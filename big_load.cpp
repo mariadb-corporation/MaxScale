@@ -79,8 +79,8 @@ void *query_thread1( void *ptr )
     while (data->exit_flag == 0) {
         execute_query(conn1, (char *) "SELECT * FROM t1;"); data->i1++;
         if (data->rwsplit_only == 0) {
-            execute_query(conn2, (char *) "SELECT * FROM t1;");
-            execute_query(conn3, (char *) "SELECT * FROM t1;");
+            execute_query_silent(conn2, (char *) "SELECT * FROM t1;");
+            execute_query_silent(conn3, (char *) "SELECT * FROM t1;");
         }
     }
     mysql_close(conn1);
@@ -106,8 +106,8 @@ void *query_thread2(void *ptr )
         sleep(1);
         execute_query(conn1, (char *) "SELECT * FROM t1;"); data->i2++;
         if (data->rwsplit_only == 0) {
-            execute_query(conn2, (char *) "SELECT * FROM t1;");
-            execute_query(conn3, (char *) "SELECT * FROM t1;");
+            execute_query_silent(conn2, (char *) "SELECT * FROM t1;");
+            execute_query_silent(conn3, (char *) "SELECT * FROM t1;");
         }
     }
     mysql_close(conn1);

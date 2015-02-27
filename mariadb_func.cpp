@@ -102,11 +102,38 @@ MYSQL * open_conn_no_db(int port, char * ip, char *User, char *Password)
  */
 int execute_query(MYSQL *conn, const char *sql)
 {
+        return(execute_query1(conn, sql, false));
+}
+
+/**
+ * Executes SQL query. Function also executes mysql_store_result() and mysql_free_result() to clea up returns; function do not produce any printing
+ *
+ * @param MYSQL	connection struct
+ * @param sql	SQL string
+ * @return 0 in case of success
+ */
+int execute_query_silent(MYSQL *conn, const char *sql)
+{
+    return(execute_query1(conn, sql, true));
+}
+
+/**
+ * Executes SQL query. Function also executes mysql_store_result() and mysql_free_result() to clea up returns; function do not produce any printing
+ *
+ * @param MYSQL	connection struct
+ * @param sql	SQL string
+ * @param silent if true function do not produce any printing
+ * @return 0 in case of success
+ */
+int execute_query1(MYSQL *conn, const char *sql, bool silent)
+{
     MYSQL_RES *res;
     if (conn != NULL) {
         if(mysql_query(conn, sql) != 0) {
-            printf("Error: can't execute SQL-query: %s\n", sql);
-            printf("%s\n\n", mysql_error(conn));
+            if (!silent) {
+                printf("Error: can't execute SQL-query: %s\n", sql);
+                printf("%s\n\n", mysql_error(conn));
+            }
             return(1);
         } else {
             do {
@@ -116,10 +143,12 @@ int execute_query(MYSQL *conn, const char *sql)
             return(0);
         }
     } else {
-        printf("Connection is broken\n");
+        if (!silent) {printf("Connection is broken\n");}
         return(1);
     }
 }
+
+
 
 /**
  * Executes SQL query and store 'affected rows' number in affectet_rows parameter
