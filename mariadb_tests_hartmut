@@ -9,7 +9,12 @@ export Master_id=`echo "SELECT (@@server_id)" | mysql -u$repl_User -p$repl_Passw
 $test_dir/Hartmut_tests/mariadb_tests_hartmut_imp 4006
 
 ssh -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$Maxscale_IP "cat /home/ec2-user/maxscale-mysqltest/fail.txt" | grep "FAILED"
-res=$?
+xres=$?
+if [ $xres !=0 ] ; then
+        res=0
+else 
+        res=1
+fi
 
 $test_dir/copy_logs.sh
 exit $res
