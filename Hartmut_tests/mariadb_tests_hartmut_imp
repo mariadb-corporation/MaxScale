@@ -3,8 +3,6 @@
 port=$1
 
 
-
-
 cat $test_dir/Hartmut_tests/maxscale-mysqltest/r/test_implicit_commit4.result.template | sed "s/####server_id####/$Master_id/" > test_implicit_commit4.result
 cat $test_dir/Hartmut_tests/maxscale-mysqltest/r/select_for_var_set.result.template | sed "s/####server_id####/$Master_id/" > select_for_var_set.result
 
@@ -14,5 +12,5 @@ scp -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking
 scp -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r test_implicit_commit4.result root@$Maxscale_IP:/home/ec2-user/maxscale-mysqltest/r/
 scp -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r select_for_var_set.result root@$Maxscale_IP:/home/ec2-user/maxscale-mysqltest/r/
 
-ssh -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$Maxscale_IP 'cd /home/ec2-user/maxscale-mysqltest/ ; ls -la ; ./test.sh $port'
+ssh -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$Maxscale_IP "cd /home/ec2-user/maxscale-mysqltest/ ; ls -la ; ./test.sh $port"
 
