@@ -10,7 +10,7 @@ echo "sleeping 100 seconds"
 sleep 100
 lines=`ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "netstat | grep 6603" | wc -l`
 echo "Connections to the port 6603 $lines"
-if [ "$lines" -gt 10 ] ; then
+if [ "$lines" -gt 10 ]; then
 	echo "there are more 10 connections to the port 6603"
 	echo " "
 	echo "netstat output"

@@ -14,7 +14,7 @@ echo "$maxscale_err"
 
 
 echo "$maxscale_err" | grep "$mariadb_err"
-if [ "$?" != 0 ] ; then
+if [ "$?" != 0 ]; then
 	echo "Messages are different!"
 	res=1
 else
