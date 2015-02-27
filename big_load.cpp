@@ -62,7 +62,7 @@ int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int thr
     nodes->CloseConn();
     *i1 = data.i1;
     *i2 = data.i2;
-    Test->Copy_all_logs(); return(global_result);
+    return(global_result);
 }
 
 void *query_thread1( void *ptr )
