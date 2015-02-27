@@ -7,11 +7,15 @@ The plugin is capable of returning data in one of two ways, either as MySQL resu
 
 The plugin is configured in the MaxScale.cnf plugin in much the same way as any other router service is configured, there needs to be a service section in the configuration file and also listeners defined for that service. The service does not however require any backend servers to be associated with it, or any monitors.
 
-The service entry merely needs to define the service name, the type as service and the router module to load.
+The service entry needs to define the service name, the type as service and the router module to load.
+The specified user, with the password (plain or encrypted via maxpassword utility) is allowed to connect via MySQL protocol.
+Currently the user can connect to maxinfo from any remote IP and to localhost as well.
 
     [MaxInfo]
     type=service
     router=maxinfo
+    user=monitor
+    passwd=EBD2F49C3B375812A8CDEBA632ED8BBC	
 
 The listener section defines the protocol, port and other information needed to create a listener for the service. To listen on a port using the MySQL protocol a section as shown below should be added to the configuration file.
 
@@ -44,9 +48,9 @@ As with any other listeners within MaxScale the listeners can be bound to a part
 
 The maxinfo supports a small subset of SQL statements in addition to the MySQL status and ping requests. These may be used for simple monitoring of MaxScale.
 
-    % mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor ping
+    % mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor -pxyz ping
     mysqld is alive
-    % mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor status
+    % mysqladmin -hmaxscale.mariadb.com -P9003 -umonitor -pxyz status
     Uptime: 72  Threads: 1  Sessions: 11 
     %
 

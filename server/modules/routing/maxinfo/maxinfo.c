@@ -23,8 +23,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 16/02/15	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 16/02/15	Mark Riddoch		Initial implementation
+ * 27/02/15	Massimiliano Pinto	Added maxinfo_add_mysql_user
  *
  * @endverbatim
  */
@@ -50,6 +51,9 @@
 #include <resultset.h>
 #include <version.h>
 #include <resultset.h>
+#include <secrets.h>
+#include <users.h>
+#include <dbusers.h>
 
 
 MODULE_INFO 	info = {
@@ -64,12 +68,15 @@ extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
+extern char *create_hex_sha1_sha1_passwd(char *passwd);
+
 static char *version_str = "V1.0.0";
 
 static int maxinfo_statistics(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_ping(INFO_INSTANCE *, INFO_SESSION *, GWBUF *);
 static int maxinfo_execute_query(INFO_INSTANCE *, INFO_SESSION *, char *);
 static int handle_url(INFO_INSTANCE *instance, INFO_SESSION *router_session, GWBUF *queue);
+static int maxinfo_add_mysql_user(SERVICE *service);
 
 
 /* The router entry points */
@@ -189,18 +196,11 @@ int		i;
 	spinlock_release(&instlock);
 
 	/*
-	 * The following adds users to the service.
-	 * At some point this must be replaced with proper user management,
-	 * one option migh tbe to use the admin users having we only have
-	 * the crypt'd version of these. This means we can not creat the
-	 * SHA1 of the raw password. Another mechansim is going to be
-	 * required to support these users.
-	 * As a temporary measure we will allow the user monitor with no
+	 * The following add the service user to service->users via mysql_users_alloc()
 	 * password to be used.
 	 */
-	service->users = (void *)mysql_users_alloc();
-	(void)add_mysql_users_with_host_ipv4(service->users, "monitor", "%", "", "Y", "");
-	(void)add_mysql_users_with_host_ipv4(service->users, "monitor", "localhost", "", "Y", "");
+
+	maxinfo_add_mysql_user(service);
 
 	return (ROUTER *)inst;
 }
@@ -745,4 +745,59 @@ RESULTSET	*set;
 		}
 	}
 	return 1;
+}
+
+/**
+ * Add the service user to the service->users
+ * via mysql_users_alloc and add_mysql_users_with_host_ipv4
+ * User is added for '%' and 'localhost' hosts
+ *
+ * @param service The service for this router
+ * @return	0 on success, 1 on failure
+ */
+static int
+maxinfo_add_mysql_user(SERVICE *service) {
+	char	*dpwd = NULL;
+	char	*newpasswd = NULL;
+	char	*service_user = NULL;
+        char	*service_passwd = NULL;
+
+	if (serviceGetUser(service, &service_user, &service_passwd) == 0) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"maxinfo: failed to get service user details")));
+
+		return 1;
+	}
+
+	dpwd = decryptPassword(service->credentials.authdata);
+
+	if (!dpwd) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"maxinfo: decrypt password failed for service user %s",
+			service_user)));
+
+		return 1;
+	}
+
+	service->users = (void *)mysql_users_alloc();
+
+	newpasswd = create_hex_sha1_sha1_passwd(dpwd);
+
+	if (!newpasswd) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"maxinfo: create hex_sha1_sha1_password failed for service user %s",
+			service_user)));
+		users_free(service->users);
+
+		return 1;
+	}
+
+	/* add service user for % and localhost */
+	(void)add_mysql_users_with_host_ipv4(service->users, service->credentials.name, "%", newpasswd, "Y", "");
+	(void)add_mysql_users_with_host_ipv4(service->users, service->credentials.name, "localhost", newpasswd, "Y", "");
+
+	free(newpasswd);
+	free(dpwd);
+
+	return 0;
 }
