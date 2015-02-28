@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
-        global_result += inset_select(Test, N);
+        global_result += insert_select(Test, N);
 
         printf("Creating database test1\n"); fflush(stdout);
         global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
         printf("Testing with database 'test1'\n");fflush(stdout);
         global_result += use_db(Test, (char *) "test1");
-        global_result += inset_select(Test, N);
+        global_result += insert_select(Test, N);
 
         global_result += check_t1_table(Test, FALSE, (char *) "test");
         global_result += check_t1_table(Test, TRUE, (char *) "test1");

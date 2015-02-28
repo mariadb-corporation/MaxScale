@@ -157,7 +157,7 @@ int check_if_t1_exists(MYSQL *conn)
 }
 
 
-int inset_select(TestConnections* Test, int N)
+int insert_select(TestConnections* Test, int N)
 {
     int global_result = 0;
     printf("Create t1\n"); fflush(stdout);

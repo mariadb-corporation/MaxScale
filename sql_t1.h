@@ -20,7 +20,7 @@ int check_if_t1_exists(MYSQL *conn);
  * @param N number of INSERTs; every next INSERT is longer 16 times in compare with previous one: for N=4 last INSERT is about 700kb long
  * @return 0 in case of no error and all checks are ok
  */
-int inset_select(TestConnections* Test, int N);
+int insert_select(TestConnections* Test, int N);
 
 /**
  * @brief Executes USE command for all Maxscale service and all Master/Slave backend nodes
