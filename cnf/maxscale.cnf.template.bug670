@@ -113,11 +113,6 @@ user=maxuser
 passwd=maxpwd
 filters=duplicate
 
-[HTTPD Router]
-type=service
-router=testroute
-servers=server1,server2,server3
-
 [Debug Interface]
 type=service
 router=debugcli
@@ -163,12 +158,6 @@ service=Debug Interface
 protocol=telnetd
 port=4442
 #address=127.0.0.1
-
-[HTTPD Listener]
-type=listener
-service=HTTPD Router
-protocol=HTTPD
-port=6444
 
 [CLI Listener]
 type=listener
