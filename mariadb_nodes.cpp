@@ -194,6 +194,7 @@ int Mariadb_nodes::StartBinlog(char * Maxscale_IP, int Binlog_Port)
     char log_pos[256];
     int i;
     int global_result = 0;
+    printf("Stopping all backend nodes\n");fflush(stdout);
     global_result += StopNodes();
 
     printf("Starting back Master\n");  fflush(stdout);
@@ -209,23 +210,31 @@ int Mariadb_nodes::StartBinlog(char * Maxscale_IP, int Binlog_Port)
     }
     sleep(5);
 
+    printf("Connecting to all backend nodes\n");fflush(stdout);
     global_result += Connect();
+    printf("Creating repl user\n");fflush(stdout);
     global_result += execute_query(nodes[0], create_repl_user);
-
+    printf("'reset master' query to node 0\n");fflush(stdout);
     execute_query(nodes[0], (char *) "reset master;");
 
+    printf("show master status\n");fflush(stdout);
     find_status_field(nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
     find_status_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
 
+    printf("Stopping first slave (node 0)\n");fflush(stdout);
     global_result += execute_query(nodes[1], (char *) "stop slave;");
+    printf("Configure first backend slave node to be slave of real master\n");fflush(stdout);
     sprintf(str, setup_slave, IP[0], log_file, log_pos, Ports[0]);
     global_result += execute_query(nodes[1], str);
 
+    printf("Connecting to MaxScale binlog router\n");fflush(stdout);
     MYSQL * binlog = open_conn(Binlog_Port, Maxscale_IP, User, Password);
 
+    printf("show master status\n");fflush(stdout);
     find_status_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
     find_status_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
 
+    printf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");fflush(stdout);
     for (i = 2; i < N; i++) {
         global_result += execute_query(nodes[i], (char *) "stop slave;");
         sprintf(str, setup_slave, Maxscale_IP, log_file, log_pos, Binlog_Port);
