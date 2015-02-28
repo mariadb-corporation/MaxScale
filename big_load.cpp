@@ -77,7 +77,7 @@ void *query_thread1( void *ptr )
         conn3 = data->Test->OpenReadSlaveConn();
     }
     while (data->exit_flag == 0) {
-        execute_query(conn1, (char *) "SELECT * FROM t1;"); data->i1++;
+        execute_query_silent(conn1, (char *) "SELECT * FROM t1;"); data->i1++;
         if (data->rwsplit_only == 0) {
             execute_query_silent(conn2, (char *) "SELECT * FROM t1;");
             execute_query_silent(conn3, (char *) "SELECT * FROM t1;");
@@ -104,7 +104,7 @@ void *query_thread2(void *ptr )
     }
     while (data->exit_flag == 0) {
         sleep(1);
-        execute_query(conn1, (char *) "SELECT * FROM t1;"); data->i2++;
+        execute_query_silent(conn1, (char *) "SELECT * FROM t1;"); data->i2++;
         if (data->rwsplit_only == 0) {
             execute_query_silent(conn2, (char *) "SELECT * FROM t1;");
             execute_query_silent(conn3, (char *) "SELECT * FROM t1;");
