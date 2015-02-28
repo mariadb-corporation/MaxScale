@@ -172,7 +172,7 @@ int inset_select(TestConnections* Test, int N)
     printf("SELECT: slave\n");fflush(stdout);
     global_result += select_from_t1(Test->conn_slave, N);
     printf("Sleeping to let replication happen\n");fflush(stdout);
-    sleep(30);
+    sleep(180);
     for (int i=0; i<Test->repl->N; i++) {
         printf("SELECT: directly from node %d\n", i);fflush(stdout);
         global_result += select_from_t1(Test->repl->nodes[i], N);
@@ -232,7 +232,7 @@ int check_t1_table(TestConnections* Test, bool presence, char * db)
         printf("ReadConn slave: ok\n");
     }
     printf("Sleeping to let replication happen\n");
-    sleep(30);
+    sleep(60);
     for (int i=0; i<Test->repl->N; i++) {
         if ( ((check_if_t1_exists(Test->repl->nodes[i]) >  0) && (!presence) ) ||
              ((check_if_t1_exists(Test->repl->nodes[i]) == 0) && (presence) ))
