@@ -14,5 +14,5 @@ ssh -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking
 ssh -i $Maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$Maxscale_IP "ls $maxdir/log/ -1"
 
 res=$?
-$test_dir/copy_logs.sh
+$test_dir/copy_logs.sh bug404
 exit $res

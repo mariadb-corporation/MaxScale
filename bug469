@@ -47,5 +47,5 @@ fi
 
 
 
-$test_dir/copy_logs.sh
+$test_dir/copy_logs.sh bug469
 exit $res

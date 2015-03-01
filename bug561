@@ -43,5 +43,5 @@ else
         echo "Messages are same"
 fi
 
-$test_dir/copy_logs.sh
+$test_dir/copy_logs.sh bug561
 exit $res

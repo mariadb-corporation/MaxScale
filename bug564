@@ -21,11 +21,11 @@ do
 	if [[ $res1 != 0 ]] || [[ $res2 != 0 ]] || [[ $res3 != 0 ]] ; then 
 		echo "charset is ignored"
 		mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4006 --default-character-set="latin2" -e "SHOW VARIABLES LIKE 'char%'" 
-		$test_dir/copy_logs.sh
+		$test_dir/copy_logs.sh bug564
 		exit 1
 	fi
 done
-$test_dir/copy_logs.sh
+$test_dir/copy_logs.sh bug564
 exit 0
 
 

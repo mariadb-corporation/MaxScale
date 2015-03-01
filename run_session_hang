@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #bug 454
-
+export Test_name=run_session_hang
 $test_dir/configure_maxscale.sh
 
 $test_dir/session_hang/run_setmix.sh &
@@ -26,3 +26,7 @@ sleep 15
 
 
 echo "show databases;" mysql -u$repl_User -p$repl_Password -h$Maxscale_IP -p 4006
+res=$?
+$test_dir/copy_logs.sh run_session_hang
+
+exit $res

@@ -22,5 +22,5 @@ else
 	res=0
 fi
 
-$test_dir/copy_logs.sh
+$test_dir/copy_logs.sh bug562
 exit $res

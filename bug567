@@ -14,6 +14,6 @@ echo "show databases;" | mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 
 
 res=$?
 
-$test_dir/copy_logs.sh
+$test_dir/copy_logs.sh bug567
 exit $res
 
