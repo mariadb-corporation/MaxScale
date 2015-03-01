@@ -798,6 +798,12 @@ When value all is used, queries reading session variables can be routed to any a
 
 In above-mentioned case the user-defined variable would only be updated in the master where query would be routed due to `INSERT` statement.
 
+`max_sescmd_history` sets a limit on how many session commands each session can execute before the connection is closed. The default is an unlimited number of session commands.
+
+	max_sescmd_history=1500
+
+When a limitation is set, it effectively creates a cap on the session's memory consumption. This might be useful if connection pooling is used and the sessions use large amounts of session commands.
+
 An example of Read/Write Split router configuration :
 
 ```
