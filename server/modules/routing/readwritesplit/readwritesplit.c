@@ -4347,6 +4347,19 @@ static bool route_session_write(
 		
 		goto return_succp;
 	}
+
+	if(router_cli_ses->rses_config.rw_max_sescmd_history_size > 0 &&
+	 router_cli_ses->rses_nsescmd >= router_cli_ses->rses_config.rw_max_sescmd_history_size)
+	{
+	    LOGIF(LT, (skygw_log_write(
+		    LOGFILE_TRACE,
+			"Router session exceeded session command history limit. "
+		        "Closing router session. <")));
+		router_cli_ses->rses_closed = true;
+		rses_end_locked_router_action(router_cli_ses);
+		goto return_succp;
+	}
+
         /** 
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
@@ -4418,6 +4431,9 @@ static bool route_session_write(
                         }
                 }
         }
+
+	atomic_add(&router_cli_ses->rses_nsescmd,1);
+
         /** Unlock router session */
         rses_end_locked_router_action(router_cli_ses);
                
@@ -4517,6 +4533,10 @@ static void rwsplit_process_router_options(
                                         router->rwsplit_config.rw_slave_select_criteria = c;
                                 }
                         }
+			else if(strcmp(options[i], "max_sescmd_history") == 0)
+			{
+			    router->rwsplit_config.rw_max_sescmd_history_size = atoi(value);
+			}
                 }
         } /*< for */
 }
