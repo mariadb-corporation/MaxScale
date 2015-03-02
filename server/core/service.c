@@ -477,7 +477,7 @@ int	n = 0,i;
 FEEDBACK_CONF *feedback = notification_get_config_feedback();
 
 	if (feedback->feedback_enable) {
-		hktask_add("send_feedback", module_feedback_create, feedback, 30);
+		hktask_add("send_feedback", module_feedback_send, feedback, 300);
 	}
 
 	ptr = allServices;
