@@ -28,6 +28,7 @@ filters=hints|regex
  * - check if hints filter working by executing and comparing results:
  *  + via RWSPLIT: "select @@server_id; -- maxscale route to server server%d" (%d - node number)
  *  + directly to backend node "select @@server_id;"
+ * - do the same test with "filters=regex|hints" "filters=hints|regex"
  */
 
 #include <my_config.h>

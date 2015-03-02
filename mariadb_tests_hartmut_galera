@@ -19,5 +19,5 @@ else
 	res=1
 fi
 
-$test_dir/copy_logs.sh
+$test_dir/copy_logs.sh mariadb_tests_hartmut_galera
 exit $res
