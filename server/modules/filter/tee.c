@@ -665,7 +665,9 @@ skygw_log_write(LOGFILE_TRACE,"Tee close: %d", atomic_add(&debug_seq,1));
 
 		if(my_session->waiting[PARENT])
 		{
-		    if(my_session->command != 0x01)
+		    if(my_session->command != 0x01 &&
+		     my_session->client_dcb &&
+		     my_session->client_dcb->state == DCB_STATE_POLLING)
 		    {
 			skygw_log_write(LOGFILE_TRACE,"Tee session closed mid-query.");
 			GWBUF* errbuf = modutil_create_mysql_err_msg(1,0,1,"00000","Session closed.");
