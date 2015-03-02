@@ -58,6 +58,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql.h>
+#include <notification.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -70,12 +71,16 @@ static	int	process_config_update(CONFIG_CONTEXT *);
 static	void	free_config_context(CONFIG_CONTEXT	*);
 static	char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 static	int	handle_global_item(const char *, const char *);
+static	int	handle_feedback_item(const char *, const char *);
 static	void	global_defaults();
+static	void	feedback_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
+static	int	config_truth_value(char *str);
 static int	internalService(char *router);
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
+static	FEEDBACK_CONF	feedback;
 char			*version_string = NULL;
 
 
@@ -121,6 +126,12 @@ CONFIG_PARAMETER	*param, *p1;
 	{
 		return handle_global_item(name, value);
 	}
+
+	if (strcasecmp(section, "feedback") == 0)
+	{
+		return handle_feedback_item(name, value);
+	}
+
 	/*
 	 * If we already have some parameters for the object
 	 * add the parameters to that object. If not create
@@ -192,6 +203,7 @@ int		rval;
 	}
 
 	global_defaults();
+	feedback_defaults();
 
 	config.object = "";
 	config.next = NULL;
@@ -337,11 +349,12 @@ int			error_count = 0;
 					serviceEnableRootUser(
                                                 obj->element, 
                                                 config_truth_value(enable_root_user));
+
 				if (connection_timeout)
 					serviceSetTimeout(
                                                 obj->element, 
                                                 atoi(connection_timeout));
-				
+
 				if (weightby)
 					serviceWeightBy(obj->element, weightby);
 
@@ -1186,6 +1199,16 @@ config_pollsleep()
 	return gateway.pollsleep;
 }
 
+/**
+ * Return the feedback config data pointer
+ *
+ * @return  The feedback config data pointer
+ */
+FEEDBACK_CONF *
+notification_get_config_feedback()
+{
+	return &feedback;
+}
 
 static struct {
 	char		*logname;
@@ -1221,8 +1244,8 @@ int i;
         }
 	else if (strcmp(name, "ms_timestamp") == 0)
 	{
-	    skygw_set_highp(atoi(value));
-        }
+		skygw_set_highp(atoi(value));
+	}
 	else
 	{
 		for (i = 0; lognames[i].logname; i++)
@@ -1235,6 +1258,28 @@ int i;
 					skygw_log_disable(lognames[i].logfile);
 			}
 		}
+        }
+	return 1;
+}
+
+/**
+ * Configuration handler for items in the feedback [feedback] section
+ *
+ * @param name	The item name
+ * @param value	The item value
+ * @return 0 on error
+ */
+static	int
+handle_feedback_item(const char *name, const char *value)
+{
+int i;
+	if (strcmp(name, "feedback_enable") == 0)
+	{
+		feedback.feedback_enable = atoi(value);
+	}
+	else if (strcmp(name, "feedback_url") == 0)
+	{
+		feedback.feedback_enable = atoi(value);
         }
 	return 1;
 }
@@ -1253,6 +1298,16 @@ global_defaults()
 	else
 		gateway.version_string = NULL;
 	gateway.id=0;
+}
+
+/**
+ * Set the defaults for the feedback configuration options
+ */
+static void
+feedback_defaults()
+{
+	feedback.feedback_enable = 0;
+	feedback.feedback_last_action = 0;
 }
 
 /**
@@ -1302,8 +1357,9 @@ SERVER			*server;
 					char *allow_localhost_match_wildcard_host;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
+
 					connection_timeout = config_get_value(obj->parameters, "connection_timeout");
-					
+
                                         user = config_get_value(obj->parameters,
                                                                 "user");
 					auth = config_get_value(obj->parameters,
@@ -1439,11 +1495,9 @@ SERVER			*server;
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
                                                                  "enable_root_user");
-					
 					connection_timeout = 
                                                 config_get_value(obj->parameters, 
                                                                  "connection_timeout");
-					
 					allow_localhost_match_wildcard_host = 
 						config_get_value(obj->parameters, "localhost_match_wildcard_host");
 

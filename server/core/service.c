@@ -58,6 +58,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <housekeeper.h>
+#include <notification.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -473,11 +474,11 @@ serviceStartAll()
 {
 SERVICE	*ptr;
 int	n = 0,i;
+FEEDBACK_CONF *feedback = notification_get_config_feedback();
 
-	/** Add the notification service feedback task, if enabled */
-	//if (config_feedback_enable() ) {
-		hktask_add("send_feedback", module_feedback_send, NULL, 30);
-	//}
+	if (feedback->feedback_enable) {
+		hktask_add("send_feedback", module_feedback_create, feedback, 30);
+	}
 
 	ptr = allServices;
 	while (ptr && !ptr->svc_do_shutdown)

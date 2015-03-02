@@ -26,10 +26,10 @@
  * Date		Who			Description
  * 13/06/13	Mark Riddoch		Initial implementation
  * 14/06/13	Mark Riddoch		Updated to add call to ModuleInit if one is
- *                             	 	defined in the loaded module.
+ *                              	defined in the loaded module.
  * 					Also updated to call fixed GetModuleObject
  * 02/06/14	Mark Riddoch		Addition of module info
- * 26/02/15	Massimiliano	Pinto	Addition of module_feedback_send
+ * 26/02/15	Massimiliano Pinto	Addition of module_feedback_send
  *
  * @endverbatim
  */
@@ -44,6 +44,7 @@
 #include	<skygw_utils.h>
 #include	<log_manager.h>
 #include	<version.h>
+#include	<notification.h>
 #include	<curl/curl.h>
 
 /** Defined in log_manager.cc */
@@ -72,18 +73,18 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
   size_t realsize = size * nmemb;
   struct MemoryStruct *mem = (struct MemoryStruct *)userp;
-
+ 
   mem->data = realloc(mem->data, mem->size + realsize + 1);
   if(mem->data == NULL) {
-    /* out of memory! */
+    /* out of memory! */ 
     printf("not enough memory (realloc returned NULL)\n");
     return 0;
   }
-
+ 
   memcpy(&(mem->data[mem->size]), contents, realsize);
   mem->size += realsize;
   mem->data[mem->size] = 0;
-
+ 
   return realsize;
 }
 
@@ -443,24 +444,70 @@ MODULES	*ptr = registered;
  *  @param data The configuration details of notification service
  */
 void
-module_feedback_send(void* data)
-{
+module_feedback_send(void* data) {
 	MODULES *ptr = registered;
 	CURL *curl;
 	CURLcode res;
 	struct curl_httppost *formpost=NULL;
 	struct curl_httppost *lastptr=NULL;
 	GWBUF *buffer = NULL;
-	char  *data_ptr = NULL;
-	int   n_mod=0;
+	void *data_ptr=NULL;
+	long http_code = 0;
 	struct MemoryStruct chunk;
+	int last_action = 0;
+	time_t now;
+	struct tm *now_tm;
+	int hour;
+	int n_mod=0;
 
-        chunk.data = malloc(1);		/* will be grown as needed by the realloc above */
-	chunk.size = 0;			/* no data at this point */
-	
+	now = time(NULL);
+	now_tm = localtime(&now);
+	hour = now_tm->tm_hour;
+
+	FEEDBACK_CONF *feedback_config = (FEEDBACK_CONF *) data;
+
+	/**
+	 * Task runs nightly, from 2 AM to 4 AM
+	 *
+	 * If it's done in that time interval, it will be skipped
+	 */
+
+	if (hour > 4 || hour < 2) {
+		/* It's not the rigt time, mark it as to be done and return */
+		feedback_config->feedback_last_action = 0;
+
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"module_feedback_create : skip task because of time interval: hour is [%d]",
+			hour)));
+
+		return;
+	}
+
+	/* Time to run the task: if a previous run was succesfull skip next runs */
+	if (feedback_config->feedback_last_action == 1) {
+		/* task was done before, return */
+
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"module_feedback_create : skip task because of previous succesful run: hour is [%d], last_action [%d]",
+			hour, feedback_config->feedback_last_action)));
+
+		return;
+	}
+ 
+	LOGIF(LE, (skygw_log_write_flush(
+		LOGFILE_ERROR,
+		"module_feedback_create : task runs: hour is [%d], last_action [%d]",
+		hour, feedback_config->feedback_last_action)));
+
+
+	chunk.data = malloc(1);  /* will be grown as needed by the realloc above */ 
+	chunk.size = 0;    /* no data at this point */
+
 	/* count loaded modules */
 	while (ptr)
-        {
+	{
 		ptr = ptr->next;
 		n_mod++;
 	}
@@ -468,56 +515,65 @@ module_feedback_send(void* data)
 
 	buffer = gwbuf_alloc(n_mod * 256);
 	data_ptr = GWBUF_DATA(buffer);
+	
+	sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", "xxxfcBRIvkRlxyGdoJL0bWy+TmY");
+	data_ptr+=strlen(data_ptr);
+	sprintf(data_ptr, "FEEDBACK_USER_INFO\t%s\n", "0467009f-xxxx-yyyy-zzzz-b6b2ec9c6cf4");
+	data_ptr+=strlen(data_ptr);
+	sprintf(data_ptr, "VERSION\t%s\n", MAXSCALE_VERSION);
+	data_ptr+=strlen(data_ptr);
+	sprintf(data_ptr, "NOW\t%lu\nPRODUCT\t%s\n", now, "maxscale");
+	data_ptr+=strlen(data_ptr);
+	sprintf(data_ptr, "Uname_sysname\t%s\n", "linux");
+	data_ptr+=strlen(data_ptr);
+	sprintf(data_ptr, "Uname_distribution\t%s\n", "centos");
+	data_ptr+=strlen(data_ptr);
 
-	while (ptr)
-	{
-		/* current maxscale setup */
-		sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", "xxxfcBRIvkRlxyGdoJL0bWy+TmY");
-		data_ptr+=strlen(data_ptr);
-		sprintf(data_ptr, "FEEDBACK_USER_INFO\t%s\n", "0467009f-xxxx-yyyy-zzzz-b6b2ec9c6cf4");
-		data_ptr+=strlen(data_ptr);
-		sprintf(data_ptr, "VERSION\t%s\n", MAXSCALE_VERSION);
-		data_ptr+=strlen(data_ptr);
-		sprintf(data_ptr, "NOW\t%lu\nPRODUCT\t%s\n", time(NULL), "maxscale");
-		data_ptr+=strlen(data_ptr);
-		sprintf(data_ptr, "Uname_sysname\t%s\n", "linux");
-		data_ptr+=strlen(data_ptr);
-		sprintf(data_ptr, "Uname_distribution\t%s\n", "centos");
-		data_ptr+=strlen(data_ptr);
-
-		/* modules data */
-		sprintf(data_ptr, "module_%s_type\t%s\nmodule_%s_version\t%s\n", ptr->module, ptr->type, ptr->module, ptr->version);
+        while (ptr)
+        {
+                sprintf(data_ptr, "module_%s_type\t%s\nmodule_%s_version\t%s\n", ptr->module, ptr->type, ptr->module, ptr->version);
 		data_ptr+=strlen(data_ptr);
 
-		if (ptr->info) {
-			sprintf(data_ptr, "module_%s_api\t%d.%d.%d\n",
-				ptr->module,
-				ptr->info->api_version.major,
-				ptr->info->api_version.minor,
-				ptr->info->api_version.patch);
+                if (ptr->info) {
+                        sprintf(data_ptr, "module_%s_api\t%d.%d.%d\n",
+					ptr->module,
+                                        ptr->info->api_version.major,
+                                        ptr->info->api_version.minor,
+                                        ptr->info->api_version.patch);
 
 			data_ptr+=strlen(data_ptr);
 			sprintf(data_ptr, "module_%s_releasestatus\t%s\n",
 				ptr->module,
-				ptr->info->status == MODULE_IN_DEVELOPMENT
-					? "In Development"
-					: (ptr->info->status == MODULE_ALPHA_RELEASE
-					? "Alpha"
-					: (ptr->info->status == MODULE_BETA_RELEASE
-					? "Beta"
-					: (ptr->info->status == MODULE_GA
-					? "GA"
-					: (ptr->info->status == MODULE_EXPERIMENTAL
-					? "Experimental" : "Unknown")))));
-					data_ptr+=strlen(data_ptr);
+                                ptr->info->status == MODULE_IN_DEVELOPMENT
+                                        ? "In Development"
+                                : (ptr->info->status == MODULE_ALPHA_RELEASE
+                                        ? "Alpha"
+                                : (ptr->info->status == MODULE_BETA_RELEASE
+                                        ? "Beta"
+                                : (ptr->info->status == MODULE_GA
+                                        ? "GA"
+                                : (ptr->info->status == MODULE_EXPERIMENTAL
+                                        ? "Experimental" : "Unknown")))));
+			data_ptr+=strlen(data_ptr);
 		}
-		ptr = ptr->next;
-	}	
+                ptr = ptr->next;
+        }
 
-	/* curl API call for data send via HTTP POST using a "file" type input */
+
+	/* Initializing curl library for data send via HTTP */
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+
 	curl = curl_easy_init();
 
 	if(curl) {
+		char error_message[CURL_ERROR_SIZE]="";
+
+		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_message);
+		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
+
+		/* curl API call for data send via HTTP POST using a "file" type input */
 		curl_formadd(&formpost,
 			&lastptr,
 			CURLFORM_COPYNAME, "data",
@@ -527,32 +583,69 @@ module_feedback_send(void* data)
 			CURLFORM_CONTENTTYPE, "text/plain",
 			CURLFORM_END);
 
+		curl_easy_setopt(curl, CURLOPT_HEADER, 1);
+
+		/* some servers don't like requests that are made without a user-agent field, so we provide one */ 
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+
 		curl_easy_setopt(curl, CURLOPT_URL, "http://127.0.0.1/post.php");
 		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
 
-		/* send all received data to this function  */
+#ifdef SKIP_PEER_VERIFICATION
+   		/*
+		 * This makes the connection A LOT LESS SECURE.
+ 	    	 */
+//   		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+#endif
+
+#ifdef SKIP_HOSTNAME_VERIFICATION
+		/*
+		 * this will make the connection less secure.
+		 */
+ //   		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+#endif
+
+		/* send all data to this function  */ 
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
 
-		/* we pass our 'chunk' struct to the callback function */
+		/* we pass our 'chunk' struct to the callback function */ 
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
-
-		/* some servers don't like requests that are made without a user-agent field, so we provide one */
-		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
-
+ 
 		/* Perform the request, res will get the return code */
 		res = curl_easy_perform(curl);
 
 		/* Check for errors */
-		if(res != CURLE_OK)
+		if(res != CURLE_OK) {
+			last_action = 0;
+
 			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-		else
-			fprintf(stderr, "Reply from remote server is\n[%s]\n", chunk.data);
+			fprintf(stderr, "curl error_message: [%s]\n", error_message);
+		} else {
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+
+			fprintf(stderr, "Reply from remote server is\n[%s]. Code [%lu]\n", chunk.data, http_code);
+		}
+
+		if (http_code == 200) {
+			last_action = 1;
+		}
+	} else {
+		last_action = 0;
 	}
+	
+	memcpy(&feedback_config->feedback_last_action, &last_action, sizeof(int));
+
+	LOGIF(LE, (skygw_log_write_flush(
+		LOGFILE_ERROR,
+		"module_feedback_create : task run result: hour is [%d], last_action [%d], http_code [%d]",
+		hour, feedback_config->feedback_last_action, http_code)));
 
 	if(chunk.data)
 		free(chunk.data);
 
 	gwbuf_free(buffer);
+
 	curl_easy_cleanup(curl);
 	curl_formfree(formpost);
+	curl_global_cleanup();
 }

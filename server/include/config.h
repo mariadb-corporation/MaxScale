@@ -30,7 +30,6 @@
  * 07/05/14	Massimiliano Pinto	Added version_string to global configuration
  * 23/05/14	Massimiliano Pinto	Added id to global configuration
  * 17/10/14	Mark Riddoch		Added poll tuning configuration parameters
- * 26/02/15	Massimiliano Pinto	Added notification service configuration parameters
  *
  * @endverbatim
  */
@@ -100,26 +99,15 @@ typedef struct {
 	unsigned int		pollsleep;		/**< Wait time in blocking polls */
 } GATEWAY_CONF;
 
-/**
- * The configuration and usage information data for feeback service
- */
-typedef struct {
-	int	feedback_enable;	/**< Enable/Disable Notification feedback */
-	char	*feedback_url;		/**< URL to which the data is sent */
-	char	*feedback_user_info;	/**< User info included in the feedback data sent */
-	char	*feedback_server_uid;	/**< Installation identifier included in the feedback data sent */
-	int	feedback_send_timeout;	/**< An attempt to send the data times out and fails after this many seconds */
-} FEEDBACK_CONF;
+extern int		config_load(char *);
+extern int		config_reload();
+extern int		config_threadcount();
+extern unsigned int	config_nbpolls();
+extern unsigned int	config_pollsleep();
+CONFIG_PARAMETER*	config_get_param(CONFIG_PARAMETER* params, const char* name);
+config_param_type_t 	config_get_paramtype(CONFIG_PARAMETER* param);
+CONFIG_PARAMETER*	config_clone_param(CONFIG_PARAMETER* param);
 
-extern int	    config_load(char *);
-extern int	    config_reload();
-extern int	    config_threadcount();
-extern unsigned int config_nbpolls();
-extern unsigned int config_pollsleep();
-CONFIG_PARAMETER*   config_get_param(CONFIG_PARAMETER* params, const char* name);
-config_param_type_t config_get_paramtype(CONFIG_PARAMETER* param);
-CONFIG_PARAMETER*   config_clone_param(CONFIG_PARAMETER* param);
-int          config_truth_value(char *str);
 bool config_set_qualified_param(
         CONFIG_PARAMETER* param, 
         void* val, 
