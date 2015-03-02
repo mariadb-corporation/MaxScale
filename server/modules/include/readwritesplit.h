@@ -246,7 +246,8 @@ typedef struct rwsplit_config_st {
         int               rw_max_slave_conn_count;
         select_criteria_t rw_slave_select_criteria;
         int               rw_max_slave_replication_lag;
-	target_t          rw_use_sql_variables_in;	
+	target_t          rw_use_sql_variables_in;
+        int               rw_max_sescmd_history_size;
 } rwsplit_config_t;
      
 
@@ -285,6 +286,7 @@ struct router_client_session {
         backend_ref_t*   rses_backend_ref; /*< Pointer to backend reference array */
         rwsplit_config_t rses_config;    /*< copied config info from router instance */
         int              rses_nbackends;
+        int              rses_nsescmd;  /*< Number of executed session commands */
         int              rses_capabilities; /*< input type, for example */
         bool             rses_autocommit_enabled;
         bool             rses_transaction_active;

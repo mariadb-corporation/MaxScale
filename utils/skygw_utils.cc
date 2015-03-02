@@ -707,8 +707,8 @@ size_t snprint_timestamp(
 
         /** Generate timestamp */
 
-        gettimeofday(&tv,NULL);
-        tm = *(localtime(&tv.tv_sec));
+        t = time(NULL);
+        tm = *(localtime(&t));
         snprintf(p_ts,
                  MIN(tslen,timestamp_len),
                  timestamp_formatstr,

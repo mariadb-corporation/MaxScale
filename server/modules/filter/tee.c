@@ -63,6 +63,7 @@
 #include <mysql_client_server_protocol.h>
 #include <housekeeper.h>
 
+
 #define MYSQL_COM_QUIT 			0x01
 #define MYSQL_COM_INITDB		0x02
 #define MYSQL_COM_FIELD_LIST		0x04
@@ -77,6 +78,10 @@
 #define REPLY_TIMEOUT_MILLISECOND 1
 #define PARENT 0
 #define CHILD 1
+
+#ifdef SS_DEBUG
+static int debug_seq = 0;
+#endif
 
 static unsigned char required_packets[] = {
 	MYSQL_COM_QUIT,
@@ -171,6 +176,7 @@ typedef struct {
 	GWBUF*          tee_replybuf;	/* Buffer for reply */
         GWBUF*          tee_partials[2];
         SPINLOCK        tee_lock;
+	DCB*		client_dcb;
 #ifdef SS_DEBUG
 	long		d_id;
 #endif
@@ -328,7 +334,6 @@ void
 ModuleInit()
 {
     spinlock_init(&orphanLock);
-    //hktask_add("tee orphan cleanup",orphan_free,NULL,15);
 #ifdef SS_DEBUG
     spinlock_init(&debug_lock);
 #endif
@@ -493,6 +498,7 @@ char		*remote, *userName;
 	{
 		my_session->active = 1;
 		my_session->residual = 0;
+		my_session->client_dcb = session->client;
 		spinlock_init(&my_session->tee_lock);
 		if (my_instance->source &&
 			(remote = session_get_remote(session)) != NULL)
@@ -630,7 +636,9 @@ TEE_SESSION	*my_session = (TEE_SESSION *)session;
 ROUTER_OBJECT	*router;
 void		*router_instance, *rsession;
 SESSION		*bsession;
-
+#ifdef SS_DEBUG
+skygw_log_write(LOGFILE_TRACE,"Tee close: %d", atomic_add(&debug_seq,1));
+#endif
 	if (my_session->active)
 	{
 		if ((bsession = my_session->branch_session) != NULL)
@@ -654,7 +662,19 @@ SESSION		*bsession;
 		 * a side effect of closing the client DCB of the
 		 * session.
 		 */
-                
+
+		if(my_session->waiting[PARENT])
+		{
+		    if(my_session->command != 0x01 &&
+		     my_session->client_dcb &&
+		     my_session->client_dcb->state == DCB_STATE_POLLING)
+		    {
+			skygw_log_write(LOGFILE_TRACE,"Tee session closed mid-query.");
+			GWBUF* errbuf = modutil_create_mysql_err_msg(1,0,1,"00000","Session closed.");
+			my_session->client_dcb->func.write(my_session->client_dcb,errbuf);
+		    }
+		}
+
 		my_session->active = 0;
 	}
 }
@@ -671,6 +691,9 @@ freeSession(FILTER *instance, void *session)
 TEE_SESSION	*my_session = (TEE_SESSION *)session;
 SESSION*	ses = my_session->branch_session;
 session_state_t state;
+#ifdef SS_DEBUG
+skygw_log_write(LOGFILE_TRACE,"Tee free: %d", atomic_add(&debug_seq,1));
+#endif
 	if (ses != NULL)
 	{
             state = ses->state;
@@ -777,7 +800,11 @@ char		*ptr;
 int		length, rval, residual = 0;
 GWBUF		*clone = NULL;
 unsigned char   command = *((unsigned char*)queue->start + 4);
-
+#ifdef SS_DEBUG
+skygw_log_write(LOGFILE_TRACE,"Tee routeQuery: %d : %s",
+		atomic_add(&debug_seq,1),
+		((char*)queue->start + 5));
+#endif
 spinlock_acquire(&my_session->tee_lock);
 
 if(!my_session->active)
@@ -864,7 +891,8 @@ if(!my_session->active)
 #endif
 	spinlock_acquire(&my_session->tee_lock);
 
-	if(my_session->branch_session == NULL ||
+	if(!my_session->active ||
+		my_session->branch_session == NULL ||
 		my_session->branch_session->state != SESSION_STATE_ROUTER_READY)
 	{
 	    rval = 0;
@@ -929,7 +957,14 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
   GWBUF *complete = NULL;
   unsigned char *ptr;
   int min_eof = my_session->command != 0x04 ? 2 : 1;
-  
+#ifdef SS_DEBUG
+  ptr = (unsigned char*) reply->start;
+  skygw_log_write(LOGFILE_TRACE,"Tee clientReply [%s] [%s] [%s]: %d",
+		  instance ? "parent":"child",
+		  my_session->active ? "open" : "closed",
+		  PTR_IS_ERR(ptr) ? "ERR" : PTR_IS_OK(ptr) ? "OK" : "RSET",
+		  atomic_add(&debug_seq,1));
+#endif
   spinlock_acquire(&my_session->tee_lock);
 
   if(!my_session->active)
@@ -1007,8 +1042,8 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
         
   if(branch == PARENT)
     {
-      ss_dassert(my_session->tee_replybuf == NULL);
-      my_session->tee_replybuf = complete;
+      //ss_dassert(my_session->tee_replybuf == NULL);
+      my_session->tee_replybuf = gwbuf_append(my_session->tee_replybuf,complete);
     }
   else
     {
