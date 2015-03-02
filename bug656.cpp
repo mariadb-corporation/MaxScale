@@ -1,15 +1,14 @@
 /**
- * @file kill_master.cpp Checks Maxscale behaviour in case if Master node is blocked
+ * @file bug656.cpp Checks Maxscale behaviour in case if Master node is blocked
  *
  * - Connecto RWSplit
  * - block Mariadb server on Master node by Firewall
- * - try simple query *show processlist" expecting failure, but not a crash
- * - check if Maxscale is alive
- * - reconnect and check if query execution is ok
+ * - try simple query *show servers" via Maxadmin
  */
 
 #include <my_config.h>
 #include "testconnections.h"
+#include "maxadmin_operations.h"
 
 int main(int argc, char *argv[])
 {
@@ -25,8 +24,9 @@ int main(int argc, char *argv[])
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);
     Test->repl->BlockNode(0);
 
-    printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
-    execute_query(Test->conn_rwsplit, (char *) "show processlist;");
+    //printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
+    //execute_query(Test->conn_rwsplit, (char *) "show processlist;");
+    executeMaxadminCommandPrint(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show servers");
 
     printf("Setup firewall back to allow mysql\n"); fflush(stdout);
     Test->repl->UnblockNode(0);
@@ -37,12 +37,7 @@ int main(int argc, char *argv[])
 
     Test->CloseRWSplit();
 
-
-    printf("Reconnecting and trying query to RWSplit\n"); fflush(stdout);
-    Test->ConnectRWSplit();
-    global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist;");
-    Test->CloseRWSplit();
-
     Test->Copy_all_logs(); return(global_result);
 }
+
 
