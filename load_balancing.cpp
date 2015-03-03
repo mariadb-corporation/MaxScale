@@ -29,15 +29,15 @@ int main(int argc, char *argv[])
     int new_inserts[256];
     int i1, i2;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->repl->Connect();
+    Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 300;");
         execute_query(Test->repl->nodes[i], (char *) "set global max_connect_errors = 100000;");
     }
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
 
     global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25, Test, &i1, &i2, 1, FALSE);
 
@@ -61,17 +61,17 @@ int main(int argc, char *argv[])
     }
 
     printf("Restoring nodes\n"); fflush(stdout);
-    Test->repl->Connect();
+    Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "flush hosts;");
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 151;");
     }
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
 
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->repl->StartReplication();
+    Test->repl->start_replication();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

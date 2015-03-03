@@ -11,18 +11,18 @@ int main(int argc, char *argv[])
     int global_result = 0;
 
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
 
     printf("Connecting to RWsplit\n");
-    Test->ConnectRWSplit();
+    Test->connect_rwsplit();
 
     global_result += create_t1(Test->conn_rwsplit);
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
     printf("Changing master to node 1\n");
-    Test->repl->ChangeMaster(1, 0);
+    Test->repl->change_master(1, 0);
     printf("executing 3 INSERTs\n");
     execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(0, 2);");
     execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(1, 2);");
@@ -30,16 +30,16 @@ int main(int argc, char *argv[])
     printf("executing SELECT\n");
     execute_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
 
-    Test->CloseRWSplit();
-    Test->ConnectRWSplit();
+    Test->close_rwsplit();
+    Test->connect_rwsplit();
     printf("Reconnecting and executing SELECT again\n");
     global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
 
 
     printf("Changing master back to node 0\n");
-    Test->repl->ChangeMaster(0, 1);
+    Test->repl->change_master(0, 1);
 
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

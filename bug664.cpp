@@ -87,22 +87,22 @@ int main(int argc, char *argv[])
     //int i;
     //char sys1[4096];
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
     //CheckLogErr((char *) "Warning : Unsupported router option \"slave\"", TRUE);
     //global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     printf("Trying query to ReadConn master\n"); fflush(stdout);
     global_result += execute_query(Test->conn_master, "show processlist;");
     printf("Trying query to ReadConn slave\n"); fflush(stdout);
     global_result += execute_query(Test->conn_slave, "show processlist;");
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result    += CheckLogErr((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
-    global_result    += CheckLogErr((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
+    global_result    += check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
+    global_result    += check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 

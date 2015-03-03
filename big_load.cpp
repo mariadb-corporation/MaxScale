@@ -13,8 +13,8 @@ int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int thr
     }
 
 
-    nodes->Connect();
-    Test->ConnectRWSplit();
+    nodes->connect();
+    Test->connect_rwsplit();
 
     data.i1 = 0;
     data.i2 = 0;
@@ -32,7 +32,7 @@ int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int thr
         sleep(60);
         global_result += execute_query(Test->conn_rwsplit, sql);
         // close connections
-        Test->CloseRWSplit();
+        Test->close_rwsplit();
 
         //int threads_num = 100;
         pthread_t thread1[threads_num];
@@ -59,7 +59,7 @@ int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int thr
         print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], nodes->N);
         printf("First thread did %d queries, second - %d \n", data.i1, data.i2);
     }
-    nodes->CloseConn();
+    nodes->close_connections();
     *i1 = data.i1;
     *i2 = data.i2;
     return(global_result);
@@ -71,10 +71,10 @@ void *query_thread1( void *ptr )
     MYSQL * conn2;
     MYSQL * conn3;
     thread_data * data = (thread_data *) ptr;
-    conn1 = data->Test->OpenRWSplitConn();
+    conn1 = data->Test->open_rwsplit_connection();
     if (data->rwsplit_only == 0) {
-        conn2 = data->Test->OpenReadMasterConn();
-        conn3 = data->Test->OpenReadSlaveConn();
+        conn2 = data->Test->open_readconn_master_connection();
+        conn3 = data->Test->open_readconn_slave_connection();
     }
     while (data->exit_flag == 0) {
         execute_query_silent(conn1, (char *) "SELECT * FROM t1;"); data->i1++;
@@ -97,10 +97,10 @@ void *query_thread2(void *ptr )
     MYSQL * conn2;
     MYSQL * conn3;
     thread_data * data = (thread_data *) ptr;
-    conn1 = data->Test->OpenRWSplitConn();
+    conn1 = data->Test->open_rwsplit_connection();
     if (data->rwsplit_only == 0) {
-        conn2 = data->Test->OpenReadMasterConn();
-        conn3 = data->Test->OpenReadSlaveConn();
+        conn2 = data->Test->open_readconn_master_connection();
+        conn3 = data->Test->open_readconn_slave_connection();
     }
     while (data->exit_flag == 0) {
         sleep(1);

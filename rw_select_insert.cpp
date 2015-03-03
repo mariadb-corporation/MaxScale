@@ -113,14 +113,14 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
 
-    printf("Connecting to RWSplit %s\n", Test->Maxscale_IP);
-    Test->ConnectRWSplit();
+    printf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->connect_rwsplit();
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "shutdown monitor \"MySQL Monitor\"");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "shutdown monitor \"MySQL Monitor\"");
 
     tolerance=0;
 
@@ -177,8 +177,8 @@ int main(int argc, char *argv[])
     }
     print_delta(&new_selects[0], &new_inserts[0], &selects_before_100[0], &inserts_before_100[0], Test->repl->N);
 
-    Test->CloseRWSplit();
+    Test->close_rwsplit();
 
-    Test->galera->CloseConn();
-    Test->Copy_all_logs(); return(global_result);
+    Test->galera->close_connections();
+    Test->copy_all_logs(); return(global_result);
 }

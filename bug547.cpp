@@ -21,11 +21,11 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->ConnectMaxscale();
+    global_result += Test->connect_maxscale();
 
     printf("Creating table t1\n"); fflush(stdout);
 
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
         printf("Query failed!\n");
     }
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

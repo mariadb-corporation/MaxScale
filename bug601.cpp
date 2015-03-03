@@ -29,19 +29,19 @@ int main(int argc, char *argv[])
     pthread_t parall_traffic1[100];
     int check_iret[100];
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
     fflush(stdout);
 
 
-    global_result += Test->ConnectRWSplit();
+    global_result += Test->connect_rwsplit();
 
-    Test->repl->Connect();
+    Test->repl->connect();
     for (int k = 0; k < Test->repl->N; k++) {
         execute_query(Test->repl->nodes[k], (char *) "set global max_connect_errors=1000;");
     }
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
 
     printf("Creating one more user\n");fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
                 global_result++;
                 printf("change_user failed!\n"); fflush(stdout);
             }
-            if (mysql_change_user(Test->conn_rwsplit, Test->Maxscale_User, Test->Maxscale_Password, (char *) "test") != 0) {
+            if (mysql_change_user(Test->conn_rwsplit, Test->maxscale_user, Test->maxscale_password, (char *) "test") != 0) {
                 global_result++;
                 printf("change_user failed!\n"); fflush(stdout);
             }
@@ -69,26 +69,26 @@ int main(int argc, char *argv[])
         }
 
         exit_flag = 1; sleep(3);
-        mysql_change_user(Test->conn_rwsplit, Test->Maxscale_User, Test->Maxscale_Password, NULL);
+        mysql_change_user(Test->conn_rwsplit, Test->maxscale_user, Test->maxscale_password, NULL);
 
         global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
-        Test->CloseRWSplit();
+        Test->close_rwsplit();
 
         printf("Checking if Maxscale is alive\n");
-        global_result += CheckMaxscaleAlive();
+        global_result += check_maxscale_alive();
     } else {
         printf("Error connection to RWSplit\n");
         global_result++;
     }
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 
 void *parall_traffic( void *ptr )
 {
     MYSQL * conn;
     while (exit_flag == 0) {
-        conn = Test->OpenRWSplitConn();
+        conn = Test->open_rwsplit_connection();
         mysql_close(conn);
     }
     return NULL;

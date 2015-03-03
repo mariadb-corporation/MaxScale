@@ -30,7 +30,7 @@ int CheckConnnectionsOnlyToMaster(TestConnections * Test, int master)
     int conn_num;
     printf("Checking number of connections to each node\n");
     for (int i = 0; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
         if (((i == master) && (conn_num != 1)) || ((i != master) && (conn_num != 0))) {
             res++;
@@ -46,34 +46,34 @@ int main(int argc, char *argv[])
     int res = 0;
 
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
 
     printf("Connecting to ReadConnnRouter in 'master' mode\n");
-    Test->ConnectReadMaster();
+    Test->connect_readconn_master();
     printf("Sleeping 10 seconds\n");
     sleep(10);
     res += CheckConnnectionsOnlyToMaster(Test, 0);
-    Test->CloseReadMaster();
+    Test->close_readconn_master();
     printf("Changing master to node 1\n");
-    Test->repl->ChangeMaster(1, 0);
+    Test->repl->change_master(1, 0);
     printf("Sleeping 10 seconds\n");
     sleep(10);
 
     printf("Connecting to ReadConnnRouter in 'master' mode\n");
-    Test->ConnectReadMaster();
+    Test->connect_readconn_master();
     printf("Sleeping 10 seconds\n");
     sleep(10);
     res += CheckConnnectionsOnlyToMaster(Test, 1);
-    Test->CloseReadMaster();
+    Test->close_readconn_master();
 
     printf("Changing master back to node 0\n");
-    Test->repl->ChangeMaster(0, 1);
+    Test->repl->change_master(0, 1);
 
-    res += CheckLogErr((char *) "The service 'CLI' is missing a definition of the servers", FALSE);
+    res += check_log_err((char *) "The service 'CLI' is missing a definition of the servers", FALSE);
 
-    Test->Copy_all_logs();
+    Test->copy_all_logs();
     printf("Finishing test\n");
     return(res);
 }

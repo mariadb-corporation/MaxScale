@@ -21,12 +21,12 @@ int main(int argc, char *argv[])
     MYSQL * conn_found_rows;
     my_ulonglong rows;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    Test->connect_maxscale();
 
-    conn_found_rows = open_conn_db_flags(Test->rwsplit_port, Test->Maxscale_IP, (char *) "test", Test->Maxscale_User, Test->Maxscale_Password, CLIENT_FOUND_ROWS);
+    conn_found_rows = open_conn_db_flags(Test->rwsplit_port, Test->maxscale_IP, (char *) "test", Test->maxscale_user, Test->maxscale_password, CLIENT_FOUND_ROWS);
 
     execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1");
     execute_query(Test->conn_rwsplit, "CREATE TABLE t1(id INT PRIMARY KEY, val INT, msg VARCHAR(100))");
@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
     printf("update #3: %ld  (expeced value is 2)\n", (long) rows);
     if (rows != 2) {global_result++;}
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 
 }

@@ -21,18 +21,18 @@ export galera_port_001=3306
 export galera_port_002=3306
 export galera_port_003=3306
 
-export Maxscale_IP="192.168.122.105"
+export maxscale_IP="192.168.122.105"
 
 export KillVMCommand="/home/ec2-user/test-scripts/kill_vm.sh"
 export StartVMCommand="/home/ec2-user/test-scripts/start_vm.sh"
 export GetLogsCommand="/home/ec2-user/test-scripts/get_logs.sh"
 
 
-export repl_User="skysql"
-export repl_Password="skysql"
+export repl_user="skysql"
+export repl_password="skysql"
 
-export galera_User="skysql"
-export galera_Password="skysql"
+export galera_user="skysql"
+export galera_password="skysql"
 
 export ImagesDir="/home/ec2-user/kvm/images"
 export SSHKeysDir="/home/ec2-user/KEYS"
@@ -48,7 +48,7 @@ export galera_sshkey_001=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_001`
 export galera_sshkey_002=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_002`
 export galera_sshkey_003=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_003`
 
-export Maxscale_sshkey=$SSHKeysDir/`cat $TestVMsDir/image_name_$Maxscale_IP`
+export maxscale_sshkey=$SSHKeysDir/`cat $TestVMsDir/image_name_$maxscale_IP`
 
 export maxdir="/usr/local/skysql/maxscale/"
 export SysbenchDir="/home/ec2-user/sysbench_deb7/sysbench/"

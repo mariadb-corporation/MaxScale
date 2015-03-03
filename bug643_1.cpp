@@ -73,22 +73,22 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
     printf("Trying to connect to all Maxscale services\n"); fflush(stdout);
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
     printf("Trying to send query to RWSplit\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
     printf("Trying to send query to ReadConn master\n"); fflush(stdout);
     global_result += execute_query(Test->conn_master, (char *) "show processlist");
     printf("Trying to send query to ReadConn slave\n"); fflush(stdout);
     global_result += execute_query(Test->conn_slave, (char *) "show processlist");
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result += CheckLogErr((char *) "Warning : Unable to find filter 'tests' for service 'RW Split2'", TRUE);
-    global_result += CheckLogErr((char *) "Error : Failed to start service 'RW Split2'", TRUE);
+    global_result += check_log_err((char *) "Warning : Unable to find filter 'tests' for service 'RW Split2'", TRUE);
+    global_result += check_log_err((char *) "Error : Failed to start service 'RW Split2'", TRUE);
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 

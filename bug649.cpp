@@ -31,11 +31,11 @@ int main(int argc, char *argv[])
     Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    printf("Connecting to RWSplit %s\n", Test->Maxscale_IP);
-    Test->ConnectRWSplit();
+    printf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->connect_rwsplit();
 
     global_result += create_t1(Test->conn_rwsplit);
     create_insert_string(sql, 65000, 1);
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     sleep(1);
 
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);
-    Test->repl->BlockNode(0); fflush(stdout);
+    Test->repl->block_node(0); fflush(stdout);
 
     sleep(1);
 
@@ -58,24 +58,24 @@ int main(int argc, char *argv[])
     sleep(1);
 
     printf("Setup firewall back to allow mysql\n"); fflush(stdout);
-    Test->repl->UnblockNode(0); fflush(stdout);
+    Test->repl->unblock_node(0); fflush(stdout);
     sleep(10);
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
-    global_result += CheckMaxscaleAlive(); fflush(stdout);
+    global_result += check_maxscale_alive(); fflush(stdout);
 
-    Test->CloseRWSplit(); fflush(stdout);
+    Test->close_rwsplit(); fflush(stdout);
 
 
     printf("Reconnecting and trying query to RWSplit\n"); fflush(stdout);
-    Test->ConnectRWSplit();
+    Test->connect_rwsplit();
     global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist;");
-    Test->CloseRWSplit();
+    Test->close_rwsplit();
 
     exit_flag = 1;
     sleep(10);
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 
 
@@ -83,7 +83,7 @@ void *parall_traffic( void *ptr )
 {
     MYSQL * conn;
     while (exit_flag == 0) {
-        conn = Test->OpenRWSplitConn();
+        conn = Test->open_rwsplit_connection();
         execute_query(conn, sql);
         mysql_close(conn);
         fflush(stdout);

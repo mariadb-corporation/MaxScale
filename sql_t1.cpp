@@ -39,15 +39,15 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
             }
         }
 
-        if (rows_from_select != rows) {printf("SELECT returned %llu rows insted of %llu!\n", rows_from_select, rows); test_result=1;  printf("sql was %s\n", sql);} else {
+        if (rows_from_select != rows) {printf("SELECT returned %llu rows instead of %llu!\n", rows_from_select, rows); test_result=1;  printf("sql was %s\n", sql);} else {
             num_fields = mysql_num_fields(res);
-            if (num_fields != 2) { printf("SELECT returned %llu fileds insted of 2!\n", num_fields); test_result=1; }
+            if (num_fields != 2) { printf("SELECT returned %llu fileds instead of 2!\n", num_fields); test_result=1; }
             if(mysql_num_rows(res) > 0)
             {
                 while((row = mysql_fetch_row(res)) != NULL) {
                     for (i = 0; i < num_fields; i++) {
                         sscanf(row[i], "%llu", &int_res);
-                        if ((i == 0 ) && (int_res != row_i)) {printf("SELECT returned wrong result! %llu insted of expected %llu\n", int_res, row_i); test_result=1; printf("sql was %s\n", sql);}
+                        if ((i == 0 ) && (int_res != row_i)) {printf("SELECT returned wrong result! %llu instead of expected %llu\n", int_res, row_i); test_result=1; printf("sql was %s\n", sql);}
                     }
                     row_i++;
                 }

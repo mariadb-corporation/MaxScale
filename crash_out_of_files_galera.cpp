@@ -17,14 +17,14 @@ int main(int argc, char *argv[])
     int new_selects[256];
     int new_inserts[256];
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->repl->Connect();
+    Test->repl->connect();
     for (int i = 0; i < Test->galera->N; i++) {
         execute_query(Test->galera->nodes[i], (char *) "set global max_connections = 20;");
     }
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
 
 
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, true);
@@ -33,16 +33,16 @@ int main(int argc, char *argv[])
     //sleep(10);
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, true);
 
-    Test->galera->Connect();
+    Test->galera->connect();
     for (int i = 0; i < Test->galera->N; i++) {
         execute_query(Test->galera->nodes[i], (char *) "flush hosts;");
         execute_query(Test->galera->nodes[i], (char *) "set global max_connections = 151;");
     }
-    Test->galera->CloseConn();
+    Test->galera->close_connections();
 
-    CheckLogErr((char *) "refresh rate limit exceeded", FALSE);
+    check_log_err((char *) "refresh rate limit exceeded", FALSE);
 
-    global_result += CheckMaxscaleAlive();
-    Test->Copy_all_logs(); return(global_result);
+    global_result += check_maxscale_alive();
+    Test->copy_all_logs(); return(global_result);
 }
 

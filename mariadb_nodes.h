@@ -45,7 +45,7 @@ public:
     /**
      * @brief  MariaDB port for every backend node
      */
-    int Ports[256];
+    int port[256];
     /**
      * @brief  Path to ssh key for every backend node
      */
@@ -57,58 +57,96 @@ public:
     /**
      * @brief   User name to access backend nodes
      */
-    char User[256];
+    char user_name[256];
     /**
      * @brief   Password to access backend nodes
      */
-    char Password[256];
-    int Master;
+    char password[256];
+    int master;
     /**
      * @brief     name of backend setup (like 'repl' or 'galera')
      */
     char prefix[16];
     /**
+     * @brief     command to kill node virtual machine
+     */
+    char kill_vm_command[1024];
+    /**
+     * @brief     command to start node virtual machine
+     */
+    char start_vm_command[1024];
+    /**
     * @brief  Opens connctions to all backend nodes (to 'test' DB)
     * @return 0 in case of success
     */
-    int Connect();
+    int connect();
     /**
      * @brief  close connections which were previously opened by Connect()
      * @return
      */
-    int CloseConn();
+    int close_connections();
     /**
      * @brief reads IP, Ports, sshkeys for every node from enviromental variables as well as number of nodes (N) and  User/Password
      * @return 0
      */
-    int ReadEnv();
+    int read_env();
     /**
      * @brief  prints all nodes information
      * @return 0
      */
-    int PrintIP();
+    int print_env();
 
-    int FindMaster();
+    int find_master();
     /**
-     * @brief ChangeMaster  set a new master node for Master/Slave setup
+     * @brief change_master set a new master node for Master/Slave setup
      * @param NewMaster index of new Master node
      * @param OldMaster index of current Master node
      * @return  0 in case of success
      */
-    int ChangeMaster(int NewMaster, int OldMaster);
+    int change_master(int NewMaster, int OldMaster);
+
+    /**
+     * @brief stop_nodes stops mysqld on all nodes
+     * @return  0 in case of success
+     */
+    int stop_nodes();
+
+    /**
+     * @brief kill_all_vm kills all VMs using kill_vm_command
+     * @return  0 in case of success
+     */
+    int kill_all_vm();
+
+    /**
+     * @brief start_all_vm starts all VMs using start_vm_command
+     * @return  0 in case of success
+     */
+    int start_all_vm();
+
+    /**
+     * @brief wait_all_vm waits until all nodes are available
+     * @return  0 in case of success
+     */
+    int wait_all_vm();
+
+    /**
+     * @brief restart_all_vm kills and start again all VMs
+     * @return  0 in case of success
+     */
+    int restart_all_vm();
 
 
     /**
-     * @brief StopNodes stops mysqld on all nodes
+     * @brief configures nodes and starts Master/Slave replication
      * @return  0 in case of success
      */
-    int StopNodes();
+    int start_replication();
 
     /**
-     * @brief StartReplication configure nodes and start Master/Slave replication
+     * @brief configures nodes and starts Galera cluster
      * @return  0 in case of success
      */
-    int StartReplication();
+    int start_galera();
 
     /**
      * @brief StartBinlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
@@ -116,21 +154,27 @@ public:
      * @param Binlog_Port port of binlog router listener
      * @return  0 in case of success
      */
-    int StartBinlog(char * Maxscale_IP, int Binlog_Port);
+    int start_binlog(char * Maxscale_IP, int Binlog_Port);
 
     /**
      * @brif BlockNode setup firewall on a backend node to block MariaDB port
      * @param node Index of node to block
      * @return 0 in case of success
      */
-    int BlockNode(int node);
+    int block_node(int node);
 
     /**
-     * @brif UnblockNode setup firewall on a backend node to unblock MariaDB port
+     * @brief UnblockNode setup firewall on a backend node to unblock MariaDB port
      * @param node Index of node to unblock
      * @return 0 in case of success
      */
-    int UnblockNode(int node);
+    int unblock_node(int node);
+
+    /**
+     * @brief Check if all nodes are avaliable (via ssh)
+     * @return 0 if everything is ok
+     */
+    int check_nodes();
 };
 
 #endif // MARIADB_NODES_H

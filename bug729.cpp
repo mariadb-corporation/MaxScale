@@ -36,10 +36,10 @@ int main(int argc, char *argv[])
     int global_result = 0;
     char str[1024];
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    sprintf(str, "php %s/bug729.php %s %d %s %s", Test->test_dir, Test->Maxscale_IP, Test->rwsplit_port, Test->Maxscale_User, Test->Maxscale_Password);
+    sprintf(str, "php %s/bug729.php %s %d %s %s", Test->test_dir, Test->maxscale_IP, Test->rwsplit_port, Test->maxscale_user, Test->maxscale_password);
 
     printf("Executing PHP script: %s\n", str); fflush(stdout);
     if (system(str) !=0) {
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         printf("PHP script FAILED!\n"); fflush(stdout);
     }
 
-    global_result += CheckLogErr((char *) "Error : Can't route MYSQL_COM_STMT_PREPARE", FALSE);
+    global_result += check_log_err((char *) "Error : Can't route MYSQL_COM_STMT_PREPARE", FALSE);
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

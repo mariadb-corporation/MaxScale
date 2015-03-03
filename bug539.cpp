@@ -33,23 +33,23 @@ int main(int argc, char *argv[])
     ports[2] = Test->readconn_slave_port;
 
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
     for (i = 0; i < N_cmd; i++) {
         for (j = 0; j < N_ports; j++) {
             printf("Executing MaxAdmin command '%s'\n", fail_cmd[i]); fflush(stdout);
-            if (executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", fail_cmd[i]) != 0) {
+            if (executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", fail_cmd[i]) != 0) {
                 printf("MaxAdmin command failed\n"); fflush(stdout);
                 global_result++;
             } else {
                 printf("Trying query against %d\n", ports[j]);
-                conn = open_conn(ports[j], Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_User);
+                conn = open_conn(ports[j], Test->maxscale_IP, Test->maxscale_user, Test->maxscale_user);
                 global_result += execute_query(conn, (char *) "show processlist;");
             }
         }
     }
 
-    global_result += CheckMaxscaleAlive();
-    Test->Copy_all_logs(); return(global_result);
+    global_result += check_maxscale_alive();
+    Test->copy_all_logs(); return(global_result);
 }

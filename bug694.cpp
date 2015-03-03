@@ -21,10 +21,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     printf("Trying SELECT @a:=@a+1 as a, test.b FROM test\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test; CREATE TABLE test (b integer);");
@@ -39,14 +39,14 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test;");
 
     printf("Checking if MaxScale alive\n"); fflush(stdout);
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
     printf("Checking logs\n"); fflush(stdout);
-    global_result    += CheckLogErr((char *) "Warning : The query can't be routed to all backend servers because it includes SELECT and SQL variable modifications which is not supported", TRUE);
-    global_result    += CheckLogErr((char *) "SELECT with session data modification is not supported if configuration parameter use_sql_variables_in=all", TRUE);
+    global_result    += check_log_err((char *) "Warning : The query can't be routed to all backend servers because it includes SELECT and SQL variable modifications which is not supported", TRUE);
+    global_result    += check_log_err((char *) "SELECT with session data modification is not supported if configuration parameter use_sql_variables_in=all", TRUE);
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 

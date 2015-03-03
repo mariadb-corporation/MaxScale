@@ -18,11 +18,11 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->ConnectMaxscale();
+    global_result += Test->connect_maxscale();
 
     printf("executing show status 1000 times\n"); fflush(stdout);
 
@@ -37,9 +37,9 @@ int main(int argc, char *argv[])
         global_result += execute_query(Test->conn_master, (char *) "show status");
     }
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    CheckMaxscaleAlive();
+    check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

@@ -31,11 +31,11 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
     printf("Trying to connect to all Maxscale services\n"); fflush(stdout);
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
     printf("Trying to send query to ReadConn master\n"); fflush(stdout);
     global_result += execute_query(Test->conn_master, (char *) "show processlist");
     printf("Trying to send query to ReadConn slave\n"); fflush(stdout);
@@ -45,11 +45,11 @@ int main(int argc, char *argv[])
         global_result++;
         printf("FAIL: Query to broken service succeeded!\n");
     }
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result += CheckLogErr((char *) "Error : RW Split Router: Recursive use of tee filter in service", TRUE);
+    global_result += check_log_err((char *) "Error : RW Split Router: Recursive use of tee filter in service", TRUE);
 
     //global_result += CheckMaxscaleAlive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

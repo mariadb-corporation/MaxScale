@@ -24,9 +24,9 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->PrintIP();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     printf("RWSplit: \n"); fflush(stdout);
     global_result = execute_query(Test->conn_rwsplit, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
@@ -35,10 +35,10 @@ int main(int argc, char *argv[])
     printf("readConn slave: \n"); fflush(stdout);
     global_result = execute_query(Test->conn_slave, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 

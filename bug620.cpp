@@ -20,10 +20,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     printf("Creating 'root'@'%%'\n");
     //global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'root'@'%'; SET PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     MYSQL * conn;
 
     printf("Connecting using 'root'@'%%'\n");
-    conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "root", (char *)  "skysqlroot");
+    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "root", (char *)  "skysqlroot");
     if (conn == NULL) {
         printf("Connection using 'root' user failed\n");
         global_result++;
@@ -48,12 +48,12 @@ int main(int argc, char *argv[])
     printf("Dropping 'root'@'%%'\n");
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'root'@'%';");
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result += CheckLogErr((char *) "Warning: Failed to add user skysql", FALSE);
-    global_result += CheckLogErr((char *) "Error : getaddrinfo failed", FALSE);
-    global_result += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
+    global_result += check_log_err((char *) "Warning: Failed to add user skysql", FALSE);
+    global_result += check_log_err((char *) "Error : getaddrinfo failed", FALSE);
+    global_result += check_log_err((char *) "Error : Couldn't find suitable Master", FALSE);
 
-    global_result += CheckMaxscaleAlive();
-    Test->Copy_all_logs(); return(global_result);
+    global_result += check_maxscale_alive();
+    Test->copy_all_logs(); return(global_result);
 }

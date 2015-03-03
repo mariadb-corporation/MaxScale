@@ -20,16 +20,16 @@ int main(int argc, char *argv[])
     int global_result = 0;
 
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->galera->Connect();
+    Test->read_env();
+    Test->print_env();
+    Test->galera->connect();
 
     tolerance=0;
 
     // connect to the MaxScale server (rwsplit)
-    Test->ConnectRWSplit();
+    Test->connect_rwsplit();
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "shutdown monitor \"Galera Monitor\"");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "shutdown monitor \"Galera Monitor\"");
 
     if (Test->conn_rwsplit == NULL ) {
         printf("Can't connect to MaxScale\n");
@@ -50,9 +50,9 @@ int main(int argc, char *argv[])
 
         // close connections
 
-        Test->CloseRWSplit();
+        Test->close_rwsplit();
     }
-    Test->galera->CloseConn();
+    Test->galera->close_connections();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

@@ -20,26 +20,26 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    printf("Connecting to Maxscale %s\n", Test->Maxscale_IP);
+    printf("Connecting to Maxscale %s\n", Test->maxscale_IP);
 
     char sys1[4096];
 
-    printf("Connecting to Maxscale %s to check its behaviour in case of blocking all bacxkends\n", Test->Maxscale_IP);
-    Test->ConnectMaxscale();
+    printf("Connecting to Maxscale %s to check its behaviour in case of blocking all bacxkends\n", Test->maxscale_IP);
+    Test->connect_maxscale();
 
     for (i = 0; i < Test->repl->N; i++) {
         printf("Setup firewall to block mysql on node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[i], Test->repl->IP[i], Test->repl->Ports[i]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[i], Test->repl->IP[i], Test->repl->port[i]);
         printf("%s\n", sys1); fflush(stdout);
         system(sys1); fflush(stdout);
     }
 
     pid_t pid = fork();
     if (!pid) {
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"service maxscale restart &\"", Test->Maxscale_sshkey, Test->Maxscale_IP);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"service maxscale restart &\"", Test->maxscale_sshkey, Test->maxscale_IP);
         printf("%s\n", sys1); fflush(stdout);
         system(sys1); fflush(stdout);
     } else {
@@ -48,11 +48,11 @@ int main(int argc, char *argv[])
         sleep(20);
 
         printf("Checking if MaxScale is alive by connecting to MaxAdmin\n"); fflush(stdout);
-        global_result += executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char* ) "show servers");
+        global_result += executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char* ) "show servers");
 
         for (i = 0; i < Test->repl->N; i++) {
             printf("Setup firewall back to allow mysql on node %d\n", i); fflush(stdout);
-            sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[i], Test->repl->IP[i], Test->repl->Ports[i]);
+            sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[i], Test->repl->IP[i], Test->repl->port[i]);
             printf("%s\n", sys1);  fflush(stdout);
             system(sys1); fflush(stdout);
         }
@@ -61,24 +61,24 @@ int main(int argc, char *argv[])
         sleep(60);
 
         printf("Checking Maxscale is alive\n"); fflush(stdout);
-        global_result += CheckMaxscaleAlive(); fflush(stdout);
+        global_result += check_maxscale_alive(); fflush(stdout);
         if (global_result !=0) {
             printf("MaxScale is not alive\n");
         } else {
             printf("MaxScale is still alive\n");
         }
 
-        Test->CloseMaxscaleConn(); fflush(stdout);
+        Test->close_maxscale_connections(); fflush(stdout);
 
         printf("Reconnecting and trying query to RWSplit\n"); fflush(stdout);
-        Test->ConnectMaxscale();
+        Test->connect_maxscale();
         global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist;");
         printf("Trying query to ReadConn master\n"); fflush(stdout);
         global_result += execute_query(Test->conn_master, (char *) "show processlist;");
         printf("Trying query to ReadConn slave\n"); fflush(stdout);
         global_result += execute_query(Test->conn_slave, (char *) "show processlist;");
-        Test->CloseMaxscaleConn();
+        Test->close_maxscale_connections();
 
-        Test->Copy_all_logs(); return(global_result);
+        Test->copy_all_logs(); return(global_result);
     }
 }

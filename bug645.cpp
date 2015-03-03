@@ -50,16 +50,16 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
     global_result += execute_query(Test->conn_master, (char *) "show processlist");
     global_result += execute_query(Test->conn_slave, (char *) "show processlist");
     global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

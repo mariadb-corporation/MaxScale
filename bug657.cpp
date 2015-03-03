@@ -62,25 +62,25 @@ int main(int argc, char *argv[])
     Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    printf("Connecting to ReadConn Master %s\n", Test->Maxscale_IP);
-    Test->ConnectReadMaster();
+    printf("Connecting to ReadConn Master %s\n", Test->maxscale_IP);
+    Test->connect_readconn_master();
 
     char sys1[4096];
     sleep(1);
 
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->Ports[0]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->port[0]);
     printf("%s\n", sys1); fflush(stdout);
     system(sys1); fflush(stdout);
 
     sleep(10);
 
     printf("Reconnecting to ReadConnMaster\n"); fflush(stdout);
-    Test->CloseReadMaster();
-    Test->ConnectReadMaster();
+    Test->close_readconn_master();
+    Test->connect_readconn_master();
 
     //printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
     //execute_query(Test->conn_rwsplit, (char *) "show processlist;");fflush(stdout);
@@ -89,24 +89,24 @@ int main(int argc, char *argv[])
 
 
     printf("Setup firewall back to allow mysql\n"); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->Ports[0]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->port[0]);
     printf("%s\n", sys1);  fflush(stdout);
     system(sys1); fflush(stdout);
     sleep(10);
 
     printf("Closing connection\n"); fflush(stdout);
 
-    Test->CloseReadMaster(); fflush(stdout);
+    Test->close_readconn_master(); fflush(stdout);
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
 
-    global_result += CheckMaxscaleAlive(); fflush(stdout);
+    global_result += check_maxscale_alive(); fflush(stdout);
 
 
     //exit_flag = 1;
     //sleep(10);
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 
 /*

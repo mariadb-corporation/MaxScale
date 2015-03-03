@@ -15,10 +15,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    Test->connect_maxscale();
 
     printf("Creating user 'user' with 3 different passwords for different hosts\n");  fflush(stdout);
     execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'non_existing_host1' identified by 'pass1';  FLUSH PRIVILEGES;");
@@ -29,14 +29,14 @@ int main(int argc, char *argv[])
 
     sleep(60);
 
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user", (char *) "pass1");
+    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass1");
     if (conn != NULL) {
         printf("MaxScale ignores host in authentification\n");
         global_result++;
         mysql_close(conn);
     }
 
-    conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user", (char *) "pass2");
+    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass2");
     if (conn == NULL) {
         printf("MaxScale can't connect\n");
         global_result++;
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
         mysql_close(conn);
     }
 
-    conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user", (char *) "pass3");
+    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass3");
     if (conn != NULL) {
         printf("MaxScale ignores host in authentification\n");
         global_result++;
@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
     execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
     execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'non_existing_host1';");
     execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'non_existing_host2';");
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 
 }

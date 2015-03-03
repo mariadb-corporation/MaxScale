@@ -76,11 +76,11 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->ConnectMaxscale();
+    global_result += Test->connect_maxscale();
 
     printf("executing fetch * from mysql.user \n"); fflush(stdout);
 
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_rwsplit, (char *) "fetch count(*) form mysql.user;");
 
 
-    Test->CloseMaxscaleConn();
-    CheckMaxscaleAlive();
-    Test->Copy_all_logs(); return(global_result);
+    Test->close_maxscale_connections();
+    check_maxscale_alive();
+    Test->copy_all_logs(); return(global_result);
 }

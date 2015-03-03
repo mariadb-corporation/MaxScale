@@ -16,17 +16,17 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     printf("Creating user with old style password\n");
     global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' IDENTIFIED BY 'old'; GRANT ALL PRIVILEGES ON *.* TO 'user_long_hoste'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' WITH GRANT OPTION;");
     sleep(10);
 
     printf("Trying to connect using user with old style password\n");
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user_long_host11", (char *)  "old");
+    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user_long_host11", (char *)  "old");
 
     if ( conn == NULL) {
         printf("Connections is not open as expected\n");
@@ -37,10 +37,10 @@ int main(int argc, char *argv[])
     }
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org'");
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

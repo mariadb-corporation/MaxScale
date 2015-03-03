@@ -17,16 +17,16 @@ int main(int argc, char *argv[])
     int new_selects[256];
     int new_inserts[256];
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
     printf("Connecting to all nodes\n"); fflush(stdout);
-    Test->repl->Connect();
+    Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
         printf("set max_connections = 20 for node %d\n", i); fflush(stdout);
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 20;");
     }
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
 
     printf("Start load\n"); fflush(stdout);
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, false);
@@ -38,16 +38,16 @@ int main(int argc, char *argv[])
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, false);
 
     printf("restoring nodes\n"); fflush(stdout);
-    Test->repl->Connect();
+    Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "flush hosts;");
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 151;");
     }
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
 
-    CheckLogErr((char *) "refresh rate limit exceeded", FALSE);
+    check_log_err((char *) "refresh rate limit exceeded", FALSE);
 
-    global_result += CheckMaxscaleAlive();
-    Test->repl->StartReplication();
-    Test->Copy_all_logs(); return(global_result);
+    global_result += check_maxscale_alive();
+    Test->repl->start_replication();
+    Test->copy_all_logs(); return(global_result);
 }

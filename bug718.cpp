@@ -24,20 +24,20 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->PrintIP();
+    Test->print_env();
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server1 master");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server2 slave");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server3 slave");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server4 slave");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server1 master");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server2 slave");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server3 slave");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server server4 slave");
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server1 master");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server2 slave");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server3 slave");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server4 slave");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server1 master");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server2 slave");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server3 slave");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "set server g_server4 slave");
 
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->ConnectMaxscale();
+    global_result += Test->connect_maxscale();
 
     //MYSQL * galera_rwsplit = open_conn(4016, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
 
@@ -58,16 +58,16 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < ThreadsNum; i ++) { pthread_join( thread_v1[i], NULL); }
 
-    Test->CloseMaxscaleConn();
-    CheckMaxscaleAlive();
+    Test->close_maxscale_connections();
+    check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 
 void *thread1( void *ptr )
 {
-    MYSQL * conn = open_conn(Test->rwsplit_port , Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
-    MYSQL * g_conn = open_conn(4016 , Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
+    MYSQL * conn = open_conn(Test->rwsplit_port , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
+    MYSQL * g_conn = open_conn(4016 , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
     char sql[1034];
     sprintf(sql, "CREATE DATABASE IF NOT EXISTS test%d; USE test%d", db1_num, db1_num);
     execute_query(conn, sql);

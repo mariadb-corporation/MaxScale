@@ -1,13 +1,13 @@
 #!/bin/bash
 
-export Test_name=561
+export test_name=bug561
 $test_dir/configure_maxscale.sh
 
-mariadb_err=`mysql -u$repl_User -p$repl_Password -h $repl_000 non_existing_db 2>&1`
-maxscale_err=`mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4006 non_existing_db 2>&1`
+mariadb_err=`mysql -u$repl_user -p$repl_password -h $repl_000 non_existing_db 2>&1`
+maxscale_err=`mysql -u$repl_user -p$repl_password -h $maxscale_IP -P 4006 non_existing_db 2>&1`
 
-maxscale_err1=`mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4008 non_existing_db 2>&1`
-maxscale_err2=`mysql -u$repl_User -p$repl_Password -h $Maxscale_IP -P 4009 non_existing_db 2>&1`
+maxscale_err1=`mysql -u$repl_user -p$repl_password -h $maxscale_IP -P 4008 non_existing_db 2>&1`
+maxscale_err2=`mysql -u$repl_user -p$repl_password -h $maxscale_IP -P 4009 non_existing_db 2>&1`
 
 echo "MariaDB message"
 echo "$mariadb_err"

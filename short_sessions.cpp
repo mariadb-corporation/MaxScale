@@ -22,15 +22,15 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
     fflush(stdout);
 
     MYSQL * conn;
     char sql[100];
 
-    conn = Test->OpenRWSplitConn();
+    conn = Test->open_rwsplit_connection();
     execute_query(conn, (char *) "DROP DATABASE IF EXISTS test;");
     execute_query(conn, (char *) "CREATE DATABASE test; USE test;");
     execute_query(conn, (char *) "USE test_non_existing_DB; USE test;");
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     fflush(stdout);
 
     for (int i = 0; i < 10000; i++) {
-        conn = Test->OpenRWSplitConn();
+        conn = Test->open_rwsplit_connection();
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
         printf("%s\n", sql);
         execute_query(conn, sql);
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
     printf("Connecting to MaxScale\n");
     fflush(stdout);
-    global_result += Test->ConnectMaxscale();
+    global_result += Test->connect_maxscale();
     printf("Checking t1 table using RWSplit router\n");
     fflush(stdout);
     global_result += execute_select_query_and_check(Test->conn_rwsplit, (char *) "SELECT * FROM t1;", 10000);
@@ -62,9 +62,9 @@ int main(int argc, char *argv[])
     fflush(stdout);
     global_result += execute_select_query_and_check(Test->conn_slave, (char *) "SELECT * FROM t1;", 10000);
     fflush(stdout);
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

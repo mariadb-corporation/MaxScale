@@ -19,10 +19,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    Test->connect_maxscale();
 
     printf("Creating user 'user' \n");  fflush(stdout);
 
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     }
 
     printf("Changing user back... \n");  fflush(stdout);
-    if (mysql_change_user(Test->conn_rwsplit, Test->repl->User, Test->repl->Password, (char *) "test") != 0) {
+    if (mysql_change_user(Test->conn_rwsplit, Test->repl->user_name, Test->repl->password, (char *) "test") != 0) {
         global_result++;
         printf("changing user failed \n");  fflush(stdout);
     }
@@ -86,9 +86,9 @@ int main(int argc, char *argv[])
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 
 }
 

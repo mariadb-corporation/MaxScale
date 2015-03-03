@@ -18,10 +18,10 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    Test->connect_maxscale();
 
 
     for (i = 1; i < Test->repl->N; i++) {
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'test_user'@'%' IDENTIFIED BY 'pass'");
 
-    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, (char *) "test_user", (char *) "pass");
+    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "test_user", (char *) "pass");
 
     if (conn == NULL) {
         printf("Connections error\n");
@@ -43,9 +43,9 @@ int main(int argc, char *argv[])
 
     execute_query(Test->conn_rwsplit, (char *) "DROP USER 'test_user'@'%'");
 
-    Test->repl->CloseConn();
-    Test->CloseMaxscaleConn();
+    Test->repl->close_connections();
+    Test->close_maxscale_connections();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 
 }

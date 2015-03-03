@@ -70,12 +70,12 @@ int main(int argc, char *argv[])
     int i;
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->galera->Connect();
+    Test->read_env();
+    Test->print_env();
+    Test->galera->connect();
 
-    printf("Connecting to ReadConnMaster on %s\n", Test->Maxscale_IP);
-    for (i=0; i<maxscale_conn_num; i++) {conn_read[i] = Test->OpenReadMasterConn();}
+    printf("Connecting to ReadConnMaster on %s\n", Test->maxscale_IP);
+    for (i=0; i<maxscale_conn_num; i++) {conn_read[i] = Test->open_readconn_master_connection();}
 
     printf("Sleeping 5 seconds\n");  sleep(5);
 
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
     Nc[3] = 0;
 
     for (i = 0; i < 4; i++) {
-        conn_num = get_conn_num(Test->galera->nodes[i], Test->Maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, (char *) "test");
         printf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
         if ((i<4) && (Nc[i] != conn_num)) {
             global_result++;
@@ -98,14 +98,14 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < maxscale_conn_num; i++) { mysql_close(conn_read[i]);}
 
-    printf("Connecting to RWSplit on %s\n", Test->Maxscale_IP);
-    for (i = 0; i < maxscale_conn_num; i++) {conn_rwsplit[i] = Test->OpenRWSplitConn();}
+    printf("Connecting to RWSplit on %s\n", Test->maxscale_IP);
+    for (i = 0; i < maxscale_conn_num; i++) {conn_rwsplit[i] = Test->open_rwsplit_connection();}
 
     printf("Sleeping 5 seconds\n");  sleep(5);
 
     int slave_found = 0;
     for (i = 1; i < Test->galera->N; i++) {
-        conn_num = get_conn_num(Test->galera->nodes[i], Test->Maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, (char *) "test");
         printf("connections to node %d: %u \n", i, conn_num);
         if ((conn_num != 0) && (conn_num != maxscale_conn_num)) {
             global_result++;
@@ -122,9 +122,9 @@ int main(int argc, char *argv[])
     }
 
     for (i=0; i<maxscale_conn_num; i++) {mysql_close(conn_rwsplit[i]);}
-    Test->galera->CloseConn();
+    Test->galera->close_connections();
 
-    global_result += CheckLogErr((char *) "Unexpected parameter 'weightby'", FALSE);
+    global_result += check_log_err((char *) "Unexpected parameter 'weightby'", FALSE);
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

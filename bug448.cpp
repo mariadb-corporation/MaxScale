@@ -17,12 +17,12 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    Test->connect_maxscale();
 
-    get_my_ip(Test->Maxscale_IP, my_ip);
+    get_my_ip(Test->maxscale_IP, my_ip);
     printf("Test machine IP %s\n", my_ip);
 
     first_dot = strstr(my_ip, ".");
@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 
     global_result += execute_query(Test->conn_rwsplit, sql);
 
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "user1", (char *) "pass1");
+    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user1", (char *) "pass1");
     if (conn == NULL) {
         printf("Authentification failed!\n");
         global_result++;
@@ -48,9 +48,9 @@ int main(int argc, char *argv[])
     sprintf(sql, "DROP USER user1@'%s';  FLUSH PRIVILEGES;", my_ip);
     global_result += execute_query(Test->conn_rwsplit, sql);
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    CheckMaxscaleAlive();
+    check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

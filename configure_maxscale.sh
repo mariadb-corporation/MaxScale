@@ -6,11 +6,11 @@ if [ -z $test_dir ] ; then
 	test_dir=$maxdir/system-test/
 fi
 
-echo "Test $Test_name"
+echo "Test $test_name"
 
-Test_name_space="$Test_name "
+test_name_space="$Test_name "
 
-template_line=`cat $test_dir/templates | grep $Test_name_space`
+template_line=`cat $test_dir/templates | grep $test_name_space`
 a=( $template_line )
 template=${a[1]}
 
@@ -60,8 +60,8 @@ do
 	echo "CREATE DATABASE IF NOT EXISTS test" | mysql -p${!Password_var} -u${!User_var} -h ${!h_var}  -P ${!port_var}
 done
 
-scp -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null MaxScale.cnf root@$Maxscale_IP:$maxdir/etc/
-#ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "$maxdir/bin/maxkeys $max_dir/etc/.secrets"
-ssh -i $Maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$Maxscale_IP "rm $maxdir/log/*.log ; rm /tmp/core*; rm -rf /dev/shm/*;  ulimit -c unlimited; service maxscale restart" 
+scp -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null MaxScale.cnf root@$maxscale_IP:$maxdir/etc/
+#ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir/bin/maxkeys $max_dir/etc/.secrets"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "rm $maxdir/log/*.log ; rm /tmp/core*; rm -rf /dev/shm/*;  ulimit -c unlimited; service maxscale restart" 
 #sleep 15
 #disown

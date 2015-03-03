@@ -25,10 +25,10 @@ int main(int argc, char *argv[])
     int i;
     int N=4;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    if (Test->ConnectMaxscale() !=0 ) {
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    if (Test->connect_maxscale() !=0 ) {
         printf("Error connecting to MaxScale\n");
         exit(1);
     }
@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_rwsplit, (char *) "SET @x = 4;");
     global_result += execute_query(Test->conn_rwsplit, (char *) "EXECUTE stmt");
 
-    global_result += CheckMaxscaleAlive();
-    Test->Copy_all_logs(); return(global_result);
+    global_result += check_maxscale_alive();
+    Test->copy_all_logs(); return(global_result);
 }
 
 

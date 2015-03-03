@@ -17,46 +17,46 @@ int main(int argc, char *argv[])
     int global_result = 0;
     char result[1024];
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers RW Split Router", (char *) "Incorrect number of arguments:", result);
+    getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers RW Split Router", (char *) "Incorrect number of arguments:", result);
     printf("result %s\n", result);
 
     if (strstr(result, "show dbusers expects 1 argument") == NULL) {
         printf("FAULT: there is NO \"show dbusers expects 1 argument\" message");
         global_result++;
     }
-    getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "User names:", result);
+    getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "User names:", result);
     printf("result %s\n", result);
 
-     executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "reload dbusers 0x232fed0");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "reload dbusers Хрен");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "reload dbusers Хрен моржовый");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "Хрен моржовый");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "khren morzhovyj");
+     executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "reload dbusers 0x232fed0");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "reload dbusers Хрен");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "reload dbusers Хрен моржовый");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "Хрен моржовый");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "khren morzhovyj");
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show Хрен");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show Хрен моржовый");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show khren morzhovyj");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show Хрен");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show Хрен моржовый");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show khren morzhovyj");
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dcb Хрен");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dcb Хрен моржовый");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dcb khren morzhovyj");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dcb Хрен");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dcb Хрен моржовый");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dcb khren morzhovyj");
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server Хрен");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server Хрен моржовый");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server khren morzhovyj");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server Хрен");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server Хрен моржовый");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server khren morzhovyj");
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service Хрен");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service Хрен моржовый");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service khren morzhovyj");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service Хрен");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service Хрен моржовый");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service khren morzhovyj");
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service khren morzhovyj");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show service khren morzhovyj");
 
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "list listeners");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "restart monitor");
-    executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "restart service");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "list listeners");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "restart monitor");
+    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "restart service");
 
 
     int N=27;
@@ -117,16 +117,16 @@ int main(int argc, char *argv[])
         for (i2 = 0; i2 < Ng; i2++) {
             sprintf(str1, "%s %s", cmd[i1], garbage[i2]);
             printf("Trying '%s'\n", str1); fflush(stdout);
-            executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", str1);
+            executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", str1);
 
             sprintf(str1, "%s %s%s%s%s %s ", cmd[i1], garbage[i2], garbage[i2], garbage[i2], garbage[i2], garbage[i2]);
             printf("Trying '%s'\n", str1); fflush(stdout);
-            executeMaxadminCommand(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", str1);
+            executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", str1);
         }
     }
 
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

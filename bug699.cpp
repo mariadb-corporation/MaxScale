@@ -21,10 +21,10 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     printf("Trying \n");  fflush(stdout);
 
@@ -71,9 +71,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

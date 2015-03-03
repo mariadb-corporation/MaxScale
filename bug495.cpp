@@ -16,7 +16,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = CheckLogErr((char *) "Error: Unable to find server", TRUE);
-    global_result += CheckMaxscaleAlive();
-    Test->Copy_all_logs(); return(global_result);
+    int global_result = check_log_err((char *) "Error: Unable to find server", TRUE);
+    global_result += check_maxscale_alive();
+    Test->copy_all_logs(); return(global_result);
 }

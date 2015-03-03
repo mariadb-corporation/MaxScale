@@ -52,13 +52,13 @@ int main(int argc, char *argv[])
     int i;
     int N=4;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
 
     for (i = 0; i < 4; i++) {
-        Test->repl->Connect();
-        if (Test->ConnectMaxscale() !=0 ) {
+        Test->repl->connect();
+        if (Test->connect_maxscale() !=0 ) {
             printf("Error connecting to MaxScale\n");
             exit(1);
         }
@@ -91,13 +91,13 @@ int main(int argc, char *argv[])
         execute_query(Test->conn_slave, "CREATE TABLE ");
 
         // close connections
-        Test->CloseMaxscaleConn();
-        Test->repl->CloseConn();
+        Test->close_maxscale_connections();
+        Test->repl->close_connections();
 
     }
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
     if (global_result == 0) {printf("PASSED!!\n");} else {printf("FAILED!!\n");}
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-export Test_name=bug562
+export test_name=bug562
 $test_dir/configure_maxscale.sh
 
 mariadb_err=`mysql -u no_such_user -psome_pwd -h $repl_001 test 2>&1`
-maxscale_err=`mysql -u no_such_user -psome_pwd -h $Maxscale_IP -P 4006 test 2>&1`
+maxscale_err=`mysql -u no_such_user -psome_pwd -h $maxscale_IP -P 4006 test 2>&1`
 
 echo "MariaDB message"
 echo "$mariadb_err"

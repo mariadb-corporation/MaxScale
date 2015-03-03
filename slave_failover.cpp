@@ -23,11 +23,11 @@ int main(int argc, char *argv[])
     unsigned int current_slave;
     unsigned int old_slave;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    printf("Connecting to RWSplit %s\n", Test->Maxscale_IP);
-    if (Test->ConnectRWSplit() != 0) {
+    printf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    if (Test->connect_rwsplit() != 0) {
         printf("Error connection to RWSplit! Exiting\n");
         global_result++;
     } else {
@@ -61,35 +61,35 @@ int main(int argc, char *argv[])
     printf("Doing test again, but with firewall block instead of VM killing\n");*/
 
         printf("Checking current slave\n"); fflush(stdout);
-        old_slave = FindConnectedSlave(Test, &global_result);
+        old_slave = find_connected_slave(Test, &global_result);
 
         printf("Setup firewall to block mysql on old slave (oldslave is node %d)\n", old_slave); fflush(stdout);
         if ((old_slave < 0) || (old_slave >= Test->repl->N)) {
             printf("Active slave is not found\n");
             global_result++;
         } else {
-            sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[old_slave], Test->repl->IP[old_slave], Test->repl->Ports[old_slave]);
+            sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[old_slave], Test->repl->IP[old_slave], Test->repl->port[old_slave]);
             printf("%s\n", sys1); fflush(stdout);
             system(sys1);
 
             printf("Sleeping 60 seconds to let MaxScale to find new slave\n"); fflush(stdout);
             sleep(60);
 
-            current_slave = FindConnectedSlave(Test, &global_result);
+            current_slave = find_connected_slave(Test, &global_result);
             if ((current_slave == old_slave) || (current_slave < 0)) {printf("FAILED: No failover happened\n"); global_result=1;}
 
             printf("Setup firewall back to allow mysql\n"); fflush(stdout);
-            sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[old_slave], Test->repl->IP[old_slave], Test->repl->Ports[old_slave]);
+            sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[old_slave], Test->repl->IP[old_slave], Test->repl->port[old_slave]);
             printf("%s\n", sys1);  fflush(stdout);
             system(sys1);
 
-            global_result += CheckMaxscaleAlive();
+            global_result += check_maxscale_alive();
 
-            Test->CloseRWSplit();
+            Test->close_rwsplit();
         }
 
-        Test->repl->StartReplication();
+        Test->repl->start_replication();
     }
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

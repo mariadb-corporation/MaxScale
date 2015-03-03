@@ -82,10 +82,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
     printf("trying query to RWSplit, expecting failure\n");
     execute_query(Test->conn_rwsplit, (char *) "show processlist");  fflush(stdout);
     printf("Trying query to ReadConn router master\n"); fflush(stdout);
@@ -99,11 +99,11 @@ int main(int argc, char *argv[])
         global_result++;
     }
 
-    Test->CloseMaxscaleConn();  fflush(stdout);
+    Test->close_maxscale_connections();  fflush(stdout);
 
-    global_result += CheckLogErr((char *) "Couldn't find suitable Master from 2 candidates", TRUE);
-    global_result += CheckLogErr((char *) "Creating client session for Tee filter failed. Terminating session.", TRUE);
+    global_result += check_log_err((char *) "Couldn't find suitable Master from 2 candidates", TRUE);
+    global_result += check_log_err((char *) "Creating client session for Tee filter failed. Terminating session.", TRUE);
 
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

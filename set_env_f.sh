@@ -49,7 +49,7 @@ export galera_port_003=3306
 
 
 export maxdir="/usr/local/skysql/maxscale/"
-export SysbenchDir="/home/ec2-user/sysbench_deb7/sysbench/"
+export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
 if [ -f copy_logs.sh ] ; then
 	export test_dir=`pwd`
 else
@@ -57,22 +57,31 @@ else
 fi
 
 # IP Of MaxScale machine
-export Maxscale_IP="192.168.122.$IP_end"
+export maxscale_IP="192.168.122.$IP_end"
 
 # User name and Password for Master/Slave replication setup (should have all PRIVILEGES)
-export repl_User="skysql"
-export repl_Password="skysql"
+export repl_user="skysql"
+export repl_password="skysql"
 
 # User name and Password for Galera setup (should have all PRIVILEGES)
-export galera_User="skysql"
-export galera_Password="skysql"
+export galera_user="skysql"
+export galera_password="skysql"
+
+export maxscale_user="skysql"
+export maxscale_password="skysql"
 
 # command to kill VM (obsolete)
-export KillVMCommand="/home/ec2-user/test-scripts/kill_vm.sh"
+export kill_vm_command="/home/ec2-user/test-scripts/kill_vm.sh"
 # command to restore VM (obsolete)
-export StartVMCommand="/home/ec2-user/test-scripts/start_vm.sh"
+export start_vm_command="/home/ec2-user/test-scripts/start_vm.sh"
+
+export repl_kill_vm_command="/home/ec2-user/test-scripts/kill_vm.sh"
+export repl_start_vm_command="/home/ec2-user/test-scripts/start_vm.sh"
+export galera_kill_vm_command="/home/ec2-user/test-scripts/kill_vm.sh"
+export galera_start_vm_command="/home/ec2-user/test-scripts/start_vm.sh"
+
 # command to download logs from MaxScale machine
-export GetLogsCommand="$test_dir/get_logs.sh"
+export get_logs_command="$test_dir/get_logs.sh"
 
 # used to generate links to ssh keys on Jenkins machine
 export ImagesDir="/home/ec2-user/kvm/images"
@@ -90,7 +99,7 @@ export galera_sshkey_001=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_001`
 export galera_sshkey_002=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_002`
 export galera_sshkey_003=$SSHKeysDir/`cat $TestVMsDir/image_name_$galera_003`
 
-export Maxscale_sshkey=$SSHKeysDir/`cat $TestVMsDir/image_name_$Maxscale_IP`
+export maxscale_sshkey=$SSHKeysDir/`cat $TestVMsDir/image_name_$maxscale_IP`
 
 # Sysbench directory (should be sysbench >= 0.5)
-export SysbenchDir="/home/ec2-user/sysbench_deb7/sysbench/"
+export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"

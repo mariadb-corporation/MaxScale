@@ -14,10 +14,10 @@ int main(int argc, char *argv[])
     int global_result = 0;
     char master_ip[100];
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     for (int i = 0; i < 100; i++) {
         if (find_status_field(Test->conn_rwsplit, (char *) "SHOW SLAVE STATUS", (char *) "Master_Host", master_ip) != 0) {
@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

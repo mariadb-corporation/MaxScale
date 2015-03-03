@@ -16,9 +16,9 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->connect_maxscale();
 
 
     printf("Trying queries that caused crashes before fix: bug473\n"); fflush(stdout);
@@ -54,11 +54,11 @@ int main(int argc, char *argv[])
         printf("bug470 ok\n");
     }
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
     printf("Checking if Maxscale is alive\n"); fflush(stdout);
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 

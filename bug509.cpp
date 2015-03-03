@@ -24,10 +24,10 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->galera->Connect();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->galera->connect();
+    Test->connect_maxscale();
 
     if (Test->galera->N < 3) {
         printf("There is not enoght nodes for test\n");
@@ -106,10 +106,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    Test->CloseMaxscaleConn();
-    Test->galera->CloseConn();
+    Test->close_maxscale_connections();
+    Test->galera->close_connections();
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

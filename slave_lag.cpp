@@ -28,10 +28,10 @@ int main(int argc, char *argv[])
     Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    Test->ConnectRWSplit();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    Test->connect_rwsplit();
 
     // connect to the MaxScale server (rwsplit)
 
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
         sscanf(server1_id, "%d", &server1_id_d);
 
         do {
-            getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
+            getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
             sscanf(result, "%d", &res_d);
             printf("server2: %d\n", res_d);
             find_status_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
@@ -102,18 +102,18 @@ int main(int argc, char *argv[])
             printf("Connected to master\n");
         }
         // close connections
-        Test->CloseRWSplit();
+        Test->close_rwsplit();
     }
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 
 
 void *query_thread( void *ptr )
 {
     MYSQL * conn;
-    conn = open_conn(Test->repl->Ports[0], Test->repl->IP[0], Test->repl->User, Test->repl->Password);
+    conn = open_conn(Test->repl->port[0], Test->repl->IP[0], Test->repl->user_name, Test->repl->password);
     while (exit_flag == 0) {
         execute_query(conn, (char *) "INSERT into t1 VALUES(1, 1)");
     }
@@ -124,11 +124,11 @@ void *checks_thread( void *ptr )
 {
     char result[1024];
     for (int i = 0; i < 1000; i++) {
-        getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
+        getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Slave delay:", result);
         printf("server2: %s\n", result);
-        getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server3", (char *) "Slave delay:", result);
+        getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server3", (char *) "Slave delay:", result);
         printf("server3: %s\n", result);
-        getMaxadminParam(Test->Maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server4", (char *) "Slave delay:", result);
+        getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show server server4", (char *) "Slave delay:", result);
         printf("server4: %s\n", result);
     }
     exit_flag = 1;

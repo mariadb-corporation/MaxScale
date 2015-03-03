@@ -88,8 +88,8 @@ int main(int argc, char *argv[])
     int i;
     char sys1[4096];
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
     /*
     printf("Stopping MaxScale");
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     sleep(10);
 */
 
-    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
+    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
 
     printf("Stopping %d\n", 0); fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", Test->galera->sshkey[0], Test->galera->IP[0]);
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     sleep(60);
     mysql_close(conn);
 
-    conn = open_conn_no_db(Test->rwsplit_port, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
+    conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
 
     if (conn == 0) {
         printf("Error connection to RW Split\n");
@@ -156,9 +156,9 @@ int main(int argc, char *argv[])
     printf("Closing connection\n"); fflush(stdout);
     mysql_close(conn);
 
-    Test->ConnectRWSplit();
+    Test->connect_rwsplit();
     global_result += execute_query(Test->conn_rwsplit, "show processlist;");
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
     printf("Stopping all Galera nodes\n");  fflush(stdout);
     for (i = 1; i < Test->galera->N; i++) {
@@ -186,6 +186,6 @@ int main(int argc, char *argv[])
         system(sys1); fflush(stdout);
     }
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 

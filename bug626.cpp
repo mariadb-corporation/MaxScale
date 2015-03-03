@@ -18,10 +18,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     printf("Creating user with old style password\n");
     global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'old'@'%' IDENTIFIED BY 'old';");
@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     sleep(10);
 
     printf("Trying to connect using user with old style password\n");
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->Maxscale_IP, (char *) "old", (char *)  "old");
+    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "old", (char *)  "old");
 
     if ( conn == NULL) {
         printf("Connections is not open as expected\n");
@@ -40,12 +40,12 @@ int main(int argc, char *argv[])
     }
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'old'@'%'");
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result += CheckLogErr((char *) "MaxScale does not support these old passwords", TRUE);
+    global_result += check_log_err((char *) "MaxScale does not support these old passwords", TRUE);
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 

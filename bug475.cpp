@@ -18,15 +18,15 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->connect_maxscale();
 
     global_result += execute_query(Test->conn_rwsplit, (char *) "select /* maxscale hintname prepare route to master */ @@server_id;");
     global_result += execute_query(Test->conn_rwsplit, (char *) "select /* maxscale hintname begin */ @@server_id;");
     global_result += execute_query(Test->conn_rwsplit, (char *) "select /* maxscale route to master*/ @@server_id;");
 
-    global_result += CheckLogErr((char *) "Error : Syntax error in hint", FALSE);
-    global_result += CheckMaxscaleAlive();
-    Test->Copy_all_logs(); return(global_result);
+    global_result += check_log_err((char *) "Error : Syntax error in hint", FALSE);
+    global_result += check_maxscale_alive();
+    Test->copy_all_logs(); return(global_result);
 }

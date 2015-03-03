@@ -43,10 +43,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    Test->connect_maxscale();
 
     char server_id[256];
     char server_id_d[256];
@@ -73,12 +73,12 @@ int main(int argc, char *argv[])
     }
 
 
-    Test->CloseMaxscaleConn();
-    Test->repl->CloseConn();
+    Test->close_maxscale_connections();
+    Test->repl->close_connections();
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 
 

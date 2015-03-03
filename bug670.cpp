@@ -166,11 +166,11 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
     printf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->ConnectMaxscale();
+    global_result += Test->connect_maxscale();
 
     printf("executing sql 100 times (ReadConn Slave)\n"); fflush(stdout);
     for (i = 0; i < 100; i++)  {
@@ -187,9 +187,9 @@ int main(int argc, char *argv[])
         execute_query(Test->conn_rwsplit, bug670_sql);
     }
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

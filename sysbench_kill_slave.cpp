@@ -34,13 +34,13 @@ int main(int argc, char *argv[])
     port[1]=Test->readconn_master_port;
     port[2]=Test->readconn_slave_port;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
 
-    printf("Connecting to RWSplit %s\n", Test->Maxscale_IP);
+    printf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     //Test->ConnectRWSplit();
-    sprintf(&sys1[0], sysbench_prepare, Test->SysbenchDir, Test->SysbenchDir, Test->Maxscale_IP);
+    sprintf(&sys1[0], sysbench_prepare, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP);
     //Test->CloseRWSplit();
     printf("Preparing sysbench tables\n%s\n", sys1);  fflush(stdout);
     if (system(sys1) != 0) {
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
         } else {
             readonly = ro_off;
         }
-        sprintf(&sys1[0], sysbench_command, Test->SysbenchDir, Test->SysbenchDir, Test->Maxscale_IP, port[k], readonly);
+        sprintf(&sys1[0], sysbench_command, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP, port[k], readonly);
         printf("Executing sysbench tables\n%s\n", sys1); fflush(stdout);
         if (system(sys1) != 0) {
             printf("Error executing sysbench test\n");
@@ -69,16 +69,16 @@ int main(int argc, char *argv[])
 
         printf("Starting VM back\n"); fflush(stdout);
         if ((old_slave >= 1) && (old_slave <= Test->repl->N)) {
-            sprintf(&sys1[0], "%s %s", Test->StartVMCommand, Test->repl->IP[old_slave]);
+            sprintf(&sys1[0], "%s %s", Test->start_vm_command, Test->repl->IP[old_slave]);
             system(sys1);fflush(stdout);
         }
         sleep(60);
         printf("Restarting replication\n"); fflush(stdout);
-        Test->repl->StartReplication();
+        Test->repl->start_replication();
         sleep(30);
     }
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     printf("Dropping sysbanch tables!\n"); fflush(stdout);
 
@@ -91,13 +91,13 @@ int main(int argc, char *argv[])
 
     printf("closing connections to MaxScale!\n"); fflush(stdout);
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
     printf("Checxking if MaxScale is still alive!\n"); fflush(stdout);
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
     fflush(stdout);
-    Test->Copy_all_logs(); fflush(stdout);
+    Test->copy_all_logs(); fflush(stdout);
     printf("Logs copied!\n"); fflush(stdout);
     return(global_result);
 }
@@ -108,7 +108,7 @@ void *kill_vm_thread( void *ptr )
     //int global_result = 0;
     sleep(20);
     printf("Checking current slave\n"); fflush(stdout);
-    old_slave = FindConnectedSlave1(Test);
+    old_slave = find_connected_slave1(Test);
 
     if ((old_slave >= 1) && (old_slave <= Test->repl->N)) {
         printf("Active slave is %d\n", old_slave); fflush(stdout);
@@ -118,7 +118,7 @@ void *kill_vm_thread( void *ptr )
     }
     char sys1[4096];
     printf("Killing VM %s\n", Test->repl->IP[old_slave]); fflush(stdout);
-    sprintf(&sys1[0], "%s %s", Test->KillVMCommand, Test->repl->IP[old_slave]);
+    sprintf(&sys1[0], "%s %s", Test->kill_vm_command, Test->repl->IP[old_slave]);
     system(sys1);
     return NULL;
 }

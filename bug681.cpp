@@ -15,10 +15,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
+    Test->connect_maxscale();
 
     if (Test->conn_rwsplit != NULL) {
         global_result++;
@@ -30,9 +30,9 @@ int main(int argc, char *argv[])
     printf("Trying query to ReadConn slave\n"); fflush(stdout);
     global_result += execute_query(Test->conn_slave, "show processlist;");
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
 
-    global_result    += CheckLogErr((char *) "Error : Unable to start RW Split Router service. There are too few backend servers configured in MaxScale.cnf. Found 10% when at least 33% would be required", TRUE);
+    global_result    += check_log_err((char *) "Error : Unable to start RW Split Router service. There are too few backend servers configured in MaxScale.cnf. Found 10% when at least 33% would be required", TRUE);
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

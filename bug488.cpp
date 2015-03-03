@@ -17,10 +17,10 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    Test->connect_maxscale();
 
     printf("Trying SHOW VARIABLES to different Maxscale services\n");  fflush(stdout);
     printf("RWSplit\n");  fflush(stdout);
@@ -37,10 +37,10 @@ int main(int argc, char *argv[])
         global_result += execute_query(Test->conn_slave, (char *) "SHOW VARIABLES;");
     }
 
-    Test->CloseMaxscaleConn();
-    Test->repl->CloseConn();
+    Test->close_maxscale_connections();
+    Test->repl->close_connections();
 
-    global_result += CheckMaxscaleAlive();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

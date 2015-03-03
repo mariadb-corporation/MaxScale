@@ -13,10 +13,11 @@ TestConnections::TestConnections(int argc, char *argv[])
     readconn_master_port = 4008;
     readconn_slave_port = 4009;
 
-    ReadEnv();
+    read_env();
 
     no_maxscale_stop = false;
     no_maxscale_start = false;
+    no_nodes_check = false;
 
     int c;
     bool run_flag = true;
@@ -29,8 +30,9 @@ TestConnections::TestConnections(int argc, char *argv[])
             {"verbose", no_argument, 0, 'v'},
             {"silent", no_argument, 0, 'n'},
             {"help",   no_argument,  0, 'h'},
-            {"no_maxscale_start", no_argument, 0, 's'},
-            {"no_maxscale_stop",  no_argument, 0, 'd'},
+            {"no-maxscale-start", no_argument, 0, 's'},
+            {"no-maxscale-stop",  no_argument, 0, 'd'},
+            {"no-nodes-check",  no_argument, 0, 'r'},
 
             {0, 0, 0, 0}
         };
@@ -55,7 +57,7 @@ TestConnections::TestConnections(int argc, char *argv[])
             break;
 
         case 'h':
-            printf ("Options: --help --verbose --silent --no_maxscale_start --no_maxscale_stop");
+            printf ("Options: --help --verbose --silent --no-maxscale-start --no-maxscale-stop");
             break;
 
         case 's':
@@ -68,11 +70,28 @@ TestConnections::TestConnections(int argc, char *argv[])
             no_maxscale_stop = true;
             break;
 
+        case 'r':
+            printf ("Nodes are not checked before test and are not restarted\n");
+            no_nodes_check = true;
+            break;
+
         default:
             run_flag = false;
         }
     }
-    if (!no_maxscale_start) {InitMaxscale();}
+    if (!no_nodes_check) {
+        //  checking repl nodes VMs for availability
+        if (repl->check_nodes() != 0) {
+            repl->restart_all_vm();
+            repl->start_replication();
+        }
+        //  checking galera nodes VMs for availability
+        if (galera->check_nodes() != 0) {
+            galera->restart_all_vm();
+            galera->start_galera();
+        }
+    }
+    if (!no_maxscale_start) {init_maxscale();}
 }
 
 TestConnections::TestConnections()
@@ -84,50 +103,50 @@ TestConnections::TestConnections()
     readconn_master_port = 4008;
     readconn_slave_port = 4009;
 
-    ReadEnv();
+    read_env();
 }
 
 
-int TestConnections::ReadEnv()
+int TestConnections::read_env()
 {
 
     char * env;
     int i;
     printf("Reading test setup configuration from environmental variables\n");
-    galera->ReadEnv();
-    repl->ReadEnv();
+    galera->read_env();
+    repl->read_env();
 
-    env = getenv("Maxscale_IP"); if (env != NULL) {sprintf(Maxscale_IP, "%s", env);}
-    env = getenv("Maxscale_User"); if (env != NULL) {sprintf(Maxscale_User, "%s", env); } else {sprintf(Maxscale_User, "skysql");}
-    env = getenv("Maxscale_Password"); if (env != NULL) {sprintf(Maxscale_Password, "%s", env); } else {sprintf(Maxscale_Password, "skysql");}
-    env = getenv("Maxscale_sshkey"); if (env != NULL) {sprintf(Maxscale_sshkey, "%s", env); } else {sprintf(Maxscale_sshkey, "skysql");}
+    env = getenv("maxscale_IP"); if (env != NULL) {sprintf(maxscale_IP, "%s", env);}
+    env = getenv("maxscale_user"); if (env != NULL) {sprintf(maxscale_user, "%s", env); } else {sprintf(maxscale_user, "skysql");}
+    env = getenv("maxscale_uassword"); if (env != NULL) {sprintf(maxscale_password, "%s", env); } else {sprintf(maxscale_password, "skysql");}
+    env = getenv("maxscale_sshkey"); if (env != NULL) {sprintf(maxscale_sshkey, "%s", env); } else {sprintf(maxscale_sshkey, "skysql");}
 
-    env = getenv("KillVMCommand"); if (env != NULL) {sprintf(KillVMCommand, "%s", env);}
-    env = getenv("GetLogsCommand"); if (env != NULL) {sprintf(GetLogsCommand, "%s", env);}
-    env = getenv("StartVMCommand"); if (env != NULL) {sprintf(StartVMCommand, "%s", env);}
-    env = getenv("SysbenchDir"); if (env != NULL) {sprintf(SysbenchDir, "%s", env);}
+    env = getenv("kill_vm_command"); if (env != NULL) {sprintf(kill_vm_command, "%s", env);}
+    env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
+    env = getenv("start_vm_command"); if (env != NULL) {sprintf(start_vm_command, "%s", env);}
+    env = getenv("sysbench_dir"); if (env != NULL) {sprintf(sysbench_dir, "%s", env);}
 
     env = getenv("maxdir"); if (env != NULL) {sprintf(maxdir, "%s", env);}
     env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
 }
 
-int TestConnections::PrintIP()
+int TestConnections::print_env()
 {
     int  i;
-    printf("Maxscale IP\t%s\n", Maxscale_IP);
-    printf("Maxscale User name\t%s\n", Maxscale_User);
-    printf("Maxscale Password\t%s\n", Maxscale_Password);
-    printf("Maxscale SSH key\t%s\n", Maxscale_sshkey);
-    repl->PrintIP();
-    galera->PrintIP();
+    printf("Maxscale IP\t%s\n", maxscale_IP);
+    printf("Maxscale User name\t%s\n", maxscale_user);
+    printf("Maxscale Password\t%s\n", maxscale_password);
+    printf("Maxscale SSH key\t%s\n", maxscale_sshkey);
+    repl->print_env();
+    galera->print_env();
 }
 
-int TestConnections::InitMaxscale()
+int TestConnections::init_maxscale()
 {
     char str[4096];
     pid_t pid = fork();
     if (!pid) {
-        sprintf(str, "export Test_name=%s; %s/configure_maxscale.sh", test_name, test_dir);
+        sprintf(str, "export test_name=%s; %s/configure_maxscale.sh", test_name, test_dir);
         printf("Executing configure_maxscale.sh\n"); fflush(stdout);
         if (system(str) !=0) {
             printf("configure_maxscale.sh executing FAILED!\n"); fflush(stdout);
@@ -144,28 +163,28 @@ int TestConnections::InitMaxscale()
     }
 }
 
-int TestConnections::ConnectMaxscale()
+int TestConnections::connect_maxscale()
 {
     return(
-                ConnectRWSplit() +
-                ConnectReadMaster() +
-                ConnectReadSlave()
+                connect_rwsplit() +
+                connect_readconn_master() +
+                connect_readconn_slave()
                 );
 }
 
-int TestConnections::CloseMaxscaleConn()
+int TestConnections::close_maxscale_connections()
 {
     mysql_close(conn_master);
     mysql_close(conn_slave);
     mysql_close(conn_rwsplit);
 }
 
-int TestConnections::Copy_all_logs()
+int TestConnections::copy_all_logs()
 {
     char str[4096];
 
     if (!no_maxscale_stop) {
-        sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale stop\"", Maxscale_sshkey, Maxscale_IP);
+        sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale stop\"", maxscale_sshkey, maxscale_IP);
         system(str);
     }
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
@@ -180,17 +199,17 @@ int TestConnections::Copy_all_logs()
 }
 
 
-int CheckLogErr(char * err_msg, bool expected)
+int check_log_err(char * err_msg, bool expected)
 {
     TestConnections * Test = new TestConnections();
     int global_result = 0;
     char * err_log_content;
 
-    Test->ReadEnv();
+    Test->read_env();
 
     printf("Getting logs\n");
     char sys1[4096];
-    sprintf(&sys1[0], "%s %s", Test->GetLogsCommand, Test->Maxscale_IP);
+    sprintf(&sys1[0], "%s %s", Test->get_logs_command, Test->maxscale_IP);
     printf("Executing: %s\n", sys1);
     fflush(stdout);
     system(sys1);
@@ -220,14 +239,14 @@ int CheckLogErr(char * err_msg, bool expected)
     return global_result;
 }
 
-int FindConnectedSlave(TestConnections* Test, int * global_result)
+int find_connected_slave(TestConnections* Test, int * global_result)
 {
     int conn_num;
     int all_conn = 0;
     int current_slave = -1;
-    Test->repl->Connect();
+    Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
         printf("connections to %d: %u\n", i, conn_num);
         if ((i == 0) && (conn_num != 1)) {printf("There is no connection to master\n"); *global_result = 1;}
         all_conn += conn_num;
@@ -235,29 +254,29 @@ int FindConnectedSlave(TestConnections* Test, int * global_result)
     }
     if (all_conn != 2) {printf("total number of connections is not 2, it is %d\n", all_conn); *global_result = 1;}
     printf("Now connected slave node is %d (%s)\n", current_slave, Test->repl->IP[current_slave]);
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
     return(current_slave);
 }
 
-int FindConnectedSlave1(TestConnections* Test)
+int find_connected_slave1(TestConnections* Test)
 {
     int conn_num;
     int all_conn = 0;
     int current_slave = -1;
-    Test->repl->Connect();
+    Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->Maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
         printf("connections to %d: %u\n", i, conn_num); fflush(stdout);
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0)) {current_slave = i;}
     }
     printf("Now connected slave node is %d (%s)\n", current_slave, Test->repl->IP[current_slave]); fflush(stdout);
-    Test->repl->CloseConn();
+    Test->repl->close_connections();
     return(current_slave);
 }
 
 
-int CheckMaxscaleAlive()
+int check_maxscale_alive()
 {
     int global_result;
     TestConnections * Test = new TestConnections();
@@ -265,7 +284,7 @@ int CheckMaxscaleAlive()
 
     //Test->ReadEnv();
     printf("Connecting to Maxscale\n");
-    global_result += Test->ConnectMaxscale();
+    global_result += Test->connect_maxscale();
     printf("Trying simple query against all sevices\n");
     printf("RWSplit ");
     if (execute_query(Test->conn_rwsplit, (char *) "show databases;") == 0) {
@@ -289,6 +308,6 @@ int CheckMaxscaleAlive()
         global_result++;
     }
 
-    Test->CloseMaxscaleConn();
+    Test->close_maxscale_connections();
     return(global_result);
 }

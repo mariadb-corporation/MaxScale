@@ -30,10 +30,10 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
 
-    Test->ReadEnv();
-    Test->PrintIP();
-    Test->repl->Connect();
-    Test->ConnectMaxscale();
+    Test->read_env();
+    Test->print_env();
+    Test->repl->connect();
+    Test->connect_maxscale();
 
     printf("Trying GRANT for with bad IP: RWSplit\n"); fflush(stdout);
     global_result += CreateDropBadUser(Test->conn_rwsplit); fflush(stdout);
@@ -44,5 +44,5 @@ int main(int argc, char *argv[])
     printf("Trying SELECT to check if Maxscale hangs\n"); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "select * from mysql.user");
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }

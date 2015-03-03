@@ -19,31 +19,39 @@ Mariadb_nodes::Mariadb_nodes(char * pref)
     strcpy(prefix, pref);
 }
 
-int Mariadb_nodes::Connect()
+int Mariadb_nodes::connect()
 {
     for (int i = 0; i < N; i++) {
-        nodes[i] = open_conn(Ports[i], IP[i], User, Password);
+        nodes[i] = open_conn(port[i], IP[i], user_name, password);
     }
 }
 
-int Mariadb_nodes::CloseConn()
+int Mariadb_nodes::close_connections()
 {
     for (int i = 0; i < N; i++) {
         if (nodes[i] != NULL) {mysql_close(nodes[i]);}
     }
 }
 
-int Mariadb_nodes::ReadEnv()
+int Mariadb_nodes::read_env()
 {
     char * env;
     char env_name[64];
+
     sprintf(env_name, "%s_N", prefix);
     env = getenv(env_name); if (env != NULL) {sscanf(env, "%d", &N); } else {N = 0;}
 
-    sprintf(env_name, "%s_User", prefix);
-    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", User); } else {sprintf(User, "skysql"); }
-    sprintf(env_name, "%s_Password", prefix);
-    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", Password); } else {sprintf(Password, "skysql"); }
+    sprintf(env_name, "%s_user", prefix);
+    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", user_name); } else {sprintf(user_name, "skysql"); }
+    sprintf(env_name, "%s_password", prefix);
+    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", password); } else {sprintf(password, "skysql"); }
+
+
+    sprintf(env_name, "%s_kill_vm_command", prefix);
+    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", kill_vm_command); } else {sprintf(kill_vm_command, "exit 1"); }
+
+    sprintf(env_name, "%s_start_vm_command", prefix);
+    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", start_vm_command); } else {sprintf(start_vm_command, "exit 1"); }
 
 
     if ((N > 0) && (N < 255)) {
@@ -55,9 +63,9 @@ int Mariadb_nodes::ReadEnv()
             //reading ports
             sprintf(env_name, "%s_port_%03d", prefix, i);
             env = getenv(env_name); if (env != NULL) {
-                sscanf(env, "%d", &Ports[i]);
+                sscanf(env, "%d", &port[i]);
             } else {
-                Ports[i] = 3306;
+                port[i] = 3306;
             }
             //reading sshkey
             sprintf(env_name, "%s_sshkey_%03d", prefix, i);
@@ -68,14 +76,14 @@ int Mariadb_nodes::ReadEnv()
     }
 }
 
-int Mariadb_nodes::PrintIP()
+int Mariadb_nodes::print_env()
 {
-    for (int i = 0; i < N; i++) {printf("%s node %d \t%s\tPort=%d\n", prefix, i, IP[i], Ports[i]);}
-    printf("%s User name %s\n", prefix, User);
-    printf("%s Password %s\n", prefix, Password);
+    for (int i = 0; i < N; i++) {printf("%s node %d \t%s\tPort=%d\n", prefix, i, IP[i], port[i]);}
+    printf("%s User name %s\n", prefix, user_name);
+    printf("%s Password %s\n", prefix, password);
 }
 
-int Mariadb_nodes::FindMaster()
+int Mariadb_nodes::find_master()
 {
     char str[255];
     char master_IP[256];
@@ -105,7 +113,7 @@ int Mariadb_nodes::FindMaster()
     return(master_node);
 }
 
-int Mariadb_nodes::ChangeMaster(int NewMaster, int OldMaster)
+int Mariadb_nodes::change_master(int NewMaster, int OldMaster)
 {
     int i;
     //int OldMaster = FindMaster();
@@ -122,19 +130,19 @@ int Mariadb_nodes::ChangeMaster(int NewMaster, int OldMaster)
     find_status_field(nodes[NewMaster], (char *) "show master status", (char *) "Position", &log_pos[0]);
     for (i = 0; i < N; i++) {
         if (i != NewMaster) {
-            sprintf(str, setup_slave, IP[NewMaster], log_file, log_pos, Ports[NewMaster]);
+            sprintf(str, setup_slave, IP[NewMaster], log_file, log_pos, port[NewMaster]);
             execute_query(nodes[i], str);
         }
     }
     //for (i = 0; i < N; i++) {if (i != NewMaster) {execute_query(nodes[i], (char *) "start slave;"); }}
 }
 
-int Mariadb_nodes::StopNodes()
+int Mariadb_nodes::stop_nodes()
 {
     int i;
     int global_result = 0;
     char sys1[4096];
-    Connect();
+    connect();
     for (i = 0; i < N; i++) {
         printf("Stopping slave %d\n", i); fflush(stdout);
         global_result += execute_query(nodes[i], (char *) "stop slave;");
@@ -143,11 +151,10 @@ int Mariadb_nodes::StopNodes()
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
-    //CloseConn();
     return(global_result);
 }
 
-int Mariadb_nodes::StartReplication()
+int Mariadb_nodes::start_replication()
 {
     char sys1[4096];
     char str[1024];
@@ -155,7 +162,7 @@ int Mariadb_nodes::StartReplication()
     char log_pos[256];
     int i;
     int global_result = 0;
-    global_result += StopNodes();
+    global_result += stop_nodes();
 
     printf("Starting back Master\n");  fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", sshkey[0], IP[0]);
@@ -170,7 +177,7 @@ int Mariadb_nodes::StartReplication()
     }
     sleep(5);
 
-    global_result += Connect();
+    global_result += connect();
     global_result += execute_query(nodes[0], create_repl_user);
     execute_query(nodes[0], (char *) "reset master;");
 
@@ -178,15 +185,42 @@ int Mariadb_nodes::StartReplication()
     find_status_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
     for (i = 1; i < N; i++) {
         global_result += execute_query(nodes[i], (char *) "stop slave;");
-        sprintf(str, setup_slave, IP[0], log_file, log_pos, Ports[0]);
+        sprintf(str, setup_slave, IP[0], log_file, log_pos, port[0]);
         global_result += execute_query(nodes[i], str);
     }
-    CloseConn();
+    close_connections();
+    return(global_result);
+}
+
+int Mariadb_nodes::start_galera()
+{
+    char sys1[4096];
+    int i;
+    int global_result = 0;
+    global_result += stop_nodes();
+
+    printf("Starting new Galera cluster\n");  fflush(stdout);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://'", sshkey[0], IP[0]);
+    printf("%s\n", sys1);  fflush(stdout);
+    global_result +=  system(sys1); fflush(stdout);
+
+    for (i = 1; i < N; i++) {
+        printf("Starting node %d\n", i); fflush(stdout);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://%s'", sshkey[i], IP[i], IP[0]);
+        printf("%s\n", sys1);  fflush(stdout);
+        global_result += system(sys1); fflush(stdout);
+    }
+    sleep(5);
+
+    global_result += connect();
+    global_result += execute_query(nodes[0], create_repl_user);
+
+    close_connections();
     return(global_result);
 }
 
 
-int Mariadb_nodes::StartBinlog(char * Maxscale_IP, int Binlog_Port)
+int Mariadb_nodes::start_binlog(char * Maxscale_IP, int Binlog_Port)
 {
     char sys1[4096];
     char str[1024];
@@ -195,7 +229,7 @@ int Mariadb_nodes::StartBinlog(char * Maxscale_IP, int Binlog_Port)
     int i;
     int global_result = 0;
     printf("Stopping all backend nodes\n");fflush(stdout);
-    global_result += StopNodes();
+    global_result += stop_nodes();
 
     printf("Starting back Master\n");  fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin'", sshkey[0], IP[0]);
@@ -211,7 +245,7 @@ int Mariadb_nodes::StartBinlog(char * Maxscale_IP, int Binlog_Port)
     sleep(5);
 
     printf("Connecting to all backend nodes\n");fflush(stdout);
-    global_result += Connect();
+    global_result += connect();
     printf("Creating repl user\n");fflush(stdout);
     global_result += execute_query(nodes[0], create_repl_user);
     printf("'reset master' query to node 0\n");fflush(stdout);
@@ -224,11 +258,11 @@ int Mariadb_nodes::StartBinlog(char * Maxscale_IP, int Binlog_Port)
     printf("Stopping first slave (node 0)\n");fflush(stdout);
     global_result += execute_query(nodes[1], (char *) "stop slave;");
     printf("Configure first backend slave node to be slave of real master\n");fflush(stdout);
-    sprintf(str, setup_slave, IP[0], log_file, log_pos, Ports[0]);
+    sprintf(str, setup_slave, IP[0], log_file, log_pos, port[0]);
     global_result += execute_query(nodes[1], str);
 
     printf("Connecting to MaxScale binlog router\n");fflush(stdout);
-    MYSQL * binlog = open_conn(Binlog_Port, Maxscale_IP, User, Password);
+    MYSQL * binlog = open_conn(Binlog_Port, Maxscale_IP, user_name, password);
 
     printf("show master status\n");fflush(stdout);
     find_status_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
@@ -240,22 +274,76 @@ int Mariadb_nodes::StartBinlog(char * Maxscale_IP, int Binlog_Port)
         sprintf(str, setup_slave, Maxscale_IP, log_file, log_pos, Binlog_Port);
         global_result += execute_query(nodes[i], str);
     }
-    CloseConn();
+    close_connections();
     return(global_result);
 }
 
-int Mariadb_nodes::BlockNode(int node)
+int Mariadb_nodes::block_node(int node)
 {
     char sys1[1024];
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", sshkey[node], IP[node], Ports[node]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", sshkey[node], IP[node], port[node]);
     printf("%s\n", sys1); fflush(stdout);
     return(system(sys1));
 }
 
-int Mariadb_nodes::UnblockNode(int node)
+int Mariadb_nodes::unblock_node(int node)
 {
     char sys1[1024];
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", sshkey[node], IP[node], Ports[node]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", sshkey[node], IP[node], port[node]);
     printf("%s\n", sys1); fflush(stdout);
     return(system(sys1));
 }
+
+int Mariadb_nodes::check_nodes()
+{
+    int res = 0;
+    char str[1024];
+    for (int i = 0; i < N; i++) {
+        sprintf(str, "ssh  -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s ls > dev/null", sshkey[i], IP[i]);
+        if (system(str) != 0) {
+            printf("Node %d is not available\n", i);
+            res = 1;
+        }
+    }
+    return(res);
+}
+
+int Mariadb_nodes::wait_all_vm()
+{
+    int i = 0;
+
+    while ((check_nodes() != 0) && (i < 10)) {
+        sleep(10);
+    }
+    return(check_nodes());
+}
+
+int Mariadb_nodes::kill_all_vm()
+{
+    int res = 0;
+    char sys[1024];
+    for (int i = 0; i < N; i++) {
+        sprintf(sys, "%s %s", kill_vm_command, IP[i]);
+        if (system(sys) != 0) {res = 1;}
+    }
+    return(res);
+}
+
+int Mariadb_nodes::start_all_vm()
+{
+    int res = 0;
+    char sys[1024];
+    for (int i = 0; i < N; i++) {
+        sprintf(sys, "%s %s", start_vm_command, IP[i]);
+        if (system(sys) != 0) {res = 1;}
+    }
+    return(res);
+}
+
+int Mariadb_nodes::restart_all_vm()
+{
+    kill_all_vm();
+    start_all_vm();
+    return(wait_all_vm());
+}
+

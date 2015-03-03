@@ -23,11 +23,11 @@ int main(int argc, char *argv[])
     int N=4;
     char str[1024];
 
-    Test->ReadEnv();
-    Test->PrintIP();
+    Test->read_env();
+    Test->print_env();
 
-    Test->ConnectMaxscale();
-    Test->repl->Connect();
+    Test->connect_maxscale();
+    Test->repl->connect();
 
     printf("Create t1\n"); fflush(stdout);
     create_t1(Test->conn_rwsplit);
@@ -84,9 +84,9 @@ int main(int argc, char *argv[])
 
 
 
-    Test->repl->CloseConn();
-    global_result += CheckMaxscaleAlive();
+    Test->repl->close_connections();
+    global_result += check_maxscale_alive();
 
-    Test->Copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(global_result);
 }
 
