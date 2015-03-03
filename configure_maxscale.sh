@@ -8,7 +8,7 @@ fi
 
 echo "Test $test_name"
 
-test_name_space="$Test_name "
+test_name_space="$test_name "
 
 template_line=`cat $test_dir/templates | grep $test_name_space`
 a=( $template_line )
@@ -53,8 +53,8 @@ do
 		port_str+="_server_port_$server_num###/$port/"
 	        sed -i "$port_str"  MaxScale.cnf
 	done
-	Password_var="$prefix"_Password
-	User_var="$prefix"_User
+	Password_var="$prefix"_password
+	User_var="$prefix"_user
 	h_var="$prefix"_000
 	port_var="$prefix"_port_000
 	echo "CREATE DATABASE IF NOT EXISTS test" | mysql -p${!Password_var} -u${!User_var} -h ${!h_var}  -P ${!port_var}
