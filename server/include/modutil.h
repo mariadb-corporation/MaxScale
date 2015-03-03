@@ -41,6 +41,7 @@
 #define PTR_IS_LOCAL_INFILE(b) (b[4] == 0xfb)
 
 extern int	modutil_is_SQL(GWBUF *);
+extern int	modutil_is_SQL_prepare(GWBUF *);
 extern int	modutil_extract_SQL(GWBUF *, char **, int *);
 extern int	modutil_MySQL_Query(GWBUF *, char **, int *, int *);
 extern char	*modutil_get_SQL(GWBUF *);
