@@ -568,7 +568,7 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
             }
         }
         
-        if((ptr + pktlen) > end)
+        if((ptr + pktlen) > end || (eof + n_found) >= 2)
         {
             ptr = prev;    
             break;
@@ -675,4 +675,98 @@ static void modutil_reply_routing_error(
 	/** Create an incoming event for backend DCB */
 	poll_add_epollin_event_to_dcb(backend_dcb, buf);
 	return;
+}
+
+/**
+ * Find the first occurrence of a character in a string. This function ignores
+ * escaped characters and all characters that are enclosed in single or double quotes.
+ * @param ptr Pointer to area of memory to inspect
+ * @param c Character to search for
+ * @param len Size of the memory area
+ * @return Pointer to the first non-escaped, non-quoted occurrence of the character.
+ * If the character is not found, NULL is returned.
+ */
+void* strnchr_esc(char* ptr,char c, int len)
+{
+    char* p = (char*)ptr;
+    char* start = p;
+    bool quoted = false, escaped = false;
+    char qc;
+
+    while(p < start + len)
+    {
+	if(escaped)
+	{
+	    escaped = false;
+	}
+	else if(*p == '\\')
+	{
+	    escaped = true;
+	}
+	else if((*p == '\'' || *p  == '"') && !quoted)
+	{
+	    quoted = true;
+	    qc = *p;
+	}
+	else if(quoted && *p == qc)
+	{
+	    quoted = false;
+	}
+	else if(*p == c && !escaped && !quoted)
+	{
+	    return p;
+	}
+	p++;
+    }
+    
+    return NULL;
+}
+
+/**
+ * Create a COM_QUERY packet from a string.
+ * @param query Query to create.
+ * @return Pointer to GWBUF with the query or NULL if an error occurred.
+ */
+GWBUF* modutil_create_query(char* query)
+{
+    if(query == NULL)
+	return NULL;
+
+    GWBUF* rval = gwbuf_alloc(strlen(query) + 5);
+    int pktlen = strlen(query) + 1;
+    unsigned char* ptr;
+
+    if(rval)
+    {
+	ptr = (unsigned char*)rval->start;
+	*ptr++ = (pktlen);
+	*ptr++ = (pktlen)>>8;
+	*ptr++ = (pktlen)>>16;
+	*ptr++ = 0x0;
+	*ptr++ = 0x03;
+	memcpy(ptr,query,strlen(query));
+	gwbuf_set_type(rval,GWBUF_TYPE_MYSQL);
+    }
+
+    return rval;
+}
+
+/**
+ * Count the number of statements in a query.
+ * @param buffer Buffer to analyze.
+ * @return Number of statements.
+ */
+int modutil_count_statements(GWBUF* buffer)
+{
+    char* ptr = ((char*)(buffer)->start + 5);
+    char* end = ((char*)(buffer)->end);
+    int num = 1;
+
+    while((ptr = strnchr_esc(ptr,';', end - ptr)))
+    {
+	num++;
+	ptr++;
+    }
+
+    return num;
 }
