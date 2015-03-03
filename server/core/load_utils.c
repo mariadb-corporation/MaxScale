@@ -46,6 +46,7 @@
 #include	<version.h>
 #include	<notification.h>
 #include	<curl/curl.h>
+#include	<sys/utsname.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -459,12 +460,25 @@ module_feedback_send(void* data) {
 	struct tm *now_tm;
 	int hour;
 	int n_mod=0;
+	struct utsname uname_data;
+	unsigned char setup_if_address[6]="";
+	unsigned char sha1_if_address[20]="";
+	char hex_setup_info[40 + 1]="";
 
 	now = time(NULL);
 	now_tm = localtime(&now);
 	hour = now_tm->tm_hour;
 
 	FEEDBACK_CONF *feedback_config = (FEEDBACK_CONF *) data;
+
+	/* Configuration check */
+
+	if (feedback_config->feedback_url == NULL || feedback_config->feedback_user_info == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"module_feedback_create : skip task because feedback_url or feedback_user_info is NULL")));
+		return;
+	}
 
 	/**
 	 * Task runs nightly, from 2 AM to 4 AM
@@ -502,6 +516,16 @@ module_feedback_send(void* data) {
 		hour, feedback_config->feedback_last_action)));
 
 
+	/* get uname info */
+	uname(&uname_data);
+
+	/* get first available network interface info */
+	if (config_get_ifaddr(setup_if_address)) {
+		gw_sha1_str(setup_if_address, 6, sha1_if_address);
+		gw_bin2hex(hex_setup_info, sha1_if_address, 20);
+	}
+
+	/* allocate first memory chunck for httpd servr reply */
 	chunk.data = malloc(1);  /* will be grown as needed by the realloc above */ 
 	chunk.size = 0;    /* no data at this point */
 
@@ -515,18 +539,27 @@ module_feedback_send(void* data) {
 
 	buffer = gwbuf_alloc(n_mod * 256);
 	data_ptr = GWBUF_DATA(buffer);
-	
-	sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", "xxxfcBRIvkRlxyGdoJL0bWy+TmY");
+
+	if (strlen(hex_setup_info))
+		sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", hex_setup_info);
+	else
+		sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", feedback_config->feedback_setup_info);
+
 	data_ptr+=strlen(data_ptr);
-	sprintf(data_ptr, "FEEDBACK_USER_INFO\t%s\n", "0467009f-xxxx-yyyy-zzzz-b6b2ec9c6cf4");
+	sprintf(data_ptr, "FEEDBACK_USER_INFO\t%s\n", feedback_config->feedback_user_info);
 	data_ptr+=strlen(data_ptr);
 	sprintf(data_ptr, "VERSION\t%s\n", MAXSCALE_VERSION);
 	data_ptr+=strlen(data_ptr);
 	sprintf(data_ptr, "NOW\t%lu\nPRODUCT\t%s\n", now, "maxscale");
 	data_ptr+=strlen(data_ptr);
-	sprintf(data_ptr, "Uname_sysname\t%s\n", "linux");
+
+	if (strlen(uname_data.sysname))
+		sprintf(data_ptr, "Uname_sysname\t%s\n", uname_data.sysname);
+	else
+		sprintf(data_ptr, "Uname_sysname\t%s\n", "");
+
 	data_ptr+=strlen(data_ptr);
-	sprintf(data_ptr, "Uname_distribution\t%s\n", "centos");
+	sprintf(data_ptr, "Uname_distribution\t%s\n", "");
 	data_ptr+=strlen(data_ptr);
 
         while (ptr)
@@ -570,8 +603,8 @@ module_feedback_send(void* data) {
 
 		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_message);
 		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 5);
-		curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10);
+		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, feedback_config->feedback_connect_timeout);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT, feedback_config->feedback_timeout);
 
 		/* curl API call for data send via HTTP POST using a "file" type input */
 		curl_formadd(&formpost,
@@ -588,7 +621,7 @@ module_feedback_send(void* data) {
 		/* some servers don't like requests that are made without a user-agent field, so we provide one */ 
 		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
 
-		curl_easy_setopt(curl, CURLOPT_URL, "http://127.0.0.1/post.php");
+		curl_easy_setopt(curl, CURLOPT_URL, feedback_config->feedback_url);
 		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
 
 #ifdef SKIP_PEER_VERIFICATION
