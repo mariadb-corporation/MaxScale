@@ -299,7 +299,7 @@ int Mariadb_nodes::check_nodes()
     int res = 0;
     char str[1024];
     for (int i = 0; i < N; i++) {
-        sprintf(str, "ssh  -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s ls > dev/null", sshkey[i], IP[i]);
+        sprintf(str, "ssh  -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s ls > /dev/null", sshkey[i], IP[i]);
         if (system(str) != 0) {
             printf("Node %d is not available\n", i);
             res = 1;
