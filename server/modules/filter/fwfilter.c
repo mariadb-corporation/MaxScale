@@ -1300,6 +1300,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 	char *ptr,*where,*msg = NULL;
 	char emsg[512];
 	int qlen;
+	unsigned char* memptr = (unsigned char*)queue->start;
 	bool is_sql, is_real, matches;
 	skygw_query_op_t optype = QUERY_OP_UNDEFINED;
 	STRLINK* strln = NULL;
@@ -1312,15 +1313,15 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 	tm_now = localtime(&time_now);
 
 	matches = false;
-	is_sql = modutil_is_SQL(queue);
+	is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
 	
 	if(is_sql){
 		if(!query_is_parsed(queue)){
 			parse_query(queue);
 		}
 		optype =  query_classifier_get_operation(queue);
-		modutil_extract_SQL(queue, &ptr, &qlen);
 		is_real = skygw_is_real_query(queue);
+		qlen = gw_mysql_get_byte3(memptr) - 1;
 	}
 
 	if(rulelist->rule->on_queries == QUERY_OP_UNDEFINED || rulelist->rule->on_queries & optype){
@@ -1547,18 +1548,19 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 	bool is_sql, rval = false;
 	int qlen;
 	char *fullquery = NULL,*ptr;
-	
+	unsigned char* memptr = (unsigned char*)queue->start;
 	RULELIST* rulelist;
-	is_sql = modutil_is_SQL(queue);
+	is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
 	
 	if(is_sql){
 		if(!query_is_parsed(queue)){
 			parse_query(queue);
 		}
-		modutil_extract_SQL(queue, &ptr, &qlen);
-		fullquery = malloc((qlen + 1) * sizeof(char));
-		memcpy(fullquery,ptr,qlen);
-		memset(fullquery + qlen,0,1);
+
+		qlen = gw_mysql_get_byte3(memptr);
+		fullquery = malloc((qlen) * sizeof(char));
+		memcpy(fullquery,memptr + 5,qlen - 1);
+		memset(fullquery + qlen - 1,0,1);
 	}
 
 	if((rulelist = user->rules_or) == NULL)
@@ -1598,21 +1600,21 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 {
 	bool is_sql, rval = true;
 	int qlen;
+	unsigned char* memptr = (unsigned char*)queue->start;
 	char *fullquery = NULL,*ptr;
 	
 	RULELIST* rulelist;
-	is_sql = modutil_is_SQL(queue);
-	
+	is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
+
 	if(is_sql){
 		if(!query_is_parsed(queue)){
 			parse_query(queue);
 		}
-		modutil_extract_SQL(queue, &ptr, &qlen);
-		fullquery = malloc((qlen + 1) * sizeof(char));
-		memcpy(fullquery,ptr,qlen);
-		memset(fullquery + qlen,0,1);
 
-
+		qlen = gw_mysql_get_byte3(memptr);
+		fullquery = malloc((qlen) * sizeof(char));
+		memcpy(fullquery,memptr + 5,qlen - 1);
+		memset(fullquery + qlen - 1,0,1);
 	}
 	
 	if(strict_all)
