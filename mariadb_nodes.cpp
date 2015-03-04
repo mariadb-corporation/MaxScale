@@ -376,7 +376,7 @@ int Mariadb_nodes::check_galera()
             printf("Error connectiong node %d\n", i);
             res1 = 1;
         } else {
-            if (find_status_field(conn, (char *) "SHOW STATUS LIKE 'wsrep%';", (char *) "wsrep_cluster_size", str) != 0) {
+            if (find_status_field(conn, (char *) "SHOW STATUS WHERE Variable_name='wsrep_cluster_size';", (char *) "Value", str) != 0) {
                 printf("wsrep_cluster_size is not found in SHOW STATUS LIKE 'wsrep%%' results\n");
                 res1 = 1;
             } else {
@@ -396,7 +396,7 @@ int Mariadb_nodes::wait_all_vm()
 {
     int i = 0;
 
-    while ((check_nodes() != 0) && (i < 10)) {
+    while ((check_nodes() != 0) && (i < 60)) {
         sleep(10);
     }
     return(check_nodes());
