@@ -942,3 +942,101 @@ void session_close_timeouts(void* data)
 	
     }
 }
+
+/**
+ * Callback structure for the session list extraction
+ */
+typedef struct {
+	int			index;
+	SESSIONLISTFILTER	filter;
+} SESSIONFILTER;
+
+/**
+ * Provide a row to the result set that defines the set of sessions
+ *
+ * @param set	The result set
+ * @param data	The index of the row to send
+ * @return The next row or NULL
+ */
+static RESULT_ROW *
+sessionRowCallback(RESULTSET *set, void *data)
+{
+SESSIONFILTER	*cbdata = (SESSIONFILTER *)data;
+int		i = 0;
+char		buf[20];
+RESULT_ROW	*row;
+SESSION		*ptr;
+
+	spinlock_acquire(&session_spin);
+	ptr = allSessions;
+	/* Skip to the first non-listener if not showing listeners */
+	while (ptr && cbdata->filter == SESSION_LIST_CONNECTION &&
+			ptr->state == SESSION_STATE_LISTENER)
+	{
+		ptr = ptr->next;
+	}
+	while (i < cbdata->index && ptr)
+	{
+		if (cbdata->filter == SESSION_LIST_CONNECTION &&
+			ptr->state !=  SESSION_STATE_LISTENER)
+		{
+			i++;
+		}
+		else if (cbdata->filter == SESSION_LIST_ALL)
+		{
+			i++;
+		}
+		ptr = ptr->next;
+	}
+	/* Skip to the next non-listener if not showing listeners */
+	while (ptr && cbdata->filter == SESSION_LIST_CONNECTION &&
+			ptr->state == SESSION_STATE_LISTENER)
+	{
+		ptr = ptr->next;
+	}
+	if (ptr == NULL)
+	{
+		spinlock_release(&session_spin);
+		free(data);
+		return NULL;
+	}
+	cbdata->index++;
+	row = resultset_make_row(set);
+	sprintf(buf, "%p", ptr);
+	resultset_row_set(row, 0, buf);
+	resultset_row_set(row, 1, ((ptr->client && ptr->client->remote)
+                                ? ptr->client->remote : ""));
+	resultset_row_set(row, 2, (ptr->service && ptr->service->name
+				? ptr->service->name : ""));
+	resultset_row_set(row, 3, session_state(ptr->state));
+	spinlock_release(&session_spin);
+	return row;
+}
+
+/**
+ * Return a resultset that has the current set of sessions in it
+ *
+ * @return A Result set
+ */
+RESULTSET *
+sessionGetList(SESSIONLISTFILTER filter)
+{
+RESULTSET	*set;
+SESSIONFILTER	*data;
+
+	if ((data = (SESSIONFILTER *)malloc(sizeof(SESSIONFILTER))) == NULL)
+		return NULL;
+	data->index = 0;
+	data->filter = filter;
+	if ((set = resultset_create(sessionRowCallback, data)) == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	resultset_add_column(set, "Session", 16, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Client", 15, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Service", 15, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "State", 15, COL_TYPE_VARCHAR);
+
+	return set;
+}

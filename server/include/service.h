@@ -24,6 +24,7 @@
 #include <server.h>
 #include <filter.h>
 #include <hashtable.h>
+#include <resultset.h>
 #include "config.h"
 
 /**
@@ -195,4 +196,7 @@ extern	void	dListServices(DCB *);
 extern	void	dListListeners(DCB *);
 char* service_get_name(SERVICE* svc);
 void  service_shutdown();
+extern	int	serviceSessionCountAll();
+extern  RESULTSET	*serviceGetList();
+extern  RESULTSET	*serviceGetListenerList();
 #endif
