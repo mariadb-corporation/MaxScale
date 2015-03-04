@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # maxscale:   The MariaDB Corporation MaxScale database proxy
 #
@@ -58,7 +58,7 @@ RETVAL=0
 
 start() {
         log_daemon_msg "Starting MaxScale"
-        start_daemon -p $MAXSCALE_PIDFILE $DAEMON 2> /dev/null
+        start_daemon -p $MAXSCALE_PIDFILE $DAEMON 2> /dev/null > /dev/null
 
         sleep 2
 
