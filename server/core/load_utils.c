@@ -440,6 +440,83 @@ MODULES	*ptr = registered;
 }
 
 /**
+ * Provide a row to the result set that defines the set of modules
+ *
+ * @param set	The result set
+ * @param data	The index of the row to send
+ * @return The next row or NULL
+ */
+static RESULT_ROW *
+moduleRowCallback(RESULTSET *set, void *data)
+{
+int		*rowno = (int *)data;
+int		i = 0;;
+char		*stat, buf[20];
+RESULT_ROW	*row;
+MODULES		*ptr;
+
+	ptr = registered;
+	while (i < *rowno && ptr)
+	{
+		i++;
+		ptr = ptr->next;
+	}
+	if (ptr == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	(*rowno)++;
+	row = resultset_make_row(set);
+	resultset_row_set(row, 0, ptr->module);
+	resultset_row_set(row, 1, ptr->type);
+	resultset_row_set(row, 2, ptr->version);
+	sprintf(buf, "%d.%d.%d", ptr->info->api_version.major,
+			ptr->info->api_version.minor,
+			ptr->info->api_version.patch);
+	resultset_row_set(row, 3, buf);
+	resultset_row_set(row, 4, ptr->info->status == MODULE_IN_DEVELOPMENT
+                                        ? "In Development"
+                                : (ptr->info->status == MODULE_ALPHA_RELEASE
+                                        ? "Alpha"
+                                : (ptr->info->status == MODULE_BETA_RELEASE
+                                        ? "Beta"
+                                : (ptr->info->status == MODULE_GA
+                                        ? "GA"
+                                : (ptr->info->status == MODULE_EXPERIMENTAL
+                                        ? "Experimental" : "Unknown")))));
+	return row;
+}
+
+/**
+ * Return a resultset that has the current set of modules in it
+ *
+ * @return A Result set
+ */
+RESULTSET *
+moduleGetList()
+{
+RESULTSET	*set;
+int		*data;
+
+	if ((data = (int *)malloc(sizeof(int))) == NULL)
+		return NULL;
+	*data = 0;
+	if ((set = resultset_create(moduleRowCallback, data)) == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	resultset_add_column(set, "Module Name", 18, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Module Type", 12, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Version", 10, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "API Version", 8, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Status", 15, COL_TYPE_VARCHAR);
+
+	return set;
+}
+
+/**
  * Send loaded modules info to notification service
  *
  *  @param data The configuration details of notification service
@@ -592,7 +669,6 @@ module_feedback_send(void* data) {
                 ptr = ptr->next;
         }
 
-
 	/* Initializing curl library for data send via HTTP */
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 
@@ -682,3 +758,4 @@ module_feedback_send(void* data) {
 	curl_formfree(formpost);
 	curl_global_cleanup();
 }
+

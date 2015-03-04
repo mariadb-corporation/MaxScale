@@ -1,4 +1,9 @@
-cmake_minimum_required(VERSION 2.8.12)
+if(PACKAGE)
+  cmake_minimum_required(VERSION 2.8.12)
+else()
+  cmake_minimum_required(VERSION 2.8)
+endif()
+
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 
 include(macros.cmake)

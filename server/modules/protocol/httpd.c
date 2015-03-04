@@ -41,6 +41,7 @@
 #include <gw.h>
 #include <modinfo.h>
 #include <log_manager.h>
+#include <resultset.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
@@ -129,10 +130,10 @@ GetModuleObject()
 static int
 httpd_read_event(DCB* dcb)
 {
-//SESSION		*session = dcb->session;
-//ROUTER_OBJECT	*router = session->service->router;
-//ROUTER		*router_instance = session->service->router_instance;
-//void		*rsession = session->router_session;
+SESSION		*session = dcb->session;
+ROUTER_OBJECT	*router = session->service->router;
+ROUTER		*router_instance = session->service->router_instance;
+void		*rsession = session->router_session;
 
 int numchars = 1;
 char buf[HTTPD_REQUESTLINE_MAXLEN-1] = "";
@@ -143,6 +144,7 @@ int cgi = 0;
 size_t i, j;
 int headers_read = 0;
 HTTPD_session *client_data = NULL;
+GWBUF	*uri;
 
 	client_data = dcb->data;
 
@@ -234,13 +236,11 @@ HTTPD_session *client_data = NULL;
 	/* send all the basic headers and close with \r\n */
 	httpd_send_headers(dcb, 1);
 
+#if 0
 	/**
 	 * ToDO: launch proper content handling based on the requested URI, later REST interface
 	 *
 	 */
-
-	dcb_printf(dcb, "Welcome to HTTPD MaxScale (c) %s\n\n", version_str);
-
 	if (strcmp(url, "/show") == 0) {
 		if (query_string && strlen(query_string)) {
 			if (strcmp(query_string, "dcb") == 0)
@@ -248,6 +248,21 @@ HTTPD_session *client_data = NULL;
 			if (strcmp(query_string, "session") == 0)
 				dprintAllSessions(dcb);
 		}
+	}
+	if (strcmp(url, "/services") == 0) {
+		RESULTSET *set, *seviceGetList();
+		if ((set = serviceGetList()) != NULL)
+		{
+			resultset_stream_json(set, dcb);
+			resultset_free(set);
+		}
+	}
+#endif
+	if ((uri = gwbuf_alloc(strlen(url) + 1)) != NULL)
+	{
+		strcpy((char *)GWBUF_DATA(uri), url);
+		gwbuf_set_type(uri, GWBUF_TYPE_HTTP);
+		SESSION_ROUTE_QUERY(session, uri);
 	}
 
 	/* force the client connecton close */
@@ -345,6 +360,9 @@ int	n_connect = 0;
 				/* create the session data for HTTPD */
 				client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
 				client->data = client_data;
+			
+				client->session =
+                                	session_alloc(dcb->session->service, client);
 
 				if (poll_add_dcb(client) == -1)
 					{
@@ -354,7 +372,6 @@ int	n_connect = 0;
 				n_connect++;
 			}
 		}
-		close(so);
 	}
 	
 	return n_connect;
@@ -484,7 +501,7 @@ static void httpd_send_headers(DCB *dcb, int final)
 
 	strftime(date, sizeof(date), fmt, localtime(&httpd_current_time));
 
-	dcb_printf(dcb, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: %s\r\nConnection: close\r\nContent-Type: text/plain\r\n", date, HTTP_SERVER_STRING);
+	dcb_printf(dcb, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: %s\r\nConnection: close\r\nContent-Type: application/json\r\n", date, HTTP_SERVER_STRING);
 
 	/* close the headers */
 	if (final) {

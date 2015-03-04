@@ -19,6 +19,7 @@
  */
 #include <server.h>
 #include <dcb.h>
+#include <resultset.h>
 
 /**
  * @file monitor.h	The interface to the monitor module
@@ -35,6 +36,7 @@
  * 28/08/14	Massimiliano Pinto	Addition of detectStaleMaster
  * 30/10/14	Massimiliano Pinto	Addition of disableMasterFailback
  * 07/11/14	Massimiliano Pinto	Addition of setNetworkTimeout
+ * 19/02/15	Mark Riddoch		Addition of monitorGetList
  *
  * @endverbatim
  */
@@ -143,4 +145,5 @@ extern void     monitorSetReplicationHeartbeat(MONITOR *, int);
 extern void     monitorDetectStaleMaster(MONITOR *, int);
 extern void     monitorDisableMasterFailback(MONITOR *, int);
 extern void     monitorSetNetworkTimeout(MONITOR *, int, int);
+extern RESULTSET *monitorGetList();
 #endif

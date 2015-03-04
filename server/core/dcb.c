@@ -803,7 +803,8 @@ int dcb_read(
                                 
                                 if (r <= 0 && 
                                         l_errno != EAGAIN && 
-                                        l_errno != EWOULDBLOCK) 
+                                        l_errno != EWOULDBLOCK &&
+					l_errno != 0) 
                                 {
                                         n = -1;
                                         goto return_n;
@@ -1586,8 +1587,10 @@ va_list	args;
 int
 dcb_isclient(DCB *dcb)
 {
-	if(dcb->session) {
-		if (dcb->session->client) {
+	if (dcb->state != DCB_STATE_LISTENING && dcb->session)
+	{
+		if (dcb->session->client)
+		{
 			return (dcb->session && dcb == dcb->session->client);
 		}
 	}
@@ -2171,4 +2174,53 @@ static int
 dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
 {
 	return 0;
+}
+
+/**
+ * Return DCB counts optionally filtered by usage
+ *
+ * @param	usage	The usage of the DCB
+ * @return	A count of DCBs in the desired state
+ */
+int
+dcb_count_by_usage(DCB_USAGE usage)
+{
+int	rval = 0;
+DCB	*ptr;
+
+	spinlock_acquire(&dcbspin);
+	ptr = allDCBs;
+	while (ptr)
+	{
+		switch (usage)
+		{
+		case DCB_USAGE_CLIENT:
+			if (dcb_isclient(ptr))
+				rval++;
+			break;
+		case DCB_USAGE_LISTENER:
+			if (ptr->state == DCB_STATE_LISTENING)
+				rval++;
+			break;
+		case DCB_USAGE_BACKEND:
+			if (dcb_isclient(ptr) == 0
+					&& ptr->dcb_role == DCB_ROLE_REQUEST_HANDLER)
+				rval++;
+			break;
+		case DCB_USAGE_INTERNAL:
+			if (ptr->dcb_role == DCB_ROLE_REQUEST_HANDLER)
+				rval++;
+			break;
+		case DCB_USAGE_ZOMBIE:
+			if (DCB_ISZOMBIE(ptr))
+				rval++;
+			break;
+		case DCB_USAGE_ALL:
+			rval++;
+			break;
+		}
+		ptr = ptr->next;
+	}
+	spinlock_release(&dcbspin);
+	return rval;
 }
