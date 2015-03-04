@@ -81,12 +81,14 @@ TestConnections::TestConnections(int argc, char *argv[])
     }
     if (!no_nodes_check) {
         //  checking repl nodes VMs for availability
-        if (repl->check_nodes() != 0) {
+        if ((repl->check_nodes() != 0) || (repl->check_replication(0) != 0)) {
+            printf("Backend broken! Restarting replication nodes\n");
             repl->restart_all_vm();
             repl->start_replication();
         }
         //  checking galera nodes VMs for availability
-        if (galera->check_nodes() != 0) {
+        if ((galera->check_nodes() != 0) || (galera->check_galera() != 0)) {
+            printf("Backend broken! Restarting Galera nodes\n");
             galera->restart_all_vm();
             galera->start_galera();
         }

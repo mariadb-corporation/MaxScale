@@ -308,6 +308,90 @@ int Mariadb_nodes::check_nodes()
     return(res);
 }
 
+int Mariadb_nodes::check_replication(int master)
+{
+    int res1 = 0;
+    char str[1024];
+    MYSQL *conn;
+    MYSQL_RES *res;
+    for (int i = 0; i < N; i++) {
+        conn = open_conn(port[i], IP[i], user_name, password);
+        if (mysql_errno(conn) != 0) {
+            printf("Error connectiong node %d\n", i);
+            res1 = 1;
+        } else {
+            if ( i == master ) {
+                // checking master
+                if (conn != NULL ) {
+                    if(mysql_query(conn, (char *) "SHOW SLAVE HOSTS;") != 0) {
+                        printf("%s\n", mysql_error(conn));
+                        res1 = 1;
+                    } else {
+                        res = mysql_store_result(conn);
+                        if(res == NULL) {
+                            printf("Error: can't get the result description\n");
+                            res1 = 1;
+                        } else {
+                            if (mysql_num_rows(res) != N-1) {
+                                printf("Number if slaves is not equal to N-1\n");
+                                res1 = 1;
+                            }
+                        }
+                        mysql_free_result(res);
+                        do {
+                            res = mysql_store_result(conn);
+                            mysql_free_result(res);
+                        } while ( mysql_next_result(conn) == 0 );
+                    }
+                }
+
+            } else {
+                // checking slave
+                if (find_status_field(conn, (char *) "SHOW SLAVE STATUS;", (char *) "Slave_IO_Running", str) != 0) {
+                    printf("Slave_IO_Running is not found in SHOW SLAVE STATUS results\n");
+                    res1 = 1;
+                } else {
+                    if (strcmp(str, "Yes") !=0 ) {
+                        printf("Slave_IO_Running is not Yes\n");
+                        res1 = 1;
+                    }
+                }
+            }
+        }
+        mysql_close(conn);
+    }
+    return(res1);
+}
+
+int Mariadb_nodes::check_galera()
+{
+    int res1 = 0;
+    char str[1024];
+    int cluster_size;
+    MYSQL *conn;
+
+    for (int i = 0; i < N; i++) {
+        conn = open_conn(port[i], IP[i], user_name, password);
+        if (mysql_errno(conn) != 0) {
+            printf("Error connectiong node %d\n", i);
+            res1 = 1;
+        } else {
+            if (find_status_field(conn, (char *) "SHOW STATUS LIKE 'wsrep%';", (char *) "wsrep_cluster_size", str) != 0) {
+                printf("wsrep_cluster_size is not found in SHOW STATUS LIKE 'wsrep%%' results\n");
+                res1 = 1;
+            } else {
+                sscanf(str, "%d",  &cluster_size);
+                if (cluster_size != N ) {
+                    printf("wsrep_cluster_size is not %d\n", N);
+                    res1 = 1;
+                }
+            }
+        }
+        mysql_close(conn);
+    }
+    return(res1);
+}
+
 int Mariadb_nodes::wait_all_vm()
 {
     int i = 0;

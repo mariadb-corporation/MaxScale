@@ -135,7 +135,6 @@ public:
      */
     int restart_all_vm();
 
-
     /**
      * @brief configures nodes and starts Master/Slave replication
      * @return  0 in case of success
@@ -175,6 +174,19 @@ public:
      * @return 0 if everything is ok
      */
     int check_nodes();
+
+    /**
+     * @brief Check if all slaves have "Slave_IO_Running" set to "Yes" and master has N-1 slaves
+     * @param master Index of master node
+     * @return 0 if everything is ok
+     */
+    int check_replication(int master);
+
+    /**
+     * @brief Check if all nodes report wsrep_cluster_size equal to N
+     * @return 0 if everything is ok
+     */
+    int check_galera();
 };
 
 #endif // MARIADB_NODES_H
