@@ -18,7 +18,7 @@
  * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <skygw_utils.h>
-
+#include <openssl/sha.h>
 /**
  * @file config.h The configuration handling elements
  *
@@ -94,6 +94,8 @@ typedef struct	config_context {
 typedef struct {
 	int			n_threads;		/**< Number of polling threads */
 	char			*version_string;	/**< The version string of embedded database library */
+        char			release_string[256];	/**< The release name string of the system */
+        char                    mac_sha1[SHA_DIGEST_LENGTH]; /*< The SHA1 digest of an interface MAC address */
 	unsigned long		id;			/**< MaxScale ID */
 	unsigned int		n_nbpoll;		/**< Tune number of non-blocking polls */
 	unsigned int		pollsleep;		/**< Wait time in blocking polls */

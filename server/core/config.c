@@ -58,9 +58,16 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql.h>
+#include <sys/utsname.h>
+#include <sys/fcntl.h>
+#include <glob.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <notification.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <string.h>
+
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -79,7 +86,8 @@ static	void	feedback_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
 static	int	config_truth_value(char *str);
 static int	internalService(char *router);
-
+int get_release_string(char* release);
+int config_get_ifaddr(unsigned char *output);
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
 static	FEEDBACK_CONF	feedback;
@@ -1312,6 +1320,21 @@ global_defaults()
 	else
 		gateway.version_string = NULL;
 	gateway.id=0;
+
+	if(!get_release_string(gateway.release_string))
+	{
+	    sprintf(gateway.release_string,"undefined");
+	}
+
+    unsigned char mac[6];
+    if(config_get_ifaddr(mac))
+    {
+        SHA1(mac,6,gateway.mac_sha1);
+    }
+    else
+	{
+	    sprintf(gateway.mac_sha1,"MAC-undef");
+	}
 }
 
 /**
@@ -1981,4 +2004,124 @@ int config_get_ifaddr(unsigned char *output)
     if (success) memcpy(output, ifr.ifr_hwaddr.sa_data, 6);
 
         return success;
+}
+
+/**
+ *
+ * @param release
+ * @return
+ */
+int get_release_string(char* release)
+{
+    const char *masks[]= {
+	"/etc/*-version", "/etc/*-release",
+	"/etc/*_version", "/etc/*_release"
+    };
+    bool have_ubuf;
+    struct utsname ubuf;
+    bool have_distribution;
+    char distribution[256];
+    int fd;
+    int i;
+    char *to;
+
+    have_ubuf = (uname(&ubuf) != -1);
+    have_distribution= false;
+    if ((fd= open("/etc/lsb-release", O_RDONLY)) != -1)
+    {
+	/* LSB-compliant distribution! */
+	size_t len= read(fd, (char*)distribution, sizeof(distribution)-1);
+	close(fd);
+	if (len != (size_t)-1)
+	{
+	    distribution[len]= 0; // safety
+	    char *found= strstr(distribution, "DISTRIB_DESCRIPTION=");
+	    if (found)
+	    {
+		have_distribution = true;
+		char *end = strstr(found, "\n");
+		if (end == NULL)
+		    end = distribution + len;
+		found += 20;
+
+		if (*found == '"' && end[-1] == '"')
+		{
+		    found++;
+		    end--;
+		}
+		*end = 0;
+
+		to = strcpy(distribution, "lsb: ");
+		memmove(to, found, end - found + 1);
+
+		strncpy(release, to, 255);
+		return 1;
+	    }
+	}
+    }
+
+  /* if not an LSB-compliant distribution */
+  for (i= 0; !have_distribution && i < 4; i++)
+  {
+    glob_t found;
+        char *new_to;
+        fprintf(stderr, "glob %d: [%s]\n", i, masks[i]);
+
+    if (glob(masks[i], GLOB_NOSORT, NULL, &found) == 0)
+    {
+      int fd;
+        int k = 0;
+        int skipindex = 0;
+        int startindex = 0;
+
+        fprintf(stderr, "Matched [%lu] paths\n", found.gl_pathc);
+
+        for (k = 0; k< found.gl_pathc; k++) {
+                fprintf(stderr, "Possibly opening [%s]\n", found.gl_pathv[k]);
+                if (strcmp(found.gl_pathv[k], "/etc/lsb-release") == 0) {
+                        fprintf(stderr, "Skipping [%s]\n", found.gl_pathv[k]);
+                        skipindex = k;
+                }
+        }
+
+
+      if ( skipindex == 0)
+         startindex++;
+
+        // skip ound.gl_pathv[0] if it's /etc/lsb-release
+      if ((fd= open(found.gl_pathv[startindex], O_RDONLY)) != -1)
+      {
+        /*
+          +5 and -8 below cut the file name part out of the
+          full pathname that corresponds to the mask as above.
+        */
+        //char *to= strmov(distribution, found.gl_pathv[0] + 5) - 8;
+        new_to = strcpy(distribution, found.gl_pathv[0] + 5);
+        new_to += 8;
+        *new_to++ = ':';
+        *new_to++ = ' ';
+
+        size_t to_len= distribution + sizeof(distribution) - 1 - new_to;
+        size_t len= read(fd, (char*)new_to, to_len);
+        close(fd);
+        if (len != (size_t)-1)
+        {
+          new_to[len]= 0; // safety
+          char *end= strstr(new_to, "\n");
+          if (end)
+            *end= 0;
+
+        have_distribution= true;
+        fprintf(stderr, "Distribution [%i]=[%s]\n", i, new_to);
+        strncpy(release, new_to, 255);
+        }
+      }
+    }
+    globfree(&found);
+  }
+
+   if (have_distribution)
+        return 1;
+   else
+        return 0;
 }
