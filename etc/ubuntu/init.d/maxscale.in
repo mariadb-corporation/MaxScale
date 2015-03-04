@@ -58,7 +58,7 @@ RETVAL=0
 
 start() {
         log_daemon_msg "Starting MaxScale"
-        nohup start_daemon -p $MAXSCALE_PIDFILE $DAEMON 2> /dev/null &
+        start_daemon -p $MAXSCALE_PIDFILE $DAEMON 2> /dev/null
 
         sleep 2
 
