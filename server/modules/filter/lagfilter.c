@@ -24,6 +24,7 @@
 #include <string.h>
 #include <hint.h>
 #include <query_classifier.h>
+#include <regex.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -87,13 +88,16 @@ struct LAGSTATS{
  * Instance structure
  */
 typedef struct {
-
+	char	*match;		/* Regular expression to match */
+	char	*nomatch;	/* Regular expression to ignore */
 	int	time;		/*< The number of seconds to wait before routing queries
 				 * to slave servers after a data modification operation
 				 * is done. */
 	int count;		/*< Number of hints to add after each operation
 				 * that modifies data. */
 	struct LAGSTATS stats;
+	regex_t	re;		/* Compiled regex text of match */
+	regex_t	nore;		/* Compiled regex text of ignore */
 } LAG_INSTANCE;
 
 /**
@@ -153,7 +157,7 @@ static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
 LAG_INSTANCE	*my_instance;
-int		i;
+int		i,cflags = 0;
 
 	if ((my_instance = calloc(1, sizeof(LAG_INSTANCE))) != NULL)
 	{
@@ -162,20 +166,70 @@ int		i;
 	    my_instance->stats.n_add_count = 0;
 	    my_instance->stats.n_add_time = 0;
 	    my_instance->stats.n_modified = 0;
-		for (i = 0; params && params[i]; i++)
+	    my_instance->match = NULL;
+	    my_instance->nomatch = NULL;
+
+	    for (i = 0; params && params[i]; i++)
+	    {
+		if (!strcmp(params[i]->name, "count"))
+		    my_instance->count = atoi(params[i]->value);
+		else if (!strcmp(params[i]->name, "time"))
+		    my_instance->time = atoi(params[i]->value);
+		else if (!strcmp(params[i]->name, "match"))
+		    my_instance->match = strdup(params[i]->value);
+		else if (!strcmp(params[i]->name, "ignore"))
+		    my_instance->nomatch = strdup(params[i]->value);
+		else
 		{
-			if (!strcmp(params[i]->name, "count"))
-				my_instance->count = atoi(params[i]->value);
-			else if (!strcmp(params[i]->name, "time"))
-			    my_instance->time = atoi(params[i]->value);
+		    LOGIF(LE, (skygw_log_write_flush(
+			    LOGFILE_ERROR,
+						     "lagfilter: Unexpected parameter '%s'.\n",
+						     params[i]->name)));
+		}
+	    }
+
+		if (options)
+		{
+		    for (i = 0; options[i]; i++)
+		    {
+			if (!strcasecmp(options[i], "ignorecase"))
+			{
+			    cflags |= REG_ICASE;
+			}
+			else if (!strcasecmp(options[i], "case"))
+			{
+			    cflags &= ~REG_ICASE;
+			}
 			else
 			{
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"lagfilter: Unexpected parameter '%s'.\n",
-					params[i]->name)));
+			    LOGIF(LE, (skygw_log_write_flush(
+				    LOGFILE_ERROR,
+				    "lagfilter: unsupported option '%s'.",
+				    options[i])));
 			}
+		    }
 		}
+
+	    if(my_instance->match)
+	    {
+		if(regcomp(&my_instance->re,my_instance->match,cflags))
+		{
+		    LOGIF(LE, (skygw_log_write_flush(
+				    LOGFILE_ERROR,
+				    "lagfilter: Failed to compile regex '%s'.",
+				    my_instance->match)));
+		}
+	    }
+	    if(my_instance->nomatch)
+	    {
+		if(regcomp(&my_instance->nore,my_instance->nomatch,cflags))
+		{
+		    LOGIF(LE, (skygw_log_write_flush(
+				    LOGFILE_ERROR,
+				    "lagfilter: Failed to compile regex '%s'.",
+				    my_instance->nomatch)));
+		}
+	    }
 	}
 	return (FILTER *)my_instance;
 }
@@ -279,9 +333,20 @@ time_t now = time(NULL);
 
 	    if(query_classifier_get_operation(queue) & (QUERY_OP_DELETE|QUERY_OP_INSERT|QUERY_OP_UPDATE))
 	    {
-		my_session->hints_left = my_instance->count;
-		my_session->last_modification = now;
-		my_instance->stats.n_modified++;
+		sql = modutil_get_SQL(queue);
+		
+		if(my_instance->nomatch == NULL||(my_instance->nomatch && regexec(&my_instance->nore,sql,0,NULL,0) != 0))
+		{
+		    if(my_instance->match == NULL||
+		     (my_instance->match && regexec(&my_instance->re,sql,0,NULL,0) == 0))
+		    {
+			my_session->hints_left = my_instance->count;
+			my_session->last_modification = now;
+			my_instance->stats.n_modified++;
+		    }
+		}
+
+		free(sql);
 	    }
 	    else if(my_session->hints_left > 0)
 	    {
