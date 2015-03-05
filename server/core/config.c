@@ -2158,8 +2158,37 @@ config_get_release_string(char* release)
 void
 config_enable_feedback_task(void) {
 	FEEDBACK_CONF *cfg = config_get_feedback_data();
-	if (cfg->feedback_enable)
-        	hktask_add("send_feedback", module_feedback_send, cfg, 30);
+	int url_set = 0;
+	int user_info_set = 0;
+	int enable_set = cfg->feedback_enable;
+
+	url_set = cfg->feedback_url != NULL && strlen(cfg->feedback_url);	
+	user_info_set = cfg->feedback_user_info != NULL && strlen(cfg->feedback_user_info);
+
+	if (enable_set && url_set && user_info_set) {
+		/* Add the task to the tasl list */
+        	if (hktask_add("send_feedback", module_feedback_send, cfg, 30)) {
+
+			LOGIF(LM, (skygw_log_write_flush(
+				LOGFILE_MESSAGE,
+				"Notification service feedback task started: URL=%s, User-Info=%s, Frequency %u seconds",
+				cfg->feedback_url,
+				cfg->feedback_user_info,
+				30)));
+		}
+	} else {
+		if (enable_set) {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: Notification service feedback cannot start: feedback_enable=1 but"
+				" some required parameters are not set: %s%s%s",
+				url_set == 0 ? "feedback_url is not set" : "", (user_info_set == 0 && url_set == 0) ? ", " : "", user_info_set == 0 ? "feedback_user_info is not set" : "")));
+		} else {
+			LOGIF(LT, (skygw_log_write_flush(
+				LOGFILE_TRACE,
+				"Notification service feedback is not enabled")));
+		}
+	}
 }
 
 /**

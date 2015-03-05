@@ -70,24 +70,36 @@ struct MemoryStruct {
   size_t size;
 };
 
+/**
+ * Callback write routine for curl library, getting remote server reply
+ *
+ * @param	contents	New data to add
+ * @param	size		Data size
+ * @param	nmemb		Elements in the buffer
+ * @param	userp		Pointer to the buffer
+ * @return	0 on failure, memory size on success
+ *
+ */
 static size_t
 WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
-  size_t realsize = size * nmemb;
-  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+	size_t realsize = size * nmemb;
+	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
  
-  mem->data = realloc(mem->data, mem->size + realsize + 1);
-  if(mem->data == NULL) {
-    /* out of memory! */ 
-    printf("not enough memory (realloc returned NULL)\n");
-    return 0;
-  }
+	mem->data = realloc(mem->data, mem->size + realsize + 1);
+	if(mem->data == NULL) {
+		/* out of memory! */ 
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error in module_feedback_send(), not enough memory for realloc")));
+		return 0;
+	}
  
-  memcpy(&(mem->data[mem->size]), contents, realsize);
-  mem->size += realsize;
-  mem->data[mem->size] = 0;
+	memcpy(&(mem->data[mem->size]), contents, realsize);
+	mem->size += realsize;
+	mem->data[mem->size] = 0;
  
-  return realsize;
+	return realsize;
 }
 
 char* get_maxscale_home(void)
@@ -525,7 +537,7 @@ int		*data;
 void
 module_feedback_send(void* data) {
 	MODULES *ptr = registered;
-	CURL *curl;
+	CURL *curl = NULL;
 	CURLcode res;
 	struct curl_httppost *formpost=NULL;
 	struct curl_httppost *lastptr=NULL;
@@ -533,7 +545,7 @@ module_feedback_send(void* data) {
 	void *data_ptr=NULL;
 	long http_code = 0;
 	struct MemoryStruct chunk;
-	int last_action = 0;
+	int last_action = _NOTIFICATION_SEND_PENDING;
 	time_t now;
 	struct tm *now_tm;
 	int hour;
@@ -548,10 +560,17 @@ module_feedback_send(void* data) {
 
 	/* Configuration check */
 
-	if (feedback_config->feedback_url == NULL || feedback_config->feedback_user_info == NULL) {
+	if (feedback_config->feedback_enable == 0 || feedback_config->feedback_url == NULL || feedback_config->feedback_user_info == NULL) {
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-			"module_feedback_create : skip task because feedback_url or feedback_user_info is NULL")));
+			"Error in module_feedback_send(): some mandatory parameters are not set"
+			" feedback_enable=%u, feedback_url=%s, feedback_user_info=%s",
+			feedback_config->feedback_enable,
+			feedback_config->feedback_url == NULL ? "NULL" : feedback_config->feedback_url,
+			feedback_config->feedback_user_info == NULL ? "NULL" : feedback_config->feedback_user_info)));
+		
+		feedback_config->feedback_last_action = _NOTIFICATION_SEND_ERROR;
+
 		return;
 	}
 
@@ -565,9 +584,10 @@ module_feedback_send(void* data) {
 		/* It's not the rigt time, mark it as to be done and return */
 		feedback_config->feedback_last_action = _NOTIFICATION_SEND_PENDING;
 
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"module_feedback_create : skip task because of time interval: hour is [%d]",
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"module_feedback_send(): execution skipped, current hour [%d]"
+			" is not within the proper interval (from 2 AM to 4 AM)",
 			hour)));
 
 		return;
@@ -577,17 +597,17 @@ module_feedback_send(void* data) {
 	if (feedback_config->feedback_last_action == _NOTIFICATION_SEND_OK) {
 		/* task was done before, return */
 
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"module_feedback_create : skip task because of previous succesful run: hour is [%d], last_action [%d]",
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"module_feedback_send() : execution skipped because of previous succesful run: hour is [%d], last_action [%d]",
 			hour, feedback_config->feedback_last_action)));
 
 		return;
 	}
  
-	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR,
-		"module_feedback_create : task runs: hour is [%d], last_action [%d]",
+	LOGIF(LT, (skygw_log_write_flush(
+		LOGFILE_TRACE,
+		"module_feedback_send(): task now runs: hour is [%d], last_action [%d]",
 		hour, feedback_config->feedback_last_action)));
 
 
@@ -608,6 +628,17 @@ module_feedback_send(void* data) {
 	ptr = registered;
 
 	buffer = gwbuf_alloc(n_mod * 256);
+	if (buffer == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error in module_feedback_send(): gwbuf_alloc() failed to allocate %d bytes",
+			n_mod * 256)));
+
+		feedback_config->feedback_last_action = _NOTIFICATION_SEND_ERROR;
+
+		return;
+	}
+
 	data_ptr = GWBUF_DATA(buffer);
 
 	sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", hex_setup_info);
@@ -711,26 +742,38 @@ module_feedback_send(void* data) {
 		if(res != CURLE_OK) {
 			last_action = _NOTIFICATION_SEND_ERROR;
 
-			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-			fprintf(stderr, "curl error_message: [%s]\n", error_message);
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: module_feedback_send(), curl call for [%s] failed due: %s, %s",
+				feedback_config->feedback_url,	
+				curl_easy_strerror(res),
+				error_message)));
 		} else {
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-
-			fprintf(stderr, "Reply from remote server is\n[%s]. Code [%lu]\n", chunk.data, http_code);
 		}
 
 		if (http_code == 200) {
 			last_action = _NOTIFICATION_SEND_OK;
+		} else {
+			last_action = _NOTIFICATION_SEND_ERROR;
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error in module_feedback_send(), Bad HTTP Code from remote server: %lu",
+				http_code)));
 		}
 	} else {
+		LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error in module_feedback_send(), curl object not initialized")));
 		last_action = _NOTIFICATION_SEND_ERROR;
 	}
-	
-	memcpy(&feedback_config->feedback_last_action, &last_action, sizeof(int));
 
-	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR,
-		"module_feedback_create : task run result: hour is [%d], last_action [%d], http_code [%d]",
+	/* update last action in the config struct */	
+	feedback_config->feedback_last_action =  last_action;
+
+	LOGIF(LT, (skygw_log_write_flush(
+		LOGFILE_TRACE,
+		"module_feedback_send(): task run result: hour is [%d], last_action [%d], HTTP code [%d]",
 		hour, feedback_config->feedback_last_action, http_code)));
 
 	if(chunk.data)
@@ -738,8 +781,11 @@ module_feedback_send(void* data) {
 
 	gwbuf_free(buffer);
 
-	curl_easy_cleanup(curl);
-	curl_formfree(formpost);
+	if (curl) {
+		curl_easy_cleanup(curl);
+		curl_formfree(formpost);
+	}
+
 	curl_global_cleanup();
 }
 
