@@ -1,5 +1,5 @@
-#ifndef _NOTIFICATION_H
-#define _NOTIFICATION_H
+#ifndef _NOTIFICATION_SERVICE_H
+#define _NOTIFICATION_SERVICE_H
 /*
  * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -32,6 +32,12 @@
  * @endverbatim
  */
 
+#define _NOTIFICATION_CONNECT_TIMEOUT 	30
+#define _NOTIFICATION_OPERATION_TIMEOUT 30
+#define _NOTIFICATION_SEND_PENDING	0
+#define _NOTIFICATION_SEND_OK		1
+#define _NOTIFICATION_SEND_ERROR 	2
+
 /**
  * The configuration and usage information data for feeback service
  */
@@ -39,14 +45,15 @@
 typedef struct {
 	int	feedback_enable;		/**< Enable/Disable Notification feedback */
 	char	*feedback_url;			/**< URL to which the data is sent */
-	char	*feedback_setup_info;		/**< MaxScale setup identifier info included in the feedback data sent */
 	char	*feedback_user_info;		/**< User info included in the feedback data sent */
 	int	feedback_timeout;		/**< An attempt to write/read the data times out and fails after this many seconds */
 	int	feedback_connect_timeout;	/**< An attempt to send the data times out and fails after this many seconds */
 	int	feedback_last_action;		/**< Holds the feedback last send action status */
+        char	*release_info;			/**< Operating system Release name */
+        char	*sysname;			/**< Operating system name */
+        uint8_t	*mac_sha1;			/**< First available MAC address*/
 } FEEDBACK_CONF;
 
-
-extern FEEDBACK_CONF*   notification_get_config_feedback();
-
+extern char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
+extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
 #endif

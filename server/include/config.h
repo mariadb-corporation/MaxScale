@@ -30,12 +30,15 @@
  * 07/05/14	Massimiliano Pinto	Added version_string to global configuration
  * 23/05/14	Massimiliano Pinto	Added id to global configuration
  * 17/10/14	Mark Riddoch		Added poll tuning configuration parameters
+ * 05/03/15	Massimiliano Pinto	Added sysname, release, sha1_mac to gateway struct
  *
  * @endverbatim
  */
 
 #define		DEFAULT_NBPOLLS		3	/**< Default number of non block polls before we block */
 #define		DEFAULT_POLLSLEEP	1000	/**< Default poll wait time (milliseconds) */
+#define		_SYSNAME_STR_LENGTH	256	/**< sysname len */
+#define		_RELEASE_STR_LENGTH	256	/**< release len */
 /**
  * Maximum length for configuration parameter value.
  */
@@ -92,11 +95,12 @@ typedef struct	config_context {
  * The gateway global configuration data
  */
 typedef struct {
-	int			n_threads;		/**< Number of polling threads */
-	char			*version_string;	/**< The version string of embedded database library */
-        char			release_string[256];	/**< The release name string of the system */
-        char                    mac_sha1[SHA_DIGEST_LENGTH]; /*< The SHA1 digest of an interface MAC address */
-	unsigned long		id;			/**< MaxScale ID */
+	int			n_threads;				/**< Number of polling threads */
+	char			*version_string;			/**< The version string of embedded database library */
+	char			release_string[_SYSNAME_STR_LENGTH];	/**< The release name string of the system */
+	char			sysname[_SYSNAME_STR_LENGTH];		/**< The release name string of the system */
+	uint8_t			mac_sha1[SHA_DIGEST_LENGTH];		/*< The SHA1 digest of an interface MAC address */
+	unsigned long		id;					/**< MaxScale ID */
 	unsigned int		n_nbpoll;		/**< Tune number of non-blocking polls */
 	unsigned int		pollsleep;		/**< Wait time in blocking polls */
 } GATEWAY_CONF;
@@ -109,7 +113,7 @@ extern unsigned int	config_pollsleep();
 CONFIG_PARAMETER*	config_get_param(CONFIG_PARAMETER* params, const char* name);
 config_param_type_t 	config_get_paramtype(CONFIG_PARAMETER* param);
 CONFIG_PARAMETER*	config_clone_param(CONFIG_PARAMETER* param);
-
+extern int		config_truth_value(char *);
 bool config_set_qualified_param(
         CONFIG_PARAMETER* param, 
         void* val, 
@@ -133,4 +137,7 @@ bool config_get_valtarget(
 	CONFIG_PARAMETER*   param,
 	const char*         name, /*< if NULL examine current param only */
 	config_param_type_t ptype);
+
+void config_enable_feedback_task(void);
+void config_disable_feedback_task(void);
 #endif

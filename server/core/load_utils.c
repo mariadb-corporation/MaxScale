@@ -47,6 +47,7 @@
 #include	<notification.h>
 #include	<curl/curl.h>
 #include	<sys/utsname.h>
+#include	<openssl/sha.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -537,10 +538,7 @@ module_feedback_send(void* data) {
 	struct tm *now_tm;
 	int hour;
 	int n_mod=0;
-	struct utsname uname_data;
-	unsigned char setup_if_address[6]="";
-	unsigned char sha1_if_address[20]="";
-	char hex_setup_info[40 + 1]="";
+	char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1]="";
 
 	now = time(NULL);
 	now_tm = localtime(&now);
@@ -565,7 +563,7 @@ module_feedback_send(void* data) {
 
 	if (hour > 4 || hour < 2) {
 		/* It's not the rigt time, mark it as to be done and return */
-		feedback_config->feedback_last_action = 0;
+		feedback_config->feedback_last_action = _NOTIFICATION_SEND_PENDING;
 
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -576,7 +574,7 @@ module_feedback_send(void* data) {
 	}
 
 	/* Time to run the task: if a previous run was succesfull skip next runs */
-	if (feedback_config->feedback_last_action == 1) {
+	if (feedback_config->feedback_last_action == _NOTIFICATION_SEND_OK) {
 		/* task was done before, return */
 
 		LOGIF(LE, (skygw_log_write_flush(
@@ -593,14 +591,9 @@ module_feedback_send(void* data) {
 		hour, feedback_config->feedback_last_action)));
 
 
-	/* get uname info */
-	uname(&uname_data);
+	/* encode MAC-sha1 to HEX */
+	gw_bin2hex(hex_setup_info, feedback_config->mac_sha1, SHA_DIGEST_LENGTH);
 
-	/* get first available network interface info */
-	if (config_get_ifaddr(setup_if_address)) {
-		gw_sha1_str(setup_if_address, 6, sha1_if_address);
-		gw_bin2hex(hex_setup_info, sha1_if_address, 20);
-	}
 
 	/* allocate first memory chunck for httpd servr reply */
 	chunk.data = malloc(1);  /* will be grown as needed by the realloc above */ 
@@ -617,11 +610,7 @@ module_feedback_send(void* data) {
 	buffer = gwbuf_alloc(n_mod * 256);
 	data_ptr = GWBUF_DATA(buffer);
 
-	if (strlen(hex_setup_info))
-		sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", hex_setup_info);
-	else
-		sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", feedback_config->feedback_setup_info);
-
+	sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", hex_setup_info);
 	data_ptr+=strlen(data_ptr);
 	sprintf(data_ptr, "FEEDBACK_USER_INFO\t%s\n", feedback_config->feedback_user_info);
 	data_ptr+=strlen(data_ptr);
@@ -629,14 +618,9 @@ module_feedback_send(void* data) {
 	data_ptr+=strlen(data_ptr);
 	sprintf(data_ptr, "NOW\t%lu\nPRODUCT\t%s\n", now, "maxscale");
 	data_ptr+=strlen(data_ptr);
-
-	if (strlen(uname_data.sysname))
-		sprintf(data_ptr, "Uname_sysname\t%s\n", uname_data.sysname);
-	else
-		sprintf(data_ptr, "Uname_sysname\t%s\n", "");
-
+	sprintf(data_ptr, "Uname_sysname\t%s\n", feedback_config->sysname);
 	data_ptr+=strlen(data_ptr);
-	sprintf(data_ptr, "Uname_distribution\t%s\n", "");
+	sprintf(data_ptr, "Uname_distribution\t%s\n", feedback_config->release_info);
 	data_ptr+=strlen(data_ptr);
 
         while (ptr)
@@ -704,14 +688,14 @@ module_feedback_send(void* data) {
    		/*
 		 * This makes the connection A LOT LESS SECURE.
  	    	 */
-//   		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+   		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 #endif
 
 #ifdef SKIP_HOSTNAME_VERIFICATION
 		/*
 		 * this will make the connection less secure.
 		 */
- //   		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+  		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
 #endif
 
 		/* send all data to this function  */ 
@@ -725,7 +709,7 @@ module_feedback_send(void* data) {
 
 		/* Check for errors */
 		if(res != CURLE_OK) {
-			last_action = 0;
+			last_action = _NOTIFICATION_SEND_ERROR;
 
 			fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
 			fprintf(stderr, "curl error_message: [%s]\n", error_message);
@@ -736,10 +720,10 @@ module_feedback_send(void* data) {
 		}
 
 		if (http_code == 200) {
-			last_action = 1;
+			last_action = _NOTIFICATION_SEND_OK;
 		}
 	} else {
-		last_action = 0;
+		last_action = _NOTIFICATION_SEND_ERROR;
 	}
 	
 	memcpy(&feedback_config->feedback_last_action, &last_action, sizeof(int));

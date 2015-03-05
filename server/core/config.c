@@ -41,6 +41,7 @@
  * 30/10/14	Massimiliano Pinto	Added disable_master_failback parameter
  * 07/11/14	Massimiliano Pinto	Addition of monitor timeouts for connect/read/write
  * 20/02/15	Markus Mäkelä		Added connection_timeout parameter for services
+ * 05/03/15	Massimiliano	Pinto	Added notification_feedback support
  *
  * @endverbatim
  */
@@ -55,6 +56,7 @@
 #include <server.h>
 #include <users.h>
 #include <monitor.h>
+#include <modules.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql.h>
@@ -63,10 +65,12 @@
 #include <glob.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <housekeeper.h>
 #include <notification.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <sys/utsname.h>
 
 
 /** Defined in log_manager.cc */
@@ -84,10 +88,11 @@ static	int	handle_feedback_item(const char *, const char *);
 static	void	global_defaults();
 static	void	feedback_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
-static	int	config_truth_value(char *str);
-static int	internalService(char *router);
-int get_release_string(char* release);
-int config_get_ifaddr(unsigned char *output);
+int	config_truth_value(char *str);
+static	int	internalService(char *router);
+int	config_get_ifaddr(unsigned char *output);
+int	config_get_release_string(char* release);
+
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
 static	FEEDBACK_CONF	feedback;
@@ -746,7 +751,7 @@ int			error_count = 0;
 			/* if id is not set, do it now */
 			if (gateway.id == 0) {
 				setipaddress(&serv_addr.sin_addr, (address == NULL) ? "0.0.0.0" : address);
-				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + port + getpid());
+				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + atoi(port) + getpid());
 			}
                 
 			if (service && socket && protocol) {        
@@ -1215,7 +1220,7 @@ config_pollsleep()
  * @return  The feedback config data pointer
  */
 FEEDBACK_CONF *
-notification_get_config_feedback()
+config_get_feedback_data()
 {
 	return &feedback;
 }
@@ -1312,6 +1317,8 @@ int i;
 static void
 global_defaults()
 {
+	uint8_t mac_addr[6]="";
+	struct utsname uname_data;
 	gateway.n_threads = 1;
 	gateway.n_nbpoll = DEFAULT_NBPOLLS;
 	gateway.pollsleep = DEFAULT_POLLSLEEP;
@@ -1321,20 +1328,23 @@ global_defaults()
 		gateway.version_string = NULL;
 	gateway.id=0;
 
-	if(!get_release_string(gateway.release_string))
-	{
+	/* get release string */
+	if(!config_get_release_string(gateway.release_string))
 	    sprintf(gateway.release_string,"undefined");
+
+	/* get first mac_address in SHA1 */
+	if(config_get_ifaddr(mac_addr)) {
+		gw_sha1_str(mac_addr, 6, gateway.mac_sha1);
+	} else {
+		memset(gateway.mac_sha1, '\0', sizeof(gateway.mac_sha1));
+		memcpy(gateway.mac_sha1, "MAC-undef", 9);
 	}
 
-    unsigned char mac[6];
-    if(config_get_ifaddr(mac))
-    {
-        SHA1(mac,6,gateway.mac_sha1);
-    }
-    else
-	{
-	    sprintf(gateway.mac_sha1,"MAC-undef");
-	}
+	/* get uname info */
+	if (uname(&uname_data))
+		strcpy(gateway.sysname, "undefined");
+	else
+		strncpy(gateway.sysname, uname_data.sysname, _SYSNAME_STR_LENGTH);
 }
 
 /**
@@ -1344,12 +1354,14 @@ static void
 feedback_defaults()
 {
 	feedback.feedback_enable = 0;
-	feedback.feedback_last_action = 0;
-	feedback.feedback_timeout = 30;
-	feedback.feedback_connect_timeout = 30;
-	feedback.feedback_url = NULL;
-	feedback.feedback_setup_info = strdup("10000-eee-AAA-444");
 	feedback.feedback_user_info = NULL;
+	feedback.feedback_last_action = _NOTIFICATION_SEND_PENDING;
+	feedback.feedback_timeout = _NOTIFICATION_OPERATION_TIMEOUT;
+	feedback.feedback_connect_timeout = _NOTIFICATION_CONNECT_TIMEOUT;
+	feedback.feedback_url = NULL;
+	feedback.release_info = gateway.release_string;
+	feedback.sysname = gateway.sysname;
+	feedback.mac_sha1 = gateway.mac_sha1;
 }
 
 /**
@@ -1970,158 +1982,190 @@ int	i;
 	}
 	return 0;
 }
-
-int config_get_ifaddr(unsigned char *output)
+/**
+ * Get the MAC address of first network interface
+ *
+ * and fill the provided allocated buffer with SHA1 encoding
+ * @param output	Allocated 6 bytes buffer
+ * @return 1 on success, 0 on failure
+ *
+ */
+int
+config_get_ifaddr(unsigned char *output)
 {
-    struct ifreq ifr;
-    struct ifconf ifc;
-    char buf[1024];
-    int success = 0;
+	struct ifreq ifr;
+	struct ifconf ifc;
+	char buf[1024];
+	struct ifreq* it;
+	struct ifreq* end;
+	int success = 0;
 
-    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if (sock == -1) { /* handle error*/ };
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (sock == -1) {
+		return 0;
+	};
 
-    ifc.ifc_len = sizeof(buf);
-    ifc.ifc_buf = buf;
-    if (ioctl(sock, SIOCGIFCONF, &ifc) == -1) { /* handle error */ }
+	ifc.ifc_len = sizeof(buf);
+	ifc.ifc_buf = buf;
+	if (ioctl(sock, SIOCGIFCONF, &ifc) == -1) {
+		return 0;
+	}
 
-    struct ifreq* it = ifc.ifc_req;
-    const struct ifreq* const end = it + (ifc.ifc_len / sizeof(struct ifreq));
+	it = ifc.ifc_req;
+	end = it + (ifc.ifc_len / sizeof(struct ifreq));
 
-    for (; it != end; ++it) {
-        strcpy(ifr.ifr_name, it->ifr_name);
-        if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0) {
-            if (! (ifr.ifr_flags & IFF_LOOPBACK)) { // don't count loopback
-                if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0) {
-                    success = 1;
-                    break;
-                }
-            }
-        }
-        else { /* handle error */ }
-    }
+	for (; it != end; ++it) {
+		strcpy(ifr.ifr_name, it->ifr_name);
+		if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0) {
+			if (! (ifr.ifr_flags & IFF_LOOPBACK)) { /* don't count loopback */
+				if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0) {
+					success = 1;
+					break;
+				}
+			}
+		} else {
+			return 0;
+		}
+	}
 
-    if (success) memcpy(output, ifr.ifr_hwaddr.sa_data, 6);
+	if (success)
+		memcpy(output, ifr.ifr_hwaddr.sa_data, 6);
 
-        return success;
+	return success;
 }
 
 /**
+ * Get the linux distribution info
  *
- * @param release
- * @return
+ * @param release	The allocated buffer where
+ *			the found distribution is copied into.
+ * @return 1 on success, 0 on failure
+ *
  */
-int get_release_string(char* release)
+int
+config_get_release_string(char* release)
 {
-    const char *masks[]= {
-	"/etc/*-version", "/etc/*-release",
-	"/etc/*_version", "/etc/*_release"
-    };
-    bool have_ubuf;
-    struct utsname ubuf;
-    bool have_distribution;
-    char distribution[256];
-    int fd;
-    int i;
-    char *to;
+	const char *masks[]= {
+		"/etc/*-version", "/etc/*-release",
+		"/etc/*_version", "/etc/*_release"
+	};
 
-    have_ubuf = (uname(&ubuf) != -1);
-    have_distribution= false;
-    if ((fd= open("/etc/lsb-release", O_RDONLY)) != -1)
-    {
-	/* LSB-compliant distribution! */
-	size_t len= read(fd, (char*)distribution, sizeof(distribution)-1);
-	close(fd);
-	if (len != (size_t)-1)
+	bool have_distribution;
+	char distribution[_RELEASE_STR_LENGTH]="";
+	int fd;
+	int i;
+	char *to;
+
+	have_distribution= false;
+
+	/* get data from lsb-release first */
+	if ((fd= open("/etc/lsb-release", O_RDONLY)) != -1)
 	{
-	    distribution[len]= 0; // safety
-	    char *found= strstr(distribution, "DISTRIB_DESCRIPTION=");
-	    if (found)
-	    {
-		have_distribution = true;
-		char *end = strstr(found, "\n");
-		if (end == NULL)
-		    end = distribution + len;
-		found += 20;
-
-		if (*found == '"' && end[-1] == '"')
+		/* LSB-compliant distribution! */
+		size_t len= read(fd, (char*)distribution, sizeof(distribution)-1);
+		close(fd);
+		if (len != (size_t)-1)
 		{
-		    found++;
-		    end--;
+			distribution[len]= 0;
+			char *found= strstr(distribution, "DISTRIB_DESCRIPTION=");
+			if (found)
+			{
+				have_distribution = true;
+				char *end = strstr(found, "\n");
+				if (end == NULL)
+				end = distribution + len;
+				found += 20;
+
+				if (*found == '"' && end[-1] == '"')
+				{
+					found++;
+					end--;
+				}
+				*end = 0;
+
+				to = strcpy(distribution, "lsb: ");
+				memmove(to, found, end - found + 1);
+
+				strncpy(release, to, _RELEASE_STR_LENGTH);
+
+				return 1;
+			}
 		}
-		*end = 0;
-
-		to = strcpy(distribution, "lsb: ");
-		memmove(to, found, end - found + 1);
-
-		strncpy(release, to, 255);
-		return 1;
-	    }
 	}
-    }
 
-  /* if not an LSB-compliant distribution */
-  for (i= 0; !have_distribution && i < 4; i++)
-  {
-    glob_t found;
-        char *new_to;
-        fprintf(stderr, "glob %d: [%s]\n", i, masks[i]);
+	/* if not an LSB-compliant distribution */
+	for (i= 0; !have_distribution && i < 4; i++)
+	{
+		glob_t found;
+		char *new_to;
 
-    if (glob(masks[i], GLOB_NOSORT, NULL, &found) == 0)
-    {
-      int fd;
-        int k = 0;
-        int skipindex = 0;
-        int startindex = 0;
+		if (glob(masks[i], GLOB_NOSORT, NULL, &found) == 0)
+		{
+			int fd;
+			int k = 0;
+			int skipindex = 0;
+			int startindex = 0;
 
-        fprintf(stderr, "Matched [%lu] paths\n", found.gl_pathc);
+			for (k = 0; k< found.gl_pathc; k++) {
+				if (strcmp(found.gl_pathv[k], "/etc/lsb-release") == 0) {
+					skipindex = k;
+				}
+			}
 
-        for (k = 0; k< found.gl_pathc; k++) {
-                fprintf(stderr, "Possibly opening [%s]\n", found.gl_pathv[k]);
-                if (strcmp(found.gl_pathv[k], "/etc/lsb-release") == 0) {
-                        fprintf(stderr, "Skipping [%s]\n", found.gl_pathv[k]);
-                        skipindex = k;
-                }
-        }
+			if ( skipindex == 0)
+				startindex++;
 
+			if ((fd= open(found.gl_pathv[startindex], O_RDONLY)) != -1)
+			{
+			/*
+				+5 and -8 below cut the file name part out of the
+				full pathname that corresponds to the mask as above.
+			*/
+				new_to = strcpy(distribution, found.gl_pathv[0] + 5);
+				new_to += 8;
+				*new_to++ = ':';
+				*new_to++ = ' ';
 
-      if ( skipindex == 0)
-         startindex++;
+				size_t to_len= distribution + sizeof(distribution) - 1 - new_to;
+				size_t len= read(fd, (char*)new_to, to_len);
 
-        // skip ound.gl_pathv[0] if it's /etc/lsb-release
-      if ((fd= open(found.gl_pathv[startindex], O_RDONLY)) != -1)
-      {
-        /*
-          +5 and -8 below cut the file name part out of the
-          full pathname that corresponds to the mask as above.
-        */
-        //char *to= strmov(distribution, found.gl_pathv[0] + 5) - 8;
-        new_to = strcpy(distribution, found.gl_pathv[0] + 5);
-        new_to += 8;
-        *new_to++ = ':';
-        *new_to++ = ' ';
+				close(fd);
 
-        size_t to_len= distribution + sizeof(distribution) - 1 - new_to;
-        size_t len= read(fd, (char*)new_to, to_len);
-        close(fd);
-        if (len != (size_t)-1)
-        {
-          new_to[len]= 0; // safety
-          char *end= strstr(new_to, "\n");
-          if (end)
-            *end= 0;
+				if (len != (size_t)-1)
+				{
+					new_to[len]= 0;
+					char *end= strstr(new_to, "\n");
+					if (end)
+						*end= 0;
 
-        have_distribution= true;
-        fprintf(stderr, "Distribution [%i]=[%s]\n", i, new_to);
-        strncpy(release, new_to, 255);
-        }
-      }
-    }
-    globfree(&found);
-  }
+					have_distribution= true;
+					strncpy(release, new_to, _RELEASE_STR_LENGTH);
+				}
+			}
+		}
+		globfree(&found);
+	}
 
-   if (have_distribution)
-        return 1;
-   else
-        return 0;
+	if (have_distribution)
+		return 1;
+	else
+		return 0;
+}
+
+/**
+ * Add the 'send_feedback' task to the task list
+ */
+void
+config_enable_feedback_task(void) {
+	FEEDBACK_CONF *cfg = config_get_feedback_data();
+	if (cfg->feedback_enable)
+        	hktask_add("send_feedback", module_feedback_send, cfg, 30);
+}
+
+/**
+ * Remove the 'send_feedback' task
+ */
+void
+config_disable_feedback_task(void) {
+        hktask_remove("send_feedback");
 }
