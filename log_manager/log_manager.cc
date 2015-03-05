@@ -52,6 +52,8 @@ static int prevval;
 static simple_mutex_t msg_mutex;
 #endif
 static int highprec = 0;
+static int do_syslog = 1;
+
 /**
  * Variable holding the enabled logfiles information.
  * Used from log users to check enabled logs prior calling
@@ -392,7 +394,13 @@ static bool logmanager_init_nomutex(
         fw = &lm->lm_filewriter;
         fn->fn_state  = UNINIT;
         fw->fwr_state = UNINIT;
-        
+
+        if(!do_syslog)
+        {
+            free(syslog_id_str);
+            syslog_id_str = NULL;
+        }
+
         /** Initialize configuration including log file naming info */
         if (!fnames_conf_init(fn, argc, argv)) 
 	{
@@ -1703,11 +1711,14 @@ static bool fnames_conf_init(
 
                 case 'l':
                         /** record list of log file ids for syslogged */
+                    if(do_syslog)
+                    {
                         if (syslog_id_str != NULL)
                         {
                                 free (syslog_id_str);
                         }
                         syslog_id_str = optarg;
+                    }
                         break;
 
                 case 'm':
@@ -1720,6 +1731,7 @@ static bool fnames_conf_init(
                         
                 case 's':
                         /** record list of log file ids for later use */
+                    if(do_syslog)
                         shmem_id_str = optarg;
                         break;
                 case 'h':
@@ -3083,7 +3095,21 @@ void skygw_log_sync_all(void)
 	skygw_message_wait(lm->lm_clientmes);
 }
 
+/**
+ * Toggle high precision logging
+ * @param val 0 for disabled, 1 for enabled
+ */
 void skygw_set_highp(int val)
 {
         highprec = val;
+}
+
+
+/**
+ * Toggle syslog logging
+ * @param val 0 for disabled, 1 for enabled
+ */
+void logmanager_enable_syslog(int val)
+{
+    do_syslog = val;
 }
