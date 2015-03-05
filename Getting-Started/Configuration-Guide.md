@@ -56,6 +56,16 @@ threads=1
 
 It should be noted that additional threads will be created to execute other internal services within MaxScale. This setting is used to configure the number of threads that will be used to manage the user connections.
 
+### `ms_timestamp`
+
+Enable or disable the high precision timestamps in logfiles. Enabling this adds millisecond precision to all logfile timestamps.
+
+```
+# Valid options are:
+#       ms_timestamp=<0|1>
+ms_timestamp=1
+```
+
 ### `log_messages`
 
 Enable or disable logging of status messages. This logfile is enabled by default and contains information about the modules MaxScale is using and details about the configuration.
@@ -796,6 +806,12 @@ When value all is used, queries reading session variables can be routed to any a
     INSERT INTO test.t1 VALUES (@myid:=@myid+1)
 
 In above-mentioned case the user-defined variable would only be updated in the master where query would be routed due to `INSERT` statement.
+
+`max_sescmd_history` sets a limit on how many session commands each session can execute before the connection is closed. The default is an unlimited number of session commands.
+
+	max_sescmd_history=1500
+
+When a limitation is set, it effectively creates a cap on the session's memory consumption. This might be useful if connection pooling is used and the sessions use large amounts of session commands.
 
 An example of Read/Write Split router configuration :
 
