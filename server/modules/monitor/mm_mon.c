@@ -635,7 +635,7 @@ size_t nrounds = 0;
 
                         if (mon_status_changed(ptr))
                         {
-                                dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
+                                dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
                         }
                         
                         if (mon_status_changed(ptr) || 

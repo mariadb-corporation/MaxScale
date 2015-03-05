@@ -1,4 +1,9 @@
-cmake_minimum_required(VERSION 2.6)
+if(PACKAGE)
+  cmake_minimum_required(VERSION 2.8.12)
+else()
+  cmake_minimum_required(VERSION 2.8)
+endif()
+
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 
 include(macros.cmake)
@@ -126,7 +131,6 @@ install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION .)
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION .)
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION .)
-install(FILES ${CMAKE_SOURCE_DIR}/SETUP DESTINATION .)
 install(DIRECTORY DESTINATION log)
 
 # Install startup scripts and ldconfig files

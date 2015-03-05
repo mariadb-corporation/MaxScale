@@ -30,4 +30,5 @@ add_subdirectory(schemarouter/test)
 if(BUILD_BINLOG)
   add_subdirectory(binlog)
 endif()
+add_subdirectory(maxinfo)
 

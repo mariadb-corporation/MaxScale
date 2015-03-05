@@ -51,6 +51,7 @@ static int block_start_index;
 static int prevval;
 static simple_mutex_t msg_mutex;
 #endif
+static int highprec = 0;
 /**
  * Variable holding the enabled logfiles information.
  * Used from log users to check enabled logs prior calling
@@ -696,9 +697,11 @@ static int logmanager_write_log(
 		else
 		{
 			sesid_str_len = 0;
-		}			
-                timestamp_len = get_timestamp_len();
-                
+		}
+                if(highprec)
+                  timestamp_len = get_timestamp_len_hp();
+                else
+                  timestamp_len = get_timestamp_len();
 		cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 		
                 /** Find out how much can be safely written with current block size */
@@ -758,8 +761,10 @@ static int logmanager_write_log(
                  * to wp.
                  * Returned timestamp_len doesn't include terminating null.
                  */
-                timestamp_len = snprint_timestamp(wp, timestamp_len);
-		
+                 if(highprec)
+                   timestamp_len = snprint_timestamp_hp(wp, timestamp_len);
+                 else
+                   timestamp_len = snprint_timestamp(wp, timestamp_len);
 		if (sesid_str_len != 0)
 		{
 			/**
@@ -3076,4 +3081,9 @@ void skygw_log_sync_all(void)
 	flushall_logfiles(true);
 	skygw_message_send(lm->lm_logmes);
 	skygw_message_wait(lm->lm_clientmes);
+}
+
+void skygw_set_highp(int val)
+{
+        highprec = val;
 }

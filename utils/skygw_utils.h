@@ -125,7 +125,9 @@ skygw_thr_state_t skygw_thread_get_state(skygw_thread_t* thr);
 pthread_t         skygw_thread_gettid(skygw_thread_t* thr);
 
 size_t get_timestamp_len(void);
+size_t get_timestamp_len_hp(void);
 size_t snprint_timestamp(char* p_ts, size_t tslen);
+size_t snprint_timestamp_hp(char* p_ts, size_t tslen);
 
 EXTERN_C_BLOCK_BEGIN
 

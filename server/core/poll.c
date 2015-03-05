@@ -30,7 +30,9 @@
 #include <gw.h>
 #include <config.h>
 #include <housekeeper.h>
+#include <config.h>
 #include <mysql.h>
+#include <resultset.h>
 
 #define		PROFILE_POLL	0
 
@@ -151,8 +153,8 @@ static struct {
 	int	n_hup;		/*< Number of hangup events */
 	int	n_accept;	/*< Number of accept events */
 	int	n_polls;	/*< Number of poll cycles   */
-	int	n_pollev;	/*< Number of polls returnign events */
-	int	n_nbpollev;	/*< Number of polls returnign events */
+	int	n_pollev;	/*< Number of polls returning events */
+	int	n_nbpollev;	/*< Number of polls returning events */
 	int	n_nothreads;	/*< Number of times no threads are polling */
 	int	n_fds[MAXNFDS];	/*< Number of wakeups with particular
 				    n_fds value */
@@ -1524,4 +1526,105 @@ int		i;
 	}
 	dcb_printf(pdcb, " > %2d00ms      | %-10d | %-10d\n", N_QUEUE_TIMES,
 					queueStats.qtimes[N_QUEUE_TIMES], queueStats.exectimes[N_QUEUE_TIMES]);
+}
+
+/**
+ * Return a poll statistic from the polling subsystem
+ *
+ * @param stat	The required statistic
+ * @return	The value of that statistic
+ */
+int
+poll_get_stat(POLL_STAT stat)
+{
+	switch (stat)
+	{
+	case POLL_STAT_READ:
+		return pollStats.n_read;
+	case POLL_STAT_WRITE:
+		return pollStats.n_write;
+	case POLL_STAT_ERROR:
+		return pollStats.n_error;
+	case POLL_STAT_HANGUP:
+		return pollStats.n_hup;
+	case POLL_STAT_ACCEPT:
+		return pollStats.n_accept;
+	case POLL_STAT_EVQ_LEN:
+		return pollStats.evq_length;
+	case POLL_STAT_EVQ_PENDING:
+		return pollStats.evq_pending;
+	case POLL_STAT_EVQ_MAX:
+		return pollStats.evq_max;
+	case POLL_STAT_MAX_QTIME:
+		return (int)queueStats.maxqtime;
+	case POLL_STAT_MAX_EXECTIME:
+		return (int)queueStats.maxexectime;
+	}
+	return 0;
+}
+
+/**
+ * Provide a row to the result set that defines the event queue statistics
+ *
+ * @param set	The result set
+ * @param data	The index of the row to send
+ * @return The next row or NULL
+ */
+static RESULT_ROW *
+eventTimesRowCallback(RESULTSET *set, void *data)
+{
+int		*rowno = (int *)data;
+char		buf[40];
+RESULT_ROW	*row;
+
+	if (*rowno >= N_QUEUE_TIMES)
+	{
+		free(data);
+		return NULL;
+	}
+	row = resultset_make_row(set);
+	if (*rowno == 0)
+		resultset_row_set(row, 0, "< 100ms");
+	else if (*rowno == N_QUEUE_TIMES - 1)
+	{
+		sprintf(buf, "> %2d00ms", N_QUEUE_TIMES);
+		resultset_row_set(row, 0, buf);
+	}
+	else
+	{
+		sprintf(buf, "%2d00 - %2d00ms", *rowno, (*rowno) + 1);
+		resultset_row_set(row, 0, buf);
+	}
+	sprintf(buf, "%d", queueStats.qtimes[*rowno]);
+	resultset_row_set(row, 1, buf);
+	sprintf(buf, "%d", queueStats.exectimes[*rowno]);
+	resultset_row_set(row, 2, buf);
+	(*rowno)++;
+	return row;
+}
+
+/**
+ * Return a resultset that has the current set of services in it
+ *
+ * @return A Result set
+ */
+RESULTSET *
+eventTimesGetList()
+{
+RESULTSET	*set;
+int		*data;
+
+	if ((data = (int *)malloc(sizeof(int))) == NULL)
+		return NULL;
+	*data = 0;
+	if ((set = resultset_create(eventTimesRowCallback, data)) == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	resultset_add_column(set, "Duration", 20, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "No. Events Queued", 12, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "No. Events Executed", 12, COL_TYPE_VARCHAR);
+
+	return set;
 }

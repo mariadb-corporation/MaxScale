@@ -42,6 +42,7 @@
 #include <poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <secrets.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -234,4 +235,31 @@ int gw_getsockerrno(
 
 return_eno:
         return eno;
+}
+
+/**
+ * Create a HEX(SHA1(SHA1(password)))
+ *
+ * @param password	The password to encrypt
+ * @return		The new allocated encrypted password, that the caller must free
+ *
+ */
+char *create_hex_sha1_sha1_passwd(char *passwd) {
+	uint8_t hash1[SHA_DIGEST_LENGTH]="";
+	uint8_t hash2[SHA_DIGEST_LENGTH]="";
+	char *hexpasswd=NULL;
+	
+	if ((hexpasswd = (char *)calloc(SHA_DIGEST_LENGTH * 2 + 1, 1)) == NULL)
+		return NULL;
+
+	/* hash1 is SHA1(real_password) */
+	gw_sha1_str((uint8_t *)passwd, strlen(passwd), hash1);
+
+	/* hash2 is the SHA1(input data), where input_data = SHA1(real_password) */
+	gw_sha1_str(hash1, SHA_DIGEST_LENGTH, hash2);
+
+	/* dbpass is the HEX form of SHA1(SHA1(real_password)) */
+	gw_bin2hex(hexpasswd, hash2, SHA_DIGEST_LENGTH);
+
+	return hexpasswd;
 }

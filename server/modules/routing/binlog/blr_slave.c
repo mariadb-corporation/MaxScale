@@ -435,7 +435,7 @@ int	query_len;
 		LOGFILE_ERROR, "Unexpected query from slave server %s", query_text)));
 	free(query_text);
 	blr_slave_send_error(router, slave, "Unexpected SQL query received from slave.");
-	return 0;
+	return 1;
 }
 
 
@@ -485,9 +485,9 @@ int             len;
         if ((pkt = gwbuf_alloc(strlen(msg) + 13)) == NULL)
                 return;
         data = GWBUF_DATA(pkt);
-        len = strlen(msg) + 1;
+        len = strlen(msg) + 9;
         encode_value(&data[0], len, 24);	// Payload length
-        data[3] = 0;				// Sequence id
+        data[3] = 1;				// Sequence id
 						// Payload
         data[4] = 0xff;				// Error indicator
 	data[5] = 0;				// Error Code
@@ -1996,7 +1996,7 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 	uint8_t *ptr;
 	int len, seqno;
 	GWBUF *pkt;
-	int n = 0;
+	int n = 1;
 
        /* preparing output result */
 	blr_slave_send_fieldcount(router, slave, 2);
@@ -2027,7 +2027,7 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
 				spinlock_release(&router->lock);
 
-				return 0;
+				return 1;
 			}
 
 			ptr = GWBUF_DATA(pkt);
@@ -2055,5 +2055,5 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
 	blr_slave_send_eof(router, slave, seqno);
 
-	return n;
+	return 1;
 }

@@ -19,6 +19,7 @@
  */
 #include <dcb.h>
 #include <gwbitmask.h>
+#include <resultset.h>
 
 /**
  * @file poll.h	The poll related functionality 
@@ -33,6 +34,22 @@
  */
 #define	MAX_EVENTS	1000
 
+/**
+* A statistic identifier that can be returned by poll_get_stat
+*/
+typedef enum {
+	POLL_STAT_READ,
+	POLL_STAT_WRITE,
+	POLL_STAT_ERROR,
+	POLL_STAT_HANGUP,
+	POLL_STAT_ACCEPT,
+	POLL_STAT_EVQ_LEN,
+	POLL_STAT_EVQ_PENDING,
+	POLL_STAT_EVQ_MAX,
+	POLL_STAT_MAX_QTIME,
+	POLL_STAT_MAX_EXECTIME
+} POLL_STAT;
+
 extern	void		poll_init();
 extern	int		poll_add_dcb(DCB *);
 extern	int		poll_remove_dcb(DCB *);
@@ -46,4 +63,6 @@ extern	void		dShowThreads(DCB *dcb);
 void 			poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
 extern	void		dShowEventQ(DCB *dcb);
 extern	void		dShowEventStats(DCB *dcb);
+extern	int		poll_get_stat(POLL_STAT stat);
+extern	RESULTSET	*eventTimesGetList();
 #endif

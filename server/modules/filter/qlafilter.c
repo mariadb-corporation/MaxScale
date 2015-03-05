@@ -99,7 +99,7 @@ static FILTER_OBJECT MyObject = {
  */
 typedef struct {
 	int	sessions;	/* The count of sessions */
-	char	*filebase;	/* The filemane base */
+	char	*filebase;	/* The filename base */
 	char	*source;	/* The source of the client connection */
 	char	*userName;	/* The user name to filter on */
 	char	*match;		/* Optional text to match against */
@@ -424,8 +424,8 @@ struct timeval	tv;
 					"%02d:%02d:%02d.%-3d %d/%02d/%d, ",
 					t.tm_hour, t.tm_min, t.tm_sec, (int)(tv.tv_usec / 1000),
 					t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-				fwrite(ptr, sizeof(char), length, my_session->fp);
-				fwrite("\n", sizeof(char), 1, my_session->fp);
+				fprintf(my_session->fp,"%s\n",ptr);
+				
 			}
 			free(ptr);
 		}

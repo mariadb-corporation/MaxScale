@@ -79,6 +79,8 @@
 #  define _GNU_SOURCE
 #endif
 
+time_t	MaxScaleStarted;
+
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
@@ -992,7 +994,7 @@ static void usage(void)
                 "  -f|--config=...   relative|absolute pathname of MaxScale configuration file\n"
 		"                    (default: $MAXSCALE_HOME/etc/MaxScale.cnf)\n"
 		"  -l|--log=...      log to file or shared memory\n"
-		"                    -lfile or -lshm - defaults to file\n"
+		"                    -lfile or -lshm - defaults to shared memory\n"
 		"  -v|--version      print version info and exit\n"
                 "  -?|--help         show this help\n"
 		, progname);
@@ -1054,7 +1056,7 @@ int main(int argc, char **argv)
         char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
         void*    log_flush_thr = NULL;
 	int      option_index;
-	int	 logtofile = 1;	      	      /* Use shared memory or file */
+	int	 logtofile = 0;	      	      /* Use shared memory or file */
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
@@ -1797,6 +1799,8 @@ int main(int argc, char **argv)
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                         "MaxScale started with %d server threads.",
                                    config_threadcount())));
+
+	MaxScaleStarted = time(0);
         /*<
          * Serve clients.
          */
@@ -1950,4 +1954,10 @@ static int write_pid_file(char *home_dir) {
 
 	/* success */
 	return 0;
+}
+
+int
+MaxScaleUptime()
+{
+	return time(0) - MaxScaleStarted;
 }
