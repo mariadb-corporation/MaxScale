@@ -243,6 +243,69 @@ static int hashcmpfun(
   return strcmp(i1,i2);
 }
 
+
+
+/**
+ * Convert a length encoded string into a C string.
+ * @param data Pointer to the first byte of the string
+ * @param len Pointer to an integer where the length of the string will be stored. On errors this will be set to -1.
+ * @return Pointer to the newly allocated string or NULL if the value is NULL or an error occurred
+ */
+char* get_lenenc_str(void* data, int* len)
+{
+    unsigned char* ptr = (unsigned char*)data;
+    char* rval;
+    long size, offset;
+
+    if(data == NULL || len == NULL)
+    {
+	*len = -1;
+        return NULL;
+    }
+
+    if(*ptr < 251)
+    {
+        size = *ptr;
+        offset = 1;
+    }
+    else
+    {
+        switch(*(ptr))
+        {
+        case 0xfb:
+            *len = 1;
+            return NULL;
+        case 0xfc:
+            size = *(ptr + 1) + (*(ptr + 2) << 8);
+            offset = 2;
+            break;
+        case 0xfd:
+            size = *ptr + (*(ptr + 2) << 8) + (*(ptr + 3) << 16);
+            offset = 3;
+            break;
+        case 0xfe:
+            size = *ptr + ((*(ptr + 2) << 8)) + (*(ptr + 3) << 16) +
+                    (*(ptr + 4) << 24) + (*(ptr + 5) << 32) + (*(ptr + 6) << 40) +
+                    (*(ptr + 7) << 48) + (*(ptr + 8) << 56);
+            offset = 8;
+            break;
+        default:
+
+            return NULL;
+        }
+    }
+
+    rval = malloc(sizeof(char)*(size+1));
+    if(rval)
+    {
+        memcpy(rval,ptr + offset,size);
+        memset(rval + size,0,1);
+
+    }
+    *len = size + offset;
+    return rval;
+}
+
 /**
  * Parses a response set to a SHOW DATABASES query and inserts them into the 
  * router client session's database hashtable. The name of the database is used 
@@ -256,29 +319,47 @@ static int hashcmpfun(
 bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 {
    bool rval = false;
-   RESULTSET* rset;
-   RSET_ROW* row;
-   
+   unsigned char* ptr;
+
    if(PTR_IS_RESULTSET(((unsigned char*)buf->start)) && 
       modutil_count_signal_packets(buf,0,0) == 2)
    {
-       rset = modutil_get_rows(buf);
-       if(rset && rset->columns == 1)
+       ptr = (unsigned char*)buf->start;
+
+       if(ptr[4] != 1)
        {
-           row = rset->head;
-           
-           while(row)
-           {
-               if(hashtable_add(rses->dbhash,row->data[0],target))
-               {
-                   skygw_log_write(LOGFILE_TRACE,"schemarouter: <%s, %s>",target,row->data[0]);
-               }
-               
-               row = row->next;
-           }
-           resultset_free(rset);
-           rval = true;
+	   /** Something else came back, discard and return with an error*/
+	   return false;
        }
+
+       /** Skip column definitions */
+       while(!PTR_IS_EOF(ptr))
+       {
+	   ptr += gw_mysql_get_byte3(ptr) + 4;
+       }
+
+       /** Skip first EOF packet */
+       ptr += gw_mysql_get_byte3(ptr) + 4;
+
+       while(!PTR_IS_EOF(ptr))
+       {
+	   int payloadlen = gw_mysql_get_byte3(ptr);
+	   int packetlen = payloadlen + 4;
+	   int len = 0;
+	   char* data = get_lenenc_str(ptr+4,&len);
+
+	   if(data)
+	   {
+	       if(hashtable_add(rses->dbhash,data,target))
+	       {
+		   skygw_log_write(LOGFILE_TRACE,"schemarouter: <%s, %s>",target,data);
+	       }
+	       free(data);
+	   }
+	   ptr += packetlen;
+       }
+       rval = true;
+       
    }
    
    return rval; 
