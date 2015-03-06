@@ -2,9 +2,8 @@ MaxScale Nagios plugins, for Nagios 3.5.1
 
 
 1) copy check_maxscale_*.pl under /usr/lib64/nagios/plugins
-
-
-2) Edit /etc/nagios/nagios.cfg
+2) copy maxscale_commands.cfg, server1.cfg to /etc/nagios/objects/
+3) Edit /etc/nagios/nagios.cfg
 
 add
 
@@ -17,6 +16,6 @@ Please note:
 
 
 
-Restart Nagios
+4) Restart Nagios
 
 
