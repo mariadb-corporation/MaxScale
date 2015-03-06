@@ -57,6 +57,7 @@
  *      - saveRealOnly          Save only real queries
  *      - redisHost             Host for redis socket
  *      - redisPort             Port for redis
+ *	- redissock		UNIX socket path
  *
  *@endverbatim
  * 
