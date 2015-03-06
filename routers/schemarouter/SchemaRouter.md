@@ -43,7 +43,7 @@ The schemarouter router currently has some limitations due to the nature of the 
 
 ## Examples
 
-To be implemeted.
+[Here](../../Tutorials/Simple-Sharding-Tutorial.md) is a small tutorial on how to set up a sharded database.
 
 ## Technical Documentation
 
