@@ -21,7 +21,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-
 #include <router.h>
 #include <schemarouter.h>
 #include <secrets.h>
@@ -186,10 +185,6 @@ static bool route_session_write(
         ROUTER_INSTANCE*   inst,
         unsigned char      packet_type,
         skygw_query_type_t qtype);
-
-static void refreshInstance(
-        ROUTER_INSTANCE*  router,
-        CONFIG_PARAMETER* param);
 
 static void bref_clear_state(backend_ref_t* bref, bref_state_t state);
 static void bref_set_state(backend_ref_t*   bref, bref_state_t state);
@@ -542,6 +537,12 @@ bool check_shard_status(ROUTER_INSTANCE* router, char* shard)
 	return rval;
 }
 
+/**
+ * Turn a string into an array of strings. The last element in the list is a NULL
+ * pointer.
+ * @param str String to tokenize
+ * @return Pointer to an array of strings.
+ */
 char** tokenize_string(char* str)
 {
 	char *tok;
@@ -579,6 +580,11 @@ char** tokenize_string(char* str)
 	return list;
 }
 
+/**
+ * A fake DCB read function used to forward queued queries.
+ * @param dcb Internal DCB used by the router session
+ * @return Always 1
+ */
 int internalRoute(DCB* dcb)
 {
     if(dcb->dcb_readqueue)
@@ -593,6 +599,11 @@ int internalRoute(DCB* dcb)
     return 1;
 }
 
+/**
+ * A fake DCB read function used to forward replies to the client.
+ * @param dcb Internal DCB used by the router session
+ * @return Always 1
+ */
 int internalReply(DCB* dcb)
 {
     if(dcb->dcb_readqueue)
@@ -624,7 +635,7 @@ ModuleInit()
 {
         LOGIF(LM, (skygw_log_write_flush(
                            LOGFILE_MESSAGE,
-                           "Initializing Database Sharding router module.")));
+                           "Initializing Schema Sharding Router.")));
         spinlock_init(&instlock);
         instances = NULL;
 }
@@ -640,49 +651,6 @@ ModuleInit()
 ROUTER_OBJECT* GetModuleObject()
 {
         return &MyObject;
-}
-
-static void refreshInstance(
-        ROUTER_INSTANCE*  router,
-        CONFIG_PARAMETER* singleparam)
-{
-        CONFIG_PARAMETER*   param;
-        bool                refresh_single;
-	config_param_type_t paramtype;
-	
-        if (singleparam != NULL)
-        {
-                param = singleparam;
-                refresh_single = true;
-        }
-        else
-        {
-                param = router->service->svc_config_param;
-                refresh_single = false;
-        }
-        paramtype = config_get_paramtype(param);
-	
-        while (param != NULL)         
-        {
-		/** Catch unused parameter types */
-		ss_dassert(paramtype == COUNT_TYPE || 
-			paramtype == PERCENT_TYPE ||
-			paramtype == SQLVAR_TARGET_TYPE || 
-			paramtype == STRING_TYPE);
-		
-                if (paramtype == COUNT_TYPE)
-                {
-                }
-                else if (paramtype == PERCENT_TYPE)
-                {
-                }
-                if (refresh_single)
-                {
-                        break;
-                }
-                param = param->next;
-        }
-        
 }
 
 /**
@@ -767,26 +735,12 @@ createInstance(SERVICE *service, char **options)
 	router->bitmask = 0;
 	router->bitvalue = 0;
 
-
-	conf = config_get_param(service->svc_config_param,"ignore_databases");
-	
-	if(conf)
-	{
-		refreshInstance(router, conf);
-	}	
-
 	/**
 	 * Read config version number from service to inform what configuration 
 	 * is used if any.
 	 */
         router->schemarouter_version = service->svc_config_version;
 
-	/** refreshInstance(router, NULL); */
-	/**
-	 * Get hashtable which includes dbname,backend pairs
-	 */
-        
-	
         /**
          * We have completed the creation of the router data, so now
          * insert this router into the linked list of routers
@@ -1291,50 +1245,50 @@ static route_target_t get_shard_route_target (
  * @param type The type of the query resolved so far
  */
 void check_drop_tmp_table(
-        ROUTER* instance,
-        void*   router_session,
-        GWBUF*  querybuf,
-	skygw_query_type_t type)
+ROUTER* instance,
+			  void*   router_session,
+			  GWBUF*  querybuf,
+			  skygw_query_type_t type)
 {
 
-  int tsize = 0, klen = 0,i;
-  char** tbl = NULL;
-  char *hkey,*dbname;
+    int tsize = 0, klen = 0,i;
+    char** tbl = NULL;
+    char *hkey,*dbname;
 
-  ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-  rses_property_t*   rses_prop_tmp;
+    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    rses_property_t*   rses_prop_tmp;
 
-  rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  dbname = router_cli_ses->rses_mysql_session->db;
+    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+    dbname = router_cli_ses->rses_mysql_session->db;
 
-  if (is_drop_table_query(querybuf))
+    if (is_drop_table_query(querybuf))
     {
-      tbl = skygw_get_table_names(querybuf,&tsize,false);
-	  if(tbl != NULL){		
-		  for(i = 0; i<tsize; i++)
-			  {
-				  klen = strlen(dbname) + strlen(tbl[i]) + 2;
-				  hkey = calloc(klen,sizeof(char));
-				  strcpy(hkey,dbname);
-				  strcat(hkey,".");
-				  strcat(hkey,tbl[i]);
-			
-				  if (rses_prop_tmp && 
-					  rses_prop_tmp->rses_prop_data.temp_tables)
-					  {
-						  if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables, 
-											   (void *)hkey))
-							  {
-								  LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
-															 "Temporary table dropped: %s",hkey)));
-							  }
-					  }
-				  free(tbl[i]);
-				  free(hkey);
-			  }
+	tbl = skygw_get_table_names(querybuf,&tsize,false);
+	if(tbl != NULL){
+	    for(i = 0; i<tsize; i++)
+	    {
+		klen = strlen(dbname) + strlen(tbl[i]) + 2;
+		hkey = calloc(klen,sizeof(char));
+		strcpy(hkey,dbname);
+		strcat(hkey,".");
+		strcat(hkey,tbl[i]);
 
-		  free(tbl);
-	  }
+		if (rses_prop_tmp &&
+		 rses_prop_tmp->rses_prop_data.temp_tables)
+		{
+		    if (hashtable_delete(rses_prop_tmp->rses_prop_data.temp_tables,
+				     (void *)hkey))
+		    {
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
+						 "Temporary table dropped: %s",hkey)));
+		    }
+		}
+		free(tbl[i]);
+		free(hkey);
+	    }
+
+	    free(tbl);
+	}
     }
 }
 
@@ -1347,74 +1301,74 @@ void check_drop_tmp_table(
  * @return The type of the query
  */
 skygw_query_type_t is_read_tmp_table(
-				     ROUTER* instance,
+ROUTER* instance,
 				     void*   router_session,
 				     GWBUF*  querybuf,
-	skygw_query_type_t type)
+				     skygw_query_type_t type)
 {
 
-  bool target_tmp_table = false;
-  int tsize = 0, klen = 0,i;
-  char** tbl = NULL;
-  char *hkey,*dbname;
+    bool target_tmp_table = false;
+    int tsize = 0, klen = 0,i;
+    char** tbl = NULL;
+    char *hkey,*dbname;
 
-  ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-  skygw_query_type_t qtype = type;
-  rses_property_t*   rses_prop_tmp;
+    ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+    skygw_query_type_t qtype = type;
+    rses_property_t*   rses_prop_tmp;
 
-  rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  dbname = router_cli_ses->rses_mysql_session->db;
+    rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
+    dbname = router_cli_ses->rses_mysql_session->db;
 
-  if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) || 
-	  QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
-	  QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
-	  QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
-	  QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))	  
+    if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
+	QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
+	QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ) ||
+	QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
+	QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
-      tbl = skygw_get_table_names(querybuf,&tsize,false);
+	tbl = skygw_get_table_names(querybuf,&tsize,false);
 
-      if (tbl != NULL && tsize > 0)
+	if (tbl != NULL && tsize > 0)
 	{ 
-	  /** Query targets at least one table */
-	  for(i = 0; i<tsize && !target_tmp_table && tbl[i]; i++)
+	    /** Query targets at least one table */
+	    for(i = 0; i<tsize && !target_tmp_table && tbl[i]; i++)
 	    {
-	      klen = strlen(dbname) + strlen(tbl[i]) + 2;
-	      hkey = calloc(klen,sizeof(char));
-	      strcpy(hkey,dbname);
-	      strcat(hkey,".");
-	      strcat(hkey,tbl[i]);
+		klen = strlen(dbname) + strlen(tbl[i]) + 2;
+		hkey = calloc(klen,sizeof(char));
+		strcpy(hkey,dbname);
+		strcat(hkey,".");
+		strcat(hkey,tbl[i]);
 
-	      if (rses_prop_tmp && 
-		  rses_prop_tmp->rses_prop_data.temp_tables)
+		if (rses_prop_tmp &&
+		 rses_prop_tmp->rses_prop_data.temp_tables)
 		{
-				
-		  if( (target_tmp_table = 
-		       (bool)hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables,(void *)hkey)))
+
+		    if( (target_tmp_table =
+		     (bool)hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables,(void *)hkey)))
 		    {
-		      /**Query target is a temporary table*/
-		      qtype = QUERY_TYPE_READ_TMP_TABLE;			
-		      LOGIF(LT, 
-			    (skygw_log_write(LOGFILE_TRACE,
-					     "Query targets a temporary table: %s",hkey)));
+			/**Query target is a temporary table*/
+			qtype = QUERY_TYPE_READ_TMP_TABLE;
+			LOGIF(LT,
+			 (skygw_log_write(LOGFILE_TRACE,
+					  "Query targets a temporary table: %s",hkey)));
 		    }
 		}
 
-	      free(hkey);
+		free(hkey);
 	    }
 
 	}
     }
 
-	
-	if(tbl != NULL){
-		for(i = 0; i<tsize;i++)
-			{
-				free(tbl[i]);
-			}
-		free(tbl);
+
+    if(tbl != NULL){
+	for(i = 0; i<tsize;i++)
+	{
+	    free(tbl[i]);
 	}
-	
-	return qtype;
+	free(tbl);
+    }
+
+    return qtype;
 }
 
 /** 
@@ -2203,7 +2157,11 @@ char		  *weightby;
 		router_cli_ses = router_cli_ses->next;
 	}
 	spinlock_release(&router->lock);
-	
+
+	dcb_printf(dcb,"|%-32s-%-32s|","","");
+	dcb_printf(dcb,"|%-32s|%-32s|","Server","Queries");
+	dcb_printf(dcb,"|%-32s-%-32s|","","");
+
 	dcb_printf(dcb,
                    "\tNumber of router sessions:           	%d\n",
                    router->stats.n_sessions);
@@ -2609,7 +2567,7 @@ lock_failed:
         return;
 }
 
-/** Compare nunmber of connections from this router in backend servers */
+/** Compare number of connections from this router in backend servers */
 int bref_cmp_router_conn(
         const void* bref1,
         const void* bref2)
@@ -2621,7 +2579,7 @@ int bref_cmp_router_conn(
 			  - ((1000 * b2->backend_conn_count) / b2->weight);
 }
 
-/** Compare nunmber of global connections in backend servers */
+/** Compare number of global connections in backend servers */
 int bref_cmp_global_conn(
         const void* bref1,
         const void* bref2)
@@ -2634,7 +2592,7 @@ int bref_cmp_global_conn(
 }
 
 
-/** Compare relication lag between backend servers */
+/** Compare replication lag between backend servers */
 int bref_cmp_behind_master(
         const void* bref1, 
         const void* bref2)
@@ -2646,7 +2604,7 @@ int bref_cmp_behind_master(
         ((b1->backend_server->rlag > b2->backend_server->rlag) ? 1 : 0));
 }
 
-/** Compare nunmber of current operations in backend servers */
+/** Compare number of current operations in backend servers */
 int bref_cmp_current_load(
         const void* bref1,
         const void* bref2)
@@ -3853,6 +3811,12 @@ static void handle_error_reply_client(
 	}
 }
 
+/**
+ * Check if a router session has servers in use
+ * @param rses Router client session
+ * @return True if session has a single backend server in use that is running.
+ * False if no backends are in use or running.
+ */
 bool have_servers(ROUTER_CLIENT_SES* rses)
 {
     int i;
@@ -3990,8 +3954,11 @@ return_succp:
 	return succp;        
 }
 
-
-
+/**
+ * Count the number of servers.
+ * @param inst Router instance
+ * @return Number of servers
+ */
 static int router_get_servercount(
         ROUTER_INSTANCE* inst)
 {
@@ -4042,6 +4009,10 @@ static backend_ref_t* get_bref_from_dcb(
 /**
  * Calls hang-up function for DCB if it is not both running and in 
  * master/slave/joined/ndb role. Called by DCB's callback routine.
+ * @param dcb Backend server DCB
+ * @param reason The reason this DCB callback was called
+ * @param data Data pointer assigned in the add_callback function call
+ * @return Always 1
  */
 static int
 router_handle_state_switch(
@@ -4101,7 +4072,7 @@ static sescmd_cursor_t* backend_ref_get_sescmd_cursor (
 }
 
 /**
- * Read new database nbame from MYSQL_COM_INIT_DB packet, check that it exists
+ * Read new database name from MYSQL_COM_INIT_DB packet, check that it exists
  * in the hashtable and copy its name to MYSQL_session.
  * 
  * @param inst	Router instance
