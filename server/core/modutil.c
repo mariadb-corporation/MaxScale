@@ -558,7 +558,7 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
  * @return Number of EOF packets
  */
 int
-modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
+modutil_count_signal_packets(GWBUF *reply, int use_ok,  int n_found, int* more)
 {
     unsigned char* ptr = (unsigned char*) reply->start;
     unsigned char* end = (unsigned char*) reply->end;
@@ -566,6 +566,7 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
     int pktlen, eof = 0, err = 0;
     int errlen = 0, eoflen = 0;
     int iserr = 0, iseof = 0;
+    bool moreresults = false;
     while(ptr < end)
     {
 
@@ -587,6 +588,7 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
         
         if((ptr + pktlen) > end || (eof + n_found) >= 2)
         {
+	    moreresults = PTR_EOF_MORE_RESULTS(ptr);
             ptr = prev;    
             break;
         }
@@ -615,6 +617,8 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
                 eof = 0;
         }
     }
+
+    *more = moreresults;
 
     return(eof + err);
 }

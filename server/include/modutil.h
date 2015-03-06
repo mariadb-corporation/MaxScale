@@ -40,6 +40,7 @@
 #define PTR_IS_OK(b) (b[4] == 0x00)
 #define PTR_IS_ERR(b) (b[4] == 0xff)
 #define PTR_IS_LOCAL_INFILE(b) (b[4] == 0xfb)
+#define PTR_EOF_MORE_RESULTS(b) ((PTR_IS_EOF(b) && ptr[7] & 0x08))
 
 extern int	modutil_is_SQL(GWBUF *);
 extern int	modutil_is_SQL_prepare(GWBUF *);
@@ -64,5 +65,5 @@ GWBUF *modutil_create_mysql_err_msg(
 	const char	*statemsg,
 	const char	*msg);
 
-int modutil_count_signal_packets(GWBUF*,int,int);
+int modutil_count_signal_packets(GWBUF*,int,int,int*);
 #endif
