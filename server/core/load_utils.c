@@ -64,6 +64,7 @@ static void register_module(const char *module,
                             void        *modobj,
 			    MODULE_INFO *info);
 static void unregister_module(const char *module);
+int module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg);
 
 struct MemoryStruct {
   char *data;
@@ -453,6 +454,29 @@ MODULES	*ptr = registered;
 }
 
 /**
+ * Print Modules to a DCB
+ *
+ * Diagnostic routine to display all the loaded modules
+ */
+void
+moduleShowFeedbackReport(DCB *dcb)
+{
+GWBUF *buffer;
+MODULES	*modules_list = registered;
+FEEDBACK_CONF *feedback_config = config_get_feedback_data();
+
+	if (!module_create_feedback_report(&buffer, modules_list, feedback_config)) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+		"Error in module_create_feedback_report(): gwbuf_alloc() failed to allocate memory")));
+
+                return;
+        }
+	dcb_printf(dcb, (char *)GWBUF_DATA(buffer));
+	gwbuf_free(buffer);
+}
+
+/**
  * Provide a row to the result set that defines the set of modules
  *
  * @param set	The result set
@@ -536,7 +560,7 @@ int		*data;
  */
 void
 module_feedback_send(void* data) {
-	MODULES *ptr = registered;
+	MODULES *modules_list = registered;
 	CURL *curl = NULL;
 	CURLcode res;
 	struct curl_httppost *formpost=NULL;
@@ -599,7 +623,7 @@ module_feedback_send(void* data) {
 
 		LOGIF(LT, (skygw_log_write_flush(
 			LOGFILE_TRACE,
-			"module_feedback_send() : execution skipped because of previous succesful run: hour is [%d], last_action [%d]",
+			"module_feedback_send(): execution skipped because of previous succesful run: hour is [%d], last_action [%d]",
 			hour, feedback_config->feedback_last_action)));
 
 		return;
@@ -611,85 +635,27 @@ module_feedback_send(void* data) {
 		hour, feedback_config->feedback_last_action)));
 
 
-	/* encode MAC-sha1 to HEX */
-	gw_bin2hex(hex_setup_info, feedback_config->mac_sha1, SHA_DIGEST_LENGTH);
-
-
 	/* allocate first memory chunck for httpd servr reply */
 	chunk.data = malloc(1);  /* will be grown as needed by the realloc above */ 
 	chunk.size = 0;    /* no data at this point */
 
-	/* count loaded modules */
-	while (ptr)
-	{
-		ptr = ptr->next;
-		n_mod++;
-	}
-	ptr = registered;
-
-	buffer = gwbuf_alloc(n_mod * 256);
-	if (buffer == NULL) {
+	if (!module_create_feedback_report(&buffer, modules_list, feedback_config)) {
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-			"Error in module_feedback_send(): gwbuf_alloc() failed to allocate %d bytes",
-			n_mod * 256)));
+			"Error in module_create_feedback_report(): gwbuf_alloc() failed to allocate memory")));
 
 		feedback_config->feedback_last_action = _NOTIFICATION_SEND_ERROR;
 
 		return;
 	}
 
-	data_ptr = GWBUF_DATA(buffer);
-
-	sprintf(data_ptr, "FEEDBACK_SERVER_UID\t%s\n", hex_setup_info);
-	data_ptr+=strlen(data_ptr);
-	sprintf(data_ptr, "FEEDBACK_USER_INFO\t%s\n", feedback_config->feedback_user_info);
-	data_ptr+=strlen(data_ptr);
-	sprintf(data_ptr, "VERSION\t%s\n", MAXSCALE_VERSION);
-	data_ptr+=strlen(data_ptr);
-	sprintf(data_ptr, "NOW\t%lu\nPRODUCT\t%s\n", now, "maxscale");
-	data_ptr+=strlen(data_ptr);
-	sprintf(data_ptr, "Uname_sysname\t%s\n", feedback_config->sysname);
-	data_ptr+=strlen(data_ptr);
-	sprintf(data_ptr, "Uname_distribution\t%s\n", feedback_config->release_info);
-	data_ptr+=strlen(data_ptr);
-
-        while (ptr)
-        {
-                sprintf(data_ptr, "module_%s_type\t%s\nmodule_%s_version\t%s\n", ptr->module, ptr->type, ptr->module, ptr->version);
-		data_ptr+=strlen(data_ptr);
-
-                if (ptr->info) {
-                        sprintf(data_ptr, "module_%s_api\t%d.%d.%d\n",
-					ptr->module,
-                                        ptr->info->api_version.major,
-                                        ptr->info->api_version.minor,
-                                        ptr->info->api_version.patch);
-
-			data_ptr+=strlen(data_ptr);
-			sprintf(data_ptr, "module_%s_releasestatus\t%s\n",
-				ptr->module,
-                                ptr->info->status == MODULE_IN_DEVELOPMENT
-                                        ? "In Development"
-                                : (ptr->info->status == MODULE_ALPHA_RELEASE
-                                        ? "Alpha"
-                                : (ptr->info->status == MODULE_BETA_RELEASE
-                                        ? "Beta"
-                                : (ptr->info->status == MODULE_GA
-                                        ? "GA"
-                                : (ptr->info->status == MODULE_EXPERIMENTAL
-                                        ? "Experimental" : "Unknown")))));
-			data_ptr+=strlen(data_ptr);
-		}
-                ptr = ptr->next;
-        }
 
 	/* Initializing curl library for data send via HTTP */
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 
 	curl = curl_easy_init();
 
-	if(curl) {
+	if (curl) {
 		char error_message[CURL_ERROR_SIZE]="";
 
 		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_message);
@@ -776,10 +742,11 @@ module_feedback_send(void* data) {
 		"module_feedback_send(): task run result: hour is [%d], last_action [%d], HTTP code [%d]",
 		hour, feedback_config->feedback_last_action, http_code)));
 
-	if(chunk.data)
+	if (chunk.data)
 		free(chunk.data);
 
-	gwbuf_free(buffer);
+	if (buffer)
+		gwbuf_free(buffer);
 
 	if (curl) {
 		curl_easy_cleanup(curl);
@@ -787,5 +754,105 @@ module_feedback_send(void* data) {
 	}
 
 	curl_global_cleanup();
+}
+
+/**
+ * Create the feedback report as string.
+ * I t could be sent to notification service
+ * or just printed via maxadmin/telnet
+ *
+ * @param buffe	 	The pointr for GWBUF allocation, to be freed by the caller
+ * @param modules	The mouleds list
+ * @param cfg		The feedback configuration
+ * @return 		0 on failure, 1 on success
+ *
+ */
+
+int
+module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg) {
+
+	MODULES *ptr = modules;
+	int n_mod = 0;
+	char *data_ptr=NULL;
+	char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1]="";
+	time_t now;
+	struct tm *now_tm;
+
+	now = time(NULL);
+
+        /* count loaded modules */
+        while (ptr)
+        {
+                ptr = ptr->next;
+                n_mod++;
+        }
+
+        /* module lists pointer is set back to the head */
+        ptr = modules;
+
+        /**
+         * allocate gwbuf for data to send
+         *
+         * each module gives 4 rows
+         * product and release rows add 6 rows
+         * row is 256 bytes long
+         */
+
+        *buffer = gwbuf_alloc(((n_mod * 4) + 6) * 256);
+
+        if (buffer == NULL) {
+                return 0;
+        }
+
+        /* encode MAC-sha1 to HEX */
+        gw_bin2hex(hex_setup_info, cfg->mac_sha1, SHA_DIGEST_LENGTH);
+
+
+        data_ptr = (char *)GWBUF_DATA(*buffer);
+
+        snprintf(data_ptr, 255, "FEEDBACK_SERVER_UID\t%s\n", hex_setup_info);
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, 255, "FEEDBACK_USER_INFO\t%s\n", cfg->feedback_user_info);
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, 255, "VERSION\t%s\n", MAXSCALE_VERSION);
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, 255 * 2, "NOW\t%lu\nPRODUCT\t%s\n", now, "maxscale");
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, 255, "Uname_sysname\t%s\n", cfg->sysname);
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, 255, "Uname_distribution\t%s\n", cfg->release_info);
+        data_ptr+=strlen(data_ptr);
+
+        while (ptr)
+        {
+                snprintf(data_ptr, 255 * 3, "module_%s_type\t%s\nmodule_%s_version\t%s\n", ptr->module, ptr->type, ptr->module, ptr->version);
+                data_ptr+=strlen(data_ptr);
+
+                if (ptr->info) {
+                        snprintf(data_ptr, 255, "module_%s_api\t%d.%d.%d\n",
+                                        ptr->module,
+                                        ptr->info->api_version.major,
+                                        ptr->info->api_version.minor,
+                                        ptr->info->api_version.patch);
+
+                        data_ptr+=strlen(data_ptr);
+                        snprintf(data_ptr, 255, "module_%s_releasestatus\t%s\n",
+                                ptr->module,
+                                ptr->info->status == MODULE_IN_DEVELOPMENT
+                                        ? "In Development"
+                                : (ptr->info->status == MODULE_ALPHA_RELEASE
+                                        ? "Alpha"
+                                : (ptr->info->status == MODULE_BETA_RELEASE
+                                        ? "Beta"
+                                : (ptr->info->status == MODULE_GA
+                                        ? "GA"
+                                : (ptr->info->status == MODULE_EXPERIMENTAL
+                                        ? "Experimental" : "Unknown")))));
+                        data_ptr+=strlen(data_ptr);
+                }
+                ptr = ptr->next;
+        }
+
+	return 1;
 }
 
