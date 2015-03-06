@@ -1,6 +1,12 @@
-Simple Sharding with Two Servers
+#Simple Sharding with Two Servers
 
-# Environment & Solution Space
+![Schema Based Sharding](images/Simple-Sharding.png)
+
+Sharding is the method of splitting a single database server into separate parts. This tutorial describes a very simple way of sharding. Each schema is located on a different database server and MaxScale's **schemarouter** module is used to combine them into a single database server.
+
+MaxScale will appear to the client as a database server with the combination of all the schemas in all the configured servers.
+
+## Environment & Solution Space
 
 This document is designed as a simple tutorial on schema-based sharding using MaxScale in an environment in which you have two servers. The object of this tutorial is to have a system that, to the client side, acts like a single MySQL database but actually is sharded between the two servers.
 
@@ -8,7 +14,7 @@ The process of setting and configuring MaxScale will be covered within this docu
 
 This tutorial will assume the user is running from one of the binary distributions available and has installed this in the default location. Building from source code in GitHub is covered in guides elsewhere as is installing to non-default locations.
 
-# Process
+## Process
 
 The steps involved in creating a system from the binary distribution of MaxScale are:
 
@@ -18,13 +24,13 @@ The steps involved in creating a system from the binary distribution of MaxScale
 
 * Create a MaxScale configuration file
 
-## Installation
+### Installation
 
 The precise installation process will vary from one distribution to another details of what to do with the RPM and DEB packages can be found on the download site when you select the distribution you are downloading from. The process involves setting up your package manager to include the MariaDB repositories and then running the package manager for your distribution, RPM or apt-get.
 
 Upon successful completion of the installation command you will have MaxScale installed and ready to be run but without a configuration. You must create a configuration file before you first run MaxScale.
 
-## Creating Your MaxScale Configuration
+### Creating Your MaxScale Configuration
 
 The first step in the creation of your MaxScale.cnf file is to define the global maxscale section. This section configures the number of threads MaxScale uses. A good rule of thumb is to use at most as may threads as you have CPUs. MaxScale uses few threads for internal operations so one or two threads less than the maximum should be enough.
 
@@ -82,7 +88,7 @@ monitor_interval=1000
 
 After this we have a fully working configuration and we can move on to starting MaxScale.
 
-# Starting MaxScale
+## Starting MaxScale
 
 Upon completion of the configuration process MaxScale is ready to be started . This may either be done manually by running the maxscale command or via the service interface. The service scripts are located in the `/etc/init.d/` folder and are accessible through both the `service` and `systemctl` commands.
 
