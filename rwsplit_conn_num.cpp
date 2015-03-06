@@ -26,6 +26,13 @@ int main(int argc, char *argv[])
     int conn_num;
     int res = 0;
 
+    MYSQL * backend_conn;
+    for (i = 0; i < Test->repl->N; i++) {
+        backend_conn = open_conn(Test->repl->port[i], Test->repl->IP[i], Test->repl->user_name, Test->repl->password);
+        execute_query(backend_conn, "SET GLOBAL max_connections = 200;");
+        mysql_close(backend_conn);
+    }
+
     printf("Creating %d connections to RWSplit router\n", TestConnNum);
     for (i=0; i<TestConnNum; i++){
         conn[i] = Test->open_rwsplit_connection();
