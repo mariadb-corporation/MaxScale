@@ -72,16 +72,20 @@ EOF
 	'P' => 6603,			# port
 	'm' => '/usr/local/skysql/maxscale/bin/maxadmin',	# maxadmin
 	);
+
+my $MAXADMIN_DEFAULT = $opts{'m'};
+
 getopts('r:hH:u:p:P:m:', \%opts)
     or usage( $ERRORS{"UNKNOWN"} );
 usage( $ERRORS{'OK'} ) if $opts{'h'};
 
 my $MAXADMIN_RESOURCE =  $opts{'r'};
 my $MAXADMIN = $opts{'m'};
+if (!defined $MAXADMIN || length($MAXADMIN) == 0) {
+        $MAXADMIN = $MAXADMIN_DEFAULT;
+}
 -x $MAXADMIN or
     die "$curr_script: Failed to find required tool: $MAXADMIN. Please install it or use the -m option to point to another location.";
-
-my ( $state, $status ) = ( "OK", 'maxadmin ' . $MAXADMIN_RESOURCE .' succeeds.' );
 
 # Just in case of problems, let's not hang Nagios
 $SIG{'ALRM'} = sub {
@@ -117,7 +121,7 @@ my %monitor_data;
 while ( <MAXSCALE> ) {
     chomp;
 
-    if ( /Unable to connect to MaxScale/ ) {
+    if ( /(Failed|Unable) to connect to MaxScale/ ) {
         printf "CRITICAL: $_\n";
 	close(MAXSCALE);
         exit(2);
