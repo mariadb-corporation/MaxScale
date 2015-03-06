@@ -290,6 +290,7 @@ struct router_client_session {
         int              rses_capabilities; /*< input type, for example */
         bool             rses_autocommit_enabled;
         bool             rses_transaction_active;
+        DCB* client_dcb;
 #if defined(PREP_STMT_CACHING)
         HASHTABLE*       rses_prep_stmt[2];
 #endif

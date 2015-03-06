@@ -790,6 +790,7 @@ static void* newSession(
 #endif
 
 	client_rses->router = router;
+	client_rses->client_dcb = session->client;
         /** 
          * If service config has been changed, reload config from service to 
          * router instance first.
@@ -4353,8 +4354,10 @@ static bool route_session_write(
 		    LOGFILE_TRACE,
 			"Router session exceeded session command history limit. "
 		        "Closing router session. <")));
-		router_cli_ses->rses_closed = true;
+		gwbuf_free(querybuf);
 		rses_end_locked_router_action(router_cli_ses);
+		router_cli_ses->client_dcb->func.hangup(router_cli_ses->client_dcb);
+		
 		goto return_succp;
 	}
 
