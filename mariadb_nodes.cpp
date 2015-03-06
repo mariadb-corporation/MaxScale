@@ -298,11 +298,14 @@ int Mariadb_nodes::check_nodes()
 {
     int res = 0;
     char str[1024];
+    printf("Checking nodes\n"); fflush(stdout);
     for (int i = 0; i < N; i++) {
         sprintf(str, "ssh  -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s ls > /dev/null", sshkey[i], IP[i]);
         if (system(str) != 0) {
-            printf("Node %d is not available\n", i);
+            printf("Node %d is not available\n", i); fflush(stdout);
             res = 1;
+        } else {
+            printf("Node %d is OK\n", i); fflush(stdout);
         }
     }
     return(res);
@@ -314,10 +317,11 @@ int Mariadb_nodes::check_replication(int master)
     char str[1024];
     MYSQL *conn;
     MYSQL_RES *res;
+    printf("Checking Master/Slave setup\n"); fflush(stdout);
     for (int i = 0; i < N; i++) {
         conn = open_conn(port[i], IP[i], user_name, password);
         if (mysql_errno(conn) != 0) {
-            printf("Error connectiong node %d\n", i);
+            printf("Error connectiong node %d\n", i); fflush(stdout);
             res1 = 1;
         } else {
             if ( i == master ) {
@@ -329,11 +333,11 @@ int Mariadb_nodes::check_replication(int master)
                     } else {
                         res = mysql_store_result(conn);
                         if(res == NULL) {
-                            printf("Error: can't get the result description\n");
+                            printf("Error: can't get the result description\n"); fflush(stdout);
                             res1 = 1;
                         } else {
                             if (mysql_num_rows(res) != N-1) {
-                                printf("Number if slaves is not equal to N-1\n");
+                                printf("Number if slaves is not equal to N-1\n"); fflush(stdout);
                                 res1 = 1;
                             }
                         }
@@ -348,11 +352,11 @@ int Mariadb_nodes::check_replication(int master)
             } else {
                 // checking slave
                 if (find_status_field(conn, (char *) "SHOW SLAVE STATUS;", (char *) "Slave_IO_Running", str) != 0) {
-                    printf("Slave_IO_Running is not found in SHOW SLAVE STATUS results\n");
+                    printf("Slave_IO_Running is not found in SHOW SLAVE STATUS results\n"); fflush(stdout);
                     res1 = 1;
                 } else {
                     if (strcmp(str, "Yes") !=0 ) {
-                        printf("Slave_IO_Running is not Yes\n");
+                        printf("Slave_IO_Running is not Yes\n"); fflush(stdout);
                         res1 = 1;
                     }
                 }
@@ -369,7 +373,7 @@ int Mariadb_nodes::check_galera()
     char str[1024];
     int cluster_size;
     MYSQL *conn;
-
+    printf("Checking Galera\n"); fflush(stdout);
     for (int i = 0; i < N; i++) {
         conn = open_conn(port[i], IP[i], user_name, password);
         if (mysql_errno(conn) != 0) {
@@ -377,12 +381,12 @@ int Mariadb_nodes::check_galera()
             res1 = 1;
         } else {
             if (find_status_field(conn, (char *) "SHOW STATUS WHERE Variable_name='wsrep_cluster_size';", (char *) "Value", str) != 0) {
-                printf("wsrep_cluster_size is not found in SHOW STATUS LIKE 'wsrep%%' results\n");
+                printf("wsrep_cluster_size is not found in SHOW STATUS LIKE 'wsrep%%' results\n"); fflush(stdout);
                 res1 = 1;
             } else {
                 sscanf(str, "%d",  &cluster_size);
                 if (cluster_size != N ) {
-                    printf("wsrep_cluster_size is not %d\n", N);
+                    printf("wsrep_cluster_size is not %d\n", N); fflush(stdout);
                     res1 = 1;
                 }
             }
@@ -396,7 +400,7 @@ int Mariadb_nodes::wait_all_vm()
 {
     int i = 0;
 
-    while ((check_nodes() != 0) && (i < 60)) {
+    while ((check_nodes() != 0) && (i < 20)) {
         sleep(10);
     }
     return(check_nodes());
@@ -418,6 +422,7 @@ int Mariadb_nodes::start_all_vm()
     int res = 0;
     char sys[1024];
     for (int i = 0; i < N; i++) {
+        printf("starting node %d\n", i);
         sprintf(sys, "%s %s", start_vm_command, IP[i]);
         if (system(sys) != 0) {res = 1;}
     }
@@ -426,7 +431,7 @@ int Mariadb_nodes::start_all_vm()
 
 int Mariadb_nodes::restart_all_vm()
 {
-    kill_all_vm();
+    //kill_all_vm();
     start_all_vm();
     return(wait_all_vm());
 }

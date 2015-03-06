@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 
 if [ -z $1 ]; then
 	echo "Test name missing"
