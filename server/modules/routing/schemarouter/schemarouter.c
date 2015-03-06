@@ -2049,12 +2049,14 @@ static int routeQuery(
 			backend_ref_t* bref;
 			
 			atomic_add(&inst->stats.n_queries, 1);
+
 			/**
 			 * Add one query response waiter to backend reference
 			 */
 			bref = get_bref_from_dcb(router_cli_ses, target_dcb);
 			bref_set_state(bref, BREF_QUERY_ACTIVE);
 			bref_set_state(bref, BREF_WAITING_RESULT);
+			atomic_add(&bref->bref_backend->stats.queries, 1);
 		}
 		else
 		{
@@ -2143,66 +2145,20 @@ static void rses_end_locked_router_action(
 static	void
 diagnostic(ROUTER *instance, DCB *dcb)
 {
-ROUTER_CLIENT_SES *router_cli_ses;
-ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
-int		  i = 0;
-BACKEND		  *backend;
-char		  *weightby;
+    ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
+    int		  i = 0;
 
-	spinlock_acquire(&router->lock);
-	router_cli_ses = router->connections;
-	while (router_cli_ses)
-	{
-		i++;
-		router_cli_ses = router_cli_ses->next;
-	}
-	spinlock_release(&router->lock);
 
-	dcb_printf(dcb,"|%-32s-%-32s|","","");
-	dcb_printf(dcb,"|%-32s|%-32s|","Server","Queries");
-	dcb_printf(dcb,"|%-32s-%-32s|","","");
-
-	dcb_printf(dcb,
-                   "\tNumber of router sessions:           	%d\n",
-                   router->stats.n_sessions);
-	dcb_printf(dcb,
-                   "\tCurrent no. of router sessions:      	%d\n",
-                   i);
-	dcb_printf(dcb,
-                   "\tNumber of queries forwarded:          	%d\n",
-                   router->stats.n_queries);
-	dcb_printf(dcb,
-                   "\tNumber of queries forwarded to master:	%d\n",
-                   router->stats.n_master);
-	dcb_printf(dcb,
-                   "\tNumber of queries forwarded to slave: 	%d\n",
-                   router->stats.n_slave);
-	dcb_printf(dcb,
-                   "\tNumber of queries forwarded to all:   	%d\n",
-                   router->stats.n_all);
-	if ((weightby = serviceGetWeightingParameter(router->service)) != NULL)
-        {
-                dcb_printf(dcb,
-		   "\tConnection distribution based on %s "
-                                "server parameter.\n", weightby);
-                dcb_printf(dcb,
-                        "\t\tServer               Target %%    Connections  "
-			"Operations\n");
-                dcb_printf(dcb,
-                        "\t\t                               Global  Router\n");
-                for (i = 0; router->servers[i]; i++)
-                {
-                        backend = router->servers[i];
-                        dcb_printf(dcb,
-				"\t\t%-20s %3.1f%%     %-6d  %-6d  %d\n",
-                                backend->backend_server->unique_name,
-                                (float)backend->weight / 10,
-				backend->backend_server->stats.n_current,
-				backend->backend_conn_count,
-				backend->backend_server->stats.n_current_ops);
-                }
-
-        }
+    dcb_printf(dcb,"\33[1;4m%-16s%-16s%-16s\33[0m\n","Server","Queries","State");
+    for(i=0;router->servers[i];i++)
+    {
+	dcb_printf(dcb,"%-16s%-16d%-16s\n",
+		 router->servers[i]->backend_server->unique_name,
+		 router->servers[i]->stats.queries,
+		 SERVER_IS_RUNNING(router->servers[i]->backend_server) ?
+	    "\33[30;42mRUNNING\33[0m":
+	    "\33[30;41mDOWN\33[0m");
+    }
 
 }
 
@@ -3587,7 +3543,7 @@ static bool route_session_write(
                         if (BREF_IS_IN_USE((&backend_ref[i])))
                         {
                                 rc = dcb->func.write(dcb, gwbuf_clone(querybuf));
-                        
+				atomic_add(&backend_ref[i].bref_backend->stats.queries,1);
                                 if (rc != 1)
                                 {
                                         succp = false;

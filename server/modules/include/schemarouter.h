@@ -196,6 +196,9 @@ typedef struct backend_st {
 					      *  load. Expressed in .1%
 					      * increments
 					      */
+        struct stats{
+          int queries;
+        } stats;
 #if defined(SS_DEBUG)
         skygw_chk_t     be_chk_tail;
 #endif
