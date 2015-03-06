@@ -64,6 +64,23 @@ unsigned char	*ptr;
 }
 
 /**
+ * Check if a GWBUF structure is a MySQL COM_STMT_PREPARE packet
+ *
+ * @param	buf	Buffer to check
+ * @return	True if GWBUF is a COM_STMT_PREPARE packet
+ */
+int
+modutil_is_SQL_prepare(GWBUF *buf)
+{
+unsigned char	*ptr;
+
+	if (GWBUF_LENGTH(buf) < 5)
+		return 0;
+	ptr = GWBUF_DATA(buf);
+	return ptr[4] == 0x16 ;		// COM_STMT_PREPARE
+}
+
+/**
  * Extract the SQL portion of a COM_QUERY packet
  *
  * NB This sets *sql to point into the packet and does not
@@ -243,7 +260,7 @@ modutil_get_SQL(GWBUF *buf)
 unsigned int	len, length;
 char	*ptr, *dptr, *rval = NULL;
 
-	if (!modutil_is_SQL(buf))
+	if (!modutil_is_SQL(buf) && !modutil_is_SQL_prepare(buf))
 		return rval;
 	ptr = GWBUF_DATA(buf);
 	length = *ptr++;

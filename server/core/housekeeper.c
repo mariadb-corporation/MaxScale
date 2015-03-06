@@ -116,9 +116,20 @@ HKTASK	*task, *ptr;
 		ptr = ptr->next;
 	}
 	if (ptr)
+	{
+	    if (strcmp(ptr->name, name) == 0)
+	    {
+		spinlock_release(&tasklock);
+		free(task->name);
+		free(task);
+		return 0;
+	    }
 		ptr->next = task;
+	}
 	else
+	{
 		tasks = task;
+	}
 	spinlock_release(&tasklock);
 
 	return task->nextdue;

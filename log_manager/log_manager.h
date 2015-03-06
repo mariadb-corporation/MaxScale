@@ -120,6 +120,7 @@ int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
 void skygw_log_sync_all(void);
 void skygw_set_highp(int);
+void logmanager_enable_syslog(int);
 EXTERN_C_BLOCK_END
 
 const char* get_trace_prefix_default(void);

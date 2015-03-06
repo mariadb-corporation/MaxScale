@@ -79,6 +79,8 @@
 #  define _GNU_SOURCE
 #endif
 
+time_t	MaxScaleStarted;
+
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
@@ -148,6 +150,7 @@ static struct option long_options[] = {
   {"config",   required_argument, 0, 'f'},
   {"nodaemon", no_argument,       0, 'd'},
   {"log",      required_argument, 0, 'l'},
+  {"syslog",   required_argument, 0, 's'},
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},
   {0, 0, 0, 0}
@@ -993,6 +996,8 @@ static void usage(void)
 		"                    (default: $MAXSCALE_HOME/etc/MaxScale.cnf)\n"
 		"  -l|--log=...      log to file or shared memory\n"
 		"                    -lfile or -lshm - defaults to shared memory\n"
+		"  -s|--syslog=	     log messages to syslog"
+		"		     true or false - defaults to true"
 		"  -v|--version      print version info and exit\n"
                 "  -?|--help         show this help\n"
 		, progname);
@@ -1055,6 +1060,7 @@ int main(int argc, char **argv)
         void*    log_flush_thr = NULL;
 	int      option_index;
 	int	 logtofile = 0;	      	      /* Use shared memory or file */
+	int	 syslog_enabled = 1; /** Log to syslog */
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
@@ -1094,7 +1100,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
         }
-        while ((opt = getopt_long(argc, argv, "dc:f:l:v?",
+        while ((opt = getopt_long(argc, argv, "dc:f:l:vs:?",
 				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
@@ -1199,7 +1205,17 @@ int main(int argc, char **argv)
                                 succp = false;
 			}
 			break;
-		  
+		case 's':
+		    if(strstr(optarg,"="))
+		    {
+			strtok(optarg,"= ");
+			syslog_enabled = config_truth_value(strtok(NULL,"= "));
+		    }
+		    else
+		    {
+			syslog_enabled = config_truth_value(optarg);
+		    }
+		    break;
 		case '?':
 		  usage();
 		  rc = EXIT_SUCCESS;
@@ -1561,6 +1577,8 @@ int main(int argc, char **argv)
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
                 argv[2] = buf;
+
+		logmanager_enable_syslog(syslog_enabled);
 		
 		if (logtofile)
 		{
@@ -1797,6 +1815,8 @@ int main(int argc, char **argv)
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                         "MaxScale started with %d server threads.",
                                    config_threadcount())));
+
+	MaxScaleStarted = time(0);
         /*<
          * Serve clients.
          */
@@ -1950,4 +1970,10 @@ static int write_pid_file(char *home_dir) {
 
 	/* success */
 	return 0;
+}
+
+int
+MaxScaleUptime()
+{
+	return time(0) - MaxScaleStarted;
 }

@@ -29,7 +29,7 @@ issues and communicate with the MaxScale community.
 	or use the [forum](http://groups.google.com/forum/#!forum/maxscale) interface
 	
 Bugs can be reported in the MariaDB Corporation bugs database
-	[bug.mariadb.com](http://bugs.mariadb.com)
+	[https://mariadb.atlassian.net/secure/CreateIssue!default.jspa](https://mariadb.atlassian.net/secure/CreateIssue!default.jspa) under project MXS.
 
 \section Documentation
 

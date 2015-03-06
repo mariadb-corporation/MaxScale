@@ -41,6 +41,7 @@
 #include <atomic.h>
 #include <buffer.h>
 #include <spinlock.h>
+#include <resultset.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 
@@ -99,6 +100,14 @@ typedef struct {
 	void		*instance;
 	void		*session;
 } SESSION_FILTER;
+
+/**
+ * Filter type for the sessionGetList call
+ */
+typedef enum {
+	SESSION_LIST_ALL,
+	SESSION_LIST_CONNECTION
+} SESSIONLISTFILTER;
 
 /**
  * The session status block
@@ -169,5 +178,6 @@ SESSION* get_session_by_router_ses(void* rses);
 void session_enable_log(SESSION* ses, logfile_id_t id);
 void session_disable_log(SESSION* ses, logfile_id_t id);
 void session_close_timeouts(void* data);
+RESULTSET	*sessionGetList(SESSIONLISTFILTER);
 
 #endif
