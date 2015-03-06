@@ -805,11 +805,18 @@ clientReply(
         GWBUF  *queue,
         DCB    *backend_dcb)
 {
-	DCB *client ;
-
+	DCB *client = NULL;
+        ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
+        
 	client = backend_dcb->session->client;
 
 	ss_dassert(client != NULL);
+
+        char srv_id[32];
+        sprintf(srv_id, "%ld", router_cli_ses->backend->server->node_id);
+        gwbuf_add_property(queue, "SERVER_ID", srv_id);
+        gwbuf_add_property(queue, "SERVER_NAME", router_cli_ses->backend->server->name);        
+        gwbuf_add_property(queue, "SERVER_UNIQUE_NAME", router_cli_ses->backend->server->unique_name);
 
 	SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }

@@ -790,7 +790,6 @@ static void* newSession(
 #endif
 
 	client_rses->router = router;
-	client_rses->client_dcb = session->client;
         /** 
          * If service config has been changed, reload config from service to 
          * router instance first.
@@ -2734,7 +2733,15 @@ static void clientReply (
 		goto lock_failed;
 	}
 #endif
-	
+	/* Save some server info into the buffer in order to consume it 
+         * on the clientReply function of the filters
+         */      
+        char srv_id[32];
+        sprintf(srv_id, "%ld", bref->bref_backend->backend_server->node_id);
+        gwbuf_add_property(writebuf, "SERVER_ID", srv_id);
+        gwbuf_add_property(writebuf, "SERVER_NAME", bref->bref_backend->backend_server->name);        
+        gwbuf_add_property(writebuf, "SERVER_UNIQUE_NAME", bref->bref_backend->backend_server->unique_name);
+        
         CHK_BACKEND_REF(bref);
         scur = &bref->bref_sescmd_cur;
         /**
@@ -4356,10 +4363,8 @@ static bool route_session_write(
 		    LOGFILE_TRACE,
 			"Router session exceeded session command history limit. "
 		        "Closing router session. <")));
-		gwbuf_free(querybuf);
+		router_cli_ses->rses_closed = true;
 		rses_end_locked_router_action(router_cli_ses);
-		router_cli_ses->client_dcb->func.hangup(router_cli_ses->client_dcb);
-		
 		goto return_succp;
 	}
 
