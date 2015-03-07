@@ -34,9 +34,9 @@ add_library(namedserverfilter SHARED namedserverfilter.c)
 target_link_libraries(namedserverfilter log_manager utils)
 install(TARGETS namedserverfilter DESTINATION modules)
 
-add_library(lagfilter SHARED lagfilter.c)
-target_link_libraries(lagfilter log_manager utils query_classifier)
-install(TARGETS lagfilter DESTINATION modules)
+add_library(slavelag SHARED slavelag.c)
+target_link_libraries(slavelag log_manager utils query_classifier)
+install(TARGETS slavelag DESTINATION modules)
 
 
 add_subdirectory(hint)

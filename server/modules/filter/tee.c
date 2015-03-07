@@ -1170,13 +1170,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	  if(my_session->waiting[PARENT])
 	    {
 	      route = true;
-#ifdef SS_DEBUG
-	      ss_dassert(my_session->replies[PARENT] < 2 || 
-			 modutil_count_signal_packets(my_session->tee_replybuf,
-						      my_session->use_ok,
-						      my_session->eof[PARENT]) == 0);
-	      skygw_log_write_flush(LOGFILE_DEBUG,"tee.c:[%d] Routing partial response set.",my_session->d_id);
-#endif
+
 	    }
 	  else if(my_session->eof[PARENT] >= min_eof &&
 		  my_session->eof[CHILD] >= min_eof)

@@ -100,6 +100,7 @@ MAXINFO_TREE	*col, *table;
 				}
 			}
 			// Malformed show
+			free(text);
 			free_tree(tree);
 			*parse_error = PARSE_MALFORMED_SHOW;
 			return NULL;
@@ -151,6 +152,8 @@ MAXINFO_TREE	*tree = NULL;
 		case LT_FROM:
 			return make_tree_node(MAXOP_COLUMNS, text, NULL, 
 				NULL);
+		default:
+		    free(text);
 		}
 		break;
 	case LT_STAR:
@@ -159,6 +162,8 @@ MAXINFO_TREE	*tree = NULL;
 		if (lookahead != LT_FROM)
 			return make_tree_node(MAXOP_ALL_COLUMNS, NULL, NULL,
 				NULL);
+	default:
+	    free(text2);
 	}
 	return NULL;
 }
@@ -180,6 +185,7 @@ MAXINFO_TREE	*tree = NULL;
 	*ptr = fetch_token(*ptr, &token, &text);
 	if  (token == LT_STRING)
 		return make_tree_node(MAXOP_TABLE, text, NULL, NULL);
+	free(text);
 	return NULL;
 }
 

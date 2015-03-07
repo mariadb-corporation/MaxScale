@@ -82,7 +82,7 @@ struct dirent	*dp;
 		strcpy(path, "/usr/local/skysql/MaxScale");
 		if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 		{
-			strcpy(path, ptr);
+			strncpy(path, ptr,PATH_MAX);
 		}
 		strcat(path, "/");
 		strcat(path, router->service->name);
@@ -196,7 +196,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	fsync(fd);
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
-	strcpy(router->binlog_name, file);
+	strncpy(router->binlog_name, file,BINLOG_FNAMELEN+1);
 	router->binlog_position = 4;			/* Initial position after the magic number */
 	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
@@ -230,7 +230,7 @@ int		fd;
 	fsync(fd);
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
-	strcpy(router->binlog_name, file);
+	strncpy(router->binlog_name, file,BINLOG_FNAMELEN+1);
 	router->binlog_position = lseek(fd, 0L, SEEK_END);
 	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
@@ -310,7 +310,7 @@ BLFILE		*file;
 		spinlock_release(&router->fileslock);
 		return NULL;
 	}
-	strcpy(file->binlogname, binlog);
+	strncpy(file->binlogname, binlog,BINLOG_FNAMELEN+1);
 	file->refcnt = 1;
 	file->cache = 0;
 	spinlock_init(&file->lock);
