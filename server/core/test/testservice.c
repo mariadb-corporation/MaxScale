@@ -42,6 +42,7 @@ static bool success = false;
 int hup(DCB* dcb)
 {
     success = true;
+    return 1;
 }
 
 /**
@@ -108,7 +109,8 @@ hkinit();
         skygw_log_sync_all();
         ss_info_dassert(0 != result, "Stop should succeed");
 
-        dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+	if((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
+	    return 1;
         ss_info_dassert(dcb != NULL, "DCB allocation failed");
         
         session = session_alloc(service,dcb);

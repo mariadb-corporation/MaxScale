@@ -1558,6 +1558,7 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 		}
 
 		qlen = gw_mysql_get_byte3(memptr);
+		qlen = qlen < 0xffffff ? qlen : 0xffffff;
 		fullquery = malloc((qlen) * sizeof(char));
 		memcpy(fullquery,memptr + 5,qlen - 1);
 		memset(fullquery + qlen - 1,0,1);
@@ -1612,6 +1613,7 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 		}
 
 		qlen = gw_mysql_get_byte3(memptr);
+		qlen = qlen < 0xffffff ? qlen : 0xffffff;
 		fullquery = malloc((qlen) * sizeof(char));
 		memcpy(fullquery,memptr + 5,qlen - 1);
 		memset(fullquery + qlen - 1,0,1);

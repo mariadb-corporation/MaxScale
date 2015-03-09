@@ -305,7 +305,7 @@ char* get_lenenc_str(void* data, int* len)
  * Parses a response set to a SHOW DATABASES query and inserts them into the 
  * router client session's database hashtable. The name of the database is used 
  * as the key and the unique name of the server is the value. The function 
- * currently supports only result sets that span a single GWBUF.
+ * currently supports only result sets that span a single SQL packet.
  * @param rses Router client session
  * @param target Target server where the database is
  * @param buf GWBUF containing the result set
@@ -315,9 +315,9 @@ bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 {
    bool rval = false;
    unsigned char* ptr;
-
+    int more = 0;
    if(PTR_IS_RESULTSET(((unsigned char*)buf->start)) && 
-      modutil_count_signal_packets(buf,0,0) == 2)
+      modutil_count_signal_packets(buf,0,0,&more) == 2)
    {
        ptr = (unsigned char*)buf->start;
 

@@ -33,6 +33,7 @@
  */
 #include <buffer.h>
 #include <dcb.h>
+#include <string.h>
 
 #define PTR_IS_RESULTSET(b) (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)
 #define PTR_IS_EOF(b) (b[0] == 0x05 && b[1] == 0x0 && b[2] == 0x0 && b[4] == 0xfe)
@@ -40,6 +41,8 @@
 #define PTR_IS_ERR(b) (b[4] == 0xff)
 #define PTR_IS_LOCAL_INFILE(b) (b[4] == 0xfb)
 #define IS_FULL_RESPONSE(buf) (modutil_count_signal_packets(buf,0,0) == 2)
+#define PTR_EOF_MORE_RESULTS(b) ((PTR_IS_EOF(b) && ptr[7] & 0x08))
+
 
 extern int	modutil_is_SQL(GWBUF *);
 extern int	modutil_is_SQL_prepare(GWBUF *);
@@ -54,6 +57,8 @@ GWBUF*          modutil_get_complete_packets(GWBUF** p_readbuf);
 int 		modutil_MySQL_query_len(GWBUF* buf, int* nbytes_missing);
 void 		modutil_reply_parse_error(DCB* backend_dcb, char* errstr, uint32_t flags);
 void 		modutil_reply_auth_error(DCB* backend_dcb, char* errstr, uint32_t flags);
+int             modutil_count_statements(GWBUF* buffer);
+GWBUF*          modutil_create_query(char* query);
 
 GWBUF *modutil_create_mysql_err_msg(
 	int		packet_number,
@@ -62,6 +67,5 @@ GWBUF *modutil_create_mysql_err_msg(
 	const char	*statemsg,
 	const char	*msg);
 
-int modutil_count_signal_packets(GWBUF*,int,int);
-
+int modutil_count_signal_packets(GWBUF*,int,int,int*);
 #endif

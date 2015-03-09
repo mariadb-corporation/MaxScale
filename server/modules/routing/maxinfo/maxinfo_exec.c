@@ -735,7 +735,7 @@ exec_select(DCB *dcb, MAXINFO_TREE *tree)
 static int
 maxinfo_pattern_match(char *pattern, char *str)
 {
-int	anchor, len, trailing;
+int	anchor = 0, len, trailing;
 char	*fixed;
 extern	char *strcasestr();
 

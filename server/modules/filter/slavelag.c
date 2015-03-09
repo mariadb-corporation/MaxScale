@@ -32,7 +32,7 @@ extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
 /**
- * @file lagfilter.c - a very simple filter designed to send queries to the 
+ * @file slavelag.c - a very simple filter designed to send queries to the 
  * master server after data modification has occurred. This is done to prevent
  * replication lag affecting the outcome of a select query.
  * 
@@ -42,8 +42,11 @@ extern __thread log_info_t tls_log_info;
  * is executed:
  *
  *	count=<number of queries>   Queries to route to master after data modification.
- *	time=<time period>	    Seconds to wait before queries are routed to slaves.
+ *	time=<time period>	    	Seconds to wait before queries are routed to slaves.
+ *	match=<regex>				Regex for matching
+ *  ignore=<regex>				Regex for ignoring
  *
+ * The filter also has two options: @c case, which makes the regex case-sensitive, and @c ignorecase, which does the opposite.
  * Date		Who		Description
  * 03/03/2015	Markus Mäkelä	Written for demonstrative purposes
  * @endverbatim
@@ -333,20 +336,20 @@ time_t now = time(NULL);
 
 	    if(query_classifier_get_operation(queue) & (QUERY_OP_DELETE|QUERY_OP_INSERT|QUERY_OP_UPDATE))
 	    {
-		sql = modutil_get_SQL(queue);
-		
-		if(my_instance->nomatch == NULL||(my_instance->nomatch && regexec(&my_instance->nore,sql,0,NULL,0) != 0))
+		if((sql = modutil_get_SQL(queue)) != NULL)
 		{
-		    if(my_instance->match == NULL||
-		     (my_instance->match && regexec(&my_instance->re,sql,0,NULL,0) == 0))
+		    if(my_instance->nomatch == NULL||(my_instance->nomatch && regexec(&my_instance->nore,sql,0,NULL,0) != 0))
 		    {
-			my_session->hints_left = my_instance->count;
-			my_session->last_modification = now;
-			my_instance->stats.n_modified++;
+			if(my_instance->match == NULL||
+			 (my_instance->match && regexec(&my_instance->re,sql,0,NULL,0) == 0))
+			{
+			    my_session->hints_left = my_instance->count;
+			    my_session->last_modification = now;
+			    my_instance->stats.n_modified++;
+			}
 		    }
+		    free(sql);
 		}
-
-		free(sql);
 	    }
 	    else if(my_session->hints_left > 0)
 	    {

@@ -100,6 +100,7 @@ MAXINFO_TREE	*col, *table;
 				}
 			}
 			// Malformed show
+			free(text);
 			free_tree(tree);
 			*parse_error = PARSE_MALFORMED_SHOW;
 			return NULL;
@@ -136,31 +137,35 @@ parse_column_list(char **ptr)
 int	token, lookahead;
 char	*text, *text2;
 MAXINFO_TREE	*tree = NULL;
-
+MAXINFO_TREE * rval = NULL;
 	*ptr = fetch_token(*ptr, &token, &text);
 	*ptr = fetch_token(*ptr, &lookahead, &text2);
 	switch (token)
 	{
 	case LT_STRING:
-		free(text2);
 		switch (lookahead)
 		{
 		case LT_COMMA:
-			return make_tree_node(MAXOP_COLUMNS, text, NULL, 
+			rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
 				parse_column_list(ptr));
 		case LT_FROM:
-			return make_tree_node(MAXOP_COLUMNS, text, NULL, 
+			rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
 				NULL);
+		default:
+		    break;
 		}
 		break;
 	case LT_STAR:
-		free(text);
-		free(text2);
 		if (lookahead != LT_FROM)
-			return make_tree_node(MAXOP_ALL_COLUMNS, NULL, NULL,
+			rval = make_tree_node(MAXOP_ALL_COLUMNS, NULL, NULL,
 				NULL);
+		break;
+	default:
+	    break;
 	}
-	return NULL;
+	free(text);
+	free(text2);
+	return rval;
 }
 
 
@@ -180,6 +185,7 @@ MAXINFO_TREE	*tree = NULL;
 	*ptr = fetch_token(*ptr, &token, &text);
 	if  (token == LT_STRING)
 		return make_tree_node(MAXOP_TABLE, text, NULL, NULL);
+	free(text);
 	return NULL;
 }
 
