@@ -2168,14 +2168,14 @@ config_enable_feedback_task(void) {
 
 	if (enable_set && url_set && user_info_set) {
 		/* Add the task to the tasl list */
-        	if (hktask_add("send_feedback", module_feedback_send, cfg, 30)) {
+        	if (hktask_add("send_feedback", module_feedback_send, cfg, 1800)) {
 
 			LOGIF(LM, (skygw_log_write_flush(
 				LOGFILE_MESSAGE,
 				"Notification service feedback task started: URL=%s, User-Info=%s, Frequency %u seconds",
 				cfg->feedback_url,
 				cfg->feedback_user_info,
-				30)));
+				1800)));
 		}
 	} else {
 		if (enable_set) {
