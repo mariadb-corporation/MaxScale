@@ -23,12 +23,13 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 13/06/13	Mark Riddoch	Initial implementation
- * 14/06/13	Mark Riddoch	Updated to add call to ModuleInit if one is
- *                              defined in the loaded module.
- * 				Also updated to call fixed GetModuleObject
- * 02/06/14	Mark Riddoch	Addition of module info
+ * Date		Who			Description
+ * 13/06/13	Mark Riddoch		Initial implementation
+ * 14/06/13	Mark Riddoch		Updated to add call to ModuleInit if one is
+ *                              	defined in the loaded module.
+ * 					Also updated to call fixed GetModuleObject
+ * 02/06/14	Mark Riddoch		Addition of module info
+ * 26/02/15	Massimiliano Pinto	Addition of module_feedback_send
  *
  * @endverbatim
  */
@@ -42,6 +43,11 @@
 #include	<modinfo.h>
 #include	<skygw_utils.h>
 #include	<log_manager.h>
+#include	<version.h>
+#include	<notification.h>
+#include	<curl/curl.h>
+#include	<sys/utsname.h>
+#include	<openssl/sha.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -58,6 +64,44 @@ static void register_module(const char *module,
                             void        *modobj,
 			    MODULE_INFO *info);
 static void unregister_module(const char *module);
+int module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg);
+
+struct MemoryStruct {
+  char *data;
+  size_t size;
+};
+
+/**
+ * Callback write routine for curl library, getting remote server reply
+ *
+ * @param	contents	New data to add
+ * @param	size		Data size
+ * @param	nmemb		Elements in the buffer
+ * @param	userp		Pointer to the buffer
+ * @return	0 on failure, memory size on success
+ *
+ */
+static size_t
+WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
+{
+	size_t realsize = size * nmemb;
+	struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+ 
+	mem->data = realloc(mem->data, mem->size + realsize + 1);
+	if(mem->data == NULL) {
+		/* out of memory! */ 
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error in module_feedback_send(), not enough memory for realloc")));
+		return 0;
+	}
+ 
+	memcpy(&(mem->data[mem->size]), contents, realsize);
+	mem->size += realsize;
+	mem->data[mem->size] = 0;
+ 
+	return realsize;
+}
 
 char* get_maxscale_home(void)
 {
@@ -410,6 +454,29 @@ MODULES	*ptr = registered;
 }
 
 /**
+ * Print Modules to a DCB
+ *
+ * Diagnostic routine to display all the loaded modules
+ */
+void
+moduleShowFeedbackReport(DCB *dcb)
+{
+GWBUF *buffer;
+MODULES	*modules_list = registered;
+FEEDBACK_CONF *feedback_config = config_get_feedback_data();
+
+	if (!module_create_feedback_report(&buffer, modules_list, feedback_config)) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+		"Error in module_create_feedback_report(): gwbuf_alloc() failed to allocate memory")));
+
+                return;
+        }
+	dcb_printf(dcb, (char *)GWBUF_DATA(buffer));
+	gwbuf_free(buffer);
+}
+
+/**
  * Provide a row to the result set that defines the set of modules
  *
  * @param set	The result set
@@ -485,3 +552,316 @@ int		*data;
 
 	return set;
 }
+
+/**
+ * Send loaded modules info to notification service
+ *
+ *  @param data The configuration details of notification service
+ */
+void
+module_feedback_send(void* data) {
+	MODULES *modules_list = registered;
+	CURL *curl = NULL;
+	CURLcode res;
+	struct curl_httppost *formpost=NULL;
+	struct curl_httppost *lastptr=NULL;
+	GWBUF *buffer = NULL;
+	void *data_ptr=NULL;
+	long http_code = 0;
+	struct MemoryStruct chunk;
+	int last_action = _NOTIFICATION_SEND_PENDING;
+	time_t now;
+	struct tm *now_tm;
+	int hour;
+	int n_mod=0;
+	char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1]="";
+
+	now = time(NULL);
+	now_tm = localtime(&now);
+	hour = now_tm->tm_hour;
+
+	FEEDBACK_CONF *feedback_config = (FEEDBACK_CONF *) data;
+
+	/* Configuration check */
+
+	if (feedback_config->feedback_enable == 0 || feedback_config->feedback_url == NULL || feedback_config->feedback_user_info == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error in module_feedback_send(): some mandatory parameters are not set"
+			" feedback_enable=%u, feedback_url=%s, feedback_user_info=%s",
+			feedback_config->feedback_enable,
+			feedback_config->feedback_url == NULL ? "NULL" : feedback_config->feedback_url,
+			feedback_config->feedback_user_info == NULL ? "NULL" : feedback_config->feedback_user_info)));
+		
+		feedback_config->feedback_last_action = _NOTIFICATION_SEND_ERROR;
+
+		return;
+	}
+
+	/**
+	 * Task runs nightly, from 2 AM to 4 AM
+	 *
+	 * If it's done in that time interval, it will be skipped
+	 */
+
+	if (hour > 4 || hour < 2) {
+		/* It's not the rigt time, mark it as to be done and return */
+		feedback_config->feedback_last_action = _NOTIFICATION_SEND_PENDING;
+
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"module_feedback_send(): execution skipped, current hour [%d]"
+			" is not within the proper interval (from 2 AM to 4 AM)",
+			hour)));
+
+		return;
+	}
+
+	/* Time to run the task: if a previous run was succesfull skip next runs */
+	if (feedback_config->feedback_last_action == _NOTIFICATION_SEND_OK) {
+		/* task was done before, return */
+
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"module_feedback_send(): execution skipped because of previous succesful run: hour is [%d], last_action [%d]",
+			hour, feedback_config->feedback_last_action)));
+
+		return;
+	}
+ 
+	LOGIF(LT, (skygw_log_write_flush(
+		LOGFILE_TRACE,
+		"module_feedback_send(): task now runs: hour is [%d], last_action [%d]",
+		hour, feedback_config->feedback_last_action)));
+
+
+	/* allocate first memory chunck for httpd servr reply */
+	chunk.data = malloc(1);  /* will be grown as needed by the realloc above */ 
+	chunk.size = 0;    /* no data at this point */
+
+	if (!module_create_feedback_report(&buffer, modules_list, feedback_config)) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error in module_create_feedback_report(): gwbuf_alloc() failed to allocate memory")));
+
+		feedback_config->feedback_last_action = _NOTIFICATION_SEND_ERROR;
+
+		return;
+	}
+
+
+	/* Initializing curl library for data send via HTTP */
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+
+	curl = curl_easy_init();
+
+	if (curl) {
+		char error_message[CURL_ERROR_SIZE]="";
+
+		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_message);
+		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, feedback_config->feedback_connect_timeout);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT, feedback_config->feedback_timeout);
+
+		/* curl API call for data send via HTTP POST using a "file" type input */
+		curl_formadd(&formpost,
+			&lastptr,
+			CURLFORM_COPYNAME, "data",
+			CURLFORM_BUFFER, "report.txt",
+			CURLFORM_BUFFERPTR, (char *)GWBUF_DATA(buffer),
+			CURLFORM_BUFFERLENGTH, strlen((char *)GWBUF_DATA(buffer)),
+			CURLFORM_CONTENTTYPE, "text/plain",
+			CURLFORM_END);
+
+		curl_easy_setopt(curl, CURLOPT_HEADER, 1);
+
+		/* some servers don't like requests that are made without a user-agent field, so we provide one */ 
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, "MaxScale-agent/http-1.0");
+		/* Force HTTP/1.0 */
+		curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+
+		curl_easy_setopt(curl, CURLOPT_URL, feedback_config->feedback_url);
+		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+
+#ifdef SKIP_PEER_VERIFICATION
+   		/*
+		 * This makes the connection A LOT LESS SECURE.
+ 	    	 */
+   		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+#endif
+
+#ifdef SKIP_HOSTNAME_VERIFICATION
+		/*
+		 * this will make the connection less secure.
+		 */
+  		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+#endif
+
+		/* send all data to this function  */ 
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+
+		/* we pass our 'chunk' struct to the callback function */ 
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+ 
+		/* Perform the request, res will get the return code */
+		res = curl_easy_perform(curl);
+
+		/* Check for errors */
+		if(res != CURLE_OK) {
+			last_action = _NOTIFICATION_SEND_ERROR;
+
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: module_feedback_send(), curl call for [%s] failed due: %s, %s",
+				feedback_config->feedback_url,	
+				curl_easy_strerror(res),
+				error_message)));
+		} else {
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+		}
+
+		if (http_code == 302) {
+			char *from = strstr(chunk.data, "<h1>ok</h1>");
+			if (from) {
+				last_action = _NOTIFICATION_SEND_OK;
+			} else {
+				last_action = _NOTIFICATION_SEND_ERROR;
+			}
+		} else {
+			last_action = _NOTIFICATION_SEND_ERROR;
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error in module_feedback_send(), Bad HTTP Code from remote server: %lu",
+				http_code)));
+		}
+	} else {
+		LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error in module_feedback_send(), curl object not initialized")));
+		last_action = _NOTIFICATION_SEND_ERROR;
+	}
+
+	/* update last action in the config struct */	
+	feedback_config->feedback_last_action =  last_action;
+
+	LOGIF(LT, (skygw_log_write_flush(
+		LOGFILE_TRACE,
+		"module_feedback_send(): task run result: hour is [%d], last_action [%d], HTTP code [%d]",
+		hour, feedback_config->feedback_last_action, http_code)));
+
+	if (chunk.data)
+		free(chunk.data);
+
+	if (buffer)
+		gwbuf_free(buffer);
+
+	if (curl) {
+		curl_easy_cleanup(curl);
+		curl_formfree(formpost);
+	}
+
+	curl_global_cleanup();
+}
+
+/**
+ * Create the feedback report as string.
+ * I t could be sent to notification service
+ * or just printed via maxadmin/telnet
+ *
+ * @param buffe	 	The pointr for GWBUF allocation, to be freed by the caller
+ * @param modules	The mouleds list
+ * @param cfg		The feedback configuration
+ * @return 		0 on failure, 1 on success
+ *
+ */
+
+int
+module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg) {
+
+	MODULES *ptr = modules;
+	int n_mod = 0;
+	char *data_ptr=NULL;
+	char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1]="";
+	time_t now;
+	struct tm *now_tm;
+	int	report_max_bytes=0;
+
+	now = time(NULL);
+
+        /* count loaded modules */
+        while (ptr)
+        {
+                ptr = ptr->next;
+                n_mod++;
+        }
+
+        /* module lists pointer is set back to the head */
+        ptr = modules;
+
+        /**
+         * allocate gwbuf for data to send
+         *
+         * each module gives 4 rows
+         * product and release rows add 7 rows
+         * row is _NOTIFICATION_REPORT_ROW_LEN bytes long
+         */
+
+	report_max_bytes = ((n_mod * 4) + 7) * (_NOTIFICATION_REPORT_ROW_LEN + 1);
+        *buffer = gwbuf_alloc(report_max_bytes);
+
+        if (buffer == NULL) {
+                return 0;
+        }
+
+        /* encode MAC-sha1 to HEX */
+        gw_bin2hex(hex_setup_info, cfg->mac_sha1, SHA_DIGEST_LENGTH);
+
+
+        data_ptr = (char *)GWBUF_DATA(*buffer);
+
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "FEEDBACK_SERVER_UID\t%s\n", hex_setup_info);
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "FEEDBACK_USER_INFO\t%s\n", cfg->feedback_user_info == NULL ? "not_set" : cfg->feedback_user_info);
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "VERSION\t%s\n", MAXSCALE_VERSION);
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN * 2, "NOW\t%lu\nPRODUCT\t%s\n", now, "maxscale");
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "Uname_sysname\t%s\n", cfg->sysname);
+        data_ptr+=strlen(data_ptr);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "Uname_distribution\t%s\n", cfg->release_info);
+        data_ptr+=strlen(data_ptr);
+
+        while (ptr)
+        {
+                snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN * 2, "module_%s_type\t%s\nmodule_%s_version\t%s\n", ptr->module, ptr->type, ptr->module, ptr->version);
+                data_ptr+=strlen(data_ptr);
+
+                if (ptr->info) {
+                        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "module_%s_api\t%d.%d.%d\n",
+                                        ptr->module,
+                                        ptr->info->api_version.major,
+                                        ptr->info->api_version.minor,
+                                        ptr->info->api_version.patch);
+
+                        data_ptr+=strlen(data_ptr);
+                        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "module_%s_releasestatus\t%s\n",
+                                ptr->module,
+                                ptr->info->status == MODULE_IN_DEVELOPMENT
+                                        ? "In Development"
+                                : (ptr->info->status == MODULE_ALPHA_RELEASE
+                                        ? "Alpha"
+                                : (ptr->info->status == MODULE_BETA_RELEASE
+                                        ? "Beta"
+                                : (ptr->info->status == MODULE_GA
+                                        ? "GA"
+                                : (ptr->info->status == MODULE_EXPERIMENTAL
+                                        ? "Experimental" : "Unknown")))));
+                        data_ptr+=strlen(data_ptr);
+                }
+                ptr = ptr->next;
+        }
+
+	return 1;
+}
+

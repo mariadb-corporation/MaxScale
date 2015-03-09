@@ -35,6 +35,7 @@
  * 13/10/14	Massimiliano Pinto	Added hashtable for resources (i.e database names for MySQL services)
  * 06/02/15	Mark Riddoch		Added caching of authentication data
  * 18/02/15	Mark Riddoch		Added result set management
+ * 03/03/15	Massimiliano Pinto	Added config_enable_feedback_task() call in serviceStartAll
  *
  * @endverbatim
  */
@@ -60,7 +61,6 @@
 #include <sys/types.h>
 #include <housekeeper.h>
 #include <resultset.h>
-
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -476,6 +476,8 @@ serviceStartAll()
 {
 SERVICE	*ptr;
 int	n = 0,i;
+
+	config_enable_feedback_task();
 
 	ptr = allServices;
 	while (ptr && !ptr->svc_do_shutdown)
