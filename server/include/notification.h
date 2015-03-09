@@ -37,6 +37,7 @@
 #define _NOTIFICATION_SEND_PENDING	0
 #define _NOTIFICATION_SEND_OK		1
 #define _NOTIFICATION_SEND_ERROR 	2
+#define	_NOTIFICATION_REPORT_ROW_LEN	255
 
 /**
  * The configuration and usage information data for feeback service

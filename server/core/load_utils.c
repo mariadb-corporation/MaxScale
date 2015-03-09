@@ -777,6 +777,7 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
 	char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1]="";
 	time_t now;
 	struct tm *now_tm;
+	int	report_max_bytes=0;
 
 	now = time(NULL);
 
@@ -794,11 +795,12 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
          * allocate gwbuf for data to send
          *
          * each module gives 4 rows
-         * product and release rows add 6 rows
-         * row is 256 bytes long
+         * product and release rows add 7 rows
+         * row is _NOTIFICATION_REPORT_ROW_LEN bytes long
          */
 
-        *buffer = gwbuf_alloc(((n_mod * 4) + 6) * 256);
+	report_max_bytes = ((n_mod * 4) + 7) * (_NOTIFICATION_REPORT_ROW_LEN + 1);
+        *buffer = gwbuf_alloc(report_max_bytes);
 
         if (buffer == NULL) {
                 return 0;
@@ -810,33 +812,33 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
 
         data_ptr = (char *)GWBUF_DATA(*buffer);
 
-        snprintf(data_ptr, 255, "FEEDBACK_SERVER_UID\t%s\n", hex_setup_info);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "FEEDBACK_SERVER_UID\t%s\n", hex_setup_info);
         data_ptr+=strlen(data_ptr);
-        snprintf(data_ptr, 255, "FEEDBACK_USER_INFO\t%s\n", cfg->feedback_user_info);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "FEEDBACK_USER_INFO\t%s\n", cfg->feedback_user_info == NULL ? "not_set" : cfg->feedback_user_info);
         data_ptr+=strlen(data_ptr);
-        snprintf(data_ptr, 255, "VERSION\t%s\n", MAXSCALE_VERSION);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "VERSION\t%s\n", MAXSCALE_VERSION);
         data_ptr+=strlen(data_ptr);
-        snprintf(data_ptr, 255 * 2, "NOW\t%lu\nPRODUCT\t%s\n", now, "maxscale");
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN * 2, "NOW\t%lu\nPRODUCT\t%s\n", now, "maxscale");
         data_ptr+=strlen(data_ptr);
-        snprintf(data_ptr, 255, "Uname_sysname\t%s\n", cfg->sysname);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "Uname_sysname\t%s\n", cfg->sysname);
         data_ptr+=strlen(data_ptr);
-        snprintf(data_ptr, 255, "Uname_distribution\t%s\n", cfg->release_info);
+        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "Uname_distribution\t%s\n", cfg->release_info);
         data_ptr+=strlen(data_ptr);
 
         while (ptr)
         {
-                snprintf(data_ptr, 255 * 3, "module_%s_type\t%s\nmodule_%s_version\t%s\n", ptr->module, ptr->type, ptr->module, ptr->version);
+                snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN * 2, "module_%s_type\t%s\nmodule_%s_version\t%s\n", ptr->module, ptr->type, ptr->module, ptr->version);
                 data_ptr+=strlen(data_ptr);
 
                 if (ptr->info) {
-                        snprintf(data_ptr, 255, "module_%s_api\t%d.%d.%d\n",
+                        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "module_%s_api\t%d.%d.%d\n",
                                         ptr->module,
                                         ptr->info->api_version.major,
                                         ptr->info->api_version.minor,
                                         ptr->info->api_version.patch);
 
                         data_ptr+=strlen(data_ptr);
-                        snprintf(data_ptr, 255, "module_%s_releasestatus\t%s\n",
+                        snprintf(data_ptr, _NOTIFICATION_REPORT_ROW_LEN, "module_%s_releasestatus\t%s\n",
                                 ptr->module,
                                 ptr->info->status == MODULE_IN_DEVELOPMENT
                                         ? "In Development"
