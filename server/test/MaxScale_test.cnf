@@ -1,6 +1,13 @@
 [maxscale]
 threads=4
 
+[feedback]
+feedback_enable=true
+feedback_user_info=user_info
+feedback_url=http://127.0.0.1:8080/load.php
+feedback_timeout=60
+feedback_connect_timeout=60
+
 [MySQL Monitor]
 type=monitor
 module=mysqlmon

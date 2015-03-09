@@ -39,6 +39,8 @@
 #define _NOTIFICATION_SEND_ERROR 	2
 #define	_NOTIFICATION_REPORT_ROW_LEN	255
 
+#include <stdint.h>
+
 /**
  * The configuration and usage information data for feeback service
  */
