@@ -676,7 +676,9 @@ module_feedback_send(void* data) {
 		curl_easy_setopt(curl, CURLOPT_HEADER, 1);
 
 		/* some servers don't like requests that are made without a user-agent field, so we provide one */ 
-		curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent/1.0");
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, "MaxScale-agent/http-1.0");
+		/* Force HTTP/1.0 */
+		curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
 
 		curl_easy_setopt(curl, CURLOPT_URL, feedback_config->feedback_url);
 		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
@@ -718,8 +720,13 @@ module_feedback_send(void* data) {
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 		}
 
-		if (http_code == 200) {
-			last_action = _NOTIFICATION_SEND_OK;
+		if (http_code == 302) {
+			char *from = strstr(chunk.data, "<h1>ok</h1>");
+			if (from) {
+				last_action = _NOTIFICATION_SEND_OK;
+			} else {
+				last_action = _NOTIFICATION_SEND_ERROR;
+			}
 		} else {
 			last_action = _NOTIFICATION_SEND_ERROR;
 			LOGIF(LE, (skygw_log_write_flush(
