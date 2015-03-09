@@ -1291,7 +1291,7 @@ handle_feedback_item(const char *name, const char *value)
 int i;
 	if (strcmp(name, "feedback_enable") == 0)
 	{
-		feedback.feedback_enable = config_truth_value(value);
+		feedback.feedback_enable = config_truth_value((char *)value);
 	}
 	else if (strcmp(name, "feedback_user_info") == 0)
 	{
