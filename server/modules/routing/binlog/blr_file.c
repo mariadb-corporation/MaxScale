@@ -71,7 +71,7 @@ static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 int
 blr_file_init(ROUTER_INSTANCE *router)
 {
-char		*ptr, path[1024], filename[1050];
+char		*ptr, path[1025], filename[1051];
 int		file_found, n = 1;
 int		root_len, i;
 DIR		*dirp;
@@ -80,12 +80,12 @@ struct dirent	*dp;
 	if (router->binlogdir == NULL)
 	{
 		strcpy(path, "/usr/local/skysql/MaxScale");
-		if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+		if ((ptr = getenv("MAXSCALE_HOME")) != NULL && strnlen(ptr,1025) < 1025)
 		{
 			strncpy(path, ptr,PATH_MAX);
 		}
-		strcat(path, "/");
-		strcat(path, router->service->name);
+		strncat(path, "/",1024);
+		strncat(path, router->service->name,1024);
 
 		if (access(path, R_OK) == -1)
 			mkdir(path, 0777);
@@ -196,7 +196,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	fsync(fd);
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
-	strncpy(router->binlog_name, file,BINLOG_FNAMELEN+1);
+	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
 	router->binlog_position = 4;			/* Initial position after the magic number */
 	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
@@ -230,7 +230,7 @@ int		fd;
 	fsync(fd);
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
-	strncpy(router->binlog_name, file,BINLOG_FNAMELEN+1);
+	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
 	router->binlog_position = lseek(fd, 0L, SEEK_END);
 	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
@@ -290,7 +290,7 @@ blr_file_flush(ROUTER_INSTANCE *router)
 BLFILE *
 blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
 {
-char		path[1024];
+char		path[1025];
 BLFILE		*file;
 
 	spinlock_acquire(&router->fileslock);
@@ -315,9 +315,9 @@ BLFILE		*file;
 	file->cache = 0;
 	spinlock_init(&file->lock);
 
-	strcpy(path, router->binlogdir);
-	strcat(path, "/");
-	strcat(path, binlog);
+	strncpy(path, router->binlogdir,1024);
+	strncat(path, "/",1024);
+	strncat(path, binlog,1024);
 
 	if ((file->fd = open(path, O_RDONLY, 0666)) == -1)
 	{
@@ -630,7 +630,7 @@ struct	stat	statb;
 void
 blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 {
-char	path[4096], *ptr;
+char	path[4097], *ptr;
 int	fd;
 
 	strcpy(path, "/usr/local/skysql/MaxScale");

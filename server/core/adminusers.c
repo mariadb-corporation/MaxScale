@@ -253,7 +253,9 @@ char* admin_remove_user(
         /**
          * Open passwd file and remove user from the file.
          */
-        if ((home = getenv("MAXSCALE_HOME")) != NULL && strlen(home) < 1024) {
+        if ((home = getenv("MAXSCALE_HOME")) != NULL &&
+	    strnlen(home,PATH_MAX) < PATH_MAX &&
+	    strnlen(home,PATH_MAX) > 0) {
                 sprintf(fname, "%s/etc/passwd", home);
                 sprintf(fname_tmp, "%s/etc/passwd_tmp", home);
         } else {
