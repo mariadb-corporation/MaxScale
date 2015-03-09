@@ -151,6 +151,7 @@ static struct option long_options[] = {
   {"nodaemon", no_argument,       0, 'd'},
   {"log",      required_argument, 0, 'l'},
   {"syslog",   required_argument, 0, 's'},
+  {"maxscalelog",   required_argument, 0, 'S'},
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},
   {0, 0, 0, 0}
@@ -998,6 +999,8 @@ static void usage(void)
 		"                    -lfile or -lshm - defaults to shared memory\n"
 		"  -s|--syslog=	     log messages to syslog"
 		"		     true or false - defaults to true"
+		"  -S|--maxscalelog=	     log messages to MaxScale log"
+		"		     true or false - defaults to true"
 		"  -v|--version      print version info and exit\n"
                 "  -?|--help         show this help\n"
 		, progname);
@@ -1061,6 +1064,7 @@ int main(int argc, char **argv)
 	int      option_index;
 	int	 logtofile = 0;	      	      /* Use shared memory or file */
 	int	 syslog_enabled = 1; /** Log to syslog */
+	int	 maxscalelog_enabled = 1; /** Log with MaxScale */
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
@@ -1100,7 +1104,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
         }
-        while ((opt = getopt_long(argc, argv, "dc:f:l:vs:?",
+        while ((opt = getopt_long(argc, argv, "dc:f:l:vs:S:?",
 				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
@@ -1205,6 +1209,17 @@ int main(int argc, char **argv)
                                 succp = false;
 			}
 			break;
+		case 'S':
+		    if(strstr(optarg,"="))
+		    {
+			strtok(optarg,"= ");
+			maxscalelog_enabled = config_truth_value(strtok(NULL,"= "));
+		    }
+		    else
+		    {
+			maxscalelog_enabled = config_truth_value(optarg);
+		    }
+		    break;
 		case 's':
 		    if(strstr(optarg,"="))
 		    {
@@ -1578,8 +1593,18 @@ int main(int argc, char **argv)
                 argv[1] = "-j";
                 argv[2] = buf;
 
-		logmanager_enable_syslog(syslog_enabled);
+		if(!syslog_enabled)
+		{
+		    printf("Syslog logging is disabled.\n");
+		}
 		
+		if(!maxscalelog_enabled)
+		{
+		    printf("MaxScale logging is disabled.\n");
+		}
+		logmanager_enable_syslog(syslog_enabled);
+		logmanager_enable_maxscalelog(maxscalelog_enabled);
+
 		if (logtofile)
 		{
 			argv[3] = "-l"; /*< write to syslog */

@@ -53,6 +53,7 @@ static simple_mutex_t msg_mutex;
 #endif
 static int highprec = 0;
 static int do_syslog = 1;
+static int do_maxscalelog = 1;
 
 /**
  * Variable holding the enabled logfiles information.
@@ -751,10 +752,17 @@ static int logmanager_write_log(
 		}
 #endif
 		/** Book space for log string from buffer */
+                if(do_maxscalelog)
+                {
                 wp = blockbuf_get_writepos(&bb,
                                            id,
                                            safe_str_len,
                                            flush);
+                }
+                else
+                {
+                    wp = (char*)malloc(sizeof(char)*(timestamp_len-sizeof(char)+cmplen+str_len + 1));
+                }
 
 
 #if defined (SS_LOG_DEBUG)
@@ -822,8 +830,15 @@ static int logmanager_write_log(
 			wp[safe_str_len-2]=' ';
 		}
 		wp[safe_str_len-1] = '\n';
-                blockbuf_unregister(bb);
 
+                if(do_maxscalelog)
+                {
+                    blockbuf_unregister(bb);
+                }
+                else
+                {
+                free(wp);
+                }
                 /**
                  * disable because cross-blockbuffer locking either causes deadlock
                  * or run out of memory blocks.
@@ -3112,4 +3127,13 @@ void skygw_set_highp(int val)
 void logmanager_enable_syslog(int val)
 {
     do_syslog = val;
+}
+
+/**
+ * Toggle syslog logging
+ * @param val 0 for disabled, 1 for enabled
+ */
+void logmanager_enable_maxscalelog(int val)
+{
+    do_maxscalelog = val;
 }
