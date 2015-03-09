@@ -35,10 +35,10 @@ It tries to send data and if there is any failure (timeout, server is down, etc)
 This feature is not enabled by default: MaxScale must be configured in [feedback] section:
 
 
-[feedback]
-feedback_enable=1
-feedback_url=xxxxxx
-feedback_user_info=yyyyy
+	[feedback]
+	feedback_enable=1
+	feedback_url=xxxxxx
+	feedback_user_info=yyyyy
 
 
 ## Manual Operation
@@ -52,7 +52,7 @@ MaxScale>show feedback report
 Report could be saved to report.txt file:
 
 
-# maxadmin -uxxx -pyyy show feedbackreport > ./report.txt
+maxadmin -uxxx -pyyy show feedbackreport > ./report.txt
 
-# curl -F data=@./report.txt https://mariadb.org/feedback_plugin/post
+curl -F data=@./report.txt https://mariadb.org/feedback_plugin/post
 
