@@ -385,7 +385,9 @@ char		*sql;
 	if (modutil_MySQL_Query(queue, &sql, &len, &residual))
 	{
 		sql = strndup(sql, len);
-		return maxinfo_execute_query(instance, session, sql);
+		int rc = maxinfo_execute_query(instance, session, sql);
+		free(sql);
+		return rc;
 	}
 	else
 	{

@@ -73,18 +73,19 @@ resultset_free(RESULTSET *resultset)
 {
 RESULT_COLUMN *col;
 
-	if (resultset)
-		return;
-	col = resultset->column;
-	while (col)
+	if (resultset != NULL)
 	{
-	RESULT_COLUMN *next;
+	    col = resultset->column;
+	    while (col)
+	    {
+		RESULT_COLUMN *next;
 
 		next = col->next;
 		resultset_column_free(col);
 		col = next;
+	    }
+	    free(resultset);
 	}
-	free(resultset);
 }
 
 /**
