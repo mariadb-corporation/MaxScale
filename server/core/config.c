@@ -92,6 +92,7 @@ int	config_truth_value(char *str);
 static	int	internalService(char *router);
 int	config_get_ifaddr(unsigned char *output);
 int	config_get_release_string(char* release);
+FEEDBACK_CONF * config_get_feedback_data();
 
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;

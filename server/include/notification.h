@@ -56,4 +56,5 @@ typedef struct {
 
 extern char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
 extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
+extern FEEDBACK_CONF * config_get_feedback_data();
 #endif
