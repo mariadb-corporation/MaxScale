@@ -72,7 +72,6 @@ int main(int argc, char** argv)
 
     regcomp(&re,fc->feedback_user_info,0);
 
-    config_enable_feedback_task();    
     module_create_feedback_report(&buf,NULL,fc);
     printf("%s",(char*)buf->start);
 
@@ -81,6 +80,5 @@ int main(int argc, char** argv)
         FAILTEST("Regex match of 'user_info' failed.");
     }
 
-    config_disable_feedback_task();
     return 0;
 }
