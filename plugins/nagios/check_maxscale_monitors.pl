@@ -96,17 +96,17 @@ alarm($TIMEOUT);
 
 my $command = $MAXADMIN . ' -h ' . $opts{'H'} . ' -u ' . $opts{'u'} . ' -p "' . $opts{'p'} . '" -P ' . $opts{'P'} . ' ' . "show " . $MAXADMIN_RESOURCE;
 
-#print "maxadmin command: $command\n";
+#
+# print "maxadmin command: $command\n";
+#
 
 open (MAXSCALE, "$command 2>&1 |")
    or die "can't get data out of Maxscale: $!";
 
 my $hostname = qx{hostname}; chomp $hostname;
 my $waiting_backend = 0;
-my $service;
 my $start_output = 0;
-my $n_threads = 0;
-my $p_threads = 0;
+my $n_monitors = 0;
 my $performance_data="";
 
 
@@ -128,8 +128,8 @@ while ( <MAXSCALE> ) {
     }
 
     if ( /^Monitor\:/ ) {
-	$n_threads++;
-	$this_key = 'monitor' . $n_threads;
+	$n_monitors++;
+	$this_key = 'monitor' . $n_monitors;
 	$monitor_data{$this_key} = {
 	 '1name'=> '',
 	 '2state' => '',
@@ -172,10 +172,6 @@ while ( <MAXSCALE> ) {
 	}
 
 	if ( /(Sampling interval\:)\s+(\d+) milliseconds/ ) {
-	        #my @data_row = split(':', $_);
-		#my $name = $data_row[1];
-		#$name =~ s/^\s+|\s+$//g;
-		#$monitor_data{$this_key}{'4interval'}=$name;
 		$monitor_data{$this_key}{'4interval'}=$2;
 	}
 
@@ -189,7 +185,6 @@ while ( <MAXSCALE> ) {
 
 
    for my $key ( sort(keys %monitor_data) ) {
-	#print "-- key: [$key]\n";
 	my $local_hash = {};
 	$performance_data .= " $key=";
 	$local_hash = $monitor_data{$key};
@@ -197,12 +192,12 @@ while ( <MAXSCALE> ) {
 	foreach my $key (sort (keys (%new_hash))) {
 		$performance_data .= $new_hash{$key} . ";";
     	}
+	chop($performance_data);
   }
 
-chop($performance_data);
 
-if ($n_threads) {
-	printf "OK: %d monitors found |%s\n", $n_threads, $performance_data;
+if ($n_monitors) {
+	printf "OK: %d monitors found |%s\n", $n_monitors, $performance_data;
 	close(MAXSCALE);
 	exit 0;
 } else {

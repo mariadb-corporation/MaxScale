@@ -97,16 +97,16 @@ alarm($TIMEOUT);
 
 my $command = $MAXADMIN . ' -h ' . $opts{'H'} . ' -u ' . $opts{'u'} . ' -p "' . $opts{'p'} . '" -P ' . $opts{'P'} . ' ' . "list " . $MAXADMIN_RESOURCE;
 
-#print "maxadmin command: $command\n";
-open (MAXSCALE, "$command 2>&1 |")
-   or die "can't get data out of Maxscale: $!";
+#
+# print "maxadmin command: $command\n";
+#
+
+open (MAXSCALE, "$command 2>&1 |") or die "can't get data out of Maxscale: $!";
 
 my $hostname = qx{hostname}; chomp $hostname;
-my $waiting_backend = 0;
-my $service;
+
 my $start_output = 0;
-my $n_threads = 0;
-my $p_threads = 0;
+my $n_resources = 0;
 my $performance_data="";
 
 
@@ -128,7 +128,9 @@ if ($resource_type eq "session") {
         $resource_match = "Session";
 }
 
-#print "Matching [$resource_match]\n";
+#
+# print "Matching [$resource_match]\n";
+#
 
 while ( <MAXSCALE> ) {
     chomp;
@@ -146,12 +148,12 @@ while ( <MAXSCALE> ) {
     }
     if ($start_output) {
 	next if (/--/ || $_ eq '');
-	$n_threads++;
+	$n_resources++;
 	if ($resource_type ne "session") {
 		my $str;
 		my $perf_line;
 		my @data_row = split('\|', $_);
-		$performance_data .= "module$n_threads=";
+		$performance_data .= "$MAXADMIN_RESOURCE$n_resources=";
 		foreach my $val (@data_row) {
 			$str = $val;
 			$str =~ s/^\s+|\s+$//g;
@@ -165,11 +167,17 @@ while ( <MAXSCALE> ) {
 
 chop($performance_data);
 
-if ($n_threads) {
+###############################################
+#
+# print OK or CRITICAL based on $n_resources
+#
+################################################
+
+if ($n_resources) {
 	if ($performance_data eq '') {
-		printf "OK: %d $MAXADMIN_RESOURCE found\n", $n_threads;
+		printf "OK: %d $MAXADMIN_RESOURCE found\n", $n_resources;
 	} else {
-		printf "OK: %d $MAXADMIN_RESOURCE found | %s\n", $n_threads, $performance_data;
+		printf "OK: %d $MAXADMIN_RESOURCE found | %s\n", $n_resources, $performance_data;
 	}
 	close(MAXSCALE);
 	exit 0;

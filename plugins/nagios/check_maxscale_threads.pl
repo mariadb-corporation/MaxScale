@@ -96,14 +96,13 @@ alarm($TIMEOUT);
 
 my $command = $MAXADMIN . ' -h ' . $opts{'H'} . ' -u ' . $opts{'u'} . ' -p "' . $opts{'p'} . '" -P ' . $opts{'P'} . ' ' . "show " . $MAXADMIN_RESOURCE;
 
-#print "maxadmin command: $command\n";
+#
+# print "maxadmin command: $command\n";
+#
 
-open (MAXSCALE, "$command 2>&1 |")
-   or die "can't get data out of Maxscale: $!";
+open (MAXSCALE, "$command 2>&1 |") or die "can't get data out of Maxscale: $!";
 
 my $hostname = qx{hostname}; chomp $hostname;
-my $waiting_backend = 0;
-my $service;
 my $start_output = 0;
 my $n_threads = 0;
 my $p_threads = 0;
@@ -175,15 +174,12 @@ while ( <MAXSCALE> ) {
 		next;
 	}
 
-    if ( ! /^\s+ID/ ) {
-	#printf $_ ."\n";
-    } else {
-	#printf "[$_]" ."\n";
+    if (/^\s+ID/ ) {
 	$start_output = 1;
 	next;
     }
+
     if ($start_output && /^\s+\d/) {
-	#printf "Thread [$_]" . "\n";
 	$n_threads++;
 	if (/Processing/) {
 		$p_threads++;
@@ -193,14 +189,21 @@ while ( <MAXSCALE> ) {
 
 close(MAXSCALE);
 
+$command = $MAXADMIN . ' -h ' . $opts{'H'} . ' -u ' . $opts{'u'} . ' -p "' . $opts{'p'} . '" -P ' . $opts{'P'} . ' ' . "show epoll";
 
-open( MAXSCALE, "/servers/maxinfo/bin/maxadmin -h 127.0.0.1 -P 8444 -uadmin -pskysql show epoll 2>&1 |" )
-   or die "can't get data out of Maxscale: $!";
+open (MAXSCALE, "$command 2>&1 |") or die "can't get data out of Maxscale: $!";
 
 my $queue_len = 0;
 
 while ( <MAXSCALE> ) {
-    chomp;
+	chomp;
+
+	if ( /(Failed|Unable) to connect to MaxScale/ ) {
+		printf "CRITICAL: $_\n";
+		close(MAXSCALE);
+		exit(2);
+	}
+
 	if ( ! /Current event queue length/ ) {
 		next;
 	} else {
@@ -216,7 +219,6 @@ while ( <MAXSCALE> ) {
 	}
 }
 
-my $performance_data = "";
 my $performance_data_thread = "";
 my $performance_data_event = "";
 
