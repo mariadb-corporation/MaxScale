@@ -714,7 +714,7 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
 	report_max_bytes = ((n_mod * 4) + 7) * (_NOTIFICATION_REPORT_ROW_LEN + 1);
         *buffer = gwbuf_alloc(report_max_bytes);
 
-        if (buffer == NULL) {
+        if (*buffer == NULL) {
                 return 0;
         }
 
