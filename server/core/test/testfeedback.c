@@ -21,65 +21,90 @@
  * @verbatim
  * Revision History
  *
- * Date			Who				Description
- * 09-03-2015	Markus Mäkelä	Initial implementation
+ * Date         Who                     Description
+ * 09-03-2015   Markus Mäkelä         Initial implementation
+ * 10-03-2015   Massimiliano Pinto      Added http_check
  *
  * @endverbatim
  */
 
-#define FAILTEST(s) printf("TEST FAILED: " s "\n");return 1; 
-
+#define FAILTEST(s) printf("TEST FAILED: " s "\n");return 1;
+#include <my_config.h>
+#include <mysql.h>
 #include <stdio.h>
 #include <notification.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
-#include <test_utils.h>
 #include <housekeeper.h>
 #include <buffer.h>
 #include <regex.h>
 
+static char* server_options[] = {
+    "MariaDB Corporation MaxScale",
+    "--no-defaults",
+    "--datadir=",
+    "--language=",
+    "--skip-innodb",
+    "--default-storage-engine=myisam",
+    NULL
+};
+
+const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
+
+static char* server_groups[] = {
+    "embedded",
+    "server",
+    "server",
+    "embedded",
+    "server",
+    "server",
+    NULL
+};
+
+
 int main(int argc, char** argv)
 {
     FEEDBACK_CONF* fc;
-    char* home;
-    char* cnf;
     GWBUF* buf;
     regex_t re;
+    char* home;
+    char* cnf;
 
-init_test_env();
-    home = getenv("MAXSCALE_HOME");
+    hkinit();
 
-    if(home == NULL)
+    mysql_library_init(num_elements, server_options, server_groups);
+
+    if ((fc = config_get_feedback_data()) == NULL)
     {
-        FAILTEST("MAXSCALE_HOME was not defined.");
+        FAILTEST("Configuration for Feedback was NULL.");
     }
-    printf("Home: %s\n",home);
 
-    cnf = malloc(strlen(home) + strlen("/etc/MaxScale.cnf") + 1);
-    strcpy(cnf,home);
-    strcat(cnf,"/etc/MaxScale.cnf");
+        fc->feedback_enable = 1;
+        fc->feedback_user_info = "TEST_user_info";
+        fc->mac_sha1 =  "TEST_user_info";
+        fc->feedback_url = "http://127.0.0.1/post.php";
 
-    printf("Config: %s\n",cnf);
-
-    config_load(cnf);
-
-    if((fc = config_get_feedback_data()) == NULL ||
-       fc->feedback_user_info == NULL)
-    {
-        FAILTEST("Configuration was NULL.");
-    }
+        fc->feedback_last_action = _NOTIFICATION_SEND_PENDING;
+        fc->feedback_timeout = _NOTIFICATION_OPERATION_TIMEOUT;
+        fc->feedback_connect_timeout = _NOTIFICATION_CONNECT_TIMEOUT;
+        fc->release_info = "";
+        fc->sysname="";
 
     regcomp(&re,fc->feedback_user_info,0);
 
     module_create_feedback_report(&buf,NULL,fc);
-    printf("%s",(char*)buf->start);
 
     if(regexec(&re,(char*)buf->start,0,NULL,0))
     {
         FAILTEST("Regex match of 'user_info' failed.");
     }
+
+        if (do_http_post(buf, fc) != 0)
+        {
+                FAILTEST("Http send failed\n");
+        }
 
     return 0;
 }
