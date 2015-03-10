@@ -73,24 +73,30 @@ int main(int argc, char** argv)
     char* cnf;
 
     hkinit();
+    home = getenv("MAXSCALE_HOME");
 
-    mysql_library_init(num_elements, server_options, server_groups);
+    if(home == NULL)
+    {
+        FAILTEST("MAXSCALE_HOME was not defined.");
+    }
+    printf("Home: %s\n",home);
+
+    cnf = malloc(strlen(home) + strlen("/etc/MaxScale.cnf") + 1);
+    strcpy(cnf,home);
+    strcat(cnf,"/etc/MaxScale.cnf");
+
+    printf("Config: %s\n",cnf);
+
+
+        mysql_library_init(num_elements, server_options, server_groups);
+
+    config_load(cnf);
 
     if ((fc = config_get_feedback_data()) == NULL)
     {
         FAILTEST("Configuration for Feedback was NULL.");
     }
 
-        fc->feedback_enable = 1;
-        fc->feedback_user_info = "TEST_user_info";
-        fc->mac_sha1 =  "TEST_user_info";
-        fc->feedback_url = "http://127.0.0.1/post.php";
-
-        fc->feedback_last_action = _NOTIFICATION_SEND_PENDING;
-        fc->feedback_timeout = _NOTIFICATION_OPERATION_TIMEOUT;
-        fc->feedback_connect_timeout = _NOTIFICATION_CONNECT_TIMEOUT;
-        fc->release_info = "";
-        fc->sysname="";
 
     regcomp(&re,fc->feedback_user_info,0);
 
