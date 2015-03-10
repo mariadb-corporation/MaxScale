@@ -1632,7 +1632,7 @@ gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
     rval = gwbuf_append(rval, last_packet);
 
     rval = gwbuf_make_contiguous(rval);
-
+    hashtable_iterator_free(iter);
     return rval;
 }
 
@@ -2224,19 +2224,20 @@ static void clientReply (
                 goto lock_failed;
         }
         bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
-        skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received reply from %s for session %p",
-                                bref->bref_backend->backend_server->unique_name,
-                                router_cli_ses->rses_client_dcb->session);
-#if !defined(FOR_BUG548_FIX_ONLY)
-	/** This makes the issue becoming visible in poll.c */
+
 	if (bref == NULL)
 	{
 		/** Unlock router session */
 		rses_end_locked_router_action(router_cli_ses);
 		goto lock_failed;
 	}
-#endif
 	
+        skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received reply from %s for session %p",
+                                bref->bref_backend->backend_server->unique_name,
+                                router_cli_ses->rses_client_dcb->session);
+
+
+
         if(router_cli_ses->init & INIT_MAPPING)
         {
             bool mapped = true, logged = false;
@@ -3905,7 +3906,7 @@ static bool handle_error_new_connection(
         
         skygw_log_write(LOGFILE_TRACE,"schemarouter: Re-mapping databases");
         gen_databaselist(rses->router,rses);
-	
+	hashtable_iterator_free(iter);
 return_succp:
 	return succp;        
 }

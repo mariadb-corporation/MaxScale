@@ -690,6 +690,8 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
 	time_t now;
 	struct tm *now_tm;
 	int	report_max_bytes=0;
+	if(buffer == NULL)
+	    return 0;
 
 	now = time(NULL);
 
@@ -838,13 +840,13 @@ do_http_post(GWBUF *buffer, void *cfg) {
 		/* Check for errors */
 		if(res != CURLE_OK) {
 			ret_code = 2;
-
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
 				"Error: do_http_post(), curl call for [%s] failed due: %s, %s",
 				feedback_config->feedback_url,	
 				curl_easy_strerror(res),
 				error_message)));
+			goto cleanup;
 		} else {
 			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 		}
@@ -855,6 +857,7 @@ do_http_post(GWBUF *buffer, void *cfg) {
 				ret_code = 0;
 			} else {
 				ret_code = 3;
+				goto cleanup;
 			}
 		} else {
 			LOGIF(LE, (skygw_log_write_flush(
@@ -862,18 +865,21 @@ do_http_post(GWBUF *buffer, void *cfg) {
 				"Error: do_http_post(), Bad HTTP Code from remote server: %lu",
 				http_code)));
 			ret_code = 4;
+			goto cleanup;
 		}
 	} else {
 		LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
 				"Error: do_http_post(), curl object not initialized")));
 		ret_code = 1;
+		goto cleanup;
 	}
 
 	LOGIF(LT, (skygw_log_write_flush(
 		LOGFILE_TRACE,
 		"do_http_post() ret_code [%d], HTTP code [%d]",
 		ret_code, http_code)));
+	cleanup:
 
 	if (chunk.data)
 		free(chunk.data);
