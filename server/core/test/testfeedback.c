@@ -35,6 +35,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <test_utils.h>
 #include <housekeeper.h>
 #include <buffer.h>
 #include <regex.h>
@@ -47,7 +48,7 @@ int main(int argc, char** argv)
     GWBUF* buf;
     regex_t re;
 
-    hkinit();
+init_test_env();
     home = getenv("MAXSCALE_HOME");
 
     if(home == NULL)
