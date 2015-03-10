@@ -2252,3 +2252,8 @@ void
 config_disable_feedback_task(void) {
         hktask_remove("send_feedback");
 }
+
+unsigned long  config_get_gateway_id()
+{
+    return gateway.id;
+}

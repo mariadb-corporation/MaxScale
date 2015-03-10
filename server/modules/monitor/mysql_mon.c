@@ -64,6 +64,8 @@
 #include <dcb.h>
 #include <modinfo.h>
 
+#include "config.h"
+
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -164,7 +166,7 @@ GetModuleObject()
  * @return A handle to use when interacting with the monitor
  */
 static	void 	*
-startMonitor(void *arg)
+startMonitor(void *arg,CONFIG_PARAMETER param)
 {
 MYSQL_MONITOR *handle;
 

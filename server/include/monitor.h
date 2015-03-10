@@ -73,9 +73,12 @@ typedef struct {
 	void	(*unregisterServer)(void *, SERVER *);
 	void	(*defaultUser)(void *, char *, char *);
 	void	(*diagnostics)(DCB *, void *);
+
 	void	(*setInterval)(void *, size_t);
 	void	(*setNetworkTimeout)(void *, int, int);
+
 	void	(*defaultId)(void *, unsigned long);
+
 	void	(*replicationHeartbeat)(void *, int);
 	void	(*detectStaleMaster)(void *, int);
 	void	(*disableMasterFailback)(void *, int);
