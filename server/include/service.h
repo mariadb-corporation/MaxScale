@@ -25,7 +25,7 @@
 #include <filter.h>
 #include <hashtable.h>
 #include <resultset.h>
-#include "config.h"
+#include <maxconfig.h>
 
 /**
  * @file service.h

@@ -63,8 +63,7 @@
 #include <secrets.h>
 #include <dcb.h>
 #include <modinfo.h>
-
-#include "config.h"
+#include <maxconfig.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -82,7 +81,7 @@ MODULE_INFO	info = {
 	"A MySQL Master/Slave replication monitor"
 };
 
-static	void 	*startMonitor(void *);
+static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
 static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
@@ -90,8 +89,6 @@ static	void	defaultUser(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
 static  void    setInterval(void *, size_t);
 static  void    defaultId(void *, unsigned long);
-static	void	replicationHeartbeat(void *, int);
-static	void	detectStaleMaster(void *, int);
 static	void	setNetworkTimeout(void *, int, int);
 static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
 static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
@@ -112,11 +109,7 @@ static MONITOR_OBJECT MyObject = {
 	defaultUser, 
 	diagnostics, 
 	setInterval, 
-	setNetworkTimeout,
-	defaultId, 
-	replicationHeartbeat, 
-	detectStaleMaster,
-	NULL
+	setNetworkTimeout
 };
 
 /**
@@ -183,7 +176,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
             handle->shutdown = 0;
             handle->defaultUser = NULL;
             handle->defaultPasswd = NULL;
-            handle->id = MONITOR_DEFAULT_ID;
+            handle->id = config_get_gateway_id();
             handle->interval = MONITOR_INTERVAL;
             handle->replicationHeartbeat = 0;
             handle->detectStaleMaster = 0;
@@ -193,6 +186,16 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
             handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
             spinlock_init(&handle->lock);
         }
+
+	while(params)
+	{
+	    if(!strcmp(params->name,"detect_stale_master"))
+		handle->detectStaleMaster = config_truth_value(params->value);
+	    else if(!strcmp(params->name,"detect_replication_lag"))
+		handle->replicationHeartbeat = config_truth_value(params->value);
+	    params = params->next;
+	}
+
         handle->tid = (THREAD)thread_start(monitorMain, handle);
         return handle;
 }

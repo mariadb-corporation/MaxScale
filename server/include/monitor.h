@@ -73,22 +73,15 @@ typedef struct {
 	void	(*unregisterServer)(void *, SERVER *);
 	void	(*defaultUser)(void *, char *, char *);
 	void	(*diagnostics)(DCB *, void *);
-
 	void	(*setInterval)(void *, size_t);
 	void	(*setNetworkTimeout)(void *, int, int);
-
-	void	(*defaultId)(void *, unsigned long);
-
-	void	(*replicationHeartbeat)(void *, int);
-	void	(*detectStaleMaster)(void *, int);
-	void	(*disableMasterFailback)(void *, int);
 } MONITOR_OBJECT;
 
 /**
  * The monitor API version number. Any change to the monitor module API
  * must change these versions usign the rules defined in modinfo.h
  */
-#define	MONITOR_VERSION	{1, 0, 0}
+#define	MONITOR_VERSION	{2, 0, 0}
 
 /** Monitor's poll frequency */
 #define MON_BASE_INTERVAL_MS 100
@@ -137,7 +130,7 @@ extern MONITOR	*monitor_find(char *);
 extern void	monitorAddServer(MONITOR *, SERVER *);
 extern void	monitorAddUser(MONITOR *, char *, char *);
 extern void	monitorStop(MONITOR *);
-extern void	monitorStart(MONITOR *);
+extern void	monitorStart(MONITOR *, void*);
 extern void	monitorStopAll();
 extern void	monitorShowAll(DCB *);
 extern void	monitorShow(DCB *, MONITOR *);

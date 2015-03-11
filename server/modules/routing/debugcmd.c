@@ -63,7 +63,7 @@
 #include <poll.h>
 #include <users.h>
 #include <dbusers.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <telnetd.h>
 #include <adminusers.h>
 #include <monitor.h>
@@ -1195,7 +1195,7 @@ shutdown_monitor(DCB *dcb, MONITOR *monitor)
 static void
 restart_monitor(DCB *dcb, MONITOR *monitor)
 {
-	monitorStart(monitor);
+	monitorStart(monitor, NULL);
 }
 
 /**

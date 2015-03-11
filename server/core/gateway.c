@@ -53,7 +53,7 @@
 #include <dcb.h>
 #include <session.h>
 #include <modules.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <poll.h>
 #include <housekeeper.h>
 #include <service.h>

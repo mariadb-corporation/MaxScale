@@ -42,7 +42,7 @@
 #include <secrets.h>
 #include <dcb.h>
 #include <modinfo.h>
-
+#include <maxconfig.h>
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -59,7 +59,7 @@ MODULE_INFO	info = {
 	"A MySQL cluster SQL node monitor"
 };
 
-static	void 	*startMonitor(void *);
+static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
 static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
@@ -76,11 +76,7 @@ static MONITOR_OBJECT MyObject = {
 	defaultUsers, 
 	diagnostics, 
 	setInterval, 
-	setNetworkTimeout, 
-	NULL, 
-	NULL,
-	NULL,
-	NULL
+	setNetworkTimeout
 };
 
 /**
@@ -129,10 +125,10 @@ GetModuleObject()
  * @return A handle to use when interacting with the monitor
  */
 static	void 	*
-startMonitor(void *arg)
+startMonitor(void *arg,void* opt)
 {
 MYSQL_MONITOR *handle;
-
+CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 	if (arg != NULL)
 	{
 		handle = (MYSQL_MONITOR *)arg;
@@ -146,13 +142,14 @@ MYSQL_MONITOR *handle;
 		handle->shutdown = 0;
 		handle->defaultUser = NULL;
 		handle->defaultPasswd = NULL;
-		handle->id = MONITOR_DEFAULT_ID;
+		handle->id = config_get_gateway_id();
 		handle->interval = MONITOR_INTERVAL;
 		handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
 		handle->read_timeout=DEFAULT_READ_TIMEOUT;
 		handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
 		spinlock_init(&handle->lock);
 	}
+
 	handle->tid = (THREAD)thread_start(monitorMain, handle);
 	return handle;
 }

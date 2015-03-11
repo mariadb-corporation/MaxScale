@@ -51,7 +51,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <ini.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <service.h>
 #include <server.h>
 #include <users.h>
@@ -895,25 +895,11 @@ int			error_count = 0;
 						gateway.id = getpid();
 					}
 
-					monitorStart(obj->element,obj->parameters)
-					/* add the maxscale-id to monitor data */
-					monitorSetId(obj->element, gateway.id);
+					monitorStart(obj->element,obj->parameters);
 
 					/* set monitor interval */
 					if (interval > 0)
 						monitorSetInterval(obj->element, interval);
-
-					/* set replication heartbeat */
-					if(replication_heartbeat == 1)
-					    monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
-
-					/* detect stale master */
-					if(detect_stale_master == 1)
-						monitorDetectStaleMaster(obj->element, detect_stale_master);
-
-					/* disable master failback */
-					if(disable_master_failback == 1)
-						monitorDisableMasterFailback(obj->element, disable_master_failback);
 
 					/* set timeouts */
 					if (connect_timeout > 0)
