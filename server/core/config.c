@@ -93,7 +93,7 @@ static	int	internalService(char *router);
 int	config_get_ifaddr(unsigned char *output);
 int	config_get_release_string(char* release);
 FEEDBACK_CONF * config_get_feedback_data();
-
+void config_add_param(CONFIG_CONTEXT*,char*,char*);
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
 static	FEEDBACK_CONF	feedback;
@@ -895,6 +895,7 @@ int			error_count = 0;
 						gateway.id = getpid();
 					}
 
+					monitorStart(obj->element,obj->parameters)
 					/* add the maxscale-id to monitor data */
 					monitorSetId(obj->element, gateway.id);
 
@@ -904,7 +905,7 @@ int			error_count = 0;
 
 					/* set replication heartbeat */
 					if(replication_heartbeat == 1)
-						monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
+					    monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
 
 					/* detect stale master */
 					if(detect_stale_master == 1)
@@ -2261,4 +2262,19 @@ config_disable_feedback_task(void) {
 unsigned long  config_get_gateway_id()
 {
     return gateway.id;
+}
+void config_add_param(CONFIG_CONTEXT* obj, char* key,char* value)
+{
+    CONFIG_PARAMETER* nptr = malloc(sizeof(CONFIG_PARAMETER));
+
+    if(nptr == NULL)
+    {
+	skygw_log_write(LOGFILE_ERROR,"Memory allocation failed when adding configuration parameters");
+	return;
+    }
+
+    nptr->name = strdup(key);
+    nptr->value = strdup(value);
+    nptr->next = obj->parameters;
+    obj->parameters = nptr;
 }

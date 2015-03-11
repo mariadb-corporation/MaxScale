@@ -67,7 +67,7 @@
  * monitored.
  */
 typedef struct {
-	void 	*(*startMonitor)(void *);
+	void 	*(*startMonitor)(void *, void*);
 	void	(*stopMonitor)(void *);
 	void	(*registerServer)(void *, SERVER *);
 	void	(*unregisterServer)(void *, SERVER *);

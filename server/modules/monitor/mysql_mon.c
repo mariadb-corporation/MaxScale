@@ -166,10 +166,10 @@ GetModuleObject()
  * @return A handle to use when interacting with the monitor
  */
 static	void 	*
-startMonitor(void *arg,CONFIG_PARAMETER param)
+startMonitor(void *arg, void* opt)
 {
 MYSQL_MONITOR *handle;
-
+CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
         if (arg)
         {
             handle = arg;	/* Must be a restart */
