@@ -1207,7 +1207,14 @@ restart_monitor(DCB *dcb, MONITOR *monitor)
 static void
 enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
 {
-	monitorSetReplicationHeartbeat(monitor, 1);
+    CONFIG_PARAMETER param;
+    const char* name = "detect_replication_lag";
+    const char* value = "1";
+    param.name = (char*)name;
+    param.value = (char*)value;
+    param.next = NULL;
+    monitorStop(monitor);
+    monitorStart(monitor,&param);
 }
 
 /**
@@ -1219,7 +1226,14 @@ enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
 static void
 disable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
 {
-	monitorSetReplicationHeartbeat(monitor, 0);
+    CONFIG_PARAMETER param;
+    const char* name = "detect_replication_lag";
+    const char* value = "0";
+    param.name = (char*)name;
+    param.value = (char*)value;
+    param.next = NULL;
+    monitorStop(monitor);
+    monitorStart(monitor,&param);
 }
 
 /**

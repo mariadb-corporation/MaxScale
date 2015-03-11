@@ -182,6 +182,8 @@ extern	int	serviceSetTimeout(SERVICE *, int );
 extern	void	serviceWeightBy(SERVICE *, char *);
 extern	char	*serviceGetWeightingParameter(SERVICE *);
 extern	int	serviceEnableLocalhostMatchWildcardHost(SERVICE *, int);
+int serviceStripDbEsc(SERVICE* service, int action);
+int serviceAuthAllServers(SERVICE *service, int action);
 extern	void	service_update(SERVICE *, char *, char *, char *);
 extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);

@@ -135,11 +135,7 @@ extern void	monitorStopAll();
 extern void	monitorShowAll(DCB *);
 extern void	monitorShow(DCB *, MONITOR *);
 extern void	monitorList(DCB *);
-extern void     monitorSetId(MONITOR *, unsigned long);
 extern void     monitorSetInterval (MONITOR *, unsigned long);
-extern void     monitorSetReplicationHeartbeat(MONITOR *, int);
-extern void     monitorDetectStaleMaster(MONITOR *, int);
-extern void     monitorDisableMasterFailback(MONITOR *, int);
 extern void     monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
 #endif

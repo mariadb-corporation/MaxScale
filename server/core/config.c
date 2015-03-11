@@ -846,9 +846,6 @@ int			error_count = 0;
 			char *user;
 			char *passwd;
 			unsigned long interval = 0;
-			int replication_heartbeat = 0;
-			int detect_stale_master = 0;
-			int disable_master_failback = 0;
 			int connect_timeout = 0;
 			int read_timeout = 0;
 			int write_timeout = 0;
@@ -859,18 +856,6 @@ int			error_count = 0;
 			passwd = config_get_value(obj->parameters, "passwd");
 			if (config_get_value(obj->parameters, "monitor_interval")) {
 				interval = strtoul(config_get_value(obj->parameters, "monitor_interval"), NULL, 10);
-			}
-
-			if (config_get_value(obj->parameters, "detect_replication_lag")) {
-				replication_heartbeat = atoi(config_get_value(obj->parameters, "detect_replication_lag"));
-			}
-
-			if (config_get_value(obj->parameters, "detect_stale_master")) {
-				detect_stale_master = atoi(config_get_value(obj->parameters, "detect_stale_master"));
-			}
-
-			if (config_get_value(obj->parameters, "disable_master_failback")) {
-				disable_master_failback = atoi(config_get_value(obj->parameters, "disable_master_failback"));
 			}
 
 			if (config_get_value(obj->parameters, "backend_connect_timeout")) {
