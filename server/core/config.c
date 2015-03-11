@@ -1338,6 +1338,10 @@ int i;
 	{
 		feedback.feedback_connect_timeout = atoi(value);
 	}
+	if (strcmp(name, "feedback_frequency") == 0)
+	{
+		feedback.feedback_frequency = atoi(value);
+	}
 	return 1;
 }
 
@@ -1389,6 +1393,7 @@ feedback_defaults()
 	feedback.feedback_timeout = _NOTIFICATION_OPERATION_TIMEOUT;
 	feedback.feedback_connect_timeout = _NOTIFICATION_CONNECT_TIMEOUT;
 	feedback.feedback_url = NULL;
+	feedback.feedback_frequency = 1800;
 	feedback.release_info = gateway.release_string;
 	feedback.sysname = gateway.sysname;
 	feedback.mac_sha1 = gateway.mac_sha1;
@@ -2221,14 +2226,14 @@ config_enable_feedback_task(void) {
 
 	if (enable_set && url_set && user_info_set) {
 		/* Add the task to the tasl list */
-        	if (hktask_add("send_feedback", module_feedback_send, cfg, 1800)) {
+        	if (hktask_add("send_feedback", module_feedback_send, cfg, cfg->feedback_frequency)) {
 
 			LOGIF(LM, (skygw_log_write_flush(
 				LOGFILE_MESSAGE,
 				"Notification service feedback task started: URL=%s, User-Info=%s, Frequency %u seconds",
 				cfg->feedback_url,
 				cfg->feedback_user_info,
-				1800)));
+				cfg->feedback_frequency)));
 		}
 	} else {
 		if (enable_set) {
