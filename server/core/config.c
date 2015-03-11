@@ -51,7 +51,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <ini.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <service.h>
 #include <server.h>
 #include <users.h>
@@ -93,7 +93,7 @@ static	int	internalService(char *router);
 int	config_get_ifaddr(unsigned char *output);
 int	config_get_release_string(char* release);
 FEEDBACK_CONF * config_get_feedback_data();
-
+void config_add_param(CONFIG_CONTEXT*,char*,char*);
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
 static	FEEDBACK_CONF	feedback;
@@ -846,9 +846,6 @@ int			error_count = 0;
 			char *user;
 			char *passwd;
 			unsigned long interval = 0;
-			int replication_heartbeat = 0;
-			int detect_stale_master = 0;
-			int disable_master_failback = 0;
 			int connect_timeout = 0;
 			int read_timeout = 0;
 			int write_timeout = 0;
@@ -859,18 +856,6 @@ int			error_count = 0;
 			passwd = config_get_value(obj->parameters, "passwd");
 			if (config_get_value(obj->parameters, "monitor_interval")) {
 				interval = strtoul(config_get_value(obj->parameters, "monitor_interval"), NULL, 10);
-			}
-
-			if (config_get_value(obj->parameters, "detect_replication_lag")) {
-				replication_heartbeat = atoi(config_get_value(obj->parameters, "detect_replication_lag"));
-			}
-
-			if (config_get_value(obj->parameters, "detect_stale_master")) {
-				detect_stale_master = atoi(config_get_value(obj->parameters, "detect_stale_master"));
-			}
-
-			if (config_get_value(obj->parameters, "disable_master_failback")) {
-				disable_master_failback = atoi(config_get_value(obj->parameters, "disable_master_failback"));
 			}
 
 			if (config_get_value(obj->parameters, "backend_connect_timeout")) {
@@ -895,24 +880,11 @@ int			error_count = 0;
 						gateway.id = getpid();
 					}
 
-					/* add the maxscale-id to monitor data */
-					monitorSetId(obj->element, gateway.id);
+					monitorStart(obj->element,obj->parameters);
 
 					/* set monitor interval */
 					if (interval > 0)
 						monitorSetInterval(obj->element, interval);
-
-					/* set replication heartbeat */
-					if(replication_heartbeat == 1)
-						monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
-
-					/* detect stale master */
-					if(detect_stale_master == 1)
-						monitorDetectStaleMaster(obj->element, detect_stale_master);
-
-					/* disable master failback */
-					if(disable_master_failback == 1)
-						monitorDisableMasterFailback(obj->element, disable_master_failback);
 
 					/* set timeouts */
 					if (connect_timeout > 0)
@@ -2256,4 +2228,24 @@ config_enable_feedback_task(void) {
 void
 config_disable_feedback_task(void) {
         hktask_remove("send_feedback");
+}
+
+unsigned long  config_get_gateway_id()
+{
+    return gateway.id;
+}
+void config_add_param(CONFIG_CONTEXT* obj, char* key,char* value)
+{
+    CONFIG_PARAMETER* nptr = malloc(sizeof(CONFIG_PARAMETER));
+
+    if(nptr == NULL)
+    {
+	skygw_log_write(LOGFILE_ERROR,"Memory allocation failed when adding configuration parameters");
+	return;
+    }
+
+    nptr->name = strdup(key);
+    nptr->value = strdup(value);
+    nptr->next = obj->parameters;
+    obj->parameters = nptr;
 }

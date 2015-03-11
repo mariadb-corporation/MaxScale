@@ -47,7 +47,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <resultset.h>
-#include <config.h>
+#include <maxconfig.h>
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];

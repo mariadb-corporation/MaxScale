@@ -28,7 +28,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <gw.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <housekeeper.h>
 #include <config.h>
 #include <mysql.h>
