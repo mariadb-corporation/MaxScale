@@ -798,7 +798,7 @@ getUsers(SERVICE *service, USERS *users)
 		if (db_grants) {
                     /* we have dbgrants, store them */
 		    if(row[5]){
-			strcpy(dbnm,row[5]);
+			strncpy(dbnm,row[5],MYSQL_DATABASE_MAXLEN);
 			if(service->strip_db_esc) {
 			    strip_escape_chars(dbnm);
 			}

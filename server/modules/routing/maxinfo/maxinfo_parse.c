@@ -126,7 +126,7 @@ MAXINFO_TREE	*col, *table;
 
 /**
  * Parse a column list, may be a * or a valid list of string name
- * seperated by a comma
+ * separated by a comma
  *
  * @param sql	Pointer to pointer to column list updated to point to the table name
  * @return	A tree of column names
@@ -148,9 +148,11 @@ MAXINFO_TREE * rval = NULL;
 		case LT_COMMA:
 			rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
 				parse_column_list(ptr));
+			break;
 		case LT_FROM:
 			rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
 				NULL);
+			break;
 		default:
 		    break;
 		}

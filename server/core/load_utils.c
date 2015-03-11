@@ -65,6 +65,7 @@ static void register_module(const char *module,
 			    MODULE_INFO *info);
 static void unregister_module(const char *module);
 int module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg);
+int do_http_post(GWBUF *buffer, void *cfg);
 
 struct MemoryStruct {
   char *data;
@@ -568,13 +569,13 @@ module_feedback_send(void* data) {
 	GWBUF *buffer = NULL;
 	void *data_ptr=NULL;
 	long http_code = 0;
-	struct MemoryStruct chunk;
 	int last_action = _NOTIFICATION_SEND_PENDING;
 	time_t now;
 	struct tm *now_tm;
 	int hour;
 	int n_mod=0;
 	char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1]="";
+	int http_send = 0;
 
 	now = time(NULL);
 	now_tm = localtime(&now);
@@ -634,11 +635,6 @@ module_feedback_send(void* data) {
 		"module_feedback_send(): task now runs: hour is [%d], last_action [%d]",
 		hour, feedback_config->feedback_last_action)));
 
-
-	/* allocate first memory chunck for httpd servr reply */
-	chunk.data = malloc(1);  /* will be grown as needed by the realloc above */ 
-	chunk.size = 0;    /* no data at this point */
-
 	if (!module_create_feedback_report(&buffer, modules_list, feedback_config)) {
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -649,118 +645,27 @@ module_feedback_send(void* data) {
 		return;
 	}
 
+	/* try sending data via http/https post */
+	http_send = do_http_post(buffer, feedback_config);
 
-	/* Initializing curl library for data send via HTTP */
-	curl_global_init(CURL_GLOBAL_DEFAULT);
-
-	curl = curl_easy_init();
-
-	if (curl) {
-		char error_message[CURL_ERROR_SIZE]="";
-
-		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_message);
-		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
-		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, feedback_config->feedback_connect_timeout);
-		curl_easy_setopt(curl, CURLOPT_TIMEOUT, feedback_config->feedback_timeout);
-
-		/* curl API call for data send via HTTP POST using a "file" type input */
-		curl_formadd(&formpost,
-			&lastptr,
-			CURLFORM_COPYNAME, "data",
-			CURLFORM_BUFFER, "report.txt",
-			CURLFORM_BUFFERPTR, (char *)GWBUF_DATA(buffer),
-			CURLFORM_BUFFERLENGTH, strlen((char *)GWBUF_DATA(buffer)),
-			CURLFORM_CONTENTTYPE, "text/plain",
-			CURLFORM_END);
-
-		curl_easy_setopt(curl, CURLOPT_HEADER, 1);
-
-		/* some servers don't like requests that are made without a user-agent field, so we provide one */ 
-		curl_easy_setopt(curl, CURLOPT_USERAGENT, "MaxScale-agent/http-1.0");
-		/* Force HTTP/1.0 */
-		curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
-
-		curl_easy_setopt(curl, CURLOPT_URL, feedback_config->feedback_url);
-		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
-
-#ifdef SKIP_PEER_VERIFICATION
-   		/*
-		 * This makes the connection A LOT LESS SECURE.
- 	    	 */
-   		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-#endif
-
-#ifdef SKIP_HOSTNAME_VERIFICATION
-		/*
-		 * this will make the connection less secure.
-		 */
-  		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-#endif
-
-		/* send all data to this function  */ 
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-
-		/* we pass our 'chunk' struct to the callback function */ 
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
- 
-		/* Perform the request, res will get the return code */
-		res = curl_easy_perform(curl);
-
-		/* Check for errors */
-		if(res != CURLE_OK) {
-			last_action = _NOTIFICATION_SEND_ERROR;
-
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error: module_feedback_send(), curl call for [%s] failed due: %s, %s",
-				feedback_config->feedback_url,	
-				curl_easy_strerror(res),
-				error_message)));
-		} else {
-			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-		}
-
-		if (http_code == 302) {
-			char *from = strstr(chunk.data, "<h1>ok</h1>");
-			if (from) {
-				last_action = _NOTIFICATION_SEND_OK;
-			} else {
-				last_action = _NOTIFICATION_SEND_ERROR;
-			}
-		} else {
-			last_action = _NOTIFICATION_SEND_ERROR;
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error in module_feedback_send(), Bad HTTP Code from remote server: %lu",
-				http_code)));
-		}
+	if (http_send == 0) {
+		feedback_config->feedback_last_action = _NOTIFICATION_SEND_OK;
 	} else {
-		LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error in module_feedback_send(), curl object not initialized")));
-		last_action = _NOTIFICATION_SEND_ERROR;
-	}
+		feedback_config->feedback_last_action = _NOTIFICATION_SEND_ERROR;
 
-	/* update last action in the config struct */	
-	feedback_config->feedback_last_action =  last_action;
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"Error in module_create_feedback_report(): do_http_post ret_code is %d", http_send)));
+	}
 
 	LOGIF(LT, (skygw_log_write_flush(
 		LOGFILE_TRACE,
-		"module_feedback_send(): task run result: hour is [%d], last_action [%d], HTTP code [%d]",
-		hour, feedback_config->feedback_last_action, http_code)));
+		"module_feedback_send(): task completed: hour is [%d], last_action [%d]",
+			hour,
+			feedback_config->feedback_last_action)));
 
-	if (chunk.data)
-		free(chunk.data);
+	gwbuf_free(buffer);
 
-	if (buffer)
-		gwbuf_free(buffer);
-
-	if (curl) {
-		curl_easy_cleanup(curl);
-		curl_formfree(formpost);
-	}
-
-	curl_global_cleanup();
 }
 
 /**
@@ -785,6 +690,8 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
 	time_t now;
 	struct tm *now_tm;
 	int	report_max_bytes=0;
+	if(buffer == NULL)
+	    return 0;
 
 	now = time(NULL);
 
@@ -809,7 +716,7 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
 	report_max_bytes = ((n_mod * 4) + 7) * (_NOTIFICATION_REPORT_ROW_LEN + 1);
         *buffer = gwbuf_alloc(report_max_bytes);
 
-        if (buffer == NULL) {
+        if (*buffer == NULL) {
                 return 0;
         }
 
@@ -863,5 +770,127 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
         }
 
 	return 1;
+}
+
+/**
+ * Send data to notification service via http/https
+ *
+ * @param buffer	The GWBUF with data to send
+ * @param cfg	 	The configuration details of notification service
+ * @return		0 on success, != 0 on failure
+ */
+int
+do_http_post(GWBUF *buffer, void *cfg) {
+	CURL *curl = NULL;
+	CURLcode res;
+	struct curl_httppost *formpost=NULL;
+	struct curl_httppost *lastptr=NULL;
+	long http_code = 0;
+	struct MemoryStruct chunk;
+	int ret_code = 1;
+
+	FEEDBACK_CONF *feedback_config = (FEEDBACK_CONF *) cfg;
+
+	/* allocate first memory chunck for httpd servr reply */
+	chunk.data = malloc(1);  /* will be grown as needed by the realloc above */
+	chunk.size = 0;    /* no data at this point */
+
+	/* Initializing curl library for data send via HTTP */
+	curl_global_init(CURL_GLOBAL_DEFAULT);
+
+	curl = curl_easy_init();
+
+	if (curl) {
+		char error_message[CURL_ERROR_SIZE]="";
+
+		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_message);
+		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, feedback_config->feedback_connect_timeout);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT, feedback_config->feedback_timeout);
+
+		/* curl API call for data send via HTTP POST using a "file" type input */
+		curl_formadd(&formpost,
+			&lastptr,
+			CURLFORM_COPYNAME, "data",
+			CURLFORM_BUFFER, "report.txt",
+			CURLFORM_BUFFERPTR, (char *)GWBUF_DATA(buffer),
+			CURLFORM_BUFFERLENGTH, strlen((char *)GWBUF_DATA(buffer)),
+			CURLFORM_CONTENTTYPE, "text/plain",
+			CURLFORM_END);
+
+		curl_easy_setopt(curl, CURLOPT_HEADER, 1);
+
+		/* some servers don't like requests that are made without a user-agent field, so we provide one */ 
+		curl_easy_setopt(curl, CURLOPT_USERAGENT, "MaxScale-agent/http-1.0");
+		/* Force HTTP/1.0 */
+		curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_0);
+
+		curl_easy_setopt(curl, CURLOPT_URL, feedback_config->feedback_url);
+		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
+
+		/* send all data to this function  */ 
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+
+		/* we pass our 'chunk' struct to the callback function */ 
+		curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+ 
+		/* Perform the request, res will get the return code */
+		res = curl_easy_perform(curl);
+
+		/* Check for errors */
+		if(res != CURLE_OK) {
+			ret_code = 2;
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: do_http_post(), curl call for [%s] failed due: %s, %s",
+				feedback_config->feedback_url,	
+				curl_easy_strerror(res),
+				error_message)));
+			goto cleanup;
+		} else {
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+		}
+
+		if (http_code == 302) {
+			char *from = strstr(chunk.data, "<h1>ok</h1>");
+			if (from) {
+				ret_code = 0;
+			} else {
+				ret_code = 3;
+				goto cleanup;
+			}
+		} else {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: do_http_post(), Bad HTTP Code from remote server: %lu",
+				http_code)));
+			ret_code = 4;
+			goto cleanup;
+		}
+	} else {
+		LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: do_http_post(), curl object not initialized")));
+		ret_code = 1;
+		goto cleanup;
+	}
+
+	LOGIF(LT, (skygw_log_write_flush(
+		LOGFILE_TRACE,
+		"do_http_post() ret_code [%d], HTTP code [%d]",
+		ret_code, http_code)));
+	cleanup:
+
+	if (chunk.data)
+		free(chunk.data);
+
+	if (curl) {
+		curl_easy_cleanup(curl);
+		curl_formfree(formpost);
+	}
+
+	curl_global_cleanup();
+
+	return ret_code;
 }
 

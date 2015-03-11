@@ -18,6 +18,7 @@
  * Copyright MariaDB Corporation Ab 2013-2014
  */
 #include <skygw_utils.h>
+#include <stdint.h>
 #include <openssl/sha.h>
 /**
  * @file config.h The configuration handling elements

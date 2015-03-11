@@ -274,7 +274,8 @@ char* get_lenenc_str(void* data, int* len)
 
     if(data == NULL || len == NULL)
     {
-	*len = -1;
+	if(len)
+	    *len = -1;
         return NULL;
     }
 
@@ -1099,7 +1100,8 @@ return_rses:
     }
 #endif
 errorblock:
-    if(client_rses->subservice)
+
+    if(client_rses && client_rses->subservice)
     {
         for(j = 0; j < i; j++)
         {
@@ -1661,14 +1663,7 @@ routeQuery(ROUTER* instance,
 
                 ret = 1;
             }
-            else
-            {
-                /** Something else went wrong, terminate connection */
-                ret = 0;
-            }
-
             goto retblock;
-
         }
 
     }
@@ -2794,6 +2789,9 @@ get_shard_subsvc(SUBSERVICE** subsvc,ROUTER_CLIENT_SES* session,char* target)
 {
     int i;
     
+    if(subsvc == NULL || session == NULL || target == NULL)
+	return false;
+
     for(i = 0;i<session->n_subservice;i++)
     {
         if(strcmp(session->subservice[i]->service->name,target) == 0)
@@ -2859,7 +2857,7 @@ router_handle_state_switch(
     CHK_DCB(dcb);
 
     return rc;
-
+#if 0
     if(SERVER_IS_RUNNING(srv) && SERVER_IS_IN_CLUSTER(srv))
     {
         goto return_rc;
@@ -2882,6 +2880,7 @@ router_handle_state_switch(
 
 return_rc:
     return rc;
+#endif
 }
 
 /**

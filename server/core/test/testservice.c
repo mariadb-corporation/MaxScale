@@ -31,11 +31,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale_test.h>
+#include <test_utils.h>
 #include <service.h>
-#include <poll.h>
-#include <dcb.h>
 
-#include "housekeeper.h"
 
 static bool success = false;
 
@@ -58,17 +56,18 @@ DCB	    *dcb;
 int	    result;
 int	    argc = 3;
 
-char*	    argv[] =
-{
-    "log_manager",
-    "-j",
-    TEST_LOG_DIR,
-    NULL
-};
+init_test_env();
+/* char*	    argv[] = */
+/* { */
+/*     "log_manager", */
+/*     "-j", */
+/*     TEST_LOG_DIR, */
+/*     NULL */
+/* }; */
 
-skygw_logmanager_init(argc,argv);
-poll_init();
-hkinit();
+/* skygw_logmanager_init(argc,argv); */
+/* poll_init(); */
+/* hkinit(); */
 
         /* Service tests */
         ss_dfprintf(stderr,

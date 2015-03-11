@@ -37,7 +37,7 @@ This feature is not enabled by default: MaxScale must be configured in [feedback
 
 	[feedback]
 	feedback_enable=1
-	feedback_url=https://mariadb.org/feedback_plugin/post
+	feedback_url=https://enterprise.mariadb.com/feedback/post
 	feedback_user_info=x-y-z-w
 
 The activation code that will be provided by MariaDB corp upon request by the customer and it shlud be put in feedback_user_info.

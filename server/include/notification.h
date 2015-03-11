@@ -52,6 +52,7 @@ typedef struct {
 	int	feedback_timeout;		/**< An attempt to write/read the data times out and fails after this many seconds */
 	int	feedback_connect_timeout;	/**< An attempt to send the data times out and fails after this many seconds */
 	int	feedback_last_action;		/**< Holds the feedback last send action status */
+        int     feedback_frequency;             /*< Frequency of the housekeeper task */
         char	*release_info;			/**< Operating system Release name */
         char	*sysname;			/**< Operating system name */
         uint8_t	*mac_sha1;			/**< First available MAC address*/

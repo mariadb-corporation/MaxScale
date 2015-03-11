@@ -78,7 +78,7 @@ int main(int argc, char** argv)
             goto report;
         }
 
-        sprintf(query,"STOP SLAVE",databases[i]);
+        sprintf(query,"STOP SLAVE");
         if(mysql_real_query(server,query,strlen(query)))
         {
             fprintf(stderr, "Failed to stop slave in %d: %s.\n",
