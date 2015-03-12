@@ -19,6 +19,8 @@ Last Updated: 12th March 2015
   </tr>
 </table>
 
+# MaxScale Requirements
+
 MaxScale must be configured with 'maxscaled' protocol for the administration interface
 
 	[AdminInterface]
@@ -31,13 +33,13 @@ MaxScale must be configured with 'maxscaled' protocol for the administration int
 	protocol=maxscaled
 	port=6603
 
-## Prepare Nagios configuration files
+## Prepare Nagios configuration files (assuming plugins are in /usr/lib64/nagios/plugins and Nagios configuration in /etc/nagios)
 
-	1) copy check_maxscale_*.pl under /usr/lib64/nagios/plugins
-	2) copy maxscale_commands.cfg, server1.cfg to /etc/nagios/objects/
+	1) Copy ./nagios/plugins/check_maxscale_*.pl under /usr/lib64/nagios/plugins
+	2) Copy ./nagios/plugins/maxscale_commands.cfg and server1.cfg to /etc/nagios/objects/
 	3) Edit /etc/nagios/nagios.cfg
 
-add
+and add (just after localhost.cfg or commnads.cfg)
 
 	cfg_file=/etc/nagios/objects/maxscale_commands.cfg
 	cfg_file=/etc/nagios/objects/server1.cfg
@@ -62,4 +64,21 @@ define service{
 
 	4) Restart Nagios
 
+
+# Nagios Plugin usag
+
+ ./check_maxscale_threads.pl -h
+
+MaxScale monitor checker plugin for Nagios
+
+Usage: check_maxscale_threads.pl [-r <resource>] [-H <host>] [-P <port>] [-u <user>] [-p <pass>] [-m <maxadmin>] [-h]
+
+Options:
+       -r <resource>	= threads
+       -h		= provide this usage message
+       -H <host>	= which host to connect to
+       -P <port>	= port to use
+       -u <user>	= username to connect as
+       -p <pass>	= password to use for <user> at <host>
+       -m <maxadmin>	= /path/to/maxadmin
 
