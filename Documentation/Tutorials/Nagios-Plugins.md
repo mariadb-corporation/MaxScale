@@ -1,27 +1,29 @@
-MaxScale Nagios plugins, for Nagios 3.5.1
+# MaxScale Nagios plugins, for Nagios 3.5.1
 
 MaxScale must be configured with 'maxscaled' protocol for the administration interface
 
-[AdminInterface]
-type=service
-router=cli
+	[AdminInterface]
+	type=service
+	router=cli
 
-[AdminListener]
-type=listener
-service=AdminInterface
-protocol=maxscaled
-port=6603
+	[AdminListener]
+	type=listener
+	service=AdminInterface
+	protocol=maxscaled
+	port=6603
 
-1) copy check_maxscale_*.pl under /usr/lib64/nagios/plugins
-2) copy maxscale_commands.cfg, server1.cfg to /etc/nagios/objects/
-3) Edit /etc/nagios/nagios.cfg
+## Prepare Nagios configuration files
+
+	1) copy check_maxscale_*.pl under /usr/lib64/nagios/plugins
+	2) copy maxscale_commands.cfg, server1.cfg to /etc/nagios/objects/
+	3) Edit /etc/nagios/nagios.cfg
 
 add
 
-cfg_file=/etc/nagios/objects/maxscale_commands.cfg
-cfg_file=/etc/nagios/objects/server1.cfg
+	cfg_file=/etc/nagios/objects/maxscale_commands.cfg
+	cfg_file=/etc/nagios/objects/server1.cfg
 
-Please note:
+### Please note:
 - modify server IP address in server1.cfg, pointing to MaxScale server
 - maxadmin executable must be in the nagios server
 - default AdminInterface port is 6603
@@ -39,6 +41,6 @@ define service{
         notifications_enabled           0
         }
 
-4) Restart Nagios
+	4) Restart Nagios
 
 
