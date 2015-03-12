@@ -65,20 +65,20 @@ define service{
 	4) Restart Nagios
 
 
-# Nagios Plugin usag
+# Nagios Plugin usage
 
- ./check_maxscale_threads.pl -h
+	./check_maxscale_threads.pl -h
 
-MaxScale monitor checker plugin for Nagios
+	MaxScale monitor checker plugin for Nagios
 
-Usage: check_maxscale_threads.pl [-r <resource>] [-H <host>] [-P <port>] [-u <user>] [-p <pass>] [-m <maxadmin>] [-h]
+	Usage: check_maxscale_threads.pl [-r <resource>] [-H <host>] [-P <port>] [-u <user>] [-p <pass>] [-m <maxadmin>] [-h]
 
-Options:
-       -r <resource>	= threads
-       -h		= provide this usage message
-       -H <host>	= which host to connect to
-       -P <port>	= port to use
-       -u <user>	= username to connect as
-       -p <pass>	= password to use for <user> at <host>
-       -m <maxadmin>	= /path/to/maxadmin
+	Options:
+		-r <resource>	= threads
+		-h		= provide this usage message
+		-H <host>	= which host to connect to
+		-P <port>	= port to use
+		-u <user>	= username to connect as
+		-p <pass>	= password to use for <user> at <host>
+		-m <maxadmin>	= /path/to/maxadmin
 
