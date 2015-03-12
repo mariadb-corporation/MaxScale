@@ -41,7 +41,8 @@ typedef enum init_mask
 {
   INIT_READY = 0x0,
   INIT_MAPPING = 0x1,
-  INIT_USE_DB = 0x02
+  INIT_USE_DB = 0x02,
+  INIT_UNINT = 0x04
 
 } init_mask_t;
 
