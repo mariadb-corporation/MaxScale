@@ -1,5 +1,24 @@
 # MaxScale Nagios plugins, for Nagios 3.5.1
 
+Massimiliano Pinto
+
+Last Updated: 12th March 2015
+
+## Document History
+
+<table>
+  <tr>
+    <td>Date</td>
+    <td>Change</td>
+    <td>Who</td>
+  </tr>
+  <tr>
+    <td>10th March 2015</td>
+    <td>Initial version</td>
+    <td>Massimiliano Pinto</td>
+  </tr>
+</table>
+
 MaxScale must be configured with 'maxscaled' protocol for the administration interface
 
 	[AdminInterface]
