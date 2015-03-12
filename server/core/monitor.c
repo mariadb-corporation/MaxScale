@@ -78,11 +78,9 @@ MONITOR	*mon;
 		free(mon);
 		return NULL;
 	}
-/*
-	mon->handle = (*mon->module->startMonitor)(NULL);
-	mon->state = MONITOR_STATE_RUNNING;
-*/
 	
+	mon->handle = NULL;
+
 	spinlock_acquire(&monLock);
 	mon->next = allMonitors;
 	allMonitors = mon;
