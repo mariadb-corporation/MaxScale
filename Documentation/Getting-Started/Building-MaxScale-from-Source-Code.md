@@ -177,7 +177,7 @@ Other useful targets for Make are `documentation`, which generates the Doxygen d
 
 ## Running the MaxScale testsuite
 
-To run "make testall" you need to have four mysqld servers running on localhost. It assumes a master-slave replication setup with one slave and three slaves.
+To run "make testall" you need to have four mysqld servers running on localhost. It assumes a master-slave replication setup with one master and three slaves.
 
 The ports to which these servers are listening and the credentials to use for testing
  can be specified in the 'macros.cmake' file. 
