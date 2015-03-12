@@ -71,7 +71,7 @@ static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 int
 blr_file_init(ROUTER_INSTANCE *router)
 {
-char		*ptr, path[1025], filename[1051];
+char		*ptr, path[PATH_MAX], filename[PATH_MAX];
 int		file_found, n = 1;
 int		root_len, i;
 DIR		*dirp;
@@ -80,12 +80,12 @@ struct dirent	*dp;
 	if (router->binlogdir == NULL)
 	{
 		strcpy(path, "/usr/local/skysql/MaxScale");
-		if ((ptr = getenv("MAXSCALE_HOME")) != NULL && strnlen(ptr,1025) < 1025)
+		if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 		{
 			strncpy(path, ptr,PATH_MAX);
 		}
-		strncat(path, "/",1024);
-		strncat(path, router->service->name,1024);
+		strncat(path, "/",PATH_MAX);
+		strncat(path, router->service->name,PATH_MAX);
 
 		if (access(path, R_OK) == -1)
 			mkdir(path, 0777);
@@ -94,7 +94,7 @@ struct dirent	*dp;
 	}
 	else
 	{
-		strncpy(path, router->binlogdir, 1024);
+		strncpy(path, router->binlogdir, PATH_MAX);
 	}
 	if (access(router->binlogdir, R_OK) == -1)
 	{
@@ -128,7 +128,7 @@ struct dirent	*dp;
 
 	file_found = 0;
 	do {
-		sprintf(filename, "%s/" BINLOG_NAMEFMT, path, router->fileroot, n);
+		snprintf(filename,PATH_MAX, "%s/" BINLOG_NAMEFMT, path, router->fileroot, n);
 		if (access(filename, R_OK) != -1)
 		{
 			file_found  = 1;
@@ -142,16 +142,16 @@ struct dirent	*dp;
 	if (n == 0)		// No binlog files found
 	{
 		if (router->initbinlog)
-			sprintf(filename, BINLOG_NAMEFMT, router->fileroot,
+			snprintf(filename,PATH_MAX, BINLOG_NAMEFMT, router->fileroot,
 						router->initbinlog);
 		else
-			sprintf(filename, BINLOG_NAMEFMT, router->fileroot, 1);
+			snprintf(filename,PATH_MAX, BINLOG_NAMEFMT, router->fileroot, 1);
 		if (! blr_file_create(router, filename))
 			return 0;
 	}
 	else
 	{
-		sprintf(filename, BINLOG_NAMEFMT, router->fileroot, n);
+		snprintf(filename,PATH_MAX, BINLOG_NAMEFMT, router->fileroot, n);
 		blr_file_append(router, filename);
 	}
 	return 1;
