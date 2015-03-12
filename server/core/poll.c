@@ -30,7 +30,7 @@
 #include <gw.h>
 #include <maxconfig.h>
 #include <housekeeper.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <mysql.h>
 #include <resultset.h>
 
