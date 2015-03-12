@@ -33,11 +33,13 @@ MaxScale must be configured with 'maxscaled' protocol for the administration int
 	protocol=maxscaled
 	port=6603
 
-## Prepare Nagios configuration files (assuming plugins are in /usr/lib64/nagios/plugins and Nagios configuration in /etc/nagios)
+## Prepare Nagios configuration files.
 
-	1) Copy ./nagios/plugins/check_maxscale_*.pl under /usr/lib64/nagios/plugins
-	2) Copy ./nagios/plugins/maxscale_commands.cfg and server1.cfg to /etc/nagios/objects/
-	3) Edit /etc/nagios/nagios.cfg
+Assuming plugins are in /usr/lib64/nagios/plugins and Nagios configuration in /etc/nagios:
+
+* Copy ./nagios/plugins/check_maxscale_*.pl under /usr/lib64/nagios/plugins
+* Copy ./nagios/plugins/maxscale_commands.cfg and server1.cfg to /etc/nagios/objects/
+* Edit /etc/nagios/nagios.cfg
 
 and add (just after localhost.cfg or commnads.cfg)
 
@@ -53,19 +55,21 @@ and add (just after localhost.cfg or commnads.cfg)
 
 Example related to server1.cfg
 
-# Check MaxScale sessions, on the remote machine.
-define service{
-        use                             local-service         ; Name of service template to use
-        host_name                       server1
-        service_description             MaxScale_sessions
-        check_command                   check_maxscale_resource!6603!admin!skysql!sessions!/path_to/maxadmin
-        notifications_enabled           0
-        }
+	#Check MaxScale sessions, on the remote machine.
+	define service{
+		use			local-service
+		host_name		server1
+		service_description	MaxScale_sessions
+		check_command		check_maxscale_resource!6603!admin!skysql!sessions!/path_to/maxadmin
+		notifications_enabled	0
+	}
 
-	4) Restart Nagios
+### Check new running monitors
+* Restart Nagios and check new monitors are running in Current Status -> Services
+* Look for any errors in /var/log/nagios/nagios.log or nagios.debug
 
 
-# Nagios Plugin usage
+# Nagios Plugin command line usage
 
 	./check_maxscale_threads.pl -h
 
@@ -82,3 +86,9 @@ define service{
 		-p <pass>	= password to use for <user> at <host>
 		-m <maxadmin>	= /path/to/maxadmin
 
+
+# Output description:
+
+* services
+
+	OK: 7 services found | services1=RW_Router;readwritesplit;1;1 services2=RW_Split;readwritesplit;1;1 services3=Test Service;readconnroute;1;1 services4=Master Service;readconnroute;2;2 services5=Debug Service;debugcli;1;1 services6=CLI;cli;2;145 services7=MaxInfo;maxinfo;2;2
