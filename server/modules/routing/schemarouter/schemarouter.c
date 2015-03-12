@@ -378,7 +378,7 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
         unsigned int len;
         
         session->init |= INIT_MAPPING;
-        
+        session->init &= ~INIT_UNINT;
         len = strlen(query);
         buffer = gwbuf_alloc(len + 4);
         *((unsigned char*)buffer->start) = len;
@@ -836,7 +836,7 @@ static void* newSession(
     client_rses->dcb_route->func.read = internalRoute;
     client_rses->dcb_route->state = DCB_STATE_POLLING;
     client_rses->dcb_route->session = session;
-    client_rses->init = INIT_MAPPING;
+    client_rses->init = INIT_UNINT;
     if(using_db)
         client_rses->init |= INIT_USE_DB;
         /** 
@@ -1685,34 +1685,44 @@ static int routeQuery(
         }
         ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
         
-        if(!rses_is_closed && router_cli_ses->init != INIT_READY)
+        if(!rses_is_closed)
         {
-            /* Generate database list */
-            gen_databaselist(inst,router_cli_ses);  
-            
-            char* querystr = modutil_get_SQL(querybuf);
-            skygw_log_write(LOGFILE_DEBUG,"schemarouter: Storing query for session %p: %s",
-                            router_cli_ses->rses_client_dcb->session,
-                            querystr);
-            free(querystr);
-            gwbuf_make_contiguous(querybuf);            
-            GWBUF* ptr = router_cli_ses->queue;
-            
-            while(ptr && ptr->next)
-            {
-                ptr = ptr->next;
-            }
-            
-            if(ptr == NULL)
-            {
-                router_cli_ses->queue = querybuf;
-            }
-            else
-            {
-                ptr->next = querybuf;                               
-            }
-            return 1;
+	    if(router_cli_ses->init & INIT_UNINT)
+	    {
+		/* Generate database list */
+		gen_databaselist(inst,router_cli_ses);
+
+	    }
+
+	    if(router_cli_ses->init & INIT_MAPPING)
+	    {
+
+		char* querystr = modutil_get_SQL(querybuf);
+		skygw_log_write(LOGFILE_DEBUG,"schemarouter: Storing query for session %p: %s",
+			 router_cli_ses->rses_client_dcb->session,
+			 querystr);
+		free(querystr);
+		gwbuf_make_contiguous(querybuf);
+		GWBUF* ptr = router_cli_ses->queue;
+
+		while(ptr && ptr->next)
+		{
+		    ptr = ptr->next;
+		}
+
+		if(ptr == NULL)
+		{
+		    router_cli_ses->queue = querybuf;
+		}
+		else
+		{
+		    ptr->next = querybuf;
+		}
+		return 1;
+	    }
+
         }
+
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
 
@@ -2232,9 +2242,13 @@ static void clientReply (
 		goto lock_failed;
 	}
 	
-        skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received reply from %s for session %p",
+        skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received reply from %s for session %p"
+		"\nmapped:%s queries queued:%s",
                                 bref->bref_backend->backend_server->unique_name,
-                                router_cli_ses->rses_client_dcb->session);
+                                router_cli_ses->rses_client_dcb->session,
+			router_cli_ses->init & INIT_MAPPING?"true":"false",
+			router_cli_ses->queue == NULL ? "none" :
+			    router_cli_ses->queue->next ? "multiple":"one");
 
 
 
