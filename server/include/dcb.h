@@ -261,7 +261,7 @@ typedef struct dcb {
 	SPINLOCK	polloutlock;
 	int		polloutbusy;
 	int		writecheck;
-        time_t          last_read;      /*< Last time the DCB received data */
+        unsigned long          last_read;      /*< Last time the DCB received data */
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
 	struct server	*server;	/**< The associated backend server */
