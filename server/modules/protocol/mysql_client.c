@@ -488,7 +488,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	 * Decode the token and check the password
 	 * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
 	 */
-
+	skygw_log_write(LOGFILE_DEBUG,"Receiving connection from '%s' to database '%s'.",username,database);
 	auth_ret = gw_check_mysql_scramble_data(dcb,
                                                 auth_token,
                                                 auth_token_len,

@@ -35,6 +35,7 @@
  * 13/10/14	Massimiliano Pinto	Added hashtable for resources (i.e database names for MySQL services)
  * 06/02/15	Mark Riddoch		Added caching of authentication data
  * 18/02/15	Mark Riddoch		Added result set management
+ * 03/03/15	Massimiliano Pinto	Added config_enable_feedback_task() call in serviceStartAll
  *
  * @endverbatim
  */
@@ -60,7 +61,6 @@
 #include <sys/types.h>
 #include <housekeeper.h>
 #include <resultset.h>
-
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -300,7 +300,8 @@ GWPROTOCOL	*funcs;
 					LOGFILE_ERROR,
 					"Service %s: failed to load any user "
 					"information. Authentication will "
-					"probably fail as a result.")));
+					"probably fail as a result.",
+					service->name)));
 			}
 
 			/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
@@ -476,6 +477,8 @@ serviceStartAll()
 {
 SERVICE	*ptr;
 int	n = 0,i;
+
+	config_enable_feedback_task();
 
 	ptr = allServices;
 	while (ptr && !ptr->svc_do_shutdown)
@@ -814,6 +817,43 @@ serviceEnableRootUser(SERVICE *service, int action)
 }
 
 /**
+ * Enable/Disable loading the user data from only one server or all of them
+ *
+ * @param service	The service we are setting the data for
+ * @param action	1 for root enable, 0 for disable access
+ * @return		0 on failure
+ */
+
+int
+serviceAuthAllServers(SERVICE *service, int action)
+{
+	if (action != 0 && action != 1)
+		return 0;
+
+	service->users_from_all = action;
+
+	return 1;
+}
+
+/**
+ * Whether to strip escape characters from the name of the database the client
+ * is connecting to.
+ * @param service Service to configure
+ * @param action 0 for disabled, 1 for enabled
+ * @return 1 if successful, 0 on error
+ */
+int serviceStripDbEsc(SERVICE* service, int action)
+{
+    	if (action != 0 && action != 1)
+		return 0;
+
+	service->strip_db_esc = action;
+
+	return 1;
+}
+
+
+/**
  * Sets the session timeout for the service.
  * @param service Service to configure
  * @param val Timeout in seconds
@@ -829,6 +869,7 @@ serviceSetTimeout(SERVICE *service, int val)
 
     return 1;
 }
+
 
 /**
  * Trim whitespace from the from an rear of a string

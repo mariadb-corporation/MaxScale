@@ -385,7 +385,9 @@ char		*sql;
 	if (modutil_MySQL_Query(queue, &sql, &len, &residual))
 	{
 		sql = strndup(sql, len);
-		return maxinfo_execute_query(instance, session, sql);
+		int rc = maxinfo_execute_query(instance, session, sql);
+		free(sql);
+		return rc;
 	}
 	else
 	{
@@ -642,7 +644,7 @@ PARSE_ERROR	err;
 	 */
 	if (strncasecmp(sql, "select UNIX_TIMESTAMP",
 			strlen("select UNIX_TIMESTAMP")) == 0
-				&& strstr(sql, "as starttime") != NULL)
+				&& (strstr(sql, "as starttime") != NULL || strstr(sql, "AS starttime") != NULL))
 	{
 		respond_starttime(session->dcb);
 		return 1;

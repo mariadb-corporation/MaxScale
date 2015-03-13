@@ -266,8 +266,9 @@ typedef enum skygw_chk_t {
 #define STRTARGET(t)	(t == TARGET_ALL ? "TARGET_ALL" :			\
 			(t == TARGET_MASTER ? "TARGET_MASTER" : 		\
 			(t == TARGET_SLAVE ? "TARGET_SLAVE" : 			\
+			(t == TARGET_NAMED_SERVER ? "TARGET_NAMED_SERVER" : 	\
 			(t == TARGET_UNDEFINED ? "TARGET_UNDEFINED" : 		\
-			"Unknown target value"))))
+			"Unknown target value")))))
                         
 #define BREFSRV(b)	(b->bref_backend->backend_server)
                         

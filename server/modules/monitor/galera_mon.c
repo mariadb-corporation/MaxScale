@@ -49,6 +49,7 @@
 #include <secrets.h>
 #include <dcb.h>
 #include <modinfo.h>
+#include <maxconfig.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -66,7 +67,7 @@ MODULE_INFO	info = {
 	"A Galera cluster monitor"
 };
 
-static	void 	*startMonitor(void *);
+static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
 static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
@@ -88,11 +89,7 @@ static MONITOR_OBJECT MyObject = {
 	defaultUsers, 
 	diagnostics, 
 	setInterval,
-	setNetworkTimeout,
-	NULL, 
-	NULL, 
-	NULL,
-	disableMasterFailback
+	setNetworkTimeout
 };
 
 /**
@@ -141,10 +138,10 @@ GetModuleObject()
  * @return A handle to use when interacting with the monitor
  */
 static	void 	*
-startMonitor(void *arg)
+startMonitor(void *arg,void* opt)
 {
 MYSQL_MONITOR *handle;
-
+CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 	if (arg != NULL)
 	{
 		handle = (MYSQL_MONITOR *)arg;
@@ -167,6 +164,15 @@ MYSQL_MONITOR *handle;
 		handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
 		spinlock_init(&handle->lock);
 	}
+
+
+	while(params)
+	{
+	    if(!strcmp(params->name,"disable_master_failback"))
+		handle->disableMasterFailback = config_truth_value(params->value);
+	    params = params->next;
+	}
+
 	handle->tid = (THREAD)thread_start(monitorMain, handle);
 	return handle;
 }
@@ -542,6 +548,12 @@ int			log_no_members = 1;
 					ptr->server->port,
 					STRSRVSTATUS(ptr->server))));
 			}
+                        
+                        if (!(SERVER_IS_RUNNING(ptr->server)) || 
+                            !(SERVER_IS_IN_CLUSTER(ptr->server)))
+                        {
+					dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
+                        }
 
 			if (SERVER_IS_DOWN(ptr->server))
 			{

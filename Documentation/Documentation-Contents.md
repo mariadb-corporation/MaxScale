@@ -51,6 +51,10 @@
 
  - [RabbitMQ Consumer Client](filters/RabbitMQ-Consumer-Client.md)
 
+## Routers
+
+ - [SchemaRouter Router](routers/schemarouter/SchemaRouter.md)
+
 ## Design Documents
 
  - [Core Objects Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/core-objects-html-docs)

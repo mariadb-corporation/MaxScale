@@ -28,6 +28,13 @@ find_package(MySQLClient)
 find_package(MySQL)
 find_package(Pandoc)
 
+# You can find the variables set by this in the FindCURL.cmake file
+# which is a default module in CMake.
+find_package(CURL) 
+if(NOT CURL_FOUND)
+  message(FATAL_ERROR "Failed to locate dependency: libcurl")
+endif()
+
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 
 # Make sure the release notes for this release are present if it is a stable one
@@ -111,9 +118,11 @@ include_directories(utils)
 include_directories(log_manager)
 include_directories(query_classifier)
 include_directories(server/include)
+include_directories(server/include/maxscale)
 include_directories(server/inih)
 include_directories(server/modules/include)
 include_directories(${CMAKE_BINARY_DIR}/server/include)
+include_directories(${CURL_INCLUDE_DIRS})
 
 add_subdirectory(utils)
 add_subdirectory(log_manager)
@@ -190,6 +199,7 @@ if(PACKAGE)
     set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
     set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
     set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_BINARY_DIR}/postinst;{CMAKE_BINARY_DIR}/postrm")
+    set(CPACK_RPM_PACKAGE_RELEASE 3)
     set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postinst)
     set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postrm)
     set(CPACK_RPM_PACKAGE_NAME "maxscale")

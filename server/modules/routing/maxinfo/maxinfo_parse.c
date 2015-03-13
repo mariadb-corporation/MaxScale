@@ -100,6 +100,7 @@ MAXINFO_TREE	*col, *table;
 				}
 			}
 			// Malformed show
+			free(text);
 			free_tree(tree);
 			*parse_error = PARSE_MALFORMED_SHOW;
 			return NULL;
@@ -125,7 +126,7 @@ MAXINFO_TREE	*col, *table;
 
 /**
  * Parse a column list, may be a * or a valid list of string name
- * seperated by a comma
+ * separated by a comma
  *
  * @param sql	Pointer to pointer to column list updated to point to the table name
  * @return	A tree of column names
@@ -136,31 +137,37 @@ parse_column_list(char **ptr)
 int	token, lookahead;
 char	*text, *text2;
 MAXINFO_TREE	*tree = NULL;
-
+MAXINFO_TREE * rval = NULL;
 	*ptr = fetch_token(*ptr, &token, &text);
 	*ptr = fetch_token(*ptr, &lookahead, &text2);
 	switch (token)
 	{
 	case LT_STRING:
-		free(text2);
 		switch (lookahead)
 		{
 		case LT_COMMA:
-			return make_tree_node(MAXOP_COLUMNS, text, NULL, 
+			rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
 				parse_column_list(ptr));
+			break;
 		case LT_FROM:
-			return make_tree_node(MAXOP_COLUMNS, text, NULL, 
+			rval = make_tree_node(MAXOP_COLUMNS, text, NULL,
 				NULL);
+			break;
+		default:
+		    break;
 		}
 		break;
 	case LT_STAR:
-		free(text);
-		free(text2);
 		if (lookahead != LT_FROM)
-			return make_tree_node(MAXOP_ALL_COLUMNS, NULL, NULL,
+			rval = make_tree_node(MAXOP_ALL_COLUMNS, NULL, NULL,
 				NULL);
+		break;
+	default:
+	    break;
 	}
-	return NULL;
+	free(text);
+	free(text2);
+	return rval;
 }
 
 
@@ -180,6 +187,7 @@ MAXINFO_TREE	*tree = NULL;
 	*ptr = fetch_token(*ptr, &token, &text);
 	if  (token == LT_STRING)
 		return make_tree_node(MAXOP_TABLE, text, NULL, NULL);
+	free(text);
 	return NULL;
 }
 

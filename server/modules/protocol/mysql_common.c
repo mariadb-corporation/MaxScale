@@ -1439,10 +1439,12 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 	LOGIF(LD,
 		(skygw_log_write_flush(
 			LOGFILE_DEBUG,
-			"%lu [MySQL Client Auth], checking user [%s@%s]",
+			"%lu [MySQL Client Auth], checking user [%s@%s]%s%s",
 			pthread_self(),
 			key.user,
-			dcb->remote)));
+			dcb->remote,
+				key.resource != NULL ?" db: " :"",
+				 key.resource != NULL ?key.resource :"")));
 
 	/* look for user@current_ipv4 now */
         user_password = mysql_users_fetch(service->users, &key);
@@ -1455,7 +1457,9 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			 * (1) Check for localhost first: 127.0.0.1 (IPv4 only)
  			 */
 
-			if ((key.ipv4.sin_addr.s_addr == 0x0100007F) && !dcb->service->localhost_match_wildcard_host) {
+			if ((key.ipv4.sin_addr.s_addr == 0x0100007F) && 
+				!dcb->service->localhost_match_wildcard_host) 
+			{
  			 	/* Skip the wildcard check and return 1 */
 				LOGIF(LE,
 					(skygw_log_write_flush(

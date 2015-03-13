@@ -892,7 +892,7 @@ static int gw_error_backend_event(DCB *dcb)
                 goto retblock;
         }
         
-#if defined(SS_DEBUG)                
+#if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "Backend error event handling.")));

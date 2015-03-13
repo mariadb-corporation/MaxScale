@@ -112,6 +112,7 @@ bool            query_is_parsed(GWBUF* buf);
 bool			skygw_query_has_clause(GWBUF* buf);
 char*           skygw_get_qtype_str(skygw_query_type_t qtype);
 char*			skygw_get_affected_fields(GWBUF* buf);
+char** skygw_get_database_names(GWBUF* querybuf,int* size);
 char*           skygw_get_realq_type_str(GWBUF *querybuf);
 
 EXTERN_C_BLOCK_END

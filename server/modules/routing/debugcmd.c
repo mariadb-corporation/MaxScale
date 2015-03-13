@@ -36,12 +36,13 @@
  * Date		Who			Description
  * 20/06/13	Mark Riddoch		Initial implementation
  * 17/07/13	Mark Riddoch		Additional commands
- * 09/08/2013	Massimiliano Pinto	Added enable/disable commands (now only for log)
+ * 09/08/13	Massimiliano Pinto	Added enable/disable commands (now only for log)
  * 20/05/14	Mark Riddoch		Added ability to give server and service names rather
  *					than simply addresses
  * 23/05/14	Mark Riddoch		Added support for developer and user modes
  * 29/05/14	Mark Riddoch		Add Filter support
  * 16/10/14	Mark Riddoch		Add show eventq
+ * 05/03/15	Massimiliano Pinto	Added enable/disable feedback
  *
  * @endverbatim
  */
@@ -62,7 +63,7 @@
 #include <poll.h>
 #include <users.h>
 #include <dbusers.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <telnetd.h>
 #include <adminusers.h>
 #include <monitor.h>
@@ -129,6 +130,10 @@ struct subcommand showoptions[] = {
 	{ "eventstats",	0, dShowEventStats,
 			"Show the event statistics",
 			"Show the event statistics",
+				{0, 0, 0} },
+	{ "feedbackreport",	0, moduleShowFeedbackReport,
+			"Show the report of MaxScale loaded modules, suitable for Notification Service",
+			"Show the report of MaxScale loaded modules, suitable for Notification Service",
 				{0, 0, 0} },
 	{ "filter",	1, dprintFilter,
 			"Show details of a filter, called with a filter name",
@@ -370,6 +375,8 @@ static void enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
 static void disable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor);
 static void enable_service_root(DCB *dcb, SERVICE *service);
 static void disable_service_root(DCB *dcb, SERVICE *service);
+static void enable_feedback_action();
+static void disable_feedback_action();
 
 /**
  *  * The subcommands of the enable command
@@ -410,6 +417,14 @@ struct subcommand enableoptions[] = {
                 "Enable root access to a service, pass a service name to enable root access",
                 "Enable root access to a service, pass a service name to enable root access",
                 {ARG_TYPE_SERVICE, 0, 0}
+        },
+        {
+                "feedback",
+                0,
+                enable_feedback_action,
+                "Enable MaxScale modules list sending via http to notification service",
+                "Enable MaxScale modules list sending via http to notification service",
+                {0, 0, 0}
         },
         {
                 NULL,
@@ -462,6 +477,14 @@ struct subcommand disableoptions[] = {
                 "Disable root access to a service",
                 "Disable root access to a service",
                 {ARG_TYPE_SERVICE, 0, 0}
+        },
+        {
+                "feedback",
+                0,
+                disable_feedback_action,
+                "Disable MaxScale modules list sending via http to notification service",
+                "Disable MaxScale modules list sending via http to notification service",
+                {0, 0, 0}
         },
     	{
             NULL,
@@ -1188,7 +1211,7 @@ shutdown_monitor(DCB *dcb, MONITOR *monitor)
 static void
 restart_monitor(DCB *dcb, MONITOR *monitor)
 {
-	monitorStart(monitor);
+	monitorStart(monitor, NULL);
 }
 
 /**
@@ -1200,7 +1223,14 @@ restart_monitor(DCB *dcb, MONITOR *monitor)
 static void
 enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
 {
-	monitorSetReplicationHeartbeat(monitor, 1);
+    CONFIG_PARAMETER param;
+    const char* name = "detect_replication_lag";
+    const char* value = "1";
+    param.name = (char*)name;
+    param.value = (char*)value;
+    param.next = NULL;
+    monitorStop(monitor);
+    monitorStart(monitor,&param);
 }
 
 /**
@@ -1212,7 +1242,14 @@ enable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
 static void
 disable_monitor_replication_heartbeat(DCB *dcb, MONITOR *monitor)
 {
-	monitorSetReplicationHeartbeat(monitor, 0);
+    CONFIG_PARAMETER param;
+    const char* name = "detect_replication_lag";
+    const char* value = "0";
+    param.name = (char*)name;
+    param.value = (char*)value;
+    param.next = NULL;
+    monitorStop(monitor);
+    monitorStart(monitor,&param);
 }
 
 /**
@@ -1395,6 +1432,29 @@ static void
 set_nbpoll(DCB *dcb, int nb)
 {
 	poll_set_nonblocking_polls(nb);
+}
+
+/**
+ * Re-enable sendig MaxScale module list via http
+ * Proper [feedback] section in MaxSclale.cnf
+ * is required.
+ */
+static void
+enable_feedback_action(void)
+{
+	config_enable_feedback_task();
+        return;
+}
+
+/**
+ * Disable sendig MaxScale module list via http
+ */
+
+static void
+disable_feedback_action(void)
+{
+	config_disable_feedback_task();
+        return;
 }
 
 #if defined(FAKE_CODE)

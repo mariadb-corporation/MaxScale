@@ -254,6 +254,15 @@ serverB  |   15     |     27%
 serverC  |   10     |     18%
 serverD  |   20     |     36%
 
+### `auth_all_servers`
+
+This parameter controls whether only a single server or all of the servers are used when loading the users from the backend servers. This takes a boolean value and when enabled, creates a union of all the users and grants on all the servers.
+
+### `strip_db_esc`
+
+The strip_db_esc parameter strips escape characters from database names of grants when loading the users from the backend server. Some visual database management tools automatically escape some characters and this might cause conflicts when MaxScale tries to authenticate users.
+
+This parameter takes a boolean value and when enabled, will strip all `\` characters from the database names.
 
 ### `connection_timeout`
 

@@ -85,6 +85,7 @@ int	len;
 		return;
 	sprintf(msg, "%s in query '%s'", desc, sql);
 	maxinfo_send_error(dcb, 1149, msg);
+	free(msg);
 }
 
 /**
@@ -112,7 +113,7 @@ int             len;
         data[4] = 0xff;				// Error indicator
 	data[5] = errcode & 0xff;		// Error Code
 	data[6] = (errcode >> 8) & 0xff;	// Error Code
-	strncpy((char *)&data[7], "#42000", 6);
-        strncpy((char *)&data[13], msg, strlen(msg));	// Error Message
+	memcpy(&data[7], "#42000", 6);
+        memcpy(&data[13], msg, strlen(msg));	// Error Message
 	dcb->func.write(dcb, pkt);
 }

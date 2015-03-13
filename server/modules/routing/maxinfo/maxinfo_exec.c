@@ -47,7 +47,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <resultset.h>
-#include <config.h>
+#include <maxconfig.h>
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -735,7 +735,7 @@ exec_select(DCB *dcb, MAXINFO_TREE *tree)
 static int
 maxinfo_pattern_match(char *pattern, char *str)
 {
-int	anchor, len, trailing;
+int	anchor = 0, len, trailing;
 char	*fixed;
 extern	char *strcasestr();
 

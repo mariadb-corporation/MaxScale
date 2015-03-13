@@ -31,17 +31,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale_test.h>
+#include <test_utils.h>
 #include <service.h>
-#include <poll.h>
-#include <dcb.h>
 
-#include "housekeeper.h"
 
 static bool success = false;
 
 int hup(DCB* dcb)
 {
     success = true;
+    return 1;
 }
 
 /**
@@ -57,17 +56,18 @@ DCB	    *dcb;
 int	    result;
 int	    argc = 3;
 
-char*	    argv[] =
-{
-    "log_manager",
-    "-j",
-    TEST_LOG_DIR,
-    NULL
-};
+init_test_env();
+/* char*	    argv[] = */
+/* { */
+/*     "log_manager", */
+/*     "-j", */
+/*     TEST_LOG_DIR, */
+/*     NULL */
+/* }; */
 
-skygw_logmanager_init(argc,argv);
-poll_init();
-hkinit();
+/* skygw_logmanager_init(argc,argv); */
+/* poll_init(); */
+/* hkinit(); */
 
         /* Service tests */
         ss_dfprintf(stderr,
@@ -108,7 +108,8 @@ hkinit();
         skygw_log_sync_all();
         ss_info_dassert(0 != result, "Stop should succeed");
 
-        dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+	if((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
+	    return 1;
         ss_info_dassert(dcb != NULL, "DCB allocation failed");
         
         session = session_alloc(service,dcb);

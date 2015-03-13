@@ -28,9 +28,9 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <gw.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <housekeeper.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <mysql.h>
 #include <resultset.h>
 
@@ -733,6 +733,7 @@ unsigned long	qtime;
 		dcb->evq.processing_events = ev;
 		dcb->evq.pending_events = 0;
 		pollStats.evq_pending--;
+		ss_dassert(pollStats.evq_pending >= 0);
 	}
 	spinlock_release(&pollqlock);
 

@@ -78,9 +78,9 @@ MONITOR	*mon;
 		free(mon);
 		return NULL;
 	}
-	mon->handle = (*mon->module->startMonitor)(NULL);
-	mon->state = MONITOR_STATE_RUNNING;
 	
+	mon->handle = NULL;
+
 	spinlock_acquire(&monLock);
 	mon->next = allMonitors;
 	allMonitors = mon;
@@ -125,9 +125,9 @@ MONITOR	*ptr;
  * @param monitor The Monitor that should be started
  */
 void
-monitorStart(MONITOR *monitor)
+monitorStart(MONITOR *monitor, void* params)
 {
-	monitor->handle = (*monitor->module->startMonitor)(monitor->handle);
+	monitor->handle = (*monitor->module->startMonitor)(monitor->handle,params);
 	monitor->state = MONITOR_STATE_RUNNING;
 }
 
@@ -279,22 +279,6 @@ MONITOR	*ptr;
 	return ptr;
 }
 
-
-/**
- * Set the id of the monitor.
- *
- * @param mon		The monitor instance
- * @param id		The id for the monitor
- */
-
-void
-monitorSetId(MONITOR *mon, unsigned long id)
-{
-	if (mon->module->defaultId != NULL) {
-		mon->module->defaultId(mon->handle, id);
-	}
-}
-
 /**
  * Set the monitor sampling interval.
  *
@@ -307,48 +291,6 @@ monitorSetInterval (MONITOR *mon, unsigned long interval)
 	if (mon->module->setInterval != NULL) {
 		mon->interval = interval;
 		mon->module->setInterval(mon->handle, interval);
-	}
-}
-
-/**
- * Enable Replication Heartbeat support in monitor.
- *
- * @param mon		The monitor instance
- * @param enable	The enabling value is 1, 0 turns it off
- */
-void
-monitorSetReplicationHeartbeat(MONITOR *mon, int enable)
-{
-	if (mon->module->replicationHeartbeat != NULL) {
-		mon->module->replicationHeartbeat(mon->handle, enable);
-	}
-}
-
-/**
- * Enable Stale Master assignement.
- *
- * @param mon		The monitor instance
- * @param enable	The enabling value is 1, 0 turns it off
- */
-void
-monitorDetectStaleMaster(MONITOR *mon, int enable)
-{
-	if (mon->module->detectStaleMaster != NULL) {
-		mon->module->detectStaleMaster(mon->handle, enable);
-	}
-}
-
-/**
- * Disable Master Failback
- *
- * @param mon		The monitor instance
- * @param disable	The value 1 disable the failback, 0 keeps it
- */
-void
-monitorDisableMasterFailback(MONITOR *mon, int disable)
-{
-	if (mon->module->disableMasterFailback != NULL) {
-		mon->module->disableMasterFailback(mon->handle, disable);
 	}
 }
 

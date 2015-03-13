@@ -71,7 +71,7 @@ static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 int
 blr_file_init(ROUTER_INSTANCE *router)
 {
-char		*ptr, path[1024], filename[1050];
+char		*ptr, path[PATH_MAX], filename[PATH_MAX];
 int		file_found, n = 1;
 int		root_len, i;
 DIR		*dirp;
@@ -82,10 +82,10 @@ struct dirent	*dp;
 		strcpy(path, "/usr/local/skysql/MaxScale");
 		if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 		{
-			strcpy(path, ptr);
+			strncpy(path, ptr,PATH_MAX);
 		}
-		strcat(path, "/");
-		strcat(path, router->service->name);
+		strncat(path, "/",PATH_MAX);
+		strncat(path, router->service->name,PATH_MAX);
 
 		if (access(path, R_OK) == -1)
 			mkdir(path, 0777);
@@ -94,7 +94,7 @@ struct dirent	*dp;
 	}
 	else
 	{
-		strncpy(path, router->binlogdir, 1024);
+		strncpy(path, router->binlogdir, PATH_MAX);
 	}
 	if (access(router->binlogdir, R_OK) == -1)
 	{
@@ -128,7 +128,7 @@ struct dirent	*dp;
 
 	file_found = 0;
 	do {
-		sprintf(filename, "%s/" BINLOG_NAMEFMT, path, router->fileroot, n);
+		snprintf(filename,PATH_MAX, "%s/" BINLOG_NAMEFMT, path, router->fileroot, n);
 		if (access(filename, R_OK) != -1)
 		{
 			file_found  = 1;
@@ -142,16 +142,16 @@ struct dirent	*dp;
 	if (n == 0)		// No binlog files found
 	{
 		if (router->initbinlog)
-			sprintf(filename, BINLOG_NAMEFMT, router->fileroot,
+			snprintf(filename,PATH_MAX, BINLOG_NAMEFMT, router->fileroot,
 						router->initbinlog);
 		else
-			sprintf(filename, BINLOG_NAMEFMT, router->fileroot, 1);
+			snprintf(filename,PATH_MAX, BINLOG_NAMEFMT, router->fileroot, 1);
 		if (! blr_file_create(router, filename))
 			return 0;
 	}
 	else
 	{
-		sprintf(filename, BINLOG_NAMEFMT, router->fileroot, n);
+		snprintf(filename,PATH_MAX, BINLOG_NAMEFMT, router->fileroot, n);
 		blr_file_append(router, filename);
 	}
 	return 1;
@@ -196,7 +196,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	fsync(fd);
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
-	strcpy(router->binlog_name, file);
+	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
 	router->binlog_position = 4;			/* Initial position after the magic number */
 	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
@@ -230,7 +230,7 @@ int		fd;
 	fsync(fd);
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
-	strcpy(router->binlog_name, file);
+	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
 	router->binlog_position = lseek(fd, 0L, SEEK_END);
 	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
@@ -290,7 +290,7 @@ blr_file_flush(ROUTER_INSTANCE *router)
 BLFILE *
 blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
 {
-char		path[1024];
+char		path[1025];
 BLFILE		*file;
 
 	spinlock_acquire(&router->fileslock);
@@ -310,14 +310,14 @@ BLFILE		*file;
 		spinlock_release(&router->fileslock);
 		return NULL;
 	}
-	strcpy(file->binlogname, binlog);
+	strncpy(file->binlogname, binlog,BINLOG_FNAMELEN+1);
 	file->refcnt = 1;
 	file->cache = 0;
 	spinlock_init(&file->lock);
 
-	strcpy(path, router->binlogdir);
-	strcat(path, "/");
-	strcat(path, binlog);
+	strncpy(path, router->binlogdir,1024);
+	strncat(path, "/",1024);
+	strncat(path, binlog,1024);
 
 	if ((file->fd = open(path, O_RDONLY, 0666)) == -1)
 	{
@@ -630,7 +630,7 @@ struct	stat	statb;
 void
 blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 {
-char	path[4096], *ptr;
+char	path[4097], *ptr;
 int	fd;
 
 	strcpy(path, "/usr/local/skysql/MaxScale");
