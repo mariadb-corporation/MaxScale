@@ -87,11 +87,12 @@ TestConnections::TestConnections(int argc, char *argv[])
             repl->start_replication();
         }
         //  checking galera nodes VMs for availability
+        /*
         if ((galera->check_nodes() != 0) || (galera->check_galera() != 0)) {
             printf("Backend broken! Restarting Galera nodes\n");
             galera->restart_all_vm();
             galera->start_galera();
-        }
+        }*/
     }
     if (!no_maxscale_start) {init_maxscale();}
 }

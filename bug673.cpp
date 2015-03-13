@@ -1,6 +1,7 @@
 /**
  * @file bug673.cpp  regression case for bug673 ("MaxScale crashes if "Users table data" is empty and "show dbusers" is executed in maxadmin")
  *
+ * - configure wrong IP for all backends
  * - execute maxadmin command show dbusers "RW Split Router"
  * - check MaxScale is alive by executing maxadmin again
  */
@@ -21,21 +22,21 @@ int main(int argc, char *argv[])
     sleep(150);
 
     printf("Trying show dbusers \"RW Split Router\"\n"); fflush(stdout);
-    getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result);
+    global_result += getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result);
     printf("result %s\n", result); fflush(stdout);
 
     printf("Trying show dbusers \"Read Connection Router Master\"\n"); fflush(stdout);
-    getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"Read Connection Router Master\"", (char *) "No. of entries:", result);
+    global_result += getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"Read Connection Router Master\"", (char *) "No. of entries:", result);
     printf("result %s\n", result); fflush(stdout);
 
 
     printf("Trying show dbusers \"Read Connection Router Slave\"\n"); fflush(stdout);
-    getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"Read Connection Router Slave\"", (char *) "No. of entries:", result);
+    global_result += getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"Read Connection Router Slave\"", (char *) "No. of entries:", result);
     printf("result %s\n", result); fflush(stdout);
 
 
     printf("Trying again show dbusers \"RW Split Router\" to check if MaxScale is alive\n"); fflush(stdout);
-    getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result);
+    global_result += getMaxadminParam(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result);
     printf("result %s\n", result);
 
     /*int users_num = 1;
