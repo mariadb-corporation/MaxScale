@@ -300,7 +300,8 @@ GWPROTOCOL	*funcs;
 					LOGFILE_ERROR,
 					"Service %s: failed to load any user "
 					"information. Authentication will "
-					"probably fail as a result.")));
+					"probably fail as a result.",
+					service->name)));
 			}
 
 			/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
