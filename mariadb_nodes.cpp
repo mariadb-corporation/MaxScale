@@ -254,8 +254,10 @@ int Mariadb_nodes::start_binlog(char * Maxscale_IP, int Binlog_Port)
     printf("show master status\n");fflush(stdout);
     find_status_field(nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
     find_status_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
+    printf("Real master file: %s\n", log_file); fflush(stdout);
+    printf("Real master pos : %s\n", log_pos); fflush(stdout);
 
-    printf("Stopping first slave (node 0)\n");fflush(stdout);
+    printf("Stopping first slave (node 1)\n");fflush(stdout);
     global_result += execute_query(nodes[1], (char *) "stop slave;");
     printf("Configure first backend slave node to be slave of real master\n");fflush(stdout);
     sprintf(str, setup_slave, IP[0], log_file, log_pos, port[0]);
@@ -267,6 +269,9 @@ int Mariadb_nodes::start_binlog(char * Maxscale_IP, int Binlog_Port)
     printf("show master status\n");fflush(stdout);
     find_status_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
     find_status_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
+
+    printf("Maxscale binlog master file: %s\n", log_file); fflush(stdout);
+    printf("Maxscale binlog master pos : %s\n", log_pos); fflush(stdout);
 
     printf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");fflush(stdout);
     for (i = 2; i < N; i++) {
