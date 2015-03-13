@@ -227,7 +227,7 @@ target_link_libraries(bug699 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(bug705 bug705.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(bug705 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(setup_binlog setup_binlog.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
+add_executable(setup_binlog setup_binlog.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(setup_binlog ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 add_executable(bug519 bug519.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##

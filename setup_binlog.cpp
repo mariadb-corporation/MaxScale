@@ -7,6 +7,7 @@
 #include <iostream>
 #include "testconnections.h"
 #include "maxadmin_operations.h"
+#include "sql_t1.h"
 
 int main(int argc, char *argv[])
 {
@@ -19,6 +20,14 @@ int main(int argc, char *argv[])
     Test->repl->start_binlog(Test->maxscale_IP, 5306);
 
     global_result += executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show servers");
+
+    Test->repl->connect();
+
+    create_t1(Test->repl->nodes[0]);
+    insert_into_t1(Test->repl->nodes[0], 4);
+    select_from_t1(Test->repl->nodes[0], 4);
+
+    Test->repl->close_connections();
 
     Test->copy_all_logs(); return(global_result);
 }
