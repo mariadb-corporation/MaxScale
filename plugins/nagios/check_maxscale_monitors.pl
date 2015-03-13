@@ -201,8 +201,8 @@ if ($n_monitors) {
 	close(MAXSCALE);
 	exit 0;
 } else {
-	printf "CRITICAL: 0 monitors found\n";
+	printf "WARNING: 0 monitors found\n";
 	close(MAXSCALE);
-	exit 2;
+	exit 1;
 }
 

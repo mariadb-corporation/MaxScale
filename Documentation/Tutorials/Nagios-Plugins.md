@@ -92,3 +92,11 @@ Example related to server1.cfg
 * services
 
 	OK: 7 services found | services1=RW_Router;readwritesplit;1;1 services2=RW_Split;readwritesplit;1;1 services3=Test Service;readconnroute;1;1 services4=Master Service;readconnroute;2;2 services5=Debug Service;debugcli;1;1 services6=CLI;cli;2;145 services7=MaxInfo;maxinfo;2;2
+
+Returns OK and the number of services
+
+Returns CRITICAL if no services are found
+
+The data after | char are so called performance data and may be collected by Nagios
+output format is:
+  servicex=Name;router_module;NumUsers;TotalSessions
