@@ -2247,8 +2247,8 @@ static void clientReply (
 		goto lock_failed;
 	}
 	
-        skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received reply from %s for session %p"
-		"\nmapped:%s queries queued:%s",
+        skygw_log_write(LOGFILE_DEBUG,"schemarouter: Reply from [%s] session [%p]"
+		" mapping [%s] queries queued [%s]",
                                 bref->bref_backend->backend_server->unique_name,
                                 router_cli_ses->rses_client_dcb->session,
 			router_cli_ses->init & INIT_MAPPING?"true":"false",
@@ -2481,11 +2481,14 @@ static void clientReply (
         
         if (writebuf != NULL && client_dcb != NULL)
         {
+	    unsigned char* cmd = (unsigned char*)writebuf->start;
+	    int state = router_cli_ses->init;
                 /** Write reply to client DCB */
-	    char* query = modutil_get_SQL(writebuf);
-	    skygw_log_write(LOGFILE_TRACE, "schemarouter: returning reply [%x]: %s",
-		     writebuf->start+4,
-		     query);
+	    skygw_log_write(LOGFILE_TRACE, "schemarouter: returning reply [%s] "
+		    "state [%s]  session [%p]",
+		    PTR_IS_ERR(cmd) ? "ERR" :PTR_IS_OK(cmd) ? "OK" : "RSET",
+		    state & INIT_UNINT ? "UNINIT" :state & INIT_MAPPING ? "MAPPING" : "READY",
+		    router_cli_ses->rses_client_dcb->session);
 		SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
         }
         /** Unlock router session */
