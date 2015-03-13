@@ -40,13 +40,20 @@ int main(int argc, char *argv[])
     printf("restoring nodes\n"); fflush(stdout);
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
-        execute_query(Test->repl->nodes[i], (char *) "flush hosts;");
-        execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 151;");
+        printf("Trying to flusg node %d\n", i); fflush(stdout);
+        if (execute_query(Test->repl->nodes[i], (char *) "flush hosts;") !=0 ) {
+            printf("node %i flusgh failed\n", i); fflush(stdout);
+        }
+        printf("Trying to set max_connections for node %d\n", i); fflush(stdout);
+        if (execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 151;") != 0) {
+            printf("set max_connections failed for node %d\n", i); fflush(stdout);
+        }
     }
     Test->repl->close_connections();
 
     check_log_err((char *) "refresh rate limit exceeded", FALSE);
 
+    printf("Sleeping\n"); fflush(stdout);
     sleep(40);
 
     global_result += check_maxscale_alive();

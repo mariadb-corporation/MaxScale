@@ -277,6 +277,7 @@ int Mariadb_nodes::start_binlog(char * Maxscale_IP, int Binlog_Port)
     for (i = 2; i < N; i++) {
         global_result += execute_query(nodes[i], (char *) "stop slave;");
         sprintf(str, setup_slave, Maxscale_IP, log_file, log_pos, Binlog_Port);
+
         global_result += execute_query(nodes[i], str);
     }
     close_connections();
