@@ -1684,8 +1684,17 @@ static int routeQuery(
                 rses_is_closed = true;
         }
         ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
-        
-        if(!rses_is_closed)
+
+        if (!rses_begin_locked_router_action(router_cli_ses))
+	{
+		LOGIF(LT, (skygw_log_write(
+			LOGFILE_TRACE,
+			"Route query aborted! Routing session is closed <")));
+		ret = 0;
+		goto retblock;
+	}
+
+        if(!(rses_is_closed = router_cli_ses->rses_closed))
         {
 	    if(router_cli_ses->init & INIT_UNINT)
 	    {
@@ -1717,12 +1726,16 @@ static int routeQuery(
 		else
 		{
 		    ptr->next = querybuf;
+
 		}
+		rses_end_locked_router_action(router_cli_ses);
 		return 1;
 	    }
 
         }
 
+	rses_end_locked_router_action(router_cli_ses);
+	
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
 
@@ -1891,14 +1904,6 @@ static int routeQuery(
 			 * for an alternate backend with the database. If this is not found
 			 * the target is undefined and an error will be returned to the client.
 			 */
-/*
-
-			if((tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL &&
-			   check_shard_status(inst,tname))
-			{
-				route_target = TARGET_NAMED_SERVER;
-			}
-*/
 		}	
 	}
 
@@ -2477,6 +2482,10 @@ static void clientReply (
         if (writebuf != NULL && client_dcb != NULL)
         {
                 /** Write reply to client DCB */
+	    char* query = modutil_get_SQL(writebuf);
+	    skygw_log_write(LOGFILE_TRACE, "schemarouter: returning reply [%x]: %s",
+		     writebuf->start+4,
+		     query);
 		SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
         }
         /** Unlock router session */
