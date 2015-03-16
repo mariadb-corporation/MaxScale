@@ -220,7 +220,7 @@ int Mariadb_nodes::start_galera()
 }
 
 
-int Mariadb_nodes::start_binlog(char * Maxscale_IP, int Binlog_Port)
+int Mariadb_nodes::start_binlog(char * Maxscale_IP, int binlog_port)
 {
     char sys1[4096];
     char str[1024];
@@ -264,7 +264,7 @@ int Mariadb_nodes::start_binlog(char * Maxscale_IP, int Binlog_Port)
     global_result += execute_query(nodes[1], str);
 
     printf("Connecting to MaxScale binlog router\n");fflush(stdout);
-    MYSQL * binlog = open_conn(Binlog_Port, Maxscale_IP, user_name, password);
+    MYSQL * binlog = open_conn(binlog_port, Maxscale_IP, user_name, password);
 
     printf("show master status\n");fflush(stdout);
     find_status_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
@@ -276,7 +276,7 @@ int Mariadb_nodes::start_binlog(char * Maxscale_IP, int Binlog_Port)
     printf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");fflush(stdout);
     for (i = 2; i < N; i++) {
         global_result += execute_query(nodes[i], (char *) "stop slave;");
-        sprintf(str, setup_slave, Maxscale_IP, log_file, log_pos, Binlog_Port);
+        sprintf(str, setup_slave, Maxscale_IP, log_file, log_pos, binlog_port);
 
         global_result += execute_query(nodes[i], str);
     }
