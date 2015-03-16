@@ -437,8 +437,8 @@ getDatabases(SERVICE *service, MYSQL *con)
 }
 
 /**
- * Load the user/passwd form mysql.user table into the service users' hashtable
- * environment.
+ * Load the user/passwd from mysql.user table into the service users' hashtable
+ * environment from all the backend servers.
  *
  * @param service	The current service
  * @param users		The users table into which to load the users
@@ -446,7 +446,7 @@ getDatabases(SERVICE *service, MYSQL *con)
  * 			(0 means no users at all)
  */
 static int
-getUsers(SERVICE *service, USERS *users)
+getAllUsers(SERVICE *service, USERS *users)
 {
 	MYSQL		*con = NULL;
 	MYSQL_ROW	row;
@@ -496,20 +496,7 @@ getUsers(SERVICE *service, USERS *users)
         {
             goto cleanup;
         }
-	/* Select a server with Master bit, if available */
-        if(service->users_from_all == false)
-        {
-            while (server != NULL && !(server->server->status & SERVER_MASTER)) {
-                server = server->next;
-            }
-        }
 
-        if(server == NULL)
-        {
-            /* If no master is found take the first available server */
-            server = service->dbref;            
-        }
-        
         while(server != NULL)
         {
             
@@ -796,18 +783,27 @@ getUsers(SERVICE *service, USERS *users)
                  */
                 
 		if (db_grants) {
+		    bool havedb = false;
                     /* we have dbgrants, store them */
 		    if(row[5]){
-			strncpy(dbnm,row[5],MYSQL_DATABASE_MAXLEN);
+			unsigned long *rowlen = mysql_fetch_lengths(result);
+			memcpy(dbnm,row[5],rowlen[5]);
+			memset(dbnm + rowlen[5],0,1);
+			havedb = true;
 			if(service->strip_db_esc) {
 			    strip_escape_chars(dbnm);
+			    LOGIF(LD, (skygw_log_write(
+				    LOGFILE_DEBUG,
+						     "[%s]: %s -> %s",
+						     service->name,
+						     row[5],
+						     dbnm)));
 			}
 		    }
-		    else {
-			*dbnm = 0;
-		    }
-                    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], dbnm);
-		    skygw_log_write(LOGFILE_DEBUG,"%s: Adding user:%s host:%s anydb:%s db:%s.",service->name,row[0],row[1],row[4],dbnm);
+                    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4],havedb ? dbnm : NULL);
+		    skygw_log_write(LOGFILE_DEBUG,"%s: Adding user:%s host:%s anydb:%s db:%s.",
+			     service->name,row[0],row[1],row[4],
+			     havedb ? dbnm : NULL);
 		} else {
                     /* we don't have dbgrants, simply set ANY DB for the user */	
                     rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
@@ -898,6 +894,456 @@ getUsers(SERVICE *service, USERS *users)
         
 	return total_users;
 }
+
+
+/**
+ * Load the user/passwd form mysql.user table into the service users' hashtable
+ * environment.
+ *
+ * @param service	The current service
+ * @param users		The users table into which to load the users
+ * @return      	-1 on any error or the number of users inserted 
+ * 			(0 means no users at all)
+ */
+static int
+getUsers(SERVICE *service, USERS *users)
+{
+	MYSQL		*con = NULL;
+	MYSQL_ROW	row;
+	MYSQL_RES	*result = NULL;
+	char		*service_user = NULL;
+	char		*service_passwd = NULL;
+	char		*dpwd;
+	int		total_users = 0;
+	SERVER_REF	*server;
+	char		*users_query;
+	unsigned char	hash[SHA_DIGEST_LENGTH]="";
+	char		*users_data = NULL;
+	int 		nusers = 0;
+	int		users_data_row_len = MYSQL_USER_MAXLEN + 
+						MYSQL_HOST_MAXLEN + 
+						MYSQL_PASSWORD_LEN + 
+						sizeof(char) + 
+						MYSQL_DATABASE_MAXLEN;
+	int		dbnames = 0;
+	int		db_grants = 0;
+	
+	if (serviceGetUser(service, &service_user, &service_passwd) == 0)
+	{
+		ss_dassert(service_passwd == NULL || service_user == NULL);
+		return -1; 
+	}
+
+	if(service->users_from_all)
+	  {
+	    return getAllUsers(service,users);
+	  }
+
+	con = mysql_init(NULL);
+
+ 	if (con == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : mysql_init: %s",
+                        mysql_error(con))));
+		return -1;
+	}
+	/** Set read, write and connect timeout values */
+	if (gw_mysql_set_timeouts(con, 
+		DEFAULT_READ_TIMEOUT, 
+		DEFAULT_WRITE_TIMEOUT,
+		DEFAULT_CONNECT_TIMEOUT))
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : failed to set timeout values for backend "
+			"connection.")));
+		mysql_close(con);
+		return -1;
+	}
+
+	if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL)) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : failed to set external connection. "
+                        "It is needed for backend server connections.")));
+		mysql_close(con);
+		return -1;
+	}
+	/**
+	 * Attempt to connect to one of the databases database or until we run 
+         * out of databases
+	 * to try
+	 */
+	server = service->dbref;
+	dpwd = decryptPassword(service_passwd);
+
+	/* Select a server with Master bit, if available */
+	while (server != NULL && !(server->server->status & SERVER_MASTER)) {
+                	server = server->next;
+	}
+
+	if (service->svc_do_shutdown)
+	{
+		free(dpwd);
+		mysql_close(con);
+		return -1;
+	}
+	
+	/* Try loading data from master server */
+	if (server != NULL && 
+		(mysql_real_connect(con,
+			server->server->name, service_user, 
+			dpwd, 
+			NULL, 
+			server->server->port, 
+			NULL, 0) != NULL)) 
+	{
+		LOGIF(LD, (skygw_log_write_flush(
+			LOGFILE_DEBUG,
+			"Dbusers : Loading data from backend database with "
+			"Master role [%s:%i] for service [%s]",
+			server->server->name,
+			server->server->port,
+			service->name)));
+	} else {
+		/* load data from other servers via loop */
+		server = service->dbref;
+
+		while (!service->svc_do_shutdown &&
+			server != NULL && 
+			(mysql_real_connect(con,
+					server->server->name,
+					service_user,
+					dpwd,
+					NULL,
+					server->server->port,
+					NULL,
+					0) == NULL))
+		{
+			server = server->next;
+		}
+		
+		if (service->svc_do_shutdown)
+		{
+			free(dpwd);
+			mysql_close(con);
+			return -1;
+		}
+		
+		if (server != NULL) {
+			LOGIF(LD, (skygw_log_write_flush(
+				LOGFILE_DEBUG,
+				"Dbusers : Loading data from backend database "
+				"[%s:%i] for service [%s]",
+				server->server->name,
+				server->server->port,
+				service->name)));
+		}
+	}
+
+	free(dpwd);
+
+	if (server == NULL)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Unable to get user data from backend database "
+			"for service [%s]. Missing server information.",
+			service->name)));
+		mysql_close(con);
+		return -1;
+	}
+
+	/** Count users. Start with users and db grants for users */
+	if (mysql_query(con, MYSQL_USERS_WITH_DB_COUNT)) {
+		if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR) {
+                        /* This is an error we cannot handle, return */
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Loading users for service [%s] encountered "
+				"error: [%s].",
+				service->name,
+				mysql_error(con))));
+			mysql_close(con);
+			return -1;
+		} else {
+			/*
+			 * We have got ER_TABLEACCESS_DENIED_ERROR
+			 * try counting users from mysql.user without DB names.
+			 */
+			if (mysql_query(con, MYSQL_USERS_COUNT)) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Loading users for service [%s] encountered "
+					"error: [%s].",
+					service->name,
+					mysql_error(con))));
+				mysql_close(con);
+				return -1;
+			}
+		}
+	}
+
+	result = mysql_store_result(con);
+
+	if (result == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading users for service [%s] encountered "
+                        "error: [%s].",
+                        service->name,
+                        mysql_error(con))));
+		mysql_close(con);
+		return -1;
+	}
+
+	row = mysql_fetch_row(result);
+
+	nusers = atoi(row[0]);
+
+	mysql_free_result(result);
+
+	if (!nusers) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Counting users for service %s returned 0",
+                        service->name)));
+		mysql_close(con);
+		return -1;
+	}
+
+	if(service->enable_root) {
+		/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
+		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY;
+	} else {
+		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
+	}
+
+	/* send first the query that fetches users and db grants */
+	if (mysql_query(con, users_query)) {
+		/*
+		 * An error occurred executing the query
+		 *
+		 * Check mysql_errno() against ER_TABLEACCESS_DENIED_ERROR)
+		 */
+
+		if (1142 != mysql_errno(con)) {
+			/* This is an error we cannot handle, return */
+
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Loading users with dbnames for service [%s] encountered "
+				"error: [%s], MySQL errno %i",
+				service->name,
+				mysql_error(con),
+				mysql_errno(con))));
+
+			mysql_close(con);
+
+			return -1;
+		}  else {
+			/*
+			 * We have got ER_TABLEACCESS_DENIED_ERROR
+			 * try loading users from mysql.user without DB names.
+			 */
+
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"%s: Unable to load database grant information, MaxScale "
+				"authentication will proceed without including database "
+				"permissions. To correct this GRANT select permission "
+				"on msql.db to the user %s.",
+					service->name, service_user)));
+			
+			/* check for root user select */
+			if(service->enable_root) {
+				users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
+			} else {
+				users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT " ORDER BY HOST DESC";
+			}
+
+			if (mysql_query(con, users_query)) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"Error : Loading users for service [%s] encountered "
+					"error: [%s], code %i",
+					service->name,
+					mysql_error(con),
+					mysql_errno(con))));
+
+				mysql_close(con);
+
+				return -1;
+			}
+
+			/* users successfully loaded but without db grants */
+
+			LOGIF(LM, (skygw_log_write_flush(
+				LOGFILE_MESSAGE,
+				"Loading users from [mysql.user] without access to [mysql.db] for "
+				"service [%s]. MaxScale Authentication with DBname on connect "
+				"will not consider database grants.",
+				 service->name)));
+		}
+	} else {
+		/*
+		 * users successfully loaded with db grants.
+		 */
+
+		db_grants = 1;
+	}
+
+	result = mysql_store_result(con);
+  
+	if (result == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading users for service %s encountered "
+                        "error: %s.",
+                        service->name,
+                        mysql_error(con))));
+
+		mysql_free_result(result);
+		mysql_close(con);
+
+		return -1;
+	}
+
+	users_data = (char *)calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
+
+	if (users_data == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Memory allocation for user data failed due to "
+			"%d, %s.",
+			errno,
+			strerror(errno))));
+		mysql_free_result(result);
+		mysql_close(con);
+
+		return -1;
+	}
+
+	if (db_grants) {
+		/* load all mysql database names */
+		dbnames = getDatabases(service, con);
+
+		LOGIF(LD, (skygw_log_write(
+			LOGFILE_DEBUG,
+			"Loaded %d MySQL Database Names for service [%s]",
+			dbnames,
+			service->name)));
+	} else {
+		service->resources = NULL;
+	}
+
+	while ((row = mysql_fetch_row(result))) {
+
+		/**
+                 * Up to six fields could be returned.
+		 * user,host,passwd,concat(),anydb,db
+                 * passwd+1 (escaping the first byte that is '*')
+                 */
+		
+		int rc = 0;
+		char *password = NULL;
+
+		if (row[2] != NULL) {
+			/* detect mysql_old_password (pre 4.1 protocol) */
+			if (strlen(row[2]) == 16) {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+					"%s: The user %s@%s has on old password in the "
+					"backend database. MaxScale does not support these "
+					"old passwords. This user will not be able to connect "
+					"via MaxScale. Update the users password to correct "
+					"this.",
+					service->name,
+					row[0],
+					row[1])));
+				continue;
+			}
+
+			if (strlen(row[2]) > 1)
+				password = row[2] +1;
+			else
+				password = row[2];
+		}
+
+		/* 
+		 * add user@host and DB global priv and specificsa grant (if possible)
+		 */
+
+		if (db_grants) {
+			/* we have dbgrants, store them */
+			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], row[5]);
+		} else {
+			/* we don't have dbgrants, simply set ANY DB for the user */	
+			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
+		}
+
+		if (rc == 1) {
+			if (db_grants) {
+				char dbgrant[MYSQL_DATABASE_MAXLEN + 1]="";
+				if (row[4] != NULL) {
+					if (strcmp(row[4], "Y"))
+						strcpy(dbgrant, "ANY");
+					else {
+						if (row[5])
+							strncpy(dbgrant, row[5], MYSQL_DATABASE_MAXLEN);
+					}
+				}
+
+				if (!strlen(dbgrant))
+					strcpy(dbgrant, "no db");
+
+				/* Log the user being added with its db grants */
+				LOGIF(LD, (skygw_log_write_flush(
+						LOGFILE_DEBUG,
+						"%s: User %s@%s for database %s added to "
+						"service user table.",
+						service->name,
+						row[0],
+						row[1],
+						dbgrant)));
+			} else {
+				/* Log the user being added (without db grants) */
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+						"%s: User %s@%s added to service user table.",
+						service->name,
+						row[0],
+						row[1])));
+			}
+
+			/* Append data in the memory area for SHA1 digest */	
+			strncat(users_data, row[3], users_data_row_len);
+
+			total_users++;
+		} else {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Warning: Failed to add user %s@%s for service [%s]. "
+				"This user will be unavailable via MaxScale.",
+				row[0],
+				row[1],
+				service->name)));
+		}
+	}
+
+	/* compute SHA1 digest for users' data */
+        SHA1((const unsigned char *) users_data, strlen(users_data), hash);
+
+	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
+
+	free(users_data);
+	mysql_free_result(result);
+	mysql_close(con);
+
+	return total_users;
+}
+
 
 /**
  * Allocate a new MySQL users table for mysql specific users@host as key
