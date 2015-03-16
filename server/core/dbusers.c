@@ -496,20 +496,7 @@ getAllUsers(SERVICE *service, USERS *users)
         {
             goto cleanup;
         }
-	/* Select a server with Master bit, if available */
-        if(service->users_from_all == false)
-        {
-            while (server != NULL && !(server->server->status & SERVER_MASTER)) {
-                server = server->next;
-            }
-        }
 
-        if(server == NULL)
-        {
-            /* If no master is found take the first available server */
-            server = service->dbref;            
-        }
-        
         while(server != NULL)
         {
             
@@ -796,18 +783,27 @@ getAllUsers(SERVICE *service, USERS *users)
                  */
                 
 		if (db_grants) {
+		    bool havedb = false;
                     /* we have dbgrants, store them */
 		    if(row[5]){
-			strncpy(dbnm,row[5],MYSQL_DATABASE_MAXLEN);
+			unsigned long *rowlen = mysql_fetch_lengths(result);
+			memcpy(dbnm,row[5],rowlen[5]);
+			memset(dbnm + rowlen[5],0,1);
+			havedb = true;
 			if(service->strip_db_esc) {
 			    strip_escape_chars(dbnm);
+			    LOGIF(LD, (skygw_log_write(
+				    LOGFILE_DEBUG,
+						     "[%s]: %s -> %s",
+						     service->name,
+						     row[5],
+						     dbnm)));
 			}
 		    }
-		    else {
-			*dbnm = 0;
-		    }
-                    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], dbnm);
-		    skygw_log_write(LOGFILE_DEBUG,"%s: Adding user:%s host:%s anydb:%s db:%s.",service->name,row[0],row[1],row[4],dbnm);
+                    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4],havedb ? dbnm : NULL);
+		    skygw_log_write(LOGFILE_DEBUG,"%s: Adding user:%s host:%s anydb:%s db:%s.",
+			     service->name,row[0],row[1],row[4],
+			     havedb ? dbnm : NULL);
 		} else {
                     /* we don't have dbgrants, simply set ANY DB for the user */	
                     rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);

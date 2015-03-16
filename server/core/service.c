@@ -131,6 +131,8 @@ SERVICE 	*service;
 	}
 	service->name = strdup(servname);
 	service->routerModule = strdup(router);
+	service->users_from_all = false;
+	
 	if (service->name == NULL || service->routerModule == NULL)
 	{
 		if (service->name)
