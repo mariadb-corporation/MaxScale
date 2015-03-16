@@ -179,7 +179,7 @@ int TestConnections::copy_all_logs()
 
     if (!no_maxscale_stop) {
         sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale stop\"", maxscale_sshkey, maxscale_IP);
-        system(str);
+        //system(str);
     }
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
     printf("Executing copy_logs.sh\n"); fflush(stdout);
