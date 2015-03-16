@@ -146,7 +146,6 @@ HASHTABLE	*oldresources;
 		return 0;
 
 	oldresources = service->resources;
-        service->resources = NULL;
 
 	i = getUsers(service, newusers);
 
@@ -184,7 +183,6 @@ HASHTABLE	*oldresources;
 		return -1;
 
 	oldresources = service->resources;
-        service->resources = NULL;
 
 	/* load db users ad db grants */
 	i = getUsers(service, newusers);
@@ -327,6 +325,112 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 }
 
 /**
+ * Add the database specific grants from mysql.db table into the service resources hashtable
+ * environment.
+ *
+ * @param service	The current service
+ * @param users		The users table into which to load the users
+ * @return      -1 on any error or the number of users inserted (0 means no users at all)
+ */
+static int
+addDatabases(SERVICE *service, MYSQL *con)
+{
+	MYSQL_ROW		row;
+	MYSQL_RES		*result = NULL;
+	char			*service_user = NULL;
+	char			*service_passwd = NULL;
+	int 			ndbs = 0;
+
+	char *get_showdbs_priv_query = LOAD_MYSQL_DATABASE_NAMES;
+
+	serviceGetUser(service, &service_user, &service_passwd);
+
+	if (service_user == NULL || service_passwd == NULL)
+		return -1;
+
+	if (mysql_query(con, get_showdbs_priv_query)) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading database names for service %s encountered "
+                        "error: %s.",
+                        service->name,
+                        mysql_error(con))));
+		return -1;
+	}
+
+	result = mysql_store_result(con);
+
+	if (result == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading database names for service %s encountered "
+                        "error: %s.",
+                        service->name,
+                        mysql_error(con))));
+		return -1;
+	}
+
+	/* Result has only one row */
+	row = mysql_fetch_row(result);
+
+	if (row) {
+		ndbs = atoi(row[0]);
+	} else {
+		ndbs = 0;
+
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+				"%s: Unable to load database grant information, MaxScale "
+				"authentication will proceed without including database "
+				"permissions. To correct this GRANT select permission "
+				"on mysql.db to the user %s.",
+					service->name, service_user)));
+	}
+
+	/* free resut set */
+	mysql_free_result(result);
+
+	if (!ndbs) {
+		/* return if no db names are available */
+		return 0;
+	}
+
+	if (mysql_query(con, "SHOW DATABASES")) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading database names for service %s encountered "
+                        "error: %s.",
+                        service->name,
+                        mysql_error(con))));
+
+		return -1;
+	}
+
+	result = mysql_store_result(con);
+
+	if (result == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Loading database names for service %s encountered "
+                        "error: %s.",
+                        service->name,
+                        mysql_error(con))));
+
+		return -1;
+	}
+
+	/* insert key and value "" */
+	while ((row = mysql_fetch_row(result))) {
+	    skygw_log_write(LOGFILE_DEBUG,"%s: Adding database %s to the resouce hash.",service->name,row[0]);
+	    resource_add(service->resources, row[0], "");
+	}
+
+	mysql_free_result(result);
+
+	return ndbs;
+}
+
+/**
  * Load the database specific grants from mysql.db table into the service resources hashtable
  * environment.
  *
@@ -422,7 +526,6 @@ getDatabases(SERVICE *service, MYSQL *con)
 	}
 
 	/* Now populate service->resources hashatable with db names */
-        if(service->resources == NULL)
             service->resources = resource_alloc();
 
 	/* insert key and value "" */
@@ -496,6 +599,8 @@ getAllUsers(SERVICE *service, USERS *users)
         {
             goto cleanup;
         }
+
+	service->resources = resource_alloc();
 
         while(server != NULL)
         {
@@ -734,7 +839,7 @@ getAllUsers(SERVICE *service, USERS *users)
             
             if (db_grants) {
 		/* load all mysql database names */
-		dbnames = getDatabases(service, con);
+		dbnames = addDatabases(service, con);
                 
 		LOGIF(LD, (skygw_log_write(
 			LOGFILE_DEBUG,
