@@ -1885,6 +1885,11 @@ char	serverid[40];
 uint8_t *ptr;
 int	len, id_len, seqno = 2;
 
+	len = 5 + id_len + strlen(state) + 1;
+
+	if ((pkt = gwbuf_alloc(len)) == NULL)
+		return 0;
+
 	blr_slave_send_fieldcount(router, slave, 2);
 	blr_slave_send_columndef(router, slave, "server_id", 0x03, 40, seqno++);
 	blr_slave_send_columndef(router, slave, "state", 0xf, 40, seqno++);
@@ -1896,11 +1901,6 @@ int	len, id_len, seqno = 2;
 		strcpy(state, "disconnected");
 	else
 		strcpy(state, "not found");
-
-	len = 5 + id_len + strlen(state) + 1;
-
-	if ((pkt = gwbuf_alloc(len)) == NULL)
-		return 0;
 
 	ptr = GWBUF_DATA(pkt);
 	encode_value(ptr, id_len + 2 + strlen(state), 24);	// Add length of data packet
@@ -1949,7 +1949,6 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int se
 		{
 			/* server_id found */
 			server_found = 1;
-
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: Slave %s, server id %d, disconnected by %s@%s",
 				router->service->name,
 				sptr->dcb->remote,
@@ -1981,8 +1980,10 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int se
 
 	if (n == 0) {
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Error: gwbuf memory allocation in "
-			"DISCONNECT SERVER for [%s], server_id [%d]",
-			sptr->dcb->remote, sptr->serverid)));
+			"DISCONNECT SERVER server_id [%d]",
+			sptr->serverid)));
+
+		blr_slave_send_error(router, slave, "Memory allocation error for DISCONNECT SERVER");
 	}
 
 	return 1;
@@ -2027,12 +2028,15 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 			sprintf(state, "disconnected");
 
 			len = 5 + strlen(server_id) + strlen(state) + 1;
+
 			if ((pkt = gwbuf_alloc(len)) == NULL) {
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Error: gwbuf memory allocation in "
 					"DISCONNECT ALL for [%s], server_id [%d]",
 					sptr->dcb->remote, sptr->serverid)));
 
 				spinlock_release(&router->lock);
+
+				blr_slave_send_error(router, slave, "Memory allocation error for DISCONNECT ALL");
 
 				return 1;
 			}
