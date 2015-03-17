@@ -243,6 +243,7 @@ int Mariadb_nodes::start_binlog(char * Maxscale_IP, int binlog_port)
     printf("Stopping all backend nodes\n");fflush(stdout);
     global_result += stop_nodes();
 
+
     printf("Starting back Master\n");  fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin  --binlog-checksum=CRC32'", sshkey[0], IP[0]);
     printf("%s\n", sys1);  fflush(stdout);

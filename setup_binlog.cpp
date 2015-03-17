@@ -17,6 +17,10 @@ int main(int argc, char *argv[])
     Test->read_env();
     Test->print_env();
 
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'rm -rf /usr/local/skysql/maxscale/Binlog_Service/*'", Test->maxscale_IP, Test->maxscale_sshkey);
+    printf("%s\n", sys1);  fflush(stdout);
+    global_result +=  system(sys1); fflush(stdout);
+
     Test->repl->start_binlog(Test->maxscale_IP, 5306);
 
     global_result += executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show servers");
