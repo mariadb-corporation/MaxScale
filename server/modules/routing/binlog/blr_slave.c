@@ -80,6 +80,7 @@ static int blr_slave_send_eof(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int 
 static int blr_slave_send_disconnected_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int server_id, int found);
 static int blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int server_id);
+static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -363,6 +364,11 @@ int	query_len;
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.heartbeat);
 		}
+		 else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
+                {
+                        free(query_text);
+                        return blr_slave_send_ok(router, slave);
+                }
 		else if (strcasecmp(word, "@master_binlog_checksum") == 0)
 		{
 			word = strtok_r(NULL, sep, &brkb);
@@ -2056,4 +2062,32 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 	blr_slave_send_eof(router, slave, seqno);
 
 	return 1;
+}
+ /**
+ * Send a MySQL OK packet to the DCB
+ *
+ * @param dcb   The DCB to send the OK packet to
+ * @return result of a write call, non-zero if write was successful
+ */
+static int
+blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+
+        if ((pkt = gwbuf_alloc(11)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        *ptr++ = 7;     // Payload length
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 1;     // Seqno
+        *ptr++ = 0;     // ok
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 2;
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 0;
+        return slave->dcb->func.write(slave->dcb, pkt);
 }
