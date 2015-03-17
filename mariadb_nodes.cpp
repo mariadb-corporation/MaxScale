@@ -154,6 +154,18 @@ int Mariadb_nodes::stop_nodes()
     return(global_result);
 }
 
+int Mariadb_nodes::stop_slaves()
+{
+    int i;
+    int global_result = 0;
+    connect();
+    for (i = 0; i < N; i++) {
+        printf("Stopping slave %d\n", i); fflush(stdout);
+        global_result += execute_query(nodes[i], (char *) "stop slave;");
+    }
+    return(global_result);
+}
+
 int Mariadb_nodes::start_replication()
 {
     char sys1[4096];
@@ -276,6 +288,8 @@ int Mariadb_nodes::start_binlog(char * Maxscale_IP, int binlog_port)
     printf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");fflush(stdout);
     for (i = 2; i < N; i++) {
         global_result += execute_query(nodes[i], (char *) "stop slave;");
+
+         //sprintf(str,  change master to MASTER_LOG_FILE='%s'
         sprintf(str, setup_slave, Maxscale_IP, log_file, log_pos, binlog_port);
 
         global_result += execute_query(nodes[i], str);

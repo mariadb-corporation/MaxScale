@@ -244,6 +244,11 @@ public:
     void close_readconn_slave(){mysql_close(conn_slave);}
 
     /**
+     * @brief restart_maxscale Issues 'service maxscale command'
+     */
+    int restart_maxscale();
+
+    /**
      * @brief Copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
      */
     int copy_all_logs();

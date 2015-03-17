@@ -173,6 +173,15 @@ int TestConnections::close_maxscale_connections()
     mysql_close(conn_rwsplit);
 }
 
+int TestConnections::restart_maxscale()
+{
+    char sys[1024];
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale restart\"", maxscale_sshkey, maxscale_IP);
+    int res = system(sys);
+    sleep(10);
+    return(res);
+}
+
 int TestConnections::copy_all_logs()
 {
     char str[4096];

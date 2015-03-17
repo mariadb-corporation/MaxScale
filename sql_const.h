@@ -5,12 +5,12 @@ const char * create_repl_user =
         "grant replication slave on *.* to repl@'%' identified by 'repl';\
         FLUSH PRIVILEGES";
 const char * setup_slave =
-        "change master to MASTER_HOST='%s';\
-        change master to MASTER_USER='repl';\
-        change master to MASTER_PASSWORD='repl';\
-        change master to MASTER_LOG_FILE='%s';\
-        change master to MASTER_LOG_POS=%s;\
-        change master to MASTER_PORT=%d;\
+        "change master to MASTER_HOST='%s',\
+         MASTER_USER='repl',\
+         MASTER_PASSWORD='repl',\
+         MASTER_LOG_FILE='%s',\
+         MASTER_LOG_POS=%s,\
+         MASTER_PORT=%d;\
         start slave;";
 
 #endif // SQL_CONST_H

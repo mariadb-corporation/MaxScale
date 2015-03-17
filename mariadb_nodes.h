@@ -112,6 +112,12 @@ public:
     int stop_nodes();
 
     /**
+     * @brief stop_slaves isues 'stop slave;' to all nodes
+     * @return  0 in case of success
+     */
+    int stop_slaves();
+
+    /**
      * @brief kill_all_vm kills all VMs using kill_vm_command
      * @return  0 in case of success
      */
