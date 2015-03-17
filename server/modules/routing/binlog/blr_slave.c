@@ -410,8 +410,6 @@ int	query_len;
 		else if (strcasecmp(word, "ALL") == 0)
 		{
 			free(query_text);
-			spinlock_release(&router->lock);
-
 			return blr_slave_disconnect_all(router, slave);
 		}
 		else if (strcasecmp(word, "SERVER") == 0)
