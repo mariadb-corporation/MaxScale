@@ -1948,8 +1948,12 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int se
 			/* server_id found */
 			server_found = 1;
 
-			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "DISCONNECT SERVER: closing [%s], server id [%d]",
-				sptr->dcb->remote, server_id)));
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: Slave %s, server id %d, disconnected by %s@%s",
+				router->service->name,
+				sptr->dcb->remote,
+				server_id,
+				slave->dcb->user,
+				slave->dcb->remote)));
 
 			/* send server_id with disconnect state to client */
 			n = blr_slave_send_disconnected_server(router, slave, server_id, 1);
