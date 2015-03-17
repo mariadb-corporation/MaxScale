@@ -1981,7 +1981,7 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int se
 
 	if (n == 0) {
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Error: gwbuf memory allocation in "
-			"DISCONNECT ALL for [%s], server_id [%d]",
+			"DISCONNECT SERVER for [%s], server_id [%d]",
 			sptr->dcb->remote, sptr->serverid)));
 	}
 
