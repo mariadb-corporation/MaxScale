@@ -1885,6 +1885,13 @@ char	serverid[40];
 uint8_t *ptr;
 int	len, id_len, seqno = 2;
 
+	sprintf(serverid, "%d", server_id);
+	if (found)
+		strcpy(state, "disconnected");
+	else
+		strcpy(state, "not found");
+
+	id_len = strlen(serverid);
 	len = 5 + id_len + strlen(state) + 1;
 
 	if ((pkt = gwbuf_alloc(len)) == NULL)
@@ -1894,13 +1901,6 @@ int	len, id_len, seqno = 2;
 	blr_slave_send_columndef(router, slave, "server_id", 0x03, 40, seqno++);
 	blr_slave_send_columndef(router, slave, "state", 0xf, 40, seqno++);
 	blr_slave_send_eof(router, slave, seqno++);
-
-	sprintf(serverid, "%d", server_id);
-	id_len = strlen(serverid);
-	if (found)
-		strcpy(state, "disconnected");
-	else
-		strcpy(state, "not found");
 
 	ptr = GWBUF_DATA(pkt);
 	encode_value(ptr, id_len + 2 + strlen(state), 24);	// Add length of data packet
