@@ -1,7 +1,6 @@
 #include "testconnections.h"
 #include <getopt.h>
 
-
 TestConnections::TestConnections(int argc, char *argv[])
 {
     galera = new Mariadb_nodes((char *)"galera");
@@ -12,6 +11,7 @@ TestConnections::TestConnections(int argc, char *argv[])
     rwsplit_port = 4006;
     readconn_master_port = 4008;
     readconn_slave_port = 4009;
+    binlog_port = 5306;
 
     read_env();
 
@@ -182,6 +182,23 @@ int TestConnections::restart_maxscale()
     return(res);
 }
 
+int TestConnections::start_maxscale()
+{
+    char sys[1024];
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale start\"", maxscale_sshkey, maxscale_IP);
+    int res = system(sys);
+    sleep(10);
+    return(res);
+}
+
+int TestConnections::stop_maxscale()
+{
+    char sys[1024];
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale stop\"", maxscale_sshkey, maxscale_IP);
+    int res = system(sys);
+    return(res);
+}
+
 int TestConnections::copy_all_logs()
 {
     char str[4096];
@@ -199,6 +216,80 @@ int TestConnections::copy_all_logs()
         printf("copy_logs.sh OK!\n"); fflush(stdout);
         return(0);
     }
+}
+
+int TestConnections::start_binlog()
+{
+    char sys1[4096];
+    char str[1024];
+    char log_file[256];
+    char log_pos[256];
+    int i;
+    int global_result = 0;
+
+    printf("Stopping maxscale\n");fflush(stdout);
+    global_result += stop_maxscale();
+
+    printf("Stopping all backend nodes\n");fflush(stdout);
+    global_result += repl->stop_nodes();
+
+    printf("Removing all binlog data\n");
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'rm -rf %s/Binlog_Service/*'", maxscale_sshkey, maxscale_IP, maxdir);
+    printf("%s\n", sys1);  fflush(stdout);
+    global_result +=  system(sys1);
+
+    printf("Starting back Master\n");  fflush(stdout);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin  --binlog-checksum=CRC32'", repl->sshkey[0], repl->IP[0]);
+    printf("%s\n", sys1);  fflush(stdout);
+    global_result += system(sys1); fflush(stdout);
+
+    for (i = 1; i < repl->N; i++) {
+        printf("Starting node %d\n", i); fflush(stdout);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin  --binlog-checksum=CRC32'", repl->sshkey[i], repl->IP[i]);
+        printf("%s\n", sys1);  fflush(stdout);
+        global_result += system(sys1); fflush(stdout);
+    }
+    sleep(5);
+
+    printf("Connecting to all backend nodes\n");fflush(stdout);
+    global_result += repl->connect();
+    //printf("Creating repl user\n");fflush(stdout);
+    //global_result += execute_query(repl->nodes[0], create_repl_user);
+    printf("'reset master' query to node 0\n");fflush(stdout);
+    execute_query(repl->nodes[0], (char *) "reset master;");
+
+    printf("show master status\n");fflush(stdout);
+    find_status_field(repl->nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
+    find_status_field(repl->nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
+    printf("Real master file: %s\n", log_file); fflush(stdout);
+    printf("Real master pos : %s\n", log_pos); fflush(stdout);
+
+    printf("Stopping first slave (node 1)\n");fflush(stdout);
+    global_result += execute_query(repl->nodes[1], (char *) "stop slave;");
+    printf("Configure first backend slave node to be slave of real master\n");fflush(stdout);
+    repl->set_slave(1, repl->IP[0],  repl->port[0], log_file, log_pos);
+
+    printf("Starting back Maxscale\n");  fflush(stdout);
+    global_result += start_maxscale();
+
+    printf("Connecting to MaxScale binlog router\n");fflush(stdout);
+    MYSQL * binlog = open_conn(binlog_port, maxscale_IP, repl->user_name, repl->password);
+
+    printf("show master status\n");fflush(stdout);
+    find_status_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
+    find_status_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
+
+    printf("Maxscale binlog master file: %s\n", log_file); fflush(stdout);
+    printf("Maxscale binlog master pos : %s\n", log_pos); fflush(stdout);
+
+    printf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");fflush(stdout);
+    for (i = 2; i < repl->N; i++) {
+        global_result += execute_query(repl->nodes[i], (char *) "stop slave;");
+        repl->set_slave(i,  maxscale_IP, binlog_port, log_file, log_pos);
+        global_result += execute_query(repl->nodes[i], str);
+    }
+    repl->close_connections();
+    return(global_result);
 }
 
 

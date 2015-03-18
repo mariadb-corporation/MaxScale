@@ -63,6 +63,11 @@ public:
     int readconn_slave_port;
 
     /**
+     * @brief binlog_port binlog router service port
+     */
+    int binlog_port;
+
+    /**
      * @brief conn_rwsplit  MYSQL connection struct to RWSplit service
      */
     MYSQL *conn_rwsplit;
@@ -244,9 +249,27 @@ public:
     void close_readconn_slave(){mysql_close(conn_slave);}
 
     /**
-     * @brief restart_maxscale Issues 'service maxscale command'
+     * @brief restart_maxscale Issues 'service maxscale restart' command
      */
     int restart_maxscale();
+
+    /**
+     * @brief start_maxscale Issues 'service maxscale start' command
+     */
+    int start_maxscale();
+
+    /**
+     * @brief stop_maxscale Issues 'service maxscale stop' command
+     */
+    int stop_maxscale();
+
+    /**
+     * @brief StartBinlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
+     * @param MaxScale_IP IP of MaxScale machine
+     * @param Binlog_Port port of binlog router listener
+     * @return  0 in case of success
+     */
+    int start_binlog();
 
     /**
      * @brief Copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace

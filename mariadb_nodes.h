@@ -154,14 +154,6 @@ public:
     int start_galera();
 
     /**
-     * @brief StartBinlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
-     * @param MaxScale_IP IP of MaxScale machine
-     * @param Binlog_Port port of binlog router listener
-     * @return  0 in case of success
-     */
-    int start_binlog(char * Maxscale_IP, int Binlog_Port);
-
-    /**
      * @brif BlockNode setup firewall on a backend node to block MariaDB port
      * @param node Index of node to block
      * @return 0 in case of success
@@ -193,6 +185,18 @@ public:
      * @return 0 if everything is ok
      */
     int check_galera();
+
+    /**
+     * @brief executes 'CHANGE MASTER TO ..' and 'START SLAVE'
+     * @param node Index of slave nodes
+     * @param master_host IP address of master node
+     * @param master_port port of master node
+     * @param log_file name of log file
+     * @param log_pos initial position
+     * @return 0 if everything is ok
+     */
+    int set_slave(int node, char master_host[], int master_port, char log_file[], char log_pos[]);
+
 };
 
 #endif // MARIADB_NODES_H
