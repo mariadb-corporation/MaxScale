@@ -21,7 +21,9 @@ Last Updated: 12th March 2015
 
 # MaxScale Requirements
 
-MaxScale must be configured with 'maxscaled' protocol for the administration interface
+MaxScale must be configured with 'maxscaled' protocol for the administration interface:
+
+Example of MaxScale.cnf file:
 
 	[AdminInterface]
 	type=service
@@ -35,7 +37,7 @@ MaxScale must be configured with 'maxscaled' protocol for the administration int
 
 ## Prepare Nagios configuration files.
 
-Assuming plugins are in /usr/lib64/nagios/plugins and Nagios configuration in /etc/nagios:
+Assuming Nagios installed in its on server and the plugins are in /usr/lib64/nagios/plugins and configuration files are in /etc/nagios:
 
 * Copy ./nagios/plugins/check_maxscale_*.pl under /usr/lib64/nagios/plugins
 * Copy ./nagios/plugins/maxscale_commands.cfg and server1.cfg to /etc/nagios/objects/
@@ -49,9 +51,10 @@ and add (just after localhost.cfg or commnads.cfg)
 ### Please note:
 - modify server IP address in server1.cfg, pointing to MaxScale server
 - maxadmin executable must be in the nagios server
-- default AdminInterface port is 6603
+- default MaxScale AdminInterface port is 6603 
 - default maxadmin executable path is /usr/local/skysql/maxscale/bin/maxadmin
 	It can be changed by -m option
+- maxadmin executable could be copied from an existing maxscale setup (default location is /usr/local/skysql/maxscale/bin/maxadmin)
 
 Example related to server1.cfg
 
