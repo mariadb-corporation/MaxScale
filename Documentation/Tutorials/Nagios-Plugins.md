@@ -37,7 +37,7 @@ Example of MaxScale.cnf file:
 
 ## Prepare Nagios configuration files.
 
-Assuming Nagios installed in its on server and the plugins are in /usr/lib64/nagios/plugins and configuration files are in /etc/nagios:
+Assuming Nagios installed on a separated server and the plugins are in /usr/lib64/nagios/plugins and configuration files are in /etc/nagios:
 
 * Copy ./nagios/plugins/check_maxscale_*.pl under /usr/lib64/nagios/plugins
 * Copy ./nagios/plugins/maxscale_commands.cfg and server1.cfg to /etc/nagios/objects/
