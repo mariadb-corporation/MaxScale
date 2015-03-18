@@ -393,5 +393,6 @@ int Mariadb_nodes::set_slave(int node, char master_host[], int master_port, char
 {
     char str[1024];
     sprintf(str, setup_slave, master_host, log_file, log_pos, master_port);
+    printf("Setup slave SQL: %s\n", str);
     return(execute_query(nodes[node], str));
 }
