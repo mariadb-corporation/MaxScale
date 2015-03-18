@@ -289,9 +289,9 @@ int Mariadb_nodes::start_binlog(char * Maxscale_IP, int binlog_port)
     printf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");fflush(stdout);
     for (i = 2; i < N; i++) {
         global_result += execute_query(nodes[i], (char *) "stop slave;");
-
-         //sprintf(str,  change master to MASTER_LOG_FILE='%s'
         sprintf(str, setup_slave, Maxscale_IP, log_file, log_pos, binlog_port);
+        //sprintf(str, "change master to MASTER_HOST='192.168.122.135',         MASTER_USER='repl',         MASTER_PASSWORD='repl',         MASTER_LOG_FILE='mar-bin.000001',    MASTER_LOG_POS=4,  MASTER_PORT=5306;        start slave;");
+        printf("XXX %s\n", str);
 
         global_result += execute_query(nodes[i], str);
     }
