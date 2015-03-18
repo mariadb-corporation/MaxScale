@@ -286,7 +286,6 @@ int TestConnections::start_binlog()
     for (i = 2; i < repl->N; i++) {
         global_result += execute_query(repl->nodes[i], (char *) "stop slave;");
         repl->set_slave(i,  maxscale_IP, binlog_port, log_file, log_pos);
-        global_result += execute_query(repl->nodes[i], str);
     }
     repl->close_connections();
     return(global_result);
