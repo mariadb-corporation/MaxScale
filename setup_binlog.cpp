@@ -19,23 +19,26 @@ int main(int argc, char *argv[])
     Test->read_env();
     Test->print_env();
 
-    Test->start_binlog();
+    for (int option = 0; option < 3; option++) {
+        Test->binlog_cmd_option = option;
+        Test->start_binlog();
 
-    global_result += executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show servers");
+        //global_result += executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show servers");
 
-    Test->repl->connect();
+        Test->repl->connect();
 
-    create_t1(Test->repl->nodes[0]);
-    global_result += insert_into_t1(Test->repl->nodes[0], 4);
-    printf("Sleeping to let replication happen\n"); fflush(stdout);
-    sleep(30);
+        create_t1(Test->repl->nodes[0]);
+        global_result += insert_into_t1(Test->repl->nodes[0], 4);
+        printf("Sleeping to let replication happen\n"); fflush(stdout);
+        sleep(30);
 
-    for (int i = 0; i < Test->repl->N; i++) {
-        printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
-        global_result += select_from_t1(Test->repl->nodes[i], 4);
+        for (int i = 0; i < Test->repl->N; i++) {
+            printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
+            global_result += select_from_t1(Test->repl->nodes[i], 4);
+        }
+
+        Test->repl->close_connections();
     }
-
-    Test->repl->close_connections();
 
     Test->copy_all_logs(); return(global_result);
 }

@@ -221,11 +221,24 @@ int TestConnections::copy_all_logs()
 int TestConnections::start_binlog()
 {
     char sys1[4096];
-    char str[1024];
     char log_file[256];
     char log_pos[256];
+    char cmd_opt[256];
     int i;
     int global_result = 0;
+
+    switch (binlog_cmd_option) {
+    case 1:
+        sprintf(cmd_opt, "--binlog-checksum=CRC32");
+        break;
+    case 2:
+        sprintf(cmd_opt, "--binlog-checksum=NONE");
+        break;
+    default:
+        sprintf(cmd_opt, " ");
+    }
+
+    printf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
 
     printf("Stopping maxscale\n");fflush(stdout);
     global_result += stop_maxscale();
@@ -239,13 +252,13 @@ int TestConnections::start_binlog()
     global_result +=  system(sys1);
 
     printf("Starting back Master\n");  fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin  --binlog-checksum=CRC32'", repl->sshkey[0], repl->IP[0]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin  %s'", repl->sshkey[0], repl->IP[0], cmd_opt);
     printf("%s\n", sys1);  fflush(stdout);
     global_result += system(sys1); fflush(stdout);
 
     for (i = 1; i < repl->N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin  --binlog-checksum=CRC32'", repl->sshkey[i], repl->IP[i]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin  %s'", repl->sshkey[i], repl->IP[i], cmd_opt);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
@@ -253,8 +266,11 @@ int TestConnections::start_binlog()
 
     printf("Connecting to all backend nodes\n");fflush(stdout);
     global_result += repl->connect();
-    //printf("Creating repl user\n");fflush(stdout);
-    //global_result += execute_query(repl->nodes[0], create_repl_user);
+    printf("Dropping t1 table on all backend nodes\n");fflush(stdout);
+    for (i = 0; i < repl->N; i++)
+    {
+        execute_query(repl->nodes[i], (char *) "DROP TABLE IF EXISTS t1;");
+    }
     printf("'reset master' query to node 0\n");fflush(stdout);
     execute_query(repl->nodes[0], (char *) "reset master;");
 

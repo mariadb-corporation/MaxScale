@@ -133,34 +133,39 @@ public:
     char sysbench_dir[4096];
 
     /**
-     * @brif maxdir path to MaxScale
+     * @brief maxdir path to MaxScale
      */
     char maxdir[4096];
 
     /**
-     * @brif test_dir path to test application
+     * @brief test_dir path to test application
      */
     char test_dir[4096];
 
     /**
-     * @brif no_maxscale_stop if true copy_all_logs() does not stop Maxscale
+     * @brief no_maxscale_stop if true copy_all_logs() does not stop Maxscale
      */
     bool no_maxscale_stop;
 
     /**
-     * @brif no_maxscale_start if true Maxscale won't be started and Maxscale.cnf won't be uploaded
+     * @brief no_maxscale_start if true Maxscale won't be started and Maxscale.cnf won't be uploaded
      */
     bool no_maxscale_start;
 
     /**
-     * @brif no_nodes_check if true nodes are not checked before test and are not restarted
+     * @brief no_nodes_check if true nodes are not checked before test and are not restarted
      */
     bool no_nodes_check;
 
     /**
-     * @brif verbose if true more printing activated
+     * @brief verbose if true more printing activated
      */
     bool verbose;
+
+    /**
+     * @brief binlog_cmd_option index of mariadb start option
+     */
+    int binlog_cmd_option;
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
