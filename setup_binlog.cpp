@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     Test->print_env();
 
     char sys1[1024];
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'rm -rf /usr/local/skysql/maxscale/Binlog_Service/*'", Test->maxscale_IP, Test->maxscale_sshkey);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'rm -rf /usr/local/skysql/maxscale/Binlog_Service/*'", Test->maxscale_sshkey, Test->maxscale_IP);
     printf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1); fflush(stdout);
 
