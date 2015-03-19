@@ -311,6 +311,11 @@ char		*weightby;
 				inst->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
 				inst->bitvalue |= SERVER_SLAVE;
 			}
+			else if (!strcasecmp(options[i], "running"))
+			{
+				inst->bitmask |= (SERVER_RUNNING);
+				inst->bitvalue |= SERVER_RUNNING;
+			}
 			else if (!strcasecmp(options[i], "synced"))
 			{
 				inst->bitmask |= (SERVER_JOINED);
