@@ -216,6 +216,8 @@ There are a number bugs and known limitations within this version of MaxScale, t
 
 * When users have different passwords based on the host from which they connect MaxScale is unable to determine which password it should use to connect to the backend database. This results in failed connections and unusable usernames in MaxScale.
 
+* Service init script is missing after upgrade from 1.0 in RPM-based system. Can be fixed by reinstalling the package ('yum reinstall maxscale' or 'rpm -i --force /maxscale-1.1.rpm')
+
 # Packaging
 
 Both RPM and Debian packages are available for MaxScale in addition to the tar based releases previously distributed we now provide
@@ -242,3 +244,6 @@ Both RPM and Debian packages are available for MaxScale in addition to the tar b
 
 * OpenSuSE 13
 
+* SuSE Linux Enterprise 11
+
+* SuSE Linux Enterprise 12
