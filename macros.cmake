@@ -1,6 +1,6 @@
 macro(set_maxscale_version)
 
-  #MaxScale version number
+  #MaxScale-test version number
   set(MAXSCALE_VERSION_MAJOR "1")
   set(MAXSCALE_VERSION_MINOR "0")
   set(MAXSCALE_VERSION_PATCH "2")
