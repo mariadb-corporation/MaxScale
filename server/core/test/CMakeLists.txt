@@ -58,3 +58,4 @@ set_tests_properties(testMySQLUsers
   TestAdminUsers
   TestMemlog 
   TestFeedback PROPERTIES ENVIRONMENT MAXSCALE_HOME=${CMAKE_BINARY_DIR}/)
+set_tests_properties(TestFeedback PROPERTIES TIMEOUT 30)
