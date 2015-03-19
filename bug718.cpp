@@ -76,6 +76,9 @@ void *thread1( void *ptr )
     for (int i = 0; i < 10000; i++) {
         insert_into_t1(conn, 4);
         insert_into_t1(g_conn, 4);
+        if ((i / 100) * 100 == i) {
+            printf("Iteration %d\n", i); fflush(stdout);
+        }
     }
     return NULL;
 }

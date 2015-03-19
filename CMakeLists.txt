@@ -372,7 +372,8 @@ add_test(run_ctrl_c run_ctrl_c.sh)
 add_test(sysbench_kill_slave sysbench_kill_slave)
 set_tests_properties(sysbench_kill_slave PROPERTIES TIMEOUT 3600)
 add_test(binlog_incompl binlog_incompl)
-
+add_test(mxs47 mxs47)
+set_tests_properties(mxs47 PROPERTIES TIMEOUT 1000)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)

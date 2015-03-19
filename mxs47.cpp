@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     Test->connect_maxscale();
 
-    for (int i = 1; i < 10000; i++) {
+    for (int i = 1; i < 50000; i++) {
         sprintf(str, "SELECT REPEAT('a',%d)", i);
         execute_query(Test->conn_rwsplit, str);
         execute_query(Test->conn_master, str);
