@@ -638,6 +638,8 @@ GWBUF	*newbuf;
 char	*ptr;
 int	len;
 
+	if(orig == NULL)
+	    return NULL;
 	if (orig->next == NULL)
 		return orig;
 

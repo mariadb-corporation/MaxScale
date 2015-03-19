@@ -1081,6 +1081,16 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
     my_session->tee_partials[branch] = gwbuf_append(my_session->tee_partials[branch], reply);
     my_session->tee_partials[branch] = gwbuf_make_contiguous(my_session->tee_partials[branch]);
     complete = modutil_get_complete_packets(&my_session->tee_partials[branch]);
+
+    if(complete == NULL)
+    {
+	/** Incomplete packet */
+	skygw_log_write(LOGFILE_DEBUG,"tee.c: Incomplete packet, "
+		"waiting for a complete packet before forwarding.");
+	rc = 1;
+	goto retblock;
+    }
+    
     complete = gwbuf_make_contiguous(complete);
 
     if(my_session->tee_partials[branch] && 
