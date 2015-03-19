@@ -1,4 +1,4 @@
 [Firewall]
 type=filter
-module=fwfilter
+module=dbfwfilter
 rules=@CMAKE_CURRENT_SOURCE_DIR@/rules

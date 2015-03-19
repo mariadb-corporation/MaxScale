@@ -26,18 +26,19 @@ add_library(topfilter SHARED topfilter.c)
 target_link_libraries(topfilter log_manager utils)
 install(TARGETS topfilter DESTINATION modules)
 
-add_library(fwfilter SHARED fwfilter.c)
-target_link_libraries(fwfilter log_manager utils query_classifier)
-install(TARGETS fwfilter DESTINATION modules)
+add_library(dbfwfilter SHARED dbfwfilter.c)
+target_link_libraries(dbfwfilter log_manager utils query_classifier)
+install(TARGETS dbfwfilter DESTINATION modules)
 
 add_library(namedserverfilter SHARED namedserverfilter.c)
 target_link_libraries(namedserverfilter log_manager utils)
 install(TARGETS namedserverfilter DESTINATION modules)
 
-add_library(slavelag SHARED slavelag.c)
-target_link_libraries(slavelag log_manager utils query_classifier)
-install(TARGETS slavelag DESTINATION modules)
-
+if(BUILD_SLAVELAG)
+  add_library(slavelag SHARED slavelag.c)
+  target_link_libraries(slavelag log_manager utils query_classifier)
+  install(TARGETS slavelag DESTINATION modules)
+endif()
 
 add_subdirectory(hint)
 

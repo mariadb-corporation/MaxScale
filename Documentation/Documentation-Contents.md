@@ -44,7 +44,7 @@
  - [Regex Filter](filters/Regex-Filter.md)
  - [Tee Filter](filters/Tee-Filter.md)
  - [Top N Filter](filters/Top-N-Filter.md)
- - [Firewall Filter](filters/Firewall-Filter.md)
+ - [Database Firewall Filter](filters/Database-Firewall-Filter.md)
  - [RabbitMQ Filter](filters/RabbitMQ-Filter.md)
 
 ## Utilities

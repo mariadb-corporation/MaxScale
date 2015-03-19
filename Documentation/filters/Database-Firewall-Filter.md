@@ -1,26 +1,26 @@
-#Firewall filter
+#Database Firewall filter
 
 ## Overview
-The firewall filter is used to block queries that match a set of rules. It can be used to prevent harmful queries into the database or to limit the access to the database based on a more defined set of rules compared to the traditional GRANT-based rights management.
+The database firewall filter is used to block queries that match a set of rules. It can be used to prevent harmful queries into the database or to limit the access to the database based on a more defined set of rules compared to the traditional GRANT-based rights management.
 
 ## Configuration
 
-The firewall filter only requires a minimal set of configurations in the MaxScale.cnf file. The actual rules of the firewall filter are located in a separate text file. The following is an example of a firewall filter configuration in the MaxScale.cnf file.
+The database firewall filter only requires a minimal set of configurations in the MaxScale.cnf file. The actual rules of the database firewall filter are located in a separate text file. The following is an example of a database firewall filter configuration in the MaxScale.cnf file.
 
 ```
-[Firewall]
+[Database Firewall]
 type=filter
-module=fwfilter
+module=dbfwfilter
 rules=/home/user/rules.txt
 ```
 
 ### Filter Options
 
-The firewall filter does not support any filter options.
+The database firewall filter does not support any filter options.
 
 ### Filter Parameters
 
-The firewall filter has one mandatory parameter that defines the location of the rule file. This is the `rules` parameter and it expects an absolute path to the rule file.
+The database firewall filter has one mandatory parameter that defines the location of the rule file. This is the `rules` parameter and it expects an absolute path to the rule file.
 
 ## Rule syntax
 
@@ -32,13 +32,13 @@ rule NAME deny [wildcard | columns VALUE ... |
       no_where_clause] [at_times VALUE...] [on_queries [select|update|insert|delete]]`
 ```
 
-Rules always define a blocking action so the basic mode for the firewall filter is to allow all queries that do not match a given set of rules. Rules are identified by their name and have a mandatory part and optional parts.
+Rules always define a blocking action so the basic mode for the database firewall filter is to allow all queries that do not match a given set of rules. Rules are identified by their name and have a mandatory part and optional parts.
 
 The first step of defining a rule is to start with the keyword `rule` which identifies this line of text as a rule. The second token is identified as the name of the rule. After that the mandatory token `deny` is required to mark the start of the actual rule definition.
 
 ### Mandatory rule parameters
 
-The firewall filter's rules expect a single mandatory parameter for a rule. You can define multiple rules to cover situations where you would like to apply multiple mandatory rules to a query.
+The database firewall filter's rules expect a single mandatory parameter for a rule. You can define multiple rules to cover situations where you would like to apply multiple mandatory rules to a query.
 
 #### Wildcard
 
