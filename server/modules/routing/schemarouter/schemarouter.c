@@ -429,20 +429,29 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 	if(sz > 0){
 		has_dbs = true;
 		for(i = 0; i < sz; i++){
+		    char* name;
+			if((name = (char*)hashtable_fetch(ht,dbnms[i]))){
 
-			if((rval = (char*)hashtable_fetch(ht,dbnms[i]))){
-
-                            if(strcmp(dbnms[i],"information_schema") == 0)
+                            if(strcmp(dbnms[i],"information_schema") == 0 && rval == NULL)
                             {
                                 has_dbs = false;
-                                rval = NULL;
                             }
                             else
                             {
-                            skygw_log_write(LOGFILE_TRACE,"schemarouter: Query targets database '%s' on server '%s",dbnms[i],rval);
+				/** Warn about improper usage of the router */
+				if(rval && strcmp(name,rval) != 0)
+				{
+				    skygw_log_write(LOGFILE_ERROR,"Error : Schemarouter: Query targets databases on servers '%s' and '%s'. "
+					    "Cross database queries across servers are not supported."
+					    ,rval,name);
+				}
+				else if (rval == NULL)
+				{
+				    rval = name;
+				    has_dbs = true;
+				    skygw_log_write(LOGFILE_TRACE,"schemarouter: Query targets database '%s' on server '%s'",dbnms[i],rval);
+				}
                             }
-				for(j = i;j < sz;j++) free(dbnms[j]);
-				break;
 			}
 			free(dbnms[i]);
 		}
