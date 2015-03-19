@@ -23,6 +23,9 @@ int main(int argc, char *argv[])
         execute_query(Test->conn_rwsplit, str);
         execute_query(Test->conn_master, str);
         execute_query(Test->conn_slave, str);
+        if ((i/100)*100 == i) {
+            printf("%d iterations done\n", i); fflush(stdout);
+        }
     }
 
     Test->close_maxscale_connections();
