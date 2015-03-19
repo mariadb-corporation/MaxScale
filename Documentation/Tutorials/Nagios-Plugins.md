@@ -26,8 +26,8 @@ Nagios plugins are compiled executables or scripts (Perl scripts, shell scripts,
 Nagios core executes a plugin whenever there is a need to check the status of a service or host. 
 
 While MaxScale resources and status can be monitored via CLI using maxadmin commands, Nagios Plugin provides an automated way for system administration and database administrators to monitor MaxScale. The diagram below provides view of how Nagios and MaxScale interact.
+![Nagios and MaxScale interaction](Nagios_and_MaxScale.png)
 
-[How Nagios and MaxScale interact](Nagios_and_MaxScale.png)
 
 There are three nagios plugin scripts that MaxScale provides.
 check_maxscale_threads.pl: This command provides you the status of current running threads and events in the queue on MaxScale Server.  The Performance data associated with this command current and historic wait time for threads and events
