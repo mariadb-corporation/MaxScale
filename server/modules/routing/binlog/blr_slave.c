@@ -34,6 +34,8 @@
  * Date		Who			Description
  * 14/04/2014	Mark Riddoch		Initial implementation
  * 18/02/2015	Massimiliano Pinto	Addition of DISCONNECT ALL and DISCONNECT SERVER server_id
+ * 18/03/2015	Markus Makela		Better detection of CRC32 | NONE  checksum
+ * 19/03/2015	Massimiliano Pinto	Addition of basic MariaDB 10 compatibility support
  *
  * @endverbatim
  */
