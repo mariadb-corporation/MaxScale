@@ -493,50 +493,6 @@ static int gw_read_backend_event(DCB *dcb) {
                         ss_dassert(read_buffer != NULL || dcb->dcb_readqueue != NULL);
                 }
 
-                /** Packet prefix was read earlier */
-                if (dcb->dcb_readqueue)
-                {
-			if (read_buffer != NULL)
-			{
-				read_buffer = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-			}
-			else
-			{
-				read_buffer = dcb->dcb_readqueue;
-			}
-                        nbytes_read = gwbuf_length(read_buffer);
-                        
-                        if (nbytes_read < 5) /*< read at least command type */
-                        {
-                                rc = 0;
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%p [gw_read_backend_event] Read %d bytes "
-					"from DCB %p, fd %d, session %s. "
-					"Returning  to poll wait.\n",
-					pthread_self(),
-					nbytes_read,
-					dcb,
-					dcb->fd,
-					dcb->session)));
-                                goto return_rc;
-                        }
-                        /** There is at least length and command type. */
-                        else
-                        {
-                                dcb->dcb_readqueue = NULL;                        
-                        }
-                }
-                /** This may be either short prefix of a packet, or the tail of it. */
-                else
-                {
-                        if (nbytes_read < 5) 
-                        {
-                                dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                                rc = 0;
-                                goto return_rc;
-                        }
-                }
                 /** 
                  * If protocol has session command set, concatenate whole 
                  * response into one buffer.
