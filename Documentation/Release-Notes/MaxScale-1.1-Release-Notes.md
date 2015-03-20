@@ -79,41 +79,16 @@ A number of bug fixes have been applied between the 1.0.5 GA and this RC release
     <td>$this->getReadConnection()->query('SET @id = 0;');</td>
   </tr>
   <tr>
-    <td>714</td>
-    <td>Error log flooded when too many connect errors causes the MaxScale host to be blocked</td>
-  </tr>
-  <tr>
-    <td>711</td>
-    <td>Some MySQL Workbench Management actions hang with R/W split router</td>
-  </tr>
-  <tr>
-    <td>710</td>
-    <td>'make package' installs files to /etc/init.d</td>
-  </tr>
-  <tr>
     <td>709</td>
     <td>"COPYRIGHT LICENSE README SETUP" files go to /usr/local/skysql/maxscale/ after 'make package'</td>
-  </tr>
-  <tr>
-  <tr>
-    <td>705</td>
-    <td>Authentication fails when the user connects to a database when the SQL mode includes ANSI_QUOTES</td>
   </tr>
   <tr>
     <td>704</td>
     <td>"make testall" returns success status (exit code 0) even on failures</td>
   </tr>
   <tr>
-    <td>701</td>
-    <td>set server <srv> maint fails when called from command line</td>
-  </tr>
-  <tr>
     <td>698</td>
     <td>Using invalid parameter in many maxadmin commands causes MaxScale to fail</td>
-  </tr>
-  <tr>
-    <td>694</td>
-    <td>RWSplit: SELECT @a:=@a+1 as a, test.b FROM test breaks client session</td>
   </tr>
   <tr>
     <td>693</td>
@@ -124,20 +99,8 @@ A number of bug fixes have been applied between the 1.0.5 GA and this RC release
     <td>CPU/architecture is hardcoded into debian/rules</td>
   </tr>
   <tr>
-    <td>689</td>
-    <td>"cmake -DCMAKE_INSTALL_PREFIX" has no effect ...</td>
-  </tr>
-  <tr>
     <td>686</td>
     <td>TestService fails because of the modules used in it aren't meant for actual use</td>
-  </tr>
-  <tr>
-    <td>685</td>
-    <td>SELECT against ReadConn fails if a lot of data returned and TEE in use</td>
-  </tr>
-  <tr>
-    <td>684</td>
-    <td>Use mysql_config to determine include/lib directory paths and compiler options</td>
   </tr>
   <tr>
     <td>677</td>
@@ -186,14 +149,6 @@ A number of bug fixes have been applied between the 1.0.5 GA and this RC release
   <tr>
     <td>579</td>
     <td>serviceStartProtocol test crashes</td>
-  </tr>
-  <tr>
-    <td>519</td>
-    <td>LOAD DATA LOCAL INFILE not handled?</td>
-  </tr>
-  <tr>
-    <td>507</td>
-    <td>rw-split router does not send last_insert_id() to master</td>
   </tr>
   <tr>
     <td>506</td>
