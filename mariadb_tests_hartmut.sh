@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 export test_name=mariadb_tests_hartmut
 
 $test_dir/configure_maxscale.sh &
