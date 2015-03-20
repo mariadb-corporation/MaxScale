@@ -53,13 +53,14 @@
 
 ## Routers
 
- - [SchemaRouter Router](routers/schemarouter/SchemaRouter.md)
+ - [Simple Schema Sharding Router](routers/schemarouter/SchemaRouter.md)
 
 ## Design Documents
 
  - [Core Objects Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/core-objects-html-docs)
  - [Binlog Router Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/binlog-router-html-docs)
  - [DCB States (to be replaced in StarUML)](Design-Documents/DCB-States.pdf)
+ - [Schema Sharding Router Technical Documentation](Design-Documents/SchemaRouter-technical.md)
 
 ## Earlier Release Notes
 
