@@ -64,7 +64,7 @@ MaxScale shall send the generated feedback report to a feedback server specified
 If it’s not possible to send data due to firewall or security settings the report could be generated manually (feedback_user_info is required) via MaxAdmin
 
 
-MaxScale>show feedback report
+MaxScale>show feedbackreport
 
 
 Report could be saved to report.txt file:
