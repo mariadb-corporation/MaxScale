@@ -44,8 +44,8 @@
 static char* server_options[] = {
     "MariaDB Corporation MaxScale",
     "--no-defaults",
-    "--datadir=",
-    "--language=",
+    "--datadir=.",
+    "--language=.",
     "--skip-innodb",
     "--default-storage-engine=myisam",
     NULL
@@ -88,7 +88,10 @@ int main(int argc, char** argv)
     printf("Config: %s\n",cnf);
 
 
-        mysql_library_init(num_elements, server_options, server_groups);
+       if(mysql_library_init(num_elements, server_options, server_groups))
+       {
+	   FAILTEST("Failed to initialize embedded library.");
+       }
 
     config_load(cnf);
 
@@ -111,6 +114,6 @@ int main(int argc, char** argv)
         {
                 FAILTEST("Http send failed\n");
         }
-
+    mysql_library_end();
     return 0;
 }

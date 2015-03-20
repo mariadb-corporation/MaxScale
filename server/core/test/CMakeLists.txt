@@ -1,3 +1,4 @@
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${ERRMSG} ${CMAKE_CURRENT_BINARY_DIR})
 add_executable(test_mysql_users test_mysql_users.c)
 add_executable(test_hash testhash.c)
 add_executable(test_hint testhint.c)
