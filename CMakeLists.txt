@@ -283,6 +283,14 @@ add_custom_target(generate_pdf
   -P generate-pdf.cmake
   COMMENT "Generating PDF files" VERBATIM) 
 
+add_custom_target(generate_txt_release
+  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Documentation ${CMAKE_BINARY_DIR}/Documentation
+  COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}/Documentation ${CMAKE_COMMAND} 
+  -DBUILD_DIR=${CMAKE_BINARY_DIR}
+  -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH} 
+  -P generate-txt-release.cmake
+  COMMENT "Generating TXT release notes" VERBATIM) 
+
 
 add_custom_target(generate_html
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Documentation ${CMAKE_BINARY_DIR}/Documentation
