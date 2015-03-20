@@ -1,0 +1,5 @@
+all:
+	gcc -o zmq_server_test ../../rabbitmq_consumer/inih/ini.c zmq_server_test.c -L/home/bitnami/mysql-5.5.41/libmysql -lmysqlclient -lpthread -I/usr/include -I/usr/include/mysql
+
+clean:
+	-rm zmq_server_test

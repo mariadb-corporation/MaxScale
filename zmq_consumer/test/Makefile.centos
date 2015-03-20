@@ -1,0 +1,25 @@
+#Path to the rabbitmq-c and mysqlclient libraries
+LIBRARY_DIRS :=-L/usr/lib64
+
+#path to headers
+INCLUDE_DIRS :=-I/usr/include -I/usr/include/mysql
+
+DEST :=$(HOME)/zmq_server/test
+
+CC=gcc
+CFLAGS=-c -Wall -g -Iinih $(INCLUDE_DIRS)
+LDFLAGS= $(LIBRARY_DIRS) -lpthread -lmysqlclient
+SRCS= ../../rabbitmq_consumer/inih/ini.c zmq_server_test.c
+OBJ=$(SRCS:.c=.o)
+all:$(OBJ)
+	$(CC) $(LDFLAGS) $(OBJ) -o zmq_server_test
+%.o:%.c
+	$(CC) $(CFLAGS)  $< -o $@
+
+clean:
+	-rm -r zmq_server_test
+
+install:
+	cp config_test.ini $(DEST)/
+	cp zmq_server_test $(DEST)/
+	chmod a+x $(DEST)/zmq_server_test
