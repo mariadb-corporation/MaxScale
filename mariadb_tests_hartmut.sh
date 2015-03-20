@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 
 export test_name=mariadb_tests_hartmut
 

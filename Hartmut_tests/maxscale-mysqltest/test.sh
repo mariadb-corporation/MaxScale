@@ -22,7 +22,7 @@ TESTS="t/test_transaction_routing1.test \
 #TESTS="t/test_sescmd.test"
 
 echo "PASSED" > fail.txt
-for i in $(seq 10); do
+for i in $(seq 25); do
   echo
   echo "Test run #$i"
   echo "============"
