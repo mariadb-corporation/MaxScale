@@ -71,26 +71,42 @@ A number of bug fixes have been applied between the 1.0.4 initial GA release and
 # Known Issues
 
 There are a number bugs and known limitations within this version of MaxScale, the most serious of this are listed below.
-● The Read/Write Splitter is a little too strict when it receives errors from slave servers during execution of session commands. This can result in sessions being terminated in situation in which MaxScale could recover without terminating the sessions.
-● MaxScale can not manage authentication that uses wildcard matching in hostnames in the mysql.user table of the backend database. The only wildcards that can be used are in IP address entries.
-● When users have different passwords based on the host from which they connect MaxScale is unable to determine which password it should use to connect to the backend database. This results in failed connections and unusable usernames in MaxScale.
+
+* The Read/Write Splitter is a little too strict when it receives errors from slave servers during execution of session commands. This can result in sessions being terminated in situation in which MaxScale could recover without terminating the sessions.
+
+* MaxScale can not manage authentication that uses wildcard matching in hostnames in the mysql.user table of the backend database. The only wildcards that can be used are in IP address entries.
+
+* When users have different passwords based on the host from which they connect MaxScale is unable to determine which password it should use to connect to the backend database. This results in failed connections and unusable usernames in MaxScale.
 
 # Packaging
 
 Both RPM and Debian packages are available for MaxScale in addition to the tar based releases previously distributed we now provide
-● CentOS/RedHat 5
-● CentOS/RedHat 6
-● CentOS/RedHat 7
-● Debian 6
-● Debian 7
-● Ubuntu 12.04 LTS
-● Ubuntu 13.10
-● Ubuntu 14.04 LTS
-● Fedora 19
-● Fedora 20
-● OpenSuSE 13
-● SuSE Enterprise 11
-● SuSE Enterprise 12
+
+* CentOS/RedHat 5
+
+* CentOS/RedHat 6
+
+* CentOS/RedHat 7
+
+* Debian 6
+
+* Debian 7
+
+* Ubuntu 12.04 LTS
+
+* Ubuntu 13.10
+
+* Ubuntu 14.04 LTS
+
+* Fedora 19
+
+* Fedora 20
+
+* OpenSuSE 13
+
+* SuSE Enterprise 11
+
+* SuSE Enterprise 12
 
 # MaxScale Home Default Value
 
