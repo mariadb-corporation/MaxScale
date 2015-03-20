@@ -35,12 +35,28 @@ Connection based routing to MySQL NDB clusters
 
 # Bug Fixes
 
-A number of bug fixes have been applied between the 1.0.5 GA and this RC release. The table below lists the bugs that have been resolved. The details for each of these may be found in https://mariadb.atlassian.net/projects/MXS
+A number of bug fixes have been applied between the 1.0.5 GA and this RC release. The table below lists the bugs that have been resolved. The details for each of these may be found in https://mariadb.atlassian.net/projects/MXS or in the former http://bugs.mariadb.com Bug database
 
 <table>
   <tr>
     <td>ID</td>
     <td>Summary</td>
+  </tr>
+    <td>MXS-47</td>
+    <td>Session freeze when small tail packet</td>
+  </tr>
+  <tr>
+  <tr>
+    <td>MXS-5</td>
+    <td>Possible memory leak in readwritesplit router</td>
+  </tr>
+  <tr>
+    <td>736</td>
+    <td>Memory leak while doing read/write splitting</td>
+  </tr>
+  <tr>
+    <td>733</td>
+    <td>Init-script deletes bin/maxscale</td>
   </tr>
   <tr>
     <td>732</td>
