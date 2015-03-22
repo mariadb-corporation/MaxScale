@@ -537,12 +537,48 @@ return_packetbuf:
  */
 GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 {
-    GWBUF *buff = NULL, *packet = NULL;
+    GWBUF *buff = NULL, *packet;
+    uint8_t *ptr,*end;
+    unsigned int len,total = 0;
+
+    if(p_readbuf == NULL || (*p_readbuf) == NULL ||
+       gwbuf_length(*p_readbuf) < 3)
+	return NULL;
+
+    packet = *p_readbuf;
+    ptr = (uint8_t*)packet->start;
+    end = (uint8_t*)packet->end;
+    len = gw_mysql_get_byte3(ptr) + 4;
     
-    while((packet = modutil_get_next_MySQL_packet(p_readbuf)) != NULL)
+    if(ptr + len >= end)
+	return NULL;
+
+    while(ptr + len < end)
     {
-        buff = gwbuf_append(buff,packet);
+	ptr += len;
+	total += len;
+	len = gw_mysql_get_byte3(ptr) + 4;
     }
+
+    /** Full packets only, return original */
+    if(total == gwbuf_length(packet))
+	return packet;
+
+    /** The next packet is a partial, split into complete and partial packets */
+    total -= len;
+
+    if(buff = gwbuf_alloc(total))
+    {
+	skygw_log_write(LOGFILE_ERROR,
+		 "Error: Failed to allocate new buffer "
+		" of %d bytes while splitting buffer"
+		" into complete packets.",
+		 total);
+	return NULL;
+    }
+    
+    memcpy(buff->start,packet->start,total);
+    gwbuf_consume(*p_readbuf,total);
     
     return buff;
 }
