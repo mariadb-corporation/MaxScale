@@ -539,31 +539,30 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 {
     GWBUF *buff = NULL, *packet;
     uint8_t *ptr,*end;
-    unsigned int len,blen,total = 0;
+    int len,blen,total = 0;
 
     if(p_readbuf == NULL || (*p_readbuf) == NULL ||
        gwbuf_length(*p_readbuf) < 3)
 	return NULL;
 
     packet = gwbuf_make_contiguous(*p_readbuf);
+    *p_readbuf = packet;
     ptr = (uint8_t*)packet->start;
     end = (uint8_t*)packet->end;
     len = gw_mysql_get_byte3(ptr) + 4;
+    blen = gwbuf_length(packet);
     
-    if(ptr + len >= end)
+    if(ptr + len == end)
     {
-	if(len == gwbuf_length(*p_readbuf))
-	{
 	    *p_readbuf = NULL;
 	    return packet;
-	}
-	else
-	{
-	    return NULL;
-	}
+    }
+    else if(ptr + len > end)
+    {
+	return NULL;
     }
 
-    while(ptr + len < end)
+    while(total + len < blen)
     {
 	ptr += len;
 	total += len;
@@ -572,14 +571,13 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 
     /** Full packets only, return original */
 
-    if(total + len == (blen = gwbuf_length(packet)))
+    if(total + len == blen)
     {
 	*p_readbuf = NULL;
 	return packet;
     }
 
     /** The next packet is a partial, split into complete and partial packets */
-    total -= len;
 
     if((buff = gwbuf_alloc(total)) == NULL)
     {
@@ -592,15 +590,14 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
     }
     
     memcpy(buff->start,packet->start,total);
-    gwbuf_consume(*p_readbuf,total);
-    
+    gwbuf_consume(packet,total);
     return buff;
 }
 
 /**
  * Count the number of EOF, OK or ERR packets in the buffer. Only complete
  * packets are inspected and the buffer is assumed to only contain whole packets.
- * If partial packets are in the buffer, they are ingnored. The caller must handle the
+ * If partial packets are in the buffer, they are ignored. The caller must handle the
  * detection of partial packets in buffers.
  * @param reply Buffer to use
  * @param use_ok Whether the DEPRECATE_EOF flag is set

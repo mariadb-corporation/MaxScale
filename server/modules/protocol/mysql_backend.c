@@ -492,8 +492,10 @@ static int gw_read_backend_event(DCB *dcb) {
                 {
                         ss_dassert(read_buffer != NULL || dcb->dcb_readqueue != NULL);
                 }
-
-		read_buffer = gwbuf_append(read_buffer,dcb->dcb_readqueue);
+		if(dcb->dcb_readqueue)
+		{
+		    read_buffer = gwbuf_append(dcb->dcb_readqueue,read_buffer);
+		}
 		nbytes_read = gwbuf_length(read_buffer);
 		
 		if (nbytes_read < 3)
