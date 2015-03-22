@@ -532,8 +532,8 @@ return_packetbuf:
 /**
  * Parse the buffer and split complete packets into individual buffers.
  * Any partial packets are left in the old buffer.
- * @param p_readbuf Buffer to split
- * @return Head of the chain of complete packets
+ * @param p_readbuf Buffer to split, set to NULL if no partial packets are left
+ * @return Head of the chain of complete packets, all in a single, contiguous buffer
  */
 GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 {
@@ -546,18 +546,19 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 	return NULL;
 
     packet = gwbuf_make_contiguous(*p_readbuf);
+    packet->next = NULL;
     *p_readbuf = packet;
     ptr = (uint8_t*)packet->start;
     end = (uint8_t*)packet->end;
     len = gw_mysql_get_byte3(ptr) + 4;
     blen = gwbuf_length(packet);
     
-    if(ptr + len == end)
+    if(len == blen)
     {
 	    *p_readbuf = NULL;
 	    return packet;
     }
-    else if(ptr + len > end)
+    else if(len > blen)
     {
 	return NULL;
     }
@@ -570,7 +571,6 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
     }
 
     /** Full packets only, return original */
-
     if(total + len == blen)
     {
 	*p_readbuf = NULL;
@@ -578,7 +578,6 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
     }
 
     /** The next packet is a partial, split into complete and partial packets */
-
     if((buff = gwbuf_alloc(total)) == NULL)
     {
 	skygw_log_write(LOGFILE_ERROR,
@@ -588,7 +587,8 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 		 total);
 	return NULL;
     }
-    
+    buff->next = NULL;
+    gwbuf_set_type(buff,GWBUF_TYPE_MYSQL);
     memcpy(buff->start,packet->start,total);
     gwbuf_consume(packet,total);
     return buff;
