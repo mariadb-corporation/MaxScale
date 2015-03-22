@@ -539,19 +539,29 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 {
     GWBUF *buff = NULL, *packet;
     uint8_t *ptr,*end;
-    unsigned int len,total = 0;
+    unsigned int len,blen,total = 0;
 
     if(p_readbuf == NULL || (*p_readbuf) == NULL ||
        gwbuf_length(*p_readbuf) < 3)
 	return NULL;
 
-    packet = *p_readbuf;
+    packet = gwbuf_make_contiguous(*p_readbuf);
     ptr = (uint8_t*)packet->start;
     end = (uint8_t*)packet->end;
     len = gw_mysql_get_byte3(ptr) + 4;
     
     if(ptr + len >= end)
-	return NULL;
+    {
+	if(len == gwbuf_length(*p_readbuf))
+	{
+	    *p_readbuf = NULL;
+	    return packet;
+	}
+	else
+	{
+	    return NULL;
+	}
+    }
 
     while(ptr + len < end)
     {
@@ -561,13 +571,17 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
     }
 
     /** Full packets only, return original */
-    if(total == gwbuf_length(packet))
+
+    if(total + len == (blen = gwbuf_length(packet)))
+    {
+	*p_readbuf = NULL;
 	return packet;
+    }
 
     /** The next packet is a partial, split into complete and partial packets */
     total -= len;
 
-    if(buff = gwbuf_alloc(total))
+    if((buff = gwbuf_alloc(total)) == NULL)
     {
 	skygw_log_write(LOGFILE_ERROR,
 		 "Error: Failed to allocate new buffer "
