@@ -1,39 +1,39 @@
-MaxScale Release Notes
+# MaxScale Release Notes
 
-1.1 RC
+## 1.1 RC
 
 This document details the changes in version 1.1 since the release of the 1.0.5 GA Release of the MaxScale product.
 
-# New Features
+## New Features
 
-## High Performance Binlog Relay
+### High Performance Binlog Relay
 Replicate Binlog from the master to slave through MaxScale as simplified relay server for reduced network load and disaster recovery
 
-## Database Firewall Filter
+### Database Firewall Filter
 Block queries based on columns in the query, where condition, query type(select, insert, delete, update), presence of wildcard, regular expression match and time of the query
 
-## Schema Sharding Router
+### Schema Sharding Router
 Route to databases sharded by schema without application level knowledge of shard configuration
 
-## Hint based routing
+### Hint based routing
 Pass hints in the SQL statement to influence the routing decision based on replication lag or time out
 
-## Named Server Routing
+### Named Server Routing
 Routing to a named server if incoming query matches a regular expression 
 
-## Canonical Query logging
+### Canonical Query logging
 Convert incoming queries to canonical form and push the query and response into RabbitMQ Broker- for a RabbitMQ Client to later retrieve from
 
-## Nagios Plugin
+### Nagios Plugin
 Plugin scripts for monitoring MaxScale status and performance from a Nagios Server
 
-## Notification Service
+### Notification Service
 Receive notification of security update and patches tailored to your MaxScale configuration 
 
-## MySQL NDB cluster support
+### MySQL NDB cluster support
 Connection based routing to MySQL NDB clusters
 
-# Bug Fixes
+## Bug Fixes
 
 A number of bug fixes have been applied between the 1.0.5 GA and this RC release. The table below lists the bugs that have been resolved. The details for each of these may be found in https://mariadb.atlassian.net/projects/MXS or in the former http://bugs.mariadb.com Bug database
 
@@ -177,7 +177,7 @@ A number of bug fixes have been applied between the 1.0.5 GA and this RC release
 </table>
 
 
-# Known Issues
+## Known Issues
 
 There are a number bugs and known limitations within this version of MaxScale, the most serious of this are listed below.
 
@@ -189,7 +189,7 @@ There are a number bugs and known limitations within this version of MaxScale, t
 
 * Service init script is missing after upgrade from 1.0 in RPM-based system. Can be fixed by reinstalling the package ('yum reinstall maxscale' or 'rpm -i --force /maxscale-1.1.rpm')
 
-# Packaging
+## Packaging
 
 Both RPM and Debian packages are available for MaxScale in addition to the tar based releases previously distributed we now provide
 
