@@ -354,7 +354,7 @@ Connected to localhost.
 
 Escape character is '^]'.
 
-Welcome the Mariadb MaxScale Debug Interface (V1.1.0).
+Welcome the MariaDB MaxScale Debug Interface (V1.1.0).
 
 Type help for a list of available commands.
 
