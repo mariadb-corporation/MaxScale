@@ -134,6 +134,15 @@ if(NOT WITHOUT_MAXADMIN)
 endif()
 
 
+execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl 
+${CMAKE_SOURCE_DIR}/Documentation/Changelog.md
+${CMAKE_BINARY_DIR}/Changelog.txt)
+execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl 
+${CMAKE_SOURCE_DIR}/Documentation/Release-Notes/MaxScale-1.1-Release-Notes.md
+ ${CMAKE_BINARY_DIR}/ReleaseNotes.txt)
+install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION .)
+install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION .)
+
 message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 
 install(FILES server/MaxScale_template.cnf DESTINATION etc)
