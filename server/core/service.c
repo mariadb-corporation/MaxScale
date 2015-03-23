@@ -229,7 +229,7 @@ GWPROTOCOL	*funcs;
 				{
 					/* Try loading authentication data from file cache */
 					char	*ptr, path[4097];
-					strcpy(path, "/usr/local/mariadb/maxscale");
+					strcpy(path, "/usr/local/mariadb-maxscale");
 					if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 					{
 						strncpy(path, ptr, 4096);
@@ -259,7 +259,7 @@ GWPROTOCOL	*funcs;
 				/* Save authentication data to file cache */
 				char	*ptr, path[4097];
                                 int mkdir_rval = 0;
-				strcpy(path, "/usr/local/mariadb/maxscale");
+				strcpy(path, "/usr/local/mariadb-maxscale");
 				if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 				{
 					strncpy(path, ptr, 4096);

@@ -2,7 +2,7 @@
 
 These are the changes introduced in the next MaxScale version. This is not the official change log and the latest changelog can always be found in here: [MaxScale 1.1 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
 
-**NOTE:** MaxScale default installation directory has changed to `/usr/local/mariadb/maxscale` and the default password for MaxAdmin is now ´mariadb´.
+**NOTE:** MaxScale default installation directory has changed to `/usr/local/mariadb-maxscale` and the default password for MaxAdmin is now ´mariadb´.
 
 * New modules added
       * Binlog router

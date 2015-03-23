@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 include(../macros.cmake)
 enable_testing()
 set_variables()
-set(CMAKE_INSTALL_PREFIX "/usr/local/mariadb/rabbitmq-consumer" CACHE PATH "Prefix prepended to install directories.")
+set(CMAKE_INSTALL_PREFIX "/usr/local/rabbitmq-consumer" CACHE PATH "Prefix prepended to install directories.")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/../cmake")
 
 project("RabbitMQ Consumer")

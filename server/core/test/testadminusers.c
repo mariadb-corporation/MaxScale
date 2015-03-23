@@ -270,7 +270,7 @@ char	*home, buf[1024];
 
 	/* Unlink any existing password file before running this test */
 	if ((home = getenv("MAXSCALE_HOME")) == NULL || strlen(home) >= 1024)
-		home =  "/usr/local/mariadb";
+		home =  "/usr/local/mariadb-maxscale";
 	sprintf(buf, "%s/etc/passwd", home);
     if(!is_valid_posix_path(buf))
         exit(1);

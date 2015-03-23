@@ -22,7 +22,7 @@ or
 
 	$ /etc/init.d/maxscale start
 
-It is also possible to start MaxScale by executing the maxscale command itself, in this case you must ensure that the environment is correctly setup or command line options are passed. The major elements to consider are the correct setting of the MAXSCALE\_HOME directory and to ensure that LD\_LIBRARY\_PATH. The LD\_LIBRARY\_PATH should include the lib directory that was installed as part of the MaxScale installation, the MAXSCALE\_HOME should point to /usr/local/mariadb/maxscale if a default installation has been created or to the directory this was relocated to. Running the executable $MAXSCALE\_HOME/bin/maxscale will result in MaxScale running as a daemon process, unattached to the terminal in which it was started and using configuration files that it finds in the $MAXSCALE\_HOME directory.
+It is also possible to start MaxScale by executing the maxscale command itself, in this case you must ensure that the environment is correctly setup or command line options are passed. The major elements to consider are the correct setting of the MAXSCALE\_HOME directory and to ensure that LD\_LIBRARY\_PATH. The LD\_LIBRARY\_PATH should include the lib directory that was installed as part of the MaxScale installation, the MAXSCALE\_HOME should point to /usr/local/mariadb-maxscale if a default installation has been created or to the directory this was relocated to. Running the executable $MAXSCALE\_HOME/bin/maxscale will result in MaxScale running as a daemon process, unattached to the terminal in which it was started and using configuration files that it finds in the $MAXSCALE\_HOME directory.
 
 Options may be passed to the MaxScale binary that alter this default behaviour, this options are documented in the table below.
 
@@ -154,7 +154,7 @@ This may be integrated into the Linux logrotate mechanism by adding a configurat
 
 <table>
   <tr>
-    <td>/usr/local/mariadb/maxscale/log/*.log {
+    <td>/usr/local/mariadb-maxscale/log/*.log {
 monthly
 rotate 5
 missingok
@@ -163,7 +163,7 @@ sharedscripts
 postrotate
 \# run if maxscale is running
 if test -n "`ps acx|grep maxscale`"; then
-/usr/local/mariadb/maxscale/bin/maxadmin -pmariadb flush logs
+/usr/local/mariadb-maxscale/bin/maxadmin -pmariadb flush logs
 fi
 endscript
 }</td>
@@ -175,14 +175,14 @@ One disadvantage with this is that the password used for the maxadmin command ha
 
 <table>
   <tr>
-    <td>/usr/local/mariadb/maxscale/log/*.log {
+    <td>/usr/local/mariadb-maxscale/log/*.log {
 monthly
 rotate 5
 missingok
 nocompress
 sharedscripts
 postrotate
-kill -USR1 `cat /usr/local/mariadb/maxscale/log/maxscale.pid` 
+kill -USR1 `cat /usr/local/mariadb-maxscale/log/maxscale.pid` 
 endscript
 }</td>
   </tr>

@@ -8,18 +8,18 @@ in the README file and execute make install.
 
 Simply set the environment variable MAXSCALE_HOME to point to the
 MaxScale directory, found inside the path into which the files have been copied,
-e.g. MAXSCALE_HOME=/usr/local/mariadb/maxscale
+e.g. MAXSCALE_HOME=/usr/local/mariadb-maxscale
 
 Also you will need to optionaly set LD_LIBRARY_PATH to include the 'lib' folder,
 found inside the path into which the files have been copied,
-e.g. LD_LIBRARY_PATH=/usr/local/mariadb/maxscale/lib
+e.g. LD_LIBRARY_PATH=/usr/local/mariadb-maxscale/lib
 
 Because we need the libmysqld library for parsing we must create a
 valid my.cnf file to enable the library to be used. Copy the my.cnf
 to $MAXSCALE_HOME/mysql/my.cnf.
 
 To start MaxScale execute the command 'maxscale' from the bin folder,
-e.g. /usr/local/mariadb/maxscale/bin/maxscale
+e.g. /usr/local/mariadb-maxscale/bin/maxscale
 
 Configuration
 
