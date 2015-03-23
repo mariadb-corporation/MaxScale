@@ -1,6 +1,8 @@
 #!/bin/bash
 
-maxdir="/usr/local/skysql/maxscale/"
+if [[ -z $maxdir ]]; then
+	maxdir="/usr/local/mariadb/maxscale/"
+fi
 cd $maxdir/bin
 export MAXSCALE_HOME=$maxdir
 

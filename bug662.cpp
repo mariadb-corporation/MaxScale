@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
         sleep(20);
 
         printf("Checking if MaxScale is alive by connecting to MaxAdmin\n"); fflush(stdout);
-        global_result += executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char* ) "show servers");
+        global_result += execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers");
 
         for (i = 0; i < Test->repl->N; i++) {
             printf("Setup firewall back to allow mysql on node %d\n", i); fflush(stdout);

@@ -202,7 +202,7 @@ int k=0;
  * @return	0 if parameter is found
  */
 int
-getMaxadminParam(char * hostname, char *user, char *password, char * cmd, char *param, char *result)
+get_maxadmin_param(char * hostname, char *user, char *password, char * cmd, char *param, char *result)
 {
 
     char		buf[10240];
@@ -251,7 +251,7 @@ getMaxadminParam(char * hostname, char *user, char *password, char * cmd, char *
  * @return	0 if parameter is found
  */
 int
-executeMaxadminCommand(char * hostname, char *user, char *password, char * cmd)
+execute_maxadmin_command(char * hostname, char *user, char *password, char * cmd)
 {
 
     char		buf[10240];
@@ -275,7 +275,7 @@ executeMaxadminCommand(char * hostname, char *user, char *password, char * cmd)
 }
 
 int
-executeMaxadminCommandPrint(char * hostname, char *user, char *password, char * cmd)
+execute_maxadmin_command_print(char * hostname, char *user, char *password, char * cmd)
 {
 
     char		buf[10240];

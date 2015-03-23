@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
     int global_result = 0;
 
     Test->print_env();
-    global_result += executeMaxadminCommandPrint(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show servers");
+    global_result += execute_maxadmin_command_print(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show servers");
 
     Test->copy_all_logs(); return(global_result);
 }

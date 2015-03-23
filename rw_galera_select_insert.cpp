@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     // connect to the MaxScale server (rwsplit)
     Test->connect_rwsplit();
 
-    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "shutdown monitor \"Galera Monitor\"");
+    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "shutdown monitor \"Galera Monitor\"");
 
     if (Test->conn_rwsplit == NULL ) {
         printf("Can't connect to MaxScale\n");

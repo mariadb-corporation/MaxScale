@@ -4,7 +4,7 @@ export test_name=bug516
 $test_dir/configure_maxscale.sh
 
 echo "executing simple maxadmin command 100 times"
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "echo 'for i in {1..100}; do $maxdir/bin/maxadmin -pskysql -uadmin -P6603 list clients; done' > $maxdir/bin/maxadmin_test.sh"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "echo 'for i in {1..100}; do $maxdir/bin/maxadmin -p$maxadmin_password -uadmin -P6603 list clients; done' > $maxdir/bin/maxadmin_test.sh"
 ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "chmod a+x $maxdir/bin/maxadmin_test.sh ; $maxdir/bin/maxadmin_test.sh "
 echo "sleeping 100 seconds"
 sleep 100

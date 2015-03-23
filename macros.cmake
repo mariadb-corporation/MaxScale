@@ -12,7 +12,7 @@ endmacro()
 macro(set_variables)
 
   # Installation directory
-  set(INSTALL_DIR "/usr/local/skysql/maxscale/" CACHE PATH "MaxScale installation directory.")
+  set(INSTALL_DIR "/usr/local/mariadb/maxscale/" CACHE PATH "MaxScale installation directory.")
   
   # Build type
   set(BUILD_TYPE "None" CACHE STRING "Build type, possible values are:None, Debug, Optimized.")

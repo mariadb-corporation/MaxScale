@@ -48,7 +48,7 @@ main(int argc, char **argv)
 
     char result[1024];
 
-    getMaxadminParam((char *) "192.168.122.105", (char *) "admin", (char *) "skysql", (char *) "show server server2", (char *) "Port:", result);
+    get_maxadmin_param((char *) "192.168.122.105", (char *) "admin", (char *) "mariadb", (char *) "show server server2", (char *) "Port:", result);
 
     printf("%s\n", result);
 

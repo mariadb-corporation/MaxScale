@@ -23,8 +23,6 @@ int main(int argc, char *argv[])
         Test->binlog_cmd_option = option;
         Test->start_binlog();
 
-        //global_result += executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show servers");
-
         Test->repl->connect();
 
         create_t1(Test->repl->nodes[0]);

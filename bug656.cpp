@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 
     //printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
     //execute_query(Test->conn_rwsplit, (char *) "show processlist;");
-    executeMaxadminCommandPrint(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "show servers");
+    execute_maxadmin_command_print(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show servers");
 
     printf("Setup firewall back to allow mysql\n"); fflush(stdout);
     Test->repl->unblock_node(0);

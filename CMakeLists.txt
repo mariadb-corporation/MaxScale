@@ -7,7 +7,7 @@ set_variables()
 set_maxscale_version()
 
 # Installation directory
-set(INSTALL_DIR "/usr/local/skysql/maxscale/" CACHE PATH "MaxScale tests installation directory.")
+#set(INSTALL_DIR "/usr/local/mariadb/maxscale/" CACHE PATH "MaxScale tests installation directory.")
 set(CMAKE_INSTALL_PREFIX "${INSTALL_DIR}" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
 
 check_deps()
@@ -264,7 +264,7 @@ install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 b
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 bug699 bug705 bug519 setup_binlog binlog_incompl bug729 bug718 bug730 bug711 bug656 DESTINATION system-test)
 install(TARGETS mxs47 DESTINATION system-test)
 
-install(FILES set_env_f.sh set_env.sh get_logs.sh run_ctrl_c.sh long_insert DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES set_env_f.sh set_env.sh get_logs.sh run_ctrl_c.sh long_insert.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut.sh start_without_root.sh configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut_galera.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES bug567.sh bug516.sh bug561.sh bug562.sh bug585 bug587_1 bug469.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)

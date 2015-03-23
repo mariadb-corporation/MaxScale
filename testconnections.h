@@ -108,6 +108,11 @@ public:
     char maxscale_password[256];
 
     /**
+     * @brief maxadmin_Password Password to access Maxadmin tool
+     */
+    char maxadmin_password[256];
+
+    /**
      * @brief Maxscale_sshkey   ssh key for Maxscale machine
      */
     char maxscale_sshkey[4096];

@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     printf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     Test->connect_rwsplit();
 
-    executeMaxadminCommand(Test->maxscale_IP, (char *) "admin", (char *) "skysql", (char *) "shutdown monitor \"MySQL Monitor\"");
+    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "shutdown monitor \"MySQL Monitor\"");
 
     tolerance=0;
 

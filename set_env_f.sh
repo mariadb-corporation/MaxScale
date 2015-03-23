@@ -48,7 +48,7 @@ export galera_port_003=3306
 
 
 
-export maxdir="/usr/local/skysql/maxscale/"
+export maxdir="/usr/local/mariadb/maxscale/"
 export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
 if [ -f copy_logs.sh ] ; then
 	export test_dir=`pwd`
@@ -69,6 +69,8 @@ export galera_password="skysql"
 
 export maxscale_user="skysql"
 export maxscale_password="skysql"
+
+export maxadmin_password="mariadb"
 
 # command to kill VM (obsolete)
 export kill_vm_command="/home/ec2-user/test-scripts/kill_vm.sh"
