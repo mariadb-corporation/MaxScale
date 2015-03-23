@@ -73,9 +73,9 @@ and add (just after localhost.cfg or commnads.cfg)
 - modify server IP address in server1.cfg, pointing to MaxScale server
 - maxadmin executable must be in the nagios server
 - default MaxScale AdminInterface port is 6603 
-- default maxadmin executable path is /usr/local/skysql/maxscale/bin/maxadmin
+- default maxadmin executable path is /usr/local/mariadb/maxscale/bin/maxadmin
 	It can be changed by -m option
-- maxadmin executable could be copied from an existing maxscale installation (default location is /usr/local/skysql/maxscale/bin/maxadmin)
+- maxadmin executable could be copied from an existing maxscale installation (default location is /usr/local/mariadb/maxscale/bin/maxadmin)
 
 This example shows configuration that needs to be done on Nagios server in order to communicate to MaxScale server that is running on host server1.
 In this example we are using the check_maxscale_resource as the check command
@@ -85,7 +85,7 @@ In this example we are using the check_maxscale_resource as the check command
 		use			local-service
 		host_name		server1
 		service_description	MaxScale_sessions
-		check_command		check_maxscale_resource!6603!admin!skysql!sessions!/path_to/maxadmin
+		check_command		check_maxscale_resource!6603!admin!mariadb!sessions!/path_to/maxadmin
 		notifications_enabled	0
 	}
 

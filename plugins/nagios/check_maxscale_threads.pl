@@ -70,7 +70,7 @@ EOF
 	'u' => 'root',			# username
 	'p' => '',			# password
 	'P' => 6603,			# port
-	'm' => '/usr/local/skysql/maxscale/bin/maxadmin',	# maxadmin
+	'm' => '/usr/local/mariadb/maxscale/bin/maxadmin',	# maxadmin
 	);
 
 my $MAXADMIN_DEFAULT = $opts{'m'};

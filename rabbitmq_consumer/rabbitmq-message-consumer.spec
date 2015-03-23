@@ -2,7 +2,7 @@
 %define name            rabbitmq-message-consumer
 %define release         beta
 %define version         1.0
-%define install_path    /usr/local/skysql/maxscale/extra/consumer/
+%define install_path    /usr/local/mariadb/maxscale/extra/consumer/
 
 BuildRoot:              %{buildroot}
 Summary:                rabbitmq-message-consumer

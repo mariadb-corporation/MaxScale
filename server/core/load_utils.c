@@ -109,7 +109,7 @@ char* get_maxscale_home(void)
         char* home = getenv("MAXSCALE_HOME");
         if (home == NULL)
         {
-                home = "/usr/local/skysql/MaxScale";
+                home = "/usr/local/mariadb/maxscale";
         }
         return home;
 }
@@ -118,7 +118,7 @@ char* get_maxscale_home(void)
 /**
  * Load the dynamic library related to a gateway module. The routine
  * will look for library files in the current directory, 
- * $MAXSCALE_HOME/modules and /usr/local/skysql/MaxScale/modules.
+ * $MAXSCALE_HOME/modules and /usr/local/mariadb/maxscale/modules.
  *
  * @param module	Name of the module to load
  * @param type		Type of module, used purely for registration

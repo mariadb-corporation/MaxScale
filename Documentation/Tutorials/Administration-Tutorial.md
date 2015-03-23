@@ -22,7 +22,7 @@ or
 
 	$ /etc/init.d/maxscale start
 
-It is also possible to start MaxScale by executing the maxscale command itself, in this case you must ensure that the environment is correctly setup or command line options are passed. The major elements to consider are the correct setting of the MAXSCALE\_HOME directory and to ensure that LD\_LIBRARY\_PATH. The LD\_LIBRARY\_PATH should include the lib directory that was installed as part of the MaxScale installation, the MAXSCALE\_HOME should point to /usr/local/skysql/maxscale if a default installation has been created or to the directory this was relocated to. Running the executable $MAXSCALE\_HOME/bin/maxscale will result in MaxScale running as a daemon process, unattached to the terminal in which it was started and using configuration files that it finds in the $MAXSCALE\_HOME directory.
+It is also possible to start MaxScale by executing the maxscale command itself, in this case you must ensure that the environment is correctly setup or command line options are passed. The major elements to consider are the correct setting of the MAXSCALE\_HOME directory and to ensure that LD\_LIBRARY\_PATH. The LD\_LIBRARY\_PATH should include the lib directory that was installed as part of the MaxScale installation, the MAXSCALE\_HOME should point to /usr/local/mariadb/maxscale if a default installation has been created or to the directory this was relocated to. Running the executable $MAXSCALE\_HOME/bin/maxscale will result in MaxScale running as a daemon process, unattached to the terminal in which it was started and using configuration files that it finds in the $MAXSCALE\_HOME directory.
 
 Options may be passed to the MaxScale binary that alter this default behaviour, this options are documented in the table below.
 
@@ -83,14 +83,14 @@ MaxScale will also stop gracefully if it received a hangup signal, to find the p
 
 In order to shutdown MaxScale using the maxadmin command you may either connect with maxadmin in interactive mode or pass the "shutdown maxscale" command you wish 	to execute as an argument to maxadmin.
 
-	$ maxadmin -pskysql shutdown maxscale
+	$ maxadmin -pmariadb shutdown maxscale
 
 <a name="checking"></a> 
 ### Checking The Status Of The MaxScale Services
 
 It is possible to use the maxadmin command to obtain statistics regarding the services that are configured within your MaxScale configuration file. The maxadmin command "list services" will give very basic information regarding the services that are define. This command may be either run in interactive mode or passed on the maxadmin command line.
 
-	$ maxadmin -pskysql
+	$ maxadmin -pmariadb
 	MaxScale> list services
 
 	Services.
@@ -118,7 +118,7 @@ It should be noted that network listeners count as a user of the service, theref
 
 To determine what client are currently connected to MaxScale you can use the "list clients" command within maxadmin. This will give you IP address and the ID’s of the DCB and session for that connection. As with any maxadmin command this can be passed on the command line or typed interactively in maxadmin.
 
-	$ maxadmin -pskysql list clients
+	$ maxadmin -pmariadb list clients
 
 	Client Connections
 
@@ -141,11 +141,11 @@ MaxScale write log data into four log files with varying degrees of detail. With
 
 It is possible to rotate either a single log file or all the log files with a single command. When the logfile is rotated, the current log file is closed and a new log file, with an increased sequence number in its name, is created.  Log file rotation is achieved by use of the "flush log" or “flush logs” command in maxadmin.
 
-	$ maxadmin -pskysql flush logs
+	$ maxadmin -pmariadb flush logs
 
 Flushes all of the logs, whereas an individual log may be flushed with the "flush log" command.
 
-	$ maxadmin -pskysql
+	$ maxadmin -pmariadb
 	MaxScale> flush log error
 	MaxScale> flush log trace
 	MaxScale>
@@ -154,7 +154,7 @@ This may be integrated into the Linux logrotate mechanism by adding a configurat
 
 <table>
   <tr>
-    <td>/usr/local/skysql/maxscale/log/*.log {
+    <td>/usr/local/mariadb/maxscale/log/*.log {
 monthly
 rotate 5
 missingok
@@ -163,7 +163,7 @@ sharedscripts
 postrotate
 \# run if maxscale is running
 if test -n "`ps acx|grep maxscale`"; then
-/usr/local/skysql/maxscale/bin/maxadmin -pskysql flush logs
+/usr/local/mariadb/maxscale/bin/maxadmin -pmariadb flush logs
 fi
 endscript
 }</td>
@@ -175,14 +175,14 @@ One disadvantage with this is that the password used for the maxadmin command ha
 
 <table>
   <tr>
-    <td>/usr/local/skysql/maxscale/log/*.log {
+    <td>/usr/local/mariadb/maxscale/log/*.log {
 monthly
 rotate 5
 missingok
 nocompress
 sharedscripts
 postrotate
-kill -USR1 `cat /usr/local/skysql/maxscale/log/maxscale.pid` 
+kill -USR1 `cat /usr/local/mariadb/maxscale/log/maxscale.pid` 
 endscript
 }</td>
   </tr>

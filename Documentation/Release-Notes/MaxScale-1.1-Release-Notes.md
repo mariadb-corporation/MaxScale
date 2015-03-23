@@ -80,7 +80,7 @@ A number of bug fixes have been applied between the 1.0.5 GA and this RC release
   </tr>
   <tr>
     <td>709</td>
-    <td>"COPYRIGHT LICENSE README SETUP" files go to /usr/local/skysql/maxscale/ after 'make package'</td>
+    <td>"COPYRIGHT LICENSE README SETUP" files go to /usr/local/mariadb/maxscale/ after 'make package'</td>
   </tr>
   <tr>
     <td>704</td>

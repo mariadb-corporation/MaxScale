@@ -12,7 +12,7 @@ enable_testing()
 set_variables() 
 set_maxscale_version()
 
-set(CMAKE_INSTALL_PREFIX "/usr/local/skysql/maxscale" CACHE PATH "Prefix prepended to install directories.")
+set(CMAKE_INSTALL_PREFIX "/usr/local/mariadb/maxscale" CACHE PATH "Prefix prepended to install directories.")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
