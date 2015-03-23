@@ -171,7 +171,7 @@ After the completion of the make process the installation can be achieved by run
 
 This will result in an installation being created which is identical to that which would be achieved by installing the binary package. The only difference is that init.d scripts aren't installed and the RabbitMQ components are not built.
 
-By default, MaxScale installs to '/usr/local/skysql/maxscale' and places init.d scripts and ldconfig files into their folders. Change the CMAKE_INSTALL_PREFIX variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
+By default, MaxScale installs to '/usr/local/mariadb/maxscale' and places init.d scripts and ldconfig files into their folders. Change the CMAKE_INSTALL_PREFIX variable to your desired installation directory and set INSTALL_SYSTEM_FILES=N to prevent the init.d script and ldconfig file installation.
 
 Other useful targets for Make are `documentation`, which generates the Doxygen documentation, and `uninstall` which uninstall MaxScale binaries after an install.
 

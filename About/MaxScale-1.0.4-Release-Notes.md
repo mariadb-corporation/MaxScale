@@ -136,5 +136,5 @@ Both RPM and Debian packages are available for MaxScale in addition to the tar b
 
 # MaxScale Home Default Value
 
-The installation assumes that the default value for the environment variable MAXSCALE_HOME is set to /usr/local/skysql/maxscale. This is hard coded in the service startup file that is placed in /etc/init.d/maxscale by the installation process.
+The installation assumes that the default value for the environment variable MAXSCALE_HOME is set to /usr/local/mariadb/maxscale. This is hard coded in the service startup file that is placed in /etc/init.d/maxscale by the installation process.
 
