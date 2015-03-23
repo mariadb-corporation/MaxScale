@@ -492,35 +492,19 @@ static int gw_read_backend_event(DCB *dcb) {
                 {
                         ss_dassert(read_buffer != NULL || dcb->dcb_readqueue != NULL);
                 }
-		
-		if(dcb->dcb_readqueue)
-		{
-		    read_buffer = gwbuf_append(dcb->dcb_readqueue,read_buffer);
-		}
 
-		nbytes_read = gwbuf_length(read_buffer);
-		
-		if (nbytes_read < 3)
-		{
-		    dcb->dcb_readqueue = read_buffer;
-		    rc = 0;
-		    goto return_rc;
-		}
-
+		if (dcb->dcb_readqueue)
                 {
-		    GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
-		    
-		    if(tmp == NULL)
+		    if (read_buffer != NULL)
 		    {
-			/** No complete packets */
-			dcb->dcb_readqueue = read_buffer;
-			rc = 0;
-			goto return_rc;
-			
+			read_buffer = gwbuf_append(dcb->dcb_readqueue, read_buffer);
 		    }
-		    
-		    dcb->dcb_readqueue = read_buffer;
-		    read_buffer = tmp;
+		    else
+		    {
+			read_buffer = dcb->dcb_readqueue;
+		    }
+
+		    nbytes_read = gwbuf_length(read_buffer);
 		}
 
                 /** 
@@ -530,6 +514,13 @@ static int gw_read_backend_event(DCB *dcb) {
                 if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, false) != 
                         MYSQL_COM_UNDEFINED)
                 {
+			if(nbytes_read < 5)
+			{
+			    dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+			    rc = 0;
+			    goto return_rc;
+			}
+
                         read_buffer = process_response_data(dcb, read_buffer, nbytes_read);
 			/** 
 			 * Received incomplete response to session command.
