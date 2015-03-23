@@ -5,7 +5,7 @@
 ## About MaxScale
 
  - [About MaxScale](About/About-MaxScale.md)
- - [Release Notes 1.0.4](About/MaxScale-1.0.4-Release-Notes.md)
+ - [Release Notes 1.1](Release-Notes/MaxScale-1.1-Release-Notes.md)
  - [Changelog](Changelog.md)
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
