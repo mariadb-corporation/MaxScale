@@ -9,16 +9,6 @@ macro(set_maxscale_version)
 
 endmacro()
 
-macro(set_variables)
-
-  # Installation directory
-  set(INSTALL_DIR "/usr/local/mariadb/maxscale/" CACHE PATH "MaxScale installation directory.")
-  
-  # Build type
-  set(BUILD_TYPE "None" CACHE STRING "Build type, possible values are:None, Debug, Optimized.")
-  
-endmacro()
-
 macro(check_deps)
 
   find_library(MYSQL_CLIENT mariadbclient mysqlclient PATH_SUFFIXES mysql mariadb)
