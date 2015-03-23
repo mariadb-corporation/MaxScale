@@ -130,7 +130,7 @@ servers=dbserv1, dbserv2, dbserv3
 
 The final step in the service sections is to add the username and password that will be used to populate the user data from the database cluster. There are two options for representing the password, either plain text or encrypted passwords may be used. In order to use encrypted passwords a set of keys must be generated that will be used by the encryption and decryption process. To generate the keys use the maxkeys command and pass the name of the secrets file in which the keys are stored.
 
-% maxkeys /usr/local/mariadb/maxscale/etc/.secrets
+% maxkeys /usr/local/mariadb-maxscale/etc/.secrets
 
 %
 
@@ -292,7 +292,7 @@ or
 
 % service maxscale start
 
-Check the error log in /usr/local/mariadb/maxscale/log to see if any errors are detected in the configuration file and to confirm MaxScale has been started. Also the maxadmin command may be used to confirm that MaxScale is running and the services, listeners etc have been correctly configured.
+Check the error log in /usr/local/mariadb-maxscale/log to see if any errors are detected in the configuration file and to confirm MaxScale has been started. Also the maxadmin command may be used to confirm that MaxScale is running and the services, listeners etc have been correctly configured.
 
 % maxadmin -pmariadb list services
 

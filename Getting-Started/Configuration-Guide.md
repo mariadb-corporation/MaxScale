@@ -513,7 +513,7 @@ Default value is `2`. Write Timeout is the timeout in seconds for each attempt t
 
 ## Protocol Modules
 
-The protocols supported by MaxScale are implemented as external modules that are loaded dynamically into the MaxScale core. These modules reside in the directory `$MAXSCALE_HOME/modules`, if the environment variable `$MAXSCALE_HOME` is not set it defaults to `/usr/local/mariadb/MaxScale`. It may also be set by passing the `-c` option on the MaxScale command line.
+The protocols supported by MaxScale are implemented as external modules that are loaded dynamically into the MaxScale core. These modules reside in the directory `$MAXSCALE_HOME/modules`, if the environment variable `$MAXSCALE_HOME` is not set it defaults to `/usr/local/mariadb-maxscale`. It may also be set by passing the `-c` option on the MaxScale command line.
 
 ### MySQLClient
 

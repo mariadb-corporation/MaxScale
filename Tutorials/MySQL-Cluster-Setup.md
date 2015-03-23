@@ -249,7 +249,7 @@ Add these sections in MaxScale.cnf config file:
 
 Assuming MaxScale is installed in server1, start it
 
-	[root@server1 ~]# cd /usr/local/mariadb/maxscale/bin
+	[root@server1 ~]# cd /usr/local/mariadb-maxscale/bin
 
 	[root@server1 bin]#  ./maxscale -c ../
 

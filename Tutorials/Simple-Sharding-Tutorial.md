@@ -92,7 +92,7 @@ After this we have a fully working configuration and we can move on to starting 
 
 Upon completion of the configuration process MaxScale is ready to be started . This may either be done manually by running the maxscale command or via the service interface. The service scripts are located in the `/etc/init.d/` folder and are accessible through both the `service` and `systemctl` commands.
 
-After starting MaxScale check the error log in /usr/local/mariadb/maxscale/log to see if any errors are detected in the configuration file. Also the maxadmin command may be used to confirm that MaxScale is running and the services, listeners etc have been correctly configured.
+After starting MaxScale check the error log in /usr/local/mariadb-maxscale/log to see if any errors are detected in the configuration file. Also the maxadmin command may be used to confirm that MaxScale is running and the services, listeners etc have been correctly configured.
 
 MaxScale is now ready to start accepting client connections and routing them. Queries are routed to the right servers based on the database they target and switching between the shards is semaless since MaxScale keeps the session state intact between servers.
 
