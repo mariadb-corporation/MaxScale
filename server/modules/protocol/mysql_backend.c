@@ -492,6 +492,36 @@ static int gw_read_backend_event(DCB *dcb) {
                 {
                         ss_dassert(read_buffer != NULL || dcb->dcb_readqueue != NULL);
                 }
+		
+		if(dcb->dcb_readqueue)
+		{
+		    read_buffer = gwbuf_append(dcb->dcb_readqueue,read_buffer);
+		}
+
+		nbytes_read = gwbuf_length(read_buffer);
+		
+		if (nbytes_read < 3)
+		{
+		    dcb->dcb_readqueue = read_buffer;
+		    rc = 0;
+		    goto return_rc;
+		}
+
+                {
+		    GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
+		    
+		    if(tmp == NULL)
+		    {
+			/** No complete packets */
+			dcb->dcb_readqueue = read_buffer;
+			rc = 0;
+			goto return_rc;
+			
+		    }
+		    
+		    dcb->dcb_readqueue = read_buffer;
+		    read_buffer = tmp;
+		}
 
                 /** 
                  * If protocol has session command set, concatenate whole 
