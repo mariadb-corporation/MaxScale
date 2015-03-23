@@ -18,8 +18,6 @@ The simplest way to install MaxScale is to use one of the binary packages that a
 
 * Select your operating system from the drop down box
 
-![image alt text](images/image_0.png)
-
 * Instructions that are specific for your operating system will then appear
 
 ![image alt text](images/image_1.png)
