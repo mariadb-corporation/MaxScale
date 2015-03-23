@@ -140,8 +140,12 @@ ${CMAKE_BINARY_DIR}/Changelog.txt)
 execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl 
 ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes/MaxScale-1.1-Release-Notes.md
  ${CMAKE_BINARY_DIR}/ReleaseNotes.txt)
+execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl 
+${CMAKE_SOURCE_DIR}/Documentation/Upgrading-To-MaxScale-1.1.0.md
+ ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt)
 install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION .)
 install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION .)
+install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION .)
 
 message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 
