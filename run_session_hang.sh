@@ -10,7 +10,7 @@ perl $test_dir/session_hang/simpletest.pl
 sleep 15
 
 $test_dir/session_hang/run_setmix.sh &
-perl $test_dir/system-test/session_hang/simpletest.pl
+perl $test_dir/session_hang/simpletest.pl
 
 sleep 15
 
@@ -19,8 +19,8 @@ perl $test_dir/session_hang/simpletest.pl
 
 sleep 15
 
-$test_dir/system-test/session_hang/run_setmix.sh &
-perl $test_dir/system-test/session_hang/simpletest.pl
+$test_dir/session_hang/run_setmix.sh &
+perl $test_dir/session_hang/simpletest.pl
 
 sleep 15
 

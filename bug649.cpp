@@ -60,6 +60,8 @@ int main(int argc, char *argv[])
     printf("Setup firewall back to allow mysql\n"); fflush(stdout);
     Test->repl->unblock_node(0); fflush(stdout);
     sleep(10);
+    exit_flag = 1;
+    sleep(10);
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
     global_result += check_maxscale_alive(); fflush(stdout);
