@@ -70,7 +70,7 @@ If you wish to use two different usernames for the two different roles of monito
 
 ## Creating Your MaxScale Configuration
 
-MaxScale configuration is held in an ini file that is located in the file MaxScale.cnf in the directory $MAXSCALE_HOME/etc, if you have installed in the default location then this file is available in /usr/local/skysql/maxscle/etc/MaxScale.cnf. This is not created as part of the installation process and must be manually created. A template file does exist within this directory that may be use as a basis for your configuration.
+MaxScale configuration is held in an ini file that is located in the file MaxScale.cnf in the directory $MAXSCALE_HOME/etc, if you have installed in the default location then this file is available in /usr/local/mariadb/maxscle/etc/MaxScale.cnf. This is not created as part of the installation process and must be manually created. A template file does exist within this directory that may be use as a basis for your configuration.
 
 A global, maxscale, section is included within every MaxScale configuration file; this is used to set the values of various MaxScale wide parameters, perhaps the most important of these is the number of threads that MaxScale will use to execute the code that forwards requests and handles responses for clients.
 
@@ -130,7 +130,7 @@ servers=dbserv1, dbserv2, dbserv3
 
 The final step in the service sections is to add the username and password that will be used to populate the user data from the database cluster. There are two options for representing the password, either plain text or encrypted passwords may be used. In order to use encrypted passwords a set of keys must be generated that will be used by the encryption and decryption process. To generate the keys use the maxkeys command and pass the name of the secrets file in which the keys are stored.
 
-% maxkeys /usr/local/skysql/maxscale/etc/.secrets
+% maxkeys /usr/local/mariadb-maxscale/etc/.secrets
 
 %
 
@@ -292,9 +292,9 @@ or
 
 % service maxscale start
 
-Check the error log in /usr/local/skysql/maxscale/log to see if any errors are detected in the configuration file and to confirm MaxScale has been started. Also the maxadmin command may be used to confirm that MaxScale is running and the services, listeners etc have been correctly configured.
+Check the error log in /usr/local/mariadb-maxscale/log to see if any errors are detected in the configuration file and to confirm MaxScale has been started. Also the maxadmin command may be used to confirm that MaxScale is running and the services, listeners etc have been correctly configured.
 
-% maxadmin -pskysql list services
+% maxadmin -pmariadb list services
 
 Services.
 
@@ -312,7 +312,7 @@ CLI                       | cli                  |      2 |     2
 
 --------------------------+----------------------+--------+---------------
 
-% maxadmin -pskysql list servers
+% maxadmin -pmariadb list servers
 
 Servers.
 
@@ -330,7 +330,7 @@ dbserv3            | 192.168.2.3     |  3306 |           0 | Running, Slave
 
 -------------------+-----------------+-------+-------------+--------------------
 
-% maxadmin -pskysql list listeners
+% maxadmin -pmariadb list listeners
 
 Listeners.
 

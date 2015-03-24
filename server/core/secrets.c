@@ -73,7 +73,7 @@ static int	reported = 0;
         home = getenv("MAXSCALE_HOME");
 
         if (home == NULL) {
-                home = "/usr/local/skysql/MaxScale";
+                home = "/usr/local/mariadb-maxscale";
         }
 	snprintf(secret_file, 255, "%s/etc/.secrets", home);
 

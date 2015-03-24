@@ -5,7 +5,7 @@
 ## About MaxScale
 
  - [About MaxScale](About/About-MaxScale.md)
- - [Release Notes 1.0.4](About/MaxScale-1.0.4-Release-Notes.md)
+ - [Release Notes 1.1](Release-Notes/MaxScale-1.1-Release-Notes.md)
  - [Changelog](Changelog.md)
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
@@ -44,7 +44,7 @@
  - [Regex Filter](filters/Regex-Filter.md)
  - [Tee Filter](filters/Tee-Filter.md)
  - [Top N Filter](filters/Top-N-Filter.md)
- - [Firewall Filter](filters/Firewall-Filter.md)
+ - [Database Firewall Filter](filters/Database-Firewall-Filter.md)
  - [RabbitMQ Filter](filters/RabbitMQ-Filter.md)
 
 ## Utilities
@@ -53,13 +53,14 @@
 
 ## Routers
 
- - [SchemaRouter Router](routers/schemarouter/SchemaRouter.md)
+ - [Simple Schema Sharding Router](routers/schemarouter/SchemaRouter.md)
 
 ## Design Documents
 
  - [Core Objects Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/core-objects-html-docs)
  - [Binlog Router Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/binlog-router-html-docs)
  - [DCB States (to be replaced in StarUML)](Design-Documents/DCB-States.pdf)
+ - [Schema Sharding Router Technical Documentation](Design-Documents/SchemaRouter-technical.md)
 
 ## Earlier Release Notes
 

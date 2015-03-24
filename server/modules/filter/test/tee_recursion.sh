@@ -29,7 +29,7 @@ function execute_test()
 
 function reload_conf()
 {
-    $BINDIR/bin/maxadmin --user=admin --password=skysql reload config
+    $BINDIR/bin/maxadmin --user=admin --password=mariadb reload config
     if [[ $? -ne 0 ]]
     then
         echo "Test failed: maxadmin returned a non-zero value."
@@ -55,7 +55,7 @@ MAXPID=$BINDIR/log/$(ls -1 $BINDIR/log|grep maxscale)
 TEST1=$SRCDIR/server/modules/filter/test/tee_recursion1.cnf
 TEST2=$SRCDIR/server/modules/filter/test/tee_recursion2.cnf
 
-$BINDIR/bin/maxadmin --user=admin --password=skysql flush logs
+$BINDIR/bin/maxadmin --user=admin --password=mariadb flush logs
 
 mv $CONF $OLDCONF
 cp $TEST1 $CONF

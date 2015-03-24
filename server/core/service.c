@@ -132,6 +132,7 @@ SERVICE 	*service;
 	service->name = strdup(servname);
 	service->routerModule = strdup(router);
 	service->users_from_all = false;
+	service->resources = NULL;
 	
 	if (service->name == NULL || service->routerModule == NULL)
 	{
@@ -228,7 +229,7 @@ GWPROTOCOL	*funcs;
 				{
 					/* Try loading authentication data from file cache */
 					char	*ptr, path[4097];
-					strcpy(path, "/usr/local/skysql/MaxScale");
+					strcpy(path, "/usr/local/mariadb-maxscale");
 					if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 					{
 						strncpy(path, ptr, 4096);
@@ -258,7 +259,7 @@ GWPROTOCOL	*funcs;
 				/* Save authentication data to file cache */
 				char	*ptr, path[4097];
                                 int mkdir_rval = 0;
-				strcpy(path, "/usr/local/skysql/MaxScale");
+				strcpy(path, "/usr/local/mariadb-maxscale");
 				if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 				{
 					strncpy(path, ptr, 4096);

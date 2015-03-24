@@ -79,7 +79,7 @@ struct dirent	*dp;
 
 	if (router->binlogdir == NULL)
 	{
-		strcpy(path, "/usr/local/skysql/MaxScale");
+		strcpy(path, "/usr/local/mariadb-maxscale");
 		if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 		{
 			strncpy(path, ptr,PATH_MAX);
@@ -633,7 +633,7 @@ blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 char	path[4097], *ptr;
 int	fd;
 
-	strcpy(path, "/usr/local/skysql/MaxScale");
+	strcpy(path, "/usr/local/mariadb-maxscale");
 	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 	{
 		strncpy(path, ptr, 4096);
@@ -672,7 +672,7 @@ char	path[4097], *ptr;
 int	fd;
 GWBUF	*buf;
 
-	strcpy(path, "/usr/local/skysql/MaxScale");
+	strcpy(path, "/usr/local/mariadb-maxscale");
 	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
 	{
 		strncpy(path, ptr, 4096);

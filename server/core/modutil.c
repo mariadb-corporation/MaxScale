@@ -532,25 +532,72 @@ return_packetbuf:
 /**
  * Parse the buffer and split complete packets into individual buffers.
  * Any partial packets are left in the old buffer.
- * @param p_readbuf Buffer to split
- * @return Head of the chain of complete packets
+ * @param p_readbuf Buffer to split, set to NULL if no partial packets are left
+ * @return Head of the chain of complete packets, all in a single, contiguous buffer
  */
 GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 {
-    GWBUF *buff = NULL, *packet = NULL;
+    GWBUF *buff = NULL, *packet;
+    uint8_t *ptr,*end;
+    int len,blen,total = 0;
+
+    if(p_readbuf == NULL || (*p_readbuf) == NULL ||
+       gwbuf_length(*p_readbuf) < 3)
+	return NULL;
+
+    packet = gwbuf_make_contiguous(*p_readbuf);
+    packet->next = NULL;
+    *p_readbuf = packet;
+    ptr = (uint8_t*)packet->start;
+    end = (uint8_t*)packet->end;
+    len = gw_mysql_get_byte3(ptr) + 4;
+    blen = gwbuf_length(packet);
     
-    while((packet = modutil_get_next_MySQL_packet(p_readbuf)) != NULL)
+    if(len == blen)
     {
-        buff = gwbuf_append(buff,packet);
+	    *p_readbuf = NULL;
+	    return packet;
     }
-    
+    else if(len > blen)
+    {
+	return NULL;
+    }
+
+    while(total + len < blen)
+    {
+	ptr += len;
+	total += len;
+	len = gw_mysql_get_byte3(ptr) + 4;
+    }
+
+    /** Full packets only, return original */
+    if(total + len == blen)
+    {
+	*p_readbuf = NULL;
+	return packet;
+    }
+
+    /** The next packet is a partial, split into complete and partial packets */
+    if((buff = gwbuf_alloc(total)) == NULL)
+    {
+	skygw_log_write(LOGFILE_ERROR,
+		 "Error: Failed to allocate new buffer "
+		" of %d bytes while splitting buffer"
+		" into complete packets.",
+		 total);
+	return NULL;
+    }
+    buff->next = NULL;
+    gwbuf_set_type(buff,GWBUF_TYPE_MYSQL);
+    memcpy(buff->start,packet->start,total);
+    gwbuf_consume(packet,total);
     return buff;
 }
 
 /**
  * Count the number of EOF, OK or ERR packets in the buffer. Only complete
  * packets are inspected and the buffer is assumed to only contain whole packets.
- * If partial packets are in the buffer, they are ingnored. The caller must handle the
+ * If partial packets are in the buffer, they are ignored. The caller must handle the
  * detection of partial packets in buffers.
  * @param reply Buffer to use
  * @param use_ok Whether the DEPRECATE_EOF flag is set

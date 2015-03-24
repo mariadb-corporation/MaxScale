@@ -354,7 +354,7 @@ Connected to localhost.
 
 Escape character is '^]'.
 
-Welcome the SkySQL MaxScale Debug Interface (V1.1.0).
+Welcome the MariaDB MaxScale Debug Interface (V1.1.0).
 
 Type help for a list of available commands.
 
@@ -364,7 +364,7 @@ Password:
 
 MaxScale> 
 
-As delivered MaxScale uses a default login name of admin with the password of skysql for connections to the debug interface. Users may be added to the CLI by use of the add user command.
+As delivered MaxScale uses a default login name of admin with the password of mariadb for connections to the debug interface. Users may be added to the CLI by use of the add user command.
 
 This places you in the debug command line interface of MaxScale, there is a help system that will display the commands available to you
 
@@ -1691,7 +1691,7 @@ Note, not all configuration elements can be changed dynamically currently. This 
 
 ## Add user
 
-The add user command is used to add new users to the debug CLI of MaxScale. The default behaviour of the CLI for MaxScale is to have a login name of admin and a fixed password of skysql. Adding new users will disable this default behaviour and limit the login access to the users that are added.
+The add user command is used to add new users to the debug CLI of MaxScale. The default behaviour of the CLI for MaxScale is to have a login name of admin and a fixed password of mariadb. Adding new users will disable this default behaviour and limit the login access to the users that are added.
 
 **MaxScale>** add user admin july2013
 
@@ -1711,7 +1711,7 @@ User admin already exists.
 
 **MaxScale>**** **
 
-If you should forget or lose the the account details you may simply remove the passwd file in $MAXSCALE_HOME/etc and the system will revert to the default behaviour with admin/skysql as the account.
+If you should forget or lose the the account details you may simply remove the passwd file in $MAXSCALE_HOME/etc and the system will revert to the default behaviour with admin/mariadb as the account.
 
 ## Enable/disable log
 

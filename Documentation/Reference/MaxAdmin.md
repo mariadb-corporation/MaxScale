@@ -650,7 +650,7 @@ A monitor that has been shutdown may be restarted using the restart monitor comm
 
 # Working With Administration Interface Users
 
-A default installation of MaxScale allows connection to the administration interface using the username of admin and the password skysql. This username and password stay in effect as long as no other users have been created for the administration interface. As soon as the first user is added the use of admin/skysql as login credentials will be disabled.
+A default installation of MaxScale allows connection to the administration interface using the username of admin and the password mariadb. This username and password stay in effect as long as no other users have been created for the administration interface. As soon as the first user is added the use of admin/mariadb as login credentials will be disabled.
 
 ## What Users Have Been Defined?
 
@@ -666,7 +666,7 @@ In order to see the current users that have been defined for the administration 
     User names: vilho, root, dba, massi, mark
     MaxScale>
 
-Please note that if no users have been configured the default admin/skysql user will not be shown.
+Please note that if no users have been configured the default admin/mariadb user will not be shown.
 
     MaxScale> show users
     Administration interface users:

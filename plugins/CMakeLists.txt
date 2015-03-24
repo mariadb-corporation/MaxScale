@@ -1,0 +1,5 @@
+install(FILES nagios/check_maxscale_monitors.pl DESTINATION plugins/nagios)
+install(FILES nagios/check_maxscale_resources.pl DESTINATION plugins/nagios)
+install(FILES nagios/check_maxscale_threads.pl DESTINATION plugins/nagios)
+install(FILES nagios/maxscale_commands.cfg DESTINATION plugins/nagios)
+install(FILES nagios/server1.cfg DESTINATION plugins/nagios)

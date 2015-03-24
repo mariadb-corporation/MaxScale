@@ -34,6 +34,8 @@
  * Date		Who			Description
  * 14/04/2014	Mark Riddoch		Initial implementation
  * 18/02/2015	Massimiliano Pinto	Addition of DISCONNECT ALL and DISCONNECT SERVER server_id
+ * 18/03/2015	Markus Makela		Better detection of CRC32 | NONE  checksum
+ * 19/03/2015	Massimiliano Pinto	Addition of basic MariaDB 10 compatibility support
  *
  * @endverbatim
  */
@@ -80,6 +82,7 @@ static int blr_slave_send_eof(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int 
 static int blr_slave_send_disconnected_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int server_id, int found);
 static int blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int server_id);
+static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -363,13 +366,17 @@ int	query_len;
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.heartbeat);
 		}
+		 else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
+                {
+                        free(query_text);
+                        return blr_slave_send_ok(router, slave);
+                }
 		else if (strcasecmp(word, "@master_binlog_checksum") == 0)
 		{
 			word = strtok_r(NULL, sep, &brkb);
-			if (word && (strcasecmp(word, "'none'") == 0))
-				slave->nocrc = 1;
-			else
-				slave->nocrc = 0;
+			if (word && (strcasecmp(word, "@@global.biglog_checksum'") == 0))
+				slave->nocrc = !router->master_chksum;
+
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.chksum1);
 		}
@@ -410,8 +417,6 @@ int	query_len;
 		else if (strcasecmp(word, "ALL") == 0)
 		{
 			free(query_text);
-			spinlock_release(&router->lock);
-
 			return blr_slave_disconnect_all(router, slave);
 		}
 		else if (strcasecmp(word, "SERVER") == 0)
@@ -1887,21 +1892,23 @@ char	serverid[40];
 uint8_t *ptr;
 int	len, id_len, seqno = 2;
 
-	blr_slave_send_fieldcount(router, slave, 2);
-	blr_slave_send_columndef(router, slave, "server_id", 0x03, 40, seqno++);
-	blr_slave_send_columndef(router, slave, "state", 0xf, 40, seqno++);
-	blr_slave_send_eof(router, slave, seqno++);
-
 	sprintf(serverid, "%d", server_id);
-	id_len = strlen(serverid);
 	if (found)
 		strcpy(state, "disconnected");
 	else
 		strcpy(state, "not found");
 
+	id_len = strlen(serverid);
 	len = 5 + id_len + strlen(state) + 1;
+
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
+
+	blr_slave_send_fieldcount(router, slave, 2);
+	blr_slave_send_columndef(router, slave, "server_id", 0x03, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "state", 0xf, 40, seqno++);
+	blr_slave_send_eof(router, slave, seqno++);
+
 	ptr = GWBUF_DATA(pkt);
 	encode_value(ptr, id_len + 2 + strlen(state), 24);	// Add length of data packet
 	ptr += 3;
@@ -1949,9 +1956,12 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int se
 		{
 			/* server_id found */
 			server_found = 1;
-
-			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "DISCONNECT SERVER: closing [%s], server id [%d]",
-				sptr->dcb->remote, server_id)));
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: Slave %s, server id %d, disconnected by %s@%s",
+				router->service->name,
+				sptr->dcb->remote,
+				server_id,
+				slave->dcb->user,
+				slave->dcb->remote)));
 
 			/* send server_id with disconnect state to client */
 			n = blr_slave_send_disconnected_server(router, slave, server_id, 1);
@@ -1975,7 +1985,15 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int se
 		n = blr_slave_send_disconnected_server(router, slave, server_id, 0);
 	}
 
-	return n;
+	if (n == 0) {
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Error: gwbuf memory allocation in "
+			"DISCONNECT SERVER server_id [%d]",
+			sptr->serverid)));
+
+		blr_slave_send_error(router, slave, "Memory allocation error for DISCONNECT SERVER");
+	}
+
+	return 1;
 }
 
 /**
@@ -2013,13 +2031,11 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 		/* skip servers with state = 0 */
 		if (sptr->state != 0)
 		{
-			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "DISCONNECT ALL: closing [%s], server_id [%d]",
-			sptr->dcb->remote, sptr->serverid)));
-
 			sprintf(server_id, "%d", sptr->serverid);
 			sprintf(state, "disconnected");
 
 			len = 5 + strlen(server_id) + strlen(state) + 1;
+
 			if ((pkt = gwbuf_alloc(len)) == NULL) {
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "Error: gwbuf memory allocation in "
 					"DISCONNECT ALL for [%s], server_id [%d]",
@@ -2027,8 +2043,14 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
 				spinlock_release(&router->lock);
 
+				blr_slave_send_error(router, slave, "Memory allocation error for DISCONNECT ALL");
+
 				return 1;
 			}
+
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: Slave %s, server id %d, disconnected by %s@%s",
+				router->service->name,
+				sptr->dcb->remote, sptr->serverid, slave->dcb->user, slave->dcb->remote)));
 
 			ptr = GWBUF_DATA(pkt);
 			encode_value(ptr, len - 4, 24);                         // Add length of data packet
@@ -2056,4 +2078,32 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 	blr_slave_send_eof(router, slave, seqno);
 
 	return 1;
+}
+ /**
+ * Send a MySQL OK packet to the DCB
+ *
+ * @param dcb   The DCB to send the OK packet to
+ * @return result of a write call, non-zero if write was successful
+ */
+static int
+blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+
+        if ((pkt = gwbuf_alloc(11)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        *ptr++ = 7;     // Payload length
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 1;     // Seqno
+        *ptr++ = 0;     // ok
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 2;
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 0;
+        return slave->dcb->func.write(slave->dcb, pkt);
 }

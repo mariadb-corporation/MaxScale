@@ -24,7 +24,7 @@
  * @verbatim
  * Revision History
  *
- * See GitHub https://github.com/skysql/MaxScale
+ * See GitHub https://github.com/mariadb-corporation/MaxScale
  *
  * @endverbatim
  */
