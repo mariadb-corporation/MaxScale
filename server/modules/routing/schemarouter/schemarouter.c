@@ -427,7 +427,6 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 	dbnms = skygw_get_database_names(buffer,&sz);
 
 	if(sz > 0){
-		has_dbs = true;
 		for(i = 0; i < sz; i++){
 		    char* name;
 			if((name = (char*)hashtable_fetch(ht,dbnms[i]))){
