@@ -7,12 +7,19 @@ find_package(Pandoc)
 
 if(PANDOC_FOUND AND BUILD_DIR)
   file(MAKE_DIRECTORY ${BUILD_DIR}/pdf)
-  file(GLOB_RECURSE MARKDOWN *.md)
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/makepdf.sh DESTINATION ${BUILD_DIR})
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Documentation ${BUILD_DIR})
+  file(GLOB_RECURSE MARKDOWN ${CMAKE_CURRENT_BINARY_DIR}/*.md)
+
   foreach(VAR ${MARKDOWN})
-    string(REPLACE ".md" ".pdf" OUTPUT ${VAR})
-    get_filename_component(DIR ${VAR} DIRECTORY)
-    string(REPLACE "${CMAKE_CURRENT_BINARY_DIR}" "${BUILD_DIR}/pdf" FILE ${OUTPUT})
-    execute_process(COMMAND ${CMAKE_COMMAND} -E chdir ${DIR} ${PANDOC_EXECUTABLE} ${VAR} -o ${OUTPUT})
-    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${OUTPUT} ${FILE})
+    execute_process(COMMAND ${BUILD_DIR}/makepdf.sh ${VAR})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E echo ${VAR})
   endforeach()
+
+  file(GLOB PDF ${BUILD_DIR}/Documentation/*.pdf)
+
+  foreach(FILE ${PDF})
+    execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${FILE} ${BUILD_DIR}/pdf/)
+  endforeach()
+
 endif()
