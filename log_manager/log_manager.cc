@@ -51,6 +51,10 @@ static int block_start_index;
 static int prevval;
 static simple_mutex_t msg_mutex;
 #endif
+static int highprec = 0;
+static int do_syslog = 1;
+static int do_maxscalelog = 1;
+
 /**
  * Variable holding the enabled logfiles information.
  * Used from log users to check enabled logs prior calling
@@ -391,7 +395,13 @@ static bool logmanager_init_nomutex(
         fw = &lm->lm_filewriter;
         fn->fn_state  = UNINIT;
         fw->fwr_state = UNINIT;
-        
+
+        if(!do_syslog)
+        {
+            free(syslog_id_str);
+            syslog_id_str = NULL;
+        }
+
         /** Initialize configuration including log file naming info */
         if (!fnames_conf_init(fn, argc, argv)) 
 	{
@@ -696,9 +706,11 @@ static int logmanager_write_log(
 		else
 		{
 			sesid_str_len = 0;
-		}			
-                timestamp_len = get_timestamp_len();
-                
+		}
+                if(highprec)
+                  timestamp_len = get_timestamp_len_hp();
+                else
+                  timestamp_len = get_timestamp_len();
 		cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 		
                 /** Find out how much can be safely written with current block size */
@@ -740,10 +752,17 @@ static int logmanager_write_log(
 		}
 #endif
 		/** Book space for log string from buffer */
+                if(do_maxscalelog)
+                {
                 wp = blockbuf_get_writepos(&bb,
                                            id,
                                            safe_str_len,
                                            flush);
+                }
+                else
+                {
+                    wp = (char*)malloc(sizeof(char)*(timestamp_len-sizeof(char)+cmplen+str_len + 1));
+                }
 
 
 #if defined (SS_LOG_DEBUG)
@@ -758,8 +777,10 @@ static int logmanager_write_log(
                  * to wp.
                  * Returned timestamp_len doesn't include terminating null.
                  */
-                timestamp_len = snprint_timestamp(wp, timestamp_len);
-		
+                 if(highprec)
+                   timestamp_len = snprint_timestamp_hp(wp, timestamp_len);
+                 else
+                   timestamp_len = snprint_timestamp(wp, timestamp_len);
 		if (sesid_str_len != 0)
 		{
 			/**
@@ -809,8 +830,15 @@ static int logmanager_write_log(
 			wp[safe_str_len-2]=' ';
 		}
 		wp[safe_str_len-1] = '\n';
-                blockbuf_unregister(bb);
 
+                if(do_maxscalelog)
+                {
+                    blockbuf_unregister(bb);
+                }
+                else
+                {
+                free(wp);
+                }
                 /**
                  * disable because cross-blockbuffer locking either causes deadlock
                  * or run out of memory blocks.
@@ -1364,12 +1392,12 @@ int skygw_log_write_flush(
          * Find out the length of log string (to be formatted str).
          */
         va_start(valist, str);
-        len = vsnprintf(NULL, 0, str, valist);
+        len = sizeof(char) * vsnprintf(NULL, 0, str, valist);
         va_end(valist);
         /**
          * Add one for line feed.
          */
-        len += 1;
+        len += sizeof(char);
         /**
          * Write log string to buffer and add to file write list.
          */
@@ -1698,11 +1726,14 @@ static bool fnames_conf_init(
 
                 case 'l':
                         /** record list of log file ids for syslogged */
+                    if(do_syslog)
+                    {
                         if (syslog_id_str != NULL)
                         {
                                 free (syslog_id_str);
                         }
                         syslog_id_str = optarg;
+                    }
                         break;
 
                 case 'm':
@@ -1715,6 +1746,7 @@ static bool fnames_conf_init(
                         
                 case 's':
                         /** record list of log file ids for later use */
+                    if(do_syslog)
                         shmem_id_str = optarg;
                         break;
                 case 'h':
@@ -3076,4 +3108,32 @@ void skygw_log_sync_all(void)
 	flushall_logfiles(true);
 	skygw_message_send(lm->lm_logmes);
 	skygw_message_wait(lm->lm_clientmes);
+}
+
+/**
+ * Toggle high precision logging
+ * @param val 0 for disabled, 1 for enabled
+ */
+void skygw_set_highp(int val)
+{
+        highprec = val;
+}
+
+
+/**
+ * Toggle syslog logging
+ * @param val 0 for disabled, 1 for enabled
+ */
+void logmanager_enable_syslog(int val)
+{
+    do_syslog = val;
+}
+
+/**
+ * Toggle syslog logging
+ * @param val 0 for disabled, 1 for enabled
+ */
+void logmanager_enable_maxscalelog(int val)
+{
+    do_maxscalelog = val;
 }

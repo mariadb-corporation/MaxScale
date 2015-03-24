@@ -41,8 +41,11 @@
 #include <secrets.h>
 #include <dcb.h>
 #include <modinfo.h>
-
-extern int lm_enabled_logfiles_bitmask;
+#include <maxconfig.h>
+/** Defined in log_manager.cc */
+extern int            lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
 
 static	void	monitorMain(void *);
 
@@ -55,7 +58,7 @@ MODULE_INFO	info = {
 	"A MySQL Multi Master monitor"
 };
 
-static	void 	*startMonitor(void *);
+static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
 static	void	registerServer(void *, SERVER *);
 static	void	unregisterServer(void *, SERVER *);
@@ -76,12 +79,7 @@ static MONITOR_OBJECT MyObject = {
 	unregisterServer,
 	defaultUser,
 	diagnostics,
-	setInterval,
-	NULL,
-	NULL,
-	NULL,
-	detectStaleMaster,
-	NULL
+	setInterval
 };
 
 /**
@@ -131,10 +129,10 @@ GetModuleObject()
  * @return A handle to use when interacting with the monitor
  */
 static	void 	*
-startMonitor(void *arg)
+startMonitor(void *arg,void* opt)
 {
 MYSQL_MONITOR *handle;
-
+CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
         if (arg)
         {
             handle = arg;	/* Must be a restart */
@@ -155,6 +153,14 @@ MYSQL_MONITOR *handle;
             handle->master = NULL;
             spinlock_init(&handle->lock);
         }
+
+	while(params)
+	{
+	    if(!strcmp(params->name,"detect_stale_master"))
+		handle->detectStaleMaster = config_truth_value(params->value);
+	    params = params->next;
+	}
+
         handle->tid = (THREAD)thread_start(monitorMain, handle);
         return handle;
 }
@@ -632,7 +638,7 @@ size_t nrounds = 0;
 
                         if (mon_status_changed(ptr))
                         {
-                                dcb_call_foreach(DCB_REASON_NOT_RESPONDING);
+                                dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
                         }
                         
                         if (mon_status_changed(ptr) || 

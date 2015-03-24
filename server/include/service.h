@@ -24,7 +24,8 @@
 #include <server.h>
 #include <filter.h>
 #include <hashtable.h>
-#include "config.h"
+#include <resultset.h>
+#include <maxconfig.h>
 
 /**
  * @file service.h
@@ -136,12 +137,17 @@ typedef struct service {
 			svc_config_param;     /*<  list of config params and values */
 	int             svc_config_version;   /*<  Version number of configuration */
 	bool            svc_do_shutdown;	/*< tells the service to exit loops etc. */
+        bool            users_from_all;         /*< Load users from one server or all of them */
+        bool            strip_db_esc;      /*< Remove the '\' characters from database names
+                                            * when querying them from the server. MySQL Workbench seems
+                                            * to escape at least the underscore character. */
 	SPINLOCK
 			users_table_spin;	/**< The spinlock for users data refresh */
 	SERVICE_REFRESH_RATE
 			rate_limit;		/**< The refresh rate limit for users table */
 	FILTER_DEF	**filters;		/**< Ordered list of filters */
 	int		n_filters;		/**< Number of filters */
+        int             conn_timeout;           /*< Session timeout in seconds */
 	char		*weightby;
 	struct service	*next;			/**< The next service in the linked list */
 } SERVICE;
@@ -172,9 +178,12 @@ extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
 extern	void	serviceSetFilters(SERVICE *, char *);
 extern	int	serviceEnableRootUser(SERVICE *, int );
+extern	int	serviceSetTimeout(SERVICE *, int );
 extern	void	serviceWeightBy(SERVICE *, char *);
 extern	char	*serviceGetWeightingParameter(SERVICE *);
 extern	int	serviceEnableLocalhostMatchWildcardHost(SERVICE *, int);
+int serviceStripDbEsc(SERVICE* service, int action);
+int serviceAuthAllServers(SERVICE *service, int action);
 extern	void	service_update(SERVICE *, char *, char *, char *);
 extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);
@@ -193,4 +202,7 @@ extern	void	dListServices(DCB *);
 extern	void	dListListeners(DCB *);
 char* service_get_name(SERVICE* svc);
 void  service_shutdown();
+extern	int	serviceSessionCountAll();
+extern  RESULTSET	*serviceGetList();
+extern  RESULTSET	*serviceGetListenerList();
 #endif

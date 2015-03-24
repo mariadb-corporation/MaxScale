@@ -37,7 +37,7 @@
 /**
  * test1	default user
  *
- * Test that the username password admin/skysql is accepted if no users
+ * Test that the username password admin/mariadb is accepted if no users
  * have been created and that no other users are accepted
  *
  * WARNING: $MAXSCALE_HOME/etc/passwd must be removed before this test is run
@@ -45,7 +45,7 @@
 static int
 test1()
 {
-	if (admin_verify("admin", "skysql") == 0)
+	if (admin_verify("admin", "mariadb") == 0)
 	{
 		fprintf(stderr, "admin_verify: test 1.1 (default user) failed.\n");
 		return 1;
@@ -270,7 +270,7 @@ char	*home, buf[1024];
 
 	/* Unlink any existing password file before running this test */
 	if ((home = getenv("MAXSCALE_HOME")) == NULL || strlen(home) >= 1024)
-		home =  "/usr/local/skysql";
+		home =  "/usr/local/mariadb-maxscale";
 	sprintf(buf, "%s/etc/passwd", home);
     if(!is_valid_posix_path(buf))
         exit(1);
@@ -284,7 +284,7 @@ char	*home, buf[1024];
 	result += test5();
 
     /* Add the default user back so other tests can use it */
-    admin_add_user("admin", "skysql");
+    admin_add_user("admin", "mariadb");
 
 	exit(result);
 }

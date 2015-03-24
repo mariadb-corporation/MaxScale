@@ -19,7 +19,7 @@
  */
 #include <time.h>
 #include <dcb.h>
-
+#include <hk_heartbeat.h>
 /**
  * @file housekeeper.h A mechanism to have task run periodically
  *
@@ -51,12 +51,6 @@ typedef struct hktask {
 	struct	hktask
 		*next;			/*< Next task in the list */
 } HKTASK;
-
-/**
- * The global housekeeper heartbeat value. This value is increamente
- * every 100ms and may be used for crude timing etc.
- */
-extern unsigned long	hkheartbeat;
 
 extern void hkinit();
 extern int  hktask_add(char *name, void (*task)(void *), void *data, int frequency);

@@ -27,11 +27,17 @@
 #include <regex.h>
 #include "skygw_debug.h"
 #include <skygw_types.h>
+#include <sys/time.h>
 #include "skygw_utils.h"
 
 const char*  timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
 /** One for terminating '\0' */
 const size_t    timestamp_len       =    (4+1 +2+1 +2+1 +2+1 +2+1 +2+3  +1) * sizeof(char);
+
+
+const char*  timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
+/** One for terminating '\0' */
+const size_t    timestamp_len_hp       =    (4+1 +2+1 +2+1 +2+1 +2+1 +2+1+3+3  +1) * sizeof(char);
 
 /** Single-linked list for storing test cases */
 
@@ -139,12 +145,16 @@ int atomic_add(
         int *variable,
         int value)
 {
+#ifdef __GNUC__
+        return (int) __sync_fetch_and_add (variable, value);
+#else
 	asm volatile(
 		"lock; xaddl %%eax, %2;"
 		:"=a" (value)
 		: "a" (value), "m" (*variable)
 		: "memory" );
 	return value;
+#endif
 }
 
 
@@ -667,6 +677,10 @@ size_t get_timestamp_len(void)
         return timestamp_len;
 }
 
+size_t get_timestamp_len_hp(void)
+{
+        return timestamp_len_hp;
+}
 /** 
  * @node Generate and write a timestamp to location passed as argument
  * by using at most tslen characters. 
@@ -689,13 +703,14 @@ size_t snprint_timestamp(
         time_t       t;
         struct tm    tm;
 	size_t          rval;
-
+        struct timeval tv;
         if (p_ts == NULL) {
 		rval = 0;
                 goto retblock;
         }
 
         /** Generate timestamp */
+
         t = time(NULL);
         tm = *(localtime(&t));
         snprintf(p_ts,
@@ -707,7 +722,56 @@ size_t snprint_timestamp(
                  tm.tm_hour,
                  tm.tm_min,
                  tm.tm_sec);
+	rval = strlen(p_ts)*sizeof(char);
+retblock:
+        return rval;
+}
 
+
+/**
+ * @node Generate and write a timestamp to location passed as argument
+ * by using at most tslen characters. This will use millisecond precision.
+ *
+ * Parameters:
+ * @param p_ts - in, use
+ *          Write position in memory. Must be filled with at least
+ *          <timestamp_len> zeroes
+ *
+ * @return Length of string written to p_ts. Length includes terminating '\0'.
+ *
+ *
+ * @details (write detailed description here)
+ *
+ */
+size_t snprint_timestamp_hp(
+        char* p_ts,
+        size_t   tslen)
+{
+        time_t       t;
+        struct tm    tm;
+	size_t          rval;
+        struct timeval tv;
+        int usec;
+        if (p_ts == NULL) {
+		rval = 0;
+                goto retblock;
+        }
+
+        /** Generate timestamp */
+
+        gettimeofday(&tv,NULL);
+        tm = *(localtime(&tv.tv_sec));
+        usec = tv.tv_usec/1000;
+        snprintf(p_ts,
+                 MIN(tslen,timestamp_len_hp),
+                 timestamp_formatstr_hp,
+                 tm.tm_year+1900,
+                 tm.tm_mon+1,
+                 tm.tm_mday,
+                 tm.tm_hour,
+                 tm.tm_min,
+                 tm.tm_sec,
+                 usec);
 	rval = strlen(p_ts)*sizeof(char);
 retblock:
         return rval;
@@ -2081,6 +2145,34 @@ bool is_valid_posix_path(char* path)
         {
           return false;
         }
+    }
+  return true;
+}
+
+/**
+ * Strip escape characters from a character string.
+ * @param String to parse.
+ * @return True if parsing was successful, false on errors.
+ */
+bool
+strip_escape_chars (char* val)
+{
+  int cur, end;
+
+  if (val == NULL)
+    return false;
+
+  end = strlen (val) + 1;
+  cur = 0;
+
+  while (cur < end)
+    {
+      if (val[cur] == '\\')
+	{
+	  memmove (val + cur, val + cur + 1,end - cur - 1);
+	  end--;
+	}
+      cur++;
     }
   return true;
 }

@@ -42,6 +42,7 @@
 #include <atomic.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <housekeeper.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -607,14 +608,21 @@ SESSION		*ptr;
 	ptr = allSessions;
 	while (ptr)
 	{
+        double idle = (hkheartbeat - ptr->client->last_read);
+        idle = idle > 0 ? idle/10.0:0;
 		dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
 		dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 		dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
 		dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
 		if (ptr->client && ptr->client->remote)
-			dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
+			dcb_printf(dcb, "\tClient Address:		%s%s%s\n",
+                       ptr->client->user?ptr->client->user:"",
+                       ptr->client->user?"@":"",
+                       ptr->client->remote);
 		dcb_printf(dcb, "\tConnected:		%s",
 			asctime_r(localtime_r(&ptr->stats.connect, &result), timebuf));
+        if(ptr->client->state == DCB_STATE_POLLING)
+            dcb_printf(dcb, "\tIdle:			   	%.0f seconds\n",idle);
 		ptr = ptr->next;
 	}
 	spinlock_release(&session_spin);
@@ -636,14 +644,21 @@ struct tm	result;
 char		buf[30];
 int		i;
 
+    double idle = (hkheartbeat - ptr->client->last_read);
+    idle = idle > 0 ? idle/10.f:0;
 	dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
 	dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 	dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
 	dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
 	if (ptr->client && ptr->client->remote)
-		dcb_printf(dcb, "\tClient Address:		%s\n", ptr->client->remote);
+			dcb_printf(dcb, "\tClient Address:		%s%s%s\n",
+                       ptr->client->user?ptr->client->user:"",
+                       ptr->client->user?"@":"",
+                       ptr->client->remote);
 	dcb_printf(dcb, "\tConnected:		%s",
 			asctime_r(localtime_r(&ptr->stats.connect, &result), buf));
+    if(ptr->client->state == DCB_STATE_POLLING)
+        dcb_printf(dcb, "\tIdle:			   	%.0f seconds",idle);
 	if (ptr->n_filters)
 	{
 		for (i = 0; i < ptr->n_filters; i++)
@@ -908,4 +923,134 @@ session_getUser(SESSION *session)
 SESSION *get_all_sessions()
 {
 	return allSessions;
+}
+
+/**
+ * Close sessions that have been idle for too long.
+ * 
+ * If the time since a session last sent data is grater than the set value in the
+ * service, it is disconnected. The default value for the timeout for a service is 0.
+ * This means that connections are never timed out.
+ * @param data NULL, this is only here to satisfy the housekeeper function requirements.
+ */
+void session_close_timeouts(void* data)
+{
+    SESSION* ses;
+    
+    spinlock_acquire(&session_spin);
+    ses = get_all_sessions();
+    spinlock_release(&session_spin);
+    
+    while(ses)
+    {
+	if(ses->client && ses->client->state == DCB_STATE_POLLING &&
+	 ses->service->conn_timeout > 0 && 
+	 hkheartbeat - ses->client->last_read > ses->service->conn_timeout * 10)
+	{
+	    ses->client->func.hangup(ses->client);
+	}
+	
+	spinlock_acquire(&session_spin);
+	ses = ses->next;
+	spinlock_release(&session_spin);
+	
+    }
+}
+
+/**
+ * Callback structure for the session list extraction
+ */
+typedef struct {
+	int			index;
+	SESSIONLISTFILTER	filter;
+} SESSIONFILTER;
+
+/**
+ * Provide a row to the result set that defines the set of sessions
+ *
+ * @param set	The result set
+ * @param data	The index of the row to send
+ * @return The next row or NULL
+ */
+static RESULT_ROW *
+sessionRowCallback(RESULTSET *set, void *data)
+{
+SESSIONFILTER	*cbdata = (SESSIONFILTER *)data;
+int		i = 0;
+char		buf[20];
+RESULT_ROW	*row;
+SESSION		*ptr;
+
+	spinlock_acquire(&session_spin);
+	ptr = allSessions;
+	/* Skip to the first non-listener if not showing listeners */
+	while (ptr && cbdata->filter == SESSION_LIST_CONNECTION &&
+			ptr->state == SESSION_STATE_LISTENER)
+	{
+		ptr = ptr->next;
+	}
+	while (i < cbdata->index && ptr)
+	{
+		if (cbdata->filter == SESSION_LIST_CONNECTION &&
+			ptr->state !=  SESSION_STATE_LISTENER)
+		{
+			i++;
+		}
+		else if (cbdata->filter == SESSION_LIST_ALL)
+		{
+			i++;
+		}
+		ptr = ptr->next;
+	}
+	/* Skip to the next non-listener if not showing listeners */
+	while (ptr && cbdata->filter == SESSION_LIST_CONNECTION &&
+			ptr->state == SESSION_STATE_LISTENER)
+	{
+		ptr = ptr->next;
+	}
+	if (ptr == NULL)
+	{
+		spinlock_release(&session_spin);
+		free(data);
+		return NULL;
+	}
+	cbdata->index++;
+	row = resultset_make_row(set);
+	sprintf(buf, "%p", ptr);
+	resultset_row_set(row, 0, buf);
+	resultset_row_set(row, 1, ((ptr->client && ptr->client->remote)
+                                ? ptr->client->remote : ""));
+	resultset_row_set(row, 2, (ptr->service && ptr->service->name
+				? ptr->service->name : ""));
+	resultset_row_set(row, 3, session_state(ptr->state));
+	spinlock_release(&session_spin);
+	return row;
+}
+
+/**
+ * Return a resultset that has the current set of sessions in it
+ *
+ * @return A Result set
+ */
+RESULTSET *
+sessionGetList(SESSIONLISTFILTER filter)
+{
+RESULTSET	*set;
+SESSIONFILTER	*data;
+
+	if ((data = (SESSIONFILTER *)malloc(sizeof(SESSIONFILTER))) == NULL)
+		return NULL;
+	data->index = 0;
+	data->filter = filter;
+	if ((set = resultset_create(sessionRowCallback, data)) == NULL)
+	{
+		free(data);
+		return NULL;
+	}
+	resultset_add_column(set, "Session", 16, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Client", 15, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "Service", 15, COL_TYPE_VARCHAR);
+	resultset_add_column(set, "State", 15, COL_TYPE_VARCHAR);
+
+	return set;
 }

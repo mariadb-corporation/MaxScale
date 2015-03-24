@@ -33,7 +33,7 @@
 #include <math.h>
 #include <time.h>
 
-#include "../../include/hashtable.h"
+#include <hashtable.h>
 
 static void
 read_lock(HASHTABLE *table)

@@ -64,6 +64,23 @@ unsigned char	*ptr;
 }
 
 /**
+ * Check if a GWBUF structure is a MySQL COM_STMT_PREPARE packet
+ *
+ * @param	buf	Buffer to check
+ * @return	True if GWBUF is a COM_STMT_PREPARE packet
+ */
+int
+modutil_is_SQL_prepare(GWBUF *buf)
+{
+unsigned char	*ptr;
+
+	if (GWBUF_LENGTH(buf) < 5)
+		return 0;
+	ptr = GWBUF_DATA(buf);
+	return ptr[4] == 0x16 ;		// COM_STMT_PREPARE
+}
+
+/**
  * Extract the SQL portion of a COM_QUERY packet
  *
  * NB This sets *sql to point into the packet and does not
@@ -243,7 +260,7 @@ modutil_get_SQL(GWBUF *buf)
 unsigned int	len, length;
 char	*ptr, *dptr, *rval = NULL;
 
-	if (!modutil_is_SQL(buf))
+	if (!modutil_is_SQL(buf) && !modutil_is_SQL_prepare(buf))
 		return rval;
 	ptr = GWBUF_DATA(buf);
 	length = *ptr++;
@@ -515,25 +532,72 @@ return_packetbuf:
 /**
  * Parse the buffer and split complete packets into individual buffers.
  * Any partial packets are left in the old buffer.
- * @param p_readbuf Buffer to split
- * @return Head of the chain of complete packets
+ * @param p_readbuf Buffer to split, set to NULL if no partial packets are left
+ * @return Head of the chain of complete packets, all in a single, contiguous buffer
  */
 GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 {
-    GWBUF *buff = NULL, *packet = NULL;
+    GWBUF *buff = NULL, *packet;
+    uint8_t *ptr,*end;
+    int len,blen,total = 0;
+
+    if(p_readbuf == NULL || (*p_readbuf) == NULL ||
+       gwbuf_length(*p_readbuf) < 3)
+	return NULL;
+
+    packet = gwbuf_make_contiguous(*p_readbuf);
+    packet->next = NULL;
+    *p_readbuf = packet;
+    ptr = (uint8_t*)packet->start;
+    end = (uint8_t*)packet->end;
+    len = gw_mysql_get_byte3(ptr) + 4;
+    blen = gwbuf_length(packet);
     
-    while((packet = modutil_get_next_MySQL_packet(p_readbuf)) != NULL)
+    if(len == blen)
     {
-        buff = gwbuf_append(buff,packet);
+	    *p_readbuf = NULL;
+	    return packet;
     }
-    
+    else if(len > blen)
+    {
+	return NULL;
+    }
+
+    while(total + len < blen)
+    {
+	ptr += len;
+	total += len;
+	len = gw_mysql_get_byte3(ptr) + 4;
+    }
+
+    /** Full packets only, return original */
+    if(total + len == blen)
+    {
+	*p_readbuf = NULL;
+	return packet;
+    }
+
+    /** The next packet is a partial, split into complete and partial packets */
+    if((buff = gwbuf_alloc(total)) == NULL)
+    {
+	skygw_log_write(LOGFILE_ERROR,
+		 "Error: Failed to allocate new buffer "
+		" of %d bytes while splitting buffer"
+		" into complete packets.",
+		 total);
+	return NULL;
+    }
+    buff->next = NULL;
+    gwbuf_set_type(buff,GWBUF_TYPE_MYSQL);
+    memcpy(buff->start,packet->start,total);
+    gwbuf_consume(packet,total);
     return buff;
 }
 
 /**
  * Count the number of EOF, OK or ERR packets in the buffer. Only complete
  * packets are inspected and the buffer is assumed to only contain whole packets.
- * If partial packets are in the buffer, they are ingnored. The caller must handle the
+ * If partial packets are in the buffer, they are ignored. The caller must handle the
  * detection of partial packets in buffers.
  * @param reply Buffer to use
  * @param use_ok Whether the DEPRECATE_EOF flag is set
@@ -541,7 +605,7 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
  * @return Number of EOF packets
  */
 int
-modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
+modutil_count_signal_packets(GWBUF *reply, int use_ok,  int n_found, int* more)
 {
     unsigned char* ptr = (unsigned char*) reply->start;
     unsigned char* end = (unsigned char*) reply->end;
@@ -549,6 +613,7 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
     int pktlen, eof = 0, err = 0;
     int errlen = 0, eoflen = 0;
     int iserr = 0, iseof = 0;
+    bool moreresults = false;
     while(ptr < end)
     {
 
@@ -568,8 +633,9 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
             }
         }
         
-        if((ptr + pktlen) > end)
+        if((ptr + pktlen) > end || (eof + n_found) >= 2)
         {
+	    moreresults = PTR_EOF_MORE_RESULTS(ptr);
             ptr = prev;    
             break;
         }
@@ -598,6 +664,8 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok, int n_found)
                 eof = 0;
         }
     }
+
+    *more = moreresults;
 
     return(eof + err);
 }
@@ -675,4 +743,98 @@ static void modutil_reply_routing_error(
 	/** Create an incoming event for backend DCB */
 	poll_add_epollin_event_to_dcb(backend_dcb, buf);
 	return;
+}
+
+/**
+ * Find the first occurrence of a character in a string. This function ignores
+ * escaped characters and all characters that are enclosed in single or double quotes.
+ * @param ptr Pointer to area of memory to inspect
+ * @param c Character to search for
+ * @param len Size of the memory area
+ * @return Pointer to the first non-escaped, non-quoted occurrence of the character.
+ * If the character is not found, NULL is returned.
+ */
+void* strnchr_esc(char* ptr,char c, int len)
+{
+    char* p = (char*)ptr;
+    char* start = p;
+    bool quoted = false, escaped = false;
+    char qc;
+
+    while(p < start + len)
+    {
+	if(escaped)
+	{
+	    escaped = false;
+	}
+	else if(*p == '\\')
+	{
+	    escaped = true;
+	}
+	else if((*p == '\'' || *p  == '"') && !quoted)
+	{
+	    quoted = true;
+	    qc = *p;
+	}
+	else if(quoted && *p == qc)
+	{
+	    quoted = false;
+	}
+	else if(*p == c && !escaped && !quoted)
+	{
+	    return p;
+	}
+	p++;
+    }
+    
+    return NULL;
+}
+
+/**
+ * Create a COM_QUERY packet from a string.
+ * @param query Query to create.
+ * @return Pointer to GWBUF with the query or NULL if an error occurred.
+ */
+GWBUF* modutil_create_query(char* query)
+{
+    if(query == NULL)
+	return NULL;
+
+    GWBUF* rval = gwbuf_alloc(strlen(query) + 5);
+    int pktlen = strlen(query) + 1;
+    unsigned char* ptr;
+
+    if(rval)
+    {
+	ptr = (unsigned char*)rval->start;
+	*ptr++ = (pktlen);
+	*ptr++ = (pktlen)>>8;
+	*ptr++ = (pktlen)>>16;
+	*ptr++ = 0x0;
+	*ptr++ = 0x03;
+	memcpy(ptr,query,strlen(query));
+	gwbuf_set_type(rval,GWBUF_TYPE_MYSQL);
+    }
+
+    return rval;
+}
+
+/**
+ * Count the number of statements in a query.
+ * @param buffer Buffer to analyze.
+ * @return Number of statements.
+ */
+int modutil_count_statements(GWBUF* buffer)
+{
+    char* ptr = ((char*)(buffer)->start + 5);
+    char* end = ((char*)(buffer)->end);
+    int num = 1;
+
+    while((ptr = strnchr_esc(ptr,';', end - ptr)))
+    {
+	num++;
+	ptr++;
+    }
+
+    return num;
 }

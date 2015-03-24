@@ -61,6 +61,7 @@
 #include <users.h>
 #include <dbusers.h>
 #include <version.h>
+#include <housekeeper.h>
 
 #define GW_MYSQL_VERSION "MaxScale " MAXSCALE_VERSION
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
@@ -304,6 +305,7 @@ typedef struct {
 #define MYSQL_GET_STMTOK_NATTR(payload)         (gw_mysql_get_byte2(&payload[11]))
 #define MYSQL_IS_ERROR_PACKET(payload)          (MYSQL_GET_COMMAND(payload)==0xff)
 #define MYSQL_IS_COM_QUIT(payload)              (MYSQL_GET_COMMAND(payload)==0x01)
+#define MYSQL_IS_COM_INIT_DB(payload)              (MYSQL_GET_COMMAND(payload)==0x02)
 #define MYSQL_IS_CHANGE_USER(payload)		(MYSQL_GET_COMMAND(payload)==0x11)
 #define MYSQL_GET_NATTR(payload)                ((int)payload[4])
 

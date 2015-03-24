@@ -33,6 +33,7 @@
  * 02-09-2013	Massimiliano Pinto	Added session ref counter
  * 29-05-2014	Mark Riddoch		Support for filter mechanism
  *					added
+ * 20-02-2015   Markus Mäkelä           Added session timeouts
  *
  * @endverbatim
  */
@@ -40,6 +41,7 @@
 #include <atomic.h>
 #include <buffer.h>
 #include <spinlock.h>
+#include <resultset.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 
@@ -98,6 +100,14 @@ typedef struct {
 	void		*instance;
 	void		*session;
 } SESSION_FILTER;
+
+/**
+ * Filter type for the sessionGetList call
+ */
+typedef enum {
+	SESSION_LIST_ALL,
+	SESSION_LIST_CONNECTION
+} SESSIONLISTFILTER;
 
 /**
  * The session status block
@@ -167,5 +177,7 @@ bool	session_link_dcb(SESSION *, struct dcb *);
 SESSION* get_session_by_router_ses(void* rses);
 void session_enable_log(SESSION* ses, logfile_id_t id);
 void session_disable_log(SESSION* ses, logfile_id_t id);
+void session_close_timeouts(void* data);
+RESULTSET	*sessionGetList(SESSIONLISTFILTER);
 
 #endif

@@ -5,7 +5,8 @@
 ## About MaxScale
 
  - [About MaxScale](About/About-MaxScale.md)
- - [Release Notes 1.0.4](About/MaxScale-1.0.4-Release-Notes.md)
+ - [Release Notes 1.1](Release-Notes/MaxScale-1.1-Release-Notes.md)
+ - [Changelog](Changelog.md)
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
  - [LICENSE](About/LICENSE.md)
@@ -30,6 +31,7 @@
  - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
  - [Galera Cluster Connection Routing Tutorial](Tutorials/Galera-Cluster-Connection-Routing-Tutorial.md)
  - [Galera Cluster Read-Write Splitting Tutorial](Tutorials/Galera-Cluster-Read-Write-Splitting-Tutorial.md)
+ - [MaxScale Information Schema Tutorial](Tutorials/MaxScale-Informaton-Schema.md)
  - [MySQL Replication Connection Routing Tutorial](Tutorials/MySQL-Replication-Connection-Routing-Tutorial.md)
  - [MySQL Replication Read-Write Splitting Tutorial](Tutorials/MySQL-Replication-Read-Write-Splitting-Tutorial.md)
  - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
@@ -42,17 +44,23 @@
  - [Regex Filter](filters/Regex-Filter.md)
  - [Tee Filter](filters/Tee-Filter.md)
  - [Top N Filter](filters/Top-N-Filter.md)
- - [Firewall Filter](filters/Firewall-Filter.md)
+ - [Database Firewall Filter](filters/Database-Firewall-Filter.md)
  - [RabbitMQ Filter](filters/RabbitMQ-Filter.md)
 
 ## Utilities
 
  - [RabbitMQ Consumer Client](filters/RabbitMQ-Consumer-Client.md)
 
+## Routers
+
+ - [Simple Schema Sharding Router](routers/schemarouter/SchemaRouter.md)
+
 ## Design Documents
 
- - [Session Commands design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/)
+ - [Core Objects Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/core-objects-html-docs)
+ - [Binlog Router Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/binlog-router-html-docs)
  - [DCB States (to be replaced in StarUML)](Design-Documents/DCB-States.pdf)
+ - [Schema Sharding Router Technical Documentation](Design-Documents/SchemaRouter-technical.md)
 
 ## Earlier Release Notes
 

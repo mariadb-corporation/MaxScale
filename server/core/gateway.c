@@ -53,7 +53,7 @@
 #include <dcb.h>
 #include <session.h>
 #include <modules.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <poll.h>
 #include <housekeeper.h>
 #include <service.h>
@@ -78,6 +78,8 @@
 #if !defined(_GNU_SOURCE)
 #  define _GNU_SOURCE
 #endif
+
+time_t	MaxScaleStarted;
 
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
@@ -148,6 +150,8 @@ static struct option long_options[] = {
   {"config",   required_argument, 0, 'f'},
   {"nodaemon", no_argument,       0, 'd'},
   {"log",      required_argument, 0, 'l'},
+  {"syslog",   required_argument, 0, 's'},
+  {"maxscalelog",   required_argument, 0, 'S'},
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},
   {0, 0, 0, 0}
@@ -632,7 +636,8 @@ static bool resolve_maxscale_homedir(
          * 3. if /etc/MaxScale/MaxScale.cnf didn't exist or wasn't accessible, home
          *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
          */
-        tmp = strndup(getenv("PWD"), PATH_MAX);
+	char *pwd = getenv("PWD");
+        tmp = strndup(pwd ? pwd : "PWD_NOT_SET", PATH_MAX);
         tmp2 = get_expanded_pathname(p_home_dir, tmp, default_cnf_fname);
 	free(tmp2); /*< full path isn't needed so simply free it */
 	
@@ -991,7 +996,11 @@ static void usage(void)
                 "  -f|--config=...   relative|absolute pathname of MaxScale configuration file\n"
 		"                    (default: $MAXSCALE_HOME/etc/MaxScale.cnf)\n"
 		"  -l|--log=...      log to file or shared memory\n"
-		"                    -lfile or -lshm - defaults to file\n"
+		"                    -lfile or -lshm - defaults to shared memory\n"
+		"  -s|--syslog=	     log messages to syslog."
+		" True or false - defaults to true\n"
+		"  -S|--maxscalelog= log messages to MaxScale log."
+		" True or false - defaults to true\n"
 		"  -v|--version      print version info and exit\n"
                 "  -?|--help         show this help\n"
 		, progname);
@@ -1053,7 +1062,9 @@ int main(int argc, char **argv)
         char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
         void*    log_flush_thr = NULL;
 	int      option_index;
-	int	 logtofile = 1;	      	      /* Use shared memory or file */
+	int	 logtofile = 0;	      	      /* Use shared memory or file */
+	int	 syslog_enabled = 1; /** Log to syslog */
+	int	 maxscalelog_enabled = 1; /** Log with MaxScale */
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
         sigset_t sigpipe_mask;
@@ -1093,7 +1104,7 @@ int main(int argc, char **argv)
                         goto return_main;
                 }
         }
-        while ((opt = getopt_long(argc, argv, "dc:f:l:v?",
+        while ((opt = getopt_long(argc, argv, "dc:f:l:vs:S:?",
 				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
@@ -1198,7 +1209,28 @@ int main(int argc, char **argv)
                                 succp = false;
 			}
 			break;
-		  
+		case 'S':
+		    if(strstr(optarg,"="))
+		    {
+			strtok(optarg,"= ");
+			maxscalelog_enabled = config_truth_value(strtok(NULL,"= "));
+		    }
+		    else
+		    {
+			maxscalelog_enabled = config_truth_value(optarg);
+		    }
+		    break;
+		case 's':
+		    if(strstr(optarg,"="))
+		    {
+			strtok(optarg,"= ");
+			syslog_enabled = config_truth_value(strtok(NULL,"= "));
+		    }
+		    else
+		    {
+			syslog_enabled = config_truth_value(optarg);
+		    }
+		    break;
 		case '?':
 		  usage();
 		  rc = EXIT_SUCCESS;
@@ -1560,7 +1592,19 @@ int main(int argc, char **argv)
                 argv[0] = "MaxScale";
                 argv[1] = "-j";
                 argv[2] = buf;
+
+		if(!syslog_enabled)
+		{
+		    printf("Syslog logging is disabled.\n");
+		}
 		
+		if(!maxscalelog_enabled)
+		{
+		    printf("MaxScale logging is disabled.\n");
+		}
+		logmanager_enable_syslog(syslog_enabled);
+		logmanager_enable_maxscalelog(maxscalelog_enabled);
+
 		if (logtofile)
 		{
 			argv[3] = "-l"; /*< write to syslog */
@@ -1796,6 +1840,8 @@ int main(int argc, char **argv)
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                         "MaxScale started with %d server threads.",
                                    config_threadcount())));
+
+	MaxScaleStarted = time(0);
         /*<
          * Serve clients.
          */
@@ -1949,4 +1995,10 @@ static int write_pid_file(char *home_dir) {
 
 	/* success */
 	return 0;
+}
+
+int
+MaxScaleUptime()
+{
+	return time(0) - MaxScaleStarted;
 }

@@ -91,7 +91,7 @@ char			*pw;
 	initialise();
 	if (users == NULL)
 	{
-		if (strcmp(username, "admin") == 0 && strcmp(password, "skysql") == 0)
+		if (strcmp(username, "admin") == 0 && strcmp(password, "mariadb") == 0)
 			return 1;
 	}
 	else
@@ -123,7 +123,7 @@ char	uname[80], passwd[80];
 		sprintf(fname, "%s/etc/passwd", home);
 	}
 	else{
-		sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
+		sprintf(fname, "/usr/local/mariadb-maxscale/etc/passwd");
 	}
 	if ((fp = fopen(fname, "r")) == NULL)
 		return NULL;
@@ -159,7 +159,7 @@ char	fname[1024], *home, *cpasswd;
 		sprintf(fname, "%s/etc/passwd", home);
 	}
 	else{
-		sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
+		sprintf(fname, "/usr/local/mariadb-maxscale/etc/passwd");
 	}
         
 	if (users == NULL)
@@ -253,12 +253,14 @@ char* admin_remove_user(
         /**
          * Open passwd file and remove user from the file.
          */
-        if ((home = getenv("MAXSCALE_HOME")) != NULL && strlen(home) < 1024) {
+        if ((home = getenv("MAXSCALE_HOME")) != NULL &&
+	    strnlen(home,PATH_MAX) < PATH_MAX &&
+	    strnlen(home,PATH_MAX) > 0) {
                 sprintf(fname, "%s/etc/passwd", home);
                 sprintf(fname_tmp, "%s/etc/passwd_tmp", home);
         } else {
-                sprintf(fname, "/usr/local/skysql/MaxScale/etc/passwd");
-                sprintf(fname_tmp, "/usr/local/skysql/MaxScale/etc/passwd_tmp");
+                sprintf(fname, "/usr/local/mariadb-maxscale/etc/passwd");
+                sprintf(fname_tmp, "/usr/local/mariadb-maxscale/etc/passwd_tmp");
         }
         /**
          * Rewrite passwd file from memory.

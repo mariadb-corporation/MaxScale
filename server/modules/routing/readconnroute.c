@@ -311,6 +311,11 @@ char		*weightby;
 				inst->bitmask |= (SERVER_MASTER|SERVER_SLAVE);
 				inst->bitvalue |= SERVER_SLAVE;
 			}
+			else if (!strcasecmp(options[i], "running"))
+			{
+				inst->bitmask |= (SERVER_RUNNING);
+				inst->bitvalue |= SERVER_RUNNING;
+			}
 			else if (!strcasecmp(options[i], "synced"))
 			{
 				inst->bitmask |= (SERVER_JOINED);
@@ -333,7 +338,12 @@ char		*weightby;
 			}
 		}
 	}
-
+	if(inst->bitmask == 0 && inst->bitvalue == 0)
+	{
+	    /** No parameters given, use RUNNING as a valid server */
+	    inst->bitmask |= (SERVER_RUNNING);
+	    inst->bitvalue |= SERVER_RUNNING;
+	}
 	/*
 	 * We have completed the creation of the instance data, so now
 	 * insert this router instance into the linked list of routers

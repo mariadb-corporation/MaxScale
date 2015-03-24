@@ -336,6 +336,8 @@ gwbuf_append(GWBUF *head, GWBUF *tail)
 {
 	if (!head)
 		return tail;
+	if(!tail)
+		return head;
         CHK_GWBUF(head);
 	head->tail->next = tail;
 	head->tail = tail->tail;
@@ -638,6 +640,8 @@ GWBUF	*newbuf;
 char	*ptr;
 int	len;
 
+	if(orig == NULL)
+	    return NULL;
 	if (orig->next == NULL)
 		return orig;
 

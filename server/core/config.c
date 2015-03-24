@@ -40,6 +40,8 @@
  *					internal router suppression of messages
  * 30/10/14	Massimiliano Pinto	Added disable_master_failback parameter
  * 07/11/14	Massimiliano Pinto	Addition of monitor timeouts for connect/read/write
+ * 20/02/15	Markus Mäkelä		Added connection_timeout parameter for services
+ * 05/03/15	Massimiliano	Pinto	Added notification_feedback support
  *
  * @endverbatim
  */
@@ -49,14 +51,27 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <ini.h>
-#include <config.h>
+#include <maxconfig.h>
 #include <service.h>
 #include <server.h>
 #include <users.h>
 #include <monitor.h>
+#include <modules.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql.h>
+#include <sys/utsname.h>
+#include <sys/fcntl.h>
+#include <glob.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <housekeeper.h>
+#include <notification.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <sys/utsname.h>
+
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -69,12 +84,19 @@ static	int	process_config_update(CONFIG_CONTEXT *);
 static	void	free_config_context(CONFIG_CONTEXT	*);
 static	char 	*config_get_value(CONFIG_PARAMETER *, const char *);
 static	int	handle_global_item(const char *, const char *);
+static	int	handle_feedback_item(const char *, const char *);
 static	void	global_defaults();
+static	void	feedback_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
-static int	internalService(char *router);
-
+int	config_truth_value(char *str);
+static	int	internalService(char *router);
+int	config_get_ifaddr(unsigned char *output);
+int	config_get_release_string(char* release);
+FEEDBACK_CONF * config_get_feedback_data();
+void config_add_param(CONFIG_CONTEXT*,char*,char*);
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
+static	FEEDBACK_CONF	feedback;
 char			*version_string = NULL;
 
 
@@ -120,6 +142,12 @@ CONFIG_PARAMETER	*param, *p1;
 	{
 		return handle_global_item(name, value);
 	}
+
+	if (strcasecmp(section, "feedback") == 0)
+	{
+		return handle_feedback_item(name, value);
+	}
+
 	/*
 	 * If we already have some parameters for the object
 	 * add the parameters to that object. If not create
@@ -191,6 +219,7 @@ int		rval;
 	}
 
 	global_defaults();
+	feedback_defaults();
 
 	config.object = "";
 	config.next = NULL;
@@ -278,16 +307,41 @@ int			error_count = 0;
 				char *user;
 				char *auth;
 				char *enable_root_user;
+				char *connection_timeout;
+				char *auth_all_servers;
+				char *strip_db_esc;
 				char *weightby;
 				char *version_string;
 				bool  is_rwsplit = false;
-                                
+				bool  is_schemarouter = false;
+				char *allow_localhost_match_wildcard_host;
+
 				obj->element = service_alloc(obj->object, router);
 				user = config_get_value(obj->parameters, "user");
 				auth = config_get_value(obj->parameters, "passwd");
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
+
+				connection_timeout = 
+					config_get_value(
+						obj->parameters,
+						"connection_timeout");
+
+				auth_all_servers = 
+					config_get_value(
+						obj->parameters, 
+						"auth_all_servers");
+
+				strip_db_esc = 
+					config_get_value(
+						obj->parameters, 
+						"strip_db_esc");
+                
+				allow_localhost_match_wildcard_host =
+					config_get_value(obj->parameters, 
+							"localhost_match_wildcard_host");
+
 				weightby = config_get_value(obj->parameters, "weightby");
 			
 				version_string = config_get_value(obj->parameters, 
@@ -298,7 +352,7 @@ int			error_count = 0;
 					is_rwsplit = true;
 				}
 
-				char *allow_localhost_match_wildcard_host =
+				allow_localhost_match_wildcard_host =
                                         config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
                                 if (obj->element == NULL) /*< if module load failed */
@@ -332,6 +386,20 @@ int			error_count = 0;
 					serviceEnableRootUser(
                                                 obj->element, 
                                                 config_truth_value(enable_root_user));
+
+				if (connection_timeout)
+					serviceSetTimeout(
+                                      obj->element, 
+                                      atoi(connection_timeout));
+
+				if(auth_all_servers)
+					serviceAuthAllServers(obj->element, 
+						config_truth_value(auth_all_servers));
+
+				if(strip_db_esc)
+					serviceStripDbEsc(obj->element, 
+						config_truth_value(strip_db_esc));
+
 				if (weightby)
 					serviceWeightBy(obj->element, weightby);
 
@@ -713,7 +781,7 @@ int			error_count = 0;
 			/* if id is not set, do it now */
 			if (gateway.id == 0) {
 				setipaddress(&serv_addr.sin_addr, (address == NULL) ? "0.0.0.0" : address);
-				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + port + getpid());
+				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + port != NULL ? atoi(port) : 0 + getpid());
 			}
                 
 			if (service && socket && protocol) {        
@@ -778,9 +846,6 @@ int			error_count = 0;
 			char *user;
 			char *passwd;
 			unsigned long interval = 0;
-			int replication_heartbeat = 0;
-			int detect_stale_master = 0;
-			int disable_master_failback = 0;
 			int connect_timeout = 0;
 			int read_timeout = 0;
 			int write_timeout = 0;
@@ -791,18 +856,6 @@ int			error_count = 0;
 			passwd = config_get_value(obj->parameters, "passwd");
 			if (config_get_value(obj->parameters, "monitor_interval")) {
 				interval = strtoul(config_get_value(obj->parameters, "monitor_interval"), NULL, 10);
-			}
-
-			if (config_get_value(obj->parameters, "detect_replication_lag")) {
-				replication_heartbeat = atoi(config_get_value(obj->parameters, "detect_replication_lag"));
-			}
-
-			if (config_get_value(obj->parameters, "detect_stale_master")) {
-				detect_stale_master = atoi(config_get_value(obj->parameters, "detect_stale_master"));
-			}
-
-			if (config_get_value(obj->parameters, "disable_master_failback")) {
-				disable_master_failback = atoi(config_get_value(obj->parameters, "disable_master_failback"));
 			}
 
 			if (config_get_value(obj->parameters, "backend_connect_timeout")) {
@@ -827,24 +880,11 @@ int			error_count = 0;
 						gateway.id = getpid();
 					}
 
-					/* add the maxscale-id to monitor data */
-					monitorSetId(obj->element, gateway.id);
+					monitorStart(obj->element,obj->parameters);
 
 					/* set monitor interval */
 					if (interval > 0)
 						monitorSetInterval(obj->element, interval);
-
-					/* set replication heartbeat */
-					if(replication_heartbeat == 1)
-						monitorSetReplicationHeartbeat(obj->element, replication_heartbeat);
-
-					/* detect stale master */
-					if(detect_stale_master == 1)
-						monitorDetectStaleMaster(obj->element, detect_stale_master);
-
-					/* disable master failback */
-					if(disable_master_failback == 1)
-						monitorDisableMasterFailback(obj->element, disable_master_failback);
 
 					/* set timeouts */
 					if (connect_timeout > 0)
@@ -1176,6 +1216,16 @@ config_pollsleep()
 	return gateway.pollsleep;
 }
 
+/**
+ * Return the feedback config data pointer
+ *
+ * @return  The feedback config data pointer
+ */
+FEEDBACK_CONF *
+config_get_feedback_data()
+{
+	return &feedback;
+}
 
 static struct {
 	char		*logname;
@@ -1209,6 +1259,10 @@ int i;
 	{
 		gateway.pollsleep = atoi(value);
         }
+	else if (strcmp(name, "ms_timestamp") == 0)
+	{
+		skygw_set_highp(atoi(value));
+	}
 	else
 	{
 		for (i = 0; lognames[i].logname; i++)
@@ -1226,11 +1280,51 @@ int i;
 }
 
 /**
+ * Configuration handler for items in the feedback [feedback] section
+ *
+ * @param name	The item name
+ * @param value	The item value
+ * @return 0 on error
+ */
+static	int
+handle_feedback_item(const char *name, const char *value)
+{
+int i;
+	if (strcmp(name, "feedback_enable") == 0)
+	{
+		feedback.feedback_enable = config_truth_value((char *)value);
+	}
+	else if (strcmp(name, "feedback_user_info") == 0)
+	{
+		feedback.feedback_user_info = strdup(value);
+        }
+	else if (strcmp(name, "feedback_url") == 0)
+	{
+		feedback.feedback_url = strdup(value);
+        }
+	if (strcmp(name, "feedback_timeout") == 0)
+	{
+		feedback.feedback_timeout = atoi(value);
+	}
+	if (strcmp(name, "feedback_connect_timeout") == 0)
+	{
+		feedback.feedback_connect_timeout = atoi(value);
+	}
+	if (strcmp(name, "feedback_frequency") == 0)
+	{
+		feedback.feedback_frequency = atoi(value);
+	}
+	return 1;
+}
+
+/**
  * Set the defaults for the global configuration options
  */
 static void
 global_defaults()
 {
+	uint8_t mac_addr[6]="";
+	struct utsname uname_data;
 	gateway.n_threads = 1;
 	gateway.n_nbpoll = DEFAULT_NBPOLLS;
 	gateway.pollsleep = DEFAULT_POLLSLEEP;
@@ -1239,6 +1333,42 @@ global_defaults()
 	else
 		gateway.version_string = NULL;
 	gateway.id=0;
+
+	/* get release string */
+	if(!config_get_release_string(gateway.release_string))
+	    sprintf(gateway.release_string,"undefined");
+
+	/* get first mac_address in SHA1 */
+	if(config_get_ifaddr(mac_addr)) {
+		gw_sha1_str(mac_addr, 6, gateway.mac_sha1);
+	} else {
+		memset(gateway.mac_sha1, '\0', sizeof(gateway.mac_sha1));
+		memcpy(gateway.mac_sha1, "MAC-undef", 9);
+	}
+
+	/* get uname info */
+	if (uname(&uname_data))
+		strcpy(gateway.sysname, "undefined");
+	else
+		strncpy(gateway.sysname, uname_data.sysname, _SYSNAME_STR_LENGTH);
+}
+
+/**
+ * Set the defaults for the feedback configuration options
+ */
+static void
+feedback_defaults()
+{
+	feedback.feedback_enable = 0;
+	feedback.feedback_user_info = NULL;
+	feedback.feedback_last_action = _NOTIFICATION_SEND_PENDING;
+	feedback.feedback_timeout = _NOTIFICATION_OPERATION_TIMEOUT;
+	feedback.feedback_connect_timeout = _NOTIFICATION_CONNECT_TIMEOUT;
+	feedback.feedback_url = NULL;
+	feedback.feedback_frequency = 1800;
+	feedback.release_info = gateway.release_string;
+	feedback.sysname = gateway.sysname;
+	feedback.mac_sha1 = gateway.mac_sha1;
 }
 
 /**
@@ -1281,20 +1411,27 @@ SERVER			*server;
                                         char *user;
 					char *auth;
 					char *enable_root_user;
-                                        char* max_slave_conn_str;
-                                        char* max_slave_rlag_str;
+
+					char *connection_timeout;
+
+					char* auth_all_servers;
+					char* strip_db_esc;
+					char* max_slave_conn_str;
+					char* max_slave_rlag_str;
 					char *version_string;
 					char *allow_localhost_match_wildcard_host;
 
 					enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
-                                        user = config_get_value(obj->parameters,
-                                                                "user");
+					connection_timeout = config_get_value(obj->parameters, "connection_timeout");
+					user = config_get_value(obj->parameters,
+								"user");
 					auth = config_get_value(obj->parameters,
-                                                                "passwd");
-
+								"passwd");
+                    
+					auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
+					strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
 					version_string = config_get_value(obj->parameters, "version_string");
-
 					allow_localhost_match_wildcard_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
 					if (version_string) {
@@ -1310,6 +1447,15 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(service, atoi(enable_root_user));
+
+						if (connection_timeout)
+							serviceSetTimeout(service, atoi(connection_timeout));
+
+
+                                                if(auth_all_servers)
+                                                    serviceAuthAllServers(service, atoi(auth_all_servers));
+						if(strip_db_esc)
+                                                    serviceStripDbEsc(service, atoi(strip_db_esc));
 
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
@@ -1412,24 +1558,38 @@ SERVER			*server;
 				}
 				else
 				{
-                                        char *user;
+                    char *user;
 					char *auth;
 					char *enable_root_user;
+					char *connection_timeout;
 					char *allow_localhost_match_wildcard_host;
+					char *auth_all_servers;
+					char *strip_db_esc;
 
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
                                                                  "enable_root_user");
+
+					connection_timeout = config_get_value(obj->parameters,
+                                                          "connection_timeout");
+					
+					auth_all_servers = 
+                                                config_get_value(obj->parameters, 
+                                                                 "auth_all_servers");
+					strip_db_esc = 
+                                                config_get_value(obj->parameters, 
+                                                                 "strip_db_esc");
+
 					allow_localhost_match_wildcard_host = 
 						config_get_value(obj->parameters, "localhost_match_wildcard_host");
-
-                                        user = config_get_value(obj->parameters,
-                                                                "user");
+                    
+					user = config_get_value(obj->parameters,
+                                            "user");
 					auth = config_get_value(obj->parameters,
-                                                                "passwd");
+                                            "passwd");
 					obj->element = service_alloc(obj->object,
-                                                                     router);
-
+                                                 router);
+                    
 					if (obj->element && user && auth)
                                         {
 						serviceSetUser(obj->element,
@@ -1437,6 +1597,9 @@ SERVER			*server;
                                                                auth);
 						if (enable_root_user)
 							serviceEnableRootUser(obj->element, atoi(enable_root_user));
+
+						if (connection_timeout)
+							serviceSetTimeout(obj->element, atoi(connection_timeout));
 
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
@@ -1660,14 +1823,18 @@ static char *service_params[] =
                 "servers",
                 "user",
                 "passwd",
-		"enable_root_user",
-		"localhost_match_wildcard_host",
+                "enable_root_user",
+                "connection_timeout",
+                "auth_all_servers",
+                "strip_db_esc",
+                "localhost_match_wildcard_host",
                 "max_slave_connections",
                 "max_slave_replication_lag",
-		"use_sql_variables_in",		/*< rwsplit only */
-		"version_string",
-		"filters",
-		"weightby",
+                "use_sql_variables_in",		/*< rwsplit only */
+                "subservices",
+                "version_string",
+                "filters",
+                "weightby",
                 NULL
         };
 
@@ -1845,4 +2012,240 @@ int	i;
 				return 1;
 	}
 	return 0;
+}
+/**
+ * Get the MAC address of first network interface
+ *
+ * and fill the provided allocated buffer with SHA1 encoding
+ * @param output	Allocated 6 bytes buffer
+ * @return 1 on success, 0 on failure
+ *
+ */
+int
+config_get_ifaddr(unsigned char *output)
+{
+	struct ifreq ifr;
+	struct ifconf ifc;
+	char buf[1024];
+	struct ifreq* it;
+	struct ifreq* end;
+	int success = 0;
+
+	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+	if (sock == -1) {
+		return 0;
+	};
+
+	ifc.ifc_len = sizeof(buf);
+	ifc.ifc_buf = buf;
+	if (ioctl(sock, SIOCGIFCONF, &ifc) == -1) {
+		return 0;
+	}
+
+	it = ifc.ifc_req;
+	end = it + (ifc.ifc_len / sizeof(struct ifreq));
+
+	for (; it != end; ++it) {
+		strcpy(ifr.ifr_name, it->ifr_name);
+		if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0) {
+			if (! (ifr.ifr_flags & IFF_LOOPBACK)) { /* don't count loopback */
+				if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0) {
+					success = 1;
+					break;
+				}
+			}
+		} else {
+			return 0;
+		}
+	}
+
+	if (success)
+		memcpy(output, ifr.ifr_hwaddr.sa_data, 6);
+
+	return success;
+}
+
+/**
+ * Get the linux distribution info
+ *
+ * @param release	The allocated buffer where
+ *			the found distribution is copied into.
+ * @return 1 on success, 0 on failure
+ *
+ */
+int
+config_get_release_string(char* release)
+{
+	const char *masks[]= {
+		"/etc/*-version", "/etc/*-release",
+		"/etc/*_version", "/etc/*_release"
+	};
+
+	bool have_distribution;
+	char distribution[_RELEASE_STR_LENGTH]="";
+	int fd;
+	int i;
+	char *to;
+
+	have_distribution= false;
+
+	/* get data from lsb-release first */
+	if ((fd= open("/etc/lsb-release", O_RDONLY)) != -1)
+	{
+		/* LSB-compliant distribution! */
+		size_t len= read(fd, (char*)distribution, sizeof(distribution)-1);
+		close(fd);
+		if (len != (size_t)-1)
+		{
+			distribution[len]= 0;
+			char *found= strstr(distribution, "DISTRIB_DESCRIPTION=");
+			if (found)
+			{
+				have_distribution = true;
+				char *end = strstr(found, "\n");
+				if (end == NULL)
+				end = distribution + len;
+				found += 20;
+
+				if (*found == '"' && end[-1] == '"')
+				{
+					found++;
+					end--;
+				}
+				*end = 0;
+
+				to = strcpy(distribution, "lsb: ");
+				memmove(to, found, end - found + 1 < INT_MAX ? end - found + 1 : INT_MAX);
+
+				strncpy(release, to, _RELEASE_STR_LENGTH);
+
+				return 1;
+			}
+		}
+	}
+
+	/* if not an LSB-compliant distribution */
+	for (i= 0; !have_distribution && i < 4; i++)
+	{
+		glob_t found;
+		char *new_to;
+
+		if (glob(masks[i], GLOB_NOSORT, NULL, &found) == 0)
+		{
+			int fd;
+			int k = 0;
+			int skipindex = 0;
+			int startindex = 0;
+
+			for (k = 0; k< found.gl_pathc; k++) {
+				if (strcmp(found.gl_pathv[k], "/etc/lsb-release") == 0) {
+					skipindex = k;
+				}
+			}
+
+			if ( skipindex == 0)
+				startindex++;
+
+			if ((fd= open(found.gl_pathv[startindex], O_RDONLY)) != -1)
+			{
+			/*
+				+5 and -8 below cut the file name part out of the
+				full pathname that corresponds to the mask as above.
+			*/
+				new_to = strncpy(distribution, found.gl_pathv[0] + 5,_RELEASE_STR_LENGTH - 1);
+				new_to += 8;
+				*new_to++ = ':';
+				*new_to++ = ' ';
+
+				size_t to_len= distribution + sizeof(distribution) - 1 - new_to;
+				size_t len= read(fd, (char*)new_to, to_len);
+
+				close(fd);
+
+				if (len != (size_t)-1)
+				{
+					new_to[len]= 0;
+					char *end= strstr(new_to, "\n");
+					if (end)
+						*end= 0;
+
+					have_distribution= true;
+					strncpy(release, new_to, _RELEASE_STR_LENGTH);
+				}
+			}
+		}
+		globfree(&found);
+	}
+
+	if (have_distribution)
+		return 1;
+	else
+		return 0;
+}
+
+/**
+ * Add the 'send_feedback' task to the task list
+ */
+void
+config_enable_feedback_task(void) {
+	FEEDBACK_CONF *cfg = config_get_feedback_data();
+	int url_set = 0;
+	int user_info_set = 0;
+	int enable_set = cfg->feedback_enable;
+
+	url_set = cfg->feedback_url != NULL && strlen(cfg->feedback_url);	
+	user_info_set = cfg->feedback_user_info != NULL && strlen(cfg->feedback_user_info);
+
+	if (enable_set && url_set && user_info_set) {
+		/* Add the task to the tasl list */
+        	if (hktask_add("send_feedback", module_feedback_send, cfg, cfg->feedback_frequency)) {
+
+			LOGIF(LM, (skygw_log_write_flush(
+				LOGFILE_MESSAGE,
+				"Notification service feedback task started: URL=%s, User-Info=%s, Frequency %u seconds",
+				cfg->feedback_url,
+				cfg->feedback_user_info,
+				cfg->feedback_frequency)));
+		}
+	} else {
+		if (enable_set) {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: Notification service feedback cannot start: feedback_enable=1 but"
+				" some required parameters are not set: %s%s%s",
+				url_set == 0 ? "feedback_url is not set" : "", (user_info_set == 0 && url_set == 0) ? ", " : "", user_info_set == 0 ? "feedback_user_info is not set" : "")));
+		} else {
+			LOGIF(LT, (skygw_log_write_flush(
+				LOGFILE_TRACE,
+				"Notification service feedback is not enabled")));
+		}
+	}
+}
+
+/**
+ * Remove the 'send_feedback' task
+ */
+void
+config_disable_feedback_task(void) {
+        hktask_remove("send_feedback");
+}
+
+unsigned long  config_get_gateway_id()
+{
+    return gateway.id;
+}
+void config_add_param(CONFIG_CONTEXT* obj, char* key,char* value)
+{
+    CONFIG_PARAMETER* nptr = malloc(sizeof(CONFIG_PARAMETER));
+
+    if(nptr == NULL)
+    {
+	skygw_log_write(LOGFILE_ERROR,"Memory allocation failed when adding configuration parameters");
+	return;
+    }
+
+    nptr->name = strdup(key);
+    nptr->value = strdup(value);
+    nptr->next = obj->parameters;
+    obj->parameters = nptr;
 }

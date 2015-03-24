@@ -447,7 +447,7 @@ static int gw_read_backend_event(DCB *dcb) {
 
                 /* read available backend data */
                 rc = dcb_read(dcb, &read_buffer);
-                
+
                 if (rc < 0) 
                 {
                         GWBUF* errbuf;
@@ -492,51 +492,37 @@ static int gw_read_backend_event(DCB *dcb) {
                 {
                         ss_dassert(read_buffer != NULL || dcb->dcb_readqueue != NULL);
                 }
+		
+		if(dcb->dcb_readqueue)
+		{
+		    read_buffer = gwbuf_append(dcb->dcb_readqueue,read_buffer);
+		}
 
-                /** Packet prefix was read earlier */
-                if (dcb->dcb_readqueue)
+		nbytes_read = gwbuf_length(read_buffer);
+		
+		if (nbytes_read < 3)
+		{
+		    dcb->dcb_readqueue = read_buffer;
+		    rc = 0;
+		    goto return_rc;
+		}
+
                 {
-			if (read_buffer != NULL)
-			{
-				read_buffer = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-			}
-			else
-			{
-				read_buffer = dcb->dcb_readqueue;
-			}
-                        nbytes_read = gwbuf_length(read_buffer);
-                        
-                        if (nbytes_read < 5) /*< read at least command type */
-                        {
-                                rc = 0;
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%p [gw_read_backend_event] Read %d bytes "
-					"from DCB %p, fd %d, session %s. "
-					"Returning  to poll wait.\n",
-					pthread_self(),
-					nbytes_read,
-					dcb,
-					dcb->fd,
-					dcb->session)));
-                                goto return_rc;
-                        }
-                        /** There is at least length and command type. */
-                        else
-                        {
-                                dcb->dcb_readqueue = NULL;                        
-                        }
-                }
-                /** This may be either short prefix of a packet, or the tail of it. */
-                else
-                {
-                        if (nbytes_read < 5) 
-                        {
-                                dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                                rc = 0;
-                                goto return_rc;
-                        }
-                }
+		    GWBUF *tmp = modutil_get_complete_packets(&read_buffer);
+		    
+		    if(tmp == NULL)
+		    {
+			/** No complete packets */
+			dcb->dcb_readqueue = read_buffer;
+			rc = 0;
+			goto return_rc;
+			
+		    }
+		    
+		    dcb->dcb_readqueue = read_buffer;
+		    read_buffer = tmp;
+		}
+
                 /** 
                  * If protocol has session command set, concatenate whole 
                  * response into one buffer.
@@ -623,9 +609,14 @@ static int gw_write_backend_event(DCB *dcb) {
                 if (dcb->writeq != NULL)
                 {
                         data = (uint8_t *)GWBUF_DATA(dcb->writeq);
-                        
-                        if (!(MYSQL_IS_COM_QUIT(data)))
+
+			if(dcb->session->client == NULL)
+			{
+				rc = 0;
+			}
+                        else if (!(MYSQL_IS_COM_QUIT(data)))
                         {
+
                                 /*< vraa : errorHandle */
                                 mysql_send_custom_error(
                                         dcb->session->client,
@@ -887,7 +878,7 @@ static int gw_error_backend_event(DCB *dcb)
                 goto retblock;
         }
         
-#if defined(SS_DEBUG)                
+#if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "Backend error event handling.")));
