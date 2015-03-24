@@ -1063,6 +1063,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 
   if(!my_session->active)
   {
+      skygw_log_write(LOGFILE_TRACE,"Tee: Failed to return reply, session is closed");
       gwbuf_free(reply);
       rc = 0;
       if(my_session->waiting[PARENT])
@@ -1104,6 +1105,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
     
     if(my_session->replies[branch] == 0)
     {
+	skygw_log_write(LOGFILE_TRACE,"Tee: First reply to a query for [%s].",branch == PARENT ? "PARENT":"CHILD");
       /* Reply is in a single packet if it is an OK, ERR or LOCAL_INFILE packet.
        * Otherwise the reply is a result set and the amount of packets is unknown.
        */            
@@ -1116,6 +1118,11 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	  {
 	      flags = get_response_flags(ptr,true);
 	      more_results = (flags & 0x08) && my_session->client_multistatement;
+	      if(more_results)
+	      {
+		  skygw_log_write(LOGFILE_TRACE,
+			   "Tee: [%s] waiting for more results.",branch == PARENT ? "PARENT":"CHILD");
+	      }
 	  }
 	}
 #ifdef SS_DEBUG
