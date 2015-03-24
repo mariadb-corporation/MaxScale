@@ -17,9 +17,6 @@ macro(set_maxscale_version)
 endmacro()
 
 macro(set_variables)
-
-  # Build type
-  set(BUILD_TYPE "None" CACHE STRING "Build type, possible values are:None, Debug, DebugSymbols, Optimized.")
   
   # hostname or IP address of MaxScale's host
   set(TEST_HOST "127.0.0.1" CACHE STRING "hostname or IP address of MaxScale's host")
@@ -61,7 +58,7 @@ macro(set_variables)
   set(GCOV FALSE CACHE BOOL "Use gcov build flags")
 
   # Install init.d scripts and ldconf configuration files
-  set(INSTALL_SYSTEM_FILES TRUE CACHE BOOL "Install init.d scripts and ldconf configuration files")
+  set(WITH_SCRIPTS TRUE CACHE BOOL "Install init.d scripts and ldconf configuration files")
 
   # Build tests
   set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
