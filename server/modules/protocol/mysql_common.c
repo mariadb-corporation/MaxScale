@@ -1530,14 +1530,20 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 				 * user@% not found.
  				 */
 
-				LOGIF(LD,
-					(skygw_log_write_flush(
-						LOGFILE_DEBUG,
-						"%lu [MySQL Client Auth], user [%s@%s] not existent",
-						pthread_self(),
-						key.user,
-						dcb->remote)));
-				break;
+			    LOGIF(LD,
+			     (skygw_log_write_flush(
+				    LOGFILE_DEBUG,
+					      "%lu [MySQL Client Auth], user [%s@%s] not existent",
+					      pthread_self(),
+					      key.user,
+					      dcb->remote)));
+
+			    skygw_log_write_flush(
+				    LOGFILE_ERROR,
+					     "Authentication Failed: user [%s@%s] not found.",
+					     key.user,
+					     dcb->remote);
+			    break;
 			}
 
 			break;
