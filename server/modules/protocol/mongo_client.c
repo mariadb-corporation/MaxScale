@@ -30,14 +30,13 @@
 #include <modinfo.h>
 #include <sys/stat.h>
 #include <modutil.h>
-
-#include <mysql_client_server_protocol.h>
+#include <plainprotocol.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
 	MODULE_GA,
 	GWPROTOCOL_VERSION,
-	"The client to plain protocol implementation"
+	"The plain client protocol"
 };
 
 /** Defined in log_manager.cc */
@@ -107,201 +106,6 @@ GetModuleObject()
 	return &MyObject;
 }
 
-/**
- * mysql_send_ok
- *
- * Send a MySQL protocol OK message to the dcb (client)
- *
- * @param dcb Descriptor Control Block for the connection to which the OK is sent
- * @param packet_number
- * @param in_affected_rows
- * @param mysql_message
- * @return packet length
- *
- */
-int
-mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message) {
-    return 1;
-}
-
-/**
- * MySQLSendHandshake
- *
- * @param dcb The descriptor control block to use for sending the handshake request
- * @return	The packet length sent
- */
-int
-MySQLSendHandshake(DCB* dcb)
-{
-    return 1;
-}
-
-/**
- * gw_mysql_do_authentication
- *
- * Performs the MySQL protocol 4.1 authentication, using data in GWBUF *queue
- *
- * (MYSQL_session*)client_data including: user, db, client_sha1 are copied into 
- * the dcb->data and later to dcb->session->data.
- * 
- * client_capabilitiesa are copied into the dcb->protocol
- *
- * @param	dcb 	Descriptor Control Block of the client
- * @param	queue	The GWBUF with data from client
- * @return	0	If succeed, otherwise non-zero value
- *
- * @note in case of failure, dcb->data is freed before returning. If succeed,
- * dcb->data is freed in session.c:session_free.
- */
-static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
-	MySQLProtocol *protocol = NULL;
-	/* int compress = -1; */
-	int connect_with_db = -1;
-	uint8_t *client_auth_packet = GWBUF_DATA(queue);
-	int client_auth_packet_size = 0;
-	char *username =  NULL;
-	char *database = NULL;
-	unsigned int auth_token_len = 0;
-	uint8_t *auth_token = NULL;
-	uint8_t *stage1_hash = NULL;
-	int auth_ret = -1;
-	MYSQL_session *client_data = NULL;
-
-        CHK_DCB(dcb);
-
-        protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
-        CHK_PROTOCOL(protocol);
-	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
-#if defined(SS_DEBUG)
-	client_data->myses_chk_top = CHK_NUM_MYSQLSES;
-	client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
-#endif
-	/**
-	 * Assign authentication structure with client DCB.
-	 */
-	dcb->data = client_data; 
-
-	stage1_hash = client_data->client_sha1;
-	username = client_data->user;
-
-	client_auth_packet_size = gwbuf_length(queue);
-
-	/* For clients supporting CLIENT_PROTOCOL_41
-	 * the Handshake Response Packet is:
-	 *
-	 * 4		bytes mysql protocol heade
-	 * 4		bytes capability flags
-	 * 4		max-packet size
-	 * 1		byte character set
-	 * string[23]	reserved (all [0])
-	 * ...
-	 * ...
-	 */
-
-	/* Detect now if there are enough bytes to continue */
-	if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23)) 
-	{
-		return 1;
-	}
-
-	memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
-
-	connect_with_db =
-                GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB & gw_mysql_get_byte4(
-                        (uint32_t *)&protocol->client_capabilities);
-        /*
-	compress =
-                GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(
-                        &protocol->client_capabilities);
-        */
-
-	username = get_username_from_auth(username, client_auth_packet);
-	
-	if (username == NULL)
-	{
-		return 1;
-	}
-
-	/* get charset */
-	memcpy(&protocol->charset, client_auth_packet + 4 + 4 + 4, sizeof (int));
-
-	/* get the auth token len */
-	memcpy(&auth_token_len,
-               client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1,
-               1);
-
-	/* 
-	 * Note: some clients may pass empty database, connect_with_db !=0 but database =""
-	 */
-	if (connect_with_db) {
-		database = client_data->db;
-		strncpy(database,
-			(char *)(client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) +
-			1 + 1 + auth_token_len), MYSQL_DATABASE_MAXLEN);
-	}
-
-	/* allocate memory for token only if auth_token_len > 0 */
-	if (auth_token_len) {
-		auth_token = (uint8_t *)malloc(auth_token_len);
-		memcpy(auth_token,
-                       client_auth_packet + 4 + 4 + 4 + 1 + 23 + strlen(username) + 1 + 1,
-                       auth_token_len);
-	}
-
-	/* 
-	 * Decode the token and check the password
-	 * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
-	 */
-
-	auth_ret = gw_check_mysql_scramble_data(dcb,
-                                                auth_token,
-                                                auth_token_len,
-                                                protocol->scramble, 
-						sizeof(protocol->scramble),
-                                                username,
-                                                stage1_hash);
-
-	/* check for database name match in resource hashtable */
-	auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
-
-	/* On failed auth try to load users' table from backend database */
-	if (auth_ret != 0) {
-		if (!service_refresh_users(dcb->service)) {
-			/* Try authentication again with new repository data */
-			/* Note: if no auth client authentication will fail */
-			auth_ret = gw_check_mysql_scramble_data(
-					dcb, 
-					auth_token, 
-					auth_token_len, 
-					protocol->scramble, 
-					sizeof(protocol->scramble), 
-					username, 
-					stage1_hash);
-		}
-		else
-		{
-			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-				"%s: login attempt for user %s, user not "
-				"found.",
-				dcb->service->name, username)));
-		}
-	}
-
-	/* Do again the database check */
-	auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
-
-	/* on succesful auth set user into dcb field */
-	if (auth_ret == 0) {
-		dcb->user = strdup(client_data->user);
-	}
-
-	/* let's free the auth_token now */
-	if (auth_token) {
-		free(auth_token);
-	}
-	
-	return auth_ret;
-}
 
 /**
  * Write function for client DCB: writes data from MaxScale to Client
@@ -328,7 +132,7 @@ int plain_read(
 	ROUTER_OBJECT  *router = NULL;
 	ROUTER         *router_instance = NULL;
 	void           *rsession = NULL;
-	MySQLProtocol  *protocol = NULL;
+	PlainProtocol  *protocol = NULL;
         GWBUF          *read_buffer = NULL;
         int             rc = 0;
         int             nbytes_read = 0;
@@ -336,7 +140,7 @@ int plain_read(
         bool            stmt_input = false; /*< router input type */
 
         CHK_DCB(dcb);
-        protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+        protocol = DCB_PROTOCOL(dcb, PlainProtocol);
         CHK_PROTOCOL(protocol);
         rc = dcb_read(dcb, &read_buffer);
         
@@ -383,7 +187,7 @@ return_rc:
  */
 int plain_write_ready(DCB *dcb)
 {
-	MySQLProtocol *protocol = NULL;
+	PlainProtocol *protocol = NULL;
 
         CHK_DCB(dcb);
 
@@ -400,7 +204,7 @@ int plain_write_ready(DCB *dcb)
 	if (dcb->protocol == NULL) {
 	        goto return_1;
 	}
-        protocol = (MySQLProtocol *)dcb->protocol;
+        protocol = (PlainProtocol *)dcb->protocol;
 
 
 		dcb_drain_writeq(dcb);
@@ -575,7 +379,7 @@ int plain_accept(DCB *listener)
 {
         int                rc = 0;
         DCB                *client_dcb;
-        MySQLProtocol      *protocol;
+        PlainProtocol      *protocol;
         int                c_sock;
 	struct sockaddr    client_conn;
 	socklen_t          client_len = sizeof(struct sockaddr_storage);
@@ -591,24 +395,12 @@ int plain_accept(DCB *listener)
 
     retry_accept:
 
-#if defined(FAKE_CODE)
-                if (fail_next_accept > 0)
-                {
-                        c_sock = -1;
-                        eno = fail_accept_errno;
-                        fail_next_accept -= 1;
-                } else {
-                        fail_accept_errno = 0;          
-#endif /* FAKE_CODE */
                         // new connection from client
 		        c_sock = accept(listener->fd,
                                         (struct sockaddr *) &client_conn,
                                         &client_len);
                         eno = errno;
                         errno = 0;
-#if defined(FAKE_CODE)
-                }
-#endif /* FAKE_CODE */
                         
                 if (c_sock == -1) {
                         
@@ -687,9 +479,7 @@ int plain_accept(DCB *listener)
                         pthread_self(),
                         c_sock)));
 #endif /* SS_DEBUG */
-#if defined(FAKE_CODE)
-                conn_open[c_sock] = true;
-#endif /* FAKE_CODE */
+
                 /* set nonblocking  */
         	sendbuf = GW_CLIENT_SO_SNDBUF;
 
@@ -762,9 +552,7 @@ int plain_accept(DCB *listener)
                 // assign function poiters to "func" field
                 memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
             
-                // client protocol state change
-                protocol->protocol_auth_state = MYSQL_IDLE;
-
+ 
                 /**
                  * Set new descriptor to event set. At the same time,
                  * change state to DCB_STATE_POLLING so that
@@ -773,12 +561,7 @@ int plain_accept(DCB *listener)
                 if (poll_add_dcb(client_dcb) == -1)
                 {
                         /* Send a custom error as MySQL command reply */
-                        mysql_send_custom_error(
-                                client_dcb,
-                                1,
-                                0,
-                                "MaxScale internal error.");
-                        
+
                         /** close client_dcb */
                         dcb_close(client_dcb);
 
@@ -807,7 +590,7 @@ int plain_accept(DCB *listener)
 #if defined(SS_DEBUG)
         if (rc == 0) {
                 CHK_DCB(client_dcb);
-                CHK_PROTOCOL(((MySQLProtocol *)client_dcb->protocol));
+                CHK_PROTOCOL(((PlainProtocol *)client_dcb->protocol));
         }
 #endif
 return_rc:
@@ -851,7 +634,7 @@ plain_client_close(DCB *dcb)
         ROUTER_OBJECT* router;
         void*          router_instance;
 #if defined(SS_DEBUG)
-        MySQLProtocol* protocol = (MySQLProtocol *)dcb->protocol;
+        PlainProtocol* protocol = (PlainProtocol *)dcb->protocol;
         if (dcb->state == DCB_STATE_POLLING ||
             dcb->state == DCB_STATE_NOPOLLING ||
             dcb->state == DCB_STATE_ZOMBIE)
@@ -927,78 +710,5 @@ plain_client_hangup_event(DCB *dcb)
  
 retblock:
         return 1;
-}
-
-
-/**
- * Detect if buffer includes partial mysql packet or multiple packets.
- * Store partial packet to dcb_readqueue. Send complete packets one by one
- * to router.
- * 
- * It is assumed readbuf includes at least one complete packet. 
- * Return 1 in success. If the last packet is incomplete return success but
- * leave incomplete packet to readbuf.
- * 
- * @param session	Session pointer
- * @param p_readbuf	Pointer to the address of GWBUF including the query
- * 
- * @return 1 if succeed, 
- */
-static int route_by_statement(
-        SESSION* session, 
-        GWBUF**  p_readbuf)
-{
-        int            rc;
-        GWBUF*         packetbuf;
-#if defined(SS_DEBUG)
-        GWBUF*         tmpbuf;
-        
-        tmpbuf = *p_readbuf;
-        while (tmpbuf != NULL)
-        {
-                ss_dassert(GWBUF_IS_TYPE_MYSQL(tmpbuf));
-                tmpbuf=tmpbuf->next;
-        }
-#endif
-        do 
-        {
-                ss_dassert(GWBUF_IS_TYPE_MYSQL((*p_readbuf)));
-
-		/** 
-		 * Collect incoming bytes to a buffer until complete packet has 
-		 * arrived and then return the buffer.
-		 */
-                packetbuf = gw_MySQL_get_next_packet(p_readbuf);
-                
-                if (packetbuf != NULL)
-                {
-                        CHK_GWBUF(packetbuf);
-                        ss_dassert(GWBUF_IS_TYPE_MYSQL(packetbuf));
-                        /**
-                         * This means that buffer includes exactly one MySQL 
-                         * statement.
-                         * backend func.write uses the information. MySQL backend
-                         * protocol, for example, stores the command identifier 
-                         * to protocol structure. When some other thread reads
-                         * the corresponding response the command tells how to
-                         * handle response.
-                         * 
-                         * Set it here instead of plain_read to make 
-                         * sure it is set to each (MySQL) packet.
-                         */
-                        gwbuf_set_type(packetbuf, GWBUF_TYPE_SINGLE_STMT);
-                        /** Route query */
-                        rc = SESSION_ROUTE_QUERY(session, packetbuf);
-                }
-                else
-                {
-                        rc = 1;
-                        goto return_rc;
-                }
-        }
-        while (rc == 1 && *p_readbuf != NULL);
-        
-return_rc:
-        return rc;
 }
 
