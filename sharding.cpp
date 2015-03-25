@@ -29,9 +29,15 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++) {
         sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", i, i);
         execute_query(Test->repl->nodes[i], str);
-        sprintf(str, "CREATE DATABASE 'db%d;", i);
+
+        /*
+        sprintf(str, "CREATE DATABASE db%d;", i);
         execute_query(Test->repl->nodes[i], str);
         sprintf(str, "GRANT SELECT,USAGE ON db%d.* TO 'user%d'@'%%'", i, i);
+        execute_query(Test->repl->nodes[i], str);
+        */
+
+        sprintf(str, "GRANT SELECT,USAGE ON test.* TO 'user%d'@'%%'", i, i);
         execute_query(Test->repl->nodes[i], str);
     }
 
