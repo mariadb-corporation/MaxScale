@@ -259,6 +259,10 @@ add_executable(mxs47 mxs47.cpp testconnections.cpp maxadmin_operations.cpp maria
 target_link_libraries(mxs47 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 
+add_executable(sharding sharding.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(sharding ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
+
 add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
 
 install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover kill_master DESTINATION system-test)
