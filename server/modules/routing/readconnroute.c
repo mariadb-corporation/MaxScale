@@ -749,7 +749,7 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 				queue);
 			break;
 		case MYSQL_COM_QUERY:
-		    trc = modutil_get_SQL(queue);
+			LOGIF(LOGFILE_TRACE,(trc = modutil_get_SQL(queue)));
 		default:
 			rc = backend_dcb->func.write(backend_dcb, queue);
 			break;
@@ -765,13 +765,13 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
                 backend_dcb,
                 rc)));
 
-	skygw_log_write(
+	LOGIF(LOGFILE_TRACE,skygw_log_write(
                 LOGFILE_TRACE,
 		 "Routed command [%#x] to '%s'%s%s",
 		 mysql_command,
 		 backend_dcb->server->unique_name,
 		 trc?": ":".",
-		 trc?trc:"");
+		 trc?trc:""));
 	free(trc);
 return_rc:
         return rc;
