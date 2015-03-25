@@ -28,11 +28,11 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->repl->N; i++) {
         sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", i, i);
-        execute_query(Test->repl->nodes, str);
+        execute_query(Test->repl->nodes[i], str);
         sprintf(str, "CREATE DATABASE 'db%d;", i);
-        execute_query(Test->repl->nodes, str);
+        execute_query(Test->repl->nodes[i], str);
         sprintf(str, "GRANT SELECT,USAGE ON db%d.* TO 'user%d'@'%%'", i, i);
-        execute_query(Test->repl->nodes, str);
+        execute_query(Test->repl->nodes[i], str);
     }
 
     MYSQL conn[Test->repl->N];
@@ -42,9 +42,9 @@ int main(int argc, char *argv[])
         conn[i] = open_conn(Test->rwsplit_port, Test->maxscale_IP, user_str, pass_str);
 
         sprintf(str, "DROP TABLE IF EXISTS table%d", i);
-        execute_query(Test->repl->nodes, str);
+        execute_query(Test->repl->nodes[i], str);
         sprintf(str, "CREATE TABLE table%d (x1 int, fl int);", i);
-        execute_query(Test->repl->nodes, str);
+        execute_query(Test->repl->nodes[i], str);
     }
 
 
