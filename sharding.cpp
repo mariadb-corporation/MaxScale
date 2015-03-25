@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->repl->N; i++) {
         sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", i, i);
+        printf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
 
         /*
@@ -37,7 +38,8 @@ int main(int argc, char *argv[])
         execute_query(Test->repl->nodes[i], str);
         */
 
-        sprintf(str, "GRANT SELECT,USAGE ON test.* TO 'user%d'@'%%'", i, i);
+        sprintf(str, "GRANT SELECT,USAGE ON test.* TO 'user%d'@'%%'", i);
+        printf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
     }
 
@@ -48,9 +50,11 @@ int main(int argc, char *argv[])
         conn[i] = open_conn(Test->rwsplit_port, Test->maxscale_IP, user_str, pass_str);
 
         sprintf(str, "DROP TABLE IF EXISTS table%d", i);
-        execute_query(Test->repl->nodes[i], str);
+        printf("%s\n", str);
+        execute_query(conn[i], str);
         sprintf(str, "CREATE TABLE table%d (x1 int, fl int);", i);
-        execute_query(Test->repl->nodes[i], str);
+        printf("%s\n", str);
+        execute_query(conn[i], str);
     }
 
 
