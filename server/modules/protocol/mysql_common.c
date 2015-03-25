@@ -1538,11 +1538,11 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 					      key.user,
 					      dcb->remote)));
 
-			    skygw_log_write_flush(
+			    LOGIF(LT,skygw_log_write_flush(
 				    LOGFILE_ERROR,
 					     "Authentication Failed: user [%s@%s] not found.",
 					     key.user,
-					     dcb->remote);
+					     dcb->remote));
 			    break;
 			}
 
