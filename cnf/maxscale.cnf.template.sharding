@@ -23,6 +23,7 @@ router=schemarouter
 servers=server1,     server2,              server3,server4
 user=skysql
 passwd=skysql
+auth_all_servers=1
 filters=QLA
 
 [Debug Interface]
