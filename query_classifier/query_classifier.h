@@ -1,3 +1,5 @@
+#ifndef QUERY_CLASSIFIER_HG
+#define QUERY_CLASSIFIER_HG
 /*
 This file is distributed as part of the MariaDB Corporation MaxScale. It is free
 software: you can redistribute it and/or modify it under the terms of the
@@ -116,3 +118,4 @@ char** skygw_get_database_names(GWBUF* querybuf,int* size);
 
 EXTERN_C_BLOCK_END
 
+#endif
