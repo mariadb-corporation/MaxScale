@@ -48,7 +48,7 @@ export galera_port_003=3306
 
 
 
-export maxdir="@CMAKE_INSTALL_PREFIX@"/maxscale
+export maxdir="@CMAKE_INSTALL_PREFIX@"
 export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
 if [ -f copy_logs.sh ] ; then
 	export test_dir=`pwd`
