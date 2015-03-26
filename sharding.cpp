@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->repl->N; i++) {
         for (j = 0; j < Test->repl->N; j++) {
-            sprintf(str, "DELETE FROM  mysql.user WHERE User='user%d';", j);
+            //sprintf(str, "DELETE FROM  mysql.user WHERE User='user%d';", j);
+            sprintf(str, "DROP USER'user%d';", j);
             printf("%s\n", str);
             execute_query(Test->repl->nodes[i], str);
 
@@ -42,6 +43,9 @@ int main(int argc, char *argv[])
         sprintf(str, "GRANT SELECT,USAGE ON db%d.* TO 'user%d'@'%%'", i, i);
         execute_query(Test->repl->nodes[i], str);*/
 
+        sprintf(str, "DROP TABLE IF EXISTS table%d", i);
+        printf("%s\n", str);
+        execute_query(conn[i], str);
 
         sprintf(str, "GRANT SELECT,USAGE ON test.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
@@ -54,9 +58,7 @@ int main(int argc, char *argv[])
         sprintf(pass_str, "pass%d", i);
         conn[i] = open_conn(Test->rwsplit_port, Test->maxscale_IP, user_str, pass_str);
 
-        sprintf(str, "DROP TABLE IF EXISTS table%d", i);
-        printf("%s\n", str);
-        execute_query(conn[i], str);
+
         sprintf(str, "CREATE TABLE table%d (x1 int, fl int);", i);
         printf("%s\n", str);
         execute_query(conn[i], str);
