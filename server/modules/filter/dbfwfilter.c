@@ -61,11 +61,9 @@
  * users NAME ... match [any|all|strict_all] rules RULE ...
  *@endcode
  */
+
 #include <my_config.h>
-#include <stdint.h>
-#include <ctype.h>
 #include <stdio.h>
-#include <fcntl.h>
 #include <filter.h>
 #include <string.h>
 #include <atomic.h>
@@ -74,13 +72,11 @@
 #include <query_classifier.h>
 #include <mysql_client_server_protocol.h>
 #include <spinlock.h>
-#include <session.h>
-#include <plugin.h>
 #include <skygw_types.h>
-#include <skygw_debug.h>
 #include <time.h>
 #include <assert.h>
 #include <regex.h>
+
 MODULE_INFO 	info = {
     MODULE_API_FILTER,
 	MODULE_ALPHA_RELEASE,
