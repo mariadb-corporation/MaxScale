@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->repl->N; i++) {
         for (j = 0; j < Test->repl->N; j++) {
-            sprintf(str, "DROP USER 'user%d';", i);
+            sprintf(str, "DELETE FROM  mysql.user WHERE User='user%d';", i);
             printf("%s\n", str);
             execute_query(Test->repl->nodes[j], str);
 
