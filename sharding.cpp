@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     for (i = 0; i < Test->repl->N; i++) {
-        sprintf(str, "DROP USER IF EXISTS 'user%d';", i);
+        sprintf(str, "DROP USER 'user%d';", i);
         printf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
 
