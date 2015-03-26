@@ -10,7 +10,6 @@
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
  - [LICENSE](About/LICENSE.md)
- - [SETUP](About/SETUP.md)
 
 ## Getting Started
 
@@ -72,3 +71,6 @@
  - [MaxScale 1.0.1 Release Notes](Release-Notes/MaxScale-1.0.1-Release-Notes.md)
  - [MaxScale 1.0.3 Release Notes](Release-Notes/MaxScale-1.0.3-Release-Notes.md)
 
+## Upgrading MaxScale
+
+- [Upgrading-To-MaxScale-1.1.0](Upgrading-To-MaxScale-1.1.0.md)
