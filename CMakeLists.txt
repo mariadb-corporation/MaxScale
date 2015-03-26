@@ -258,7 +258,6 @@ target_link_libraries(bug656 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(mxs47 mxs47.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(mxs47 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-
 add_executable(sharding sharding.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(sharding ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -382,6 +381,7 @@ set_tests_properties(sysbench_kill_slave PROPERTIES TIMEOUT 3600)
 add_test(binlog_incompl binlog_incompl)
 add_test(mxs47 mxs47)
 set_tests_properties(mxs47 PROPERTIES TIMEOUT 1000)
+add_test(sharding sharding)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
