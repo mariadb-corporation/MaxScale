@@ -28,13 +28,13 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->repl->N; i++) {
         for (j = 0; j < Test->repl->N; j++) {
-            sprintf(str, "DELETE FROM  mysql.user WHERE User='user%d';", i);
+            sprintf(str, "DELETE FROM  mysql.user WHERE User='user%d';", j);
             printf("%s\n", str);
-            execute_query(Test->repl->nodes[j], str);
+            execute_query(Test->repl->nodes[i], str);
 
-            sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", i, i);
+            sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", j, j);
             printf("%s\n", str);
-            execute_query(Test->repl->nodes[j], str);
+            execute_query(Test->repl->nodes[i], str);
         }
 
         /*sprintf(str, "CREATE DATABASE db%d;", i);
