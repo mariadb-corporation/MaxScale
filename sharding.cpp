@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 
         sprintf(str, "DROP TABLE IF EXISTS table%d", i);
         printf("%s\n", str);
-        execute_query(conn[i], str);
+        execute_query(Test->repl->nodes[i], str);
 
         sprintf(str, "GRANT SELECT,USAGE ON test.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
