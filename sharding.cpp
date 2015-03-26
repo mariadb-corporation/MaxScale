@@ -27,6 +27,10 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     for (i = 0; i < Test->repl->N; i++) {
+        sprintf(str, "DROP USER IF EXISTS 'user%d';", i);
+        printf("%s\n", str);
+        execute_query(Test->repl->nodes[i], str);
+
         sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", i, i);
         printf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
