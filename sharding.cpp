@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
-    int i;
+    int i, j;
     char str[256];
     char user_str[256];
     char pass_str[256];
@@ -27,20 +27,21 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     for (i = 0; i < Test->repl->N; i++) {
-        sprintf(str, "DROP USER 'user%d';", i);
-        printf("%s\n", str);
-        execute_query(Test->repl->nodes[i], str);
+        for (j = 0; j < Test->repl->N; j++) {
+            sprintf(str, "DROP USER 'user%d';", i);
+            printf("%s\n", str);
+            execute_query(Test->repl->nodes[j], str);
 
-        sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", i, i);
-        printf("%s\n", str);
-        execute_query(Test->repl->nodes[i], str);
+            sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", i, i);
+            printf("%s\n", str);
+            execute_query(Test->repl->nodes[j], str);
+        }
 
-        /*
-        sprintf(str, "CREATE DATABASE db%d;", i);
+        /*sprintf(str, "CREATE DATABASE db%d;", i);
         execute_query(Test->repl->nodes[i], str);
         sprintf(str, "GRANT SELECT,USAGE ON db%d.* TO 'user%d'@'%%'", i, i);
-        execute_query(Test->repl->nodes[i], str);
-        */
+        execute_query(Test->repl->nodes[i], str);*/
+
 
         sprintf(str, "GRANT SELECT,USAGE ON test.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
