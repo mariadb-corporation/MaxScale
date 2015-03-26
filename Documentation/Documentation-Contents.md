@@ -17,6 +17,10 @@
  - [Building MaxScale from Source Code](Getting-Started/Building-MaxScale-from-Source-Code.md)
  - [Configuration Guide](Getting-Started/Configuration-Guide.md)
 
+## Upgrading MaxScale
+
+- [Upgrading-To-MaxScale-1.1.0](Upgrading-To-MaxScale-1.1.0.md)
+
 ## Reference
 
  - [MaxAdmin](Reference/MaxAdmin.md)
@@ -71,6 +75,3 @@
  - [MaxScale 1.0.1 Release Notes](Release-Notes/MaxScale-1.0.1-Release-Notes.md)
  - [MaxScale 1.0.3 Release Notes](Release-Notes/MaxScale-1.0.3-Release-Notes.md)
 
-## Upgrading MaxScale
-
-- [Upgrading-To-MaxScale-1.1.0](Upgrading-To-MaxScale-1.1.0.md)
