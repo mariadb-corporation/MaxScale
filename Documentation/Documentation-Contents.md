@@ -19,7 +19,7 @@
 
 ## Upgrading MaxScale
 
-- [Upgrading-To-MaxScale-1.1.0](Upgrading-To-MaxScale-1.1.0.md)
+- [Upgrading MaxScale to 1.1.0](Upgrading-To-MaxScale-1.1.0.md)
 
 ## Reference
 
