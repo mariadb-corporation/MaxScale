@@ -62,7 +62,7 @@ MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * P
  */
 MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Password)
 {
-    return(open_conn_db_flags(port, ip, (char *) "test", User, Password, CLIENT_MULTI_STATEMENTS));
+    return(open_conn_db_flags(port, ip, db, User, Password, CLIENT_MULTI_STATEMENTS));
 }
 
 /**
