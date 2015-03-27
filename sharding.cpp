@@ -26,8 +26,8 @@ int main(int argc, char *argv[])
 
     Test->repl->connect();
 
-    for (i = 0; i < Test->repl->N; i++) {
-        for (j = 0; j < Test->repl->N; j++) {
+    for (i = 0; i < Test->repl->N; i++) { //nodes
+        for (j = 0; j < Test->repl->N; j++) { //users
             //sprintf(str, "DELETE FROM  mysql.user WHERE User='user%d';", j);
             sprintf(str, "DROP USER'user%d';", j);
             printf("%s\n", str);
@@ -36,16 +36,11 @@ int main(int argc, char *argv[])
             sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", j, j);
             printf("%s\n", str);
             execute_query(Test->repl->nodes[i], str);
+
+            sprintf(str, "DROP TABLE IF EXISTS table%d", j);
+            printf("%s\n", str);
+            execute_query(Test->repl->nodes[i], str);
         }
-
-        /*sprintf(str, "CREATE DATABASE db%d;", i);
-        execute_query(Test->repl->nodes[i], str);
-        sprintf(str, "GRANT SELECT,USAGE ON db%d.* TO 'user%d'@'%%'", i, i);
-        execute_query(Test->repl->nodes[i], str);*/
-
-        sprintf(str, "DROP TABLE IF EXISTS table%d", i);
-        printf("%s\n", str);
-        execute_query(Test->repl->nodes[i], str);
 
         sprintf(str, "GRANT SELECT,USAGE ON test.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
@@ -56,6 +51,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++) {
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
+        printf("Open connection to Sharding router ising %s %s\n", user_str, pass_str);
         conn[i] = open_conn(Test->rwsplit_port, Test->maxscale_IP, user_str, pass_str);
 
 
