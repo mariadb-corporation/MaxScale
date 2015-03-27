@@ -60,7 +60,8 @@ int main(int argc, char *argv[])
         sprintf(pass_str, "pass%d", i);
         printf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
         conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, user_str, pass_str);
-        sprintf(str, "USE shard_db; CREATE TABLE table%d (x1 int, fl int);", i);
+        execute_query(conn, "USE shard_db;");
+        sprintf(str, "CREATE TABLE table%d (x1 int, fl int);", i);
         printf("%s\n", str);
         execute_query(conn, str);
         mysql_close(conn);
@@ -71,7 +72,8 @@ int main(int argc, char *argv[])
         sprintf(pass_str, "pass%d", i);
         printf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
         conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, user_str, pass_str);
-        execute_query(conn, "USE shard_db");
+
+        execute_query(Test->rwsplit_port, "USE shard_db");
         sprintf(str, "SHOW TABLES;");
         printf("%s\n", str);
         sprintf(str1, "table%d", i);
