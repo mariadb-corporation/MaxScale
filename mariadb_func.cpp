@@ -165,7 +165,9 @@ int execute_query_check_one(MYSQL *conn, const char *sql, const char *expected)
                 if (row[0] != NULL) {
                     r = strcmp(row[0], expected);
                     if (r != 0) {
-                        printf("First field is '%s'\n", row[0]);
+                        printf("First field is '%s, but expected %s'\n", row[0], expected);
+                    } else {
+                        printf("First field is '%s' as expected\n", row[0]);
                     }
                 } else {
                     r = 1;
@@ -174,7 +176,7 @@ int execute_query_check_one(MYSQL *conn, const char *sql, const char *expected)
             }
             else {
                 r = 1;
-                printf("Number of rows is %llu\n", mysql_num_rows(res));
+                printf("Number of rows is not 1, it is %llu\n", mysql_num_rows(res));
             }
 
             mysql_free_result(res);

@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
         execute_query(Test->repl->nodes[i], "CREATE DATABASE shard_db");
         sprintf(str, "GRANT SELECT,USAGE,CREATE ON shard_db.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
-        execute_query(Test->repl->nodes[i], str);
+        global_result += execute_query(Test->repl->nodes[i], str);
     }
 
     Test->repl->close_connections();
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 
         sprintf(str, "CREATE TABLE table%d (x1 int, fl int);", i);
         printf("%s\n", str);
-        execute_query(conn, str);
+        global_result += execute_query(conn, str);
         mysql_close(conn);
     }
 
@@ -77,11 +77,9 @@ int main(int argc, char *argv[])
         printf("%s\n", str);
         sprintf(str1, "table%d", i);
         printf("Table should be %s\n", str1);
-        execute_query_check_one(conn, str, str1);
+        global_result += execute_query_check_one(conn, str, str1);
         mysql_close(conn);
     }
-
-    //global_result += check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }
