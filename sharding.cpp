@@ -41,7 +41,9 @@ int main(int argc, char *argv[])
             printf("%s\n", str);
             execute_query(Test->repl->nodes[i], str);
         }
+    }
 
+    for (i = 0; i < Test->repl->N; i++) { //nodes
         sprintf(str, "GRANT SELECT,USAGE,CREATE ON test.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
