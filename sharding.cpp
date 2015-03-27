@@ -44,6 +44,7 @@ int main(int argc, char *argv[])
     }
 
     for (i = 0; i < Test->repl->N; i++) { //nodes
+        printf("Node %d\t", i);
         sprintf(str, "GRANT SELECT,USAGE,CREATE ON test.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++) {
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
-        printf("Open connection to Sharding router ising %s %s\n", user_str, pass_str);
+        printf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
         conn[i] = open_conn(Test->rwsplit_port, Test->maxscale_IP, user_str, pass_str);
 
 
