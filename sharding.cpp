@@ -47,6 +47,8 @@ int main(int argc, char *argv[])
         execute_query(Test->repl->nodes[i], str);
     }
 
+    Test->repl->close_connections();
+
     MYSQL * conn[Test->repl->N];
     for (i = 0; i < Test->repl->N; i++) {
         sprintf(user_str, "user%d", i);

@@ -163,6 +163,7 @@ int Mariadb_nodes::stop_slaves()
         printf("Stopping slave %d\n", i); fflush(stdout);
         global_result += execute_query(nodes[i], (char *) "stop slave;");
     }
+    close_connections();
     return(global_result);
 }
 
