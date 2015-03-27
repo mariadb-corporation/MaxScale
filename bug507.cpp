@@ -43,11 +43,11 @@ int main(int argc, char *argv[])
     char last_insert_id1[1024];
     char last_insert_id2[1024];
     if ( (
-             find_status_field(
+             find_field(
                  Test->conn_rwsplit, sel1,
                  "@@server_id", &last_insert_id1[0])
              != 0 ) || (
-             find_status_field(
+             find_field(
                  Test->repl->nodes[0], sel1,
                  "@@server_id", &last_insert_id2[0])
              != 0 )) {

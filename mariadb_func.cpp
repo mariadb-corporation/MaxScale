@@ -148,6 +148,49 @@ int execute_query1(MYSQL *conn, const char *sql, bool silent)
     }
 }
 
+int execute_query_check_one(MYSQL *conn, const char *sql, const char *expected)
+{
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+    int r = 0;
+    if (conn != NULL) {
+        if(mysql_query(conn, sql) != 0) {
+            printf("Error: can't execute SQL-query: %s\n", sql);
+            printf("%s\n\n", mysql_error(conn));
+            return(1);
+        } else {
+            res = mysql_store_result(conn);
+            if (mysql_num_rows(res) == 1) {
+                row = mysql_fetch_row(res);
+                if (row[0] != NULL) {
+                    r = strcmp(row[0], expected);
+                    if (r != 0) {
+                        printf("First field is '%s'\n", row[0]);
+                    }
+                } else {
+                    r = 1;
+                    printf("First field is NULL\n");
+                }
+            }
+            else {
+                r = 1;
+                printf("Number of rows is %llu\n", mysql_num_rows(res));
+            }
+
+            mysql_free_result(res);
+
+            do {
+                res = mysql_store_result(conn);
+                mysql_free_result(res);
+            } while ( mysql_next_result(conn) == 0 );
+            return(r);
+        }
+    } else {
+        printf("Connection is broken\n");
+        return(1);
+    }
+}
+
 
 
 /**
@@ -232,7 +275,7 @@ int get_conn_num(MYSQL *conn, char * ip, char * db)
  * @param value pointer to variable to store value of found field
  * @return 0 in case of success
  */
-int find_status_field(MYSQL *conn, const char *sql, const char *field_name, char * value)
+int find_field(MYSQL *conn, const char *sql, const char *field_name, char * value)
 {
     MYSQL_RES *res;
     MYSQL_ROW row;
@@ -279,11 +322,11 @@ int find_status_field(MYSQL *conn, const char *sql, const char *field_name, char
  * @param MYSQL	connection struct
  * @return value of SECONDS_BEHIND_MASTER
  */
-unsigned int get_Seconds_Behind_Master(MYSQL *conn)
+unsigned int get_seconds_behind_master(MYSQL *conn)
 {
     char SBM_str[16];
     unsigned int SBM=0;
-    if (find_status_field(
+    if (find_field(
                 conn, (char *) "show slave status;",
                 (char *) "Seconds_Behind_Master", &SBM_str[0]
                 ) != 1) {
@@ -300,7 +343,7 @@ unsigned int get_Seconds_Behind_Master(MYSQL *conn)
  * @param err_log_content   pointer to the buffer to store log file content
  * @return 0 in case of success, 1 in case of error
  */
-int ReadLog(char * name, char ** err_log_content)
+int read_log(char * name, char ** err_log_content)
 {
     FILE *f;
 

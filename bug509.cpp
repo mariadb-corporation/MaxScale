@@ -59,11 +59,11 @@ int main(int argc, char *argv[])
     char last_insert_id1[1024];
     char last_insert_id2[1024];
     if ( (
-             find_status_field(
+             find_field(
                  Test->conn_rwsplit, sel1,
                  "last_insert_id()", &last_insert_id1[0])
              != 0 ) || (
-             find_status_field(
+             find_field(
                  Test->conn_rwsplit, sel2,
                  "last_insert_id()", &last_insert_id2[0])
              != 0 )) {
@@ -86,17 +86,17 @@ int main(int argc, char *argv[])
         sprintf(str1, "insert into t2 (x) values (%d);", i);
         global_result += execute_query(Test->conn_rwsplit, str1);
         sprintf(str1, "select * from t2 where x=%d;", i);
-        find_status_field(
+        find_field(
                     Test->conn_rwsplit, sel1,
                     "last_insert_id()", &last_insert_id1[0]);
-        find_status_field(
+        find_field(
                     Test->conn_rwsplit, str1,
                     "id", &id_str[0]);
         printf("last_insert_id is %s, id is %s\n", last_insert_id1, id_str);
         if (strcmp(last_insert_id1, id_str) !=0 ) {
             printf("replication is not happened yet, sleeping 5 seconds\n");
             sleep(5);
-            find_status_field(
+            find_field(
                         Test->conn_rwsplit, str1,
                         "id", &id_str[0]);
             printf("id after 5 seconds sleep is %s\n", id_str);

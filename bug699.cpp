@@ -32,11 +32,11 @@ int main(int argc, char *argv[])
     char serverid2[1024];
 
     if ( (
-             find_status_field(
+             find_field(
                  Test->conn_rwsplit, sel3,
                  "@@server_id", &serverid1[0])
              != 0 ) || (
-             find_status_field(
+             find_field(
                  Test->conn_rwsplit, sel4,
                  "@@server_id", &serverid2[0])
              != 0 )) {
@@ -52,11 +52,11 @@ int main(int argc, char *argv[])
     }
 
     if ( (
-             find_status_field(
+             find_field(
                  Test->conn_rwsplit, sel1,
                  "@@hostname", &serverid1[0])
              != 0 ) || (
-             find_status_field(
+             find_field(
                  Test->conn_rwsplit, sel2,
                  "@@hostname", &serverid2[0])
              != 0 )) {

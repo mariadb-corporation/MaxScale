@@ -277,8 +277,8 @@ int TestConnections::start_binlog()
     execute_query(repl->nodes[0], (char *) "reset master;");
 
     printf("show master status\n");fflush(stdout);
-    find_status_field(repl->nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
-    find_status_field(repl->nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
+    find_field(repl->nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
+    find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
     printf("Real master file: %s\n", log_file); fflush(stdout);
     printf("Real master pos : %s\n", log_pos); fflush(stdout);
 
@@ -294,8 +294,8 @@ int TestConnections::start_binlog()
     MYSQL * binlog = open_conn(binlog_port, maxscale_IP, repl->user_name, repl->password);
 
     printf("show master status\n");fflush(stdout);
-    find_status_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
-    find_status_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
+    find_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
+    find_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
 
     printf("Maxscale binlog master file: %s\n", log_file); fflush(stdout);
     printf("Maxscale binlog master pos : %s\n", log_pos); fflush(stdout);
@@ -326,7 +326,7 @@ int check_log_err(char * err_msg, bool expected)
     system(sys1);
 
     printf("Reading err_log\n");
-    global_result += ReadLog((char *) "skygw_err1.log", &err_log_content);
+    global_result += read_log((char *) "skygw_err1.log", &err_log_content);
 
     if (expected) {
         if (strstr(err_log_content, err_msg) == NULL) {

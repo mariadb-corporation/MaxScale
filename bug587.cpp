@@ -59,8 +59,8 @@ int main(int argc, char *argv[])
             sprintf(hint_sql, "select @@server_id; -- maxscale route to server server%d", j+1);
             printf("%s\n", hint_sql); fflush(stdout);
 
-            find_status_field(Test->conn_rwsplit, hint_sql, (char *) "@@server_id", &server_id[0]);
-            find_status_field(Test->repl->nodes[j], (char *) "select @@server_id;", (char *) "@@server_id", &server_id_d[0]);
+            find_field(Test->conn_rwsplit, hint_sql, (char *) "@@server_id", &server_id[0]);
+            find_field(Test->repl->nodes[j], (char *) "select @@server_id;", (char *) "@@server_id", &server_id_d[0]);
 
             printf("server%d ID from Maxscale: \t%s\n", j+1, server_id); fflush(stdout);
             printf("server%d ID directly from node: \t%s\n", j+1, server_id_d);  fflush(stdout);

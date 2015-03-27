@@ -91,7 +91,7 @@ int Mariadb_nodes::find_master()
     int found = 0;
     int master_node = 255;
     while ((found == 0) && (i < N)) {
-        if (find_status_field(
+        if (find_field(
                     nodes[i], (char *) "show slave status;",
                     (char *) "Master_Host", &str[0]
                     ) == 0 ) {
@@ -126,8 +126,8 @@ int Mariadb_nodes::change_master(int NewMaster, int OldMaster)
     }
     execute_query(nodes[NewMaster], create_repl_user);
     execute_query(nodes[OldMaster], (char *) "reset master;");
-    find_status_field(nodes[NewMaster], (char *) "show master status", (char *) "File", &log_file[0]);
-    find_status_field(nodes[NewMaster], (char *) "show master status", (char *) "Position", &log_pos[0]);
+    find_field(nodes[NewMaster], (char *) "show master status", (char *) "File", &log_file[0]);
+    find_field(nodes[NewMaster], (char *) "show master status", (char *) "Position", &log_pos[0]);
     for (i = 0; i < N; i++) {
         if (i != NewMaster) {
             sprintf(str, setup_slave, IP[NewMaster], log_file, log_pos, port[NewMaster]);
@@ -194,8 +194,8 @@ int Mariadb_nodes::start_replication()
     global_result += execute_query(nodes[0], create_repl_user);
     execute_query(nodes[0], (char *) "reset master;");
 
-    find_status_field(nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
-    find_status_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
+    find_field(nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
+    find_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
     for (i = 1; i < N; i++) {
         global_result += execute_query(nodes[i], (char *) "stop slave;");
         sprintf(str, setup_slave, IP[0], log_file, log_pos, port[0]);
@@ -305,7 +305,7 @@ int Mariadb_nodes::check_replication(int master)
 
             } else {
                 // checking slave
-                if (find_status_field(conn, (char *) "SHOW SLAVE STATUS;", (char *) "Slave_IO_Running", str) != 0) {
+                if (find_field(conn, (char *) "SHOW SLAVE STATUS;", (char *) "Slave_IO_Running", str) != 0) {
                     printf("Slave_IO_Running is not found in SHOW SLAVE STATUS results\n"); fflush(stdout);
                     res1 = 1;
                 } else {
@@ -334,7 +334,7 @@ int Mariadb_nodes::check_galera()
             printf("Error connectiong node %d\n", i);
             res1 = 1;
         } else {
-            if (find_status_field(conn, (char *) "SHOW STATUS WHERE Variable_name='wsrep_cluster_size';", (char *) "Value", str) != 0) {
+            if (find_field(conn, (char *) "SHOW STATUS WHERE Variable_name='wsrep_cluster_size';", (char *) "Value", str) != 0) {
                 printf("wsrep_cluster_size is not found in SHOW STATUS LIKE 'wsrep%%' results\n"); fflush(stdout);
                 res1 = 1;
             } else {

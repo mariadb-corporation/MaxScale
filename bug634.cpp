@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
 
     for (int i = 0; i < 100; i++) {
-        if (find_status_field(Test->conn_rwsplit, (char *) "SHOW SLAVE STATUS", (char *) "Master_Host", master_ip) != 0) {
+        if (find_field(Test->conn_rwsplit, (char *) "SHOW SLAVE STATUS", (char *) "Master_Host", master_ip) != 0) {
             printf("Master_host files is not found in the SHOW SLAVE STATUS reply, probably query went to master\n");
             global_result++;
         }
