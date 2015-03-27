@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
             execute_query(Test->repl->nodes[i], str);
         }
 
-        sprintf(str, "GRANT SELECT,USAGE ON test.* TO 'user%d'@'%%'", i);
+        sprintf(str, "GRANT SELECT,USAGE,CREATE ON test.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
     }
