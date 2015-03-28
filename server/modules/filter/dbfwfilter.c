@@ -294,24 +294,27 @@ void* rlistdup(void* fval)
 
 static void* hrulefree(void* fval)
 {
-	USER* user = (USER*)fval;
-	RULELIST *ptr = user->rules_or,*tmp;
+	RULELIST *ptr = (RULELIST*)fval;
 	while(ptr){
-		tmp = ptr;
+		RULELIST *tmp = ptr;
 		ptr = ptr->next;
 		free(tmp);
 	}
-	ptr = user->rules_and;
-	while(ptr){
-		tmp = ptr;
-		ptr = ptr->next;
-		free(tmp);
-	}
-	free(user->name);
-	free(user);
 	return NULL;
 }
 
+static void* huserfree(void* fval)
+{
+    USER* value = (USER*)fval;
+
+    hrulefree(value->rules_and);
+    hrulefree(value->rules_or);
+    hrulefree(value->rules_strict_and);
+    free(value->qs_limit);
+    free(value->name);
+    free(value);
+    return NULL;
+}
 
 /**
  * Strips the single or double quotes from a string.
@@ -632,13 +635,14 @@ void add_users(char* rule, FW_INSTANCE* instance)
  * @param rule Rule string to parse
  * @param instance The FW_FILTER instance
  */
-void link_rules(char* rule, FW_INSTANCE* instance)
+bool link_rules(char* orig, FW_INSTANCE* instance)
 {
-	assert(rule != NULL && instance != NULL);
 	
 	/**Apply rules to users*/
 
 	bool match_any = true;
+	bool rval = true;
+	char *rule = strdup(orig);
 	char *tok, *ruleptr, *userptr, *modeptr;
         char *saveptr = NULL;
 	RULELIST* rulelist = NULL;
@@ -649,8 +653,9 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 
 	if((userptr == NULL || ruleptr == NULL || modeptr == NULL)||
 	   (userptr > modeptr || userptr > ruleptr || modeptr > ruleptr)) {
-		skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, right keywords not found in the correct order: %s",rule);
-		return;
+		skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, right keywords not found in the correct order: %s",orig);
+		rval = false;
+		goto parse_err;
 	}
 		
 	*modeptr++ = '\0';
@@ -660,15 +665,17 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 
 	if(tok == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, right keywords not found in the correct order: %s",rule);
-	    return;
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, right keywords not found in the correct order: %s",orig);
+	    rval = false;
+	    goto parse_err;
 	}
 	if(strcmp(tok,"match") == 0){
 		tok = strtok_r(NULL," ",&saveptr);
 		if(tok == NULL)
 		{
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, missing keyword after 'match': %s",rule);
-		    return;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, missing keyword after 'match': %s",orig);
+		    rval = false;
+		    goto parse_err;
 		}
 		if(strcmp(tok,"any") == 0){
 			match_any = true;
@@ -678,8 +685,9 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 			match_any = false;
 			strict = true;
 		}else{
-			skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, 'match' was not followed by correct keyword: %s",rule);
-			return;
+			skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, 'match' was not followed by correct keyword: %s",orig);
+			rval = false;
+			goto parse_err;
 		}
 	}
 	
@@ -688,8 +696,9 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 
 	if(tok == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no rules given: %s",rule);
-	    return;
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no rules given: %s",orig);
+	    rval = false;
+	    goto parse_err;
 	}
 
 	while(tok)
@@ -721,7 +730,15 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 
 	if(userptr == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no users given: %s",rule);
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no users given: %s",orig);
+	    rval = false;
+	    goto parse_err;
+	}
+
+	if(rulelist == NULL)
+	{
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no rules found: %s",orig);
+	    rval = false;
 	    goto parse_err;
 	}
 
@@ -737,6 +754,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 
             if(user == NULL){
 		skygw_log_write(LOGFILE_ERROR,"Error: dbfwfilter: failed to allocate memory when parsing rules.");
+		rval = false;
 		goto parse_err;
             }
 
@@ -773,12 +791,15 @@ void link_rules(char* rule, FW_INSTANCE* instance)
     }
         parse_err:
 
+	free(rule);
+
         while(rulelist)
         {
             RULELIST *tmp = rulelist;
             rulelist = rulelist->next;
             free(tmp);
         }
+	return rval;
 }
 
 
@@ -1042,7 +1063,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 		return NULL;
 	}
 
-	hashtable_memory_fns(ht,(HASHMEMORYFN)strdup,NULL,(HASHMEMORYFN)free,hrulefree);
+	hashtable_memory_fns(ht,(HASHMEMORYFN)strdup,NULL,(HASHMEMORYFN)free,huserfree);
 	
 	my_instance->htable = ht;
 	my_instance->def_op = true;
@@ -1104,13 +1125,28 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	fclose(file);
 	
 	/**Apply the rules to users*/
+	bool err = false;
 	ptr = my_instance->userstrings;
+
 	while(ptr){
-		link_rules(ptr->value,my_instance);
-		tmp = ptr;
-		ptr = ptr->next;
-		free(tmp->value);
-		free(tmp);
+
+	    if(!link_rules(ptr->value,my_instance))
+	    {
+		skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Failed to parse rule: %s",ptr->value);
+		err = true;
+	    }
+	    tmp = ptr;
+	    ptr = ptr->next;
+	    free(tmp->value);
+	    free(tmp);
+	}
+
+	if(err)
+	{
+	    hrulefree(my_instance->rules);
+	    hashtable_free(my_instance->htable);
+            free(my_instance);
+	    my_instance = NULL;
 	}
 
 	return (FILTER *)my_instance;
