@@ -719,7 +719,7 @@ void link_rules(char* rule, FW_INSTANCE* instance)
 	userptr = strtok_r(rule," ",&saveptr);
 	userptr = strtok_r(NULL," ",&saveptr);
 
-	if(tok == NULL)
+	if(userptr == NULL)
 	{
 	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no users given: %s",rule);
 	    goto parse_err;
