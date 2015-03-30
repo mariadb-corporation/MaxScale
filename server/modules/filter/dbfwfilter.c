@@ -803,6 +803,23 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 }
 
 /**
+ * Free a TIMERANGE struct
+ * @param tr pointer to a TIMERANGE struct
+ */
+void tr_free(TIMERANGE* tr)
+{
+    TIMERANGE *node,*tmp;
+
+    node = tr;
+
+    while(node)
+    {
+	tmp = node;
+	node = node->next;
+	free(tmp);
+    }
+}
+/**
  * Parse the configuration value either as a new rule or a list of users.
  * @param rule The string to parse
  * @param instance The FW_FILTER instance
@@ -937,6 +954,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    {
 			skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, unexpected characters after time definition.");
 			rval = false;
+			tr_free(tr);
 			goto retblock;
 		    }
 
