@@ -29,19 +29,60 @@
  */
 #include	<stdio.h>
 #include	<secrets.h>
-
+#include <skygw_utils.h>
+#include <log_manager.h>
 int main(int argc, char **argv)
 {
+    int arg_count = 3;
+    char *home;
+    char** arg_vector;
+    
+
 	if (argc != 2)
 	{
 		fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
 		exit(1);
 	}
+
+	arg_vector = malloc(sizeof(char*)*4);
+
+	if(arg_vector == NULL)
+	{
+	    fprintf(stderr,"Error: Memory allocation failed.\n");
+	    return 1;
+	}
+
+	arg_vector[0] = strdup("logmanager");
+	arg_vector[1] = strdup("-j");
+
+	if ((home = getenv("MAXSCALE_HOME")) != NULL)
+	{
+	    arg_vector[2] = (char*)malloc((strlen(home) + strlen("/log"))*sizeof(char));
+	    sprintf(arg_vector[2],"%s/log",home);
+	}
+	else
+	{
+	    arg_vector[2] = strdup("/usr/local/mariadb-maxscale/log");
+	}
+
+	arg_vector[3] = NULL;
+	skygw_logmanager_init(arg_count,arg_vector);
+	skygw_log_enable(LOGFILE_TRACE);
+	skygw_log_enable(LOGFILE_DEBUG);
+	free(arg_vector[0]);
+	free(arg_vector[1]);
+	free(arg_vector[2]);
+	free(arg_vector);
 	
+
 	if (secrets_writeKeys(argv[1]))
 	{
 		fprintf(stderr, "Failed to encode the password\n");
 		exit(1);
 	}
-	exit(0);
+
+	skygw_log_sync_all();
+	skygw_logmanager_done();
+
+    return 0;
 }

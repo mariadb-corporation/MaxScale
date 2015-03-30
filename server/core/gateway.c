@@ -826,6 +826,7 @@ static bool file_is_readable(
                         absolute_pathname,
                         eno,
                         strerror(eno))));
+		LOGIF(LE,(skygw_log_sync_all()));
                 succp = false;
         }
         return succp;
