@@ -514,6 +514,10 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
          */
 
         rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
+	if(rval)
+	{
+	    skygw_log_write(LOGFILE_TRACE,"schemarouter: Using active database '%s'",client->rses_mysql_session->db);
+	}
     }
    
 	return rval;
@@ -1932,6 +1936,7 @@ static int routeQuery(
 			 */
                     
 			route_target = TARGET_ANY;
+			skygw_log_write(LOGFILE_TRACE,"schemarouter: Routing query to first available backend.");
 
 		}
 		else
@@ -2008,6 +2013,9 @@ static int routeQuery(
 
 			/**No valid backends alive*/
                         skygw_log_write(LOGFILE_TRACE,"schemarouter: No backends are running");
+			skygw_log_write(LOGFILE_ERROR,
+				 "Error: Schemarouter: Failed to route query, "
+				"no backends are available.");
 			rses_end_locked_router_action(router_cli_ses);
 			ret = 0;
 			goto retblock;

@@ -900,7 +900,7 @@ int gw_read_client_event(
 						dcb,
 						ERRACT_NEW_CONNECTION,
 						&succp);
-				free(errbuf);
+				gwbuf_free(errbuf);
 				/** 
 				 * If there are not enough backends close 
 				 * session 
