@@ -64,6 +64,7 @@
 #include <dcb.h>
 #include <modinfo.h>
 #include <maxconfig.h>
+#include <mon_exec.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -184,6 +185,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
             handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
             handle->read_timeout=DEFAULT_READ_TIMEOUT;
             handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
+	    handle->script = NULL;
             spinlock_init(&handle->lock);
         }
 
@@ -193,6 +195,8 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		handle->detectStaleMaster = config_truth_value(params->value);
 	    else if(!strcmp(params->name,"detect_replication_lag"))
 		handle->replicationHeartbeat = config_truth_value(params->value);
+	    else if(!strcmp(params->name,"script"))
+            handle->script = strdup(params->value);
 	    params = params->next;
 	}
 
@@ -696,7 +700,15 @@ int log_no_master = 1;
 					!(SERVER_IS_IN_CLUSTER(ptr->server)))
 				{
 					dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
-				}				
+				}		
+
+/*
+                if(handle->script)
+                {
+                    if(monitor_exec_cmd(handle->script))
+                        skygw_log_write(LOGFILE_ERROR,"Error: Failed to execute command '%s' on server state change.",handle->script);
+                }
+*/
                         }
                         
                         if (mon_status_changed(ptr))

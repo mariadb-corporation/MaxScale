@@ -1,4 +1,4 @@
-add_library(mysqlmon SHARED mysql_mon.c)
+add_library(mysqlmon SHARED mysql_mon.c mon_exec.c)
 target_link_libraries(mysqlmon log_manager utils)
 install(TARGETS mysqlmon DESTINATION modules)
 

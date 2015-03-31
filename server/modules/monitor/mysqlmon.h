@@ -77,6 +77,7 @@ typedef struct {
 	int	write_timeout;		/**< Timeout in seconds for each attempt to write to the server.
 					 * There are retries and the total effective timeout value is two times the option value.
 					 */
+    char *script;0
 } MYSQL_MONITOR;
 
 #define MONITOR_RUNNING		1
