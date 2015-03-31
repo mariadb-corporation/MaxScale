@@ -669,6 +669,7 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 	    rval = false;
 	    goto parse_err;
 	}
+
 	if(strcmp(tok,"match") == 0){
 		tok = strtok_r(NULL," ",&saveptr);
 		if(tok == NULL)
@@ -690,8 +691,31 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 			goto parse_err;
 		}
 	}
-	
+	else
+	{
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, bad token: %s",tok);
+	    rval = false;
+	    goto parse_err;
+	}
+
+	tok = strtok_r(NULL," ",&saveptr);
+
+	if(tok != NULL)
+	{
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, extra token found after 'match' keyword: %s",orig);
+	    rval = false;
+	    goto parse_err;
+	}
+
 	tok = strtok_r(ruleptr," ",&saveptr);
+
+	if(tok == NULL)
+	{
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no rules given: %s",orig);
+	    rval = false;
+	    goto parse_err;
+	}
+
 	tok = strtok_r(NULL," ",&saveptr);
 
 	if(tok == NULL)
@@ -716,6 +740,8 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 	    else
 	    {
 		skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, could not find rule '%s'.",tok);
+		rval = false;
+		goto parse_err;
 	    }
 	    tok = strtok_r(NULL," ",&saveptr);
 	}
@@ -1222,7 +1248,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	
 	my_instance->htable = ht;
 	my_instance->def_op = true;
-
+	my_instance->userstrings = NULL;
 	for(i = 0;params[i];i++){
 		if(strcmp(params[i]->name, "rules") == 0){
                     
@@ -1285,7 +1311,12 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	fclose(file);
 	
 	/**Apply the rules to users*/
-
+	if(ptr == NULL)
+	{
+	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: No 'users' line found.");
+	    err = true;
+	    goto retblock;
+	}
 	ptr = my_instance->userstrings;
 
 	while(ptr){
