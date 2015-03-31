@@ -942,7 +942,7 @@ static ROUTER *
 createInstance(SERVICE *service, char **options)
 {
     ROUTER_INSTANCE* router;
-    char *services, *tok;
+    char *services, *tok, *saveptr;
     SERVICE **res_svc, **temp;
     CONFIG_PARAMETER* conf;
     int i = 0, sz;
@@ -957,7 +957,6 @@ createInstance(SERVICE *service, char **options)
     spinlock_init(&router->lock);
 
     conf = config_get_param(service->svc_config_param, "subservices");
-/*
 
     if(conf == NULL)
     {
@@ -968,22 +967,20 @@ createInstance(SERVICE *service, char **options)
     }
 
     services = strdup(conf->value);
-*/
     sz = 2;
-    res_svc = calloc(sz, sizeof(SERVICE*));
-/*
-    tok = strtok(services, ",");
-*/
 
-    if(options == NULL)
+    if((res_svc = calloc(sz, sizeof(SERVICE*))) == NULL)
     {
 	free(router);
-	skygw_log_write(LOGFILE_ERROR, "Error : No 'subservice' router option found. Shardrouter requires at least %d "
-		"configured services listed in the 'subservices' router option to work.", min_nsvc);
+	skygw_log_write(LOGFILE_ERROR,"Error: Memory allocation failed.");
 	return NULL;
     }
 
-    while(options[i])
+    tok = strtok_r(services, ",",&saveptr);
+
+
+
+    while(tok)
     {
         if(sz <= i)
         {
@@ -991,9 +988,9 @@ createInstance(SERVICE *service, char **options)
             if(temp == NULL)
             {
                 skygw_log_write(LOGFILE_ERROR, "Error : Memory reallocation failed.");
-                skygw_log_write(LOGFILE_DEBUG, "shardrouter.c: realloc returned NULL. "
+                LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG, "shardrouter.c: realloc returned NULL. "
                                 "service count[%d] buffer size [%u] tried to allocate [%u]",
-                                sz, sizeof(SERVICE*)*(sz), sizeof(SERVICE*)*(sz * 2));
+                                sz, sizeof(SERVICE*)*(sz), sizeof(SERVICE*)*(sz * 2))));
                 free(res_svc);
                 free(router);
                 return NULL;
@@ -1002,7 +999,7 @@ createInstance(SERVICE *service, char **options)
             res_svc = temp;
         }
 
-        res_svc[i] = service_find(options[i]);
+        res_svc[i] = service_find(tok);
 	if(res_svc[i] == NULL)
 	{
 	    free(res_svc);
@@ -1011,10 +1008,11 @@ createInstance(SERVICE *service, char **options)
 	    return NULL;
 	}
         i++;
+	tok = strtok_r(NULL,",",&saveptr);
     }
-/*
+
     free(services);
-*/
+
 
     router->services = res_svc;
     router->n_services = i;

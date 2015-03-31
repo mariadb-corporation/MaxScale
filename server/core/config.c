@@ -312,6 +312,7 @@ int			error_count = 0;
 				char *strip_db_esc;
 				char *weightby;
 				char *version_string;
+				char *subservices;
 				bool  is_rwsplit = false;
 				bool  is_schemarouter = false;
 				char *allow_localhost_match_wildcard_host;
@@ -319,6 +320,7 @@ int			error_count = 0;
 				obj->element = service_alloc(obj->object, router);
 				user = config_get_value(obj->parameters, "user");
 				auth = config_get_value(obj->parameters, "passwd");
+				subservices = config_get_value(obj->parameters, "subservices");
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
@@ -346,6 +348,15 @@ int			error_count = 0;
 			
 				version_string = config_get_value(obj->parameters, 
 								  "version_string");
+
+				if(subservices)
+				{
+				    service_set_param_value(obj->element,
+						     obj->parameters,
+						     subservices,
+						     1,STRING_TYPE);
+				}
+
 				/** flag for rwsplit-specific parameters */
 				if (strncmp(router, "readwritesplit", strlen("readwritesplit")+1) == 0)
 				{
