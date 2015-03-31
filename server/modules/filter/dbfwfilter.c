@@ -922,7 +922,8 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                 STRLINK *tail = NULL,*current;
                 ruledef->type = RT_COLUMN;
                 tok = strtok_r(NULL, " ,",&saveptr);
-                while(tok && strcmp(tok,"at_times") != 0){
+                while(tok && strcmp(tok,"at_times") != 0 &&
+		      strcmp(tok,"on_queries") != 0){
                     current = malloc(sizeof(STRLINK));
                     current->value = strdup(tok);
                     current->next = tail;
@@ -1094,10 +1095,19 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 	    else if(strcmp(tok,"on_queries") == 0)
             {
                 tok = strtok_r(NULL," ",&saveptr);
+
+		if(tok == NULL)
+		{
+		     skygw_log_write(LOGFILE_ERROR,
+                                    "dbfwfilter: Missing parameter for 'on_queries'.");
+		    rval = false;
+		    goto retblock;
+		}
+
                 if(!parse_querytypes(tok,ruledef)){
                     skygw_log_write(LOGFILE_ERROR,
                                     "dbfwfilter: Invalid query type"
-			    "requirements on where/having clauses: %s."
+			    "requirements: %s."
 			    ,tok);
 		    rval = false;
 		    goto retblock;
