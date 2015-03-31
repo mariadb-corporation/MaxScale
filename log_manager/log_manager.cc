@@ -2507,6 +2507,7 @@ static bool logfile_init(
 		char* c;
 		pid_t pid = getpid();
 		int   len = strlen(shm_pathname_prefix)+
+                + strlen("maxscale.") +
 			get_decimal_len((size_t)pid) + 1;
 			
 		c = (char *)calloc(len, sizeof(char));
@@ -2516,7 +2517,7 @@ static bool logfile_init(
 			succp = false;
 			goto return_with_succp;
 		}
-		sprintf(c, "%s%d", shm_pathname_prefix, pid);
+		sprintf(c, "%smaxscale.%d", shm_pathname_prefix, pid);
 		logfile->lf_filepath = c;
 		
 		if (mkdir(c, S_IRWXU | S_IRWXG) != 0 &&

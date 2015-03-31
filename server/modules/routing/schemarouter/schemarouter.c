@@ -402,7 +402,7 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
                                 rval);
             }
         }
-        
+        gwbuf_free(buffer);
         return !rval;
 }
 
@@ -514,6 +514,10 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
          */
 
         rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
+	if(rval)
+	{
+	    skygw_log_write(LOGFILE_TRACE,"schemarouter: Using active database '%s'",client->rses_mysql_session->db);
+	}
     }
    
 	return rval;
@@ -1932,6 +1936,7 @@ static int routeQuery(
 			 */
                     
 			route_target = TARGET_ANY;
+			skygw_log_write(LOGFILE_TRACE,"schemarouter: Routing query to first available backend.");
 
 		}
 		else
@@ -2008,6 +2013,9 @@ static int routeQuery(
 
 			/**No valid backends alive*/
                         skygw_log_write(LOGFILE_TRACE,"schemarouter: No backends are running");
+			skygw_log_write(LOGFILE_ERROR,
+				 "Error: Schemarouter: Failed to route query, "
+				"no backends are available.");
 			rses_end_locked_router_action(router_cli_ses);
 			ret = 0;
 			goto retblock;
@@ -2215,6 +2223,7 @@ static void clientReply (
          */
         if (!rses_begin_locked_router_action(router_cli_ses))
         {
+	    while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
                 goto lock_failed;
 	}
         /** Holding lock ensures that router session remains open */
@@ -2244,6 +2253,7 @@ static void clientReply (
         if (!rses_begin_locked_router_action(router_cli_ses))
         {
                 /** Log to debug that router was closed */
+	    while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
                 goto lock_failed;
         }
         bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
@@ -2252,6 +2262,7 @@ static void clientReply (
 	{
 		/** Unlock router session */
 		rses_end_locked_router_action(router_cli_ses);
+		while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
 		goto lock_failed;
 	}
 	
@@ -2299,7 +2310,7 @@ static void clientReply (
                 }
             }
             
-	    gwbuf_free(writebuf);
+	    while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
             
             if(mapped)
             {
@@ -2322,7 +2333,10 @@ static void clientReply (
                                               router_cli_ses->connect_db);
                         router_cli_ses->rses_closed = true;                        
                         if(router_cli_ses->queue)
-                            gwbuf_free(router_cli_ses->queue);
+			{
+                            while((router_cli_ses->queue = gwbuf_consume(
+				   router_cli_ses->queue,gwbuf_length(router_cli_ses->queue))));
+			}
                         rses_end_locked_router_action(router_cli_ses);
                         return;
                     }
@@ -2376,7 +2390,7 @@ static void clientReply (
                 {
                     GWBUF* tmp = router_cli_ses->queue;
                     router_cli_ses->queue = router_cli_ses->queue->next;
-                    tmp->next = NULL;                    
+                    tmp->next = NULL;
                     char* querystr = modutil_get_SQL(tmp);
                     skygw_log_write(LOGFILE_DEBUG,"schemarouter: Sending queued buffer for session %p: %s",
                                     router_cli_ses->rses_client_dcb->session,
@@ -2416,6 +2430,8 @@ static void clientReply (
             strcpy(router_cli_ses->rses_mysql_session->db,router_cli_ses->connect_db);
             ss_dassert(router_cli_ses->init == INIT_READY);
             rses_end_locked_router_action(router_cli_ses);
+	    if(writebuf)
+		while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
             return;
         }
         

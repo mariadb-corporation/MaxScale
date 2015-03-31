@@ -10,13 +10,16 @@
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
  - [LICENSE](About/LICENSE.md)
- - [SETUP](About/SETUP.md)
 
 ## Getting Started
 
  - [Getting Started with MaxScale](Getting-Started/Getting-Started-With-MaxScale.md)
  - [Building MaxScale from Source Code](Getting-Started/Building-MaxScale-from-Source-Code.md)
  - [Configuration Guide](Getting-Started/Configuration-Guide.md)
+
+## Upgrading MaxScale
+
+- [Upgrading MaxScale to 1.1.0](Upgrading-To-MaxScale-1.1.0.md)
 
 ## Reference
 
@@ -37,6 +40,7 @@
  - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
  - [RabbitMQ Setup and MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
+ - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
 
 ## Filters
 

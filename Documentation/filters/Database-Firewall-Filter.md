@@ -1,11 +1,11 @@
 #Database Firewall filter
 
 ## Overview
-The database firewall filter is used to block queries that match a set of rules. It can be used to prevent harmful queries into the database or to limit the access to the database based on a more defined set of rules compared to the traditional GRANT-based rights management.
+The database firewall filter is used to block queries that match a set of rules. It can be used to prevent harmful queries from reaching the backend database instances or to limit access to the database based on a more flexible set of rules compared to the traditional GRANT-based privilege system.
 
 ## Configuration
 
-The database firewall filter only requires a minimal set of configurations in the MaxScale.cnf file. The actual rules of the database firewall filter are located in a separate text file. The following is an example of a database firewall filter configuration in the MaxScale.cnf file.
+The database firewall filter only requires minimal configuration in the MaxScale.cnf file. The actual rules of the database firewall filter are located in a separate text file. The following is an example of a database firewall filter configuration in MaxScale.cnf.
 
 ```
 [Database Firewall]
@@ -24,12 +24,12 @@ The database firewall filter has one mandatory parameter that defines the locati
 
 ## Rule syntax
 
-The rules are defined by using the following syntax.
+The rules are defined by using the following syntax:
 
 ```
 rule NAME deny [wildcard | columns VALUE ... |
      regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF |
-      no_where_clause] [at_times VALUE...] [on_queries [select|update|insert|delete]]`
+      no_where_clause] [at_times VALUE...] [on_queries [select|update|insert|delete]]
 ```
 
 Rules always define a blocking action so the basic mode for the database firewall filter is to allow all queries that do not match a given set of rules. Rules are identified by their name and have a mandatory part and optional parts.
@@ -40,45 +40,47 @@ The first step of defining a rule is to start with the keyword `rule` which iden
 
 The database firewall filter's rules expect a single mandatory parameter for a rule. You can define multiple rules to cover situations where you would like to apply multiple mandatory rules to a query.
 
-#### Wildcard
+#### wildcard
 
 This rule blocks all queries that use the wildcard character *.
 
-#### Columns
+#### columns
 
 This rule expects a list of values after the `columns` keyword. These values are interpreted as column names and if a query targets any of these, it is blocked.
 
-#### Regex
+#### regex
 
 This rule blocks all queries matching a regex enclosed in single or double quotes.
 
-#### Limit_queries
+#### limit_queries
 
 The limit_queries rule expects three parameters. The first parameter is the number of allowed queries during the time period. The second is the time period in seconds and the third is the amount of time for which the rule is considered active and blocking.
 
-#### No_where_clause
+#### no_where_clause
 
-This rule inspects the query and blocks it if it has no where clause. This way you can't do a DELETE FROM ... query without having the where clause. This does not prevent wrongful usage of the where clause e.g. DELETE FROM ... WHERE 1=1.
+This rule inspects the query and blocks it if it has no WHERE clause. For example, this would disallow a `DELETE FROM ...` query without a `WHERE` clause. This does not prevent wrongful usage of the `WHERE` clause e.g. `DELETE FROM ... WHERE 1=1`.
 
 ### Optional rule parameters
 
 Each mandatory rule accepts one or more optional parameters. These are to be defined after the mandatory part of the rule.
 
-#### At_times
+#### at_times
 
-This rule expects a list of time ranges that define the times when the rule in question is active. The time formats are expected to be ISO-8601 compliant and to be separated by a single dash (the - character). For example defining the active period of a rule to be 17:00 to 19:00 you would add `at times 17:00:00-19:00:00` to the end of the rule.
+This rule expects a list of time ranges that define the times when the rule in question is active. The time formats are expected to be ISO-8601 compliant and to be separated by a single dash (the - character). For example, to define the active period of a rule to be 5pm to 7pm, you would include `at times 17:00:00-19:00:00` in the rule definition.
 
-#### On_queries
+#### on_queries
 
 This limits the rule to be active only on certain types of queries.
 
 ### Applying rules to users
 
-To apply the defined rules to users use the following syntax.
+The `users` directive defines the users to which the rule should be applied.
 
-`users NAME ... match [any|all|strict_all] rules RULE ...`
+`users NAME ... match [any|all|strict_all] rules RULE [,...]`
 
-The first keyword is users which identifies this line as a user definition line. After this a list of user names and network addresses in the format `user@0.0.0.0` is expected. The first part is the user name and the second part is the network address. You can use the `%` character as the wildcard to enable user name matching from any address or network matching for all users. After the list of users and networks the keyword match is expected. 
+The first keyword is `users`, which identifies this line as a user definition line.
+
+The second component is a list of user names and network addresses in the format *`user`*`@`*`0.0.0.0`*. The first part is the user name and the second part is the network address. You can use the `%` character as the wildcard to enable user name matching from any address or network matching for all users. After the list of users and networks the keyword match is expected. 
 
 After this either the keyword `any` `all` or `strict_all` is expected. This defined how the rules are matched. If `any` is used when the first rule is matched the query is considered blocked and the rest of the rules are skipped. If instead the `all` keyword is used all rules must match for the query to be blocked. The `strict_all` is the same as `all` but it checks the rules from left to right in the order they were listed. If one of these does not match, the rest of the rules are not checked. This could be usedful in situations where you would for example combine `limit_queries` and `regex` rules. By using `strict_all` you can have the `regex` rule first and the `limit_queries` rule second. This way the rule only matches if the `regex` rule matches enough times for the `limit_queries` rule to match.
 

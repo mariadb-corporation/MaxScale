@@ -530,6 +530,12 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	if (auth_ret == 0) {
 		dcb->user = strdup(client_data->user);
 	}
+	else
+	{
+	    skygw_log_write(LOGFILE_ERROR,
+		     "%s: login attempt for user '%s', authentication failed.",
+		     dcb->service->name, username);
+	}
 
 	/* let's free the auth_token now */
 	if (auth_token) {
@@ -900,7 +906,7 @@ int gw_read_client_event(
 						dcb,
 						ERRACT_NEW_CONNECTION,
 						&succp);
-				free(errbuf);
+				gwbuf_free(errbuf);
 				/** 
 				 * If there are not enough backends close 
 				 * session 

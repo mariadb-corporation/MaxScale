@@ -14,8 +14,6 @@ This section describes the limitations that are common to all configuration of p
 
 Both capabilities are not included in MySQL server handshake
 
-* LOAD DATA LOCAL INFILE currently not supported
-
 ## Limitations with MySQL Master/Slave Replication monitoring
 
 ## Limitations with Galera Cluster Monitoring
