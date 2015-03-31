@@ -837,7 +837,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
     if(tok == NULL)
     {
-	skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, no rule rule: %s",rule);
+	skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, no rule: %s",rule);
 	rval = false;
 	goto retblock;
     }
@@ -900,6 +900,12 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
     tok = strtok_r(NULL, " ,",&saveptr);
 
+    if(tok == NULL)
+    {
+	skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, no allow or deny: %s",rule);
+	rval = false;
+	goto retblock;
+    }
 
     if((allow = (strcmp(tok,"allow") == 0)) ||
        (deny = (strcmp(tok,"deny") == 0)))
@@ -946,7 +952,9 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    if(!check_time(tok))
 		    {
 			not_valid = true;
-			break;
+			skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, malformed time definition: %s",tok);
+			rval = false;
+			goto retblock;
 		    }
 
                     TIMERANGE *tmp = parse_time(tok,instance);
@@ -983,7 +991,21 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                 tok = strtok_r(NULL," ",&saveptr);
 		char delim = '\'';
 		int n_char = 0;
-		
+
+		if(tok == NULL)
+		{
+		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, No regex string.");
+		    rval = false;
+		    goto retblock;
+		}
+
+		if(*tok != '\'' || *tok != '"')
+		{
+		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, regex string not quoted.");
+		    rval = false;
+		    goto retblock;
+		}
+
                 while(*tok == '\'' || *tok == '"')
 		{
                     delim = *tok;
@@ -1054,6 +1076,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
             {
 
                 QUERYSPEED* qs = (QUERYSPEED*)calloc(1,sizeof(QUERYSPEED));
+		char *errptr = NULL;
 
                 spinlock_acquire(instance->lock);
                 qs->id = ++instance->idgen;
@@ -1066,7 +1089,34 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
                     goto retblock;
                 }
-                qs->limit = atoi(tok);
+
+                qs->limit = strtol(tok,&errptr,0);
+
+		if(errptr && *errptr != '\0')
+		{
+		    free(qs);
+		    rval = false;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+                    goto retblock;
+		}
+		errptr = NULL;
+                tok = strtok_r(NULL," ",&saveptr);
+                if(tok == NULL){
+                    free(qs);
+		    rval = false;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+                    goto retblock;
+                }
+                qs->period = strtod(tok,&errptr);
+
+		if(errptr && *errptr != '\0')
+		{
+		    free(qs);
+		    rval = false;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+                    goto retblock;
+		}
+		errptr = NULL;
 
                 tok = strtok_r(NULL," ",&saveptr);
                 if(tok == NULL){
@@ -1075,15 +1125,16 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
                     goto retblock;
                 }
-                qs->period = atof(tok);
-                tok = strtok_r(NULL," ",&saveptr);
-                if(tok == NULL){
-                    free(qs);
+                qs->cooldown = strtod(tok,&errptr);
+
+		if(errptr && *errptr != '\0')
+		{
+		    free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
                     goto retblock;
-                }
-                qs->cooldown = atof(tok);
+		}
+
                 ruledef->type = RT_THROTTLE;
                 ruledef->data = (void*)qs;
             }
@@ -1113,6 +1164,14 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    goto retblock;
                 }	
             }
+	    else
+	    {
+		 skygw_log_write(LOGFILE_ERROR,
+                                    "dbfwfilter: Unknown rule type: %s"
+			    ,tok);
+		    rval = false;
+		    goto retblock;
+	    }
 	    tok = strtok_r(NULL," ,",&saveptr);
 	}
 
