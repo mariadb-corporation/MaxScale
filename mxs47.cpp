@@ -1,6 +1,6 @@
 /**
- * @file mxs47.cpp
- *
+ * @file mxs47.cpp Regression test for bug MXS-47 ("Session freeze when small tail packet")
+ * - execute SELECT REPEAT('a',i), where 'i' is changing from 1 to 50000 using all Maxscale services
  */
 
 #include <my_config.h>
@@ -15,14 +15,14 @@ int main(int argc, char *argv[])
 
     Test->read_env();
     Test->print_env();
-    Test->repl->connect();
+    //Test->repl->connect();
     Test->connect_maxscale();
 
     for (int i = 1; i < 50000; i++) {
         sprintf(str, "SELECT REPEAT('a',%d)", i);
-        execute_query(Test->conn_rwsplit, str);
-        execute_query(Test->conn_master, str);
-        execute_query(Test->conn_slave, str);
+        global_result += execute_query(Test->conn_rwsplit, str);
+        global_result += execute_query(Test->conn_master, str);
+        global_result += execute_query(Test->conn_slave, str);
         if ((i/100)*100 == i) {
             printf("%d iterations done\n", i); fflush(stdout);
         }
