@@ -1,2 +1,2 @@
 select * from mysql.user;
-delete from t1 where x like "_";
+DROP TABLE IF EXISTS t1; CREATE TABLE t1 (x1 int, fl int); delete from t1 where x1 like "_";
