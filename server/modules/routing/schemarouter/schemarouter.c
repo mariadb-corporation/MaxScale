@@ -402,7 +402,7 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
                                 rval);
             }
         }
-        
+        gwbuf_free(buffer);
         return !rval;
 }
 
@@ -803,14 +803,16 @@ static void* newSession(
         MySQLProtocol* protocol = session->client->protocol;
         MYSQL_session* data = session->data;
         bool using_db = false;
-        
+        bool have_db = false;
+
         memset(db,0,MYSQL_DATABASE_MAXLEN+1);
         
         spinlock_acquire(&protocol->protocol_lock);
         
         /* To enable connecting directly to a sharded database we first need
          * to disable it for the client DCB's protocol so that we can connect to them*/
-        if(protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+        if(protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB &&
+	   (have_db = strnlen(data->db,MYSQL_DATABASE_MAXLEN) > 0))
         {
             
             protocol->client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
@@ -820,7 +822,12 @@ static void* newSession(
             skygw_log_write(LOGFILE_TRACE,"schemarouter: Client logging in directly to a database '%s', "
                     "postponing until databases have been mapped.",db);
         }
-        
+
+	if(!have_db)
+	{
+	   LOGIF(LT,(skygw_log_write(LT,"schemarouter: Client'%s' connecting with empty database.",data->user)));
+	}
+
         spinlock_release(&protocol->protocol_lock);
         
         client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
@@ -1004,7 +1011,7 @@ static void closeSession(
         backend_ref_t*     backend_ref;
 
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-			   "%lu [RWSplit:closeSession]",
+			   "%lu [schemarouter:closeSession]",
 			    pthread_self())));                                
 	
         /** 
@@ -2223,6 +2230,7 @@ static void clientReply (
          */
         if (!rses_begin_locked_router_action(router_cli_ses))
         {
+	    while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
                 goto lock_failed;
 	}
         /** Holding lock ensures that router session remains open */
@@ -2252,6 +2260,7 @@ static void clientReply (
         if (!rses_begin_locked_router_action(router_cli_ses))
         {
                 /** Log to debug that router was closed */
+	    while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
                 goto lock_failed;
         }
         bref = get_bref_from_dcb(router_cli_ses, backend_dcb);
@@ -2260,6 +2269,7 @@ static void clientReply (
 	{
 		/** Unlock router session */
 		rses_end_locked_router_action(router_cli_ses);
+		while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
 		goto lock_failed;
 	}
 	
@@ -2307,7 +2317,7 @@ static void clientReply (
                 }
             }
             
-	    gwbuf_free(writebuf);
+	    while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
             
             if(mapped)
             {
@@ -2326,12 +2336,20 @@ static void clientReply (
                     if((target = hashtable_fetch(router_cli_ses->dbhash,
                                        router_cli_ses->connect_db)) == NULL)
                     {
+			/** Unknown database, hang up on the client*/
                         skygw_log_write_flush(LOGFILE_TRACE,"schemarouter: Connecting to a non-existent database '%s'",
                                               router_cli_ses->connect_db);
-                        router_cli_ses->rses_closed = true;                        
+			char errmsg[128 + MYSQL_DATABASE_MAXLEN+1];
+			sprintf(errmsg,"Unknown database '%s'",router_cli_ses->connect_db);
+			GWBUF* errbuff = modutil_create_mysql_err_msg(1,0,1049,"42000",errmsg);
+			router_cli_ses->rses_client_dcb->func.write(router_cli_ses->rses_client_dcb,errbuff);
                         if(router_cli_ses->queue)
-                            gwbuf_free(router_cli_ses->queue);
+			{
+                            while((router_cli_ses->queue = gwbuf_consume(
+				   router_cli_ses->queue,gwbuf_length(router_cli_ses->queue))));
+			}
                         rses_end_locked_router_action(router_cli_ses);
+			router_cli_ses->rses_client_dcb->func.hangup(router_cli_ses->rses_client_dcb);
                         return;
                     }
                     
@@ -2384,7 +2402,7 @@ static void clientReply (
                 {
                     GWBUF* tmp = router_cli_ses->queue;
                     router_cli_ses->queue = router_cli_ses->queue->next;
-                    tmp->next = NULL;                    
+                    tmp->next = NULL;
                     char* querystr = modutil_get_SQL(tmp);
                     skygw_log_write(LOGFILE_DEBUG,"schemarouter: Sending queued buffer for session %p: %s",
                                     router_cli_ses->rses_client_dcb->session,
@@ -2424,6 +2442,8 @@ static void clientReply (
             strcpy(router_cli_ses->rses_mysql_session->db,router_cli_ses->connect_db);
             ss_dassert(router_cli_ses->init == INIT_READY);
             rses_end_locked_router_action(router_cli_ses);
+	    if(writebuf)
+		while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
             return;
         }
         

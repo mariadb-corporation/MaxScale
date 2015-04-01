@@ -159,7 +159,20 @@ typedef struct subservice_t{
     int state;
     int n_res_waiting;
     bool mapped;
-}SUBSERVICE;    
+}SUBSERVICE;
+
+/**
+ * Bitmask values for the router session's initialization. These values are used
+ * to prevent responses from internal commands being forwarded to the client.
+ */
+typedef enum shard_init_mask
+{
+  INIT_READY = 0x0,
+  INIT_MAPPING = 0x1,
+  INIT_USE_DB = 0x02,
+  INIT_UNINT = 0x04
+
+} shard_init_mask_t;
 
 /**
  * The client session structure used within this router.
@@ -172,8 +185,8 @@ struct router_client_session {
         int              rses_versno;    /*< even = no active update, else odd. not used 4/14 */
         bool             rses_closed;    /*< true when closeSession is called      */
 	    DCB*			 rses_client_dcb;
-            DCB* dummy_dcb; /* DCB used to send the client write messages from the router itself */
-            DCB* queue_dcb; /* DCB used to send queued queries to the router */
+            DCB* replydcb; /* DCB used to send the client write messages from the router itself */
+            DCB* routedcb; /* DCB used to send queued queries to the router */
 	    MYSQL_session*   rses_mysql_session;
 	/** Properties listed by their type */
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
@@ -190,6 +203,8 @@ struct router_client_session {
         bool            hash_init;
         SESSION*        session;
         GWBUF* queue;
+        char            connect_db[MYSQL_DATABASE_MAXLEN+1]; /*< Database the user was trying to connect to */
+        shard_init_mask_t    init; /*< Initialization state bitmask */
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
 #endif

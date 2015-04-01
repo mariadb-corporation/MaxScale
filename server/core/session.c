@@ -608,21 +608,30 @@ SESSION		*ptr;
 	ptr = allSessions;
 	while (ptr)
 	{
-        double idle = (hkheartbeat - ptr->client->last_read);
-        idle = idle > 0 ? idle/10.0:0;
+
 		dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
 		dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 		dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
 		dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
+
 		if (ptr->client && ptr->client->remote)
+		{
 			dcb_printf(dcb, "\tClient Address:		%s%s%s\n",
                        ptr->client->user?ptr->client->user:"",
                        ptr->client->user?"@":"",
                        ptr->client->remote);
+		}
+
 		dcb_printf(dcb, "\tConnected:		%s",
 			asctime_r(localtime_r(&ptr->stats.connect, &result), timebuf));
-        if(ptr->client->state == DCB_STATE_POLLING)
-            dcb_printf(dcb, "\tIdle:			   	%.0f seconds\n",idle);
+
+		if(ptr->client && ptr->client->state == DCB_STATE_POLLING)
+		{
+		    double idle = (hkheartbeat - ptr->client->last_read);
+		    idle = idle > 0 ? idle/10.0:0;
+		    dcb_printf(dcb, "\tIdle:			   	%.0f seconds\n",idle);
+		}
+		
 		ptr = ptr->next;
 	}
 	spinlock_release(&session_spin);
