@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
         file = fopen(pass_file, "r");
         printf("********** Trying queries that should be OK ********** \n");
         while (fgets(sql, sizeof(sql), file)) {
-            printf("%s\n", sql);
+            printf("%s", sql);
             local_result += execute_query(Test->conn_rwsplit, sql);
         }
         fclose(file);
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         file = fopen(deny_file, "r");
         printf("********** Trying queries that should FAIL ********** \n");
         while (fgets(sql, sizeof(sql), file)) {
-            printf("%s\n", sql);
+            printf("%s", sql);
             execute_query(Test->conn_rwsplit, sql);
             if (mysql_errno(Test->conn_rwsplit) != 1141) {
                 printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));
@@ -57,9 +57,9 @@ int main(int argc, char *argv[])
         fclose(file);
         global_result += local_result;
         if (local_result == 0) {
-            printf("********** rules%d test PASSED", i);
+            printf("********** rules%d test PASSED\n", i);
         } else {
-            printf("********** rules%d test FAILED", i);
+            printf("********** rules%d test FAILED\n", i);
         }
 
         mysql_close(Test->conn_rwsplit);
