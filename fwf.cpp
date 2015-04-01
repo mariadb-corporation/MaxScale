@@ -25,14 +25,14 @@ int main(int argc, char *argv[])
 
     for (int i = 1; i < N+1; i++){
 
-        sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fwf/rules%d root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, i, Test->maxscale_IP);
+        sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules%d root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, i, Test->maxscale_IP);
         printf("Copying rules to Maxscale machine: %s\n", str);
         system(str);
         Test->restart_maxscale();
         Test->connect_rwsplit();
 
-        sprintf(pass_file, "%s/fwf/pass%d", Test->test_dir, i);
-        sprintf(deny_file, "%s/fwf/deny%d", Test->test_dir, i);
+        sprintf(pass_file, "%s/fw/pass%d", Test->test_dir, i);
+        sprintf(deny_file, "%s/fw/deny%d", Test->test_dir, i);
 
         file = fopen(pass_file, "r");
         while (fgets(sql, sizeof(sql), file)) {
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
         while (fgets(sql, sizeof(sql), file)) {
             printf("%s\n", sql);
             execute_query(Test->conn_rwsplit, sql);
-            if (mysql_errno(Test->conn_rwsplit) == 0) {
+            if (mysql_errno(Test->conn_rwsplit) != 1141) {
                 printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));
                 global_result++;
             }
