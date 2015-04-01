@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     Test->read_env();
     Test->print_env();
 
-    int N = 1;
+    int N = 2;
 
     for (int i = 1; i < N+1; i++){
 
