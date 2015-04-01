@@ -1011,7 +1011,7 @@ static void closeSession(
         backend_ref_t*     backend_ref;
 
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-			   "%lu [RWSplit:closeSession]",
+			   "%lu [schemarouter:closeSession]",
 			    pthread_self())));                                
 	
         /** 
@@ -2336,15 +2336,20 @@ static void clientReply (
                     if((target = hashtable_fetch(router_cli_ses->dbhash,
                                        router_cli_ses->connect_db)) == NULL)
                     {
+			/** Unknown database, hang up on the client*/
                         skygw_log_write_flush(LOGFILE_TRACE,"schemarouter: Connecting to a non-existent database '%s'",
                                               router_cli_ses->connect_db);
-                        router_cli_ses->rses_closed = true;                        
+			char errmsg[128 + MYSQL_DATABASE_MAXLEN+1];
+			sprintf(errmsg,"Unknown database '%s'",router_cli_ses->connect_db);
+			GWBUF* errbuff = modutil_create_mysql_err_msg(1,0,1049,"42000",errmsg);
+			router_cli_ses->rses_client_dcb->func.write(router_cli_ses->rses_client_dcb,errbuff);
                         if(router_cli_ses->queue)
 			{
                             while((router_cli_ses->queue = gwbuf_consume(
 				   router_cli_ses->queue,gwbuf_length(router_cli_ses->queue))));
 			}
                         rses_end_locked_router_action(router_cli_ses);
+			router_cli_ses->rses_client_dcb->func.hangup(router_cli_ses->rses_client_dcb);
                         return;
                     }
                     
