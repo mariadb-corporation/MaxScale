@@ -376,7 +376,7 @@ int	query_len;
 			word = strtok_r(NULL, sep, &brkb);
 			if (word && (strcasecmp(word, "'none'") == 0))
 				slave->nocrc = 1;
-			else if (word && (strcasecmp(word, "@@global.biglog_checksum'") == 0))
+			else if (word && (strcasecmp(word, "@@global.biglog_checksum") == 0))
 				slave->nocrc = !router->master_chksum;
 			else
 				slave->nocrc = 0;
