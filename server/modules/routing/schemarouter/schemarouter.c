@@ -803,14 +803,16 @@ static void* newSession(
         MySQLProtocol* protocol = session->client->protocol;
         MYSQL_session* data = session->data;
         bool using_db = false;
-        
+        bool have_db = false;
+
         memset(db,0,MYSQL_DATABASE_MAXLEN+1);
         
         spinlock_acquire(&protocol->protocol_lock);
         
         /* To enable connecting directly to a sharded database we first need
          * to disable it for the client DCB's protocol so that we can connect to them*/
-        if(protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+        if(protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB &&
+	   (have_db = strnlen(data->db,MYSQL_DATABASE_MAXLEN) > 0))
         {
             
             protocol->client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
@@ -820,7 +822,12 @@ static void* newSession(
             skygw_log_write(LOGFILE_TRACE,"schemarouter: Client logging in directly to a database '%s', "
                     "postponing until databases have been mapped.",db);
         }
-        
+
+	if(!have_db)
+	{
+	   LOGIF(LT,(skygw_log_write(LT,"schemarouter: Client'%s' connecting with empty database.",data->user)));
+	}
+
         spinlock_release(&protocol->protocol_lock);
         
         client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
