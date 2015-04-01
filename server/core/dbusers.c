@@ -89,6 +89,7 @@
 
 #define LOAD_MYSQL_DATABASE_NAMES "SELECT * FROM ( (SELECT COUNT(1) AS ndbs FROM INFORMATION_SCHEMA.SCHEMATA) AS tbl1, (SELECT GRANTEE,PRIVILEGE_TYPE from INFORMATION_SCHEMA.USER_PRIVILEGES WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \'\\'\',\'\')=CURRENT_USER()) AS tbl2)"
 
+#define ERROR_NO_SHOW_DATABASES "%s: Unable to load database grant information, MaxScale authentication will proceed without including database permissions. To correct this GRANT SHOW DATABASES ON *.* privilege to the user %s."
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -380,11 +381,8 @@ addDatabases(SERVICE *service, MYSQL *con)
 
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-				"%s: Unable to load database grant information, MaxScale "
-				"authentication will proceed without including database "
-				"permissions. To correct this GRANT select permission "
-				"on mysql.db to the user %s.",
-					service->name, service_user)));
+            ERROR_NO_SHOW_DATABASES,
+            service->name, service_user)));
 	}
 
 	/* free resut set */
@@ -486,11 +484,8 @@ getDatabases(SERVICE *service, MYSQL *con)
 
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-				"%s: Unable to load database grant information, MaxScale "
-				"authentication will proceed without including database "
-				"permissions. To correct this GRANT select permission "
-				"on mysql.db to the user %s.",
-					service->name, service_user)));
+            ERROR_NO_SHOW_DATABASES,
+            service->name, service_user)));
 	}
 
 	/* free resut set */
@@ -762,11 +757,8 @@ getAllUsers(SERVICE *service, USERS *users)
                     
                     LOGIF(LE, (skygw_log_write_flush(
                             LOGFILE_ERROR,
-                                                     "%s: Unable to load database grant information, MaxScale "
-                            "authentication will proceed without including database "
-                            "permissions. To correct this GRANT select permission "
-                            "on msql.db to the user %s.",
-                                                     service->name, service_user)));
+                            ERROR_NO_SHOW_DATABASES,
+                            service->name, service_user)));
                     
                     /* check for root user select */
                     if(service->enable_root) {
@@ -1255,11 +1247,8 @@ getUsers(SERVICE *service, USERS *users)
 
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"%s: Unable to load database grant information, MaxScale "
-				"authentication will proceed without including database "
-				"permissions. To correct this GRANT select permission "
-				"on msql.db to the user %s.",
-					service->name, service_user)));
+                ERROR_NO_SHOW_DATABASES,
+                service->name, service_user)));
 			
 			/* check for root user select */
 			if(service->enable_root) {
