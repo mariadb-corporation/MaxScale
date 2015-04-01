@@ -12,6 +12,7 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
+    int local_result;
     char str[4096];
     char sql[4096];
     char pass_file[4096];
@@ -24,6 +25,7 @@ int main(int argc, char *argv[])
     int N = 4;
 
     for (int i = 1; i < N+1; i++){
+        local_result = 0;
 
         sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules%d root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, i, Test->maxscale_IP);
         printf("Copying rules to Maxscale machine: %s\n", str);
@@ -35,22 +37,30 @@ int main(int argc, char *argv[])
         sprintf(deny_file, "%s/fw/deny%d", Test->test_dir, i);
 
         file = fopen(pass_file, "r");
+        printf("********** Trying queries that should be OK ********** \n");
         while (fgets(sql, sizeof(sql), file)) {
             printf("%s\n", sql);
-            global_result += execute_query(Test->conn_rwsplit, sql);
+            local_result += execute_query(Test->conn_rwsplit, sql);
         }
         fclose(file);
 
         file = fopen(deny_file, "r");
+        printf("********** Trying queries that should FAIL ********** \n");
         while (fgets(sql, sizeof(sql), file)) {
             printf("%s\n", sql);
             execute_query(Test->conn_rwsplit, sql);
             if (mysql_errno(Test->conn_rwsplit) != 1141) {
                 printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));
-                global_result++;
+                local_result++;
             }
         }
         fclose(file);
+        global_result += local_result;
+        if (local_result == 0) {
+            printf("********** rules%d test PASSED", i);
+        } else {
+            printf("********** rules%d test FAILED", i);
+        }
 
         mysql_close(Test->conn_rwsplit);
     }
