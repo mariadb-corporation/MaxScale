@@ -205,8 +205,9 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
 
 
   # Check which init.d script to install
-  find_file(RPM_FNC functions PATHS /etc/rc.d/init.d)
-  if(${RPM_FNC} MATCHES "RPM_FNC-NOTFOUND")
+  if(WITH_SCRIPTS)
+    find_file(RPM_FNC functions PATHS /etc/rc.d/init.d)
+    if(${RPM_FNC} MATCHES "RPM_FNC-NOTFOUND")
 	find_file(DEB_FNC init-functions PATHS /lib/lsb)
 	if(${DEB_FNC} MATCHES "DEB_FNC-NOTFOUND")
 	  set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
@@ -214,11 +215,12 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
 	else()
 	  set(DEB_BASED TRUE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
 	endif()
-  else()
+    else()
 	set(DEB_BASED FALSE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
+    endif()
+    unset(DEB_FNC)
+    unset(RPM_FNC)
   endif()
-  unset(DEB_FNC)
-  unset(RPM_FNC)
 
   #Check RabbitMQ headers and libraries
   if(BUILD_RABBITMQ)
