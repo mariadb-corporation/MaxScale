@@ -692,7 +692,15 @@ createInstance(SERVICE *service, char **options)
         /** Calculate number of servers */
         server = service->dbref;
         nservers = 0;
-        
+
+	conf = service->svc_config_param;
+	if((config_get_param(conf,"auth_all_servers")) == NULL)
+	{
+	    skygw_log_write(LOGFILE_MESSAGE,"Schemarouter: Authentication data is fetched from all servers. To disable this "
+		    "add 'auth_all_servers=0' to the service.");
+	    service->users_from_all = true;
+	}
+
         while (server != NULL)
         {
                 nservers++;
