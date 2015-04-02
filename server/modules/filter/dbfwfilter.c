@@ -221,6 +221,7 @@ typedef struct {
 	bool def_op;/*< Default operation mode, defaults to deny */
 	SPINLOCK* lock;/*< Instance spinlock */
 	long idgen; /*< UID generator */
+	int regflags;
 } FW_INSTANCE;
 
 /**
@@ -1084,7 +1085,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
                 memcpy(str, start, (tok-start));
 
-                if(regcomp(re, str,REG_NOSUB|REG_ICASE)){
+                if(regcomp(re, str,REG_NOSUB|instance->regflags)){
                     skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Invalid regular expression '%s'.", str);
 		    rval = false;
                     free(re);
@@ -1265,16 +1266,26 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	my_instance->htable = ht;
 	my_instance->def_op = true;
 	my_instance->userstrings = NULL;
+	my_instance->regflags = 0;
+	
 	for(i = 0;params[i];i++){
-		if(strcmp(params[i]->name, "rules") == 0){
-                    
-                        if(filename)
-                            free(filename);
-                    
-			filename = strdup(params[i]->value);
-		}
+	    if(strcmp(params[i]->name, "rules") == 0){
+		if(filename)
+		    free(filename);
+		filename = strdup(params[i]->value);
+	    }
 	}
-        
+
+	if(options)
+	{
+	    for(i = 0;options[i];i++)
+	    {
+		if(strcmp(options[i],"ignorecase") == 0)
+		{
+		    my_instance->regflags |= REG_ICASE;
+		}
+	    }
+	}
         
         if(filename == NULL)
         {
