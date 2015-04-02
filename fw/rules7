@@ -1,0 +1,3 @@
+rule test11 deny no_where_clause on_queries delete
+users %@% match all rules test11
+

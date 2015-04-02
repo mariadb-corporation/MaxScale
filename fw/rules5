@@ -1,0 +1,3 @@
+rule test7 deny no_where_clause
+users %@% match all rules test7
+

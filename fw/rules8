@@ -1,0 +1,3 @@
+rule test12 deny regex '.FROM.*t1.*.WHERE*.OR.*" on_queries select
+users %@% match all rules test12
+
