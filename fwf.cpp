@@ -37,24 +37,34 @@ int main(int argc, char *argv[])
         sprintf(deny_file, "%s/fw/deny%d", Test->test_dir, i);
 
         file = fopen(pass_file, "r");
-        printf("********** Trying queries that should be OK ********** \n");
-        while (fgets(sql, sizeof(sql), file)) {
-            printf("%s", sql);
-            local_result += execute_query(Test->conn_rwsplit, sql);
+        if (file != NULL) {
+            printf("********** Trying queries that should be OK ********** \n");
+            while (fgets(sql, sizeof(sql), file)) {
+                printf("%s", sql);
+                local_result += execute_query(Test->conn_rwsplit, sql);
+            }
+            fclose(file);
+        } else {
+            printf("Error opening query file\n");
+            global_result++;
         }
-        fclose(file);
 
         file = fopen(deny_file, "r");
-        printf("********** Trying queries that should FAIL ********** \n");
-        while (fgets(sql, sizeof(sql), file)) {
-            printf("%s", sql);
-            execute_query(Test->conn_rwsplit, sql);
-            if (mysql_errno(Test->conn_rwsplit) != 1141) {
-                printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));
-                local_result++;
+        if (file != NULL) {
+            printf("********** Trying queries that should FAIL ********** \n");
+            while (fgets(sql, sizeof(sql), file)) {
+                printf("%s", sql);
+                execute_query(Test->conn_rwsplit, sql);
+                if (mysql_errno(Test->conn_rwsplit) != 1141) {
+                    printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));
+                    local_result++;
+                }
             }
+            fclose(file);
+        } else {
+            printf("Error opening query file\n");
+            global_result++;
         }
-        fclose(file);
         global_result += local_result;
         if (local_result == 0) {
             printf("********** rules%d test PASSED\n", i);
