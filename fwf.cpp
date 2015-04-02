@@ -27,10 +27,11 @@ int main(int argc, char *argv[])
     for (int i = 1; i < N+1; i++){
         local_result = 0;
 
+        Test->stop_maxscale();
         sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules%d root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, i, Test->maxscale_IP);
-        printf("Copying rules to Maxscale machine: %s\n", str);
+        printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
         system(str);
-        Test->restart_maxscale();
+        Test->start_maxscale();
         Test->connect_rwsplit();
 
         sprintf(pass_file, "%s/fw/pass%d", Test->test_dir, i);
@@ -38,10 +39,10 @@ int main(int argc, char *argv[])
 
         file = fopen(pass_file, "r");
         if (file != NULL) {
-            printf("********** Trying queries that should be OK ********** \n");
+            printf("********** Trying queries that should be OK ********** \n");fflush(stdout);
             while (fgets(sql, sizeof(sql), file)) {
                 if (strlen(sql) > 1) {
-                    printf("%s", sql);
+                    printf("%s", sql);fflush(stdout);
                     local_result += execute_query(Test->conn_rwsplit, sql);
                 }
             }
@@ -53,13 +54,13 @@ int main(int argc, char *argv[])
 
         file = fopen(deny_file, "r");
         if (file != NULL) {
-            printf("********** Trying queries that should FAIL ********** \n");
+            printf("********** Trying queries that should FAIL ********** \n");fflush(stdout);
             while (fgets(sql, sizeof(sql), file)) {
                 if (strlen(sql) > 1) {
-                    printf("%s", sql);
+                    printf("%s", sql);fflush(stdout);
                     execute_query(Test->conn_rwsplit, sql);
                     if (mysql_errno(Test->conn_rwsplit) != 1141) {
-                        printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));
+                        printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));fflush(stdout);
                         local_result++;
                     }
                 }
@@ -71,9 +72,9 @@ int main(int argc, char *argv[])
         }
         global_result += local_result;
         if (local_result == 0) {
-            printf("********** rules%d test PASSED\n", i);
+            printf("********** rules%d test PASSED\n", i);fflush(stdout);
         } else {
-            printf("********** rules%d test FAILED\n", i);
+            printf("********** rules%d test FAILED\n", i);fflush(stdout);
         }
 
         mysql_close(Test->conn_rwsplit);
