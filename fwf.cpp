@@ -40,8 +40,10 @@ int main(int argc, char *argv[])
         if (file != NULL) {
             printf("********** Trying queries that should be OK ********** \n");
             while (fgets(sql, sizeof(sql), file)) {
-                printf("%s", sql);
-                local_result += execute_query(Test->conn_rwsplit, sql);
+                if (strlen(sql) > 1) {
+                    printf("%s", sql);
+                    local_result += execute_query(Test->conn_rwsplit, sql);
+                }
             }
             fclose(file);
         } else {
@@ -53,11 +55,13 @@ int main(int argc, char *argv[])
         if (file != NULL) {
             printf("********** Trying queries that should FAIL ********** \n");
             while (fgets(sql, sizeof(sql), file)) {
-                printf("%s", sql);
-                execute_query(Test->conn_rwsplit, sql);
-                if (mysql_errno(Test->conn_rwsplit) != 1141) {
-                    printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));
-                    local_result++;
+                if (strlen(sql) > 1) {
+                    printf("%s", sql);
+                    execute_query(Test->conn_rwsplit, sql);
+                    if (mysql_errno(Test->conn_rwsplit) != 1141) {
+                        printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));
+                        local_result++;
+                    }
                 }
             }
             fclose(file);
