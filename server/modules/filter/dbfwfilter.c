@@ -1982,7 +1982,16 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	GWBUF* forward;
 	ipaddr = strdup(dcb->remote);
 	sprintf(uname_addr,"%s@%s",dcb->user,ipaddr);
-	
+
+	if(modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)
+	{
+	    if(my_session->errmsg)
+		free(my_session->errmsg);
+
+	    my_session->errmsg = strdup("This filter does not support multi-statements.");
+	    accept = false;
+	    goto queryresolved;
+	}
 	
 	if((user = (USER*)hashtable_fetch(my_instance->htable, uname_addr)) == NULL){
 		while(user == NULL && next_ip_class(ipaddr)){
