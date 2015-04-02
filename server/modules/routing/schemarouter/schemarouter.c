@@ -1869,8 +1869,11 @@ static int routeQuery(
 	 * Find out whether the query should be routed to single server or to 
 	 * all of them.
 	 */
-        
-        if (packet_type == MYSQL_COM_INIT_DB)
+
+        skygw_query_op_t op = query_classifier_get_operation(querybuf);
+
+        if (packet_type == MYSQL_COM_INIT_DB ||
+	    op == QUERY_OP_CHANGE_DB)
 	{
 		if (!(change_successful = change_current_db(inst, router_cli_ses, querybuf)))
 		{
@@ -1897,7 +1900,8 @@ static int routeQuery(
 					router_cli_ses->rses_transaction_active,
 					querybuf->hint);
         
-	if (packet_type == MYSQL_COM_INIT_DB)
+	if (packet_type == MYSQL_COM_INIT_DB ||
+	    op == QUERY_OP_CHANGE_DB)
 	{
 		route_target = TARGET_UNDEFINED;
                 tname = hashtable_fetch(router_cli_ses->dbhash,router_cli_ses->rses_mysql_session->db);
@@ -4126,10 +4130,53 @@ static bool change_current_db(
 		plen = gw_mysql_get_byte3(packet) - 1;
 
 		/** Copy database name from MySQL packet to session */
+		if(query_classifier_get_operation(buf) == QUERY_OP_CHANGE_DB)
+		{
+		    char* query = modutil_get_SQL(buf);
+		    char *saved,*tok;
 
-                memcpy(rses->rses_mysql_session->db,packet + 5,plen);
-                memset(rses->rses_mysql_session->db + plen,0,1);
-                
+		    tok = strtok_r(query," ;",&saved);
+		    if(tok == NULL || strcasecmp(tok,"use") != 0)
+		    {
+			skygw_log_write(LOGFILE_ERROR,"Schemarouter: Malformed chage database packet.");
+			free(query);
+			message_len = 25 + MYSQL_DATABASE_MAXLEN;
+			fail_str = calloc(1, message_len+1);
+			snprintf(fail_str,
+				message_len,
+				"Unknown database '%s'",
+				(char*)rses->rses_mysql_session->db);
+			rses->rses_mysql_session->db[0] = '\0';
+			succp = false;
+			goto reply_error;
+		    }
+
+		    tok = strtok_r(NULL," ;",&saved);
+		    if(tok == NULL)
+		    {
+			skygw_log_write(LOGFILE_ERROR,"Schemarouter: Malformed chage database packet.");
+			free(query);
+			message_len = 25 + MYSQL_DATABASE_MAXLEN;
+			fail_str = calloc(1, message_len+1);
+			snprintf(fail_str,
+				message_len,
+				"Unknown database '%s'",
+				(char*)rses->rses_mysql_session->db);
+			rses->rses_mysql_session->db[0] = '\0';
+			succp = false;
+			goto reply_error;
+		    }
+
+		    strcpy(rses->rses_mysql_session->db,tok);
+		    free(query);
+		    query = NULL;
+		    
+		}
+		else
+		{
+		    memcpy(rses->rses_mysql_session->db,packet + 5,plen);
+		    memset(rses->rses_mysql_session->db + plen,0,1);
+                }
                 skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB with database '%s'",
                                 rses->rses_mysql_session->db);
 		/**
