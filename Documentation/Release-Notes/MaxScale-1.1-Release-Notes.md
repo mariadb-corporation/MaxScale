@@ -189,6 +189,9 @@ There are a number bugs and known limitations within this version of MaxScale, t
 
 * Service init script is missing after upgrade from 1.0 in RPM-based system. Can be fixed by reinstalling the package ('yum reinstall maxscale' or 'rpm -i --force /maxscale-1.1.rpm')
 
+* Binlog Router Plugin is compatible with MySQL 5.6 and MariaDB 5.5
+  Binlog Router Plugin compatibility with MariaDB 10 is aplha
+
 ## Packaging
 
 Both RPM and Debian packages are available for MaxScale in addition to the tar based releases previously distributed we now provide
