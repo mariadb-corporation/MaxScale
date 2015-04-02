@@ -33,6 +33,9 @@ Receive notification of security update and patches tailored to your MaxScale co
 ### MySQL NDB cluster support
 Connection based routing to MySQL NDB clusters
 
+### Updated installation path
+MaxScale is now installed into `/usr/local/mariadb-maxscale`.
+
 ## Bug Fixes
 
 A number of bug fixes have been applied between the 1.0.5 GA and this RC release. The table below lists the bugs that have been resolved. The details for each of these may be found in https://mariadb.atlassian.net/projects/MXS or in the former http://bugs.mariadb.com Bug database
@@ -42,10 +45,62 @@ A number of bug fixes have been applied between the 1.0.5 GA and this RC release
     <td>ID</td>
     <td>Summary</td>
   </tr>
+  <tr>
+    <td>MXS-80</td>
+    <td>"show sessions" can crash MaxScale</td>
+  </tr>
+  <tr>
+    <td>MXS-79</td>
+    <td>schemarouter hangs if client connects with empty database</td>
+  </tr>
+  <tr>
+    <td>MXS-78</td>
+    <td>"USE" statement gives unpredictable/unexpected results</td>
+  </tr>
+  <tr>
+    <td>MXS-76</td>
+    <td>core/dbusers.c needs better error messages</td>
+  </tr>
+  <tr>
+    <td>MXS-74</td>
+    <td>Crash when no arguments given to on_queries clause</td>
+  </tr>
+  <tr>
+    <td>MXS-72</td>
+    <td>dbfwfilter on_queries clause appears to be ignored</td>
+  </tr>
+  <tr>
+    <td>MXS-71</td>
+    <td>dbfwfilter at_times clause seems to erroneously block user</td>
+  </tr>
+  <tr>
+    <td>MXS-68</td>
+    <td>Wrong rule name in dbfwfilter leads to MaxScale crash</td>
+  </tr>
+  <tr>
+    <td>MXS-65</td>
+    <td>Omitting <any|all|strict_all> in users directive causes crash in libdbfwfilter.so(link_rules)</td>
+  </tr>
+  <tr>
+    <td>MXS-63</td>
+    <td>Maxkeys and Maxpasswd log to /tpm</td>
+  </tr>
+  <tr>
+    <td>MXS-57</td>
+    <td>MaxScale should write a message to the error log when config is not found</td>
+  </tr>
+  <tr>
+    <td>MXS-54</td>
+    <td>Write failed auth attempt to trace log</td>
+  </tr>
+  <tr>
+    <td>MXS-50</td>
+    <td>Removing 1.0.5 RPM gives error about /etc/ld.so.conf.d/maxscale.conf</td>
+  </tr>
+  <tr>
     <td>MXS-47</td>
     <td>Session freeze when small tail packet</td>
   </tr>
-  <tr>
   <tr>
     <td>MXS-5</td>
     <td>Possible memory leak in readwritesplit router</td>
