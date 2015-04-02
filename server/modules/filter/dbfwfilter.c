@@ -1025,7 +1025,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    goto retblock;
 		}
 
-		if(*tok != '\'' || *tok != '"')
+		if(*tok != '\'' && *tok != '\"')
 		{
 		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, regex string not quoted.");
 		    rval = false;
@@ -1084,7 +1084,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
                 memcpy(str, start, (tok-start));
 
-                if(regcomp(re, str,REG_NOSUB)){
+                if(regcomp(re, str,REG_NOSUB|REG_ICASE)){
                     skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Invalid regular expression '%s'.", str);
 		    rval = false;
                     free(re);
