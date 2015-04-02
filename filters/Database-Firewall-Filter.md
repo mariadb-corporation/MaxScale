@@ -16,7 +16,7 @@ rules=/home/user/rules.txt
 
 ### Filter Options
 
-The database firewall filter does not support any filter options.
+The database firewall filter supports a single option, `ignorecase`. This will set the regular expression matching to case-insensitive mode.
 
 ### Filter Parameters
 
