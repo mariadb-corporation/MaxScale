@@ -1210,6 +1210,22 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
 }
 
+bool is_comment(char* str)
+{
+    char *ptr = str;
+
+    while(*ptr != '\0')
+    {
+	if(isspace(*ptr))
+	    ptr++;
+	else if(*ptr == '#')
+	    return true;
+	else
+	    return false;
+    }
+    return true;
+}
+
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -1277,8 +1293,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
             return NULL;
 	}
 
-	free(filename);
-	
+
+	bool file_empty = true;
+
 	while(!feof(file))
     {
 
@@ -1300,6 +1317,13 @@ createInstance(char **options, FILTER_PARAMETER **params)
             *nl = '\0';
         }
         
+	if(strnlen(buffer,2048) < 1 || is_comment(buffer))
+	{
+	    continue;
+	}
+
+	file_empty = false;
+
         if(!parse_rule(buffer,my_instance))
 	{
 	    fclose(file);
@@ -1308,8 +1332,17 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	}
     }
 
+	if(file_empty)
+	{
+	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: File is empty: %s");
+	    free(filename);
+	    err = true;
+	    goto retblock;
+	}
+
 	fclose(file);
-	
+	free(filename);
+
 	/**Apply the rules to users*/
 	if(ptr == NULL)
 	{
