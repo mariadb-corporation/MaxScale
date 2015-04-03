@@ -1,7 +1,7 @@
 #Database Firewall filter
 
 ## Overview
-The database firewall filter is used to block queries that match a set of rules. It can be used to prevent harmful queries from reaching the backend database instances or to limit access to the database based on a more flexible set of rules compared to the traditional GRANT-based privilege system.
+The database firewall filter is used to block queries that match a set of rules. It can be used to prevent harmful queries from reaching the backend database instances or to limit access to the database based on a more flexible set of rules compared to the traditional GRANT-based privilege system. Currently the filter does not support multi-statements.
 
 ## Configuration
 
@@ -16,7 +16,7 @@ rules=/home/user/rules.txt
 
 ### Filter Options
 
-The database firewall filter does not support any filter options.
+The database firewall filter supports a single option, `ignorecase`. This will set the regular expression matching to case-insensitive mode.
 
 ### Filter Parameters
 
@@ -32,7 +32,7 @@ rule NAME deny [wildcard | columns VALUE ... |
       no_where_clause] [at_times VALUE...] [on_queries [select|update|insert|delete]]
 ```
 
-Rules always define a blocking action so the basic mode for the database firewall filter is to allow all queries that do not match a given set of rules. Rules are identified by their name and have a mandatory part and optional parts.
+Rules always define a blocking action so the basic mode for the database firewall filter is to allow all queries that do not match a given set of rules. Rules are identified by their name and have a mandatory part and optional parts. You can add comments to the rule files by adding the `#` character at the beginning of the line.
 
 The first step of defining a rule is to start with the keyword `rule` which identifies this line of text as a rule. The second token is identified as the name of the rule. After that the mandatory token `deny` is required to mark the start of the actual rule definition.
 
@@ -40,23 +40,23 @@ The first step of defining a rule is to start with the keyword `rule` which iden
 
 The database firewall filter's rules expect a single mandatory parameter for a rule. You can define multiple rules to cover situations where you would like to apply multiple mandatory rules to a query.
 
-#### wildcard
+#### `wildcard`
 
 This rule blocks all queries that use the wildcard character *.
 
-#### columns
+#### `columns`
 
 This rule expects a list of values after the `columns` keyword. These values are interpreted as column names and if a query targets any of these, it is blocked.
 
-#### regex
+#### `regex`
 
 This rule blocks all queries matching a regex enclosed in single or double quotes.
 
-#### limit_queries
+#### `limit_queries`
 
 The limit_queries rule expects three parameters. The first parameter is the number of allowed queries during the time period. The second is the time period in seconds and the third is the amount of time for which the rule is considered active and blocking.
 
-#### no_where_clause
+#### `no_where_clause`
 
 This rule inspects the query and blocks it if it has no WHERE clause. For example, this would disallow a `DELETE FROM ...` query without a `WHERE` clause. This does not prevent wrongful usage of the `WHERE` clause e.g. `DELETE FROM ... WHERE 1=1`.
 
@@ -64,11 +64,11 @@ This rule inspects the query and blocks it if it has no WHERE clause. For exampl
 
 Each mandatory rule accepts one or more optional parameters. These are to be defined after the mandatory part of the rule.
 
-#### at_times
+#### `at_times`
 
 This rule expects a list of time ranges that define the times when the rule in question is active. The time formats are expected to be ISO-8601 compliant and to be separated by a single dash (the - character). For example, to define the active period of a rule to be 5pm to 7pm, you would include `at times 17:00:00-19:00:00` in the rule definition.
 
-#### on_queries
+#### `on_queries`
 
 This limits the rule to be active only on certain types of queries.
 

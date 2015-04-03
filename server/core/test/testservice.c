@@ -56,7 +56,7 @@ DCB	    *dcb;
 int	    result;
 int	    argc = 3;
 
-init_test_env();
+init_test_env(NULL);
 /* char*	    argv[] = */
 /* { */
 /*     "log_manager", */

@@ -1664,6 +1664,9 @@ skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
 		case SQLCOM_DROP_INDEX:
 			operation = QUERY_OP_DROP_INDEX;
 			break;
+                case SQLCOM_CHANGE_DB:
+                    operation = QUERY_OP_CHANGE_DB;
+                    break;
 
 		default:
 	    operation = QUERY_OP_UNDEFINED;
