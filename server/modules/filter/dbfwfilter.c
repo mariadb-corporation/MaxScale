@@ -2100,3 +2100,72 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
         spinlock_release(my_instance->lock);
     }
 }
+
+#ifdef BUILD_RULE_PARSER
+#include <test_utils.h>
+
+int main(int argc, char** argv)
+{
+    char ch;
+    bool have_icase = false;
+    char *home;
+    char cwd[PATH_MAX];
+    char* opts[2] = {NULL,NULL};
+    FILTER_PARAMETER ruleparam;
+    FILTER_PARAMETER* paramlist[2];
+
+    while((ch = getopt(argc,argv,"ih?")) != -1)
+    {
+        switch(ch)
+        {
+        case 'i':
+            opts[0] = strdup("ignorecase");
+            break;
+        case '?':
+        case 'h':
+            printf("Usage: %s [OPTION]... RULEFILE\n"
+		    "-?\tPrint this information\n",
+                   argv[0]);
+            return 0;
+        }
+    }
+
+    if(argc < 2)
+    {
+        printf("Usage: %s [OPTION]... RULEFILE\n"
+		"-?\tPrint this information\n",
+               argv[0]);
+        return 1;
+    }
+
+    if((home = getenv("MAXSCALE_HOME")) == NULL)
+    {
+	home = malloc(sizeof(char)*(PATH_MAX+1));
+	if(getcwd(home,PATH_MAX) == NULL)
+	{
+	    free(home);
+	    home = NULL;
+	}
+    }
+
+    init_test_env(home);
+    ruleparam.name = strdup("rules");
+    ruleparam.value = strdup(argv[1]);
+    paramlist[0] = &ruleparam;
+    paramlist[1] = NULL;
+
+    if(createInstance(opts,paramlist))
+    {
+	printf("Rule parsing was successful.\n");
+    }
+    else
+    {
+	printf("Failed to parse rule. Read the error log for the reason of the failure.\n");
+    }
+
+    skygw_log_sync_all();
+
+    return 0;
+}
+
+#endif
