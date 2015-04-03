@@ -1355,13 +1355,14 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	free(filename);
 
 	/**Apply the rules to users*/
+	ptr = my_instance->userstrings;
+
 	if(ptr == NULL)
 	{
 	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: No 'users' line found.");
 	    err = true;
 	    goto retblock;
 	}
-	ptr = my_instance->userstrings;
 
 	while(ptr){
 

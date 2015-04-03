@@ -4167,7 +4167,7 @@ static bool change_current_db(
 			goto reply_error;
 		    }
 
-		    strcpy(rses->rses_mysql_session->db,tok);
+		    strncpy(rses->rses_mysql_session->db,tok,MYSQL_DATABASE_MAXLEN);
 		    free(query);
 		    query = NULL;
 		    
