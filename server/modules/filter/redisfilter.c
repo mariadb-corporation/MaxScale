@@ -542,145 +542,152 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     REDIS_INSTANCE    *my_instance = (REDIS_INSTANCE *)instance;
     REDIS_SESSION     *my_session = (REDIS_SESSION *)session;
     char            *ptr = NULL;
-    int             length;
         
-    if (my_session->active && modutil_extract_SQL(queue, &ptr, &length))
+    if (my_session->active)
     {       
-        skygw_log_write_flush(LOGFILE_DEBUG, "redisfilter: Query received");
-        freeInfo(&my_session->current);
-
-        if ((my_instance->match == NULL || regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
-                (my_instance->exclude == NULL || regexec(&my_instance->exre,ptr,0,NULL, 0) != 0))
+        if (queue->next != NULL)
         {
+            queue = gwbuf_make_contiguous(queue);
+        }
+        
+        if ((ptr = modutil_get_SQL(queue)) != NULL)
+        {
+            skygw_log_write_flush(LOGFILE_DEBUG, "redisfilter: Query received");
+            freeInfo(&my_session->current);
 
-            if((my_session->current = (REDIS_INFO*) malloc(sizeof(REDIS_INFO))) == NULL){
-                my_session->active = 0;
-                skygw_log_write(LOGFILE_ERROR, "redisfilter: Memory allocation failed for: %s" , "route_query");                            
-            }
-            else
+            if ((my_instance->match == NULL || regexec(&my_instance->re, ptr, 0, NULL, 0) == 0) &&
+                    (my_instance->exclude == NULL || regexec(&my_instance->exre,ptr,0,NULL, 0) != 0))
             {
-                my_session->n_statements++;
-                my_session->current->clientName = strdup(my_session->clientHost);
 
-                my_session->current->sqlQuery = NULL;
-                my_session->current->canonicalSql = NULL;
-                my_session->current->queryError = NULL;
-                my_session->current->transactionId = NULL;
-                my_session->current->serverId = 0;
-                my_session->current->serverName = NULL;
-                my_session->current->serverUniqueName = NULL;
-                my_session->current->affectedTables = NULL;
-                my_session->current->isRealQuery = false;
-                my_session->current->statementType = QUERY_TYPE_UNKNOWN;
-
-                gettimeofday(&my_session->current->requestTime, NULL);
-                my_session->current->sqlQuery = strndup(ptr, length);        
-
-                int i, tbl_count = 0;
-                char **tables;
-                if (!query_is_parsed(queue)){
-                    if(parse_query(queue)){
-                        skygw_log_write(LOGFILE_DEBUG, "redisfilter: Query parsed.");
-
-                        my_session->current->isRealQuery = skygw_is_real_query(queue);
-                        my_session->current->statementType = query_classifier_get_type(queue);
-
-                        if(my_session->current->isRealQuery){
-                            skygw_log_write(LOGFILE_DEBUG, "redisfilter: Current is real query.");            
-                            
-                            //get query tables 
-                            tables = skygw_get_table_names(queue, &tbl_count, false);
-                            my_session->current->canonicalSql = skygw_get_canonical(queue);                            
-                            
-                            if(tbl_count > 0)
-                                my_session->current->affectedTables = str_join(tables, ",", tbl_count);
-                            
-                            char *real_query_t = skygw_get_realq_type_str(queue);
-                            if(strcmp(real_query_t, "SELECT") == 0)
-                                my_session->current->canonCmdType = SELECT;
-                            else if(strcmp(real_query_t, "INSERT") == 0)
-                                my_session->current->canonCmdType = INSERT;
-                            else if(strcmp(real_query_t, "INSERT_SELECT") == 0)
-                                my_session->current->canonCmdType = INSERT_SELECT;
-                            else if(strcmp(real_query_t, "UPDATE") == 0)
-                                my_session->current->canonCmdType = UPDATE;
-                            else if(strcmp(real_query_t, "REPLACE") == 0)
-                                my_session->current->canonCmdType = REPLACE;
-                            else if(strcmp(real_query_t, "REPLACE_SELECT") == 0)
-                                my_session->current->canonCmdType = REPLACE_SELECT;
-                            else if(strcmp(real_query_t, "DELETE") == 0)
-                                my_session->current->canonCmdType = DELETE;
-                            else if(strcmp(real_query_t, "TRUNCATE") == 0)
-                                my_session->current->canonCmdType = TRUNCATE;
-                            else if(strcmp(real_query_t, "PREPARE") == 0)
-                                my_session->current->canonCmdType = PREPARE;
-                            else if(strcmp(real_query_t, "EXECUTE") == 0)
-                                my_session->current->canonCmdType = EXECUTE;
-                            else
-                                my_session->current->canonCmdType = OTHER;
-                            
-                            free(real_query_t);
-                        }
-                    }                            
+                if((my_session->current = (REDIS_INFO*) malloc(sizeof(REDIS_INFO))) == NULL){
+                    my_session->active = 0;
+                    skygw_log_write(LOGFILE_ERROR, "redisfilter: Memory allocation failed for: %s" , "route_query");                            
                 }
-                
-                //save real queries only
-                if(my_instance->saveRealOnly && !my_session->current->isRealQuery){
-                    freeInfo(&my_session->current);
-                    goto send_to_downstream;
-                }
+                else
+                {
+                    my_session->n_statements++;
+                    my_session->current->clientName = strdup(my_session->clientHost);
 
-                //save only if query is related to one or more included tables
-                if(my_instance->includedTables && tbl_count > 0){
-                    skygw_log_write(LOGFILE_DEBUG, "redisfilter: Analyzing included tables filter.");
-                    char **cnf_tables;
-                    int cnf_tables_cnt = strCharCount(my_instance->includedTables, ',');
-                    bool found = false;
+                    my_session->current->sqlQuery = NULL;
+                    my_session->current->canonicalSql = NULL;
+                    my_session->current->queryError = NULL;
+                    my_session->current->transactionId = NULL;
+                    my_session->current->serverId = 0;
+                    my_session->current->serverName = NULL;
+                    my_session->current->serverUniqueName = NULL;
+                    my_session->current->affectedTables = NULL;
+                    my_session->current->isRealQuery = false;
+                    my_session->current->statementType = QUERY_TYPE_UNKNOWN;
 
-                    if(cnf_tables_cnt >= 1){//more than one tables to check
-                        cnf_tables_cnt++;
+                    gettimeofday(&my_session->current->requestTime, NULL);
+                    my_session->current->sqlQuery = strdup((const char*) ptr);        
 
-                        char *tmp = strdup(my_instance->includedTables);
-                        cnf_tables = str_split(tmp, ',');
-                        free(tmp);
+                    int i, tbl_count = 0;
+                    char **tables;
+                    if (!query_is_parsed(queue)){
+                        if(parse_query(queue)){
+                            skygw_log_write(LOGFILE_DEBUG, "redisfilter: Query parsed.");
 
-                        int j;
-                        for(i = 0; i < tbl_count; i++){
-                            for(j = 0; j < cnf_tables_cnt; j++)
-                                if(strcmp(cnf_tables[j], tables[i]) == 0){
+                            my_session->current->isRealQuery = skygw_is_real_query(queue);
+                            my_session->current->statementType = query_classifier_get_type(queue);
+
+                            if(my_session->current->isRealQuery){
+                                skygw_log_write(LOGFILE_DEBUG, "redisfilter: Current is real query.");            
+
+                                //get query tables 
+                                tables = skygw_get_table_names(queue, &tbl_count, false);
+                                my_session->current->canonicalSql = skygw_get_canonical(queue);                            
+
+                                if(tbl_count > 0)
+                                    my_session->current->affectedTables = str_join(tables, ",", tbl_count);
+
+                                char *real_query_t = skygw_get_realq_type_str(queue);
+                                if(strcmp(real_query_t, "SELECT") == 0)
+                                    my_session->current->canonCmdType = SELECT;
+                                else if(strcmp(real_query_t, "INSERT") == 0)
+                                    my_session->current->canonCmdType = INSERT;
+                                else if(strcmp(real_query_t, "INSERT_SELECT") == 0)
+                                    my_session->current->canonCmdType = INSERT_SELECT;
+                                else if(strcmp(real_query_t, "UPDATE") == 0)
+                                    my_session->current->canonCmdType = UPDATE;
+                                else if(strcmp(real_query_t, "REPLACE") == 0)
+                                    my_session->current->canonCmdType = REPLACE;
+                                else if(strcmp(real_query_t, "REPLACE_SELECT") == 0)
+                                    my_session->current->canonCmdType = REPLACE_SELECT;
+                                else if(strcmp(real_query_t, "DELETE") == 0)
+                                    my_session->current->canonCmdType = DELETE;
+                                else if(strcmp(real_query_t, "TRUNCATE") == 0)
+                                    my_session->current->canonCmdType = TRUNCATE;
+                                else if(strcmp(real_query_t, "PREPARE") == 0)
+                                    my_session->current->canonCmdType = PREPARE;
+                                else if(strcmp(real_query_t, "EXECUTE") == 0)
+                                    my_session->current->canonCmdType = EXECUTE;
+                                else
+                                    my_session->current->canonCmdType = OTHER;
+
+                                free(real_query_t);
+                            }
+                        }                            
+                    }
+
+                    //save real queries only
+                    if(my_instance->saveRealOnly && !my_session->current->isRealQuery){
+                        freeInfo(&my_session->current);
+                        goto send_to_downstream;
+                    }
+
+                    //save only if query is related to one or more included tables
+                    if(my_instance->includedTables && tbl_count > 0){
+                        skygw_log_write(LOGFILE_DEBUG, "redisfilter: Analyzing included tables filter.");
+                        char **cnf_tables;
+                        int cnf_tables_cnt = strCharCount(my_instance->includedTables, ',');
+                        bool found = false;
+
+                        if(cnf_tables_cnt >= 1){//more than one tables to check
+                            cnf_tables_cnt++;
+
+                            char *tmp = strdup(my_instance->includedTables);
+                            cnf_tables = str_split(tmp, ',');
+                            free(tmp);
+
+                            int j;
+                            for(i = 0; i < tbl_count; i++){
+                                for(j = 0; j < cnf_tables_cnt; j++)
+                                    if(strcmp(cnf_tables[j], tables[i]) == 0){
+                                        found = true;
+                                        break;
+                                    }
+
+                                if(found) break;
+                            }
+
+                        } else{//one table to check
+                            for(i = 0; i < tbl_count; i++){
+                                if(strcmp(my_instance->includedTables, tables[i]) == 0){
                                     found = true;
                                     break;
                                 }
-
-                            if(found) break;
-                        }
-
-                    } else{//one table to check
-                        for(i = 0; i < tbl_count; i++){
-                            if(strcmp(my_instance->includedTables, tables[i]) == 0){
-                                found = true;
-                                break;
                             }
                         }
+
+                        for(i=0; i<cnf_tables_cnt; i++)
+                            free(cnf_tables[i]);
+                        free(cnf_tables);
+
+                        if(!found) 
+                            freeInfo(&my_session->current);
                     }
 
-                    for(i=0; i<cnf_tables_cnt; i++)
-                        free(cnf_tables[i]);
-                    free(cnf_tables);
+                    if(tbl_count > 0){
 
-                    if(!found) 
-                        freeInfo(&my_session->current);
-                }
-
-                if(tbl_count > 0){
-
-                    for(i=0; i<tbl_count; i++){
-                        free(tables[i]);
+                        for(i=0; i<tbl_count; i++){
+                            free(tables[i]);
+                        }
+                        free(tables);
                     }
-                    free(tables);
-                }
 
-                //TODO: transactionId  
+                    //TODO: transactionId  
+                }
             }
         }
     }
@@ -710,7 +717,7 @@ clientReply(FILTER *instance, void *session, GWBUF *reply)
         char *srv = gwbuf_get_property(reply, "SERVER_NAME");
         char *srv_id = gwbuf_get_property(reply, "SERVER_ID");
         char *srv_uniq = gwbuf_get_property(reply, "SERVER_UNIQUE_NAME");
-
+        
         if(srv)
             my_session->current->serverName = strdup(srv);
 
