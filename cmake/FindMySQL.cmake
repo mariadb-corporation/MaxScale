@@ -3,7 +3,7 @@
 # The following variables are set:
 # MYSQL_VERSION - The MySQL version number
 # MYSQL_PROVIDER - The MySQL provider e.g. MariaDB
-
+# EMBEDDED_LIB - The MySQL embedded library
 
 find_file(MYSQL_VERSION_H mysql_version.h PATH_SUFFIXES mysql)
 if(MYSQL_VERSION_H MATCHES "MYSQL_VERSION_H-NOTFOUND")
@@ -33,5 +33,69 @@ if(NOT MYSQL_PROVIDER STREQUAL "MariaDB")
 message(WARNING "Not using MariaDB server.")
 endif()
 if(MYSQL_VERSION VERSION_LESS 5.5.41)
-message(WARNING "MySQL version is ${MYSQL_VERSION}. Minimum supported version is 5.5.41")
+message(WARNING "MySQL version is ${MYSQL_VERSION}. Minimum supported version is 5.5.41.")
+endif()
+
+if (DEFINED EMBEDDED_LIB)
+  if( NOT (IS_DIRECTORY ${EMBEDDED_LIB}) )
+	debugmsg("EMBEDDED_LIB is not a directory: ${EMBEDDED_LIB}")
+	if(${CMAKE_VERSION} VERSION_LESS 2.8.12 )
+	  set(COMP_VAR PATH)
+	else()
+	  set(COMP_VAR DIRECTORY)
+	endif()
+	get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} ${COMP_VAR})
+	debugmsg("EMBEDDED_LIB directory component: ${EMBEDDED_LIB}")
+  endif()
+  debugmsg("Searching for the embedded library at: ${EMBEDDED_LIB}")
+endif()
+
+if(STATIC_EMBEDDED)
+
+  debugmsg("Using the static embedded library...")
+  set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+  if (DEFINED EMBEDDED_LIB)
+	debugmsg("Searching for libmysqld.a at: ${EMBEDDED_LIB}")
+	find_library(EMBEDDED_LIB_STATIC libmysqld.a PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
+  else()
+	find_library(EMBEDDED_LIB_STATIC libmysqld.a PATH_SUFFIXES mysql mariadb)
+  endif()
+  debugmsg("Search returned: ${EMBEDDED_LIB_STATIC}")
+
+  set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC} CACHE FILEPATH "Path to libmysqld" FORCE)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
+
+else()
+  debugmsg("Using the dynamic embedded library...")
+  set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
+  if (DEFINED EMBEDDED_LIB)
+	debugmsg("Searching for libmysqld.so at: ${EMBEDDED_LIB}")
+	find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
+  else()
+	find_library(EMBEDDED_LIB_DYNAMIC mysqld PATH_SUFFIXES mysql mariadb)
+  endif()
+  debugmsg("Search returned: ${EMBEDDED_LIB_DYNAMIC}")
+  set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC} CACHE FILEPATH "Path to libmysqld" FORCE)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
+
+endif()
+
+unset(EMBEDDED_LIB_DYNAMIC)
+unset(EMBEDDED_LIB_STATIC)
+unset(OLD_SUFFIXES)
+
+check_library_exists(${EMBEDDED_LIB} pcre_stack_guard ${EMBEDDED_LIB} HAVE_EMBEDDED_PCRE)
+
+if(HAVE_EMBEDDED_PCRE)
+  set(PCRE_LINK_FLAGS "" CACHE INTERNAL "pcre linker flags")
+else()
+  message(STATUS "Embedded mysqld does not have pcre_stack_guard, linking with system pcre.")
+  set(PCRE_LINK_FLAGS "pcre" CACHE INTERNAL "pcre linker flags")
+endif()
+if( (${EMBEDDED_LIB} MATCHES "NOTFOUND") OR (${EMBEDDED_LIB} MATCHES "NOTFOUND"))
+  message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
+else()
+  message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
 endif()
