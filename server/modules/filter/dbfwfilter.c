@@ -2114,19 +2114,21 @@ int main(int argc, char** argv)
     FILTER_PARAMETER ruleparam;
     FILTER_PARAMETER* paramlist[2];
 
-    while((ch = getopt(argc,argv,"ih?")) != -1)
+    opterr = 0;
+    while((ch = getopt(argc,argv,"h?")) != -1)
     {
         switch(ch)
         {
-        case 'i':
-            opts[0] = strdup("ignorecase");
-            break;
         case '?':
         case 'h':
             printf("Usage: %s [OPTION]... RULEFILE\n"
-		    "-?\tPrint this information\n",
+		    "Options:\n"
+		    "\t-?\tPrint this information\n",
                    argv[0]);
             return 0;
+	default:
+	    printf("Unknown option '%c'.\n",ch);
+	    return 1;
         }
     }
 
