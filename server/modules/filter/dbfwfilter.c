@@ -2149,6 +2149,22 @@ int main(int argc, char** argv)
 	    home = NULL;
 	}
     }
+    printf("Log files written to: %s\n",home?home:"/tpm");
+
+    int argc_ = 11;
+    char* argv_[] =
+        {
+            "log_manager",
+            "-j",home?home:"/tmp",
+	    "-a","ruleparser_debug",
+	    "-c","ruleparser_trace",
+	    "-e","ruleparser_message",
+	    "-g","ruleparser_error",
+            NULL
+        };
+
+    skygw_logmanager_init(argc_,argv_);
+
 
     init_test_env(home);
     ruleparam.name = strdup("rules");
