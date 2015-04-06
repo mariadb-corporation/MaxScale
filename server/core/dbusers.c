@@ -912,6 +912,7 @@ getAllUsers(SERVICE *service, USERS *users)
 		    if(havedb && wildcard_db_grant(dbnm))
 		    {
 			rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
+			skygw_log_write(LOGFILE_DEBUG,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
 		    }
 		    else
 		    {
@@ -1395,6 +1396,7 @@ getUsers(SERVICE *service, USERS *users)
 		    if(wildcard_db_grant(row[5]))
 		    {
 			rc = add_wildcard_users(users, row[0], row[1], password, row[4], row[5], service->resources);
+			skygw_log_write(LOGFILE_DEBUG,"%s: Converted '%s' to %d individual database grants.",service->name,row[5],rc);
 		    }
 		    else
 		    {
@@ -2112,6 +2114,17 @@ int wildcard_db_grant(char* str)
     return 0;
 }
 
+/**
+ *
+ * @param users Pointer to USERS struct
+ * @param name Username of the client
+ * @param host Host address of the client
+ * @param password Client password
+ * @param anydb If the user has access to all databases
+ * @param db Database, in wildcard form
+ * @param hash Hashtable with all database names
+ * @return number of unique grants generated from wildcard database name
+ */
 int add_wildcard_users(USERS *users, char* name, char* host, char* password, char* anydb, char* db, HASHTABLE* hash)
 {
     HASHITERATOR* iter;
@@ -2163,7 +2176,7 @@ int add_wildcard_users(USERS *users, char* name, char* host, char* password, cha
     {
 	if(regexec(&re,value,0,NULL,0) == 0)
 	{
-	    rval = add_mysql_users_with_host_ipv4(users, name, host, password, anydb, value);
+	    rval += add_mysql_users_with_host_ipv4(users, name, host, password, anydb, value);
 	}
     }
     
