@@ -2140,7 +2140,9 @@ int add_wildcard_users(USERS *users, char* name, char* host, char* password, cha
 
     while(ptr)
     {
-	memmove(ptr,ptr+1,(len - (ptr - restr)) + 1);
+	memmove(ptr+1,ptr,(len - (ptr - restr)) + 1);
+	*ptr++ = '.';
+	*ptr = '*';
 	len = strlen(restr);
 	ptr = strchr(restr,'%');
     }
