@@ -1,4 +1,4 @@
-if(BUILD_TESTS)
+if(BUILD_TESTS OR BUILD_TOOLS)
   file(GLOB FULLCORE_SRC *.c)
   add_library(fullcore STATIC ${FULLCORE_SRC})
   target_link_libraries(fullcore ${CURL_LIBRARIES} log_manager utils pthread ${EMBEDDED_LIB} ssl aio rt crypt dl crypto inih z m stdc++)

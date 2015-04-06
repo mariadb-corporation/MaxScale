@@ -830,10 +830,16 @@ int modutil_count_statements(GWBUF* buffer)
     char* end = ((char*)(buffer)->end);
     int num = 1;
 
-    while((ptr = strnchr_esc(ptr,';', end - ptr)))
+    while(ptr < end && (ptr = strnchr_esc(ptr,';', end - ptr)))
     {
 	num++;
-	ptr++;
+	while(*ptr == ';')
+	    ptr++;
+    }
+
+    if(*(end - 1) == ';')
+    {
+	num--;
     }
 
     return num;

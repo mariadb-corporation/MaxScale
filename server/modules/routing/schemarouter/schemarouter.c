@@ -692,7 +692,15 @@ createInstance(SERVICE *service, char **options)
         /** Calculate number of servers */
         server = service->dbref;
         nservers = 0;
-        
+
+	conf = service->svc_config_param;
+	if((config_get_param(conf,"auth_all_servers")) == NULL)
+	{
+	    skygw_log_write(LOGFILE_MESSAGE,"Schemarouter: Authentication data is fetched from all servers. To disable this "
+		    "add 'auth_all_servers=0' to the service.");
+	    service->users_from_all = true;
+	}
+
         while (server != NULL)
         {
                 nservers++;
@@ -803,14 +811,16 @@ static void* newSession(
         MySQLProtocol* protocol = session->client->protocol;
         MYSQL_session* data = session->data;
         bool using_db = false;
-        
+        bool have_db = false;
+
         memset(db,0,MYSQL_DATABASE_MAXLEN+1);
         
         spinlock_acquire(&protocol->protocol_lock);
         
         /* To enable connecting directly to a sharded database we first need
          * to disable it for the client DCB's protocol so that we can connect to them*/
-        if(protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB)
+        if(protocol->client_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB &&
+	   (have_db = strnlen(data->db,MYSQL_DATABASE_MAXLEN) > 0))
         {
             
             protocol->client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
@@ -820,7 +830,12 @@ static void* newSession(
             skygw_log_write(LOGFILE_TRACE,"schemarouter: Client logging in directly to a database '%s', "
                     "postponing until databases have been mapped.",db);
         }
-        
+
+	if(!have_db)
+	{
+	   LOGIF(LT,(skygw_log_write(LT,"schemarouter: Client'%s' connecting with empty database.",data->user)));
+	}
+
         spinlock_release(&protocol->protocol_lock);
         
         client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
@@ -1004,7 +1019,7 @@ static void closeSession(
         backend_ref_t*     backend_ref;
 
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-			   "%lu [RWSplit:closeSession]",
+			   "%lu [schemarouter:closeSession]",
 			    pthread_self())));                                
 	
         /** 
@@ -1854,8 +1869,11 @@ static int routeQuery(
 	 * Find out whether the query should be routed to single server or to 
 	 * all of them.
 	 */
-        
-        if (packet_type == MYSQL_COM_INIT_DB)
+
+        skygw_query_op_t op = query_classifier_get_operation(querybuf);
+
+        if (packet_type == MYSQL_COM_INIT_DB ||
+	    op == QUERY_OP_CHANGE_DB)
 	{
 		if (!(change_successful = change_current_db(inst, router_cli_ses, querybuf)))
 		{
@@ -1882,7 +1900,8 @@ static int routeQuery(
 					router_cli_ses->rses_transaction_active,
 					querybuf->hint);
         
-	if (packet_type == MYSQL_COM_INIT_DB)
+	if (packet_type == MYSQL_COM_INIT_DB ||
+	    op == QUERY_OP_CHANGE_DB)
 	{
 		route_target = TARGET_UNDEFINED;
                 tname = hashtable_fetch(router_cli_ses->dbhash,router_cli_ses->rses_mysql_session->db);
@@ -2329,15 +2348,20 @@ static void clientReply (
                     if((target = hashtable_fetch(router_cli_ses->dbhash,
                                        router_cli_ses->connect_db)) == NULL)
                     {
+			/** Unknown database, hang up on the client*/
                         skygw_log_write_flush(LOGFILE_TRACE,"schemarouter: Connecting to a non-existent database '%s'",
                                               router_cli_ses->connect_db);
-                        router_cli_ses->rses_closed = true;                        
+			char errmsg[128 + MYSQL_DATABASE_MAXLEN+1];
+			sprintf(errmsg,"Unknown database '%s'",router_cli_ses->connect_db);
+			GWBUF* errbuff = modutil_create_mysql_err_msg(1,0,1049,"42000",errmsg);
+			router_cli_ses->rses_client_dcb->func.write(router_cli_ses->rses_client_dcb,errbuff);
                         if(router_cli_ses->queue)
 			{
                             while((router_cli_ses->queue = gwbuf_consume(
 				   router_cli_ses->queue,gwbuf_length(router_cli_ses->queue))));
 			}
                         rses_end_locked_router_action(router_cli_ses);
+			router_cli_ses->rses_client_dcb->func.hangup(router_cli_ses->rses_client_dcb);
                         return;
                     }
                     
@@ -4106,10 +4130,53 @@ static bool change_current_db(
 		plen = gw_mysql_get_byte3(packet) - 1;
 
 		/** Copy database name from MySQL packet to session */
+		if(query_classifier_get_operation(buf) == QUERY_OP_CHANGE_DB)
+		{
+		    char* query = modutil_get_SQL(buf);
+		    char *saved,*tok;
 
-                memcpy(rses->rses_mysql_session->db,packet + 5,plen);
-                memset(rses->rses_mysql_session->db + plen,0,1);
-                
+		    tok = strtok_r(query," ;",&saved);
+		    if(tok == NULL || strcasecmp(tok,"use") != 0)
+		    {
+			skygw_log_write(LOGFILE_ERROR,"Schemarouter: Malformed chage database packet.");
+			free(query);
+			message_len = 25 + MYSQL_DATABASE_MAXLEN;
+			fail_str = calloc(1, message_len+1);
+			snprintf(fail_str,
+				message_len,
+				"Unknown database '%s'",
+				(char*)rses->rses_mysql_session->db);
+			rses->rses_mysql_session->db[0] = '\0';
+			succp = false;
+			goto reply_error;
+		    }
+
+		    tok = strtok_r(NULL," ;",&saved);
+		    if(tok == NULL)
+		    {
+			skygw_log_write(LOGFILE_ERROR,"Schemarouter: Malformed chage database packet.");
+			free(query);
+			message_len = 25 + MYSQL_DATABASE_MAXLEN;
+			fail_str = calloc(1, message_len+1);
+			snprintf(fail_str,
+				message_len,
+				"Unknown database '%s'",
+				(char*)rses->rses_mysql_session->db);
+			rses->rses_mysql_session->db[0] = '\0';
+			succp = false;
+			goto reply_error;
+		    }
+
+		    strncpy(rses->rses_mysql_session->db,tok,MYSQL_DATABASE_MAXLEN);
+		    free(query);
+		    query = NULL;
+		    
+		}
+		else
+		{
+		    memcpy(rses->rses_mysql_session->db,packet + 5,plen);
+		    memset(rses->rses_mysql_session->db + plen,0,1);
+                }
                 skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB with database '%s'",
                                 rses->rses_mysql_session->db);
 		/**

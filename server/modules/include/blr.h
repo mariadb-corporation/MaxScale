@@ -158,7 +158,7 @@ typedef struct router_slave {
 #endif
 	DCB		*dcb;		/*< The slave server DCB */
 	int		state;		/*< The state of this slave */
-	int		binlog_pos;	/*< Binlog position for this slave */
+	uint32_t	binlog_pos;	/*< Binlog position for this slave */
 	char		binlogfile[BINLOG_FNAMELEN+1];
 					/*< Current binlog file for this slave */
 	char		*uuid;		/*< Slave UUID */

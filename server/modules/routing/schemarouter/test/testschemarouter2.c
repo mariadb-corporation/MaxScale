@@ -122,7 +122,8 @@ int main(int argc, char** argv)
         sprintf(query,"CREATE DATABASE %s",databases[i]);
         if(mysql_real_query(server,query,strlen(query)))
         {
-            fprintf(stderr, "Failed to create table in %d: %s.\n",
+            fprintf(stderr, "Failed to create database '%s' in %d: %s.\n",
+                    databases[i],
                     ports[i],
                     mysql_error(server));
             rval = 1;
@@ -132,7 +133,8 @@ int main(int argc, char** argv)
         sprintf(query,"DROP TABLE IF EXISTS %s.t1",databases[i]);
         if(mysql_real_query(server,query,strlen(query)))
         {
-            fprintf(stderr, "Failed to drop table in %d: %s.\n",
+            fprintf(stderr, "Failed to drop table '%s.t1' in %d: %s.\n",
+                    databases[i],
                     ports[i],
                     mysql_error(server));
         }
@@ -141,14 +143,26 @@ int main(int argc, char** argv)
         sprintf(query,"CREATE TABLE %s.t1 (id int)",databases[i]);
         if(mysql_real_query(server,query,strlen(query)))
         {
-            fprintf(stderr, "Failed to create table in %d: %s.\n",
+            fprintf(stderr, "Failed to create table '%s.t1' in %d: %s.\n",
+                    databases[i],
                     ports[i],
                     mysql_error(server));
             rval = 1;
             goto report;
         }
         
-        sprintf(query,"INSERT INTO %s.t1 values (%s)",databases[i],srv_id[i]);
+
+        if(mysql_select_db(server,databases[i]))
+        {
+            fprintf(stderr, "Failed to use database %s in %d: %s.\n",
+                    databases[i],
+                    ports[i],
+                    mysql_error(server));
+            rval = 1;
+            goto report;
+        }
+
+        sprintf(query,"INSERT INTO t1 values (%s)",srv_id[i]);
         if(mysql_real_query(server,query,strlen(query)))
         {
             fprintf(stderr, "Failed to insert values in %d: %s.\n",
@@ -161,10 +175,14 @@ int main(int argc, char** argv)
         mysql_close(server);
     }
 
+/** Test 1 - With default database  */
+
+    printf("Testing with default database.\n");
+
     for(i = 0;i<4;i++)
     {
 
-        printf("Testing server on port %d through MaxScale.\n",ports[i]);
+        printf("Testing database %s through MaxScale.\n",databases[i]);
         if((server = mysql_init(NULL)) == NULL){
             fprintf(stderr,"Error : Initialization of MySQL client failed.\n");
             rval = 1;
@@ -175,6 +193,66 @@ int main(int argc, char** argv)
             fprintf(stderr, "Failed to connect to port %d using database %s: %s\n",
                     port,
                     databases[i],
+                    mysql_error(server));
+            rval = 1;
+            goto report;
+        }
+
+        if(mysql_real_query(server,"SELECT id FROM t1",strlen("SELECT id FROM t1")))
+        {
+            fprintf(stderr, "Failed to execute query in %d: %s.\n",
+                    ports[i],
+                    mysql_error(server));
+            rval = 1;
+            goto report;
+        }
+
+        result = mysql_store_result(server);
+
+        while((row = mysql_fetch_row(result)))
+        {
+            if(strcmp(row[0],srv_id[i]))
+            {
+                fprintf(stderr, "Test failed in %d: Was expecting %s but got %s instead.\n",
+                        ports[i],srv_id[i],row[0]);
+                rval = 1;
+            
+            }
+        }
+
+        mysql_free_result(result);
+        
+        mysql_close(server);
+
+    }
+
+    printf("Testing without default database and USE ... query.\n");
+
+    for(i = 0;i<4;i++)
+    {
+
+        printf("Testing server on port %d through MaxScale.\n",ports[i]);
+        if((server = mysql_init(NULL)) == NULL){
+            fprintf(stderr,"Error : Initialization of MySQL client failed.\n");
+            rval = 1;
+            goto report;
+        }
+
+        if(mysql_real_connect(server,host,username,password,NULL,port,NULL,0) == NULL){
+            fprintf(stderr, "Failed to connect to port %d using database %s: %s\n",
+                    port,
+                    databases[i],
+                    mysql_error(server));
+            rval = 1;
+            goto report;
+        }
+
+        sprintf(query,"USE %s",databases[i]);
+        if(mysql_select_db(server,databases[i]))
+        {
+            fprintf(stderr, "Failed to use database %s in %d: %s.\n",
+                    databases[i],
+                    ports[i],
                     mysql_error(server));
             rval = 1;
             goto report;
@@ -204,6 +282,29 @@ int main(int argc, char** argv)
 
         mysql_free_result(result);
         
+        mysql_close(server);
+    }
+
+/** Cleanup and START SLAVE */
+
+    for(i = 0;i<4;i++)
+    {
+        
+        if((server = mysql_init(NULL)) == NULL){
+            fprintf(stderr,"Error : Initialization of MySQL client failed.\n");
+            rval = 1;
+            goto report;
+        }
+
+        if(mysql_real_connect(server,host,username,password,NULL,port,NULL,0) == NULL){
+            fprintf(stderr, "Failed to connect to port %d using database %s: %s\n",
+                    port,
+                    databases[i],
+                    mysql_error(server));
+            rval = 1;
+            goto report;
+        }
+
         if(i > 0 && mysql_real_query(server,"START SLAVE",strlen("START SLAVE")))
         {
             fprintf(stderr, "Failed to start slave in %d: %s.\n",

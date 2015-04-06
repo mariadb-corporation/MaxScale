@@ -221,6 +221,7 @@ typedef struct {
 	bool def_op;/*< Default operation mode, defaults to deny */
 	SPINLOCK* lock;/*< Instance spinlock */
 	long idgen; /*< UID generator */
+	int regflags;
 } FW_INSTANCE;
 
 /**
@@ -669,6 +670,7 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 	    rval = false;
 	    goto parse_err;
 	}
+
 	if(strcmp(tok,"match") == 0){
 		tok = strtok_r(NULL," ",&saveptr);
 		if(tok == NULL)
@@ -690,8 +692,31 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 			goto parse_err;
 		}
 	}
-	
+	else
+	{
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, bad token: %s",tok);
+	    rval = false;
+	    goto parse_err;
+	}
+
+	tok = strtok_r(NULL," ",&saveptr);
+
+	if(tok != NULL)
+	{
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, extra token found after 'match' keyword: %s",orig);
+	    rval = false;
+	    goto parse_err;
+	}
+
 	tok = strtok_r(ruleptr," ",&saveptr);
+
+	if(tok == NULL)
+	{
+	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no rules given: %s",orig);
+	    rval = false;
+	    goto parse_err;
+	}
+
 	tok = strtok_r(NULL," ",&saveptr);
 
 	if(tok == NULL)
@@ -716,6 +741,8 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 	    else
 	    {
 		skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, could not find rule '%s'.",tok);
+		rval = false;
+		goto parse_err;
 	    }
 	    tok = strtok_r(NULL," ",&saveptr);
 	}
@@ -837,7 +864,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
     if(tok == NULL)
     {
-	skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, no rule rule: %s",rule);
+	skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, no rule: %s",rule);
 	rval = false;
 	goto retblock;
     }
@@ -900,6 +927,12 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
     tok = strtok_r(NULL, " ,",&saveptr);
 
+    if(tok == NULL)
+    {
+	skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, no allow or deny: %s",rule);
+	rval = false;
+	goto retblock;
+    }
 
     if((allow = (strcmp(tok,"allow") == 0)) ||
        (deny = (strcmp(tok,"deny") == 0)))
@@ -946,7 +979,9 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    if(!check_time(tok))
 		    {
 			not_valid = true;
-			break;
+			skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, malformed time definition: %s",tok);
+			rval = false;
+			goto retblock;
 		    }
 
                     TIMERANGE *tmp = parse_time(tok,instance);
@@ -983,7 +1018,21 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                 tok = strtok_r(NULL," ",&saveptr);
 		char delim = '\'';
 		int n_char = 0;
-		
+
+		if(tok == NULL)
+		{
+		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, No regex string.");
+		    rval = false;
+		    goto retblock;
+		}
+
+		if(*tok != '\'' && *tok != '\"')
+		{
+		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, regex string not quoted.");
+		    rval = false;
+		    goto retblock;
+		}
+
                 while(*tok == '\'' || *tok == '"')
 		{
                     delim = *tok;
@@ -1036,7 +1085,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
                 memcpy(str, start, (tok-start));
 
-                if(regcomp(re, str,REG_NOSUB)){
+                if(regcomp(re, str,REG_NOSUB|instance->regflags)){
                     skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Invalid regular expression '%s'.", str);
 		    rval = false;
                     free(re);
@@ -1054,6 +1103,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
             {
 
                 QUERYSPEED* qs = (QUERYSPEED*)calloc(1,sizeof(QUERYSPEED));
+		char *errptr = NULL;
 
                 spinlock_acquire(instance->lock);
                 qs->id = ++instance->idgen;
@@ -1066,7 +1116,34 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
                     goto retblock;
                 }
-                qs->limit = atoi(tok);
+
+                qs->limit = strtol(tok,&errptr,0);
+
+		if(errptr && *errptr != '\0')
+		{
+		    free(qs);
+		    rval = false;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+                    goto retblock;
+		}
+		errptr = NULL;
+                tok = strtok_r(NULL," ",&saveptr);
+                if(tok == NULL){
+                    free(qs);
+		    rval = false;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+                    goto retblock;
+                }
+                qs->period = strtod(tok,&errptr);
+
+		if(errptr && *errptr != '\0')
+		{
+		    free(qs);
+		    rval = false;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+                    goto retblock;
+		}
+		errptr = NULL;
 
                 tok = strtok_r(NULL," ",&saveptr);
                 if(tok == NULL){
@@ -1075,15 +1152,16 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
                     goto retblock;
                 }
-                qs->period = atof(tok);
-                tok = strtok_r(NULL," ",&saveptr);
-                if(tok == NULL){
-                    free(qs);
+                qs->cooldown = strtod(tok,&errptr);
+
+		if(errptr && *errptr != '\0')
+		{
+		    free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
                     goto retblock;
-                }
-                qs->cooldown = atof(tok);
+		}
+
                 ruledef->type = RT_THROTTLE;
                 ruledef->data = (void*)qs;
             }
@@ -1113,6 +1191,14 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    goto retblock;
                 }	
             }
+	    else
+	    {
+		 skygw_log_write(LOGFILE_ERROR,
+                                    "dbfwfilter: Unknown rule type: %s"
+			    ,tok);
+		    rval = false;
+		    goto retblock;
+	    }
 	    tok = strtok_r(NULL," ,",&saveptr);
 	}
 
@@ -1123,6 +1209,22 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 	    free(rulecpy);
     return rval;
 
+}
+
+bool is_comment(char* str)
+{
+    char *ptr = str;
+
+    while(*ptr != '\0')
+    {
+	if(isspace(*ptr))
+	    ptr++;
+	else if(*ptr == '#')
+	    return true;
+	else
+	    return false;
+    }
+    return true;
 }
 
 /**
@@ -1163,17 +1265,27 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	
 	my_instance->htable = ht;
 	my_instance->def_op = true;
-
+	my_instance->userstrings = NULL;
+	my_instance->regflags = 0;
+	
 	for(i = 0;params[i];i++){
-		if(strcmp(params[i]->name, "rules") == 0){
-                    
-                        if(filename)
-                            free(filename);
-                    
-			filename = strdup(params[i]->value);
-		}
+	    if(strcmp(params[i]->name, "rules") == 0){
+		if(filename)
+		    free(filename);
+		filename = strdup(params[i]->value);
+	    }
 	}
-        
+
+	if(options)
+	{
+	    for(i = 0;options[i];i++)
+	    {
+		if(strcmp(options[i],"ignorecase") == 0)
+		{
+		    my_instance->regflags |= REG_ICASE;
+		}
+	    }
+	}
         
         if(filename == NULL)
         {
@@ -1192,8 +1304,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
             return NULL;
 	}
 
-	free(filename);
-	
+
+	bool file_empty = true;
+
 	while(!feof(file))
     {
 
@@ -1215,6 +1328,13 @@ createInstance(char **options, FILTER_PARAMETER **params)
             *nl = '\0';
         }
         
+	if(strnlen(buffer,2048) < 1 || is_comment(buffer))
+	{
+	    continue;
+	}
+
+	file_empty = false;
+
         if(!parse_rule(buffer,my_instance))
 	{
 	    fclose(file);
@@ -1223,11 +1343,26 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	}
     }
 
-	fclose(file);
-	
-	/**Apply the rules to users*/
+	if(file_empty)
+	{
+	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: File is empty: %s");
+	    free(filename);
+	    err = true;
+	    goto retblock;
+	}
 
+	fclose(file);
+	free(filename);
+
+	/**Apply the rules to users*/
 	ptr = my_instance->userstrings;
+
+	if(ptr == NULL)
+	{
+	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: No 'users' line found.");
+	    err = true;
+	    goto retblock;
+	}
 
 	while(ptr){
 
@@ -1848,7 +1983,16 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	GWBUF* forward;
 	ipaddr = strdup(dcb->remote);
 	sprintf(uname_addr,"%s@%s",dcb->user,ipaddr);
-	
+
+	if(modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)
+	{
+	    if(my_session->errmsg)
+		free(my_session->errmsg);
+
+	    my_session->errmsg = strdup("This filter does not support multi-statements.");
+	    accept = false;
+	    goto queryresolved;
+	}
 	
 	if((user = (USER*)hashtable_fetch(my_instance->htable, uname_addr)) == NULL){
 		while(user == NULL && next_ip_class(ipaddr)){
@@ -1956,3 +2100,90 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
         spinlock_release(my_instance->lock);
     }
 }
+
+#ifdef BUILD_RULE_PARSER
+#include <test_utils.h>
+
+int main(int argc, char** argv)
+{
+    char ch;
+    bool have_icase = false;
+    char *home;
+    char cwd[PATH_MAX];
+    char* opts[2] = {NULL,NULL};
+    FILTER_PARAMETER ruleparam;
+    FILTER_PARAMETER* paramlist[2];
+
+    opterr = 0;
+    while((ch = getopt(argc,argv,"h?")) != -1)
+    {
+        switch(ch)
+        {
+        case '?':
+        case 'h':
+            printf("Usage: %s [OPTION]... RULEFILE\n"
+		    "Options:\n"
+		    "\t-?\tPrint this information\n",
+                   argv[0]);
+            return 0;
+	default:
+	    printf("Unknown option '%c'.\n",ch);
+	    return 1;
+        }
+    }
+
+    if(argc < 2)
+    {
+        printf("Usage: %s [OPTION]... RULEFILE\n"
+		"-?\tPrint this information\n",
+               argv[0]);
+        return 1;
+    }
+
+    if((home = getenv("MAXSCALE_HOME")) == NULL)
+    {
+	home = malloc(sizeof(char)*(PATH_MAX+1));
+	if(getcwd(home,PATH_MAX) == NULL)
+	{
+	    free(home);
+	    home = NULL;
+	}
+    }
+    printf("Log files written to: %s\n",home?home:"/tpm");
+
+    int argc_ = 11;
+    char* argv_[] =
+        {
+            "log_manager",
+            "-j",home?home:"/tmp",
+	    "-a","ruleparser_debug",
+	    "-c","ruleparser_trace",
+	    "-e","ruleparser_message",
+	    "-g","ruleparser_error",
+            NULL
+        };
+
+    skygw_logmanager_init(argc_,argv_);
+
+
+    init_test_env(home);
+    ruleparam.name = strdup("rules");
+    ruleparam.value = strdup(argv[1]);
+    paramlist[0] = &ruleparam;
+    paramlist[1] = NULL;
+
+    if(createInstance(opts,paramlist))
+    {
+	printf("Rule parsing was successful.\n");
+    }
+    else
+    {
+	printf("Failed to parse rule. Read the error log for the reason of the failure.\n");
+    }
+
+    skygw_log_sync_all();
+
+    return 0;
+}
+
+#endif

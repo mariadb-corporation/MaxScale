@@ -10,7 +10,7 @@ This document details the changes in version 1.1 since the release of the 1.0.5 
 Replicate Binlog from the master to slave through MaxScale as simplified relay server for reduced network load and disaster recovery
 
 ### Database Firewall Filter
-Block queries based on columns in the query, where condition, query type(select, insert, delete, update), presence of wildcard, regular expression match and time of the query
+Block queries based on columns in the query, where condition, query type(select, insert, delete, update), presence of wildcard in column selection, regular expression match and time of the query
 
 ### Schema Sharding Router
 Route to databases sharded by schema without application level knowledge of shard configuration
@@ -22,7 +22,7 @@ Pass hints in the SQL statement to influence the routing decision based on repli
 Routing to a named server if incoming query matches a regular expression 
 
 ### Canonical Query logging
-Convert incoming queries to canonical form and push the query and response into RabbitMQ Broker- for a RabbitMQ Client to later retrieve from
+Convert incoming queries to canonical form and push the query and response into RabbitMQ Broker for a RabbitMQ Client to later retrieve from
 
 ### Nagios Plugin
 Plugin scripts for monitoring MaxScale status and performance from a Nagios Server
@@ -33,6 +33,9 @@ Receive notification of security update and patches tailored to your MaxScale co
 ### MySQL NDB cluster support
 Connection based routing to MySQL NDB clusters
 
+### Updated installation path
+MaxScale is now installed into `/usr/local/mariadb-maxscale`
+
 ## Bug Fixes
 
 A number of bug fixes have been applied between the 1.0.5 GA and this RC release. The table below lists the bugs that have been resolved. The details for each of these may be found in https://mariadb.atlassian.net/projects/MXS or in the former http://bugs.mariadb.com Bug database
@@ -42,10 +45,62 @@ A number of bug fixes have been applied between the 1.0.5 GA and this RC release
     <td>ID</td>
     <td>Summary</td>
   </tr>
+  <tr>
+    <td>MXS-80</td>
+    <td>"show sessions" can crash MaxScale</td>
+  </tr>
+  <tr>
+    <td>MXS-79</td>
+    <td>schemarouter hangs if client connects with empty database</td>
+  </tr>
+  <tr>
+    <td>MXS-78</td>
+    <td>"USE" statement gives unpredictable/unexpected results</td>
+  </tr>
+  <tr>
+    <td>MXS-76</td>
+    <td>core/dbusers.c needs better error messages</td>
+  </tr>
+  <tr>
+    <td>MXS-74</td>
+    <td>Crash when no arguments given to on_queries clause</td>
+  </tr>
+  <tr>
+    <td>MXS-72</td>
+    <td>dbfwfilter on_queries clause appears to be ignored</td>
+  </tr>
+  <tr>
+    <td>MXS-71</td>
+    <td>dbfwfilter at_times clause seems to erroneously block user</td>
+  </tr>
+  <tr>
+    <td>MXS-68</td>
+    <td>Wrong rule name in dbfwfilter leads to MaxScale crash</td>
+  </tr>
+  <tr>
+    <td>MXS-65</td>
+    <td>Omitting <any|all|strict_all> in users directive causes crash in libdbfwfilter.so(link_rules)</td>
+  </tr>
+  <tr>
+    <td>MXS-63</td>
+    <td>Maxkeys and Maxpasswd log to /tpm</td>
+  </tr>
+  <tr>
+    <td>MXS-57</td>
+    <td>MaxScale should write a message to the error log when config is not found</td>
+  </tr>
+  <tr>
+    <td>MXS-54</td>
+    <td>Write failed auth attempt to trace log</td>
+  </tr>
+  <tr>
+    <td>MXS-50</td>
+    <td>Removing 1.0.5 RPM gives error about /etc/ld.so.conf.d/maxscale.conf</td>
+  </tr>
+  <tr>
     <td>MXS-47</td>
     <td>Session freeze when small tail packet</td>
   </tr>
-  <tr>
   <tr>
     <td>MXS-5</td>
     <td>Possible memory leak in readwritesplit router</td>
@@ -188,6 +243,15 @@ There are a number bugs and known limitations within this version of MaxScale, t
 * When users have different passwords based on the host from which they connect MaxScale is unable to determine which password it should use to connect to the backend database. This results in failed connections and unusable usernames in MaxScale.
 
 * Service init script is missing after upgrade from 1.0 in RPM-based system. Can be fixed by reinstalling the package ('yum reinstall maxscale' or 'rpm -i --force /maxscale-1.1.rpm')
+
+* Binlog Router Plugin is compatible with MySQL 5.6 and MariaDB 5.5  
+  Binlog Router Plugin compatibility with MariaDB 10 is alpha
+
+* LONGBLOG are currently not supported.
+
+* Galera Cluster variables, such as @@wsrep_node_name, are not resolved by the embedded MariaDB parser.
+
+* The Database Firewall filter does not support multi-statements. Using them will result in an error being sent to the client.   
 
 ## Packaging
 
