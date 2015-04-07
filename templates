@@ -52,7 +52,7 @@ kill_master replication
 prepared_statemet replication
 bug592 replication
 bug564 replication
-crash_ot_of_files_galera galera
+crash_out_of_files_galera galera
 bug620 bug620
 bug634 replication
 bug626 replication
