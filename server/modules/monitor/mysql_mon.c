@@ -22,7 +22,7 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
+ * Date		Who			Demaster_down_scription
  * 08/07/13	Mark Riddoch		Initial implementation
  * 11/07/13	Mark Riddoch		Addition of code to check replication
  * 					status
@@ -185,7 +185,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
             handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
             handle->read_timeout=DEFAULT_READ_TIMEOUT;
             handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
-	    handle->script = NULL;
+	    handle->master_down_script = NULL;
             spinlock_init(&handle->lock);
         }
 
@@ -195,8 +195,18 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		handle->detectStaleMaster = config_truth_value(params->value);
 	    else if(!strcmp(params->name,"detect_replication_lag"))
 		handle->replicationHeartbeat = config_truth_value(params->value);
-	    else if(!strcmp(params->name,"script"))
-            handle->script = strdup(params->value);
+	    else if(!strcmp(params->name,"master_down_script"))
+	    {
+		if(access(params->value,F_OK) == 0)
+		{
+		    handle->master_down_script = strdup(params->value);
+		    handle->master_down_script_called = 0;
+		}
+		else
+		{
+		    skygw_log_write(LOGFILE_ERROR,"Error: could not find master_down_script file: %s",params->value);
+		}
+	    }
 	    params = params->next;
 	}
 
@@ -688,6 +698,11 @@ int log_no_master = 1;
 						"Server %s:%d lost the master status.",
 						ptr->server->name,
 						ptr->server->port)));
+					if(handle->master_down_script)
+					{
+					    if(monitor_exec_cmd(handle->master_down_script))
+						skygw_log_write(LOGFILE_ERROR,"Error: Failed to execute command '%s' on server state change.",handle->master_down_script);
+					}
 				}
 				/**
 				 * Here we say: If the server's state changed
@@ -700,15 +715,12 @@ int log_no_master = 1;
 					!(SERVER_IS_IN_CLUSTER(ptr->server)))
 				{
 					dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
+
 				}		
 
-/*
-                if(handle->script)
-                {
-                    if(monitor_exec_cmd(handle->script))
-                        skygw_log_write(LOGFILE_ERROR,"Error: Failed to execute command '%s' on server state change.",handle->script);
-                }
-*/
+
+                
+
                         }
                         
                         if (mon_status_changed(ptr))
