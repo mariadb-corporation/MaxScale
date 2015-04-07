@@ -430,8 +430,10 @@ addDatabases(SERVICE *service, MYSQL *con)
 
 	/* insert key and value "" */
 	while ((row = mysql_fetch_row(result))) {
-	    skygw_log_write(LOGFILE_DEBUG,"%s: Adding database %s to the resouce hash.",service->name,row[0]);
-	    resource_add(service->resources, row[0], "");
+	    if(resource_add(service->resources, row[0], ""))
+	    {
+		skygw_log_write(LOGFILE_DEBUG,"%s: Adding database %s to the resouce hash.",service->name,row[0]);
+	    }
 	}
 
 	mysql_free_result(result);
@@ -607,6 +609,78 @@ getAllUsers(SERVICE *service, USERS *users)
         }
 
 	service->resources = resource_alloc();
+
+	 while(server != NULL)
+        {
+
+            con = mysql_init(NULL);
+
+            if (con == NULL)
+            {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                                                 "Error : mysql_init: %s",
+                                                 mysql_error(con))));
+		goto cleanup;
+            }
+
+            /** Set read, write and connect timeout values */
+            if (gw_mysql_set_timeouts(con,
+                                      DEFAULT_READ_TIMEOUT,
+                                      DEFAULT_WRITE_TIMEOUT,
+                                      DEFAULT_CONNECT_TIMEOUT))
+            {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+                                                 "Error : failed to set timeout values for backend "
+			"connection.")));
+		mysql_close(con);
+		goto cleanup;
+            }
+
+            if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL))
+            {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                                                 "Error : failed to set external connection. "
+                        "It is needed for backend server connections.")));
+		mysql_close(con);
+		goto cleanup;
+            }
+
+
+            while(!service->svc_do_shutdown &&
+                  server != NULL &&
+                  (mysql_real_connect(con,
+                                      server->server->name,
+                                      service_user,
+                                      dpwd,
+                                      NULL,
+                                      server->server->port,
+                                      NULL,
+                                      0) == NULL))
+            {
+                server = server->next;
+            }
+
+
+            if (server == NULL)
+            {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+                                                 "Error : Unable to get user data from backend database "
+			"for service [%s]. Missing server information.",
+                                                 service->name)));
+		mysql_close(con);
+		goto cleanup;
+            }
+
+	    addDatabases(service, con);
+	    mysql_close(con);
+	    server = server->next;
+	 }
+
+	server = service->dbref;
 
         while(server != NULL)
         {
@@ -839,20 +913,7 @@ getAllUsers(SERVICE *service, USERS *users)
                 
 		goto cleanup;
             }
-            
-            if (db_grants) {
-		/* load all mysql database names */
-		dbnames = addDatabases(service, con);
-                
-		LOGIF(LD, (skygw_log_write(
-			LOGFILE_DEBUG,
-                                         "Loaded %d MySQL Database Names for service [%s]",
-                                         dbnames,
-                                         service->name)));
-            } else {
-		service->resources = NULL;
-            }
-            
+
             while ((row = mysql_fetch_row(result))) {
                 
 		/**
