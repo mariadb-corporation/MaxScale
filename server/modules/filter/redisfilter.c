@@ -796,14 +796,36 @@ clientReply(FILTER *instance, void *session, GWBUF *reply)
             goto send_to_upstream;
         }
         
-        pthread_mutex_lock(&lock);
+        /* THREADED start*/
+//        pthread_mutex_lock(&lock);
+//        
+//        the_msg.json_tree = infoNode;
+//        the_msg.request_time = my_session->current->requestTime;
+//        
+//        pthread_cond_signal(&sig_consumer);
+//        pthread_cond_wait(&sig_producer, &lock);
+//        pthread_mutex_unlock(&lock);
+        /* THREADED end*/
         
-        the_msg.json_tree = infoNode;
-        the_msg.request_time = my_session->current->requestTime;
+        /* SYNCED start*/
+        char *json_message = json_encode(infoNode);
+        if (json_message != NULL) {
+            /* Send message to Redis. */
+            redisReply *reply = redisCommand(my_instance->ctx, "ZADD queries %lu.%d %s", 
+                my_session->current->requestTime.tv_sec, 
+                my_session->current->requestTime.tv_usec,
+                json_message);
+
+            skygw_log_write(LOGFILE_DEBUG, "redisfilter: ZADD reply: %s", reply->str);
         
-        pthread_cond_signal(&sig_consumer);
-        pthread_cond_wait(&sig_producer, &lock);
-        pthread_mutex_unlock(&lock);
+            freeReplyObject(reply);
+            free(json_message);
+        } else {
+            skygw_log_write(LOGFILE_ERROR, "redisfilter: NULL value returned from json_encode");
+        }
+
+        json_delete(infoNode);
+        /* SYNCED end*/
         
         freeInfo(&my_session->current);
     }
