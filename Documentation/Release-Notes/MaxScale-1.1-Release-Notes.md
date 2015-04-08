@@ -1,6 +1,6 @@
 # MaxScale Release Notes
 
-## 1.1 RC
+## 1.1 GA
 
 This document details the changes in version 1.1 since the release of the 1.0.5 GA Release of the MaxScale product.
 
@@ -38,7 +38,7 @@ MaxScale is now installed into `/usr/local/mariadb-maxscale`
 
 ## Bug Fixes
 
-A number of bug fixes have been applied between the 1.0.5 GA and this RC release. The table below lists the bugs that have been resolved. The details for each of these may be found in https://mariadb.atlassian.net/projects/MXS or in the former http://bugs.mariadb.com Bug database
+A number of bug fixes have been applied between the 1.0.5 GA and this GA release. The table below lists the bugs that have been resolved. The details for each of these may be found in https://mariadb.atlassian.net/projects/MXS or in the former http://bugs.mariadb.com Bug database
 
 <table>
   <tr>
