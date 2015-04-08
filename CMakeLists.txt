@@ -139,6 +139,7 @@ install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION .)
 message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 
 install(FILES server/MaxScale_template.cnf DESTINATION etc)
+install(FILES server/MaxScale_BinlogServer_template.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION .)
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION .)
