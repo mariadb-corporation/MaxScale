@@ -693,6 +693,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     }
 
 send_to_downstream:
+        if (ptr != NULL) {
+            free(ptr);
+        }
 	/* Pass the query downstream */
 	return my_session->down.routeQuery(my_session->down.instance, my_session->down.session, queue);
     
