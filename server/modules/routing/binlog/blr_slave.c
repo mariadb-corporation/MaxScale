@@ -1203,7 +1203,7 @@ uint32_t	chksum;
 		"%s: COM_BINLOG_DUMP: binlog name '%s', length %d, "
 		"from position %lu.", router->service->name,
 			slave->binlogfile, binlognamelen, 
-			slave->binlog_pos)));
+			(unsigned long)slave->binlog_pos)));
 
 	slave->seqno = 1;
 
@@ -1261,7 +1261,7 @@ uint32_t	chksum;
 			"%s: New slave %s, server id %d,  requested binlog file %s from position %lu",
 				router->service->name, slave->dcb->remote,
 					slave->serverid,
-					slave->binlogfile, slave->binlog_pos)));
+					slave->binlogfile, (unsigned long)slave->binlog_pos)));
 
 	if (slave->binlog_pos != router->binlog_position ||
 			strcmp(slave->binlogfile, router->binlog_name) != 0)
@@ -1532,7 +1532,7 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 					"%s: Slave %s is up to date %s, %lu.",
 					router->service->name,
 					slave->dcb->remote,
-					slave->binlogfile, slave->binlog_pos)));
+					slave->binlogfile, (unsigned long)slave->binlog_pos)));
 			}
 			else if ((slave->stats.n_caughtup % 50) == 0)
 			{
@@ -1540,7 +1540,7 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 					"%s: Slave %s is up to date %s, %lu.",
 					router->service->name,
 					slave->dcb->remote,
-					slave->binlogfile, slave->binlog_pos)));
+					slave->binlogfile, (unsigned long)slave->binlog_pos)));
 			}
 		}
 	}
@@ -1565,7 +1565,7 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 				"which is not the file currently being downloaded. "
 				"Master binlog is %s, %lu. This may be caused by a "
 				"previous failure of the master.",
-				slave->binlogfile, slave->binlog_pos,
+				slave->binlogfile, (unsigned long)slave->binlog_pos,
 				router->binlog_name, router->binlog_position)));
 			if (blr_slave_fake_rotate(router, slave))
 			{
