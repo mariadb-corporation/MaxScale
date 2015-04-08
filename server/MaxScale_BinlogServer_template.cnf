@@ -1,0 +1,131 @@
+#
+# Example MaxScale.cnf for the Binlog Server.
+#
+#
+
+#######################################################################
+# MaxScale Global configuration.
+#
+# Valid options are:
+#       threads=<number of threads>
+[maxscale]
+threads=6
+
+# Other parameters.
+#log_messages=1
+#log_trace=1
+#log_debug=1
+#non_blocking_polls
+#poll_sleep
+
+
+#######################################################################
+# A series of service definition
+#
+# Valid options are:
+#       type=servie
+#       router=<name of router module>
+#       servers=<server name>,<server name>,...
+#       user=<User to fetch password inforamtion with>
+#       passwd=<Password of the user, plain text currently>
+#       version_string=<specific string for server handshake,
+#               default is the MariaDB embedded library version>
+#       router_options=<option[=value]>,<option[=value]>,...
+#
+
+#######################################################################
+# The MaxScale Binlog Server Service.
+#
+# The name of this service will be used as the directory name
+#   in $MAXSCALE_HOME where the binlogs will be saved.
+# If this name is changed, it must be changed in the listener
+#   configuration below.
+[Binlog_Service]
+
+# type must be service
+# router must be binlogrouter
+#   (corresponding to the so file in $MAXSCALE_HOME/modules).
+type=service
+router=binlogrouter
+
+# servers should include a single name corresponding to the master
+#    where the Binlog Server will download its binlogs from.
+servers=master
+
+# user, password and version: see generic definition.
+# Note: user should have the following grants:
+#       SELECT ON mysql.user
+#       SELECT ON mysql.db
+#       SHOW DATABASES ON *.*
+user=repl
+passwd=slavepass
+version_string=5.6.15-log
+
+# The router_options set parameters to the binlogrouter:
+#    server-id=
+#       The server-id that MaxScale uses when it connects
+#       to the real master server. Again it will reports
+#       the master's server-id to the slaves that connect
+#       to it.
+#    user=
+#       The user that MaxScale uses to login to the real master.
+#       Note: user should have "REPLICATION SLAVE" grant.
+#    password=
+#       The password that MaxScale uses to login to the real master.
+#    filestem=
+#       The prefix of the binlogs downloaded from master.
+router_options=server-id=1000000000,user=repl,password=slavepass,filestem=mysql-bin
+
+
+######################################################################
+# Configuration of the master from which binlogs are downloaded.
+#
+[master]
+type=server
+address=master.example.com
+port=3306
+protocol=MySQLBackend
+
+
+######################################################################
+# Configuration of the listenning service of the Binlog Server.
+#
+[Binlog Listener]
+type=listener
+service=Binlog_Service
+protocol=MySQLClient
+port=5306
+
+
+######################################################################
+# Debug Service and Listener.
+#
+[Debug Service]
+type=service
+router=debugcli
+
+[Debug Listener]
+type=listener
+service=Debug Service
+protocol=telnetd
+address=localhost
+port=4442
+
+
+######################################################################
+# CLI Service and Listener.
+#
+[CLI Service]
+type=service
+router=cli
+
+[CLI Listener]
+type=listener
+service=CLI Service
+protocol=maxscaled
+address=localhost
+port=6603
+
+
+# EOF.
+
