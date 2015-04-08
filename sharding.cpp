@@ -44,8 +44,10 @@ int main(int argc, char *argv[])
         }
     }
 
+    sleep(10);
     for (i = 0; i < Test->repl->N; i++) { //nodes
         printf("Node %d\t", i);
+        printf("Creating shard_db\t");
         execute_query(Test->repl->nodes[i], "CREATE DATABASE shard_db");
         sprintf(str, "GRANT SELECT,USAGE,CREATE ON shard_db.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
@@ -54,6 +56,7 @@ int main(int argc, char *argv[])
 
     Test->repl->close_connections();
 
+    sleep(30);
     MYSQL * conn;
     for (i = 0; i < Test->repl->N; i++) {
         sprintf(user_str, "user%d", i);
