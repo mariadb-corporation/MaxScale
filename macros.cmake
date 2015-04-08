@@ -50,7 +50,13 @@ macro(set_variables)
 
   # Build RabbitMQ components
   set(BUILD_RABBITMQ FALSE CACHE BOOL "Build RabbitMQ components")
-  
+
+  # Build ZeroMQ pipeline filter
+  set(BUILD_ZEROMQ FALSE CACHE BOOL "Build ZeroMQ pipeline filter")
+
+  # Build Redis filter
+  set(BUILD_REDIS FALSE CACHE BOOL "Build Redis pipeline filter")
+
   # Build the binlog router
   set(BUILD_BINLOG TRUE CACHE BOOL "Build binlog router")
 

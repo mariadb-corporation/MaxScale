@@ -1674,3 +1674,70 @@ skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
   }
 	return operation;
 }
+
+/**
+ * Generates a string of real query type.
+ * Caller must free the memory of the resulting string.
+ * 
+ * @param	querybuf	GWBUF buffer including necessary parsing info 
+ * 
+ * @return	string representing the real query type
+ */
+char* skygw_get_realq_type_str(GWBUF *querybuf){
+    char *real_query_t = NULL;
+    parsing_info_t* pi;
+    MYSQL *mysql = NULL;                            
+    pi = (parsing_info_t*)gwbuf_get_buffer_object_data(querybuf, GWBUF_PARSING_INFO);
+
+    if (pi != NULL){
+        static const uint res_sz = 16;
+        real_query_t = (char*)calloc(res_sz, sizeof(char));
+        if(real_query_t == NULL){
+            LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Error : Memory allocation failed for skygw_get_realq_type_str.")));
+            return NULL;
+        }
+
+        memset(real_query_t, '\0', res_sz);
+        mysql = (MYSQL *)pi->pi_handle;
+        enum_sql_command sql_c = ((THD*)mysql->thd)->lex->sql_command;      
+        
+        switch(sql_c){
+            case SQLCOM_SELECT:
+                strcpy(real_query_t, "SELECT");
+                break;
+            case SQLCOM_UPDATE:
+                strcpy(real_query_t, "UPDATE");
+                break;
+            case SQLCOM_INSERT:
+                strcpy(real_query_t, "INSERT");
+                break;
+            case SQLCOM_INSERT_SELECT:
+                strcpy(real_query_t, "INSERT_SELECT");
+                break;
+            case SQLCOM_DELETE:
+                strcpy(real_query_t, "DELETE");
+                break;
+            case SQLCOM_TRUNCATE:
+                strcpy(real_query_t, "TRUNCATE");
+                break;
+            case SQLCOM_REPLACE:
+                strcpy(real_query_t, "REPLACE");
+                break;
+            case SQLCOM_REPLACE_SELECT:
+                strcpy(real_query_t, "REPLACE_SELECT");
+                break;
+            case SQLCOM_PREPARE:
+                strcpy(real_query_t, "PREPARE");
+                break;
+            case SQLCOM_EXECUTE:
+                strcpy(real_query_t, "EXECUTE");
+                break;
+            default:
+                strcpy(real_query_t, "UNKNOWN");
+        }  
+    }
+    
+    return real_query_t;
+}
