@@ -50,6 +50,7 @@
 #include <secrets.h>
 #include <mysql_client_server_protocol.h>
 #include <mysqld_error.h>
+#include <regex.h>
 
 
 #define DEFAULT_CONNECT_TIMEOUT 3
@@ -110,6 +111,16 @@ void *resource_fetch(HASHTABLE *, char *);
 int resource_add(HASHTABLE *, char *, char *);
 int resource_hash(char *);
 static int normalize_hostname(char *input_host, char *output_host);
+int wildcard_db_grant(char* str);
+
+int add_wildcard_users(USERS *users,
+		       char* name,
+		       char* host,
+		       char* password,
+		       char* anydb,
+		       char* db,
+		       HASHTABLE* hash);
+
 static int gw_mysql_set_timeouts(
 	MYSQL* handle,
 	int    read_timeout,
@@ -419,8 +430,10 @@ addDatabases(SERVICE *service, MYSQL *con)
 
 	/* insert key and value "" */
 	while ((row = mysql_fetch_row(result))) {
-	    skygw_log_write(LOGFILE_DEBUG,"%s: Adding database %s to the resouce hash.",service->name,row[0]);
-	    resource_add(service->resources, row[0], "");
+	    if(resource_add(service->resources, row[0], ""))
+	    {
+		skygw_log_write(LOGFILE_DEBUG,"%s: Adding database %s to the resouce hash.",service->name,row[0]);
+	    }
 	}
 
 	mysql_free_result(result);
@@ -596,6 +609,78 @@ getAllUsers(SERVICE *service, USERS *users)
         }
 
 	service->resources = resource_alloc();
+
+	 while(server != NULL)
+        {
+
+            con = mysql_init(NULL);
+
+            if (con == NULL)
+            {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                                                 "Error : mysql_init: %s",
+                                                 mysql_error(con))));
+		goto cleanup;
+            }
+
+            /** Set read, write and connect timeout values */
+            if (gw_mysql_set_timeouts(con,
+                                      DEFAULT_READ_TIMEOUT,
+                                      DEFAULT_WRITE_TIMEOUT,
+                                      DEFAULT_CONNECT_TIMEOUT))
+            {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+                                                 "Error : failed to set timeout values for backend "
+			"connection.")));
+		mysql_close(con);
+		goto cleanup;
+            }
+
+            if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL))
+            {
+		LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                                                 "Error : failed to set external connection. "
+                        "It is needed for backend server connections.")));
+		mysql_close(con);
+		goto cleanup;
+            }
+
+
+            while(!service->svc_do_shutdown &&
+                  server != NULL &&
+                  (mysql_real_connect(con,
+                                      server->server->name,
+                                      service_user,
+                                      dpwd,
+                                      NULL,
+                                      server->server->port,
+                                      NULL,
+                                      0) == NULL))
+            {
+                server = server->next;
+            }
+
+
+            if (server == NULL)
+            {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+                                                 "Error : Unable to get user data from backend database "
+			"for service [%s]. Missing server information.",
+                                                 service->name)));
+		mysql_close(con);
+		goto cleanup;
+            }
+
+	    addDatabases(service, con);
+	    mysql_close(con);
+	    server = server->next;
+	 }
+
+	server = service->dbref;
 
         while(server != NULL)
         {
@@ -828,20 +913,7 @@ getAllUsers(SERVICE *service, USERS *users)
                 
 		goto cleanup;
             }
-            
-            if (db_grants) {
-		/* load all mysql database names */
-		dbnames = addDatabases(service, con);
-                
-		LOGIF(LD, (skygw_log_write(
-			LOGFILE_DEBUG,
-                                         "Loaded %d MySQL Database Names for service [%s]",
-                                         dbnames,
-                                         service->name)));
-            } else {
-		service->resources = NULL;
-            }
-            
+
             while ((row = mysql_fetch_row(result))) {
                 
 		/**
@@ -897,7 +969,17 @@ getAllUsers(SERVICE *service, USERS *users)
 						     dbnm)));
 			}
 		    }
-                    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4],havedb ? dbnm : NULL);
+
+		    if(havedb && wildcard_db_grant(dbnm))
+		    {
+			rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
+			skygw_log_write(LOGFILE_DEBUG,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
+		    }
+		    else
+		    {
+			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], havedb ? dbnm : NULL);
+		    }
+		    
 		    skygw_log_write(LOGFILE_DEBUG,"%s: Adding user:%s host:%s anydb:%s db:%s.",
 			     service->name,row[0],row[1],row[4],
 			     havedb ? dbnm : NULL);
@@ -1371,7 +1453,17 @@ getUsers(SERVICE *service, USERS *users)
 
 		if (db_grants) {
 			/* we have dbgrants, store them */
+
+		    if(wildcard_db_grant(row[5]))
+		    {
+			rc = add_wildcard_users(users, row[0], row[1], password, row[4], row[5], service->resources);
+			skygw_log_write(LOGFILE_DEBUG,"%s: Converted '%s' to %d individual database grants.",service->name,row[5],rc);
+		    }
+		    else
+		    {
 			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], row[5]);
+		    }
+
 		} else {
 			/* we don't have dbgrants, simply set ANY DB for the user */	
 			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
@@ -2062,4 +2154,96 @@ int
 dbusers_load(USERS *users, char *filename)
 {
 	return hashtable_load(users->data, filename, dbusers_keyread, dbusers_valueread);
+}
+
+/**
+ * Check if the database name contains a wildcard character
+ * @param str Database grant
+ * @return 1 if the name contains the '%' wildcard character, 0 if it does not
+ */
+int wildcard_db_grant(char* str)
+{
+    char* ptr = str;
+
+    while(ptr && *ptr != '\0')
+    {
+	if(*ptr == '%')
+	    return 1;
+	ptr++;
+    }
+
+    return 0;
+}
+
+/**
+ *
+ * @param users Pointer to USERS struct
+ * @param name Username of the client
+ * @param host Host address of the client
+ * @param password Client password
+ * @param anydb If the user has access to all databases
+ * @param db Database, in wildcard form
+ * @param hash Hashtable with all database names
+ * @return number of unique grants generated from wildcard database name
+ */
+int add_wildcard_users(USERS *users, char* name, char* host, char* password, char* anydb, char* db, HASHTABLE* hash)
+{
+    HASHITERATOR* iter;
+    HASHTABLE* ht = hash;
+    char *restr,*ptr,*value;
+    int len,err,rval = 0;
+    char errbuf[1024];
+    regex_t re;
+
+    if(db == NULL || hash == NULL)
+	return 0;
+
+    if((restr = malloc(sizeof(char)*strlen(db)*2)) == NULL)
+	return 0;
+    
+    strcpy(restr,db);
+
+    len = strlen(restr);
+    ptr = strchr(restr,'%');
+
+    if(ptr == NULL)
+    {
+	free(restr);
+	return 0;
+    }
+
+    while(ptr)
+    {
+	memmove(ptr+1,ptr,(len - (ptr - restr)) + 1);
+	*ptr++ = '.';
+	*ptr = '*';
+	len = strlen(restr);
+	ptr = strchr(restr,'%');
+    }
+
+    if((err = regcomp(&re,restr,REG_ICASE|REG_NOSUB)))
+    {
+	regerror(err,&re,errbuf,1024);
+	skygw_log_write(LOGFILE_ERROR,"Error: Failed to compile regex "
+		"when resolving wildcard database grants: %s",
+		 errbuf);
+	free(restr);
+	return 0;
+    }
+
+    iter = hashtable_iterator(ht);
+
+    while(iter && (value = hashtable_next(iter)))
+    {
+	if(regexec(&re,value,0,NULL,0) == 0)
+	{
+	    rval += add_mysql_users_with_host_ipv4(users, name, host, password, anydb, value);
+	}
+    }
+    
+    hashtable_iterator_free(iter);
+    regfree(&re);
+    free(restr);
+
+    return rval;
 }
