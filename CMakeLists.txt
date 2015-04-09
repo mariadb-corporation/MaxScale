@@ -86,6 +86,9 @@ if(FAKE_CODE)
   set(FLAGS "${FLAGS} -DFAKE_CODE" CACHE STRING "Compilation flags")
 endif()
 
+if(PROFILE)
+  set(FLAGS "${FLAGS} -pg " CACHE STRING "Compilation flags")
+endif()
 
 set(CMAKE_C_FLAGS "${FLAGS}")
 set(CMAKE_C_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG")
