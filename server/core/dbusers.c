@@ -973,7 +973,7 @@ getAllUsers(SERVICE *service, USERS *users)
 		    if(havedb && wildcard_db_grant(dbnm))
 		    {
 			rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
-			skygw_log_write(LOGFILE_DEBUG,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
+			skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
 		    }
 		    else
 		    {
@@ -1005,7 +1005,7 @@ getAllUsers(SERVICE *service, USERS *users)
                         
                         /* Log the user being added with its db grants */
                         LOGIF(LD, (skygw_log_write_flush(
-                                LOGFILE_DEBUG,
+                                LOGFILE_DEBUG|LOGFILE_TRACE,
                                                          "%s: User %s@%s for database %s added to "
                                 "service user table.",
                                                          service->name,
@@ -1015,7 +1015,7 @@ getAllUsers(SERVICE *service, USERS *users)
                     } else {
                         /* Log the user being added (without db grants) */
                         LOGIF(LD, (skygw_log_write_flush(
-                                LOGFILE_DEBUG,
+                                LOGFILE_DEBUG|LOGFILE_TRACE,
                                                          "%s: User %s@%s added to service user table.",
                                                          service->name,
                                                          row[0],
@@ -1028,7 +1028,7 @@ getAllUsers(SERVICE *service, USERS *users)
                     total_users++;
 		} else {
                     LOGIF(LE, (skygw_log_write_flush(
-                            LOGFILE_ERROR,
+                            LOGFILE_ERROR|LOGFILE_TRACE,
                                                      "Warning: Failed to add user %s@%s for service [%s]. "
                             "This user will be unavailable via MaxScale.",
                                                      row[0],
@@ -1457,7 +1457,7 @@ getUsers(SERVICE *service, USERS *users)
 		    if(wildcard_db_grant(row[5]))
 		    {
 			rc = add_wildcard_users(users, row[0], row[1], password, row[4], row[5], service->resources);
-			skygw_log_write(LOGFILE_DEBUG,"%s: Converted '%s' to %d individual database grants.",service->name,row[5],rc);
+			skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,row[5],rc);
 		    }
 		    else
 		    {
@@ -1486,7 +1486,7 @@ getUsers(SERVICE *service, USERS *users)
 
 				/* Log the user being added with its db grants */
 				LOGIF(LD, (skygw_log_write_flush(
-						LOGFILE_DEBUG,
+						LOGFILE_DEBUG|LOGFILE_TRACE,
 						"%s: User %s@%s for database %s added to "
 						"service user table.",
 						service->name,
@@ -1496,7 +1496,7 @@ getUsers(SERVICE *service, USERS *users)
 			} else {
 				/* Log the user being added (without db grants) */
 				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
+					LOGFILE_DEBUG|LOGFILE_TRACE,
 						"%s: User %s@%s added to service user table.",
 						service->name,
 						row[0],
@@ -1509,7 +1509,7 @@ getUsers(SERVICE *service, USERS *users)
 			total_users++;
 		} else {
 			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
+				LOGFILE_ERROR|LOGFILE_TRACE,
 				"Warning: Failed to add user %s@%s for service [%s]. "
 				"This user will be unavailable via MaxScale.",
 				row[0],
