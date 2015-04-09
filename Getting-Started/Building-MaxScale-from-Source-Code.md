@@ -14,7 +14,7 @@ You will need a number of tools and libraries in order to achieve this.
 
 # Obtaining MariaDB packages
 
-MaxScale requires the server and the development packages for the MariaDB server. You can obtain these by following the instructions on the MariaDB.org site: [https://downloads.mariadb.org/](https://downloads.mariadb.org/ MariaDB.org)
+MaxScale requires the server and the development packages for the MariaDB server. Either the 10.0 or the 5.5 version of the MariaDB server can be used. You can obtain these by following the instructions on the MariaDB.org site: [https://downloads.mariadb.org/](https://downloads.mariadb.org/)
 
 After following the instructions on that site you should have a working MariaDB repository if you use Yum or APT or the binary packages if you prefer a manual download.
 
