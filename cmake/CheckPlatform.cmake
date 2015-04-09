@@ -1,6 +1,7 @@
 #Checks for all the C system headers found in all the files
 
   include(CheckFunctionExists)
+  include(CheckLibraryExists)
   include(CheckIncludeFiles)
 
   check_include_files(arpa/inet.h HAVE_ARPA_INET)

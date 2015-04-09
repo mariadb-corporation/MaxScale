@@ -1,7 +1,7 @@
 if(BUILD_TESTS OR BUILD_TOOLS)
   file(GLOB FULLCORE_SRC *.c)
   add_library(fullcore STATIC ${FULLCORE_SRC})
-  target_link_libraries(fullcore ${CURL_LIBRARIES} log_manager utils pthread ${EMBEDDED_LIB} ssl aio rt crypt dl crypto inih z m stdc++)
+  target_link_libraries(fullcore ${CURL_LIBRARIES} log_manager utils pthread ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ssl aio rt crypt dl crypto inih z m stdc++)
 endif()
 
 add_executable(maxscale atomic.c buffer.c spinlock.c gateway.c
@@ -9,7 +9,7 @@ add_executable(maxscale atomic.c buffer.c spinlock.c gateway.c
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c 
 	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c
 	housekeeper.c memlog.c resultset.c)
-target_link_libraries(maxscale ${EMBEDDED_LIB} ${CURL_LIBRARIES} log_manager utils ssl aio pthread crypt dl crypto inih z rt m stdc++)
+target_link_libraries(maxscale ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ${CURL_LIBRARIES} log_manager utils ssl aio pthread crypt dl crypto inih z rt m stdc++)
 install(TARGETS maxscale DESTINATION bin)
 
 add_executable(maxkeys maxkeys.c secrets.c utils.c)

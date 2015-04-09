@@ -19,7 +19,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 project(MaxScale)
 
 #Disabled for now pending evaluation
-#include(CheckPlatform.cmake) 
+include(cmake/CheckPlatform.cmake) 
 
 check_deps()
 check_dirs()
