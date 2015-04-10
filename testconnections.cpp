@@ -326,7 +326,9 @@ int check_log_err(char * err_msg, bool expected)
     system(sys1);
 
     printf("Reading err_log\n");
-    global_result += read_log((char *) "skygw_err1.log", &err_log_content);
+    if ( read_log((char *) "skygw_err1.log", &err_log_content) != 0) {
+        read_log((char *) "error1.log", &err_log_content);
+    }
 
     if (expected) {
         if (strstr(err_log_content, err_msg) == NULL) {

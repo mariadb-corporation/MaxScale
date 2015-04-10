@@ -1,2 +1,2 @@
-DROP TABLE IF EXISTS t1; CREATE TABLE t1 (x1 int, fl int); update t1 set x1=1 where fl=0;
+update t1 set x1=1 where fl=0;
 SELECT x1 FROM t1;
