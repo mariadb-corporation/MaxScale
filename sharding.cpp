@@ -42,6 +42,14 @@ int main(int argc, char *argv[])
             printf("%s\n", str);
             execute_query(Test->repl->nodes[i], str);
         }
+
+        sprintf(str, "DROP DATABASE IF EXISTS shard_db%d", i);
+        printf("%s\n", str);
+        execute_query(Test->repl->nodes[i], str);
+
+        sprintf(str, "CREATE DATABASE shard_db%d", i);
+        printf("%s\n", str);
+        execute_query(Test->repl->nodes[i], str);
     }
 
     sleep(10);
@@ -82,6 +90,17 @@ int main(int argc, char *argv[])
         printf("Table should be %s\n", str1);
         global_result += execute_query_check_one(conn, str, str1);
         mysql_close(conn);
+    }
+
+    Test->connect_rwsplit();
+
+    printf("Trying USE");
+    execute_query(Test->conn_rwsplit, "USE shard_db");
+
+    for (i = 0; i < Test->repl->N; i++) {
+        sprintf(str, "USE shard_db%d", i);
+        printf("%s\n", str);
+        global_result += execute_query(Test->conn_rwsplit, str);
     }
 
     Test->copy_all_logs(); return(global_result);

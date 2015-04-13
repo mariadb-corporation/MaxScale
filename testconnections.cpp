@@ -325,8 +325,9 @@ int check_log_err(char * err_msg, bool expected)
     fflush(stdout);
     system(sys1);
 
-    printf("Reading err_log\n");
+    printf("Reading skygw_err1.log\n");
     if ( read_log((char *) "skygw_err1.log", &err_log_content) != 0) {
+        printf("Reading error1.log\n");
         read_log((char *) "error1.log", &err_log_content);
     }
 
