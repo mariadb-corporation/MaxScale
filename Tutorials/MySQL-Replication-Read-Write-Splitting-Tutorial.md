@@ -122,7 +122,7 @@ user=maxscale
 
 passwd=96F99AA1315BDC3604B006F427DD9484
 
-This completes the definitions required by the service, however listening ports must be associated with the service in order to allow network connections. This is done by creating a series of listener sections. This section again is named for the convenience of the administrator and should be of type listener with an entry labelled service which contains the name of the service to associate the listener with. A service may have multiple listeners.
+This completes the definitions required by the service, however listening ports must be associated with the service in order to allow network connections. This is done by creating a series of listener sections. This section again is named for the convenience of the administrator and should be of type listener with an entry labeled service which contains the name of the service to associate the listener with. A service may have multiple listeners.
 
 [Splitter Listener]
 

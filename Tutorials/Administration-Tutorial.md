@@ -24,7 +24,7 @@ or
 
 It is also possible to start MaxScale by executing the maxscale command itself, in this case you must ensure that the environment is correctly setup or command line options are passed. The major elements to consider are the correct setting of the MAXSCALE\_HOME directory and to ensure that LD\_LIBRARY\_PATH. The LD\_LIBRARY\_PATH should include the lib directory that was installed as part of the MaxScale installation, the MAXSCALE\_HOME should point to /usr/local/mariadb-maxscale if a default installation has been created or to the directory this was relocated to. Running the executable $MAXSCALE\_HOME/bin/maxscale will result in MaxScale running as a daemon process, unattached to the terminal in which it was started and using configuration files that it finds in the $MAXSCALE\_HOME directory.
 
-Options may be passed to the MaxScale binary that alter this default behaviour, this options are documented in the table below.
+Options may be passed to the MaxScale binary that alter this default behavior, this options are documented in the table below.
 
 <table>
   <tr>
@@ -137,7 +137,7 @@ To determine what client are currently connected to MaxScale you can use the "li
 <a name="rotating"></a> 
 ### Rotating Log Files
 
-MaxScale write log data into four log files with varying degrees of detail. With the exception of the error log, which can not be disabled, these log files may be enabled and disabled via the maxadmin interface or in the configuration file. The default behaviour of MaxScale is to grow the log files indefinitely, the administrator must take action to prevent this.
+MaxScale write log data into four log files with varying degrees of detail. With the exception of the error log, which can not be disabled, these log files may be enabled and disabled via the maxadmin interface or in the configuration file. The default behavior of MaxScale is to grow the log files indefinitely, the administrator must take action to prevent this.
 
 It is possible to rotate either a single log file or all the log files with a single command. When the logfile is rotated, the current log file is closed and a new log file, with an increased sequence number in its name, is created.  Log file rotation is achieved by use of the "flush log" or “flush logs” command in maxadmin.
 

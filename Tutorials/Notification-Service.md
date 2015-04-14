@@ -28,7 +28,7 @@ The purpose of Notification Service in MaxScale is for a customer registered for
 
 ## MaxScale Setup
 
-MaxScale may collect the installed plugins and send the informations nightly, between 2:00 AM and 4:59 AM.
+MaxScale may collect the installed plugins and send the information's nightly, between 2:00 AM and 4:59 AM.
 
 It tries to send data and if there is any failure (timeout, server is down, etc), the next retry is in 1800 seconds (30 minutes)
 
@@ -40,7 +40,7 @@ This feature is not enabled by default: MaxScale must be configured in [feedback
 	feedback_url=https://enterprise.mariadb.com/feedback/post
 	feedback_user_info=x-y-z-w
 
-The activation code that will be provided by MariaDB corp upon request by the customer and it shlud be put in feedback_user_info.
+The activation code that will be provided by MariaDB corp upon request by the customer and it should be put in feedback_user_info.
 
 Example:
 feedback_user_info=0467009f-b04d-45b1-a77b-b6b2ec9c6cf4

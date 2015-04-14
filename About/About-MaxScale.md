@@ -1,7 +1,7 @@
 # About MaxScale
 The MariaDB Corporation **MaxScale** is an intelligent proxy that allows forwarding of database statements to one or more database servers using complex rules, which can be based on a semantic understanding of the database statements and the roles of the various servers within the backend cluster of databases.
 
-MaxScale is designed to provide load balancing and high availability functionality transparently to the applications. In addition it provides a highly scalable and flexibile architecture, with plugin components to support different protocols and routing decisions.
+MaxScale is designed to provide load balancing and high availability functionality transparently to the applications. In addition it provides a highly scalable and flexible architecture, with plugin components to support different protocols and routing decisions.
 
 MaxScale is implemented in C so as to operate speedily. It also makes extensive use of the asynchronous I/O capabilities of the Linux operating system. The epoll system is used to provide the event driven framework for the input and output via sockets. Similar features in Windows&reg; could be used in future development of MaxScale.
 

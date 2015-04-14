@@ -10,7 +10,7 @@ Simply set the environment variable MAXSCALE_HOME to point to the
 MaxScale directory, found inside the path into which the files have been copied,
 e.g. MAXSCALE_HOME=/usr/local/mariadb-maxscale
 
-Also you will need to optionaly set LD_LIBRARY_PATH to include the 'lib' folder,
+Also you will need to optionally set LD_LIBRARY_PATH to include the 'lib' folder,
 found inside the path into which the files have been copied,
 e.g. LD_LIBRARY_PATH=/usr/local/mariadb-maxscale/lib
 
