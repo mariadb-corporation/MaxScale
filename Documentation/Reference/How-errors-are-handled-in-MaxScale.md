@@ -52,5 +52,5 @@ Reasons for "backend failure" in rwsplit:
 
 ### Router error
 
-In cases where SESSION_ROUTE_QUERY has returned successfully (=1) query may not be successfully processed in backend or even sent to it. It is posible that router fails in routing the particular query but there is no such error which would prevent session from continuing. In this case router handles error silently by creating and adding MySQL error to first available backend’s (incoming) eventqueue where it is found and sent to client (clientReply).
+In cases where SESSION_ROUTE_QUERY has returned successfully (=1) query may not be successfully processed in backend or even sent to it. It is possible that router fails in routing the particular query but there is no such error which would prevent session from continuing. In this case router handles error silently by creating and adding MySQL error to first available backend’s (incoming) eventqueue where it is found and sent to client (clientReply).
 

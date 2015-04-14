@@ -36,7 +36,7 @@ The number of SQL statements to store and report upon.
 
 count=30
 
-The default vakue for the numebr of statements recorded is 10.
+The default value for the number of statements recorded is 10.
 
 ### Match
 
@@ -62,7 +62,7 @@ source=127.0.0.1
 
 ### User
 
-The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username will result in results being gebnerated.
+The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username will result in results being generated.
 
 user=john
 
@@ -126,11 +126,11 @@ In the router definition add both filters
 
 filters=SlowAppServer | ControlAppServer
 
-You will then have two sets of logs files written, one which profiles the top 20 queries of the slow application server and another that gives you the top 20 queries of your control application server. These two sets of files can then be compared to determine what if anythign is different between the two.
+You will then have two sets of logs files written, one which profiles the top 20 queries of the slow application server and another that gives you the top 20 queries of your control application server. These two sets of files can then be compared to determine what if anything is different between the two.
 
 # Output Report
 
-The following is an example report for a number of fictitious queries executed against the employees exaple database available for MySQL.
+The following is an example report for a number of fictitious queries executed against the employees example database available for MySQL.
 
 -bash-4.1$ cat /var/logs/top/Employees-top-10.137
 

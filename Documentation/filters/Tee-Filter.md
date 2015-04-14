@@ -58,7 +58,7 @@ user=john
 
 Assume an order processing system that has a table called orders. You also have another database server, the datamart server, that requires all inserts into orders to be replicated to it. Deletes and updates are not however required.
 
-Set up a service in MaxScale, called Orders, to communicate with the order processing system with the tee filter applied to it. Also set up a service to talk the datamart server, using the DataMart service. The tee filter woudl have as it’s service entry the DataMart service, by adding a match parameter of "insert into orders" would then result in all requests being sent to the order processing system, and insert statements that include the orders table being additionally sent to the datamart server.
+Set up a service in MaxScale, called Orders, to communicate with the order processing system with the tee filter applied to it. Also set up a service to talk the datamart server, using the DataMart service. The tee filter would have as it’s service entry the DataMart service, by adding a match parameter of "insert into orders" would then result in all requests being sent to the order processing system, and insert statements that include the orders table being additionally sent to the datamart server.
 
 [Orders]
 

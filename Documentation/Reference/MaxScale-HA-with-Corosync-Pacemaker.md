@@ -336,7 +336,7 @@ The Corosync / Pacemaker cluster is ready to be configured to manage resources.
 
 # MaxScale init script /etc/init.d/maxscale
 
-The MaxScale /etc/init.d./maxscale script allows to start/stop/restart and monitor maxScale process running in the system.
+The MaxScale /etc/init.d./maxscale script allows to start/stop/restart and monitor MaxScale process running in the system.
 
 Edit it and modify the **MAXSCALE_BASEDIR** to match the installation directory you choose when you installed MaxScale.
 
@@ -400,7 +400,7 @@ For more informations;
 
 	[http://www.linux-ha.org/wiki/LSB_Resource_Agents](http://www.linux-ha.org/wiki/LSB_Resource_Agents)
 
-After checking maxScale is well managed by the /etc/init.d/script is possible to configure the MAxScale HA via Pacemaker.
+After checking MaxScale is well managed by the /etc/init.d/script is possible to configure the MaxScale HA via Pacemaker.
 
 # Configure MaxScale for HA with Pacemaker
 

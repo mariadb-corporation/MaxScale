@@ -7,8 +7,8 @@ the various servers within the backend cluster of databases.
 
 MaxScale is designed to provide load balancing and high availability
 functionality transparently to the applications. In addition it provides
-a highly scalable and flexibile architecture, with plugin components to
-support different protocols and routing decissions.
+a highly scalable and flexible architecture, with plugin components to
+support different protocols and routing decisions.
 
 MaxScale is implemented in C and makes extensive use of the
 asynchronous I/O capabilities of the Linux operating system. The epoll

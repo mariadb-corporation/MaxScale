@@ -74,7 +74,7 @@ When a switch takes a value, this may either be as the next argument on the comm
 
 If no arguments other than the command line switches are passed to MaxAdmin it will enter its interactive mode of operation. Users will be prompted to enter commands with a **MaxScale>** prompt. The commands themselves are documented in the sections later in this document. A help system is available that will give some minimal details of the commands available.
 
-Command history is available on platforms that support the libedit library. This allows the use of the up and down arrow keys to recall previous commands that have been executed by MaxAdmin. The default edit mode for the history is to emulate the vi commands, the behaviour of libedit may however be customised using the .editrc file. To obtain the history of commands that have been executed use the inbuilt history command.
+Command history is available on platforms that support the libedit library. This allows the use of the up and down arrow keys to recall previous commands that have been executed by MaxAdmin. The default edit mode for the history is to emulate the vi commands, the behavior of libedit may however be customized using the .editrc file. To obtain the history of commands that have been executed use the inbuilt history command.
 
 In interactive mode it is possible to execute a set of commands stored in an external file by using the source command. The command takes the argument of a filename which should contain a set of MaxScale commands, one per line. These will be executed in the order they appear in the file.
 
@@ -713,7 +713,7 @@ MaxScale uses a number of threads, as defined in the MaxScale configuration file
       2 | Processing |      1 | 0x7f54c0030d00   | <  100ms | IN|OUT
     MaxScale>
 
-The resultant output returns data as to the average thread utilisation for the past minutes 5 minutes and 15 minutes. It also gives a table, with a row per thread that shows what DCB that thread is currently processing events for, the events it is processing and how long, to the nearest 100ms has been send processing these events.
+The resultant output returns data as to the average thread utilization for the past minutes 5 minutes and 15 minutes. It also gives a table, with a row per thread that shows what DCB that thread is currently processing events for, the events it is processing and how long, to the nearest 100ms has been send processing these events.
 
 ## The Event Queue
 
@@ -726,7 +726,7 @@ At the core of MaxScale is an event driven engine that is processing network eve
     0x1e22f10        | Processing | IN|OUT             |                   
     MaxScale>
 
-The output of this command gives the DCB’s that are currenting in the event queue, the events queued for that DCB, and events that are beign processed for that DCB.
+The output of this command gives the DCB’s that are currently in the event queue, the events queued for that DCB, and events that are being processed for that DCB.
 
 ## The Housekeeper Tasks
 
@@ -770,7 +770,7 @@ This command provides important version information for the module. Each module 
 
 MaxScale write a number of log files in the log directory within MaxScale home directory. The default option for these is that the grow continually, it is recommended that periodically the log files are rotated. This will close the current log file and open a new one with a new name. The log file names use a sequence number which is incremented each time the logs are rotated.
 
-It is possible to rotate just a single log file, using the flush log command and the name of the log to flush. The names that are recognised by MaxAdmin are error, message, trace or debug.
+It is possible to rotate just a single log file, using the flush log command and the name of the log to flush. The names that are recognized by MaxAdmin are error, message, trace or debug.
 
     MaxScale> flush log message
     MaxScale>
@@ -819,7 +819,7 @@ Note that this uses the default port of 6603 and confines the connections to loc
 
 The way that MaxScale does it’s polling is that each of the polling threads, as defined by the threads parameter in the configuration file, will call epoll_wait to obtain the events that are to be processed. The events are then added to a queue for execution. Any thread can read from this queue, not just the thread that added the event. 
 
-Once the thread has done an epoll call with no timeout it will either do an epoll_wait call with a timeout or it will take an event from the queue if there is one. These two new parameters affect this behaviour.
+Once the thread has done an epoll call with no timeout it will either do an epoll_wait call with a timeout or it will take an event from the queue if there is one. These two new parameters affect this behavior.
 
 The first parameter, which may be set by using the non_blocking_polls option in the configuration file, controls the number of epoll_wait calls that will be issued without a timeout before MaxScale will make a call with a timeout value. The advantage of performing a call without a timeout is that the kernel treats this case as different and will not rescheduled the process in this case. If a timeout is passed then the system call will cause the MaxScale thread to be put back in the scheduling queue and may result in lost CPU time to MaxScale. Setting the value of this parameter too high will cause MaxScale to consume a lot of CPU when there is infrequent work to be done. The default value of this parameter is 3.
 
