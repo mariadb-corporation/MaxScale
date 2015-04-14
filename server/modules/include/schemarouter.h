@@ -215,6 +215,8 @@ typedef struct backend_ref_st {
 #if defined(SS_DEBUG)
         skygw_chk_t     bref_chk_top;
 #endif
+        int             n_mapping_eof;
+        GWBUF*          map_queue;
         BACKEND*        bref_backend; /*< Backend server */
         DCB*            bref_dcb; /*< Backend DCB */
         bref_state_t    bref_state; /*< State of the backend */
