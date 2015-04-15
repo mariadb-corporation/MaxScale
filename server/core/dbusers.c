@@ -970,7 +970,7 @@ getAllUsers(SERVICE *service, USERS *users)
 			}
 		    }
 
-		    if(havedb && wildcard_db_grant(dbnm))
+		    if(service->optimize_wildcard && havedb && wildcard_db_grant(dbnm))
 		    {
 			rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
 			skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
@@ -1454,7 +1454,7 @@ getUsers(SERVICE *service, USERS *users)
 		if (db_grants) {
 			/* we have dbgrants, store them */
 
-		    if(wildcard_db_grant(row[5]))
+		    if(service->optimize_wildcard && wildcard_db_grant(row[5]))
 		    {
 			rc = add_wildcard_users(users, row[0], row[1], password, row[4], row[5], service->resources);
 			skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,row[5],rc);

@@ -309,6 +309,7 @@ int			error_count = 0;
 				char *enable_root_user;
 				char *connection_timeout;
 				char *auth_all_servers;
+				char *optimize_wildcard;
 				char *strip_db_esc;
 				char *weightby;
 				char *version_string;
@@ -330,9 +331,14 @@ int			error_count = 0;
 						obj->parameters,
 						"connection_timeout");
 
-				auth_all_servers = 
+				optimize_wildcard =
 					config_get_value(
 						obj->parameters, 
+						"optimize_wildcard");
+
+				auth_all_servers =
+					config_get_value(
+						obj->parameters,
 						"auth_all_servers");
 
 				strip_db_esc = 
@@ -406,6 +412,10 @@ int			error_count = 0;
 				if(auth_all_servers)
 					serviceAuthAllServers(obj->element, 
 						config_truth_value(auth_all_servers));
+
+				if(optimize_wildcard)
+					serviceOptimizeWildcard(obj->element,
+						config_truth_value(optimize_wildcard));
 
 				if(strip_db_esc)
 					serviceStripDbEsc(obj->element, 
@@ -1426,6 +1436,7 @@ SERVER			*server;
 					char *connection_timeout;
 
 					char* auth_all_servers;
+					char* optimize_wildcard;
 					char* strip_db_esc;
 					char* max_slave_conn_str;
 					char* max_slave_rlag_str;
@@ -1441,6 +1452,7 @@ SERVER			*server;
 								"passwd");
                     
 					auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
+					optimize_wildcard = config_get_value(obj->parameters, "optimize_wildcard");
 					strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
 					version_string = config_get_value(obj->parameters, "version_string");
 					allow_localhost_match_wildcard_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
@@ -1464,9 +1476,11 @@ SERVER			*server;
 
 
                                                 if(auth_all_servers)
-                                                    serviceAuthAllServers(service, atoi(auth_all_servers));
+                                                    serviceAuthAllServers(service, config_truth_value(auth_all_servers));
+						if(optimize_wildcard)
+                                                    serviceOptimizeWildcard(service, config_truth_value(optimize_wildcard));
 						if(strip_db_esc)
-                                                    serviceStripDbEsc(service, atoi(strip_db_esc));
+                                                    serviceStripDbEsc(service, config_truth_value(strip_db_esc));
 
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
@@ -1575,6 +1589,7 @@ SERVER			*server;
 					char *connection_timeout;
 					char *allow_localhost_match_wildcard_host;
 					char *auth_all_servers;
+					char *optimize_wildcard;
 					char *strip_db_esc;
 
 					enable_root_user = 
@@ -1587,6 +1602,9 @@ SERVER			*server;
 					auth_all_servers = 
                                                 config_get_value(obj->parameters, 
                                                                  "auth_all_servers");
+					optimize_wildcard =
+                                                config_get_value(obj->parameters,
+                                                                 "optimize_wildcard");
 					strip_db_esc = 
                                                 config_get_value(obj->parameters, 
                                                                  "strip_db_esc");
@@ -1837,6 +1855,7 @@ static char *service_params[] =
                 "enable_root_user",
                 "connection_timeout",
                 "auth_all_servers",
+		"optimize_wildcard",
                 "strip_db_esc",
                 "localhost_match_wildcard_host",
                 "max_slave_connections",

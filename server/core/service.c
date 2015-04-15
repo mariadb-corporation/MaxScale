@@ -823,7 +823,7 @@ serviceEnableRootUser(SERVICE *service, int action)
  * Enable/Disable loading the user data from only one server or all of them
  *
  * @param service	The service we are setting the data for
- * @param action	1 for root enable, 0 for disable access
+ * @param action	1 for all servers, 0 for single server
  * @return		0 on failure
  */
 
@@ -835,6 +835,28 @@ serviceAuthAllServers(SERVICE *service, int action)
 
 	service->users_from_all = action;
 
+	return 1;
+}
+
+/**
+ * Enable/Disable optimization of wildcard database grats
+ *
+ * @param service	The service we are setting the data for
+ * @param action	1 for optimized, 0 for normal grants
+ * @return		0 on failure
+ */
+
+int
+serviceOptimizeWildcard(SERVICE *service, int action)
+{
+	if (action != 0 && action != 1)
+		return 0;
+
+	service->optimize_wildcard = action;
+	if(action)
+	{
+	    LOGIF(LM,(skygw_log_write(LOGFILE_MESSAGE,"[%s] Optimizing wildcard database grants.",service->name)));
+	}
 	return 1;
 }
 
