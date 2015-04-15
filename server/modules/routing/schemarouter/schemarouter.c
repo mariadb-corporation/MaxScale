@@ -1543,6 +1543,12 @@ void check_create_tmp_table(
       free(tblname);
     }
 }
+
+int cmpfn(const void* a, const void *b)
+{
+    return strcmp(*(char**)a,*(char**)b);
+}
+
 /**
  * Generates a custom SHOW DATABASES result set from all the databases in the
  * hashtable. Only backend servers that are up and in a proper state are listed
@@ -1653,35 +1659,69 @@ gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
     memcpy(ptr, eof, sizeof(eof));
 
     unsigned int packet_num = 4;
+    int j = 0,ndbs = 0, bufsz = 10;
+    char** dbs;
+
+    if((dbs = malloc(sizeof(char*)*bufsz)) == NULL)
+    {
+	gwbuf_free(rval);
+	hashtable_iterator_free(iter);
+	return NULL;
+    }
 
     while((value = (char*) hashtable_next(iter)))
     {
         char* bend = hashtable_fetch(ht, value);
+
         for(i = 0; backends[i]; i++)
         {
             if(strcmp(bref[i].bref_backend->backend_server->unique_name, bend) == 0 &&
                BREF_IS_IN_USE(&bref[i]) && !BREF_IS_CLOSED(&bref[i]))
             {
+		ndbs++;
 
-                GWBUF* temp;
-                int plen = strlen(value) + 1;
+		if(ndbs >= bufsz)
+		{
+		    bufsz += bufsz / 2;
+		    char** tmp = realloc(dbs,sizeof(char*)*bufsz);
+		    if(tmp == NULL)
+		    {
+			gwbuf_free(rval);
+			hashtable_iterator_free(iter);
+			for(i=0;i<ndbs-1;i++)free(dbs[i]);
+			free(dbs);
+			return NULL;
+		    }
+		    dbs = tmp;
+		}
 
-                sprintf(dbname, "%s", value);
-                temp = gwbuf_alloc(plen + 4);
-
-                ptr = temp->start;
-                *ptr++ = plen;
-                *ptr++ = plen >> 8;
-                *ptr++ = plen >> 16;
-                *ptr++ = packet_num++;
-                *ptr++ = plen - 1;
-                memcpy(ptr, dbname, plen - 1);
-
-                /** Append the row*/
-                rval = gwbuf_append(rval, temp);
-                
+		dbs[j++] = strdup(value);
             }
         }
+    }
+
+    qsort(&dbs[0],(size_t)ndbs,sizeof(char*),cmpfn);
+
+    for(j = 0;j<ndbs;j++)
+    {
+
+	GWBUF* temp;
+	int plen = strlen(dbs[j]) + 1;
+
+	sprintf(dbname, "%s", dbs[j]);
+	temp = gwbuf_alloc(plen + 4);
+
+	ptr = temp->start;
+	*ptr++ = plen;
+	*ptr++ = plen >> 8;
+	*ptr++ = plen >> 16;
+	*ptr++ = packet_num++;
+	*ptr++ = plen - 1;
+	memcpy(ptr, dbname, plen - 1);
+
+	/** Append the row*/
+	rval = gwbuf_append(rval, temp);
+	free(dbs[j]);
     }
 
     eof[3] = packet_num;
@@ -1692,6 +1732,7 @@ gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 
     rval = gwbuf_make_contiguous(rval);
     hashtable_iterator_free(iter);
+    free(dbs);
     return rval;
 }
 
