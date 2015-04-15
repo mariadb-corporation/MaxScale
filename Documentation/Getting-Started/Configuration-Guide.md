@@ -263,6 +263,10 @@ The strip_db_esc parameter strips escape characters from database names of grant
 
 This parameter takes a boolean value and when enabled, will strip all `\` characters from the database names.
 
+#### `optimize_wildcard`
+
+Enabling this feature will transform wildcard grants to individual database grants. This will consume more memory but authentication in MaxScale will be done faster. The parameter takes a boolean value.
+
 #### `connection_timeout`
 
 The connection_timeout parameter is used to disconnect sessions to MaxScale that have been idle for too long. The session timeouts are disabled by default. To enable them, define the timeout in seconds in the service's configuration section.
