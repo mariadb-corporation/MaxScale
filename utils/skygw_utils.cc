@@ -1045,6 +1045,59 @@ void slcursor_add_data(
         CHK_SLIST_CURSOR(c);
 }
 
+/**
+ * Remove the current node in the slist. This does not delete the data in the
+ * node but will delete the structure pointing to that data. This is useful when
+ * the user wants to free the allocated memory. After node removal, the cursor
+ * will point to the node before the removed node.
+ * @param c Cursor pointing to the data node to be removed
+ */
+void slcursor_remove_data(slist_cursor_t* c)
+{
+    slist_node_t* node = c->slcursor_pos;
+    int havemore = slist_size(c);
+    slcursor_move_to_begin (c);
+
+    if(node == c->slcursor_pos)
+    {
+        c->slcursor_list->slist_head = c->slcursor_list->slist_head->slnode_next;
+        slcursor_move_to_begin (c);
+        atomic_add((int*)&node->slnode_list->slist_nelems,-1);
+        atomic_add((int*)&node->slnode_cursor_refcount,-1);
+        if(node->slnode_cursor_refcount == 0)
+        {
+            free(node);
+        }
+        return;
+    }
+
+    while(havemore)
+    {
+        if( c->slcursor_pos->slnode_next == node)
+        {
+            c->slcursor_pos->slnode_next = node->slnode_next;
+            atomic_add((int*)&node->slnode_list->slist_nelems,-1);
+            atomic_add((int*)&node->slnode_cursor_refcount,-1);
+            if(node->slnode_cursor_refcount == 0)
+            {
+                free(node);
+            }
+            return;
+        }
+        havemore = slcursor_step_ahead (c);
+    }
+}
+
+/**
+ * Return the size of the slist.
+ * @param c slist cursor which refers to a list
+ * @return nummber of elements in the list
+ */
+size_t slist_size(slist_cursor_t* c)
+{
+    return c->slcursor_list->slist_nelems;
+}
+
 
 void slist_done(
         slist_cursor_t* c)
@@ -2175,4 +2228,23 @@ strip_escape_chars (char* val)
       cur++;
     }
   return true;
+}
+
+/**
+* Calculate a hash value for a null-terminated string.
+* @param key String to hash
+* @return Hash value of the string
+*/
+int simple_str_hash(char* key)
+{
+  if(key == NULL){
+    return 0;
+  }
+  int hash = 0,c = 0;
+  char* ptr = key;
+  while((c = *ptr++)){
+    hash = c + (hash << 6) + (hash << 16) - hash;
+  }
+
+  return hash;
 }
