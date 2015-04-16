@@ -254,7 +254,7 @@ HASHTABLE	*oldresources;
  * @param user          The user name
  * @param host          The host to add, with possible wildcards
  * @param passwd	The sha1(sha1(passoword)) to add
- * @return              1 on success, 0 on failure
+ * @return              1 on success, 0 on failure and -1 on duplicate user
  */
 
 int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd, char *anydb, char *db) {
@@ -326,6 +326,10 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 		/* add user@host as key and passwd as value in the MySQL users hash table */
 		if (mysql_users_add(users, &key, passwd)) {
 			ret = 1;
+		}
+		else if(key.user)
+		{
+		    ret = -1;
 		}
 	}
 
@@ -950,9 +954,9 @@ getAllUsers(SERVICE *service, USERS *users)
 		/* 
                  * add user@host and DB global priv and specificsa grant (if possible)
                  */
-                
+                bool havedb = false;
+
 		if (db_grants) {
-		    bool havedb = false;
                     /* we have dbgrants, store them */
 		    if(row[5]){
 			unsigned long *rowlen = mysql_fetch_lengths(result);
@@ -1026,6 +1030,14 @@ getAllUsers(SERVICE *service, USERS *users)
                     strncat(users_data, row[3], users_data_row_len);
                     
                     total_users++;
+
+		} else if(rc == -1) {
+		    /** Duplicate user*/
+		    LOGIF(LE,(skygw_log_write(LT|LE,
+					     "Warning: Duplicate MySQL user found for service [%s]: %s@%s%s%s",
+					     service->name,
+					     row[0],row[1],havedb?" for database: ":"",
+					     havedb ?dbnm:"")));
 		} else {
                     LOGIF(LE, (skygw_log_write_flush(
                             LOGFILE_ERROR|LOGFILE_TRACE,
@@ -1507,6 +1519,14 @@ getUsers(SERVICE *service, USERS *users)
 			strncat(users_data, row[3], users_data_row_len);
 
 			total_users++;
+
+		} else if(rc == -1) {
+		    /** Duplicate user*/
+		    LOGIF(LE,(skygw_log_write(LT|LE,
+					     "Warning: Duplicate MySQL user found for service [%s]: %s@%s%s%s",
+					     service->name,
+					     row[0],row[1],db_grants?" for database: ":"",
+					     db_grants ?row[5]:"")));
 		} else {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR|LOGFILE_TRACE,
