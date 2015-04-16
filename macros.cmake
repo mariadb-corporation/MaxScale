@@ -75,21 +75,67 @@ macro(check_deps)
 
 
   # Check for libraries MaxScale depends on
-  set(MAXSCALE_DEPS aio ssl crypt crypto z m dl rt pthread)
-  foreach(lib ${MAXSCALE_DEPS})
-    find_library(lib${lib} ${lib})
-    if((DEFINED lib${lib}) AND (${lib${lib}} MATCHES "NOTFOUND"))
-      set(DEPS_ERROR TRUE)
-      set(FAILED_DEPS "${FAILED_DEPS} lib${lib}")
-	elseif(DEBUG_OUTPUT)
-	  message(STATUS "Library was found at: ${lib${lib}}")
-    endif()
-  endforeach()
-
-  if(DEPS_ERROR)
-	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-    message(FATAL_ERROR "Cannot find dependencies: ${FAILED_DEPS}")
+  find_library(HAVE_LIBAIO NAMES aio)
+  if(NOT HAVE_LIBAIO)
+    message(FATAL_ERROR "Could not find libaio")
   endif()
+
+  find_library(HAVE_LIBSSL NAMES ssl)
+  if(NOT HAVE_LIBSSL)
+    message(FATAL_ERROR "Could not find libssl")
+  endif()
+
+  find_library(HAVE_LIBCRYPT NAMES crypt)
+  if(NOT HAVE_LIBCRYPT)
+    message(FATAL_ERROR "Could not find libcrypt")
+  endif()
+
+  find_library(HAVE_LIBCRYPTO NAMES crypto)
+  if(NOT HAVE_LIBCRYPTO)
+    message(FATAL_ERROR "Could not find libcrypto")
+  endif()
+
+  find_library(HAVE_LIBZ NAMES z)
+  if(NOT HAVE_LIBZ)
+    message(FATAL_ERROR "Could not find libz")
+  endif()
+
+  find_library(HAVE_LIBM NAMES m)
+  if(NOT HAVE_LIBM)
+    message(FATAL_ERROR "Could not find libm")
+  endif()
+
+  find_library(HAVE_LIBDL NAMES dl)
+  if(NOT HAVE_LIBDL)
+    message(FATAL_ERROR "Could not find libdl")
+  endif()
+
+  find_library(HAVE_LIBRT NAMES rt)
+  if(NOT HAVE_LIBRT)
+    message(FATAL_ERROR "Could not find librt")
+  endif()
+
+  find_library(HAVE_LIBPTHREAD NAMES pthread)
+  if(NOT HAVE_LIBPTHREAD)
+    message(FATAL_ERROR "Could not find libpthread")
+  endif()
+
+
+  # set(MAXSCALE_DEPS aio ssl crypt crypto z m dl rt pthread)
+  # foreach(lib ${MAXSCALE_DEPS})
+  #   find_library(lib${lib} ${lib})
+  #   if((DEFINED lib${lib}) AND (${lib${lib}} MATCHES "NOTFOUND"))
+  #     set(DEPS_ERROR TRUE)
+  #     set(FAILED_DEPS "${FAILED_DEPS} lib${lib}")
+  #   elseif(DEBUG_OUTPUT)
+  #     message(STATUS "Library was found at: ${lib${lib}}")
+  #   endif()
+  # endforeach()
+
+  # if(DEPS_ERROR)
+  #   set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
+  #   message(FATAL_ERROR "Cannot find dependencies: ${FAILED_DEPS}")
+  # endif()
 
 endmacro()
 
