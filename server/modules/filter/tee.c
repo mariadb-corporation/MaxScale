@@ -1380,6 +1380,8 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
         {
 	case 0x1b:
 	    my_session->client_multistatement = *((unsigned char*) buffer->start + 5);
+	    LOGIF(LT,(skygw_log_write(LT,"Tee: client %s multistatements",
+			my_session->client_multistatement ? "enabled":"disabled")));
         case 0x03:
         case 0x16:
         case 0x17:
