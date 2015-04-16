@@ -1015,6 +1015,9 @@ int gw_MySQLListener(
 	int  one = 1;
         int  rc;
 
+	memset(&serv_addr,0,sizeof(serv_addr));
+	memset(&local_addr,0,sizeof(local_addr));
+
 	if (strchr(config_bind, '/')) {
 		char *tmp = strrchr(config_bind, ':');
 		if (tmp)

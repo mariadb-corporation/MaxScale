@@ -54,7 +54,7 @@ struct slist_st {
         skygw_chk_t   slist_chk_top;
         slist_node_t* slist_head;
         slist_node_t* slist_tail;
-        size_t        slist_nelems;
+        int        slist_nelems;
         slist_t*      slist_cursors_list;
         skygw_chk_t   slist_chk_tail;
 };
@@ -1046,7 +1046,7 @@ void slcursor_add_data(
 }
 
 /**
- * Remove the current node in the slist. This does not delete the data in the
+ * Remove the node currently pointed by the cursor from the slist. This does not delete the data in the
  * node but will delete the structure pointing to that data. This is useful when
  * the user wants to free the allocated memory. After node removal, the cursor
  * will point to the node before the removed node.

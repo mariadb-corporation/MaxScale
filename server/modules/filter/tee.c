@@ -1047,8 +1047,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
     }
     else
     {
-	if(complete)
-	    gwbuf_free(complete);
+	gwbuf_free(complete);
     }
 
     my_session->replies[branch]++;
@@ -1264,7 +1263,7 @@ int internal_route(DCB* dcb)
 GWBUF* clone_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF* buffer)
 {
     GWBUF* clone = NULL;
-    int length, residual;
+    int length, residual = 0;
     char* ptr;
     
 	if (my_session->branch_session &&

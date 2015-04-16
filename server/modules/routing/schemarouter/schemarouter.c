@@ -854,7 +854,7 @@ static void* newSession(
         {
             
             protocol->client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-            strncpy(db,data->db,MYSQL_DATABASE_MAXLEN+1);
+            strncpy(db,data->db,MYSQL_DATABASE_MAXLEN);
             memset(data->db,0,MYSQL_DATABASE_MAXLEN+1);
             using_db = true;
             skygw_log_write(LOGFILE_TRACE,"schemarouter: Client logging in directly to a database '%s', "

@@ -2069,6 +2069,7 @@ config_get_ifaddr(unsigned char *output)
 	ifc.ifc_len = sizeof(buf);
 	ifc.ifc_buf = buf;
 	if (ioctl(sock, SIOCGIFCONF, &ifc) == -1) {
+		close(sock);
 		return 0;
 	}
 
@@ -2085,6 +2086,7 @@ config_get_ifaddr(unsigned char *output)
 				}
 			}
 		} else {
+		    close(sock);
 			return 0;
 		}
 	}

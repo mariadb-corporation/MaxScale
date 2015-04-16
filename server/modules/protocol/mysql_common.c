@@ -1558,7 +1558,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			    break;
 			}
 
-			break;
 		}
 	}
 

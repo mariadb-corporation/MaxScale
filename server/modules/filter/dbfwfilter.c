@@ -973,12 +973,10 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
                 tok = strtok_r(NULL, " ,",&saveptr);
                 TIMERANGE *tr = NULL;
-		bool not_valid = false;
                 while(tok){
 
 		    if(!check_time(tok))
 		    {
-			not_valid = true;
 			skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, malformed time definition: %s",tok);
 			rval = false;
 			goto retblock;
@@ -1003,11 +1001,6 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                     tok = strtok_r(NULL, " ,",&saveptr);
                 }
                 ruledef->active = tr;
-
-		if(not_valid)
-		{
-		    continue;
-		}
 
             }
 	    else if(strcmp(tok,"regex") == 0)
