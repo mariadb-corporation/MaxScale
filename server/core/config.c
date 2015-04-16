@@ -2017,6 +2017,25 @@ config_truth_value(char *str)
 	return atoi(str);
 }
 
+
+/**
+ * Converts a string into a floating point representation of a percentage value.
+ * For example 75% is converted to 0.75 and -10% is converted to -0.1.
+ * @param	str	String to convert
+ * @return	String converted to a floating point percentage
+ */
+double
+config_percentage_value(char *str)
+{
+    double value = 0;
+
+    value = strtod(str,NULL);
+    if(value != 0)
+	value /= 100.0;
+
+    return value;
+}
+
 static char *InternalRouters[] = {
 	"debugcli",
 	"cli",
