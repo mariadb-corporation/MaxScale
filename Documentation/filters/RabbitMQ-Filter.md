@@ -25,6 +25,14 @@ logging_log_all=false
 logging_object=my1
 logging_schema=test
 logging_source_user=maxtest
+
+[RabbitMQ Service]
+type=service
+router=readconnrouter
+servers=server1
+user=myuser
+passwd=mypasswd
+filters=RabbitMQ
 ```
 
 ### Filter Options

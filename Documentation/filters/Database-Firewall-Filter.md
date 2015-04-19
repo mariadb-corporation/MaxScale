@@ -8,10 +8,18 @@ The database firewall filter is used to block queries that match a set of rules.
 The database firewall filter only requires minimal configuration in the MaxScale.cnf file. The actual rules of the database firewall filter are located in a separate text file. The following is an example of a database firewall filter configuration in MaxScale.cnf.
 
 ```
-[Database Firewall]
+[DatabaseFirewall]
 type=filter
 module=dbfwfilter
 rules=/home/user/rules.txt
+
+[Firewalled Routing Service]
+type=service
+router=readconnrouter
+servers=server1
+user=myuser
+passwd=mypasswd
+filters=DatabaseFirewall
 ```
 
 ### Filter Options

@@ -44,6 +44,8 @@
 
 ## Filters
 
+Here are detailed documents about the filters MaxScale offers. They contain configuration guides and example use cases. Before reading these,you should have read the filter tutorial so that you know how they work and how to configure them.
+
  - [Query Log All](filters/Query-Log-All-Filter.md)
  - [Regex Filter](filters/Regex-Filter.md)
  - [Tee Filter](filters/Tee-Filter.md)
