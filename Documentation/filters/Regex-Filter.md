@@ -8,15 +8,21 @@ The regex filter is a filter module for MaxScale that is able to rewrite query c
 
 The configuration block for the Regex filter requires the minimal filter options in it’s section within the MaxScale.cnf file, stored in $MAXSCALE_HOME/etc/MaxScale.cnf.
 
+```
 [MyRegexFilter]
-
 type=filter
-
 module=regexfilter
-
 match=some string
-
 replace=replacement string
+
+[MyService]
+type=service
+router=readconnrouter
+servers=server1
+user=myuser
+passwd=mypasswd
+filters=MyRegexfilter
+```
 
 ## Filter Options
 
@@ -30,7 +36,9 @@ The Regex filter requires two mandatory parameters to be defined.
 
 A parameter that can be used to match text in the SQL statement which should be replaced.
 
+```
 match=TYPE[	]*=
+```
 
 If the filter option ignorecase is used all regular expressions are evaluated with the option to ignore the case of the text, therefore a match option of select will match both type, TYPE and any form of the word with upper or lowercase characters.
 
@@ -38,19 +46,25 @@ If the filter option ignorecase is used all regular expressions are evaluated wi
 
 The replace parameter defines the text that should replace the text in the SQL text which matches the match.
 
+```
 replace=ENGINE =
+```
 
 ### Source
 
 The optional source parameter defines an address that is used to match against the address from which the client connection to MaxScale originates. Only sessions that originate from this address will have the match and replacement applied to them.
 
+```
 source=127.0.0.1
+```
 
 ### User
 
 The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username will have the match and replacement applied to them.
 
+```
 user=john
+```
 
 ## Examples
 
@@ -58,15 +72,11 @@ user=john
 
 MySQL 5.1 used the parameter TYPE = to set the storage engine that should be used for a table. In later versions this changed to be ENGINE =. Imagine you have an application that you can not change for some reason, but you wish to migrate to a newer version of MySQL. The regexfilter can be used to transform the create table statements into the form that could be used by MySQL 5.5
 
+```
 [CreateTableFilter]
-
 type=filter
-
 module=regexfilter
-
 options=ignorecase
-
 match=TYPE[ 	]*=
-
 replace=ENGINE=
-
+```
