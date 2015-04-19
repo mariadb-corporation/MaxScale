@@ -11,6 +11,14 @@ The  configuration  block  for  the  QLA  filter  requires  the  minimal  filter
 [MyLogFilter]
 type=filter
 module=qlafilter
+
+[MyService]
+type=service
+router=readconnrouter
+servers=server1
+user=myuser
+passwd=mypasswd
+filters=MyLogFilter
 ```
 
 ## Filter Options

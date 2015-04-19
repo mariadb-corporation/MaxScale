@@ -79,4 +79,12 @@ module=regexfilter
 options=ignorecase
 match=TYPE[ 	]*=
 replace=ENGINE=
+
+[MyService]
+type=service
+router=readconnrouter
+servers=server1
+user=myuser
+passwd=mypasswd
+filters=CreateTableFilter
 ```
