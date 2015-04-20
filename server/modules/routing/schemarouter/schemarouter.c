@@ -386,6 +386,9 @@ bool parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* bref, GWBUF**
        skygw_log_write(LOGFILE_TRACE,"schemarouter: SHOW DATABASES partially received from %s.",
 		       bref->bref_backend->backend_server->unique_name);
    }
+
+   gwbuf_free(buf);
+
    return bref->n_mapping_eof == 2;
 }
 
@@ -2298,14 +2301,15 @@ diagnostic(ROUTER *instance, DCB *dcb)
 static void clientReply (
         ROUTER* instance,
         void*   router_session,
-        GWBUF*  writebuf,
+        GWBUF*  buffer,
         DCB*    backend_dcb)
 {
         DCB*               client_dcb;
         ROUTER_CLIENT_SES* router_cli_ses;
 	sescmd_cursor_t*   scur = NULL;
         backend_ref_t*     bref;
-        
+	GWBUF* writebuf = buffer;
+
 	router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -2373,23 +2377,20 @@ static void clientReply (
             bool mapped = true, logged = false;
             int i;
             backend_ref_t* bkrf = router_cli_ses->rses_backend_ref;
-		    GWBUF* tmpbuf = writebuf;
             
             for(i = 0; i < router_cli_ses->rses_nbackends; i++)
             {
-                
                 if(bref->bref_dcb == bkrf[i].bref_dcb && !BREF_IS_MAPPED(&bkrf[i]))
                 {
-
-
 		    if(bref->map_queue)
 		    {
-			tmpbuf = gwbuf_append(bref->map_queue,tmpbuf);
+			writebuf = gwbuf_append(bref->map_queue,writebuf);
+			bref->map_queue = NULL;
 		    }
                     
                     if(parse_showdb_response(router_cli_ses,
                                 &router_cli_ses->rses_backend_ref[i],
-                                &tmpbuf))
+                                &writebuf))
 		    {
 			router_cli_ses->rses_backend_ref[i].bref_mapped = true;
 			 skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received SHOW DATABASES reply from %s for session %p",
@@ -2398,7 +2399,7 @@ static void clientReply (
 		    }
 		    else
 		    {
-			bref->map_queue = tmpbuf;
+			bref->map_queue = writebuf;
 			writebuf = NULL;
 			skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received partial SHOW DATABASES reply from %s for session %p",
                                 router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
@@ -2420,7 +2421,7 @@ static void clientReply (
                 }
             }
             
-	    while(tmpbuf && (tmpbuf = gwbuf_consume(tmpbuf,gwbuf_length(tmpbuf))));
+	    while(writebuf && (writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
             
             if(mapped)
             {
