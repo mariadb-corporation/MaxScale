@@ -837,7 +837,11 @@ int modutil_count_statements(GWBUF* buffer)
 	    ptr++;
     }
 
-    if(*(end - 1) == ';')
+    ptr = end - 1;
+    while(isspace(*ptr))
+	ptr--;
+    
+    if(*ptr == ';')
     {
 	num--;
     }
