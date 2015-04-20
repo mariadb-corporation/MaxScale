@@ -1,2 +1,1 @@
 SELECT x1 FROM t1;
-#SELECT * FROM t1;

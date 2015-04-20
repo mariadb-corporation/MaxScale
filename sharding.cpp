@@ -1,9 +1,34 @@
 /**
- * @file sharding.cpp
+ * @file sharding.cpp - Schema router test and regression test for MXS-78, MXS-79
  *
  * @verbatim
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+servers= server1, server2,server3  ,server4
+user=skysql
+passwd= skysql
+
+[Sharding router]
+type=service
+router=schemarouter
+servers=server1,     server2,              server3,server4
+user=skysql
+passwd=skysql
+auth_all_servers=1
+filters=QLA
 
  @endverbatim
+ * - stop all slaves in Master/Slave setup
+ * - restrt Maxscale
+ * - using direct connection to backend nodes
+ *    - create user0...userN users on all nodes
+ *    - create sharddb on all nodes
+ *    - create database 'shard_db%d" on node %d (% from 0 to N)
+ *    - GRANT SELECT,USAGE,CREATE ON shard_db.* TO 'user%d'@'%%' only on node %d
+ * - for every user%d
+ *   - open connection to schemarouter using user%d
+ * - CREATE TABLE table%d (x1 int, fl int)
  * - check if Maxscale alive
  */
 
@@ -94,7 +119,7 @@ int main(int argc, char *argv[])
 
     Test->connect_rwsplit();
 
-    printf("Trying USE");
+    printf("Trying USE shard_db\n");
     execute_query(Test->conn_rwsplit, "USE shard_db");
 
     for (i = 0; i < Test->repl->N; i++) {
@@ -102,6 +127,14 @@ int main(int argc, char *argv[])
         printf("%s\n", str);
         global_result += execute_query(Test->conn_rwsplit, str);
     }
+
+    mysql_close(Test->conn_rwsplit);
+
+    printf("Trying to connect with empty database name\n");
+    conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "", user_str, pass_str);
+    mysql_close(conn);
+
+
 
     Test->copy_all_logs(); return(global_result);
 }
