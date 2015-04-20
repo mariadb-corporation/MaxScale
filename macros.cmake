@@ -60,6 +60,9 @@ macro(set_variables)
   # Install init.d scripts and ldconf configuration files
   set(WITH_SCRIPTS TRUE CACHE BOOL "Install init.d scripts and ldconf configuration files")
 
+  # Use tcmalloc as the memory allocator
+  set(WITH_TCMALLOC FALSE CACHE BOOL "Use tcmalloc as the memory allocator")
+
   # Build tests
   set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
 

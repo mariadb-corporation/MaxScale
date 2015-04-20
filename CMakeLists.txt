@@ -13,6 +13,7 @@ set_variables()
 set_maxscale_version()
 
 set(CMAKE_INSTALL_PREFIX "/usr/local/mariadb-maxscale" CACHE PATH "Prefix prepended to install directories.")
+set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
@@ -27,6 +28,7 @@ find_package(Valgrind)
 find_package(MySQLClient)
 find_package(MySQL)
 find_package(Pandoc)
+find_package(TCMalloc)
 
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
