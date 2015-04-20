@@ -435,6 +435,7 @@ backend_write_timeout=2
 
 # galeramon specific options
 disable_master_failback=0
+available_when_donor=0
 ```
 
 #### `module`
@@ -498,6 +499,12 @@ By default, if a node takes a lower index than the current master one the monito
 The server status field may have the `SERVER_MASTER_STICKINESS` bit, meaning the current master selection is not based on the available rules but it's the one previously selected and then kept, accordingly to option value equal 1.
 
 Anyway, a new master will be selected in case of current master failure, regardless the option value.
+
+#### `available_when_donor`
+
+This option if set to 1 will allow Galera monitor to keep a node in `Donor` status in the server pool if it is using any xtrabackup method for SST, e.g. `wsrep_sst_method` equal to `xtrabackup` or `xtrabackup-v2`.
+
+As xtrabackup is a non-locking SST method, a node in `Donor` status can still be considered in sync. This option is not enabled by default and should be used as the administrator's discretion.
 
 #### `backend_connect_timeout`
 
