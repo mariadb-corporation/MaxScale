@@ -32,6 +32,7 @@
  * 24/06/14	Massimiliano Pinto	Added depth level 0 for each node
  * 30/10/14	Massimiliano Pinto	Added disableMasterFailback feature
  * 10/11/14	Massimiliano Pinto	Added setNetworkTimeout for connect,read,write
+ * 20/05/15	Guillaume Lefranc	Added availableWhenDonor feature
  *
  * @endverbatim
  */
@@ -158,6 +159,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		handle->id = MONITOR_DEFAULT_ID;
 		handle->interval = MONITOR_INTERVAL;
 		handle->disableMasterFailback = 0;
+		handle->availableWhenDonor = 0;
 		handle->master = NULL;
 		handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
 		handle->read_timeout=DEFAULT_READ_TIMEOUT;
@@ -170,6 +172,8 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 	{
 	    if(!strcmp(params->name,"disable_master_failback"))
 		handle->disableMasterFailback = config_truth_value(params->value);
+	    if(!strcmp(params->name,"available_when_donor"))
+		handle->availableWhenDonor = config_truth_value(params->value);
 	    params = params->next;
 	}
 
@@ -289,6 +293,7 @@ char		*sep;
 
 	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
 	dcb_printf(dcb,"\tMaster Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
+	dcb_printf(dcb,"\tAvailable when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
 	dcb_printf(dcb,"\tConnect Timeout:\t%i seconds\n", handle->connect_timeout);
 	dcb_printf(dcb,"\tRead Timeout:\t\t%i seconds\n", handle->read_timeout);
 	dcb_printf(dcb,"\tWrite Timeout:\t\t%i seconds\n", handle->write_timeout);
@@ -428,14 +433,28 @@ char 			*server_string;
 	}	
 
 	/* Check if the the Galera FSM shows this node is joined to the cluster */
-	if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_state_comment'") == 0
+	if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_state'") == 0
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
 		num_fields = mysql_num_fields(result);
 		while ((row = mysql_fetch_row(result)))
 		{
-			if (strncasecmp(row[1], "SYNCED", 3) == 0)
+			if (strcmp(row[1], "4") == 0) 
 				isjoined = 1;
+	
+			/* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
+			else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1) {
+				if (mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
+					&& (result = mysql_store_result(database->con)) != NULL)
+				{
+					num_fields = mysql_num_fields(result);
+					while ((row = mysql_fetch_row(result)))
+					{
+						if (strncmp(row[1], "xtrabackup", 10) == 0)
+							isjoined = 1;
+					}
+				}
+			}
 		}
 		mysql_free_result(result);
 	}
@@ -730,6 +749,22 @@ disableMasterFailback(void *arg, int disable)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
         memcpy(&handle->disableMasterFailback, &disable, sizeof(int));
+}
+
+/**
+ * Allow a Galera node to be in sync when Donor.
+ *
+ * When enabled, the monitor will check if the node is using xtrabackup or xtrabackup-v2
+ * as SST method. In that case, node will stay as synced.
+ *
+ * @param arg		The handle allocated by startMonitor
+ * @param disable	To allow sync status use 1, 0 for traditional behavior
+ */
+static void
+availableWhenDonor(void *arg, int disable)
+{
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+        memcpy(&handle->availableWhenDonor, &disable, sizeof(int));
 }
 
 /**
