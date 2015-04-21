@@ -42,6 +42,7 @@
  * 07/11/14	Massimiliano Pinto	Addition of monitor timeouts for connect/read/write
  * 20/02/15	Markus Mäkelä		Added connection_timeout parameter for services
  * 05/03/15	Massimiliano	Pinto	Added notification_feedback support
+ * 20/04/15	Guillaume Lefranc	Added available_when_donor parameter
  *
  * @endverbatim
  */
@@ -1893,6 +1894,7 @@ static char *monitor_params[] =
 		"backend_connect_timeout",
 		"backend_read_timeout",
 		"backend_write_timeout",
+		"available_when_donor",
                 NULL
         };
 /**
