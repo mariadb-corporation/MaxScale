@@ -720,6 +720,7 @@ createInstance(SERVICE *service, char **options)
                 return NULL; 
         } 
         router->service = service;
+	router->schemarouter_config.max_sescmd_hist = 0;
         spinlock_init(&router->lock);
         
         /** Calculate number of servers */
@@ -732,6 +733,37 @@ createInstance(SERVICE *service, char **options)
 	    skygw_log_write(LOGFILE_MESSAGE,"Schemarouter: Authentication data is fetched from all servers. To disable this "
 		    "add 'auth_all_servers=0' to the service.");
 	    service->users_from_all = true;
+	}
+
+	bool failure = false;
+
+	for(i=0;options && options[i];i++)
+	{
+	    char* value;
+	    if((value = strchr(options[i],'=')) == NULL)
+	    {
+		skygw_log_write(LOGFILE_ERROR,"Error: Unknown router options for Schemarouter: %s",options[i]);
+		failure = true;
+		break;
+	    }
+	    *value = '\0';
+	    value++;
+	    if(strcmp(options[i],"max_sescmd_history") == 0)
+	    {
+		router->schemarouter_config.max_sescmd_hist = atoi(value);
+	    }
+	    else
+	    {
+		skygw_log_write(LOGFILE_ERROR,"Error: Unknown router options for Schemarouter: %s",options[i]);
+		failure = true;
+		break;
+	    }
+	}
+
+	if(failure)
+	{
+	    free(router);
+	    return NULL;
 	}
 
         while (server != NULL)
@@ -891,7 +923,8 @@ static void* newSession(
     client_rses->dcb_reply->func.read = internalReply;
     client_rses->dcb_reply->state = DCB_STATE_POLLING;
     client_rses->dcb_reply->session = session;
-    
+    memcpy(&client_rses->rses_config,&router->schemarouter_config,sizeof(schemarouter_config_t));
+    client_rses->n_sescmd = 0;
     client_rses->dcb_route = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
     client_rses->dcb_route->func.read = internalRoute;
     client_rses->dcb_route->state = DCB_STATE_POLLING;
@@ -3733,17 +3766,33 @@ static bool route_session_write(
 		succp = false;
 		goto return_succp;
 	}
-        /** 
+
+	if(router_cli_ses->rses_config.max_sescmd_hist > 0 &&
+	 router_cli_ses->n_sescmd >= router_cli_ses->rses_config.max_sescmd_hist)
+	{
+	    LOGIF(LE, (skygw_log_write(
+		    LOGFILE_ERROR|LOGFILE_TRACE,
+			"Router session exceeded session command history limit of %d. "
+		        "Closing router session.",
+		router_cli_ses->rses_config.max_sescmd_hist)));
+		gwbuf_free(querybuf);
+		rses_end_locked_router_action(router_cli_ses);
+		router_cli_ses->rses_client_dcb->func.hangup(router_cli_ses->rses_client_dcb);
+
+		goto return_succp;
+	}
+        /**
+	 *
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
-         * are cleaned up as a part of router sessionclean-up.
+         * are cleaned up as a part of router session clean-up.
          */
         prop = rses_property_init(RSES_PROP_TYPE_SESCMD);
         mysql_sescmd_init(prop, querybuf, packet_type, router_cli_ses);
         
         /** Add sescmd property to router client session */
         rses_property_add(router_cli_ses, prop);
-         
+	router_cli_ses->n_sescmd++;
         for (i=0; i<router_cli_ses->rses_nbackends; i++)
         {
                 if (BREF_IS_IN_USE((&backend_ref[i])))

@@ -235,7 +235,8 @@ typedef struct backend_ref_st {
 typedef struct schemarouter_config_st {
         int               rw_max_slave_conn_percent;
         int               rw_max_slave_conn_count;
-	target_t          rw_use_sql_variables_in;	
+	target_t          rw_use_sql_variables_in;
+        int max_sescmd_hist;
 } schemarouter_config_t;
      
 
@@ -268,6 +269,7 @@ struct router_client_session {
         GWBUF*          queue; /*< Query that was received before the session was ready */
         DCB*            dcb_route; /*< Internal DCB used to trigger re-routing of buffers */
         DCB*            dcb_reply; /*< Internal DCB used to send replies to the client */
+        int n_sescmd;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
 #endif
