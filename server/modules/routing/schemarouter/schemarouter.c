@@ -721,6 +721,11 @@ createInstance(SERVICE *service, char **options)
         } 
         router->service = service;
 	router->schemarouter_config.max_sescmd_hist = 0;
+	router->stats.longest_sescmd = 0;
+	router->stats.n_hist_exceeded = 0;
+	router->stats.n_queries = 0;
+	router->stats.n_sescmd = 0;
+	router->stats.ses_longest = 0;
         spinlock_init(&router->lock);
         
         /** Calculate number of servers */
@@ -751,6 +756,10 @@ createInstance(SERVICE *service, char **options)
 	    if(strcmp(options[i],"max_sescmd_history") == 0)
 	    {
 		router->schemarouter_config.max_sescmd_hist = atoi(value);
+	    }
+	    else if(strcmp(options[i],"disable_sescmd_history") == 0)
+	    {
+		router->schemarouter_config.disable_sescmd_hist = config_truth_value(value);
 	    }
 	    else
 	    {
@@ -1158,14 +1167,15 @@ static void closeSession(
                 dcb_close(router_cli_ses->dcb_reply);
                 dcb_close(router_cli_ses->dcb_route);
 
-
-
                 /** Unlock */
                 rses_end_locked_router_action(router_cli_ses);
 
 		spinlock_acquire(&inst->lock);
 		if(inst->stats.longest_sescmd < router_cli_ses->stats.longest_sescmd)
 		    inst->stats.longest_sescmd = router_cli_ses->stats.longest_sescmd;
+		time_t ses_time = difftime(time(NULL),router_cli_ses->rses_client_dcb->session->stats.connect);
+		if(inst->stats.ses_longest < ses_time)
+		    inst->stats.ses_longest = ses_time;
 		spinlock_release(&inst->lock);
         }
 }
@@ -2342,6 +2352,10 @@ diagnostic(ROUTER *instance, DCB *dcb)
 	    router->stats.longest_sescmd);
     dcb_printf(dcb,"Session command history limit exceeded: %d times\n",
 	    router->stats.n_hist_exceeded);
+
+     dcb_printf(dcb,"\n\33[1;4mSession Time Statistics\33[0m\n");
+     dcb_printf(dcb,"Longest session: %d seconds\n",router->stats.ses_longest);
+     dcb_printf(dcb,"\n");
 }
 
 /**
@@ -3186,7 +3200,7 @@ static mysql_sescmd_t* mysql_sescmd_init (
         /** Set session command buffer */
         sescmd->my_sescmd_buf  = sescmd_buf;
         sescmd->my_sescmd_packet_type = packet_type;
-        
+        sescmd->position = atomic_add(&rses->pos_generator,1);
         return sescmd;
 }
 
@@ -3238,6 +3252,7 @@ static GWBUF* sescmd_cursor_process_replies(
          */
         while (scmd != NULL && replybuf != NULL)
         {
+	    scur->position = scmd->position;
                 /** Faster backend has already responded to client : discard */
                 if (scmd->my_sescmd_is_replied)
                 {
@@ -3805,6 +3820,44 @@ static bool route_session_write(
 
 		goto return_succp;
 	}
+
+	if(router_cli_ses->rses_config.disable_sescmd_hist)
+	{
+	    rses_property_t *prop, *tmp;
+	    backend_ref_t* bref;
+	    bool conflict;
+
+	    prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
+	    while(prop)
+	    {
+		conflict = false;
+
+		for(i = 0;i<router_cli_ses->rses_nbackends;i++)
+		{
+		    bref = &backend_ref[i];
+		    if(BREF_IS_IN_USE(bref))
+		    {
+
+			if(bref->bref_sescmd_cur.position <= prop->rses_prop_data.sescmd.position)
+			{
+			    conflict = true;
+			    break;
+			}
+		    }
+		}
+
+		if(conflict)
+		{
+		    break;
+		}
+
+		tmp = prop;
+		router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD] = prop->rses_prop_next;
+		rses_property_done(tmp);
+		prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
+	    }
+	}
+
         /**
 	 *
          * Additional reference is created to querybuf to 
