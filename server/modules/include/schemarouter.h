@@ -252,7 +252,10 @@ typedef struct {
         int             longest_sescmd; /*< Longest chain of stored session commands */
         int             n_hist_exceeded;/*< Number of sessions that exceeded session
                                          * command history limit */
-        time_t          ses_longest;      /*< Session start time */
+        int sessions;
+        double          ses_longest;      /*< Longest session */
+        double          ses_shortest; /*< Shortest session */
+        double          ses_average; /*< Average session length */
 } ROUTER_STATS;
 
 /**

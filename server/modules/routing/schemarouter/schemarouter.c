@@ -726,6 +726,7 @@ createInstance(SERVICE *service, char **options)
 	router->stats.n_queries = 0;
 	router->stats.n_sescmd = 0;
 	router->stats.ses_longest = 0;
+	router->stats.ses_shortest = (double)((unsigned long)(~0));
         spinlock_init(&router->lock);
         
         /** Calculate number of servers */
@@ -768,6 +769,10 @@ createInstance(SERVICE *service, char **options)
 		break;
 	    }
 	}
+
+	/** Setting a limit to the history size is not needed if it is disabled.*/
+	if(router->schemarouter_config.disable_sescmd_hist && router->schemarouter_config.max_sescmd_hist > 0)
+	    router->schemarouter_config.max_sescmd_hist = 0;
 
 	if(failure)
 	{
@@ -1054,7 +1059,8 @@ static void* newSession(
         
              
         rses_end_locked_router_action(client_rses);
-        
+
+	atomic_add(&router->stats.sessions, 1);
        
         /**
          * Version is bigger than zero once initialized.
@@ -1173,9 +1179,16 @@ static void closeSession(
 		spinlock_acquire(&inst->lock);
 		if(inst->stats.longest_sescmd < router_cli_ses->stats.longest_sescmd)
 		    inst->stats.longest_sescmd = router_cli_ses->stats.longest_sescmd;
-		time_t ses_time = difftime(time(NULL),router_cli_ses->rses_client_dcb->session->stats.connect);
+		double ses_time = difftime(time(NULL),router_cli_ses->rses_client_dcb->session->stats.connect);
 		if(inst->stats.ses_longest < ses_time)
 		    inst->stats.ses_longest = ses_time;
+		if(inst->stats.ses_shortest > ses_time)
+		    inst->stats.ses_shortest = ses_time;
+
+		inst->stats.ses_average = 
+			(ses_time + ((inst->stats.sessions - 1) * inst->stats.ses_average)) /
+			(inst->stats.sessions);
+
 		spinlock_release(&inst->lock);
         }
 }
@@ -2345,17 +2358,42 @@ diagnostic(ROUTER *instance, DCB *dcb)
     /** Session command statistics */
     dcb_printf(dcb,"\n\33[1;4mSession Commands\33[0m\n");
     dcb_printf(dcb,"Total number of queries: %d\n",
-	    router->stats.n_queries);
+	       router->stats.n_queries);
     dcb_printf(dcb,"Percentage of session commands: %.2f\n",
-	    sescmd_pct);
+	       sescmd_pct);
     dcb_printf(dcb,"Longest chain of stored session commands: %d\n",
-	    router->stats.longest_sescmd);
+	       router->stats.longest_sescmd);
     dcb_printf(dcb,"Session command history limit exceeded: %d times\n",
-	    router->stats.n_hist_exceeded);
+	       router->stats.n_hist_exceeded);
+    if(!router->schemarouter_config.disable_sescmd_hist)
+    {
+	dcb_printf(dcb,"Session command history: enabled\n");
+	if(router->schemarouter_config.max_sescmd_hist == 0)
+	{
+	    dcb_printf(dcb,"Session command history limit: unlimited\n");
+	}
+	else
+	{
+	    dcb_printf(dcb,"Session command history limit: %d\n",
+		     router->schemarouter_config.max_sescmd_hist);
+	}
+    }
+    else
+    {
 
-     dcb_printf(dcb,"\n\33[1;4mSession Time Statistics\33[0m\n");
-     dcb_printf(dcb,"Longest session: %d seconds\n",router->stats.ses_longest);
-     dcb_printf(dcb,"\n");
+	dcb_printf(dcb,"Session command history: disabled\n");
+    }
+
+    /** Session time statistics */
+
+    if(router->stats.sessions > 0)
+    {
+	dcb_printf(dcb,"\n\33[1;4mSession Time Statistics\33[0m\n");
+	dcb_printf(dcb,"Longest session: %.2lf seconds\n",router->stats.ses_longest);
+	dcb_printf(dcb,"Shortest session: %.2lf seconds\n",router->stats.ses_shortest);
+	dcb_printf(dcb,"Average session length: %.2lf seconds\n",router->stats.ses_average);
+    }
+    dcb_printf(dcb,"\n");
 }
 
 /**
