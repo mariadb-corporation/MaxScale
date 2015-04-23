@@ -6,8 +6,11 @@ These are the changes introduced in the next MaxScale version. This is not the o
 
 * Schemarouter now also allows for an upper limit to session commans.
 * Schemarouter correctly handles SHOW DATABASES responses that span multiple buffers.
+* Schemarouter now allows disabling of the session command history.
+* Readwritesplit now allows disabling of the session command history.
 * Logfiles have been renamed. The log names are now named error.log, messages.log, trace.log and debug.log.
 
+	
 ## MaxScale 1.1
 
 **NOTE:** MaxScale default installation directory has changed to `/usr/local/mariadb-maxscale` and the default password for MaxAdmin is now ´mariadb´.
