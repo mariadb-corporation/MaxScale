@@ -795,6 +795,7 @@ createInstance(SERVICE *service, char **options)
                 router->servers[nservers]->backend_conn_count = 0;
                 router->servers[nservers]->weight = 1;
                 router->servers[nservers]->be_valid = false;
+		router->servers[nservers]->stats.queries = 0;
 		if(server->server->monuser == NULL && service->credentials.name != NULL)
 		{
 			router->servers[nservers]->backend_server->monuser = 
@@ -1025,7 +1026,6 @@ static void* newSession(
         client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
-        router->stats.n_sessions      += 1;
         
         if (!(succp = rses_begin_locked_router_action(client_rses)))
 	{
@@ -1084,6 +1084,7 @@ static void closeSession(
         void*   router_session)
 {
         ROUTER_CLIENT_SES* router_cli_ses;
+	ROUTER_INSTANCE* inst;
         backend_ref_t*     backend_ref;
 
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
@@ -1100,7 +1101,8 @@ static void closeSession(
         }
         router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         CHK_CLIENT_RSES(router_cli_ses);
-        
+
+	inst = router_cli_ses->router;
         backend_ref = router_cli_ses->rses_backend_ref;
         /**
          * Lock router client session for secure read and update.
@@ -1155,9 +1157,16 @@ static void closeSession(
                 router_cli_ses->dcb_route->session = NULL;
                 dcb_close(router_cli_ses->dcb_reply);
                 dcb_close(router_cli_ses->dcb_route);
-                
+
+
+
                 /** Unlock */
-                rses_end_locked_router_action(router_cli_ses);                
+                rses_end_locked_router_action(router_cli_ses);
+
+		spinlock_acquire(&inst->lock);
+		if(inst->stats.longest_sescmd < router_cli_ses->stats.longest_sescmd)
+		    inst->stats.longest_sescmd = router_cli_ses->stats.longest_sescmd;
+		spinlock_release(&inst->lock);
         }
 }
 
@@ -2106,7 +2115,8 @@ static int routeQuery(
 		
 		if (succp)
 		{
-			atomic_add(&inst->stats.n_all, 1);
+			atomic_add(&inst->stats.n_sescmd, 1);
+			atomic_add(&inst->stats.n_queries, 1);
 			ret = 1;
 		}
 		goto retblock;
@@ -2307,6 +2317,9 @@ diagnostic(ROUTER *instance, DCB *dcb)
     ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
     int		  i = 0;
 
+    double sescmd_pct = router->stats.n_sescmd != 0 ?
+	100.0*((double)router->stats.n_sescmd / (double)router->stats.n_queries) :
+	0.0;
 
     dcb_printf(dcb,"\33[1;4m%-16s%-16s%-16s\33[0m\n","Server","Queries","State");
     for(i=0;router->servers[i];i++)
@@ -2319,6 +2332,16 @@ diagnostic(ROUTER *instance, DCB *dcb)
 	    "\33[30;41mDOWN\33[0m");
     }
 
+    /** Session command statistics */
+    dcb_printf(dcb,"\n\33[1;4mSession Commands\33[0m\n");
+    dcb_printf(dcb,"Total number of queries: %d\n",
+	    router->stats.n_queries);
+    dcb_printf(dcb,"Percentage of session commands: %.2f\n",
+	    sescmd_pct);
+    dcb_printf(dcb,"Longest chain of stored session commands: %d\n",
+	    router->stats.longest_sescmd);
+    dcb_printf(dcb,"Session command history limit exceeded: %d times\n",
+	    router->stats.n_hist_exceeded);
 }
 
 /**
@@ -3776,6 +3799,7 @@ static bool route_session_write(
 		        "Closing router session.",
 		router_cli_ses->rses_config.max_sescmd_hist)));
 		gwbuf_free(querybuf);
+		atomic_add(&router_cli_ses->router->stats.n_hist_exceeded,1);
 		rses_end_locked_router_action(router_cli_ses);
 		router_cli_ses->rses_client_dcb->func.hangup(router_cli_ses->rses_client_dcb);
 
@@ -3792,7 +3816,9 @@ static bool route_session_write(
         
         /** Add sescmd property to router client session */
         rses_property_add(router_cli_ses, prop);
-	router_cli_ses->n_sescmd++;
+	atomic_add(&router_cli_ses->stats.longest_sescmd,1);
+	atomic_add(&router_cli_ses->n_sescmd,1);
+
         for (i=0; i<router_cli_ses->rses_nbackends; i++)
         {
                 if (BREF_IS_IN_USE((&backend_ref[i])))
@@ -3847,6 +3873,10 @@ static bool route_session_write(
                                                 backend_ref[i].bref_backend->backend_server->name,
                                                 backend_ref[i].bref_backend->backend_server->port)));
                                 }
+				else
+				{
+				    atomic_add(&backend_ref[i].bref_backend->stats.queries,1);
+				}
                         }
                 }
                 else

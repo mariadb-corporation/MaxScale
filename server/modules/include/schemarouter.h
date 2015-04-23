@@ -238,7 +238,17 @@ typedef struct schemarouter_config_st {
 	target_t          rw_use_sql_variables_in;
         int max_sescmd_hist;
 } schemarouter_config_t;
-     
+
+/**
+ * The statistics for this router instance
+ */
+typedef struct {
+	int		n_queries;	/*< Number of queries forwarded    */
+        int             n_sescmd;       /*< Number of session commands */
+        int             longest_sescmd; /*< Longest chain of stored session commands */
+        int             n_hist_exceeded;/*< Number of sessions that exceeded session
+                                         * command history limit */
+} ROUTER_STATS;
 
 /**
  * The client session structure used within this router.
@@ -269,22 +279,12 @@ struct router_client_session {
         GWBUF*          queue; /*< Query that was received before the session was ready */
         DCB*            dcb_route; /*< Internal DCB used to trigger re-routing of buffers */
         DCB*            dcb_reply; /*< Internal DCB used to send replies to the client */
+        ROUTER_STATS    stats;     /*< Statistics for this router         */
         int n_sescmd;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
 #endif
 };
-
-/**
- * The statistics for this router instance
- */
-typedef struct {
-	int		n_sessions;	/*< Number sessions created        */
-	int		n_queries;	/*< Number of queries forwarded    */
-	int		n_master;	/*< Number of stmts sent to master */
-	int		n_slave;	/*< Number of stmts sent to slave  */
-	int		n_all;		/*< Number of stmts sent to all    */
-} ROUTER_STATS;
 
 
 /**
