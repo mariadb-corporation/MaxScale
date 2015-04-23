@@ -63,7 +63,7 @@ static void DoSource(int so, char *cmd);
 static void DoUsage();
 static int isquit(char *buf);
 static void PrintVersion(const char *progname);
-static void read_inifile(char **hostname, char **port, char **user, char **passwd);
+static void read_inifile(char **hostname, char **port, char **user, char **passwd,int*);
 
 #ifdef HISTORY
 static char *
@@ -82,6 +82,7 @@ static struct option long_options[] = {
   {"port",     required_argument, 0, 'P'},
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},
+  {"emacs",     no_argument,       0, 'e'},
   {0, 0, 0, 0}
 };
 
@@ -94,6 +95,9 @@ static struct option long_options[] = {
 int
 main(int argc, char **argv)
 {
+const char* vi = "vi";
+const char* emacs = "emacs";
+
 int		i, num, rv;
 #ifdef HISTORY
 char		*buf;
@@ -109,13 +113,14 @@ char		*hostname = "localhost";
 char		*port = "6603";
 char		*user = "admin";
 char		*passwd = NULL;
+int use_emacs = 0;
 int		so;
 int             option_index = 0;
 char            c;
 
-	read_inifile(&hostname, &port, &user, &passwd);
+	read_inifile(&hostname, &port, &user, &passwd,&use_emacs);
 
-        while ((c = getopt_long(argc, argv, "h:p:P:u:v?", 
+        while ((c = getopt_long(argc, argv, "h:p:P:u:v?e", 
 				long_options, &option_index))
 	       >= 0)
         {
@@ -135,6 +140,9 @@ char            c;
 	  case 'v':
 	    PrintVersion(*argv);
 	    exit(EXIT_SUCCESS);
+      case 'e':
+          use_emacs = 1;
+          break;          
 	  case '?':
 	    DoUsage(*argv);
 	    exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
@@ -224,7 +232,10 @@ char            c;
 					/* Initialize editline		*/
 	el = el_init(*argv, stdin, stdout, stderr);
 
-	el_set(el, EL_EDITOR, "vi");	/* Default editor is vi		*/
+    if(use_emacs)
+        el_set(el, EL_EDITOR, emacs);	/** Editor is emacs */
+    else
+        el_set(el, EL_EDITOR, vi);	/* Default editor is vi		*/
 	el_set(el, EL_SIGNAL, 1);	/* Handle signals gracefully	*/
 	el_set(el, EL_PROMPT, prompt);/* Set the prompt function */
 
@@ -592,7 +603,7 @@ char	*ptr = str + strlen(str);
  * @param passwd	Pointer to the password to be updated
  */
 static void
-read_inifile(char **hostname, char **port, char **user, char **passwd)
+read_inifile(char **hostname, char **port, char **user, char **passwd, int* editor)
 {
 char	pathname[400];
 char	*home, *brkt;
@@ -624,6 +635,17 @@ char	line[400];
 				*user = strdup(value);
 			else if (strcmp(name, "passwd") == 0)
 				*passwd = strdup(value);
+			else if (strcmp(name, "editor") == 0)
+            {
+                
+                if(strcmp(value,"vi") == 0)
+                    *editor = 0;
+                else if(strcmp(value,"emacs") == 0)
+                    *editor = 1;
+                else
+				fprintf(stderr, "WARNING: Unrecognised "
+					"parameter '%s=%s' in .maxadmin file\n", name, value);
+            }
 			else
 			{
 				fprintf(stderr, "WARNING: Unrecognised "
