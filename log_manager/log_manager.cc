@@ -1333,9 +1333,9 @@ static bool logfile_set_enabled(
         CHK_LOGFILE(lf);
 
         if (val) {
-            logstr = strdup("---\tLogging is enabled\t--");
+            logstr = strdup("---\tLogging to file is enabled\t--");
         } else {
-            logstr = strdup("---\tLogging is disabled\t--");
+            logstr = strdup("---\tLogging to file is disabled\t--");
         }
         oldval = lf->lf_enabled;
         lf->lf_enabled = val;
