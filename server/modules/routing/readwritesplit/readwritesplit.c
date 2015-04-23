@@ -628,7 +628,7 @@ createInstance(SERVICE *service, char **options)
 	 * If server weighting has been defined calculate the percentage
 	 * of load that will be sent to each server. This is only used for
 	 * calculating the least connections, either globally or within a
-	 * service, or the numebr of current operations on a server.
+	 * service, or the number of current operations on a server.
 	 */
 	if ((weightby = serviceGetWeightingParameter(service)) != NULL)
 	{
@@ -698,6 +698,13 @@ createInstance(SERVICE *service, char **options)
 	{
                 rwsplit_process_router_options(router, options);
 	}
+
+	/** These options cancel each other out */
+	if(router->rwsplit_config.disable_sescmd_hist && router->rwsplit_config.rw_max_sescmd_history_size > 0)
+	{
+	    router->rwsplit_config.rw_max_sescmd_history_size = 0;
+	}
+
 	/** 
          * Set default value for max_slave_connections and for slave selection
          * criteria. If parameter is set in config file max_slave_connections 
@@ -807,7 +814,7 @@ static void* newSession(
                 rwsplit_process_router_options(router, router->service->routerOptions);
         }
         /** Copy config struct from router instance */
-        client_rses->rses_config = router->rwsplit_config;
+        memcpy(&client_rses->rses_config,&router->rwsplit_config,sizeof(rwsplit_config_t));
         
         spinlock_release(&router->lock);
         /** 
@@ -3667,7 +3674,8 @@ static mysql_sescmd_t* mysql_sescmd_init (
         /** Set session command buffer */
         sescmd->my_sescmd_buf  = sescmd_buf;
         sescmd->my_sescmd_packet_type = packet_type;
-        
+	sescmd->position = atomic_add(&rses->pos_generator,1);
+
         return sescmd;
 }
 
@@ -3724,6 +3732,7 @@ static GWBUF* sescmd_cursor_process_replies(
         while (scmd != NULL && replybuf != NULL)
         {
 	    bref->reply_cmd = *((unsigned char*)replybuf->start + 4);
+	    scur->position = scmd->position;
                 /** Faster backend has already responded to client : discard */
                 if (scmd->my_sescmd_is_replied)
                 {
@@ -4361,6 +4370,43 @@ static bool route_session_write(
 		goto return_succp;
 	}
 
+	if(router_cli_ses->rses_config.disable_sescmd_hist)
+	{
+	    rses_property_t *prop, *tmp;
+	    backend_ref_t* bref;
+	    bool conflict;
+
+	    prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
+	    while(prop)
+	    {
+		conflict = false;
+
+		for(i = 0;i<router_cli_ses->rses_nbackends;i++)
+		{
+		    bref = &backend_ref[i];
+		    if(BREF_IS_IN_USE(bref))
+		    {
+
+			if(bref->bref_sescmd_cur.position <= prop->rses_prop_data.sescmd.position)
+			{
+			    conflict = true;
+			    break;
+			}
+		    }
+		}
+
+		if(conflict)
+		{
+		    break;
+		}
+
+		tmp = prop;
+		router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD] = prop->rses_prop_next;
+		rses_property_done(tmp);
+		prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
+	    }
+	}
+
         /** 
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
@@ -4537,6 +4583,10 @@ static void rwsplit_process_router_options(
 			else if(strcmp(options[i], "max_sescmd_history") == 0)
 			{
 			    router->rwsplit_config.rw_max_sescmd_history_size = atoi(value);
+			}
+			else if(strcmp(options[i],"disable_sescmd_history") == 0)
+			{
+			    router->rwsplit_config.disable_sescmd_hist = config_truth_value(value);
 			}
                 }
         } /*< for */
