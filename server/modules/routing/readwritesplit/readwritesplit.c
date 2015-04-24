@@ -2789,16 +2789,16 @@ static void clientReply (
 			bool rconn = false;
                         writebuf = sescmd_cursor_process_replies(writebuf, bref, &rconn);
 
-			if(rconn)
+			if(rconn && !router_inst->rwsplit_config.disable_slave_recovery)
 			{
-			   select_connect_backend_servers(&router_cli_ses->rses_master_ref,
-						    router_cli_ses->rses_backend_ref,
-						    router_cli_ses->rses_nbackends,
-						    router_cli_ses->rses_config.rw_max_slave_conn_count,
-						    router_cli_ses->rses_config.rw_max_slave_replication_lag,
-						    router_cli_ses->rses_config.rw_slave_select_criteria,
-						    router_cli_ses->rses_master_ref->bref_dcb->session,
-						    router_cli_ses->router);
+			    select_connect_backend_servers(&router_cli_ses->rses_master_ref,
+						     router_cli_ses->rses_backend_ref,
+						     router_cli_ses->rses_nbackends,
+						     router_cli_ses->rses_config.rw_max_slave_conn_count,
+						     router_cli_ses->rses_config.rw_max_slave_replication_lag,
+						     router_cli_ses->rses_config.rw_slave_select_criteria,
+						     router_cli_ses->rses_master_ref->bref_dcb->session,
+						     router_cli_ses->router);
 			}
                 }
                 /** 
@@ -4588,6 +4588,10 @@ static void rwsplit_process_router_options(
 			{
 			    router->rwsplit_config.disable_sescmd_hist = config_truth_value(value);
 			}
+			else if(strcmp(options[i],"disable_slave_recovery") == 0)
+			{
+			    router->rwsplit_config.disable_slave_recovery = config_truth_value(value);
+			}
                 }
         } /*< for */
 }
@@ -4830,6 +4834,12 @@ static bool handle_error_new_connection(
 	 * Try to get replacement slave or at least the minimum 
 	 * number of slave connections for router session.
 	 */
+	if(inst->rwsplit_config.disable_slave_recovery)
+	{
+	    succp = have_enough_servers(&rses,1,router_nservers,inst) ? true : false;
+	}
+	else
+	{
 	succp = select_connect_backend_servers(
 			&rses->rses_master_ref,
 			rses->rses_backend_ref,
@@ -4839,6 +4849,7 @@ static bool handle_error_new_connection(
 			rses->rses_config.rw_slave_select_criteria,
 			ses,
 			inst);
+	}
 	
 return_succp:
 	return succp;        

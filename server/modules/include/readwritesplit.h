@@ -251,6 +251,7 @@ typedef struct rwsplit_config_st {
 	target_t          rw_use_sql_variables_in;
         int               rw_max_sescmd_history_size;
         bool disable_sescmd_hist;
+        bool disable_slave_recovery;
 } rwsplit_config_t;
      
 
