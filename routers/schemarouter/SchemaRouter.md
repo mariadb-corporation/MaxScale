@@ -47,7 +47,7 @@ The schemarouter supports the following router options:
 |option				|parameter	|description|
 ---------------------------------------------
 |max_sescmd_hitory	|<int>		|Set a limit on the number of session modifying commands a session can execute. This sets an effective cap on the memory consupmtion of the session.|
-
+|disable_sescmd_history|<boolean>|Disable the session command history. This will prevent growing memory consumption of a long-running session and allows pooled connections to MaxScale to be used. The drawback of this is the fact that if a server goes down, the session state will not be consistent anymore.|
 ## Limitations
 
 The schemarouter router currently has some limitations due to the nature of the sharding implementation and the way the session variables are detected and routed. Here is a list of the current limitations.
