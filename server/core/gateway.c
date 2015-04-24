@@ -2015,7 +2015,7 @@ static int write_pid_file(char *home_dir) {
 
 	int fd = -1;
 
-        snprintf(pidfile, PATH_MAX, "%s/log/maxscale.pid", home_dir);
+        snprintf(pidfile, PATH_MAX, "%s/data/maxscale.pid", home_dir);
 
         fd = open(pidfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
         if (fd == -1) {
