@@ -908,6 +908,10 @@ int			error_count = 0;
 					/* set monitor interval */
 					if (interval > 0)
 						monitorSetInterval(obj->element, interval);
+					else
+					    skygw_log_write(LOGFILE_ERROR,"Warning: Monitor '%s' "
+						    "missing monitor_interval parameter, "
+						    "default value of 10000 miliseconds.",obj->object);
 
 					/* set timeouts */
 					if (connect_timeout > 0)

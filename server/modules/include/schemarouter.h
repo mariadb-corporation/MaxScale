@@ -136,6 +136,7 @@ typedef struct mysql_sescmd_st {
         GWBUF*             my_sescmd_buf;        /*< Query buffer */
         unsigned char      my_sescmd_packet_type;/*< Packet type */
 	bool               my_sescmd_is_replied; /*< Is cmd replied to client */
+        int      position; /*< Position of this command */
 #if defined(SS_DEBUG)
         skygw_chk_t        my_sescmd_chk_tail;
 #endif
@@ -170,6 +171,7 @@ typedef struct sescmd_cursor_st {
 	rses_property_t**  scmd_cur_ptr_property; /*< address of pointer to owner property */
 	mysql_sescmd_t*    scmd_cur_cmd;          /*< pointer to current session command */
 	bool               scmd_cur_active;       /*< true if command is being executed */
+        int      position; /*< Position of this cursor */
 #if defined(SS_DEBUG)
 	skygw_chk_t        scmd_cur_chk_tail;
 #endif
@@ -221,6 +223,7 @@ typedef struct backend_ref_st {
         DCB*            bref_dcb; /*< Backend DCB */
         bref_state_t    bref_state; /*< State of the backend */
         bool            bref_mapped; /*< Whether the backend has been mapped */
+        bool            last_sescmd_replied;
         int             bref_num_result_wait; /*< Number of not yet received results */
         sescmd_cursor_t bref_sescmd_cur; /*< Session command cursor */
 	GWBUF*          bref_pending_cmd; /*< For stmt which can't be routed due active sescmd execution */
@@ -235,9 +238,25 @@ typedef struct backend_ref_st {
 typedef struct schemarouter_config_st {
         int               rw_max_slave_conn_percent;
         int               rw_max_slave_conn_count;
-	target_t          rw_use_sql_variables_in;	
+	target_t          rw_use_sql_variables_in;
+        int max_sescmd_hist;
+        bool disable_sescmd_hist;
 } schemarouter_config_t;
-     
+
+/**
+ * The statistics for this router instance
+ */
+typedef struct {
+	int		n_queries;	/*< Number of queries forwarded    */
+        int             n_sescmd;       /*< Number of session commands */
+        int             longest_sescmd; /*< Longest chain of stored session commands */
+        int             n_hist_exceeded;/*< Number of sessions that exceeded session
+                                         * command history limit */
+        int sessions;
+        double          ses_longest;      /*< Longest session */
+        double          ses_shortest; /*< Shortest session */
+        double          ses_average; /*< Average session length */
+} ROUTER_STATS;
 
 /**
  * The client session structure used within this router.
@@ -268,21 +287,13 @@ struct router_client_session {
         GWBUF*          queue; /*< Query that was received before the session was ready */
         DCB*            dcb_route; /*< Internal DCB used to trigger re-routing of buffers */
         DCB*            dcb_reply; /*< Internal DCB used to send replies to the client */
+        ROUTER_STATS    stats;     /*< Statistics for this router         */
+        int             n_sescmd;
+        int             pos_generator;
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
 #endif
 };
-
-/**
- * The statistics for this router instance
- */
-typedef struct {
-	int		n_sessions;	/*< Number sessions created        */
-	int		n_queries;	/*< Number of queries forwarded    */
-	int		n_master;	/*< Number of stmts sent to master */
-	int		n_slave;	/*< Number of stmts sent to slave  */
-	int		n_all;		/*< Number of stmts sent to all    */
-} ROUTER_STATS;
 
 
 /**
@@ -301,15 +312,10 @@ typedef struct router_instance {
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
         struct router_instance* next;        /*< Next router on the list            */
 	bool			available_slaves; /*< The router has some slaves available */
-	//HASHTABLE* dbnames_hash; /** Hashtable containing the database names and where to find them */
-	//char** ignore_list;
+
 } ROUTER_INSTANCE;
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
         (SERVER_IS_SLAVE((b)->backend_server) ? BE_SLAVE :  BE_UNDEFINED));
-#if 0
-void* dbnames_hash_init(ROUTER_INSTANCE* inst,BACKEND** backends);
-bool update_dbnames_hash(ROUTER_INSTANCE* inst,BACKEND** backends, HASHTABLE* hashtable);
-#endif
 
 #endif /*< _SCHEMAROUTER_H */

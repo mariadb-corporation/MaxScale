@@ -831,6 +831,8 @@ In above-mentioned case the user-defined variable would only be updated in the m
 
 When a limitation is set, it effectively creates a cap on the session's memory consumption. This might be useful if connection pooling is used and the sessions use large amounts of session commands.
 
+`disable_sescmd_history=true|false` disables the session command history. This way nothing is stored and if a slave server fails and a new one is taken in its stead, the session on that server will be in an inconsistent state compared to the master server. Disabling session command history will allow connection pooling without causing a constant growth in the memory consumption.
+
 An example of Read/Write Split router configuration :
 
 ```
