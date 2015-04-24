@@ -42,6 +42,12 @@ GRANT SELECT,USAGE ON shard.* TO 'john'@'%';
 
 This would in effect allow the user 'john' to only see the database 'shard' on this server. Take notice that these grants are matched against MaxScale's hostname instead of the client's hostname. Only user authentication uses the client's hostname and all other grants use MaxScale's hostname.
 
+The schemarouter supports the following router options:
+
+|option				|parameter	|description|
+---------------------------------------------
+|max_sescmd_hitory	|<int>		|Set a limit on the number of session modifying commands a session can execute. This sets an effective cap on the memory consupmtion of the session.|
+|disable_sescmd_history|<boolean>|Disable the session command history. This will prevent growing memory consumption of a long-running session and allows pooled connections to MaxScale to be used. The drawback of this is the fact that if a server goes down, the session state will not be consistent anymore.|
 ## Limitations
 
 The schemarouter router currently has some limitations due to the nature of the sharding implementation and the way the session variables are detected and routed. Here is a list of the current limitations.

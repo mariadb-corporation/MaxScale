@@ -13,8 +13,8 @@ A Google Group exists for MaxScale that can be used to discuss ideas, issues and
 Send email to [maxscale@googlegroups.com](mailto:maxscale@googlegroups.com)
 	or use the [forum](http://groups.google.com/forum/#!forum/maxscale) interface
 	
-Bugs can be reported in the MariaDB Corporation bugs database
-	[bug.mariadb.com](http://bugs.mariadb.com)
+Bugs can be reported in the MariaDB Jira
+	[https://mariadb.atlassian.net](https://mariadb.atlassian.net)
 
 ## Installing MaxScale
 Information about installing MaxScale, either from a repository or by building from source code, is included in the guide [Getting Started with MaxScale](/Documentation/Getting-Started/Getting-Started-With-MaxScale.md).
