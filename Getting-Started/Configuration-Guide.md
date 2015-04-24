@@ -440,6 +440,7 @@ backend_write_timeout=2
 # galeramon specific options
 disable_master_failback=0
 available_when_donor=0
+disable_master_role_setting=0
 ```
 
 #### `module`
@@ -509,6 +510,13 @@ Anyway, a new master will be selected in case of current master failure, regardl
 This option if set to 1 will allow Galera monitor to keep a node in `Donor` status in the server pool if it is using any xtrabackup method for SST, e.g. `wsrep_sst_method` equal to `xtrabackup` or `xtrabackup-v2`.
 
 As xtrabackup is a non-locking SST method, a node in `Donor` status can still be considered in sync. This option is not enabled by default and should be used as the administrator's discretion.
+
+#### `disable_master_role_setting`
+
+This option if set to 1 will stop the Galera monitor from setting the status of
+backend servers to master or slave.  It is applicable when the Galera router is
+being used to spread writes across multiple nodes, so that no server is to be
+nominated as the master.
 
 #### `backend_connect_timeout`
 
@@ -1367,11 +1375,11 @@ Example:
 ```
 [Galera Listener]
 type=listener
-address=192.1681.3.33
+address=192.168.3.33
 port=4408
 socket=/servers/maxscale/galera.sock
 ```
 
-TCP/IP Traffic must be permitted to 192.1681.3.33 port 4408
+TCP/IP Traffic must be permitted to 192.168.3.33 port 4408
 
 For Unix socket, the socket file path (example: `/servers/maxscale/galera.sock`) must be writable by the Unix user MaxScale runs as.
