@@ -2,9 +2,13 @@
 #
 # Global parameters
 #
-# Number of worker threads in MaxScale
+# Number of worker threads in MaxScale.
 #
 # 	threads=<number of threads>
+#
+# Directory for the MaxScale log files. Default is /var/log/maxscale/.
+#
+#	logdir=<path to directory>
 #
 # Enabled logfiles. The message log is enabled by default and
 # the error log is always enabled.
