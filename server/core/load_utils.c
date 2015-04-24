@@ -48,6 +48,7 @@
 #include	<curl/curl.h>
 #include	<sys/utsname.h>
 #include	<openssl/sha.h>
+#include        <gw.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -146,16 +147,16 @@ MODULE_INFO	*mod_info = NULL;
 		
 		if (access(fname, F_OK) == -1)
 		{
-			home = get_maxscale_home ();
-			snprintf(fname, MAXPATHLEN+1,"%s/modules/lib%s.so", home, module);
+			//home = get_maxscale_home ();
+			snprintf(fname, MAXPATHLEN+1,"%s/lib%s.so", get_moduledir(), module);
 
                         if (access(fname, F_OK) == -1)
 			{
 				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
 					"Error : Unable to find library for "
-                                        "module: %s.",
-                                        module)));
+                                        "module: %s. Module dir: %s",
+                                        module, get_moduledir())));
 				return NULL;
 			}
 		}
