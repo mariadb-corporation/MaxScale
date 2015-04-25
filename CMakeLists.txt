@@ -37,7 +37,6 @@ if(NOT CURL_FOUND)
   message(FATAL_ERROR "Failed to locate dependency: libcurl")
 endif()
 
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/modules)
 
 # Make sure the release notes for this release are present if it is a stable one
 if(${MAXSCALE_VERSION} MATCHES "-stable")
@@ -47,6 +46,7 @@ if(${MAXSCALE_VERSION} MATCHES "-stable")
     message(FATAL_ERROR "Could not find the release notes for this stable release: ${MAXSCALE_VERSION_NUMERIC}")
   endif()
 endif()
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_MODULE_INSTALL}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBRARY_INSTALL})
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DIR}/server/include/version.h)
@@ -127,7 +127,7 @@ if(NOT WITHOUT_MAXADMIN)
   add_subdirectory(client)
 endif()
 
-
+# Generate text versions of some documents
 execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl 
 ${CMAKE_SOURCE_DIR}/Documentation/Changelog.md
 ${CMAKE_BINARY_DIR}/Changelog.txt)
@@ -138,28 +138,17 @@ execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
 ${CMAKE_SOURCE_DIR}/Documentation/Upgrading-To-MaxScale-1.1.0.md
  ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt)
 
-message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 
-if(PACKAGE)
-  install(FILES server/MaxScale_template.cnf DESTINATION /etc)
-  install(FILES server/MaxScale_BinlogServer_template.cnf DESTINATION /etc)
-  install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION /usr/share/maxscale)
-  install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION /usr/share/maxscale)
-  install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION /usr/share/maxscale)
-  install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION /usr/share/maxscale)
-  install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION /usr/share/maxscale)
-  install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION /usr/share/maxscale)
-else()
-  install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION .)
-  install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION .)
-  install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION .)
-  install(FILES server/MaxScale_template.cnf DESTINATION etc)
-  install(FILES server/MaxScale_BinlogServer_template.cnf DESTINATION etc)
-  install(FILES ${ERRMSG} DESTINATION mysql)
-  install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION .)
-  install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION .)
-  install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION .)
-endif()
+install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION ${MAXSCALE_SHARE_DIR})
+install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION ${MAXSCALE_SHARE_DIR})
+install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION ${MAXSCALE_SHARE_DIR})
+install(FILES server/MaxScale_template.cnf DESTINATION ${MAXSCALE_CONFIG_DIR})
+install(FILES server/MaxScale_BinlogServer_template.cnf DESTINATION ${MAXSCALE_CONFIG_DIR})
+install(FILES ${ERRMSG} DESTINATION ${MAXSCALE_LANG_DIR})
+install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${MAXSCALE_SHARE_DIR})
+install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${MAXSCALE_SHARE_DIR})
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${MAXSCALE_SHARE_DIR})
+
 # Install startup scripts and ldconfig files
 if(WITH_SCRIPTS)
   configure_file(${CMAKE_SOURCE_DIR}/maxscale.conf.in ${CMAKE_BINARY_DIR}/maxscale.conf @ONLY)

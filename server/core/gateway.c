@@ -113,16 +113,6 @@ static char* server_options[] = {
 
 const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
 
-const char* default_cnf_fname = "MaxScale.cnf";
-
-const char* default_configdir = "/etc/";
-const char* default_logdir = "/var/log/maxscale/";
-const char* default_datadir = "/var/lib/maxscale/";
-const char* default_moduledir = "/lib64/maxscale/modules/";
-const char* default_cachedir = "/var/cache/maxscale/";
-const char* default_langdir = "/usr/share/mysql/english/";
-const char* default_piddir = "/var/run/maxscale/";
-
 static char* server_groups[] = {
     "embedded",
     "server",
@@ -1752,7 +1742,8 @@ int main(int argc, char **argv)
 
 	    if(langdir == NULL)
 		langdir = strdup(default_langdir);
-
+	    if(moduledir == NULL)
+		moduledir = strdup(default_moduledir);
 	/**
          * Set a data directory for the mysqld library, we use
          * a unique directory name to avoid clauses if multiple
@@ -1786,33 +1777,35 @@ int main(int argc, char **argv)
         if (!daemon_mode)
         {
                 fprintf(stderr,
-                        //"Home directory     : %s"
-                        "Configuration file : %s"
-                        "\nLog directory      : %s"
-                        "\nData directory     : %s\n\n",
-                        //home_dir,
+                        "Configuration file : %s\n"
+                        "Log directory      : %s\n"
+                        "Data directory     : %s\n"
+			"Module directory   : %s\n\n",
                         cnf_file_path,
                         logdir,
-                        datadir);
+                        datadir,
+			moduledir);
         }
-/*
-        LOGIF(LM, (skygw_log_write_flush(
-                           LOGFILE_MESSAGE,
-                           "Home directory      : %s",
-                           home_dir)));
-*/
-        LOGIF(LM, (skygw_log_write_flush(
-                           LOGFILE_MESSAGE,
-                           "Data directory      : %s",
-                           datadir)));
-        LOGIF(LM, (skygw_log_write_flush(
-                           LOGFILE_MESSAGE,
-                           "Log directory       : %s/",
-                           logdir)));
-        LOGIF(LM, (skygw_log_write_flush(
-                           LOGFILE_MESSAGE,
-                           "Configuration file  : %s",
-                           cnf_file_path)));
+
+        LOGIF(LM,
+	      (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+			       "Configuration file: %s",
+			       cnf_file_path)));
+        LOGIF(LM,
+	      (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+			       "Log directory: %s/",
+			       logdir)));
+	LOGIF(LM,
+	 (skygw_log_write_flush(
+		LOGFILE_MESSAGE,
+			  "Data directory: %s",
+			  datadir)));
+	LOGIF(LM,
+	 (skygw_log_write_flush(LOGFILE_MESSAGE,
+			  "Module directory: %s",
+			  moduledir)));
 
         /*< Update the server options */
         for (i = 0; server_options[i]; i++)

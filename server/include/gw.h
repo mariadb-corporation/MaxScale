@@ -1,3 +1,5 @@
+#ifndef _GW_HG
+#define _GW_HG
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
@@ -16,8 +18,18 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
 #include <stdbool.h>
+
+/** Default file locations */
+static const char* default_cnf_fname = "MaxScale.cnf";
+static const char* default_configdir = "/etc/";
+static const char* default_logdir = "/var/log/maxscale/";
+static const char* default_datadir = "/var/cache/maxscale/";
+static const char* default_moduledir = "/lib64/maxscale/";
+static const char* default_cachedir = "/var/cache/maxscale/";
+static const char* default_langdir = "/usr/share/mysql/english/"; /*< This is where the MariaDB
+                                                                   *  server installs errmsg.sys */
+static const char* default_piddir = "/var/run/maxscale/";
 
 #define EXIT_FAILURE 1
 
@@ -66,3 +78,4 @@ int  gw_getsockerrno(int fd);
 int  parse_bindconfig(char *, unsigned short, struct sockaddr_in *);
 int setipaddress(struct in_addr *, char *);
 char* get_moduledir();
+#endif

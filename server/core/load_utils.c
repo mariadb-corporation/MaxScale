@@ -147,7 +147,6 @@ MODULE_INFO	*mod_info = NULL;
 		
 		if (access(fname, F_OK) == -1)
 		{
-			//home = get_maxscale_home ();
 			snprintf(fname, MAXPATHLEN+1,"%s/lib%s.so", get_moduledir(), module);
 
                         if (access(fname, F_OK) == -1)
