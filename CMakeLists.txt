@@ -6,15 +6,16 @@ endif()
 
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 
+
 include(${CMAKE_SOURCE_DIR}/cmake/macros.cmake)
+
+# Set the installation layout
+set(INSTALL_LAYOUT "STANDALONE" CACHE STRING "Install layout, options are: STANDALONE, RPM, DEB")
 include(${CMAKE_SOURCE_DIR}/cmake/install_layout.cmake)
+
 enable_testing()
 set_variables() 
 set_maxscale_version()
-
-
-set(INSTALL_LAYOUT "STANDALONE" CACHE STRING "Install layout, options are: STANDALONE, RPM, DEB")
-set_install_layout(${INSTALL_LAYOUT})
 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
 
@@ -22,7 +23,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 project(MaxScale)
 
-#Disabled for now pending evaluation
+#Do the platform check
 include(cmake/CheckPlatform.cmake) 
 
 check_deps()
@@ -40,7 +41,7 @@ if(NOT CURL_FOUND)
   message(FATAL_ERROR "Failed to locate dependency: libcurl")
 endif()
 
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${MAXSCALE_MODULE_DIR}:${MAXSCALE_LIBRARY_DIR})
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBDIR})
 
 # Make sure the release notes for this release are present if it is a stable one
 if(${MAXSCALE_VERSION} MATCHES "-stable")
@@ -143,15 +144,15 @@ ${CMAKE_SOURCE_DIR}/Documentation/Upgrading-To-MaxScale-1.1.0.md
  ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt)
 
 
-install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION ${MAXSCALE_SHARE_DIR})
-install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION ${MAXSCALE_SHARE_DIR})
-install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION ${MAXSCALE_SHARE_DIR})
-install(FILES server/MaxScale_template.cnf DESTINATION ${MAXSCALE_CONFIG_DIR})
-install(FILES server/MaxScale_BinlogServer_template.cnf DESTINATION ${MAXSCALE_CONFIG_DIR})
-install(FILES ${ERRMSG} DESTINATION ${MAXSCALE_SHARE_DIR})
-install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${MAXSCALE_SHARE_DIR})
-install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${MAXSCALE_SHARE_DIR})
-install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${MAXSCALE_SHARE_DIR})
+install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES server/MaxScale_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES server/MaxScale_BinlogServer_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${ERRMSG} DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${MAXSCALE_SHAREDIR})
 
 # Install startup scripts and ldconfig files
 if(WITH_SCRIPTS)
@@ -176,13 +177,13 @@ endif()
 
 if(PACKAGE)
   # Install the files copied by the postinst script into the share folder
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHARE_DIR}
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION ${MAXSCALE_SHARE_DIR}
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION ${MAXSCALE_SHAREDIR}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/postinst DESTINATION ${MAXSCALE_SHARE_DIR}
+  install(FILES ${CMAKE_BINARY_DIR}/postinst DESTINATION ${MAXSCALE_SHAREDIR}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/postrm DESTINATION ${MAXSCALE_SHARE_DIR}
+  install(FILES ${CMAKE_BINARY_DIR}/postrm DESTINATION ${MAXSCALE_SHAREDIR}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
   if(${CMAKE_VERSION} VERSION_LESS 2.8.12)
     message(WARNING "CMake version is ${CMAKE_VERSION}. Building of packages requires version 2.8.12 or greater.")

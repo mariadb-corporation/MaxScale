@@ -113,7 +113,7 @@ SERVICE 	*service;
 		return NULL;
 	if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
 	{
-                char* home = get_moduledir();
+                char* home = get_libdir();
                 char* ldpath = getenv("LD_LIBRARY_PATH");
                 
                 LOGIF(LE, (skygw_log_write_flush(

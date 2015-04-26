@@ -131,7 +131,7 @@ static char	pidfile[PATH_MAX+1] = "";
 
 static char* configdir = NULL;
 static char* logdir = NULL;
-static char* moduledir = NULL;
+static char* libdir = NULL;
 static char* cachedir = NULL;
 static char* langdir = NULL;
 /**
@@ -158,7 +158,7 @@ static struct option long_options[] = {
   {"logdir",   required_argument, 0, 'L'},
   {"datadir",  required_argument, 0, 'D'},
   {"configdir",required_argument, 0, 'C'},
-  {"moduledir",required_argument, 0, 'B'},
+  {"libdir",required_argument, 0, 'B'},
   {"cachedir",required_argument, 0, 'A'},
   {"language",required_argument, 0, 'N'},
   {"syslog",   required_argument, 0, 's'},
@@ -204,9 +204,9 @@ static char* check_dir_access(char* dirname,bool,bool);
  * Get the directory with all the modules.
  * @return The module directory
  */
-char* get_moduledir()
+char* get_libdir()
 {
-    return moduledir;
+    return libdir;
 }
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
@@ -1029,7 +1029,7 @@ static void usage(void)
 		"                     (default: /var/lib/maxscale)\n"
 		"  -C|--configdir=... path to configuration file directory\n"
 		"                     (default: /etc/)\n"
-		"  -B|--moduledir=... path to module directory\n"
+		"  -B|--libdir=... path to module directory\n"
 		"                     (default: /var/lib/maxscale)\n"
 		"  -A|--cachedir=...  path to cache directory\n"
 		"                     (default: /var/cache/maxscale)\n"
@@ -1274,7 +1274,7 @@ int main(int argc, char **argv)
 		case 'B':
 		    if(handle_path_arg(&tmp_path,optarg,NULL,true,false))
 		    {
-			moduledir = tmp_path;
+			libdir = tmp_path;
 		    }
 		    break;
 		case 'A':
@@ -1742,8 +1742,8 @@ int main(int argc, char **argv)
 		cachedir = strdup(default_cachedir);
 	    if(langdir == NULL)
 		langdir = strdup(default_langdir);
-	    if(moduledir == NULL)
-		moduledir = strdup(default_moduledir);
+	    if(libdir == NULL)
+		libdir = strdup(default_libdir);
 	/**
          * Set a data directory for the mysqld library, we use
          * a unique directory name to avoid clauses if multiple
@@ -1785,7 +1785,7 @@ int main(int argc, char **argv)
                         cnf_file_path,
                         logdir,
                         datadir,
-			moduledir,
+			libdir,
 			cachedir);
         }
 
@@ -1807,7 +1807,7 @@ int main(int argc, char **argv)
 	LOGIF(LM,
 	 (skygw_log_write_flush(LOGFILE_MESSAGE,
 			  "Module directory: %s",
-			  moduledir)));
+			  libdir)));
 	LOGIF(LM,
 	 (skygw_log_write_flush(LOGFILE_MESSAGE,
 			  "Service cache: %s",
@@ -1882,8 +1882,8 @@ int main(int argc, char **argv)
         }
         libmysqld_started = TRUE;
 
-	if(moduledir == NULL)
-	    moduledir = strdup(default_moduledir);
+	if(libdir == NULL)
+	    libdir = strdup(default_libdir);
 
         if (!config_load(cnf_file_path))
         {
@@ -2179,10 +2179,10 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
 	    if(logdir == NULL)
 		handle_path_arg(&logdir,(char*)value,NULL,true,true);
 	}
-	else if(strcmp(name, "moduledir") == 0)
+	else if(strcmp(name, "libdir") == 0)
 	{
-	    if(moduledir == NULL)
-		handle_path_arg(&moduledir,(char*)value,NULL,true,false);
+	    if(libdir == NULL)
+		handle_path_arg(&libdir,(char*)value,NULL,true,false);
 	}
 	else if(strcmp(name, "datadir") == 0)
 	{

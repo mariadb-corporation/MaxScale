@@ -1,6 +1,6 @@
 add_library(readwritesplit SHARED readwritesplit.c)
 target_link_libraries(readwritesplit ssl pthread log_manager utils query_classifier)
-install(TARGETS readwritesplit DESTINATION ${MAXSCALE_MODULE_INSTALL})
+install(TARGETS readwritesplit DESTINATION ${MAXSCALE_LIBDIR})
 if(BUILD_TESTS)
 add_subdirectory(test)
 endif()

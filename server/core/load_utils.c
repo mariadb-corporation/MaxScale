@@ -147,7 +147,7 @@ MODULE_INFO	*mod_info = NULL;
 		
 		if (access(fname, F_OK) == -1)
 		{
-			snprintf(fname, MAXPATHLEN+1,"%s/lib%s.so", get_moduledir(), module);
+			snprintf(fname, MAXPATHLEN+1,"%s/lib%s.so", get_libdir(), module);
 
                         if (access(fname, F_OK) == -1)
 			{
@@ -155,7 +155,7 @@ MODULE_INFO	*mod_info = NULL;
                                         LOGFILE_ERROR,
 					"Error : Unable to find library for "
                                         "module: %s. Module dir: %s",
-                                        module, get_moduledir())));
+                                        module, get_libdir())));
 				return NULL;
 			}
 		}
