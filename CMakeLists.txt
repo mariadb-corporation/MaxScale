@@ -38,7 +38,7 @@ find_package(MySQLClient)
 find_package(MySQL)
 find_package(Pandoc)
 find_package(TCMalloc)
-
+find_package(Jemalloc)
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
 find_package(CURL) 
