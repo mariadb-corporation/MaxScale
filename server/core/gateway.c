@@ -1276,6 +1276,7 @@ int main(int argc, char **argv)
 		    {
 			moduledir = tmp_path;
 		    }
+		    break;
 		case 'A':
 		    if(handle_path_arg(&tmp_path,optarg,NULL,true,true))
 		    {
@@ -1739,7 +1740,6 @@ int main(int argc, char **argv)
 
 	    if(cachedir == NULL)
 		cachedir = strdup(default_cachedir);
-
 	    if(langdir == NULL)
 		langdir = strdup(default_langdir);
 	    if(moduledir == NULL)
@@ -1780,11 +1780,13 @@ int main(int argc, char **argv)
                         "Configuration file : %s\n"
                         "Log directory      : %s\n"
                         "Data directory     : %s\n"
-			"Module directory   : %s\n\n",
+			"Module directory   : %s\n"
+			"Service cache      : %s\n\n",
                         cnf_file_path,
                         logdir,
                         datadir,
-			moduledir);
+			moduledir,
+			cachedir);
         }
 
         LOGIF(LM,
@@ -1806,6 +1808,10 @@ int main(int argc, char **argv)
 	 (skygw_log_write_flush(LOGFILE_MESSAGE,
 			  "Module directory: %s",
 			  moduledir)));
+	LOGIF(LM,
+	 (skygw_log_write_flush(LOGFILE_MESSAGE,
+			  "Service cache: %s",
+			  cachedir)));
 
         /*< Update the server options */
         for (i = 0; server_options[i]; i++)
@@ -1882,7 +1888,7 @@ int main(int argc, char **argv)
         if (!config_load(cnf_file_path))
         {
                 char* fprerr = "Failed to load MaxScale configuration "
-                        "file. Exiting.";
+                        "file. Exiting. See the error log for details.";
                 print_log_n_stderr(false, !daemon_mode, fprerr, fprerr, 0);
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,

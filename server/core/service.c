@@ -61,6 +61,7 @@
 #include <sys/types.h>
 #include <housekeeper.h>
 #include <resultset.h>
+#include <gw.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -112,7 +113,7 @@ SERVICE 	*service;
 		return NULL;
 	if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
 	{
-                char* home = get_maxscale_home();
+                char* home = get_moduledir();
                 char* ldpath = getenv("LD_LIBRARY_PATH");
                 
                 LOGIF(LE, (skygw_log_write_flush(
@@ -120,12 +121,13 @@ SERVICE 	*service;
                         "Error : Unable to load %s module \"%s\".\n\t\t\t"
                         "      Ensure that lib%s.so exists in one of the "
                         "following directories :\n\t\t\t      "
-                        "- %s/modules\n\t\t\t      - %s",
+                        "- %s/modules\n%s%s",
                         MODULE_ROUTER,
                         router,
                         router,
                         home,
-                        ldpath)));
+			ldpath?"\t\t\t      - ":"",
+                        ldpath?ldpath:"")));
 		free(service);
 		return NULL;
 	}

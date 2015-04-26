@@ -1,5 +1,8 @@
 #!/bin/sh
 
+mkdir -p /var/log/maxscale
+mkdir -p /var/cache/maxscale
+mkdir -p /var/run/maxscale
 cp @CMAKE_INSTALL_PREFIX@/maxscale /etc/init.d/
 cp @CMAKE_INSTALL_PREFIX@/maxscale.conf /etc/ld.so.conf.d/
 /sbin/ldconfig

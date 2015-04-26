@@ -6,13 +6,16 @@ endif()
 
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 
-include(macros.cmake)
-
+include(${CMAKE_SOURCE_DIR}/cmake/macros.cmake)
+include(${CMAKE_SOURCE_DIR}/cmake/install_layout.cmake)
 enable_testing()
 set_variables() 
 set_maxscale_version()
 
-set(CMAKE_INSTALL_PREFIX "/usr/local/mariadb-maxscale" CACHE PATH "Prefix prepended to install directories.")
+
+set(INSTALL_LAYOUT "STANDALONE" CACHE STRING "Install layout, options are: STANDALONE, RPM, DEB")
+set_install_layout(${INSTALL_LAYOUT})
+
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -37,6 +40,7 @@ if(NOT CURL_FOUND)
   message(FATAL_ERROR "Failed to locate dependency: libcurl")
 endif()
 
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${MAXSCALE_MODULE_DIR}:${MAXSCALE_LIBRARY_DIR})
 
 # Make sure the release notes for this release are present if it is a stable one
 if(${MAXSCALE_VERSION} MATCHES "-stable")
@@ -144,7 +148,7 @@ install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION ${MAXSCALE_SHARE_
 install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION ${MAXSCALE_SHARE_DIR})
 install(FILES server/MaxScale_template.cnf DESTINATION ${MAXSCALE_CONFIG_DIR})
 install(FILES server/MaxScale_BinlogServer_template.cnf DESTINATION ${MAXSCALE_CONFIG_DIR})
-install(FILES ${ERRMSG} DESTINATION ${MAXSCALE_LANG_DIR})
+install(FILES ${ERRMSG} DESTINATION ${MAXSCALE_SHARE_DIR})
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${MAXSCALE_SHARE_DIR})
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${MAXSCALE_SHARE_DIR})
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${MAXSCALE_SHARE_DIR})
@@ -225,7 +229,7 @@ if(PACKAGE)
   endif()
 endif()
 
-add_custom_target(buildtests
+add_custom_target(buildtestsx
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DWITH_SCRIPTS=N ${CMAKE_SOURCE_DIR}
   COMMAND make
   COMMENT "Building test suite..." VERBATIM
