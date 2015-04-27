@@ -62,7 +62,7 @@ If you wish to use two different usernames for the two different roles of monito
 
 ### Creating Your MaxScale Configuration
 
-MaxScale configuration is held in an ini file that is located in the file MaxScale.cnf in the directory $MAXSCALE_HOME/etc, if you have installed in the default location then this file is available in /usr/local/mariadb-maxscale/etc/MaxScale.cnf. This is not created as part of the installation process and must be manually created. A template file does exist within this directory that may be use as a basis for your configuration.
+MaxScale configuration is held in an ini file that is located in the file MaxScale.cnf in the directory /etc, if you have installed in the default location then this file is available in /usr/local/mariadb-maxscale/etc/MaxScale.cnf. This is not created as part of the installation process and must be manually created. A template file does exist within this directory that may be use as a basis for your configuration.
 
 A global, maxscale, section is included within every MaxScale configuration file; this is used to set the values of various MaxScale wide parameters, perhaps the most important of these is the number of threads that MaxScale will use to execute the code that forwards requests and handles responses for clients.
 

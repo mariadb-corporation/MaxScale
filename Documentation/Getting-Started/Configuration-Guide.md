@@ -27,11 +27,9 @@ connection failover| When a connection currently being used between MaxScale and
 
 The MaxScale configuration is read from a file which can be located in a number of placing, MaxScale will search for the configuration file in a number of locations.
 
-1. If the environment variable `MAXSCALE_HOME` is set then MaxScale will look for a configuration file called `MaxScale.cnf` in the directory `$MAXSCALE_HOME/etc`.
+1. Location given with the --configdir=<path> command line argument
 
-2. If `MAXSCALE_HOME` is not set or the configuration file is not in the location above MaxScale will look for a file in `/etc/MaxScale.cnf`.
-
-Alternatively MaxScale can be started with the `-c` flag and the path of the MaxScale home directory tree.
+2. MaxScale will look for a configuration file called `MaxScale.cnf` in the directory `/etc/MaxScale.cnf`
 
 An explicit path to a configuration file can be passed by using the `-f` option to MaxScale.
 
@@ -524,7 +522,7 @@ Default value is `2`. Write Timeout is the timeout in seconds for each attempt t
 
 ## Protocol Modules
 
-The protocols supported by MaxScale are implemented as external modules that are loaded dynamically into the MaxScale core. These modules reside in the directory `$MAXSCALE_HOME/modules`, if the environment variable `$MAXSCALE_HOME` is not set it defaults to `/usr/local/mariadb-maxscale`. It may also be set by passing the `-c` option on the MaxScale command line.
+The protocols supported by MaxScale are implemented as external modules that are loaded dynamically into the MaxScale core. These modules reside in the directory `/usr/lib64/maxscale`. The location can be overridden with the `libdir=PATH` parameter under the `[maxscale]` section. It may also be set by passing the `-B PATH` or `--libdir=PATH` option on the MaxScale command line.
 
 ### MySQLClient
 

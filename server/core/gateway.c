@@ -505,15 +505,9 @@ static bool resolve_maxscale_conf_fname(
                  * directory.
                  * '-f MaxScale.cnf' 
                  */
-                home_etc_dir = (char*)malloc(strlen(home_dir)+strlen("/etc")+1);
-                snprintf(home_etc_dir,
-                         strlen(home_dir)+strlen("/etc")+1,
-                         "%s/etc",
-                         home_dir);
                 *cnf_full_path = get_expanded_pathname(NULL,
-                                                       home_etc_dir,
+                                                       home_dir,
                                                        cnf_file_arg);
-                free(home_etc_dir);
 
                 if (*cnf_full_path != NULL)
                 {
@@ -1026,11 +1020,11 @@ static void usage(void)
 		"  -L|--logdir=...    path to log file directory\n"
 		"                     (default: /var/log/maxscale)\n"
 		"  -D|--datadir=...   path to data directory\n"
-		"                     (default: /var/lib/maxscale)\n"
+		"                     (default: /usr/lib64/maxscale)\n"
 		"  -C|--configdir=... path to configuration file directory\n"
 		"                     (default: /etc/)\n"
-		"  -B|--libdir=... path to module directory\n"
-		"                     (default: /var/lib/maxscale)\n"
+		"  -B|--libdir=...    path to module directory\n"
+		"                     (default: /usr/lib64/maxscale)\n"
 		"  -A|--cachedir=...  path to cache directory\n"
 		"                     (default: /var/cache/maxscale)\n"
 		"  -s|--syslog=	      log messages to syslog.\n"
@@ -1587,63 +1581,6 @@ int main(int argc, char **argv)
         /** Use the cache dir for the mysql folder of the embedded library */
 	sprintf(mysql_home, "%s/mysql", cachedir);
 	setenv("MYSQL_HOME", mysql_home, 1);
-
-	/*<
-         * If MaxScale home directory wasn't set by command-line argument.
-         * Next, resolve it from environment variable and further on,
-         * try to use default.
-         */
-/*
-	
-        if (home_dir == NULL)
-        {
-                if (!resolve_maxscale_homedir(&home_dir))
-                {
-                        ss_dassert(home_dir != NULL);
-                        rc = MAXSCALE_HOMELESS;
-                        goto return_main;
-                }
-                
-        }
-	else
-	{
-		char* log_context = strdup("Home directory command-line argument"); 
-		char* errstr;
-		
-		errstr = check_dir_access(home_dir,true,true);
-		
-		if (errstr != NULL)
-		{
-			char* logstr = (char*)malloc(strlen(log_context)+
-			1+
-			strlen(errstr)+
-			1);
-			
-			snprintf(logstr,
-				 strlen(log_context)+
-				 1+
-				 strlen(errstr)+1,
-				 "%s: %s",
-				log_context,
-				errstr);
-			
-			print_log_n_stderr(true, true, logstr, logstr, 0);
-			
-			free(errstr);
-			free(logstr);
-			rc = MAXSCALE_HOMELESS;
-			goto return_main;
-		}
-		else if (!daemon_mode)
-		{
-			fprintf(stderr,
-				"Using %s as MAXSCALE_HOME = %s\n",
-				log_context,
-				home_dir);
-		}
-		free(log_context);
-	}
-*/
 
         /**
          * Resolve the full pathname for configuration file and check for

@@ -6,22 +6,27 @@ endif()
 
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 
-
 include(${CMAKE_SOURCE_DIR}/cmake/macros.cmake)
-
-# Set the installation layout
-set(INSTALL_LAYOUT "STANDALONE" CACHE STRING "Install layout, options are: STANDALONE, RPM, DEB")
-include(${CMAKE_SOURCE_DIR}/cmake/install_layout.cmake)
-
 enable_testing()
+
+set(INSTALL_LAYOUT "STANDALONE" CACHE STRING "Install layout, options are: STANDALONE, RPM, DEB")
+if(${INSTALL_LAYOUT} MATCHES "STANDALONE")
+  set(CMAKE_INSTALL_PREFIX "/usr/local/mariadb-maxscale" CACHE PATH "Prefix prepended to install directories.")
+else()
+  set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "Prefix prepended to install directories.")
+endif()
+
+# Set default values for cache entries and set the MaxScale version
 set_variables() 
 set_maxscale_version()
 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 project(MaxScale)
+
+# Set the installation layout
+include(${CMAKE_SOURCE_DIR}/cmake/install_layout.cmake)
 
 #Do the platform check
 include(cmake/CheckPlatform.cmake) 
@@ -51,10 +56,10 @@ if(${MAXSCALE_VERSION} MATCHES "-stable")
     message(FATAL_ERROR "Could not find the release notes for this stable release: ${MAXSCALE_VERSION_NUMERIC}")
   endif()
 endif()
-set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_MODULE_INSTALL}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBRARY_INSTALL})
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DIR}/server/include/version.h)
+configure_file(${CMAKE_SOURCE_DIR}/server/include/gwdirs.h.in ${CMAKE_BINARY_DIR}/server/include/gwdirs.h)
 configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/server/include/maxscale_test.h)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postrm.in ${CMAKE_BINARY_DIR}/postrm)
