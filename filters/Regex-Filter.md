@@ -6,7 +6,7 @@ The regex filter is a filter module for MaxScale that is able to rewrite query c
 
 # Configuration
 
-The configuration block for the Regex filter requires the minimal filter options in it’s section within the MaxScale.cnf file, stored in $MAXSCALE_HOME/etc/MaxScale.cnf.
+The configuration block for the Regex filter requires the minimal filter options in it’s section within the MaxScale.cnf file, stored in /etc/MaxScale.cnf.
 
 ```
 [MyRegexFilter]

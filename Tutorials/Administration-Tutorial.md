@@ -45,7 +45,7 @@ Options may be passed to the MaxScale binary that alter this default behavior, t
   <tr>
     <td>-f</td>
     <td>--config=</td>
-    <td>Use the filename passed as an argument instead of looking in $MAXSCALE_HOME/etc/MaxScale.cnf</td>
+    <td>Use the filename passed as an argument instead of looking in /etc/MaxScale.cnf</td>
   </tr>
   <tr>
     <td>-l<file>|<shm></td>
@@ -79,7 +79,7 @@ or
 
 MaxScale will also stop gracefully if it received a hangup signal, to find the process id of the MaxScale server use the ps command or read the contents of the maxscale.pid file located in the same directory as the logs.
 
-	$ kill -HUP `cat $MAXSCALE_HOME/log/maxscale.pid`
+	$ kill -HUP `cat /log/maxscale.pid`
 
 In order to shutdown MaxScale using the maxadmin command you may either connect with maxadmin in interactive mode or pass the "shutdown maxscale" command you wish 	to execute as an argument to maxadmin.
 
