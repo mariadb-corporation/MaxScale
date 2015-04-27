@@ -538,7 +538,7 @@ return_packetbuf:
 GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 {
     GWBUF *buff = NULL, *packet;
-    uint8_t *ptr,*end;
+    uint8_t *ptr;
     int len,blen,total = 0;
 
     if(p_readbuf == NULL || (*p_readbuf) == NULL ||
@@ -549,7 +549,6 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
     packet->next = NULL;
     *p_readbuf = packet;
     ptr = (uint8_t*)packet->start;
-    end = (uint8_t*)packet->end;
     len = gw_mysql_get_byte3(ptr) + 4;
     blen = gwbuf_length(packet);
     
@@ -578,18 +577,12 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
     }
 
     /** The next packet is a partial, split into complete and partial packets */
-    if((buff = gwbuf_alloc(total)) == NULL)
+    if((buff = gwbuf_clone_portion(packet,0,total)) == NULL)
     {
 	skygw_log_write(LOGFILE_ERROR,
-		 "Error: Failed to allocate new buffer "
-		" of %d bytes while splitting buffer"
-		" into complete packets.",
-		 total);
+		 "Error: Failed to partially clone buffer.");
 	return NULL;
     }
-    buff->next = NULL;
-    gwbuf_set_type(buff,GWBUF_TYPE_MYSQL);
-    memcpy(buff->start,packet->start,total);
     gwbuf_consume(packet,total);
     return buff;
 }
