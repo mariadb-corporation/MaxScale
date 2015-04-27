@@ -63,6 +63,7 @@ configure_file(${CMAKE_SOURCE_DIR}/server/include/gwdirs.h.in ${CMAKE_BINARY_DIR
 configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/server/include/maxscale_test.h)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postrm.in ${CMAKE_BINARY_DIR}/postrm)
+configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.cnf ${CMAKE_BINARY_DIR}/maxscale.cnf)
 
 set(FLAGS "-Wall -Wno-unused-variable -Wno-unused-function -fPIC" CACHE STRING "Compilation flags")
 set(DEBUG_FLAGS "-ggdb -pthread -pipe -Wformat -fstack-protector --param=ssp-buffer-size=4" CACHE STRING "Debug compilation flags")
@@ -152,9 +153,9 @@ ${CMAKE_SOURCE_DIR}/Documentation/Upgrading-To-MaxScale-1.1.0.md
 install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION ${MAXSCALE_SHAREDIR})
-install(FILES server/MaxScale_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
-install(FILES server/MaxScale_BinlogServer_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
-install(FILES ${ERRMSG} DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES server/maxscale_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES server/maxscale_binlogserver_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${ERRMSG} DESTINATION /usr/share/mysql/english/)
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${MAXSCALE_SHAREDIR})
@@ -245,7 +246,6 @@ add_custom_target(buildtestsx
 add_custom_target(testall 
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DWITH_SCRIPTS=N ${CMAKE_SOURCE_DIR}
   COMMAND make install
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/server/test/MaxScale_test.cnf ${CMAKE_BINARY_DIR}/etc/MaxScale.cnf
   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/cmake/testall.cmake
   COMMENT "Running full test suite..." VERBATIM)
 

@@ -1,5 +1,9 @@
 [maxscale]
 threads=4
+libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
+logdir=@CMAKE_INSTALL_PREFIX@/log
+datadir=@CMAKE_INSTALL_PREFIX@/data
+cachedir=@CMAKE_INSTALL_PREFIX@/cache
 
 [feedback]
 feedback_enable=true

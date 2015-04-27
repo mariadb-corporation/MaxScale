@@ -8,3 +8,12 @@ char* get_libdir()
 {
     return libdir?libdir:(char*)default_libdir;
 }
+
+/**
+ * Get the service cache directory
+ * @return The path to the cache directory
+ */
+char* get_cachedir()
+{
+    return cachedir?cachedir:(char*)default_cachedir;
+}

@@ -62,6 +62,7 @@
 #include <housekeeper.h>
 #include <resultset.h>
 #include <gw.h>
+#include <gwdirs.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -259,15 +260,11 @@ GWPROTOCOL	*funcs;
 			else
 			{
 				/* Save authentication data to file cache */
-				char	*ptr, path[4097];
+				char	*ptr, path[PATH_MAX + 1];
                                 int mkdir_rval = 0;
-				strcpy(path, "/usr/local/mariadb-maxscale");
-				if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
-				{
-					strncpy(path, ptr, 4096);
-				}
+				strcpy(path, get_cachedir());
 				strncat(path, "/", 4096);
-				strncat(path, service->name, 4096);
+				strncat(path, service->name, PATH_MAX);
 				if (access(path, R_OK) == -1)
                                 {
 					mkdir_rval = mkdir(path, 0777);
@@ -282,7 +279,7 @@ GWPROTOCOL	*funcs;
                                     mkdir_rval = 0;
                                 }
 
-				strncat(path, "/.cache", 4096);
+				strncat(path, "/.cache", PATH_MAX);
 				if (access(path, R_OK) == -1)
                                 {
 					mkdir_rval = mkdir(path, 0777);
@@ -296,7 +293,7 @@ GWPROTOCOL	*funcs;
                                                     strerror(errno));
                                     mkdir_rval = 0;
                                 }
-				strncat(path, "/dbusers", 4096);
+				strncat(path, "/dbusers", PATH_MAX);
 				dbusers_save(service->users, path);
 			}
 			if (loaded == 0)

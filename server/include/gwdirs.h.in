@@ -22,7 +22,7 @@
 #include <stdlib.h>
 
 /** Default file locations, configured by CMake */
-static const char* default_cnf_fname = "MaxScale.cnf";
+static const char* default_cnf_fname = "maxscale.cnf";
 static const char* default_configdir = "/etc/";
 static const char* default_piddir = "/var/run/maxscale/";
 static const char* default_logdir = "/var/log/maxscale/";
