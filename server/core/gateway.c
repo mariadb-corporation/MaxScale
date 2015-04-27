@@ -129,11 +129,7 @@ static bool	datadir_defined = false; /*< If the datadir was already set */
 /* The data directory we created for this gateway instance */
 static char	pidfile[PATH_MAX+1] = "";
 
-static char* configdir = NULL;
-static char* logdir = NULL;
-static char* libdir = NULL;
-static char* cachedir = NULL;
-static char* langdir = NULL;
+
 /**
  * exit flag for log flusher.
  */
@@ -200,14 +196,7 @@ static bool resolve_maxscale_homedir(
 
 static char* check_dir_access(char* dirname,bool,bool);
 
-/**
- * Get the directory with all the modules.
- * @return The module directory
- */
-char* get_libdir()
-{
-    return libdir;
-}
+
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.

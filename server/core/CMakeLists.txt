@@ -1,5 +1,5 @@
 if(BUILD_TESTS OR BUILD_TOOLS)
-  add_library(fullcore STATIC adminusers.c atomic.c config.c buffer.c dbusers.c dcb.c filter.c gwbitmask.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c memlog.c modutil.c monitor.c poll.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c)
+  add_library(fullcore STATIC adminusers.c atomic.c config.c buffer.c dbusers.c dcb.c filter.c gwbitmask.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c memlog.c modutil.c monitor.c poll.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c gwdirs.c)
   if(WITH_JEMALLOC)
     target_link_libraries(fullcore ${JEMALLOC_LIBRARIES})
   elseif(WITH_TCMALLOC)
@@ -12,7 +12,7 @@ add_executable(maxscale atomic.c buffer.c spinlock.c gateway.c
 	gw_utils.c utils.c dcb.c load_utils.c session.c service.c server.c 
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c 
 	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c
-	housekeeper.c memlog.c resultset.c)
+	housekeeper.c memlog.c resultset.c  gwdirs.c)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale ${JEMALLOC_LIBRARIES})
