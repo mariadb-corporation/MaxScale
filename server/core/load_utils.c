@@ -49,6 +49,7 @@
 #include	<sys/utsname.h>
 #include	<openssl/sha.h>
 #include        <gw.h>
+#include        <gwdirs.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -108,7 +109,7 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 /**
  * Load the dynamic library related to a gateway module. The routine
  * will look for library files in the current directory, 
- * $MAXSCALE_HOME/modules and /usr/local/mariadb-maxscale/modules.
+ * the configured folder and /usr/lib64/maxscale.
  *
  * @param module	Name of the module to load
  * @param type		Type of module, used purely for registration

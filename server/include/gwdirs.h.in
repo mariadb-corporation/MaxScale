@@ -39,5 +39,5 @@ static char* cachedir = NULL;
 static char* langdir = NULL;
 
 char* get_libdir();
-
+char* get_cachedir();
 #endif

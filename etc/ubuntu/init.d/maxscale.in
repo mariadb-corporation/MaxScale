@@ -38,7 +38,7 @@ _RETVAL_STATUS_OK=0
 _RETVAL_STATUS_NOT_RUNNING=3
 
 # Sanity checks.
-[ -x $MAXSCALE_HOME/bin/maxscale ] || exit $_RETVAL_NOT_INSTALLED
+[ -x @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale ] || exit $_RETVAL_NOT_INSTALLED
 
 #################################
 # stop/start/status related vars

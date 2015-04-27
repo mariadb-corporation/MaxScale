@@ -191,8 +191,6 @@ static bool resolve_maxscale_conf_fname(
         char** cnf_full_path,
         char*  home_dir,
         char*  cnf_file_arg);
-static bool resolve_maxscale_homedir(
-        char** p_home_dir);
 
 static char* check_dir_access(char* dirname,bool,bool);
 
@@ -575,149 +573,6 @@ return_succp:
         return succp;
 }
 
-
-static bool resolve_maxscale_homedir(
-        char** p_home_dir)
-{
-        bool  succp = false;
-        char* tmp;
-	char* tmp2;
-        char* log_context = NULL;
-        
-        ss_dassert(*p_home_dir == NULL);
-
-        if (*p_home_dir != NULL)
-        {
-                log_context = strdup("Command-line argument");
-		tmp = NULL;
-                goto check_home_dir;
-        }
-        /*<
-         * 1. if home dir wasn't specified by a command-line argument,
-         *    read env. variable MAXSCALE_HOME.
-         */
-        if (getenv("MAXSCALE_HOME") != NULL)
-        {
-                tmp = strndup(getenv("MAXSCALE_HOME"), PATH_MAX);
-                get_expanded_pathname(p_home_dir, tmp, NULL);
-        
-                if (*p_home_dir != NULL)
-                {
-                        log_context = strdup("MAXSCALE_HOME");
-                        goto check_home_dir;
-                }
-                free(tmp);
-        }
-        else
-        {
-                fprintf(stderr, "\n*\n* Warning : MAXSCALE_HOME environment variable "
-                        "is not set.\n*\n");
-                LOGIF(LE, (skygw_log_write_flush(
-                                   LOGFILE_ERROR,
-                                   "Warning : MAXSCALE_HOME environment "
-                                   "variable is not set.")));
-        }
-        /*<
-         * 2. if home dir wasn't specified in MAXSCALE_HOME,
-         *    try access /etc/MaxScale/
-         */
-        tmp = strdup("/etc/MaxScale");                
-        get_expanded_pathname(p_home_dir, tmp, NULL);
-
-        if (*p_home_dir != NULL)
-        {
-                log_context = strdup("/etc/MaxScale");
-                goto check_home_dir;
-        }
-        free(tmp);
-        /*<
-         * 3. if /etc/MaxScale/MaxScale.cnf didn't exist or wasn't accessible, home
-         *    isn't specified. Thus, try to access $PWD/MaxScale.cnf .
-         */
-	char *pwd = getenv("PWD");
-        tmp = strndup(pwd ? pwd : "PWD_NOT_SET", PATH_MAX);
-        tmp2 = get_expanded_pathname(p_home_dir, tmp, default_cnf_fname);
-	free(tmp2); /*< full path isn't needed so simply free it */
-	
-        if (*p_home_dir != NULL)
-        {
-                log_context = strdup("Current working directory");
-        }
-
-check_home_dir:
-        if (*p_home_dir != NULL)
-        {
-                if (!file_is_readable(*p_home_dir))
-                {
-                        char* tailstr = "MaxScale doesn't have read permission "
-                                "to MAXSCALE_HOME.";
-                        char* logstr = (char*)malloc(strlen(log_context)+
-                                                     1+
-                                                     strlen(tailstr)+
-                                                     1);
-                        snprintf(logstr,
-                                 strlen(log_context)+
-                                 1+
-                                 strlen(tailstr)+1,
-                                 "%s:%s",
-                                 log_context,
-                                 tailstr);
-                        print_log_n_stderr(true, true, logstr, logstr, 0);
-                        free(logstr);
-                        goto return_succp;
-                }
-
-#if WRITABLE_HOME
-                if (!file_is_writable(*p_home_dir))
-                {
-                        char* tailstr = "MaxScale doesn't have write permission "
-                                "to MAXSCALE_HOME. Exiting.";
-                        char* logstr = (char*)malloc(strlen(log_context)+
-                                                     1+
-                                                     strlen(tailstr)+
-                                                     1);
-                        snprintf(logstr,
-                                 strlen(log_context)+
-                                 1+
-                                 strlen(tailstr)+1,
-                                 "%s:%s",
-                                 log_context,
-                                 tailstr);
-                        print_log_n_stderr(true, true, logstr, logstr, 0);
-                        free(logstr);
-                        goto return_succp;
-                }
-#endif
-                if (!daemon_mode)
-                {
-                        fprintf(stderr,
-                                "Using %s as MAXSCALE_HOME = %s\n",
-                                log_context,
-                                tmp);
-                }
-                succp = true;
-                goto return_succp;
-        }
-        
-return_succp:
-        free (tmp);
-
-	
-        if (log_context != NULL)
-        {
-                free(log_context);
-        }
-        
-        if (!succp)
-        {
-                char* logstr = "MaxScale was unable to locate home directory "
-                        "with read and write permissions. \n*\n* Exiting.";
-                print_log_n_stderr(true, true, logstr, logstr, 0);
-                usage();
-        }
-        return succp;
-}
-
 /**
  * Check read and write accessibility to a directory.
  * @param dirname	directory to be checked
@@ -1042,19 +897,13 @@ static void usage(void)
  * This is not obvious solution because stderr is often directed to somewhere,
  * but currently this is the case.
  *
- * The configuration file is by default \<maxscale home\>/etc/MaxScale.cnf
+ * The configuration file is by default /etc/maxscale.cnf
  * The name of configuration file and its location can be specified by
  * command-line argument.
  * 
- * \<maxscale home\> is resolved in the following order:
- * 1. from '-c <dir>' command-line argument
- * 2. from MAXSCALE_HOME environment variable
- * 3. /etc/ if MaxScale.cnf is found from there
- * 4. current working directory if MaxScale.cnf is found from there
- *
  * \<config filename\> is resolved in the following order:
  * 1. from '-f \<config filename\>' command-line argument
- * 2. by using default value "MaxScale.cnf"
+ * 2. by using default value "maxscale.cnf"
  *
  */
 int main(int argc, char **argv)
@@ -1130,56 +979,6 @@ int main(int argc, char **argv)
                 case 'd':
                         /*< Debug mode, maxscale runs in this same process */
                         daemon_mode = false;
-                        break;
-                        
-                case 'c':
-                        /*<
-                         * Create absolute path pointing to MaxScale home
-                         * directory. User-provided home directory may be
-                         * either absolute or relative. If latter, it is
-                         * expanded and stored in home_dir if succeed.
-                         */
-                        if (optarg[0] != '-')
-                        {
-				struct stat sb;
-
-				if (stat(optarg, &sb) != -1
-					&& (! S_ISDIR(sb.st_mode)))
-				{
-					char* logerr = "Home directory argument "
-						"identifier \'-c\' was specified but "
-						"the argument didn't specify a valid "
-						"a directory.";
-					print_log_n_stderr(true, true, logerr, logerr, 0);
-					usage();
-					succp = false;
-				} 
-				else
-				{
-                                	get_expanded_pathname(&home_dir, optarg, NULL);
-				}
-                        }
-
-                        if (home_dir != NULL)
-                        {
-                                /*<
-                                 * MAXSCALE_HOME is set.
-                                 * It is used to assist in finding the modules
-                                 * to be loaded into MaxScale.
-                                 */
-                                setenv("MAXSCALE_HOME", home_dir, 1);
-                        }
-                        else
-                        {
-                                char* logerr = "Home directory argument "
-                                        "identifier \'-c\' was specified but "
-                                        "the argument didn't specify \n  a valid "
-                                        "home directory or the argument was "
-                                        "missing.";
-                                print_log_n_stderr(true, true, logerr, logerr, 0);
-                                usage();
-                                succp = false;
-                        }
                         break;
 
                 case 'f':
@@ -1589,7 +1388,6 @@ int main(int argc, char **argv)
 	    sprintf(datadir,"%s",default_datadir);
         /**
          * Init Log Manager for MaxScale.
-         * If $MAXSCALE_HOME is set then write the logs into $MAXSCALE_HOME/log.
          * The skygw_logmanager_init expects to take arguments as passed to main
          * and proesses them with getopt, therefore we need to give it a dummy
          * argv[0]

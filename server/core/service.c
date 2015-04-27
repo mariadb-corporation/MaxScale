@@ -232,11 +232,7 @@ GWPROTOCOL	*funcs;
 				{
 					/* Try loading authentication data from file cache */
 					char	*ptr, path[4097];
-					strcpy(path, "/usr/local/mariadb-maxscale");
-					if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
-					{
-						strncpy(path, ptr, 4096);
-					}
+					strcpy(path, get_cachedir());
 					strncat(path, "/", 4096);
 					strncat(path, service->name, 4096);
 					strncat(path, "/.cache/dbusers", 4096);

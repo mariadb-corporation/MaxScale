@@ -23,11 +23,11 @@ endif()
 target_link_libraries(maxscale ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ${CURL_LIBRARIES} log_manager utils ssl aio pthread crypt dl crypto inih z rt m stdc++)
 install(TARGETS maxscale DESTINATION ${MAXSCALE_BINDIR})
 
-add_executable(maxkeys maxkeys.c secrets.c utils.c)
+add_executable(maxkeys maxkeys.c secrets.c utils.c gwdirs.c)
 target_link_libraries(maxkeys log_manager utils pthread  crypt crypto)
 install(TARGETS maxkeys DESTINATION ${MAXSCALE_BINDIR})
 
-add_executable(maxpasswd maxpasswd.c secrets.c utils.c)
+add_executable(maxpasswd maxpasswd.c secrets.c utils.c gwdirs.c)
 target_link_libraries(maxpasswd log_manager utils pthread crypt crypto)
 install(TARGETS maxpasswd DESTINATION ${MAXSCALE_BINDIR})
 

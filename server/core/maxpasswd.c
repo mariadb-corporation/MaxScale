@@ -62,16 +62,7 @@ main(int argc, char **argv)
 
 	arg_vector[0] = strdup("logmanager");
 	arg_vector[1] = strdup("-j");
-
-	if ((home = getenv("MAXSCALE_HOME")) != NULL)
-	{
-	    arg_vector[2] = (char*)malloc((strlen(home) + strlen("/log"))*sizeof(char));
-	    sprintf(arg_vector[2],"%s/log",home);
-	}
-	else
-	{
-	    arg_vector[2] = strdup("/usr/local/mariadb-maxscale/log");
-	}
+	arg_vector[2] = strdup("/var/log/maxscale");
 
 	arg_vector[3] = NULL;
 	skygw_logmanager_init(arg_count,arg_vector);

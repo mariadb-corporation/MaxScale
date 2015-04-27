@@ -38,7 +38,7 @@ _RETVAL_STATUS_OK=0
 _RETVAL_STATUS_NOT_RUNNING=3
 
 # Sanity checks.
-[ -x $MAXSCALE_HOME/bin/maxscale ] || exit $_RETVAL_NOT_INSTALLED
+[ -x @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale ] || exit $_RETVAL_NOT_INSTALLED
 
 # Source function library.
 . /etc/rc.d/init.d/functions
@@ -51,7 +51,7 @@ RETVAL=0
 
 start() {
     echo -n $"Starting MaxScale: "
-    my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale`
+    my_check=`status -p $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale`
     CHECK_RET=$?
     [ $CHECK_RET -eq 0 ] && echo -n " found $my_check" && success && CHECK_RET=0
 
@@ -62,7 +62,7 @@ start() {
 
     if [ $CHECK_RET -ne 0 ]; then
 	sleep 2
-        my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale`
+        my_check=`status -p $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale`
         CHECK_RET=$?
         [ $CHECK_RET -eq 0 ] && echo -n $my_check && success || failure
     fi
