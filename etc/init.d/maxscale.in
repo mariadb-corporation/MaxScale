@@ -18,12 +18,11 @@
 ### END INIT INFO
 
 #############################################
-# MaxScale HOME, PIDFILE, LIB
+# MaxScale PIDFILE and LIB
 #############################################
 
-export MAXSCALE_HOME=@CMAKE_INSTALL_PREFIX@
-export MAXSCALE_PIDFILE=$MAXSCALE_HOME/log/maxscale.pid
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MAXSCALE_HOME/lib
+export MAXSCALE_PIDFILE=/var/run/maxscale/maxscale.pid
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@/maxscale
 
 ###############################
 # LSB Exit codes (non-Status)
@@ -56,7 +55,7 @@ start() {
     CHECK_RET=$?
     [ $CHECK_RET -eq 0 ] && echo -n " found $my_check" && success && CHECK_RET=0
 
-    daemon --pidfile $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale >& /dev/null
+    daemon --pidfile $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale >& /dev/null
 
     RETVAL=$?
     [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$servicename
@@ -68,7 +67,7 @@ start() {
         [ $CHECK_RET -eq 0 ] && echo -n $my_check && success || failure
     fi
 
-    # Return rigth code
+    # Return right code
     if [ $RETVAL -ne 0 ]; then
        failure
        RETVAL=$_RETVAL_NOT_RUNNING
@@ -100,7 +99,7 @@ stop() {
 reload() {
     echo -n $"Reloading MaxScale: "
 
-    killproc -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale -HUP
+    killproc -p $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale -HUP
     RETVAL=$?
     echo
 }
