@@ -1,5 +1,5 @@
 if(BUILD_TESTS OR BUILD_TOOLS)
-  add_library(fullcore STATIC adminusers.c atomic.c config.c dbusers.c dcb.c filter.c gwbitmask.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c memlog.x modutil.c monitor.c poll.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c)
+  add_library(fullcore STATIC adminusers.c atomic.c config.c dbusers.c dcb.c filter.c gwbitmask.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c memlog.c modutil.c monitor.c poll.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c)
   if(WITH_JEMALLOC)
     target_link_libraries(fullcore ${JEMALLOC_LIBRARIES})
   elseif(WITH_TCMALLOC)
