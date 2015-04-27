@@ -9,7 +9,14 @@ message(STATUS "CMake version: ${CMAKE_VERSION}")
 include(${CMAKE_SOURCE_DIR}/cmake/macros.cmake)
 enable_testing()
 
-set(INSTALL_LAYOUT "STANDALONE" CACHE STRING "Install layout, options are: STANDALONE, RPM, DEB")
+# Packaging builds install to /usr and other builds to /usr/local/mariadb-maxscale
+if(PACKAGE)
+  set(INSTALL_LAYOUT "PACKAGE" CACHE STRING "Install layout, options are: STANDALONE, PACKAGE")
+else()
+  set(INSTALL_LAYOUT "STANDALONE" CACHE STRING "Install layout, options are: STANDALONE, PACKAGE")
+endif()
+
+# Installation prefixes for different layouts
 if(${INSTALL_LAYOUT} MATCHES "STANDALONE")
   set(CMAKE_INSTALL_PREFIX "/usr/local/mariadb-maxscale" CACHE PATH "Prefix prepended to install directories.")
 else()
@@ -58,12 +65,12 @@ if(${MAXSCALE_VERSION} MATCHES "-stable")
 endif()
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
-configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DIR}/server/include/version.h)
-configure_file(${CMAKE_SOURCE_DIR}/server/include/gwdirs.h.in ${CMAKE_BINARY_DIR}/server/include/gwdirs.h)
-configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/server/include/maxscale_test.h)
-configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst)
-configure_file(${CMAKE_SOURCE_DIR}/etc/postrm.in ${CMAKE_BINARY_DIR}/postrm)
-configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.cnf ${CMAKE_BINARY_DIR}/maxscale.cnf)
+configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DIR}/server/include/version.h @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/server/include/gwdirs.h.in ${CMAKE_BINARY_DIR}/server/include/gwdirs.h @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/server/include/maxscale_test.h @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/etc/postrm.in ${CMAKE_BINARY_DIR}/postrm @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.cnf ${CMAKE_BINARY_DIR}/maxscale.cnf @ONLY)
 
 set(FLAGS "-Wall -Wno-unused-variable -Wno-unused-function -fPIC" CACHE STRING "Compilation flags")
 set(DEBUG_FLAGS "-ggdb -pthread -pipe -Wformat -fstack-protector --param=ssp-buffer-size=4" CACHE STRING "Debug compilation flags")
@@ -81,7 +88,7 @@ if(CMAKE_VERSION VERSION_GREATER 2.6)
 endif()
 
 
-IF(DEFINED OLEVEL )
+IF(DEFINED OLEVEL)
   if((OLEVEL GREATER -1) AND (OLEVEL LESS 4) )
   	set(FLAGS "${FLAGS} -O${OLEVEL}" CACHE STRING "Compilation flags")
 	message(STATUS "Optimization level at: ${OLEVEL}")
@@ -181,7 +188,9 @@ if(WITH_SCRIPTS)
   endif()
 endif()
 
+# Only do packaging if configured
 if(PACKAGE)
+
   # Install the files copied by the postinst script into the share folder
   install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
@@ -194,23 +203,8 @@ if(PACKAGE)
   if(${CMAKE_VERSION} VERSION_LESS 2.8.12)
     message(WARNING "CMake version is ${CMAKE_VERSION}. Building of packages requires version 2.8.12 or greater.")
   else()
-    # See if we are on a RPM-capable or DEB-capable system
-    find_program(RPMBUILD rpmbuild)
-    find_program(DEBBUILD dpkg-buildpackage)
-    set(CPACK_GENERATOR "TGZ")
-    if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
-      message(STATUS "Generating RPM packages")
-      set(CPACK_GENERATOR "${CPACK_GENERATOR};RPM")
-    endif()
 
-    if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
-      set(CPACK_GENERATOR "${CPACK_GENERATOR};DEB")
-      execute_process(COMMAND dpgk --print-architecture OUTPUT_VARIABLE DEB_ARCHITECTURE)
-      set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${DEB_ARCHITECTURE})
-      set (CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON) 
-      message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
-    endif()
-
+    # Generic CPack configuration variables
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale")
     set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
     set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
@@ -221,23 +215,25 @@ if(PACKAGE)
     set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
     set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
     set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
-    set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_BINARY_DIR}/postinst;{CMAKE_BINARY_DIR}/postrm")
-    set(CPACK_RPM_PACKAGE_RELEASE ${MAXSCALE_BUILD_NUMBER})
-    set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postinst)
-    set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postrm)
-    set(CPACK_RPM_PACKAGE_NAME "maxscale")
-    set(CPACK_RPM_PACKAGE_VENDOR "MariaDB Corporation Ab")
-    set(CPACK_RPM_PACKAGE_LICENSE "GPLv2")
-    set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION "/etc /etc/ld.so.conf.d /etc/init.d /etc/rc.d/init.d")
-    set(CPACK_RPM_SPEC_MORE_DEFINE "%define ignore \#")
-    set(CPACK_RPM_USER_FILELIST "%ignore /etc/init.d")
-    set(CPACK_RPM_USER_FILELIST "%ignore /etc/ld.so.conf.d")
-    set(CPACK_RPM_USER_FILELIST "%ignore /etc")  
+
+    # See if we are on a RPM-capable or DEB-capable system
+    find_program(RPMBUILD rpmbuild)
+    find_program(DEBBUILD dpkg-buildpackage)
+    set(CPACK_GENERATOR "TGZ")
+
+    if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
+      include(cmake/package_rpm.cmake)
+      message(STATUS "Generating RPM packages")
+    elseif(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
+      include(cmake/package_deb.cmake)
+      message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
+    endif()
+
     include(CPack)
   endif()
 endif()
 
-add_custom_target(buildtestsx
+add_custom_target(buildtests
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DWITH_SCRIPTS=N ${CMAKE_SOURCE_DIR}
   COMMAND make
   COMMENT "Building test suite..." VERBATIM
@@ -252,7 +248,6 @@ add_custom_target(testall
 add_custom_target(testcore
   COMMAND ${CMAKE_COMMAND} -DDEPS_OK=Y -DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DWITH_SCRIPTS=N ${CMAKE_SOURCE_DIR}
   COMMAND make install
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_SOURCE_DIR}/server/test/MaxScale_test.cnf ${CMAKE_BINARY_DIR}/etc/MaxScale.cnf
   COMMAND ctest -R Internal
   COMMENT "Running core test suite..." VERBATIM)
 
