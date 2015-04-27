@@ -105,17 +105,6 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 	return realsize;
 }
 
-char* get_maxscale_home(void)
-{
-        char* home = getenv("MAXSCALE_HOME");
-        if (home == NULL)
-        {
-                home = "/usr/local/mariadb-maxscale";
-        }
-        return home;
-}
-                
-
 /**
  * Load the dynamic library related to a gateway module. The routine
  * will look for library files in the current directory, 
