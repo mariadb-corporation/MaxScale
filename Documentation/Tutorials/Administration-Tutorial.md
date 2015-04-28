@@ -26,43 +26,20 @@ It is also possible to start MaxScale by executing the maxscale command itself, 
 
 Options may be passed to the MaxScale binary that alter this default behavior, this options are documented in the table below.
 
-<table>
-  <tr>
-    <td>Switch</td>
-    <td>Long Option</td>
-    <td>Description</td>
-  </tr>
-  <tr>
-    <td>-d</td>
-    <td>--nodaemon</td>
-    <td>Run MaxScale attached to the terminal rather than as a daemon process. This is useful for debugging purposes.</td>
-  </tr>
-  <tr>
-    <td>-c</td>
-    <td>--homedir=</td>
-    <td>Ignore the environment variable MAXSCALE_HOME and use the supplied argument instead.</td>
-  </tr>
-  <tr>
-    <td>-f</td>
-    <td>--config=</td>
-    <td>Use the filename passed as an argument instead of looking in /etc/MaxScale.cnf</td>
-  </tr>
-  <tr>
-    <td>-l<file>|<shm></td>
-    <td>--log=</td>
-    <td>Control where logs are written for the debug and trace level log messages. the default is to write these to a shared memory device, however using the -lfile or --log=file option will forced these to be written to regular files.</td>
-  </tr>
-  <tr>
-    <td>-v</td>
-    <td>--version</td>
-    <td>Print version information for MaxScale</td>
-  </tr>
-  <tr>
-    <td>-?</td>
-    <td>--help</td>
-    <td>Print usage information for MaxScale</td>
-  </tr>
-</table>
+Switch|Long Option|Description
+------|-----------|-----------
+`-d`|`--nodaemon`|enable running in terminal process (default:disabled)
+`-f FILE`|`--config=FILE`|relative or absolute pathname of MaxScale configuration file (default:/etc/maxscale.cnf)
+`-l[file shm]`|`--log=[file shm]`|log to file or shared memory (default: shm)
+`-L PATH`|`--logdir=PATH`|path to log file directory (default: /var/log/maxscale)
+`-D PATH`|`--datadir=PATH`|path to data directory, stored embedded mysql tables (default: /var/cache/maxscale)
+`-C PATH`|`--configdir=PATH`|path to configuration file directory (default: /etc/)
+`-B PATH`|`--libdir=PATH`|path to module directory (default: /usr/lib64/maxscale)
+`-A PATH`|`--cachedir=PATH`|path to cache directory (default: /var/cache/maxscale)
+`-s [yes no]`|`--syslog=[yes no]`|log messages to syslog (default:yes)
+`-S [yes no]`|`--maxscalelog=[yes no]`|log messages to MaxScale log (default: yes)
+`-v`|`--version`|print version info and exit
+`-?`|`--help`|show this help
 
 <a name="stopping"></a> 
 ### Stopping MaxScale
@@ -90,6 +67,7 @@ In order to shutdown MaxScale using the maxadmin command you may either connect 
 
 It is possible to use the maxadmin command to obtain statistics regarding the services that are configured within your MaxScale configuration file. The maxadmin command "list services" will give very basic information regarding the services that are define. This command may be either run in interactive mode or passed on the maxadmin command line.
 
+```
 	$ maxadmin -pmariadb
 	MaxScale> list services
 
@@ -110,6 +88,7 @@ It is possible to use the maxadmin command to obtain statistics regarding the se
 	--------------------------+----------------------+--------+---------------
 
 	MaxScale> 
+```
 
 It should be noted that network listeners count as a user of the service, therefore there will always be one user per network port in which the service listens. More detail can be obtained by use of the "show service" command which is passed a service name.
 

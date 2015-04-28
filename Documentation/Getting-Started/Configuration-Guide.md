@@ -1268,7 +1268,7 @@ Changing the encryption key for MaxScale will invalidate any currently encrypted
 
 ### Creating Encrypted Passwords
 
-Encrypted passwords are created by executing the maxpasswd command with the password you require to encrypt as an argument. The environment variable `MAXSCALE_HOME` must be set, or MaxScale must be installed in the default location before maxpasswd can be executed.
+Encrypted passwords are created by executing the maxpasswd command with the password you require to encrypt as an argument.
 
     maxpasswd MaxScalePw001
     61DD955512C39A4A8BC4BB1E5F116705
