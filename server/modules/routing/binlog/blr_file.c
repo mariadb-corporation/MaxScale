@@ -258,6 +258,7 @@ int		fd;
 	                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"%s: binlog file %s has an invalid length %d.",
 				router->service->name, path, router->binlog_position)));
+                    close(fd);
 			return;
 		}
 	}
