@@ -196,68 +196,6 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
   set(ERRMSG ${ERRMSG_FILE} CACHE FILEPATH "Path to the errmsg.sys file." FORCE)
   unset(ERRMSG_FILE)
 
-  # Find the embedded mysql library
-
-  # if (DEFINED EMBEDDED_LIB)
-  #   if( NOT (IS_DIRECTORY ${EMBEDDED_LIB}) )
-  #     debugmsg("EMBEDDED_LIB is not a directory: ${EMBEDDED_LIB}")
-  #     if(${CMAKE_VERSION} VERSION_LESS 2.8.12 )
-  #   	set(COMP_VAR PATH)
-  #     else()
-  #   	set(COMP_VAR DIRECTORY)
-  #     endif()
-  #     get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} ${COMP_VAR})
-  #     debugmsg("EMBEDDED_LIB directory component: ${EMBEDDED_LIB}")
-  #   endif()
-  #   debugmsg("Searching for the embedded library at: ${EMBEDDED_LIB}")
-  # endif()
-
-  # if(STATIC_EMBEDDED)
-
-  #   debugmsg("Using the static embedded library...")
-  #   set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-  #   if (DEFINED EMBEDDED_LIB)
-  #     debugmsg("Searching for libmysqld.a at: ${EMBEDDED_LIB}")
-  #     find_library(EMBEDDED_LIB_STATIC libmysqld.a PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
-  #   else()
-  #     find_library(EMBEDDED_LIB_STATIC libmysqld.a PATH_SUFFIXES mysql mariadb)
-  #   endif()
-  #   debugmsg("Search returned: ${EMBEDDED_LIB_STATIC}")
-
-  #   set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC} CACHE FILEPATH "Path to libmysqld" FORCE)
-  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
-
-  # else()
-  #   debugmsg("Using the dynamic embedded library...")
-  #   set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
-  #   if (DEFINED EMBEDDED_LIB)
-  #     debugmsg("Searching for libmysqld.so at: ${EMBEDDED_LIB}")
-  #     find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
-  #   else()
-  #     find_library(EMBEDDED_LIB_DYNAMIC mysqld PATH_SUFFIXES mysql mariadb)
-  #   endif()
-  #   debugmsg("Search returned: ${EMBEDDED_LIB_DYNAMIC}")
-  #   set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC} CACHE FILEPATH "Path to libmysqld" FORCE)
-  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
-
-  # endif()
-
-  # unset(EMBEDDED_LIB_DYNAMIC)
-  # unset(EMBEDDED_LIB_STATIC)
-  # unset(OLD_SUFFIXES)
-
-  # # Inform the user about the embedded library
-  # if( (${EMBEDDED_LIB} MATCHES "NOTFOUND") OR (${EMBEDDED_LIB} MATCHES "NOTFOUND"))
-  #   set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-  #   message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
-  # else()
-  #   get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
-  #   message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
-  # endif()
-
-
   # Check which init.d script to install
   find_file(RPM_FNC functions PATHS /etc/rc.d/init.d)
   if(${RPM_FNC} MATCHES "RPM_FNC-NOTFOUND")

@@ -1,8 +1,7 @@
 # Set the install layout
 # Possible values:
 # STANDALONE - Installs to /usr/local/mariadb-maxscale
-# RPM - Installs to /usr
-# DEB - Installs to /usr
+# PACKAGE - Installs to /usr
 include(GNUInstallDirs)
 
 set(MAXSCALE_LIBDIR ${CMAKE_INSTALL_LIBDIR}/maxscale CACHE PATH "Library installation path")

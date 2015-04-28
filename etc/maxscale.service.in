@@ -1,0 +1,11 @@
+[Unit]
+Description=MariaDB MaxScale Database Proxy
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/maxscale/maxscale.pid
+ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale
+
+[Install]
+WantedBy=multi-user.target

@@ -1244,7 +1244,7 @@ In addition parameters may be added to define patterns to match against to eithe
 
 The top filter is a filter module for MaxScale that monitors every SQL statement that passes through the filter. It measures the duration of that statement, the time between the statement being sent and the first result being returned. The top N times are kept, along with the SQL text itself and a list sorted on the execution times of the query is written to a file upon closure of the client session.
 
-The configuration block for the **top** filter requires the minimal filter options in its section within the `MaxScale.cnf` file, stored in `$MAXSCALE_HOME/etc/MaxScale.cnf`.
+The configuration block for the **top** filter requires the minimal filter options in its section within the `MaxScale.cnf` file, stored in `/etc/MaxScale.cnf`.
 
 ```
 [MyLogFilter]
@@ -1258,9 +1258,11 @@ In addition parameters may be added to define patterns to match against to eithe
 
 ## Encrypting Passwords
 
-Passwords stored in the MaxScale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key.
+Passwords stored in the MaxScale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key. The default location MaxScale stores the keys is `/var/cache/maxscale`.
 
-    maxkeys $MAXSCALE_HOME/etc/.secrets
+```
+maxkeys /var/cache/maxscale/.secrets
+```
 
 Changing the encryption key for MaxScale will invalidate any currently encrypted keys stored in the MaxScale.cnf file.
 
@@ -1352,7 +1354,7 @@ and short notations
 
 ## Error Reporting
 
-MaxScale is designed to be executed as a service, therefore all error reports, including configuration errors, are written to the MaxScale error log file. MaxScale will log to a set of files in the directory `$MAXSCALE_HOME/log`, the only exception to this is if the log directory is not writable, in which case a message is sent to the standard error descriptor.
+MaxScale is designed to be executed as a service, therefore all error reports, including configuration errors, are written to the MaxScale error log file. By default, MaxScale will log to a set of files in the directory `/var/log/maxscale`, the only exception to this is if the log directory is not writable, in which case a message is sent to the standard error descriptor.
 
 ### Troubleshooting
 
@@ -1367,11 +1369,11 @@ Example:
 ```
 [Galera Listener]
 type=listener
-address=192.1681.3.33
+address=192.168.3.33
 port=4408
 socket=/servers/maxscale/galera.sock
 ```
 
-TCP/IP Traffic must be permitted to 192.1681.3.33 port 4408
+TCP/IP Traffic must be permitted to 192.168.3.33 port 4408
 
 For Unix socket, the socket file path (example: `/servers/maxscale/galera.sock`) must be writable by the Unix user MaxScale runs as.
