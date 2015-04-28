@@ -1711,7 +1711,7 @@ User admin already exists.
 
 **MaxScale>**** **
 
-If you should forget or lose the the account details you may simply remove the passwd file in $MAXSCALE_HOME/etc and the system will revert to the default behavior with admin/mariadb as the account.
+If you should forget or lose the the account details you may simply remove the passwd file in /var/cache/maxscale and the system will revert to the default behavior with admin/mariadb as the account.
 
 ## Enable/disable log
 
@@ -1745,7 +1745,7 @@ MaxScale generates output of its behavior to four distinct logs, error, messages
 
 ## Log contents
 
-By default all log files are located in : $MAXSCALE_HOME/log and named as : 
+By default all log files are located in : /var/log/maxscale and named as : 
 
 skygw_errW.log, skygw_msgX.log, skygw_traceY.log and skygw_debugZ.log
 
@@ -1837,7 +1837,7 @@ MariaDB Corporation MaxScale	/home/jdoe/bin/develop/log/skygw_msg1.log Tue Dec  
 
 ### Trace log
 
-Trace log includes information about available servers and their states, client sessions, queries being executed, routing decisions and other routing related data. Trace log can be found from the same directory with other logs but it is physically stored elsewhere, to OSs shared memory to reduce the latency caused by logging. The location of physical file is : /dev/shm/<pid>/skygw_traceX.log where ‘X’ is the same sequence number as in the file name in the $MAXSCALE_HOME/log directory.
+Trace log includes information about available servers and their states, client sessions, queries being executed, routing decisions and other routing related data. Trace log can be found from the same directory with other logs but it is physically stored elsewhere, to OSs shared memory to reduce the latency caused by logging. The location of physical file is : /dev/shm/<pid>/skygw_traceX.log where ‘X’ is the same sequence number as in the file name in the /var/log/maxscale directory.
 
 Individual trace log entry looks similar to those in other logs but there is some difference too. Some log entries include a number within square brackets to specify which client session they belong to. For example:
 
@@ -1923,11 +1923,11 @@ In the log, session’s life cycle is covered by annotating its beginning and th
 
 The log files are located in 
 
-$MAXSCALE_HOME/log 
+/var/log/maxscale
 
 by default. If, however, trace and debug logs are enabled, only a soft link is created there. MaxScale process creates a directory under 
 
-/dev/shm/<pid> 
+/dev/shm/maxscale.<pid> 
 
 where it stores the physical trace and debug log files. Link and physical files share the same name. These logs consume the main memory of the host they run on so it is important to archive or remove them periodically to avoid unnecessary main-memory consumption.
 
