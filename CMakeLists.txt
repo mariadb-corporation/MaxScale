@@ -270,6 +270,9 @@ target_link_libraries(sharding ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto 
 add_executable(fwf fwf.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(fwf ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(t t.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(t ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 
 add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
 

@@ -4,6 +4,7 @@
 
 #include <my_config.h>
 #include <iostream>
+#include <ctime>
 #include "testconnections.h"
 #include "maxadmin_operations.h"
 #include "sql_t1.h"
@@ -79,6 +80,42 @@ int main(int argc, char *argv[])
 
         mysql_close(Test->conn_rwsplit);
     }
+
+    // Test for at_times clause
+    printf("Trying at_times clause\n");
+    Test->stop_maxscale();
+    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_at_times root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
+    printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
+    system(str);
+
+    char time_str[100];
+    time_t curr_time = time(NULL);
+
+    // current time and 'current time + 2 minutes': block delete quries for 2 minutes
+    struct tm * timeinfo1 = localtime (&curr_time);
+    struct tm * timeinfo2 = localtime (&curr_time+120);
+
+    sprintf(time_str, "%2d:%2d:%2d-%2d:%2d:%2d", timeinfo1->tm_hour, timeinfo1->tm_min, timeinfo1->tm_sec, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);
+
+    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed \"s/###time###/%s/\" /home/ec2-user/rules.txt'", Test->maxscale_sshkey, Test->maxscale_IP, time_str);
+
+    Test->start_maxscale();
+    Test->connect_rwsplit();
+
+    printf("DELETE quries without WHERE clause will be blocked during next 2 minutes: %s\n", time_str);
+    printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
+    system(str);
+
+    printf("Trying 'DELETE FROM t1' and expecting FAILURE\n");
+    execute_query(Test->conn_rwsplit, "DELETE FROM t1");
+    if (mysql_errno(Test->conn_rwsplit) != 1141) {
+        printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));fflush(stdout);
+        global_result++;
+    }
+    printf("Waiting 3 minutes and trying 'DELETE FROM t1', expecting OK\n");
+    sleep(180);
+    global_result += execute_query(Test->conn_rwsplit, "DELETE FROM t1");
+
 
     Test->copy_all_logs(); return(global_result);
 }
