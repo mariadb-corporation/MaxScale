@@ -678,28 +678,42 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *servers) {
 	MONITOR_SERVERS *ptr = servers;
 	MONITOR_SERVERS *candidate_master = NULL;
 	long min_id = -1;
-	
+	int minval = INT_MAX;
+	int currval;
+	char* value;
 	/* set min_id to the lowest value of ptr->server->node_id */
 	while(ptr) {
-		if ((! SERVER_IN_MAINT(ptr->server)) && ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
+		if (!SERVER_IN_MAINT(ptr->server) && SERVER_IS_JOINED(ptr->server)) {
+
 			ptr->server->depth = 0;
-			if ((ptr->server->node_id < min_id) && min_id >= 0) {
+
+			if((value = serverGetParameter(ptr->server,"priority")) != NULL)
+			{
+			    currval = atoi(value);
+			    if(currval < minval)
+			    {
+				minval = currval;
+				candidate_master = ptr;
+			    }
+			}
+			else if(ptr->server->node_id >= 0)
+			{
+			    if ((ptr->server->node_id < min_id) && min_id >= 0) {
 				min_id = ptr->server->node_id;
 				candidate_master = ptr;
-			} else {
+			    } else {
 				if (min_id < 0) {
-					min_id = ptr->server->node_id;
-					candidate_master = ptr;
+				    min_id = ptr->server->node_id;
+				    candidate_master = ptr;
 				}
+			    }
 			}
 		}
-
 		ptr = ptr->next;
 	}
 
 	return candidate_master;
 }
-
 /**
  * set the master server in the cluster
  *
