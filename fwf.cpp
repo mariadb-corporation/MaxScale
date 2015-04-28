@@ -89,14 +89,18 @@ int main(int argc, char *argv[])
     system(str);
 
     char time_str[100];
+    char time_str1[100];
     time_t curr_time = time(NULL);
     time_t end_time = curr_time + 120;
 
     // current time and 'current time + 2 minutes': block delete quries for 2 minutes
     struct tm * timeinfo1 = localtime (&curr_time);
-    struct tm * timeinfo2 = localtime (&end_time);
 
-    sprintf(time_str, "%2d:%2d:%2d-%2d:%2d:%2d", timeinfo1->tm_hour, timeinfo1->tm_min, timeinfo1->tm_sec, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);
+
+    sprintf(time_str1, "%2d:%2d:%2d", timeinfo1->tm_hour, timeinfo1->tm_min, timeinfo1->tm_sec);
+
+    struct tm * timeinfo2 = localtime (&end_time);
+    sprintf(time_str, "%s-%2d:%2d:%2d", time_str1, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);
 
     sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed \"s/###time###/%s/\" /home/ec2-user/rules.txt'", Test->maxscale_sshkey, Test->maxscale_IP, time_str);
 
