@@ -18,11 +18,11 @@ char time_str[100];
     struct tm * timeinfo1 = localtime (&curr_time);
 
 
-    printf("%2d:%2d:%2d\n", timeinfo1->tm_hour, timeinfo1->tm_min, timeinfo1->tm_sec);
+    printf("%02d:%02d:%02d\n", timeinfo1->tm_hour, timeinfo1->tm_min, timeinfo1->tm_sec);
     struct tm * timeinfo2 = localtime (&end_time);
-    printf("%2d:%2d:%2d\n", timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);
+    printf("%02d:%02d:%02d\n", timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);
 
-    sprintf(time_str, "%2d:%2d:%2d-%2d:%2d:%2d", timeinfo1->tm_hour, timeinfo1->tm_min, timeinfo1->tm_sec, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);
+    sprintf(time_str, "%02d:%02d:%02d-%02d:%02d:%02d", timeinfo1->tm_hour, timeinfo1->tm_min, timeinfo1->tm_sec, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);
 
 printf("%s\n", time_str);
 
