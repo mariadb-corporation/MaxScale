@@ -1,0 +1,2 @@
+rule testrule deny no_where_clause at_times ###time### 17:00:00-19:00:00 on_queries delete
+users %@% match strict_all rules testrule
