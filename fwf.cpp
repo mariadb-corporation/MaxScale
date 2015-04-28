@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     // Test for at_times clause
     printf("Trying at_times clause\n");
     Test->stop_maxscale();
-    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_at_times root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
+    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_at_time root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
     system(str);
 
