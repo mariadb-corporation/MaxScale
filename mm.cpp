@@ -16,6 +16,8 @@ int main(int argc, char *argv[])
     Test->read_env();
     Test->print_env();
 
+    Test->repl->set_repl_user();
+
     Test->start_mm();
 
     Test->repl->connect();

@@ -403,8 +403,8 @@ int Mariadb_nodes::set_repl_user()
 {
     int global_result = 0;
     global_result += connect();
-    for (i = 0; i < N; i++) {
-        global_result += execute_query(nodes[node], create_repl_user);
+    for (int i = 0; i < N; i++) {
+        global_result += execute_query(nodes[i], create_repl_user);
     }
     close_connections();
     return(global_result);
