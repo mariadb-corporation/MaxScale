@@ -50,7 +50,7 @@ monitor_interval=8000
 [RW Split Router]
 type=service
 router= readwritesplit
-servers=server1,     server2,              server3,server4
+servers=server1,     server2
 user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
@@ -60,7 +60,7 @@ filters=QLA
 type=service
 router=readconnroute
 router_options= slave
-servers=server1,server2,server3,server4
+servers=server1,server2
 user=skysql
 passwd=skysql
 filters=QLA
@@ -69,7 +69,7 @@ filters=QLA
 type=service
 router=readconnroute
 router_options=master
-servers=server1,server2,server3,server4
+servers=server1,server2
 user=skysql
 passwd=skysql
 filters=QLA
