@@ -9,17 +9,8 @@ message(STATUS "CMake version: ${CMAKE_VERSION}")
 include(${CMAKE_SOURCE_DIR}/cmake/macros.cmake)
 enable_testing()
 
-# Packaging builds install to /usr and other builds to /usr/local/mariadb-maxscale
+# Packaging builds install to /usr and other builds to /usr/local
 if(PACKAGE)
-  set(INSTALL_LAYOUT "PACKAGE" CACHE STRING "Install layout, options are: STANDALONE, PACKAGE")
-else()
-  set(INSTALL_LAYOUT "STANDALONE" CACHE STRING "Install layout, options are: STANDALONE, PACKAGE")
-endif()
-
-# Installation prefixes for different layouts
-if(${INSTALL_LAYOUT} MATCHES "STANDALONE")
-  set(CMAKE_INSTALL_PREFIX "/usr/local/mariadb-maxscale" CACHE PATH "Prefix prepended to install directories.")
-else()
   set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "Prefix prepended to install directories.")
 endif()
 

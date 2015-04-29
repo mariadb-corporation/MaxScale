@@ -1,6 +1,6 @@
 # Set the install layout
 # Possible values:
-# STANDALONE - Installs to /usr/local/mariadb-maxscale
+# STANDALONE - Installs to /usr/local
 # PACKAGE - Installs to /usr
 include(GNUInstallDirs)
 
