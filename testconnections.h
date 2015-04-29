@@ -274,12 +274,16 @@ public:
     int stop_maxscale();
 
     /**
-     * @brief StartBinlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
-     * @param MaxScale_IP IP of MaxScale machine
-     * @param Binlog_Port port of binlog router listener
+     * @brief start_binlog configure first node as Master, Second as slave connected to Master and others as slave connected to MaxScale binlog router
      * @return  0 in case of success
      */
     int start_binlog();
+
+    /**
+     * @brief start_mm configure first node as Master for second, Second as Master for first
+     * @return  0 in case of success
+     */
+    int start_mm();
 
     /**
      * @brief Copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace

@@ -309,6 +309,45 @@ int TestConnections::start_binlog()
     return(global_result);
 }
 
+int TestConnections::start_mm()
+{
+    int i;
+    char log_file1[256];
+    char log_pos1[256];
+    char log_file2[256];
+    char log_pos2[256];
+    char sys1[1024];
+
+    printf("Stopping maxscale\n");fflush(stdout);
+    int global_result = stop_maxscale();
+
+    printf("Stopping all backend nodes\n");fflush(stdout);
+    global_result += repl->stop_nodes();
+
+    for (i = 0; i < 2; i++) {
+        printf("Starting back node %d\n", i);  fflush(stdout);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start", repl->sshkey[i], repl->IP[i]);
+        printf("%s\n", sys1);  fflush(stdout);
+        global_result += system(sys1); fflush(stdout);
+    }
+
+    repl->connect();
+    for (i = 0; i < 2; i++) {
+        execute_query(repl->nodes[i], (char *) "reset master");
+    }
+
+    find_field(repl->nodes[0], (char *) "show master status", (char *) "File", log_file1);
+    find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", log_pos1);
+
+    find_field(repl->nodes[1], (char *) "show master status", (char *) "File", log_file2);
+    find_field(repl->nodes[1], (char *) "show master status", (char *) "Position", log_pos2);
+
+    repl->set_slave(0, repl->IP[1],  repl->port[1], log_file2, log_pos2);
+    repl->set_slave(1, repl->IP[0],  repl->port[0], log_file1, log_pos1);
+
+    repl->close_connections();
+    return(global_result);
+}
 
 int check_log_err(char * err_msg, bool expected)
 {

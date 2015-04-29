@@ -81,9 +81,11 @@ int main(int argc, char *argv[])
         mysql_close(Test->conn_rwsplit);
     }
 
+    Test->stop_maxscale();
+
     // Test for at_times clause
     printf("Trying at_times clause\n");
-    Test->stop_maxscale();
+
     sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_at_time root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
     system(str);
@@ -103,13 +105,12 @@ int main(int argc, char *argv[])
     sprintf(time_str, "%s-%02d:%02d:%02d", time_str1, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);
 
     sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/###time###/%s/\" /home/ec2-user/rules.txt'", Test->maxscale_sshkey, Test->maxscale_IP, time_str);
+    printf("DELETE quries without WHERE clause will be blocked during next 2 minutes: %s\n", time_str);
+    printf("Put time to rules.txt: %s\n", str); fflush(stdout);
+    system(str);
 
     Test->start_maxscale();
     Test->connect_rwsplit();
-
-    printf("DELETE quries without WHERE clause will be blocked during next 2 minutes: %s\n", time_str);
-    printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
-    system(str);
 
     printf("Trying 'DELETE FROM t1' and expecting FAILURE\n");
     execute_query(Test->conn_rwsplit, "DELETE FROM t1");
