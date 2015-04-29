@@ -142,24 +142,22 @@ int main(int argc, char *argv[])
 
     printf("Expecting failures during next 5 seconds\n");
 
-    long int blocked_time;
-    long int start_time;
-    struct timespec gettime_now;
-    clock_gettime(CLOCK_REALTIME, &gettime_now);
-    start_time = gettime_now.tv_nsec;
+    time_t start_time_clock = time(NULL);
+    timeval t1, t2;
+    double elapsedTime;
+    gettimeofday(&t1, NULL);
 
     do {
-
     } while (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") != 0);
 
-    clock_gettime(CLOCK_REALTIME, &gettime_now);
-    blocked_time = gettime_now.tv_nsec - start_time;
-    time_t start_time_clock = time(NULL);
+    gettimeofday(&t2, NULL);
 
-    float spent_time = (float) blocked_time / 1000000000.0 ;
-    printf("Quries were blocked during %f (using clock_gettime())\n", spent_time);
+    elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
+    elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000.0;
+
+    printf("Quries were blocked during %f (using clock_gettime())\n", elapsedTime);
     printf("Quries were blocked during %lu (using time())\n", time(NULL)-start_time_clock);
-    if ((spent_time > 5.2) or (spent_time < 4.8)) {
+    if ((elapsedTime > 5.2) or (elapsedTime < 4.8)) {
         printf("Queries were blocked during wrong time\n");
         global_result++;
     }
