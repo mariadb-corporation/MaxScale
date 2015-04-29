@@ -24,8 +24,9 @@ int main(int argc, char *argv[])
     Test->print_env();
 
     int N = 9;
+    int i;
 
-    for (int i = 1; i < N+1; i++){
+    for (i = 1; i < N+1; i++){
         local_result = 0;
 
         Test->stop_maxscale();
@@ -90,13 +91,13 @@ int main(int argc, char *argv[])
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
     system(str);
 
-    char time_str[100];
+/*    char time_str[100];
     char time_str1[100];
     time_t curr_time = time(NULL);
     time_t end_time = curr_time + 120;
 
     // current time and 'current time + 2 minutes': block delete quries for 2 minutes
-/*    struct tm * timeinfo1 = localtime (&curr_time);
+    struct tm * timeinfo1 = localtime (&curr_time);
 
 
     sprintf(time_str1, "%02d:%02d:%02d", timeinfo1->tm_hour, timeinfo1->tm_min, timeinfo1->tm_sec);
@@ -105,7 +106,7 @@ int main(int argc, char *argv[])
     sprintf(time_str, "%s-%02d:%02d:%02d", time_str1, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);*/
 
     sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'start_time=`date +%%T`; stop_time=` date --date \"now +2 mins\" +%%T`; sed -i \"s/###time###/$start_time-$stop_time/\" /home/ec2-user/rules.txt'", Test->maxscale_sshkey, Test->maxscale_IP);
-    printf("DELETE quries without WHERE clause will be blocked during next 2 minutes: %s\n", time_str);
+    printf("DELETE quries without WHERE clause will be blocked during next 2 minutes\n");
     printf("Put time to rules.txt: %s\n", str); fflush(stdout);
     system(str);
 
@@ -122,6 +123,45 @@ int main(int argc, char *argv[])
     sleep(180);
     global_result += execute_query(Test->conn_rwsplit, "DELETE FROM t1");
 
+    mysql_close(Test->conn_rwsplit);
+    Test->stop_maxscale();
+
+    printf("Trying limit_queries clause\n");
+
+    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_limit_queries root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
+    printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
+    system(str);
+
+    Test->start_maxscale();
+    Test->connect_rwsplit();
+
+    printf("Trying 10 quries as fast as possible\n");
+    for (i = 0; i < 10; i++) {
+        global_result += execute_query(Test->conn_rwsplit, "SELECT * FROM t1");
+    }
+
+    printf("Expecting failures during next 5 seconds\n");
+    clock_t start_time = clock();
+    do {
+
+    } while (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") != 0);
+
+    clock_t blocked_time = clock() - start_time;
+
+    float spent_time = (float) blocked_time / CLOCKS_PER_SEC ;
+    printf("Quries were blocked during %f\n", spent_time);
+    if ((spent_time > 5.2) or (spent_time < 4.8)) {
+        printf("Queries were blocked during wrong time\n");
+        global_result++;
+    }
+
+    printf("Trying 20 quries, 1 query / second\n");
+    for (i = 0; i < 20; i++) {
+        sleep(1);
+        global_result += execute_query(Test->conn_rwsplit, "SELECT * FROM t1");
+        printf("%d ", i);
+    }
+    printf("\n");
 
     Test->copy_all_logs(); return(global_result);
 }
