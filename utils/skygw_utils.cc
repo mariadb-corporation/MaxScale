@@ -1989,6 +1989,34 @@ return_file:
         return file;
 }
 
+
+void skygw_file_close_stdout(
+	skygw_file_t* file,
+	bool          shutdown)
+{
+	int fd;
+	int err;
+	
+	if (file != NULL) 
+	{
+		CHK_FILE(file);
+		
+		if (!file_write_footer(file, shutdown)) 
+		{
+			fprintf(stderr,
+				"* Writing footer to log file %s failed.\n",
+				file->sf_fname);
+			perror("Write fike footer\n");
+		}
+		fd = fileno(file->sf_file);
+		fsync(fd);
+	
+                ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);
+                free(file->sf_fname);
+                free(file);
+	}
+}
+
 void skygw_file_close(
 	skygw_file_t* file,
 	bool          shutdown)

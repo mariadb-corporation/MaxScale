@@ -2741,7 +2741,10 @@ static void filewriter_done(
                 for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++) 
 		{
                     id = (logfile_id_t)i;
-                    skygw_file_close(fw->fwr_file[id], true);
+                    if(use_stdout)
+                        skygw_file_close_stdout(fw->fwr_file[id], true);
+                    else
+                        skygw_file_close(fw->fwr_file[id], true);
                 }
                 fw->fwr_state = DONE;
             case DONE:
