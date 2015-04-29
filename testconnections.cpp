@@ -347,6 +347,10 @@ int TestConnections::start_mm()
     repl->set_slave(1, repl->IP[0],  repl->port[0], log_file1, log_pos1);
 
     repl->close_connections();
+
+    printf("Starting back Maxscale\n");  fflush(stdout);
+    global_result += start_maxscale();
+
     return(global_result);
 }
 

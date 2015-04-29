@@ -25,7 +25,7 @@ threads=###threads###
 
 [MySQL Monitor]
 type=monitor
-module=mmon
+module=mmmon
 servers= server1, server2
 user=skysql
 passwd= skysql
