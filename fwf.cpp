@@ -96,15 +96,15 @@ int main(int argc, char *argv[])
     time_t end_time = curr_time + 120;
 
     // current time and 'current time + 2 minutes': block delete quries for 2 minutes
-    struct tm * timeinfo1 = localtime (&curr_time);
+/*    struct tm * timeinfo1 = localtime (&curr_time);
 
 
     sprintf(time_str1, "%02d:%02d:%02d", timeinfo1->tm_hour, timeinfo1->tm_min, timeinfo1->tm_sec);
 
     struct tm * timeinfo2 = localtime (&end_time);
-    sprintf(time_str, "%s-%02d:%02d:%02d", time_str1, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);
+    sprintf(time_str, "%s-%02d:%02d:%02d", time_str1, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);*/
 
-    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/###time###/%s/\" /home/ec2-user/rules.txt'", Test->maxscale_sshkey, Test->maxscale_IP, time_str);
+    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s start_time=`date +%T`; stop_time=` date --date 'now +2 mins' +%T`; sed -i \"s/###time###/$start_time-$stop_time/\" /home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->maxscale_IP);
     printf("DELETE quries without WHERE clause will be blocked during next 2 minutes: %s\n", time_str);
     printf("Put time to rules.txt: %s\n", str); fflush(stdout);
     system(str);

@@ -156,7 +156,7 @@ protocol=MySQLBackend
 [server2]
 type=server
 address=###galera_server_IP_2###
-port=###galera_server_port_3###
+port=###galera_server_port_2###
 protocol=MySQLBackend
 
 [server3]

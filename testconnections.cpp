@@ -337,6 +337,8 @@ int TestConnections::start_mm()
         execute_query(repl->nodes[i], (char *) "reset master");
     }
 
+    execute_query(repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=ON");
+
     find_field(repl->nodes[0], (char *) "show master status", (char *) "File", log_file1);
     find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", log_pos1);
 

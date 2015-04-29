@@ -197,6 +197,11 @@ public:
      */
     int set_slave(int node, char master_host[], int master_port, char log_file[], char log_pos[]);
 
+    /**
+     * @brief Creates 'repl' user on all nodes
+     * @return 0 if everything is ok
+     */
+    int set_repl_user();
 };
 
 #endif // MARIADB_NODES_H

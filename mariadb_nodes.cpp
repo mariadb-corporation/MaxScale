@@ -394,6 +394,18 @@ int Mariadb_nodes::set_slave(int node, char master_host[], int master_port, char
 {
     char str[1024];
     sprintf(str, setup_slave, master_host, log_file, log_pos, master_port);
+    printf("Setup node %d (%s)\n", node, IP[node]);
     printf("Setup slave SQL: %s\n", str);
     return(execute_query(nodes[node], str));
+}
+
+int Mariadb_nodes::set_repl_user()
+{
+    int global_result = 0;
+    global_result += connect();
+    for (i = 0; i < N; i++) {
+        global_result += execute_query(nodes[node], create_repl_user);
+    }
+    close_connections();
+    return(global_result);
 }
