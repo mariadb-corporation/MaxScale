@@ -154,9 +154,11 @@ int main(int argc, char *argv[])
 
     clock_gettime(CLOCK_REALTIME, &gettime_now);
     blocked_time = gettime_now.tv_nsec - start_time;
+    time_t start_time_clock = time(NULL);
 
     float spent_time = (float) blocked_time / 1000000000.0 ;
-    printf("Quries were blocked during %f\n", spent_time);
+    printf("Quries were blocked during %f (using clock_gettime())\n", spent_time);
+    printf("Quries were blocked during %f (using time())\n", time(NULL)-start_time_clock);
     if ((spent_time > 5.2) or (spent_time < 4.8)) {
         printf("Queries were blocked during wrong time\n");
         global_result++;
