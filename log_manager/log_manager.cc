@@ -80,6 +80,9 @@ ssize_t log_ses_count[LOGFILE_LAST] = {0};
  */
 #define MAX_LOGSTRLEN BUFSIZ
 
+/** Use the skygw_ prefix, only for 1.1 compatible builds*/
+#define OLD_LOGNAMES
+
 /**
  * Path to directory in which all files are stored to shared memory
  * by the OS.
@@ -308,7 +311,11 @@ const char* get_suffix_default(void)
 
 const char* get_debug_prefix_default(void)
 {
-        return "debug";
+#ifdef OLD_LOGNAMES
+    return "skygw_debug";
+#else
+    return "debug";
+#endif
 }
 
 const char* get_debug_suffix_default(void)
@@ -318,7 +325,11 @@ const char* get_debug_suffix_default(void)
 
 const char* get_trace_prefix_default(void)
 {
-        return "trace";
+#ifdef OLD_LOGNAMES
+    return "skygw_trace";
+#else
+    return "trace";
+#endif
 }
 
 const char* get_trace_suffix_default(void)
@@ -328,7 +339,11 @@ const char* get_trace_suffix_default(void)
 
 const char* get_msg_prefix_default(void)
 {
-        return "messages";
+#ifdef OLD_LOGNAMES
+    return "skygw_msg";
+#else
+    return "messages";
+#endif
 }
 
 const char* get_msg_suffix_default(void)
@@ -338,7 +353,11 @@ const char* get_msg_suffix_default(void)
 
 const char* get_err_prefix_default(void)
 {
-        return "error";
+#ifdef OLD_LOGNAMES
+    return "skygw_err";
+#else
+    return "error";
+#endif
 }
 
 const char* get_err_suffix_default(void)
