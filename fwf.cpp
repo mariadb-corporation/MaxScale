@@ -152,12 +152,12 @@ int main(int argc, char *argv[])
 
     gettimeofday(&t2, NULL);
 
-    elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
-    elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000.0;
+    elapsedTime = (t2.tv_sec - t1.tv_sec);
+    elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
 
     printf("Quries were blocked during %f (using clock_gettime())\n", elapsedTime);
     printf("Quries were blocked during %lu (using time())\n", time(NULL)-start_time_clock);
-    if ((elapsedTime > 5.2) or (elapsedTime < 4.8)) {
+    if ((elapsedTime > 6) or (elapsedTime < 4)) {
         printf("Queries were blocked during wrong time\n");
         global_result++;
     }
