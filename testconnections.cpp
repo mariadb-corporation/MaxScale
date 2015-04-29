@@ -333,6 +333,7 @@ int TestConnections::start_mm()
 
     repl->connect();
     for (i = 0; i < 2; i++) {
+        execute_query(repl->nodes[i], (char *) "stop slave");
         execute_query(repl->nodes[i], (char *) "reset master");
     }
 
