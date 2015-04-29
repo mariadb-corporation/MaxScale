@@ -133,21 +133,17 @@ MODULE_INFO	*mod_info = NULL;
 		 *
 		 * Search of the shared object.
 		 */
-		snprintf(fname,MAXPATHLEN+1, "./lib%s.so", module);
-		
+
+		snprintf(fname, MAXPATHLEN+1,"%s/lib%s.so", get_libdir(), module);
+
 		if (access(fname, F_OK) == -1)
 		{
-			snprintf(fname, MAXPATHLEN+1,"%s/lib%s.so", get_libdir(), module);
-
-                        if (access(fname, F_OK) == -1)
-			{
-				LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-					"Error : Unable to find library for "
-                                        "module: %s. Module dir: %s",
-                                        module, get_libdir())));
-				return NULL;
-			}
+		    LOGIF(LE, (skygw_log_write_flush(
+			    LOGFILE_ERROR,
+						     "Error : Unable to find library for "
+			    "module: %s. Module dir: %s",
+						     module, get_libdir())));
+		    return NULL;
 		}
 
 		if ((dlhandle = dlopen(fname, RTLD_NOW|RTLD_LOCAL)) == NULL)
