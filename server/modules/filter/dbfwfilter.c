@@ -86,6 +86,14 @@ MODULE_INFO 	info = {
 
 static char *version_str = "V1.0.0";
 
+static char* required_rules[] = {
+    "wildcard",
+    "columns",
+    "regex",
+    "limit_queries",
+    "no_where_clause",
+    NULL
+};
 /*
  * The filter entry points
  */
@@ -861,6 +869,10 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
     bool allow,deny,mode;
     RULE* ruledef = NULL;
     bool rval = true;
+    bool req_defined,oq_def,at_def;
+    int i;
+
+    req_defined = oq_def = at_def = false;
 
     if(tok == NULL)
     {
@@ -920,7 +932,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
     }
     else
     {
-	skygw_log_write(LOGFILE_ERROR,"Error : Unknown token in rule file: %s",tok);
+	skygw_log_write(LOGFILE_ERROR,"Error : Unknown token in rule '%s': %s",rule,tok);
 	rval = false;
 	goto retblock;
     }
@@ -947,6 +959,23 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 	while(tok)
 	{
 	    reparse_rule:
+	    
+	    for(i = 0;required_rules[i] != NULL;i++)
+	    {
+		if(strcmp(tok,required_rules[i]) == 0)
+		{
+		    if(req_defined)
+		    {
+			skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, Multiple non-optional rules: %s",rule);
+			rval = false;
+			goto retblock;
+		    }
+		    else
+		    {
+			req_defined = true;
+		    }
+		}
+	    }
 
 	    if(strcmp(tok,"wildcard") == 0)
             {
@@ -972,7 +1001,13 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
             }
 	    else if(strcmp(tok,"at_times") == 0)
             {
-
+		if(at_def)
+		{
+		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, multiple 'at_times' tokens: %s",rule);
+		    rval = false;
+		    goto retblock;
+		}
+		at_def = true;
                 tok = strtok_r(NULL, " ,",&saveptr);
                 TIMERANGE *tr = NULL;
                 while(tok){
@@ -1126,14 +1161,24 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
                     goto retblock;
 		}
+
+		if(qs->limit < 1){
+                    free(qs);
+		    rval = false;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Bad query amount: %s", tok);
+                    goto retblock;
+                }
+
 		errptr = NULL;
                 tok = strtok_r(NULL," ",&saveptr);
+
                 if(tok == NULL){
                     free(qs);
 		    rval = false;
 		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
                     goto retblock;
                 }
+
                 qs->period = strtod(tok,&errptr);
 
 		if(errptr && *errptr != '\0')
@@ -1143,9 +1188,17 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
                     goto retblock;
 		}
-		errptr = NULL;
 
+		if(qs->period < 1){
+                    free(qs);
+		    rval = false;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Bad time period: %s", tok);
+                    goto retblock;
+                }
+
+		errptr = NULL;
                 tok = strtok_r(NULL," ",&saveptr);
+
                 if(tok == NULL){
                     free(qs);
 		    rval = false;
@@ -1162,6 +1215,13 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                     goto retblock;
 		}
 
+		if(qs->cooldown < 1){
+                    free(qs);
+		    rval = false;
+		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Bad blocking period: %s", tok);
+                    goto retblock;
+                }
+
                 ruledef->type = RT_THROTTLE;
                 ruledef->data = (void*)qs;
             }
@@ -1172,6 +1232,13 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
             }
 	    else if(strcmp(tok,"on_queries") == 0)
             {
+		if(oq_def)
+		{
+		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, multiple 'on_queries' tokens: %s",rule);
+		    rval = false;
+		    goto retblock;
+		}
+		oq_def = true;
                 tok = strtok_r(NULL," ",&saveptr);
 
 		if(tok == NULL)
