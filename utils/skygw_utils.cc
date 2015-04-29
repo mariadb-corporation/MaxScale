@@ -30,76 +30,6 @@
 #include <sys/time.h>
 #include "skygw_utils.h"
 
-const char*  timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
-/** One for terminating '\0' */
-const size_t    timestamp_len       =    (4+1 +2+1 +2+1 +2+1 +2+1 +2+3  +1) * sizeof(char);
-
-
-const char*  timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
-/** One for terminating '\0' */
-const size_t    timestamp_len_hp       =    (4+1 +2+1 +2+1 +2+1 +2+1 +2+1+3+3  +1) * sizeof(char);
-
-/** Single-linked list for storing test cases */
-
-struct slist_node_st {
-        skygw_chk_t   slnode_chk_top;
-        slist_t*      slnode_list;
-        slist_node_t* slnode_next;
-        void*         slnode_data;
-        size_t        slnode_cursor_refcount;
-        skygw_chk_t   slnode_chk_tail;
-};
-
-struct slist_st {
-        skygw_chk_t   slist_chk_top;
-        slist_node_t* slist_head;
-        slist_node_t* slist_tail;
-        int        slist_nelems;
-        slist_t*      slist_cursors_list;
-        skygw_chk_t   slist_chk_tail;
-};
-
-struct slist_cursor_st {
-        skygw_chk_t     slcursor_chk_top;
-        slist_t*        slcursor_list;
-        slist_node_t*   slcursor_pos;
-        skygw_chk_t     slcursor_chk_tail;
-};
-
-struct skygw_thread_st {
-        skygw_chk_t       sth_chk_top;
-        bool              sth_must_exit;
-        simple_mutex_t*   sth_mutex;
-        pthread_t         sth_parent;
-        pthread_t         sth_thr;
-        int               sth_errno;
-#if defined(SS_DEBUG)
-        skygw_thr_state_t sth_state;
-#endif
-        char*             sth_name;
-        void* (*sth_thrfun)(void* data);
-        void*             sth_data;
-        skygw_chk_t       sth_chk_tail;
-};
-
-struct skygw_message_st {
-        skygw_chk_t     mes_chk_top;
-        bool            mes_sent;
-        pthread_mutex_t mes_mutex;
-        pthread_cond_t  mes_cond;
-        skygw_chk_t     mes_chk_tail;
-};
-
-struct skygw_file_st {
-        skygw_chk_t  sf_chk_top;
-        char*        sf_fname;
-        FILE*        sf_file;
-        int          sf_fd;
-        skygw_chk_t  sf_chk_tail;
-};
-
-/** End of structs and types */
-
 #if defined(MLIST)
 
 
@@ -2028,6 +1958,32 @@ skygw_file_t* skygw_file_init(
                         goto return_file;
                 }
         }
+
+return_file:
+        return file;
+}
+
+
+skygw_file_t* skygw_file_init_stdout(
+        char* fname,
+        char* symlinkname)
+{
+        skygw_file_t* file;
+
+        if ((file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t))) == NULL)
+	{
+                fprintf(stderr,
+                        "* Error : Memory allocation for file %s failed.\n",
+			fname);
+                perror("SkyGW file allocation\n");
+		goto return_file;
+        }
+        ss_dassert(file != NULL);
+        file->sf_chk_top = CHK_NUM_FILE;
+        file->sf_chk_tail = CHK_NUM_FILE;
+        file->sf_fname = strdup(fname);
+        file->sf_file = stdout;
+        CHK_FILE(file);
 
 return_file:
         return file;
