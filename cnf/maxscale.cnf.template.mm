@@ -141,17 +141,17 @@ address=###repl_server_IP_2###
 port=###repl_server_port_3###
 protocol=MySQLBackend
 
-[server3]
-type=server
-address=###repl_server_IP_3###
-port=###repl_server_port_3###
-protocol=MySQLBackend
+#[server3]
+#type=server
+#address=###repl_server_IP_3###
+#port=###repl_server_port_3###
+#protocol=MySQLBackend
 
-[server4]
-type=server
-address=###repl_server_IP_4###
-port=###repl_server_port_4###
-protocol=MySQLBackend
+#[server4]
+#type=server
+#address=###repl_server_IP_4###
+#port=###repl_server_port_4###
+#protocol=MySQLBackend
 
 [QLA]
 type=filter
