@@ -946,6 +946,8 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
 	while(tok)
 	{
+	    reparse_rule:
+
 	    if(strcmp(tok,"wildcard") == 0)
             {
                 ruledef->type = RT_WILDCARD;
@@ -974,7 +976,8 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                 tok = strtok_r(NULL, " ,",&saveptr);
                 TIMERANGE *tr = NULL;
                 while(tok){
-
+		    if(strcmp(tok,"on_queries") == 0)
+			goto reparse_rule;
 		    if(!check_time(tok))
 		    {
 			skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, malformed time definition: %s",tok);
