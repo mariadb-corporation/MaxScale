@@ -1882,24 +1882,37 @@ return_rc:
         return rc;
 }
 
+skygw_file_t* skygw_file_alloc(
+        char* fname)
+{
+    skygw_file_t* file;
+
+    if ((file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t))) == NULL)
+    {
+        fprintf(stderr,
+                "* Error : Memory allocation for file %s failed.\n",
+                fname);
+        perror("SkyGW file allocation\n");
+        return NULL;
+    }
+    ss_dassert(file != NULL);
+    file->sf_chk_top = CHK_NUM_FILE;
+    file->sf_chk_tail = CHK_NUM_FILE;
+    file->sf_fname = strdup(fname);
+    return file;
+}
+
 skygw_file_t* skygw_file_init(
         char* fname,
         char* symlinkname)
 {
         skygw_file_t* file;
         
-        if ((file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t))) == NULL)
+        if ((file = skygw_file_alloc (fname)) == NULL)
 	{
-                fprintf(stderr,
-                        "* Error : Memory allocation for file %s failed.\n",
-			fname);
-                perror("SkyGW file allocation\n");
+            /** Error was reported in skygw_file_alloc */
 		goto return_file;
         }
-        ss_dassert(file != NULL);
-        file->sf_chk_top = CHK_NUM_FILE;
-        file->sf_chk_tail = CHK_NUM_FILE;
-        file->sf_fname = strdup(fname);
 
         if ((file->sf_file = fopen(file->sf_fname, "a")) == NULL)
 	{
@@ -1963,58 +1976,10 @@ return_file:
         return file;
 }
 
-
-skygw_file_t* skygw_file_init_stdout(
-        char* fname,
-        char* symlinkname)
+void skygw_file_free(skygw_file_t* file)
 {
-        skygw_file_t* file;
-
-        if ((file = (skygw_file_t *)calloc(1, sizeof(skygw_file_t))) == NULL)
-	{
-                fprintf(stderr,
-                        "* Error : Memory allocation for file %s failed.\n",
-			fname);
-                perror("SkyGW file allocation\n");
-		goto return_file;
-        }
-        ss_dassert(file != NULL);
-        file->sf_chk_top = CHK_NUM_FILE;
-        file->sf_chk_tail = CHK_NUM_FILE;
-        file->sf_fname = strdup(fname);
-        file->sf_file = stdout;
-        CHK_FILE(file);
-
-return_file:
-        return file;
-}
-
-
-void skygw_file_close_stdout(
-	skygw_file_t* file,
-	bool          shutdown)
-{
-	int fd;
-	int err;
-	
-	if (file != NULL) 
-	{
-		CHK_FILE(file);
-		
-		if (!file_write_footer(file, shutdown)) 
-		{
-			fprintf(stderr,
-				"* Writing footer to log file %s failed.\n",
-				file->sf_fname);
-			perror("Write fike footer\n");
-		}
-		fd = fileno(file->sf_file);
-		fsync(fd);
-	
-                ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);
-                free(file->sf_fname);
-                free(file);
-	}
+    free(file->sf_fname);
+    free(file);
 }
 
 void skygw_file_close(
@@ -2037,7 +2002,7 @@ void skygw_file_close(
 		}
 		fd = fileno(file->sf_file);
 		fsync(fd);
-		
+
 		if ((err = fclose(file->sf_file)) != 0)
 		{
 			fprintf(stderr,
@@ -2049,8 +2014,7 @@ void skygw_file_close(
 		else
 		{
 			ss_dfprintf(stderr, "Closed %s\n", file->sf_fname);        
-			free(file->sf_fname);
-			free(file);
+			skygw_file_free (file);
 		}
 	}
 }

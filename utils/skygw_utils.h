@@ -216,10 +216,10 @@ EXTERN_C_BLOCK_END
 /** Skygw thread routines */
 
 /** Skygw file routines */
+skygw_file_t* skygw_file_alloc(char* fname);
+void skygw_file_free(skygw_file_t* file);
 skygw_file_t* skygw_file_init(char* fname, char* symlinkname);
-skygw_file_t* skygw_file_init_stdout(char* fname, char* symlinkname);
 void skygw_file_close(skygw_file_t* file, bool shutdown);
-void skygw_file_close_stdout(skygw_file_t*, bool);
 int skygw_file_write(
         skygw_file_t* file,
         void*         data,

@@ -2161,9 +2161,9 @@ static bool logfile_open_file(
 
         if(use_stdout)
         {
-            fw->fwr_file[lf->lf_id] = skygw_file_init_stdout (
-                    lf->lf_full_file_name,
-                    lf->lf_full_link_name);
+            fw->fwr_file[lf->lf_id] = skygw_file_alloc (
+                    lf->lf_full_file_name);
+            fw->fwr_file[lf->lf_id]->sf_file = stdout;
         }
 	else if (lf->lf_store_shmem)
 	{
@@ -2742,7 +2742,7 @@ static void filewriter_done(
 		{
                     id = (logfile_id_t)i;
                     if(use_stdout)
-                        skygw_file_close_stdout(fw->fwr_file[id], true);
+                        skygw_file_free(fw->fwr_file[id]);
                     else
                         skygw_file_close(fw->fwr_file[id], true);
                 }
@@ -2876,6 +2876,9 @@ static void* thr_filewriter_fun(
 				} 
 				else if ((succp = logfile_open_file(fwr, lf)))
 				{
+                                    if(use_stdout)
+                                        skygw_file_free (file);
+                                    else
 					skygw_file_close(file, false); /*< close old file */
 				}
 				
