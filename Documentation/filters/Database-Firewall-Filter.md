@@ -74,7 +74,7 @@ Each mandatory rule accepts one or more optional parameters. These are to be def
 
 #### `at_times`
 
-This rule expects a list of time ranges that define the times when the rule in question is active. The time formats are expected to be ISO-8601 compliant and to be separated by a single dash (the - character). For example, to define the active period of a rule to be 5pm to 7pm, you would include `at times 17:00:00-19:00:00` in the rule definition.
+This rule expects a list of time ranges that define the times when the rule in question is active. The time formats are expected to be ISO-8601 compliant and to be separated by a single dash (the - character). For example, to define the active period of a rule to be 5pm to 7pm, you would include `at times 17:00:00-19:00:00` in the rule definition. The rule uses local time to check if the rule is active and has a precision of one second.
 
 #### `on_queries`
 
