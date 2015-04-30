@@ -199,6 +199,7 @@ typedef enum skygw_chk_t {
                             ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY" : \
                              ((s) == SESSION_STATE_LISTENER ? "SESSION_STATE_LISTENER" : \
                               ((s) == SESSION_STATE_LISTENER_STOPPED ? "SESSION_STATE_LISTENER_STOPPED" : \
+                              (s) == SESSION_STATE_ROUTER_READY ? "SESSION_STATE_ROUTER_READY":\
                                "SESSION_STATE_UNKNOWN"))))
 
 #define STRPROTOCOLSTATE(s) ((s) == MYSQL_ALLOC ? "MYSQL_ALLOC" :       \
