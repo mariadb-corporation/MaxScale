@@ -77,6 +77,8 @@ stop() {
 
 reload() {
         log_daemon_msg "Reloading MaxScale"
+        
+        kill -HUP $(cat $MAXSCALE_PIDFILE)
 
         log_end_msg $?
 }
