@@ -796,7 +796,7 @@ int log_no_master = 1;
 			mon_status_changed(root_master) && 
 			!(root_master->server->status & SERVER_STALE_STATUS)) 
 		{
-			if (root_master->pending_status & (SERVER_MASTER)) {
+			if (root_master->pending_status & (SERVER_MASTER) && SERVER_IS_RUNNING(root_master->server)) {
 				if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) && 
 					!(root_master->server->status & SERVER_MAINT)) 
 				{
