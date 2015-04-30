@@ -95,7 +95,7 @@ static FILTER_OBJECT MyObject = {
  * are logged.
  *
  * To this base a session number is attached such that each session will
- * have a nique name.
+ * have a unique name.
  */
 typedef struct {
 	int	sessions;	/* The count of sessions */
