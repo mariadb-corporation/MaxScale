@@ -29,8 +29,7 @@ static const char* default_logdir = "/var/log/maxscale/";
 static const char* default_datadir = "/var/cache/maxscale/";
 static const char* default_libdir = "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@";
 static const char* default_cachedir = "/var/cache/maxscale/";
-static const char* default_langdir = "/usr/share/mysql/english/"; /*< This is where the MariaDB
-                                                                   *  server installs errmsg.sys */
+static const char* default_langdir = "@MAXSCALE_VARDIR@/lib/maxscale/";
 
 static char* configdir = NULL;
 static char* logdir = NULL;
