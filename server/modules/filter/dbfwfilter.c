@@ -1041,7 +1041,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
                 ruledef->active = tr;
 
-		if(strcmp(tok,"on_queries") == 0)
+		if(tok && strcmp(tok,"on_queries") == 0)
 			goto reparse_rule;
 
             }
