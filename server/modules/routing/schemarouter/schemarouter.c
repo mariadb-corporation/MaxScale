@@ -1186,7 +1186,7 @@ static void closeSession(
 		double ses_time = difftime(time(NULL),router_cli_ses->rses_client_dcb->session->stats.connect);
 		if(inst->stats.ses_longest < ses_time)
 		    inst->stats.ses_longest = ses_time;
-		if(inst->stats.ses_shortest > ses_time)
+		if(inst->stats.ses_shortest > ses_time && inst->stats.ses_shortest > 0)
 		    inst->stats.ses_shortest = ses_time;
 
 		inst->stats.ses_average = 
