@@ -5,7 +5,7 @@ if(BUILD_TESTS OR BUILD_TOOLS)
   elseif(WITH_TCMALLOC)
     target_link_libraries(fullcore ${TCMALLOC_LIBRARIES})
   endif()
-  target_link_libraries(fullcore ${CURL_LIBRARIES} log_manager utils pthread ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ssl aio rt crypt dl crypto inih z m stdc++)
+  target_link_libraries(fullcore ${CURL_LIBRARIES} utils log_manager pthread ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ssl aio rt crypt dl crypto inih z m stdc++)
 endif()
 
 add_executable(maxscale atomic.c buffer.c spinlock.c gateway.c

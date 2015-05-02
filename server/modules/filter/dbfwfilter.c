@@ -464,9 +464,9 @@ bool check_time(char* str)
 
 
 #ifdef SS_DEBUG
-#define CHK_TIMES(t)(ss_dassert(t->tm_sec > -1 && t->tm_sec < 62        \
+#define CHK_TIMES(t) ss_dassert(t->tm_sec > -1 && t->tm_sec < 62        \
                                 && t->tm_min > -1 && t->tm_min < 60     \
-                                && t->tm_hour > -1 && t->tm_hour < 24))
+                                && t->tm_hour > -1 && t->tm_hour < 24)
 #else
 #define CHK_TIMES(t)
 #endif
