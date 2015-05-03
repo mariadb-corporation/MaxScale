@@ -1724,29 +1724,36 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 			
         case RT_COLUMN:
 		   
-            if(is_sql && is_real){
-
-                strln = (STRLINK*)rulelist->rule->data;			
+            if(is_sql && is_real)
+	    {
                 where = skygw_get_affected_fields(queue);
-
                 if(where != NULL){
+		    char* saveptr;
+		    char* tok = strtok_r(where," ",&saveptr);
+		    while(tok)
+		    {
+			strln = (STRLINK*)rulelist->rule->data;
+			while(strln)
+			{
+			    if(strcasecmp(tok,strln->value) == 0)
+			    {
+				matches = true;
 
-                    while(strln){
-                        if(strstr(where,strln->value)){
-
-                            matches = true;
-
-                            if(!rulelist->rule->allow){
-                                sprintf(emsg,"Permission denied to column '%s'.",strln->value);
-                                skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': query targets forbidden column: %s",rulelist->rule->name,strln->value);
-                                msg = strdup(emsg);
-                                goto queryresolved;
-                            }else{
-                                break;
-                            }
-                        }
-                        strln = strln->next;
-                    }
+				if(!rulelist->rule->allow)
+				{
+				    sprintf(emsg,"Permission denied to column '%s'.",strln->value);
+				    skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': query targets forbidden column: %s",rulelist->rule->name,strln->value);
+				    msg = strdup(emsg);
+				    goto queryresolved;
+				}
+				else
+				    break;
+			    }
+			    strln = strln->next;
+			}
+			tok = strtok_r(NULL,",",&saveptr);
+		    }
+		    free(where);
                 }
             }
 			
@@ -1761,16 +1768,16 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 						
                 if(where != NULL){
                     strptr = where;
-                }else{
-                    strptr = query;
-                }
-                if(strchr(strptr,'*')){
 
-                    matches = true;
-                    msg = strdup("Usage of wildcard denied.");
-                    skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': query contains a wildcard.",rulelist->rule->name);
-                    goto queryresolved;
-                }
+		    if(strchr(strptr,'*')){
+
+			matches = true;
+			msg = strdup("Usage of wildcard denied.");
+			skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': query contains a wildcard.",rulelist->rule->name);
+			goto queryresolved;
+		    }
+		    free(where);
+		}
             }
 			
             break;
