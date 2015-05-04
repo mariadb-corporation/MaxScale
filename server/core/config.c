@@ -2033,15 +2033,18 @@ bool config_set_qualified_param(
 int
 config_truth_value(char *str)
 {
-	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0)
+	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 ||
+	 strcasecmp(str, "yes") == 0 || strcasecmp(str, "1") == 0)
 	{
 		return 1;
 	}
-	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 || strcasecmp(str, "no") == 0)
+	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 ||
+	 strcasecmp(str, "no") == 0|| strcasecmp(str, "0") == 0)
 	{
 		return 0;
 	}
-	return atoi(str);
+	skygw_log_write(LOGFILE_ERROR,"Error: Not a boolean value: %s",str);
+	return -1;
 }
 
 
