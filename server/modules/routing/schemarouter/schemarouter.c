@@ -1173,6 +1173,10 @@ static void closeSession(
                 dcb_close(router_cli_ses->dcb_reply);
                 dcb_close(router_cli_ses->dcb_route);
 
+		if(router_cli_ses->queue)
+		    router_cli_ses->queue = gwbuf_consume(
+				   router_cli_ses->queue,gwbuf_length(router_cli_ses->queue));
+
                 /** Unlock */
                 rses_end_locked_router_action(router_cli_ses);
 
@@ -1182,7 +1186,7 @@ static void closeSession(
 		double ses_time = difftime(time(NULL),router_cli_ses->rses_client_dcb->session->stats.connect);
 		if(inst->stats.ses_longest < ses_time)
 		    inst->stats.ses_longest = ses_time;
-		if(inst->stats.ses_shortest > ses_time)
+		if(inst->stats.ses_shortest > ses_time && inst->stats.ses_shortest > 0)
 		    inst->stats.ses_shortest = ses_time;
 
 		inst->stats.ses_average = 
@@ -1828,7 +1832,7 @@ gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 static int routeQuery(
         ROUTER* instance,
         void*   router_session,
-        GWBUF*  querybuf)
+        GWBUF* qbuf)
 {
         skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
         mysql_server_cmd_t packet_type;
@@ -1842,7 +1846,7 @@ static int routeQuery(
         route_target_t     route_target = TARGET_UNDEFINED;
 	bool           	   succp          = false;
 	char* tname = NULL;
-
+	GWBUF*  querybuf = qbuf;
 
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -1879,7 +1883,7 @@ static int routeQuery(
 			 router_cli_ses->rses_client_dcb->session,
 			 querystr);
 		free(querystr);
-		gwbuf_make_contiguous(querybuf);
+		querybuf = gwbuf_make_contiguous(querybuf);
 		GWBUF* ptr = router_cli_ses->queue;
 
 		while(ptr && ptr->next)
