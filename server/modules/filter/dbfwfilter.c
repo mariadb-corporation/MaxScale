@@ -2225,15 +2225,11 @@ int main(int argc, char** argv)
     }
     printf("Log files written to: %s\n",home?home:"/tpm");
 
-    int argc_ = 11;
+    int argc_ = 2;
     char* argv_[] =
         {
             "log_manager",
-            "-j",home?home:"/tmp",
-	    "-a","ruleparser_debug",
-	    "-c","ruleparser_trace",
-	    "-e","ruleparser_message",
-	    "-g","ruleparser_error",
+            "-o",
             NULL
         };
 
