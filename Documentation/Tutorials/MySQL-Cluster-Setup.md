@@ -24,7 +24,7 @@ Last Updated: 1st August 2014
 
 ## Overview
 
-The document covers the MySQL Cluster 7.2.17 setup and MaxScale configuration in order to load balancing the SQL nodes acces.
+The document covers the MySQL Cluster 7.2.17 setup and MaxScale configuration in order to load balancing the SQL nodes access.
 
 ## MySQL Cluster setup
 

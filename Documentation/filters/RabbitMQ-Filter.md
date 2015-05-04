@@ -5,7 +5,7 @@ This filter is designed to extract queries and transform them into a canonical f
 
 ## Configuration
 
-The configuration block for the **mqfilter** filter requires the minimal filter options in it’s section within the MaxScale.cnf file, stored in $MAXSCALE_HOME/etc/MaxScale.cnf. Although the filter will start, it will use the default values which only work with a freshly installed RabbitMQ server and use its default values. This setup is mostly intednded for testing the filter.
+The configuration block for the **mqfilter** filter requires the minimal filter options in it’s section within the MaxScale.cnf file, stored in $MAXSCALE_HOME/etc/MaxScale.cnf. Although the filter will start, it will use the default values which only work with a freshly installed RabbitMQ server and use its default values. This setup is mostly intended for testing the filter.
 
 The following is an example of a mqfilter configuration in the MaxScale.cnf file used for actual logging of queries to a RabbitMQ broker on a different host.
 
@@ -25,6 +25,14 @@ logging_log_all=false
 logging_object=my1
 logging_schema=test
 logging_source_user=maxtest
+
+[RabbitMQ Service]
+type=service
+router=readconnrouter
+servers=server1
+user=myuser
+passwd=mypasswd
+filters=RabbitMQ
 ```
 
 ### Filter Options

@@ -1,4 +1,4 @@
-/** \mainpage MaxScale by MariaDB Corporation
+# MaxScale by MariaDB Corporation
 
 The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
 database statements to one or more database servers using complex rules,
@@ -25,26 +25,13 @@ as external shared objects and are referred to as routing modules.
 
 An Google Group exists for MaxScale that can be used to discuss ideas,
 issues and communicate with the MaxScale community.
-	Send email to [maxscale@googlegroups.com](mailto:maxscale@googlegroups.com)
+	Send email to maxscale@googlegroups.com
 	or use the [forum](http://groups.google.com/forum/#!forum/maxscale) interface
 	
 Bugs can be reported in the MariaDB Corporation bugs database
-	[https://mariadb.atlassian.net/secure/CreateIssue!default.jspa](https://mariadb.atlassian.net/secure/CreateIssue!default.jspa) under project MXS.
+	[https://mariadb.atlassian.net](https://mariadb.atlassian.net) under project MXS.
 
-\section Documentation
+# Documentation
 
 For information about installing and using MaxScale, please refer to the 
-documentation. It is in Markdown format.
-
-You can point your browser to the MaxScale project at GitHub.  Look
-inside the "Documentation" directory, where you will find a file named
-Documentation-Contents.md. Click on that, and GitHub will show the
-documentation in its intended display format.  The contents page lists
-the available documents and has links to them.
-
-If you do not want to rely on the internet, then clone the project
-from GitHub - either the entire project or just the Documentation folder.
-Then point your browser to the Documentation-Contents.md file in your
-local file system and proceed as above.
-
-*/
+[documentation](Documentation/Documentation-Contents.md).

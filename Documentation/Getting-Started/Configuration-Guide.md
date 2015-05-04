@@ -2,7 +2,7 @@
 
 ## Introduction
 
-The purpose of this document is to describe how to configure MaxScale and to discuss some possible usage scenarios for MaxScale. MaxScale is designed with flexibility in mind, and consists of an event processing core with various support functions and plugin modules that tailor the behaviour of the MaxScale itself.
+The purpose of this document is to describe how to configure MaxScale and to discuss some possible usage scenarios for MaxScale. MaxScale is designed with flexibility in mind, and consists of an event processing core with various support functions and plugin modules that tailor the behavior of the MaxScale itself.
 
 ### Terms
 
@@ -120,7 +120,7 @@ In order for MaxScale to forward any requests it must have at least one service 
 
 #### `router`
 
-The router parameter of a service defines the name of the router module that will be used to implement the routing algorithm between the client of MaxScale and the backend databases. Additionally routers may also be passed a comma separated list of options that are used to control the behaviour of the routing algorithm. The two parameters that control the routing choice are router and router_options. The router options are specific to a particular router and are used to modify the behaviour of the router. The read connection router can be passed options of master, slave or synced, an example of configuring a service to use this router and limiting the choice of servers to those in slave state would be as follows.
+The router parameter of a service defines the name of the router module that will be used to implement the routing algorithm between the client of MaxScale and the backend databases. Additionally routers may also be passed a comma separated list of options that are used to control the behavior of the routing algorithm. The two parameters that control the routing choice are router and router_options. The router options are specific to a particular router and are used to modify the behavior of the router. The read connection router can be passed options of master, slave or synced, an example of configuring a service to use this router and limiting the choice of servers to those in slave state would be as follows.
 
 ```
 router=readconnroute
@@ -262,6 +262,10 @@ This parameter controls whether only a single server or all of the servers are u
 The strip_db_esc parameter strips escape characters from database names of grants when loading the users from the backend server. Some visual database management tools automatically escape some characters and this might cause conflicts when MaxScale tries to authenticate users.
 
 This parameter takes a boolean value and when enabled, will strip all `\` characters from the database names.
+
+#### `optimize_wildcard`
+
+Enabling this feature will transform wildcard grants to individual database grants. This will consume more memory but authentication in MaxScale will be done faster. The parameter takes a boolean value.
 
 #### `connection_timeout`
 
@@ -406,6 +410,8 @@ In order for the various router modules to function correctly they require infor
 
 Monitors are defined in much the same way as other elements in the configuration file, with the section name being the name of the monitor instance and the type being set to monitor.
 
+This is an example configuration of the MySQL monitor module. It is intended for Master-Slave replication clusters and allows for replication lag detection.
+
 ```
 [MySQL Monitor]
 type=monitor
@@ -421,7 +427,11 @@ backend_write_timeout=2
 # mysqlmon specific options
 detect_replication_lag=0
 detect_stale_master=0
+```
 
+Here is an example configuration of the Galera cluster monitor. It detects when nodes are in sync and also assigns master and slave roles to nodes within MaxScale, allowing it to be used with modules designed for Master-Slave replication clusters.
+
+```
 [Galera Monitor]
 type=monitor
 module=galeramon
@@ -435,6 +445,7 @@ backend_write_timeout=2
 
 # galeramon specific options
 disable_master_failback=0
+available_when_donor=0
 ```
 
 #### `module`
@@ -444,6 +455,8 @@ The module parameter defines the name of the loadable module that implements the
 #### `servers`
 
 The servers parameter is a comma separated list of server names to monitor, these are the names defined elsewhere in the configuration file. The set of servers monitored by a single monitor need not be the same as the set of servers used within any particular server, a single monitor instance may monitor servers in multiple servers.
+
+Multiple monitors monitoring the same servers should be avoided. They can possibly make the whole cluster inoperable and a good example is the mixed use of the MySQL and the Galera monitors. The MySQL monitor requires a working Master-Slave replication for it to assign the Master and Slave roles inside MaxScale but the Galera monitor only looks for Galera specific status variables. These two monitors will cause a conflict when one tries to clear server states it sees as valid while the other is simultaneously setting new states to the rest of the servers.
 
 #### `user`
 
@@ -499,6 +512,12 @@ The server status field may have the `SERVER_MASTER_STICKINESS` bit, meaning the
 
 Anyway, a new master will be selected in case of current master failure, regardless the option value.
 
+#### `available_when_donor`
+
+This option if set to 1 will allow Galera monitor to keep a node in `Donor` status in the server pool if it is using any xtrabackup method for SST, e.g. `wsrep_sst_method` equal to `xtrabackup` or `xtrabackup-v2`.
+
+As xtrabackup is a non-locking SST method, a node in `Donor` status can still be considered in sync. This option is not enabled by default and should be used as the administrator's discretion.
+
 #### `backend_connect_timeout`
 
 This option, with default value of `3` sets the monitor connect timeout to backends.
@@ -539,7 +558,7 @@ This protocol module is currently still under development, it provides a means t
 
 The main task of MaxScale is to accept database connections from client applications and route the connections or the statements sent over those connections to the various services supported by MaxScale.
 
-There are two flavours of routing that MaxScale can perform, connection based routing and statement based routine. These each have their own characteristics and costs associated with them.
+There are two flavors of routing that MaxScale can perform, connection based routing and statement based routine. These each have their own characteristics and costs associated with them.
 
 ### Connection Based Routing
 
@@ -644,7 +663,7 @@ passwd=galeramon
 
 The specialized Galera monitor can also select one of the node in the cluster as _Master_, the others will be marked as _Slave_. These roles are only assigned to _Synced_ nodes.
 
-It then possible to have services/listeners with `router_options=master` or `slave` accessing a subset of all galera nodes. The _Synced_ state simply means: access all nodes. Examples of different **readconn** router configurations for Galera:
+It then possible to have services/listeners with `router_options=master` or `slave` accessing a subset of all Galera nodes. The _Synced_ state simply means: access all nodes. Examples of different **readconn** router configurations for Galera:
 
 ```
 [Galera Master Service]
@@ -811,6 +830,8 @@ In above-mentioned case the user-defined variable would only be updated in the m
 	max_sescmd_history=1500
 
 When a limitation is set, it effectively creates a cap on the session's memory consumption. This might be useful if connection pooling is used and the sessions use large amounts of session commands.
+
+`disable_sescmd_history=true|false` disables the session command history. This way nothing is stored and if a slave server fails and a new one is taken in its stead, the session on that server will be in an inconsistent state compared to the master server. Disabling session command history will allow connection pooling without causing a constant growth in the memory consumption.
 
 An example of Read/Write Split router configuration :
 
@@ -1308,7 +1329,7 @@ In this case the user *X* would be able to connect to MaxScale from host a givin
 
 Hostname mapping in MaxScale works in exactly the same way as for MySQL, if the wildcard is used for the host then any host other than the localhost (127.0.0.1) will match. It is important to consider that the localhost check will be performed at the MaxScale level and at the MySQL server level.
 
-If MaxScale and the databases are on separate hosts there are two important changes in behaviour to consider:
+If MaxScale and the databases are on separate hosts there are two important changes in behavior to consider:
 
 1. Clients running on the same machine as the backend database now may access the database using the wildcard entry. The localhost check between the client and MaxScale will allow the use of the wildcard, since the client is not running on the MaxScale host. Also the wildcard entry can be used on the database host as MaxScale is making that connection and it is not running on the same host as the database.
 

@@ -172,7 +172,7 @@ user=maxscale
 
 passwd=96F99AA1315BDC3604B006F427DD9484
 
-This completes the definitions required by the services, however listening ports must be associated with the services in order to allow network connections. This is done by creating a series of listener sections. These sections again are named for the convenience of the administrator and should be of type listener with an entry labelled service which contains the name of the service to associate the listener with. Each service may have multiple listeners.
+This completes the definitions required by the services, however listening ports must be associated with the services in order to allow network connections. This is done by creating a series of listener sections. These sections again are named for the convenience of the administrator and should be of type listener with an entry labeled service which contains the name of the service to associate the listener with. Each service may have multiple listeners.
 
 [Write Listener]
 
@@ -210,7 +210,7 @@ protocol=MySQLClient
 
 port=4307
 
-An address parameter may be given if the listener is required to bind to a particular network address when using hosts with multiple network addresses. The default behaviour is to listen on all network interfaces.
+An address parameter may be given if the listener is required to bind to a particular network address when using hosts with multiple network addresses. The default behavior is to listen on all network interfaces.
 
 The next stage is the configuration is to define the server information. This defines how to connect to each of the servers within the cluster, again a section is created for each server, with the type set to server, the network address and port to connect to and the protocol to use to connect to the server. Currently the protocol for all database connections in MySQLBackend.
 

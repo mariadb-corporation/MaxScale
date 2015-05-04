@@ -653,21 +653,27 @@ struct tm	result;
 char		buf[30];
 int		i;
 
-    double idle = (hkheartbeat - ptr->client->last_read);
-    idle = idle > 0 ? idle/10.f:0;
+
 	dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
 	dcb_printf(dcb, "\tState:    		%s\n", session_state(ptr->state));
 	dcb_printf(dcb, "\tService:		%s (%p)\n", ptr->service->name, ptr->service);
 	dcb_printf(dcb, "\tClient DCB:		%p\n", ptr->client);
 	if (ptr->client && ptr->client->remote)
-			dcb_printf(dcb, "\tClient Address:		%s%s%s\n",
-                       ptr->client->user?ptr->client->user:"",
-                       ptr->client->user?"@":"",
-                       ptr->client->remote);
-	dcb_printf(dcb, "\tConnected:		%s",
-			asctime_r(localtime_r(&ptr->stats.connect, &result), buf));
-    if(ptr->client->state == DCB_STATE_POLLING)
-        dcb_printf(dcb, "\tIdle:			   	%.0f seconds",idle);
+	{
+	    double idle = (hkheartbeat - ptr->client->last_read);
+	    idle = idle > 0 ? idle/10.f:0;
+	    dcb_printf(dcb, "\tClient Address:		%s%s%s\n",
+		     ptr->client->user?ptr->client->user:"",
+		     ptr->client->user?"@":"",
+		     ptr->client->remote);
+	    dcb_printf(dcb, "\tConnected:		%s",
+		     asctime_r(localtime_r(&ptr->stats.connect, &result), buf));
+	    if(ptr->client->state == DCB_STATE_POLLING)
+	    {
+		dcb_printf(dcb, "\tIdle:		%.0f seconds",idle);
+	    }
+
+	}
 	if (ptr->n_filters)
 	{
 		for (i = 0; i < ptr->n_filters; i++)

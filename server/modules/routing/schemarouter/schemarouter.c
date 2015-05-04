@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <router.h>
 #include <schemarouter.h>
+#include <sharding_common.h>
 #include <secrets.h>
 #include <mysql.h>
 #include <skygw_utils.h>
@@ -208,12 +209,6 @@ static ROUTER_INSTANCE* instances;
 static int hashkeyfun(void* key);
 static int hashcmpfun (void *, void *);
 
-static bool change_current_db(
-	ROUTER_INSTANCE*   inst,
-	ROUTER_CLIENT_SES* rses,
-	GWBUF*             buf);
-
-
 static int hashkeyfun(void* key)
 {
   if(key == NULL){
@@ -250,7 +245,7 @@ char* get_lenenc_str(void* data, int* len)
 {
     unsigned char* ptr = (unsigned char*)data;
     char* rval;
-    long size, offset;
+    unsigned long size, offset;
 
     if(data == NULL || len == NULL)
     {
@@ -279,9 +274,14 @@ char* get_lenenc_str(void* data, int* len)
             offset = 3;
             break;
         case 0xfe:
-            size = *ptr + ((*(ptr + 2) << 8)) + (*(ptr + 3) << 16) +
-                    (*(ptr + 4) << 24) + (*(ptr + 5) << 32) + (*(ptr + 6) << 40) +
-                    (*(ptr + 7) << 48) + (*(ptr + 8) << 56);
+            size = *ptr +
+		    ((*(ptr + 2) << 8)) +
+		    (*(ptr + 3) << 16) +
+                    (*(ptr + 4) << 24) +
+		    ((unsigned long)*(ptr + 5) << 32) +
+		    ((unsigned long)*(ptr + 6) << 40) +
+                    ((unsigned long)*(ptr + 7) << 48) +
+		    ((unsigned long)*(ptr + 8) << 56);
             offset = 8;
             break;
         default:
@@ -311,32 +311,52 @@ char* get_lenenc_str(void* data, int* len)
  * @param buf GWBUF containing the result set
  * @return True if the buffer contained a result set with a single column. All other responses return false.
  */
-bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
+bool parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* bref, GWBUF** buffer)
 {
-   bool rval = false;
    unsigned char* ptr;
-    int more = 0;
-   if(PTR_IS_RESULTSET(((unsigned char*)buf->start)) && 
-      modutil_count_signal_packets(buf,0,0,&more) == 2)
+   char* target = bref->bref_backend->backend_server->unique_name;
+   GWBUF* buf;
+
+   if(buffer == NULL || *buffer == NULL)
+       return false;
+
+   buf = modutil_get_complete_packets(buffer);
+
+   if(buf == NULL)
+       return false;
+   
+   ptr = (unsigned char*)buf->start;
+   
+    if(PTR_IS_ERR(ptr))
+    {
+        skygw_log_write(LOGFILE_TRACE,"schemarouter: SHOW DATABASES returned an error.");
+        gwbuf_free(buf);
+        return true;        
+    }
+
+    if(bref->n_mapping_eof == 0)
    {
-       ptr = (unsigned char*)buf->start;
-
-       if(ptr[4] != 1)
-       {
-	   /** Something else came back, discard and return with an error*/
-	   return false;
-       }
-
        /** Skip column definitions */
-       while(!PTR_IS_EOF(ptr))
+       while(ptr < (unsigned char*)buf->end && !PTR_IS_EOF(ptr))
        {
 	   ptr += gw_mysql_get_byte3(ptr) + 4;
        }
 
+       if(ptr >= (unsigned char*)buf->end)
+       {
+           skygw_log_write(LOGFILE_TRACE,"schemarouter: Malformed packet for SHOW DATABASES.");
+           *buffer = gwbuf_append(buf,*buffer);
+           return false;
+       }
+
+       atomic_add(&bref->n_mapping_eof,1);
        /** Skip first EOF packet */
        ptr += gw_mysql_get_byte3(ptr) + 4;
-
-       while(!PTR_IS_EOF(ptr))
+   }
+   
+   if(bref->n_mapping_eof == 1)
+   {
+       while(ptr < (unsigned char*)buf->end && !PTR_IS_EOF(ptr))
        {
 	   int payloadlen = gw_mysql_get_byte3(ptr);
 	   int packetlen = payloadlen + 4;
@@ -353,11 +373,23 @@ bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 	   }
 	   ptr += packetlen;
        }
-       rval = true;
-       
    }
-   
-   return rval; 
+   if(ptr < (unsigned char*)buf->end && PTR_IS_EOF(ptr) &&
+      bref->n_mapping_eof == 1)
+   {
+       atomic_add(&bref->n_mapping_eof,1);
+       skygw_log_write(LOGFILE_TRACE,"schemarouter: SHOW DATABASES fully received from %s.",
+		       bref->bref_backend->backend_server->unique_name);
+   }
+   else
+   {
+       skygw_log_write(LOGFILE_TRACE,"schemarouter: SHOW DATABASES partially received from %s.",
+		       bref->bref_backend->backend_server->unique_name);
+   }
+
+   gwbuf_free(buf);
+
+   return bref->n_mapping_eof == 2;
 }
 
 /**
@@ -372,14 +404,14 @@ bool parse_showdb_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
 {
 	DCB* dcb;
-        const char* query = "SHOW DATABASES;";
+        const char* query = "SHOW DATABASES";
         GWBUF *buffer,*clone;
 	int i,rval = 0;
         unsigned int len;
         
         session->init |= INIT_MAPPING;
         session->init &= ~INIT_UNINT;
-        len = strlen(query);
+        len = strlen(query) + 1;
         buffer = gwbuf_alloc(len + 4);
         *((unsigned char*)buffer->start) = len;
         *((unsigned char*)buffer->start + 1) = len>>8;
@@ -391,7 +423,8 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
 	for(i = 0;i<session->rses_nbackends;i++)
 	{   
             if(BREF_IS_IN_USE(&session->rses_backend_ref[i]) && 
-               !BREF_IS_CLOSED(&session->rses_backend_ref[i]))
+               !BREF_IS_CLOSED(&session->rses_backend_ref[i]) &&
+	       SERVER_IS_RUNNING(session->rses_backend_ref[i].bref_backend->backend_server))
             {
                 clone = gwbuf_clone(buffer);
                 dcb = session->rses_backend_ref[i].bref_dcb;
@@ -687,6 +720,13 @@ createInstance(SERVICE *service, char **options)
                 return NULL; 
         } 
         router->service = service;
+	router->schemarouter_config.max_sescmd_hist = 0;
+	router->stats.longest_sescmd = 0;
+	router->stats.n_hist_exceeded = 0;
+	router->stats.n_queries = 0;
+	router->stats.n_sescmd = 0;
+	router->stats.ses_longest = 0;
+	router->stats.ses_shortest = (double)((unsigned long)(~0));
         spinlock_init(&router->lock);
         
         /** Calculate number of servers */
@@ -699,6 +739,45 @@ createInstance(SERVICE *service, char **options)
 	    skygw_log_write(LOGFILE_MESSAGE,"Schemarouter: Authentication data is fetched from all servers. To disable this "
 		    "add 'auth_all_servers=0' to the service.");
 	    service->users_from_all = true;
+	}
+
+	bool failure = false;
+
+	for(i=0;options && options[i];i++)
+	{
+	    char* value;
+	    if((value = strchr(options[i],'=')) == NULL)
+	    {
+		skygw_log_write(LOGFILE_ERROR,"Error: Unknown router options for Schemarouter: %s",options[i]);
+		failure = true;
+		break;
+	    }
+	    *value = '\0';
+	    value++;
+	    if(strcmp(options[i],"max_sescmd_history") == 0)
+	    {
+		router->schemarouter_config.max_sescmd_hist = atoi(value);
+	    }
+	    else if(strcmp(options[i],"disable_sescmd_history") == 0)
+	    {
+		router->schemarouter_config.disable_sescmd_hist = config_truth_value(value);
+	    }
+	    else
+	    {
+		skygw_log_write(LOGFILE_ERROR,"Error: Unknown router options for Schemarouter: %s",options[i]);
+		failure = true;
+		break;
+	    }
+	}
+
+	/** Setting a limit to the history size is not needed if it is disabled.*/
+	if(router->schemarouter_config.disable_sescmd_hist && router->schemarouter_config.max_sescmd_hist > 0)
+	    router->schemarouter_config.max_sescmd_hist = 0;
+
+	if(failure)
+	{
+	    free(router);
+	    return NULL;
 	}
 
         while (server != NULL)
@@ -730,6 +809,7 @@ createInstance(SERVICE *service, char **options)
                 router->servers[nservers]->backend_conn_count = 0;
                 router->servers[nservers]->weight = 1;
                 router->servers[nservers]->be_valid = false;
+		router->servers[nservers]->stats.queries = 0;
 		if(server->server->monuser == NULL && service->credentials.name != NULL)
 		{
 			router->servers[nservers]->backend_server->monuser = 
@@ -824,7 +904,7 @@ static void* newSession(
         {
             
             protocol->client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-            strncpy(db,data->db,MYSQL_DATABASE_MAXLEN+1);
+            strncpy(db,data->db,MYSQL_DATABASE_MAXLEN);
             memset(data->db,0,MYSQL_DATABASE_MAXLEN+1);
             using_db = true;
             skygw_log_write(LOGFILE_TRACE,"schemarouter: Client logging in directly to a database '%s', "
@@ -858,7 +938,8 @@ static void* newSession(
     client_rses->dcb_reply->func.read = internalReply;
     client_rses->dcb_reply->state = DCB_STATE_POLLING;
     client_rses->dcb_reply->session = session;
-    
+    memcpy(&client_rses->rses_config,&router->schemarouter_config,sizeof(schemarouter_config_t));
+    client_rses->n_sescmd = 0;
     client_rses->dcb_route = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
     client_rses->dcb_route->func.read = internalRoute;
     client_rses->dcb_route->state = DCB_STATE_POLLING;
@@ -905,6 +986,8 @@ static void* newSession(
                 backend_ref[i].bref_sescmd_cur.scmd_cur_chk_tail = CHK_NUM_SESCMD_CUR;
 #endif
                 backend_ref[i].bref_state = 0;
+		backend_ref[i].n_mapping_eof = 0;
+		backend_ref[i].map_queue = NULL;
                 backend_ref[i].bref_backend = router->servers[i];
                 /** store pointers to sescmd list to both cursors */
                 backend_ref[i].bref_sescmd_cur.scmd_cur_rses = client_rses;
@@ -957,7 +1040,6 @@ static void* newSession(
         client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
-        router->stats.n_sessions      += 1;
         
         if (!(succp = rses_begin_locked_router_action(client_rses)))
 	{
@@ -977,7 +1059,8 @@ static void* newSession(
         
              
         rses_end_locked_router_action(client_rses);
-        
+
+	atomic_add(&router->stats.sessions, 1);
        
         /**
          * Version is bigger than zero once initialized.
@@ -1016,6 +1099,7 @@ static void closeSession(
         void*   router_session)
 {
         ROUTER_CLIENT_SES* router_cli_ses;
+	ROUTER_INSTANCE* inst;
         backend_ref_t*     backend_ref;
 
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
@@ -1032,7 +1116,8 @@ static void closeSession(
         }
         router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         CHK_CLIENT_RSES(router_cli_ses);
-        
+
+	inst = router_cli_ses->router;
         backend_ref = router_cli_ses->rses_backend_ref;
         /**
          * Lock router client session for secure read and update.
@@ -1087,9 +1172,28 @@ static void closeSession(
                 router_cli_ses->dcb_route->session = NULL;
                 dcb_close(router_cli_ses->dcb_reply);
                 dcb_close(router_cli_ses->dcb_route);
-                
+
+		if(router_cli_ses->queue)
+		    router_cli_ses->queue = gwbuf_consume(
+				   router_cli_ses->queue,gwbuf_length(router_cli_ses->queue));
+
                 /** Unlock */
-                rses_end_locked_router_action(router_cli_ses);                
+                rses_end_locked_router_action(router_cli_ses);
+
+		spinlock_acquire(&inst->lock);
+		if(inst->stats.longest_sescmd < router_cli_ses->stats.longest_sescmd)
+		    inst->stats.longest_sescmd = router_cli_ses->stats.longest_sescmd;
+		double ses_time = difftime(time(NULL),router_cli_ses->rses_client_dcb->session->stats.connect);
+		if(inst->stats.ses_longest < ses_time)
+		    inst->stats.ses_longest = ses_time;
+		if(inst->stats.ses_shortest > ses_time && inst->stats.ses_shortest > 0)
+		    inst->stats.ses_shortest = ses_time;
+
+		inst->stats.ses_average = 
+			(ses_time + ((inst->stats.sessions - 1) * inst->stats.ses_average)) /
+			(inst->stats.sessions);
+
+		spinlock_release(&inst->lock);
         }
 }
 
@@ -1511,6 +1615,12 @@ void check_create_tmp_table(
       free(tblname);
     }
 }
+
+int cmpfn(const void* a, const void *b)
+{
+    return strcmp(*(char**)a,*(char**)b);
+}
+
 /**
  * Generates a custom SHOW DATABASES result set from all the databases in the
  * hashtable. Only backend servers that are up and in a proper state are listed
@@ -1621,35 +1731,69 @@ gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
     memcpy(ptr, eof, sizeof(eof));
 
     unsigned int packet_num = 4;
+    int j = 0,ndbs = 0, bufsz = 10;
+    char** dbs;
+
+    if((dbs = malloc(sizeof(char*)*bufsz)) == NULL)
+    {
+	gwbuf_free(rval);
+	hashtable_iterator_free(iter);
+	return NULL;
+    }
 
     while((value = (char*) hashtable_next(iter)))
     {
         char* bend = hashtable_fetch(ht, value);
+
         for(i = 0; backends[i]; i++)
         {
             if(strcmp(bref[i].bref_backend->backend_server->unique_name, bend) == 0 &&
                BREF_IS_IN_USE(&bref[i]) && !BREF_IS_CLOSED(&bref[i]))
             {
+		ndbs++;
 
-                GWBUF* temp;
-                int plen = strlen(value) + 1;
+		if(ndbs >= bufsz)
+		{
+		    bufsz += bufsz / 2;
+		    char** tmp = realloc(dbs,sizeof(char*)*bufsz);
+		    if(tmp == NULL)
+		    {
+			gwbuf_free(rval);
+			hashtable_iterator_free(iter);
+			for(i=0;i<ndbs-1;i++)free(dbs[i]);
+			free(dbs);
+			return NULL;
+		    }
+		    dbs = tmp;
+		}
 
-                sprintf(dbname, "%s", value);
-                temp = gwbuf_alloc(plen + 4);
-
-                ptr = temp->start;
-                *ptr++ = plen;
-                *ptr++ = plen >> 8;
-                *ptr++ = plen >> 16;
-                *ptr++ = packet_num++;
-                *ptr++ = plen - 1;
-                memcpy(ptr, dbname, plen - 1);
-
-                /** Append the row*/
-                rval = gwbuf_append(rval, temp);
-                
+		dbs[j++] = strdup(value);
             }
         }
+    }
+
+    qsort(&dbs[0],(size_t)ndbs,sizeof(char*),cmpfn);
+
+    for(j = 0;j<ndbs;j++)
+    {
+
+	GWBUF* temp;
+	int plen = strlen(dbs[j]) + 1;
+
+	sprintf(dbname, "%s", dbs[j]);
+	temp = gwbuf_alloc(plen + 4);
+
+	ptr = temp->start;
+	*ptr++ = plen;
+	*ptr++ = plen >> 8;
+	*ptr++ = plen >> 16;
+	*ptr++ = packet_num++;
+	*ptr++ = plen - 1;
+	memcpy(ptr, dbname, plen - 1);
+
+	/** Append the row*/
+	rval = gwbuf_append(rval, temp);
+	free(dbs[j]);
     }
 
     eof[3] = packet_num;
@@ -1660,6 +1804,7 @@ gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 
     rval = gwbuf_make_contiguous(rval);
     hashtable_iterator_free(iter);
+    free(dbs);
     return rval;
 }
 
@@ -1687,12 +1832,12 @@ gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 static int routeQuery(
         ROUTER* instance,
         void*   router_session,
-        GWBUF*  querybuf)
+        GWBUF* qbuf)
 {
         skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
         mysql_server_cmd_t packet_type;
         uint8_t*           packet;
-        int                ret            = 0;
+        int                i,ret            = 0;
         DCB*               target_dcb     = NULL;
         ROUTER_INSTANCE*   inst = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
@@ -1701,8 +1846,9 @@ static int routeQuery(
         route_target_t     route_target = TARGET_UNDEFINED;
 	bool           	   succp          = false;
 	char* tname = NULL;
-
-
+	GWBUF*  querybuf = qbuf;
+	char db[MYSQL_DATABASE_MAXLEN + 1];
+	char errbuf[26+MYSQL_DATABASE_MAXLEN];
         CHK_CLIENT_RSES(router_cli_ses);
 
         /** Dirty read for quick check if router is closed. */
@@ -1734,11 +1880,11 @@ static int routeQuery(
 	    {
 
 		char* querystr = modutil_get_SQL(querybuf);
-		skygw_log_write(LOGFILE_DEBUG,"schemarouter: Storing query for session %p: %s",
+		skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"schemarouter: Storing query for session %p: %s",
 			 router_cli_ses->rses_client_dcb->session,
 			 querystr);
 		free(querystr);
-		gwbuf_make_contiguous(querybuf);
+		querybuf = gwbuf_make_contiguous(querybuf);
 		GWBUF* ptr = router_cli_ses->queue;
 
 		while(ptr && ptr->next)
@@ -1875,12 +2021,25 @@ static int routeQuery(
         if (packet_type == MYSQL_COM_INIT_DB ||
 	    op == QUERY_OP_CHANGE_DB)
 	{
-		if (!(change_successful = change_current_db(inst, router_cli_ses, querybuf)))
+	    if (!(change_successful = change_current_db(router_cli_ses->rses_mysql_session,
+						     router_cli_ses->dbhash,
+						     querybuf)))
+	    {
+		extract_database(querybuf,db);
+		snprintf(errbuf,25+MYSQL_DATABASE_MAXLEN,"Unknown database: %s",db);
+		for(i = 0;i<router_cli_ses->rses_nbackends;i++)
 		{
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Changing database failed.")));
+		    if(SERVER_IS_RUNNING(router_cli_ses->rses_backend_ref[i].bref_backend->backend_server))
+		    {
+			create_error_reply(errbuf,router_cli_ses->rses_backend_ref[i].bref_dcb);
+			break;
+		    }
 		}
+
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+						 "Error : Changing database failed.")));
+	    }
 	}
 
 	if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_DATABASES))
@@ -1997,7 +2156,8 @@ static int routeQuery(
 		
 		if (succp)
 		{
-			atomic_add(&inst->stats.n_all, 1);
+			atomic_add(&inst->stats.n_sescmd, 1);
+			atomic_add(&inst->stats.n_queries, 1);
 			ret = 1;
 		}
 		goto retblock;
@@ -2198,6 +2358,9 @@ diagnostic(ROUTER *instance, DCB *dcb)
     ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
     int		  i = 0;
 
+    double sescmd_pct = router->stats.n_sescmd != 0 ?
+	100.0*((double)router->stats.n_sescmd / (double)router->stats.n_queries) :
+	0.0;
 
     dcb_printf(dcb,"\33[1;4m%-16s%-16s%-16s\33[0m\n","Server","Queries","State");
     for(i=0;router->servers[i];i++)
@@ -2210,6 +2373,45 @@ diagnostic(ROUTER *instance, DCB *dcb)
 	    "\33[30;41mDOWN\33[0m");
     }
 
+    /** Session command statistics */
+    dcb_printf(dcb,"\n\33[1;4mSession Commands\33[0m\n");
+    dcb_printf(dcb,"Total number of queries: %d\n",
+	       router->stats.n_queries);
+    dcb_printf(dcb,"Percentage of session commands: %.2f\n",
+	       sescmd_pct);
+    dcb_printf(dcb,"Longest chain of stored session commands: %d\n",
+	       router->stats.longest_sescmd);
+    dcb_printf(dcb,"Session command history limit exceeded: %d times\n",
+	       router->stats.n_hist_exceeded);
+    if(!router->schemarouter_config.disable_sescmd_hist)
+    {
+	dcb_printf(dcb,"Session command history: enabled\n");
+	if(router->schemarouter_config.max_sescmd_hist == 0)
+	{
+	    dcb_printf(dcb,"Session command history limit: unlimited\n");
+	}
+	else
+	{
+	    dcb_printf(dcb,"Session command history limit: %d\n",
+		     router->schemarouter_config.max_sescmd_hist);
+	}
+    }
+    else
+    {
+
+	dcb_printf(dcb,"Session command history: disabled\n");
+    }
+
+    /** Session time statistics */
+
+    if(router->stats.sessions > 0)
+    {
+	dcb_printf(dcb,"\n\33[1;4mSession Time Statistics\33[0m\n");
+	dcb_printf(dcb,"Longest session: %.2lf seconds\n",router->stats.ses_longest);
+	dcb_printf(dcb,"Shortest session: %.2lf seconds\n",router->stats.ses_shortest);
+	dcb_printf(dcb,"Average session length: %.2lf seconds\n",router->stats.ses_average);
+    }
+    dcb_printf(dcb,"\n");
 }
 
 /**
@@ -2225,14 +2427,15 @@ diagnostic(ROUTER *instance, DCB *dcb)
 static void clientReply (
         ROUTER* instance,
         void*   router_session,
-        GWBUF*  writebuf,
+        GWBUF*  buffer,
         DCB*    backend_dcb)
 {
         DCB*               client_dcb;
         ROUTER_CLIENT_SES* router_cli_ses;
 	sescmd_cursor_t*   scur = NULL;
         backend_ref_t*     bref;
-        
+	GWBUF* writebuf = buffer;
+
 	router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -2303,16 +2506,31 @@ static void clientReply (
             
             for(i = 0; i < router_cli_ses->rses_nbackends; i++)
             {
-                
                 if(bref->bref_dcb == bkrf[i].bref_dcb && !BREF_IS_MAPPED(&bkrf[i]))
                 {
-                    router_cli_ses->rses_backend_ref[i].bref_mapped = true;
-                    parse_showdb_response(router_cli_ses,
-                                router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
-                                writebuf);
-                    skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received SHOW DATABASES reply from %s for session %p",
+		    if(bref->map_queue)
+		    {
+			writebuf = gwbuf_append(bref->map_queue,writebuf);
+			bref->map_queue = NULL;
+		    }
+                    
+                    if(parse_showdb_response(router_cli_ses,
+                                &router_cli_ses->rses_backend_ref[i],
+                                &writebuf))
+		    {
+			router_cli_ses->rses_backend_ref[i].bref_mapped = true;
+			 skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received SHOW DATABASES reply from %s for session %p",
                                 router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
                                 router_cli_ses->rses_client_dcb->session);
+		    }
+		    else
+		    {
+			bref->map_queue = writebuf;
+			writebuf = NULL;
+			skygw_log_write(LOGFILE_DEBUG,"schemarouter: Received partial SHOW DATABASES reply from %s for session %p",
+                                router_cli_ses->rses_backend_ref[i].bref_backend->backend_server->unique_name,
+                                router_cli_ses->rses_client_dcb->session);
+		    }
                 }
                 
                 if(BREF_IS_IN_USE(&bkrf[i]) && 
@@ -2329,7 +2547,7 @@ static void clientReply (
                 }
             }
             
-	    while((writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
+	    while(writebuf && (writebuf = gwbuf_consume(writebuf,gwbuf_length(writebuf))));
             
             if(mapped)
             {
@@ -2551,8 +2769,7 @@ static void clientReply (
         /** There is one pending session command to be executed. */
         if (sescmd_cursor_is_active(scur)) 
         {
-                bool succp;
-                
+
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
                         "Backend %s:%d processed reply and starts to execute "
@@ -2560,9 +2777,7 @@ static void clientReply (
                         bref->bref_backend->backend_server->name,
                         bref->bref_backend->backend_server->port)));
                 
-                succp = execute_sescmd_in_backend(bref);
-                
-                ss_dassert(succp);
+                execute_sescmd_in_backend(bref);
         }
 	else if (bref->bref_pending_cmd != NULL) /*< non-sescmd is waiting to be routed */
 	{
@@ -3038,7 +3253,7 @@ static mysql_sescmd_t* mysql_sescmd_init (
         /** Set session command buffer */
         sescmd->my_sescmd_buf  = sescmd_buf;
         sescmd->my_sescmd_packet_type = packet_type;
-        
+        sescmd->position = atomic_add(&rses->pos_generator,1);
         return sescmd;
 }
 
@@ -3090,6 +3305,7 @@ static GWBUF* sescmd_cursor_process_replies(
          */
         while (scmd != NULL && replybuf != NULL)
         {
+	    scur->position = scmd->position;
                 /** Faster backend has already responded to client : discard */
                 if (scmd->my_sescmd_is_replied)
                 {
@@ -3641,17 +3857,74 @@ static bool route_session_write(
 		succp = false;
 		goto return_succp;
 	}
-        /** 
+
+	if(router_cli_ses->rses_config.max_sescmd_hist > 0 &&
+	 router_cli_ses->n_sescmd >= router_cli_ses->rses_config.max_sescmd_hist)
+	{
+	    LOGIF(LE, (skygw_log_write(
+		    LOGFILE_ERROR|LOGFILE_TRACE,
+			"Router session exceeded session command history limit of %d. "
+		        "Closing router session.",
+		router_cli_ses->rses_config.max_sescmd_hist)));
+		gwbuf_free(querybuf);
+		atomic_add(&router_cli_ses->router->stats.n_hist_exceeded,1);
+		rses_end_locked_router_action(router_cli_ses);
+		router_cli_ses->rses_client_dcb->func.hangup(router_cli_ses->rses_client_dcb);
+
+		goto return_succp;
+	}
+
+	if(router_cli_ses->rses_config.disable_sescmd_hist)
+	{
+	    rses_property_t *prop, *tmp;
+	    backend_ref_t* bref;
+	    bool conflict;
+
+	    prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
+	    while(prop)
+	    {
+		conflict = false;
+
+		for(i = 0;i<router_cli_ses->rses_nbackends;i++)
+		{
+		    bref = &backend_ref[i];
+		    if(BREF_IS_IN_USE(bref))
+		    {
+
+			if(bref->bref_sescmd_cur.position <= prop->rses_prop_data.sescmd.position)
+			{
+			    conflict = true;
+			    break;
+			}
+		    }
+		}
+
+		if(conflict)
+		{
+		    break;
+		}
+
+		tmp = prop;
+		router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD] = prop->rses_prop_next;
+		rses_property_done(tmp);
+		prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
+	    }
+	}
+
+        /**
+	 *
          * Additional reference is created to querybuf to 
          * prevent it from being released before properties
-         * are cleaned up as a part of router sessionclean-up.
+         * are cleaned up as a part of router session clean-up.
          */
         prop = rses_property_init(RSES_PROP_TYPE_SESCMD);
         mysql_sescmd_init(prop, querybuf, packet_type, router_cli_ses);
         
         /** Add sescmd property to router client session */
         rses_property_add(router_cli_ses, prop);
-         
+	atomic_add(&router_cli_ses->stats.longest_sescmd,1);
+	atomic_add(&router_cli_ses->n_sescmd,1);
+
         for (i=0; i<router_cli_ses->rses_nbackends; i++)
         {
                 if (BREF_IS_IN_USE((&backend_ref[i])))
@@ -3706,6 +3979,10 @@ static bool route_session_write(
                                                 backend_ref[i].bref_backend->backend_server->name,
                                                 backend_ref[i].bref_backend->backend_server->port)));
                                 }
+				else
+				{
+				    atomic_add(&backend_ref[i].bref_backend->stats.queries,1);
+				}
                         }
                 }
                 else
@@ -3885,7 +4162,7 @@ static bool handle_error_new_connection(
 {
 	SESSION*       ses;
 	int            router_nservers,i;
-
+	unsigned char cmd = *((unsigned char*)errmsg->start + 4);
 
 	backend_ref_t* bref;
 	bool           succp;
@@ -3960,10 +4237,11 @@ static bool handle_error_new_connection(
         }
         
         rses->init |= INIT_MAPPING;
-        
+
         for(i = 0;i<rses->rses_nbackends;i++)
         {
-            bref_clear_state(&rses->rses_backend_ref[i],BREF_DB_MAPPED);                            
+            bref_clear_state(&rses->rses_backend_ref[i],BREF_DB_MAPPED);
+	    rses->rses_backend_ref[i].n_mapping_eof = 0;
         }
         
         HASHITERATOR* iter  = hashtable_iterator(rses->dbhash);
@@ -4053,8 +4331,6 @@ router_handle_state_switch(
 {
     backend_ref_t* bref;
     int rc = 1;
-    ROUTER_CLIENT_SES* rses;
-    SESSION* ses;
     SERVER* srv;
     
     CHK_DCB(dcb);
@@ -4067,12 +4343,7 @@ router_handle_state_switch(
     {
         goto return_rc;
     }
-    ses = dcb->session;
-    CHK_SESSION(ses);
 
-    rses = (ROUTER_CLIENT_SES *) dcb->session->router_session;
-    CHK_CLIENT_RSES(rses);
- 
     switch(reason)
     {
     case DCB_REASON_NOT_RESPONDING:
@@ -4102,172 +4373,4 @@ static sescmd_cursor_t* backend_ref_get_sescmd_cursor (
         return scur;
 }
 
-/**
- * Read new database name from MYSQL_COM_INIT_DB packet, check that it exists
- * in the hashtable and copy its name to MYSQL_session.
- * 
- * @param inst	Router instance
- * @param rses	Router client session
- * @param buf	Query buffer
- * 
- * @return true if new database is set, false if non-existent database was tried
- * to be set
- */
-static bool change_current_db(
-	ROUTER_INSTANCE*   inst,
-	ROUTER_CLIENT_SES* rses,
-	GWBUF*             buf)
-{
-	bool	 succp;
-	uint8_t* packet;
-	unsigned int plen;
-	int 	 message_len;
-	char*	 fail_str,*target;
-	
-	if(GWBUF_LENGTH(buf) <= MYSQL_DATABASE_MAXLEN - 5)
-	{
-		packet = GWBUF_DATA(buf);
-		plen = gw_mysql_get_byte3(packet) - 1;
 
-		/** Copy database name from MySQL packet to session */
-		if(query_classifier_get_operation(buf) == QUERY_OP_CHANGE_DB)
-		{
-		    char* query = modutil_get_SQL(buf);
-		    char *saved,*tok;
-
-		    tok = strtok_r(query," ;",&saved);
-		    if(tok == NULL || strcasecmp(tok,"use") != 0)
-		    {
-			skygw_log_write(LOGFILE_ERROR,"Schemarouter: Malformed chage database packet.");
-			free(query);
-			message_len = 25 + MYSQL_DATABASE_MAXLEN;
-			fail_str = calloc(1, message_len+1);
-			snprintf(fail_str,
-				message_len,
-				"Unknown database '%s'",
-				(char*)rses->rses_mysql_session->db);
-			rses->rses_mysql_session->db[0] = '\0';
-			succp = false;
-			goto reply_error;
-		    }
-
-		    tok = strtok_r(NULL," ;",&saved);
-		    if(tok == NULL)
-		    {
-			skygw_log_write(LOGFILE_ERROR,"Schemarouter: Malformed chage database packet.");
-			free(query);
-			message_len = 25 + MYSQL_DATABASE_MAXLEN;
-			fail_str = calloc(1, message_len+1);
-			snprintf(fail_str,
-				message_len,
-				"Unknown database '%s'",
-				(char*)rses->rses_mysql_session->db);
-			rses->rses_mysql_session->db[0] = '\0';
-			succp = false;
-			goto reply_error;
-		    }
-
-		    strncpy(rses->rses_mysql_session->db,tok,MYSQL_DATABASE_MAXLEN);
-		    free(query);
-		    query = NULL;
-		    
-		}
-		else
-		{
-		    memcpy(rses->rses_mysql_session->db,packet + 5,plen);
-		    memset(rses->rses_mysql_session->db + plen,0,1);
-                }
-                skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB with database '%s'",
-                                rses->rses_mysql_session->db);
-		/**
-		 * Update the session's active database only if it's in the hashtable.
-		 * If it isn't found, send a custom error packet to the client.
-		 */
-
-                
-		if((target = (char*)hashtable_fetch(
-			rses->dbhash,
-			(char*)rses->rses_mysql_session->db)) == NULL)
-		{			
-			
-			/** Create error message */
-			message_len = 25 + MYSQL_DATABASE_MAXLEN;
-			fail_str = calloc(1, message_len+1);
-			snprintf(fail_str, 
-				message_len, 
-				"Unknown database '%s'", 
-				(char*)rses->rses_mysql_session->db);
-			rses->rses_mysql_session->db[0] = '\0';			
-			succp = false;
-			goto reply_error;
-		}
-		else
-		{
-                    skygw_log_write(LOGFILE_TRACE,"schemarouter: database is on server: '%s'.",target);
-			succp = true;
-			goto retblock;
-		}
-	}
-	else 
-	{
-		/** Create error message */
-            skygw_log_write_flush(LOGFILE_ERROR,
-                        "schemarouter: failed to change database: Query buffer too large");
-            skygw_log_write_flush(LOGFILE_TRACE,
-                        "schemarouter: failed to change database: Query buffer too large [%d bytes]",GWBUF_LENGTH(buf));
-		message_len = 25 + MYSQL_DATABASE_MAXLEN;
-		fail_str = calloc(1, message_len+1);
-		snprintf(fail_str, 
-			message_len, 
-			"Unknown database '%s'", 
-			(char*)rses->rses_mysql_session->db);
-		succp = false;
-		goto reply_error;
-	}
-reply_error:
-	{
-		GWBUF* errbuf;
-                skygw_log_write_flush(
-				LOGFILE_TRACE,
-				"schemarouter: failed to change database: %s", fail_str);
-		errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
-		free(fail_str);
-		
-                        
-		if (errbuf == NULL)
-		{
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Creating buffer for error message failed."))); 
-			goto retblock;			
-		}
-		/** Set flags that help router to identify session commans reply */
-		gwbuf_set_type(errbuf, GWBUF_TYPE_MYSQL);
-		gwbuf_set_type(errbuf, GWBUF_TYPE_SESCMD_RESPONSE);
-		gwbuf_set_type(errbuf, GWBUF_TYPE_RESPONSE_END);
-		/** 
-		* Create an incoming event for randomly selected backend DCB which
-		* will then be notified and replied 'back' to the client.
-		*/
-                DCB *dcb = NULL;
-                int i;
-                for(i = 0;i<rses->rses_nbackends;i++)
-                {
-                    if(rses->rses_backend_ref[i].bref_dcb){
-                        dcb = rses->rses_backend_ref[i].bref_dcb;
-                        break;
-                    }
-                }
-                
-                if(dcb == NULL)
-                {
-                    skygw_log_write_flush(LOGFILE_ERROR,"Error : All backend connections are down.");
-                    return false;
-                }
-		poll_add_epollin_event_to_dcb(rses->dcb_reply, 
-					gwbuf_clone(errbuf));
-		gwbuf_free(errbuf);
-	}
-retblock:
-	return succp;
-}

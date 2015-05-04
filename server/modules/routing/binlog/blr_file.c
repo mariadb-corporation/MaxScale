@@ -165,6 +165,24 @@ blr_file_rotate(ROUTER_INSTANCE *router, char *file, uint64_t pos)
 
 
 /**
+ * binlog files need an initial 4 magic bytes at the start. blr_file_add_magic()
+ * adds them.
+ *
+ * @param router	The router instance
+ * @param fd		file descriptor to the open binlog file
+ * @return		Nothing
+ */
+static void
+blr_file_add_magic(ROUTER_INSTANCE *router, int fd)
+{
+unsigned char	magic[] = BINLOG_MAGIC;
+
+	write(fd, magic, 4);
+	router->binlog_position = 4;			/* Initial position after the magic number */
+}
+
+
+/**
  * Create a new binlog file for the router to use.
  *
  * @param router	The router instance
@@ -176,7 +194,6 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
 {
 char		path[1024];
 int		fd;
-unsigned char	magic[] = BINLOG_MAGIC;
 
 	strcpy(path, router->binlogdir);
 	strcat(path, "/");
@@ -184,7 +201,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 
 	if ((fd = open(path, O_RDWR|O_CREAT, 0666)) != -1)
 	{
-		write(fd, magic, 4);
+		blr_file_add_magic(router,fd);
 	}
 	else
 	{
@@ -197,7 +214,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
 	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
-	router->binlog_position = 4;			/* Initial position after the magic number */
+	blr_file_add_magic(router, fd);
 	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
 	return 1;
@@ -232,6 +249,19 @@ int		fd;
 	spinlock_acquire(&router->binlog_lock);
 	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
 	router->binlog_position = lseek(fd, 0L, SEEK_END);
+	if (router->binlog_position < 4) {
+		if (router->binlog_position == 0) {
+			blr_file_add_magic(router, fd);
+		} else {
+			/* If for any reason the file's length is between 1 and 3 bytes
+			 * then report an error. */
+	                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"%s: binlog file %s has an invalid length %d.",
+				router->service->name, path, router->binlog_position)));
+                    close(fd);
+			return;
+		}
+	}
 	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
 }

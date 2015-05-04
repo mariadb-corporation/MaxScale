@@ -141,6 +141,7 @@ typedef struct service {
         bool            strip_db_esc;      /*< Remove the '\' characters from database names
                                             * when querying them from the server. MySQL Workbench seems
                                             * to escape at least the underscore character. */
+        bool optimize_wildcard;             /*< Convert wildcard grants to individual database grants */
 	SPINLOCK
 			users_table_spin;	/**< The spinlock for users data refresh */
 	SERVICE_REFRESH_RATE
@@ -184,6 +185,7 @@ extern	char	*serviceGetWeightingParameter(SERVICE *);
 extern	int	serviceEnableLocalhostMatchWildcardHost(SERVICE *, int);
 int serviceStripDbEsc(SERVICE* service, int action);
 int serviceAuthAllServers(SERVICE *service, int action);
+int serviceOptimizeWildcard(SERVICE *service, int action);
 extern	void	service_update(SERVICE *, char *, char *, char *);
 extern	int	service_refresh_users(SERVICE *);
 extern	void	printService(SERVICE *);

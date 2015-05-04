@@ -5,14 +5,6 @@ if(BUILD_TESTS)
   install(TARGETS testroute DESTINATION modules)
 endif()
 
-add_library(schemarouter SHARED schemarouter/schemarouter.c)
-target_link_libraries(schemarouter log_manager utils query_classifier)
-install(TARGETS schemarouter DESTINATION modules)
-
-add_library(shardrouter SHARED schemarouter/shardrouter.c)
-target_link_libraries(shardrouter log_manager utils query_classifier)
-install(TARGETS shardrouter DESTINATION modules)
-
 add_library(readconnroute SHARED readconnroute.c)
 target_link_libraries(readconnroute log_manager utils)
 install(TARGETS readconnroute DESTINATION modules)
@@ -30,7 +22,7 @@ target_link_libraries(cli log_manager utils)
 install(TARGETS cli DESTINATION modules)
 
 add_subdirectory(readwritesplit)
-add_subdirectory(schemarouter/test)
+add_subdirectory(schemarouter)
 if(BUILD_BINLOG)
   add_subdirectory(binlog)
 endif()

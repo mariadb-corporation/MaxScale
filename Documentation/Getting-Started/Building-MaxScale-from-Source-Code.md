@@ -12,11 +12,19 @@ You will need a number of tools and libraries in order to achieve this.
 
 * libedit 2.11 or later (used by the MaxAdmin tool)
 
-## Build dependencied
+# Obtaining MariaDB packages
+
+MaxScale requires the server and the development packages for the MariaDB server. Either the 10.0 or the 5.5 version of the MariaDB server can be used. You can obtain these by following the instructions on the MariaDB.org site: [https://downloads.mariadb.org/](https://downloads.mariadb.org/)
+
+After following the instructions on that site you should have a working MariaDB repository if you use Yum or APT or the binary packages if you prefer a manual download.
+
+# Build dependencies
 
 The full list of dependencies for the most common distributions is provided in this section. If your system is not listed here, MaxScale building isn't guaranteed to be compatible but might still be successful.
 
-### All RHEL, CentOS and Fedora versions
+## RHEL, CentOS and Fedora
+
+You will need to install all of the following packages for all versions of RHEL, CentOS and Fedora.
 
 ```
 gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool 
@@ -26,8 +34,10 @@ openssl-devel libaio libaio-devel librabbitmq-devel
 In addition, if you wish to to build an RPM package include:
 
 ```
-	rpm-build                           
+rpm-build
 ```
+
+There are also some version specific packages you need to install.
 
 #### RHEL 6, 7, CentOS 6, 7, Fedora:
 
@@ -41,8 +51,10 @@ libedit-devel
 mariadb-devel mariadb-embedded-devel 
 ```
 
-#### RHEL 5, 7, CentOS 5, 6, Fedora 19, 20
+#### RHEL 5, 6, CentOS 5, 6, Fedora 19, 20
+```
 MariaDB-devel MariaDB-server
+```
 
 #### Fedora 19, 20
 
@@ -50,7 +62,9 @@ MariaDB-devel MariaDB-server
 systemtap-sdt-devel
 ```
 
-### All Ubuntu and Debian versions
+## Ubuntu and Debian
+
+These packages are required on all versions of Ubuntu and Debian.
 
 ```
 	build-essential libssl-dev libaio-dev ncurses-dev bison
@@ -62,6 +76,8 @@ If you want to build a DEB package, you will also need:
 ```
 	dpkg-dev
 ```
+
+You will also need some version specific packages.
 
 #### Ubuntu 14.04 or later, Debian 8 (Jessie) or later
 
@@ -91,7 +107,7 @@ The suggested location for extracting the tarball is `/usr` so the operation can
 
 where /path/to/mariadb.library.tar.gz is replaced by the actual path and name of the downloaded tarball.
 
-### OpenSUSE
+## OpenSUSE
 
 At the time this guide was written, the MariaDB development packages for OpenSUSE were broken and the build failed.
 
@@ -107,7 +123,7 @@ libedit-devel librabbitmq-devel
 If zypper ask which MariaDB client should be installed `MariaDB-client` or `mariadb-client`
 	 please select `MariaDB-client`. This is the package provided by the MariaDB repository.
 
-##Obtaining the MaxScale Source Code
+# Obtaining the MaxScale Source Code
 
 Now clone the GitHub project to your machine either via the web interface, your favorite graphical interface or the git command line
 
@@ -126,7 +142,7 @@ $ mkdir build
 $ cd build
 ```
 
-The next step is to run the cmake command to build the Makefile you need to compile Maxscale. There are a number of options you may give to configure cmake and point it to the various packages it requires. In this example we will assume the MariaDB developer packages have been installed as described above and set all the options required to locate these, along with options to build the unit tests and configure the installation target directory.
+The next step is to run the `cmake` command to build the Makefile you need to compile Maxscale. There are a number of options you may give to configure cmake and point it to the various packages it requires. In this example we will assume the MariaDB developer packages have been installed as described above and set all the options required to locate these, along with options to build the unit tests and configure the installation target directory.
 
 If you run into any trouble while configuring CMake, you can always remove the 
 `CMakeCache.txt` file to clear CMake's internal cache. This resets all values to their 
@@ -143,13 +159,21 @@ variables manually at configuration time.
 To display all CMake variables with their descriptions:
 
 ```
-cmake -LH <path to source>
+cmake .. -LH
 ```
+This is a useful command if you have your libraries installed in non-standard locations.
 
-When you are ready to run cmake:
+When you are ready to run cmake, provide the following command:
 
 ```
-$ cmake -DMYSQL_DIR=/usr/mariadb-5.5.41-linux-x86_64/include/mysql \
+cmake ..
+```
+This will automatically search your system for the right files and libraries and if you have your libraries installed in standard locations, it should succeed. If there are errors with the CMake configuration, read the error messages, provide the needed variables for CMake and call `cmake` again with the additional parameters.
+
+Here is an example of a cmake call with parameters for custom library locations, building of tests and without the installation of init scripts.
+
+```
+$ cmake .. -DMYSQL_DIR=/usr/mariadb-5.5.41-linux-x86_64/include/mysql \
 -DEMBEDDED_LIB=/usr/mariadb-5.5.41-linux-x86_64/lib/libmysqld.a \
 -DMYSQLCLIENT_LIBRARIES=/usr/mariadb-5.5.41-linux-x86_64/lib/libmysqlclient.so \
 -DERRMSG=/usr/mariadb-5.5.41-linux-x86_64/share/english/errmsg.sys \
@@ -215,7 +239,7 @@ $ make install
 ...
 ```
 
-This will result in an installation being created which is identical to that which would be achieved by installing the binary package. The only difference is that init.d scripts aren't installed.
+This will result in an installation being created which is identical to that which would be achieved by installing the binary package.
 
 By default, MaxScale installs to `/usr/local/mariadb-maxscale` and places init.d scripts and ldconfig files into their folders. Change the `CMAKE_INSTALL_PREFIX` variable to your desired installation directory and set `WITH_SCRIPTS=N` to prevent the init.d script and ldconfig file installation.
 
@@ -235,3 +259,8 @@ When you run the `make testall` target after configuring the build with CMake a 
 
 After testing has finished you can find a full testlog generated by CTest in `Testing/Temporary/` directory and MaxScale's log files in the `log/` directory of the build root.
 
+## Building the MaxScale package
+
+First make sure you have the required libraries for your platform, including either rpmbuild for RHEL variants or dpkg-dev for Debian variants.
+
+If you wish to generate your own MaxScale package, you can do so by first configuring CMake with -DPACKAGE=Y. This will enable the package building target, `package` for the Makefile build system. After configuring, it should be as simple as running the `make package` command in the build directory. This will result in two packages, a tar.gz package and either a .rpm package or a .deb package depending on your system.

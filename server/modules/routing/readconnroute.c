@@ -755,20 +755,10 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 			break;
         }
 
-        CHK_PROTOCOL(((MySQLProtocol*)backend_dcb->protocol));
-        LOGIF(LD, (skygw_log_write(
-                LOGFILE_DEBUG,
-                "%lu [readconnroute:routeQuery] Routed command %d to dcb %p "
-                "with return value %d.",
-                pthread_self(),
-                mysql_command,
-                backend_dcb,
-                rc)));
-
 	LOGIF(LOGFILE_TRACE,skygw_log_write(
-                LOGFILE_TRACE,
-		 "Routed command [%#x] to '%s'%s%s",
-		 mysql_command,
+                LOGFILE_DEBUG|LOGFILE_TRACE,
+		 "Routed [%s] to '%s'%s%s",
+		 STRPACKETTYPE(mysql_command),
 		 backend_dcb->server->unique_name,
 		 trc?": ":".",
 		 trc?trc:""));

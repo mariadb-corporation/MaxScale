@@ -13,13 +13,14 @@ set_variables()
 set_maxscale_version()
 
 set(CMAKE_INSTALL_PREFIX "/usr/local/mariadb-maxscale" CACHE PATH "Prefix prepended to install directories.")
+set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 
 project(MaxScale)
 
 #Disabled for now pending evaluation
-#include(CheckPlatform.cmake) 
+include(cmake/CheckPlatform.cmake) 
 
 check_deps()
 check_dirs()
@@ -27,7 +28,8 @@ find_package(Valgrind)
 find_package(MySQLClient)
 find_package(MySQL)
 find_package(Pandoc)
-
+find_package(TCMalloc)
+find_package(Jemalloc)
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
 find_package(CURL) 
@@ -86,14 +88,17 @@ if(FAKE_CODE)
   set(FLAGS "${FLAGS} -DFAKE_CODE" CACHE STRING "Compilation flags")
 endif()
 
+if(PROFILE)
+  set(FLAGS "${FLAGS} -pg " CACHE STRING "Compilation flags")
+endif()
 
 set(CMAKE_C_FLAGS "${FLAGS}")
-set(CMAKE_C_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG")
+set(CMAKE_C_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
 set(CMAKE_C_FLAGS_RELEASE "")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-ggdb")
 
 set(CMAKE_CXX_FLAGS "${FLAGS}")
-set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb")
 
@@ -139,6 +144,7 @@ install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale110.txt DESTINATION .)
 message(STATUS "Installing MaxScale to: ${CMAKE_INSTALL_PREFIX}/")
 
 install(FILES server/MaxScale_template.cnf DESTINATION etc)
+install(FILES server/MaxScale_BinlogServer_template.cnf DESTINATION etc)
 install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION .)
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION .)
@@ -206,7 +212,7 @@ if(PACKAGE)
     set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
     set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
     set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_BINARY_DIR}/postinst;{CMAKE_BINARY_DIR}/postrm")
-    set(CPACK_RPM_PACKAGE_RELEASE 1)
+    set(CPACK_RPM_PACKAGE_RELEASE ${MAXSCALE_BUILD_NUMBER})
     set(CPACK_RPM_POST_INSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postinst)
     set(CPACK_RPM_POST_UNINSTALL_SCRIPT_FILE ${CMAKE_BINARY_DIR}/postrm)
     set(CPACK_RPM_PACKAGE_NAME "maxscale")

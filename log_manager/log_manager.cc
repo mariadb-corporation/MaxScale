@@ -308,7 +308,7 @@ const char* get_suffix_default(void)
 
 const char* get_debug_prefix_default(void)
 {
-        return "skygw_debug";
+        return "debug";
 }
 
 const char* get_debug_suffix_default(void)
@@ -318,7 +318,7 @@ const char* get_debug_suffix_default(void)
 
 const char* get_trace_prefix_default(void)
 {
-        return "skygw_trace";
+        return "trace";
 }
 
 const char* get_trace_suffix_default(void)
@@ -328,7 +328,7 @@ const char* get_trace_suffix_default(void)
 
 const char* get_msg_prefix_default(void)
 {
-        return "skygw_msg";
+        return "messages";
 }
 
 const char* get_msg_suffix_default(void)
@@ -338,7 +338,7 @@ const char* get_msg_suffix_default(void)
 
 const char* get_err_prefix_default(void)
 {
-        return "skygw_err";
+        return "error";
 }
 
 const char* get_err_suffix_default(void)
@@ -1333,9 +1333,9 @@ static bool logfile_set_enabled(
         CHK_LOGFILE(lf);
 
         if (val) {
-            logstr = strdup("---\tLogging is enabled\t--");
+            logstr = strdup("---\tLogging to file is enabled\t--");
         } else {
-            logstr = strdup("---\tLogging is disabled\t--");
+            logstr = strdup("---\tLogging to file is disabled\t--");
         }
         oldval = lf->lf_enabled;
         lf->lf_enabled = val;
@@ -1368,7 +1368,7 @@ int skygw_log_write_flush(
         const char*   str,
         ...)
 {
-        int     err = 0;
+        int     i,err = 0;
         va_list valist;
         size_t  len;
 
@@ -1379,15 +1379,6 @@ int skygw_log_write_flush(
         }
         CHK_LOGMANAGER(lm);
 
-	/**
-	 * If particular log is disabled in general and it is not enabled for
-	 * the current session, then unregister and return.
-	 */
-	if (!LOG_IS_ENABLED(id)) 
-	{
-		err = 1;
-		goto return_unregister;
-        }
         /**
          * Find out the length of log string (to be formatted str).
          */
@@ -1401,16 +1392,27 @@ int skygw_log_write_flush(
         /**
          * Write log string to buffer and add to file write list.
          */
-        va_start(valist, str);
-        err = logmanager_write_log(id, true, true, true, false, len, str, valist);
-        va_end(valist);
+        for(i = LOGFILE_FIRST;i<=LOGFILE_LAST;i <<=1)
+        {
+            /**
+             * If particular log is disabled in general and it is not enabled for
+             * the current session, check the next log.
+             */
+            if (!LOG_IS_ENABLED(i) || (i & id) == 0)
+            {
+                continue;
+            }
 
-        if (err != 0) {
-            fprintf(stderr, "skygw_log_write_flush failed.\n");
-            goto return_unregister;
+            va_start(valist, str);
+            err = logmanager_write_log((logfile_id_t)i, true, true, true, false, len, str, valist);
+            va_end(valist);
+
+            if (err != 0) {
+                fprintf(stderr, "skygw_log_write_flush failed.\n");
+                break;
+            }
         }
 
-return_unregister:
         logmanager_unregister();
 return_err:
         return err;
@@ -1423,7 +1425,7 @@ int skygw_log_write(
         const char*   str,
         ...)
 {
-        int     err = 0;
+        int     i,err = 0;
         va_list valist;
         size_t  len;
         
@@ -1438,11 +1440,7 @@ int skygw_log_write(
          * If particular log is disabled in general and it is not enabled for
 	 * the current session, then unregister and return.
          */
-        if (!LOG_IS_ENABLED(id))
-	{
-                err = 1;
-                goto return_unregister;
-        }
+
         /**
          * Find out the length of log string (to be formatted str).
          */
@@ -1457,16 +1455,27 @@ int skygw_log_write(
          * Write log string to buffer and add to file write list.
          */
 
-        va_start(valist, str);
-        err = logmanager_write_log(id, false, true, true, false, len, str, valist);
-        va_end(valist);
+        for(i = LOGFILE_FIRST;i<=LOGFILE_LAST;i <<=1)
+        {
+            /**
+             * If particular log is disabled in general and it is not enabled for
+             * the current session, check the next log.
+             */
+            if (!LOG_IS_ENABLED(i) || (i & id) == 0)
+            {
+                continue;
+            }
 
-        if (err != 0) {
-            fprintf(stderr, "skygw_log_write failed.\n");
-            goto return_unregister;
+            va_start(valist, str);
+            err = logmanager_write_log((logfile_id_t)i, false, true, true, false, len, str, valist);
+            va_end(valist);
+
+            if (err != 0) {
+                fprintf(stderr, "skygw_log_write failed.\n");
+                break;
+            }
         }
 
-return_unregister:
         logmanager_unregister();
 return_err:
         return err;

@@ -7,17 +7,19 @@ endfunction()
 
 macro(set_maxscale_version)
 
-  #MaxScale version number
+  # MaxScale version number
   set(MAXSCALE_VERSION_MAJOR "1")
   set(MAXSCALE_VERSION_MINOR "1")
-  set(MAXSCALE_VERSION_PATCH "0") 
+  set(MAXSCALE_VERSION_PATCH "1")
   set(MAXSCALE_VERSION_NUMERIC "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
   set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
 
+  # This should be incremented each time a package is rebuilt
+  set(MAXSCALE_BUILD_NUMBER 2)
 endmacro()
 
 macro(set_variables)
-  
+
   # hostname or IP address of MaxScale's host
   set(TEST_HOST "127.0.0.1" CACHE STRING "hostname or IP address of MaxScale's host")
 
@@ -50,7 +52,7 @@ macro(set_variables)
 
   # Build RabbitMQ components
   set(BUILD_RABBITMQ FALSE CACHE BOOL "Build RabbitMQ components")
-  
+
   # Build the binlog router
   set(BUILD_BINLOG TRUE CACHE BOOL "Build binlog router")
 
@@ -59,6 +61,9 @@ macro(set_variables)
 
   # Install init.d scripts and ldconf configuration files
   set(WITH_SCRIPTS TRUE CACHE BOOL "Install init.d scripts and ldconf configuration files")
+
+  # Use tcmalloc as the memory allocator
+  set(WITH_TCMALLOC FALSE CACHE BOOL "Use tcmalloc as the memory allocator")
 
   # Build tests
   set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
@@ -75,21 +80,67 @@ macro(check_deps)
 
 
   # Check for libraries MaxScale depends on
-  set(MAXSCALE_DEPS aio ssl crypt crypto z m dl rt pthread)
-  foreach(lib ${MAXSCALE_DEPS})
-    find_library(lib${lib} ${lib})
-    if((DEFINED lib${lib}) AND (${lib${lib}} MATCHES "NOTFOUND"))
-      set(DEPS_ERROR TRUE)
-      set(FAILED_DEPS "${FAILED_DEPS} lib${lib}")
-	elseif(DEBUG_OUTPUT)
-	  message(STATUS "Library was found at: ${lib${lib}}")
-    endif()
-  endforeach()
-
-  if(DEPS_ERROR)
-	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-    message(FATAL_ERROR "Cannot find dependencies: ${FAILED_DEPS}")
+  find_library(HAVE_LIBAIO NAMES aio)
+  if(NOT HAVE_LIBAIO)
+    message(FATAL_ERROR "Could not find libaio")
   endif()
+
+  find_library(HAVE_LIBSSL NAMES ssl)
+  if(NOT HAVE_LIBSSL)
+    message(FATAL_ERROR "Could not find libssl")
+  endif()
+
+  find_library(HAVE_LIBCRYPT NAMES crypt)
+  if(NOT HAVE_LIBCRYPT)
+    message(FATAL_ERROR "Could not find libcrypt")
+  endif()
+
+  find_library(HAVE_LIBCRYPTO NAMES crypto)
+  if(NOT HAVE_LIBCRYPTO)
+    message(FATAL_ERROR "Could not find libcrypto")
+  endif()
+
+  find_library(HAVE_LIBZ NAMES z)
+  if(NOT HAVE_LIBZ)
+    message(FATAL_ERROR "Could not find libz")
+  endif()
+
+  find_library(HAVE_LIBM NAMES m)
+  if(NOT HAVE_LIBM)
+    message(FATAL_ERROR "Could not find libm")
+  endif()
+
+  find_library(HAVE_LIBDL NAMES dl)
+  if(NOT HAVE_LIBDL)
+    message(FATAL_ERROR "Could not find libdl")
+  endif()
+
+  find_library(HAVE_LIBRT NAMES rt)
+  if(NOT HAVE_LIBRT)
+    message(FATAL_ERROR "Could not find librt")
+  endif()
+
+  find_library(HAVE_LIBPTHREAD NAMES pthread)
+  if(NOT HAVE_LIBPTHREAD)
+    message(FATAL_ERROR "Could not find libpthread")
+  endif()
+
+
+  # set(MAXSCALE_DEPS aio ssl crypt crypto z m dl rt pthread)
+  # foreach(lib ${MAXSCALE_DEPS})
+  #   find_library(lib${lib} ${lib})
+  #   if((DEFINED lib${lib}) AND (${lib${lib}} MATCHES "NOTFOUND"))
+  #     set(DEPS_ERROR TRUE)
+  #     set(FAILED_DEPS "${FAILED_DEPS} lib${lib}")
+  #   elseif(DEBUG_OUTPUT)
+  #     message(STATUS "Library was found at: ${lib${lib}}")
+  #   endif()
+  # endforeach()
+
+  # if(DEPS_ERROR)
+  #   set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
+  #   message(FATAL_ERROR "Cannot find dependencies: ${FAILED_DEPS}")
+  # endif()
 
 endmacro()
 
@@ -99,7 +150,7 @@ macro(check_dirs)
   set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
 
   # Find the MySQL headers if they were not defined
-  
+
   if(DEFINED MYSQL_DIR)
 	debugmsg("Searching for MySQL headers at: ${MYSQL_DIR}")
     list(APPEND CMAKE_INCLUDE_PATH ${MYSQL_DIR})
@@ -107,9 +158,9 @@ macro(check_dirs)
   else()
 	find_path(MYSQL_DIR_LOC mysql.h PATH_SUFFIXES mysql mariadb)
   endif()
- 
-debugmsg("Search returned: ${MYSQL_DIR_LOC}") 
-  
+
+debugmsg("Search returned: ${MYSQL_DIR_LOC}")
+
   if(${MYSQL_DIR_LOC} MATCHES "NOTFOUND")
 	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
     message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
@@ -123,7 +174,7 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
   # Find the errmsg.sys file if it was not defied
   if( DEFINED ERRMSG )
 	debugmsg("Looking for errmsg.sys at: ${ERRMSG}")
-	if(NOT(IS_DIRECTORY ${ERRMSG})) 
+	if(NOT(IS_DIRECTORY ${ERRMSG}))
 	  get_filename_component(ERRMSG ${ERRMSG} PATH)
 	  debugmsg("Path to file is: ${ERRMSG}")
 	endif()
@@ -146,65 +197,65 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
   unset(ERRMSG_FILE)
 
   # Find the embedded mysql library
-  
-  if (DEFINED EMBEDDED_LIB)
-	if( NOT (IS_DIRECTORY ${EMBEDDED_LIB}) )
-	  debugmsg("EMBEDDED_LIB is not a directory: ${EMBEDDED_LIB}")
-	  if(${CMAKE_VERSION} VERSION_LESS 2.8.12 )
-		set(COMP_VAR PATH)
-	  else()
-		set(COMP_VAR DIRECTORY)
-	  endif()
-	  get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} ${COMP_VAR})	
-	  debugmsg("EMBEDDED_LIB directory component: ${EMBEDDED_LIB}")
-	endif()
-	debugmsg("Searching for the embedded library at: ${EMBEDDED_LIB}")
-  endif()
 
-  if(STATIC_EMBEDDED)
-	
-	debugmsg("Using the static embedded library...")
-	set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-	set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-	if (DEFINED EMBEDDED_LIB)
-	  debugmsg("Searching for libmysqld.a at: ${EMBEDDED_LIB}")
-	  find_library(EMBEDDED_LIB_STATIC libmysqld.a PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
-	else()
-	  find_library(EMBEDDED_LIB_STATIC libmysqld.a PATH_SUFFIXES mysql mariadb)      
-	endif()
-	debugmsg("Search returned: ${EMBEDDED_LIB_STATIC}")
-	
-	set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC} CACHE FILEPATH "Path to libmysqld" FORCE)      
-	set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
+  # if (DEFINED EMBEDDED_LIB)
+  #   if( NOT (IS_DIRECTORY ${EMBEDDED_LIB}) )
+  #     debugmsg("EMBEDDED_LIB is not a directory: ${EMBEDDED_LIB}")
+  #     if(${CMAKE_VERSION} VERSION_LESS 2.8.12 )
+  #   	set(COMP_VAR PATH)
+  #     else()
+  #   	set(COMP_VAR DIRECTORY)
+  #     endif()
+  #     get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} ${COMP_VAR})
+  #     debugmsg("EMBEDDED_LIB directory component: ${EMBEDDED_LIB}")
+  #   endif()
+  #   debugmsg("Searching for the embedded library at: ${EMBEDDED_LIB}")
+  # endif()
 
-  else()
-	debugmsg("Using the dynamic embedded library...")
-	set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-	set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
-	if (DEFINED EMBEDDED_LIB)
-	  debugmsg("Searching for libmysqld.so at: ${EMBEDDED_LIB}")
-	  find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH) 
-	else()
-	  find_library(EMBEDDED_LIB_DYNAMIC mysqld PATH_SUFFIXES mysql mariadb)            
-	endif()
-	debugmsg("Search returned: ${EMBEDDED_LIB_DYNAMIC}")
-	set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC} CACHE FILEPATH "Path to libmysqld" FORCE)      
-	set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
-	
-  endif()
-  
-  unset(EMBEDDED_LIB_DYNAMIC)
-  unset(EMBEDDED_LIB_STATIC)
-  unset(OLD_SUFFIXES)
+  # if(STATIC_EMBEDDED)
 
-  # Inform the user about the embedded library
-  if( (${EMBEDDED_LIB} MATCHES "NOTFOUND") OR (${EMBEDDED_LIB} MATCHES "NOTFOUND"))
-	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-	message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
-  else()
-	get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
-	message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
-  endif()
+  #   debugmsg("Using the static embedded library...")
+  #   set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+  #   if (DEFINED EMBEDDED_LIB)
+  #     debugmsg("Searching for libmysqld.a at: ${EMBEDDED_LIB}")
+  #     find_library(EMBEDDED_LIB_STATIC libmysqld.a PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
+  #   else()
+  #     find_library(EMBEDDED_LIB_STATIC libmysqld.a PATH_SUFFIXES mysql mariadb)
+  #   endif()
+  #   debugmsg("Search returned: ${EMBEDDED_LIB_STATIC}")
+
+  #   set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC} CACHE FILEPATH "Path to libmysqld" FORCE)
+  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
+
+  # else()
+  #   debugmsg("Using the dynamic embedded library...")
+  #   set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
+  #   if (DEFINED EMBEDDED_LIB)
+  #     debugmsg("Searching for libmysqld.so at: ${EMBEDDED_LIB}")
+  #     find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
+  #   else()
+  #     find_library(EMBEDDED_LIB_DYNAMIC mysqld PATH_SUFFIXES mysql mariadb)
+  #   endif()
+  #   debugmsg("Search returned: ${EMBEDDED_LIB_DYNAMIC}")
+  #   set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC} CACHE FILEPATH "Path to libmysqld" FORCE)
+  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
+
+  # endif()
+
+  # unset(EMBEDDED_LIB_DYNAMIC)
+  # unset(EMBEDDED_LIB_STATIC)
+  # unset(OLD_SUFFIXES)
+
+  # # Inform the user about the embedded library
+  # if( (${EMBEDDED_LIB} MATCHES "NOTFOUND") OR (${EMBEDDED_LIB} MATCHES "NOTFOUND"))
+  #   set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
+  #   message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
+  # else()
+  #   get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
+  #   message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
+  # endif()
 
 
   # Check which init.d script to install

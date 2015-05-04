@@ -1356,7 +1356,7 @@ int		action;
 					"Slave %d is ahead of expected position %s@%d. "
 					"Expected position %d",
 						slave->serverid, slave->binlogfile,
-						slave->binlog_pos,
+						(unsigned long)slave->binlog_pos,
 						hdr->next_pos - hdr->event_size)));
 				spinlock_acquire(&slave->catch_lock);
 				slave->cstate &= ~(CS_UPTODATE|CS_BUSY);

@@ -8,11 +8,19 @@ The top filter is a filter module for MaxScale that monitors every SQL statement
 
 The configuration block for the TOP filter requires the minimal filter options in it’s section within the MaxScale.cnf file, stored in $MAXSCALE_HOME/etc/MaxScale.cnf.
 
+```
 [MyLogFilter]
-
 type=filter
-
 module=topfilter
+
+[Service]
+type=service
+router=readconnrouter
+servers=server1
+user=myuser
+passwd=mypasswd
+filters=MyLogFilter
+```
 
 ## Filter Options
 
@@ -26,7 +34,9 @@ The top filter accepts a number of optional parameters.
 
 The basename of the output file created for each session. A session index is added to the filename for each file written.
 
+```
 filebase=/tmp/SqlQueryLog
+```
 
 The filebase may also be set as the filter, the mechanism to set the filebase via the filter option is superseded by the parameter. If both are set the parameter setting will be used and the filter option ignored.
 
@@ -34,15 +44,19 @@ The filebase may also be set as the filter, the mechanism to set the filebase vi
 
 The number of SQL statements to store and report upon.
 
+```
 count=30
+```
 
-The default vakue for the numebr of statements recorded is 10.
+The default value for the number of statements recorded is 10.
 
 ### Match
 
 An optional parameter that can be used to limit the queries that will be logged by the top filter. The parameter value is a regular expression that is used to match against the SQL text. Only SQL statements that matches the text passed as the value of this parameter will be logged.
 
+```
 match=select.*from.*customer.*where
+```
 
 All regular expressions are evaluated with the option to ignore the case of the text, therefore a match option of select will match both select, SELECT and any form of the word with upper or lowercase characters.
 
@@ -50,7 +64,9 @@ All regular expressions are evaluated with the option to ignore the case of the 
 
 An optional parameter that can be used to limit the queries that will be logged by the top filter. The parameter value is a regular expression that is used to match against the SQL text. SQL statements that match the text passed as the value of this parameter will be excluded from the log output.
 
+```
 exclude=where
+```
 
 All regular expressions are evaluated with the option to ignore the case of the text, therefore an exclude option of select will exclude statements that contain both where, WHERE or any form of the word with upper or lowercase characters.
 
@@ -58,13 +74,17 @@ All regular expressions are evaluated with the option to ignore the case of the 
 
 The optional source parameter defines an address that is used to match against the address from which the client connection to MaxScale originates. Only sessions that originate from this address will be logged.
 
+```
 source=127.0.0.1
+```
 
 ### User
 
-The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username will result in results being gebnerated.
+The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username will result in results being generated.
 
+```
 user=john
+```
 
 ## Examples
 
@@ -74,19 +94,15 @@ You have an order system and believe the updates of the PRODUCTS table is causin
 
 Add a filter with the following definition;
 
+```
 [ProductsUpdateTop20]
-
 type=filter
-
 module=topfilter
-
 count=20
-
 match=UPDATE.*PRODUCTS.*WHERE
-
 exclude=UPDATE.*PRODUCTS_STOCK.*WHERE
-
 filebase=/var/logs/top/ProductsUpdate
+```
 
 Note the exclude entry, this is to prevent updates to the PRODUCTS_STOCK table from being included in the report.
 
@@ -96,42 +112,46 @@ One of your applications servers is slower than the rest, you believe it is rela
 
 Add a filter with the following definition;
 
+```
 [SlowAppServer]
-
 type=filter
-
 module=topfilter
-
 count=20
-
 source=192.168.0.32
-
 filebase=/var/logs/top/SlowAppServer
+```
 
 In order to produce a comparison with an unaffected application server you can also add a second filter as a control.
 
+```
 [ControlAppServer]
 
 type=filter
-
 module=topfilter
-
 count=20
-
 source=192.168.0.42
-
 filebase=/var/logs/top/ControlAppServer
+```
 
-In the router definition add both filters
+In the service definition add both filters
 
+```
+[App Service]
+type=service
+router=readconnrouter
+servers=server1
+user=myuser
+passwd=mypasswd
 filters=SlowAppServer | ControlAppServer
+```
 
-You will then have two sets of logs files written, one which profiles the top 20 queries of the slow application server and another that gives you the top 20 queries of your control application server. These two sets of files can then be compared to determine what if anythign is different between the two.
+You will then have two sets of logs files written, one which profiles the top 20 queries of the slow application server and another that gives you the top 20 queries of your control application server. These two sets of files can then be compared to determine what if anything is different between the two.
 
 # Output Report
 
-The following is an example report for a number of fictitious queries executed against the employees exaple database available for MySQL.
+The following is an example report for a number of fictitious queries executed against the employees example database available for MySQL.
 
+```
 -bash-4.1$ cat /var/logs/top/Employees-top-10.137
 
 Top 10 longest running queries in session.
@@ -180,3 +200,4 @@ Total connection time               46.500 seconds
 
 -bash-4.1$ 
 
+```

@@ -65,7 +65,7 @@ modules it will search using a predescribed search path. The rules are:
  2. Look in $MAXSCALE_HOME/modules
  3. Look in /usr/local/mariadb-maxscale/modules
 
-Configuration is read by default from the file $MAXSCALE_HOME/etc/MaxScale.cnf, /etc/MaxScale.cnf. An example file is included in in the installation and can be found in the etc/ folder within the MaxScale installation. The default value of MAXSCALE_HOME can be overriden by using the -c flag on the command line. This should be immediately followed by the path to the MaxScale home directory. The -f flag can be used on the command line to set the name and the location of the configuration file. Without path expression the file is read from \$MAXSCALE_HOME/etc directory.
+Configuration is read by default from the file $MAXSCALE_HOME/etc/MaxScale.cnf, /etc/MaxScale.cnf. An example file is included in in the installation and can be found in the etc/ folder within the MaxScale installation. The default value of MAXSCALE_HOME can be overridden by using the -c flag on the command line. This should be immediately followed by the path to the MaxScale home directory. The -f flag can be used on the command line to set the name and the location of the configuration file. Without path expression the file is read from \$MAXSCALE_HOME/etc directory.
 
 
 ## Administration Of MaxScale

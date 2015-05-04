@@ -82,7 +82,7 @@ Beyond the language support for debugging using tools such as gdb, MaxScale will
 
 ## Command Line Option
 
-Normally when MaxScale starts it will place itself in the background and setup the signal masks so that it is immune to the normal set of signals that will cause the process to exit, SIGINT and SIGQUIT. This behaviour is normally what is required, however if you wish to run MaxScale under the control of a debugger it is useful to suppress this behaviour.  A command line option, -d is provided to turn off this behaviour.
+Normally when MaxScale starts it will place itself in the background and setup the signal masks so that it is immune to the normal set of signals that will cause the process to exit, SIGINT and SIGQUIT. This behavior is normally what is required, however if you wish to run MaxScale under the control of a debugger it is useful to suppress this behavior.  A command line option, -d is provided to turn off this behavior.
 
 % gdb maxscale
 
@@ -234,7 +234,7 @@ Server 0x60d920
 
 ### Modules
 
-MaxScale makes significant use of moules, shared objects, that are loaded on demand based on the configuration. A routine exists that will print the currently loaded modules.
+MaxScale makes significant use of modules, shared objects, that are loaded on demand based on the configuration. A routine exists that will print the currently loaded modules.
 
 (gdb) call printModules()
 
@@ -476,7 +476,7 @@ The commands available are very similar to those described above to print things
 
 ## Listing Services
 
-The list services command is designed to give a concise tabular view of the currently configured services within MaxScale along with key data that summarises the use beign made of the service.
+The list services command is designed to give a concise tabular view of the currently configured services within MaxScale along with key data that summarizes the use being made of the service.
 
 **MaxScale>** list services
 
@@ -830,13 +830,13 @@ Server 0x6ec5d0 (server4)
 
 * the value of ‘Ndb_cluster_node_id’ for SQL nodes in MySQL Cluster
 
-* the -1 value for a failure getting one of these informations
+* the -1 value for a failure getting one of these information
 
 * Repl Depth is the replication depth level found by MaxScale MySQL Monitor
 
 * Master Id is the master node, if available, for current server
 
-* Slave Ids is the slave list for the current node, if availbable
+* Slave Ids is the slave list for the current node, if available
 
 Note, the Master Root Server used for routing decision is the server with master role and with lowest replication depth level. All slaves servers even if they are intermediate master are suitable for read statement routing decisions.
 
@@ -844,7 +844,7 @@ Note, the Master Root Server used for routing decision is the server with master
 
 	Value of 0 or less than monitor interval means there is no replication delay.
 
-* Last Repl Heartbeat is the maxScale timestamp read or inserted (if current server is master)
+* Last Repl Heartbeat is the MaxScale timestamp read or inserted (if current server is master)
 
 The Replication Heartbeat table is updated by MySQL replication, starting MaxScale when there is a significant slave delay may result that Slave Delay and  Last Repl Heartbeat are not available for some time in the slave server details
 
@@ -1559,7 +1559,7 @@ Server 0x6ec5d0 (server4)
 
 **MaxScale>** set server 0x6ec840 slave
 
-Valid options that are recognised by the set server command are running, master and slave. Please note that if the monitor is running it will reset the flags to match reality, this interface is really for use when the monitor is disabled.
+Valid options that are recognized by the set server command are running, master and slave. Please note that if the monitor is running it will reset the flags to match reality, this interface is really for use when the monitor is disabled.
 
 In user mode there is no need to find the address of the server structure, the name of the server from the section header in the configuration file make be given. 
 
@@ -1691,7 +1691,7 @@ Note, not all configuration elements can be changed dynamically currently. This 
 
 ## Add user
 
-The add user command is used to add new users to the debug CLI of MaxScale. The default behaviour of the CLI for MaxScale is to have a login name of admin and a fixed password of mariadb. Adding new users will disable this default behaviour and limit the login access to the users that are added.
+The add user command is used to add new users to the debug CLI of MaxScale. The default behavior of the CLI for MaxScale is to have a login name of admin and a fixed password of mariadb. Adding new users will disable this default behavior and limit the login access to the users that are added.
 
 **MaxScale>** add user admin july2013
 
@@ -1711,11 +1711,11 @@ User admin already exists.
 
 **MaxScale>**** **
 
-If you should forget or lose the the account details you may simply remove the passwd file in $MAXSCALE_HOME/etc and the system will revert to the default behaviour with admin/mariadb as the account.
+If you should forget or lose the the account details you may simply remove the passwd file in $MAXSCALE_HOME/etc and the system will revert to the default behavior with admin/mariadb as the account.
 
 ## Enable/disable log
 
-The enable/disable log command is used to enable/disable the log facility of MaxScale. The default behaviour for MaxScale is to have all logs enabled in DEBUG version, and only error log in production release.
+The enable/disable log command is used to enable/disable the log facility of MaxScale. The default behavior for MaxScale is to have all logs enabled in DEBUG version, and only error log in production release.
 
 Examples:
 
@@ -1741,7 +1741,7 @@ No output for these commands in the debug interface, but in the affected logs th
 
 # Logging facility
 
-MaxScale generates output of its behavior to four distinct logs, error, messages, trace and debug log. Error and message logs are enabled by default but all logs can be dynamically enabled and disabled by using maxadm utility, debug client interface (telnet) or optionally by using your own application through the client API.
+MaxScale generates output of its behavior to four distinct logs, error, messages, trace and debug log. Error and message logs are enabled by default but all logs can be dynamically enabled and disabled by using maxadmin utility, debug client interface (telnet) or optionally by using your own application through the client API.
 
 ## Log contents
 

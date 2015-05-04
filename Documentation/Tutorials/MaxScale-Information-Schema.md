@@ -119,7 +119,7 @@ The show variables command can also accept a limited like clause. This like clau
 
 ## Show status
 
-The show status command displays a set of status counters, as with show variables the show status command can be passed a simplifed like clause to limit the values returned.
+The show status command displays a set of status counters, as with show variables the show status command can be passed a simplified like clause to limit the values returned.
 
     mysql> show status;
     +---------------------------+-------+
