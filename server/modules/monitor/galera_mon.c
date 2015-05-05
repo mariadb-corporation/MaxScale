@@ -32,7 +32,8 @@
  * 24/06/14	Massimiliano Pinto	Added depth level 0 for each node
  * 30/10/14	Massimiliano Pinto	Added disableMasterFailback feature
  * 10/11/14	Massimiliano Pinto	Added setNetworkTimeout for connect,read,write
- * 20/05/15	Guillaume Lefranc	Added availableWhenDonor feature
+ * 20/04/15	Guillaume Lefranc	Added availableWhenDonor feature
+ * 22/04/15     Martin Brampton         Addition of disableMasterRoleSetting
  *
  * @endverbatim
  */
