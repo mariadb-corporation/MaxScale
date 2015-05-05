@@ -1,5 +1,22 @@
 /**
  * @file mm test of multi master monitor
+ *
+ * - reset master, stop slaves, stop all nodes
+ * - start 2 nodes
+ * - execute SET MASTER TO on node0 to point to node1 and on node1 to point to node0
+ * - execute SET GLOBAL READ_ONLY=ON on node0
+ * - check server status using maxadmin interface, expect Master on node1 and Slave on node0
+ * - put data to DB using RWSplit, check data using RWSplit and directrly from backend nodes
+ * - block node0 (slave)
+ * - check server status using maxadmin interface, expect node0 Down
+ * - put data and check it
+ * - unblock node0
+ * - block node1 (master)
+ * - check server status using maxadmin interface, expect node1 Down
+ * - execute SET GLOBAL READ_ONLY=OFF on node0
+ * - unblock node0
+ * - execute SET GLOBAL READ_ONLY=ON on node1
+ * - check server status using maxadmin interface, expect Master on node0 and Slave on node1
  */
 
 #include <my_config.h>
@@ -73,6 +90,13 @@ int main(int argc, char *argv[])
     printf("Block slave\n");
     Test->repl->block_node(0);
     sleep(30);
+    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
+    printf("node0 %s\n", maxadmin_result);
+    if (strstr(maxadmin_result, "Down")  == NULL ) {
+        printf("Node0 is not down, status is %s\n", maxadmin_result);
+        global_result++;
+    }
+
     printf("Put some data and check\n");
     global_result += check_conf(Test, 0);
     printf("global_result is %d\n", global_result);
@@ -84,6 +108,12 @@ int main(int argc, char *argv[])
     printf("Block master\n");
     Test->repl->block_node(1);
     sleep(30);
+    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
+    printf("node1 %s\n", maxadmin_result);
+    if (strstr(maxadmin_result, "Down")  == NULL ) {
+        printf("Node1 is not down, status is %s\n", maxadmin_result);
+        global_result++;
+    }
     printf("Make node 1 master\n");
 
     Test->repl->connect();
