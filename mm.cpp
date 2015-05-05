@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
     }
     printf("global_result is %d\n", global_result);
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
-    printf("node1 %s+n", maxadmin_result);
+    printf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Master, Running") == NULL ) {
         printf("Node1 is not master, status is %s\n", maxadmin_result);
         global_result++;
