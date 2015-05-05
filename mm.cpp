@@ -8,7 +8,7 @@
 #include "maxadmin_operations.h"
 #include "sql_t1.h"
 
-int check_conf(TestConnections* Test)
+int check_conf(TestConnections* Test, int blocked_node)
 {
     int global_result;
 
@@ -20,8 +20,10 @@ int check_conf(TestConnections* Test)
     sleep(30);
 
     for (int i = 0; i < 2; i++) {
-        printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
-        global_result += select_from_t1(Test->repl->nodes[i], 4);
+        if ( i != blocked_node) {
+            printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
+            global_result += select_from_t1(Test->repl->nodes[i], 4);
+        }
     }
 
     printf("Checking data from rwsplit\n"); fflush(stdout);
@@ -47,13 +49,14 @@ int main(int argc, char *argv[])
     Test->start_mm(); // first node - slave, second - master
 
     printf("Put some data and check\n");
-
+    printf("Put some data and check\n");
+    global_result += check_conf(Test, 2);
 
     printf("Block slave\n");
     Test->repl->block_node(0);
     sleep(30);
     printf("Put some data and check\n");
-    global_result += check_conf(Test);
+    global_result += check_conf(Test, 0);
 
     printf("Unlock slave\n");
     Test->repl->unblock_node(0);
@@ -70,7 +73,7 @@ int main(int argc, char *argv[])
 
     sleep(30);
     printf("Put some data and check\n");
-    global_result += check_conf(Test);
+    global_result += check_conf(Test, 1);
 
     printf("Unlock slave\n");
     Test->repl->unblock_node(1);
@@ -83,7 +86,7 @@ int main(int argc, char *argv[])
     sleep(30);
 
     printf("Put some data and check\n");
-    global_result += check_conf(Test);
+    global_result += check_conf(Test, 2);
 
 
 
