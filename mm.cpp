@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
+    char maxadmin_result[1024];
 
     Test->read_env();
     Test->print_env();
@@ -48,7 +49,19 @@ int main(int argc, char *argv[])
 
     Test->start_mm(); // first node - slave, second - master
 
-    printf("Put some data and check\n");
+    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
+    printf("node0 %s+n", maxadmin_result);
+    if (strcmp(maxadmin_result, "Slave, Running")) {
+        printf("Node0 is not slave, status is %s\n", maxadmin_result);
+        global_result++;
+    }
+    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
+    printf("node1 %s+n", maxadmin_result);
+    if (strcmp(maxadmin_result, "Master, Running")) {
+        printf("Node1 is not master, status is %s\n", maxadmin_result);
+        global_result++;
+    }
+
     printf("Put some data and check\n");
     global_result += check_conf(Test, 2);
 
@@ -88,7 +101,18 @@ int main(int argc, char *argv[])
     printf("Put some data and check\n");
     global_result += check_conf(Test, 2);
 
-
+    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
+    printf("node1 %s+n", maxadmin_result);
+    if (strcmp(maxadmin_result, "Slave, Running")) {
+        printf("Node1 is not slave, status is %s\n", maxadmin_result);
+        global_result++;
+    }
+    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
+    printf("node0 %s+n", maxadmin_result);
+    if (strcmp(maxadmin_result, "Master, Running")) {
+        printf("Node0 is not master, status is %s\n", maxadmin_result);
+        global_result++;
+    }
 
     Test->copy_all_logs(); return(global_result);
 }
