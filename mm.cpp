@@ -50,30 +50,30 @@ int main(int argc, char *argv[])
     Test->start_mm(); // first node - slave, second - master
 
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
-    printf("node0 %s+n", maxadmin_result);
+    printf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Slave, Running")  == NULL ) {
         printf("Node0 is not slave, status is %s\n", maxadmin_result);
         global_result++;
     }
-    printf("globa_result is %d\n", global_result);
+    printf("global_result is %d\n", global_result);
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s+n", maxadmin_result);
     if (strstr(maxadmin_result, "Master, Running") == NULL ) {
         printf("Node1 is not master, status is %s\n", maxadmin_result);
         global_result++;
     }
-    printf("globa_result is %d\n", global_result);
+    printf("global_result is %d\n", global_result);
 
     printf("Put some data and check\n");
     global_result += check_conf(Test, 2);
-    printf("globa_result is %d\n", global_result);
+    printf("global_result is %d\n", global_result);
 
     printf("Block slave\n");
     Test->repl->block_node(0);
     sleep(30);
     printf("Put some data and check\n");
     global_result += check_conf(Test, 0);
-    printf("globa_result is %d\n", global_result);
+    printf("global_result is %d\n", global_result);
 
     printf("Unlock slave\n");
     Test->repl->unblock_node(0);
@@ -87,12 +87,12 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=OFF");
     Test->repl->close_connections();
-    printf("globa_result is %d\n", global_result);
+    printf("global_result is %d\n", global_result);
 
     sleep(30);
     printf("Put some data and check\n");
     global_result += check_conf(Test, 1);
-    printf("globa_result is %d\n", global_result);
+    printf("global_result is %d\n", global_result);
 
     printf("Unlock slave\n");
     Test->repl->unblock_node(1);
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
 
     printf("Put some data and check\n");
     global_result += check_conf(Test, 2);
-    printf("globa_result is %d\n", global_result);
+    printf("global_result is %d\n", global_result);
 
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
@@ -114,14 +114,14 @@ int main(int argc, char *argv[])
         printf("Node1 is not slave, status is %s\n", maxadmin_result);
         global_result++;
     }
-    printf("globa_result is %d\n", global_result);
+    printf("global_result is %d\n", global_result);
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
     printf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Master, Running")  == NULL ) {
         printf("Node0 is not master, status is %s\n", maxadmin_result);
         global_result++;
     }
-    printf("globa_result is %d\n", global_result);
+    printf("global_result is %d\n", global_result);
 
     Test->copy_all_logs(); return(global_result);
 }
