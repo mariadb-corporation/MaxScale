@@ -301,7 +301,15 @@ process_config_context(CONFIG_CONTEXT *context)
 {
 CONFIG_CONTEXT		*obj;
 int			error_count = 0;
+HASHTABLE* monitorhash;
 
+if((monitorhash = hashtable_alloc(5,simple_str_hash,strcmp)) == NULL)
+{
+    skygw_log_write(LOGFILE_ERROR,"Error: Failed to allocate ,onitor configuration check hashtable.");
+    return 0;
+}
+
+hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 	/**
 	 * Process the data and create the services and servers defined
 	 * in the data.
@@ -953,6 +961,13 @@ int			error_count = 0;
                                                             obj->element && obj1->element)
                                                         {
 								found = 1;
+								if(hashtable_add(monitorhash,obj1->object,"") == 0)
+								{
+								    skygw_log_write(LOGFILE_ERROR,
+									     "Warning: Multiple monitors are monitoring server [%s]. "
+									    "This will cause undefined behavior.",
+									     obj1->object);
+								}
 								monitorAddServer(
                                                                         obj->element,
                                                                         obj1->element);
@@ -1013,7 +1028,8 @@ int			error_count = 0;
 		obj = obj->next;
 	} /*< while */
 	/** TODO: consistency check function */
-        
+
+	hashtable_free(monitorhash);
         /**
          * error_count += consistency_checks();
          */
