@@ -63,7 +63,11 @@ int main(int argc, char *argv[])
     Test->repl->block_node(1);
     sleep(30);
     printf("Make node 1 master\n");
+
+    Test->repl->connect();
     execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=OFF");
+    Test->repl->close_connections();
+
     sleep(30);
     printf("Put some data and check\n");
     global_result += check_conf(Test);
@@ -73,7 +77,9 @@ int main(int argc, char *argv[])
     sleep(30);
 
     printf("Make node 2 slave\n");
+    Test->repl->connect();
     execute_query(Test->repl->nodes[1], (char *) "SET GLOBAL READ_ONLY=ON");
+    Test->repl->close_connections();
     sleep(30);
 
     printf("Put some data and check\n");
