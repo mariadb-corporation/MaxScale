@@ -51,13 +51,13 @@ int main(int argc, char *argv[])
 
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
     printf("node0 %s+n", maxadmin_result);
-    if (strcmp(maxadmin_result, "Slave, Running")) {
+    if (strstr(maxadmin_result, "Slave, Running")  == NULL ) {
         printf("Node0 is not slave, status is %s\n", maxadmin_result);
         global_result++;
     }
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s+n", maxadmin_result);
-    if (strcmp(maxadmin_result, "Master, Running")) {
+    if (strstr(maxadmin_result, "Master, Running") == NULL ) {
         printf("Node1 is not master, status is %s\n", maxadmin_result);
         global_result++;
     }
@@ -103,13 +103,13 @@ int main(int argc, char *argv[])
 
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s+n", maxadmin_result);
-    if (strcmp(maxadmin_result, "Slave, Running")) {
+    if (strstr(maxadmin_result, "Slave, Running")  == NULL ) {
         printf("Node1 is not slave, status is %s\n", maxadmin_result);
         global_result++;
     }
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
     printf("node0 %s+n", maxadmin_result);
-    if (strcmp(maxadmin_result, "Master, Running")) {
+    if (strstr(maxadmin_result, "Master, Running")  == NULL ) {
         printf("Node0 is not master, status is %s\n", maxadmin_result);
         global_result++;
     }
