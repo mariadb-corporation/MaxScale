@@ -43,6 +43,7 @@
  * 20/02/15	Markus Mäkelä		Added connection_timeout parameter for services
  * 05/03/15	Massimiliano	Pinto	Added notification_feedback support
  * 20/04/15	Guillaume Lefranc	Added available_when_donor parameter
+ * 22/04/15     Martin Brampton         Added disable_master_role_setting parameter
  *
  * @endverbatim
  */
@@ -301,7 +302,15 @@ process_config_context(CONFIG_CONTEXT *context)
 {
 CONFIG_CONTEXT		*obj;
 int			error_count = 0;
+HASHTABLE* monitorhash;
 
+if((monitorhash = hashtable_alloc(5,simple_str_hash,strcmp)) == NULL)
+{
+    skygw_log_write(LOGFILE_ERROR,"Error: Failed to allocate ,onitor configuration check hashtable.");
+    return 0;
+}
+
+hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 	/**
 	 * Process the data and create the services and servers defined
 	 * in the data.
@@ -953,6 +962,13 @@ int			error_count = 0;
                                                             obj->element && obj1->element)
                                                         {
 								found = 1;
+								if(hashtable_add(monitorhash,obj1->object,"") == 0)
+								{
+								    skygw_log_write(LOGFILE_ERROR,
+									     "Warning: Multiple monitors are monitoring server [%s]. "
+									    "This will cause undefined behavior.",
+									     obj1->object);
+								}
 								monitorAddServer(
                                                                         obj->element,
                                                                         obj1->element);
@@ -1013,7 +1029,8 @@ int			error_count = 0;
 		obj = obj->next;
 	} /*< while */
 	/** TODO: consistency check function */
-        
+
+	hashtable_free(monitorhash);
         /**
          * error_count += consistency_checks();
          */
@@ -1920,6 +1937,7 @@ static char *monitor_params[] =
 		"backend_read_timeout",
 		"backend_write_timeout",
 		"available_when_donor",
+                "disable_master_role_setting",
                 NULL
         };
 /**
@@ -2033,15 +2051,18 @@ bool config_set_qualified_param(
 int
 config_truth_value(char *str)
 {
-	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0)
+	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 ||
+	 strcasecmp(str, "yes") == 0 || strcasecmp(str, "1") == 0)
 	{
 		return 1;
 	}
-	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 || strcasecmp(str, "no") == 0)
+	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 ||
+	 strcasecmp(str, "no") == 0|| strcasecmp(str, "0") == 0)
 	{
 		return 0;
 	}
-	return atoi(str);
+	skygw_log_write(LOGFILE_ERROR,"Error: Not a boolean value: %s",str);
+	return -1;
 }
 
 

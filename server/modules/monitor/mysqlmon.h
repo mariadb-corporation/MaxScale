@@ -35,7 +35,8 @@
  * 28/08/14	Massimiliano	Pinto	Addition of detectStaleMaster
  * 30/10/14	Massimiliano	Pinto	Addition of disableMasterFailback
  * 07/11/14	Massimiliano	Pinto	Addition of NetworkTimeout: connect, read, write
- * 20/05/15	Guillaume Lefranc	Addition of availableWhenDonor
+ * 20/04/15	Guillaume Lefranc	Addition of availableWhenDonor
+ * 22/04/15     Martin Brampton         Addition of disableMasterRoleSetting
  *
  * @endverbatim
  */
@@ -70,6 +71,7 @@ typedef struct {
 	int	detectStaleMaster;	/**< Monitor flag for MySQL replication Stale Master detection */
 	int	disableMasterFailback;	/**< Monitor flag for Galera Cluster Master failback */
 	int	availableWhenDonor;	/**< Monitor flag for Galera Cluster Donor availability */
+        int     disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
 	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
 	MONITOR_SERVERS	*databases;     /**< Linked list of servers to monitor */
 	int	connect_timeout;	/**< Connect timeout in seconds for mysql_real_connect */

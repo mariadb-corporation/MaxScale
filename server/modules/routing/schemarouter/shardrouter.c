@@ -246,25 +246,23 @@ hashcmpfun(
 /**
  * Convert a length encoded string into a C string.
  * @param data Pointer to the first byte of the string
- * @param len Pointer to an integer where the length of the string will be stored. On errors this will be set to -1.
  * @return Pointer to the newly allocated string or NULL if the value is NULL or an error occurred
  */
-char* get_lenenc_str(void* data, int* len)
+char* get_lenenc_str(void* data)
 {
     unsigned char* ptr = (unsigned char*)data;
     char* rval;
-    long size, offset;
+    uintptr_t size;
+    long offset;
 
-    if(data == NULL || len == NULL)
+    if(data == NULL)
     {
-	if(len)
-	    *len = -1;
         return NULL;
     }
 
     if(*ptr < 251)
     {
-        size = *ptr;
+        size = (uintptr_t)*ptr;
         offset = 1;
     }
     else
@@ -272,7 +270,6 @@ char* get_lenenc_str(void* data, int* len)
         switch(*(ptr))
         {
         case 0xfb:
-            *len = 1;
             return NULL;
         case 0xfc:
             size = *(ptr + 1) + (*(ptr + 2) << 8);
@@ -284,8 +281,8 @@ char* get_lenenc_str(void* data, int* len)
             break;
         case 0xfe:
             size = *ptr + ((*(ptr + 2) << 8)) + (*(ptr + 3) << 16) +
-                    (*(ptr + 4) << 24) + ((long)*(ptr + 5) << 32) + ((long)*(ptr + 6) << 40) +
-                    ((long)*(ptr + 7) << 48) + ((long)*(ptr + 8) << 56);
+                    (*(ptr + 4) << 24) + ((uintptr_t)*(ptr + 5) << 32) + ((uintptr_t)*(ptr + 6) << 40) +
+                    ((uintptr_t)*(ptr + 7) << 48) + ((uintptr_t)*(ptr + 8) << 56);
             offset = 8;
             break;
         default:
@@ -301,7 +298,6 @@ char* get_lenenc_str(void* data, int* len)
         memset(rval + size,0,1);
 
     }
-    *len = size + offset;
     return rval;
 }
 
@@ -344,8 +340,7 @@ parse_mapping_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
        {
 	   int payloadlen = gw_mysql_get_byte3(ptr);
 	   int packetlen = payloadlen + 4;
-	   int len = 0;
-	   char* data = get_lenenc_str(ptr+4,&len);
+	   char* data = get_lenenc_str(ptr+4);
 
 	   if(data)
 	   {
