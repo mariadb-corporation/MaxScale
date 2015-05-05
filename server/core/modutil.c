@@ -538,7 +538,7 @@ return_packetbuf:
 GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 {
     GWBUF *buff = NULL, *packet;
-    uint8_t *ptr,*end;
+    uint8_t *ptr;
     int len,blen,total = 0;
 
     if(p_readbuf == NULL || (*p_readbuf) == NULL ||
@@ -583,7 +583,6 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 		 "Error: Failed to partially clone buffer.");
 	return NULL;
     }
-
     gwbuf_consume(packet,total);
     return buff;
 }

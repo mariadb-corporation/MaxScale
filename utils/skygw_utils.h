@@ -80,6 +80,75 @@ struct mlist_node_st {
 typedef enum { THR_INIT, THR_RUNNING, THR_STOPPED, THR_DONE } skygw_thr_state_t;
 typedef enum { MES_RC_FAIL, MES_RC_SUCCESS, MES_RC_TIMEOUT } skygw_mes_rc_t;
 
+
+static const char*  timestamp_formatstr = "%04d-%02d-%02d %02d:%02d:%02d   ";
+/** One for terminating '\0' */
+static const size_t    timestamp_len       =    (4+1 +2+1 +2+1 +2+1 +2+1 +2+3  +1) * sizeof(char);
+
+
+static const char*  timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d   ";
+/** One for terminating '\0' */
+static const size_t    timestamp_len_hp       =    (4+1 +2+1 +2+1 +2+1 +2+1 +2+1+3+3  +1) * sizeof(char);
+
+/** Single-linked list for storing test cases */
+
+struct slist_node_st {
+        skygw_chk_t   slnode_chk_top;
+        slist_t*      slnode_list;
+        slist_node_t* slnode_next;
+        void*         slnode_data;
+        size_t        slnode_cursor_refcount;
+        skygw_chk_t   slnode_chk_tail;
+};
+
+struct slist_st {
+        skygw_chk_t   slist_chk_top;
+        slist_node_t* slist_head;
+        slist_node_t* slist_tail;
+        int        slist_nelems;
+        slist_t*      slist_cursors_list;
+        skygw_chk_t   slist_chk_tail;
+};
+
+struct slist_cursor_st {
+        skygw_chk_t     slcursor_chk_top;
+        slist_t*        slcursor_list;
+        slist_node_t*   slcursor_pos;
+        skygw_chk_t     slcursor_chk_tail;
+};
+
+struct skygw_thread_st {
+        skygw_chk_t       sth_chk_top;
+        bool              sth_must_exit;
+        simple_mutex_t*   sth_mutex;
+        pthread_t         sth_parent;
+        pthread_t         sth_thr;
+        int               sth_errno;
+#if defined(SS_DEBUG)
+        skygw_thr_state_t sth_state;
+#endif
+        char*             sth_name;
+        void* (*sth_thrfun)(void* data);
+        void*             sth_data;
+        skygw_chk_t       sth_chk_tail;
+};
+
+struct skygw_message_st {
+        skygw_chk_t     mes_chk_top;
+        bool            mes_sent;
+        pthread_mutex_t mes_mutex;
+        pthread_cond_t  mes_cond;
+        skygw_chk_t     mes_chk_tail;
+};
+
+struct skygw_file_st {
+        skygw_chk_t  sf_chk_top;
+        char*        sf_fname;
+        FILE*        sf_file;
+        int          sf_fd;
+        skygw_chk_t  sf_chk_tail;
+};
+
 EXTERN_C_BLOCK_BEGIN
 
 slist_cursor_t* slist_init(void);
@@ -147,6 +216,8 @@ EXTERN_C_BLOCK_END
 /** Skygw thread routines */
 
 /** Skygw file routines */
+skygw_file_t* skygw_file_alloc(char* fname);
+void skygw_file_free(skygw_file_t* file);
 skygw_file_t* skygw_file_init(char* fname, char* symlinkname);
 void skygw_file_close(skygw_file_t* file, bool shutdown);
 int skygw_file_write(

@@ -1883,7 +1883,6 @@ static int routeQuery(
 	bool           	   succp          = false;
 
         CHK_CLIENT_RSES(router_cli_ses);
-
 	/**
 	 * GWBUF is called "type undefined" when the incoming data isn't parsed
 	 * and MySQL packets haven't been extracted to separate buffers. 
@@ -3716,13 +3715,11 @@ static GWBUF* sescmd_cursor_process_replies(
         mysql_sescmd_t*  scmd;
         sescmd_cursor_t* scur;
         ROUTER_CLIENT_SES* ses;
-	ROUTER_INSTANCE* router;
 	
         scur = &bref->bref_sescmd_cur;        
         ss_dassert(SPINLOCK_IS_LOCKED(&(scur->scmd_cur_rses->rses_lock)));
         scmd = sescmd_cursor_get_command(scur);
         ses = (*scur->scmd_cur_ptr_property)->rses_prop_rsession;
-	router = ses->router;
         CHK_GWBUF(replybuf);
         
         /** 

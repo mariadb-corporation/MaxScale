@@ -13,8 +13,9 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * Copyright MariaDB Corporation Ab 2013-2015
  */
+
 #include <my_config.h>
 #include <stdio.h>
 #include <strings.h>
@@ -24,6 +25,7 @@
 
 #include <router.h>
 #include <shardrouter.h>
+#include <sharding_common.h>
 #include <secrets.h>
 #include <mysql.h>
 #include <skygw_utils.h>
@@ -119,9 +121,9 @@ static route_target_t get_shard_route_target(
 
 static uint8_t getCapabilities(ROUTER* inst, void* router_session);
 
-static void subsvc_clear_state(SUBSERVICE* svc,subsvc_state_t state);
-static void subsvc_set_state(SUBSERVICE* svc,subsvc_state_t state);
-static bool get_shard_subsvc(SUBSERVICE** subsvc,ROUTER_CLIENT_SES* session,char* target);
+void subsvc_clear_state(SUBSERVICE* svc,subsvc_state_t state);
+void subsvc_set_state(SUBSERVICE* svc,subsvc_state_t state);
+bool get_shard_subsvc(SUBSERVICE** subsvc,ROUTER_CLIENT_SES* session,char* target);
 
 static ROUTER_OBJECT MyObject = {
     createInstance,
@@ -205,30 +207,12 @@ static void refreshInstance(
                             CONFIG_PARAMETER* param);
 
 static int router_handle_state_switch(DCB* dcb, DCB_REASON reason, void* data);
-/*
-static bool handle_error_new_connection(
-                                        ROUTER_INSTANCE* inst,
-                                        ROUTER_CLIENT_SES* rses,
-                                        DCB* backend_dcb,
-                                        GWBUF* errmsg);
-static void handle_error_reply_client(
-                                      SESSION* ses,
-                                      ROUTER_CLIENT_SES* rses,
-                                      DCB* backend_dcb,
-                                      GWBUF* errmsg);
-*/
-
 
 static SPINLOCK instlock;
 static ROUTER_INSTANCE* instances;
 
 static int hashkeyfun(void* key);
 static int hashcmpfun(void *, void *);
-
-static bool change_current_db(
-                              ROUTER_INSTANCE* inst,
-                              ROUTER_CLIENT_SES* rses,
-                              GWBUF* buf);
 
 static int
 hashkeyfun(void* key)
@@ -1186,7 +1170,7 @@ newSession(
     atomic_add(&client_rses->rses_versno, 2);
     ss_dassert(client_rses->rses_versno == 2);
 
-    client_rses->dbhash = hashtable_alloc(100, hashkeyfun, hashcmpfun);
+    client_rses->dbhash = hashtable_alloc(100, simple_str_hash,strcmp);
     hashtable_memory_fns(client_rses->dbhash, (HASHMEMORYFN) strdup,
                          (HASHMEMORYFN) strdup,
                          (HASHMEMORYFN) free,
@@ -1559,7 +1543,7 @@ routeQuery(ROUTER* instance,
     skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
     mysql_server_cmd_t packet_type;
     uint8_t* packet;
-    int ret = 1;
+    int i,ret = 1;
     SUBSERVICE* target_subsvc;
     ROUTER_INSTANCE* inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
@@ -1568,7 +1552,10 @@ routeQuery(ROUTER* instance,
     route_target_t route_target = TARGET_UNDEFINED;
     bool succp = false;
     char* tname = NULL;
-    skygw_log_write_flush(LOGFILE_TRACE,"shardrouter: routeQuery");
+    char db[MYSQL_DATABASE_MAXLEN + 1];
+    char errbuf[26+MYSQL_DATABASE_MAXLEN];
+
+    skygw_log_write_flush(LOGFILE_DEBUG,"shardrouter: routeQuery");
     CHK_CLIENT_RSES(router_cli_ses);
 
     /** Dirty read for quick check if router is closed. */
@@ -1709,8 +1696,13 @@ routeQuery(ROUTER* instance,
     
     if(packet_type == MYSQL_COM_INIT_DB)
     {
-        if(!(change_successful = change_current_db(inst, router_cli_ses, querybuf)))
+        if(!(change_successful = change_current_db(router_cli_ses->rses_mysql_session,
+						   router_cli_ses->dbhash,
+						   querybuf)))
         {
+	    extract_database(querybuf,db);
+	    snprintf(errbuf,"Unknown database: %s",db);
+	    create_error_reply(errbuf,router_cli_ses->replydcb);
             LOGIF(LE, (skygw_log_write_flush(
                                              LOGFILE_ERROR,
                                              "Error : Changing database failed.")));
@@ -2059,34 +2051,6 @@ clientReply(
     
     SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     return;
-}
-
-
-static void
-subsvc_set_state(SUBSERVICE* svc,subsvc_state_t state)
-{
-    if(state & SUBSVC_WAITING_RESULT)
-    {
-
-        /** Increase waiter count */
-       atomic_add(&svc->n_res_waiting, 1);
-    }
-    
-    svc->state |= state;
-}
-
-static void
-subsvc_clear_state(SUBSERVICE* svc,subsvc_state_t state)
-{
-    
-
-    if(state & SUBSVC_WAITING_RESULT)
-    {
-        /** Decrease waiter count */
-        atomic_add(&svc->n_res_waiting, -1);
-    }
-    
-    svc->state &= ~state;
 }
 
 /** 
@@ -2629,8 +2593,7 @@ mysql_sescmd_get_property(
  * capabilities specified, rc > 0 when there are capabilities.
  */
 static uint8_t
-getCapabilities(
-                ROUTER* inst,
+getCapabilities(ROUTER* inst,
                 void* router_session)
 {
     ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *) router_session;
@@ -2900,37 +2863,7 @@ handleError(
 }
 
 
-static bool 
-get_shard_subsvc(SUBSERVICE** subsvc,ROUTER_CLIENT_SES* session,char* target)
-{
-    int i;
-    
-    if(subsvc == NULL || session == NULL || target == NULL)
-	return false;
 
-    for(i = 0;i<session->n_subservice;i++)
-    {
-        if(strcmp(session->subservice[i]->service->name,target) == 0)
-        {
-            
-            if (SUBSVC_IS_OK(session->subservice[i]))
-            {
-                if(subsvc_is_valid(session->subservice[i])){
-                    *subsvc = session->subservice[i];
-                    return true;
-                }
-                
-                /**
-                 * The service has failed 
-                 */
-                
-                subsvc_set_state(session->subservice[i],SUBSVC_FAILED);
-            }
-        } 
-    }
-    
-    return false;
-}
 /**
  * Finds the subservice who owns this session.
  * @param rses Router client session
@@ -2997,111 +2930,4 @@ router_handle_state_switch(
 return_rc:
     return rc;
 #endif
-}
-
-/**
- * Read new database nbame from MYSQL_COM_INIT_DB packet, check that it exists
- * in the hashtable and copy its name to MYSQL_session.
- * 
- * @param inst	Router instance
- * @param rses	Router client session
- * @param buf	Query buffer
- * 
- * @return true if new database is set, false if non-existent database was tried
- * to be set
- */
-static bool
-change_current_db(
-                  ROUTER_INSTANCE* inst,
-                  ROUTER_CLIENT_SES* rses,
-                  GWBUF* buf)
-{
-    bool succp;
-    uint8_t* packet;
-    unsigned int plen;
-    int message_len;
-    char* fail_str;
-
-    if(GWBUF_LENGTH(buf) <= MYSQL_DATABASE_MAXLEN - 5)
-    {
-        packet = GWBUF_DATA(buf);
-        plen = gw_mysql_get_byte3(packet) - 1;
-
-        /** Copy database name from MySQL packet to session */
-
-        memcpy(rses->rses_mysql_session->db,
-               packet + 5,
-               plen);
-        memset(rses->rses_mysql_session->db + plen, 0, 1);
-
-        /**
-         * Update the session's active database only if it's in the hashtable.
-         * If it isn't found, send a custom error packet to the client.
-         */
-
-        if(hashtable_fetch(
-                           rses->dbhash,
-                           (char*) rses->rses_mysql_session->db) == NULL)
-        {
-
-            /** Create error message */
-            message_len = 25 + MYSQL_DATABASE_MAXLEN;
-            fail_str = calloc(1, message_len + 1);
-            snprintf(fail_str,
-                     message_len,
-                     "Unknown database '%s'",
-                     (char*) rses->rses_mysql_session->db);
-            rses->rses_mysql_session->db[0] = '\0';
-            succp = false;
-            goto reply_error;
-        }
-        else
-        {
-            succp = true;
-            goto retblock;
-        }
-    }
-    else
-    {
-        /** Create error message */
-        message_len = 25 + MYSQL_DATABASE_MAXLEN;
-        fail_str = calloc(1, message_len + 1);
-        snprintf(fail_str,
-                 message_len,
-                 "Unknown database '%s'",
-                 (char*) rses->rses_mysql_session->db);
-        succp = false;
-        goto reply_error;
-    }
-reply_error:
-    {
-        GWBUF* errbuf;
-        skygw_log_write_flush(
-				LOGFILE_TRACE,
-				"shardrouter: failed to change database: %s", fail_str);
-		errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
-        errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
-        free(fail_str);
-
-        if(errbuf == NULL)
-        {
-            LOGIF(LE, (skygw_log_write_flush(
-                                             LOGFILE_ERROR,
-                                             "Error : Creating buffer for error message failed.")));
-            goto retblock;
-        }
-        /** Set flags that help router to identify session commans reply */
-        gwbuf_set_type(errbuf, GWBUF_TYPE_MYSQL);
-        gwbuf_set_type(errbuf, GWBUF_TYPE_SESCMD_RESPONSE);
-        gwbuf_set_type(errbuf, GWBUF_TYPE_RESPONSE_END);
-        /** 
-         * Create an incoming event for randomly selected backend DCB which
-         * will then be notified and replied 'back' to the client.
-         */
-        poll_add_epollin_event_to_dcb(rses->replydcb,
-					gwbuf_clone(errbuf));
-        gwbuf_free(errbuf);
-    }
-retblock:
-    return succp;
 }

@@ -29,7 +29,7 @@ find_package(MySQLClient)
 find_package(MySQL)
 find_package(Pandoc)
 find_package(TCMalloc)
-
+find_package(Jemalloc)
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
 find_package(CURL) 
@@ -93,12 +93,12 @@ if(PROFILE)
 endif()
 
 set(CMAKE_C_FLAGS "${FLAGS}")
-set(CMAKE_C_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG")
+set(CMAKE_C_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
 set(CMAKE_C_FLAGS_RELEASE "")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-ggdb")
 
 set(CMAKE_CXX_FLAGS "${FLAGS}")
-set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb")
 
@@ -149,6 +149,7 @@ install(FILES ${ERRMSG} DESTINATION mysql)
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION .)
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION .)
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION .)
+install(DIRECTORY DESTINATION log)
 
 # Install startup scripts and ldconfig files
 if(WITH_SCRIPTS)

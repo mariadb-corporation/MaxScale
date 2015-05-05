@@ -41,7 +41,7 @@ int
 main(int argc, char **argv)
 {
 	char	*enc, *pw;
-	int	arg_count = 3;
+	int	arg_count = 4;
 	char	*home;
     char** arg_vector;
 	
@@ -52,7 +52,7 @@ main(int argc, char **argv)
 		exit(1);
 	}
 
-    arg_vector = malloc(sizeof(char*)*4);
+    arg_vector = malloc(sizeof(char*)*5);
 
 	if(arg_vector == NULL)
 	{
@@ -73,7 +73,8 @@ main(int argc, char **argv)
 	    arg_vector[2] = strdup("/usr/local/mariadb-maxscale/log");
 	}
 
-	arg_vector[3] = NULL;
+	arg_vector[3] = "-o";
+	arg_vector[4] = NULL;
 	skygw_logmanager_init(arg_count,arg_vector);
 	skygw_log_enable(LOGFILE_TRACE);
 	skygw_log_enable(LOGFILE_DEBUG);

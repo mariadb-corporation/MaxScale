@@ -410,6 +410,8 @@ In order for the various router modules to function correctly they require infor
 
 Monitors are defined in much the same way as other elements in the configuration file, with the section name being the name of the monitor instance and the type being set to monitor.
 
+This is an example configuration of the MySQL monitor module. It is intended for Master-Slave replication clusters and allows for replication lag detection.
+
 ```
 [MySQL Monitor]
 type=monitor
@@ -425,7 +427,11 @@ backend_write_timeout=2
 # mysqlmon specific options
 detect_replication_lag=0
 detect_stale_master=0
+```
 
+Here is an example configuration of the Galera cluster monitor. It detects when nodes are in sync and also assigns master and slave roles to nodes within MaxScale, allowing it to be used with modules designed for Master-Slave replication clusters.
+
+```
 [Galera Monitor]
 type=monitor
 module=galeramon
@@ -450,6 +456,8 @@ The module parameter defines the name of the loadable module that implements the
 #### `servers`
 
 The servers parameter is a comma separated list of server names to monitor, these are the names defined elsewhere in the configuration file. The set of servers monitored by a single monitor need not be the same as the set of servers used within any particular server, a single monitor instance may monitor servers in multiple servers.
+
+Multiple monitors monitoring the same servers should be avoided. They can possibly make the whole cluster inoperable and a good example is the mixed use of the MySQL and the Galera monitors. The MySQL monitor requires a working Master-Slave replication for it to assign the Master and Slave roles inside MaxScale but the Galera monitor only looks for Galera specific status variables. These two monitors will cause a conflict when one tries to clear server states it sees as valid while the other is simultaneously setting new states to the rest of the servers.
 
 #### `user`
 

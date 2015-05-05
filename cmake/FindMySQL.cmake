@@ -30,7 +30,7 @@ message(STATUS "MySQL version: ${MYSQL_VERSION}")
 message(STATUS "MySQL provider: ${MYSQL_PROVIDER}")
 
 if(NOT MYSQL_PROVIDER STREQUAL "MariaDB")
-message(WARNING "Not using MariaDB server.")
+message(WARNING "Not using a release version of MariaDB server. If this is intentional, please ignore this warning. Otherwise make sure the right libraries are installed and CMake finds the right libraries.")
 endif()
 if(MYSQL_VERSION VERSION_LESS 5.5.41)
 message(WARNING "MySQL version is ${MYSQL_VERSION}. Minimum supported version is 5.5.41.")

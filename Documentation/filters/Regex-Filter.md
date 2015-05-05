@@ -32,7 +32,7 @@ The regex filter accepts the options ignorecase or case. These define if the pat
 
 The Regex filter requires two mandatory parameters to be defined.
 
-### Match
+### `match`
 
 A parameter that can be used to match text in the SQL statement which should be replaced.
 
@@ -42,7 +42,7 @@ match=TYPE[	]*=
 
 If the filter option ignorecase is used all regular expressions are evaluated with the option to ignore the case of the text, therefore a match option of select will match both type, TYPE and any form of the word with upper or lowercase characters.
 
-### Replace
+### `replace`
 
 The replace parameter defines the text that should replace the text in the SQL text which matches the match.
 
@@ -50,7 +50,7 @@ The replace parameter defines the text that should replace the text in the SQL t
 replace=ENGINE =
 ```
 
-### Source
+### `source`
 
 The optional source parameter defines an address that is used to match against the address from which the client connection to MaxScale originates. Only sessions that originate from this address will have the match and replacement applied to them.
 
@@ -58,12 +58,28 @@ The optional source parameter defines an address that is used to match against t
 source=127.0.0.1
 ```
 
-### User
+### `user`
 
 The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username will have the match and replacement applied to them.
 
 ```
 user=john
+```
+
+### `log_file`
+
+The optional log_file parameter defines a log file in which the filter writes all queries that are not mached and maching queries with their replacement queries. All sessions will log to this file so this should only be used for diagnostic purposes.
+
+```
+log_file=/tmp/regexfilter.log
+```
+
+### `log_trace`
+
+The optional log_trace parameter toggles the logging of non-matching and matching queries with their replacements into the trace log file. This is the preferred method of diagnosing the matching of queries since the trace log can be disabled mid-session if such a need rises.
+
+```
+log_trace=true
 ```
 
 ## Examples
