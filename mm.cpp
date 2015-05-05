@@ -10,13 +10,13 @@
 
 int check_conf(TestConnections* Test, int blocked_node)
 {
-    int global_result;
+    int global_result = 0;
 
     Test->repl->connect();
     Test->connect_rwsplit();
     create_t1(Test->conn_rwsplit);
     global_result += insert_into_t1(Test->conn_rwsplit, 4);
-    printf("l_result is %d\n", global_result);
+
     printf("Sleeping to let replication happen\n"); fflush(stdout);
     sleep(30);
 
@@ -30,9 +30,7 @@ int check_conf(TestConnections* Test, int blocked_node)
 
     printf("Checking data from rwsplit\n"); fflush(stdout);
     global_result += select_from_t1(Test->conn_rwsplit, 4);
-    printf("l_result is %d\n", global_result);
     global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
-    printf("l_result is %d\n", global_result);
 
     Test->repl->close_connections();
     mysql_close(Test->conn_rwsplit);
