@@ -197,15 +197,9 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		handle->replicationHeartbeat = config_truth_value(params->value);
 	    else if(!strcmp(params->name,"master_down_script"))
 	    {
-		if(access(params->value,F_OK) == 0)
-		{
-		    handle->master_down_script = strdup(params->value);
-		    handle->master_down_script_called = 0;
-		}
-		else
-		{
-		    skygw_log_write(LOGFILE_ERROR,"Error: could not find master_down_script file: %s",params->value);
-		}
+		if(handle->master_down_script)
+		    externcmd_free(handle->master_down_script);
+		handle->master_down_script = externcmd_allocate(params->value);
 	    }
 	    params = params->next;
 	}
@@ -700,8 +694,11 @@ int log_no_master = 1;
 						ptr->server->port)));
 					if(handle->master_down_script)
 					{
-					    if(monitor_exec_cmd(handle->master_down_script))
-						skygw_log_write(LOGFILE_ERROR,"Error: Failed to execute command '%s' on server state change.",handle->master_down_script);
+					    if(externcmd_execute(handle->master_down_script))
+						skygw_log_write(LOGFILE_ERROR,
+							 "Error: Failed to execute command "
+							"'%s' on server state change.",
+							 handle->master_down_script->parameters[0]);
 					}
 				}
 				/**

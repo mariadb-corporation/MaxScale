@@ -20,7 +20,7 @@
 #include	<server.h>
 #include	<spinlock.h>
 #include	<mysql.h>
-
+#include        <mon_exec.h>
 /**
  * @file mysqlmon.h - The MySQL monitor functionality within the gateway
  *
@@ -81,8 +81,7 @@ typedef struct {
 	int	write_timeout;		/**< Timeout in seconds for each attempt to write to the server.
 					 * There are retries and the total effective timeout value is two times the option value.
 					 */
-    char *master_down_script;
-    int master_down_script_called;
+    EXTERNCMD* master_down_script;
 } MYSQL_MONITOR;
 
 #define MONITOR_RUNNING		1

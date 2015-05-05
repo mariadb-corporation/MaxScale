@@ -1,13 +1,19 @@
 #ifndef MON_EXEC_HG
 #define MON_EXEC_HG
 
-#include <mon_exec.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#define MAXSCALE_EXTCMD_ARG_MAX 256
 
-int monitor_exec_cmd(char* cmd);
+typedef struct extern_cmd_t{
+  char* parameters[MAXSCALE_EXTCMD_ARG_MAX]; /*< Command arguments */
+  int n_exec; /*< Number of times executed */
+}EXTERNCMD;
 
+EXTERNCMD* externcmd_allocate(char* argstr);
+void externcmd_free(EXTERNCMD* cmd);
+int externcmd_execute(EXTERNCMD* cmd);
 #endif
