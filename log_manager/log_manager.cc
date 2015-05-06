@@ -2581,14 +2581,14 @@ static bool logfile_init(
         }
 
 #if defined(SS_DEBUG)
-        if (store_shmem)
+        if (store_shmem && !use_stdout)
 	{
 		fprintf(stderr, "%s\t: %s->%s\n", 
 			STRLOGNAME(logfile_id),
 			logfile->lf_full_link_name,
 			logfile->lf_full_file_name);
 	}
-	else
+	else if(!use_stdout)
 	{
 		fprintf(stderr, "%s\t: %s\n", 
 			STRLOGNAME(logfile_id),
@@ -3135,7 +3135,7 @@ void flushall_logfiles(bool flush)
  */
 void skygw_log_sync_all(void)
 {
-	skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
+	if(!use_stdout)skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
 	flushall_logfiles(true);
 	skygw_message_send(lm->lm_logmes);
 	skygw_message_wait(lm->lm_clientmes);
