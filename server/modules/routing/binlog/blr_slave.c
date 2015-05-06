@@ -369,7 +369,8 @@ int	query_len;
 		 else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
                 {
                         free(query_text);
-                        return blr_slave_send_ok(router, slave);
+			return blr_slave_replay(router, slave, router->saved_master.gtid_mode);
+                        //return blr_slave_send_ok(router, slave);
                 }
 		else if (strcasecmp(word, "@master_binlog_checksum") == 0)
 		{
