@@ -276,6 +276,10 @@ target_link_libraries(t ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 add_executable(mm mm.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(mm ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(mxs118 mxs118.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(mxs118 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
+
 
 add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
 
@@ -402,6 +406,7 @@ set_tests_properties(mxs47 PROPERTIES TIMEOUT 1000)
 add_test(sharding sharding)
 add_test(fwf fwf)
 add_test(mm mm)
+add_test(mxs118 mxs118)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)

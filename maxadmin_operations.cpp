@@ -233,7 +233,7 @@ get_maxadmin_param(char * hostname, char *user, char *password, char * cmd, char
         result[cnt] = x[cnt+param_len];
         cnt++;
     }
-    result[cnt] = '\n';
+    result[cnt] = '\0';
     //sprintf(f_field, "%s %%s", param);
     //sscanf(x, f_field, result);
     close(so);
