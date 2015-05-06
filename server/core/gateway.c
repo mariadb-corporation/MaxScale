@@ -996,8 +996,8 @@ static void usage(void)
                 "  -c|--homedir=...  relative|absolute MaxScale home directory\n"
                 "  -f|--config=...   relative|absolute pathname of MaxScale configuration file\n"
 		"                    (default: $MAXSCALE_HOME/etc/MaxScale.cnf)\n"
-		"  -l|--log=...      log to file or shared memory\n"
-		"                    -lfile or -lshm - defaults to shared memory\n"
+		"  -l|--log=...      log to file shared memory or stdout\n"
+		"                    -lfile, -lshm or -lstdout - defaults to shared memory\n"
 		"  -s|--syslog=	     log messages to syslog."
 		" True or false - defaults to true\n"
 		"  -S|--maxscalelog= log messages to MaxScale log."
@@ -1064,6 +1064,7 @@ int main(int argc, char **argv)
         void*    log_flush_thr = NULL;
 	int      option_index;
 	int	 logtofile = 0;	      	      /* Use shared memory or file */
+	int	 logtostdout = 0;	      	      /* Use stdout for log output */
 	int	 syslog_enabled = 1; /** Log to syslog */
 	int	 maxscalelog_enabled = 1; /** Log with MaxScale */
         ssize_t  log_flush_timeout_ms = 0;
@@ -1198,6 +1199,8 @@ int main(int argc, char **argv)
 				logtofile = 1;
 			else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
 				logtofile = 0;
+			else if (strncasecmp(optarg, "stdout", PATH_MAX) == 0)
+				logtostdout = 1;
 			else
 			{
                                 char* logerr = "Configuration file argument "
@@ -1575,7 +1578,7 @@ int main(int argc, char **argv)
          */
         {
                 char buf[1024];
-                char *argv[8];
+                char *argv[9];
 		bool succp;
 		/** Set log directory under $MAXSCALE_HOME/log */
                 sprintf(buf, "%s/log", home_dir);
@@ -1605,8 +1608,17 @@ int main(int argc, char **argv)
 		}
 		logmanager_enable_syslog(syslog_enabled);
 		logmanager_enable_maxscalelog(maxscalelog_enabled);
-
-		if (logtofile)
+		if (logtostdout)
+		{
+		    			argv[3] = "-s"; /*< store to shared memory */
+			argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE"; /*< to shm */
+			argv[5] = "-l"; /*< write to syslog */
+			argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< to syslog */
+			argv[7] = "-o";
+			argv[8] = NULL;
+			succp = skygw_logmanager_init(8, argv);
+		}
+		else if (logtofile)
 		{
 			argv[3] = "-l"; /*< write to syslog */
 			/** Logs that should be syslogged */

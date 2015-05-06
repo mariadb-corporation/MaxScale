@@ -1686,7 +1686,8 @@ static bool fnames_conf_init(
                 "-j <log path>       ............(\"/tmp\")\n"
                 "-l <syslog log file ids> .......(no default)\n"
                 "-m <syslog ident>   ............(argv[0])\n"
-                "-s <shmem log file ids>  .......(no default)\n";
+                "-s <shmem log file ids>  .......(no default)\n"
+                "-o                       .......(write logs to stdout)\n";
 
         /**
          * When init_started is set, clean must be done for it.
