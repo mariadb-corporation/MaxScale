@@ -43,6 +43,7 @@
  * 20/02/15	Markus Mäkelä		Added connection_timeout parameter for services
  * 05/03/15	Massimiliano	Pinto	Added notification_feedback support
  * 20/04/15	Guillaume Lefranc	Added available_when_donor parameter
+ * 22/04/15     Martin Brampton         Added disable_master_role_setting parameter
  *
  * @endverbatim
  */
@@ -1936,6 +1937,7 @@ static char *monitor_params[] =
 		"backend_read_timeout",
 		"backend_write_timeout",
 		"available_when_donor",
+                "disable_master_role_setting",
                 NULL
         };
 /**
