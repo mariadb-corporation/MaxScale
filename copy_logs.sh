@@ -11,6 +11,7 @@ else
 	rm -rf $logs_dir
 fi
 mkdir -p $logs_dir
+
 scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$maxscale_IP:$maxdir/log/* $logs_dir
 if [ $? -ne 0 ]; then
         echo "Error creating log dir"

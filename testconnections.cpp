@@ -366,7 +366,7 @@ int check_log_err(char * err_msg, bool expected)
 
     printf("Getting logs\n");
     char sys1[4096];
-    sprintf(&sys1[0], "%s %s", Test->get_logs_command, Test->maxscale_IP);
+    sprintf(&sys1[0], "rm *.log; %s %s", Test->get_logs_command, Test->maxscale_IP);
     printf("Executing: %s\n", sys1);
     fflush(stdout);
     system(sys1);
