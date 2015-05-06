@@ -48,9 +48,9 @@ Options may be passed to the MaxScale binary that alter this default behavior, t
     <td>Use the filename passed as an argument instead of looking in $MAXSCALE_HOME/etc/MaxScale.cnf</td>
   </tr>
   <tr>
-    <td>-l<file>|<shm></td>
+    <td>-l<file>|<shm>|<stdout></td>
     <td>--log=</td>
-    <td>Control where logs are written for the debug and trace level log messages. the default is to write these to a shared memory device, however using the -lfile or --log=file option will forced these to be written to regular files.</td>
+    <td>Control where logs are written for the debug and trace level log messages. the default is to write these to a shared memory device, however using the -lfile or --log=file option will forced these to be written to regular files. Using -lstdout or --log=stdout will use the standard output for all enabled logs.</td>
   </tr>
   <tr>
     <td>-v</td>
