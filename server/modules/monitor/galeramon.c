@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <monitor.h>
-#include <mysqlmon.h>
+#include <galeramon.h>
 #include <thread.h>
 #include <mysql.h>
 #include <mysqld_error.h>
@@ -60,7 +60,7 @@ extern __thread log_info_t tls_log_info;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.4.0";
+static char *version_str = "V1.5.0";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
@@ -142,16 +142,16 @@ GetModuleObject()
 static	void 	*
 startMonitor(void *arg,void* opt)
 {
-MYSQL_MONITOR *handle;
+GALERA_MONITOR *handle;
 CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 	if (arg != NULL)
 	{
-		handle = (MYSQL_MONITOR *)arg;
+		handle = (GALERA_MONITOR *)arg;
 		handle->shutdown = 0;
 	}
 	else
 	{
-		if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
+		if ((handle = (GALERA_MONITOR *)malloc(sizeof(GALERA_MONITOR))) == NULL)
 			return NULL;
 		handle->databases = NULL;
 		handle->shutdown = 0;
@@ -161,11 +161,12 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		handle->interval = MONITOR_INTERVAL;
 		handle->disableMasterFailback = 0;
 		handle->availableWhenDonor = 0;
-                handle->disableMasterRoleSetting = 0;
+        handle->disableMasterRoleSetting = 0;
 		handle->master = NULL;
 		handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
 		handle->read_timeout=DEFAULT_READ_TIMEOUT;
 		handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
+		handle->master_down_script = NULL;
 		spinlock_init(&handle->lock);
 	}
 
@@ -178,6 +179,12 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		handle->availableWhenDonor = config_truth_value(params->value);
 	    else if(!strcmp(params->name,"disable_master_role_setting"))
 		handle->disableMasterRoleSetting = config_truth_value(params->value);
+	    else if(!strcmp(params->name,"master_down_script"))
+	    {
+		if(handle->master_down_script)
+		    externcmd_free(handle->master_down_script);
+		handle->master_down_script = externcmd_allocate(params->value);
+	    }
 	    params = params->next;
 	}
 
@@ -193,7 +200,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 static	void	
 stopMonitor(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR	*handle = (GALERA_MONITOR *)arg;
 
         handle->shutdown = 1;
         thread_wait((void *)handle->tid);
@@ -209,7 +216,7 @@ MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 static	void	
 registerServer(void *arg, SERVER *server)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR	*handle = (GALERA_MONITOR *)arg;
 MONITOR_SERVERS	*ptr, *db;
 
 	if ((db = (MONITOR_SERVERS *)malloc(sizeof(MONITOR_SERVERS))) == NULL)
@@ -239,7 +246,7 @@ MONITOR_SERVERS	*ptr, *db;
 static	void	
 unregisterServer(void *arg, SERVER *server)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR	*handle = (GALERA_MONITOR *)arg;
 MONITOR_SERVERS	*ptr, *lptr;
 
 	spinlock_acquire(&handle->lock);
@@ -278,7 +285,7 @@ MONITOR_SERVERS	*ptr, *lptr;
 static void
 diagnostics(DCB *dcb, void *arg)
 {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
 MONITOR_SERVERS	*db;
 char		*sep;
 
@@ -326,7 +333,7 @@ char		*sep;
 static void
 defaultUsers(void *arg, char *uname, char *passwd)
 {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
 
  	if (handle->defaultUser)
 		free(handle->defaultUser);
@@ -343,7 +350,7 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
  * @param database      The database to probe
  */
 static void
-monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
+monitorDatabase(GALERA_MONITOR *handle, MONITOR_SERVERS *database)
 {
 MYSQL_ROW	row;
 MYSQL_RES	*result;
@@ -497,7 +504,7 @@ char 			*server_string;
 static void
 monitorMain(void *arg)
 {
-MYSQL_MONITOR		*handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR		*handle = (GALERA_MONITOR *)arg;
 MONITOR_SERVERS		*ptr;
 size_t			nrounds = 0;
 MONITOR_SERVERS		*candidate_master = NULL;
@@ -550,6 +557,15 @@ int			log_no_members = 1;
 		{
 			monitorDatabase(handle, ptr);
 
+			if(ptr->mon_prev_status & SERVER_MASTER &&
+			 SERVER_IS_DOWN(ptr->server))
+			{
+			    if(externcmd_execute(handle->master_down_script) == -1)
+			    {
+				skygw_log_write(LOGFILE_ERROR,"Error: Failed to execute master server failure script in galeramon.");
+			    }
+			}
+
 			/* clear bits for non member nodes */
 			if ( ! SERVER_IN_MAINT(ptr->server) && (ptr->server->node_id < 0 || ! SERVER_IS_JOINED(ptr->server))) {
 				ptr->server->depth = -1;
@@ -584,6 +600,7 @@ int			log_no_members = 1;
 				/** Increase this server'e error count */
 				dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
 				ptr->mon_err_count += 1;
+
 			}
 			else
 			{
@@ -673,7 +690,7 @@ int			log_no_members = 1;
 static void
 setInterval(void *arg, size_t interval)
 {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
 	memcpy(&handle->interval, &interval, sizeof(unsigned long));
 }
 
@@ -759,7 +776,7 @@ static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONI
 static void
 disableMasterFailback(void *arg, int disable)
 {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
         memcpy(&handle->disableMasterFailback, &disable, sizeof(int));
 }
 
@@ -775,7 +792,7 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 static void
 availableWhenDonor(void *arg, int disable)
 {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
         memcpy(&handle->availableWhenDonor, &disable, sizeof(int));
 }
 
@@ -789,7 +806,7 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 static void
 setNetworkTimeout(void *arg, int type, int value)
 {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
 int max_timeout = (int)(handle->interval/1000);
 int new_timeout = max_timeout -1;
 

@@ -1,8 +1,8 @@
-add_library(mysqlmon SHARED mysql_mon.c mon_exec.c)
+add_library(mysqlmon SHARED mysql_mon.c)
 target_link_libraries(mysqlmon log_manager utils)
 install(TARGETS mysqlmon DESTINATION modules)
 
-add_library(galeramon SHARED galera_mon.c)
+add_library(galeramon SHARED galeramon.c)
 target_link_libraries(galeramon log_manager utils)
 install(TARGETS galeramon DESTINATION modules)
 
