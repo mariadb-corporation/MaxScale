@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
         //global_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
         printf("INSERT data\n");
         global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
-        sleep(10);
+        sleep(20);
 
         printf("SELECT, checking inserted values\n");
         global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
         global_result += execute_query(Test->repl->nodes[0], (char *) "ROLLBACK");
         printf("INSERT data\n");
         global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
-        sleep(10);
+        sleep(20);
 
         printf("SELECT, checking inserted values\n");
         global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
@@ -71,6 +71,11 @@ int main(int argc, char *argv[])
         printf("Checking t1\n");
         global_result += select_from_t1(Test->repl->nodes[0], 4);
 
+        printf("FLUSH LOGS\n");
+        global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+        sleep(20);
+        printf("FLUSH LOGS\n");
+        global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
 
 
         Test->repl->close_connections();
