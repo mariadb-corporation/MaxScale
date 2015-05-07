@@ -368,9 +368,11 @@ int	query_len;
 		}
 		else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
                 {
+                       	free(query_text);
 			if (router->mariadb10_compat) {
-				free(query_text);
 				return blr_slave_replay(router, slave, router->saved_master.mariadb10);
+			} else {
+				return blr_slave_send_ok(router, slave);
 			}
                 }
 		else if (strcasecmp(word, "@master_binlog_checksum") == 0)
