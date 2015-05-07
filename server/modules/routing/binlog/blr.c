@@ -195,6 +195,7 @@ unsigned char	*defuuid;
 	inst->retry_backoff = 1;
 	inst->binlogdir = NULL;
 	inst->heartbeat = 300;	// Default is every 5 minutes
+	inst->mariadb10_compat = false;
 
 	inst->user = strdup(service->credentials.name);
 	inst->password = strdup(service->credentials.authdata);
@@ -281,6 +282,10 @@ unsigned char	*defuuid;
 				else if (strcmp(options[i], "master-id") == 0)
 				{
 					inst->masterid = atoi(value);
+				}
+				else if (strcmp(options[i], "mariadb10-compatibility") == 0)
+				{
+					inst->mariadb10_compat = config_truth_value(value);
 				}
 				else if (strcmp(options[i], "filestem") == 0)
 				{

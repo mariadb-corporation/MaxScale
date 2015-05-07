@@ -449,7 +449,7 @@ char	query[128];
 		router->saved_master.chksum2 = buf;
 		blr_cache_response(router, "chksum2", buf);
 		//buf = blr_make_query("SELECT @@GLOBAL.GTID_MODE");
-		buf = blr_make_query("SET @mariadb_slave_capability=4);
+		buf = blr_make_query("SET @mariadb_slave_capability=4");
 		router->master_state = BLRM_GTIDMODE;
 		router->master->func.write(router->master, buf);
 		break;
