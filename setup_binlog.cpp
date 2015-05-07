@@ -15,6 +15,8 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
+    char sys[1024];
+    int i;
 
     Test->read_env();
     Test->print_env();
@@ -30,13 +32,20 @@ int main(int argc, char *argv[])
         printf("Sleeping to let replication happen\n"); fflush(stdout);
         sleep(30);
 
-        for (int i = 0; i < Test->repl->N; i++) {
+        for (i = 0; i < Test->repl->N; i++) {
             printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
             global_result += select_from_t1(Test->repl->nodes[i], 4);
         }
 
         Test->repl->close_connections();
+
+        for (i = 0; i < Test->repl->N; i++) {
+            sprintf(sys, "ssh root@%s 'sha1sum /var/lib/mysql/mar-bin.000001'", Test->repl->IP[i]);
+            system(sys);
+        }
     }
+    sprintf(sys, "ssh root@%s 'sha1sum %s/Binlog_Service/mar-bin.000001'", Test->maxscale_IP, Test->maxdir);
+    system(sys);
 
     Test->copy_all_logs(); return(global_result);
 }
