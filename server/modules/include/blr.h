@@ -233,7 +233,7 @@ typedef struct {
 	GWBUF		*selectvercom;	/*< select @@version_comment */
 	GWBUF		*selecthostname;/*< select @@hostname */
 	GWBUF		*map;		/*< select @@max_allowed_packet */
-        GWBUF		*mariadb10;	/*< set @mariadb_slave_capability=4 */
+	GWBUF		*mariadb10;	/*< set @mariadb_slave_capability */
 	uint8_t		*fde_event;	/*< Format Description Event */
 	int		fde_len;	/*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -242,55 +242,54 @@ typedef struct {
  * The per instance data for the router.
  */
 typedef struct router_instance {
-	SERVICE		  *service;     /*< Pointer to the service using this router */
-	ROUTER_SLAVE	  *slaves;	/*< Link list of all the slave connections  */
-	SPINLOCK	  lock;	        /*< Spinlock for the instance data */
-	char		  *uuid;	/*< UUID for the router to use w/master */
-	int		  masterid;	/*< Server ID of the master */
-	int		  serverid;	/*< Server ID to use with master */
-	int		  initbinlog;	/*< Initial binlog file number */
-	char		  *user;	/*< User name to use with master */
-	char		  *password;	/*< Password to use with master */
-	char		  *fileroot;	/*< Root of binlog filename */
-	bool		  master_chksum;/*< Does the master provide checksums */
-        bool              mariadb10_compat; /*< MariaDB 10.0 compatibility */
-	char		  *master_uuid;	/*< UUID of the master */
-	DCB		  *master;	/*< DCB for master connection */
-	DCB		  *client;	/*< DCB for dummy client */
-	SESSION		  *session;	/*< Fake session for master connection */
-	unsigned int	  master_state;	/*< State of the master FSM */
-	uint8_t		  lastEventReceived;
-	uint32_t	  lastEventTimestamp; /*< Timestamp from last event */
-	GWBUF	 	  *residual;	/*< Any residual binlog event */
-	MASTER_RESPONSES  saved_master;	/*< Saved master responses */
-	char		  *binlogdir;	/*< The directory with the binlog files */
-	SPINLOCK	  binlog_lock;	/*< Lock to control update of the binlog position */
-	char		  binlog_name[BINLOG_FNAMELEN+1];
+	SERVICE			*service;	/*< Pointer to the service using this router */
+	ROUTER_SLAVE		*slaves;	/*< Link list of all the slave connections  */
+	SPINLOCK		lock;	        /*< Spinlock for the instance data */
+	char			*uuid;		/*< UUID for the router to use w/master */
+	int			masterid;	/*< Server ID of the master */
+	int			serverid;	/*< Server ID to use with master */
+	int			initbinlog;	/*< Initial binlog file number */
+	char			*user;		/*< User name to use with master */
+	char			*password;	/*< Password to use with master */
+	char			*fileroot;	/*< Root of binlog filename */
+	bool			master_chksum;	/*< Does the master provide checksums */
+	bool			mariadb10_compat; /*< MariaDB 10.0 compatibility */
+	char			*master_uuid;	/*< UUID of the master */
+	DCB			*master;	/*< DCB for master connection */
+	DCB			*client;	/*< DCB for dummy client */
+	SESSION			*session;	/*< Fake session for master connection */
+	unsigned int		master_state;	/*< State of the master FSM */
+	uint8_t			lastEventReceived;
+	uint32_t		lastEventTimestamp; /*< Timestamp from last event */
+	GWBUF	 		*residual;	/*< Any residual binlog event */
+	MASTER_RESPONSES	saved_master;	/*< Saved master responses */
+	char			*binlogdir;	/*< The directory with the binlog files */
+	SPINLOCK		binlog_lock;	/*< Lock to control update of the binlog position */
+	char			binlog_name[BINLOG_FNAMELEN+1];
 					/*< Name of the current binlog file */
-	uint64_t	  binlog_position;
+	uint64_t		binlog_position;
 					/*< Current binlog position */
-	int		  binlog_fd;	/*< File descriptor of the binlog
+	int			binlog_fd;	/*< File descriptor of the binlog
 					 *  file being written
 					 */
-	uint64_t	  last_written;	/*< Position of last event written */
-	char		  prevbinlog[BINLOG_FNAMELEN+1];
-	int		  rotating;	/*< Rotation in progress flag */
-	BLFILE		  *files;	/*< Files used by the slaves */
-	SPINLOCK	  fileslock;	/*< Lock for the files queue above */
-	unsigned int	  low_water;	/*< Low water mark for client DCB */
-	unsigned int	  high_water;	/*< High water mark for client DCB */
-	unsigned int	  short_burst;	/*< Short burst for slave catchup */
-	unsigned int	  long_burst;	/*< Long burst for slave catchup */
-	unsigned long	  burst_size;	/*< Maximum size of burst to send */
-	unsigned long	  heartbeat;	/*< Configured heartbeat value */
-	ROUTER_STATS	  stats;	/*< Statistics for this router */
-	int		  active_logs;
-	int		  reconnect_pending;
-	int		  retry_backoff;
-	time_t		  connect_time;
-	int		  handling_threads;
-	struct router_instance
-                          *next;
+	uint64_t		last_written;	/*< Position of last event written */
+	char			prevbinlog[BINLOG_FNAMELEN+1];
+	int			rotating;	/*< Rotation in progress flag */
+	BLFILE			*files;		/*< Files used by the slaves */
+	SPINLOCK		fileslock;	/*< Lock for the files queue above */
+	unsigned int		low_water;	/*< Low water mark for client DCB */
+	unsigned int		high_water;	/*< High water mark for client DCB */
+	unsigned int		short_burst;	/*< Short burst for slave catchup */
+	unsigned int		long_burst;	/*< Long burst for slave catchup */
+	unsigned long		burst_size;	/*< Maximum size of burst to send */
+	unsigned long		heartbeat;	/*< Configured heartbeat value */
+	ROUTER_STATS		stats;		/*< Statistics for this router */
+	int			active_logs;
+	int			reconnect_pending;
+	int			retry_backoff;
+	time_t			connect_time;
+	int			handling_threads;
+	struct router_instance	*next;
 } ROUTER_INSTANCE;
 
 /**
@@ -317,6 +316,7 @@ typedef struct router_instance {
 #define	BLRM_REGISTER		0x0012
 #define	BLRM_BINLOGDUMP		0x0013
 #define	BLRM_MARIADB10		0x0014
+
 #define BLRM_MAXSTATE		0x0014
 
 static char *blrm_states[] = { "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
@@ -324,7 +324,7 @@ static char *blrm_states[] = { "Unconnected", "Connecting", "Authenticated", "Ti
 	"binlog checksum rerieval", "GTID Mode retrieval", "Master UUID retrieval",
 	"Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
 	"select version()", "select @@version_comment", "select @@hostname",
-	"select @@mx_allowed_packet", "Register slave", "Binlog Dump","Set MariaDB slave capability" };
+	"select @@mx_allowed_packet", "Register slave", "Binlog Dump", "Set MariaDB slave capability" };
 
 #define BLRS_CREATED		0x0000
 #define BLRS_UNREGISTERED	0x0001
