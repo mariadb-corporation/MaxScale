@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
             x = strchr(buf, ' '); x[0] = 0;
             printf("Binlog checksum from node %d %s\n", i, buf);
             if (strcmp(buf_max, buf) != 0) {
-                printf("Binlog from node %d checksum is not eqiual to binlog checksum from Maxscale node", i);
+                printf("Binlog from node %d checksum is not eqiual to binlog checksum from Maxscale node\n", i);
             }
         }
     }
