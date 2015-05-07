@@ -35,6 +35,8 @@
  * 02/04/2014	Mark Riddoch		Initial implementation
  * 17/02/2015	Massimiliano Pinto	Addition of slave port and username in diagnostics
  * 18/02/2015	Massimiliano Pinto	Addition of dcb_close in closeSession
+ * 07/05/2015   Massimiliano Pinto      Addition of MariaDB 10 compatibility support
+
  *
  * @endverbatim
  */
