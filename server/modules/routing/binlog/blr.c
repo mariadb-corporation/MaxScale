@@ -395,6 +395,7 @@ unsigned char	*defuuid;
 	inst->saved_master.selectvercom = blr_cache_read_response(inst, "selectvercom");
 	inst->saved_master.selecthostname = blr_cache_read_response(inst, "selecthostname");
 	inst->saved_master.map = blr_cache_read_response(inst, "map");
+	inst->saved_master.mariadb10 = blr_cache_read_response(inst, "mariadb10");
 
 	/*
 	 * Initialise the binlog file and position
