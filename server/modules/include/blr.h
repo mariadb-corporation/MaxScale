@@ -397,7 +397,8 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 #define ANONYMOUS_GTID_EVENT			0x22
 #define PREVIOUS_GTIDS_EVENT			0x23
 
-#define MAX_EVENT_TYPE				0xa3
+#define MAX_EVENT_TYPE				0x23
+#define MAX_EVENT_TYPE_MARIADB10		0xa3
 
 /**
  * Binlog event flags
