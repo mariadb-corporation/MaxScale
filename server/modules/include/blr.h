@@ -317,8 +317,7 @@ typedef struct router_instance {
 #define	BLRM_REGISTER		0x0012
 #define	BLRM_BINLOGDUMP		0x0013
 #define	BLRM_MARIADB10		0x0014
-#define BLRM_MAXSTATE		0x0013
-#define BLRM_MAXSTATE_MARIADB10	0x0014
+#define BLRM_MAXSTATE		0x0014
 
 static char *blrm_states[] = { "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
 	"Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
