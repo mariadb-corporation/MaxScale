@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
         global_result += execute_query(Test->repl->nodes[0], (char *) "START TRANSACTION");
         //global_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
         printf("INSERT data\n");
-        global_result += execute_query(Test->repl->nodes[0], (char *) "INSER INTO t1 VALUES(111, 10)");
+        global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
 
         printf("SELECT, checking inserted values\n");
         global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
         Test->repl->close_connections();
 
 
-        for (i = 0; i < 3; i++) {
+        for (i = 1; i < 3; i++) {
             printf("\nFILE: 000000%d\n", i);
             sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum %s/Binlog_Service/mar-bin.00000%d'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxdir, i);
             ls = popen(sys, "r");
