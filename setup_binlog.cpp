@@ -43,24 +43,47 @@ int main(int argc, char *argv[])
             global_result += select_from_t1(Test->repl->nodes[i], 4);
         }
 
+        printf("Transaction test\n");
+        printf("Start transaction\n");
+        global_result += execute_query(Test->repl->nodes[0], (char *) "START TRANSACTION");
+        //global_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
+        printf("INSERT data\n");
+        global_result += execute_query(Test->repl->nodes[0], (char *) "INSER INTO t1 VALUES(111, 10)");
+
+        printf("SELECT, checking inserted values\n");
+        global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
+
+        printf("SELECT, checking inserted values from slave\n");
+        global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
+
+        printf("ROLLBACK\n");
+        global_result += execute_query(Test->repl->nodes[0], (char *) "ROLLBACK");
+        printf("Checking t1\n");
+        global_result += select_from_t1(Test->repl->nodes[0], 4);
+
+
+
         Test->repl->close_connections();
 
-        sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum %s/Binlog_Service/mar-bin.000001'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxdir);
-        ls = popen(sys, "r");
-        fgets(buf_max, sizeof(buf), ls);
-        pclose(ls);
-        x = strchr(buf_max, ' '); x[0] = 0;
-        printf("Binlog checksum from Maxscale %s\n", buf_max);
 
-        for (i = 0; i < Test->repl->N; i++) {
-            sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum /var/lib/mysql/mar-bin.000001'", Test->repl->sshkey[i], Test->repl->IP[i]);
+        for (i = 0; i < 3; i++) {
+            printf("\nFILE: 000000%d\n", i);
+            sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum %s/Binlog_Service/mar-bin.00000%d'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxdir, i);
+            ls = popen(sys, "r");
+            fgets(buf_max, sizeof(buf), ls);
+            pclose(ls);
+            x = strchr(buf_max, ' '); x[0] = 0;
+            printf("Binlog checksum from Maxscale %s\n", buf_max);
+
+
+            sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum /var/lib/mysql/mar-bin.00000%d'", Test->repl->sshkey[0], Test->repl->IP[0], i);
             ls = popen(sys, "r");
             fgets(buf, sizeof(buf), ls);
             pclose(ls);
             x = strchr(buf, ' '); x[0] = 0;
-            printf("Binlog checksum from node %d %s\n", i, buf);
+            printf("Binlog checksum from master %s\n", buf);
             if (strcmp(buf_max, buf) != 0) {
-                printf("Binlog from node %d checksum is not eqiual to binlog checksum from Maxscale node\n", i);
+                printf("Binlog from master checksum is not eqiual to binlog checksum from Maxscale node\n");
                 global_result++;
             }
         }
