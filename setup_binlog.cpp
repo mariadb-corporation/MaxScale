@@ -44,12 +44,12 @@ int main(int argc, char *argv[])
         Test->repl->close_connections();
 
         for (i = 0; i < Test->repl->N; i++) {
-            sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum /var/lib/mysql/mar-bin.000001'", Test->repl->sshkey, Test->repl->IP[i]);
+            sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum /var/lib/mysql/mar-bin.000001'", Test->repl->sshkey[i], Test->repl->IP[i]);
             //system(sys);
             ls = popen(sys, "r");
             fgets(buf, sizeof(buf), ls);
             pclose(ls);
-            printf("%S\n", buf);
+            printf("%s\n", buf);
         }
     }
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum %s/Binlog_Service/mar-bin.000001'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxdir);
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
     ls = popen(sys, "r");
     fgets(buf, sizeof(buf), ls);
     pclose(ls);
-    printf("%S\n", buf);
+    printf("%s\n", buf);
 
     Test->copy_all_logs(); return(global_result);
 }
