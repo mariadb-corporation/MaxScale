@@ -18,6 +18,10 @@ int main(int argc, char *argv[])
     char sys[1024];
     int i;
 
+    FILE *ls;
+
+    char buf[1024];
+
     Test->read_env();
     Test->print_env();
 
@@ -40,12 +44,20 @@ int main(int argc, char *argv[])
         Test->repl->close_connections();
 
         for (i = 0; i < Test->repl->N; i++) {
-            sprintf(sys, "ssh root@%s 'sha1sum /var/lib/mysql/mar-bin.000001'", Test->repl->IP[i]);
-            system(sys);
+            sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum /var/lib/mysql/mar-bin.000001'", Test->repl->sshkey, Test->repl->IP[i]);
+            //system(sys);
+            ls = popen(sys, "r");
+            fgets(buf, sizeof(buf), ls);
+            pclose(ls);
+            printf("%S\n", buf);
         }
     }
-    sprintf(sys, "ssh root@%s 'sha1sum %s/Binlog_Service/mar-bin.000001'", Test->maxscale_IP, Test->maxdir);
-    system(sys);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum %s/Binlog_Service/mar-bin.000001'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxdir);
+    //system(sys);
+    ls = popen(sys, "r");
+    fgets(buf, sizeof(buf), ls);
+    pclose(ls);
+    printf("%S\n", buf);
 
     Test->copy_all_logs(); return(global_result);
 }
