@@ -18,7 +18,7 @@ user=skysql
 passwd=skysql
 version_string=5.6.15-log
 #router_options=server-id=3,user=repl,password=repl,master-id=1
-router_options=server-id=3,user=repl,password=repl,filestem=mar-bin,longburst=500,heartbeat=30,binlogdir=@CMAKE_INSTALL_PREFIX@/Binlog_Service,initialfile=000001
+router_options=server-id=3,user=repl,password=repl,filestem=mar-bin,longburst=500,heartbeat=30,binlogdir=@CMAKE_INSTALL_PREFIX@/Binlog_Service,initialfile=000001,mariadb10-compatibility=1
 
 ######################################################################
 # Configuration of the listenning service of the Binlog Server.
