@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 
         start_transaction(Test);
 
-        printf("SELECT, checking inserted values\n");
+        printf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
         global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
 
         //printf("SELECT, checking inserted values from slave\n");
@@ -103,15 +103,16 @@ int main(int argc, char *argv[])
 
         printf("ROLLBACK\n");
         global_result += execute_query(Test->repl->nodes[0], (char *) "ROLLBACK");
-        printf("INSERT data\n");
+        printf("INSERT INTO t1 VALUES(112, 10)\n");
         global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
         sleep(20);
 
-        printf("SELECT, checking inserted values\n");
+        printf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
         global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
 
-        printf("SELECT, checking inserted values from slave\n");
+        printf("SELECT * FROM t1 WHERE fl=10, checking inserted values from slave\n");
         global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
+        printf("DELETE FROM t1 WHERE fl=10\n");
         global_result += execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
         printf("Checking t1\n");
         global_result += select_from_t1(Test->repl->nodes[0], 4);
@@ -126,6 +127,9 @@ int main(int argc, char *argv[])
 
         printf("SELECT, checking inserted values from slave\n");
         global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
+        global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
+        printf("DELETE FROM t1 WHERE fl=10\n");
+        global_result += execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
 
         Test->repl->close_connections();
 
