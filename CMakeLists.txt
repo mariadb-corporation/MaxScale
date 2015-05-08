@@ -279,6 +279,8 @@ target_link_libraries(mm ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 add_executable(mxs118 mxs118.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(mxs118 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(transaction_test_wo_maxscale transaction_test_wo_maxscale.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(transaction_test_wo_maxscale ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 
 add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
