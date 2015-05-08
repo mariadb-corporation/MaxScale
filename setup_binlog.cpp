@@ -1,8 +1,22 @@
 /**
- * @file setup_binlog test of simple binlog router setup
- * setup one master, one slave directly connected to real master and two slaves connected to binlog router
- * create table and put data into it using connection to master
- * check data using direct commection to all backend
+ * @file setup_binlog.cpp test of simple binlog router setup
+ * - setup one master, one slave directly connected to real master and two slaves connected to binlog router
+ * - create table and put data into it using connection to master
+ * - check data using direct commection to all backend
+ * - compare sha1 checksum of binlog file on master and on Maxscale machine
+ * - START TRANSACTION
+ * - SET autocommit = 0
+ * - INSERT INTO t1 VALUES(111, 10)
+ * - check SELECT * FROM t1 WHERE fl=10 - expect one row x=111
+ * - ROLLBACK
+ * - INSERT INTO t1 VALUES(112, 10)
+ * - check SELECT * FROM t1 WHERE fl=10 - expect one row x=112 and no row with x=111
+ * - DELETE FROM t1 WHERE fl=10
+ * - START TRANSACTION
+ * - INSERT INTO t1 VALUES(111, 10)
+ * - check SELECT * FROM t1 WHERE fl=10 - expect one row x=111 from master and slave
+ * - DELETE FROM t1 WHERE fl=10
+ * - compare sha1 checksum of binlog file on master and on Maxscale machine
  */
 
 #include <my_config.h>
@@ -86,7 +100,7 @@ int start_transaction(TestConnections* Test)
     printf("Transaction test\n");
     printf("Start transaction\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "START TRANSACTION");
-    //global_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
+    global_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
     printf("INSERT data\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
     sleep(20);

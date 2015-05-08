@@ -226,6 +226,7 @@ int TestConnections::start_binlog()
     char log_file[256];
     char log_pos[256];
     char cmd_opt[256];
+    char version_str[1024];
     int i;
     int global_result = 0;
 
@@ -238,6 +239,18 @@ int TestConnections::start_binlog()
         break;
     default:
         sprintf(cmd_opt, " ");
+    }
+
+    repl->connect();
+    find_field(repl->nodes[0], "SELECT @@VERSION", "@@version", version_str);
+    repl->close_connections();
+
+    printf("Master server version %s\n", version_str);
+
+    if (strstr(version_str, "5.5") != NULL) {
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i %s/etc/Maxscale.cnf \"s/,mariadb10-compatibility=1//\"'", repl->sshkey[0], repl->IP[0], maxdir);
+        printf("%s\n", sys1);  fflush(stdout);
+        global_result +=  system(sys1);
     }
 
     printf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
