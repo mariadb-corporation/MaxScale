@@ -131,6 +131,8 @@ int TestConnections::read_env()
     env = getenv("sysbench_dir"); if (env != NULL) {sprintf(sysbench_dir, "%s", env);}
 
     env = getenv("maxdir"); if (env != NULL) {sprintf(maxdir, "%s", env);}
+    env = getenv("maxscale_cnf"); if (env != NULL) {sprintf(maxscale_cnf, "%s", env);} else {sprintf(maxscale_cnf, "/etc/maxscale.cnf");}
+    env = getenv("maxscale_log_dir"); if (env != NULL) {sprintf(maxscale_log_dir, "%s", env);} else {sprintf(maxscale_log_dir, "%s/logs/", maxdir);}
     env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
 }
 
@@ -248,7 +250,7 @@ int TestConnections::start_binlog()
     printf("Master server version %s\n", version_str);
 
     if (strstr(version_str, "5.5") != NULL) {
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/,mariadb10-compatibility=1// %s/etc/MaxScale.cnf\"'", repl->sshkey[0], repl->IP[0], maxdir);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/,mariadb10-compatibility=1// %s\"'", repl->sshkey[0], repl->IP[0], maxscale_cnf);
         printf("%s\n", sys1);  fflush(stdout);
         global_result +=  system(sys1);
     }

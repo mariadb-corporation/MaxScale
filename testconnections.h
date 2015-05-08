@@ -15,6 +15,7 @@
  * - Maxscale_Password - Password to access Maxscale services
  * - Maxscale_sshkey - ssh key for Maxscale machine
  * - maxdir - Path to Maxscale home direcdtory
+ * - maxscale_cnf - name of maxscale .cnf file (full)
  * - KillVMCommand - Command to kill a node (should handle one parameter: IP address of virtual machine to kill)
  * - StartVMCommand - Command to restart virtual machine (should handle one parameter: IP address of virtual machine to kill)
  * - GetLogsCommand - Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
@@ -141,6 +142,16 @@ public:
      * @brief maxdir path to MaxScale
      */
     char maxdir[4096];
+
+    /**
+      * @brief maxscale_cnf full name of Maxscale configuration file
+      */
+    char maxscale_cnf[4096];
+
+    /**
+      * @brief log_dir name of log files directory
+      */
+    char maxscale_log_dir[4096];
 
     /**
      * @brief test_dir path to test application
