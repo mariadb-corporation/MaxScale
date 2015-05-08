@@ -112,6 +112,7 @@ int main(int argc, char *argv[])
 
         printf("SELECT, checking inserted values from slave\n");
         global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
+        global_result += execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
         printf("Checking t1\n");
         global_result += select_from_t1(Test->repl->nodes[0], 4);
 
