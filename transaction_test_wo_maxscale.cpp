@@ -155,9 +155,9 @@ int main(int argc, char *argv[])
         printf("DELETE FROM t1 WHERE fl=10\n");
         global_result += execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
 
+        global_result += check_sha1(Test);
         Test->repl->close_connections();
 
-        global_result += check_sha1(Test);
     }
 
 
