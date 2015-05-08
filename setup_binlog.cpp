@@ -22,11 +22,39 @@ int check_sha1(TestConnections* Test)
     char buf[1024];
     char buf_max[1024];
 
-    printf("FLUSH LOGS\n");
+    printf("ls before FLUSH LOGS\n");
+    printf("Maxscale");
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la %s/Binlog_Service/mar-bin.0000*'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxdir);
+    system(sys);
+    printf("Master");
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la /var/lib/mysql/mar-bin.0000*'", Test->repl->sshkey[0], Test->repl->IP[0]);
+    system(sys);
+
+    printf("FLUSH LOGS\n");fflush(stdout);
     global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+    printf("Logs flushed\n");
     sleep(20);
-    printf("FLUSH LOGS\n");
+    printf("ls after first FLUSH LOGS\n");
+    printf("Maxscale");
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la %s/Binlog_Service/mar-bin.0000*'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxdir);
+    system(sys);
+    printf("Master");
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->IP[0]);
+    system(sys);
+
+
+    printf("FLUSH LOGS\n");fflush(stdout);
     global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+    printf("Logs flushed\n"); fflush(stdout);
+
+    sleep(19);
+    printf("ls before FLUSH LOGS\n");
+    printf("Maxscale");
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la %s/Binlog_Service/mar-bin.0000*'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxdir);
+    system(sys);
+    printf("Master");
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->IP[0]);
+    system(sys);fflush(stdout);
 
     for (i = 1; i < 3; i++) {
         printf("\nFILE: 000000%d\n", i);
