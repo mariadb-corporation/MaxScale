@@ -31,27 +31,4 @@
  * @endverbatim
  */
 
-#define MONITOR_RUNNING		1
-#define MONITOR_STOPPING	2
-#define MONITOR_STOPPED		3
-
-#define MONITOR_INTERVAL 10000 // in milliseconds
-#define MONITOR_DEFAULT_ID 1UL // unsigned long value
-#define MONITOR_MAX_NUM_SLAVES 20 //number of MySQL slave servers associated to a MySQL master server
-
-
-/**
- * The linked list of servers that are being monitored by the MySQL 
- * Monitor module.
- */
-typedef struct monitor_servers {
-	SERVER		*server;	/**< The server being monitored */
-	MYSQL		*con;		/**< The MySQL connection */
-	int		mon_err_count;
-	unsigned int	mon_prev_status;
-	unsigned int	pending_status; /**< Pending Status flag bitmap */	
-	struct monitor_servers
-			*next;		/**< The next server in the list */
-} MONITOR_SERVERS;
-
 #endif

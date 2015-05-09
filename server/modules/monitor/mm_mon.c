@@ -49,7 +49,7 @@ extern __thread log_info_t tls_log_info;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.0.1";
+static char *version_str = "V1.1.1";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
@@ -60,26 +60,18 @@ MODULE_INFO	info = {
 
 static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
-static	void	registerServer(void *, SERVER *);
-static	void	unregisterServer(void *, SERVER *);
-static	void	defaultUser(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
-static  void    setInterval(void *, size_t);
 static	void	detectStaleMaster(void *, int);
 static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
 static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
-static MONITOR_SERVERS *get_current_master(MYSQL_MONITOR *);
+static MONITOR_SERVERS *get_current_master(MONITOR *);
 static void monitor_set_pending_status(MONITOR_SERVERS *, int);
 static void monitor_clear_pending_status(MONITOR_SERVERS *, int);
 
 static MONITOR_OBJECT MyObject = {
 	startMonitor,
 	stopMonitor,
-	registerServer,
-	unregisterServer,
-	defaultUser,
-	diagnostics,
-	setInterval
+	diagnostics
 };
 
 /**
@@ -131,23 +123,19 @@ GetModuleObject()
 static	void 	*
 startMonitor(void *arg,void* opt)
 {
-MYSQL_MONITOR *handle;
+    MONITOR* mon = (MONITOR*)arg;
+MYSQL_MONITOR *handle = mon->handle;
 CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
-        if (arg)
+        if (handle)
         {
-            handle = arg;	/* Must be a restart */
             handle->shutdown = 0;
         }
         else
         {
             if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
                 return NULL;
-            handle->databases = NULL;
             handle->shutdown = 0;
-            handle->defaultUser = NULL;
-            handle->defaultPasswd = NULL;
             handle->id = MONITOR_DEFAULT_ID;
-            handle->interval = MONITOR_INTERVAL;
             handle->replicationHeartbeat = 0;
             handle->detectStaleMaster = 0;
             handle->master = NULL;
@@ -180,103 +168,6 @@ MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 }
 
 /**
- * Register a server that must be added to the monitored servers for
- * a monitoring module.
- *
- * @param arg	A handle on the running monitor module
- * @param server	The server to add
- */
-static	void	
-registerServer(void *arg, SERVER *server)
-{
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*ptr, *db;
-
-	if ((db = (MONITOR_SERVERS *)malloc(sizeof(MONITOR_SERVERS))) == NULL)
-		return;
-	db->server = server;
-	db->con = NULL;
-	db->next = NULL;
-        db->mon_err_count = 0;
-        db->mon_prev_status = 0;
-	/* pending status is updated by monitorMain */
-	db->pending_status = 0;
-
-	spinlock_acquire(&handle->lock);
-        
-	if (handle->databases == NULL)
-		handle->databases = db;
-	else
-	{
-		ptr = handle->databases;
-		while (ptr->next != NULL)
-			ptr = ptr->next;
-		ptr->next = db;
-	}
-	spinlock_release(&handle->lock);
-}
-
-/**
- * Remove a server from those being monitored by a monitoring module
- *
- * @param arg	A handle on the running monitor module
- * @param server	The server to remove
- */
-static	void	
-unregisterServer(void *arg, SERVER *server)
-{
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*ptr, *lptr;
-
-	spinlock_acquire(&handle->lock);
-	if (handle->databases == NULL)
-	{
-		spinlock_release(&handle->lock);
-		return;
-	}
-	if (handle->databases->server == server)
-	{
-		ptr = handle->databases;
-		handle->databases = handle->databases->next;
-		free(ptr);
-	}
-	else
-	{
-		ptr = handle->databases;
-		while (ptr->next != NULL && ptr->next->server != server)
-			ptr = ptr->next;
-		if (ptr->next)
-		{
-			lptr = ptr->next;
-			ptr->next = ptr->next->next;
-			free(lptr);
-		}
-	}
-	spinlock_release(&handle->lock);
-}
-
-/**
- * Set the default username and password to use to monitor if the server does not
- * override this.
- *
- * @param arg		The handle allocated by startMonitor
- * @param uname		The default user name
- * @param passwd	The default password
- */
-static void
-defaultUser(void *arg, char *uname, char *passwd)
-{
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-
-	if (handle->defaultUser)
-		free(handle->defaultUser);
-	if (handle->defaultPasswd)
-		free(handle->defaultPasswd);
-	handle->defaultUser = strdup(uname);
-	handle->defaultPasswd = strdup(passwd);
-}
-
-/**
  * Daignostic interface
  *
  * @param dcb	DCB to print diagnostics
@@ -284,7 +175,8 @@ MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
  */
 static void diagnostics(DCB *dcb, void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+    MONITOR* mon = (MONITOR*)arg;
+MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
 MONITOR_SERVERS	*db;
 char		*sep;
 
@@ -301,11 +193,11 @@ char		*sep;
 		break;
 	}
 
-	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
+	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", mon->interval);
 	dcb_printf(dcb,"\tDetect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
 	dcb_printf(dcb, "\tMonitored servers:	");
 
-	db = handle->databases;
+	db = mon->databases;
 	sep = "";
 	while (db)
 	{
@@ -327,15 +219,16 @@ char		*sep;
  * @param database	The database to probe
  */
 static void
-monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
+monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
 {
+    MYSQL_MONITOR *handle = mon->handle;
 MYSQL_ROW	  row;
 MYSQL_RES	  *result;
 int		  num_fields;
 int               isslave = 0;
 int               ismaster = 0;
-char		  *uname  = handle->defaultUser; 
-char              *passwd = handle->defaultPasswd;
+char		  *uname  = mon->user;
+char              *passwd = mon->password;
 unsigned long int server_version = 0;
 char 		  *server_string;
 
@@ -358,12 +251,11 @@ char 		  *server_string;
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
-                int  rc;
                 int  read_timeout = 1;
 
                 database->con = mysql_init(NULL);
 
-                rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+                mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
                 
 		if (mysql_real_connect(database->con,
                                        database->server->name,
@@ -437,7 +329,7 @@ char 		  *server_string;
                 && (result = mysql_store_result(database->con)) != NULL)
         {
                 long server_id = -1;
-                num_fields = mysql_num_fields(result);
+                
                 while ((row = mysql_fetch_row(result)))
                 {
                         server_id = strtol(row[0], NULL, 10);
@@ -463,7 +355,7 @@ char 		  *server_string;
 		{
 			int i = 0;
 			long master_id = -1;
-			num_fields = mysql_num_fields(result);
+			
 			while ((row = mysql_fetch_row(result)))
 			{
 				/* get Slave_IO_Running and Slave_SQL_Running values*/
@@ -502,7 +394,7 @@ char 		  *server_string;
 			&& (result = mysql_store_result(database->con)) != NULL)
 		{
 			long master_id = -1;
-			num_fields = mysql_num_fields(result);
+			
 			while ((row = mysql_fetch_row(result)))
 			{
 				/* get Slave_IO_Running and Slave_SQL_Running values*/
@@ -534,7 +426,7 @@ char 		  *server_string;
 	if (mysql_query(database->con, "SHOW GLOBAL VARIABLES LIKE 'read_only'") == 0
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
-		num_fields = mysql_num_fields(result);
+
 		while ((row = mysql_fetch_row(result)))
 		{
 			if (strncasecmp(row[1], "OFF", 3) == 0) {
@@ -584,7 +476,8 @@ char 		  *server_string;
 static void
 monitorMain(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+    MONITOR* mon = (MONITOR*)arg;
+MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
 MONITOR_SERVERS	*ptr;
 int detect_stale_master = handle->detectStaleMaster;
 MONITOR_SERVERS *root_master;
@@ -619,7 +512,7 @@ size_t nrounds = 0;
 		 * round.
 		 */
                 if (nrounds != 0 &&
-                        ((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) >=
+                        ((nrounds*MON_BASE_INTERVAL_MS)%mon->interval) >=
                         MON_BASE_INTERVAL_MS)
                 {
                         nrounds += 1;
@@ -628,7 +521,7 @@ size_t nrounds = 0;
                 nrounds += 1;
 
 		/* start from the first server in the list */
-		ptr = handle->databases;
+		ptr = mon->databases;
 
 		while (ptr)
 		{
@@ -636,7 +529,7 @@ size_t nrounds = 0;
 			ptr->pending_status = ptr->server->status;
 
 			/* monitor current node */
-			monitorDatabase(handle, ptr);
+			monitorDatabase(mon, ptr);
 
                         if (mon_status_changed(ptr))
                         {
@@ -668,11 +561,11 @@ size_t nrounds = 0;
 		}
 	
 		/* Get Master server pointer */
-		root_master = get_current_master(handle);
+		root_master = get_current_master(mon);
 
 		/* Update server status from monitor pending status on that server*/
 
-                ptr = handle->databases;
+                ptr = mon->databases;
 		while (ptr)
 		{
 			if (! SERVER_IN_MAINT(ptr->server)) {
@@ -691,19 +584,6 @@ size_t nrounds = 0;
 		}
 	}
 }
-                        
-/**
- * Set the monitor sampling interval.
- *
- * @param arg           The handle allocated by startMonitor
- * @param interval      The interval to set in monitor struct, in milliseconds
- */
-static void
-setInterval(void *arg, size_t interval)
-{
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
-	memcpy(&handle->interval, &interval, sizeof(unsigned long));
-}
 
 /**
  * Enable/Disable the MySQL Replication Stale Master dectection, allowing a previouvsly detected master to still act as a Master.
@@ -716,7 +596,8 @@ MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 static void
 detectStaleMaster(void *arg, int enable)
 {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+    MONITOR* mon = (MONITOR*)arg;
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)mon->handle;
 	memcpy(&handle->detectStaleMaster, &enable, sizeof(int));
 }
 
@@ -790,10 +671,11 @@ monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
  * @return              The server at root level with SERVER_MASTER bit
  */
 
-static MONITOR_SERVERS *get_current_master(MYSQL_MONITOR *handle) {
+static MONITOR_SERVERS *get_current_master(MONITOR *mon) {
+    MYSQL_MONITOR* handle = mon->handle;
 MONITOR_SERVERS *ptr;
 
-	ptr = handle->databases;
+	ptr = mon->databases;
 
 	while (ptr)
 	{

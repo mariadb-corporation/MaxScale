@@ -42,24 +42,13 @@ typedef struct {
 	pthread_t tid;			/**< id of monitor thread */ 
 	int    	  shutdown;		/**< Flag to shutdown the monitor thread */
 	int       status;		/**< Monitor status */
-	char      *defaultUser;		/**< Default username for monitoring */
-	char      *defaultPasswd;	/**< Default password for monitoring */
-	unsigned long   interval;	/**< Monitor sampling interval */
 	unsigned long         id;	/**< Monitor ID */
 	int	detectStaleMaster;	/**< Monitor flag for MySQL replication Stale Master detection */
 	int	disableMasterFailback;	/**< Monitor flag for Galera Cluster Master failback */
 	int	availableWhenDonor;	/**< Monitor flag for Galera Cluster Donor availability */
         int     disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
 	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
-	MONITOR_SERVERS	*databases;     /**< Linked list of servers to monitor */
-	int	connect_timeout;	/**< Connect timeout in seconds for mysql_real_connect */
-	int	read_timeout;		/**< Timeout in seconds to read from the server.
-					 * There are retries and the total effective timeout value is three times the option value.
-					 */
-	int	write_timeout;		/**< Timeout in seconds for each attempt to write to the server.
-					 * There are retries and the total effective timeout value is two times the option value.
-					 */
-    EXTERNCMD* master_down_script;
+        EXTERNCMD* master_down_script;
 } GALERA_MONITOR;
 
 #endif
