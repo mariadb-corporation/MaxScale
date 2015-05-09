@@ -295,7 +295,7 @@ void monitor_launch_script(MONITOR* mon,MONITOR_SERVERS* ptr, char* script)
     EXTERNCMD* cmd;
 
     snprintf(argstr,PATH_MAX + MON_ARG_MAX,
-	     "%s --event=%s --node=%s --nodelist=",
+	     "%s --event=%s --initiator=%s --nodelist=",
 	     script,
 	     mon_get_event_name(ptr),
 	     ptr->server->unique_name);
