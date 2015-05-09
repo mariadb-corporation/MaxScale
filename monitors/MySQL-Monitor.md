@@ -84,7 +84,7 @@ script=/home/user/script.sh
 This script will be called with the following command line arguments.
 
 ```
-<name of the script> --event=<event type> --node=<server whose state changed> --nodelist=<list of all servers>
+<name of the script> --event=<event type> --initiator=<server whose state changed> --nodelist=<list of all servers>
 ```
 Here is a table of all possible event names and their descriptions.
 
