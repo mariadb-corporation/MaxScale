@@ -148,7 +148,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		handle->availableWhenDonor = config_truth_value(params->value);
 	    else if(!strcmp(params->name,"disable_master_role_setting"))
 		handle->disableMasterRoleSetting = config_truth_value(params->value);
-	    else if(!strcmp(params->name,"master_down_script"))
+	    else if(!strcmp(params->name,"script"))
 	    {
 		if(handle->script)
 		    free(handle->script);
@@ -157,7 +157,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 	    params = params->next;
 	}
 
-	handle->tid = (THREAD)thread_start(monitorMain, handle);
+	handle->tid = (THREAD)thread_start(monitorMain, mon);
 	return handle;
 }
 
@@ -546,6 +546,26 @@ int			log_no_members = 1;
 					"Info: found cluster members")));
 				log_no_members = 1;
 			}
+		}
+
+
+		ptr = mon->databases;
+
+		while(ptr)
+		{
+		    /** Execute monitor script if a server state has changed */
+		    if(mon_status_changed(ptr) && mon_get_event_type(ptr) != UNDEFINED_MONITOR_EVENT)
+		    {
+			skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
+				 ptr->server->unique_name,
+				 ptr->server->name,ptr->server->port,
+				 mon_get_event_name(ptr));
+			if(handle->script)
+			{
+			    monitor_launch_script(mon,ptr,handle->script);
+			}
+		    }
+		    ptr = ptr->next;
 		}
 	}
 }

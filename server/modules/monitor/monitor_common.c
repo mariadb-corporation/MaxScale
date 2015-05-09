@@ -40,61 +40,187 @@ void monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
 	ptr->pending_status &= ~bit;
 }
 
-char* mon_get_event_type(MONITOR_SERVERS* node)
+
+ monitor_event_t mon_get_event_type(MONITOR_SERVERS* node)
 {
     unsigned int prev = node->mon_prev_status;
 
     if((prev & (SERVER_MASTER|SERVER_RUNNING)) == (SERVER_MASTER|SERVER_RUNNING) &&
        SERVER_IS_DOWN(node->server))
     {
-	return "master_down";
+	return MASTER_DOWN_EVENT;
     }
     if((prev & (SERVER_RUNNING)) == 0 &&
        SERVER_IS_RUNNING(node->server) && SERVER_IS_MASTER(node->server))
     {
-	return "master_up";
+	return MASTER_UP_EVENT;
     }
     if((prev & (SERVER_SLAVE|SERVER_RUNNING)) == (SERVER_SLAVE|SERVER_RUNNING) &&
        SERVER_IS_DOWN(node->server))
     {
-	return "slave_down";
+	return SLAVE_DOWN_EVENT;
     }
     if((prev & (SERVER_RUNNING)) == 0 &&
        SERVER_IS_RUNNING(node->server) && SERVER_IS_SLAVE(node->server))
     {
-	return "slave_up";
+	return SLAVE_UP_EVENT;
     }
+
+    /** Galera specific events */
+    if((prev & (SERVER_JOINED|SERVER_RUNNING)) == (SERVER_JOINED|SERVER_RUNNING) &&
+       SERVER_IS_DOWN(node->server))
+    {
+	return SYNCED_DOWN_EVENT;
+    }
+    if((prev & (SERVER_RUNNING)) == 0 &&
+       SERVER_IS_RUNNING(node->server) && SERVER_IS_JOINED(node->server))
+    {
+	return SYNCED_UP_EVENT;
+    }
+
+    /** NDB events*/
+    if((prev & (SERVER_NDB|SERVER_RUNNING)) == (SERVER_NDB|SERVER_RUNNING) &&
+       SERVER_IS_DOWN(node->server))
+    {
+	return NDB_DOWN_EVENT;
+    }
+    if((prev & (SERVER_RUNNING)) == 0 &&
+       SERVER_IS_RUNNING(node->server) && SERVER_IS_NDB(node->server))
+    {
+	return NDB_UP_EVENT;
+    }
+
     if((prev & (SERVER_RUNNING)) == SERVER_RUNNING &&
        SERVER_IS_RUNNING(node->server) && SERVER_IS_MASTER(node->server))
     {
-	return "new_master";
+	return NEW_MASTER_EVENT;
     }
     if((prev & (SERVER_RUNNING)) == SERVER_RUNNING &&
        SERVER_IS_RUNNING(node->server) && SERVER_IS_SLAVE(node->server))
     {
-	return "new_slave";
+	return NEW_SLAVE_EVENT;
     }
+
+    /** Status loss events */
     if((prev & (SERVER_RUNNING|SERVER_MASTER)) == (SERVER_RUNNING|SERVER_MASTER) &&
        SERVER_IS_RUNNING(node->server) && !SERVER_IS_MASTER(node->server))
     {
-	return "lost_master";
+	return LOST_MASTER_EVENT;
     }
     if((prev & (SERVER_RUNNING|SERVER_SLAVE)) == (SERVER_RUNNING|SERVER_SLAVE) &&
        SERVER_IS_RUNNING(node->server) && !SERVER_IS_SLAVE(node->server))
     {
-	return "lost_slave";
+	return LOST_SLAVE_EVENT;
     }
+    if((prev & (SERVER_RUNNING|SERVER_JOINED)) == (SERVER_RUNNING|SERVER_JOINED) &&
+       SERVER_IS_RUNNING(node->server) && !SERVER_IS_JOINED(node->server))
+    {
+	return LOST_SYNCED_EVENT;
+    }
+    if((prev & (SERVER_RUNNING|SERVER_NDB)) == (SERVER_RUNNING|SERVER_NDB) &&
+       SERVER_IS_RUNNING(node->server) && !SERVER_IS_NDB(node->server))
+    {
+	return LOST_NDB_EVENT;
+    }
+
+
+    /** Generic server failure */
     if((prev & SERVER_RUNNING) == 0 &&
        SERVER_IS_RUNNING(node->server))
     {
-	return "server_up";
+	return SERVER_UP_EVENT;
     }
     if((prev & SERVER_RUNNING) == SERVER_RUNNING &&
        SERVER_IS_DOWN(node->server))
     {
-	return "server_down";
+	return SERVER_DOWN_EVENT;
     }
-    return "unknown";
+
+    /** Something else, most likely a state that does not matter.
+     * For example SERVER_DOWN -> SERVER_MASTER|SERVER_DOWN still results in a
+     * server state equal to not running.*/
+    return UNDEFINED_MONITOR_EVENT;
+}
+
+char* mon_get_event_name(MONITOR_SERVERS* node)
+{
+    switch(mon_get_event_type(node))
+    {
+case UNDEFINED_MONITOR_EVENT:
+	return "undefined";
+
+case MASTER_DOWN_EVENT:
+	return "master_down";
+
+case MASTER_UP_EVENT:
+	return "master_up";
+
+case SLAVE_DOWN_EVENT:
+	return "slave_down";
+
+case SLAVE_UP_EVENT:
+	return "slave_up";
+
+case SERVER_DOWN_EVENT:
+	return "server_down";
+
+case SERVER_UP_EVENT:
+	return "server_up";
+
+case SYNCED_DOWN_EVENT:
+	return "synced_down";
+
+case SYNCED_UP_EVENT:
+	return "synced_up";
+
+case DONOR_DOWN_EVENT:
+	return "donor_down";
+
+case DONOR_UP_EVENT:
+	return "donor_up";
+
+case NDB_DOWN_EVENT:
+	return "ndb_down";
+
+case NDB_UP_EVENT:
+	return "ndb_up";
+
+case LOST_MASTER_EVENT:
+	return "lost_master";
+
+case LOST_SLAVE_EVENT:
+	return "lost_slave";
+
+case LOST_SYNCED_EVENT:
+	return "lost_synced";
+
+case LOST_DONOR_EVENT:
+	return "lost_donor";
+
+case LOST_NDB_EVENT:
+	return "lost_ndb";
+
+case NEW_MASTER_EVENT:
+	return "new_master";
+
+case NEW_SLAVE_EVENT:
+	return "new_slave";
+
+case NEW_SYNCED_EVENT:
+	return "new_synced";
+
+case NEW_DONOR_EVENT:
+	return "new_donor";
+
+    case NEW_NDB_EVENT:
+	return "new_ndb";
+
+    default:
+	return "MONITOR_EVENT_FAILURE";
+
+    }
+
+    
 }
 
 void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len)
@@ -161,4 +287,28 @@ bool mon_print_fail_status(
                 succp = false;
         }
         return succp;
+}
+
+void monitor_launch_script(MONITOR* mon,MONITOR_SERVERS* ptr, char* script)
+{
+    char argstr[PATH_MAX + MON_ARG_MAX + 1];
+    EXTERNCMD* cmd;
+
+    snprintf(argstr,PATH_MAX + MON_ARG_MAX,
+	     "%s --event=%s --node=%s --nodelist=",
+	     script,
+	     mon_get_event_name(ptr),
+	     ptr->server->unique_name);
+
+    mon_append_node_names(mon->databases,argstr,PATH_MAX + MON_ARG_MAX + 1);
+    cmd = externcmd_allocate(argstr);
+
+    if(externcmd_execute(cmd))
+    {
+	skygw_log_write(LOGFILE_ERROR,
+		 "Error: Failed to execute script "
+		"'%s' on server state change event %s.",
+		 script,mon_get_event_type(ptr));
+    }
+    externcmd_free(cmd);
 }

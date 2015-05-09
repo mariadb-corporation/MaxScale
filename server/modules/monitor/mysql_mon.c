@@ -54,9 +54,6 @@
 
 #include <mysqlmon.h>
 
-
-#define MON_ARG_MAX 8192
-
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -674,39 +671,31 @@ int log_no_master = 1;
 					}
 				} else {
 					ptr->server->status = ptr->pending_status;
-
-					if(mon_status_changed(ptr))
-					{
-					    /** Execute monitor script */
-					    if(handle->script && strcmp(mon_get_event_type(ptr),"unknown") != 0)
-					    {
-						char argstr[PATH_MAX + MON_ARG_MAX + 1];
-						snprintf(argstr,PATH_MAX + MON_ARG_MAX,
-							 "%s --event=%s --node=%s --nodelist=",
-							 handle->script,
-							 mon_get_event_type(ptr),
-							 ptr->server->unique_name);
-						mon_append_node_names(mon->databases,argstr,PATH_MAX + MON_ARG_MAX + 1);
-
-						EXTERNCMD* cmd = externcmd_allocate(argstr);
-						if(externcmd_execute(cmd))
-						{
-						    skygw_log_write(LOGFILE_ERROR,
-							     "Error: Failed to execute script "
-							    "'%s' on server state change.",
-							     handle->script);
-						}
-						externcmd_free(cmd);
-						skygw_log_write(LOGFILE_TRACE,"monitor_state_change: %s: %s",
-						     ptr->server->unique_name,mon_get_event_type(ptr));
-					    }
-					}
 				}
 			}
 			ptr = ptr->next;
 		}
 
-		/* log master detection failure od first master becomes available after failure */
+		ptr = mon->databases;
+
+		while(ptr)
+		{
+		    /** Execute monitor script if a server state has changed */
+		    if(mon_status_changed(ptr) && mon_get_event_type(ptr) != UNDEFINED_MONITOR_EVENT)
+		    {
+			skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
+				 ptr->server->unique_name,
+				 ptr->server->name,ptr->server->port,
+				 mon_get_event_name(ptr));
+			if(handle->script)
+			{
+			    monitor_launch_script(mon,ptr,handle->script);
+			}
+		    }
+		    ptr = ptr->next;
+		}
+
+		/* log master detection failure of first master becomes available after failure */
 		if (root_master && 
 			mon_status_changed(root_master) && 
 			!(root_master->server->status & SERVER_STALE_STATUS)) 

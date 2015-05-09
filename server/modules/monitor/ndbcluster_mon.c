@@ -107,23 +107,31 @@ static	void 	*
 startMonitor(void *arg,void* opt)
 {
     MONITOR* mon = (MONITOR*)arg;
-MYSQL_MONITOR *handle = mon->handle;
-CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
-	if (handle != NULL)
+    MYSQL_MONITOR *handle = mon->handle;
+    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
+    if (handle != NULL)
+    {
+	handle->shutdown = 0;
+    }
+    else
+    {
+	if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
+	    return NULL;
+	handle->shutdown = 0;
+	handle->id = MONITOR_DEFAULT_ID;
+	spinlock_init(&handle->lock);
+    }
+    while(params)
+    {
+	if(!strcmp(params->name,"script"))
 	{
-		handle->shutdown = 0;
+	    if(handle->script)
+		free(handle->script);
+	    handle->script = strdup(params->value);
 	}
-	else
-	{
-		if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
-			return NULL;
-		handle->shutdown = 0;
-		handle->id = MONITOR_DEFAULT_ID;
-		spinlock_init(&handle->lock);
-	}
-
-	handle->tid = (THREAD)thread_start(monitorMain, mon);
-	return handle;
+    }
+    handle->tid = (THREAD)thread_start(monitorMain, mon);
+    return handle;
 }
 
 /**
@@ -371,6 +379,25 @@ size_t nrounds = 0;
 			}
 
 			ptr = ptr->next;
+		}
+
+		ptr = mon->databases;
+
+		while(ptr)
+		{
+		    /** Execute monitor script if a server state has changed */
+		    if(mon_status_changed(ptr) && mon_get_event_type(ptr) != UNDEFINED_MONITOR_EVENT)
+		    {
+			skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
+				 ptr->server->unique_name,
+				 ptr->server->name,ptr->server->port,
+				 mon_get_event_name(ptr));
+			if(handle->script)
+			{
+			    monitor_launch_script(mon,ptr,handle->script);
+			}
+		    }
+		    ptr = ptr->next;
 		}
 	}
 }

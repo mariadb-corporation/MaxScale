@@ -21,6 +21,8 @@
 #include <server.h>
 #include <mysql.h>
 #include <monitor.h>
+#include <log_manager.h>
+#include <mon_exec.h>
 /**
  * @file monitor_common.h - The generic monitor structures all monitors use
  *
@@ -31,10 +33,42 @@
  * @endverbatim
  */
 
+#define MON_ARG_MAX 8192
+
+/** Monitor events that are caused by servers moving from
+ * one state to another.*/
+typedef enum {
+  UNDEFINED_MONITOR_EVENT,
+  MASTER_DOWN_EVENT,
+  MASTER_UP_EVENT,
+  SLAVE_DOWN_EVENT,
+  SLAVE_UP_EVENT,
+  SERVER_DOWN_EVENT,
+  SERVER_UP_EVENT,
+  SYNCED_DOWN_EVENT,
+  SYNCED_UP_EVENT,
+  DONOR_DOWN_EVENT,
+  DONOR_UP_EVENT,
+  NDB_DOWN_EVENT,
+  NDB_UP_EVENT,
+  LOST_MASTER_EVENT,
+  LOST_SLAVE_EVENT,
+  LOST_SYNCED_EVENT,
+  LOST_DONOR_EVENT,
+  LOST_NDB_EVENT,
+  NEW_MASTER_EVENT,
+  NEW_SLAVE_EVENT,
+  NEW_SYNCED_EVENT,
+  NEW_DONOR_EVENT,
+  NEW_NDB_EVENT
+
+}monitor_event_t;
 void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len);
-char* mon_get_event_type(MONITOR_SERVERS* node);
+monitor_event_t mon_get_event_type(MONITOR_SERVERS* node);
+char* mon_get_event_name(MONITOR_SERVERS* node);
 void monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit);
 void monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit);
 bool mon_status_changed(MONITOR_SERVERS* mon_srv);
 bool mon_print_fail_status(MONITOR_SERVERS* mon_srv);
+void monitor_launch_script(MONITOR* mon,MONITOR_SERVERS* ptr, char* script);
 #endif
