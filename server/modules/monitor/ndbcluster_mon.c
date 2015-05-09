@@ -233,6 +233,8 @@ char 			*server_string;
                 int read_timeout = mon->read_timeout;
                 int write_timeout = mon->write_timeout;
 
+		if(database->con)
+		    mysql_close(database->con);
                 database->con = mysql_init(NULL);
 
                 rc = mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);

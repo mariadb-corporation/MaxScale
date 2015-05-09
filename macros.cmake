@@ -65,6 +65,9 @@ macro(set_variables)
   # Use tcmalloc as the memory allocator
   set(WITH_TCMALLOC FALSE CACHE BOOL "Use tcmalloc as the memory allocator")
 
+  # Use jemalloc as the memory allocator
+  set(WITH_JEMALLOC FALSE CACHE BOOL "Use jemalloc as the memory allocator")
+
   # Build tests
   set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
 
