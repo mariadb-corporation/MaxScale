@@ -59,17 +59,10 @@ MODULE_INFO	info = {
 
 static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
-static	void	registerServer(void *, SERVER *);
-static	void	unregisterServer(void *, SERVER *);
-static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
-static  void    setInterval(void *, size_t);
 static	MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *);
 static	MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
 static	void	disableMasterFailback(void *, int);
-static	void	setNetworkTimeout(void *arg, int type, int value);
-static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
-static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
@@ -142,7 +135,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		handle->availableWhenDonor = 0;
 		handle->disableMasterRoleSetting = 0;
 		handle->master = NULL;
-		handle->master_down_script = NULL;
+		handle->script = NULL;
 		spinlock_init(&handle->lock);
 	}
 
@@ -157,9 +150,9 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		handle->disableMasterRoleSetting = config_truth_value(params->value);
 	    else if(!strcmp(params->name,"master_down_script"))
 	    {
-		if(handle->master_down_script)
-		    externcmd_free(handle->master_down_script);
-		handle->master_down_script = externcmd_allocate(params->value);
+		if(handle->script)
+		    free(handle->script);
+		handle->script = strdup(params->value);
 	    }
 	    params = params->next;
 	}
@@ -438,16 +431,9 @@ int			log_no_members = 1;
 
 		while (ptr)
 		{
-			monitorDatabase(mon, ptr);
+			ptr->mon_prev_status = ptr->server->status;
 
-			if(ptr->mon_prev_status & SERVER_MASTER &&
-			 SERVER_IS_DOWN(ptr->server))
-			{
-			    if(externcmd_execute(handle->master_down_script) == -1)
-			    {
-				skygw_log_write(LOGFILE_ERROR,"Error: Failed to execute master server failure script in galeramon.");
-			    }
-			}
+			monitorDatabase(mon, ptr);
 
 			/* clear bits for non member nodes */
 			if ( ! SERVER_IN_MAINT(ptr->server) && (ptr->server->node_id < 0 || ! SERVER_IS_JOINED(ptr->server))) {
@@ -664,49 +650,4 @@ availableWhenDonor(void *arg, int disable)
 {
 GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
         memcpy(&handle->availableWhenDonor, &disable, sizeof(int));
-}
-
-/**
- * Check if current monitored server status has changed
- *
- * @param mon_srv	The monitored server
- * @return		true if status has changed or false
- */
-static bool mon_status_changed(
-        MONITOR_SERVERS* mon_srv)
-{
-        bool succp;
-
-        if (mon_srv->mon_prev_status != mon_srv->server->status)
-        {
-                succp = true;
-        }
-        else
-        {
-                succp = false;
-        }
-        return succp;
-}
-
-/**
- * Check if current monitored server has a loggable failure status
- *
- * @param mon_srv	The monitored server
- * @return		true if failed status can be logged or false
- */
-static bool mon_print_fail_status(
-        MONITOR_SERVERS* mon_srv)
-{
-        bool succp;
-        int errcount = mon_srv->mon_err_count;
-        
-        if (SERVER_IS_DOWN(mon_srv->server) && errcount == 0)
-        {
-                succp = true;
-        }
-        else
-        {
-                succp = false;
-        }
-        return succp;
 }

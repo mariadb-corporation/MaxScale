@@ -35,4 +35,6 @@ void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len);
 char* mon_get_event_type(MONITOR_SERVERS* node);
 void monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit);
 void monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit);
+bool mon_status_changed(MONITOR_SERVERS* mon_srv);
+bool mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 #endif

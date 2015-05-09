@@ -51,11 +51,7 @@ static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
 static	void	diagnostics(DCB *, void *);
 static	void	detectStaleMaster(void *, int);
-static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
-static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 static MONITOR_SERVERS *get_current_master(MONITOR *);
-static void monitor_set_pending_status(MONITOR_SERVERS *, int);
-static void monitor_clear_pending_status(MONITOR_SERVERS *, int);
 
 static MONITOR_OBJECT MyObject = {
 	startMonitor,
@@ -138,7 +134,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 	    params = params->next;
 	}
 
-        handle->tid = (THREAD)thread_start(monitorMain, handle);
+        handle->tid = (THREAD)thread_start(monitorMain, mon);
         return handle;
 }
 
@@ -213,7 +209,6 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
     MYSQL_MONITOR *handle = mon->handle;
 MYSQL_ROW	  row;
 MYSQL_RES	  *result;
-int		  num_fields;
 int               isslave = 0;
 int               ismaster = 0;
 char		  *uname  = mon->user;

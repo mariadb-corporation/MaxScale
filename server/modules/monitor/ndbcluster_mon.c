@@ -122,7 +122,7 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 		spinlock_init(&handle->lock);
 	}
 
-	handle->tid = (THREAD)thread_start(monitorMain, handle);
+	handle->tid = (THREAD)thread_start(monitorMain, mon);
 	return handle;
 }
 
@@ -356,10 +356,10 @@ size_t nrounds = 0;
 
 		while (ptr)
 		{
-			unsigned int prev_status = ptr->server->status;
+			ptr->mon_prev_status = ptr->server->status;
 			monitorDatabase(ptr, mon->user, mon->password,mon);
 
-			if (ptr->server->status != prev_status ||
+			if (ptr->server->status != ptr->mon_prev_status ||
 				SERVER_IS_DOWN(ptr->server))
 			{
 				LOGIF(LD, (skygw_log_write_flush(

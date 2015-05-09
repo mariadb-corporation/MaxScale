@@ -113,3 +113,52 @@ void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len)
 	ptr = ptr->next;
     }
 }
+
+/**
+ * Check if current monitored server status has changed
+ *
+ * @param mon_srv       The monitored server
+ * @return              true if status has changed or false
+ */
+bool mon_status_changed(
+        MONITOR_SERVERS* mon_srv)
+{
+        bool succp;
+
+	/** This is the first time the server was set with a status*/
+        if (mon_srv->mon_prev_status == -1)
+	    return false;
+
+        if (mon_srv->mon_prev_status != mon_srv->server->status)
+        {
+                succp = true;
+        }
+        else
+        {
+                succp = false;
+        }
+        return succp;
+}
+
+/**
+ * Check if current monitored server has a loggable failure status
+ *
+ * @param mon_srv	The monitored server
+ * @return		true if failed status can be logged or false
+ */
+bool mon_print_fail_status(
+        MONITOR_SERVERS* mon_srv)
+{
+        bool succp;
+        int errcount = mon_srv->mon_err_count;
+
+        if (SERVER_IS_DOWN(mon_srv->server) && errcount == 0)
+        {
+                succp = true;
+        }
+        else
+        {
+                succp = false;
+        }
+        return succp;
+}
