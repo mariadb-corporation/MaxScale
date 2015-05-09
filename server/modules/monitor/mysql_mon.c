@@ -22,7 +22,7 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Demaster_down_scription
+ * Date		Who			Description
  * 08/07/13	Mark Riddoch		Initial implementation
  * 11/07/13	Mark Riddoch		Addition of code to check replication
  * 					status
@@ -46,6 +46,7 @@
  * 10/11/14	Massimiliano Pinto	Addition of setNetworkTimeout for connect, read, write
  * 18/11/14	Massimiliano Pinto	One server only in configuration becomes master.
  *					servers=server1 must be present in mysql_mon and in router sections as well.
+ * 08/05/15     Markus Makela           Added launchable scripts
  *
  * @endverbatim
  */
@@ -65,6 +66,8 @@
 #include <modinfo.h>
 #include <maxconfig.h>
 #include <mon_exec.h>
+
+#define MON_ARG_MAX 8192
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -96,6 +99,8 @@ static void set_slave_heartbeat(MONITOR *, MONITOR_SERVERS *);
 static int add_slave_to_master(long *, int, long);
 static void monitor_set_pending_status(MONITOR_SERVERS *, int);
 static void monitor_clear_pending_status(MONITOR_SERVERS *, int);
+char* mon_get_event_type(MONITOR_SERVERS*);
+void mon_append_node_names(MONITOR_SERVERS*,char*,int);
 
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
@@ -156,9 +161,8 @@ startMonitor(void *arg, void* opt)
     MONITOR* monitor = (MONITOR*)arg;
     MYSQL_MONITOR *handle = (MYSQL_MONITOR*)monitor->handle;
     CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
-    if (arg)
+    if (handle)
     {
-	handle = arg;	/* Must be a restart */
 	handle->shutdown = 0;
     }
     else
@@ -170,7 +174,7 @@ startMonitor(void *arg, void* opt)
 	handle->replicationHeartbeat = 0;
 	handle->detectStaleMaster = 0;
 	handle->master = NULL;
-	handle->master_down_script = NULL;
+	handle->script = NULL;
 	spinlock_init(&handle->lock);
     }
 
@@ -180,16 +184,16 @@ startMonitor(void *arg, void* opt)
 	    handle->detectStaleMaster = config_truth_value(params->value);
 	else if(!strcmp(params->name,"detect_replication_lag"))
 	    handle->replicationHeartbeat = config_truth_value(params->value);
-	else if(!strcmp(params->name,"master_down_script"))
+	else if(!strcmp(params->name,"script"))
 	{
-	    if(handle->master_down_script)
-		externcmd_free(handle->master_down_script);
-	    handle->master_down_script = externcmd_allocate(params->value);
+	    if(handle->script)
+		free(handle->script);
+	    handle->script = strdup(params->value);
 	}
 	params = params->next;
     }
 
-    handle->tid = (THREAD)thread_start(monitorMain, handle);
+    handle->tid = (THREAD)thread_start(monitorMain, monitor);
     return handle;
 }
 
@@ -554,6 +558,8 @@ int log_no_master = 1;
 
 		while (ptr)
 		{
+			ptr->mon_prev_status = ptr->server->status;
+
 			/* copy server status into monitor pending_status */
 			ptr->pending_status = ptr->server->status;
 
@@ -579,14 +585,6 @@ int log_no_master = 1;
 						"Server %s:%d lost the master status.",
 						ptr->server->name,
 						ptr->server->port)));
-					if(handle->master_down_script)
-					{
-					    if(externcmd_execute(handle->master_down_script))
-						skygw_log_write(LOGFILE_ERROR,
-							 "Error: Failed to execute command "
-							"'%s' on server state change.",
-							 handle->master_down_script->parameters[0]);
-					}
 				}
 				/**
 				 * Here we say: If the server's state changed
@@ -694,6 +692,33 @@ int log_no_master = 1;
 					}
 				} else {
 					ptr->server->status = ptr->pending_status;
+
+					if(mon_status_changed(ptr))
+					{
+					    /** Execute monitor script */
+					    if(handle->script && strcmp(mon_get_event_type(ptr),"unknown") != 0)
+					    {
+						char argstr[PATH_MAX + MON_ARG_MAX + 1];
+						snprintf(argstr,PATH_MAX + MON_ARG_MAX,
+							 "%s --event=%s --node=%s --nodelist=",
+							 handle->script,
+							 mon_get_event_type(ptr),
+							 ptr->server->unique_name);
+						mon_append_node_names(mon->databases,argstr,PATH_MAX + MON_ARG_MAX + 1);
+
+						EXTERNCMD* cmd = externcmd_allocate(argstr);
+						if(externcmd_execute(cmd))
+						{
+						    skygw_log_write(LOGFILE_ERROR,
+							     "Error: Failed to execute script "
+							    "'%s' on server state change.",
+							     handle->script);
+						}
+						externcmd_free(cmd);
+						skygw_log_write(LOGFILE_TRACE,"monitor_state_change: %s: %s",
+						     ptr->server->unique_name,mon_get_event_type(ptr));
+					    }
+					}
 				}
 			}
 			ptr = ptr->next;
@@ -808,7 +833,11 @@ static bool mon_status_changed(
         MONITOR_SERVERS* mon_srv)
 {
         bool succp;
-        
+
+	/** This is the first time the server was set with a status*/
+        if (mon_srv->mon_prev_status == -1)
+	    return false;
+
         if (mon_srv->mon_prev_status != mon_srv->server->status)
         {
                 succp = true;
@@ -1255,3 +1284,76 @@ monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
 	ptr->pending_status &= ~bit;
 }
 
+char* mon_get_event_type(MONITOR_SERVERS* node)
+{
+    unsigned int prev = node->mon_prev_status;
+
+    if((prev & (SERVER_MASTER|SERVER_RUNNING)) == (SERVER_MASTER|SERVER_RUNNING) &&
+       SERVER_IS_DOWN(node->server))
+    {
+	return "master_down";
+    }
+    if((prev & (SERVER_RUNNING)) == 0 &&
+       SERVER_IS_RUNNING(node->server) && SERVER_IS_MASTER(node->server))
+    {
+	return "master_up";
+    }
+    if((prev & (SERVER_SLAVE|SERVER_RUNNING)) == (SERVER_SLAVE|SERVER_RUNNING) &&
+       SERVER_IS_DOWN(node->server))
+    {
+	return "slave_down";
+    }
+    if((prev & (SERVER_RUNNING)) == 0 &&
+       SERVER_IS_RUNNING(node->server) && SERVER_IS_SLAVE(node->server))
+    {
+	return "slave_up";
+    }
+    if((prev & (SERVER_RUNNING)) == SERVER_RUNNING &&
+       SERVER_IS_RUNNING(node->server) && SERVER_IS_MASTER(node->server))
+    {
+	return "new_master";
+    }
+    if((prev & (SERVER_RUNNING)) == SERVER_RUNNING &&
+       SERVER_IS_RUNNING(node->server) && SERVER_IS_SLAVE(node->server))
+    {
+	return "new_slave";
+    }
+    if((prev & (SERVER_RUNNING|SERVER_MASTER)) == (SERVER_RUNNING|SERVER_MASTER) &&
+       SERVER_IS_RUNNING(node->server) && !SERVER_IS_MASTER(node->server))
+    {
+	return "lost_master";
+    }
+    if((prev & (SERVER_RUNNING|SERVER_SLAVE)) == (SERVER_RUNNING|SERVER_SLAVE) &&
+       SERVER_IS_RUNNING(node->server) && !SERVER_IS_SLAVE(node->server))
+    {
+	return "lost_slave";
+    }
+    if((prev & SERVER_RUNNING) == 0 &&
+       SERVER_IS_RUNNING(node->server))
+    {
+	return "server_up";
+    }
+    if((prev & SERVER_RUNNING) == SERVER_RUNNING &&
+       SERVER_IS_DOWN(node->server))
+    {
+	return "server_down";
+    }
+    return "unknown";
+}
+
+void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len)
+{
+    MONITOR_SERVERS* ptr = start;
+    bool first = true;
+
+    while(ptr)
+    {
+	if(!first)
+	{
+	    strncat(str,",",len);
+	}
+	first = false;
+	strncat(str,ptr->server->unique_name,len);
+	ptr = ptr->next;
+    }
+}

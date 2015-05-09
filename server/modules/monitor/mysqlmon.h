@@ -56,7 +56,7 @@ typedef struct {
 	int	availableWhenDonor;	/**< Monitor flag for Galera Cluster Donor availability */
         int     disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
 	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
-        EXTERNCMD* master_down_script;
+        char* script; /*< Script to call when state changes occur on servers */
 } MYSQL_MONITOR;
 
 #endif
