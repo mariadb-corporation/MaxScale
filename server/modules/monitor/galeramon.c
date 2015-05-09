@@ -38,20 +38,8 @@
  * @endverbatim
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <monitor.h>
+
 #include <galeramon.h>
-#include <thread.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <dcb.h>
-#include <modinfo.h>
-#include <maxconfig.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;

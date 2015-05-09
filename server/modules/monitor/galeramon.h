@@ -18,9 +18,22 @@
  * Copyright MariaDB Corporation Ab 2013-2014
  */
 
-#include    <monitor_common.h>
-#include	<spinlock.h>
-#include    <mon_exec.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <monitor.h>
+#include <monitor_common.h>
+#include <spinlock.h>
+#include <mon_exec.h>
+#include <thread.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+#include <secrets.h>
+#include <dcb.h>
+#include <modinfo.h>
+#include <maxconfig.h>
 
 /**
  * @file galeramon.h - The Galera cluster monitor

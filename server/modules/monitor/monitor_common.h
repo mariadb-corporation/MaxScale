@@ -15,20 +15,24 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * Copyright MariaDB Corporation Ab 2013-2015
  */
 
-#include	<server.h>
-#include	<mysql.h>
-
+#include <server.h>
+#include <mysql.h>
+#include <monitor.h>
 /**
  * @file monitor_common.h - The generic monitor structures all monitors use
  *
  * Revision History
  *
  * Date      Who             Description
- * 07/05/15  Markus Makela   Initial Implementation of galeramon.h
+ * 07/05/15  Markus Makela   Initial Implementation
  * @endverbatim
  */
 
+void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len);
+char* mon_get_event_type(MONITOR_SERVERS* node);
+void monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit);
+void monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit);
 #endif

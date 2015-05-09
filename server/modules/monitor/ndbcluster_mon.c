@@ -29,20 +29,9 @@
  * @endverbatim
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <monitor.h>
+
 #include <mysqlmon.h>
-#include <thread.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <dcb.h>
-#include <modinfo.h>
-#include <maxconfig.h>
+
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -207,10 +196,8 @@ monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPassw
     MYSQL_MONITOR* handle = mon->handle;
 MYSQL_ROW	row;
 MYSQL_RES	*result;
-int		num_fields;
 int		isjoined = 0;
 char            *uname = defaultUser, *passwd = defaultPasswd;
-unsigned long int	server_version = 0;
 char 			*server_string;
 
 	if (database->server->monuser != NULL)
@@ -228,7 +215,6 @@ char 			*server_string;
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
-		int rc;
                 int connect_timeout = mon->connect_timeout;
                 int read_timeout = mon->read_timeout;
                 int write_timeout = mon->write_timeout;
@@ -237,9 +223,9 @@ char 			*server_string;
 		    mysql_close(database->con);
                 database->con = mysql_init(NULL);
 
-                rc = mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
-                rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
-                rc = mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
+                mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
+                mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+                mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
 
 		if (mysql_real_connect(database->con, database->server->name,
 			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
@@ -270,9 +256,6 @@ char 			*server_string;
 	/* If we get this far then we have a working connection */
 	server_set_status(database->server, SERVER_RUNNING);
 
-	/* get server version from current server */
-	server_version = mysql_get_server_version(database->con);
-
 	/* get server version string */
 	server_string = (char *)mysql_get_server_info(database->con);
 	if (server_string) {
@@ -285,7 +268,6 @@ char 			*server_string;
 	if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
-		num_fields = mysql_num_fields(result);
 		while ((row = mysql_fetch_row(result)))
 		{
 			if (atoi(row[1]) > 0)
@@ -299,7 +281,6 @@ char 			*server_string;
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
 		long cluster_node_id = -1;
-		num_fields = mysql_num_fields(result);
 		while ((row = mysql_fetch_row(result)))
 		{
 			cluster_node_id = strtol(row[1], NULL, 10);
@@ -333,7 +314,6 @@ monitorMain(void *arg)
     MONITOR* mon = arg;
 MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
 MONITOR_SERVERS	*ptr;
-long master_id;
 size_t nrounds = 0;
 
 	if (mysql_thread_init())
@@ -372,7 +352,6 @@ size_t nrounds = 0;
 			continue;
 		}
 		nrounds += 1;
-		master_id = -1;
 		ptr = mon->databases;
 
 		while (ptr)

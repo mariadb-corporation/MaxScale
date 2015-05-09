@@ -17,10 +17,22 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
-
-#include	<spinlock.h>
-#include	<monitor_common.h>
-#include        <mon_exec.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <monitor.h>
+#include <spinlock.h>
+#include <thread.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+#include <secrets.h>
+#include <dcb.h>
+#include <modinfo.h>
+#include <maxconfig.h>
+#include <monitor_common.h>
+#include <mon_exec.h>
 /**
  * @file mysqlmon.h - The MySQL monitor functionality within the gateway
  *
