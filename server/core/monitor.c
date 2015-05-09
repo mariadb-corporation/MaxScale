@@ -28,6 +28,7 @@
  * 					and monitor id
  * 30/10/14	Massimiliano Pinto	Addition of disable_master_failback parameter
  * 07/11/14	Massimiliano Pinto	Addition of monitor network timeouts
+ * 08/05/15     Markus Makela           Moved common monitor variables to MONITOR struct
  *
  * @endverbatim
  */
@@ -220,7 +221,6 @@ monitorAddUser(MONITOR *mon, char *user, char *passwd)
 {
     mon->user = strdup(user);
     mon->password = strdup(passwd);
-	//mon->module->defaultUser(mon->handle, user, passwd);
 }
 
 /**
@@ -240,7 +240,7 @@ MONITOR	*ptr;
 		dcb_printf(dcb, "Monitor: %p\n", ptr);
 		dcb_printf(dcb, "\tName:		%s\n", ptr->name);
 		if (ptr->module->diagnostics)
-			ptr->module->diagnostics(dcb, ptr->handle);
+			ptr->module->diagnostics(dcb, ptr);
 		ptr = ptr->next;
 	}
 	spinlock_release(&monLock);
@@ -258,7 +258,7 @@ monitorShow(DCB *dcb, MONITOR *monitor)
 	dcb_printf(dcb, "Monitor: %p\n", monitor);
 	dcb_printf(dcb, "\tName:		%s\n", monitor->name);
 	if (monitor->module->diagnostics)
-		monitor->module->diagnostics(dcb, monitor->handle);
+		monitor->module->diagnostics(dcb, monitor);
 }
 
 /**
