@@ -4384,7 +4384,7 @@ static bool route_session_write(
 		    if(BREF_IS_IN_USE(bref))
 		    {
 
-			if(bref->bref_sescmd_cur.position <= prop->rses_prop_data.sescmd.position)
+			if(bref->bref_sescmd_cur.position <= prop->rses_prop_data.sescmd.position + 1)
 			{
 			    conflict = true;
 			    break;
