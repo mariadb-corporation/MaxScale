@@ -159,6 +159,7 @@ static struct option long_options[] = {
   {"language",required_argument, 0, 'N'},
   {"syslog",   required_argument, 0, 's'},
   {"maxscalelog",required_argument,0,'S'},
+  {"user",required_argument,0,'U'},
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},
   {0, 0, 0, 0}
@@ -193,7 +194,7 @@ static bool resolve_maxscale_conf_fname(
         char*  cnf_file_arg);
 
 static char* check_dir_access(char* dirname,bool,bool);
-
+static int set_user();
 
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
@@ -861,14 +862,16 @@ static void usage(void)
 		"  -l, --log=[file|shm]       log to file or shared memory (default: shm)\n"
 		"  -L, --logdir=PATH          path to log file directory\n"
 		"                             (default: /var/log/maxscale)\n"
-		"  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
-		"                             (default: /var/cache/maxscale)\n"
-		"  -C, --configdir=PATH       path to configuration file directory\n"
-		"                             (default: /etc/)\n"
-		"  -B, --libdir=PATH          path to module directory\n"
-		"                             (default: /usr/lib64/maxscale)\n"
 		"  -A, --cachedir=PATH        path to cache directory\n"
 		"                             (default: /var/cache/maxscale)\n"
+		"  -B, --libdir=PATH          path to module directory\n"
+		"                             (default: /usr/lib64/maxscale)\n"
+		"  -C, --configdir=PATH       path to configuration file directory\n"
+		"                             (default: /etc/)\n"
+		"  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
+		"                             (default: /var/cache/maxscale)\n"
+		"  -U, --user=USER	      run MaxScale as another user.\n"
+		"                             The user ID and group ID of this user are used to run MaxScale."
 		"  -s, --syslog=[yes|no]      log messages to syslog (default:yes)\n"
 		"  -S, --maxscalelog=[yes|no] log messages to MaxScale log (default: yes)\n"
 		"  -v, --version              print version info and exit\n"
@@ -939,6 +942,9 @@ int main(int argc, char **argv)
                                        datadir_cleanup,
                                        write_footer,
                                        NULL};
+
+	
+
         sigemptyset(&sigpipe_mask);
         sigaddset(&sigpipe_mask, SIGPIPE);
 	progname = *argv;
@@ -970,7 +976,7 @@ int main(int argc, char **argv)
                 }
         }
 
-        while ((opt = getopt_long(argc, argv, "dc:f:l:vs:S:?L:D:C:B:",
+        while ((opt = getopt_long(argc, argv, "dc:f:l:vs:S:?L:D:C:B:U:A:",
 				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
@@ -1081,6 +1087,12 @@ int main(int argc, char **argv)
 		    else
 		    {
 			syslog_enabled = config_truth_value(optarg);
+		    }
+		    break;
+		case 'U':
+		    if(set_user(optarg) != 0)
+		    {
+			succp = false;
 		    }
 		    break;
 		case '?':
@@ -1930,4 +1942,44 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
     }
 
     return 1;
+}
+
+static int set_user(char* user)
+{
+    errno = 0;
+    struct passwd *pwname;
+    int rval;
+
+    pwname = getpwnam(user);
+    if(pwname == NULL)
+    {
+	printf("Error: Failed to retrieve user information for '%s': %d %s\n",
+	 user,errno,errno == 0 ? "User not found" : strerror(errno));
+	return -1;
+    }
+    
+    rval = setgid(pwname->pw_gid);
+    if(rval != 0)
+    {
+	printf("Error: Failed to change group to '%d': %d %s\n",
+	 pwname->pw_gid,errno,strerror(errno));
+	return rval;
+    }
+
+    rval = setuid(pwname->pw_uid);
+    if(rval != 0)
+    {
+	printf("Error: Failed to change user to '%s': %d %s\n",
+	 pwname->pw_name,errno,strerror(errno));
+	return rval;
+    }
+#ifdef SS_DEBUG
+    else
+    {
+	printf("Running MaxScale as: %s %d:%d\n",pwname->pw_name,pwname->pw_uid,pwname->pw_gid);
+    }
+#endif
+
+
+    return rval;
 }
