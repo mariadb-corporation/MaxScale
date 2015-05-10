@@ -172,7 +172,11 @@ char		*logfile = NULL;
 			else if (!strcmp(params[i]->name, "log_trace"))
 			    my_instance->log_trace = config_truth_value(params[i]->value);
 			else if (!strcmp(params[i]->name, "log_file"))
+			{
+			    if(logfile)
+				free(logfile);
 			    logfile = strdup(params[i]->value);
+			}
 			else if (!filter_standard_parameter(params[i]->name))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
@@ -207,6 +211,7 @@ char		*logfile = NULL;
 		if (my_instance->match == NULL || my_instance->replace == NULL)
 		{
 			free(my_instance);
+			free(logfile);
 			return NULL;
 		}
 
@@ -218,6 +223,7 @@ char		*logfile = NULL;
 			free(my_instance->match);
 			free(my_instance->replace);
 			free(my_instance);
+			free(logfile);
 			return NULL;
 		}
 
