@@ -21,7 +21,7 @@
 # MaxScale HOME, PIDFILE, LIB
 #############################################
 
-export MAXSCALE_PIDFILE=/var/run/maxscale/maxscale.pid
+export MAXSCALE_PIDFILE=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@/maxscale
 
 ###############################
@@ -44,7 +44,7 @@ _RETVAL_STATUS_NOT_RUNNING=3
 # stop/start/status related vars
 #################################
 NAME=maxscale
-DAEMON=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale
+DAEMON=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale
 
 # Source function library.
 . /lib/lsb/init-functions

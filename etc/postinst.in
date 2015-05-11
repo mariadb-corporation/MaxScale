@@ -1,9 +1,25 @@
 #!/bin/sh
 
-mkdir -p /var/log/maxscale
-mkdir -p /var/cache/maxscale
-mkdir -p /var/run/maxscale
-mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHARE_DIR@/
+
+# Create directories
+mkdir -p @MAXSCALE_LIBDIR@
+mkdir -p @MAXSCALE_BINDIR@
+mkdir -p @MAXSCALE_SHAREDIR@
+mkdir -p @MAXSCALE_DOCDIR@
+mkdir -p @MAXSCALE_CONFDIR@
+mkdir -p @MAXSCALE_VARDIR@/log/maxscale
+mkdir -p @MAXSCALE_VARDIR@/lib/maxscale
+mkdir -p @MAXSCALE_VARDIR@/cache/maxscale
+mkdir -p @MAXSCALE_VARDIR@/run/maxscale
+
+# Create MaxScale user
+if [ -f "/etc/passwd" -a "$(grep -c 'maxscale' /etc/passwd)" -eq 0 ]
+then
+    useradd -s -r /bin/false maxscale
+    groupadd maxscale
+fi
+
+# Copy init.d script and ldconfig file
 cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
 cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf /etc/ld.so.conf.d/
 /sbin/ldconfig

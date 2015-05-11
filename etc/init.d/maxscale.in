@@ -21,7 +21,7 @@
 # MaxScale PIDFILE and LIB
 #############################################
 
-export MAXSCALE_PIDFILE=/var/run/maxscale/maxscale.pid
+export MAXSCALE_PIDFILE=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@/maxscale
 
 ###############################
@@ -55,7 +55,7 @@ start() {
     CHECK_RET=$?
     [ $CHECK_RET -eq 0 ] && echo -n " found $my_check" && success && CHECK_RET=0
 
-    daemon --pidfile $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale >& /dev/null
+    daemon --pidfile $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale >& /dev/null
 
     RETVAL=$?
     [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$servicename
