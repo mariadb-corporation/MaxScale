@@ -65,6 +65,9 @@ macro(set_variables)
   # Use tcmalloc as the memory allocator
   set(WITH_TCMALLOC FALSE CACHE BOOL "Use tcmalloc as the memory allocator")
 
+  # Use jemalloc as the memory allocator
+  set(WITH_JEMALLOC FALSE CACHE BOOL "Use jemalloc as the memory allocator")
+
   # Build tests
   set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
 
@@ -259,20 +262,22 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
 
 
   # Check which init.d script to install
-  find_file(RPM_FNC functions PATHS /etc/rc.d/init.d)
-  if(${RPM_FNC} MATCHES "RPM_FNC-NOTFOUND")
-	find_file(DEB_FNC init-functions PATHS /lib/lsb)
-	if(${DEB_FNC} MATCHES "DEB_FNC-NOTFOUND")
-	  set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-	  message(FATAL_ERROR "Cannot find required init-functions in /lib/lsb/ or /etc/rc.d/init.d/, please confirm that your system files are OK.")
-	else()
-	  set(DEB_BASED TRUE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
-	endif()
-  else()
-	set(DEB_BASED FALSE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
+  if(WITH_SCRIPTS)
+    find_file(RPM_FNC functions PATHS /etc/rc.d/init.d)
+    if(${RPM_FNC} MATCHES "RPM_FNC-NOTFOUND")
+      find_file(DEB_FNC init-functions PATHS /lib/lsb)
+      if(${DEB_FNC} MATCHES "DEB_FNC-NOTFOUND")
+	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
+	message(FATAL_ERROR "Cannot find required init-functions in /lib/lsb/ or /etc/rc.d/init.d/, please confirm that your system files are OK.")
+      else()
+	set(DEB_BASED TRUE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
+      endif()
+    else()
+      set(DEB_BASED FALSE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
+    endif()
+    unset(DEB_FNC)
+    unset(RPM_FNC)
   endif()
-  unset(DEB_FNC)
-  unset(RPM_FNC)
 
   #Check RabbitMQ headers and libraries
   if(BUILD_RABBITMQ)

@@ -1978,8 +1978,11 @@ return_file:
 
 void skygw_file_free(skygw_file_t* file)
 {
-    free(file->sf_fname);
-    free(file);
+    if(file)
+    {
+        free(file->sf_fname);
+        free(file);
+    }
 }
 
 void skygw_file_close(

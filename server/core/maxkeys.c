@@ -33,18 +33,18 @@
 #include <log_manager.h>
 int main(int argc, char **argv)
 {
-    int arg_count = 4;
+    int arg_count = 6;
     char *home;
     char** arg_vector;
-    
+    int rval = 0;
 
 	if (argc != 2)
 	{
 		fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-		exit(1);
+		return 1;
 	}
 
-	arg_vector = malloc(sizeof(char*)*5);
+	arg_vector = malloc(sizeof(char*)*(arg_count + 1));
 
 	if(arg_vector == NULL)
 	{
@@ -52,8 +52,8 @@ int main(int argc, char **argv)
 	    return 1;
 	}
 
-	arg_vector[0] = strdup("logmanager");
-	arg_vector[1] = strdup("-j");
+	arg_vector[0] = "logmanager";
+	arg_vector[1] = "-j";
 
 	if ((home = getenv("MAXSCALE_HOME")) != NULL)
 	{
@@ -65,12 +65,12 @@ int main(int argc, char **argv)
 	    arg_vector[2] = strdup("/usr/local/mariadb-maxscale/log");
 	}
     arg_vector[3] = "-o";
-	arg_vector[4] = NULL;
+    arg_vector[4] = "-l";
+    arg_vector[5] = "LOGFILE_ERROR";
+	arg_vector[6] = NULL;
 	skygw_logmanager_init(arg_count,arg_vector);
 	skygw_log_enable(LOGFILE_TRACE);
 	skygw_log_enable(LOGFILE_DEBUG);
-	free(arg_vector[0]);
-	free(arg_vector[1]);
 	free(arg_vector[2]);
 	free(arg_vector);
 	
@@ -78,11 +78,11 @@ int main(int argc, char **argv)
 	if (secrets_writeKeys(argv[1]))
 	{
 		fprintf(stderr, "Failed to encode the password\n");
-		exit(1);
+		rval = 1;
 	}
 
 	skygw_log_sync_all();
 	skygw_logmanager_done();
 
-    return 0;
+    return rval;
 }

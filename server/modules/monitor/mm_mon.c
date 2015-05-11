@@ -360,7 +360,8 @@ char 		  *server_string;
 		char *dpwd = decryptPassword(passwd);
                 int  rc;
                 int  read_timeout = 1;
-
+		if(database->con)
+		    mysql_close(database->con);
                 database->con = mysql_init(NULL);
 
                 rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
