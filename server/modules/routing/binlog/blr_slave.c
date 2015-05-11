@@ -138,8 +138,9 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
-				"MariaDB 10 Slave is required for Slave registration",
-				MYSQL_COMMAND(queue))));
+				"%s: Slave %s: a MariaDB 10 Slave is required for Slave registration",
+				router->service->name,
+				slave->dcb->remote)));
 
 			dcb_close(slave->dcb);
 			return 1;
@@ -472,7 +473,7 @@ int	query_len;
 
 	query_text = strndup(qtext, query_len);
 	LOGIF(LE, (skygw_log_write(
-		LOGFILE_ERROR, "Unexpected query from slave server %s", query_text)));
+		LOGFILE_ERROR, "Unexpected query from slave %s: %s", slave->dcb->remote, query_text)));
 	free(query_text);
 	blr_slave_send_error(router, slave, "Unexpected SQL query received from slave.");
 	return 1;
