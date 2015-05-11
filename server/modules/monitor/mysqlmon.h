@@ -49,7 +49,7 @@
  * 07/11/14	Massimiliano	Pinto	Addition of NetworkTimeout: connect, read, write
  * 20/04/15	Guillaume Lefranc	Addition of availableWhenDonor
  * 22/04/15     Martin Brampton         Addition of disableMasterRoleSetting
- * 07/05/15	Markus Makela			Addition of command execution on Master server failure
+ * 07/05/15	Markus Makela		Addition of command execution on Master server failure
  * @endverbatim
  */
 

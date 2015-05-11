@@ -17,19 +17,20 @@
  */
 
 /**
- * @file mysql_mon.c - A MySQL Multi Muster cluster monitor
+ * @file mm_mon.c - A Multi-Master Multi Muster cluster monitor
  *
  * @verbatim
  * Revision History
  *
  * Date		Who			Description
  * 08/09/14	Massimiliano Pinto	Initial implementation
+ * 08/05/15     Markus Makela           Addition of launchable scripts
  *
  * @endverbatim
  */
 
 
-#include <mysqlmon.h>
+#include <mmmon.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -44,7 +45,7 @@ MODULE_INFO	info = {
 	MODULE_API_MONITOR,
 	MODULE_BETA_RELEASE,
 	MONITOR_VERSION,
-	"A MySQL Multi Master monitor"
+	"A Multi-Master Multi Master monitor"
 };
 
 static	void 	*startMonitor(void *,void*);
@@ -79,7 +80,7 @@ ModuleInit()
 {
 	LOGIF(LM, (skygw_log_write(
                            LOGFILE_MESSAGE,
-                           "Initialise the MySQL Monitor module %s.",
+                           "Initialise the Multi-Master Monitor module %s.",
                            version_str)));
 }
 
@@ -109,7 +110,7 @@ static	void 	*
 startMonitor(void *arg,void* opt)
 {
     MONITOR* mon = (MONITOR*)arg;
-    MYSQL_MONITOR *handle = mon->handle;
+    MM_MONITOR *handle = mon->handle;
     CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
     if (handle)
     {
@@ -117,12 +118,10 @@ startMonitor(void *arg,void* opt)
     }
     else
     {
-	if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
+	if ((handle = (MM_MONITOR *)malloc(sizeof(MM_MONITOR))) == NULL)
 	    return NULL;
 	handle->shutdown = 0;
 	handle->id = MONITOR_DEFAULT_ID;
-	handle->replicationHeartbeat = 0;
-	handle->detectStaleMaster = 0;
 	handle->master = NULL;
 	spinlock_init(&handle->lock);
     }
@@ -157,7 +156,7 @@ startMonitor(void *arg,void* opt)
 static	void	
 stopMonitor(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+MM_MONITOR	*handle = (MM_MONITOR *)arg;
 
         handle->shutdown = 1;
         thread_wait((void *)handle->tid);
@@ -172,7 +171,7 @@ MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
 static void diagnostics(DCB *dcb, void *arg)
 {
     MONITOR* mon = (MONITOR*)arg;
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
+MM_MONITOR	*handle = (MM_MONITOR *)mon->handle;
 MONITOR_SERVERS	*db;
 char		*sep;
 
@@ -217,7 +216,7 @@ char		*sep;
 static void
 monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
 {
-    MYSQL_MONITOR *handle = mon->handle;
+    MM_MONITOR *handle = mon->handle;
 MYSQL_ROW	  row;
 MYSQL_RES	  *result;
 int               isslave = 0;
@@ -240,7 +239,7 @@ char 		  *server_string;
 	if (SERVER_IN_MAINT(database->server))
 		return;
 
-        /** Store prevous status */
+        /** Store previous status */
         database->mon_prev_status = database->server->status;
         
 	if (database->con == NULL || mysql_ping(database->con) != 0)
@@ -473,7 +472,7 @@ static void
 monitorMain(void *arg)
 {
     MONITOR* mon = (MONITOR*)arg;
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
+MM_MONITOR	*handle = (MM_MONITOR *)mon->handle;
 MONITOR_SERVERS	*ptr;
 int detect_stale_master = handle->detectStaleMaster;
 MONITOR_SERVERS *root_master;
@@ -612,68 +611,8 @@ static void
 detectStaleMaster(void *arg, int enable)
 {
     MONITOR* mon = (MONITOR*)arg;
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)mon->handle;
+MM_MONITOR   *handle = (MM_MONITOR *)mon->handle;
 	memcpy(&handle->detectStaleMaster, &enable, sizeof(int));
-}
-
-static bool mon_status_changed(
-        MONITOR_SERVERS* mon_srv)
-{
-        bool succp;
-        
-        if (mon_srv->mon_prev_status != mon_srv->server->status)
-        {
-                succp = true;
-        }
-        else
-        {
-                succp = false;
-        }
-        return succp;
-}
-
-static bool mon_print_fail_status(
-        MONITOR_SERVERS* mon_srv)
-{
-        bool succp;
-        int errcount = mon_srv->mon_err_count;
-        uint8_t modval;
-        
-        modval = 1<<(MIN(errcount/10, 7));
-
-        if (SERVER_IS_DOWN(mon_srv->server) && errcount%modval == 0)
-        {
-                succp = true;
-        }
-        else
-        {
-                succp = false;
-        }
-        return succp;
-}
-
-/**
- * Set a pending status bit in the monior server
- *
- * @param server        The server to update
- * @param bit           The bit to clear for the server
- */
-static void
-monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit)
-{
-	ptr->pending_status |= bit;
-}
-
-/**
- * Clear a pending status bit in the monior server
- *
- * @param server        The server to update
- * @param bit           The bit to clear for the server
- */
-static void
-monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
-{
-	ptr->pending_status &= ~bit;
 }
 
 /*******
@@ -687,7 +626,7 @@ monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
  */
 
 static MONITOR_SERVERS *get_current_master(MONITOR *mon) {
-    MYSQL_MONITOR* handle = mon->handle;
+    MM_MONITOR* handle = mon->handle;
 MONITOR_SERVERS *ptr;
 
 	ptr = mon->databases;

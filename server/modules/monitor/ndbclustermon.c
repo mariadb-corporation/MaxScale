@@ -25,6 +25,7 @@
  * Date		Who			Description
  * 25/07/14	Massimiliano Pinto	Initial implementation
  * 10/11/14	Massimiliano Pinto	Added setNetworkTimeout for connect,read,write
+ * 08/05/15     Markus Makela           Addition of launchable scripts
  *
  * @endverbatim
  */

@@ -141,6 +141,7 @@ int externcmd_execute(EXTERNCMD* cmd)
     }
     else
     {
+	cmd->child = pid;
 	cmd->n_exec++;
 	LOGIF(LD,skygw_log_write(LD,"[monitor_exec_cmd] Forked child process %d : %s.",pid,cmd));
     }

@@ -34,6 +34,7 @@
  * 10/11/14	Massimiliano Pinto	Added setNetworkTimeout for connect,read,write
  * 20/04/15	Guillaume Lefranc	Added availableWhenDonor feature
  * 22/04/15     Martin Brampton         Addition of disableMasterRoleSetting
+ * 08/05/15     Markus Makela           Addition of launchable scripts
  *
  * @endverbatim
  */

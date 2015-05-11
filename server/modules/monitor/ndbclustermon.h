@@ -1,5 +1,5 @@
-#ifndef _GALERAMON_H
-#define _GALERAMON_H
+#ifndef _MYSQLMON_H
+#define _MYSQLMON_H
 /*
  * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -17,14 +17,11 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <monitor.h>
-#include <monitor_common.h>
 #include <spinlock.h>
-#include <mon_exec.h>
 #include <thread.h>
 #include <mysql.h>
 #include <mysqld_error.h>
@@ -34,21 +31,16 @@
 #include <dcb.h>
 #include <modinfo.h>
 #include <maxconfig.h>
+#include <monitor_common.h>
+#include <mon_exec.h>
 
 /**
- * @file galeramon.h - The Galera cluster monitor
+ * @file ndbclustermon.h - The NDB Cluster monitor
  *
- * @verbatim
- * Revision History
- *
- * Date      Who             Description
- * 07/05/15  Markus Makela   Initial Implementation of galeramon.h
- * @endverbatim
  */
 
-
 /**
- * The handle for an instance of a MySQL Monitor module
+ * The handle for an instance of a NDB Cluster Monitor module
  */
 typedef struct {
 	SPINLOCK  lock;			/**< The monitor spinlock */
@@ -56,11 +48,8 @@ typedef struct {
 	int    	  shutdown;		/**< Flag to shutdown the monitor thread */
 	int       status;		/**< Monitor status */
 	unsigned long         id;	/**< Monitor ID */
-	int	disableMasterFailback;	/**< Monitor flag for Galera Cluster Master failback */
-	int	availableWhenDonor;	/**< Monitor flag for Galera Cluster Donor availability */
-        int     disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
 	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
-        char* script;
-} GALERA_MONITOR;
+        char* script; /*< Script to call when state changes occur on servers */
+} MYSQL_MONITOR;
 
 #endif

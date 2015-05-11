@@ -11,6 +11,7 @@
 typedef struct extern_cmd_t{
   char* parameters[MAXSCALE_EXTCMD_ARG_MAX]; /*< Command arguments */
   int n_exec; /*< Number of times executed */
+  pid_t child; /*< PID of the child process */
 }EXTERNCMD;
 
 EXTERNCMD* externcmd_allocate(char* argstr);
