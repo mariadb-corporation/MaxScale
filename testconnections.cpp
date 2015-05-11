@@ -250,7 +250,7 @@ int TestConnections::start_binlog()
     printf("Master server version %s\n", version_str);
 
     if (strstr(version_str, "5.5") != NULL) {
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/,mariadb10-compatibility=1//\" %s'", repl->sshkey[0], repl->IP[0], maxscale_cnf);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/,mariadb10-compatibility=1//\" %s'", maxscale_sshkey, maxscale_IP, maxscale_cnf);
         printf("%s\n", sys1);  fflush(stdout);
         global_result +=  system(sys1);
     }
