@@ -1,8 +1,8 @@
-# MySQL Monitor
+# Galera Monitor
 
 ## Overview
 
-The MySQL Monitor is a monitoring module for MaxScale that monitors a Master-Slave replication cluster. It assigns master and slave roles inside MaxScale according to the acutal replication tree in the cluster.
+The Galera Monitor is a monitoring module for MaxScale that monitors a Galera cluster. It detects whether nodes are a part of the cluster and if they are in sync with the rest of the cluster. It can also assign master and slave roles inside MaxScale, allowing Galera clusters to be used with modules designed for traditional master-slave clusters.
 
 ## Configuration
 
@@ -11,7 +11,7 @@ A minimal configuration for a  monitor requires a set of servers for monitoring 
 ```
 [MySQL Monitor]
 type=monitor
-module=mysqlmon
+module=galeramon
 servers=server1,server2,server3
 user=myuser
 passwd=mypwd
@@ -54,27 +54,32 @@ This parameter controls the timeout for reading from a monitored server. It is i
 backend_read_timeout=2
 ```
 
-## MySQL Monitor optional parameters
+## Galera Monitor optional parameters
 
-These are optional parameters specific to the MySQL Monitor.
+These are optional parameters specific to the Galera Monitor.
 
-### `detect_replication_lag`
+### `disable_master_failback`
 
-Detect replication lag between the master and the slaves. This allows the routers to route read queries to only slaves that are up to date.
-
-```
-detect_replication_lag=true
-```
-
-### `detect_stale_master`
-
-Allow previous master to be available even in case of stopped or misconfigured 
-replication. This allows services that depend on master and slave roles to continue functioning as long as the master server is available.
-
-This is a situation which can happen if all slave servers are unreachable or the replication breaks for some reason.
+If a node marked as master inside MaxScale happens to fail and the master status is assigned to another node MaxScale will normally return the master status to the original node after it comes back up. With this option enabled, if the master status is assigned to a new node it will not be reassigned to the original node for as long as the new master node is running.
 
 ```
-detect_stale_master=true
+disable_master_failback=true
+```
+
+### `available_when_donor`
+
+This option only has an effect if there is a single Galera node being backed up an XtraBackup instance. This causes the initial node to go into Donor state which would normally prevent if from being marked as a valid server inside MaxScale. If this option is enabled, a single node in Donor state where the method is XtraBackup will be kept in Synced state. 
+
+```
+available_when_donor=true
+```
+
+### `disable_master_role_setting`
+
+This disables the assingment of master and slave roles to the Galera cluster nodes. If this option is enabled, Synced is the only status assigned by this monitor.
+
+```
+disable_master_role_setting=true
 ```
  
 ### `script`
