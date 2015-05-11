@@ -22,28 +22,27 @@ Using the password functionality in MaxScale is now a lot easier. Both programs 
 
 Here is a list of bugs fixed since the release of the 1.1 version of MaxScale. The bug IDs are from the **[Mariadb Jira](https://mariadb.atlassian.net/)**.
 
-|Bug|Description|
-|---|-----------|
-|[MXS-99](https://mariadb.atlassian.net/browse/MXS-99)|/etc/init.d/maxscale reload doesn't do anything|
-|[MXS-83](https://mariadb.atlassian.net/browse/MXS-83)|linkage fails when system pcre library is recent|
-|[MXS-112](https://mariadb.atlassian.net/browse/MXS-112)|Disable saving of session commands in the readwritesplit and schemarouter modules|
-|[MXS-114](https://mariadb.atlassian.net/browse/MXS-114)|Disable recovery of disconnected slaves|
-|[MXS-73](https://mariadb.atlassian.net/browse/MXS-73)|MaxScale uses nearly 100% CPU |
-|[MXS-36](https://mariadb.atlassian.net/browse/MXS-36)|bugzillaId-671: wrong message if SHOW DATABASES privilege is missing|
-|[MXS-39](https://mariadb.atlassian.net/browse/MXS-39)|bugzillaId-731:Boolean configuration parameters accept inconsistent parameters|
-|[MXS-64](https://mariadb.atlassian.net/browse/MXS-64)|maxkeys and Maxpasswd do not produce informative error output|
-|[MXS-25](https://mariadb.atlassian.net/browse/MXS-25)|bugzillaId-656: MySQL Monitor: claims that Master is available after master failure|
-|[MXS-82](https://mariadb.atlassian.net/browse/MXS-82)|cmake warns when mariadb is compiled without mysql_release|
-|[MXS-69](https://mariadb.atlassian.net/browse/MXS-69)|dbfwfilter should be pessimistic about rule syntax errors|
-|[MXS-98](https://mariadb.atlassian.net/browse/MXS-98)|regexfilter log|
-|[MXS-28](https://mariadb.atlassian.net/browse/MXS-28)|bugzillaId-433: Logging don't include assert information|
-|[MXS-75](https://mariadb.atlassian.net/browse/MXS-75)|"wildcard" rule also blocks COUNT(*)|
-|[MXS-118](https://mariadb.atlassian.net/browse/MXS-118)|Two monitors loaded at the same time result into not working installation|
-|[MXS-33](https://mariadb.atlassian.net/browse/MXS-33)|bugzillaId-702: CLI: list services command shows negative values for the number of users of a service (Read Service).|
-|[MXS-17](https://mariadb.atlassian.net/browse/MXS-17)|bugzillaId-736: Memory leak while doing read/write splitting|
-|[MXS-30](https://mariadb.atlassian.net/browse/MXS-30)|bugzillaId-487: Buffer manager should not use pointer arithmetic on void*|
-|[MXS-81](https://mariadb.atlassian.net/browse/MXS-81)|cmake fails when init scripts are missing|
-|[MXS-127](https://mariadb.atlassian.net/browse/MXS-127)|disable_sescmd_history causes MaxScale to crash under load|
+* [MXS-99](https://mariadb.atlassian.net/browse/MXS-99): /etc/init.d/maxscale reload doesn't do anything
+* [MXS-83](https://mariadb.atlassian.net/browse/MXS-83): linkage fails when system pcre library is recent
+* [MXS-112](https://mariadb.atlassian.net/browse/MXS-112): Disable saving of session commands in the readwritesplit and schemarouter modules
+* [MXS-114](https://mariadb.atlassian.net/browse/MXS-114): Disable recovery of disconnected slaves
+* [MXS-73](https://mariadb.atlassian.net/browse/MXS-73): MaxScale uses nearly 100% CPU 
+* [MXS-36](https://mariadb.atlassian.net/browse/MXS-36): bugzillaId-671: wrong message if SHOW DATABASES privilege is missing
+* [MXS-39](https://mariadb.atlassian.net/browse/MXS-39): bugzillaId-731:Boolean configuration parameters accept inconsistent parameters
+* [MXS-64](https://mariadb.atlassian.net/browse/MXS-64): maxkeys and Maxpasswd do not produce informative error output
+* [MXS-25](https://mariadb.atlassian.net/browse/MXS-25): bugzillaId-656: MySQL Monitor: claims that Master is available after master failure
+* [MXS-82](https://mariadb.atlassian.net/browse/MXS-82): cmake warns when mariadb is compiled without mysql_release
+* [MXS-69](https://mariadb.atlassian.net/browse/MXS-69): dbfwfilter should be pessimistic about rule syntax errors
+* [MXS-98](https://mariadb.atlassian.net/browse/MXS-98): regexfilter log
+* [MXS-28](https://mariadb.atlassian.net/browse/MXS-28): bugzillaId-433: Logging don't include assert information
+* [MXS-75](https://mariadb.atlassian.net/browse/MXS-75): "wildcard" rule also blocks COUNT(*)
+* [MXS-118](https://mariadb.atlassian.net/browse/MXS-118): Two monitors loaded at the same time result into not working installation
+* [MXS-33](https://mariadb.atlassian.net/browse/MXS-33): bugzillaId-702: CLI: list services command shows negative values for the number of users of a service (Read Service).
+* [MXS-17](https://mariadb.atlassian.net/browse/MXS-17): bugzillaId-736: Memory leak while doing read/write splitting
+* [MXS-30](https://mariadb.atlassian.net/browse/MXS-30): bugzillaId-487: Buffer manager should not use pointer arithmetic on void*
+* [MXS-81](https://mariadb.atlassian.net/browse/MXS-81): cmake fails when init scripts are missing
+* [MXS-127](https://mariadb.atlassian.net/browse/MXS-127): disable_sescmd_history causes MaxScale to crash under load
+
 ## Known Issues
 
 There are a number bugs and known limitations within this version of MaxScale, the most serious of this are listed below.
