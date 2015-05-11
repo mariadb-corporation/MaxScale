@@ -24,8 +24,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 02/04/14	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 02/04/14	Mark Riddoch		Initial implementation
+ * 11/05/15	Massimilaino Pinto	Added mariadb10_compat to master and slave structs
  *
  * @endverbatim
  */
@@ -175,6 +176,7 @@ typedef struct router_slave {
 	uint32_t	lastEventTimestamp;/*< Last event timestamp sent */
 	SPINLOCK	catch_lock;	/*< Event catchup lock */
 	unsigned int	cstate;		/*< Catch up state */
+	bool            mariadb10_compat;/*< MariaDB 10.0 compatibility */
         SPINLOCK        rses_lock;	/*< Protects rses_deleted */
 	pthread_t	pthread;
 	struct router_instance

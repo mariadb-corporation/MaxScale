@@ -498,6 +498,7 @@ ROUTER_SLAVE		*slave;
 	strcpy(slave->binlogfile, "unassigned");
 	slave->connect_time = time(0);
 	slave->lastEventTimestamp = 0;
+	slave->mariadb10_compat = false;
 
 	/**
          * Add this session to the list of active sessions.

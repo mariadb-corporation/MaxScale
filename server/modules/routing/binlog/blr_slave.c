@@ -37,6 +37,7 @@
  * 18/03/2015	Markus Makela		Better detection of CRC32 | NONE  checksum
  * 19/03/2015	Massimiliano Pinto	Addition of basic MariaDB 10 compatibility support
  * 07/05/2015   Massimiliano Pinto	Added MariaDB 10 Compatibility
+ * 11/05/2015   Massimiliano Pinto	Only MariaDB 10 Slaves can register to binlog router with a MariaDB 10 Master
  *
  * @endverbatim
  */
@@ -125,7 +126,27 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		return blr_slave_query(router, slave, queue);
 		break;
 	case COM_REGISTER_SLAVE:
-		return blr_slave_register(router, slave, queue);
+		/*
+		 * If Master is MariaDB10 don't allow registration from
+		 * MariaDB/Mysql 5 Slaves
+		 */
+
+		if (router->mariadb10_compat && !slave->mariadb10_compat) {
+			slave->state = BLRS_ERRORED;
+			blr_send_custom_error(slave->dcb, 1, 0,
+				"MariaDB 10 Slave is required for Slave registration");
+
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"MariaDB 10 Slave is required for Slave registration",
+				MYSQL_COMMAND(queue))));
+
+			dcb_close(slave->dcb);
+			return 1;
+		} else {
+			/* Master and Slave version OK: continue with slave registration */
+			return blr_slave_register(router, slave, queue);
+		}
 		break;
 	case COM_BINLOG_DUMP:
 		return blr_slave_binlog_dump(router, slave, queue);
@@ -370,6 +391,9 @@ int	query_len;
 		}
 		else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
                 {
+			/* mariadb10 compatibility is set for the slave */
+			slave->mariadb10_compat=true;
+
                        	free(query_text);
 			if (router->mariadb10_compat) {
 				return blr_slave_replay(router, slave, router->saved_master.mariadb10);
