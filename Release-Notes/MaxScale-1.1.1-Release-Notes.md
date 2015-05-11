@@ -2,7 +2,7 @@
 
 ## 1.1 GA
 
-This document details the changes in version 1.1.1 since the release of the 1.1 GA Release of the MaxScale product.
+MaxScale 1.1 is the current stable (GA) release of MaxScale. Version 1.1.1 is mainly a bug fix release introducing fixes, but also introduces some improvements to existing functionality.
 
 ## New Features
 
@@ -20,7 +20,7 @@ Using the password functionality in MaxScale is now a lot easier. Both programs 
 
 ## Bug Fixes
 
-Here is a list of bugs fixed since the release of the 1.1 version of MaxScale. The bug IDs are from the **[Mariadb Jira](https://mariadb.atlassian.net/)**.
+Here is a list of bugs fixed since the release of the 1.1.0 version of MaxScale. The bug IDs are from the **[MariaDB Jira](https://mariadb.atlassian.net/)**.
 
 * [MXS-99](https://mariadb.atlassian.net/browse/MXS-99): /etc/init.d/maxscale reload doesn't do anything
 * [MXS-83](https://mariadb.atlassian.net/browse/MXS-83): linkage fails when system pcre library is recent
@@ -45,18 +45,18 @@ Here is a list of bugs fixed since the release of the 1.1 version of MaxScale. T
 
 ## Known Issues
 
-There are a number bugs and known limitations within this version of MaxScale, the most serious of this are listed below.
+There are a number bugs and known limitations within this version of MaxScale, the most serious of these are listed below.
 
-* The Read/Write Splitter is a little too strict when it receives errors from slave servers during execution of session commands. This can result in sessions being terminated in situation in which MaxScale could recover without terminating the sessions.
+* The Read/Write Splitter is a little too strict when it receives errors from slave servers during execution of session commands. This can result in sessions being terminated in situations from which MaxScale could recover without terminating the sessions.
 
-* MaxScale can not manage authentication that uses wildcard matching in hostnames in the mysql.user table of the backend database. The only wildcards that can be used are in IP address entries.
+* MaxScale cannot manage authentication that uses wildcard matching in hostnames in the mysql.user table of the backend database. The only wildcards that can be used are in IP address entries.
 
 * When users have different passwords based on the host from which they connect MaxScale is unable to determine which password it should use to connect to the backend database. This results in failed connections and unusable usernames in MaxScale.
 
 * Binlog Router Plugin is compatible with MySQL 5.6  
   Binlog Router Plugin currently does not work for MariaDB 5.5 and MariaDB 10.0 
 
-* LONGBLOG are currently not supported.
+* LONGBLOG datatype is currently not supported.
 
 * Galera Cluster variables, such as @@wsrep_node_name, are not resolved by the embedded MariaDB parser.
 
@@ -64,7 +64,7 @@ There are a number bugs and known limitations within this version of MaxScale, t
 
 ## Packaging
 
-Both RPM and Debian packages are available for MaxScale in addition to the tar based releases previously distributed we now provide
+Both RPM and Debian packages are available for MaxScale in addition to the tar based releases. Packages are now provided for:
 
 * CentOS/RedHat 5
 
