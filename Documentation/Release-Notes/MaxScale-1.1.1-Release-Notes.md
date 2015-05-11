@@ -42,7 +42,8 @@ Here is a list of bugs fixed since the release of the 1.1 version of MaxScale. T
 |[MXS-33](https://mariadb.atlassian.net/browse/MXS-33)|bugzillaId-702: CLI: list services command shows negative values for the number of users of a service (Read Service).|
 |[MXS-17](https://mariadb.atlassian.net/browse/MXS-17)|bugzillaId-736: Memory leak while doing read/write splitting|
 |[MXS-30](https://mariadb.atlassian.net/browse/MXS-30)|bugzillaId-487: Buffer manager should not use pointer arithmetic on void*|
-
+|[MXS-81](https://mariadb.atlassian.net/browse/MXS-81)|cmake fails when init scripts are missing|
+|[MXS-127](https://mariadb.atlassian.net/browse/MXS-127)|disable_sescmd_history causes MaxScale to crash under load|
 ## Known Issues
 
 There are a number bugs and known limitations within this version of MaxScale, the most serious of this are listed below.
