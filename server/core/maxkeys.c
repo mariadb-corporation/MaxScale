@@ -69,8 +69,6 @@ int main(int argc, char **argv)
     arg_vector[5] = "LOGFILE_ERROR";
 	arg_vector[6] = NULL;
 	skygw_logmanager_init(arg_count,arg_vector);
-	skygw_log_enable(LOGFILE_TRACE);
-	skygw_log_enable(LOGFILE_DEBUG);
 	free(arg_vector[2]);
 	free(arg_vector);
 	
