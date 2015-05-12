@@ -31,6 +31,7 @@
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include "atomic.h"
 
 #define MAX_PREFIXLEN 250
 #define MAX_SUFFIXLEN 250
@@ -300,6 +301,8 @@ static int skygw_log_disable_raw(logfile_id_t id, bool emergency); /*< no lockin
 static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
 void flushall_logfiles(bool flush);
 bool thr_flushall_check();
+
+#include "../core/atomic.c"
 
 const char* get_suffix_default(void)
 {

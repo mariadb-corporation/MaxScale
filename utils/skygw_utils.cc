@@ -29,6 +29,7 @@
 #include <skygw_types.h>
 #include <sys/time.h>
 #include "skygw_utils.h"
+#include "atomic.h"
 
 #if defined(MLIST)
 
@@ -70,23 +71,6 @@ static void simple_mutex_free_memory(simple_mutex_t* sm);
 static void mlist_free_memory(mlist_t* ml, char* name);
 static void thread_free_memory(skygw_thread_t* th, char* name);
 /** End of static function declarations */
-
-int atomic_add(
-        int *variable,
-        int value)
-{
-#ifdef __GNUC__
-        return (int) __sync_fetch_and_add (variable, value);
-#else
-	asm volatile(
-		"lock; xaddl %%eax, %2;"
-		:"=a" (value)
-		: "a" (value), "m" (*variable)
-		: "memory" );
-	return value;
-#endif
-}
-
 
 /** mutexed list, mlist */
 
