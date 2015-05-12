@@ -1,5 +1,14 @@
 /**
- * @file fwf
+ * @file fwf - Firewall filtyer test
+ * - setup Firewall filter to use rules from rule file fw/ruleXX, where XX - number of sub-test
+ * - execute queries for fw/passXX file, expect OK
+ * - execute queries from fw/denyXX, expect Access Denied error (mysql_error 1141)
+ * - repeat for all XX
+ * - setup Firewall filter to block queries next 2 minutes using 'at_time' statement (see template fw/rules_at_time)
+ * - start sending queries, expect Access Denied now and OK after two mintes
+ * - setup Firewall filter to limit a number of queries during certain time
+ * - start sending queries as fast as possible, expect OK for N first quries and Access Denied for next queries
+ * - wait, start sending queries again, but only one query per second, expect OK
  */
 
 #include <my_config.h>
