@@ -15,7 +15,7 @@ mkdir -p @MAXSCALE_VARDIR@/run/maxscale
 # Create MaxScale user
 if [ -f "/etc/passwd" -a "$(grep -c 'maxscale' /etc/passwd)" -eq 0 ]
 then
-    useradd -s -r /bin/false maxscale
+    useradd -r -s /bin/false maxscale
     groupadd maxscale
 fi
 
