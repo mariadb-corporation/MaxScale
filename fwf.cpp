@@ -179,6 +179,21 @@ int main(int argc, char *argv[])
     }
     printf("\n");
 
+
+    printf("Trying rules with syntax error\n");
+
+    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_syntax_error root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
+    printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
+    system(str);
+
+    Test->start_maxscale();
+    Test->connect_rwsplit();
+
+    if (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") == 0) {
+        global_result++;
+        printf("Rule has syntax error, but query OK");
+    }
+
     Test->copy_all_logs(); return(global_result);
 }
 

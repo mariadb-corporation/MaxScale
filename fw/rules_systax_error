@@ -1,0 +1,2 @@
+rule test1 deny wildcard
+xusers %@% match all rules test1
