@@ -103,7 +103,7 @@ In Master-Slave replication cluster also read-only queries are routed to master 
 
 ### Limitations in client session handling
 
-Some of the queries that client sends are routed to all backends instead of sending them just to one of server. These queries include "USE <db name>" and “SET autocommit=0” among many others. Readwritesplit sends a copy of these queries to each backend server and forwards the master's reply to the client. Below is a list of MySQL commands which are classified as session commands :
+Some of the queries that client sends are routed to all backends instead of sending them just to one of server. These queries include `USE <db name>` and `SET autocommit=0` among many others. Readwritesplit sends a copy of these queries to each backend server and forwards the master's reply to the client. Below is a list of MySQL commands which are classified as session commands :
 ```
 COM_INIT_DB (USE <db name> creates this)
 
@@ -138,7 +138,7 @@ SELECT ..INTO variable|OUTFILE|DUMPFILE
 SET autocommit=1|0 
 ```
 
-There is a possibility for misbehavior; if `USE mytable` was executed in one of the slaves and it failed, it may be due to replication lag rather than the fact it didn’t exist. Thus the same command may end up with different result among backend servers. This disparity is missed.
+There is a possibility for misbehavior; if `USE mytable` was executed in one of the slaves and it failed, it may be due to replication lag rather than the fact it didn’t exist. Thus the same command may end up with different result among backend servers. The slaves which fail to execute a session command will be dropped from the active list of slaves for this session to guarantee a consistent session state across all the servers that are in use by the session.
 
 The above-mentioned behavior can be partially controller with the `use_sql_variables_in` configuration parameter.
 
@@ -152,10 +152,9 @@ Server-side session variables are called as SQL variables. If "master" or no val
 
 ### Examples of limitations
 
-If new database "db" was created and client executes “USE db” and it is routed to slave before the CREATE DATABASE clause is replicated to all slaves there is a risk of executing query in wrong database. Similarly, if any response that RWSplit sends back to the client differ from that of the master, there is a risk for misbehavior. 
+If new database "db" was created and client executes “USE db” and it is routed to slave before the CREATE DATABASE clause is replicated to all slaves there is a risk of executing query in wrong database. Similarly, if any response that RWSplit sends back to the client differ from that of the master, there is a risk for misbehavior. To prevent this, any failures in session command execution are treated as fatal errors and all connections by the session to that particular slave server will be closed. In addition, the server will not used again for routing for the duration of the session.
 
 Most imaginable reasons are related to replication lag but it could be possible that a slave fails to execute something because of some non-fatal, temporary failure while execution of same command succeeds in other backends.
-
 
 ## Examples
 
