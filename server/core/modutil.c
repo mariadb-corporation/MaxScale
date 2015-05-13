@@ -258,7 +258,8 @@ char *
 modutil_get_SQL(GWBUF *buf)
 {
 unsigned int	len, length;
-char	*ptr, *dptr, *rval = NULL;
+unsigned char	*ptr;
+char	*dptr, *rval = NULL;
 
 	if (!modutil_is_SQL(buf) && !modutil_is_SQL_prepare(buf))
 		return rval;
