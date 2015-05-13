@@ -9,6 +9,7 @@
  * - setup Firewall filter to limit a number of queries during certain time
  * - start sending queries as fast as possible, expect OK for N first quries and Access Denied for next queries
  * - wait, start sending queries again, but only one query per second, expect OK
+ * - try to load rules with syntax error, expect failure for all sessions and queries
  */
 
 #include <my_config.h>

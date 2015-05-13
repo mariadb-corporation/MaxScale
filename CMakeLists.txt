@@ -285,6 +285,8 @@ target_link_libraries(mxs127 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(transaction_test_wo_maxscale transaction_test_wo_maxscale.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(transaction_test_wo_maxscale ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(session_limits session_limits.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(session_limits ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
 
@@ -293,7 +295,7 @@ install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572
 install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 bug699 bug705 bug519 setup_binlog setup_binlog_crc_none setup_binlog_crc_32 binlog_incompl bug729 bug718 bug730 bug711 bug656 DESTINATION system-test)
-install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 DESTINATION system-test)
+install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 session_limits DESTINATION system-test)
 
 install(FILES set_env_f.sh set_env.sh get_logs.sh run_ctrl_c.sh long_insert.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut.sh start_without_root.sh configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
@@ -413,6 +415,7 @@ add_test(fwf fwf)
 add_test(mm mm)
 add_test(mxs118 mxs118)
 add_test(mxs127 mxs127)
+add_test(session_limits session_limits)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
