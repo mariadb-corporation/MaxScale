@@ -1,2 +1,2 @@
-rule test1 deny wildcard
-xusers %@% match all rules test1
+rule test1 deny wildcard1
+users %@% match all rules test1
