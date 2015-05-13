@@ -1449,12 +1449,6 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
         
     if (0 == mysql_num_rows(mysql_store_result(database->con)))
     {
-        if (mysql_query(database->con, "CREATE DATABASE IF NOT EXISTS maxscale_schema")) {
-            MXS_ERROR( "[mysql_mon]: Error creating maxscale_schema database in Master server"
-                ": %s", mysql_error(database->con));
-            database->server->rlag = -1;
-        }
-
         /* create repl_heartbeat table in maxscale_schema database */
         if (mysql_query(database->con, "CREATE TABLE IF NOT EXISTS "
                         "maxscale_schema.replication_heartbeat "
