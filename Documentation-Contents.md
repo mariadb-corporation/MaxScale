@@ -42,6 +42,11 @@
  - [RabbitMQ Setup and MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
  - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
 
+## Routers
+
+ - [Read Write Split](routers/ReadWriteSplit.md)
+ - [Schemarouter](routers/SchemaRouter.md)
+
 ## Filters
 
 Here are detailed documents about the filters MaxScale offers. They contain configuration guides and example use cases. Before reading these,you should have read the filter tutorial so that you know how they work and how to configure them.
