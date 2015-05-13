@@ -567,7 +567,7 @@ typedef enum skygw_chk_t {
 
 
 #if defined(FAKE_CODE)
-bool conn_open[10240];
+static bool conn_open[10240];
 #endif /* FAKE_CODE */
 
 #endif /* SKYGW_DEBUG_H */
