@@ -34,8 +34,8 @@ int main(int argc, char *argv[])
     sleep(20);
     printf("Execute query to check session\n");
     global_result += execute_query(Test->conn_rwsplit, "SELECT 1");
-    printf("Wait 20 seconds more and try quiry again expecting failure\n");
-    sleep(20);
+    printf("Wait 35 seconds more and try quiry again expecting failure\n");
+    sleep(35);
     if (execute_query(Test->conn_rwsplit, "SELECT 1") == 0) {
         printf("Session was not closed after 40 seconds\n");
         global_result++;
