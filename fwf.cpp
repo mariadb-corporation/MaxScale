@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
         printf("%d ", i);
     }
     printf("\n");
-
+    Test->stop_maxscale();
 
     printf("Trying rules with syntax error\n");
 
