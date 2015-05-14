@@ -871,7 +871,7 @@ static void usage(void)
 		"  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
 		"                             (default: /var/cache/maxscale)\n"
 		"  -U, --user=USER	      run MaxScale as another user.\n"
-		"                             The user ID and group ID of this user are used to run MaxScale."
+		"                             The user ID and group ID of this user are used to run MaxScale.\n"
 		"  -s, --syslog=[yes|no]      log messages to syslog (default:yes)\n"
 		"  -S, --maxscalelog=[yes|no] log messages to MaxScale log (default: yes)\n"
 		"  -v, --version              print version info and exit\n"
