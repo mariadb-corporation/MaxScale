@@ -2,7 +2,7 @@
 
 ## Overview
 
-The MySQL Monitor is a monitoring module for MaxScale that monitors a Master-Slave replication cluster. It assigns master and slave roles inside MaxScale according to the acutal replication tree in the cluster.
+The MySQL Monitor is a monitoring module for MaxScale that monitors a Master-Slave replication cluster. It assigns master and slave roles inside MaxScale according to the actual replication tree in the cluster.
 
 ## Configuration
 
@@ -24,7 +24,7 @@ Here are optional parameters that are common for all the monitors.
 
 ### `monitor_interval`
 
-This is the time the monitor waits between each cycle of monitoring. The default value of 10000 milliseconds (10 seconds) should be lowered if you want a faster response to changes in the server states. The value is defined in milliseconds and the smallest possible value is 100 illiseconds.
+This is the time the monitor waits between each cycle of monitoring. The default value of 10000 milliseconds (10 seconds) should be lowered if you want a faster response to changes in the server states. The value is defined in milliseconds and the smallest possible value is 100 milliseconds.
 
 ```
 monitor_interval=2500
