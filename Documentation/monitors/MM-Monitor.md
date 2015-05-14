@@ -1,17 +1,17 @@
-# Galera Monitor
+# Multi-Master Monitor
 
 ## Overview
 
-The Galera Monitor is a monitoring module for MaxScale that monitors a Galera cluster. It detects whether nodes are a part of the cluster and if they are in sync with the rest of the cluster. It can also assign master and slave roles inside MaxScale, allowing Galera clusters to be used with modules designed for traditional master-slave clusters.
+The Multi-Master Monitor is a monitoring module for MaxScale that monitors Master-Master replicatio. It assigns master and slave roles inside MaxScale based on whether the read_only parameter on a server is set to off or on.
 
 ## Configuration
 
-A minimal configuration for a  monitor requires a set of servers for monitoring and a username and a password to connect to these servers. The user requires the REPLICATION CLIENT privilege to successfully monitor the state of the servers.
+A minimal configuration for a monitor requires a set of servers for monitoring and a username and a password to connect to these servers. The user requires the REPLICATION CLIENT privilege to successfully monitor the state of the servers.
 
 ```
-[Galera Monitor]
+[Multi-Master Monitor]
 type=monitor
-module=galeramon
+module=mmmon
 servers=server1,server2,server3
 user=myuser
 passwd=mypwd
@@ -54,32 +54,18 @@ This parameter controls the timeout for reading from a monitored server. It is i
 backend_read_timeout=2
 ```
 
-## Galera Monitor optional parameters
+## Multi-Master Monitor optional parameters
 
-These are optional parameters specific to the Galera Monitor.
+These are optional parameters specific to the Multi-Master Monitor.
 
-### `disable_master_failback`
+### `detect_stale_master`
 
-If a node marked as master inside MaxScale happens to fail and the master status is assigned to another node MaxScale will normally return the master status to the original node after it comes back up. With this option enabled, if the master status is assigned to a new node it will not be reassigned to the original node for as long as the new master node is running.
+Allow previous master to be available even in case of stopped or misconfigured replication. This allows services that depend on master and slave roles to continue functioning as long as the master server is available.
 
-```
-disable_master_failback=true
-```
-
-### `available_when_donor`
-
-This option only has an effect if there is a single Galera node being backed up an XtraBackup instance. This causes the initial node to go into Donor state which would normally prevent if from being marked as a valid server inside MaxScale. If this option is enabled, a single node in Donor state where the method is XtraBackup will be kept in Synced state. 
+This is a situation which can happen if all slave servers are unreachable or the replication breaks for some reason.
 
 ```
-available_when_donor=true
-```
-
-### `disable_master_role_setting`
-
-This disables the assingment of master and slave roles to the Galera cluster nodes. If this option is enabled, Synced is the only status assigned by this monitor.
-
-```
-disable_master_role_setting=true
+detect_stale_master=true
 ```
  
 ### `script`
@@ -90,6 +76,11 @@ This script will be executed when a server changes its state. The parameter shou
 script=/home/user/script.sh
 ```
 
+This script will be called with the following command line arguments.
+
+```
+<name of the script> --event=<event type> --initiator=<server whose state changed> --nodelist=<list of all servers>
+```
 ### `events`
 
 A list of event names which cause the script to be executed. If this option is not defined, all events cause the script to be executed. The list must contain a comma separated list of event names.
@@ -110,11 +101,7 @@ slave_down|A Slave server has gone down
 slave_up|A Slave server has come up
 server_down|A server with no assigned role has done down
 server_up|A server with no assigned role has come up
-synced_down|A synced Galera node has come up
-synced_up|A synced Galera node has gone down
 lost_master|A server lost Master status
 lost_slave|A server lost Slave status
-lost_synced|A Galera node lost synced status
 new_master|A new Master was detected
 new_slave|A new Slave was detected
-new_synced|A new synced Galera node was detected
