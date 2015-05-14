@@ -24,7 +24,7 @@ Here are optional parameters that are common for all the monitors.
 
 ### `monitor_interval`
 
-This is the time the monitor waits between each cycle of monitoring. The default value of 10000 milliseconds (10 seconds) should be lowered if you want a faster response to changes in the server states. The value is defined in milliseconds and the smallest possible value is 100 illiseconds.
+This is the time the monitor waits between each cycle of monitoring. The default value of 10000 milliseconds (10 seconds) should be lowered if you want a faster response to changes in the server states. The value is defined in milliseconds and the smallest possible value is 100 milliseconds.
 
 ```
 monitor_interval=2500
@@ -76,7 +76,7 @@ available_when_donor=true
 
 ### `disable_master_role_setting`
 
-This disables the assingment of master and slave roles to the Galera cluster nodes. If this option is enabled, Synced is the only status assigned by this monitor.
+This disables the assignment of master and slave roles to the Galera cluster nodes. If this option is enabled, Synced is the only status assigned by this monitor.
 
 ```
 disable_master_role_setting=true

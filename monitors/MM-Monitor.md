@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Multi-Master Monitor is a monitoring module for MaxScale that monitors Master-Master replicatio. It assigns master and slave roles inside MaxScale based on whether the read_only parameter on a server is set to off or on.
+The Multi-Master Monitor is a monitoring module for MaxScale that monitors Master-Master replication. It assigns master and slave roles inside MaxScale based on whether the read_only parameter on a server is set to off or on.
 
 ## Configuration
 
@@ -24,7 +24,7 @@ Here are optional parameters that are common for all the monitors.
 
 ### `monitor_interval`
 
-This is the time the monitor waits between each cycle of monitoring. The default value of 10000 milliseconds (10 seconds) should be lowered if you want a faster response to changes in the server states. The value is defined in milliseconds and the smallest possible value is 100 illiseconds.
+This is the time the monitor waits between each cycle of monitoring. The default value of 10000 milliseconds (10 seconds) should be lowered if you want a faster response to changes in the server states. The value is defined in milliseconds and the smallest possible value is 100 milliseconds.
 
 ```
 monitor_interval=2500

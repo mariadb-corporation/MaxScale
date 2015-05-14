@@ -53,6 +53,12 @@ Here are detailed documents about the filters MaxScale offers. They contain conf
  - [Database Firewall Filter](filters/Database-Firewall-Filter.md)
  - [RabbitMQ Filter](filters/RabbitMQ-Filter.md)
 
+## Monitors
+ - [MySQL Monitor](monitors/MySQL-Monitor.md)
+ - [Galera Monitor](monitors/Galera-Monitor.md)
+ - [Multi-Master Monitor](monitors/MM-Monitor.md)
+ - [MySQL Cluster Monitor](monitors/NDB-Cluster-Monitor.md)
+
 ## Utilities
 
  - [RabbitMQ Consumer Client](filters/RabbitMQ-Consumer-Client.md)
