@@ -11,6 +11,7 @@ else
 	rm -rf $logs_dir
 fi
 
+echo "Creating log dir in workspace $logs_dir"
 mkdir -p $logs_dir
 if [ $? -ne 0 ]; then
         echo "Error creating log dir"

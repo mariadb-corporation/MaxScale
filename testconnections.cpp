@@ -212,7 +212,7 @@ int TestConnections::copy_all_logs()
         //system(str);
     }
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
-    printf("Executing copy_logs.sh\n"); fflush(stdout);
+    printf("Executing %s\n", str); fflush(stdout);
     if (system(str) !=0) {
         printf("copy_logs.sh executing FAILED!\n"); fflush(stdout);
         return(1);

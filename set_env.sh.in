@@ -52,7 +52,7 @@ export maxdir="@CMAKE_INSTALL_PREFIX@"
 export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
 
 export maxscale_cnf="$maxdir/etc/MaxScale.cnf"
-export maxscale_log_dir="$maxdir/logs/"
+export maxscale_log_dir="$maxdir/log/"
 export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
 if [ -f copy_logs.sh ] ; then
         export test_dir=`pwd`
@@ -62,7 +62,7 @@ fi
 
 if [ "$new_dirs" == "yes" ] ; then
         export maxdir="/usr/local/mariadb-maxscale"
-        export maxscale_cnf="/etc/MaxScale.cnf"
+        export maxscale_cnf="/etc/maxscale.cnf"
         export maxscale_log_dir="/var/log/maxscale/"
 fi
 
