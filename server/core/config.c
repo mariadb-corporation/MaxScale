@@ -1721,6 +1721,9 @@ SERVER			*server;
 					obj->element = server_alloc(address,
                                                                     protocol,
                                                                     atoi(port));
+
+					server_set_unique_name(obj->element, obj->object);
+
 					if (obj->element && monuser && monpw)
                                         {
 						serverAddMonUser(obj->element,
