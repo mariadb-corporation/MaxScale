@@ -66,8 +66,6 @@ MONITOR	*mon;
 	{
 		return NULL;
 	}
-	mon->state = MONITOR_STATE_ALLOC;
-	mon->name = strdup(name);
 
 	if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
 	{
@@ -79,10 +77,10 @@ MONITOR	*mon;
 		free(mon);
 		return NULL;
 	}
-	
+	mon->state = MONITOR_STATE_ALLOC;
+	mon->name = strdup(name);
 	mon->handle = NULL;
 	mon->databases = NULL;
-	mon->name = NULL;
 	mon->password = NULL;
 	mon->read_timeout = DEFAULT_READ_TIMEOUT;
 	mon->write_timeout = DEFAULT_WRITE_TIMEOUT;

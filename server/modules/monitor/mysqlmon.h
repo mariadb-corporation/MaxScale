@@ -69,6 +69,7 @@ typedef struct {
         int     disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
 	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
         char* script; /*< Script to call when state changes occur on servers */
+        bool events[MAX_MONITOR_EVENT]; /*< enabled events */
 } MYSQL_MONITOR;
 
 #endif

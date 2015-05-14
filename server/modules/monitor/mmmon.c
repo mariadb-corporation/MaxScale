@@ -112,6 +112,8 @@ startMonitor(void *arg,void* opt)
     MONITOR* mon = (MONITOR*)arg;
     MM_MONITOR *handle = mon->handle;
     CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
+    bool have_events = false;
+
     if (handle)
     {
 	handle->shutdown = 0;
@@ -123,6 +125,7 @@ startMonitor(void *arg,void* opt)
 	handle->shutdown = 0;
 	handle->id = MONITOR_DEFAULT_ID;
 	handle->master = NULL;
+	memset(handle->events,false,sizeof(handle->events));
 	spinlock_init(&handle->lock);
     }
 
@@ -141,9 +144,18 @@ startMonitor(void *arg,void* opt)
 
 	    handle->script = strdup(params->value);
 	}
+	else if(!strcmp(params->name,"events"))
+	{
+	    mon_parse_event_string(&handle->events,sizeof(handle->events),params->value);
+	    have_events = true;
+	}
 	params = params->next;
     }
-
+    /** If no specific events are given, enable them all */
+    if(!have_events)
+    {
+	memset(handle->events,true,sizeof(handle->events));
+    }
     handle->tid = (THREAD)thread_start(monitorMain, mon);
     return handle;
 }
@@ -579,17 +591,17 @@ size_t nrounds = 0;
 		}
 		
 		ptr = mon->databases;
-
+		monitor_event_t evtype;
 		while(ptr)
 		{
 		    /** Execute monitor script if a server state has changed */
-		    if(mon_status_changed(ptr) && mon_get_event_type(ptr) != UNDEFINED_MONITOR_EVENT)
+		    if(mon_status_changed(ptr) && (evtype = mon_get_event_type(ptr)) != UNDEFINED_MONITOR_EVENT)
 		    {
 			skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
 				 ptr->server->unique_name,
 				 ptr->server->name,ptr->server->port,
 				 mon_get_event_name(ptr));
-			if(handle->script)
+			if(handle->script && handle->events[evtype])
 			{
 			    monitor_launch_script(mon,ptr,handle->script);
 			}

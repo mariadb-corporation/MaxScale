@@ -120,46 +120,59 @@ static	void 	*
 startMonitor(void *arg,void* opt)
 {
     MONITOR* mon = arg;
-GALERA_MONITOR *handle = mon->handle;
-CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
-	if (handle != NULL)
-	{
-		handle->shutdown = 0;
-	}
-	else
-	{
-		if ((handle = (GALERA_MONITOR *)malloc(sizeof(GALERA_MONITOR))) == NULL)
-			return NULL;
-		handle->shutdown = 0;
-		handle->id = MONITOR_DEFAULT_ID;
-		handle->disableMasterFailback = 0;
-		handle->availableWhenDonor = 0;
-		handle->disableMasterRoleSetting = 0;
-		handle->master = NULL;
-		handle->script = NULL;
-		spinlock_init(&handle->lock);
-	}
+    GALERA_MONITOR *handle = mon->handle;
+    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
+    bool have_events = false;
+    if (handle != NULL)
+    {
+	handle->shutdown = 0;
+    }
+    else
+    {
+	if ((handle = (GALERA_MONITOR *)malloc(sizeof(GALERA_MONITOR))) == NULL)
+	    return NULL;
+	handle->shutdown = 0;
+	handle->id = MONITOR_DEFAULT_ID;
+	handle->disableMasterFailback = 0;
+	handle->availableWhenDonor = 0;
+	handle->disableMasterRoleSetting = 0;
+	handle->master = NULL;
+	handle->script = NULL;
+	memset(handle->events,false,sizeof(handle->events));
+	spinlock_init(&handle->lock);
+    }
 
 
-	while(params)
+    while(params)
+    {
+	if(!strcmp(params->name,"disable_master_failback"))
+	    handle->disableMasterFailback = config_truth_value(params->value);
+	else if(!strcmp(params->name,"available_when_donor"))
+	    handle->availableWhenDonor = config_truth_value(params->value);
+	else if(!strcmp(params->name,"disable_master_role_setting"))
+	    handle->disableMasterRoleSetting = config_truth_value(params->value);
+	else if(!strcmp(params->name,"script"))
 	{
-	    if(!strcmp(params->name,"disable_master_failback"))
-		handle->disableMasterFailback = config_truth_value(params->value);
-	    else if(!strcmp(params->name,"available_when_donor"))
-		handle->availableWhenDonor = config_truth_value(params->value);
-	    else if(!strcmp(params->name,"disable_master_role_setting"))
-		handle->disableMasterRoleSetting = config_truth_value(params->value);
-	    else if(!strcmp(params->name,"script"))
-	    {
-		if(handle->script)
-		    free(handle->script);
-		handle->script = strdup(params->value);
-	    }
-	    params = params->next;
+	    if(handle->script)
+		free(handle->script);
+	    handle->script = strdup(params->value);
 	}
+	else if(!strcmp(params->name,"events"))
+	{
+	    mon_parse_event_string(&handle->events,sizeof(handle->events),params->value);
+	    have_events = true;
+	}
+	params = params->next;
+    }
 
-	handle->tid = (THREAD)thread_start(monitorMain, mon);
-	return handle;
+    /** If no specific events are given, enable them all */
+    if(!have_events)
+    {
+	memset(handle->events,true,sizeof(handle->events));
+    }
+
+    handle->tid = (THREAD)thread_start(monitorMain, mon);
+    return handle;
 }
 
 /**
@@ -388,6 +401,7 @@ MONITOR_SERVERS		*candidate_master = NULL;
 int			master_stickiness = handle->disableMasterFailback;
 int			is_cluster=0;
 int			log_no_members = 1;
+monitor_event_t evtype;
 
 	if (mysql_thread_init())
 	{
@@ -554,14 +568,15 @@ int			log_no_members = 1;
 
 		while(ptr)
 		{
+
 		    /** Execute monitor script if a server state has changed */
-		    if(mon_status_changed(ptr) && mon_get_event_type(ptr) != UNDEFINED_MONITOR_EVENT)
+		    if(mon_status_changed(ptr) && (evtype = mon_get_event_type(ptr)) != UNDEFINED_MONITOR_EVENT)
 		    {
 			skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
 				 ptr->server->unique_name,
 				 ptr->server->name,ptr->server->port,
 				 mon_get_event_name(ptr));
-			if(handle->script)
+			if(handle->script && handle->events[evtype])
 			{
 			    monitor_launch_script(mon,ptr,handle->script);
 			}

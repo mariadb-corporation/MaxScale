@@ -18,6 +18,8 @@
 
 #include <monitor_common.h>
 
+monitor_event_t mon_name_to_event(char* tok);
+
 /**
  * Set a pending status bit in the monitor server
  *
@@ -312,3 +314,85 @@ void monitor_launch_script(MONITOR* mon,MONITOR_SERVERS* ptr, char* script)
     }
     externcmd_free(cmd);
 }
+
+/**
+ * Parse a string of event names to an array with enabled events.
+ * @param events Pointer to an array of boolean values
+ * @param count Size of the array
+ * @param string String to parse
+ * @return 0 on success. 1 when an error has occurred or an unexpected event was
+ * found.
+ */
+int mon_parse_event_string(bool* events, size_t count,char* string)
+{
+    char *tok,*saved;
+    monitor_event_t event;
+
+    tok = strtok_r(string,",| ",&saved);
+
+    if(tok == NULL)
+	return -1;
+
+    while(tok)
+    {
+	event = mon_name_to_event(tok);
+	if(event == UNDEFINED_MONITOR_EVENT)
+	    return -1;
+	events[event] = true;
+	tok = strtok_r(NULL,",| ",&saved);
+    }
+
+    return 0;
+}
+
+monitor_event_t mon_name_to_event(char* tok)
+{
+    if(!strcasecmp("master_down",tok))
+	return MASTER_DOWN_EVENT;
+    else if(!strcasecmp("master_up",tok))
+	return MASTER_UP_EVENT;
+    else if(!strcasecmp("slave_down",tok))
+	return SLAVE_DOWN_EVENT;
+    else if(!strcasecmp("slave_up",tok))
+	return SLAVE_UP_EVENT;
+    else if(!strcasecmp("server_down",tok))
+	return SERVER_DOWN_EVENT;
+    else if(!strcasecmp("server_up",tok))
+	return SERVER_UP_EVENT;
+    else if(!strcasecmp("synced_down",tok))
+	return SYNCED_DOWN_EVENT;
+    else if(!strcasecmp("synced_up",tok))
+	return SYNCED_UP_EVENT;
+    else if(!strcasecmp("donor_down",tok))
+	return DONOR_DOWN_EVENT;
+    else if(!strcasecmp("donor_up",tok))
+	return DONOR_UP_EVENT;
+    else if(!strcasecmp("ndb_down",tok))
+	return NDB_DOWN_EVENT;
+    else if(!strcasecmp("ndb_up",tok))
+	return NDB_UP_EVENT;
+    else if(!strcasecmp("lost_master",tok))
+	return LOST_MASTER_EVENT;
+    else if(!strcasecmp("lost_slave",tok))
+	return LOST_SLAVE_EVENT;
+    else if(!strcasecmp("lost_synced",tok))
+	return LOST_SYNCED_EVENT;
+    else if(!strcasecmp("lost_donor",tok))
+	return LOST_DONOR_EVENT;
+    else if(!strcasecmp("lost_ndb",tok))
+	return LOST_NDB_EVENT;
+    else if(!strcasecmp("new_master",tok))
+	return NEW_MASTER_EVENT;
+    else if(!strcasecmp("new_slave",tok))
+	return NEW_SLAVE_EVENT;
+    else if(!strcasecmp("new_synced",tok))
+	return NEW_SYNCED_EVENT;
+    else if(!strcasecmp("new_donor",tok))
+	return NEW_DONOR_EVENT;
+    else if(!strcasecmp("new_ndb",tok))
+	return NEW_NDB_EVENT;
+    else
+	return UNDEFINED_MONITOR_EVENT;
+
+    }
+
