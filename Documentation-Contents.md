@@ -45,6 +45,7 @@
 ## Routers
 
  - [Read Write Split](routers/ReadWriteSplit.md)
+ - [Read Connnection Router](routers/ReadConnRoute.md)
  - [Schemarouter](routers/SchemaRouter.md)
 
 ## Filters
