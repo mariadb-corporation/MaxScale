@@ -4,7 +4,7 @@ This document provides anoverview of the **readconnroute** router module and its
 
 ## Overview
 
-The readconnroute router provides simple and lightweight load balancing across a set of servers. The router can be configured to 
+The readconnroute router provides simple and lightweight load balancing across a set of servers. The router can also be configured to balance connections based on a weighting parameter defined in the server's section.
 
 ## Configuration
 
@@ -38,6 +38,36 @@ passwd=<password>
 ```
 
 ## Optional parameters
+
+The **`weightby`** parameter defines the name of the value which is used to calculate the weights of the servers. Here is an example server configuration with the `serv_weight` parameter used as the weighting parameter.
+
+```
+[server1]
+type=server
+address=127.0.0.1
+port=3000
+protocol=MySQLBackend
+serv_weight=3
+
+[server2]
+type=server
+address=127.0.0.1
+port=3001
+protocol=MySQLBackend
+serv_weight=1
+
+[Read Service]
+type=service
+router=readconnroute
+servers=server1,server2
+weightby=serv_weight
+```
+
+With this configuration and a heavy query load, the server *server1* will get most of the connections and about a third of the remaining queries are routed to the second server. With server weights, you can assing secondary servers that are only used when the primary server is under heavy load.
+
+Without the weightby parameter, each connection counts as a single connection. With a weighting parameter, a single connection received its weight from the server's own weighting parameter divided by the sum of all weighting parameters in all the configured servers.
+
+If we use the previous configuration as an example, the sum of the `serv_weight` parameter is 4. Server1 would receive a weight of `3/4=75%` and server2 would get `1/4=25%`. This means that server1 would get 75% of the connections and server2 would get 25% of the connections.
 
 **`router_options`** can contain a list of valid server roles. These roles are used as the valid types of servers the router will form connections to when new sessions are created.
 ```
