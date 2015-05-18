@@ -1,5 +1,5 @@
-#ifndef MON_EXEC_HG
-#define MON_EXEC_HG
+#ifndef _EXTERN_CMD_HG
+#define _EXTERN_CMD_HG
 
 #include <unistd.h>
 #include <string.h>

@@ -1,4 +1,4 @@
-#include <mon_exec.h>
+#include <externcmd.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;

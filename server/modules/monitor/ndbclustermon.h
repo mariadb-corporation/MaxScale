@@ -32,7 +32,7 @@
 #include <modinfo.h>
 #include <maxconfig.h>
 #include <monitor_common.h>
-#include <mon_exec.h>
+#include <externcmd.h>
 
 /**
  * @file ndbclustermon.h - The NDB Cluster monitor
