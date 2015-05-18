@@ -6,15 +6,6 @@ add_library(MySQLBackend SHARED mysql_backend.c mysql_common.c)
 target_link_libraries(MySQLBackend log_manager utils)
 install(TARGETS MySQLBackend DESTINATION modules)
 
-add_library(plainclient SHARED plainclient.c mysql_common.c)
-target_link_libraries(plainclient log_manager utils)
-install(TARGETS plainclient DESTINATION modules)
-
-add_library(plainbackend SHARED plainbackend.c mysql_common.c)
-target_link_libraries(plainbackend log_manager utils)
-install(TARGETS plainbackend DESTINATION modules)
-
-
 add_library(telnetd SHARED telnetd.c)
 target_link_libraries(telnetd log_manager utils)
 install(TARGETS telnetd DESTINATION modules)
