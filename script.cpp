@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     Test->print_env();
 
     printf("Creating script on Maxscale machine\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'echo \"echo $* >> /home/ec2-user/script_output\" > /home/ec2-user/script.sh'", maxscale_sshkey, maxscale_IP);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'echo \"echo $* >> /home/ec2-user/script_output\" > /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
 
     printf("Block master node\n"); fflush(stdout);
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     sleep(30);
 
     printf("Printf results\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'cat /home/ec2-user/script_output'", maxscale_sshkey, maxscale_IP);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'cat /home/ec2-user/script_output'", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
 
 
