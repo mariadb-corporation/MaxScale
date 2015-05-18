@@ -118,7 +118,7 @@ typedef struct server {
  */
 #define	SERVER_IS_RUNNING(server)	(((server)->status & (SERVER_RUNNING|SERVER_MAINT)) == SERVER_RUNNING)
 /**
- * Is the server marked as down - the macro returns true if the server is beleived
+ * Is the server marked as down - the macro returns true if the server is believed
  * to be inoperable.
  */
 #define	SERVER_IS_DOWN(server)		(((server)->status & SERVER_RUNNING) == 0)

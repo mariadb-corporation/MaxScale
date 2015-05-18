@@ -163,6 +163,7 @@ dcb_get_zombies(void)
  * This routine performs the generic initialisation on the DCB before returning
  * the newly allocated DCB.
  *
+ * @param dcb_role_t	The role for the new DCB
  * @return A newly allocated DCB or NULL if non could be allocated.
  */
 DCB *

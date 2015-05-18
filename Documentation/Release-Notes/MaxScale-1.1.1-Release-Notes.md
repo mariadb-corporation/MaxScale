@@ -56,7 +56,7 @@ There are a number bugs and known limitations within this version of MaxScale, t
 * Binlog Router Plugin is compatible with MySQL 5.6  
   Binlog Router Plugin currently does not work for MariaDB 5.5 and MariaDB 10.0 
 
-* LONGBLOG are currently not supported.
+* LONGBLOB are currently not supported.
 
 * Galera Cluster variables, such as @@wsrep_node_name, are not resolved by the embedded MariaDB parser.
 
@@ -78,13 +78,13 @@ Both RPM and Debian packages are available for MaxScale in addition to the tar b
 
 * Ubuntu 12.04 LTS
 
-* Ubuntu 13.10
-
 * Ubuntu 14.04 LTS
 
 * Fedora 19
 
 * Fedora 20
+
+* Fedora 21
 
 * OpenSuSE 13
 
