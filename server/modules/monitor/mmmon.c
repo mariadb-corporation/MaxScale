@@ -53,6 +53,7 @@ static	void	stopMonitor(void *);
 static	void	diagnostics(DCB *, void *);
 static	void	detectStaleMaster(void *, int);
 static MONITOR_SERVERS *get_current_master(MONITOR *);
+bool isMySQLEvent(monitor_event_t event);
 
 static MONITOR_OBJECT MyObject = {
 	startMonitor,
@@ -146,7 +147,7 @@ startMonitor(void *arg,void* opt)
 	}
 	else if(!strcmp(params->name,"events"))
 	{
-	    mon_parse_event_string(&handle->events,sizeof(handle->events),params->value);
+	    mon_parse_event_string((bool*)&handle->events,sizeof(handle->events),params->value);
 	    have_events = true;
 	}
 	params = params->next;
