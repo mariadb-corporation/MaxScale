@@ -22,7 +22,7 @@
 #include <mysql.h>
 #include <monitor.h>
 #include <log_manager.h>
-#include <mon_exec.h>
+#include <externcmd.h>
 /**
  * @file monitor_common.h - The generic monitor structures all monitors use
  *
