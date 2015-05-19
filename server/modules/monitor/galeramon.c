@@ -64,6 +64,7 @@ static	void	diagnostics(DCB *, void *);
 static	MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *);
 static	MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
 static	void	disableMasterFailback(void *, int);
+bool isGaleraEvent(monitor_event_t event);
 
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
@@ -570,15 +571,19 @@ monitor_event_t evtype;
 		{
 
 		    /** Execute monitor script if a server state has changed */
-		    if(mon_status_changed(ptr) && (evtype = mon_get_event_type(ptr)) != UNDEFINED_MONITOR_EVENT)
+		    if(mon_status_changed(ptr))
 		    {
-			skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
-				 ptr->server->unique_name,
-				 ptr->server->name,ptr->server->port,
-				 mon_get_event_name(ptr));
-			if(handle->script && handle->events[evtype])
+			evtype = mon_get_event_type(ptr);
+			if(isGaleraEvent(evtype))
 			{
-			    monitor_launch_script(mon,ptr,handle->script);
+			    skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
+				     ptr->server->unique_name,
+				     ptr->server->name,ptr->server->port,
+				     mon_get_event_name(ptr));
+			    if(handle->script && handle->events[evtype])
+			    {
+				monitor_launch_script(mon,ptr,handle->script);
+			    }
 			}
 		    }
 		    ptr = ptr->next;
@@ -686,4 +691,41 @@ availableWhenDonor(void *arg, int disable)
 {
 GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
         memcpy(&handle->availableWhenDonor, &disable, sizeof(int));
+}
+
+static monitor_event_t galera_events[] = {
+    MASTER_DOWN_EVENT,
+    MASTER_UP_EVENT,
+    SLAVE_DOWN_EVENT,
+    SLAVE_UP_EVENT,
+    SERVER_DOWN_EVENT,
+    SERVER_UP_EVENT,
+    SYNCED_DOWN_EVENT,
+    SYNCED_UP_EVENT,
+    DONOR_DOWN_EVENT,
+    DONOR_UP_EVENT,
+    LOST_MASTER_EVENT,
+    LOST_SLAVE_EVENT,
+    LOST_SYNCED_EVENT,
+    LOST_DONOR_EVENT,
+    NEW_MASTER_EVENT,
+    NEW_SLAVE_EVENT,
+    NEW_SYNCED_EVENT,
+    NEW_DONOR_EVENT,
+    MAX_MONITOR_EVENT
+};
+/**
+ * Check if the Galera monitor is monitoring this event type.
+ * @param event Event to check
+ * @return True if the event is monitored, false if it is not
+ * */
+bool isGaleraEvent(monitor_event_t event)
+{
+    int i;
+    for(i = 0;galera_events[i] != MAX_MONITOR_EVENT;i++)
+    {
+	if(event == galera_events[i])
+	    return true;
+    }
+    return false;
 }

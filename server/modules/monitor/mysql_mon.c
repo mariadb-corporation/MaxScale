@@ -80,7 +80,7 @@ static MONITOR_SERVERS *get_replication_tree(MONITOR *, int);
 static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
 static void set_slave_heartbeat(MONITOR *, MONITOR_SERVERS *);
 static int add_slave_to_master(long *, int, long);
-
+bool isMySQLEvent(monitor_event_t event);
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
 	stopMonitor, 
@@ -693,15 +693,19 @@ int log_no_master = 1;
 		while(ptr)
 		{
 		    /** Execute monitor script if a server state has changed */
-		    if(mon_status_changed(ptr) && (evtype = mon_get_event_type(ptr)) != UNDEFINED_MONITOR_EVENT)
+		    if(mon_status_changed(ptr))
 		    {
-			skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
-				 ptr->server->unique_name,
-				 ptr->server->name,ptr->server->port,
-				 mon_get_event_name(ptr));
-			if(handle->script && handle->events[evtype])
+			evtype = mon_get_event_type(ptr);
+			if(isMySQLEvent(evtype))
 			{
-			    monitor_launch_script(mon,ptr,handle->script);
+			    skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
+				     ptr->server->unique_name,
+				     ptr->server->name,ptr->server->port,
+				     mon_get_event_name(ptr));
+			    if(handle->script && handle->events[evtype])
+			    {
+				monitor_launch_script(mon,ptr,handle->script);
+			    }
 			}
 		    }
 		    ptr = ptr->next;
@@ -1192,4 +1196,33 @@ static int add_slave_to_master(long *slaves_list, int list_size, long node_id) {
                 }
         }
         return 0;
+}
+
+static monitor_event_t mysql_events[] = {
+  MASTER_DOWN_EVENT,
+  MASTER_UP_EVENT,
+  SLAVE_DOWN_EVENT,
+  SLAVE_UP_EVENT,
+  SERVER_DOWN_EVENT,
+  SERVER_UP_EVENT,
+  LOST_MASTER_EVENT,
+  LOST_SLAVE_EVENT,
+  NEW_MASTER_EVENT,
+  NEW_SLAVE_EVENT,
+  MAX_MONITOR_EVENT
+};
+/**
+ * Check if the MySQL monitor is monitoring this event type.
+ * @param event Event to check
+ * @return True if the event is monitored, false if it is not
+ * */
+bool isMySQLEvent(monitor_event_t event)
+{
+    int i;
+    for(i = 0;mysql_events[i] != MAX_MONITOR_EVENT;i++)
+    {
+	if(event == mysql_events[i])
+	    return true;
+    }
+    return false;
 }
