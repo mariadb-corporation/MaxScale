@@ -303,7 +303,11 @@ void monitor_launch_script(MONITOR* mon,MONITOR_SERVERS* ptr, char* script)
 	     ptr->server->unique_name);
 
     mon_append_node_names(mon->databases,argstr,PATH_MAX + MON_ARG_MAX + 1);
-    cmd = externcmd_allocate(argstr);
+    if((cmd = externcmd_allocate(argstr)) == NULL)
+    {
+	skygw_log_write(LE,"Failed to execute script: %s",script);
+	return;
+    }
 
     if(externcmd_execute(cmd))
     {

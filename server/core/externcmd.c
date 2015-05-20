@@ -97,6 +97,23 @@ EXTERNCMD* externcmd_allocate(char* argstr)
 	    free(cmd);
 	    return NULL;
 	}
+	if(access(cmd->parameters[0],F_OK) != 0)
+	{
+	    skygw_log_write(LE,
+		     "Error: Cannot find file: %s",
+		     cmd->parameters[0]);
+	    externcmd_free(cmd);
+	    return NULL;
+	}
+
+	if(access(cmd->parameters[0],X_OK) != 0)
+	{
+	    skygw_log_write(LE,
+		     "Error: Cannot execute file: %s",
+		     cmd->parameters[0]);
+	    externcmd_free(cmd);
+	    return NULL;
+	}
     }
     return cmd;
 }
@@ -138,7 +155,7 @@ int externcmd_execute(EXTERNCMD* cmd)
     {
         /** Child process, execute command */
         execvp(cmd->parameters[0],cmd->parameters);
-	exit(1);
+	_exit(1);
     }
     else
     {

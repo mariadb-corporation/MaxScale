@@ -142,8 +142,17 @@ startMonitor(void *arg,void* opt)
 	    {
 		free(handle->script);
 	    }
-
-	    handle->script = strdup(params->value);
+	    if(access(params->value,X_OK) == 0)
+	    {
+		handle->script = strdup(params->value);
+	    }
+	    else
+	    {
+		skygw_log_write(LE,
+			 "Error: The file cannot be executed: %s",
+			 params->value);
+		handle->script = NULL;
+	    }
 	}
 	else if(!strcmp(params->name,"events"))
 	{
