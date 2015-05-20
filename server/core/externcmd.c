@@ -138,6 +138,7 @@ int externcmd_execute(EXTERNCMD* cmd)
     {
         /** Child process, execute command */
         execvp(cmd->parameters[0],cmd->parameters);
+	exit(1);
     }
     else
     {
