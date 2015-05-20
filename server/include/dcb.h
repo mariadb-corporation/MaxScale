@@ -249,6 +249,7 @@ typedef struct dcb {
 	DCBSTATS	stats;		/**< DCB related statistics */
         unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
 	struct dcb	*next;		/**< Next DCB in the chain of allocated DCB's */
+        struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
 	struct service	*service;	/**< The related service */
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
@@ -261,7 +262,7 @@ typedef struct dcb {
 	SPINLOCK	polloutlock;
 	int		polloutbusy;
 	int		writecheck;
-        unsigned long          last_read;      /*< Last time the DCB received data */
+        unsigned long   last_read;      /*< Last time the DCB received data */
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
 	struct server	*server;	/**< The associated backend server */

@@ -632,7 +632,18 @@ DCB		*dcb;
 GWPROTOCOL	*funcs;
 int             fd;
 int             rc;
+char            *user;
 
+        user = session_getUser(session);
+        if (NULL != user && strlen(user))
+        {
+            dcb = server_get_persistent(server, user);
+            if (NULL != dcb)
+            {
+                return dcb;
+            }
+        }
+        
 	if ((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
 	{
 		return NULL;
@@ -1271,6 +1282,13 @@ dcb_close(DCB *dcb)
 	
 		if (rc == 0)
 		{
+                        spinlock_acquire(&dcb->server->persistlock);
+                        dcb->nextpersistent = dcb->server->persistent;
+                        dcb->server->persistent = dcb;
+                        spinlock_release(&dcb->server->persistlock);
+                        atomic_add(&dcb->server->stats.n_persistent, 1);
+                        return;
+                        
 			/**
 			 * close protocol and router session
 			 */

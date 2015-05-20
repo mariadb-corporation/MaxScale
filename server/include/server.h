@@ -66,6 +66,7 @@ typedef struct {
 	int		n_connections;	/**< Number of connections */
 	int		n_current;	/**< Current connections */
 	int             n_current_ops;  /**< Current active operations */
+	int             n_persistent;  /**< Current persistent pool */
 } SERVER_STATS;
 
 /**
@@ -94,6 +95,8 @@ typedef struct server {
 	int		depth;		/**< Replication level in the tree */
 	long		*slaves;	/**< Slaves of this node */
 	bool            master_err_is_logged; /*< If node failed, this indicates whether it is logged */
+        DCB             *persistent;    /**< List of unused persistent connections to the server */
+        SPINLOCK        *persistlock;   /**< Lock for adjusting the persistent connections list */
 } SERVER;
 
 /**
@@ -189,5 +192,6 @@ extern void	serverAddParameter(SERVER *, char *, char *);
 extern char	*serverGetParameter(SERVER *, char *);
 extern void	server_update(SERVER *, char *, char *, char *);
 extern void     server_set_unique_name(SERVER *, char *);
+extern DCB      *server_get_persistent(SERVER *, char *);
 extern RESULTSET	*serverGetList();
 #endif

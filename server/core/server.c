@@ -78,6 +78,8 @@ SERVER 	*server;
 	server->rlag = -2;
 	server->master_id = -1;
 	server->depth = -1;
+        server->persistent = NULL;
+        spinlock_init(server->persistlock);
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -126,6 +128,56 @@ SERVER *ptr;
 		free(server->server_string);
 	free(server);
 	return 1;
+}
+
+/**
+ * Get a DCB from the persistent connection pool, if possible
+ *
+ * @param	server	The server to set the name on
+ * @param	user	The name of the user needing the connection
+ */
+DCB *
+server_get_persistent(SERVER *server, char *user)
+{
+    DCB *dcb, *previous;
+    int rc;
+    
+    spinlock_acquire(server->persistlock);
+    dcb = server->persistent;
+    previous = NULL;
+    while (dcb) {
+        /* Test for expired, free and remove from list if it is */
+        if (0 == strcmp(dcb->user, user))
+        {
+            if (NULL == previous)
+            {
+                server->persistent = dcb->nextpersistent;
+            }
+            else
+            {
+                previous->nextpersistent = dcb->nextpersistent;
+            }
+            rc = poll_add_dcb(dcb);
+            if (rc == DCBFD_CLOSED) {
+                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb_free(dcb);
+            }
+            else
+            {
+                spinlock_release(server->persistlock);
+                atomic_add(&server->stats.n_persistent, -1);
+                return dcb;
+            }
+        }
+        previous = dcb;
+        dcb = dcb->nextpersistent;
+    }
+    if (NULL != server->persistent)
+    {
+        /* Change user, remove DCB from list, release spinlock, return dcb */
+    }
+    spinlock_release(server->persistlock);
+    return NULL;
 }
 
 /**
