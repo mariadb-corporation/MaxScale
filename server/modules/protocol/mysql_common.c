@@ -287,7 +287,7 @@ int gw_read_backend_handshake(
                                         pthread_self(),
                                         conn->owner_dcb->fd,
                                         pthread_self())));
-                                while(head = gwbuf_consume(head, GWBUF_LENGTH(head)));
+                                while((head = gwbuf_consume(head, GWBUF_LENGTH(head))));
 				return 1;
 			}
 
