@@ -74,10 +74,10 @@ int main(int argc, char *argv[])
     printf("Comparing results\n"); fflush(stdout);
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'diff /home/ec2-user/script_output /home/ec2-user/script_output_expected'", Test->maxscale_sshkey, Test->maxscale_IP);
     if (system(str) != 0) {
-        printf("FAIL! Wrong script output!");
+        printf("FAIL! Wrong script output!\n");
         global_result++;
     } else {
-        printf("Script output is OK!");
+        printf("Script output is OK!\n");
     }
 
     printf("Making script non-executable\n"); fflush(stdout);
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     printf("Unblock node1\n"); fflush(stdout);
     Test->repl->unblock_node(1);
 
-    global_result += check_log_err((char *) "Error: The file cannot be executed: /home/ec2-user/script.sh", true);
+    global_result += check_log_err((char *) "Error: Cannot execute file: /home/ec2-user/script.sh", true);
 
     printf("checking if Maxscale is alive\n"); fflush(stdout);
     global_result += check_maxscale_alive();
