@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     Test->print_env();
 
     printf("Creating script on Maxscale machine\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'rm /home/ec2-user/script_output", Test->maxscale_sshkey, Test->maxscale_IP);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'rm /home/ec2-user/script_output'", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'echo \"echo \\$* >> /home/ec2-user/script_output\" > /home/ec2-user/script.sh; chmod a+x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
@@ -74,8 +74,10 @@ int main(int argc, char *argv[])
     printf("Comparing results\n"); fflush(stdout);
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'diff /home/ec2-user/script_output /home/ec2-user/script_output_expected'", Test->maxscale_sshkey, Test->maxscale_IP);
     if (system(str) != 0) {
-        printf("Wrong script output!");
-        global_result;
+        printf("FAIL! Wrong script output!");
+        global_result++;
+    } else {
+        printf("Script output is OK!");
     }
 
     printf("Making script non-executable\n"); fflush(stdout);
