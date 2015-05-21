@@ -156,21 +156,31 @@ startMonitor(void *arg,void* opt)
 	{
 	    if(handle->script)
 		free(handle->script);
+
 	    if(access(params->value,X_OK) == 0)
 	    {
 		handle->script = strdup(params->value);
 	    }
 	    else
 	    {
+		if(access(params->value,F_OK) == 0)
+		{
 		skygw_log_write(LE,
 			 "Error: The file cannot be executed: %s",
 			 params->value);
+		}
+		else
+		{
+		skygw_log_write(LE,
+			 "Error: The file cannot be found: %s",
+			 params->value);
+		}
 		handle->script = NULL;
 	    }
 	}
 	else if(!strcmp(params->name,"events"))
 	{
-	    mon_parse_event_string(&handle->events,sizeof(handle->events),params->value);
+	    mon_parse_event_string((bool*)&handle->events,sizeof(handle->events),params->value);
 	    have_events = true;
 	}
 	params = params->next;
