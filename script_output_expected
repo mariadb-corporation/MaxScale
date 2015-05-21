@@ -1,7 +1,3 @@
---event=new_master --initiator=server1 --nodelist=server1,server2,server3,server4
---event=new_slave --initiator=server2 --nodelist=server1,server2,server3,server4
---event=new_slave --initiator=server3 --nodelist=server1,server2,server3,server4
---event=new_slave --initiator=server4 --nodelist=server1,server2,server3,server4
 --event=master_down --initiator=server1 --nodelist=server1,server2,server3,server4
 --event=master_up --initiator=server1 --nodelist=server1,server2,server3,server4
 --event=slave_up --initiator=server2 --nodelist=server1,server2,server3,server4
