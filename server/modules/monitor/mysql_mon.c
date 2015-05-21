@@ -46,24 +46,13 @@
  * 10/11/14	Massimiliano Pinto	Addition of setNetworkTimeout for connect, read, write
  * 18/11/14	Massimiliano Pinto	One server only in configuration becomes master.
  *					servers=server1 must be present in mysql_mon and in router sections as well.
+ * 08/05/15     Markus Makela           Added launchable scripts
  *
  * @endverbatim
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <monitor.h>
+
 #include <mysqlmon.h>
-#include <thread.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <dcb.h>
-#include <modinfo.h>
-#include <maxconfig.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -83,33 +72,19 @@ MODULE_INFO	info = {
 
 static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
-static	void	registerServer(void *, SERVER *);
-static	void	unregisterServer(void *, SERVER *);
-static	void	defaultUser(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
-static  void    setInterval(void *, size_t);
 static  void    defaultId(void *, unsigned long);
-static	void	setNetworkTimeout(void *, int, int);
-static  bool    mon_status_changed(MONITOR_SERVERS* mon_srv);
-static  bool    mon_print_fail_status(MONITOR_SERVERS* mon_srv);
 static	MONITOR_SERVERS   *getServerByNodeId(MONITOR_SERVERS *, long);
 static	MONITOR_SERVERS   *getSlaveOfNodeId(MONITOR_SERVERS *, long);
-static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *, int);
+static MONITOR_SERVERS *get_replication_tree(MONITOR *, int);
 static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
-static void set_slave_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
+static void set_slave_heartbeat(MONITOR *, MONITOR_SERVERS *);
 static int add_slave_to_master(long *, int, long);
-static void monitor_set_pending_status(MONITOR_SERVERS *, int);
-static void monitor_clear_pending_status(MONITOR_SERVERS *, int);
-
+bool isMySQLEvent(monitor_event_t event);
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
 	stopMonitor, 
-	registerServer, 
-	unregisterServer, 
-	defaultUser, 
-	diagnostics, 
-	setInterval, 
-	setNetworkTimeout
+	diagnostics
 };
 
 /**
@@ -156,48 +131,80 @@ GetModuleObject()
  * This function creates a thread to execute the actual monitoring.
  *
  * @param arg	The current handle - NULL if first start
+ * @param opt	Configuration parameters
  * @return A handle to use when interacting with the monitor
  */
 static	void 	*
 startMonitor(void *arg, void* opt)
 {
-MYSQL_MONITOR *handle;
-CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
-        if (arg)
-        {
-            handle = arg;	/* Must be a restart */
-            handle->shutdown = 0;
-        }
-        else
-        {
-            if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
-                return NULL;
-            handle->databases = NULL;
-            handle->shutdown = 0;
-            handle->defaultUser = NULL;
-            handle->defaultPasswd = NULL;
-            handle->id = config_get_gateway_id();
-            handle->interval = MONITOR_INTERVAL;
-            handle->replicationHeartbeat = 0;
-            handle->detectStaleMaster = 0;
-            handle->master = NULL;
-            handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
-            handle->read_timeout=DEFAULT_READ_TIMEOUT;
-            handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
-            spinlock_init(&handle->lock);
-        }
+    MONITOR* monitor = (MONITOR*)arg;
+    MYSQL_MONITOR *handle = (MYSQL_MONITOR*)monitor->handle;
+    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
+    bool have_events = false;
 
-	while(params)
+    if (handle)
+    {
+	handle->shutdown = 0;
+    }
+    else
+    {
+	if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
+	    return NULL;
+	handle->shutdown = 0;
+	handle->id = config_get_gateway_id();
+	handle->replicationHeartbeat = 0;
+	handle->detectStaleMaster = 0;
+	handle->master = NULL;
+	handle->script = NULL;
+	memset(handle->events,false,sizeof(handle->events));
+	spinlock_init(&handle->lock);
+    }
+
+    while(params)
+    {
+	if(!strcmp(params->name,"detect_stale_master"))
+	    handle->detectStaleMaster = config_truth_value(params->value);
+	else if(!strcmp(params->name,"detect_replication_lag"))
+	    handle->replicationHeartbeat = config_truth_value(params->value);
+	else if(!strcmp(params->name,"script"))
 	{
-	    if(!strcmp(params->name,"detect_stale_master"))
-		handle->detectStaleMaster = config_truth_value(params->value);
-	    else if(!strcmp(params->name,"detect_replication_lag"))
-		handle->replicationHeartbeat = config_truth_value(params->value);
-	    params = params->next;
+	    if(handle->script)
+		free(handle->script);
+	    if(access(params->value,X_OK) == 0)
+	    {
+		handle->script = strdup(params->value);
+	    }
+	    else
+	    {
+		if(access(params->value,F_OK) == 0)
+		{
+		skygw_log_write(LE,
+			 "Error: The file cannot be executed: %s",
+			 params->value);
+		}
+		else
+		{
+		skygw_log_write(LE,
+			 "Error: The file cannot be found: %s",
+			 params->value);
+		}
+		handle->script = NULL;
+	    }
 	}
-
-        handle->tid = (THREAD)thread_start(monitorMain, handle);
-        return handle;
+	else if(!strcmp(params->name,"events"))
+	{
+	    mon_parse_event_string(handle->events,sizeof(handle->events),params->value);
+	    have_events = true;
+	}
+	params = params->next;
+    }
+    /** If no specific events are given, enable them all */
+    if(!have_events)
+    {
+	memset(handle->events,true,sizeof(handle->events));
+    }
+    handle->tid = (THREAD)thread_start(monitorMain, monitor);
+    return handle;
 }
 
 /**
@@ -208,107 +215,11 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 static	void	
 stopMonitor(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+    MONITOR* mon = (MONITOR*)arg;
+    MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
 
-        handle->shutdown = 1;
-        thread_wait((void *)handle->tid);
-}
-
-/**
- * Register a server that must be added to the monitored servers for
- * a monitoring module.
- *
- * @param arg	A handle on the running monitor module
- * @param server	The server to add
- */
-static	void	
-registerServer(void *arg, SERVER *server)
-{
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*ptr, *db;
-
-	if ((db = (MONITOR_SERVERS *)malloc(sizeof(MONITOR_SERVERS))) == NULL)
-		return;
-	db->server = server;
-	db->con = NULL;
-	db->next = NULL;
-        db->mon_err_count = 0;
-        db->mon_prev_status = 0;
-	/* pending status is updated by get_replication_tree */
-	db->pending_status = 0;
-
-	spinlock_acquire(&handle->lock);
-        
-	if (handle->databases == NULL)
-		handle->databases = db;
-	else
-	{
-		ptr = handle->databases;
-		while (ptr->next != NULL)
-			ptr = ptr->next;
-		ptr->next = db;
-	}
-	spinlock_release(&handle->lock);
-}
-
-/**
- * Remove a server from those being monitored by a monitoring module
- *
- * @param arg	A handle on the running monitor module
- * @param server	The server to remove
- */
-static	void	
-unregisterServer(void *arg, SERVER *server)
-{
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*ptr, *lptr;
-
-	spinlock_acquire(&handle->lock);
-	if (handle->databases == NULL)
-	{
-		spinlock_release(&handle->lock);
-		return;
-	}
-	if (handle->databases->server == server)
-	{
-		ptr = handle->databases;
-		handle->databases = handle->databases->next;
-		free(ptr);
-	}
-	else
-	{
-		ptr = handle->databases;
-		while (ptr->next != NULL && ptr->next->server != server)
-			ptr = ptr->next;
-		if (ptr->next)
-		{
-			lptr = ptr->next;
-			ptr->next = ptr->next->next;
-			free(lptr);
-		}
-	}
-	spinlock_release(&handle->lock);
-}
-
-/**
- * Set the default username and password to use to monitor if the server does not
- * override this.
- *
- * @param arg		The handle allocated by startMonitor
- * @param uname		The default user name
- * @param passwd	The default password
- */
-static void
-defaultUser(void *arg, char *uname, char *passwd)
-{
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-
-	if (handle->defaultUser)
-		free(handle->defaultUser);
-	if (handle->defaultPasswd)
-		free(handle->defaultPasswd);
-	handle->defaultUser = strdup(uname);
-	handle->defaultPasswd = strdup(passwd);
+    handle->shutdown = 1;
+    thread_wait((void *)handle->tid);
 }
 
 /**
@@ -319,45 +230,46 @@ MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
  */
 static void diagnostics(DCB *dcb, void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*db;
-char		*sep;
+    MONITOR* mon = (MONITOR*)arg;
+    MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
+    MONITOR_SERVERS	*db;
+    char		*sep;
 
-	switch (handle->status)
-	{
-	case MONITOR_RUNNING:
-		dcb_printf(dcb, "\tMonitor running\n");
-		break;
-	case MONITOR_STOPPING:
-		dcb_printf(dcb, "\tMonitor stopping\n");
-		break;
-	case MONITOR_STOPPED:
-		dcb_printf(dcb, "\tMonitor stopped\n");
-		break;
-	}
+    switch (handle->status)
+    {
+    case MONITOR_RUNNING:
+	dcb_printf(dcb, "\tMonitor running\n");
+	break;
+    case MONITOR_STOPPING:
+	dcb_printf(dcb, "\tMonitor stopping\n");
+	break;
+    case MONITOR_STOPPED:
+	dcb_printf(dcb, "\tMonitor stopped\n");
+	break;
+    }
 
-	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
-	dcb_printf(dcb,"\tMaxScale MonitorId:\t%lu\n", handle->id);
-	dcb_printf(dcb,"\tReplication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
-	dcb_printf(dcb,"\tDetect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
-	dcb_printf(dcb,"\tConnect Timeout:\t%i seconds\n", handle->connect_timeout);
-	dcb_printf(dcb,"\tRead Timeout:\t\t%i seconds\n", handle->read_timeout);
-	dcb_printf(dcb,"\tWrite Timeout:\t\t%i seconds\n", handle->write_timeout);
-	dcb_printf(dcb, "\tMonitored servers:	");
-
-	db = handle->databases;
-	sep = "";
-	while (db)
-	{
-		dcb_printf(dcb,
-                           "%s%s:%d",
-                           sep,
-                           db->server->name,
-                           db->server->port);
-		sep = ", ";
-		db = db->next;
-	}
-	dcb_printf(dcb, "\n");
+    dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", mon->interval);
+    dcb_printf(dcb,"\tMaxScale MonitorId:\t%lu\n", handle->id);
+    dcb_printf(dcb,"\tReplication lag:\t%s\n", (handle->replicationHeartbeat == 1) ? "enabled" : "disabled");
+    dcb_printf(dcb,"\tDetect Stale Master:\t%s\n", (handle->detectStaleMaster == 1) ? "enabled" : "disabled");
+    dcb_printf(dcb,"\tConnect Timeout:\t%i seconds\n", mon->connect_timeout);
+    dcb_printf(dcb,"\tRead Timeout:\t\t%i seconds\n", mon->read_timeout);
+    dcb_printf(dcb,"\tWrite Timeout:\t\t%i seconds\n", mon->write_timeout);
+    dcb_printf(dcb, "\tMonitored servers:	");
+    
+    db = mon->databases;
+    sep = "";
+    while (db)
+    {
+	dcb_printf(dcb,
+		 "%s%s:%d",
+		 sep,
+		 db->server->name,
+		 db->server->port);
+	sep = ", ";
+	db = db->next;
+    }
+    dcb_printf(dcb, "\n");
 }
 
 /**
@@ -367,14 +279,14 @@ char		*sep;
  * @param database	The database to probe
  */
 static void
-monitorDatabase(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
+monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 {
+    MYSQL_MONITOR* handle = mon->handle;
 MYSQL_ROW	  row;
 MYSQL_RES	  *result;
-int		  num_fields;
 int               isslave = 0;
-char		  *uname  = handle->defaultUser; 
-char              *passwd = handle->defaultPasswd;
+char		  *uname  = mon->user;
+char              *passwd = mon->password;
 unsigned long int server_version = 0;
 char 		  *server_string;
 
@@ -397,17 +309,15 @@ char 		  *server_string;
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
-                int  rc;
-                int  connect_timeout = handle->connect_timeout;
-                int  read_timeout = handle->read_timeout;
-                int  write_timeout = handle->write_timeout;
-		if(database->con)
-		    mysql_close(database->con);
+                int  connect_timeout = mon->connect_timeout;
+                int  read_timeout = mon->read_timeout;
+                int  write_timeout = mon->write_timeout;
+
                 database->con = mysql_init(NULL);
 
-                rc = mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
-                rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
-                rc = mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
+                mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
+                mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+                mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
                 
 		if (mysql_real_connect(database->con,
                                        database->server->name,
@@ -486,7 +396,6 @@ char 		  *server_string;
                 && (result = mysql_store_result(database->con)) != NULL)
         {
                 long server_id = -1;
-                num_fields = mysql_num_fields(result);
                 while ((row = mysql_fetch_row(result)))
                 {
                         server_id = strtol(row[0], NULL, 10);
@@ -512,7 +421,6 @@ char 		  *server_string;
 		{
 			int i = 0;
 			long master_id = -1;
-			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
 			{
 				/* get Slave_IO_Running and Slave_SQL_Running values*/
@@ -551,7 +459,6 @@ char 		  *server_string;
 			&& (result = mysql_store_result(database->con)) != NULL)
 		{
 			long master_id = -1;
-			num_fields = mysql_num_fields(result);
 			while ((row = mysql_fetch_row(result)))
 			{
 				/* get Slave_IO_Running and Slave_SQL_Running values*/
@@ -608,14 +515,21 @@ char 		  *server_string;
 static void
 monitorMain(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+    MONITOR* mon = (MONITOR*) arg;
+MYSQL_MONITOR	*handle;
 MONITOR_SERVERS	*ptr;
-int replication_heartbeat = handle->replicationHeartbeat;
-int detect_stale_master = handle->detectStaleMaster;
+int replication_heartbeat;
+int detect_stale_master;
 int num_servers=0;
 MONITOR_SERVERS *root_master = NULL;
 size_t nrounds = 0;
 int log_no_master = 1;
+
+spinlock_acquire(&mon->lock);
+handle = (MYSQL_MONITOR *)mon->handle;
+spinlock_release(&mon->lock);
+replication_heartbeat = handle->replicationHeartbeat;
+detect_stale_master = handle->detectStaleMaster;
 
 	if (mysql_thread_init())
 	{
@@ -645,7 +559,7 @@ int log_no_master = 1;
 		 * round.
 		 */
 		if (nrounds != 0 && 
-			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) >= 
+			((nrounds*MON_BASE_INTERVAL_MS)%mon->interval) >=
 			MON_BASE_INTERVAL_MS) 
 		{
 			nrounds += 1;
@@ -656,15 +570,17 @@ int log_no_master = 1;
 		num_servers = 0;
 
 		/* start from the first server in the list */
-		ptr = handle->databases;
+		ptr = mon->databases;
 
 		while (ptr)
 		{
+			ptr->mon_prev_status = ptr->server->status;
+
 			/* copy server status into monitor pending_status */
 			ptr->pending_status = ptr->server->status;
 
 			/* monitor current node */
-			monitorDatabase(handle, ptr);
+			monitorDatabase(mon, ptr);
 
 			/* reset the slave list of current node */
 			if (ptr->server->slaves) {
@@ -697,7 +613,12 @@ int log_no_master = 1;
 					!(SERVER_IS_IN_CLUSTER(ptr->server)))
 				{
 					dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
-				}				
+
+				}		
+
+
+                
+
                         }
                         
                         if (mon_status_changed(ptr))
@@ -733,7 +654,7 @@ int log_no_master = 1;
 			ptr = ptr->next;
 		}
 	
-		ptr = handle->databases;
+		ptr = mon->databases;
 		/* if only one server is configured, that's is Master */
 		if (num_servers == 1) {
 			if (SERVER_IS_RUNNING(ptr->server)) {
@@ -750,12 +671,12 @@ int log_no_master = 1;
 			}
 		} else {
 			/* Compute the replication tree */
-			root_master = get_replication_tree(handle, num_servers);
+			root_master = get_replication_tree(mon, num_servers);
 		}
 
 		/* Update server status from monitor pending status on that server*/
 
-                ptr = handle->databases;
+                ptr = mon->databases;
 		while (ptr)
 		{
 			if (! SERVER_IN_MAINT(ptr->server)) {
@@ -792,7 +713,30 @@ int log_no_master = 1;
 			ptr = ptr->next;
 		}
 
-		/* log master detection failure od first master becomes available after failure */
+		ptr = mon->databases;
+		monitor_event_t evtype;
+		while(ptr)
+		{
+		    /** Execute monitor script if a server state has changed */
+		    if(mon_status_changed(ptr))
+		    {
+			evtype = mon_get_event_type(ptr);
+			if(isMySQLEvent(evtype))
+			{
+			    skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
+				     ptr->server->unique_name,
+				     ptr->server->name,ptr->server->port,
+				     mon_get_event_name(ptr));
+			    if(handle->script && handle->events[evtype])
+			    {
+				monitor_launch_script(mon,ptr,handle->script);
+			    }
+			}
+		    }
+		    ptr = ptr->next;
+		}
+
+		/* log master detection failure of first master becomes available after failure */
 		if (root_master && 
 			mon_status_changed(root_master) && 
 			!(root_master->server->status & SERVER_STALE_STATUS)) 
@@ -832,7 +776,7 @@ int log_no_master = 1;
 				SERVER_IS_RELAY_SERVER(root_master->server))) 
 		{
 			set_master_heartbeat(handle, root_master);
-			ptr = handle->databases;
+			ptr = mon->databases;
 			
 			while (ptr) {
 				if( (! SERVER_IN_MAINT(ptr->server)) && SERVER_IS_RUNNING(ptr->server))
@@ -841,7 +785,7 @@ int log_no_master = 1;
 						(SERVER_IS_SLAVE(ptr->server) || 
 							SERVER_IS_RELAY_SERVER(ptr->server))) 
 					{
-						set_slave_heartbeat(handle, ptr);
+						set_slave_heartbeat(mon, ptr);
 					}
 				}
 				ptr = ptr->next;
@@ -862,19 +806,6 @@ defaultId(void *arg, unsigned long id)
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->id, &id, sizeof(unsigned long));
                         }
-
-/**
- * Set the monitor sampling interval.
- *
- * @param arg           The handle allocated by startMonitor
- * @param interval      The interval to set in monitor struct, in milliseconds
- */
-static void
-setInterval(void *arg, size_t interval)
-{
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
-	memcpy(&handle->interval, &interval, sizeof(unsigned long));
-}
 
 /**
  * Enable/Disable the MySQL Replication hearbeat, detecting slave lag behind master.
@@ -902,54 +833,6 @@ detectStaleMaster(void *arg, int enable)
 {
 MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
 	memcpy(&handle->detectStaleMaster, &enable, sizeof(int));
-}
-
-/**
- * Check if current monitored server status has changed
- *
- * @param mon_srv       The monitored server
- * @return              true if status has changed or false
- */
-static bool mon_status_changed(
-        MONITOR_SERVERS* mon_srv)
-{
-        bool succp;
-        
-        if (mon_srv->mon_prev_status != mon_srv->server->status)
-        {
-                succp = true;
-        }
-        else
-        {
-                succp = false;
-        }
-        return succp;
-}
-
-/**
- * Check if current monitored server has a loggable failure status
- *
- * @param mon_srv       The monitored server
- * @return              true if failed status can be logged or false
- */
-static bool mon_print_fail_status(
-        MONITOR_SERVERS* mon_srv)
-{
-        bool succp;
-        int errcount = mon_srv->mon_err_count;
-        uint8_t modval;
-        
-        modval = 1<<(MIN(errcount/10, 7));
-
-        if (SERVER_IS_DOWN(mon_srv->server) && errcount == 0)
-        {
-                succp = true;
-        }
-        else
-        {
-                succp = false;
-        }
-        return succp;
 }
 
 /**
@@ -1113,13 +996,13 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
  * @param handle   	The monitor handle
  * @param database   	The number database server
  */
-static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database) {
+static void set_slave_heartbeat(MONITOR* mon, MONITOR_SERVERS *database) {
+    MYSQL_MONITOR *handle = (MYSQL_MONITOR*)mon->handle;
 	unsigned long id = handle->id;
 	time_t heartbeat;
 	char select_heartbeat_query[256] = "";
 	MYSQL_ROW row;
 	MYSQL_RES *result;
-	int  num_fields;
 
 	if (handle->master == NULL) {
 		LOGIF(LE, (skygw_log_write_flush(
@@ -1139,7 +1022,6 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 	if (handle->master !=NULL && (mysql_query(database->con, select_heartbeat_query) == 0
 		&& (result = mysql_store_result(database->con)) != NULL)) {
 		int rows_found = 0;
-		num_fields = mysql_num_fields(result);
 
 		while ((row = mysql_fetch_row(result))) {
 			int rlag = -1;
@@ -1164,7 +1046,7 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
 
 			if (rlag >= 0) {
 				/* store rlag only if greater than monitor sampling interval */
-				database->server->rlag = (rlag > (handle->interval / 1000)) ? rlag : 0;
+				database->server->rlag = (rlag > (mon->interval / 1000)) ? rlag : 0;
 			} else {
 				database->server->rlag = -1;
 			}
@@ -1218,7 +1100,8 @@ static void set_slave_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *database
  * @return		The server at root level with SERVER_MASTER bit
  */
 
-static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_servers) {
+static MONITOR_SERVERS *get_replication_tree(MONITOR *mon, int num_servers) {
+	MYSQL_MONITOR* handle = (MYSQL_MONITOR*)mon->handle;
 	MONITOR_SERVERS *ptr;
 	MONITOR_SERVERS *backend;
 	SERVER *current;
@@ -1226,7 +1109,7 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 	long node_id;
 	int root_level;
 
-	ptr = handle->databases;
+	ptr = mon->databases;
 	root_level = num_servers;
 
 	while (ptr)
@@ -1245,7 +1128,7 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 		node_id = current->master_id;
 		if (node_id < 1) {
 			MONITOR_SERVERS *find_slave;
-			find_slave = getSlaveOfNodeId(handle->databases, current->node_id);
+			find_slave = getSlaveOfNodeId(mon->databases, current->node_id);
 
 			if (find_slave == NULL) {
 				current->depth = -1;
@@ -1265,7 +1148,7 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 				root_level = current->depth;
 				handle->master = ptr;
 			}
-			backend = getServerByNodeId(handle->databases, node_id);
+			backend = getServerByNodeId(mon->databases, node_id);
 
 			if (backend) {
 				node_id = backend->server->master_id;
@@ -1281,7 +1164,7 @@ static MONITOR_SERVERS *get_replication_tree(MYSQL_MONITOR *handle, int num_serv
 				MONITOR_SERVERS *master;
 				current->depth = depth;
 
-				master = getServerByNodeId(handle->databases, current->master_id);
+				master = getServerByNodeId(mon->databases, current->master_id);
 				if (master && master->server && master->server->node_id > 0) {
 					add_slave_to_master(master->server->slaves, MONITOR_MAX_NUM_SLAVES, current->node_id);
 					master->server->depth = current->depth -1;
@@ -1340,88 +1223,31 @@ static int add_slave_to_master(long *slaves_list, int list_size, long node_id) {
         return 0;
 }
 
+static monitor_event_t mysql_events[] = {
+  MASTER_DOWN_EVENT,
+  MASTER_UP_EVENT,
+  SLAVE_DOWN_EVENT,
+  SLAVE_UP_EVENT,
+  SERVER_DOWN_EVENT,
+  SERVER_UP_EVENT,
+  LOST_MASTER_EVENT,
+  LOST_SLAVE_EVENT,
+  NEW_MASTER_EVENT,
+  NEW_SLAVE_EVENT,
+  MAX_MONITOR_EVENT
+};
 /**
- * Set a pending status bit in the monior server
- *
- * @param server        The server to update
- * @param bit           The bit to clear for the server
- */
-static void
-monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit)
+ * Check if the MySQL monitor is monitoring this event type.
+ * @param event Event to check
+ * @return True if the event is monitored, false if it is not
+ * */
+bool isMySQLEvent(monitor_event_t event)
 {
-	ptr->pending_status |= bit;
+    int i;
+    for(i = 0;mysql_events[i] != MAX_MONITOR_EVENT;i++)
+    {
+	if(event == mysql_events[i])
+	    return true;
+    }
+    return false;
 }
-
-/**
- * Clear a pending status bit in the monior server
- *
- * @param server        The server to update
- * @param bit           The bit to clear for the server
- */
-static void
-monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
-{
-	ptr->pending_status &= ~bit;
-}
-
-/**
- * Set the default id to use in the monitor.
- *
- * @param arg		The handle allocated by startMonitor
- * @param type		The connect timeout type
- * @param value		The timeout value to set
- */
-static void
-setNetworkTimeout(void *arg, int type, int value)
-{
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
-int max_timeout = (int)(handle->interval/1000);
-int new_timeout = max_timeout -1;
-
-	if (new_timeout <= 0)
-		new_timeout = DEFAULT_CONNECT_TIMEOUT;
-
-	switch(type) {
-		case MONITOR_CONNECT_TIMEOUT:
-			if (value < max_timeout) {
-				memcpy(&handle->connect_timeout, &value, sizeof(int));
-			} else {
-				memcpy(&handle->connect_timeout, &new_timeout, sizeof(int));
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"warning : Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
-					", lowering to %i seconds", value, max_timeout, new_timeout)));
-			}
-			break;
-
-		case MONITOR_READ_TIMEOUT:
-			if (value < max_timeout) {
-				memcpy(&handle->read_timeout, &value, sizeof(int));
-			} else {
-				memcpy(&handle->read_timeout, &new_timeout, sizeof(int));
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"warning : Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
-					", lowering to %i seconds", value, max_timeout, new_timeout)));
-			}
-			break;
-
-		case MONITOR_WRITE_TIMEOUT:
-			if (value < max_timeout) {
-				memcpy(&handle->write_timeout, &value, sizeof(int));
-			} else {
-				memcpy(&handle->write_timeout, &new_timeout, sizeof(int));
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"warning : Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
-					", lowering to %i seconds", value, max_timeout, new_timeout)));
-			}
-			break;
-		default:
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Monitor setNetworkTimeout received an unsupported action type %i", type)));
-			break;
-	}
-}
-
