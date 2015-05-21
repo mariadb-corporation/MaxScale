@@ -30,7 +30,7 @@ servers= server1, server2,server3  ,server4
 user=skysql
 passwd= skysql
 script=/home/ec2-user/script.sh
-events=master_down,master_up, slave_down,   slave_up  ,server_down,server_up,lost_master,lost_slave,new_master,new_slave
+events=master_down,master_up, slave_down,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave
 
 # A series of service definition
 #

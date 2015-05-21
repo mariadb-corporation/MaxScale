@@ -1,5 +1,21 @@
 /**
  * @file script.cpp - test for running external script feature (MXS-121)
+ * - setup Maxscale to execute script on folowing events: master_down,master_up, slave_down,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave
+ * - block master, unblock master, block node1, unblock node1
+ * - expect following as a script output:
+ * @verbatim
+--event=new_master --initiator=server1 --nodelist=server1,server2,server3,server4
+--event=new_slave --initiator=server2 --nodelist=server1,server2,server3,server4
+--event=new_slave --initiator=server3 --nodelist=server1,server2,server3,server4
+--event=new_slave --initiator=server4 --nodelist=server1,server2,server3,server4
+--event=master_down --initiator=server1 --nodelist=server1,server2,server3,server4
+--event=master_up --initiator=server1 --nodelist=server1,server2,server3,server4
+--event=slave_down --initiator=server2 --nodelist=server1,server2,server3,server4
+@endverbatim
+ * - make script non-executable
+ * - block and unblocm node1
+ * - check error log for 'Error: The file cannot be executed: /home/ec2-user/script.sh' error
+ * - check if Maxscale still alive
  */
 
 
@@ -18,7 +34,7 @@ int main(int argc, char *argv[])
     Test->print_env();
 
     printf("Creating script on Maxscale machine\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'echo \"echo \\$* >> /home/ec2-user/script_output\" > /home/ec2-user/script.sh; chmod a+x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->maxscale_IP);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s '; rm /home/ec2-user/script_output; echo \"echo \\$* >> /home/ec2-user/script_output\" > /home/ec2-user/script.sh; chmod a+x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
 
     printf("Block master node\n"); fflush(stdout);
@@ -49,6 +65,36 @@ int main(int argc, char *argv[])
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'cat /home/ec2-user/script_output'", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
 
+    printf("Copying expected script output to Maxscale machine\n"); fflush(stdout);
+    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s/script_output_expected root@%s:/home/ec2-user/", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
+    system(str);
+
+    printf("Comparing results\n"); fflush(stdout);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'diff /home/ec2-user/script_output /home/ec2-user/script_output_expected'", Test->maxscale_sshkey, Test->maxscale_IP);
+    if (system(str) != 0) {
+        printf("Wrong script output!");
+        global_result;
+    }
+
+    printf("Making script non-executable\n"); fflush(stdout);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'chmod a-x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->maxscale_IP);
+    system(str);
+
+    sleep(3);
+
+    printf("Block node1\n"); fflush(stdout);
+    Test->repl->block_node(1);
+
+    printf("Sleeping\n"); fflush(stdout);
+    sleep(10);
+
+    printf("Unblock node1\n"); fflush(stdout);
+    Test->repl->unblock_node(1);
+
+    global_result += check_log_err((char *) "Error: The file cannot be executed: /home/ec2-user/script.sh", true);
+
+    printf("checking if Maxscale is alive\n"); fflush(stdout);
+    global_result += check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }
