@@ -346,9 +346,13 @@ static void
 monitorMain(void *arg)
 {
     MONITOR* mon = arg;
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
+MYSQL_MONITOR	*handle;
 MONITOR_SERVERS	*ptr;
 size_t nrounds = 0;
+
+spinlock_acquire(&mon->lock);
+handle = (MYSQL_MONITOR *)mon->handle;
+spinlock_release(&mon->lock);
 
 	if (mysql_thread_init())
 	{

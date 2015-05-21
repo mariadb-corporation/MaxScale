@@ -494,11 +494,16 @@ static void
 monitorMain(void *arg)
 {
     MONITOR* mon = (MONITOR*)arg;
-MM_MONITOR	*handle = (MM_MONITOR *)mon->handle;
+MM_MONITOR	*handle;
 MONITOR_SERVERS	*ptr;
-int detect_stale_master = handle->detectStaleMaster;
+int detect_stale_master;
 MONITOR_SERVERS *root_master;
 size_t nrounds = 0;
+
+spinlock_acquire(&mon->lock);
+handle = (MM_MONITOR *)mon->handle;
+spinlock_release(&mon->lock);
+detect_stale_master = handle->detectStaleMaster;
 
 	if (mysql_thread_init())
 	{

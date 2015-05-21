@@ -133,8 +133,10 @@ MONITOR	*ptr;
 void
 monitorStart(MONITOR *monitor, void* params)
 {
+	spinlock_acquire(&monitor->lock);
 	monitor->handle = (*monitor->module->startMonitor)(monitor,params);
 	monitor->state = MONITOR_STATE_RUNNING;
+	spinlock_release(&monitor->lock);
 }
 
 /**

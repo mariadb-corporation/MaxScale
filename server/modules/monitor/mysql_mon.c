@@ -507,14 +507,20 @@ static void
 monitorMain(void *arg)
 {
     MONITOR* mon = (MONITOR*) arg;
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
+MYSQL_MONITOR	*handle;
 MONITOR_SERVERS	*ptr;
-int replication_heartbeat = handle->replicationHeartbeat;
-int detect_stale_master = handle->detectStaleMaster;
+int replication_heartbeat;
+int detect_stale_master;
 int num_servers=0;
 MONITOR_SERVERS *root_master = NULL;
 size_t nrounds = 0;
 int log_no_master = 1;
+
+spinlock_acquire(&mon->lock);
+handle = (MYSQL_MONITOR *)mon->handle;
+spinlock_release(&mon->lock);
+replication_heartbeat = handle->replicationHeartbeat;
+detect_stale_master = handle->detectStaleMaster;
 
 	if (mysql_thread_init())
 	{

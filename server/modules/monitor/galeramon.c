@@ -405,15 +405,19 @@ static void
 monitorMain(void *arg)
 {
     MONITOR* mon = (MONITOR*)arg;
-GALERA_MONITOR		*handle = (GALERA_MONITOR *)mon->handle;
+GALERA_MONITOR		*handle;
 MONITOR_SERVERS		*ptr;
 size_t			nrounds = 0;
 MONITOR_SERVERS		*candidate_master = NULL;
-int			master_stickiness = handle->disableMasterFailback;
+int			master_stickiness;
 int			is_cluster=0;
 int			log_no_members = 1;
 monitor_event_t evtype;
 
+    spinlock_acquire(&mon->lock);
+    handle = (GALERA_MONITOR *)mon->handle;
+    spinlock_release(&mon->lock);
+    master_stickiness = handle->disableMasterFailback;
 	if (mysql_thread_init())
 	{
                 LOGIF(LE, (skygw_log_write_flush(
