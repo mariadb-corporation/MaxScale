@@ -59,7 +59,7 @@ export test_dir=$maxdir/system-test/
 
 
 if [ "$new_dirs" == "yes" ] ; then
-        export maxdir="/usr/local/mariadb-maxscale"
+        export maxdir="/usr/bin/"
         export maxscale_cnf="/etc/maxscale.cnf"
         export maxscale_log_dir="/var/log/maxscale/"
 fi
