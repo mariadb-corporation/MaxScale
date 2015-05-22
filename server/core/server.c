@@ -165,6 +165,8 @@ server_get_persistent(SERVER *server, char *user)
             }
             else
             {
+                free(dcb->user);
+                dcb->user = NULL;
                 spinlock_release(&server->persistlock);
                 atomic_add(&server->stats.n_persistent, -1);
                 return dcb;
@@ -342,6 +344,8 @@ char	*stat;
 							ptr->stats.n_current);
                 dcb_printf(dcb, "\tCurrent no. of operations:	%d\n",
 						ptr->stats.n_current_ops);
+                dcb_printf(dcb, "\tPersistent pool size:            %d\n",
+						ptr->stats.n_persistent);
                 ptr = ptr->next;
 	}
 	spinlock_release(&server_spin);

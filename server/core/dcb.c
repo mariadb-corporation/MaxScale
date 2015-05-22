@@ -1285,8 +1285,11 @@ dcb_close(DCB *dcb)
 	
 		if (rc == 0)
 		{
-                    if (NULL != dcb->server)
+                    char *user;
+                    user = session_getUser(dcb->session);
+                    if (user && dcb->server)
                     {
+                        dcb->user = strdup(user);
                         spinlock_acquire(&dcb->server->persistlock);
                         dcb->nextpersistent = dcb->server->persistent;
                         dcb->server->persistent = dcb;
