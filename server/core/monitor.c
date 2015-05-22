@@ -73,7 +73,6 @@ MONITOR	*mon;
                                    LOGFILE_ERROR,
                                    "Error : Unable to load monitor module '%s'.",
                                    name)));
-                free(mon->name);
 		free(mon);
 		return NULL;
 	}

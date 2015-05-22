@@ -229,8 +229,9 @@ void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len)
 {
     MONITOR_SERVERS* ptr = start;
     bool first = true;
+    int slen = strlen(str);
 
-    while(ptr)
+    while(ptr && slen < len)
     {
 	if(!first)
 	{
@@ -239,6 +240,7 @@ void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len)
 	first = false;
 	strncat(str,ptr->server->unique_name,len);
 	ptr = ptr->next;
+	slen = strlen(str);
     }
 }
 
