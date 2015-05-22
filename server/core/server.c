@@ -42,6 +42,7 @@
 #include <server.h>
 #include <spinlock.h>
 #include <dcb.h>
+#include <poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 
@@ -79,7 +80,7 @@ SERVER 	*server;
 	server->master_id = -1;
 	server->depth = -1;
         server->persistent = NULL;
-        spinlock_init(server->persistlock);
+        spinlock_init(&server->persistlock);
 
 	spinlock_acquire(&server_spin);
 	server->next = allServers;
@@ -142,12 +143,12 @@ server_get_persistent(SERVER *server, char *user)
     DCB *dcb, *previous;
     int rc;
     
-    spinlock_acquire(server->persistlock);
+    spinlock_acquire(&server->persistlock);
     dcb = server->persistent;
     previous = NULL;
     while (dcb) {
         /* Test for expired, free and remove from list if it is */
-        if (0 == strcmp(dcb->user, user))
+        if (NULL != dcb->user && 0 == strcmp(dcb->user, user))
         {
             if (NULL == previous)
             {
@@ -164,7 +165,7 @@ server_get_persistent(SERVER *server, char *user)
             }
             else
             {
-                spinlock_release(server->persistlock);
+                spinlock_release(&server->persistlock);
                 atomic_add(&server->stats.n_persistent, -1);
                 return dcb;
             }
@@ -176,7 +177,7 @@ server_get_persistent(SERVER *server, char *user)
     {
         /* Change user, remove DCB from list, release spinlock, return dcb */
     }
-    spinlock_release(server->persistlock);
+    spinlock_release(&server->persistlock);
     return NULL;
 }
 
@@ -255,6 +256,7 @@ printServer(SERVER *server)
 	printf("\tPort:			%d\n", server->port);
 	printf("\tTotal connections:	%d\n", server->stats.n_connections);
 	printf("\tCurrent connections:	%d\n", server->stats.n_current);
+	printf("\tPersistent connections:	%d\n", server->stats.n_persistent);
 }
 
 /**

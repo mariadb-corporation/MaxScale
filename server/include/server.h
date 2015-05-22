@@ -96,7 +96,7 @@ typedef struct server {
 	long		*slaves;	/**< Slaves of this node */
 	bool            master_err_is_logged; /*< If node failed, this indicates whether it is logged */
         DCB             *persistent;    /**< List of unused persistent connections to the server */
-        SPINLOCK        *persistlock;   /**< Lock for adjusting the persistent connections list */
+        SPINLOCK        persistlock;   /**< Lock for adjusting the persistent connections list */
 } SERVER;
 
 /**

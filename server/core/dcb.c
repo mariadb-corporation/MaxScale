@@ -637,6 +637,9 @@ char            *user;
         user = session_getUser(session);
         if (NULL != user && strlen(user))
         {
+            LOGIF(LD, (skygw_log_write(
+                LOGFILE_DEBUG,
+		"About to attempt to get a persistent connection DCB")));
             dcb = server_get_persistent(server, user);
             if (NULL != dcb)
             {
@@ -1282,12 +1285,15 @@ dcb_close(DCB *dcb)
 	
 		if (rc == 0)
 		{
+                    if (NULL != dcb->server)
+                    {
                         spinlock_acquire(&dcb->server->persistlock);
                         dcb->nextpersistent = dcb->server->persistent;
                         dcb->server->persistent = dcb;
                         spinlock_release(&dcb->server->persistlock);
                         atomic_add(&dcb->server->stats.n_persistent, 1);
                         return;
+                    }
                         
 			/**
 			 * close protocol and router session
