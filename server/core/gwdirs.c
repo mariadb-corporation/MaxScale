@@ -17,3 +17,13 @@ char* get_cachedir()
 {
     return cachedir?cachedir:(char*)default_cachedir;
 }
+
+
+/**
+ * Get the service cache directory
+ * @return The path to the cache directory
+ */
+char* get_datadir()
+{
+    return maxscaledatadir?maxscaledatadir:(char*)default_datadir;
+}

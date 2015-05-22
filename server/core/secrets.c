@@ -71,7 +71,7 @@ int		fd;
 int             len;
 static int	reported = 0;
 
-	snprintf(secret_file, PATH_MAX, "%s/.secrets", get_cachedir());
+	snprintf(secret_file, PATH_MAX, "%s/.secrets", get_datadir());
 
 	/* Try to access secrets file */
 	if (access(secret_file, R_OK) == -1) 

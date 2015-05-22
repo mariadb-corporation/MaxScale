@@ -79,7 +79,7 @@ struct dirent	*dp;
 
 	if (router->binlogdir == NULL)
 	{
-		strcpy(path, get_cachedir());
+		strcpy(path, get_datadir());
 		strncat(path,"/",PATH_MAX);
 		strncat(path, router->service->name,PATH_MAX);
 
@@ -658,7 +658,7 @@ blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 char	path[PATH_MAX+1], *ptr;
 int	fd;
 
-	strcpy(path,get_cachedir());
+	strcpy(path,get_datadir());
 	strncat(path,"/",PATH_MAX);
 	strncat(path, router->service->name, PATH_MAX);
 
@@ -693,7 +693,7 @@ char	path[PATH_MAX+1], *ptr;
 int	fd;
 GWBUF	*buf;
 
-	strcpy(path, get_cachedir());
+	strcpy(path, get_datadir());
 	strncat(path, "/", PATH_MAX);
 	strncat(path, router->service->name, PATH_MAX);
 	strncat(path, "/.cache/", PATH_MAX);

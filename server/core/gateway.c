@@ -1047,6 +1047,7 @@ int main(int argc, char **argv)
 		    break;
 		case 'D':
 		    sprintf(datadir,"%s",optarg);
+		    maxscaledatadir = strdup(optarg);
 		    datadir_defined = true;
 		    break;
 		case 'C':
