@@ -24,9 +24,16 @@ chown maxscale:maxscale @MAXSCALE_VARDIR@/log/maxscale
 chown maxscale:maxscale @MAXSCALE_VARDIR@/lib/maxscale
 chown maxscale:maxscale @MAXSCALE_VARDIR@/cache/maxscale
 chown maxscale:maxscale @MAXSCALE_VARDIR@/run/maxscale
+chmod 0755 @MAXSCALE_VARDIR@/log/maxscale
+chmod 0755 @MAXSCALE_VARDIR@/lib/maxscale
+chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
+chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
 
 # Copy init.d script and ldconfig file
 cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
 cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf /etc/ld.so.conf.d/
-cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
+if [ -d "/usr/lib/systemd/system" ]
+then
+    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
+fi
 /sbin/ldconfig
