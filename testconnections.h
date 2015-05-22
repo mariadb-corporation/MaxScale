@@ -149,9 +149,14 @@ public:
     char maxscale_cnf[4096];
 
     /**
-      * @brief log_dir name of log files directory
+      * @brief maxscale_log_dir name of log files directory
       */
     char maxscale_log_dir[4096];
+
+    /**
+      * @brief maxscale_lbinog_dir name of binlog files (for binlog router) directory
+      */
+    char maxscale_binlog_dir[4096];
 
     /**
      * @brief test_dir path to test application

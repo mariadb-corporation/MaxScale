@@ -133,6 +133,7 @@ int TestConnections::read_env()
     env = getenv("maxdir"); if (env != NULL) {sprintf(maxdir, "%s", env);}
     env = getenv("maxscale_cnf"); if (env != NULL) {sprintf(maxscale_cnf, "%s", env);} else {sprintf(maxscale_cnf, "/etc/maxscale.cnf");}
     env = getenv("maxscale_log_dir"); if (env != NULL) {sprintf(maxscale_log_dir, "%s", env);} else {sprintf(maxscale_log_dir, "%s/logs/", maxdir);}
+    env = getenv("maxscale_binlog_dir"); if (env != NULL) {sprintf(maxscale_binlog_dir, "%s", env);} else {sprintf(maxscale_binlog_dir, "%s/Binlog_Service/", maxdir);}
     env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
 }
 
@@ -264,7 +265,12 @@ int TestConnections::start_binlog()
     global_result += repl->stop_nodes();
 
     printf("Removing all binlog data\n");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'rm -rf %s/Binlog_Service/*'", maxscale_sshkey, maxscale_IP, maxdir);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'rm -rf %s/*'", maxscale_sshkey, maxscale_IP, maxscale_binlog_dir);
+    printf("%s\n", sys1);  fflush(stdout);
+    global_result +=  system(sys1);
+
+    printf("Set 'maxscale' as a owner of binlog dir\n");
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'mkdir -p %s; chown maxscale:maxscale -R %s'", maxscale_sshkey, maxscale_IP, maxscale_binlog_dir, maxscale_binlog_dir);
     printf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1);
 
