@@ -63,7 +63,7 @@ if [ "$new_dirs" == "yes" ] ; then
         export maxdir="/usr/bin/"
         export maxscale_cnf="/etc/maxscale.cnf"
         export maxscale_log_dir="/var/log/maxscale/"
-        export maxscale_log_dir="/var/lib/maxscale/Binlog_Service/"
+        export maxscale_binlog_dir="/var/lib/maxscale/Binlog_Service/"
 fi
 
 # IP Of MaxScale machine
