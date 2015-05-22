@@ -192,6 +192,6 @@ extern void	serverAddParameter(SERVER *, char *, char *);
 extern char	*serverGetParameter(SERVER *, char *);
 extern void	server_update(SERVER *, char *, char *, char *);
 extern void     server_set_unique_name(SERVER *, char *);
-extern DCB      *server_get_persistent(SERVER *, char *);
+extern DCB      *server_get_persistent(SERVER *, char *, char *);
 extern RESULTSET	*serverGetList();
 #endif

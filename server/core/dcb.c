@@ -408,7 +408,9 @@ DCB_CALLBACK		*cb;
 	}
 
 	if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
-		free(dcb->protocol);	
+		free(dcb->protocol);
+        if (dcb->protoname)
+                free(dcb->protoname);
 	if (dcb->remote)
 		free(dcb->remote);
 	if (dcb->user)
@@ -635,14 +637,31 @@ int             rc;
 char            *user;
 
         user = session_getUser(session);
-        if (NULL != user && strlen(user))
+        if (user && strlen(user))
         {
             LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
 		"About to attempt to get a persistent connection DCB")));
-            dcb = server_get_persistent(server, user);
+            dcb = server_get_persistent(server, user, protocol);
             if (NULL != dcb)
             {
+                /**
+                * Link dcb to session. Unlink is called in dcb_final_free
+                */
+                if (!session_link_dcb(session, dcb))
+                {
+                    LOGIF(LD, (skygw_log_write(
+                        LOGFILE_DEBUG,
+			"%lu [dcb_connect] Failed to link to session, the "
+                        "session has been removed.",
+                        pthread_self())));
+                    dcb_final_free(dcb);
+                    return NULL;
+                }
+                dcb->dcb_server_status = server->status;
+                LOGIF(LD, (skygw_log_write(
+                    LOGFILE_DEBUG,
+                    "Reusing a persistent connection")));
                 return dcb;
             }
         }
@@ -666,6 +685,7 @@ char            *user;
 		return NULL;
 	}
 	memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
+        dcb->protoname = strdup(protocol);
 
         /**
          * Link dcb to session. Unlink is called in dcb_final_free

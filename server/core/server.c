@@ -138,7 +138,7 @@ SERVER *ptr;
  * @param	user	The name of the user needing the connection
  */
 DCB *
-server_get_persistent(SERVER *server, char *user)
+server_get_persistent(SERVER *server, char *user, char *protocol)
 {
     DCB *dcb, *previous;
     int rc;
@@ -148,7 +148,7 @@ server_get_persistent(SERVER *server, char *user)
     previous = NULL;
     while (dcb) {
         /* Test for expired, free and remove from list if it is */
-        if (NULL != dcb->user && 0 == strcmp(dcb->user, user))
+        if (dcb->user && dcb->protoname && 0 == strcmp(dcb->user, user) && 0 == strcmp(dcb->protoname, protocol))
         {
             if (NULL == previous)
             {

@@ -234,6 +234,7 @@ typedef struct dcb {
 	char		*remote;	/**< Address of remote end */
 	char		*user;		/**< User name for connection */
 	struct sockaddr_in ipv4;	/**< remote end IPv4 address */
+        char            *protoname;     /**< Name of the protocol */
 	void		*protocol;	/**< The protocol specific state */
 	struct session	*session;	/**< The owning session */
 	GWPROTOCOL	func;		/**< The functions for this descriptor */
