@@ -9,6 +9,11 @@ export test_name=bug469
 
 $test_dir/configure_maxscale.sh
 
+echo $maxdir | grep "bin//bin"
+if [ $? == 0 ] ; then
+	export maxdir="/usr/bin/"
+fi
+
 res=0
 
 ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir/bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" 

@@ -416,11 +416,11 @@ add_test(mxs47 mxs47)
 set_tests_properties(mxs47 PROPERTIES TIMEOUT 1000)
 add_test(sharding sharding)
 add_test(fwf fwf)
-add_test(mm mm)
 add_test(mxs118 mxs118)
 add_test(mxs127 mxs127)
 add_test(session_limits session_limits)
 add_test(script script)
+add_test(mm mm)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
