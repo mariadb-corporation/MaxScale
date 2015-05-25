@@ -24,8 +24,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 02/04/14	Mark Riddoch	Initial implementation
+ * Date		Who			Description
+ * 02/04/14	Mark Riddoch		Initial implementation
+ * 25/05/15	Massimiliano Pinto	Added BLRM_SLAVE_STOPPED state
  *
  * @endverbatim
  */
@@ -314,15 +315,16 @@ typedef struct router_instance {
 #define BLRM_MAP		0x0011
 #define	BLRM_REGISTER		0x0012
 #define	BLRM_BINLOGDUMP		0x0013
+#define	BLRM_SLAVE_STOPPED	0x0014
 
-#define BLRM_MAXSTATE		0x0013
+#define BLRM_MAXSTATE		0x0014
 
 static char *blrm_states[] = { "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
 	"Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
 	"binlog checksum rerieval", "GTID Mode retrieval", "Master UUID retrieval",
 	"Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
 	"select version()", "select @@version_comment", "select @@hostname",
-	"select @@mx_allowed_packet", "Register slave", "Binlog Dump" };
+	"select @@mx_allowed_packet", "Register slave", "Binlog Dump" , "Slave stopped"};
 
 #define BLRS_CREATED		0x0000
 #define BLRS_UNREGISTERED	0x0001

@@ -31,8 +31,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 02/04/2014	Mark Riddoch		Initial implementation
+ * Date		Who			Description
+ * 02/04/2014	Mark Riddoch			Initial implementation
+ * 25/05/2015	Massimiliano Pinto		Addev BLRM_SLAVE_STOPPED state
  *
  * @endverbatim
  */
@@ -78,7 +79,7 @@ static void *CreateMySQLAuthData(char *username, char *password, char *database)
 void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
 inline uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
-static void blr_master_close(ROUTER_INSTANCE *);
+void blr_master_close(ROUTER_INSTANCE *);
 static char *blr_extract_column(GWBUF *buf, int col);
 
 static int keepalive = 1;
@@ -100,9 +101,15 @@ GWBUF	*buf;
 	spinlock_acquire(&router->lock);
 	if (router->master_state != BLRM_UNCONNECTED)
 	{
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"%s: Master Connect: Unexpected master state %s\n",
-			router->service->name, blrm_states[router->master_state])));
+		if (router->master_state != BLRM_SLAVE_STOPPED) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"%s: Master Connect: Unexpected master state %s\n",
+				router->service->name, blrm_states[router->master_state])));
+		} else {
+			LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+				"%s: Master Connect: binlog state is %s\n",
+				router->service->name, blrm_states[router->master_state])));
+		}
 		spinlock_release(&router->lock);
 		return;
 	}

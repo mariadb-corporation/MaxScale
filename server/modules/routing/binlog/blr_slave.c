@@ -36,6 +36,7 @@
  * 18/02/2015	Massimiliano Pinto	Addition of DISCONNECT ALL and DISCONNECT SERVER server_id
  * 18/03/2015	Markus Makela		Better detection of CRC32 | NONE  checksum
  * 19/03/2015	Massimiliano Pinto	Addition of basic MariaDB 10 compatibility support
+ * 25/05/2015	Massimiliano Pinto	Addition BLRM_SLAVE_STOPPED state and blr_start/stop_slave
  *
  * @endverbatim
  */
@@ -83,6 +84,8 @@ static int blr_slave_send_disconnected_server(ROUTER_INSTANCE *router, ROUTER_SL
 static int blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int server_id);
 static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
+static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
+static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -411,13 +414,41 @@ int	query_len;
 			}
 		}
 	}
+	/* start replication from the current configured master */
+	else if (strcasecmp(query_text, "START") == 0)
+	{
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete START command.",
+					router->service->name)));
+		}
+		else if (strcasecmp(word, "SLAVE") == 0)
+		{
+			free(query_text);
+			return blr_start_slave(router, slave);
+		}
+
+	}
+	/* stop replication from the current */
+	else if (strcasecmp(query_text, "STOP") == 0)
+	{
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete STOP command.",
+					router->service->name)));
+		}
+		else if (strcasecmp(word, "SLAVE") == 0)
+		{
+			free(query_text);
+			return blr_stop_slave(router, slave);
+		}
+	}
 	else if (strcasecmp(query_text, "DISCONNECT") == 0)
 	{
 		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
 		{
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete DISCONNECT command.",
 					router->service->name)));
-
 		}
 		else if (strcasecmp(word, "ALL") == 0)
 		{
@@ -2084,12 +2115,16 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
 	return 1;
 }
+
  /**
- * Send a MySQL OK packet to the DCB
+ * Send a MySQL OK packet to the slave backend
  *
- * @param dcb   The DCB to send the OK packet to
+ * @param       router          The binlog router instance
+ * @param       slave           The slave server to which we are sending the response
+ *
  * @return result of a write call, non-zero if write was successful
  */
+
 static int
 blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
@@ -2110,5 +2145,74 @@ uint8_t *ptr;
         *ptr++ = 0;
         *ptr++ = 0;
         *ptr++ = 0;
+
         return slave->dcb->func.write(slave->dcb, pkt);
 }
+
+/**
+ * Stop current replication from master
+ *
+ * @param router          The binlog router instance
+ * @param slave           The slave server to which we are sending the response* 
+ *
+ */
+
+static int
+blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+{
+	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: STOP SLAVE received by %s@%s. Disconnecting from master %s:%d",
+        	router->service->name,
+		slave->dcb->user,
+		slave->dcb->remote,
+		router->service->dbref->server->name,
+		router->service->dbref->server->port)));
+
+	if (router->master_state != BLRM_SLAVE_STOPPED) {
+
+		if (router->master->fd != -1)
+			blr_master_close(router);
+
+		spinlock_acquire(&router->lock);
+
+		router->master_state = BLRM_SLAVE_STOPPED;
+
+		spinlock_release(&router->lock);
+
+		return blr_slave_send_ok(router, slave);
+	} else {
+		blr_slave_send_error(router, slave, "Slave connection is not running");
+		return 1;
+	}
+}
+
+/**
+ * Start replication from current configured master
+ *
+ * @param router          The binlog router instance
+ * @param slave           The slave server to which we are sending the response
+ * 
+ */
+
+static int
+blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+{
+	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: START SLAVE received by %s@%s. Trying connection to master %s:%d",
+        	router->service->name,
+		slave->dcb->user,
+		slave->dcb->remote,
+		router->service->dbref->server->name,
+		router->service->dbref->server->port)));
+
+	if ( (router->master_state == BLRM_UNCONNECTED) || (router->master_state == BLRM_SLAVE_STOPPED) ) {
+
+		spinlock_acquire(&router->lock);
+		router->master_state = BLRM_UNCONNECTED;
+		spinlock_release(&router->lock);
+		blr_start_master(router);
+
+		return blr_slave_send_ok(router, slave);
+	} else {
+		blr_slave_send_error(router, slave, "Slave connection is already running");
+		return 1;
+	}
+} 
