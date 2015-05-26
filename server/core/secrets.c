@@ -22,6 +22,7 @@
 #include <log_manager.h>
 #include <ctype.h>
 #include <mysql_client_server_protocol.h>
+#include <gwdirs.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -62,7 +63,7 @@ int i;
 static MAXKEYS *
 secrets_readKeys()
 {
-char		secret_file[255];
+char		secret_file[PATH_MAX+1];
 char		*home;
 MAXKEYS		*keys;
 struct stat 	secret_stats;
@@ -70,12 +71,7 @@ int		fd;
 int             len;
 static int	reported = 0;
 
-        home = getenv("MAXSCALE_HOME");
-
-        if (home == NULL) {
-                home = "/usr/local/mariadb-maxscale";
-        }
-	snprintf(secret_file, 255, "%s/etc/.secrets", home);
+	snprintf(secret_file, PATH_MAX, "%s/.secrets", get_datadir());
 
 	/* Try to access secrets file */
 	if (access(secret_file, R_OK) == -1) 

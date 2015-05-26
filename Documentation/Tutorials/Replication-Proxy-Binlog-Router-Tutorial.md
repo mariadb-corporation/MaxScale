@@ -84,7 +84,7 @@ This optional parameter allows for the administrator to define the number of the
 
 ### binlogdir
 
-This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory $MAXSCALE_HOME/<Service Name>.
+This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory /var/cache/maxscale/<Service Name>.
 
 ### heartbeat
 

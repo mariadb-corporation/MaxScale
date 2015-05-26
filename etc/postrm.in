@@ -3,4 +3,9 @@ if [ "$1" -eq 0 ]
 then
     rm -f /etc/init.d/maxscale
     rm -f /etc/ld.so.conf.d/maxscale.conf
+else
+    if [ -f "/usr/local/mariadb-maxscale/etc/MaxScale.cnf" ]
+    then
+        cp "/usr/local/mariadb-maxscale/etc/MaxScale.cnf" "/etc/maxscale.cnf"
+    fi
 fi

@@ -21,9 +21,8 @@
 # MaxScale HOME, PIDFILE, LIB
 #############################################
 
-export MAXSCALE_HOME=@CMAKE_INSTALL_PREFIX@
-export MAXSCALE_PIDFILE=$MAXSCALE_HOME/log/maxscale.pid
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MAXSCALE_HOME/lib
+export MAXSCALE_PIDFILE=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@/maxscale
 
 ###############################
 # LSB Exit codes (non-Status)
@@ -39,13 +38,13 @@ _RETVAL_STATUS_OK=0
 _RETVAL_STATUS_NOT_RUNNING=3
 
 # Sanity checks.
-[ -x $MAXSCALE_HOME/bin/maxscale ] || exit $_RETVAL_NOT_INSTALLED
+[ -x @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale ] || exit $_RETVAL_NOT_INSTALLED
 
 #################################
 # stop/start/status related vars
 #################################
 NAME=maxscale
-DAEMON=$MAXSCALE_HOME/bin/maxscale
+DAEMON=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale
 
 # Source function library.
 . /lib/lsb/init-functions
@@ -84,7 +83,7 @@ reload() {
 }
 
 maxscale_wait_stop() {
-        PIDTMP=$(pidofproc -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale)
+        PIDTMP=$(pidofproc -p $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale)
         kill -TERM "${PIDTMP:-}" 2> /dev/null;
         if [ -n "${PIDTMP:-}" ] && kill -0 "${PIDTMP:-}" 2> /dev/null; then
                 local i=0

@@ -60,18 +60,9 @@ main(int argc, char **argv)
 	    return 1;
 	}
 
-	arg_vector[0] = "logmanager";
-	arg_vector[1] = "-j";
-
-	if ((home = getenv("MAXSCALE_HOME")) != NULL)
-	{
-	    arg_vector[2] = (char*)malloc((strlen(home) + strlen("/log"))*sizeof(char));
-	    sprintf(arg_vector[2],"%s/log",home);
-	}
-	else
-	{
-	    arg_vector[2] = strdup("/usr/local/mariadb-maxscale/log");
-	}
+	arg_vector[0] = strdup("logmanager");
+	arg_vector[1] = strdup("-j");
+	arg_vector[2] = strdup("/var/log/maxscale");
 
 	arg_vector[3] = "-o";
 	arg_vector[4] = "-l";

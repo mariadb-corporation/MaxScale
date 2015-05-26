@@ -31,6 +31,7 @@
 #include	<secrets.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <gwdirs.h>
 int main(int argc, char **argv)
 {
     int arg_count = 6;
@@ -52,22 +53,21 @@ int main(int argc, char **argv)
 	    return 1;
 	}
 
-	arg_vector[0] = "logmanager";
-	arg_vector[1] = "-j";
-
-	if ((home = getenv("MAXSCALE_HOME")) != NULL)
+	if(access("/var/log/maxscale/maxkeys/",F_OK) != 0)
 	{
-	    arg_vector[2] = (char*)malloc((strlen(home) + strlen("/log"))*sizeof(char));
-	    sprintf(arg_vector[2],"%s/log",home);
+            if(mkdir("/var/log/maxscale/maxkeys/",0777) == -1)
+            {
+		if(errno != EEXIST)
+		{
+		    fprintf(stderr,"Error: %d - %s",errno,strerror(errno));
+		    return 1;
+		}
+            }
 	}
-	else
-	{
-	    arg_vector[2] = strdup("/usr/local/mariadb-maxscale/log");
-	}
-    arg_vector[3] = "-o";
-    arg_vector[4] = "-l";
-    arg_vector[5] = "LOGFILE_ERROR";
-	arg_vector[6] = NULL;
+	arg_vector[0] = strdup("logmanager");
+	arg_vector[1] = strdup("-j");
+	arg_vector[2] = strdup("/var/log/maxscale/maxkeys");
+	arg_vector[3] = NULL;
 	skygw_logmanager_init(arg_count,arg_vector);
 	free(arg_vector[2]);
 	free(arg_vector);
