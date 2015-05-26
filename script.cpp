@@ -105,6 +105,7 @@ int main(int argc, char *argv[])
     printf("Unblock node1\n"); fflush(stdout);
     Test->repl->unblock_node(1);
 
+    sleep(15);
     global_result += check_log_err((char *) "Error: Cannot execute file: /home/ec2-user/script.sh", true);
 
     printf("checking if Maxscale is alive\n"); fflush(stdout);
