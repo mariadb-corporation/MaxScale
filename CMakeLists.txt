@@ -309,6 +309,7 @@ install(FILES bug648 copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ
 
 install(FILES templates DESTINATION system-test)
 install(FILES script_output_expected DESTINATION system-test)
+install(FILES script_output_expected_galera DESTINATION system-test)
 install(FILES bug729.php DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test)
 install(DIRECTORY fw DESTINATION system-test)
