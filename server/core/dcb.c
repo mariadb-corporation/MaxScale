@@ -642,7 +642,7 @@ char            *user;
         {
             LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
-		"About to attempt to get a persistent connection DCB")));
+		"%lu [dcb_connect] Looking for persistent connection DCB user %s protocol %s\n", user, protocol)));
             dcb = server_get_persistent(server, user, protocol);
             if (dcb)
             {
@@ -654,7 +654,7 @@ char            *user;
                     LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
 			"%lu [dcb_connect] Failed to link to session, the "
-                        "session has been removed.",
+                        "session has been removed.\n",
                         pthread_self())));
                     dcb_final_free(dcb);
                     return NULL;
@@ -662,7 +662,7 @@ char            *user;
                 dcb->dcb_server_status = server->status;
                 LOGIF(LD, (skygw_log_write(
                     LOGFILE_DEBUG,
-                    "Reusing a persistent connection")));
+                    "%lu [dcb_connect] Reusing a persistent connection, dcb %p\n", dcb)));
                 return dcb;
             }
         }

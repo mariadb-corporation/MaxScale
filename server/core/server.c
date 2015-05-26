@@ -158,7 +158,7 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
             {
                 previous->nextpersistent = dcb->nextpersistent;
             }
-            rc = poll_add_dcb(dcb);
+            rc = 0; /* poll_add_dcb(dcb); */
             if (rc == DCBFD_CLOSED) {
                 dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 dcb_free(dcb);
