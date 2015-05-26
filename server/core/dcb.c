@@ -1358,6 +1358,18 @@ printDCB(DCB *dcb)
 		printf("\tUsername to:		%s\n", dcb->user);
 	if (dcb->writeq)
 		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
+        char *server_status = server_status(dcb->dcb_server_status);
+        if (server_status) 
+        {
+            printf("\tServer status:            %s\n", server_status);
+            free(server_status);
+        }
+        char *rolename = dcb_role_name(dcb);
+        if (rolename)
+        {
+            printf("\tRole:                     %s\n", rolename);
+            free(rolename);
+        }
 	printf("\tStatistics:\n");
 	printf("\t\tNo. of Reads: 			%d\n",
 				dcb->stats.n_reads);
@@ -1438,6 +1450,18 @@ DCB	*dcb;
 		if (dcb->writeq)
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));
+                char *server_status = server_status(dcb->dcb_server_status);
+                if (server_status) 
+                {
+                    dcb_printf(pdcb, "\tServer status:            %s\n", server_status);
+                    free(server_status);
+                }
+                char *rolename = dcb_role_name(dcb);
+                if (rolename)
+                {
+                    dcb_printf(pdcb, "\tRole:                     %s\n", rolename);
+                    free(rolename);
+                }
 		dcb_printf(pdcb, "\tStatistics:\n");
 		dcb_printf(pdcb, "\t\tNo. of Reads:           	%d\n", dcb->stats.n_reads);
 		dcb_printf(pdcb, "\t\tNo. of Writes:          	%d\n", dcb->stats.n_writes);
@@ -1541,6 +1565,18 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 		dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
 	if (dcb->delayq)
 		dcb_printf(pdcb, "\tDelayed write data:	%d\n", gwbuf_length(dcb->delayq));
+        char *server_status = server_status(dcb->dcb_server_status);
+        if (server_status) 
+        {
+            dcb_printf(pdcb, "\tServer status:            %s\n", server_status);
+            free(server_status);
+        }
+        char *rolename = dcb_role_name(dcb);
+        if (rolename)
+        {
+            dcb_printf(pdcb, "\tRole:                     %s\n", rolename);
+            free(rolename);
+        }
 	dcb_printf(pdcb, "\tStatistics:\n");
 	dcb_printf(pdcb, "\t\tNo. of Reads: 			%d\n",
 						dcb->stats.n_reads);
@@ -2274,4 +2310,31 @@ DCB	*ptr;
 	}
 	spinlock_release(&dcbspin);
 	return rval;
+}
+
+/**
+ * Convert a DCB role to a string, the returned
+ * string has been malloc'd and must be free'd by the caller
+ *
+ * @param DCB    The DCB to return the role of
+ * @return       A string representation of the DCB role
+ */
+char *
+dcb_role_name(DCB *dcb)
+{
+char	*name = NULL;
+
+	if (NULL != (name = (char *)malloc(64)))
+        {
+            name[0] = 0;
+            if (DCB_ROLE_SERVICE_LISTENER = dcb->dcb_role)
+		strcat(name, "Service Listener");
+            else if (DCB_ROLE_REQUEST_HANDLER = dcb->dcb_role)
+		strcat(name, "Request Handler");
+            else if (DCB_ROLE_INTERNAL = dcb->dcb_role)
+		strcat(name, "Internal");
+            else
+                strcat(name, "Unknown");
+        }
+	return name;
 }
