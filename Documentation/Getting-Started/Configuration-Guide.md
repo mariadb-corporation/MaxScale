@@ -35,7 +35,7 @@ An explicit path to a configuration file can be passed by using the `-f` option 
 
 The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration, these sections define services, servers, listeners, monitors and global settings.
 
-Please see the section about [Protocol Modules](# Protocol Modules) for more details about MaxScale and the default directories where modules will be searched for.
+Please see the section about [Protocol Modules](#protocol-modules) for more details about MaxScale and the default directories where modules will be searched for.
 
 ### Global Settings
 
