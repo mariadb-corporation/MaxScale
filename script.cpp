@@ -84,6 +84,7 @@ int main(int argc, char *argv[])
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'echo \"echo \\$* >> /home/ec2-user/script_output\" > /home/ec2-user/script.sh; chmod a+x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
+    Test->restart_maxscale();
 
     global_result += test_script_monitor(Test, Test->repl);
     global_result += test_script_monitor(Test, Test->galera);
