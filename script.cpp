@@ -64,6 +64,7 @@ int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expe
     } else {
         printf("Script output is OK!\n");
     }
+    return(global_result);
 }
 
 int main(int argc, char *argv[])
