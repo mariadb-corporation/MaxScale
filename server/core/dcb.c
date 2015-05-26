@@ -1358,11 +1358,11 @@ printDCB(DCB *dcb)
 		printf("\tUsername to:		%s\n", dcb->user);
 	if (dcb->writeq)
 		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
-        char *server_status = server_status(dcb->dcb_server_status);
-        if (server_status) 
+        char *statusname = server_status(dcb->dcb_server_status);
+        if (statusname) 
         {
-            printf("\tServer status:            %s\n", server_status);
-            free(server_status);
+            printf("\tServer status:            %s\n", statusname);
+            free(statusname);
         }
         char *rolename = dcb_role_name(dcb);
         if (rolename)
@@ -1450,11 +1450,11 @@ DCB	*dcb;
 		if (dcb->writeq)
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));
-                char *server_status = server_status(dcb->dcb_server_status);
-                if (server_status) 
+                char *statusname = server_status(dcb->dcb_server_status);
+                if (statusname) 
                 {
-                    dcb_printf(pdcb, "\tServer status:            %s\n", server_status);
-                    free(server_status);
+                    dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
+                    free(statusname);
                 }
                 char *rolename = dcb_role_name(dcb);
                 if (rolename)
@@ -1565,11 +1565,11 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 		dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
 	if (dcb->delayq)
 		dcb_printf(pdcb, "\tDelayed write data:	%d\n", gwbuf_length(dcb->delayq));
-        char *server_status = server_status(dcb->dcb_server_status);
-        if (server_status) 
+        char *statusname = server_status(dcb->dcb_server_status);
+        if (statusname) 
         {
-            dcb_printf(pdcb, "\tServer status:            %s\n", server_status);
-            free(server_status);
+            dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
+            free(statusname);
         }
         char *rolename = dcb_role_name(dcb);
         if (rolename)
@@ -2327,11 +2327,11 @@ char	*name = NULL;
 	if (NULL != (name = (char *)malloc(64)))
         {
             name[0] = 0;
-            if (DCB_ROLE_SERVICE_LISTENER = dcb->dcb_role)
+            if (DCB_ROLE_SERVICE_LISTENER == dcb->dcb_role)
 		strcat(name, "Service Listener");
-            else if (DCB_ROLE_REQUEST_HANDLER = dcb->dcb_role)
+            else if (DCB_ROLE_REQUEST_HANDLER == dcb->dcb_role)
 		strcat(name, "Request Handler");
-            else if (DCB_ROLE_INTERNAL = dcb->dcb_role)
+            else if (DCB_ROLE_INTERNAL == dcb->dcb_role)
 		strcat(name, "Internal");
             else
                 strcat(name, "Unknown");
