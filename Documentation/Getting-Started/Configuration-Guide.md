@@ -29,11 +29,13 @@ The MaxScale configuration is read from a file which can be located in a number 
 
 1. Location given with the --configdir=<path> command line argument
 
-2. MaxScale will look for a configuration file called `MaxScale.cnf` in the directory `/etc/MaxScale.cnf`
+2. MaxScale will look for a configuration file called `maxscale.cnf` in the directory `/etc/maxscale.cnf`
 
 An explicit path to a configuration file can be passed by using the `-f` option to MaxScale.
 
 The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration, these sections define services, servers, listeners, monitors and global settings.
+
+Please see the section about [Protocol Modules](## Protocol Modules) for more details about MaxScale and the default directories where modules will be searched for.
 
 ### Global Settings
 
