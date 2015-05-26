@@ -138,7 +138,7 @@ SERVER *ptr;
  * @param	user	The name of the user needing the connection
  */
 DCB *
-server_get_persistent(SERVER *server, char *user, char *protocol)
+server_get_persistent(SERVER *server, char *user, const char *protocol)
 {
     DCB *dcb, *previous;
     int rc;
@@ -169,6 +169,7 @@ server_get_persistent(SERVER *server, char *user, char *protocol)
                 dcb->user = NULL;
                 spinlock_release(&server->persistlock);
                 atomic_add(&server->stats.n_persistent, -1);
+                atomic_add(&server->stats.n_current, 1);
                 return dcb;
             }
         }
