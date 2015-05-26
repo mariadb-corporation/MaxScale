@@ -1076,7 +1076,7 @@ Please note, those two options are not enabled by default.
 
 ### galeramon
 
-The Galeramon monitor is a simple router designed for use with MySQL Galera cluster. To execute the galeramon monitor an entry as shown below should be added to the MaxScale configuration file.
+The Galeramon monitor is a simple monitor designed for use with MySQL Galera cluster. To execute the galeramon monitor an entry as shown below should be added to the MaxScale configuration file.
 
 ```
 [Galera Monitor]
