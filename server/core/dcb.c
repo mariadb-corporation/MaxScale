@@ -280,17 +280,33 @@ dcb_add_to_zombieslist(DCB *dcb)
                 spinlock_release(&zombiespin);
                 return;
         }
-        /*<
-         * Add closing dcb to the top of the list.
-         */
-        dcb->memdata.next = zombies;
-        zombies = dcb;
-        /*<
-         * Set state which indicates that it has been added to zombies
-         * list.
-         */
-        succp = dcb_set_state(dcb, DCB_STATE_ZOMBIE, &prev_state);
-        ss_info_dassert(succp, "Failed to set DCB_STATE_ZOMBIE");
+
+        char *user;
+        user = session_getUser(dcb->session);
+        if (user && dcb->server)
+        {
+            dcb->user = strdup(user);
+            spinlock_acquire(&dcb->server->persistlock);
+            dcb->nextpersistent = dcb->server->persistent;
+            dcb->server->persistent = dcb;
+            spinlock_release(&dcb->server->persistlock);
+            atomic_add(&dcb->server->stats.n_persistent, 1);
+        }
+
+        else
+        {
+            /*<
+            * Add closing dcb to the top of the list.
+            */
+            dcb->memdata.next = zombies;
+            zombies = dcb;
+            /*<
+            * Set state which indicates that it has been added to zombies
+            * list.
+            */
+            succp = dcb_set_state(dcb, DCB_STATE_ZOMBIE, &prev_state);
+            ss_info_dassert(succp, "Failed to set DCB_STATE_ZOMBIE");
+        }
         
 	spinlock_release(&zombiespin);
 }
@@ -643,7 +659,7 @@ char            *user;
                 LOGFILE_DEBUG,
 		"About to attempt to get a persistent connection DCB")));
             dcb = server_get_persistent(server, user, protocol);
-            if (NULL != dcb)
+            if (dcb)
             {
                 /**
                 * Link dcb to session. Unlink is called in dcb_final_free
@@ -1243,7 +1259,7 @@ int	above_water;
 }
 
 /** 
- * Removes dcb from poll set, and adds it to zombies list. As a consequense,
+ * Removes dcb from poll set, and adds it to zombies list. As a consequence,
  * dcb first moves to DCB_STATE_NOPOLLING, and then to DCB_STATE_ZOMBIE state.
  * At the end of the function state may not be DCB_STATE_ZOMBIE because once
  * dcb_initlock is released parallel threads may change the state.
@@ -1305,19 +1321,6 @@ dcb_close(DCB *dcb)
 	
 		if (rc == 0)
 		{
-                    char *user;
-                    user = session_getUser(dcb->session);
-                    if (user && dcb->server)
-                    {
-                        dcb->user = strdup(user);
-                        spinlock_acquire(&dcb->server->persistlock);
-                        dcb->nextpersistent = dcb->server->persistent;
-                        dcb->server->persistent = dcb;
-                        spinlock_release(&dcb->server->persistlock);
-                        atomic_add(&dcb->server->stats.n_persistent, 1);
-                        return;
-                    }
-                        
 			/**
 			 * close protocol and router session
 			 */
