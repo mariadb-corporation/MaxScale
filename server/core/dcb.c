@@ -281,32 +281,17 @@ dcb_add_to_zombieslist(DCB *dcb)
                 return;
         }
 
-        char *user;
-        user = session_getUser(dcb->session);
-        if (user && dcb->server)
-        {
-            dcb->user = strdup(user);
-            spinlock_acquire(&dcb->server->persistlock);
-            dcb->nextpersistent = dcb->server->persistent;
-            dcb->server->persistent = dcb;
-            spinlock_release(&dcb->server->persistlock);
-            atomic_add(&dcb->server->stats.n_persistent, 1);
-        }
-
-        else
-        {
-            /*<
-            * Add closing dcb to the top of the list.
-            */
-            dcb->memdata.next = zombies;
-            zombies = dcb;
-            /*<
-            * Set state which indicates that it has been added to zombies
-            * list.
-            */
-            succp = dcb_set_state(dcb, DCB_STATE_ZOMBIE, &prev_state);
-            ss_info_dassert(succp, "Failed to set DCB_STATE_ZOMBIE");
-        }
+        /*<
+        * Add closing dcb to the top of the list.
+        */
+        dcb->memdata.next = zombies;
+        zombies = dcb;
+        /*<
+        * Set state which indicates that it has been added to zombies
+        * list.
+        */
+        succp = dcb_set_state(dcb, DCB_STATE_ZOMBIE, &prev_state);
+        ss_info_dassert(succp, "Failed to set DCB_STATE_ZOMBIE");
         
 	spinlock_release(&zombiespin);
 }
@@ -1300,7 +1285,20 @@ dcb_close(DCB *dcb)
         */
 	if (dcb->state == DCB_STATE_POLLING)
 	{
-		rc = poll_remove_dcb(dcb);
+            char *user;
+            user = session_getUser(dcb->session);
+            if (user && dcb->server)
+            {
+                dcb->user = strdup(user);
+                spinlock_acquire(&dcb->server->persistlock);
+                dcb->nextpersistent = dcb->server->persistent;
+                dcb->server->persistent = dcb;
+                spinlock_release(&dcb->server->persistlock);
+                atomic_add(&dcb->server->stats.n_persistent, 1);
+                return;
+            }
+
+            rc = poll_remove_dcb(dcb);
 
 		if (rc == 0) {
 			LOGIF(LD, (skygw_log_write(
@@ -1358,7 +1356,7 @@ printDCB(DCB *dcb)
 		printf("\tUsername to:		%s\n", dcb->user);
 	if (dcb->writeq)
 		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
-        char *statusname = server_status(dcb->dcb_server_status);
+        char *statusname = server_status(dcb->server);
         if (statusname) 
         {
             printf("\tServer status:            %s\n", statusname);
@@ -1450,7 +1448,7 @@ DCB	*dcb;
 		if (dcb->writeq)
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));
-                char *statusname = server_status(dcb->dcb_server_status);
+                char *statusname = server_status(dcb->server);
                 if (statusname) 
                 {
                     dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
@@ -1565,7 +1563,7 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 		dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
 	if (dcb->delayq)
 		dcb_printf(pdcb, "\tDelayed write data:	%d\n", gwbuf_length(dcb->delayq));
-        char *statusname = server_status(dcb->dcb_server_status);
+        char *statusname = server_status(dcb->server);
         if (statusname) 
         {
             dcb_printf(pdcb, "\tServer status:            %s\n", statusname);

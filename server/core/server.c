@@ -547,7 +547,7 @@ server_status(SERVER *server)
 {
 char	*status = NULL;
 
-	if ((status = (char *)malloc(256)) == NULL)
+	if (NULL == server || (status = (char *)malloc(256)) == NULL)
 		return NULL;
 	status[0] = 0;
 	if (server->status & SERVER_MAINT)
