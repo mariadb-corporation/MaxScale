@@ -32,6 +32,13 @@ passwd= skysql
 script=/home/ec2-user/script.sh
 events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave
 
+[Galera Monitor]
+type=monitor
+module=galeramon
+servers=gserver1,gserver2,gserver3,gserver4
+user=skysql
+passwd=skysql
+
 # A series of service definition
 #
 # Valid options are:
@@ -51,6 +58,15 @@ events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lo
 type=service
 router= readwritesplit
 servers=server1,     server2,              server3,server4
+user=skysql
+passwd=skysql
+router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
+filters=QLA
+
+[RW Split Router Galera]
+type=service
+router= readwritesplit
+servers=gserver1,gserver2,gserver3,gserver4
 user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
@@ -94,6 +110,14 @@ service=RW Split Router
 protocol=MySQLClient
 port=4006
 #socket=/tmp/rwsplit.sock
+
+[RW Split Listener Galera]
+type=listener
+service=RW Split Router Galera
+protocol=MySQLClient
+port=4016
+#socket=/tmp/rwsplit.sock
+
 
 [Read Connection Listener Slave]
 type=listener
@@ -152,6 +176,31 @@ type=server
 address=###repl_server_IP_4###
 port=###repl_server_port_4###
 protocol=MySQLBackend
+
+[gserver1]
+type=server
+address=###galera_server_IP_1###
+port=###galera_server_port_1###
+protocol=MySQLBackend
+
+[gserver2]
+type=server
+address=###galera_server_IP_2###
+port=###galera_server_port_2###
+protocol=MySQLBackend
+
+[gserver3]
+type=server
+address=###galera_server_IP_3###
+port=###galera_server_port_3###
+protocol=MySQLBackend
+
+[gserver4]
+type=server
+address=###galera_server_IP_4###
+port=###galera_server_port_4###
+protocol=MySQLBackend
+
 
 [QLA]
 type=filter
