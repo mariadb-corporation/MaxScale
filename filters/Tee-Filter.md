@@ -6,7 +6,7 @@ The tee filter is a filter module for MaxScale is a "plumbing" fitting in the Ma
 
 # Configuration
 
-The configuration block for the TEE filter requires the minimal filter parameters in it’s section within the MaxScale.cnf file, stored in $MAXSCALE_HOME/etc/MaxScale.cnf, that defines the filter to load and the service to send the duplicates to. Currently the tee filter does not support multi-statements.
+The configuration block for the TEE filter requires the minimal filter parameters in it’s section within the MaxScale.cnf file, stored in /etc/MaxScale.cnf, that defines the filter to load and the service to send the duplicates to. Currently the tee filter does not support multi-statements.
 
 ```
 [DataMartFilter]
