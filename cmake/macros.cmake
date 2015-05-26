@@ -132,29 +132,9 @@ macro(check_deps)
   endif()
 
 
-  # set(MAXSCALE_DEPS aio ssl crypt crypto z m dl rt pthread)
-  # foreach(lib ${MAXSCALE_DEPS})
-  #   find_library(lib${lib} ${lib})
-  #   if((DEFINED lib${lib}) AND (${lib${lib}} MATCHES "NOTFOUND"))
-  #     set(DEPS_ERROR TRUE)
-  #     set(FAILED_DEPS "${FAILED_DEPS} lib${lib}")
-  #   elseif(DEBUG_OUTPUT)
-  #     message(STATUS "Library was found at: ${lib${lib}}")
-  #   endif()
-  # endforeach()
-
-  # if(DEPS_ERROR)
-  #   set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-  #   message(FATAL_ERROR "Cannot find dependencies: ${FAILED_DEPS}")
-  # endif()
-
 endmacro()
 
 macro(check_dirs)
-
-  # This variable is used to prevent redundant checking of dependencies
-  set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
-
   # Find the MySQL headers if they were not defined
 
   if(DEFINED MYSQL_DIR)
@@ -168,7 +148,6 @@ macro(check_dirs)
 debugmsg("Search returned: ${MYSQL_DIR_LOC}")
 
   if(${MYSQL_DIR_LOC} MATCHES "NOTFOUND")
-	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
     message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
   else()
 	set(MYSQL_DIR ${MYSQL_DIR_LOC} CACHE PATH "Path to MySQL headers" FORCE)
@@ -193,7 +172,6 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
   else()
 	find_file(ERRMSG_FILE errmsg.sys PATHS /usr/share /usr/share/mysql /usr/local/share/mysql PATH_SUFFIXES english mysql/english)
 	if(${ERRMSG_FILE} MATCHES "NOTFOUND")
-	  set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
       message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found, please define the path to it by using -DERRMSG=<path>")
 	else()
 	  message(STATUS "Using errmsg.sys found at: ${ERRMSG_FILE}")
@@ -208,7 +186,6 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
     if(${RPM_FNC} MATCHES "RPM_FNC-NOTFOUND")
       find_file(DEB_FNC init-functions PATHS /lib/lsb)
       if(${DEB_FNC} MATCHES "DEB_FNC-NOTFOUND")
-	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
 	message(FATAL_ERROR "Cannot find required init-functions in /lib/lsb/ or /etc/rc.d/init.d/, please confirm that your system files are OK.")
       else()
 	set(DEB_BASED TRUE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")

@@ -133,6 +133,14 @@ Configure the directory MaxScale uses to store cached data. An example of cached
 cachedir=/tmp/maxscale_cache/
 ```
 
+#### `piddir`
+
+Configure the directory for the PID file for MaxScale. This file contains the Process ID for the running MaxScale process.
+
+```
+piddir=/tmp/maxscale_cache/
+```
+
 #### `language`
 
 Set the folder where the errmsg.sys file is located in. MaxScale will look for the errmsg.sys file installed with MaxScale from this folder.

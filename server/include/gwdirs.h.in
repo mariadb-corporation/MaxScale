@@ -37,7 +37,7 @@ static char* libdir = NULL;
 static char* cachedir = NULL;
 static char* maxscaledatadir = NULL;
 static char* langdir = NULL;
-
+static char* piddir = NULL;
 char* get_libdir();
 char* get_datadir();
 char* get_cachedir();

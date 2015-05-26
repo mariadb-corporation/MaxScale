@@ -154,6 +154,7 @@ static struct option long_options[] = {
   {"logdir",   required_argument, 0, 'L'},
   {"datadir",  required_argument, 0, 'D'},
   {"configdir",required_argument, 0, 'C'},
+  {"piddir",required_argument, 0, 'P'},
   {"libdir",required_argument, 0, 'B'},
   {"cachedir",required_argument, 0, 'A'},
   {"language",required_argument, 0, 'N'},
@@ -870,6 +871,8 @@ static void usage(void)
 		"                             (default: /etc/)\n"
 		"  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
 		"                             (default: /var/cache/maxscale)\n"
+		"  -P, --piddir=PATH	      path to PID file directory\n"
+		"                             (default: /var/run/maxscale)\n"
 		"  -U, --user=USER	      run MaxScale as another user.\n"
 		"                             The user ID and group ID of this user are used to run MaxScale.\n"
 		"  -s, --syslog=[yes|no]      log messages to syslog (default:yes)\n"
@@ -976,7 +979,7 @@ int main(int argc, char **argv)
                 }
         }
 
-        while ((opt = getopt_long(argc, argv, "dc:f:l:vs:S:?L:D:C:B:U:A:",
+        while ((opt = getopt_long(argc, argv, "dc:f:l:vs:S:?L:D:C:B:U:A:P:",
 				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
@@ -1043,6 +1046,12 @@ int main(int argc, char **argv)
 		    if(handle_path_arg(&tmp_path,optarg,NULL,true,false))
 		    {
 			langdir = tmp_path;
+		    }
+		    break;
+		case 'P':
+		    if(handle_path_arg(&tmp_path,optarg,NULL,true,true))
+		    {
+			piddir = tmp_path;
 		    }
 		    break;
 		case 'D':
@@ -1821,7 +1830,7 @@ static int write_pid_file(char *home_dir) {
 
 	int fd = -1;
 
-        snprintf(pidfile, PATH_MAX, "%smaxscale.pid",default_piddir);
+        snprintf(pidfile, PATH_MAX, "%smaxscale.pid",piddir?piddir:default_piddir);
 
         fd = open(pidfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
         if (fd == -1) {
@@ -1919,6 +1928,11 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
 	{
 	    if(libdir == NULL)
 		handle_path_arg(&libdir,(char*)value,NULL,true,false);
+	}
+	else if(strcmp(name, "piddir") == 0)
+	{
+	    if(piddir == NULL)
+		handle_path_arg(&piddir,(char*)value,NULL,true,true);
 	}
 	else if(strcmp(name, "datadir") == 0)
 	{

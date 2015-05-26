@@ -36,6 +36,8 @@ Switch|Long Option|Description
 `-C PATH`|`--configdir=PATH`|path to configuration file directory (default: /etc/)
 `-B PATH`|`--libdir=PATH`|path to module directory (default: /usr/lib64/maxscale)
 `-A PATH`|`--cachedir=PATH`|path to cache directory (default: /var/cache/maxscale)
+`P PATH`|`--piddir=PATH`|PID file directory
+`-U USER`|`--user=USER`|run MaxScale as another user. The user ID and group ID of this user are used to run MaxScale.
 `-s [yes no]`|`--syslog=[yes no]`|log messages to syslog (default:yes)
 `-S [yes no]`|`--maxscalelog=[yes no]`|log messages to MaxScale log (default: yes)
 `-v`|`--version`|print version info and exit

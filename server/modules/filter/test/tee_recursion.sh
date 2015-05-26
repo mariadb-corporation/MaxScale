@@ -17,8 +17,8 @@ function execute_test()
         return 1
     fi
 
-    LAST_LOG=$(ls $BINDIR/log -1|grep err|sort|uniq|tail -n 1)
-    TEST_RESULT=$(cat $BINDIR/log/$LAST_LOG | grep -i recursive)
+    LAST_LOG=$(ls $BINDIR/ -1|grep error|sort|uniq|tail -n 1)
+    TEST_RESULT=$(cat $BINDIR/$LAST_LOG | grep -i recursive)
     if [[ "$TEST_RESULT" != "" ]]
     then
         return 0
