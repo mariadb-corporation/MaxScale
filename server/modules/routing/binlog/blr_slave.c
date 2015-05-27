@@ -2160,6 +2160,8 @@ uint8_t *ptr;
 static int
 blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
+	GWBUF   *ptr;
+
 	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: STOP SLAVE received by %s@%s. Disconnecting from master %s:%d",
         	router->service->name,
 		slave->dcb->user,
@@ -2176,6 +2178,22 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 		router->master_state = BLRM_SLAVE_STOPPED;
 
+		spinlock_release(&router->lock);
+
+		dcb_close(router->client);
+
+		/* Discard the queued residual data */
+		ptr = router->residual;
+		while (ptr)
+		{
+			ptr = gwbuf_consume(ptr, GWBUF_LENGTH(ptr));
+		}
+		router->residual = NULL;
+
+		/* Now it is safe to unleash other threads on this router instance */
+		spinlock_acquire(&router->lock);
+		router->reconnect_pending = 0;
+		router->active_logs = 0;
 		spinlock_release(&router->lock);
 
 		return blr_slave_send_ok(router, slave);
