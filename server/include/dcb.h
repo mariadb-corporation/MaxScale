@@ -19,6 +19,7 @@
  */
 #include <spinlock.h>
 #include <buffer.h>
+#include <server.h>
 #include <modinfo.h>
 #include <gwbitmask.h>
 #include <skygw_utils.h>
@@ -320,6 +321,7 @@ DCB		*dcb_process_zombies(int);		/* Process Zombies except the one behind the po
 void		printAllDCBs();				/* Debug to print all DCB in the system */
 void		printDCB(DCB *);			/* Debug print routine */
 void		dprintAllDCBs(DCB *);			/* Debug to print all DCB in the system */
+void            dprintOneDCB(DCB *, DCB *);             /* Debug to print one DCB */
 void		dprintDCB(DCB *, DCB *);		/* Debug to print a DCB in the system */
 void		dListDCBs(DCB *);			/* List all DCBs in the system */
 void		dListClients(DCB *);			/* List al the client DCBs */

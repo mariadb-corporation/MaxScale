@@ -501,6 +501,31 @@ SERVER_PARAM	*param;
 }
 
 /**
+ * Diagnostic to print all DCBs in persistent pool for a server
+ *
+ * @param       pdcb    DCB to print results to
+ * @param       server  SERVER for which DCBs are to be printed
+ */
+void 
+dprintPersistentDCBs(DCB *pdcb, SERVER *server)
+{
+DCB	*dcb;
+
+	spinlock_acquire(&server->persistlock);
+#if SPINLOCK_PROFILE
+	dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
+	spinlock_stats(&server->persistlock, spin_reporter, pdcb);
+#endif
+	dcb = server->persistent;
+	while (dcb)
+	{
+            dprintOneDCB(pdcb, dcb);
+            dcb = dcb->nextpersistent;
+	}
+	spinlock_release(&server->persistlock);
+}
+
+/**
  * List all servers in a tabular form to a DCB
  *
  */
