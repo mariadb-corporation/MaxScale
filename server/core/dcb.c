@@ -1311,25 +1311,27 @@ dcb_close(DCB *dcb)
                 dcb->session = NULL;
                 spinlock_release(&dcb->server->persistlock);
                 atomic_add(&dcb->server->stats.n_persistent, 1);
-                spinlock_acquire(&dcb->session->ses_lock);
-                /** 
-                 * If session->state is STOPPING, start closing client session. 
-                 * Otherwise only this backend connection is closed.
-                 */
-                if (session != NULL && 
-		session->state == SESSION_STATE_STOPPING &&
-		session->client != NULL &&
-                session->client->state == DCB_STATE_POLLING)
+                if (dcb->session)
                 {
-                    spinlock_release(&session->ses_lock);
+                    spinlock_acquire(&dcb->session->ses_lock);
+                    /** 
+                     * If session->state is STOPPING, start closing client session. 
+                     * Otherwise only this backend connection is closed.
+                     */
+                    if (dcb->session->state == SESSION_STATE_STOPPING &&
+                    dcb->session->client != NULL &&
+                    dcb->session->client->state == DCB_STATE_POLLING)
+                    {
+                        spinlock_release(&dcb->session->ses_lock);
 			
-                    /** Close client DCB */
-                    dcb_close(session->client);
+                        /** Close client DCB */
+                        dcb_close(dcb->session->client);
+                    }
+                    else 
+                    {
+                        spinlock_release(&dcb->session->ses_lock);
+                    }
                 }
-                else 
-		{
-                    spinlock_release(&session->ses_lock);
-		}
                 return;
             }
 
