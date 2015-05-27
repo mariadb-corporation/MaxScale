@@ -642,7 +642,7 @@ char            *user;
         {
             LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
-		"%lu [dcb_connect] Looking for persistent connection DCB user %s protocol %s\n", user, protocol)));
+		"%lu [dcb_connect] Looking for persistent connection DCB user %s protocol %s\n", pthread_self(), user, protocol)));
             dcb = server_get_persistent(server, user, protocol);
             if (dcb)
             {
@@ -662,7 +662,7 @@ char            *user;
                 dcb->dcb_server_status = server->status;
                 LOGIF(LD, (skygw_log_write(
                     LOGFILE_DEBUG,
-                    "%lu [dcb_connect] Reusing a persistent connection, dcb %p\n", dcb)));
+                    "%lu [dcb_connect] Reusing a persistent connection, dcb %p\n", pthread_self(), dcb)));
                 return dcb;
             }
         }
@@ -1472,6 +1472,67 @@ DCB	*dcb;
 		dcb = dcb->next;
 	}
 	spinlock_release(&dcbspin);
+}
+
+/**
+ * Diagnostic to print all DCBs in persistent pool for a server
+ *
+ * @param       pdcb    DCB to print results to
+ * @param       server  SERVER for which DCBs are to be printed
+ */
+void dprintPersistentDCBs(DCB *pdcb, SERVER *server)
+{
+DCB	*dcb;
+
+	spinlock_acquire(&server->persistlock);
+#if SPINLOCK_PROFILE
+	dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
+	spinlock_stats(&dcbspin, spin_reporter, pdcb);
+	dcb_printf(pdcb, "Zombie Queue Lock Statistics:\n");
+	spinlock_stats(&zombiespin, spin_reporter, pdcb);
+#endif
+	dcb = server->persistent;
+	while (dcb)
+	{
+		dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
+		dcb_printf(pdcb, "\tDCB state:          %s\n",
+					gw_dcb_state2string(dcb->state));
+		if (dcb->session && dcb->session->service)
+			dcb_printf(pdcb, "\tService:            %s\n",
+					dcb->session->service->name);
+		if (dcb->remote)
+			dcb_printf(pdcb, "\tConnected to:       %s\n",
+					dcb->remote);
+		if (dcb->user)
+			dcb_printf(pdcb, "\tUsername:           %s\n",
+					dcb->user);
+		if (dcb->writeq)
+			dcb_printf(pdcb, "\tQueued write data:  %d\n",
+					gwbuf_length(dcb->writeq));
+                char *statusname = server_status(dcb->server);
+                if (statusname) 
+                {
+                    dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
+                    free(statusname);
+                }
+                char *rolename = dcb_role_name(dcb);
+                if (rolename)
+                {
+                    dcb_printf(pdcb, "\tRole:                     %s\n", rolename);
+                    free(rolename);
+                }
+		dcb_printf(pdcb, "\tStatistics:\n");
+		dcb_printf(pdcb, "\t\tNo. of Reads:           	%d\n", dcb->stats.n_reads);
+		dcb_printf(pdcb, "\t\tNo. of Writes:          	%d\n", dcb->stats.n_writes);
+		dcb_printf(pdcb, "\t\tNo. of Buffered Writes: 	%d\n", dcb->stats.n_buffered);
+		dcb_printf(pdcb, "\t\tNo. of Accepts:         	%d\n", dcb->stats.n_accepts);
+		dcb_printf(pdcb, "\t\tNo. of High Water Events:	%d\n", dcb->stats.n_high_water);
+		dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n", dcb->stats.n_low_water);
+		if (dcb->flags & DCBF_CLONE)
+			dcb_printf(pdcb, "\t\tDCB is a clone.\n");
+		dcb = dcb->nextpersistent;
+	}
+	spinlock_release(&server->persistlock);
 }
 
 /** 

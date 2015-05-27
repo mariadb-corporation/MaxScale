@@ -199,7 +199,7 @@ char            c;
 	  for (i = optind +1; i < argc; i++)
 	  {
 	    strcat(cmd, " ");
-	    /* Arguments after the seconf are quoted to allow for names
+	    /* Arguments after the second are quoted to allow for names
 	     * that contain white space
 	     */
 	    if (i - optind > 1)
