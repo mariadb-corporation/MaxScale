@@ -19,7 +19,6 @@
  */
 #include <spinlock.h>
 #include <buffer.h>
-#include <server.h>
 #include <modinfo.h>
 #include <gwbitmask.h>
 #include <skygw_utils.h>

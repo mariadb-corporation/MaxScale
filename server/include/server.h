@@ -183,7 +183,7 @@ extern void	printAllServers();
 extern void	dprintAllServers(DCB *);
 extern void	dprintAllServersJson(DCB *);
 extern void	dprintServer(DCB *, SERVER *);
-extern void     dprintPersistentDCBs(DCB *, SERVER *)
+extern void     dprintPersistentDCBs(DCB *, SERVER *);
 extern void	dListServers(DCB *);
 extern char	*server_status(SERVER *);
 extern void	server_set_status(SERVER *, int);

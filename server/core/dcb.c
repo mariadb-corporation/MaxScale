@@ -660,6 +660,16 @@ char            *user;
                     return NULL;
                 }
                 dcb->dcb_server_status = server->status;
+                dcb->state = DCB_STATE_ALLOC;
+                if (poll_add_dcb(dcb)) 
+                {
+                    LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+			"%lu [dcb_connect] Failed to add DCB %p to polling.\n",
+                        pthread_self(), dcb)));
+                    dcb_final_free(dcb);
+                    return NULL;
+                }
                 LOGIF(LD, (skygw_log_write(
                     LOGFILE_DEBUG,
                     "%lu [dcb_connect] Reusing a persistent connection, dcb %p\n", pthread_self(), dcb)));
@@ -1293,8 +1303,33 @@ dcb_close(DCB *dcb)
                 spinlock_acquire(&dcb->server->persistlock);
                 dcb->nextpersistent = dcb->server->persistent;
                 dcb->server->persistent = dcb;
+                if (poll_remove_dcb(dcb))
+                {
+                    /* Error */
+                    return;
+                }
+                dcb->session = NULL;
                 spinlock_release(&dcb->server->persistlock);
                 atomic_add(&dcb->server->stats.n_persistent, 1);
+                spinlock_acquire(&dcb->session->ses_lock);
+                /** 
+                 * If session->state is STOPPING, start closing client session. 
+                 * Otherwise only this backend connection is closed.
+                 */
+                if (session != NULL && 
+		session->state == SESSION_STATE_STOPPING &&
+		session->client != NULL &&
+                session->client->state == DCB_STATE_POLLING)
+                {
+                    spinlock_release(&session->ses_lock);
+			
+                    /** Close client DCB */
+                    dcb_close(session->client);
+                }
+                else 
+		{
+                    spinlock_release(&session->ses_lock);
+		}
                 return;
             }
 
@@ -1423,8 +1458,6 @@ DCB	*dcb;
 void 
 dprintOneDCB(DCB *pdcb, DCB *dcb)
 {
-DCB	*dcb;
-
 		dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
 		dcb_printf(pdcb, "\tDCB state:          %s\n",
 					gw_dcb_state2string(dcb->state));
