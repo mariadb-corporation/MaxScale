@@ -37,7 +37,8 @@ type=monitor
 module=galeramon
 servers=gserver1,gserver2,gserver3,gserver4
 script=/home/ec2-user/script.sh
-events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave,server_down,server_up,synced_down,synced_up,
+events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave,server_down,server_up,synced_down,synced_up
+disable_master_role_setting=true
 user=skysql
 passwd=skysql
 
