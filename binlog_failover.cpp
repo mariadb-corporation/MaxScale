@@ -5,8 +5,8 @@
  *   - one master
  *   - two maxscale binlog machines
  *   - two slaves connected to each maxscale binlog mashine
- *   - an empty machine which will ne a new master after failover
  * - put some date via master
+ * - block master
  * - stop all Maxscale machines with STOP SLAVE command
  * - check which Maxscale machine contains most recent data (let's call this machine 'most_recent_maxscale')
  * - use CHANGE MASETER on the second Maxscale machine to point it to the Maxscale machine from the previous step ('most_recent_maxscale')

@@ -17,6 +17,14 @@
  * - check SELECT * FROM t1 WHERE fl=10 - expect one row x=111 from master and slave
  * - DELETE FROM t1 WHERE fl=10
  * - compare sha1 checksum of binlog file on master and on Maxscale machine
+ * - Re-create t1 table via master
+ * - STOP SLAVE against Maxscale binlog
+ * - put data to t1
+ * - START SLAVE against Maxscale binlog
+ * - wait to let replication happens
+ * - check data on all nodes
+ * - chack sha1
+ * - repeat last test with FLUSH LOGS on master 1. before putting data to Master 2. after putting data to master
  */
 
 #include <my_config.h>
@@ -111,7 +119,7 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
-
+    MYSQL * binlog;
     int i;
 
     Test->read_env();
@@ -176,6 +184,43 @@ int main(int argc, char *argv[])
 
         global_result += check_sha1(Test);
         Test->repl->close_connections();
+
+
+        // test SLAVE STOP/START
+        for (int j = 0; j < 3; j++) {
+            Test->repl->connect();
+
+            printf("Dropping and re-creating t1"); fflush(stdout);
+            execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1");
+            create_t1(Test->repl->nodes[0]);
+
+            printf("Connecting to MaxScale binlog router\n");fflush(stdout);
+            binlog = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password);
+
+            printf("STOP SLAVE against Maxscale binlog"); fflush(stdout);
+            execute_query(binlog, (char *) "STOP SLAVE");
+
+            if (j == 1) {
+                printf("FLUSH LOGS on master");
+                execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+            }
+            global_result += insert_into_t1(Test->repl->nodes[0], 4);
+
+
+            printf("START SLAVE against Maxscale binlog"); fflush(stdout);
+            execute_query(binlog, (char *) "START SLAVE");
+
+            printf("Sleeping to let replication happen\n"); fflush(stdout);
+            sleep(30);
+
+            for (i = 0; i < Test->repl->N; i++) {
+                printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
+                global_result += select_from_t1(Test->repl->nodes[i], 4);
+            }
+
+            global_result += check_sha1(Test);
+            Test->repl->close_connections();
+        }
     }
 
 
