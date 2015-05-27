@@ -8,7 +8,11 @@
 --event=master_up --initiator=server1 --nodelist=server1,server2,server3,server4
 --event=slave_up --initiator=server2 --nodelist=server1,server2,server3,server4
 @endverbatim
- * - repeat test for Galera monitor
+ * - repeat test for Galera monitor: block node0, unblock node0, block node1, unblock node1
+ * - expect following as a script output:
+ * @verbatim
+
+ @endverbatim
  * - make script non-executable
  * - block and unblocm node1
  * - check error log for 'Error: The file cannot be executed: /home/ec2-user/script.sh' error
