@@ -5,7 +5,7 @@
  * - DROP TABLE t1
  * - LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1; using RWSplit
  * - check if t1 contains right data
- * - SDROP t1 again and repeat LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1; using ReadConn master
+ * - DROP t1 again and repeat LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1; using ReadConn master
  */
 
 
