@@ -105,6 +105,12 @@ typedef struct server_ref_t{
         SERVER* server;
 }SERVER_REF;
 
+typedef enum {
+  SSL_DISABLED,
+  SSL_ENABLED,
+  SSL_REQUIRED
+} ssl_mode_t;
+
 /**
  * Defines a service within the gateway.
  *
@@ -149,6 +155,7 @@ typedef struct service {
 	FILTER_DEF	**filters;		/**< Ordered list of filters */
 	int		n_filters;		/**< Number of filters */
         int             conn_timeout;           /*< Session timeout in seconds */
+        ssl_mode_t ssl_mode; /*< one of DISABLED, ENABLED or REQUIRED */
 	char		*weightby;
 	struct service	*next;			/**< The next service in the linked list */
 } SERVICE;

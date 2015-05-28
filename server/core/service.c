@@ -136,7 +136,8 @@ SERVICE 	*service;
 	service->routerModule = strdup(router);
 	service->users_from_all = false;
 	service->resources = NULL;
-	
+	service->ssl_mode = SSL_REQUIRED;
+
 	if (service->name == NULL || service->routerModule == NULL)
 	{
 		if (service->name)
@@ -853,6 +854,16 @@ serviceOptimizeWildcard(SERVICE *service, int action)
 	    LOGIF(LM,(skygw_log_write(LOGFILE_MESSAGE,"[%s] Optimizing wildcard database grants.",service->name)));
 	}
 	return 1;
+}
+
+/** Enable or disable the service SSL capability*/
+int
+serviceSetSSL(SERVICE *service, int action)
+{
+    if(action)
+	service->ssl_mode = SSL_REQUIRED;
+    else
+	service->ssl_mode = SSL_DISABLED;
 }
 
 /**

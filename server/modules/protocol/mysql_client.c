@@ -242,7 +242,7 @@ MySQLSendHandshake(DCB* dcb)
 	char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1]="";
 	char *version_string;
 	int len_version_string=0;
-
+	
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	GWBUF		*buf;
 
@@ -319,7 +319,16 @@ MySQLSendHandshake(DCB* dcb)
 
 
         mysql_server_capabilities_one[0] &= ~GW_MYSQL_CAPABILITIES_COMPRESS;
-        mysql_server_capabilities_one[0] &= ~GW_MYSQL_CAPABILITIES_SSL;
+
+	if(dcb->service->ssl_mode != SSL_DISABLED)
+	{
+	   mysql_server_capabilities_one[1] |= GW_MYSQL_CAPABILITIES_SSL >> 8;
+	}
+	else
+	{
+	    mysql_server_capabilities_one[0] &= ~GW_MYSQL_CAPABILITIES_SSL;
+	}
+
 
         memcpy(mysql_handshake_payload, mysql_server_capabilities_one, sizeof(mysql_server_capabilities_one));
         mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_capabilities_one);
@@ -402,7 +411,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	uint8_t *stage1_hash = NULL;
 	int auth_ret = -1;
 	MYSQL_session *client_data = NULL;
-
+	int ssl = 0;
         CHK_DCB(dcb);
 
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
@@ -450,6 +459,15 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                 GW_MYSQL_CAPABILITIES_COMPRESS & gw_mysql_get_byte4(
                         &protocol->client_capabilities);
         */
+
+	
+	ssl = protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
+
+	/** Client didn't requested SSL when SSL mode was required*/
+	if(!ssl && protocol->owner_dcb->service->ssl_mode == SSL_REQUIRED)
+	{
+	    return 1;
+	}
 
 	username = get_username_from_auth(username, client_auth_packet);
 	

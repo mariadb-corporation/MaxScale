@@ -97,6 +97,10 @@ typedef enum {
         MYSQL_AUTH_RECV,
         MYSQL_AUTH_FAILED,
         MYSQL_HANDSHAKE_FAILED,
+        MYSQL_AUTH_SSL_REQ, /*< client requested SSL */
+        MYSQL_AUTH_SSL_EXCHANGE_DONE, /*< SSL handshake done */
+        MYSQL_AUTH_SSL_EXCHANGE_ERR, /*< SSL handshake failure */
+        MYSQL_AUTH_SSL_RECV, /*<  */
         MYSQL_IDLE
 } mysql_auth_state_t;
 
