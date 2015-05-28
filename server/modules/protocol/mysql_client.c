@@ -46,7 +46,9 @@
 #include <modinfo.h>
 #include <sys/stat.h>
 #include <modutil.h>
-
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
 	MODULE_GA,
@@ -113,6 +115,7 @@ version()
 void
 ModuleInit()
 {
+    SSL_library_init();
 }
 
 /**
@@ -473,12 +476,17 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	    return 1;
 	}
 
-	if(LOG_IS_ENABLED(LT))
+	if(LOG_IS_ENABLED(LT) && ssl)
 	{
 	    skygw_log_write(LT,"User %s@%s connected to service '%s' with SSL.",
 		    protocol->owner_dcb->user,
 		    protocol->owner_dcb->remote,
 		    protocol->owner_dcb->service->name);
+	}
+
+	if(ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED)
+	{
+
 	}
 
 	username = get_username_from_auth(username, client_auth_packet);
