@@ -26,7 +26,9 @@
 #include <hashtable.h>
 #include <resultset.h>
 #include <maxconfig.h>
-
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 /**
  * @file service.h
  *
@@ -158,6 +160,15 @@ typedef struct service {
         ssl_mode_t ssl_mode; /*< one of DISABLED, ENABLED or REQUIRED */
 	char		*weightby;
 	struct service	*next;			/**< The next service in the linked list */
+        SSL_CTX         *ctx;
+        SSL            *ssl;
+        SSL_METHOD      *method;                           /*<  SSLv2/3 or TLSv1/2 methods
+                                                           * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
+        char* ssl_cert;
+        char* ssl_key;
+        char* ssl_ca_cert;
+        bool ssl_init_done;
+
 } SERVICE;
 
 typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOST} count_spec_t;
@@ -186,6 +197,8 @@ extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
 extern	void	serviceSetFilters(SERVICE *, char *);
 extern  int     serviceSetSSL(SERVICE *service, char* action);
+extern  int     serviceInitSSL(SERVICE* service);
+extern  void    serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert);
 extern	int	serviceEnableRootUser(SERVICE *, int );
 extern	int	serviceSetTimeout(SERVICE *, int );
 extern	void	serviceWeightBy(SERVICE *, char *);

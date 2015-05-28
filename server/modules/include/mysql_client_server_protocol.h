@@ -54,7 +54,9 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
-
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include <service.h>
 #include <router.h>
 #include <poll.h>
@@ -294,6 +296,7 @@ typedef struct {
         unsigned        long tid;                         /*< MySQL Thread ID, in
         * handshake */
         unsigned int    charset;                          /*< MySQL character set at connect time */
+        SSL* ssl; /*< SSL struct for client connection */
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;
 #endif

@@ -46,9 +46,7 @@
 #include <modinfo.h>
 #include <sys/stat.h>
 #include <modutil.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
 	MODULE_GA,
@@ -116,6 +114,7 @@ void
 ModuleInit()
 {
     SSL_library_init();
+    SSL_load_error_strings();
 }
 
 /**
@@ -484,9 +483,47 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		    protocol->owner_dcb->service->name);
 	}
 
+	/** Do the SSL Handshake */
 	if(ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED)
 	{
+	    if(serviceInitSSL(protocol->owner_dcb->service) != 0)
+	    {
+		skygw_log_write(LOGFILE_ERROR,"Error: SSL initialization for service '%s' failed.",
+			 protocol->owner_dcb->service->name);
+		return 1;
+	    }
+	    protocol->ssl = SSL_new(protocol->owner_dcb->service->ctx);
+	    SSL_set_fd(protocol->ssl,dcb->fd);
+	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
+	    printf("%s\n",SSL_get_version(protocol->ssl));
+	    int errnum,rval;
+	    char errbuf[1024];
+	    switch((rval = SSL_accept(protocol->ssl)))
+	    {
+	    case 0:
+		errnum = SSL_get_error(protocol->ssl,rval);
+		ERR_error_string(errnum,errbuf);
+		skygw_log_write_flush(LOGFILE_ERROR,"SSL_accept: %s",errbuf);
+		ERR_print_errors_fp(stdout);
+		ERR_error_string(errnum,errbuf);
+		printf("%s\n",errbuf);
+		fflush(stdout);
+		break;
+	    case 1:
+		protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_DONE;
+		break;
 
+	    default:
+		errnum = SSL_get_error(protocol->ssl,rval);
+		ERR_print_errors_fp(stdout);		
+		ERR_error_string(errnum,errbuf);
+		printf("%s\n",errbuf);
+		fflush(stdout);
+		skygw_log_write_flush(LOGFILE_ERROR,"Error: Fatal error in SSL_accept: %s",errbuf);
+		protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_ERR;
+		break;
+
+	    }
 	}
 
 	username = get_username_from_auth(username, client_auth_packet);
@@ -1700,4 +1737,3 @@ return_str:
         return str;
 }
 #endif
-

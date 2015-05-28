@@ -137,6 +137,10 @@ SERVICE 	*service;
 	service->users_from_all = false;
 	service->resources = NULL;
 	service->ssl_mode = SSL_DISABLED;
+	service->ssl_init_done = false;
+	service->ssl_ca_cert = NULL;
+	service->ssl_cert = NULL;
+	service->ssl_key = NULL;
 
 	if (service->name == NULL || service->routerModule == NULL)
 	{
@@ -854,6 +858,14 @@ serviceOptimizeWildcard(SERVICE *service, int action)
 	    LOGIF(LM,(skygw_log_write(LOGFILE_MESSAGE,"[%s] Optimizing wildcard database grants.",service->name)));
 	}
 	return 1;
+}
+
+void
+serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert)
+{
+    service->ssl_cert = strdup(cert);
+    service->ssl_key = strdup(key);
+    service->ssl_ca_cert = strdup(ca_cert);
 }
 
 /** Enable or disable the service SSL capability*/
@@ -1797,4 +1809,42 @@ int		*data;
 	resultset_add_column(set, "Total Sessions", 10, COL_TYPE_VARCHAR);
 
 	return set;
+}
+
+
+int serviceInitSSL(SERVICE* service)
+{
+    if(!service->ssl_init_done)
+    {
+	service->method = (SSL_METHOD*)SSLv23_server_method();
+	service->ctx = SSL_CTX_new(service->method);
+
+	if (SSL_CTX_use_certificate_file(service->ctx, service->ssl_cert, SSL_FILETYPE_PEM) <= 0) {
+	    return -1;
+	}
+
+	/* Load the private-key corresponding to the server certificate */
+	if (SSL_CTX_use_PrivateKey_file(service->ctx, service->ssl_key, SSL_FILETYPE_PEM) <= 0) {
+	    return -1;
+	}
+
+	/* Check if the server certificate and private-key matches */
+	if (!SSL_CTX_check_private_key(service->ctx)) {
+	    return -1;
+	}
+
+
+	/* Load the RSA CA certificate into the SSL_CTX structure */
+	if (!SSL_CTX_load_verify_locations(service->ctx, service->ssl_ca_cert, NULL)) {
+	    return -1;
+	}
+
+	/* Set to require peer (client) certificate verification */
+	SSL_CTX_set_verify(service->ctx,SSL_VERIFY_PEER,NULL);
+
+	/* Set the verification depth to 1 */
+	SSL_CTX_set_verify_depth(service->ctx,10);
+	service->ssl_init_done = true;
+    }
+    return 0;
 }

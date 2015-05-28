@@ -345,7 +345,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				char *weightby;
 				char *version_string;
 				char *subservices;
-				char* ssl;
+				char *ssl,*ssl_cert,*ssl_key,*ssl_ca_cert;
 				bool  is_rwsplit = false;
 				bool  is_schemarouter = false;
 				char *allow_localhost_match_wildcard_host;
@@ -355,7 +355,9 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				auth = config_get_value(obj->parameters, "passwd");
 				subservices = config_get_value(obj->parameters, "subservices");
 				ssl = config_get_value(obj->parameters, "ssl");
-
+				ssl_cert = config_get_value(obj->parameters, "ssl_cert");
+				ssl_key = config_get_value(obj->parameters, "ssl_key");
+				ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
@@ -448,8 +450,28 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
                                                          "max_slave_replication_lag");
 
 				if(ssl)
-				    if(serviceSetSSL(obj->element,ssl) != 0)
-					skygw_log_write(LE,"Error: Unknown parameter for service '%s': %s",obj->object,ssl);
+				{
+				    if(ssl_cert == NULL)
+					skygw_log_write(LE,"Error: Server certificate missing for service '%s'.",obj->object);
+				    if(ssl_ca_cert == NULL)
+					skygw_log_write(LE,"Error: CA Certificate missing for service '%s'.",obj->object);
+				    if(ssl_key == NULL)
+					skygw_log_write(LE,"Error: Server private key missing for service '%s'.",obj->object);
+
+				    if(ssl_ca_cert != NULL && ssl_cert != NULL && ssl_key != NULL)
+				    {
+
+					if(serviceSetSSL(obj->element,ssl) != 0)
+					{
+					    skygw_log_write(LE,"Error: Unknown parameter for service '%s': %s",obj->object,ssl);
+					}
+					else
+					{
+					    serviceSetCertificates(obj->element,ssl_cert,ssl_key,ssl_ca_cert);
+					}
+				    }
+
+				}
 
 				if (enable_root_user)
 					serviceEnableRootUser(
