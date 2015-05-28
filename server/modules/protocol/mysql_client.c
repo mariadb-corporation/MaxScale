@@ -466,7 +466,19 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	/** Client didn't requested SSL when SSL mode was required*/
 	if(!ssl && protocol->owner_dcb->service->ssl_mode == SSL_REQUIRED)
 	{
+	    LOGIF(LT,(skygw_log_write(LT,"User %s@%s connected to service '%s' without SSL when SSL was required.",
+		    protocol->owner_dcb->user,
+	            protocol->owner_dcb->remote,
+		    protocol->owner_dcb->service->name)));
 	    return 1;
+	}
+
+	if(LOG_IS_ENABLED(LT))
+	{
+	    skygw_log_write(LT,"User %s@%s connected to service '%s' with SSL.",
+		    protocol->owner_dcb->user,
+		    protocol->owner_dcb->remote,
+		    protocol->owner_dcb->service->name);
 	}
 
 	username = get_username_from_auth(username, client_auth_packet);

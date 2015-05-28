@@ -136,7 +136,7 @@ SERVICE 	*service;
 	service->routerModule = strdup(router);
 	service->users_from_all = false;
 	service->resources = NULL;
-	service->ssl_mode = SSL_REQUIRED;
+	service->ssl_mode = SSL_DISABLED;
 
 	if (service->name == NULL || service->routerModule == NULL)
 	{
@@ -858,12 +858,20 @@ serviceOptimizeWildcard(SERVICE *service, int action)
 
 /** Enable or disable the service SSL capability*/
 int
-serviceSetSSL(SERVICE *service, int action)
+serviceSetSSL(SERVICE *service, char* action)
 {
-    if(action)
+    int rval = 0;
+
+    if(strcasecmp(action,"required") == 0)
 	service->ssl_mode = SSL_REQUIRED;
-    else
+    else if(strcasecmp(action,"enabled") == 0)
+	service->ssl_mode = SSL_ENABLED;
+    else if(strcasecmp(action,"disabled") == 0)
 	service->ssl_mode = SSL_DISABLED;
+    else
+	rval = -1;
+
+    return rval;
 }
 
 /**
@@ -1029,6 +1037,8 @@ int		i;
 	printf("\tUsers data:        	%p\n", (void *)service->users);
 	printf("\tTotal connections:	%d\n", service->stats.n_sessions);
 	printf("\tCurrently connected:	%d\n", service->stats.n_current);
+	printf("\tSSL:	%s\n", service->ssl_mode == SSL_DISABLED ? "Disabled":
+	    (service->ssl_mode == SSL_ENABLED ? "Enabled":"Required"));
 }
 
 /**
@@ -1138,6 +1148,8 @@ int		i;
 						service->stats.n_sessions);
 	dcb_printf(dcb, "\tCurrently connected:			%d\n",
 						service->stats.n_current);
+		dcb_printf(dcb,"\tSSL:	%s\n", service->ssl_mode == SSL_DISABLED ? "Disabled":
+	    (service->ssl_mode == SSL_ENABLED ? "Enabled":"Required"));
 }
 
 /**

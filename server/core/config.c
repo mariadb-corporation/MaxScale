@@ -345,6 +345,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				char *weightby;
 				char *version_string;
 				char *subservices;
+				char* ssl;
 				bool  is_rwsplit = false;
 				bool  is_schemarouter = false;
 				char *allow_localhost_match_wildcard_host;
@@ -353,6 +354,8 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				user = config_get_value(obj->parameters, "user");
 				auth = config_get_value(obj->parameters, "passwd");
 				subservices = config_get_value(obj->parameters, "subservices");
+				ssl = config_get_value(obj->parameters, "ssl");
+
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
@@ -443,7 +446,11 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
                                 max_slave_rlag_str = 
                                         config_get_value(obj->parameters, 
                                                          "max_slave_replication_lag");
-                                        
+
+				if(ssl)
+				    if(serviceSetSSL(obj->element,ssl) != 0)
+					skygw_log_write(LE,"Error: Unknown parameter for service '%s': %s",obj->object,ssl);
+
 				if (enable_root_user)
 					serviceEnableRootUser(
                                                 obj->element, 
