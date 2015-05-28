@@ -231,7 +231,7 @@ int		rval;
 			    strcpy(version_string,tmp);
 			}
 
-			ptr = strstr(tmp, "-embedded");
+			ptr = strstr(version_string, "-embedded");
 			if (ptr) {
 				*ptr = '\0';
 			}

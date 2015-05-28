@@ -58,6 +58,7 @@
 #include <log_manager.h>
 #include <version.h>
 
+extern void blr_master_close(ROUTER_INSTANCE* router);
 static uint32_t extract_field(uint8_t *src, int bits);
 static void encode_value(unsigned char *data, unsigned int value, int len);
 static int blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
@@ -86,6 +87,7 @@ static int blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *sl
 static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
+static void blr_slave_send_error_packet(ROUTER_SLAVE *slave, char *msg, unsigned int err_num, char *status);
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -2198,7 +2200,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 		return blr_slave_send_ok(router, slave);
 	} else {
-		blr_slave_send_error(router, slave, "Slave connection is not running");
+		blr_slave_send_error_packet(slave, "Slave connection is not running", (unsigned int)1199, NULL);
 		return 1;
 	}
 }
@@ -2230,7 +2232,59 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 		return blr_slave_send_ok(router, slave);
 	} else {
-		blr_slave_send_error(router, slave, "Slave connection is already running");
+		blr_slave_send_error_packet(slave, "Slave connection is already running", (unsigned int)1254, NULL);
 		return 1;
 	}
 } 
+
+/**
+ * Construct an error packet reply with specified code and status
+ *
+ * @param slave		The slave server instance
+ * @param msg		The error message to send
+ * @param err_num	The error number to send
+ * @param status	The error status
+ */
+
+static void
+blr_slave_send_error_packet(ROUTER_SLAVE *slave, char *msg, unsigned int err_num, char *status)
+{
+GWBUF		*pkt;
+unsigned char   *data;
+int             len;
+unsigned int	mysql_errno = 0;
+char		*mysql_state;
+uint8_t		mysql_err[2];
+
+	if ((pkt = gwbuf_alloc(strlen(msg) + 13)) == NULL)
+		return;
+
+	if (status != NULL)
+		mysql_state = status;
+	else
+		mysql_state = "HY000";
+
+	if (err_num > 0)
+		mysql_errno = err_num;
+	else
+		mysql_errno = (unsigned int)2003;
+
+	data = GWBUF_DATA(pkt);
+	len = strlen(msg) + 9;
+
+	encode_value(&data[0], len, 24);	// Payload length
+
+	data[3] = 1;				// Sequence id
+
+	data[4] = 0xff;				// Error indicator
+
+	encode_value(&data[5], mysql_errno, 16);// Error Code
+
+	data[7] = '#';				// Status message first char
+	strncpy((char *)&data[8], mysql_state, 5); // Status message
+
+	memcpy(&data[13], msg, strlen(msg));	// Error Message
+
+	slave->dcb->func.write(slave->dcb, pkt);
+}
+
