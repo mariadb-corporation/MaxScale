@@ -78,6 +78,8 @@ extern char* get_username_from_auth(char* ptr, uint8_t* data);
 extern int check_db_name_after_auth(DCB *, char *, int);
 extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db);
 
+int do_ssl_accept(MySQLProtocol* protocol);
+
 /*
  * The "module object" for the mysqld client protocol module.
  */
@@ -498,6 +500,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	    printf("%s\n",SSL_get_version(protocol->ssl));
 	    int errnum,rval;
 	    char errbuf[1024];
+
 	    switch((rval = SSL_accept(protocol->ssl)))
 	    {
 	    case 0:
@@ -515,12 +518,22 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	    default:
 		errnum = SSL_get_error(protocol->ssl,rval);
-		ERR_print_errors_fp(stdout);		
-		ERR_error_string(errnum,errbuf);
-		printf("%s\n",errbuf);
-		fflush(stdout);
-		skygw_log_write_flush(LOGFILE_ERROR,"Error: Fatal error in SSL_accept: %s",errbuf);
-		protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_ERR;
+		if(errnum == SSL_ERROR_WANT_READ)
+		{
+		    /** Not all of the data has been read. Go back to the poll
+		     queue and wait for more.*/
+		    protocol->protocol_auth_state = MYSQL_AUTH_SSL_RECV;
+		    return 0;
+		}
+		else
+		{
+		    ERR_print_errors_fp(stdout);
+		    ERR_error_string(errnum,errbuf);
+		    printf("%s\n",errbuf);
+		    fflush(stdout);
+		    skygw_log_write_flush(LOGFILE_ERROR,"Error: Fatal error in SSL_accept: %s",errbuf);
+		    protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_ERR;
+		}
 		break;
 
 	    }
@@ -655,6 +668,10 @@ int gw_read_client_event(
         CHK_DCB(dcb);
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
+	if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_RECV)
+	{
+	    goto do_auth;
+	}
         rc = dcb_read(dcb, &read_buffer);
         
 	
@@ -794,7 +811,7 @@ int gw_read_client_event(
 		}
 
 	}
-        
+        do_auth:
         /**
          * Now there should be at least one complete mysql packet in read_buffer.
          */
@@ -805,7 +822,10 @@ int gw_read_client_event(
 		int auth_val;
 		
                 auth_val = gw_mysql_do_authentication(dcb, read_buffer);
-	
+
+		if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_RECV)
+		    break;
+		
 		if (auth_val == 0)
 		{
 			SESSION *session;
@@ -899,6 +919,15 @@ int gw_read_client_event(
 	}
         break;
         
+	case MYSQL_AUTH_SSL_RECV:
+	{
+	    if(do_ssl_accept(protocol) == 1)
+	    {
+		protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_DONE;
+	    }
+	}
+	break;
+
         case MYSQL_IDLE:
         {
                 uint8_t* payload = NULL; 
@@ -1737,3 +1766,49 @@ return_str:
         return str;
 }
 #endif
+
+int do_ssl_accept(MySQLProtocol* protocol)
+{
+    int rval,errnum;
+    char errbuf[2014];
+    
+    switch((rval = SSL_accept(protocol->ssl)))
+	    {
+	    case 0:
+		errnum = SSL_get_error(protocol->ssl,rval);
+		ERR_error_string(errnum,errbuf);
+		skygw_log_write_flush(LOGFILE_ERROR,"SSL_accept: %s",errbuf);
+		ERR_print_errors_fp(stdout);
+		ERR_error_string(errnum,errbuf);
+		printf("%s\n",errbuf);
+		fflush(stdout);
+		break;
+	    case 1:
+		protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_DONE;
+		rval = 1;
+		break;
+
+	    default:
+		errnum = SSL_get_error(protocol->ssl,rval);
+		if(errnum == SSL_ERROR_WANT_READ)
+		{
+		    /** Not all of the data has been read. Go back to the poll
+		     queue and wait for more.*/
+		    rval = 0;
+		}
+		else
+		{
+		    ERR_print_errors_fp(stdout);
+		    ERR_error_string(errnum,errbuf);
+		    printf("%s\n",errbuf);
+		    fflush(stdout);
+		    skygw_log_write_flush(LOGFILE_ERROR,"Error: Fatal error in SSL_accept: %s",errbuf);
+		    protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_ERR;
+		    rval = -1;
+		}
+		break;
+
+	    }
+
+    return rval;
+}
