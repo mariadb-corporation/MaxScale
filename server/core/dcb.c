@@ -49,6 +49,7 @@
  *                                      backend
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
  * 20/06/2014	Mark Riddoch		Addition of dcb_clone
+ * 29/05/2015	Markus Makela           Addition of dcb_write_SSL
  *
  * @endverbatim
  */
@@ -880,6 +881,152 @@ return_n:
         return n;
 }
 
+
+/**
+ * General purpose read routine to read data from a socket in the
+ * Descriptor Control Block and append it to a linked list of buffers.
+ * The list may be empty, in which case *head == NULL
+ *
+ * @param dcb	The DCB to read from
+ * @param head	Pointer to linked list to append data to
+ * @return	-1 on error, otherwise the number of read bytes on the last
+ * iteration of while loop. 0 is returned if no data available.
+ */
+int dcb_read_SSL(
+        DCB   *dcb,
+	SSL* ssl,
+        GWBUF **head)
+{
+        GWBUF *buffer = NULL;
+        int   b;
+        int   rc;
+        int   n;
+        int   nread = 0;
+
+        CHK_DCB(dcb);
+
+	if (dcb->fd <= 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Read failed, dcb is %s.",
+			dcb->fd == DCBFD_CLOSED ? "closed" : "cloned, not readable")));
+		n = 0;
+		goto return_n;
+	}
+
+	while (true)
+        {
+                int bufsize;
+
+                rc = ioctl(dcb->fd, FIONREAD, &b);
+
+                if (rc == -1)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : ioctl FIONREAD for dcb %p in "
+                                "state %s fd %d failed due error %d, %s.",
+                                dcb,
+                                STRDCBSTATE(dcb->state),
+                                dcb->fd,
+                                errno,
+                                strerror(errno))));
+                        n = -1;
+                        goto return_n;
+                }
+
+                if (b == 0 && nread == 0)
+                {
+                        /** Handle closed client socket */
+                        if (dcb_isclient(dcb))
+                        {
+                                char c;
+                                int l_errno = 0;
+                                int r = -1;
+
+                                /* try to read 1 byte, without consuming the socket buffer */
+                                r = recv(dcb->fd, &c, sizeof(char), MSG_PEEK);
+                                l_errno = errno;
+
+                                if (r <= 0 &&
+                                        l_errno != EAGAIN &&
+                                        l_errno != EWOULDBLOCK &&
+					l_errno != 0)
+                                {
+                                        n = -1;
+                                        goto return_n;
+                                }
+                        }
+                        n = 0;
+                        goto return_n;
+                }
+                else if (b == 0)
+                {
+                        n = 0;
+                        goto return_n;
+                }
+
+		dcb->last_read = hkheartbeat;
+
+                bufsize = MIN(b, MAX_BUFFER_SIZE);
+
+                if ((buffer = gwbuf_alloc(bufsize)) == NULL)
+                {
+                        /*<
+                        * This is a fatal error which should cause shutdown.
+                        * Todo shutdown if memory allocation fails.
+                        */
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Failed to allocate read buffer "
+                                "for dcb %p fd %d, due %d, %s.",
+                                dcb,
+                                dcb->fd,
+                                errno,
+                                strerror(errno))));
+
+                        n = -1;
+                        goto return_n;
+                }
+                GW_NOINTR_CALL(n = SSL_read(ssl, GWBUF_DATA(buffer), bufsize);
+                dcb->stats.n_reads++);
+
+                if (n <= 0)
+                {
+		    int ssl_errno = ERR_get_error();
+		    if(ssl_errno != SSL_ERROR_WANT_READ)
+		    {
+		    LOGIF(LE, (skygw_log_write_flush(
+			    LOGFILE_ERROR,
+			    "Error : Read failed, dcb %p in state "
+			    "%s fd %d: %s.",
+			    dcb,
+			    STRDCBSTATE(dcb->state),
+			    dcb->fd,
+			    ERR_error_string(ssl_errno,NULL))));
+
+			gwbuf_free(buffer);
+                        goto return_n;
+		    }
+                }
+                nread += n;
+
+                LOGIF(LD, (skygw_log_write(
+                        LOGFILE_DEBUG,
+                        "%lu [dcb_read] Read %d bytes from dcb %p in state %s "
+                        "fd %d.",
+                        pthread_self(),
+                        n,
+                        dcb,
+                        STRDCBSTATE(dcb->state),
+                        dcb->fd)));
+                /*< Append read data to the gwbuf */
+                *head = gwbuf_append(*head, buffer);
+        } /*< while (true) */
+return_n:
+        return n;
+}
 /**
  * General purpose routine to write to a DCB
  *
@@ -905,11 +1052,11 @@ int	below_water;
 		return 0;
 	}
         /**
-         * SESSION_STATE_STOPPING means that one of the backends is closing 
-         * the router session. Some backends may have not completed 
+         * SESSION_STATE_STOPPING means that one of the backends is closing
+         * the router session. Some backends may have not completed
          * authentication yet and thus they have no information about router
          * being closed. Session state is changed to SESSION_STATE_STOPPING
-         * before router's closeSession is called and that tells that DCB may 
+         * before router's closeSession is called and that tells that DCB may
          * still be writable.
          */
         if (queue == NULL ||
@@ -932,9 +1079,9 @@ int	below_water;
                 //ss_dassert(false);
                 return 0;
         }
-                
+
         spinlock_acquire(&dcb->writeqlock);
-        
+
 	if (dcb->writeq != NULL)
 	{
 		/*
@@ -949,7 +1096,7 @@ int	below_water;
 		if (queue)
                 {
                         int qlen;
-                        
+
                         qlen = gwbuf_length(queue);
                         atomic_add(&dcb->writeqlen, qlen);
                         dcb->writeq = gwbuf_append(dcb->writeq, queue);
@@ -998,7 +1145,7 @@ int	below_water;
                                 w = gw_write(dcb, GWBUF_DATA(queue), qlen);
                                 dcb->stats.n_writes++;
                                 );
-                        
+
 			if (w < 0)
 			{
                                 saved_errno = errno;
@@ -1006,7 +1153,7 @@ int	below_water;
 
                                 if (LOG_IS_ENABLED(LOGFILE_DEBUG))
                                 {
-                                        if (saved_errno == EPIPE) 
+                                        if (saved_errno == EPIPE)
                                         {
                                                 LOGIF(LD, (skygw_log_write(
                                                         LOGFILE_DEBUG,
@@ -1019,9 +1166,9 @@ int	below_water;
                                                         dcb->fd,
                                                         saved_errno,
                                                         strerror(saved_errno))));
-                                        } 
+                                        }
                                 }
-                                
+
                                 if (LOG_IS_ENABLED(LOGFILE_ERROR))
                                 {
                                         if (saved_errno != EPIPE &&
@@ -1066,7 +1213,7 @@ int	below_water;
                 if (queue)
 		{
                         int qlen;
-                        
+
 			qlen = gwbuf_length(queue);
                         atomic_add(&dcb->writeqlen, qlen);
                         dcb->stats.n_buffered++;
@@ -1086,7 +1233,7 @@ int	below_water;
                 if (GWBUF_IS_TYPE_MYSQL(queue))
                 {
                         uint8_t* data = GWBUF_DATA(queue);
-                        
+
                         if (data[4] == 0x01)
                         {
                                 dolog = false;
@@ -1114,6 +1261,262 @@ int	below_water;
 	}
 
 	return 1;
+}
+
+/**
+ * General purpose routine to write to an SSL enabled DCB
+ *
+ * @param dcb	The DCB of the client
+ * @param ssl   The SSL structure for this DCB
+ * @param queue	Queue of buffers to write
+ * @return 0 on failure, 1 on success
+ */
+int
+dcb_write_SSL(DCB *dcb, SSL* ssl, GWBUF *queue)
+{
+    int	w;
+    int	saved_errno = 0;
+    int	below_water;
+
+    below_water = (dcb->high_water && dcb->writeqlen < dcb->high_water) ? 1 : 0;
+    ss_dassert(queue != NULL);
+
+    if (dcb->fd <= 0)
+    {
+	LOGIF(LE, (skygw_log_write_flush(
+		LOGFILE_ERROR,
+					 "Error : Write failed, dcb is %s.",
+					 dcb->fd == DCBFD_CLOSED ? "closed" : "cloned, not writable")));
+	return 0;
+    }
+
+    /**
+     * SESSION_STATE_STOPPING means that one of the backends is closing
+     * the router session. Some backends may have not completed
+     * authentication yet and thus they have no information about router
+     * being closed. Session state is changed to SESSION_STATE_STOPPING
+     * before router's closeSession is called and that tells that DCB may
+     * still be writable.
+     */
+    if (queue == NULL ||
+	(dcb->state != DCB_STATE_ALLOC &&
+	 dcb->state != DCB_STATE_POLLING &&
+	 dcb->state != DCB_STATE_LISTENING &&
+	 dcb->state != DCB_STATE_NOPOLLING &&
+	 (dcb->session == NULL ||
+	  dcb->session->state != SESSION_STATE_STOPPING)))
+    {
+	LOGIF(LD, (skygw_log_write(
+		LOGFILE_DEBUG,
+				 "%lu [dcb_write] Write aborted to dcb %p because "
+		"it is in state %s",
+				 pthread_self(),
+				 dcb->stats.n_buffered,
+				 dcb,
+				 STRDCBSTATE(dcb->state),
+				 dcb->fd)));
+	//ss_dassert(false);
+	return 0;
+    }
+
+    spinlock_acquire(&dcb->writeqlock);
+
+    if (dcb->writeq != NULL)
+    {
+	/*
+	 * We have some queued data, so add our data to
+	 * the write queue and return.
+	 * The assumption is that there will be an EPOLLOUT
+	 * event to drain what is already queued. We are protected
+	 * by the spinlock, which will also be acquired by the
+	 * the routine that drains the queue data, so we should
+	 * not have a race condition on the event.
+	 */
+	if (queue)
+	{
+	    int qlen;
+
+	    qlen = gwbuf_length(queue);
+	    atomic_add(&dcb->writeqlen, qlen);
+	    dcb->writeq = gwbuf_append(dcb->writeq, queue);
+	    dcb->stats.n_buffered++;
+	    LOGIF(LD, (skygw_log_write(
+		    LOGFILE_DEBUG,
+				     "%lu [dcb_write] Append to writequeue. %d writes "
+		    "buffered for dcb %p in state %s fd %d",
+				     pthread_self(),
+				     dcb->stats.n_buffered,
+				     dcb,
+				     STRDCBSTATE(dcb->state),
+				     dcb->fd)));
+	}
+    }
+    else
+    {
+	/*
+	 * Loop over the buffer chain that has been passed to us
+	 * from the reading side.
+	 * Send as much of the data in that chain as possible and
+	 * add any balance to the write queue.
+	 */
+	while (queue != NULL)
+	{
+	    int qlen;
+#if defined(FAKE_CODE)
+	    if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER &&
+	     dcb->session != NULL)
+	    {
+		if (dcb_isclient(dcb) && fail_next_client_fd) {
+		    dcb_fake_write_errno[dcb->fd] = 32;
+		    dcb_fake_write_ev[dcb->fd] = 29;
+		    fail_next_client_fd = false;
+		} else if (!dcb_isclient(dcb) &&
+			 fail_next_backend_fd)
+		{
+		    dcb_fake_write_errno[dcb->fd] = 32;
+		    dcb_fake_write_ev[dcb->fd] = 29;
+		    fail_next_backend_fd = false;
+		}
+	    }
+#endif /* FAKE_CODE */
+	    qlen = GWBUF_LENGTH(queue);
+	    GW_NOINTR_CALL(
+		    w = gw_write_SSL(ssl, GWBUF_DATA(queue), qlen);
+	    dcb->stats.n_writes++;
+	    );
+
+	    if (w < 0)
+	    {
+		int ssl_errno = ERR_get_error();
+
+		if (LOG_IS_ENABLED(LOGFILE_DEBUG))
+		{
+		    switch(ssl_errno)
+		    {
+		    case SSL_ERROR_WANT_READ:
+			LOGIF(LD, (skygw_log_write(
+				LOGFILE_DEBUG,
+				"%lu [dcb_write] Write to dcb "
+				"%p in state %s fd %d failed "
+				"due error SSL_ERROR_WANT_READ",
+						 pthread_self(),
+						 dcb,
+						 STRDCBSTATE(dcb->state),
+						 dcb->fd)));
+			break;
+		    case SSL_ERROR_WANT_WRITE:
+			LOGIF(LD, (skygw_log_write(
+				LOGFILE_DEBUG,
+				"%lu [dcb_write] Write to dcb "
+				"%p in state %s fd %d failed "
+				"due error SSL_ERROR_WANT_WRITE",
+						 pthread_self(),
+						 dcb,
+						 STRDCBSTATE(dcb->state),
+						 dcb->fd)));
+			break;
+		    default:
+			LOGIF(LD, (skygw_log_write(
+				LOGFILE_DEBUG,
+				"%lu [dcb_write] Write to dcb "
+				"%p in state %s fd %d failed "
+				"due error %d",
+						 pthread_self(),
+						 dcb,
+						 STRDCBSTATE(dcb->state),
+						 dcb->fd,ssl_errno)));
+		    }
+		}
+		
+		if (LOG_IS_ENABLED(LOGFILE_ERROR))
+		{
+		    if (ssl_errno != 0)
+		    {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Write to dcb %p in "
+				"state %s fd %d failed due "
+				"SSL error %d",
+							 dcb,
+							 STRDCBSTATE(dcb->state),
+							 dcb->fd,
+							 ssl_errno)));
+		    }
+		}
+		break;
+	    }
+	    /*
+	     * Pull the number of bytes we have written from
+	     * queue with have.
+	     */
+	    queue = gwbuf_consume(queue, w);
+	    LOGIF(LD, (skygw_log_write(
+		    LOGFILE_DEBUG,
+				     "%lu [dcb_write] Wrote %d Bytes to dcb %p in "
+		    "state %s fd %d",
+				     pthread_self(),
+				     w,
+				     dcb,
+				     STRDCBSTATE(dcb->state),
+				     dcb->fd)));
+	} /*< while (queue != NULL) */
+	/*<
+	 * What wasn't successfully written is stored to write queue
+	 * for suspended write.
+	 */
+	dcb->writeq = queue;
+
+	if (queue)
+	{
+	    int qlen;
+
+	    qlen = gwbuf_length(queue);
+	    atomic_add(&dcb->writeqlen, qlen);
+	    dcb->stats.n_buffered++;
+	}
+    } /* if (dcb->writeq) */
+
+    if (saved_errno != 0           &&
+	queue != NULL              &&
+	saved_errno != EAGAIN      &&
+	saved_errno != EWOULDBLOCK)
+    {
+	bool dolog = true;
+
+	/**
+	 * Do not log if writing COM_QUIT to backend failed.
+	 */
+	if (GWBUF_IS_TYPE_MYSQL(queue))
+	{
+	    uint8_t* data = GWBUF_DATA(queue);
+
+	    if (data[4] == 0x01)
+	    {
+		dolog = false;
+	    }
+	}
+	if (dolog)
+	{
+	    LOGIF(LD, (skygw_log_write(
+		    LOGFILE_DEBUG,
+				     "%lu [dcb_write] Writing to %s socket failed due %d, %s.",
+				     pthread_self(),
+				     dcb_isclient(dcb) ? "client" : "backend server",
+				     saved_errno,
+				     strerror(saved_errno))));
+	}
+	spinlock_release(&dcb->writeqlock);
+	return 0;
+    }
+    spinlock_release(&dcb->writeqlock);
+
+    if (dcb->high_water && dcb->writeqlen > dcb->high_water && below_water)
+    {
+	atomic_add(&dcb->stats.n_high_water, 1);
+	dcb_call_callback(dcb, DCB_REASON_HIGH_WATER);
+    }
+
+    return 1;
 }
 
 /**
@@ -1206,6 +1609,85 @@ int	above_water;
 	}
 
 	return n;
+}
+
+
+/**
+ * Drain the write queue of a DCB. This is called as part of the EPOLLOUT handling
+ * of a socket and will try to send any buffered data from the write queue
+ * up until the point the write would block.
+ *
+ * @param dcb	DCB to drain the write queue of
+ * @return The number of bytes written
+ */
+int
+dcb_drain_writeq_SSL(DCB *dcb, SSL* ssl)
+{
+    int	n = 0;
+    int	w;
+    int	saved_errno = 0;
+    int	above_water;
+
+    above_water = (dcb->low_water && dcb->writeqlen > dcb->low_water) ? 1 : 0;
+
+    spinlock_acquire(&dcb->writeqlock);
+
+    if (dcb->writeq)
+    {
+	int	len;
+	/*
+	 * Loop over the buffer chain in the pending writeq
+	 * Send as much of the data in that chain as possible and
+	 * leave any balance on the write queue.
+	 */
+	while (dcb->writeq != NULL)
+	{
+	    len = GWBUF_LENGTH(dcb->writeq);
+	    GW_NOINTR_CALL(w = gw_write_SSL(ssl, GWBUF_DATA(dcb->writeq), len););
+
+	    if (w < 0)
+	    {
+		int ssl_errno = ERR_get_error();
+
+		if(ssl_errno == SSL_ERROR_WANT_WRITE ||
+		 ssl_errno == SSL_ERROR_WANT_ACCEPT ||
+		 ssl_errno == SSL_ERROR_WANT_READ)
+		{
+		    break;
+		}
+
+		skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Write to dcb %p "
+			"in state %s fd %d failed: %s",
+				 dcb,
+				 STRDCBSTATE(dcb->state),
+				 dcb->fd,
+				 ERR_error_string(ssl_errno,NULL));
+		break;
+	    }
+	    /*
+	     * Pull the number of bytes we have written from
+	     * queue with have.
+	     */
+	    dcb->writeq = gwbuf_consume(dcb->writeq, w);
+	    n += w;
+	}
+    }
+    spinlock_release(&dcb->writeqlock);
+    atomic_add(&dcb->writeqlen, -n);
+
+    /* The write queue has drained, potentially need to call a callback function */
+    if (dcb->writeq == NULL)
+	dcb_call_callback(dcb, DCB_REASON_DRAINED);
+
+    if (above_water && dcb->writeqlen < dcb->low_water)
+    {
+	atomic_add(&dcb->stats.n_low_water, 1);
+	dcb_call_callback(dcb, DCB_REASON_LOW_WATER);
+    }
+
+    return n;
 }
 
 /** 
@@ -1791,6 +2273,29 @@ static bool dcb_set_state_nomutex(
         }
         return succp;
 }
+
+/**
+ * Write data to a DCB
+ *
+ * @param ssl		The SSL to write the buffer to
+ * @param buf		Buffer to write
+ * @param nbytes	Number of bytes to write
+ * @return Number of written bytes
+ */
+int
+gw_write_SSL(SSL* ssl, const void *buf, size_t nbytes)
+{
+        int w = 0;
+	int fd = SSL_get_fd(ssl);
+
+	if (fd > 0)
+	{
+		w = SSL_write(ssl, buf, nbytes);
+	}
+        return w;
+}
+
+
 
 /**
  * Write data to a DCB

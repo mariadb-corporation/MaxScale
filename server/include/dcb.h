@@ -23,6 +23,9 @@
 #include <gwbitmask.h>
 #include <skygw_utils.h>
 #include <netinet/in.h>
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #define ERRHANDLE
 
@@ -337,7 +340,10 @@ bool   dcb_set_state(DCB* dcb, dcb_state_t new_state, dcb_state_t* old_state);
 void   dcb_call_foreach (struct server* server, DCB_REASON reason);
 size_t dcb_get_session_id(DCB* dcb);
 bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
-
+int gw_write_SSL(SSL* ssl, const void *buf, size_t nbytes);
+int dcb_write_SSL(DCB *dcb, SSL* ssl, GWBUF *queue);
+int dcb_read_SSL(DCB   *dcb,SSL* ssl,GWBUF **head);
+int dcb_drain_writeq_SSL(DCB *dcb, SSL* ssl);
 
 
 /**

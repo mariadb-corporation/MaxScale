@@ -37,7 +37,7 @@
  * 09/09/2014	Massimiliano Pinto	Added: 777 permission for socket path
  * 13/10/2014	Massimiliano Pinto	Added: dbname authentication check
  * 10/11/2014	Massimiliano Pinto	Added: client charset added to protocol struct
- *
+ * 29/05/2015   Markus Makela           Added SSL support
  */
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -69,7 +69,9 @@ static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
 static int gw_error_client_event(DCB *dcb);
 static int gw_client_close(DCB *dcb);
 static int gw_client_hangup_event(DCB *dcb);
-
+int gw_read_client_event_SSL(DCB* dcb);
+int gw_MySQLWrite_client_SSL(DCB *dcb, GWBUF *queue);
+int gw_write_client_event_SSL(DCB *dcb);
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
@@ -464,6 +466,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                         &protocol->client_capabilities);
         */
 
+	if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_EXCHANGE_DONE)
+	    goto ssl_hs_done;
 	
 	ssl = protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 
@@ -497,47 +501,18 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	    protocol->ssl = SSL_new(protocol->owner_dcb->service->ctx);
 	    SSL_set_fd(protocol->ssl,dcb->fd);
 	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
-	    printf("%s\n",SSL_get_version(protocol->ssl));
-	    int errnum,rval;
-	    char errbuf[1024];
 
-	    switch((rval = SSL_accept(protocol->ssl)))
+	    if(do_ssl_accept(protocol) < 0)
 	    {
-	    case 0:
-		errnum = SSL_get_error(protocol->ssl,rval);
-		ERR_error_string(errnum,errbuf);
-		skygw_log_write_flush(LOGFILE_ERROR,"SSL_accept: %s",errbuf);
-		ERR_print_errors_fp(stdout);
-		ERR_error_string(errnum,errbuf);
-		printf("%s\n",errbuf);
-		fflush(stdout);
-		break;
-	    case 1:
-		protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_DONE;
-		break;
-
-	    default:
-		errnum = SSL_get_error(protocol->ssl,rval);
-		if(errnum == SSL_ERROR_WANT_READ)
-		{
-		    /** Not all of the data has been read. Go back to the poll
-		     queue and wait for more.*/
-		    protocol->protocol_auth_state = MYSQL_AUTH_SSL_RECV;
-		    return 0;
-		}
-		else
-		{
-		    ERR_print_errors_fp(stdout);
-		    ERR_error_string(errnum,errbuf);
-		    printf("%s\n",errbuf);
-		    fflush(stdout);
-		    skygw_log_write_flush(LOGFILE_ERROR,"Error: Fatal error in SSL_accept: %s",errbuf);
-		    protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_ERR;
-		}
-		break;
-
+		return 1;
+	    }
+	    else
+	    {
+		return 0;
 	    }
 	}
+
+	ssl_hs_done:
 
 	username = get_username_from_auth(username, client_auth_packet);
 	
@@ -645,6 +620,65 @@ gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
  	return dcb_write(dcb, queue);
 }
 
+
+/**
+ * Write function for client DCB: writes data from MaxScale to Client
+ *
+ * @param dcb	The DCB of the client
+ * @param queue	Queue of buffers to write
+ */
+int
+gw_MySQLWrite_client_SSL(DCB *dcb, GWBUF *queue)
+{
+    MySQLProtocol  *protocol = NULL;
+    CHK_DCB(dcb);
+    protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+    CHK_PROTOCOL(protocol);
+    return dcb_write_SSL(dcb, protocol->ssl, queue);
+}
+
+
+int gw_read_client_event_SSL(
+DCB* dcb)
+{
+    SESSION        *session = NULL;
+    ROUTER_OBJECT  *router = NULL;
+    ROUTER         *router_instance = NULL;
+    void           *rsession = NULL;
+    MySQLProtocol  *protocol = NULL;
+    GWBUF          *read_buffer = NULL;
+    int             rc = 0;
+    int             nbytes_read = 0;
+    uint8_t         cap = 0;
+    bool            stmt_input = false; /*< router input type */
+
+    CHK_DCB(dcb);
+    protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+    CHK_PROTOCOL(protocol);
+
+
+    if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ)
+    {
+	if(do_ssl_accept(protocol) == 1)
+	{
+	    spinlock_acquire(&protocol->protocol_lock);
+	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_DONE;
+	    spinlock_release(&protocol->protocol_lock);
+
+	    spinlock_acquire(&dcb->authlock);
+	    dcb->func.read = gw_read_client_event_SSL;
+	    dcb->func.write = gw_MySQLWrite_client_SSL;
+	    dcb->func.write_ready = gw_write_client_event;
+	    spinlock_release(&dcb->authlock);
+	}
+	goto return_rc;
+    }
+
+    return_rc:
+
+    return rc;
+}
+
 /**
  * Client read event triggered by EPOLLIN
  *
@@ -668,13 +702,36 @@ int gw_read_client_event(
         CHK_DCB(dcb);
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
-	if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_RECV)
+
+	/** Let the OpenSSL API do the reading from the socket */
+	if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ)
 	{
-	    goto do_auth;
+	    if(do_ssl_accept(protocol) == 1)
+	    {
+		spinlock_acquire(&protocol->protocol_lock);
+		protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_DONE;
+		protocol->use_ssl = true;
+		spinlock_release(&protocol->protocol_lock);
+
+		spinlock_acquire(&dcb->authlock);
+		//dcb->func.read = gw_read_client_event_SSL;
+		//dcb->func.write = gw_MySQLWrite_client_SSL;
+		//dcb->func.write_ready = gw_write_client_event_SSL;
+		spinlock_release(&dcb->authlock);
+	    }
+	    goto return_rc;
 	}
-        rc = dcb_read(dcb, &read_buffer);
-        
-	
+
+
+	if(protocol->use_ssl)
+	{
+	    rc = dcb_read_SSL(dcb,protocol->ssl, &read_buffer);
+	}
+	else
+	{
+	    rc = dcb_read(dcb, &read_buffer);
+	}
+
         if (rc < 0)
         {
                 dcb_close(dcb);
@@ -811,7 +868,7 @@ int gw_read_client_event(
 		}
 
 	}
-        do_auth:
+
         /**
          * Now there should be at least one complete mysql packet in read_buffer.
          */
@@ -823,7 +880,7 @@ int gw_read_client_event(
 		
                 auth_val = gw_mysql_do_authentication(dcb, read_buffer);
 
-		if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_RECV)
+		if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ)
 		    break;
 		
 		if (auth_val == 0)
@@ -919,12 +976,9 @@ int gw_read_client_event(
 	}
         break;
         
-	case MYSQL_AUTH_SSL_RECV:
+	case MYSQL_AUTH_SSL_EXCHANGE_DONE:
 	{
-	    if(do_ssl_accept(protocol) == 1)
-	    {
-		protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_DONE;
-	    }
+	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_DONE;
 	}
 	break;
 
@@ -1047,6 +1101,64 @@ return_rc:
 	return rc;
 }
 
+
+///////////////////////////////////////////////
+// client write event to Client triggered by EPOLLOUT
+//////////////////////////////////////////////
+/**
+ * @node Client's fd became writable, and EPOLLOUT event
+ * arrived. As a consequence, client input buffer (writeq) is flushed.
+ *
+ * Parameters:
+ * @param dcb - in, use
+ *          client dcb
+ *
+ * @return constantly 1
+ *
+ *
+ * @details (write detailed description here)
+ *
+ */
+int gw_write_client_event(DCB *dcb)
+{
+	MySQLProtocol *protocol = NULL;
+
+        CHK_DCB(dcb);
+
+        ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
+
+	if (dcb == NULL) {
+		goto return_1;
+	}
+
+	if (dcb->state == DCB_STATE_DISCONNECTED) {
+		goto return_1;
+	}
+
+	if (dcb->protocol == NULL) {
+	        goto return_1;
+	}
+        protocol = (MySQLProtocol *)dcb->protocol;
+        CHK_PROTOCOL(protocol);
+
+        if (protocol->protocol_auth_state == MYSQL_IDLE)
+        {
+		dcb_drain_writeq(dcb);
+                goto return_1;
+	}
+
+return_1:
+#if defined(SS_DEBUG)
+        if (dcb->state == DCB_STATE_POLLING ||
+            dcb->state == DCB_STATE_NOPOLLING ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
+                CHK_PROTOCOL(protocol);
+        }
+#endif
+        return 1;
+}
+
 ///////////////////////////////////////////////
 // client write event to Client triggered by EPOLLOUT
 //////////////////////////////////////////////
@@ -1064,7 +1176,7 @@ return_rc:
  * @details (write detailed description here)
  *
  */
-int gw_write_client_event(DCB *dcb)
+int gw_write_client_event_SSL(DCB *dcb)
 {
 	MySQLProtocol *protocol = NULL;
 
@@ -1088,7 +1200,7 @@ int gw_write_client_event(DCB *dcb)
 
         if (protocol->protocol_auth_state == MYSQL_IDLE)
         {
-		dcb_drain_writeq(dcb);
+		dcb_drain_writeq_SSL(dcb,protocol->ssl);
                 goto return_1;
 	}
 
@@ -1776,16 +1888,17 @@ int do_ssl_accept(MySQLProtocol* protocol)
 	    {
 	    case 0:
 		errnum = SSL_get_error(protocol->ssl,rval);
-		ERR_error_string(errnum,errbuf);
-		skygw_log_write_flush(LOGFILE_ERROR,"SSL_accept: %s",errbuf);
-		ERR_print_errors_fp(stdout);
-		ERR_error_string(errnum,errbuf);
-		printf("%s\n",errbuf);
-		fflush(stdout);
+		skygw_log_write_flush(LT,"SSL_accept ongoing for %s@%s",
+				 protocol->owner_dcb->user,
+				 protocol->owner_dcb->remote);
 		break;
 	    case 1:
 		protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_DONE;
 		rval = 1;
+		protocol->use_ssl = true;
+		skygw_log_write_flush(LT,"SSL_accept done for %s@%s",
+				 protocol->owner_dcb->user,
+				 protocol->owner_dcb->remote);
 		break;
 
 	    default:
@@ -1795,14 +1908,18 @@ int do_ssl_accept(MySQLProtocol* protocol)
 		    /** Not all of the data has been read. Go back to the poll
 		     queue and wait for more.*/
 		    rval = 0;
+		    protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
+		    skygw_log_write_flush(LT,"SSL_accept partially done for %s@%s",
+				 protocol->owner_dcb->user,
+				 protocol->owner_dcb->remote);
 		}
 		else
 		{
-		    ERR_print_errors_fp(stdout);
-		    ERR_error_string(errnum,errbuf);
-		    printf("%s\n",errbuf);
-		    fflush(stdout);
-		    skygw_log_write_flush(LOGFILE_ERROR,"Error: Fatal error in SSL_accept: %s",errbuf);
+		    skygw_log_write_flush(LE,
+				     "Error: Fatal error in SSL_accept for %s@%s: %s",
+				     protocol->owner_dcb->user,
+				     protocol->owner_dcb->remote,
+				     ERR_error_string(errnum,NULL));
 		    protocol->protocol_auth_state = MYSQL_AUTH_SSL_EXCHANGE_ERR;
 		    rval = -1;
 		}

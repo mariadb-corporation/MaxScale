@@ -452,11 +452,17 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				if(ssl)
 				{
 				    if(ssl_cert == NULL)
-					skygw_log_write(LE,"Error: Server certificate missing for service '%s'.",obj->object);
+					skygw_log_write(LE,"Error: Server certificate missing for service '%s'."
+						"Please provide the path to the server certificate by adding the ssl_cert=<path> parameter",
+						 obj->object);
 				    if(ssl_ca_cert == NULL)
-					skygw_log_write(LE,"Error: CA Certificate missing for service '%s'.",obj->object);
+					skygw_log_write(LE,"Error: CA Certificate missing for service '%s'."						
+						"Please provide the path to the certificate authority certificate by adding the ssl_ca_cert=<path> parameter",
+						 obj->object);
 				    if(ssl_key == NULL)
-					skygw_log_write(LE,"Error: Server private key missing for service '%s'.",obj->object);
+					skygw_log_write(LE,"Error: Server private key missing for service '%s'. "
+						"Please provide the path to the server certificate key by adding the ssl_key=<path> parameter"
+						,obj->object);
 
 				    if(ssl_ca_cert != NULL && ssl_cert != NULL && ssl_key != NULL)
 				    {
@@ -469,6 +475,13 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 					{
 					    serviceSetCertificates(obj->element,ssl_cert,ssl_key,ssl_ca_cert);
 					}
+				    }
+				    else
+				    {
+					/** If SSL was configured wrong, the
+					 * service needs to fail.*/
+					skygw_log_write_flush(LE,"Error: Missing SSL certificate paths found in the configuration. "
+						"This service will not use SSL.");
 				    }
 
 				}
