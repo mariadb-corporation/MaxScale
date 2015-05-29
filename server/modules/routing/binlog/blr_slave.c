@@ -36,7 +36,9 @@
  * 18/02/2015	Massimiliano Pinto	Addition of DISCONNECT ALL and DISCONNECT SERVER server_id
  * 18/03/2015	Markus Makela		Better detection of CRC32 | NONE  checksum
  * 19/03/2015	Massimiliano Pinto	Addition of basic MariaDB 10 compatibility support
- * 25/05/2015	Massimiliano Pinto	Addition BLRM_SLAVE_STOPPED state and blr_start/stop_slave
+ * 25/05/2015	Massimiliano Pinto	Addition of BLRM_SLAVE_STOPPED state and blr_start/stop_slave.
+ *					New commands STOP SLAVE, START SLAVE added.	
+ * 29/05/2015	Massimiliano Pinto	Addition of CHANGE MASTER TO ...
  *
  * @endverbatim
  */
@@ -88,6 +90,9 @@ static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static void blr_slave_send_error_packet(ROUTER_SLAVE *slave, char *msg, unsigned int err_num, char *status);
+static char *get_change_master_option(char *input, char *option);
+static void blr_handle_change_master(ROUTER_INSTANCE* router, char *command);
+
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -431,7 +436,7 @@ int	query_len;
 		}
 
 	}
-	/* stop replication from the current */
+	/* stop replication from the current master*/
 	else if (strcasecmp(query_text, "STOP") == 0)
 	{
 		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
@@ -443,6 +448,37 @@ int	query_len;
 		{
 			free(query_text);
 			return blr_stop_slave(router, slave);
+		}
+	}
+	/* Change the server to replicate from */
+	else if (strcasecmp(query_text, "CHANGE") == 0)
+	{
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete CHANGE command.",
+				router->service->name)));
+		}
+		else if (strcasecmp(word, "MASTER") == 0)
+		{
+			char *master_host=NULL;
+			char *master_port = NULL;
+			char *master_logfile = NULL;
+			char *master_log_pos = NULL;
+
+			if (router->master_state != BLRM_SLAVE_STOPPED)
+			{
+				free(query_text);
+				blr_slave_send_error_packet(slave, "Cannot change master with a running slave; run STOP SLAVE first", (unsigned int)1198, NULL);
+				return 1;
+			}
+			else
+			{
+				blr_handle_change_master(router, brkb);
+
+				free(query_text);
+
+				return blr_slave_send_ok(router, slave);
+			}
 		}
 	}
 	else if (strcasecmp(query_text, "DISCONNECT") == 0)
@@ -2288,3 +2324,139 @@ uint8_t		mysql_err[2];
 	slave->dcb->func.write(slave->dcb, pkt);
 }
 
+/**
+ * Get a 'change master to' option
+ *
+ * @param input		The current command
+ * @param option_field	The option to fetch
+ */
+static
+char *get_change_master_option(char *input, char *option_field) {
+	extern  char *strcasestr();
+	char *option = NULL;
+	char *ptr = NULL;
+	ptr = strcasestr(input, option_field);
+	if (ptr) {
+		char *end;
+		option = strdup(ptr);
+		end = strchr(option, ',');
+		if (end)
+			*end = '\0';
+	}
+
+	return option;
+}
+
+/**
+ * handle a 'change master' operation
+ *
+ * @param router	The router instance
+ * @param command	The change master SQL command
+ */
+static
+void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
+	char *master_host=NULL;
+	char *master_port = NULL;
+	char *master_logfile = NULL;
+	char *master_log_pos = NULL;
+
+	/* fetch options from SQL command */
+	master_host = get_change_master_option(command, "MASTER_HOST");
+	master_port = get_change_master_option(command, "MASTER_PORT");
+	master_logfile = get_change_master_option(command, "MASTER_LOG_FILE");
+	master_log_pos = get_change_master_option(command, "MASTER_LOG_POS");
+	
+	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: CHANGE MASTER: MASTER_HOST=[%s], MASTER_PORT=[%s], MASTER_LOG_FILE=[%s], MASTER_LOG_POS=[%s]",
+		router->service->name,
+		master_host != NULL ? (master_host + 12) : "null",
+		master_port != NULL ? (master_port + 12) : "null",
+		master_logfile != NULL ? (master_logfile + 16) : "null",
+		master_log_pos != NULL ? (master_log_pos + 15) : "null")));
+
+	/*
+	 * Change values in the router->service->dbref->server structure
+	 * Change binlogfilename and position in the router scrutcure 
+	 */
+	spinlock_acquire(&router->lock);
+
+	/* Change the master name/address */
+	if (master_host) {
+		char *ptr;
+		char *end;
+		ptr = strchr(master_host, '\'');
+		if (ptr)
+			ptr++;
+		else
+			ptr = master_host + 12;
+
+		end = strchr(ptr, '\'');
+		if (end)
+			*end ='\0';
+				
+		if (router->service->dbref->server->name) {
+			free(router->service->dbref->server->name);
+		}
+		router->service->dbref->server->name = strdup(ptr);
+
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_HOST is [%s]",
+			router->service->name,
+			router->service->dbref->server->name)));
+		free(master_host);
+	}
+
+	/* Change the master port */
+	if (master_port) {
+		router->service->dbref->server->port = atoi(master_port + 12);
+
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_PORT is [%i]",
+			router->service->name,
+			router->service->dbref->server->port)));
+		free(master_port);
+	}	
+
+	/* Change the binlog filename to request from master */
+	if (master_logfile) {
+		char *ptr;
+		char *end;
+		ptr = strchr(master_logfile, '\'');
+		if (ptr)
+			ptr++;
+		else 
+			ptr = master_logfile + 16;
+
+		end = strchr(ptr+1, '\'');
+		if (end)
+			*end ='\0';
+
+		memset(router->binlog_name, '\0', sizeof(router->binlog_name));	
+		strncpy(router->binlog_name, ptr, BINLOG_FNAMELEN);
+
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
+			router->service->name,
+			router->binlog_name)));
+
+		free(master_logfile);
+	}
+
+	/* Change the position in the current binlog filename */
+	if (master_log_pos) {
+		long pos = atol(master_log_pos + 15);
+		if (pos <= 0) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: cannot set MASTER_LOG_POS to [%u] for binlog [%s]. Set to 4",
+				router->service->name,
+				pos,
+				router->binlog_name)));
+
+			router->binlog_position = 4;
+		} else {
+			router->binlog_position = atol(master_log_pos + 15);
+		}
+
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
+			router->service->name,
+			router->binlog_position)));
+		free(master_log_pos);
+	}
+
+	spinlock_release(&router->lock);
+}
