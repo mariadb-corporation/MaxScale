@@ -57,7 +57,7 @@ export maxscale_log_dir="$maxdir/log/"
 export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
 
 export test_dir="$maxdir/system-test/"
-export maxscale_log_dir="$maxdir/Binlog_Service"
+#export maxscale_log_dir="$maxdir/Binlog_Service"
 
 
 if [ "$new_dirs" == "yes" ] ; then

@@ -1,6 +1,3 @@
---event=master_down --initiator=gserver1 --nodelist=gserver1,gserver2,gserver3,gserver4
---event=new_master --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
---event=master_down --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
---event=new_master --initiator=gserver3 --nodelist=gserver1,gserver2,gserver3,gserver4
---event=master_up --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
---event=new_slave --initiator=gserver3 --nodelist=gserver1,gserver2,gserver3,gserver4
+--event=synced_down --initiator=gserver1 --nodelist=gserver1,gserver2,gserver3,gserver4
+--event=synced_down --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
+--event=synced_up --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
