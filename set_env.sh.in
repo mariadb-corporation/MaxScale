@@ -57,7 +57,7 @@ export maxscale_log_dir="$maxdir/log/"
 export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
 
 export test_dir="$maxdir/system-test/"
-#export maxscale_log_dir="$maxdir/Binlog_Service"
+export maxscale_binlog_dir="/var/lib/maxscale/Binlog_Service/"
 
 
 if [ "$new_dirs" == "yes" ] ; then
@@ -65,7 +65,7 @@ if [ "$new_dirs" == "yes" ] ; then
 	export maxdir_bin="/usr/bin/"
         export maxscale_cnf="/etc/maxscale.cnf"
         export maxscale_log_dir="/var/log/maxscale/"
-        export maxscale_binlog_dir="/var/lib/maxscale/Binlog_Service/"
+#        export maxscale_binlog_dir="/var/lib/maxscale/Binlog_Service/"
 fi
 
 # IP Of MaxScale machine
