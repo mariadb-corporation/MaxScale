@@ -966,7 +966,7 @@ int gw_read_client_event(
 		     * Send an AUTH_OK packet to the client,
 		     * packet sequence is # 2
 		     */
-		    mysql_send_ok(dcb, 2, 0, NULL);
+		    mysql_send_ok(dcb, 3, 0, NULL);
 		}
 		else
 		{
