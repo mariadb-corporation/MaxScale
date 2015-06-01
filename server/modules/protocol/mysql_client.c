@@ -490,14 +490,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	/** Do the SSL Handshake */
 	if(ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED)
 	{
-	    if(serviceInitSSL(protocol->owner_dcb->service) != 0)
-	    {
-		skygw_log_write(LOGFILE_ERROR,"Error: SSL initialization for service '%s' failed.",
-			 protocol->owner_dcb->service->name);
-		return 1;
-	    }
-	    protocol->ssl = SSL_new(protocol->owner_dcb->service->ctx);
-	    SSL_set_fd(protocol->ssl,dcb->fd);
+
 	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
 
 	    if(do_ssl_accept(protocol) < 0)
@@ -632,7 +625,7 @@ gw_MySQLWrite_client_SSL(DCB *dcb, GWBUF *queue)
     CHK_DCB(dcb);
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     CHK_PROTOCOL(protocol);
-    return dcb_write_SSL(dcb, protocol->ssl, queue);
+    return dcb_write_SSL(dcb, queue);
 }
 
 /**
@@ -681,7 +674,7 @@ int gw_read_client_event(
 
 	if(protocol->use_ssl)
 	{
-	    rc = dcb_read_SSL(dcb,protocol->ssl, &read_buffer);
+	    rc = dcb_read_SSL(dcb, &read_buffer);
 	}
 	else
 	{
@@ -795,7 +788,7 @@ int gw_read_client_event(
 			dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
 			nbytes_read = gwbuf_length(dcb->dcb_readqueue);
 			data = (uint8_t *)GWBUF_DATA(dcb->dcb_readqueue);
-
+			int plen = MYSQL_GET_PACKET_LEN(data);
 			if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data))
 			{
 				rc = 0;
@@ -1255,7 +1248,7 @@ int gw_write_client_event_SSL(DCB *dcb)
 
         if (protocol->protocol_auth_state == MYSQL_IDLE)
         {
-		dcb_drain_writeq_SSL(dcb,protocol->ssl);
+		dcb_drain_writeq_SSL(dcb);
                 goto return_1;
 	}
 
@@ -1878,30 +1871,38 @@ return_rc:
 
 /**
  * Do the SSL authentication handshake.
- * This functions
- * @param protocol
- * @return
+ * This creates the DCB SSL structure if one has not been created and starts the
+ * SSL handshake handling.
+ * @param protocol Protocol to connect with SSL
+ * @return 1 on success, 0 when the handshake is ongoing or -1 on error
  */
 int do_ssl_accept(MySQLProtocol* protocol)
 {
     int rval,errnum;
     char errbuf[2014];
-    DCB* dcb;
+    DCB* dcb = protocol->owner_dcb;
+    if(dcb->ssl == NULL)
+    {
+	if(dcb_create_SSL(dcb) != 0)
+	    return -1;
+    }
 
-    rval = SSL_accept(protocol->ssl);
-
+    rval = dcb_accept_SSL(dcb);
+    
     switch(rval)
     {
     case 0:
-	errnum = SSL_get_error(protocol->ssl,rval);
-	skygw_log_write_flush(LT,"SSL_accept shutdown for %s@%s",
+	/** Not all of the data has been read. Go back to the poll
+	 queue and wait for more.*/
+
+	rval = 0;
+	skygw_log_write_flush(LT,"SSL_accept ongoing for %s@%s",
 			 protocol->owner_dcb->user,
 			 protocol->owner_dcb->remote);
-	return -1;
+	return 0;
 	break;
     case 1:
 	spinlock_acquire(&protocol->protocol_lock);
-	dcb = protocol->owner_dcb;
 	protocol->protocol_auth_state = MYSQL_AUTH_SSL_HANDSHAKE_DONE;
 	protocol->use_ssl = true;
 	spinlock_release(&protocol->protocol_lock);
@@ -1919,32 +1920,15 @@ int do_ssl_accept(MySQLProtocol* protocol)
 	break;
 
     case -1:
-	errnum = SSL_get_error(protocol->ssl,rval);
 
-	if(errnum == SSL_ERROR_WANT_READ || errnum == SSL_ERROR_WANT_WRITE ||
-	 errnum == SSL_ERROR_WANT_X509_LOOKUP)
-	{
-	    /** Not all of the data has been read. Go back to the poll
-	     queue and wait for more.*/
-
-	    rval = 0;
-	    skygw_log_write_flush(LT,"SSL_accept ongoing for %s@%s",
-			     protocol->owner_dcb->user,
-			     protocol->owner_dcb->remote);
-	}
-	else
-	{
 	    spinlock_acquire(&protocol->protocol_lock);
 	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_HANDSHAKE_FAILED;
 	    spinlock_release(&protocol->protocol_lock);
 	    rval = -1;
-	    
 	    skygw_log_write_flush(LE,
 			     "Error: Fatal error in SSL_accept for %s@%s: %s",
 			     protocol->owner_dcb->user,
-			     protocol->owner_dcb->remote,
-			     ERR_error_string(errnum,NULL));
-	}
+			     protocol->owner_dcb->remote);
 	break;
 
     default:

@@ -268,6 +268,7 @@ typedef struct dcb {
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
 	struct server	*server;	/**< The associated backend server */
+        SSL* ssl; /*< SSL struct for connection */
 #if defined(SS_DEBUG)
         int             dcb_port;       /**< port of target server */
         skygw_chk_t     dcb_chk_tail;
@@ -340,10 +341,12 @@ bool   dcb_set_state(DCB* dcb, dcb_state_t new_state, dcb_state_t* old_state);
 void   dcb_call_foreach (struct server* server, DCB_REASON reason);
 size_t dcb_get_session_id(DCB* dcb);
 bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
+int dcb_create_SSL(DCB* dcb);
+int dcb_accept_SSL(DCB* dcb);
 int gw_write_SSL(SSL* ssl, const void *buf, size_t nbytes);
-int dcb_write_SSL(DCB *dcb, SSL* ssl, GWBUF *queue);
-int dcb_read_SSL(DCB   *dcb,SSL* ssl,GWBUF **head);
-int dcb_drain_writeq_SSL(DCB *dcb, SSL* ssl);
+int dcb_write_SSL(DCB *dcb,GWBUF *queue);
+int dcb_read_SSL(DCB   *dcb,GWBUF **head);
+int dcb_drain_writeq_SSL(DCB *dcb);
 
 
 /**

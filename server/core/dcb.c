@@ -73,6 +73,8 @@
 #include <hashtable.h>
 #include <hk_heartbeat.h>
 
+#include "mysql_client_server_protocol.h"
+
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -433,7 +435,8 @@ DCB_CALLBACK		*cb;
 		free(cb);
 	}
 	spinlock_release(&dcb->cb_lock);
-
+	if(dcb->ssl)
+	    SSL_free(dcb->ssl);
 	bitmask_free(&dcb->memdata.bitmask);
 	free(dcb);
 }
@@ -894,7 +897,6 @@ return_n:
  */
 int dcb_read_SSL(
         DCB   *dcb,
-	SSL* ssl,
         GWBUF **head)
 {
         GWBUF *buffer = NULL;
@@ -945,7 +947,7 @@ int dcb_read_SSL(
                                 int r = -1;
 
                                 /* try to read 1 byte, without consuming the socket buffer */
-                                r = SSL_peek(ssl, &c, sizeof(char));
+                                r = SSL_peek(dcb->ssl, &c, sizeof(char));
                                 if (r <= 0)
                                 {
                                         n = -1;
@@ -983,11 +985,18 @@ int dcb_read_SSL(
                         n = -1;
                         goto return_n;
                 }
-                n = SSL_read(ssl, GWBUF_DATA(buffer), bufsize);
-                dcb->stats.n_reads++;
+
+		int npending;
+		n = 0;
+		do
+		{
+		    n += SSL_read(dcb->ssl, GWBUF_DATA(buffer), bufsize);
+		    dcb->stats.n_reads++;
+		}while((npending = SSL_pending(dcb->ssl)) > 0);
 
 		int ssl_errno = 0;
-                if (n <= 0)
+		
+		if (n <= 0)
                 {
 		    ssl_errno = ERR_get_error();
 
@@ -1006,6 +1015,15 @@ int dcb_read_SSL(
                         goto return_n;
 		    }
                 }
+
+		if(n < b)
+		{
+		    gwbuf_rtrim(buffer,b - n);
+		    ss_dassert(gwbuf_length(buffer) == n);
+		    LOGIF(LD,(skygw_log_write(LD,"[%lu] SSL: Truncated buffer to correct size from %d to %d bytes.\n",
+		     b,gwbuf_length(buffer))));
+		}
+
                 nread += n;
 
                 LOGIF(LD, (skygw_log_write(
@@ -1019,7 +1037,8 @@ int dcb_read_SSL(
                         dcb->fd)));
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
-		if(ssl_errno == SSL_ERROR_WANT_READ || ssl_errno == SSL_ERROR_NONE)
+		if(ssl_errno == SSL_ERROR_WANT_READ || ssl_errno == SSL_ERROR_NONE ||
+		 ssl_errno == SSL_ERROR_WANT_X509_LOOKUP || SSL_ERROR_WANT_WRITE)
 		    break;
         } /*< while (true) */
 return_n:
@@ -1270,7 +1289,7 @@ int	below_water;
  * @return 0 on failure, 1 on success
  */
 int
-dcb_write_SSL(DCB *dcb, SSL* ssl, GWBUF *queue)
+dcb_write_SSL(DCB *dcb, GWBUF *queue)
 {
     int	w;
     int	saved_errno = 0;
@@ -1379,7 +1398,7 @@ dcb_write_SSL(DCB *dcb, SSL* ssl, GWBUF *queue)
 #endif /* FAKE_CODE */
 	    qlen = GWBUF_LENGTH(queue);
 	    GW_NOINTR_CALL(
-		    w = gw_write_SSL(ssl, GWBUF_DATA(queue), qlen);
+		    w = gw_write_SSL(dcb->ssl, GWBUF_DATA(queue), qlen);
 	    dcb->stats.n_writes++;
 	    );
 
@@ -1619,7 +1638,7 @@ int	above_water;
  * @return The number of bytes written
  */
 int
-dcb_drain_writeq_SSL(DCB *dcb, SSL* ssl)
+dcb_drain_writeq_SSL(DCB *dcb)
 {
     int	n = 0;
     int	w;
@@ -1641,7 +1660,7 @@ dcb_drain_writeq_SSL(DCB *dcb, SSL* ssl)
 	while (dcb->writeq != NULL)
 	{
 	    len = GWBUF_LENGTH(dcb->writeq);
-	    GW_NOINTR_CALL(w = gw_write_SSL(ssl, GWBUF_DATA(dcb->writeq), len););
+	    GW_NOINTR_CALL(w = gw_write_SSL(dcb->ssl, GWBUF_DATA(dcb->writeq), len););
 
 	    if (w < 0)
 	    {
@@ -2727,4 +2746,102 @@ DCB	*ptr;
 	}
 	spinlock_release(&dcbspin);
 	return rval;
+}
+
+/**
+ * Create the SSL structure for this DCB.
+ * This function creates the SSL structure for the given SSL context. This context
+ * should be the service's context
+ * @param dcb
+ * @param context
+ * @return 
+ */
+int dcb_create_SSL(DCB* dcb)
+{
+
+    if(serviceInitSSL(dcb->service) != 0)
+    {
+	return -1;
+    }
+
+    if((dcb->ssl = SSL_new(dcb->service->ctx)) == NULL)
+    {
+	skygw_log_write(LE,"Error: Failed to initialize SSL connection.");
+	return -1;
+    }
+
+    if(SSL_set_fd(dcb->ssl,dcb->fd) == 0)
+    {
+	skygw_log_write(LE,"Error: Failed to set file descriptor for SSL connection.");
+	return -1;
+    }
+
+    return 0;
+}
+/**
+ * Accept a SSL connection and do the SSL authentication handshake.
+ * This function accepts a client connection to a DCB. It assumes that the SSL
+ * structure has the underlying method of communication set and this method is ready
+ * for usage. It then proceeds with the SSL handshake and stops only if an error
+ * occurs or the client has not yet written enough data to complete the handshake.
+ * @param dcb DCB which should accept the SSL connection
+ * @return 1 if the handshake was successfully completed, 0 if the handshake is
+ * still ongoing and another call to dcb_SSL_accept should be made or -1 if an
+ * error occurred during the handshake and the connection should be terminated.
+ */
+int dcb_accept_SSL(DCB* dcb)
+{
+    int rval,errnum;
+
+    rval = SSL_accept(dcb->ssl);
+
+    switch(rval)
+    {
+    case 0:
+	errnum = SSL_get_error(dcb->ssl,rval);
+	LOGIF(LD,(skygw_log_write_flush(LD,"SSL_accept shutdown for %s@%s",
+			 dcb->user,
+			 dcb->remote)));
+	return -1;
+	break;
+    case 1:
+	rval = 1;
+	LOGIF(LD,(skygw_log_write_flush(LD,"SSL_accept done for %s@%s",
+			 dcb->user,
+			 dcb->remote)));
+	break;
+
+    case -1:
+	errnum = SSL_get_error(dcb->ssl,rval);
+
+	if(errnum == SSL_ERROR_WANT_READ || errnum == SSL_ERROR_WANT_WRITE ||
+	 errnum == SSL_ERROR_WANT_X509_LOOKUP)
+	{
+	    /** Not all of the data has been read. Go back to the poll
+	     queue and wait for more.*/
+
+	    rval = 0;
+	    LOGIF(LD,(skygw_log_write_flush(LD,"SSL_accept ongoing for %s@%s",
+			     dcb->user,
+			     dcb->remote)));
+	}
+	else
+	{
+	    rval = -1;
+	    skygw_log_write_flush(LE,
+			     "Error: Fatal error in SSL_accept for %s@%s: %s",
+			     dcb->user,
+			     dcb->remote,
+			     ERR_error_string(errnum,NULL));
+	}
+	break;
+
+    default:
+	skygw_log_write_flush(LE,
+			 "Error: Fatal error in SSL_accept, returned value was %d.",
+			 rval);
+	break;
+    }
+
+    return rval;
 }

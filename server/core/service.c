@@ -1818,24 +1818,28 @@ int serviceInitSSL(SERVICE* service)
     {
 	service->method = (SSL_METHOD*)SSLv23_server_method();
 	service->ctx = SSL_CTX_new(service->method);
-
+	SSL_CTX_set_read_ahead(service->ctx,1);
 	if (SSL_CTX_use_certificate_file(service->ctx, service->ssl_cert, SSL_FILETYPE_PEM) <= 0) {
+	    skygw_log_write(LE,"Error: Failed to set server SSL certificate.");
 	    return -1;
 	}
 
 	/* Load the private-key corresponding to the server certificate */
 	if (SSL_CTX_use_PrivateKey_file(service->ctx, service->ssl_key, SSL_FILETYPE_PEM) <= 0) {
+	    skygw_log_write(LE,"Error: Failed to set server SSL key.");
 	    return -1;
 	}
 
 	/* Check if the server certificate and private-key matches */
 	if (!SSL_CTX_check_private_key(service->ctx)) {
+	    skygw_log_write(LE,"Error: Server SSL certificate and key do not match.");
 	    return -1;
 	}
 
 
 	/* Load the RSA CA certificate into the SSL_CTX structure */
 	if (!SSL_CTX_load_verify_locations(service->ctx, service->ssl_ca_cert, NULL)) {
+	    skygw_log_write(LE,"Error: Failed to set Certificate Authority file.");
 	    return -1;
 	}
 

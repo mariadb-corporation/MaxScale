@@ -297,7 +297,6 @@ typedef struct {
         unsigned        long tid;                         /*< MySQL Thread ID, in
         * handshake */
         unsigned int    charset;                          /*< MySQL character set at connect time */
-        SSL* ssl; /*< SSL struct for client connection */
         bool use_ssl;
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;

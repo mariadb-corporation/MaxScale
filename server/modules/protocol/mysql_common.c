@@ -137,10 +137,7 @@ void mysql_protocol_done (
                 goto retblock;
         }
         scmd = p->protocol_cmd_history;
-        if(p->ssl)
-	{
-	    SSL_free(p->ssl);
-	}
+
         while (scmd != NULL)
         {
                 scmd2 = scmd->scom_next;
