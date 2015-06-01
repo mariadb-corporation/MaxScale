@@ -158,20 +158,12 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
             {
                 previous->nextpersistent = dcb->nextpersistent;
             }
-            rc = 0; /* poll_add_dcb(dcb); */
-            if (rc == DCBFD_CLOSED) {
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
-                dcb_free(dcb);
-            }
-            else
-            {
-                free(dcb->user);
-                dcb->user = NULL;
-                spinlock_release(&server->persistlock);
-                atomic_add(&server->stats.n_persistent, -1);
-                atomic_add(&server->stats.n_current, 1);
-                return dcb;
-            }
+            free(dcb->user);
+            dcb->user = NULL;
+            spinlock_release(&server->persistlock);
+            atomic_add(&server->stats.n_persistent, -1);
+            atomic_add(&server->stats.n_current, 1);
+            return dcb;
         }
         previous = dcb;
         dcb = dcb->nextpersistent;

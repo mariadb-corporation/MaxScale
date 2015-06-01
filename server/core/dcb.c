@@ -1306,6 +1306,7 @@ dcb_close(DCB *dcb)
                 if (poll_remove_dcb(dcb))
                 {
                     /* Error */
+                    spinlock_release(&dcb->server->persistlock);
                     return;
                 }
                 dcb->session = NULL;
