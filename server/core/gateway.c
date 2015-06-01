@@ -196,7 +196,9 @@ static bool resolve_maxscale_conf_fname(
 
 static char* check_dir_access(char* dirname,bool,bool);
 static int set_user();
-
+static void maxscale_ssl_lock(int mode,int n,const char* file, int line);
+static unsigned long maxscale_ssl_id();
+static SPINLOCK* ssl_locks;
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.
@@ -1370,7 +1372,23 @@ int main(int argc, char **argv)
                 rc = MAXSCALE_INTERNALERROR;
                 goto return_main;
         }
+	
+	/** OpenSSL initialization */
 
+	SSL_library_init();
+	SSL_load_error_strings();
+	int n_locks = CRYPTO_num_locks();
+	if((ssl_locks = malloc(n_locks*sizeof(SPINLOCK))) == NULL)
+	{
+	    rc = MAXSCALE_INTERNALERROR;
+	    goto return_main;
+	}
+
+	for(i = 0;i<n_locks;i++)
+	    spinlock_init(&ssl_locks[i]);
+
+	CRYPTO_set_locking_callback(maxscale_ssl_lock);
+	CRYPTO_set_id_callback(maxscale_ssl_id);
 	/* register exit function for embedded MySQL library */
         l = atexit(libmysqld_done);
 
@@ -2001,4 +2019,21 @@ static int set_user(char* user)
 
 
     return rval;
+}
+
+static void maxscale_ssl_lock(int mode,int n,const char* file, int line)
+{
+    if(mode & CRYPTO_LOCK)
+    {
+	spinlock_acquire(&ssl_locks[n]);
+    }
+    else
+    {
+	spinlock_release(&ssl_locks[n]);
+    }
+}
+
+static unsigned long maxscale_ssl_id()
+{
+    return (unsigned long)pthread_self();
 }

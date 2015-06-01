@@ -941,18 +941,12 @@ int dcb_read_SSL(
                         /** Handle closed client socket */
                         if (dcb_isclient(dcb))
                         {
-                                char c;
-                                int l_errno = 0;
+                                char c = 0;
                                 int r = -1;
 
                                 /* try to read 1 byte, without consuming the socket buffer */
-                                r = recv(dcb->fd, &c, sizeof(char), MSG_PEEK);
-                                l_errno = errno;
-
-                                if (r <= 0 &&
-                                        l_errno != EAGAIN &&
-                                        l_errno != EWOULDBLOCK &&
-					l_errno != 0)
+                                r = SSL_peek(ssl, &c, sizeof(char));
+                                if (r <= 0)
                                 {
                                         n = -1;
                                         goto return_n;
@@ -989,13 +983,15 @@ int dcb_read_SSL(
                         n = -1;
                         goto return_n;
                 }
-                GW_NOINTR_CALL(n = SSL_read(ssl, GWBUF_DATA(buffer), bufsize);
-                dcb->stats.n_reads++);
+                n = SSL_read(ssl, GWBUF_DATA(buffer), bufsize);
+                dcb->stats.n_reads++;
 
+		int ssl_errno = 0;
                 if (n <= 0)
                 {
-		    int ssl_errno = ERR_get_error();
-		    if(ssl_errno != SSL_ERROR_WANT_READ)
+		    ssl_errno = ERR_get_error();
+
+		    if(ssl_errno != SSL_ERROR_WANT_READ && ssl_errno != SSL_ERROR_NONE)
 		    {
 		    LOGIF(LE, (skygw_log_write_flush(
 			    LOGFILE_ERROR,
@@ -1023,6 +1019,8 @@ int dcb_read_SSL(
                         dcb->fd)));
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
+		if(ssl_errno == SSL_ERROR_WANT_READ || ssl_errno == SSL_ERROR_NONE)
+		    break;
         } /*< while (true) */
 return_n:
         return n;

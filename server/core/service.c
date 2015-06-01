@@ -1843,7 +1843,7 @@ int serviceInitSSL(SERVICE* service)
 	SSL_CTX_set_verify(service->ctx,SSL_VERIFY_PEER,NULL);
 
 	/* Set the verification depth to 1 */
-	SSL_CTX_set_verify_depth(service->ctx,10);
+	SSL_CTX_set_verify_depth(service->ctx,1);
 	service->ssl_init_done = true;
     }
     return 0;
