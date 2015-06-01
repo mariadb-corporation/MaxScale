@@ -2359,19 +2359,25 @@ void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
 	char *master_port = NULL;
 	char *master_logfile = NULL;
 	char *master_log_pos = NULL;
+	char *master_user = NULL;
+	char *master_password = NULL;
 
 	/* fetch options from SQL command */
 	master_host = get_change_master_option(command, "MASTER_HOST");
 	master_port = get_change_master_option(command, "MASTER_PORT");
 	master_logfile = get_change_master_option(command, "MASTER_LOG_FILE");
 	master_log_pos = get_change_master_option(command, "MASTER_LOG_POS");
+	master_user = get_change_master_option(command, "MASTER_USER");
+	master_password = get_change_master_option(command, "MASTER_PASSWORD");
 	
-	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: CHANGE MASTER: MASTER_HOST=[%s], MASTER_PORT=[%s], MASTER_LOG_FILE=[%s], MASTER_LOG_POS=[%s]",
+	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: CHANGE MASTER: MASTER_HOST=[%s], MASTER_PORT=[%s], MASTER_LOG_FILE=[%s], MASTER_LOG_POS=[%s], MASTER_USER=[%s], MASTER_PASSWORD=[%s]",
 		router->service->name,
 		master_host != NULL ? (master_host + 12) : "null",
 		master_port != NULL ? (master_port + 12) : "null",
 		master_logfile != NULL ? (master_logfile + 16) : "null",
-		master_log_pos != NULL ? (master_log_pos + 15) : "null")));
+		master_log_pos != NULL ? (master_log_pos + 15) : "null",
+		master_user != NULL ? (master_user + 12) : "null",
+		master_password != NULL ? (master_password+ 16) : "null")));
 
 	/*
 	 * Change values in the router->service->dbref->server structure
@@ -2456,6 +2462,56 @@ void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
 			router->service->name,
 			router->binlog_position)));
 		free(master_log_pos);
+	}
+
+	/* Change the replication user */
+	if (master_user) {
+		char *ptr;
+		char *end;
+		ptr = strchr(master_user, '\'');
+		if (ptr)
+			ptr++;
+		else
+			ptr = master_user + 12;
+
+		end = strchr(ptr, '\'');
+		if (end)
+			*end ='\0';
+				
+		if (router->user) {
+			free(router->user);
+		}
+		router->user = strdup(ptr);
+
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_USER is [%s]",
+			router->service->name,
+			router->user)));
+		free(master_user);
+	}
+
+	/* Change the replication password */
+	if (master_password) {
+		char *ptr;
+		char *end;
+		ptr = strchr(master_password, '\'');
+		if (ptr)
+			ptr++;
+		else
+			ptr = master_password + 16;
+
+		end = strchr(ptr, '\'');
+		if (end)
+			*end ='\0';
+				
+		if (router->password) {
+			free(router->password);
+		}
+		router->password = strdup(ptr);
+
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_PASSWORD is [%s]",
+			router->service->name,
+			router->password)));
+		free(master_password);
 	}
 
 	spinlock_release(&router->lock);
