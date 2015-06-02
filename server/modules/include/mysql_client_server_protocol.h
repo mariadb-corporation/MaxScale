@@ -91,6 +91,10 @@
 #define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
+#define MYSQL_FAILED_AUTH 1
+#define MYSQL_FAILED_AUTH_DB 2
+#define MYSQL_FAILED_AUTH_SSL 3
+
 typedef enum {
         MYSQL_ALLOC,
         MYSQL_PENDING_CONNECT,

@@ -78,7 +78,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
 static int route_by_statement(SESSION *, GWBUF **);
 extern char* get_username_from_auth(char* ptr, uint8_t* data);
 extern int check_db_name_after_auth(DCB *, char *, int);
-extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db);
+extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
 
 int do_ssl_accept(MySQLProtocol* protocol);
 
@@ -450,7 +450,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	/* Detect now if there are enough bytes to continue */
 	if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23)) 
 	{
-		return 1;
+		return MYSQL_FAILED_AUTH;
 	}
 
 	memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
@@ -476,7 +476,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 		    protocol->owner_dcb->user,
 	            protocol->owner_dcb->remote,
 		    protocol->owner_dcb->service->name)));
-	    return 1;
+	    return MYSQL_FAILED_AUTH_SSL;
 	}
 
 	if(LOG_IS_ENABLED(LT) && ssl)
@@ -495,7 +495,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 
 	    if(do_ssl_accept(protocol) < 0)
 	    {
-		return 1;
+		return MYSQL_FAILED_AUTH;
 	    }
 	    else
 	    {
@@ -509,7 +509,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	
 	if (username == NULL)
 	{
-		return 1;
+		return MYSQL_FAILED_AUTH;
 	}
 
 	/* get charset */
@@ -902,7 +902,7 @@ int gw_read_client_event(
 				fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user, 
 							dcb->remote, 
 							(char*)((MYSQL_session *)dcb->data)->client_sha1,
-							(char*)((MYSQL_session *)dcb->data)->db);
+							(char*)((MYSQL_session *)dcb->data)->db,auth_val);
 				modutil_send_mysql_err_packet(dcb, 2, 0, 1045, "28000", fail_str);
 			}
 			if (fail_str)
@@ -996,14 +996,21 @@ int gw_read_client_event(
 		    snprintf(fail_str, message_len, "Unknown database '%s'",
 			     (char*)((MYSQL_session *)dcb->data)->db);
 
-		    modutil_send_mysql_err_packet(dcb, 2, 0, 1049, "42000", fail_str);
-		} else {
+		    modutil_send_mysql_err_packet(dcb, 3, 0, 1049, "42000", fail_str);
+		}else if(auth_val == 3){
 		    /** Send error 1045 to client */
 		    fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
 					     dcb->remote,
 					     (char*)((MYSQL_session *)dcb->data)->client_sha1,
-					     (char*)((MYSQL_session *)dcb->data)->db);
-		    modutil_send_mysql_err_packet(dcb, 2, 0, 1045, "28000", fail_str);
+					     (char*)((MYSQL_session *)dcb->data)->db,auth_val);
+		    modutil_send_mysql_err_packet(dcb, 3, 0, 1045, "28000", fail_str);
+		}else {
+		    /** Send error 1045 to client */
+		    fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
+					     dcb->remote,
+					     (char*)((MYSQL_session *)dcb->data)->client_sha1,
+					     (char*)((MYSQL_session *)dcb->data)->db,auth_val);
+		    modutil_send_mysql_err_packet(dcb, 3, 0, 1045, "28000", fail_str);
 		}
 		if (fail_str)
 		    free(fail_str);

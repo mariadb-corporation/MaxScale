@@ -2199,7 +2199,8 @@ char *create_auth_fail_str(
 	char	*username,
 	char	*hostaddr,
 	char	*sha1,
-	char	*db)
+	char	*db,
+	int errcode)
 {
 	char* errstr;
 	const char* ferrstr;
@@ -2213,6 +2214,10 @@ char *create_auth_fail_str(
 	if (db_len > 0)
 	{
 		ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
+	}
+	else if(errcode == MYSQL_FAILED_AUTH_SSL)
+	{
+	    ferrstr = "Access without SSL denied";
 	}
 	else
 	{
@@ -2232,6 +2237,10 @@ char *create_auth_fail_str(
 	if (db_len > 0)
 	{
 		sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
+	}
+	else if(errcode == MYSQL_FAILED_AUTH_SSL)
+	{
+	    sprintf(errstr, ferrstr);
 	}
 	else
 	{
