@@ -466,8 +466,8 @@ char	query[128];
 			GWBUF_CONSUME_ALL(router->saved_master.mariadb10);
 		router->saved_master.mariadb10 = buf;
 		blr_cache_response(router, "mariadb10", buf);
-		buf = blr_make_registration(router);
-		router->master_state = BLRM_REGISTER;
+		buf = blr_make_query("SHOW VARIABLES LIKE 'SERVER_UUID'");
+		router->master_state = BLRM_MUUID;
 		router->master->func.write(router->master, buf);
 		break;
 	case BLRM_GTIDMODE:
