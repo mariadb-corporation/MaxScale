@@ -975,7 +975,7 @@ int gw_read_client_event(
 		    /** Send ERR 1045 to client */
 		    mysql_send_auth_error(
 			    dcb,
-				     2,
+				     3,
 				     0,
 				     "failed to create new session");
 
