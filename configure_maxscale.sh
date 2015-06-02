@@ -75,7 +75,12 @@ else
         ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "mkdir -p /home/ec2-user; chmod 777 -R /home/ec2-user"
 	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "service maxscale status | grep running"
 	if [ $? == 0 ] ; then
-	        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "rm $maxscale_log_dir/*.log ; rm /tmp/core*; rm -rf /dev/shm/*;  ulimit -c unlimited; killall -HUP maxscale" 
+		ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "echo " " > $maxscale_log_dir/error1.log"
+                ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "echo " " > $maxscale_log_dir/messages1.log"
+                ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "echo " " > $maxscale_log_dir/debug1.log"
+                ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "echo " " > $maxscale_log_dir/trace1.log"
+
+	        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "rm /tmp/core*; rm -rf /dev/shm/*;  ulimit -c unlimited; killall -HUP maxscale" 
 	else
 		ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "rm $maxscale_log_dir/*.log ; rm /tmp/core*; rm -rf /dev/shm/*;  ulimit -c unlimited; service  maxscale start"
 	fi
