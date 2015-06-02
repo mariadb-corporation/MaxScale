@@ -141,7 +141,8 @@ SERVICE 	*service;
 	service->ssl_ca_cert = NULL;
 	service->ssl_cert = NULL;
 	service->ssl_key = NULL;
-
+	/** Use the highest possible SSL/TLS methods available */
+	service->ssl_method_type = SERVICE_SSL_TLS_MAX;
 	if (service->name == NULL || service->routerModule == NULL)
 	{
 		if (service->name)
@@ -868,6 +869,22 @@ serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert)
     service->ssl_ca_cert = strdup(ca_cert);
 }
 
+void
+serviceSetSSLVersion(SERVICE *service, char* version)
+{
+    if(strcasecmp(version,"SSLV2") == 0)
+	service->ssl_method_type = SERVICE_SSLV2;
+    else if(strcasecmp(version,"SSLV3") == 0)
+	service->ssl_method_type = SERVICE_SSLV3;
+    else if(strcasecmp(version,"TLSV10") == 0)
+	service->ssl_method_type = SERVICE_TLS10;
+    else if(strcasecmp(version,"TLSV11") == 0)
+	service->ssl_method_type = SERVICE_TLS11;
+    else if(strcasecmp(version,"TLSV12") == 0)
+	service->ssl_method_type = SERVICE_TLS12;
+    else if(strcasecmp(version,"MAX") == 0)
+	service->ssl_method_type = SERVICE_SSL_TLS_MAX;
+}
 /** Enable or disable the service SSL capability*/
 int
 serviceSetSSL(SERVICE *service, char* action)
@@ -1816,7 +1833,37 @@ int serviceInitSSL(SERVICE* service)
 {
     if(!service->ssl_init_done)
     {
-	service->method = (SSL_METHOD*)SSLv23_server_method();
+	switch(service->ssl_method_type)
+	{
+	case SERVICE_SSLV2:
+	    service->method = (SSL_METHOD*)SSLv2_server_method();
+	    break;
+	case SERVICE_SSLV3:
+	    service->method = (SSL_METHOD*)SSLv3_server_method();
+	    break;
+	case SERVICE_TLS10:
+	    service->method = (SSL_METHOD*)TLSv1_server_method();
+	    break;
+	case SERVICE_TLS11:
+	    service->method = (SSL_METHOD*)TLSv1_1_server_method();
+	    break;
+	case SERVICE_TLS12:
+	    service->method = (SSL_METHOD*)TLSv1_2_server_method();
+	    break;
+	case SERVICE_SSL_MAX:
+	    service->method = (SSL_METHOD*)SSLv23_server_method();
+	    break;
+	case SERVICE_TLS_MAX:
+	    service->method = (SSL_METHOD*)SSLv23_server_method();
+	    break;
+	case SERVICE_SSL_TLS_MAX:
+	    service->method = (SSL_METHOD*)SSLv23_server_method();
+	    break;
+	default:
+	    service->method = (SSL_METHOD*)SSLv23_server_method();
+	    break;
+	}
+
 	service->ctx = SSL_CTX_new(service->method);
 	SSL_CTX_set_read_ahead(service->ctx,1);
 	if (SSL_CTX_use_certificate_file(service->ctx, service->ssl_cert, SSL_FILETYPE_PEM) <= 0) {

@@ -345,7 +345,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				char *weightby;
 				char *version_string;
 				char *subservices;
-				char *ssl,*ssl_cert,*ssl_key,*ssl_ca_cert;
+				char *ssl,*ssl_cert,*ssl_key,*ssl_ca_cert,*ssl_version;
 				bool  is_rwsplit = false;
 				bool  is_schemarouter = false;
 				char *allow_localhost_match_wildcard_host;
@@ -358,6 +358,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				ssl_cert = config_get_value(obj->parameters, "ssl_cert");
 				ssl_key = config_get_value(obj->parameters, "ssl_key");
 				ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
+				ssl_version = config_get_value(obj->parameters, "ssl_version");
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
@@ -474,6 +475,10 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 					else
 					{
 					    serviceSetCertificates(obj->element,ssl_cert,ssl_key,ssl_ca_cert);
+					    if(ssl_version)
+					    {
+						serviceSetSSLVersion(obj->element,ssl_version);
+					    }
 					}
 				    }
 				    else
@@ -1381,7 +1386,7 @@ int i;
         }
 	else if (strcmp(name, "ms_timestamp") == 0)
 	{
-		skygw_set_highp(config_truth_value(value));
+		skygw_set_highp(config_truth_value((char*)value));
 	}
 	else
 	{
@@ -1389,7 +1394,7 @@ int i;
 		{
 			if (strcasecmp(name, lognames[i].logname) == 0)
 			{
-				if (config_truth_value(value))
+				if (config_truth_value((char*)value))
 					skygw_log_enable(lognames[i].logfile);
 				else
 					skygw_log_disable(lognames[i].logfile);
@@ -1967,6 +1972,11 @@ static char *service_params[] =
                 "version_string",
                 "filters",
                 "weightby",
+		"ssl_cert",
+		"ssl_ca_cert",
+		"ssl",
+		"ssl_key",
+		"ssl_version",
                 NULL
         };
 

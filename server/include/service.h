@@ -113,6 +113,17 @@ typedef enum {
   SSL_REQUIRED
 } ssl_mode_t;
 
+enum{
+  SERVICE_SSLV2,
+  SERVICE_SSLV3,
+  SERVICE_TLS10,
+  SERVICE_TLS11,
+  SERVICE_TLS12,
+  SERVICE_SSL_MAX,
+  SERVICE_TLS_MAX,
+  SERVICE_SSL_TLS_MAX
+};
+
 /**
  * Defines a service within the gateway.
  *
@@ -164,6 +175,7 @@ typedef struct service {
         SSL            *ssl;
         SSL_METHOD      *method;                           /*<  SSLv2/3 or TLSv1/2 methods
                                                            * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
+        int ssl_method_type; /*< Which of the SSLv2/3 or TLS1.0/1.1/1.2 methods to use */
         char* ssl_cert;
         char* ssl_key;
         char* ssl_ca_cert;
