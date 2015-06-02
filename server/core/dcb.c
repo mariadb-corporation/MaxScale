@@ -56,6 +56,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <dcb.h>
 #include <spinlock.h>
 #include <server.h>
@@ -1297,7 +1298,9 @@ dcb_close(DCB *dcb)
 	{
             char *user;
             user = session_getUser(dcb->session);
-            if (user && dcb->server)
+            if (user && dcb->server 
+                    && dcb->server->persistpoolmax 
+                    && dcb_persistent_clean_count(dcb) < dcb->server->persistpoolmax)
             {
                 dcb->user = strdup(user);
                 spinlock_acquire(&dcb->server->persistlock);
@@ -2309,6 +2312,46 @@ static int
 dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
 {
 	return 0;
+}
+
+/**
+ * Check persistent pool for expiry or excess size and count
+ *
+ * @param dcb		The DCB being closed.
+ */
+int
+dcb_persistent_clean_count(DCB *dcb)
+{
+    int count = 0;
+    if (dcb)
+    {
+        SERVER *server = dcb->server;
+        DCB *previousdcb = NULL;
+        DCB *persistentdcb = server->persistent;
+    
+        while (persistentdcb) {
+            if (count >= server->persistpoolmax || (persistentdcb->last_read + server->persistmaxtime) < time(NULL))
+            {
+                if (previousdcb) {
+                    previousdcb->nextpersistent = persistentdcb->nextpersistent;
+                }
+                else
+                {
+                    dcb->nextpersistent = persistentdcb->nextpersistent;
+                }
+                /** Call possible callback for this DCB in case of close */
+                dcb_call_callback(persistentdcb, DCB_REASON_CLOSE);
+                dcb_add_to_zombieslist(persistentdcb);
+                atomic_add(&server->stats.n_persistent, -1);
+            }
+            else 
+            {
+                count++;
+            }
+            persistentdcb = persistentdcb->nextpersistent;
+        }
+    }
+    return count;
 }
 
 /**

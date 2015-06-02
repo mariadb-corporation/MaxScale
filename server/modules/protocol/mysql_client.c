@@ -847,7 +847,7 @@ int gw_read_client_event(
                          * created. A BREF_CLOSED flag is set so dcb_close won't
                          * send redundant COM_QUIT.
                          */
-                        SESSION_ROUTE_QUERY(session, read_buffer);
+                        /* Temporarily suppressed: SESSION_ROUTE_QUERY(session, read_buffer); */
                         /** 
                          * Close router session which causes closing of backends.
                          */

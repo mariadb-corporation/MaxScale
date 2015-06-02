@@ -140,39 +140,35 @@ SERVER *ptr;
 DCB *
 server_get_persistent(SERVER *server, char *user, const char *protocol)
 {
-    DCB *dcb, *previous;
-    int rc;
+    DCB *dcb, *previous = NULL;
     
-    spinlock_acquire(&server->persistlock);
-    dcb = server->persistent;
-    previous = NULL;
-    while (dcb) {
-        /* Test for expired, free and remove from list if it is */
-        if (dcb->user && dcb->protoname && 0 == strcmp(dcb->user, user) && 0 == strcmp(dcb->protoname, protocol))
-        {
-            if (NULL == previous)
-            {
-                server->persistent = dcb->nextpersistent;
-            }
-            else
-            {
-                previous->nextpersistent = dcb->nextpersistent;
-            }
-            free(dcb->user);
-            dcb->user = NULL;
-            spinlock_release(&server->persistlock);
-            atomic_add(&server->stats.n_persistent, -1);
-            atomic_add(&server->stats.n_current, 1);
-            return dcb;
-        }
-        previous = dcb;
-        dcb = dcb->nextpersistent;
-    }
-    if (NULL != server->persistent)
+    if (server->persistent && dcb_persistent_clean_count(server->persistent) && server->persistent)
     {
-        /* Change user, remove DCB from list, release spinlock, return dcb */
+        spinlock_acquire(&server->persistlock);
+        dcb = server->persistent;
+        while (dcb) {
+            if (dcb->user && dcb->protoname && 0 == strcmp(dcb->user, user) && 0 == strcmp(dcb->protoname, protocol))
+            {
+                if (NULL == previous)
+                {
+                    server->persistent = dcb->nextpersistent;
+                }
+                else
+                {
+                    previous->nextpersistent = dcb->nextpersistent;
+                }
+                free(dcb->user);
+                dcb->user = NULL;
+                spinlock_release(&server->persistlock);
+                atomic_add(&server->stats.n_persistent, -1);
+                atomic_add(&server->stats.n_current, 1);
+                return dcb;
+            }
+            previous = dcb;
+            dcb = dcb->nextpersistent;
+        }
+        spinlock_release(&server->persistlock);
     }
-    spinlock_release(&server->persistlock);
     return NULL;
 }
 
@@ -716,7 +712,7 @@ SERVER_PARAM	*param;
 }
 
 /**
- * Retreive a parameter value from a server
+ * Retrieve a parameter value from a server
  *
  * @param server	The server we are looking for a parameter of
  * @param name		The name of the parameter we require

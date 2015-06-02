@@ -619,6 +619,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 		}
 		else if (!strcmp(type, "server"))
 		{
+                    SERVER *server = obj->element;
                         char *address;
 			char *port;
 			char *protocol;
@@ -631,6 +632,8 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 			monuser = config_get_value(obj->parameters,
                                                    "monitoruser");
 			monpw = config_get_value(obj->parameters, "monitorpw");
+                        server->persistpoolmax = config_get_value(obj->parameters, "persistpoolmax");
+                        server->persistmaxtime = config_get_value(obj->parameters, "persistmaxtime");
 
 			if (address && port && protocol)
 			{
@@ -677,6 +680,10 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 								"monitorpw")
 						&& strcmp(params->name,
 								"type")
+						&& strcmp(params->name,
+								"persistpoolmax")
+						&& strcmp(params->name,
+								"persistmaxtime")
 						)
 					{
 						serverAddParameter(obj->element,

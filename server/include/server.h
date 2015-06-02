@@ -97,6 +97,8 @@ typedef struct server {
 	bool            master_err_is_logged; /*< If node failed, this indicates whether it is logged */
         DCB             *persistent;    /**< List of unused persistent connections to the server */
         SPINLOCK        persistlock;   /**< Lock for adjusting the persistent connections list */
+        long            persistpoolmax; /**< Maximum size of persistent connections pool */
+        long            persistmaxtime; /**< Maximum number of seconds connection can live */
 } SERVER;
 
 /**
