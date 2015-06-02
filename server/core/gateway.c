@@ -1377,6 +1377,8 @@ int main(int argc, char **argv)
 
 	SSL_library_init();
 	SSL_load_error_strings();
+	OPENSSL_add_all_algorithms_noconf();
+
 	int n_locks = CRYPTO_num_locks();
 	if((ssl_locks = malloc(n_locks*sizeof(SPINLOCK))) == NULL)
 	{
