@@ -73,8 +73,6 @@
 #include <hashtable.h>
 #include <hk_heartbeat.h>
 
-#include "mysql_client_server_protocol.h"
-
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -1397,10 +1395,9 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 	    }
 #endif /* FAKE_CODE */
 	    qlen = GWBUF_LENGTH(queue);
-	    GW_NOINTR_CALL(
-		    w = gw_write_SSL(dcb->ssl, GWBUF_DATA(queue), qlen);
+
+        w = gw_write_SSL(dcb->ssl, GWBUF_DATA(queue), qlen);
 	    dcb->stats.n_writes++;
-	    );
 
 	    if (w < 0)
 	    {
@@ -1660,7 +1657,7 @@ dcb_drain_writeq_SSL(DCB *dcb)
 	while (dcb->writeq != NULL)
 	{
 	    len = GWBUF_LENGTH(dcb->writeq);
-	    GW_NOINTR_CALL(w = gw_write_SSL(dcb->ssl, GWBUF_DATA(dcb->writeq), len););
+        w = gw_write_SSL(dcb->ssl, GWBUF_DATA(dcb->writeq), len);
 
 	    if (w < 0)
 	    {
