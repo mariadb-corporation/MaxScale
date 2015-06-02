@@ -343,6 +343,7 @@ size_t dcb_get_session_id(DCB* dcb);
 bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
 int dcb_create_SSL(DCB* dcb);
 int dcb_accept_SSL(DCB* dcb);
+int dcb_connect_SSL(DCB* dcb);
 int gw_write_SSL(SSL* ssl, const void *buf, size_t nbytes);
 int dcb_write_SSL(DCB *dcb,GWBUF *queue);
 int dcb_read_SSL(DCB   *dcb,GWBUF **head);

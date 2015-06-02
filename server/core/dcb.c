@@ -2845,3 +2845,69 @@ int dcb_accept_SSL(DCB* dcb)
 
     return rval;
 }
+
+/**
+ * Initiate an SSL client connection to a server
+ *
+ * This functions starts an SSL client connection to a server which is expecting
+ * an SSL handshake. The DCB should already have a TCP connection to the server and
+ * this connection should be in a state that expects an SSL handshake.
+ * @param dcb DCB to connect
+ * @return 1 on success, -1 on error and 0 if the SSL handshake is still ongoing
+ */
+int dcb_connect_SSL(DCB* dcb)
+{
+    int rval,errnum;
+
+    rval = SSL_connect(dcb->ssl);
+
+    switch(rval)
+    {
+    case 0:
+	errnum = SSL_get_error(dcb->ssl,rval);
+	LOGIF(LD,(skygw_log_write_flush(LD,"SSL_connect shutdown for %s@%s",
+			 dcb->user,
+			 dcb->remote)));
+	return -1;
+	break;
+    case 1:
+	rval = 1;
+	LOGIF(LD,(skygw_log_write_flush(LD,"SSL_connect done for %s@%s",
+			 dcb->user,
+			 dcb->remote)));
+	break;
+
+    case -1:
+	errnum = SSL_get_error(dcb->ssl,rval);
+
+	if(errnum == SSL_ERROR_WANT_READ || errnum == SSL_ERROR_WANT_WRITE ||
+	 errnum == SSL_ERROR_WANT_X509_LOOKUP)
+	{
+	    /** Not all of the data has been read. Go back to the poll
+	     queue and wait for more.*/
+
+	    rval = 0;
+	    LOGIF(LD,(skygw_log_write_flush(LD,"SSL_connect ongoing for %s@%s",
+			     dcb->user,
+			     dcb->remote)));
+	}
+	else
+	{
+	    rval = -1;
+	    skygw_log_write_flush(LE,
+			     "Error: Fatal error in SSL_connect for %s@%s: %s",
+			     dcb->user,
+			     dcb->remote,
+			     ERR_error_string(errnum,NULL));
+	}
+	break;
+
+    default:
+	skygw_log_write_flush(LE,
+			 "Error: Fatal error in SSL_connect, returned value was %d.",
+			 rval);
+	break;
+    }
+
+    return rval;
+}
