@@ -62,9 +62,18 @@ done
 
 scp -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null MaxScale.cnf root@$maxscale_IP:$maxscale_cnf
 #ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir/bin/maxkeys $max_dir/etc/.secrets"
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "service maxscale stop"
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "killall -9 maxscale"
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "mkdir -p /home/ec2-user; chmod 777 -R /home/ec2-user"
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "rm $maxscale_log_dir/*.log ; rm /tmp/core*; rm -rf /dev/shm/*;  ulimit -c unlimited; service maxscale restart" 
+if [ -z "$maxscale_restart" ] ; then
+	export maxscale_restart="yes"
+fi
+
+if [ "$maxscale_restart" != "no" ] ; then
+	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "service maxscale stop"
+	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "killall -9 maxscale"
+	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "mkdir -p /home/ec2-user; chmod 777 -R /home/ec2-user"
+	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "rm $maxscale_log_dir/*.log ; rm /tmp/core*; rm -rf /dev/shm/*;  ulimit -c unlimited; service maxscale restart" 
+else
+        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "mkdir -p /home/ec2-user; chmod 777 -R /home/ec2-user"
+        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "rm $maxscale_log_dir/*.log ; rm /tmp/core*; rm -rf /dev/shm/*;  ulimit -c unlimited; killall -HUP maxscale" 
+fi
 #sleep 15
 #disown

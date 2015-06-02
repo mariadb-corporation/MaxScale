@@ -1,6 +1,9 @@
 /**
  * @file script.cpp - test for running external script feature (MXS-121)
- * - setup Maxscale to execute script on folowing events: master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave
+ * - setup Maxscale to execute script on folowing events:
+ *   - for MariaDB monitor: master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave
+ *   - for Galera monitor: events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave,server_down,server_up,synced_down,synced_up
+ * - for Galera monitor set also 'disable_master_role_setting=true'
  * - block master, unblock master, block node1, unblock node1
  * - expect following as a script output:
  * @verbatim
@@ -11,7 +14,9 @@
  * - repeat test for Galera monitor: block node0, unblock node0, block node1, unblock node1
  * - expect following as a script output:
  * @verbatim
-
+--event=synced_down --initiator=gserver1 --nodelist=gserver1,gserver2,gserver3,gserver4
+--event=synced_down --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
+--event=synced_up --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
  @endverbatim
  * - make script non-executable
  * - block and unblocm node1
