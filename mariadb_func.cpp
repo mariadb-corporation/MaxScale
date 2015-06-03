@@ -33,6 +33,9 @@ MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * P
         fprintf(stdout, "Error: can't create MySQL-descriptor\n");
         return(NULL);
     }
+
+    mysql_ssl_set(conn, "client-key.pem", "client-cert.pem", "ca.pem", NULL, "TLSv12");
+
     if(!mysql_real_connect(conn,
                            ip,
                            User,

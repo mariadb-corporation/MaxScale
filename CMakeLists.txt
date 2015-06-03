@@ -317,6 +317,7 @@ install(DIRECTORY test_ctrl_c DESTINATION system-test USE_SOURCE_PERMISSIONS)
 install(DIRECTORY long_insert_sql DESTINATION system-test USE_SOURCE_PERMISSIONS)
 install(DIRECTORY Hartmut_tests DESTINATION system-test USE_SOURCE_PERMISSIONS)
 install(DIRECTORY session_hang DESTINATION system-test USE_SOURCE_PERMISSIONS)
+install(DIRECTORY ssl-cert DESTINATION system-test USE_SOURCE_PERMISSIONS)
 
 add_test(readconnrouter_master readconnrouter_master)
 add_test(readconnrouter_slave readconnrouter_slave)
