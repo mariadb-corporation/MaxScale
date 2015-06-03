@@ -32,22 +32,27 @@ printf "Testing No key defined"
 start_maxscale @CMAKE_CURRENT_BINARY_DIR@/no_key.cnf
 echo " OK"
 
-# Bad SSL value
+# Bad SSL value defined
 printf "Testing Bad SSL defined"
 start_maxscale @CMAKE_CURRENT_BINARY_DIR@/bad_ssl.cnf
 echo " OK"
 
-# Bad CA defined
+# Bad SSL version defined
+printf "Testing Bad SSL version defined"
+start_maxscale @CMAKE_CURRENT_BINARY_DIR@/bad_ssl_version.cnf
+echo " OK"
+
+# Bad CA value defined
 printf "Testing Bad CA defined"
 start_maxscale @CMAKE_CURRENT_BINARY_DIR@/bad_ca.cnf
 echo " OK"
 
-# Bad cert defined
+# Bad server certificate defined
 printf "Testing Bad cert defined"
 start_maxscale @CMAKE_CURRENT_BINARY_DIR@/bad_cert.cnf
 echo " OK"
 
-# Bad key defined
+# Bad server key defined
 printf "Testing Bad key defined"
 start_maxscale @CMAKE_CURRENT_BINARY_DIR@/bad_key.cnf
 echo " OK"
@@ -59,14 +64,14 @@ rm @CMAKE_CURRENT_BINARY_DIR@/ca.pem
 start_maxscale @CMAKE_CURRENT_BINARY_DIR@/ok.cnf
 echo " OK"
 
-# No cert file
+# No server certificate file
 printf "Testing No cert file"
 create_certs
 rm @CMAKE_CURRENT_BINARY_DIR@/server-cert.pem
 start_maxscale @CMAKE_CURRENT_BINARY_DIR@/ok.cnf
 echo " OK"
 
-# No key file
+# No server key file
 printf "Testing No key file"
 create_certs
 rm @CMAKE_CURRENT_BINARY_DIR@/server-key.pem
