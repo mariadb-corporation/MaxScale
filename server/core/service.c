@@ -864,12 +864,20 @@ serviceOptimizeWildcard(SERVICE *service, int action)
 void
 serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert)
 {
+    if(service->ssl_cert)
+	free(service->ssl_cert);
     service->ssl_cert = strdup(cert);
+
+    if(service->ssl_key)
+	free(service->ssl_key);
     service->ssl_key = strdup(key);
+
+    if(service->ssl_ca_cert)
+	free(service->ssl_ca_cert);
     service->ssl_ca_cert = strdup(ca_cert);
 }
 
-void
+int
 serviceSetSSLVersion(SERVICE *service, char* version)
 {
     if(strcasecmp(version,"SSLV2") == 0)
@@ -884,6 +892,8 @@ serviceSetSSLVersion(SERVICE *service, char* version)
 	service->ssl_method_type = SERVICE_TLS12;
     else if(strcasecmp(version,"MAX") == 0)
 	service->ssl_method_type = SERVICE_SSL_TLS_MAX;
+    else return -1;
+    return 0;
 }
 /** Enable or disable the service SSL capability*/
 int

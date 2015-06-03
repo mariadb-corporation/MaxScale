@@ -210,6 +210,7 @@ extern	int	serviceGetUser(SERVICE *, char **, char **);
 extern	void	serviceSetFilters(SERVICE *, char *);
 extern  int     serviceSetSSL(SERVICE *service, char* action);
 extern  int     serviceInitSSL(SERVICE* service);
+extern  int     serviceSetSSLVersion(SERVICE *service, char* version);
 extern  void    serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert);
 extern	int	serviceEnableRootUser(SERVICE *, int );
 extern	int	serviceSetTimeout(SERVICE *, int );

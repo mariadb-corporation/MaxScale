@@ -453,40 +453,68 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				if(ssl)
 				{
 				    if(ssl_cert == NULL)
+				    {
+					error_count++;
 					skygw_log_write(LE,"Error: Server certificate missing for service '%s'."
 						"Please provide the path to the server certificate by adding the ssl_cert=<path> parameter",
 						 obj->object);
+				    }
 				    if(ssl_ca_cert == NULL)
+				    {
+					error_count++;
 					skygw_log_write(LE,"Error: CA Certificate missing for service '%s'."						
 						"Please provide the path to the certificate authority certificate by adding the ssl_ca_cert=<path> parameter",
 						 obj->object);
+				    }
 				    if(ssl_key == NULL)
+				    {
+					error_count++;
 					skygw_log_write(LE,"Error: Server private key missing for service '%s'. "
 						"Please provide the path to the server certificate key by adding the ssl_key=<path> parameter"
 						,obj->object);
+				    }
 
-				    if(ssl_ca_cert != NULL && ssl_cert != NULL && ssl_key != NULL)
+				    if(access(ssl_ca_cert,F_OK) != 0)
 				    {
+					skygw_log_write(LE,"Error: Certificate authority file for service '%s' not found: %s",
+						 obj->object,
+						 ssl_ca_cert);
+					error_count++;
+				    }
+				    if(access(ssl_cert,F_OK) != 0)
+				    {
+					skygw_log_write(LE,"Error: Server certificate file for service '%s' not found: %s",
+						 obj->object,
+						 ssl_cert);
+					error_count++;
+				    }
+				    if(access(ssl_key,F_OK) != 0)
+				    {
+					skygw_log_write(LE,"Error: Server private key file for service '%s' not found: %s",
+						 obj->object,
+						 ssl_key);
+					error_count++;
+				    }
 
+				    if(error_count == 0)
+				    {
 					if(serviceSetSSL(obj->element,ssl) != 0)
 					{
 					    skygw_log_write(LE,"Error: Unknown parameter for service '%s': %s",obj->object,ssl);
+					    error_count++;
 					}
 					else
 					{
 					    serviceSetCertificates(obj->element,ssl_cert,ssl_key,ssl_ca_cert);
 					    if(ssl_version)
 					    {
-						serviceSetSSLVersion(obj->element,ssl_version);
+						if(serviceSetSSLVersion(obj->element,ssl_version) != 0)
+						{
+						    skygw_log_write(LE,"Error: Unknown parameter value for 'ssl_version' for service '%s': %s",obj->object,ssl_version);
+						    error_count++;
+						}
 					    }
 					}
-				    }
-				    else
-				    {
-					/** If SSL was configured wrong, the
-					 * service needs to fail.*/
-					skygw_log_write_flush(LE,"Error: Missing SSL certificate paths found in the configuration. "
-						"This service will not use SSL.");
 				    }
 
 				}
