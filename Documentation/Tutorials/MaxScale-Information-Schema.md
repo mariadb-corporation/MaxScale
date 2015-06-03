@@ -5,7 +5,7 @@ The plugin is capable of returning data in one of two ways, either as MySQL resu
 
 # Configuration
 
-The plugin is configured in the MaxScale.cnf plugin in much the same way as any other router service is configured, there needs to be a service section in the configuration file and also listeners defined for that service. The service does not however require any backend servers to be associated with it, or any monitors.
+The plugin is configured in the maxscale.cnf plugin in much the same way as any other router service is configured, there needs to be a service section in the configuration file and also listeners defined for that service. The service does not however require any backend servers to be associated with it, or any monitors.
 
 The service entry needs to define the service name, the type as service and the router module to load.
 The specified user, with the password (plain or encrypted via maxpassword utility) is allowed to connect via MySQL protocol.
