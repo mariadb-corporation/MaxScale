@@ -1825,6 +1825,7 @@ static bool dcb_set_state_nolock(
 			case DCB_STATE_DISCONNECTED: 
 				dcb->state = new_state;
 				succp = true;
+                        default: ;
                 }
                 break;
                 
@@ -1833,6 +1834,7 @@ static bool dcb_set_state_nolock(
 			case DCB_STATE_NOPOLLING:
 				dcb->state = new_state;
 				succp = true;
+                        default: ;
                 }
                 break;
 
@@ -1841,6 +1843,7 @@ static bool dcb_set_state_nolock(
 			case DCB_STATE_NOPOLLING:
 				dcb->state = new_state;
 				succp = true;
+                        default: ;
                 }
                 break;
                 
@@ -1850,6 +1853,7 @@ static bool dcb_set_state_nolock(
 				dcb->state = new_state;
 			case DCB_STATE_POLLING: /*< ok to try but state can't change */
 				succp = true;
+                        default: ;
                 }
                 break;
 
@@ -1859,6 +1863,7 @@ static bool dcb_set_state_nolock(
 				dcb->state = new_state;
 			case DCB_STATE_POLLING: /*< ok to try but state can't change */
 				succp = true;
+                        default: ;
                 }
                 break;
 
@@ -1867,6 +1872,7 @@ static bool dcb_set_state_nolock(
 			case DCB_STATE_FREED:
 				dcb->state = new_state;
 				succp = true;
+                        default: ;
                 }
                 break;
 
@@ -2304,13 +2310,14 @@ int
 dcb_persistent_clean_count(DCB *dcb)
 {
     int count = 0;
-    if (dcb)
+    if (dcb && dcb->server)
     {
         SERVER *server = dcb->server;
         DCB *previousdcb = NULL;
         DCB *persistentdcb = server->persistent;
     
         while (persistentdcb) {
+			CHK_DCB(persistentdcb);
             if (count >= server->persistpoolmax || (persistentdcb->last_read + server->persistmaxtime) < time(NULL))
             {
                 if (previousdcb) {
