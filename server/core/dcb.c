@@ -84,7 +84,7 @@ static	SPINLOCK	dcbspin = SPINLOCK_INIT;
 static	SPINLOCK	zombiespin = SPINLOCK_INIT;
 
 static void dcb_final_free(DCB *dcb);
-static bool dcb_set_state_nomutex(
+static bool dcb_set_state_nolock(
         DCB*              dcb,
         const dcb_state_t new_state,
         dcb_state_t*      old_state);
@@ -1319,8 +1319,9 @@ dcb_close(DCB *dcb)
             
             char *user;
             user = session_getUser(dcb->session);
-            if (!rc
+            if (0 == rc
                 && user 
+                && strlen(user)
                 && dcb->server 
                 && dcb->server->persistpoolmax 
                 && dcb_persistent_clean_count(dcb) < dcb->server->persistpoolmax)
@@ -1676,6 +1677,8 @@ gw_dcb_state2string (int state) {
 			return "DCB Allocated";
 		case DCB_STATE_POLLING:
 			return "DCB in the polling loop";
+		case DCB_STATE_NOPOLLING:
+			return "DCB not in the polling loop";
 		case DCB_STATE_LISTENING:
 			return "DCB for listening socket";
 		case DCB_STATE_DISCONNECTED:
@@ -1684,14 +1687,16 @@ gw_dcb_state2string (int state) {
 			return "DCB memory could be freed";
 		case DCB_STATE_ZOMBIE:
 			return "DCB Zombie";
+		case DCB_STATE_UNDEFINED:
+			return "DCB undefined state";
 		default:
-			return "DCB (unknown)";
+			return "DCB (unknown - erroneous)";
 	}
 }
 
 /**
  * A  DCB based wrapper for printf. Allows formatting printing to
- * a descritor control block.
+ * a descriptor control block.
  *
  * @param dcb	Descriptor to write to
  * @param fmt	A printf format string
@@ -1768,40 +1773,43 @@ void dcb_hashtable_stats(
 bool dcb_set_state(
         DCB*              dcb,
         const dcb_state_t new_state,
-        dcb_state_t*      old_state)
+        dcb_state_t*      old_state_ptr)
 {
         bool              succp;
-        dcb_state_t       state ;
+        dcb_state_t       old_state_buffer;
         
         CHK_DCB(dcb);
-        spinlock_acquire(&dcb->dcb_initlock);
-        succp = dcb_set_state_nomutex(dcb, new_state, &state);
         
+        spinlock_acquire(&dcb->dcb_initlock);
+        succp = dcb_set_state_nolock(dcb, new_state, &old_state_buffer);
         spinlock_release(&dcb->dcb_initlock);
 
-        if (old_state != NULL) {
-                *old_state = state;
+        if (old_state_ptr != NULL)
+        {
+                *old_state_ptr = old_state_buffer;
         }
         return succp;
 }
 
-static bool dcb_set_state_nomutex(
-        DCB*              dcb,
-        const dcb_state_t new_state,
-        dcb_state_t*      old_state)
+static bool dcb_set_state_nolock(
+        DCB*                dcb,
+        const dcb_state_t   new_state,
+        dcb_state_t*        old_state_ptr)
 {
-        bool        succp = false;
-        dcb_state_t state = DCB_STATE_UNDEFINED;
+        bool                succp = false;
+        bool                old_state_supplied = true;
+        dcb_state_t         state_buffer;
         
         CHK_DCB(dcb);
 
-        state = dcb->state;
-        
-        if (old_state != NULL) {
-                *old_state = state;
+        if (NULL == old_state_ptr)
+        {
+            old_state_supplied = false;
+            old_state_ptr = &state_buffer;
         }
+        *old_state_ptr = dcb->state;
         
-        switch (state) {
+        switch (*old_state_ptr) {
         case DCB_STATE_UNDEFINED:
                 dcb->state = new_state;
                 succp = true;
@@ -1817,10 +1825,6 @@ static bool dcb_set_state_nomutex(
 			case DCB_STATE_DISCONNECTED: 
 				dcb->state = new_state;
 				succp = true;
-				break;
-			default:                        
-				ss_dassert(old_state != NULL);
-				break;
                 }
                 break;
                 
@@ -1829,10 +1833,6 @@ static bool dcb_set_state_nomutex(
 			case DCB_STATE_NOPOLLING:
 				dcb->state = new_state;
 				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
                 }
                 break;
 
@@ -1841,10 +1841,6 @@ static bool dcb_set_state_nomutex(
 			case DCB_STATE_NOPOLLING:
 				dcb->state = new_state;
 				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
                 }
                 break;
                 
@@ -1854,10 +1850,6 @@ static bool dcb_set_state_nomutex(
 				dcb->state = new_state;
 			case DCB_STATE_POLLING: /*< ok to try but state can't change */
 				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
                 }
                 break;
 
@@ -1867,10 +1859,6 @@ static bool dcb_set_state_nomutex(
 				dcb->state = new_state;
 			case DCB_STATE_POLLING: /*< ok to try but state can't change */
 				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
                 }
                 break;
 
@@ -1879,15 +1867,10 @@ static bool dcb_set_state_nomutex(
 			case DCB_STATE_FREED:
 				dcb->state = new_state;
 				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
                 }
                 break;
 
         case DCB_STATE_FREED:
-                ss_dassert(old_state != NULL);
                 break;
                 
         default:
@@ -1904,24 +1887,25 @@ static bool dcb_set_state_nomutex(
         if (succp) {
                 LOGIF(LD, (skygw_log_write_flush(
                         LOGFILE_DEBUG,
-                        "%lu [dcb_set_state_nomutex] dcb %p fd %d %s -> %s",
+                        "%lu [dcb_set_state_nolock] dcb %p fd %d %s -> %s",
                         pthread_self(),
                         dcb,
                         dcb->fd,
-                        STRDCBSTATE(state),
+                        STRDCBSTATE(*old_state_ptr),
                         STRDCBSTATE(dcb->state))));
         }
         else
         {
                 LOGIF(LD, (skygw_log_write(
                                    LOGFILE_DEBUG,
-                                   "%lu [dcb_set_state_nomutex] Failed "
+                                   "%lu [dcb_set_state_nolock] Failed "
                                    "to change state of DCB %p. "
                                    "Old state %s > new state %s.",
                                    pthread_self(),
                                    dcb,
-				   (old_state == NULL ? "NULL" : STRDCBSTATE(*old_state)),
+				   (old_state_ptr == NULL ? "NULL" : STRDCBSTATE(*old_state_ptr)),
                                    STRDCBSTATE(new_state))));
+                ss_dassert(old_state_supplied);
         }
         return succp;
 }
@@ -2340,6 +2324,7 @@ dcb_persistent_clean_count(DCB *dcb)
                 dcb_call_callback(persistentdcb, DCB_REASON_CLOSE);
                 dcb_add_to_zombieslist(persistentdcb);
                 atomic_add(&server->stats.n_persistent, -1);
+                atomic_add(&server->stats.n_connections, -1);
             }
             else 
             {
