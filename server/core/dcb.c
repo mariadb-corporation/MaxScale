@@ -2789,7 +2789,7 @@ int dcb_create_SSL(DCB* dcb)
 int dcb_accept_SSL(DCB* dcb)
 {
     int rval,errnum;
-
+    char errbuf[140];
     rval = SSL_accept(dcb->ssl);
 
     switch(rval)
@@ -2819,23 +2819,25 @@ int dcb_accept_SSL(DCB* dcb)
 
 	    rval = 0;
 	    LOGIF(LD,(skygw_log_write_flush(LD,"SSL_accept ongoing for %s@%s",
-			     dcb->user,
+			     dcb->user?dcb->user:"a connection from ",
 			     dcb->remote)));
 	}
 	else
 	{
 	    rval = -1;
+	    ERR_error_string(errnum,errbuf);
 	    skygw_log_write_flush(LE,
-			     "Error: Fatal error in SSL_accept for %s@%s: %s",
+			     "Error: Fatal error in SSL_accept for %s@%s: (SSL error code: %d) %s",
 			     dcb->user,
 			     dcb->remote,
-			     ERR_error_string(errnum,NULL));
+			     errnum,
+			     errbuf);
 	}
 	break;
 
     default:
 	skygw_log_write_flush(LE,
-			 "Error: Fatal error in SSL_accept, returned value was %d.",
+			 "Error: Fatal library error in SSL_accept, returned value was %d.",
 			 rval);
 	break;
     }
@@ -2855,7 +2857,7 @@ int dcb_accept_SSL(DCB* dcb)
 int dcb_connect_SSL(DCB* dcb)
 {
     int rval,errnum;
-
+    char errbuf[140];
     rval = SSL_connect(dcb->ssl);
 
     switch(rval)
@@ -2891,11 +2893,13 @@ int dcb_connect_SSL(DCB* dcb)
 	else
 	{
 	    rval = -1;
+	    ERR_error_string(errnum,errbuf);
 	    skygw_log_write_flush(LE,
-			     "Error: Fatal error in SSL_connect for %s@%s: %s",
+			     "Error: Fatal error in SSL_accept for %s@%s: (SSL error code: %d) %s",
 			     dcb->user,
 			     dcb->remote,
-			     ERR_error_string(errnum,NULL));
+			     errnum,
+			     errbuf);
 	}
 	break;
 
