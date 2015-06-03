@@ -1327,6 +1327,7 @@ dcb_close(DCB *dcb)
                 && dcb_persistent_clean_count(dcb) < dcb->server->persistpoolmax)
             {
                 dcb->user = strdup(user);
+                dcb->persistentstart = time(NULL);
                 spinlock_acquire(&dcb->server->persistlock);
                 dcb->nextpersistent = dcb->server->persistent;
                 dcb->server->persistent = dcb;
@@ -2319,14 +2320,14 @@ dcb_persistent_clean_count(DCB *dcb)
         CHK_SERVER(server);
         while (persistentdcb) {
             CHK_DCB(persistentdcb);
-            if (count >= server->persistpoolmax || (persistentdcb->last_read + server->persistmaxtime) < time(NULL))
+            if (count >= server->persistpoolmax || difftime(time(NULL), persistentdcb->persistentstart) > server->persistmaxtime)
             {
                 if (previousdcb) {
                     previousdcb->nextpersistent = persistentdcb->nextpersistent;
                 }
                 else
                 {
-                    dcb->nextpersistent = persistentdcb->nextpersistent;
+                    server->persistent = persistentdcb->nextpersistent;
                 }
                 /** Call possible callback for this DCB in case of close */
                 dcb_call_callback(persistentdcb, DCB_REASON_CLOSE);

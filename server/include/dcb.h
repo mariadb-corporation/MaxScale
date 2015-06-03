@@ -251,6 +251,7 @@ typedef struct dcb {
         unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
 	struct dcb	*next;		/**< Next DCB in the chain of allocated DCB's */
         struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
+        time_t          persistentstart;   /**< Time when DCB placed in persistent pool */
 	struct service	*service;	/**< The related service */
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
