@@ -56,7 +56,7 @@ filters=QLA
 ssl=required
 ssl_cert=/home/ec2-user/server-cert.pem
 ssl_key=/home/ec2-user/server-key.pem
-ssl_ca_cert=/home/ec2-user/certs/ca.pem
+ssl_ca_cert=/home/ec2-user/ca.pem
 ssl_version=TLSv12
 
 [Read Connection Router Slave]
