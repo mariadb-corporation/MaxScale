@@ -2398,11 +2398,8 @@ void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
 		end = strchr(ptr, '\'');
 		if (end)
 			*end ='\0';
-				
-		if (router->service->dbref->server->name) {
-			free(router->service->dbref->server->name);
-		}
-		router->service->dbref->server->name = strdup(ptr);
+
+		server_update_address(router->service->dbref->server, ptr);
 
 		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_HOST is [%s]",
 			router->service->name,
@@ -2412,7 +2409,7 @@ void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
 
 	/* Change the master port */
 	if (master_port) {
-		router->service->dbref->server->port = atoi(master_port + 12);
+		server_update_port(router->service->dbref->server, atoi(master_port + 12));
 
 		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_PORT is [%i]",
 			router->service->name,
