@@ -417,7 +417,21 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
                                 }
 
                                 if (version_string) {
+
+				    /** Add the 5.5.5- string to the start of the version string if
+				     * the version string starts with "10.".
+				     * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
+				    if(strncmp(version_string,"10.",3) == 0)
+				    {
+					((SERVICE *)(obj->element))->version_string = malloc((strlen(version_string) +
+						strlen("5.5.5-") + 1) * sizeof(char));
+					strcpy(((SERVICE *)(obj->element))->version_string,"5.5.5-");
+					strcat(((SERVICE *)(obj->element))->version_string,version_string);
+				    }
+				    else
+				    {
 					((SERVICE *)(obj->element))->version_string = strdup(version_string);
+				    }
 				} else {
 					if (gateway.version_string)
 						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);

@@ -2381,7 +2381,7 @@ void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
 
 	/*
 	 * Change values in the router->service->dbref->server structure
-	 * Change binlogfilename and position in the router scrutcure 
+	 * Change binlogfilename and position in the router structure 
 	 */
 	spinlock_acquire(&router->lock);
 
