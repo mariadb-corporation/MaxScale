@@ -76,6 +76,9 @@ typedef struct {
  * between the gateway and the server.
  */
 typedef struct server {
+#if defined(SS_DEBUG)
+        skygw_chk_t     server_chk_top;
+#endif
 	char		*unique_name;	/**< Unique name for the server */
 	char		*name;		/**< Server name/IP address*/
 	unsigned short	port;		/**< Port to listen on */
@@ -99,6 +102,9 @@ typedef struct server {
         SPINLOCK        persistlock;   /**< Lock for adjusting the persistent connections list */
         long            persistpoolmax; /**< Maximum size of persistent connections pool */
         long            persistmaxtime; /**< Maximum number of seconds connection can live */
+#if defined(SS_DEBUG)
+        skygw_chk_t     server_chk_tail;
+#endif
 } SERVER;
 
 /**

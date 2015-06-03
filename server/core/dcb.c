@@ -2316,8 +2316,9 @@ dcb_persistent_clean_count(DCB *dcb)
         DCB *previousdcb = NULL;
         DCB *persistentdcb = server->persistent;
     
+        CHK_SERVER(server);
         while (persistentdcb) {
-			CHK_DCB(persistentdcb);
+            CHK_DCB(persistentdcb);
             if (count >= server->persistpoolmax || (persistentdcb->last_read + server->persistmaxtime) < time(NULL))
             {
                 if (previousdcb) {
