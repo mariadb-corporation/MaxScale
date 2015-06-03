@@ -11,7 +11,7 @@ or by manually starting the process from the bin folder of the installation dire
 
 Configuration
 
-You need to create or edit the MaxScale.cnf file in the /etc folder.
+You need to create or edit the maxscale.cnf file in the /etc folder.
 Define the services you wish to provide, the set of server definitions
 you require, with the addresses and ports of those servers and also 
 define the listening ports for your various services.
@@ -22,4 +22,4 @@ the port defined for the telnet listener. Initially you may login with
 the user name of "admin" and the password "mariadb". Once connected type
 help for an overview of the commands and help <command> for the more
 detailed help on commands. Use the add user command to add a new user,
-this will also remove the admin/mariadb user.
+this will also remove the admin/mariadb user. For a detailed guide about using the MaxAdmin interface, take a look at the [MaxAdmin](../Reference/MaxAdmin.md) guide.

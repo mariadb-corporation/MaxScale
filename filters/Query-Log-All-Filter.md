@@ -6,7 +6,7 @@ The  Query Log All (QLA)  filter  is  a  filter  module  for  MaxScale  that  is
 
 ## Configuration
 
-The  configuration  block  for  the  QLA  filter  requires  the  minimal  filter  options  in  it's  section  within  the  MaxScale.cnf  file,  stored  in  /etc/MaxScale.cnf.
+The  configuration  block  for  the  QLA  filter  requires  the  minimal  filter  options  in  it's  section  within  the  maxscale.cnf  file,  stored  in  /etc/maxscale.cnf.
 ```
 [MyLogFilter]
 type=filter

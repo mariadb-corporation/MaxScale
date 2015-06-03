@@ -241,7 +241,7 @@ Query OK, 0 rows affected (0.00 sec)
 
 #### `passwd`
 
-The passwd parameter provides the password information for the above user and may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file. This user must be capable of connecting to the backend database and executing these SQL statements to load database names and grants from the backends:
+The passwd parameter provides the password information for the above user and may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the maxscale.cnf file. This user must be capable of connecting to the backend database and executing these SQL statements to load database names and grants from the backends:
 
 * `SELECT user, host, password,Select_priv FROM mysql.user`.
 * `SELECT user, host, db FROM mysql.db`
@@ -366,7 +366,7 @@ The monitor has a username and password that is used to connect to all servers f
 monitorpw=mymonitorpasswd
 ```
 
-The monpasswd parameter may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the MaxScale.cnf file.
+The monpasswd parameter may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the maxscale.cnf file.
 
 ### Listener
 
@@ -515,7 +515,7 @@ Individual servers may define override values for the user and password the moni
 
 #### `passwd`
 
-The password parameter may be either a plain text password or it may be an encrypted password. See the section on encrypting passwords for use in the `MaxScale.cnf` file.
+The password parameter may be either a plain text password or it may be an encrypted password. See the section on encrypting passwords for use in the `maxscale.cnf` file.
 
 #### `monitor_interval`
 
@@ -1307,7 +1307,7 @@ before being sent to the server. Note that the text in the match string is case-
 
 The **tee** filter is a filter module for MaxScale that acts as a "plumbing" fitting in the MaxScale filter toolkit. It can be used in a filter pipeline of a service to make a copy of requests from the client and dispatch a copy of the request to another service within MaxScale.
 
-The configuration block for the **tee** filter requires the minimal filter parameters in its section within the `MaxScale.cnf` file that defines the filter to load and the service to send the duplicates to.
+The configuration block for the **tee** filter requires the minimal filter parameters in its section within the `maxscale.cnf` file that defines the filter to load and the service to send the duplicates to.
 
 ```
 [ArchiveFilter]
@@ -1322,7 +1322,7 @@ In addition parameters may be added to define patterns to match against to eithe
 
 The top filter is a filter module for MaxScale that monitors every SQL statement that passes through the filter. It measures the duration of that statement, the time between the statement being sent and the first result being returned. The top N times are kept, along with the SQL text itself and a list sorted on the execution times of the query is written to a file upon closure of the client session.
 
-The configuration block for the **top** filter requires the minimal filter options in its section within the `MaxScale.cnf` file, stored in `/etc/MaxScale.cnf`.
+The configuration block for the **top** filter requires the minimal filter options in its section within the `maxscale.cnf` file, stored in `/etc/maxscale.cnf`.
 
 ```
 [MyLogFilter]
@@ -1336,13 +1336,13 @@ In addition parameters may be added to define patterns to match against to eithe
 
 ## Encrypting Passwords
 
-Passwords stored in the MaxScale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key. The default location MaxScale stores the keys is `/var/cache/maxscale`.
+Passwords stored in the maxscale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key. The default location MaxScale stores the keys is `/var/cache/maxscale`.
 
 ```
 maxkeys /var/cache/maxscale/.secrets
 ```
 
-Changing the encryption key for MaxScale will invalidate any currently encrypted keys stored in the MaxScale.cnf file.
+Changing the encryption key for MaxScale will invalidate any currently encrypted keys stored in the maxscale.cnf file.
 
 ### Creating Encrypted Passwords
 
@@ -1351,7 +1351,7 @@ Encrypted passwords are created by executing the maxpasswd command with the pass
     maxpasswd MaxScalePw001
     61DD955512C39A4A8BC4BB1E5F116705
 
-The output of the maxpasswd command is a hexadecimal string, this should be inserted into the MaxScale.cnf file in place of the ordinary, plain text, password. MaxScale will determine this as an encrypted password and automatically decrypt it before sending it the database server.
+The output of the maxpasswd command is a hexadecimal string, this should be inserted into the maxscale.cnf file in place of the ordinary, plain text, password. MaxScale will determine this as an encrypted password and automatically decrypt it before sending it the database server.
 
 ```
 [Split Service]
