@@ -1296,25 +1296,44 @@ dcb_close(DCB *dcb)
         */
 	if (dcb->state == DCB_STATE_POLLING)
 	{
+            rc = poll_remove_dcb(dcb);
+            if (rc)
+            {
+                LOGIF(LE, (skygw_log_write(
+                    LOGFILE_ERROR,
+                    "Error : Removing DCB fd == %d in state %s from "
+                    "poll set failed.",
+                    dcb->fd,
+                    STRDCBSTATE(dcb->state))));
+            } 
+            else
+            {
+                LOGIF(LD, (skygw_log_write(
+                    LOGFILE_DEBUG,
+                    "%lu [dcb_close] Removed dcb %p in state %s from "
+                    "poll set.",
+                    pthread_self(),
+                    dcb,
+                    STRDCBSTATE(dcb->state))));
+            }
+            
             char *user;
             user = session_getUser(dcb->session);
-            if (user && dcb->server 
-                    && dcb->server->persistpoolmax 
-                    && dcb_persistent_clean_count(dcb) < dcb->server->persistpoolmax)
+            if (!rc
+                && user 
+                && dcb->server 
+                && dcb->server->persistpoolmax 
+                && dcb_persistent_clean_count(dcb) < dcb->server->persistpoolmax)
             {
                 dcb->user = strdup(user);
                 spinlock_acquire(&dcb->server->persistlock);
                 dcb->nextpersistent = dcb->server->persistent;
                 dcb->server->persistent = dcb;
-                if (poll_remove_dcb(dcb))
-                {
-                    /* Error */
-                    spinlock_release(&dcb->server->persistlock);
-                    return;
-                }
                 dcb->session = NULL;
                 spinlock_release(&dcb->server->persistlock);
                 atomic_add(&dcb->server->stats.n_persistent, 1);
+                /* Because we're not going to close the connection, need to do */
+                /* the session closedown processing here */
                 if (dcb->session)
                 {
                     spinlock_acquire(&dcb->session->ses_lock);
@@ -1323,11 +1342,10 @@ dcb_close(DCB *dcb)
                      * Otherwise only this backend connection is closed.
                      */
                     if (dcb->session->state == SESSION_STATE_STOPPING &&
-                    dcb->session->client != NULL &&
-                    dcb->session->client->state == DCB_STATE_POLLING)
+                        dcb->session->client != NULL &&
+                        dcb->session->client->state == DCB_STATE_POLLING)
                     {
                         spinlock_release(&dcb->session->ses_lock);
-			
                         /** Close client DCB */
                         dcb_close(dcb->session->client);
                     }
@@ -1336,30 +1354,9 @@ dcb_close(DCB *dcb)
                         spinlock_release(&dcb->session->ses_lock);
                     }
                 }
-                return;
             }
-
-            rc = poll_remove_dcb(dcb);
-
-		if (rc == 0) {
-			LOGIF(LD, (skygw_log_write(
-				LOGFILE_DEBUG,
-				"%lu [dcb_close] Removed dcb %p in state %s from "
-				"poll set.",
-				pthread_self(),
-				dcb,
-				STRDCBSTATE(dcb->state))));
-		} else {
-			LOGIF(LE, (skygw_log_write(
-				LOGFILE_ERROR,
-				"Error : Removing DCB fd == %d in state %s from "
-				"poll set failed.",
-				dcb->fd,
-				STRDCBSTATE(dcb->state))));
-		}
-	
-		if (rc == 0)
-		{
+            else if (!rc)
+            {
 			/**
 			 * close protocol and router session
 			 */
@@ -1374,10 +1371,10 @@ dcb_close(DCB *dcb)
 			{
 				dcb_add_to_zombieslist(dcb);
 			}
-		}
-	        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-					dcb->state == DCB_STATE_ZOMBIE);	
-	}
+            }
+            ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+                dcb->state == DCB_STATE_ZOMBIE);	
+        }
 }
 
 /**
