@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
             create_t1(Test->repl->nodes[0]);
 
             printf("Connecting to MaxScale binlog router\n");fflush(stdout);
-            binlog = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password);
+            binlog = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password, Test->ssl);
 
             printf("STOP SLAVE against Maxscale binlog"); fflush(stdout);
             execute_query(binlog, (char *) "STOP SLAVE");

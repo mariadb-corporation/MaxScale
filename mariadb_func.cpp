@@ -22,9 +22,10 @@
  * @param User  User name
  * @param Password  Password
  * @param flag  Connections flags
+ * @param ssl   true if ssl should be used
  * @return MYSQL struct or NULL in case of error
  */
-MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * Password, unsigned long flag)
+MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * Password, unsigned long flag, bool ssl)
 {
     MYSQL * conn = mysql_init(NULL);
 
@@ -34,7 +35,7 @@ MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * P
         return(NULL);
     }
 
-    mysql_ssl_set(conn, "client-key.pem", "client-cert.pem", "ca.pem", NULL, "TLSv12");
+    if (ssl) {mysql_ssl_set(conn, "client-key.pem", "client-cert.pem", "ca.pem", NULL, NULL);}
 
     if(!mysql_real_connect(conn,
                            ip,
@@ -61,11 +62,12 @@ MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * P
  * @param db    name of DB to connect
  * @param User  User name
  * @param Password  Password
+ * @param ssl   true if ssl should be used
  * @return MYSQL struct or NULL in case of error
  */
-MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Password)
+MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Password, bool ssl)
 {
-    return(open_conn_db_flags(port, ip, db, User, Password, CLIENT_MULTI_STATEMENTS));
+    return(open_conn_db_flags(port, ip, db, User, Password, CLIENT_MULTI_STATEMENTS, ssl));
 }
 
 /**
@@ -75,11 +77,12 @@ MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Passwor
  * @param ip	DB server IP address
  * @param User  User name
  * @param Password  Password
+ * @param ssl   true if ssl should be used
  * @return MYSQL struct or NULL in case of error
  */
-MYSQL * open_conn(int port, char * ip, char * User, char * Password)
+MYSQL * open_conn(int port, char * ip, char * User, char * Password, bool ssl)
 {
-    return(open_conn_db(port, ip, (char *) "test", User, Password));
+    return(open_conn_db(port, ip, (char *) "test", User, Password, ssl));
 }
 
 /**
@@ -89,11 +92,12 @@ MYSQL * open_conn(int port, char * ip, char * User, char * Password)
  * @param ip	DB server IP address
  * @param User  User name
  * @param Password  Password
+ * @param ssl   true if ssl should be used
  * @return MYSQL struct or NULL in case of error
  */
-MYSQL * open_conn_no_db(int port, char * ip, char *User, char *Password)
+MYSQL * open_conn_no_db(int port, char * ip, char *User, char *Password, bool ssl)
 {
-    return(open_conn_db_flags(port, ip, NULL, User, Password, CLIENT_MULTI_STATEMENTS));
+    return(open_conn_db_flags(port, ip, NULL, User, Password, CLIENT_MULTI_STATEMENTS, ssl));
 }
 
 /**

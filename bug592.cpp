@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'test_user'@'%' IDENTIFIED BY 'pass'");
 
-    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "test_user", (char *) "pass");
+    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "test_user", (char *) "pass", Test->ssl);
 
     if (conn == NULL) {
         printf("Connections error\n");

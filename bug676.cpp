@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     sleep(10);
 */
 
-    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
+    MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
 
     printf("Stopping %d\n", 0); fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", Test->galera->sshkey[0], Test->galera->IP[0]);
@@ -143,7 +143,7 @@ int main(int argc, char *argv[])
     sleep(60);
     mysql_close(conn);
 
-    conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
+    conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
 
     if (conn == 0) {
         printf("Error connection to RW Split\n");

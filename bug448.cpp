@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 
     global_result += execute_query(Test->conn_rwsplit, sql);
 
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user1", (char *) "pass1");
+    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user1", (char *) "pass1", Test->ssl);
     if (conn == NULL) {
         printf("Authentification failed!\n");
         global_result++;

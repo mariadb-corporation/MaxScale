@@ -189,6 +189,11 @@ public:
     int binlog_cmd_option;
 
     /**
+     * @brief ssl if true ssl  will be used
+     */
+    int ssl;
+
+    /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
      * @return 0 in case of success
      */
@@ -224,40 +229,40 @@ public:
      * @brief ConnectRWSplit    Opens connections to RWSplit and store MYSQL struct in conn_rwsplit
      * @return 0 in case of success
      */
-    int connect_rwsplit() {conn_rwsplit = open_conn(rwsplit_port, maxscale_IP, maxscale_user, maxscale_password); if (conn_rwsplit == NULL){return(1);} else {return(0);}}
+    int connect_rwsplit() {conn_rwsplit = open_conn(rwsplit_port, maxscale_IP, maxscale_user, maxscale_password, ssl); if (conn_rwsplit == NULL){return(1);} else {return(0);}}
 
     /**
      * @brief ConnectReadMaster Opens connections to ReadConn master and store MYSQL struct in conn_master
      * @return 0 in case of success
      */
-    int connect_readconn_master() {conn_master = open_conn(readconn_master_port, maxscale_IP, maxscale_user, maxscale_password);  if (conn_master == NULL){return(1);} else {return(0);}}
+    int connect_readconn_master() {conn_master = open_conn(readconn_master_port, maxscale_IP, maxscale_user, maxscale_password, ssl);  if (conn_master == NULL){return(1);} else {return(0);}}
 
     /**
      * @brief ConnectReadSlave Opens connections to ReadConn slave and store MYSQL struct in conn_slave
      * @return 0 in case of success
      */
-    int connect_readconn_slave() {conn_slave = open_conn(readconn_slave_port, maxscale_IP, maxscale_user, maxscale_password); if (conn_slave == NULL){return(1);} else {return(0);}}
+    int connect_readconn_slave() {conn_slave = open_conn(readconn_slave_port, maxscale_IP, maxscale_user, maxscale_password, ssl); if (conn_slave == NULL){return(1);} else {return(0);}}
 
     /**
      * @brief OpenRWSplitConn   Opens new connections to RWSplit and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
      */
-    MYSQL * open_rwsplit_connection() {return open_conn(rwsplit_port, maxscale_IP, maxscale_user, maxscale_password);}
+    MYSQL * open_rwsplit_connection() {return open_conn(rwsplit_port, maxscale_IP, maxscale_user, maxscale_password, ssl);}
 
     /**
      * @brief OpenReadMasterConn    Opens new connections to ReadConn master and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return MYSQL struct
      */
-    MYSQL * open_readconn_master_connection() {return open_conn(readconn_master_port, maxscale_IP, maxscale_user, maxscale_password);}
+    MYSQL * open_readconn_master_connection() {return open_conn(readconn_master_port, maxscale_IP, maxscale_user, maxscale_password, ssl);}
 
     /**
      * @brief OpenReadSlaveConn    Opens new connections to ReadConn slave and returns MYSQL struct
      * To close connection mysql_close() have to be called
      * @return  MYSQL struct
      */
-    MYSQL * open_readconn_slave_connection() {return open_conn(readconn_slave_port, maxscale_IP, maxscale_user, maxscale_password);}
+    MYSQL * open_readconn_slave_connection() {return open_conn(readconn_slave_port, maxscale_IP, maxscale_user, maxscale_password, ssl);}
 
     /**
      * @brief CloseRWSplit Closes RWplit connections stored in conn_rwsplit

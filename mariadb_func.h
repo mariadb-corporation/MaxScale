@@ -28,10 +28,10 @@
 
 
 
-MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * Password, unsigned long flag);
-MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Password);
-MYSQL * open_conn(int port, char * ip, char *User, char *Password);
-MYSQL * open_conn_no_db(int port, char * ip, char *User, char *Password);
+MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * Password, unsigned long flag, bool ssl);
+MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Password, bool ssl);
+MYSQL * open_conn(int port, char * ip, char *User, char *Password, bool ssl);
+MYSQL * open_conn_no_db(int port, char * ip, char *User, char *Password, bool ssl);
 int execute_query(MYSQL *conn, const char *sql);
 int execute_query_silent(MYSQL *conn, const char *sql);
 int execute_query1(MYSQL *conn, const char *sql, bool silent);

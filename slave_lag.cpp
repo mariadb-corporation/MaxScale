@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 void *query_thread( void *ptr )
 {
     MYSQL * conn;
-    conn = open_conn(Test->repl->port[0], Test->repl->IP[0], Test->repl->user_name, Test->repl->password);
+    conn = open_conn(Test->repl->port[0], Test->repl->IP[0], Test->repl->user_name, Test->repl->password, Test->repl->ssl);
     while (exit_flag == 0) {
         execute_query(conn, (char *) "INSERT into t1 VALUES(1, 1)");
     }

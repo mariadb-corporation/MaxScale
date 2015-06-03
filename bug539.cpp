@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
                 global_result++;
             } else {
                 printf("Trying query against %d\n", ports[j]);
-                conn = open_conn(ports[j], Test->maxscale_IP, Test->maxscale_user, Test->maxscale_user);
+                conn = open_conn(ports[j], Test->maxscale_IP, Test->maxscale_user, Test->maxscale_user, Test->ssl);
                 global_result += execute_query(conn, (char *) "show processlist;");
             }
         }

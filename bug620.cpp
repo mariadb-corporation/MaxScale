@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     MYSQL * conn;
 
     printf("Connecting using 'root'@'%%'\n");
-    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "root", (char *)  "skysqlroot");
+    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "root", (char *)  "skysqlroot", Test->ssl);
     if (conn == NULL) {
         printf("Connection using 'root' user failed\n");
         global_result++;

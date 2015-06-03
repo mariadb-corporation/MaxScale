@@ -22,7 +22,7 @@ Mariadb_nodes::Mariadb_nodes(char * pref)
 int Mariadb_nodes::connect()
 {
     for (int i = 0; i < N; i++) {
-        nodes[i] = open_conn(port[i], IP[i], user_name, password);
+        nodes[i] = open_conn(port[i], IP[i], user_name, password, ssl);
     }
 }
 
@@ -52,6 +52,10 @@ int Mariadb_nodes::read_env()
 
     sprintf(env_name, "%s_start_vm_command", prefix);
     env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", start_vm_command); } else {sprintf(start_vm_command, "exit 1"); }
+
+    ssl = false;
+    sprintf(env_name, "%s_ssl", prefix);
+    env = getenv(env_name); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {ssl = true;}
 
 
     if ((N > 0) && (N < 255)) {
@@ -273,7 +277,7 @@ int Mariadb_nodes::check_replication(int master)
     MYSQL_RES *res;
     printf("Checking Master/Slave setup\n"); fflush(stdout);
     for (int i = 0; i < N; i++) {
-        conn = open_conn(port[i], IP[i], user_name, password);
+        conn = open_conn(port[i], IP[i], user_name, password, ssl);
         if (mysql_errno(conn) != 0) {
             printf("Error connectiong node %d\n", i); fflush(stdout);
             res1 = 1;
@@ -329,7 +333,7 @@ int Mariadb_nodes::check_galera()
     MYSQL *conn;
     printf("Checking Galera\n"); fflush(stdout);
     for (int i = 0; i < N; i++) {
-        conn = open_conn(port[i], IP[i], user_name, password);
+        conn = open_conn(port[i], IP[i], user_name, password, ssl);
         if (mysql_errno(conn) != 0) {
             printf("Error connectiong node %d\n", i);
             res1 = 1;

@@ -29,14 +29,14 @@ int main(int argc, char *argv[])
 
     sleep(60);
 
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass1");
+    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass1", Test->ssl);
     if (conn != NULL) {
         printf("MaxScale ignores host in authentification\n");
         global_result++;
         mysql_close(conn);
     }
 
-    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass2");
+    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass2", Test->ssl);
     if (conn == NULL) {
         printf("MaxScale can't connect\n");
         global_result++;
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
         mysql_close(conn);
     }
 
-    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass3");
+    conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass3", Test->ssl);
     if (conn != NULL) {
         printf("MaxScale ignores host in authentification\n");
         global_result++;

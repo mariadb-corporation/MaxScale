@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     sleep(10);
 
     printf("Trying to connect using user with old style password\n");
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "old", (char *)  "old");
+    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "old", (char *)  "old", Test->ssl);
 
     if ( conn == NULL) {
         printf("Connections is not open as expected\n");

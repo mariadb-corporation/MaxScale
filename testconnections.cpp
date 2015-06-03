@@ -135,6 +135,11 @@ int TestConnections::read_env()
     env = getenv("maxscale_log_dir"); if (env != NULL) {sprintf(maxscale_log_dir, "%s", env);} else {sprintf(maxscale_log_dir, "%s/logs/", maxdir);}
     env = getenv("maxscale_binlog_dir"); if (env != NULL) {sprintf(maxscale_binlog_dir, "%s", env);} else {sprintf(maxscale_binlog_dir, "%s/Binlog_Service/", maxdir);}
     env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
+    ssl = false;
+
+    env = getenv("ssl"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {ssl = true;}
+
+
 }
 
 int TestConnections::print_env()
@@ -312,7 +317,7 @@ int TestConnections::start_binlog()
     global_result += start_maxscale();
 
     printf("Connecting to MaxScale binlog router\n");fflush(stdout);
-    MYSQL * binlog = open_conn(binlog_port, maxscale_IP, repl->user_name, repl->password);
+    MYSQL * binlog = open_conn(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
 
     printf("show master status\n");fflush(stdout);
     find_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);

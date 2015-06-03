@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     Test->connect_maxscale();
 
-    conn_found_rows = open_conn_db_flags(Test->rwsplit_port, Test->maxscale_IP, (char *) "test", Test->maxscale_user, Test->maxscale_password, CLIENT_FOUND_ROWS);
+    conn_found_rows = open_conn_db_flags(Test->rwsplit_port, Test->maxscale_IP, (char *) "test", Test->maxscale_user, Test->maxscale_password, CLIENT_FOUND_ROWS, Test->ssl);
 
     execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1");
     execute_query(Test->conn_rwsplit, "CREATE TABLE t1(id INT PRIMARY KEY, val INT, msg VARCHAR(100))");

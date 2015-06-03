@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
         printf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
-        conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "shard_db", user_str, pass_str);
+        conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "shard_db", user_str, pass_str, Test->ssl);
 
         sprintf(str, "CREATE TABLE table%d (x1 int, fl int);", i);
         printf("%s\n", str);
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
         printf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
-        conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP,  (char *) "shard_db", user_str, pass_str);
+        conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP,  (char *) "shard_db", user_str, pass_str, Test->ssl);
 
         sprintf(str, "SHOW TABLES;");
         printf("%s\n", str);
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
     mysql_close(Test->conn_rwsplit);
 
     printf("Trying to connect with empty database name\n");
-    conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "", user_str, pass_str);
+    conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "", user_str, pass_str, Test->ssl);
     mysql_close(conn);
 
 

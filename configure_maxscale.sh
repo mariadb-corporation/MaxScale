@@ -63,6 +63,8 @@ done
 scp -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null MaxScale.cnf root@$maxscale_IP:$maxscale_cnf
 scp -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $test_dir/ssl-cert/* root@$maxscale_IP:/home/ec2-user/
 cp $test_dir/ssl-cert/* .
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP 'chown maxscale:maxscale /home/ec2-user/*.pem'
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP 'chmod 664 /home/ec2-user/*.pem'
 #ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir/bin/maxkeys $max_dir/etc/.secrets"
 if [ -z "$maxscale_restart" ] ; then
 	export maxscale_restart="yes"

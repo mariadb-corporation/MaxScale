@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     Test->print_env();
 
     printf("Connecting to RWSplit\n");
-    Test->conn_rwsplit = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
+    Test->conn_rwsplit = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
     if (Test->conn_rwsplit == NULL) {
         printf("Error connecting to MaxScale\n"); return(1);
     }
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     Test->close_maxscale_connections();
 
     printf("Connecting to RWSplit again to recreate 'test' db\n");
-    Test->conn_rwsplit = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
+    Test->conn_rwsplit = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
     if (Test->conn_rwsplit == NULL) {
         printf("Error connecting to MaxScale\n"); return(1);
     }

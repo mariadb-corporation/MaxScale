@@ -66,8 +66,8 @@ int main(int argc, char *argv[])
 
 void *thread1( void *ptr )
 {
-    MYSQL * conn = open_conn(Test->rwsplit_port , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
-    MYSQL * g_conn = open_conn(4016 , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password);
+    MYSQL * conn = open_conn(Test->rwsplit_port , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
+    MYSQL * g_conn = open_conn(4016 , Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
     char sql[1034];
     sprintf(sql, "CREATE DATABASE IF NOT EXISTS test%d; USE test%d", db1_num, db1_num);
     execute_query(conn, sql);

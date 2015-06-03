@@ -79,6 +79,12 @@ public:
     * @brief  Opens connctions to all backend nodes (to 'test' DB)
     * @return 0 in case of success
     */
+
+    /**
+     * @brief ssl if true ssl  will be used
+     */
+    int ssl;
+
     int connect();
     /**
      * @brief  close connections which were previously opened by Connect()
