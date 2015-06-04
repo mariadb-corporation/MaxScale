@@ -1014,12 +1014,14 @@ int dcb_read_SSL(
 		    }
                 }
 
-		if(n < b)
+		if(n > 0 && b > 0 && n < b)
 		{
 		    gwbuf_rtrim(buffer,b - n);
-		    ss_dassert(GWBUF_LENGTH(buffer) == n);
 		    LOGIF(LD,(skygw_log_write(LD,"[%lu] SSL: Truncated buffer to correct size from %d to %d bytes.\n",
 		     b,gwbuf_length(buffer))));
+		    LOGIF(LD,(skygw_log_sync_all()));
+		    ss_dassert(GWBUF_LENGTH(buffer) == n);
+
 		}
 
                 nread += n;
