@@ -17,6 +17,8 @@ function start_maxscale ()
     fi
 }
 
+# All test cases expect that MaxScale will not start with a bad configuration or missing certificates
+
 # No CA defined
 printf "Testing No CA defined"
 start_maxscale @CMAKE_CURRENT_BINARY_DIR@/no_ca.cnf
