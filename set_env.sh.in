@@ -17,6 +17,7 @@ g1=`expr 1 + $galeraIP`
 g2=`expr 2 + $galeraIP`
 g3=`expr 3 + $galeraIP`
 g4=`expr 4 + $galeraIP`
+export ssl="yes"
 
 # Number of nodes
 export galera_N=4
