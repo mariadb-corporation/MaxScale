@@ -1020,13 +1020,14 @@ int dcb_read_SSL(
 
 		    gwbuf_rtrim(buffer,bufsize - n);
 #ifdef SS_DEBUG
-		    LOGIF(LD,(skygw_log_write(LD,"[%lu] SSL: Truncated buffer to correct size from %d to %d bytes.\n",
-		     b,GWBUF_LENGTH(buffer))));
-		    LOGIF(LD,
-			    if(GWBUF_LENGTH(buffer) != n){
-				skygw_log_sync_all();
-			    }
-		    );
+		    skygw_log_write(LD,"[%lu] SSL: Truncated buffer from %d to %d bytes. "
+	            "Read %d bytes, %d bytes waiting.\n",
+		     bufsize,GWBUF_LENGTH(buffer),n,b);
+		    
+		    if(GWBUF_LENGTH(buffer) != n){
+			skygw_log_sync_all();
+		    }
+		    
 		    ss_info_dassert((buffer->start <= buffer->end),"Buffer start has passed end.");
 		    ss_dassert(GWBUF_LENGTH(buffer) == n);
 #endif
