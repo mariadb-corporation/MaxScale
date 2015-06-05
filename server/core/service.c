@@ -1875,7 +1875,6 @@ int serviceInitSSL(SERVICE* service)
 	}
 
 	service->ctx = SSL_CTX_new(service->method);
-	SSL_CTX_set_read_ahead(service->ctx,1);
 	if (SSL_CTX_use_certificate_file(service->ctx, service->ssl_cert, SSL_FILETYPE_PEM) <= 0) {
 	    skygw_log_write(LE,"Error: Failed to set server SSL certificate.");
 	    return -1;

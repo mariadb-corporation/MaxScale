@@ -898,7 +898,7 @@ int dcb_read_SSL(
         GWBUF **head)
 {
         GWBUF *buffer = NULL;
-        int   b;
+        int   b,pending;
         int   rc;
         int   n;
         int   nread = 0;
@@ -918,9 +918,9 @@ int dcb_read_SSL(
 	while (true)
         {
                 int bufsize;
-
+		int ssl_errno = 0;
                 rc = ioctl(dcb->fd, FIONREAD, &b);
-
+		pending = SSL_pending(dcb->ssl);
                 if (rc == -1)
                 {
                         LOGIF(LE, (skygw_log_write_flush(
@@ -936,7 +936,7 @@ int dcb_read_SSL(
                         goto return_n;
                 }
 
-                if (b == 0 && nread == 0)
+                if (b == 0 && pending == 0 && nread == 0)
                 {
                         /** Handle closed client socket */
                         if (dcb_isclient(dcb))
@@ -948,14 +948,20 @@ int dcb_read_SSL(
                                 r = SSL_peek(dcb->ssl, &c, sizeof(char));
                                 if (r <= 0)
                                 {
+				    ssl_errno = SSL_get_error(dcb->ssl,r);
+				    if(ssl_errno != SSL_ERROR_WANT_READ &&
+				     ssl_errno != SSL_ERROR_WANT_WRITE &&
+				     ssl_errno != SSL_ERROR_NONE)
+				    {
                                         n = -1;
-                                        goto return_n;
+				    }
+				    goto return_n;
                                 }
                         }
                         n = 0;
                         goto return_n;
                 }
-                else if (b == 0)
+                else if (b == 0 && pending == 0)
                 {
                         n = 0;
                         goto return_n;
@@ -984,39 +990,36 @@ int dcb_read_SSL(
                         goto return_n;
                 }
 
-		int npending;
-		n = 0;
-		do
-		{
-		    n += SSL_read(dcb->ssl, GWBUF_DATA(buffer), bufsize);
+		    n = SSL_read(dcb->ssl, GWBUF_DATA(buffer), bufsize);
 		    dcb->stats.n_reads++;
-		}while((npending = SSL_pending(dcb->ssl)) > 0);
 
-		int ssl_errno = 0;
-		
-		if (n <= 0)
-                {
-		    ssl_errno = ERR_get_error();
-
-		    if(ssl_errno != SSL_ERROR_WANT_READ && ssl_errno != SSL_ERROR_NONE)
+		    if (n <= 0)
 		    {
-		    LOGIF(LE, (skygw_log_write_flush(
-			    LOGFILE_ERROR,
-			    "Error : Read failed, dcb %p in state "
-			    "%s fd %d: %s.",
-			    dcb,
-			    STRDCBSTATE(dcb->state),
-			    dcb->fd,
-			    ERR_error_string(ssl_errno,NULL))));
+			ssl_errno = SSL_get_error(dcb->ssl,n);
 
-			gwbuf_free(buffer);
-                        goto return_n;
-		    }
+			if(ssl_errno != SSL_ERROR_WANT_READ &&
+			 ssl_errno != SSL_ERROR_WANT_WRITE &&
+			 ssl_errno != SSL_ERROR_NONE)
+			{
+			    char errbuf[200];
+			    ERR_error_string(ssl_errno,errbuf);
+			    LOGIF(LE, (skygw_log_write_flush(
+				    LOGFILE_ERROR,
+				"Error : Read failed, dcb %p in state "
+				"%s fd %d, SSL error %d: %s.",
+				dcb,
+				STRDCBSTATE(dcb->state),
+				dcb->fd,
+				ssl_errno,
+				errbuf)));
+
+			    gwbuf_free(buffer);
+			    goto return_n;
+			}
                 }
 
-		if(n > 0 && b > 0 && n < b)
-		{
-		    gwbuf_rtrim(buffer,b - n);
+		    buffer->end = buffer->start + n;
+#ifdef SS_DEBUG
 		    LOGIF(LD,(skygw_log_write(LD,"[%lu] SSL: Truncated buffer to correct size from %d to %d bytes.\n",
 		     b,gwbuf_length(buffer))));
 		    LOGIF(LD,
@@ -1025,9 +1028,7 @@ int dcb_read_SSL(
 			    }
 		    );
 		    ss_dassert(GWBUF_LENGTH(buffer) == n);
-
-		}
-
+#endif
                 nread += n;
 
                 LOGIF(LD, (skygw_log_write(
@@ -1039,11 +1040,19 @@ int dcb_read_SSL(
                         dcb,
                         STRDCBSTATE(dcb->state),
                         dcb->fd)));
+
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
-		if(ssl_errno == SSL_ERROR_WANT_READ || ssl_errno == SSL_ERROR_NONE ||
-		 ssl_errno == SSL_ERROR_WANT_X509_LOOKUP || SSL_ERROR_WANT_WRITE)
+		rc = ioctl(dcb->fd, FIONREAD, &b);
+		pending = SSL_pending(dcb->ssl);
+
+		if(ssl_errno == SSL_ERROR_WANT_READ ||
+		   ssl_errno == SSL_ERROR_WANT_WRITE ||
+		   (b == 0 && pending == 0))
+		{
 		    break;
+		}
+
         } /*< while (true) */
 return_n:
         return n;

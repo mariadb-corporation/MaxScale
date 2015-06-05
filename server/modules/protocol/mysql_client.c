@@ -789,7 +789,7 @@ int gw_read_client_event(
 			nbytes_read = gwbuf_length(dcb->dcb_readqueue);
 			data = (uint8_t *)GWBUF_DATA(dcb->dcb_readqueue);
 			int plen = MYSQL_GET_PACKET_LEN(data);
-			if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data))
+			if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data) + 4)
 			{
 				rc = 0;
 				goto return_rc;
