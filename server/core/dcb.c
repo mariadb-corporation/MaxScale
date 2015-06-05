@@ -966,6 +966,13 @@ int dcb_read_SSL(
                         n = 0;
                         goto return_n;
                 }
+#ifdef SS_DEBUG
+		else
+		{
+		    skygw_log_write_flush(LD,"Total: %d Socket: %d Pending: %d",
+				     nread,b,pending);
+		}
+#endif
 
 		dcb->last_read = hkheartbeat;
 
@@ -993,7 +1000,7 @@ int dcb_read_SSL(
 		    n = SSL_read(dcb->ssl, GWBUF_DATA(buffer), bufsize);
 		    dcb->stats.n_reads++;
 
-		    if (n <= 0)
+		    if (n < 0)
 		    {
 			ssl_errno = SSL_get_error(dcb->ssl,n);
 
@@ -1016,12 +1023,17 @@ int dcb_read_SSL(
 			    gwbuf_free(buffer);
 			    goto return_n;
 			}
-                }
+		    }
+		    else if(n == 0)
+		    {
+			gwbuf_free(buffer);
+			goto return_n;
+		    }
 
 		    gwbuf_rtrim(buffer,bufsize - n);
 #ifdef SS_DEBUG
 		    skygw_log_write(LD,"[%lu] SSL: Truncated buffer from %d to %d bytes. "
-	            "Read %d bytes, %d bytes waiting.\n",
+	            "Read %d bytes, %d bytes waiting.\n",pthread_self(),
 		     bufsize,GWBUF_LENGTH(buffer),n,b);
 		    
 		    if(GWBUF_LENGTH(buffer) != n){
@@ -1029,7 +1041,7 @@ int dcb_read_SSL(
 		    }
 		    
 		    ss_info_dassert((buffer->start <= buffer->end),"Buffer start has passed end.");
-		    ss_dassert(GWBUF_LENGTH(buffer) == n);
+		    ss_info_dassert(GWBUF_LENGTH(buffer) == n,"Buffer size not equal to read bytes.");
 #endif
                 nread += n;
 
