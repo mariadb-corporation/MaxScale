@@ -1002,13 +1002,21 @@ int dcb_read_SSL(
 
 		    if (n < 0)
 		    {
+			char errbuf[200];
 			ssl_errno = SSL_get_error(dcb->ssl,n);
-
-			if(ssl_errno != SSL_ERROR_WANT_READ &&
-			 ssl_errno != SSL_ERROR_WANT_WRITE &&
-			 ssl_errno != SSL_ERROR_NONE)
+#ifdef SS_DEBUG
+			ERR_error_string(ssl_errno,errbuf);
+			skygw_log_write_flush(LD,"[%lu]SSL error %d: %s",
+				pthread_self(),ssl_errno,errbuf);
+#endif
+			if(ssl_errno == SSL_ERROR_WANT_READ ||
+			   ssl_errno == SSL_ERROR_WANT_WRITE ||
+			   ssl_errno == SSL_ERROR_NONE)
 			{
-			    char errbuf[200];
+			    n = 0;
+			}
+			else
+			{
 			    ERR_error_string(ssl_errno,errbuf);
 			    LOGIF(LE, (skygw_log_write_flush(
 				    LOGFILE_ERROR,
@@ -1019,10 +1027,10 @@ int dcb_read_SSL(
 				dcb->fd,
 				ssl_errno,
 				errbuf)));
-
-			    gwbuf_free(buffer);
-			    goto return_n;
 			}
+
+			gwbuf_free(buffer);
+			goto return_n;
 		    }
 		    else if(n == 0)
 		    {
