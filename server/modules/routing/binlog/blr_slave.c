@@ -39,6 +39,8 @@
  * 25/05/2015	Massimiliano Pinto	Addition of BLRM_SLAVE_STOPPED state and blr_start/stop_slave.
  *					New commands STOP SLAVE, START SLAVE added.	
  * 29/05/2015	Massimiliano Pinto	Addition of CHANGE MASTER TO ...
+ * 05/06/2015	Massimiliano Pinto	router->service->dbref->sever->name instead of master->remote
+ *					in blr_slave_send_slave_status()
  *
  * @endverbatim
  */
@@ -848,7 +850,7 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	sprintf(column, "%s", router->master->remote ? router->master->remote : "");
+	sprintf(column, "%s", router->service->dbref->server->name ? router->service->dbref->server->name : "");
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
@@ -924,7 +926,7 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	*ptr++ = 0;
 
 	/* Last error information */
-	sprintf(column, "%d", 0);
+	sprintf(column, "%lu", router->m_errno);
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
@@ -2209,7 +2211,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 	if (router->master_state != BLRM_SLAVE_STOPPED) {
 
-		if (router->master->fd != -1)
+		if (router->master->fd != -1 && router->master->state == DCB_STATE_POLLING)
 			blr_master_close(router);
 
 		spinlock_acquire(&router->lock);
@@ -2218,7 +2220,8 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 		spinlock_release(&router->lock);
 
-		dcb_close(router->client);
+		if (router->client->fd != -1 && router->client->state == DCB_STATE_POLLING)
+			dcb_close(router->client);
 
 		/* Discard the queued residual data */
 		ptr = router->residual;

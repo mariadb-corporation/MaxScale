@@ -27,6 +27,7 @@
  * Date		Who			Description
  * 02/04/14	Mark Riddoch		Initial implementation
  * 25/05/15	Massimiliano Pinto	Added BLRM_SLAVE_STOPPED state
+ * 05/06/15	Massimiliano Pinto	Addition of m_errno, m_errmsg fields
  *
  * @endverbatim
  */
@@ -288,6 +289,8 @@ typedef struct router_instance {
 	int		  retry_backoff;
 	time_t		  connect_time;
 	int		  handling_threads;
+	unsigned long	  m_errno;	/*< master response mysql errno */
+	char		  *m_errmsg;	/*< master response mysql error message */
 	struct router_instance
                           *next;
 } ROUTER_INSTANCE;

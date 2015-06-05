@@ -199,6 +199,9 @@ unsigned char	*defuuid;
 	inst->user = strdup(service->credentials.name);
 	inst->password = strdup(service->credentials.authdata);
 
+	inst->m_errno = 0;
+	inst->m_errmsg = NULL
+
 	my_uuid_init((ulong)rand()*12345,12345);
 	if ((defuuid = (char *)malloc(20)) != NULL)
 	{
@@ -1018,6 +1021,7 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error, len;
 char		msg[85], *errmsg;
+unsigned long mysql_errno;
 
 	if (action == ERRACT_RESET)
 	{
@@ -1046,12 +1050,25 @@ char		msg[85], *errmsg;
 	else
 		strcpy(msg, "");
 
+	mysql_errno = (unsigned long) extract_field((uint8_t *)(GWBUF_DATA(message) + 5), 16);
 	errmsg = extract_message(message);
+
        	LOGIF(LE, (skygw_log_write_flush(
 		LOGFILE_ERROR, "%s: Master connection error '%s' in state '%s', "
 		"%sattempting reconnect to master",
 			router->service->name, errmsg,
 			blrm_states[router->master_state], msg)));
+
+	if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED) {
+	/* set mysql_errno */
+		router->m_errno = mysql_errno;
+
+		/* set io error message */
+		if (router->m_errmsg)
+			free(router->m_errmsg);
+		router->m_errmsg = strdup(errmsg);
+	}
+
 	if (errmsg)
 		free(errmsg);
 	*succp = true;

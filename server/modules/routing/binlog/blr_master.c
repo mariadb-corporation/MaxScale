@@ -472,7 +472,17 @@ char	query[128];
 		break;
 	case BLRM_MUUID:
 		{
-		char *val = blr_extract_column(buf, 2);
+		char *key;
+		char *val = NULL;
+
+		key = blr_extract_column(buf, 1);
+		if (key && strlen(key))
+			val = blr_extract_column(buf, 2);
+		if (key)
+			free(key);
+
+		if (router->master_uuid)
+			free(router->master_uuid);
 		router->master_uuid = val;
 
 		// Response to the SERVER_UUID, should be stored
@@ -907,6 +917,9 @@ static REP_HEADER	phdr;
 			phdr = hdr;
 			if (hdr.ok == 0)
 			{
+				/* set mysql errno to 0 */
+				router->m_errno = 0;
+
 				/*
 				 * First check that the checksum we calculate matches the
 				 * checksum in the packet we received.
@@ -1080,6 +1093,11 @@ static REP_HEADER	phdr;
 			}
 			else
 			{
+				unsigned long mysql_errno = extract_field(ptr+5, 16);
+
+				/* set mysql_errno */
+				router->m_errno = mysql_errno;
+
 				LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
 					"Error packet in binlog stream.%s @ %d.",
 							router->binlog_name,
