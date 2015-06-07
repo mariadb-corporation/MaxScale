@@ -2825,60 +2825,66 @@ int dcb_create_SSL(DCB* dcb)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    int rval,errnum;
+    int rval = 0,ssl_rval,errnum,fd,b = 0;
     char errbuf[140];
-    rval = SSL_accept(dcb->ssl);
-
-    switch(rval)
+    fd = dcb->fd;
+    ioctl(fd,FIONREAD,&b);
+    while(b > 0 && rval != -1)
     {
-    case 0:
-	errnum = SSL_get_error(dcb->ssl,rval);
-	LOGIF(LD,(skygw_log_write_flush(LD,"SSL_accept shutdown for %s@%s",
-			 dcb->user,
-			 dcb->remote)));
-	return -1;
-	break;
-    case 1:
-	rval = 1;
-	LOGIF(LD,(skygw_log_write_flush(LD,"SSL_accept done for %s@%s",
-			 dcb->user,
-			 dcb->remote)));
-	break;
+	ssl_rval = SSL_accept(dcb->ssl);
 
-    case -1:
-	errnum = SSL_get_error(dcb->ssl,rval);
-
-	if(errnum == SSL_ERROR_WANT_READ || errnum == SSL_ERROR_WANT_WRITE ||
-	 errnum == SSL_ERROR_WANT_X509_LOOKUP)
+	switch(ssl_rval)
 	{
-	    /** Not all of the data has been read. Go back to the poll
-	     queue and wait for more.*/
-
-	    rval = 0;
-	    LOGIF(LD,(skygw_log_write_flush(LD,"SSL_accept ongoing for %s@%s",
-			     dcb->user?dcb->user:"a connection from ",
-			     dcb->remote)));
-	}
-	else
-	{
-	    rval = -1;
+	case 0:
+	    errnum = SSL_get_error(dcb->ssl,ssl_rval);
 	    ERR_error_string(errnum,errbuf);
+	    LOGIF(LD,(skygw_log_write_flush(LD,"[%p] SSL_accept shutdown for %s:%s",
+				     dcb,
+				     dcb->remote,
+				     errbuf)));
+	    rval = -1;
+	    break;
+	case 1:
+	    rval = 1;
+	    LOGIF(LD,(skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL_accept done for %s",
+				     dcb->remote)));
+	    break;
+
+	case -1:
+	    errnum = SSL_get_error(dcb->ssl,ssl_rval);
+
+	    if(errnum == SSL_ERROR_WANT_READ || errnum == SSL_ERROR_WANT_WRITE)
+	    {
+		/** Not all of the data has been read. Go back to the poll
+		 queue and wait for more.*/
+		rval = 0;
+		LOGIF(LD,(skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL_accept ongoing for %s",
+					 dcb->remote)));
+		return rval;
+	    }
+	    else
+	    {
+		rval = -1;
+		ERR_error_string(errnum,errbuf);
+		skygw_log_write_flush(LE,
+				 "Error: Fatal error in SSL_accept for %s: (SSL error code: %d) %s",
+				 dcb->remote,
+				 errnum,
+				 errbuf);
+	    }
+	    break;
+
+	default:
 	    skygw_log_write_flush(LE,
-			     "Error: Fatal error in SSL_accept for %s@%s: (SSL error code: %d) %s",
-			     dcb->user,
-			     dcb->remote,
-			     errnum,
-			     errbuf);
+			     "Error: Fatal library error in SSL_accept, returned value was %d.",
+			     ssl_rval);
+	    rval = -1;
+	    break;
 	}
-	break;
-
-    default:
-	skygw_log_write_flush(LE,
-			 "Error: Fatal library error in SSL_accept, returned value was %d.",
-			 rval);
-	break;
+	ioctl(fd,FIONREAD,&b);
+	if(LOG_IS_ENABLED(LD) && b > 0)
+	    skygw_log_write_flush(LD,"[dcb_accept_SSL] FD %d has %d bytes ",fd,b);
     }
-
     return rval;
 }
 
