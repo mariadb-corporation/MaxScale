@@ -890,7 +890,11 @@ gw_mysql_protocol_state2string (int state) {
                 case MYSQL_AUTH_FAILED:
                         return "MySQL Authentication failed";
                 case MYSQL_IDLE:
-                        return "MySQL authentication is succesfully done.";
+		    return "MySQL authentication is succesfully done.";
+	case MYSQL_AUTH_SSL_REQ: return "MYSQL_AUTH_SSL_REQ";
+	case MYSQL_AUTH_SSL_HANDSHAKE_DONE: return "MYSQL_AUTH_SSL_HANDSHAKE_DONE";
+	case MYSQL_AUTH_SSL_HANDSHAKE_FAILED: return "MYSQL_AUTH_SSL_HANDSHAKE_FAILED";
+	case MYSQL_AUTH_SSL_HANDSHAKE_ONGOING: return "MYSQL_AUTH_SSL_HANDSHAKE_ONGOING";
                 default:
                         return "MySQL (unknown protocol state)";
         }

@@ -652,9 +652,16 @@ int gw_read_client_event(
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
 
+#ifdef SS_DEBUG
+	skygw_log_write(LD,"[gw_read_client_event] Protocol state: %s",
+		 gw_mysql_protocol_state2string(protocol->protocol_auth_state));
+
+#endif
+
 	if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_ONGOING ||
 	 protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ)
 	{
+
 	    switch(do_ssl_accept(protocol))
 	    {
 	    case 0:
@@ -1943,6 +1950,10 @@ int do_ssl_accept(MySQLProtocol* protocol)
 			 rval);
 	break;
     }
+#ifdef SS_DEBUG
+	skygw_log_write(LD,"[do_ssl_accept] Protocol state: %s",
+		 gw_mysql_protocol_state2string(protocol->protocol_auth_state));
+#endif
 
     return rval;
 }

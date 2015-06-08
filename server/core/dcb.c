@@ -2825,14 +2825,19 @@ int dcb_create_SSL(DCB* dcb)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    int rval = 0,ssl_rval,errnum,fd,b = 0;
+    int rval = 0,ssl_rval,errnum = 0,fd,b = 0;
     char errbuf[140];
     fd = dcb->fd;
     ioctl(fd,FIONREAD,&b);
+#ifdef SS_DEBUG
+	skygw_log_write(LD,"[dcb_accept_SSL] fd %d bytes: %d",fd,b);
+#endif
     while(b > 0 && rval != -1)
     {
 	ssl_rval = SSL_accept(dcb->ssl);
-
+#ifdef SS_DEBUG
+	skygw_log_write(LD,"[dcb_accept_SSL] SSL_accept returned %d.",ssl_rval);
+#endif
 	switch(ssl_rval)
 	{
 	case 0:
@@ -2882,8 +2887,10 @@ int dcb_accept_SSL(DCB* dcb)
 	    break;
 	}
 	ioctl(fd,FIONREAD,&b);
-	if(LOG_IS_ENABLED(LD) && b > 0)
-	    skygw_log_write_flush(LD,"[dcb_accept_SSL] FD %d has %d bytes ",fd,b);
+#ifdef SS_DEBUG
+	    skygw_log_write_flush(LD,"[dcb_accept_SSL] fd %d: %d bytes",fd,b);
+	    skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL error: %d",errnum);
+#endif
     }
     return rval;
 }

@@ -321,7 +321,7 @@ typedef struct {
 #define MYSQL_IS_CHANGE_USER(payload)		(MYSQL_GET_COMMAND(payload)==0x11)
 #define MYSQL_GET_NATTR(payload)                ((int)payload[4])
 
-#endif /** _MYSQL_PROTOCOL_H */
+
 
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 void           mysql_protocol_done (DCB* dcb);
@@ -417,4 +417,4 @@ void init_response_status (
         int* npackets, 
         ssize_t* nbytes);
 
-
+#endif /** _MYSQL_PROTOCOL_H */
