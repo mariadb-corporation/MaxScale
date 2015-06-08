@@ -183,7 +183,11 @@ unsigned char	*defuuid;
 	spinlock_init(&inst->binlog_lock);
 
 	inst->binlog_fd = -1;
-	inst->master_chksum = true;
+
+	inst->master_state = BLRM_UNCONNECTED;
+	inst->master = NULL;
+	inst->client = NULL;
+
 	inst->master_uuid = NULL;
 
 	inst->low_water = DEF_LOW_WATER;
@@ -374,23 +378,13 @@ unsigned char	*defuuid;
 	inst->next = NULL;
 	inst->lastEventTimestamp = 0;
 
+	inst->binlog_position = 0;
+	strcpy(inst->binlog_name, "");
+
 	/*
 	 * Read any cached response messages
 	 */
-	inst->saved_master.server_id = blr_cache_read_response(inst, "serverid");
-	inst->saved_master.heartbeat = blr_cache_read_response(inst, "heartbeat");
-	inst->saved_master.chksum1 = blr_cache_read_response(inst, "chksum1");
-	inst->saved_master.chksum2 = blr_cache_read_response(inst, "chksum2");
-	inst->saved_master.gtid_mode = blr_cache_read_response(inst, "gtidmode");
-	inst->saved_master.uuid = blr_cache_read_response(inst, "uuid");
-	inst->saved_master.setslaveuuid = blr_cache_read_response(inst, "ssuuid");
-	inst->saved_master.setnames = blr_cache_read_response(inst, "setnames");
-	inst->saved_master.utf8 = blr_cache_read_response(inst, "utf8");
-	inst->saved_master.select1 = blr_cache_read_response(inst, "select1");
-	inst->saved_master.selectver = blr_cache_read_response(inst, "selectver");
-	inst->saved_master.selectvercom = blr_cache_read_response(inst, "selectvercom");
-	inst->saved_master.selecthostname = blr_cache_read_response(inst, "selecthostname");
-	inst->saved_master.map = blr_cache_read_response(inst, "map");
+	blr_cache_read_master_data(inst);
 
 	/*
 	 * Initialise the binlog file and position
@@ -1060,7 +1054,7 @@ unsigned long mysql_errno;
 			blrm_states[router->master_state], msg)));
 
 	if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED) {
-	/* set mysql_errno */
+		/* set mysql_errno */
 		router->m_errno = mysql_errno;
 
 		/* set io error message */

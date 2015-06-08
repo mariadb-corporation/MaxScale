@@ -23,8 +23,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
+ * Date		Who			Description
  * 14/04/2014	Mark Riddoch		Initial implementation
+ * 08/06/2015	Massimiliano Pinto	Addition of blr_cache_read_master_data()
  *
  * @endverbatim
  */
@@ -59,6 +60,7 @@ static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_file_append(ROUTER_INSTANCE *router, char *file);
 static uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
+void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -751,4 +753,28 @@ int	filenum;
 	if (access(bigbuf, R_OK) == -1)
 		return 0;
 	return 1;
+}
+
+/**
+ * Read any previously saved master data
+ *
+ * @param       router          The router instance
+ */
+void
+blr_cache_read_master_data(ROUTER_INSTANCE *router)
+{
+	router->saved_master.server_id = blr_cache_read_response(router, "serverid");
+	router->saved_master.heartbeat = blr_cache_read_response(router, "heartbeat");
+	router->saved_master.chksum1 = blr_cache_read_response(router, "chksum1");
+	router->saved_master.chksum2 = blr_cache_read_response(router, "chksum2");
+	router->saved_master.gtid_mode = blr_cache_read_response(router, "gtidmode");
+	router->saved_master.uuid = blr_cache_read_response(router, "uuid");
+	router->saved_master.setslaveuuid = blr_cache_read_response(router, "ssuuid");
+	router->saved_master.setnames = blr_cache_read_response(router, "setnames");
+	router->saved_master.utf8 = blr_cache_read_response(router, "utf8");
+	router->saved_master.select1 = blr_cache_read_response(router, "select1");
+	router->saved_master.selectver = blr_cache_read_response(router, "selectver");
+	router->saved_master.selectvercom = blr_cache_read_response(router, "selectvercom");
+	router->saved_master.selecthostname = blr_cache_read_response(router, "selecthostname");
+	router->saved_master.map = blr_cache_read_response(router, "map");
 }

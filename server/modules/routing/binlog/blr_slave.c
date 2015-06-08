@@ -2211,8 +2211,9 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 	if (router->master_state != BLRM_SLAVE_STOPPED) {
 
-		if (router->master->fd != -1 && router->master->state == DCB_STATE_POLLING)
-			blr_master_close(router);
+		if (router->master)
+			if (router->master->fd != -1 && router->master->state == DCB_STATE_POLLING)
+				blr_master_close(router);
 
 		spinlock_acquire(&router->lock);
 
@@ -2220,8 +2221,9 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 		spinlock_release(&router->lock);
 
-		if (router->client->fd != -1 && router->client->state == DCB_STATE_POLLING)
-			dcb_close(router->client);
+		if (router->client)
+			if (router->client->fd != -1 && router->client->state == DCB_STATE_POLLING)
+				dcb_close(router->client);
 
 		/* Discard the queued residual data */
 		ptr = router->residual;
