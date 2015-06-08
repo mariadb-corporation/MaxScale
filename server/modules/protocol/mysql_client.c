@@ -661,7 +661,6 @@ int gw_read_client_event(
 		return 0;
 		break;
 	    case 1:
-		return 0;
 		break;
 	    case -1:
 		return 1;
