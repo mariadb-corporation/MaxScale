@@ -1055,7 +1055,7 @@ int dcb_read_SSL(
 
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
-                        "%lu [dcb_read] Read %d bytes from dcb %p in state %s "
+                        "%lu [dcb_read_SSL] Read %d bytes from dcb %p in state %s "
                         "fd %d.",
                         pthread_self(),
                         n,
@@ -2800,7 +2800,7 @@ int dcb_create_SSL(DCB* dcb)
 
     if((dcb->ssl = SSL_new(dcb->service->ctx)) == NULL)
     {
-	skygw_log_write(LE,"Error: Failed to initialize SSL connection.");
+	skygw_log_write(LE,"Error: Failed to initialize SSL for connection.");
 	return -1;
     }
 
@@ -2828,16 +2828,10 @@ int dcb_accept_SSL(DCB* dcb)
     int rval = 0,ssl_rval,errnum = 0,fd,b = 0;
     char errbuf[140];
     fd = dcb->fd;
-    ioctl(fd,FIONREAD,&b);
-#ifdef SS_DEBUG
-	skygw_log_write(LD,"[dcb_accept_SSL] fd %d bytes: %d",fd,b);
-#endif
-    while(b > 0 && rval != -1)
+
+    do
     {
 	ssl_rval = SSL_accept(dcb->ssl);
-#ifdef SS_DEBUG
-	skygw_log_write(LD,"[dcb_accept_SSL] SSL_accept returned %d.",ssl_rval);
-#endif
 	switch(ssl_rval)
 	{
 	case 0:
@@ -2889,9 +2883,10 @@ int dcb_accept_SSL(DCB* dcb)
 	ioctl(fd,FIONREAD,&b);
 #ifdef SS_DEBUG
 	    skygw_log_write_flush(LD,"[dcb_accept_SSL] fd %d: %d bytes",fd,b);
-	    skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL error: %d",errnum);
+	    skygw_log_write(LD,"[dcb_accept_SSL] SSL_accept returned %d, SSL error: %d",ssl_rval,errnum);
 #endif
-    }
+    }while(b > 0 && rval != -1);
+
     return rval;
 }
 

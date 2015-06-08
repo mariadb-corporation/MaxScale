@@ -668,7 +668,18 @@ int gw_read_client_event(
 		return 0;
 		break;
 	    case 1:
+	    {
+		int b = 0;
+		ioctl(dcb->fd,FIONREAD,&b);
+		if(b == 0) 
+		{
+		    skygw_log_write(LD,
+			     "[gw_read_client_event] No data in socket after SSL auth");
+		    return 0;
+		}
 		break;
+	    }
+
 	    case -1:
 		return 1;
 		break;
@@ -1897,7 +1908,9 @@ int do_ssl_accept(MySQLProtocol* protocol)
     if(dcb->ssl == NULL)
     {
 	if(dcb_create_SSL(dcb) != 0)
+	{
 	    return -1;
+	}
     }
 
     rval = dcb_accept_SSL(dcb);
