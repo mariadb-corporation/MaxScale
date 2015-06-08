@@ -2201,13 +2201,15 @@ static int
 blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
 	GWBUF   *ptr;
-
-	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: STOP SLAVE received by %s@%s. Disconnecting from master %s:%d",
-        	router->service->name,
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+		"%s: STOP SLAVE received by %s@%s. Disconnecting from master %s:%d, read up to log %s, pos %lu",
+		router->service->name,
 		slave->dcb->user,
 		slave->dcb->remote,
 		router->service->dbref->server->name,
-		router->service->dbref->server->port)));
+		router->service->dbref->server->port,
+		router->binlog_name, router->binlog_position)));
 
 	if (router->master_state != BLRM_SLAVE_STOPPED) {
 
@@ -2257,12 +2259,15 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 static int
 blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
-	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: START SLAVE received by %s@%s. Trying connection to master %s:%d",
-        	router->service->name,
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+		"%s: START SLAVE received by %s@%s. Trying connection to master %s:%d, binlog %s, pos %lu",
+		router->service->name,
 		slave->dcb->user,
 		slave->dcb->remote,
 		router->service->dbref->server->name,
-		router->service->dbref->server->port)));
+		router->service->dbref->server->port,
+		router->binlog_name, router->binlog_position)));
 
 	if ( (router->master_state == BLRM_UNCONNECTED) || (router->master_state == BLRM_SLAVE_STOPPED) ) {
 

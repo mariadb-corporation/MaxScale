@@ -159,10 +159,12 @@ GWBUF	*buf;
 		return;
 	}
 	router->master->remote = strdup(router->service->dbref->server->name);
-        LOGIF(LM,(skygw_log_write(
-                        LOGFILE_MESSAGE,
-				"%s: attempting to connect to master server %s.",
-			router->service->name, router->master->remote)));
+
+	LOGIF(LM,(skygw_log_write(
+		LOGFILE_MESSAGE,
+		"%s: attempting to connect to master server %s:%d, binlog %s, pos %lu",
+		router->service->name, router->service->dbref->server->name, router->service->dbref->server->port, router->binlog_name, router->binlog_position)));
+
 	router->connect_time = time(0);
 
 if (setsockopt(router->master->fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive , sizeof(keepalive )))
@@ -581,12 +583,13 @@ char	query[128];
 		buf = blr_make_binlog_dump(router);
 		router->master_state = BLRM_BINLOGDUMP;
 		router->master->func.write(router->master, buf);
-        	LOGIF(LM,(skygw_log_write(
-                           LOGFILE_MESSAGE,
-				"%s: Request binlog records from %s at "
-				"position %d from master server %s.",
+		LOGIF(LM,(skygw_log_write(
+			LOGFILE_MESSAGE,
+			"%s: Request binlog records from %s at "
+			"position %lu from master server %s:%d",
 			router->service->name, router->binlog_name,
-			router->binlog_position, router->master->remote)));
+			router->binlog_position, router->master->remote,
+			router->service->dbref->server->port)));
 		break;
 	case BLRM_BINLOGDUMP:
 		// Main body, we have received a binlog record from the master
