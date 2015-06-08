@@ -28,6 +28,7 @@
  * 02/04/14	Mark Riddoch		Initial implementation
  * 25/05/15	Massimiliano Pinto	Added BLRM_SLAVE_STOPPED state
  * 05/06/15	Massimiliano Pinto	Addition of m_errno, m_errmsg fields
+ * 08/06/15	Massimiliano Pinto	Modification of MYSQL_ERROR_CODE and MYSQL_ERROR_MSG
  *
  * @endverbatim
  */
@@ -77,8 +78,8 @@
 #define MYSQL_RESPONSE_OK(buf)	(*((uint8_t *)GWBUF_DATA(buf) + 4) == 0x00)
 #define MYSQL_RESPONSE_EOF(buf)	(*((uint8_t *)GWBUF_DATA(buf) + 4) == 0xfe)
 #define MYSQL_RESPONSE_ERR(buf)	(*((uint8_t *)GWBUF_DATA(buf) + 4) == 0xff)
-#define MYSQL_ERROR_CODE(buf)	(*((uint8_t *)GWBUF_DATA(buf) + 5))
-#define MYSQL_ERROR_MSG(buf)	((uint8_t *)GWBUF_DATA(buf) + 6)
+#define MYSQL_ERROR_CODE(buf)	((uint8_t *)GWBUF_DATA(buf) + 5)
+#define MYSQL_ERROR_MSG(buf)	((uint8_t *)GWBUF_DATA(buf) + 7)
 #define MYSQL_COMMAND(buf)	(*((uint8_t *)GWBUF_DATA(buf) + 4))
 
 

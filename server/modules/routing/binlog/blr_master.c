@@ -33,7 +33,8 @@
  *
  * Date		Who			Description
  * 02/04/2014	Mark Riddoch			Initial implementation
- * 25/05/2015	Massimiliano Pinto		Addev BLRM_SLAVE_STOPPED state
+ * 25/05/2015	Massimiliano Pinto		Added BLRM_SLAVE_STOPPED state
+ * 08/06/2015	Massimiliano Pinto		Addev m_errno and m_errmsg
  *
  * @endverbatim
  */
@@ -365,16 +366,34 @@ char	query[128];
 	}
 	else if (router->master_state != BLRM_BINLOGDUMP && MYSQL_RESPONSE_ERR(buf))
 	{
-        	LOGIF(LE, (skygw_log_write(
-                           LOGFILE_ERROR,
-			"%s: Received error: %d, %s from master during %s phase "
+		char *msg_err = NULL;
+		int msg_len=0;
+		int len = gwbuf_length(buf);
+		unsigned long mysql_errno = extract_field(MYSQL_ERROR_CODE(buf), 16);
+
+		msg_len = len-7-6; // +7 is where msg starts, 6 is skipped the status message (#42000)
+		msg_err = (char *)malloc(msg_len + 1);
+
+		LOGIF(LE, (skygw_log_write(
+			LOGFILE_ERROR,
+			"%s: Received error: %u, '%s' from master during '%s' phase "
 			"of the master state machine.",
 			router->service->name,
-			MYSQL_ERROR_CODE(buf), MYSQL_ERROR_MSG(buf),
+			mysql_errno, msg_err,
 			blrm_states[router->master_state]
 			)));
 		gwbuf_consume(buf, gwbuf_length(buf));
+
 		spinlock_acquire(&router->lock);
+
+		/* set mysql errno */
+		router->m_errno = mysql_errno;
+
+		/* set mysql error message */
+		if (router->m_errmsg)
+			free(router->m_errmsg);
+		router->m_errmsg = msg_err;
+
 		router->active_logs = 0;
 		if (router->reconnect_pending)
 		{
@@ -923,6 +942,11 @@ static REP_HEADER	phdr;
 				/* set mysql errno to 0 */
 				router->m_errno = 0;
 
+				/* Remove error message */
+				if (router->m_errmsg)
+					free(router->m_errmsg);
+				router->m_errmsg = NULL;
+
 				/*
 				 * First check that the checksum we calculate matches the
 				 * checksum in the packet we received.
@@ -1097,9 +1121,26 @@ static REP_HEADER	phdr;
 			else
 			{
 				unsigned long mysql_errno = extract_field(ptr+5, 16);
+				char *msg_err = NULL;
+				int msg_len=0;
+				msg_err = (char *)ptr+7+6;	// err msg starts after 7 bytes + 6 of status message
+				msg_len = len-7-6;	// msg len is decreased by 7 and 6
+				msg_err = (uint8_t *)malloc(msg_len + 1);
+				strncpy(msg_err, (char *)ptr+7+6, msg_len);
+				/* NULL terminate error string */
+				*(msg_err+msg_len)='\0';
+
+				spinlock_acquire(&router->lock);
 
 				/* set mysql_errno */
 				router->m_errno = mysql_errno;
+
+				/* set io error message */
+				if (router->m_errmsg)
+					free(router->m_errmsg);
+				router->m_errmsg = msg_err;
+
+				spinlock_release(&router->lock);
 
 				LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
 					"Error packet in binlog stream.%s @ %d.",

@@ -41,6 +41,7 @@
  * 29/05/2015	Massimiliano Pinto	Addition of CHANGE MASTER TO ...
  * 05/06/2015	Massimiliano Pinto	router->service->dbref->sever->name instead of master->remote
  *					in blr_slave_send_slave_status()
+ * 08/06/2015	Massimiliano Pinto	blr_slave_send_slave_status() shows mysql_errno and error_msg
  *
  * @endverbatim
  */
@@ -826,6 +827,7 @@ GWBUF	*pkt;
 char	column[42];
 uint8_t *ptr;
 int	len, actual_len, col_len, seqno, ncols, i;
+char    *dyn_column=NULL;
 
 	/* Count the columns */
 	for (ncols = 0; slave_status_columns[ncols]; ncols++);
@@ -836,7 +838,8 @@ int	len, actual_len, col_len, seqno, ncols, i;
 		blr_slave_send_columndef(router, slave, slave_status_columns[i], 0xf, 40, seqno++);
 	blr_slave_send_eof(router, slave, seqno++);
 
-	len = 5 + (ncols * 41);				// Max length
+	len = 5 + (ncols * 41) + 250;	// Max length + 250 bytes error message
+
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
 	ptr = GWBUF_DATA(pkt);
@@ -932,7 +935,18 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	*ptr++ = 0;
+	/* Last error message */
+	if (router->m_errmsg == NULL) {
+		*ptr++ = 0;
+	} else {
+		dyn_column = (char*)router->m_errmsg;
+		col_len = strlen(dyn_column);
+		if (col_len > 250)
+			col_len = 250;
+		*ptr++ = col_len;                                       // Length of result string
+		strncpy((char *)ptr, dyn_column, col_len);              // Result string
+		ptr += col_len;
+	}
 
 	/* Skip_Counter */
 	sprintf(column, "%d", 0);
