@@ -37,3 +37,17 @@ then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
 fi
 /sbin/ldconfig
+
+cat <<EOF >& 2
+********** Notice: MaxScale 1.2 Changes **************
+
+MaxScale 1.2 has changed the default installation locations
+and various files have changed locations. The configuration
+file is now read from /etc/maxscale.cnf (note the lower case name)
+and MaxScale data is in /var/lib/maxscale/.
+
+The default location of binary log files and the authentication cache changed from
+/usr/local/mariadb-maxscale/<Service name> to /var/lib/maxscale/<Service name>.
+
+******************************************************
+EOF
