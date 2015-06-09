@@ -35,6 +35,8 @@
 #include <modutil.h>
 #include <mysql_client_server_protocol.h>
 
+#define DEFAULT_REFRESH_INTERVAL 30.0
+
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
 	MODULE_BETA_RELEASE,
@@ -399,7 +401,13 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
         GWBUF *buffer,*clone;
 	int i,rval = 0;
         unsigned int len;
-        
+
+	for(i = 0;i<session->rses_nbackends;i++)
+	{
+	    session->rses_backend_ref[i].bref_mapped = false;
+	    session->rses_backend_ref[i].n_mapping_eof = 0;
+	}
+
         session->init |= INIT_MAPPING;
         session->init &= ~INIT_UNINT;
         len = strlen(query) + 1;
@@ -712,6 +720,9 @@ createInstance(SERVICE *service, char **options)
         } 
         router->service = service;
 	router->schemarouter_config.max_sescmd_hist = 0;
+	router->schemarouter_config.last_refresh = time(NULL);
+	router->schemarouter_config.refresh_databases = false;
+	router->schemarouter_config.refresh_min_interval = DEFAULT_REFRESH_INTERVAL;
 	router->stats.longest_sescmd = 0;
 	router->stats.n_hist_exceeded = 0;
 	router->stats.n_queries = 0;
@@ -752,6 +763,14 @@ createInstance(SERVICE *service, char **options)
 	    else if(strcmp(options[i],"disable_sescmd_history") == 0)
 	    {
 		router->schemarouter_config.disable_sescmd_hist = config_truth_value(value);
+	    }
+	    else if(strcmp(options[i],"refresh_databases") == 0)
+	    {
+		router->schemarouter_config.refresh_databases = config_truth_value(value);
+	    }
+	    else if(strcmp(options[i],"refresh_interval") == 0)
+	    {
+		router->schemarouter_config.refresh_min_interval = atof(value);
 	    }
 	    else
 	    {
@@ -935,6 +954,7 @@ static void* newSession(
     client_rses->dcb_route->func.read = internalRoute;
     client_rses->dcb_route->state = DCB_STATE_POLLING;
     client_rses->dcb_route->session = session;
+    client_rses->rses_config.last_refresh = time(NULL);
     client_rses->init = INIT_UNINT;
     if(using_db)
         client_rses->init |= INIT_USE_DB;
@@ -2015,20 +2035,48 @@ static int routeQuery(
 						     router_cli_ses->dbhash,
 						     querybuf)))
 	    {
+		time_t now = time(NULL);
+		if(router_cli_ses->rses_config.refresh_databases &&
+		   difftime(now,router_cli_ses->rses_config.last_refresh) >
+		   router_cli_ses->rses_config.refresh_min_interval)
+		{
+		    rses_begin_locked_router_action(router_cli_ses);
+		    router_cli_ses->rses_config.last_refresh = now;
+		    router_cli_ses->queue = querybuf;
+		    hashtable_free(router_cli_ses->dbhash);
+		    if((router_cli_ses->dbhash = hashtable_alloc(100, hashkeyfun, hashcmpfun)) == NULL)
+		    {
+			skygw_log_write(LE,"Error: Hashtable allocation failed.");
+			rses_end_locked_router_action(router_cli_ses);
+			return 1;
+		    }
+		    hashtable_memory_fns(router_cli_ses->dbhash,(HASHMEMORYFN)strdup,
+				     (HASHMEMORYFN)strdup,
+				     (HASHMEMORYFN)free,
+				     (HASHMEMORYFN)free);
+		    gen_databaselist(inst,router_cli_ses);
+		    rses_end_locked_router_action(router_cli_ses);
+		    return 1;
+		}
 		extract_database(querybuf,db);
 		snprintf(errbuf,25+MYSQL_DATABASE_MAXLEN,"Unknown database: %s",db);
-		for(i = 0;i<router_cli_ses->rses_nbackends;i++)
+		GWBUF* error = modutil_create_mysql_err_msg(1, 0, 1049, "42000", errbuf);
+
+		if (error == NULL)
 		{
-		    if(SERVER_IS_RUNNING(router_cli_ses->rses_backend_ref[i].bref_backend->backend_server))
-		    {
-			create_error_reply(errbuf,router_cli_ses->rses_backend_ref[i].bref_dcb);
-			break;
-		    }
+		    LOGIF(LE, (skygw_log_write_flush(
+			    LOGFILE_ERROR,
+						     "Error : Creating buffer for error message failed.")));
+		    return 0;
 		}
+		/** Set flags that help router to identify session commands reply */
+		router_cli_ses->rses_client_dcb->func.write(router_cli_ses->rses_client_dcb,error);
 
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 						 "Error : Changing database failed.")));
+		ret = 1;
+		goto retblock;
 	    }
 	}
 

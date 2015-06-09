@@ -241,6 +241,9 @@ typedef struct schemarouter_config_st {
 	target_t          rw_use_sql_variables_in;
         int max_sescmd_hist;
         bool disable_sescmd_hist;
+        time_t last_refresh; /*< Last time the database list was refreshed */
+        double refresh_min_interval; /*< Minimum required interval between refreshes of databases */
+        bool refresh_databases; /*< Are databases refreshed when they are not found in the hashtable */
 } schemarouter_config_t;
 
 /**
@@ -312,6 +315,7 @@ typedef struct router_instance {
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
         struct router_instance* next;        /*< Next router on the list            */
 	bool			available_slaves; /*< The router has some slaves available */
+
 
 } ROUTER_INSTANCE;
 
