@@ -1005,9 +1005,18 @@ int dcb_read_SSL(
 			char errbuf[200];
 			ssl_errno = SSL_get_error(dcb->ssl,n);
 #ifdef SS_DEBUG
-			ERR_error_string(ssl_errno,errbuf);
-			skygw_log_write_flush(LD,"[%lu]SSL error %d: %s",
-				pthread_self(),ssl_errno,errbuf);
+			if(ssl_errno == SSL_ERROR_SSL ||
+			   ssl_errno == SSL_ERROR_SYSCALL)
+			  {
+			    int eno;
+			    while((eno = ERR_get_error()) != 0)
+			      {
+				ERR_error_string(eno,errbuf);
+				skygw_log_write(LE,
+						"%s",
+						errbuf);
+			      }
+			  }
 #endif
 			if(ssl_errno == SSL_ERROR_WANT_READ ||
 			   ssl_errno == SSL_ERROR_WANT_WRITE ||
@@ -1017,7 +1026,6 @@ int dcb_read_SSL(
 			}
 			else
 			{
-			    ERR_error_string(ssl_errno,errbuf);
 			    LOGIF(LE, (skygw_log_write_flush(
 				    LOGFILE_ERROR,
 				"Error : Read failed, dcb %p in state "
@@ -1052,7 +1060,7 @@ int dcb_read_SSL(
 
 		    gwbuf_rtrim(buffer,bufsize - n);
 #ifdef SS_DEBUG
-		    skygw_log_write(LD,"[%lu] SSL: Truncated buffer from %d to %d bytes. "
+		    skygw_log_write(LD,"%lu SSL: Truncated buffer from %d to %d bytes. "
 	            "Read %d bytes, %d bytes waiting.\n",pthread_self(),
 		     bufsize,GWBUF_LENGTH(buffer),n,b);
 		    
@@ -1079,13 +1087,6 @@ int dcb_read_SSL(
                 *head = gwbuf_append(*head, buffer);
 		rc = ioctl(dcb->fd, FIONREAD, &b);
 		pending = SSL_pending(dcb->ssl);
-
-		if(ssl_errno == SSL_ERROR_WANT_READ ||
-		   ssl_errno == SSL_ERROR_WANT_WRITE ||
-		   (b == 0 && pending == 0))
-		{
-		    break;
-		}
 
         } /*< while (true) */
 return_n:
@@ -2837,22 +2838,34 @@ int dcb_create_SSL(DCB* dcb)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    int rval = 0,ssl_rval,errnum = 0,fd,b = 0;
+    int rval = 0,ssl_rval,errnum = 0,fd,b = 0,pending;
     char errbuf[140];
     fd = dcb->fd;
 
     do
     {
 	ssl_rval = SSL_accept(dcb->ssl);
+	errnum = SSL_get_error(dcb->ssl,ssl_rval);
+	LOGIF(LD,(skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL_accept %d, error %d",
+				 ssl_rval,errnum)));
 	switch(ssl_rval)
 	{
 	case 0:
 	    errnum = SSL_get_error(dcb->ssl,ssl_rval);
-	    ERR_error_string(errnum,errbuf);
-	    LOGIF(LD,(skygw_log_write_flush(LD,"[%p] SSL_accept shutdown for %s:%s",
+	    skygw_log_write(LE,"Error: SSL authentication failed (SSL error %d):",
 				     dcb,
 				     dcb->remote,
-				     errbuf)));
+				     errnum);
+
+	    if(errnum == SSL_ERROR_SSL ||
+	     errnum == SSL_ERROR_SYSCALL)
+	    {
+		while((errnum = ERR_get_error()) != 0)
+		{
+		    ERR_error_string(errnum,errbuf);
+		    skygw_log_write(LE,"%s",errbuf);
+		}
+	    }
 	    rval = -1;
 	    break;
 	case 1:
@@ -2871,7 +2884,7 @@ int dcb_accept_SSL(DCB* dcb)
 		 queue and wait for more.*/
 		rval = 0;
 		LOGIF(LD,(skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL_accept ongoing for %s",
-					 dcb->remote)));
+						dcb->remote)));
 		return rval;
 	    }
 	    else
@@ -2904,11 +2917,11 @@ int dcb_accept_SSL(DCB* dcb)
 	    break;
 	}
 	ioctl(fd,FIONREAD,&b);
+	pending = SSL_pending(dcb->ssl);
 #ifdef SS_DEBUG
-	    skygw_log_write_flush(LD,"[dcb_accept_SSL] fd %d: %d bytes",fd,b);
-	    skygw_log_write(LD,"[dcb_accept_SSL] SSL_accept returned %d, SSL error: %d",ssl_rval,errnum);
+	    skygw_log_write_flush(LD,"[dcb_accept_SSL] fd %d: %d bytes, %d pending",fd,b,pending);
 #endif
-    }while(b > 0 && rval != -1);
+    }while((b > 0 || pending > 0) && rval != -1);
 
     return rval;
 }

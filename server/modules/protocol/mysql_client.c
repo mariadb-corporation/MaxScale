@@ -1952,8 +1952,7 @@ int do_ssl_accept(MySQLProtocol* protocol)
 	    spinlock_release(&protocol->protocol_lock);
 	    rval = -1;
 	    skygw_log_write_flush(LE,
-			     "Error: Fatal error in SSL_accept for %s@%s: %s",
-			     protocol->owner_dcb->user,
+			     "Error: Fatal error in SSL_accept for %s",
 			     protocol->owner_dcb->remote);
 	break;
 
