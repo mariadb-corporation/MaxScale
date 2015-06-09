@@ -1331,6 +1331,7 @@ dcb_close(DCB *dcb)
                     dcb->session = NULL;
                     spinlock_release(&dcb->server->persistlock);
                     atomic_add(&dcb->server->stats.n_persistent, 1);
+                    atomic_add(&dcb->server->stats.n_current, -1);
                 }
                 else
                 {

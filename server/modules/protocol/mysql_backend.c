@@ -1140,7 +1140,6 @@ gw_backend_close(DCB *dcb)
         
         CHK_DCB(dcb);
         session = dcb->session;
-        CHK_SESSION(session);
 
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
 			"%lu [gw_backend_close]",
@@ -1153,21 +1152,24 @@ gw_backend_close(DCB *dcb)
         mysql_send_com_quit(dcb, 0, quitbuf);
         
         mysql_protocol_done(dcb);
-	/** 
-	 * The lock is needed only to protect the read of session->state and 
-	 * session->client values. Client's state may change by other thread
-	 * but client's close and adding client's DCB to zombies list is executed
-	 * only if client's DCB's state does _not_ change in parallel.
-	 */
-	spinlock_acquire(&session->ses_lock);
-	/** 
-	 * If session->state is STOPPING, start closing client session. 
-	 * Otherwise only this backend connection is closed.
-	 */
-        if (session != NULL && 
-		session->state == SESSION_STATE_STOPPING &&
+        
+        if (session)
+        {
+            CHK_SESSION(session);
+            /** 
+             * The lock is needed only to protect the read of session->state and 
+             * session->client values. Client's state may change by other thread
+             * but client's close and adding client's DCB to zombies list is executed
+             * only if client's DCB's state does _not_ change in parallel.
+             */
+            spinlock_acquire(&session->ses_lock);
+            /** 
+             * If session->state is STOPPING, start closing client session. 
+             * Otherwise only this backend connection is closed.
+             */
+            if (session->state == SESSION_STATE_STOPPING &&
 		session->client != NULL)
-        {		
+            {		
                 if (session->client->state == DCB_STATE_POLLING)
                 {
 			spinlock_release(&session->ses_lock);
@@ -1179,11 +1181,12 @@ gw_backend_close(DCB *dcb)
 		{
 			spinlock_release(&session->ses_lock);
 		}
-        }
-        else
-	{
+            }
+            else
+            {
 		spinlock_release(&session->ses_lock);
-	}
+            }
+        }
 	return 1;
 }
 
