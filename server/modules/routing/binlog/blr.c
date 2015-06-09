@@ -204,7 +204,7 @@ unsigned char	*defuuid;
 	inst->password = strdup(service->credentials.authdata);
 
 	inst->m_errno = 0;
-	inst->m_errmsg = NULL
+	inst->m_errmsg = NULL;
 
 	my_uuid_init((ulong)rand()*12345,12345);
 	if ((defuuid = (char *)malloc(20)) != NULL)
