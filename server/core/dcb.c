@@ -893,6 +893,150 @@ return_n:
  * @return	-1 on error, otherwise the number of read bytes on the last
  * iteration of while loop. 0 is returned if no data available.
  */
+int dcb_read_n(
+        DCB   *dcb,
+        GWBUF **head,
+        int nbytes)
+{
+        GWBUF *buffer = NULL;
+        int   b;
+        int   rc;
+        int   n;
+        int   nread = 0;
+
+        CHK_DCB(dcb);
+
+	if (dcb->fd <= 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Read failed, dcb is %s.",
+			dcb->fd == DCBFD_CLOSED ? "closed" : "cloned, not readable")));
+		n = 0;
+		goto return_n;
+	}
+
+                int bufsize;
+
+                rc = ioctl(dcb->fd, FIONREAD, &b);
+
+                if (rc == -1)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : ioctl FIONREAD for dcb %p in "
+                                "state %s fd %d failed due error %d, %s.",
+                                dcb,
+                                STRDCBSTATE(dcb->state),
+                                dcb->fd,
+                                errno,
+                                strerror(errno))));
+                        n = -1;
+                        goto return_n;
+                }
+
+                if (b == 0 && nread == 0)
+                {
+                        /** Handle closed client socket */
+                        if (dcb_isclient(dcb))
+                        {
+                                char c;
+                                int l_errno = 0;
+                                int r = -1;
+
+                                /* try to read 1 byte, without consuming the socket buffer */
+                                r = recv(dcb->fd, &c, sizeof(char), MSG_PEEK);
+                                l_errno = errno;
+
+                                if (r <= 0 &&
+                                        l_errno != EAGAIN &&
+                                        l_errno != EWOULDBLOCK &&
+					l_errno != 0)
+                                {
+                                        n = -1;
+                                        goto return_n;
+                                }
+                        }
+                        n = 0;
+                        goto return_n;
+                }
+                else if (b == 0)
+                {
+                        n = 0;
+                        goto return_n;
+                }
+
+		dcb->last_read = hkheartbeat;
+
+                bufsize = MIN(b, nbytes);
+
+                if ((buffer = gwbuf_alloc(bufsize)) == NULL)
+                {
+                        /*<
+                        * This is a fatal error which should cause shutdown.
+                        * Todo shutdown if memory allocation fails.
+                        */
+                        LOGIF(LE, (skygw_log_write_flush(
+                                LOGFILE_ERROR,
+                                "Error : Failed to allocate read buffer "
+                                "for dcb %p fd %d, due %d, %s.",
+                                dcb,
+                                dcb->fd,
+                                errno,
+                                strerror(errno))));
+
+                        n = -1;
+                        goto return_n;
+                }
+                GW_NOINTR_CALL(n = read(dcb->fd, GWBUF_DATA(buffer), bufsize);
+                dcb->stats.n_reads++);
+
+                if (n <= 0)
+                {
+                        if (errno != 0 && errno != EAGAIN && errno != EWOULDBLOCK)
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+                                        "Error : Read failed, dcb %p in state "
+                                        "%s fd %d, due %d, %s.",
+                                        dcb,
+                                        STRDCBSTATE(dcb->state),
+                                        dcb->fd,
+                                        errno,
+                                        strerror(errno))));
+                        }
+			gwbuf_free(buffer);
+                        goto return_n;
+                }
+                nread += n;
+
+                LOGIF(LD, (skygw_log_write(
+                        LOGFILE_DEBUG,
+                        "%lu [dcb_read] Read %d bytes from dcb %p in state %s "
+                        "fd %d.",
+                        pthread_self(),
+                        n,
+                        dcb,
+                        STRDCBSTATE(dcb->state),
+                        dcb->fd)));
+                /*< Append read data to the gwbuf */
+                *head = gwbuf_append(*head, buffer);
+
+return_n:
+        return n;
+}
+
+
+/**
+ * General purpose read routine to read data from a socket in the
+ * Descriptor Control Block and append it to a linked list of buffers.
+ * The list may be empty, in which case *head == NULL
+ *
+ * @param dcb	The DCB to read from
+ * @param head	Pointer to linked list to append data to
+ * @return	-1 on error, otherwise the number of read bytes on the last
+ * iteration of while loop. 0 is returned if no data available.
+ */
 int dcb_read_SSL(
         DCB   *dcb,
         GWBUF **head)

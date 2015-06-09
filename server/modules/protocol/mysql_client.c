@@ -490,7 +490,6 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	/** Do the SSL Handshake */
 	if(ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED)
 	{
-
 	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
 
 	    if(do_ssl_accept(protocol) < 0)
@@ -692,6 +691,11 @@ int gw_read_client_event(
 	if(protocol->use_ssl)
 	{
 	    rc = dcb_read_SSL(dcb, &read_buffer);
+	}
+	else if(dcb->service->ssl_mode != SSL_DISABLED &&
+	 protocol->protocol_auth_state == MYSQL_AUTH_SENT)
+	{
+	    rc = dcb_read_n(dcb, &read_buffer,(4 + 4 + 4 + 1 + 23));
 	}
 	else
 	{
