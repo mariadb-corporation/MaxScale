@@ -94,6 +94,7 @@ static int  dcb_null_write(DCB *dcb, GWBUF *buf);
 static int  dcb_null_close(DCB *dcb);
 static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
 static int  dcb_isvalid_nolock(DCB *dcb);
+static void dcb_close_finish(DCB *);
 
 size_t dcb_get_session_id(
 	DCB* dcb)
@@ -570,6 +571,7 @@ bool    succp = false;
 			* Close file descriptor and move to clean-up phase.
 			*/
 			rc = close(dcb->fd);
+                        if (dcb->server) atomic_add(&dcb->server->stats.n_persistent, -1);
 
 			if (rc < 0) 
 			{
@@ -1268,8 +1270,6 @@ int	above_water;
 void
 dcb_close(DCB *dcb)
 {
-        int  rc = 0;
-
         CHK_DCB(dcb);
 
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
@@ -1296,8 +1296,7 @@ dcb_close(DCB *dcb)
         */
 	if (dcb->state == DCB_STATE_POLLING)
 	{
-            rc = poll_remove_dcb(dcb);
-            if (rc)
+            if (poll_remove_dcb(dcb))
             {
                 LOGIF(LE, (skygw_log_write(
                     LOGFILE_ERROR,
@@ -1315,69 +1314,56 @@ dcb_close(DCB *dcb)
                     pthread_self(),
                     dcb,
                     STRDCBSTATE(dcb->state))));
-            }
             
-            char *user;
-            user = session_getUser(dcb->session);
-            if (0 == rc
-                && user 
-                && strlen(user)
-                && dcb->server 
-                && dcb->server->persistpoolmax 
-                && dcb_persistent_clean_count(dcb, false) < dcb->server->persistpoolmax)
-            {
-                dcb->user = strdup(user);
-                dcb->persistentstart = time(NULL);
-                spinlock_acquire(&dcb->server->persistlock);
-                dcb->nextpersistent = dcb->server->persistent;
-                dcb->server->persistent = dcb;
-                dcb->session = NULL;
-                spinlock_release(&dcb->server->persistlock);
-                atomic_add(&dcb->server->stats.n_persistent, 1);
-                /* Because we're not going to close the connection, need to do */
-                /* the session closedown processing here */
-                if (dcb->session)
+                char *user;
+                user = session_getUser(dcb->session);
+                if (user 
+                    && strlen(user)
+                    && dcb->server 
+                    && dcb->server->persistpoolmax 
+                    && dcb_persistent_clean_count(dcb, false) < dcb->server->persistpoolmax)
                 {
-                    spinlock_acquire(&dcb->session->ses_lock);
-                    /** 
-                     * If session->state is STOPPING, start closing client session. 
-                     * Otherwise only this backend connection is closed.
-                     */
-                    if (dcb->session->state == SESSION_STATE_STOPPING &&
-                        dcb->session->client != NULL &&
-                        dcb->session->client->state == DCB_STATE_POLLING)
-                    {
-                        spinlock_release(&dcb->session->ses_lock);
-                        /** Close client DCB */
-                        dcb_close(dcb->session->client);
-                    }
-                    else 
-                    {
-                        spinlock_release(&dcb->session->ses_lock);
-                    }
+                    dcb->user = strdup(user);
+                    dcb->persistentstart = time(NULL);
+                    spinlock_acquire(&dcb->server->persistlock);
+                    dcb->nextpersistent = dcb->server->persistent;
+                    dcb->server->persistent = dcb;
+                    dcb->session = NULL;
+                    spinlock_release(&dcb->server->persistlock);
+                    atomic_add(&dcb->server->stats.n_persistent, 1);
                 }
-            }
-            else if (!rc)
-            {
-			/**
-			 * close protocol and router session
-			 */
-			if (dcb->func.close != NULL)
-			{
-				dcb->func.close(dcb);
-			}
-			/** Call possible callback for this DCB in case of close */
-			dcb_call_callback(dcb, DCB_REASON_CLOSE);
-			
-			if (dcb->state == DCB_STATE_NOPOLLING) 
-			{
-				dcb_add_to_zombieslist(dcb);
-			}
+                else
+                {
+                    dcb_close_finish(dcb);
+               }
             }
             ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
                 dcb->state == DCB_STATE_ZOMBIE);	
         }
 }
+
+/**
+ * Final calls for DCB close
+ *
+ * @param dcb	The DCB to print
+ *
+ */
+static void
+dcb_close_finish(DCB *dcb)
+{
+    /**
+     * check persistent list, close protocol and router session
+     */
+    if (dcb->server && dcb->server->persistent) CHK_DCB(dcb->server->persistent);
+    if (dcb->func.close)
+    {
+        dcb->func.close(dcb);
+    }
+    /** Call possible callback for this DCB in case of close */
+    dcb_call_callback(dcb, DCB_REASON_CLOSE);
+    /** Must be DCB_STATE_NOPOLLING when this function is called */
+    dcb_add_to_zombieslist(dcb);
+ }
 
 /**
  * Diagnostic to print a DCB
@@ -2330,9 +2316,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
                     server->persistent = persistentdcb->nextpersistent;
                 }
                 /** Call possible callback for this DCB in case of close */
-                dcb_call_callback(persistentdcb, DCB_REASON_CLOSE);
-                dcb_add_to_zombieslist(persistentdcb);
-                atomic_add(&server->stats.n_persistent, -1);
+                dcb_close_finish(persistentdcb);
             }
             else 
             {
