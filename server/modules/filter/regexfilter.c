@@ -23,7 +23,7 @@
 #include <log_manager.h>
 #include <string.h>
 #include <regex.h>
-
+#include <atomic.h>
 #include "maxconfig.h"
 
 /** Defined in log_manager.cc */
@@ -97,6 +97,7 @@ typedef struct {
  */
 typedef struct {
 	DOWNSTREAM	down;		/* The downstream filter */
+	SPINLOCK        lock;
 	int		no_change;	/* No. of unchanged requests */
 	int		replacements;	/* No. of changed requests */
 	int		active;		/* Is filter active */
@@ -356,13 +357,17 @@ char		*sql, *newsql;
 			{
 				queue = modutil_replace_SQL(queue, newsql);
 				queue = gwbuf_make_contiguous(queue);
+				spinlock_acquire(&my_session->lock);
 				log_match(my_instance,my_instance->match,sql,newsql);
+				spinlock_release(&my_session->lock);
 				free(newsql);
 				my_session->replacements++;
 			}
 			else
 			{
+				spinlock_acquire(&my_session->lock);
 				log_nomatch(my_instance,my_instance->match,sql);
+				spinlock_release(&my_session->lock);
 				my_session->no_change++;
 			}
 			free(sql);

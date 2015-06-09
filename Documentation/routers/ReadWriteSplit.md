@@ -18,9 +18,9 @@ The configuration consists of mandatory and optional parameters.
 
     type=router
 
-**`service`** specifies the router module to be used. For **readwritesplit** the value is `readwritesplit`:
+**`router`** specifies the router module to be used. For **readwritesplit** the value is `readwritesplit`:
 
-    service=readwritesplit
+    router=readwritesplit
 
 **`servers`** provides a list of servers, which must include one master and available slaves:
 

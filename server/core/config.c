@@ -1728,6 +1728,9 @@ SERVER			*server;
 					obj->element = server_alloc(address,
                                                                     protocol,
                                                                     atoi(port));
+
+					server_set_unique_name(obj->element, obj->object);
+
 					if (obj->element && monuser && monpw)
                                         {
 						serverAddMonUser(obj->element,
@@ -1936,6 +1939,8 @@ static char *monitor_params[] =
                 "servers",
                 "user",
                 "passwd",
+		"script",
+		"events",
 		"monitor_interval",
 		"detect_replication_lag",
 		"detect_stale_master",

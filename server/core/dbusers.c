@@ -1118,6 +1118,7 @@ getUsers(SERVICE *service, USERS *users)
 						MYSQL_DATABASE_MAXLEN;
 	int		dbnames = 0;
 	int		db_grants = 0;
+	char		dbnm[MYSQL_DATABASE_MAXLEN+1];
 	
 	if (serviceGetUser(service, &service_user, &service_passwd) == 0)
 	{
@@ -1464,16 +1465,32 @@ getUsers(SERVICE *service, USERS *users)
 		 */
 
 		if (db_grants) {
-			/* we have dbgrants, store them */
+		    bool havedb = false;
+		    /* we have dbgrants, store them */
+		    if(row[5]){
+			unsigned long *rowlen = mysql_fetch_lengths(result);
+			memcpy(dbnm,row[5],rowlen[5]);
+			memset(dbnm + rowlen[5],0,1);
+			havedb = true;
+			if(service->strip_db_esc) {
+			    strip_escape_chars(dbnm);
+			    LOGIF(LD, (skygw_log_write(
+				    LOGFILE_DEBUG,
+						     "[%s]: %s -> %s",
+						     service->name,
+						     row[5],
+						     dbnm)));
+			}
+		    }
 
-		    if(service->optimize_wildcard && wildcard_db_grant(row[5]))
+		    if(service->optimize_wildcard && havedb && wildcard_db_grant(row[5]))
 		    {
-			rc = add_wildcard_users(users, row[0], row[1], password, row[4], row[5], service->resources);
+			rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
 			skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,row[5],rc);
 		    }
 		    else
 		    {
-			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], row[5]);
+			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], havedb ? dbnm : NULL);
 		    }
 
 		} else {

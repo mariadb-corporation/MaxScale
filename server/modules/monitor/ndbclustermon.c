@@ -25,24 +25,14 @@
  * Date		Who			Description
  * 25/07/14	Massimiliano Pinto	Initial implementation
  * 10/11/14	Massimiliano Pinto	Added setNetworkTimeout for connect,read,write
+ * 08/05/15     Markus Makela           Addition of launchable scripts
  *
  * @endverbatim
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <monitor.h>
+
 #include <mysqlmon.h>
-#include <thread.h>
-#include <mysql.h>
-#include <mysqld_error.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <secrets.h>
-#include <dcb.h>
-#include <modinfo.h>
-#include <maxconfig.h>
+
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -50,7 +40,7 @@ extern __thread log_info_t tls_log_info;
 
 static	void	monitorMain(void *);
 
-static char *version_str = "V1.1.0";
+static char *version_str = "V2.1.0";
 
 MODULE_INFO	info = {
 	MODULE_API_MONITOR,
@@ -61,22 +51,13 @@ MODULE_INFO	info = {
 
 static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
-static	void	registerServer(void *, SERVER *);
-static	void	unregisterServer(void *, SERVER *);
-static	void	defaultUsers(void *, char *, char *);
 static	void	diagnostics(DCB *, void *);
-static  void    setInterval(void *, size_t);
-static  void    setNetworkTimeout(void *arg, int type, int value);
+bool isNdbEvent(monitor_event_t event);
 
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
-	stopMonitor, 
-	registerServer, 
-	unregisterServer, 
-	defaultUsers, 
-	diagnostics, 
-	setInterval, 
-	setNetworkTimeout
+	stopMonitor,
+	diagnostics
 };
 
 /**
@@ -127,31 +108,67 @@ GetModuleObject()
 static	void 	*
 startMonitor(void *arg,void* opt)
 {
-MYSQL_MONITOR *handle;
-CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
-	if (arg != NULL)
-	{
-		handle = (MYSQL_MONITOR *)arg;
-		handle->shutdown = 0;
-	}
-	else
-	{
-		if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
-			return NULL;
-		handle->databases = NULL;
-		handle->shutdown = 0;
-		handle->defaultUser = NULL;
-		handle->defaultPasswd = NULL;
-		handle->id = MONITOR_DEFAULT_ID;
-		handle->interval = MONITOR_INTERVAL;
-		handle->connect_timeout=DEFAULT_CONNECT_TIMEOUT;
-		handle->read_timeout=DEFAULT_READ_TIMEOUT;
-		handle->write_timeout=DEFAULT_WRITE_TIMEOUT;
-		spinlock_init(&handle->lock);
-	}
+    MONITOR* mon = (MONITOR*)arg;
+    MYSQL_MONITOR *handle = mon->handle;
+    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
+    bool have_events = false;
 
-	handle->tid = (THREAD)thread_start(monitorMain, handle);
-	return handle;
+    if (handle != NULL)
+    {
+	handle->shutdown = 0;
+    }
+    else
+    {
+	if ((handle = (MYSQL_MONITOR *)malloc(sizeof(MYSQL_MONITOR))) == NULL)
+	    return NULL;
+	handle->shutdown = 0;
+	handle->id = MONITOR_DEFAULT_ID;
+	handle->script = NULL;
+	handle->master = NULL;
+	memset(handle->events,false,sizeof(handle->events));
+	spinlock_init(&handle->lock);
+    }
+    while(params)
+    {
+	if(!strcmp(params->name,"script"))
+	{
+	    if(handle->script)
+		free(handle->script);
+	    if(access(params->value,X_OK) == 0)
+	    {
+		handle->script = strdup(params->value);
+	    }
+	    else
+	    {
+		if(access(params->value,F_OK) == 0)
+		{
+		skygw_log_write(LE,
+			 "Error: The file cannot be executed: %s",
+			 params->value);
+		}
+		else
+		{
+		skygw_log_write(LE,
+			 "Error: The file cannot be found: %s",
+			 params->value);
+		}
+		handle->script = NULL;
+	    }
+	}
+	else if(!strcmp(params->name,"events"))
+	{
+	    mon_parse_event_string(&handle->events,sizeof(handle->events),params->value);
+	    have_events = true;
+	}
+	params = params->next;
+    }
+    /** If no specific events are given, enable them all */
+    if(!have_events)
+    {
+	memset(handle->events,true,sizeof(handle->events));
+    }
+    handle->tid = (THREAD)thread_start(monitorMain, mon);
+    return handle;
 }
 
 /**
@@ -162,80 +179,11 @@ CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
 static	void	
 stopMonitor(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+    MONITOR* mon = (MONITOR*)arg;
+MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)mon->handle;
 
         handle->shutdown = 1;
         thread_wait((void *)handle->tid);
-}
-
-/**
- * Register a server that must be added to the monitored servers for
- * a monitoring module.
- *
- * @param arg	A handle on the running monitor module
- * @param server	The server to add
- */
-static	void	
-registerServer(void *arg, SERVER *server)
-{
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*ptr, *db;
-
-	if ((db = (MONITOR_SERVERS *)malloc(sizeof(MONITOR_SERVERS))) == NULL)
-		return;
-	db->server = server;
-	db->con = NULL;
-	db->next = NULL;
-	spinlock_acquire(&handle->lock);
-	if (handle->databases == NULL)
-		handle->databases = db;
-	else
-	{
-		ptr = handle->databases;
-		while (ptr->next != NULL)
-			ptr = ptr->next;
-		ptr->next = db;
-	}
-	spinlock_release(&handle->lock);
-}
-
-/**
- * Remove a server from those being monitored by a monitoring module
- *
- * @param arg	A handle on the running monitor module
- * @param server	The server to remove
- */
-static	void	
-unregisterServer(void *arg, SERVER *server)
-{
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
-MONITOR_SERVERS	*ptr, *lptr;
-
-	spinlock_acquire(&handle->lock);
-	if (handle->databases == NULL)
-	{
-		spinlock_release(&handle->lock);
-		return;
-	}
-	if (handle->databases->server == server)
-	{
-		ptr = handle->databases;
-		handle->databases = handle->databases->next;
-		free(ptr);
-	}
-	else
-	{
-		ptr = handle->databases;
-		while (ptr->next != NULL && ptr->next->server != server)
-			ptr = ptr->next;
-		if (ptr->next)
-		{
-			lptr = ptr->next;
-			ptr->next = ptr->next->next;
-			free(lptr);
-		}
-	}
-	spinlock_release(&handle->lock);
 }
 
 /**
@@ -247,7 +195,8 @@ MONITOR_SERVERS	*ptr, *lptr;
 static void
 diagnostics(DCB *dcb, void *arg)
 {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
+    MONITOR* mon = arg;
+MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)mon->handle;
 MONITOR_SERVERS	*db;
 char		*sep;
 
@@ -264,13 +213,13 @@ char		*sep;
 		break;
 	}
 
-	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", handle->interval);
-	dcb_printf(dcb,"\tConnect Timeout:\t%i seconds\n", handle->connect_timeout);
-	dcb_printf(dcb,"\tRead Timeout:\t\t%i seconds\n", handle->read_timeout);
-	dcb_printf(dcb,"\tWrite Timeout:\t\t%i seconds\n", handle->write_timeout);
+	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", mon->interval);
+	dcb_printf(dcb,"\tConnect Timeout:\t%i seconds\n", mon->connect_timeout);
+	dcb_printf(dcb,"\tRead Timeout:\t\t%i seconds\n", mon->read_timeout);
+	dcb_printf(dcb,"\tWrite Timeout:\t\t%i seconds\n", mon->write_timeout);
 	dcb_printf(dcb, "\tMonitored servers:	");
 
-	db = handle->databases;
+	db = mon->databases;
 	sep = "";
 	while (db)
 	{
@@ -282,40 +231,18 @@ char		*sep;
 }
 
 /**
- * Set the default username and password to use to monitor if the server does not
- * override this.
- *
- * @param arg           The handle allocated by startMonitor
- * @param uname         The default user name
- * @param passwd        The default password
- */
-static void
-defaultUsers(void *arg, char *uname, char *passwd)
-{
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
-
- 	if (handle->defaultUser)
-		free(handle->defaultUser);
-	if (handle->defaultPasswd)
-		free(handle->defaultPasswd);
-	handle->defaultUser = strdup(uname);
-	handle->defaultPasswd = strdup(passwd);
-}
-
-/**
  * Monitor an individual server
  *
  * @param database	The database to probe
  */
 static void
-monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPasswd, MYSQL_MONITOR *handle)
+monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPasswd, MONITOR *mon)
 {
+    MYSQL_MONITOR* handle = mon->handle;
 MYSQL_ROW	row;
 MYSQL_RES	*result;
-int		num_fields;
 int		isjoined = 0;
 char            *uname = defaultUser, *passwd = defaultPasswd;
-unsigned long int	server_version = 0;
 char 			*server_string;
 
 	if (database->server->monuser != NULL)
@@ -333,18 +260,17 @@ char 			*server_string;
 	if (database->con == NULL || mysql_ping(database->con) != 0)
 	{
 		char *dpwd = decryptPassword(passwd);
-		int rc;
-                int connect_timeout = handle->connect_timeout;
-                int read_timeout = handle->read_timeout;
-                int write_timeout = handle->write_timeout;
+                int connect_timeout = mon->connect_timeout;
+                int read_timeout = mon->read_timeout;
+                int write_timeout = mon->write_timeout;
 
 		if(database->con)
 		    mysql_close(database->con);
                 database->con = mysql_init(NULL);
 
-                rc = mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
-                rc = mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
-                rc = mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
+                mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
+                mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+                mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
 
 		if (mysql_real_connect(database->con, database->server->name,
 			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
@@ -375,9 +301,6 @@ char 			*server_string;
 	/* If we get this far then we have a working connection */
 	server_set_status(database->server, SERVER_RUNNING);
 
-	/* get server version from current server */
-	server_version = mysql_get_server_version(database->con);
-
 	/* get server version string */
 	server_string = (char *)mysql_get_server_info(database->con);
 	if (server_string) {
@@ -390,7 +313,6 @@ char 			*server_string;
 	if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
-		num_fields = mysql_num_fields(result);
 		while ((row = mysql_fetch_row(result)))
 		{
 			if (atoi(row[1]) > 0)
@@ -404,7 +326,6 @@ char 			*server_string;
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
 		long cluster_node_id = -1;
-		num_fields = mysql_num_fields(result);
 		while ((row = mysql_fetch_row(result)))
 		{
 			cluster_node_id = strtol(row[1], NULL, 10);
@@ -435,10 +356,14 @@ char 			*server_string;
 static void
 monitorMain(void *arg)
 {
-MYSQL_MONITOR	*handle = (MYSQL_MONITOR *)arg;
+    MONITOR* mon = arg;
+MYSQL_MONITOR	*handle;
 MONITOR_SERVERS	*ptr;
-long master_id;
 size_t nrounds = 0;
+
+spinlock_acquire(&mon->lock);
+handle = (MYSQL_MONITOR *)mon->handle;
+spinlock_release(&mon->lock);
 
 	if (mysql_thread_init())
 	{
@@ -469,22 +394,21 @@ size_t nrounds = 0;
 		 * round.
 		 */ 
 		if (nrounds != 0 && 
-			((nrounds*MON_BASE_INTERVAL_MS)%handle->interval) >= 
+			((nrounds*MON_BASE_INTERVAL_MS)%mon->interval) >=
 			MON_BASE_INTERVAL_MS) 
 		{
 			nrounds += 1;
 			continue;
 		}
 		nrounds += 1;
-		master_id = -1;
-		ptr = handle->databases;
+		ptr = mon->databases;
 
 		while (ptr)
 		{
-			unsigned int prev_status = ptr->server->status;
-			monitorDatabase(ptr, handle->defaultUser, handle->defaultPasswd,handle);
+			ptr->mon_prev_status = ptr->server->status;
+			monitorDatabase(ptr, mon->user, mon->password,mon);
 
-			if (ptr->server->status != prev_status ||
+			if (ptr->server->status != ptr->mon_prev_status ||
 				SERVER_IS_DOWN(ptr->server))
 			{
 				LOGIF(LD, (skygw_log_write_flush(
@@ -497,80 +421,64 @@ size_t nrounds = 0;
 
 			ptr = ptr->next;
 		}
+
+		ptr = mon->databases;
+		monitor_event_t evtype;
+
+		while(ptr)
+		{
+		    /** Execute monitor script if a server state has changed */
+		    if(mon_status_changed(ptr))
+		    {
+			evtype = mon_get_event_type(ptr);
+			if(isNdbEvent(evtype))
+			{
+			    skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
+				     ptr->server->unique_name,
+				     ptr->server->name,ptr->server->port,
+				     mon_get_event_name(ptr));
+			    if(handle->script && handle->events[evtype])
+			    {
+				monitor_launch_script(mon,ptr,handle->script);
+			    }
+			}
+		    }
+		    ptr = ptr->next;
+		}
 	}
 }
 
-/**
- * Set the monitor sampling interval.
- *
- * @param arg           The handle allocated by startMonitor
- * @param interval      The interval to set in monitor struct, in milliseconds
- */
-static void
-setInterval(void *arg, size_t interval)
-{
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
-	memcpy(&handle->interval, &interval, sizeof(unsigned long));
-}
+
+static monitor_event_t ndb_events[] = {
+  MASTER_DOWN_EVENT,
+  MASTER_UP_EVENT,
+  SLAVE_DOWN_EVENT,
+  SLAVE_UP_EVENT,
+  SERVER_DOWN_EVENT,
+  SERVER_UP_EVENT,
+  NDB_UP_EVENT,
+  NDB_DOWN_EVENT,
+  LOST_MASTER_EVENT,
+  LOST_SLAVE_EVENT,
+  LOST_NDB_EVENT,
+  NEW_MASTER_EVENT,
+  NEW_SLAVE_EVENT,
+  NEW_NDB_EVENT,
+  MAX_MONITOR_EVENT
+};
 
 /**
- * Set the timeouts to use in the monitor.
- *
- * @param arg           The handle allocated by startMonitor
- * @param type          The connect timeout type
- * @param value         The timeout value to set
+ * Check if the event type is one the ndbcustermonitor is interested in.
+ * @param event Event to check
+ * @return True if the event is monitored, false if it is not
  */
-static void
-setNetworkTimeout(void *arg, int type, int value)
+bool isNdbEvent(monitor_event_t event)
 {
-MYSQL_MONITOR   *handle = (MYSQL_MONITOR *)arg;
-int max_timeout = (int)(handle->interval/1000);
-int new_timeout = max_timeout -1;
-
-	if (new_timeout <= 0)
-		new_timeout = DEFAULT_CONNECT_TIMEOUT;
-
-	switch(type) {
-		case MONITOR_CONNECT_TIMEOUT:
-			if (value < max_timeout) {
-				memcpy(&handle->connect_timeout, &value, sizeof(int));
-			} else {
-				memcpy(&handle->connect_timeout, &new_timeout, sizeof(int));
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"warning : Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
-					", lowering to %i seconds", value, max_timeout, new_timeout)));
-			}
-			break;
-
-		case MONITOR_READ_TIMEOUT:
-			if (value < max_timeout) {
-				memcpy(&handle->read_timeout, &value, sizeof(int));
-			} else {
-				memcpy(&handle->read_timeout, &new_timeout, sizeof(int));
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-						"warning : Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
-						", lowering to %i seconds", value, max_timeout, new_timeout)));
-			}
-			break;
-
-                case MONITOR_WRITE_TIMEOUT:
-			if (value < max_timeout) {
-				memcpy(&handle->write_timeout, &value, sizeof(int));
-			} else {
-				memcpy(&handle->write_timeout, &new_timeout, sizeof(int));
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"warning : Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
-					", lowering to %i seconds", value, max_timeout, new_timeout)));
-			}
-			break;
-		default:
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : Monitor setNetworkTimeout received an unsupported action type %i", type)));
-			break;
-	}
+    int i;
+    for(i = 0;ndb_events[i] != MAX_MONITOR_EVENT;i++)
+    {
+	if(event == ndb_events[i])
+	    return true;
+    }
+    return false;
 }
-

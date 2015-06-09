@@ -28,6 +28,7 @@
  * 					and monitor id
  * 30/10/14	Massimiliano Pinto	Addition of disable_master_failback parameter
  * 07/11/14	Massimiliano Pinto	Addition of monitor network timeouts
+ * 08/05/15     Markus Makela           Moved common monitor variables to MONITOR struct
  *
  * @endverbatim
  */
@@ -65,8 +66,6 @@ MONITOR	*mon;
 	{
 		return NULL;
 	}
-	mon->state = MONITOR_STATE_ALLOC;
-	mon->name = strdup(name);
 
 	if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
 	{
@@ -74,13 +73,19 @@ MONITOR	*mon;
                                    LOGFILE_ERROR,
                                    "Error : Unable to load monitor module '%s'.",
                                    name)));
-                free(mon->name);
 		free(mon);
 		return NULL;
 	}
-	
+	mon->state = MONITOR_STATE_ALLOC;
+	mon->name = strdup(name);
 	mon->handle = NULL;
-
+	mon->databases = NULL;
+	mon->password = NULL;
+	mon->read_timeout = DEFAULT_READ_TIMEOUT;
+	mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
+	mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+	mon->interval = MONITOR_INTERVAL;
+	spinlock_init(&mon->lock);
 	spinlock_acquire(&monLock);
 	mon->next = allMonitors;
 	allMonitors = mon;
@@ -100,7 +105,7 @@ monitor_free(MONITOR *mon)
 {
 MONITOR	*ptr;
 
-	mon->module->stopMonitor(mon->handle);
+	mon->module->stopMonitor(mon);
 	mon->state = MONITOR_STATE_FREED;
 	spinlock_acquire(&monLock);
 	if (allMonitors == mon)
@@ -127,8 +132,10 @@ MONITOR	*ptr;
 void
 monitorStart(MONITOR *monitor, void* params)
 {
-	monitor->handle = (*monitor->module->startMonitor)(monitor->handle,params);
+	spinlock_acquire(&monitor->lock);
+	monitor->handle = (*monitor->module->startMonitor)(monitor,params);
 	monitor->state = MONITOR_STATE_RUNNING;
+	spinlock_release(&monitor->lock);
 }
 
 /**
@@ -142,7 +149,7 @@ monitorStop(MONITOR *monitor)
     if(monitor->state != MONITOR_STATE_STOPPED)
     {
 	monitor->state = MONITOR_STATE_STOPPING;
-	monitor->module->stopMonitor(monitor->handle);
+	monitor->module->stopMonitor(monitor);
 	monitor->state = MONITOR_STATE_STOPPED;
     }
 }
@@ -175,7 +182,31 @@ MONITOR	*ptr;
 void
 monitorAddServer(MONITOR *mon, SERVER *server)
 {
-	mon->module->registerServer(mon->handle, server);
+    MONITOR_SERVERS	*ptr, *db;
+
+    if ((db = (MONITOR_SERVERS *)malloc(sizeof(MONITOR_SERVERS))) == NULL)
+		return;
+	db->server = server;
+	db->con = NULL;
+	db->next = NULL;
+        db->mon_err_count = 0;
+	/** Server status is uninitialized */
+        db->mon_prev_status = -1;
+	/* pending status is updated by get_replication_tree */
+	db->pending_status = 0;
+
+	spinlock_acquire(&mon->lock);
+
+	if (mon->databases == NULL)
+		mon->databases = db;
+	else
+	{
+		ptr = mon->databases;
+		while (ptr->next != NULL)
+			ptr = ptr->next;
+		ptr->next = db;
+	}
+	spinlock_release(&mon->lock);
 }
 
 /**
@@ -189,7 +220,8 @@ monitorAddServer(MONITOR *mon, SERVER *server)
 void
 monitorAddUser(MONITOR *mon, char *user, char *passwd)
 {
-	mon->module->defaultUser(mon->handle, user, passwd);
+    mon->user = strdup(user);
+    mon->password = strdup(passwd);
 }
 
 /**
@@ -209,7 +241,7 @@ MONITOR	*ptr;
 		dcb_printf(dcb, "Monitor: %p\n", ptr);
 		dcb_printf(dcb, "\tName:		%s\n", ptr->name);
 		if (ptr->module->diagnostics)
-			ptr->module->diagnostics(dcb, ptr->handle);
+			ptr->module->diagnostics(dcb, ptr);
 		ptr = ptr->next;
 	}
 	spinlock_release(&monLock);
@@ -227,7 +259,7 @@ monitorShow(DCB *dcb, MONITOR *monitor)
 	dcb_printf(dcb, "Monitor: %p\n", monitor);
 	dcb_printf(dcb, "\tName:		%s\n", monitor->name);
 	if (monitor->module->diagnostics)
-		monitor->module->diagnostics(dcb, monitor->handle);
+		monitor->module->diagnostics(dcb, monitor);
 }
 
 /**
@@ -288,10 +320,7 @@ MONITOR	*ptr;
 void
 monitorSetInterval (MONITOR *mon, unsigned long interval)
 {
-	if (mon->module->setInterval != NULL) {
-		mon->interval = interval;
-		mon->module->setInterval(mon->handle, interval);
-	}
+    mon->interval = interval;
 }
 
 /**
@@ -303,9 +332,55 @@ monitorSetInterval (MONITOR *mon, unsigned long interval)
  */
 void
 monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
-	if (mon->module->setNetworkTimeout != NULL) {
-		mon->module->setNetworkTimeout(mon->handle, type, value);
+	
+    int max_timeout = (int)(mon->interval/1000);
+    int new_timeout = max_timeout -1;
+
+    if (new_timeout <= 0)
+	new_timeout = DEFAULT_CONNECT_TIMEOUT;
+
+    switch(type) {
+    case MONITOR_CONNECT_TIMEOUT:
+	if (value < max_timeout) {
+	    memcpy(&mon->connect_timeout, &value, sizeof(int));
+	} else {
+	    memcpy(&mon->connect_timeout, &new_timeout, sizeof(int));
+	    LOGIF(LE, (skygw_log_write_flush(
+		    LOGFILE_ERROR,
+					     "warning : Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
+		    ", lowering to %i seconds", value, max_timeout, new_timeout)));
 	}
+	break;
+
+    case MONITOR_READ_TIMEOUT:
+	if (value < max_timeout) {
+	    memcpy(&mon->read_timeout, &value, sizeof(int));
+	} else {
+	    memcpy(&mon->read_timeout, &new_timeout, sizeof(int));
+	    LOGIF(LE, (skygw_log_write_flush(
+		    LOGFILE_ERROR,
+					     "warning : Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
+		    ", lowering to %i seconds", value, max_timeout, new_timeout)));
+	}
+	break;
+
+    case MONITOR_WRITE_TIMEOUT:
+	if (value < max_timeout) {
+	    memcpy(&mon->write_timeout, &value, sizeof(int));
+	} else {
+	    memcpy(&mon->write_timeout, &new_timeout, sizeof(int));
+	    LOGIF(LE, (skygw_log_write_flush(
+		    LOGFILE_ERROR,
+					     "warning : Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
+		    ", lowering to %i seconds", value, max_timeout, new_timeout)));
+	}
+	break;
+    default:
+	LOGIF(LE, (skygw_log_write_flush(
+		LOGFILE_ERROR,
+					 "Error : Monitor setNetworkTimeout received an unsupported action type %i", type)));
+	break;
+    }
 }
 
 /**

@@ -77,6 +77,9 @@ macro(set_variables)
   # Build extra tools
   set(BUILD_TOOLS FALSE CACHE BOOL "Build extra utility tools")
 
+  # Profiling
+  set(PROFILE FALSE CACHE BOOL "Profiling (gprof)")
+
 endmacro()
 
 macro(check_deps)
