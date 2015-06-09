@@ -1026,7 +1026,19 @@ int dcb_read_SSL(
 				STRDCBSTATE(dcb->state),
 				dcb->fd,
 				ssl_errno,
-				errbuf)));
+				strerror(errno))));
+
+			    if(ssl_errno == SSL_ERROR_SSL ||
+			     ssl_errno == SSL_ERROR_SYSCALL)
+			    {
+				while((ssl_errno = ERR_get_error()) != 0)
+				{
+				    ERR_error_string(ssl_errno,errbuf);
+				    skygw_log_write(LE,
+					     "%s",
+					     errbuf);
+				}
+			    }
 			}
 
 			gwbuf_free(buffer);
@@ -2850,6 +2862,7 @@ int dcb_accept_SSL(DCB* dcb)
 	    break;
 
 	case -1:
+
 	    errnum = SSL_get_error(dcb->ssl,ssl_rval);
 
 	    if(errnum == SSL_ERROR_WANT_READ || errnum == SSL_ERROR_WANT_WRITE)
@@ -2864,12 +2877,22 @@ int dcb_accept_SSL(DCB* dcb)
 	    else
 	    {
 		rval = -1;
-		ERR_error_string(errnum,errbuf);
-		skygw_log_write_flush(LE,
-				 "Error: Fatal error in SSL_accept for %s: (SSL error code: %d) %s",
-				 dcb->remote,
-				 errnum,
+		skygw_log_write(LE,
+			 "Error: Fatal error in SSL_accept for %s: (SSL error code: %d):%s",
+			 dcb->remote,
+			 errnum,
+			 strerror(errno));
+		if(errnum == SSL_ERROR_SSL ||
+		 errnum == SSL_ERROR_SYSCALL)
+		{
+		    while((errnum = ERR_get_error()) != 0)
+		    {
+			ERR_error_string(errnum,errbuf);
+			skygw_log_write(LE,
+				 "%s",
 				 errbuf);
+		    }
+		}
 	    }
 	    break;
 
