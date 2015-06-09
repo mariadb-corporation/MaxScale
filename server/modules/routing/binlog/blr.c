@@ -1254,9 +1254,9 @@ const char	*mysql_error_msg = NULL;
 const char	*mysql_state = NULL;
 GWBUF		*errbuf = NULL;
         
-        mysql_errno = 2003;
+        mysql_errno = 1064;
         mysql_error_msg = "An errorr occurred ...";
-        mysql_state = "HY000";
+        mysql_state = "42000";
         
         field_count = 0xff;
         gw_mysql_set_byte2(mysql_err, mysql_errno);

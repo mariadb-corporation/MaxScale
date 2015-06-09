@@ -154,7 +154,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		break;
 	default:
 		blr_send_custom_error(slave->dcb, 1, 0,
-			"MySQL command not supported by the binlog router.");
+			"You have an error in your SQL syntax; Check the syntax the MaxScale binlog router accepts.");
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
 			"Unexpected MySQL Command (%d) received from slave",
@@ -516,7 +516,7 @@ int	query_len;
 	LOGIF(LE, (skygw_log_write(
 		LOGFILE_ERROR, "Unexpected query from slave server %s", query_text)));
 	free(query_text);
-	blr_slave_send_error(router, slave, "Unexpected SQL query received from slave.");
+	blr_slave_send_error(router, slave, "You have an error in your SQL syntax; Check the syntax the MaxScale binlog router accepts.");
 	return 1;
 }
 
@@ -572,9 +572,8 @@ int             len;
         data[3] = 1;				// Sequence id
 						// Payload
         data[4] = 0xff;				// Error indicator
-	data[5] = 0;				// Error Code
-	data[6] = 0;				// Error Code
-	strncpy((char *)&data[7], "#00000", 6);
+	encode_value(&data[5], 1064, 16);// Error Code
+	strncpy((char *)&data[7], "#42000", 6);
         memcpy(&data[13], msg, strlen(msg));	// Error Message
 	slave->dcb->func.write(slave->dcb, pkt);
 }
@@ -909,13 +908,19 @@ char    *dyn_column=NULL;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	strcpy(column, "Yes");
+	if (router->master_state != BLRM_SLAVE_STOPPED)
+		strcpy(column, "Yes");
+	else
+		strcpy(column, "No");
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	strcpy(column, "Yes");
+	if (router->master_state != BLRM_SLAVE_STOPPED)
+		strcpy(column, "Yes");
+	else
+		strcpy(column, "No");
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
@@ -1054,7 +1059,16 @@ char    *dyn_column=NULL;
 	*ptr++ = 0xfb;				// NULL value
 
 	/* Slave_Running_State */
-	strcpy(column, "Slave running");
+	if (router->master_state == BLRM_SLAVE_STOPPED)
+		strcpy(column, "Slave stopped");
+	else if (!router->m_errno)
+		strcpy(column, "Slave running");
+	else {
+		if (router->master_state < BLRM_BINLOGDUMP)
+			strcpy(column, "Registering");
+		else
+			strcpy(column, "Error");
+	}
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
