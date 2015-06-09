@@ -85,11 +85,11 @@ static	SPINLOCK	zombiespin = SPINLOCK_INIT;
 
 static void dcb_final_free(DCB *dcb);
 static bool dcb_set_state_nolock(
-        DCB*              dcb,
-        const dcb_state_t new_state,
-        dcb_state_t*      old_state);
+        DCB                 *dcb,
+        const dcb_state_t   new_state,
+        dcb_state_t         *old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
-static DCB* dcb_get_next (DCB* dcb);
+static DCB* dcb_get_next (DCB *dcb);
 static int  dcb_null_write(DCB *dcb, GWBUF *buf);
 static int  dcb_null_close(DCB *dcb);
 static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
@@ -97,7 +97,7 @@ static int  dcb_isvalid_nolock(DCB *dcb);
 static void dcb_close_finish(DCB *);
 
 size_t dcb_get_session_id(
-	DCB* dcb)
+	DCB *dcb)
 {
 	size_t rval;
 	
@@ -125,9 +125,9 @@ size_t dcb_get_session_id(
  *parameters was NULL.
  */ 
 bool dcb_get_ses_log_info(
-	DCB*    dcb,
-	size_t* sesid,
-	int*    enabled_logs)
+	DCB     *dcb,
+	size_t  *sesid,
+	int     *enabled_logs)
 {
 	bool succp;
 	
@@ -458,8 +458,8 @@ DCB *
 dcb_process_zombies(int threadid)
 {
 DCB	*ptr, *lptr;
-DCB*    dcb_list = NULL;
-DCB*    dcb = NULL;
+DCB     *dcb_list = NULL;
+DCB     *dcb = NULL;
 bool    succp = false;
 
 	/**
@@ -1733,8 +1733,8 @@ dcb_isclient(DCB *dcb)
  * @param table		The hash table
  */
 void dcb_hashtable_stats(
-        DCB*  dcb,
-        void* table)
+        DCB     *dcb,
+        void    *table)
 {
         int total;
         int longest;
@@ -1759,12 +1759,12 @@ void dcb_hashtable_stats(
 
 
 bool dcb_set_state(
-        DCB*              dcb,
-        const dcb_state_t new_state,
-        dcb_state_t*      old_state_ptr)
+        DCB                 *dcb,
+        const dcb_state_t   new_state,
+        dcb_state_t         *old_state_ptr)
 {
-        bool              succp;
-        dcb_state_t       old_state_buffer;
+        bool                succp;
+        dcb_state_t         old_state_buffer;
         
         CHK_DCB(dcb);
         
@@ -1780,9 +1780,9 @@ bool dcb_set_state(
 }
 
 static bool dcb_set_state_nolock(
-        DCB*                dcb,
+        DCB                 *dcb,
         const dcb_state_t   new_state,
-        dcb_state_t*        old_state_ptr)
+        dcb_state_t         *old_state_ptr)
 {
         bool                succp = false;
         bool                old_state_supplied = true;
@@ -2188,7 +2188,7 @@ int	rval = 0;
  * @return	The pointer to the next DCB or NULL if this is the last
  */
 static DCB *
-dcb_get_next (DCB* dcb)
+dcb_get_next (DCB *dcb)
 {
         spinlock_acquire(&dcbspin);
         if (dcb) {
@@ -2221,7 +2221,7 @@ dcb_call_foreach(struct server* server, DCB_REASON reason)
                 case DCB_REASON_HUP:
                 case DCB_REASON_NOT_RESPONDING: 
                 {
-                        DCB* dcb;
+                        DCB *dcb;
                         dcb = dcb_get_next(NULL);
                         
                         while (dcb != NULL)
