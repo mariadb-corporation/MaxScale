@@ -374,6 +374,12 @@ char	query[128];
 		msg_len = len-7-6; // +7 is where msg starts, 6 is skipped the status message (#42000)
 		msg_err = (char *)malloc(msg_len + 1);
 
+		// skip status message only as MYSQL_RESPONSE_ERR(buf) points to GWBUF_DATA(buf) +7
+		strncpy(msg_err, (char *)(MYSQL_ERROR_MSG(buf) + 6), msg_len);
+
+		/* NULL terminated error string */
+		*(msg_err+msg_len)='\0';
+
 		LOGIF(LE, (skygw_log_write(
 			LOGFILE_ERROR,
 			"%s: Received error: %u, '%s' from master during '%s' phase "
