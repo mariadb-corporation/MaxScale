@@ -131,6 +131,8 @@ SERVER *ptr;
 		free(server->unique_name);
 	if (server->server_string)
 		free(server->server_string);
+        if (server->persistent)
+            dcb_persistent_clean_count(server->persistent, true);
 	free(server);
 	return 1;
 }
@@ -146,7 +148,7 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
 {
     DCB *dcb, *previous = NULL;
     
-    if (server->persistent && dcb_persistent_clean_count(server->persistent) && server->persistent)
+    if (server->persistent && dcb_persistent_clean_count(server->persistent, false) && server->persistent)
     {
         spinlock_acquire(&server->persistlock);
         dcb = server->persistent;

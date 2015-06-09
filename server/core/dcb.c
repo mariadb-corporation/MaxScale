@@ -1324,7 +1324,7 @@ dcb_close(DCB *dcb)
                 && strlen(user)
                 && dcb->server 
                 && dcb->server->persistpoolmax 
-                && dcb_persistent_clean_count(dcb) < dcb->server->persistpoolmax)
+                && dcb_persistent_clean_count(dcb, false) < dcb->server->persistpoolmax)
             {
                 dcb->user = strdup(user);
                 dcb->persistentstart = time(NULL);
@@ -2308,7 +2308,7 @@ dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
  * @param dcb		The DCB being closed.
  */
 int
-dcb_persistent_clean_count(DCB *dcb)
+dcb_persistent_clean_count(DCB *dcb, bool cleanall)
 {
     int count = 0;
     if (dcb && dcb->server)
@@ -2320,7 +2320,7 @@ dcb_persistent_clean_count(DCB *dcb)
         CHK_SERVER(server);
         while (persistentdcb) {
             CHK_DCB(persistentdcb);
-            if (count >= server->persistpoolmax || difftime(time(NULL), persistentdcb->persistentstart) > server->persistmaxtime)
+            if (cleanall || count >= server->persistpoolmax || difftime(time(NULL), persistentdcb->persistentstart) > server->persistmaxtime)
             {
                 if (previousdcb) {
                     previousdcb->nextpersistent = persistentdcb->nextpersistent;
@@ -2333,12 +2333,12 @@ dcb_persistent_clean_count(DCB *dcb)
                 dcb_call_callback(persistentdcb, DCB_REASON_CLOSE);
                 dcb_add_to_zombieslist(persistentdcb);
                 atomic_add(&server->stats.n_persistent, -1);
-                atomic_add(&server->stats.n_connections, -1);
             }
             else 
             {
                 count++;
             }
+            previousdcb = persistentdcb;
             persistentdcb = persistentdcb->nextpersistent;
         }
     }
