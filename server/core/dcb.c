@@ -2287,7 +2287,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
         spinlock_acquire(&server->persistlock);
         while (persistentdcb) {
             CHK_DCB(persistentdcb);
-            if (cleanall || count >= server->persistpoolmax || difftime(time(NULL), persistentdcb->persistentstart) > server->persistmaxtime)
+            if (cleanall || count >= server->persistpoolmax || time(NULL) - persistentdcb->persistentstart > server->persistmaxtime)
             {
                 if (previousdcb) {
                     previousdcb->nextpersistent = persistentdcb->nextpersistent;
@@ -2298,6 +2298,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
                 }
                 persistentdcb->nextpersistent = disposals;
                 disposals = persistentdcb;
+                atomic_add(&server->stats.n_persistent, -1);
             }
             else 
             {
