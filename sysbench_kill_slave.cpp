@@ -69,8 +69,9 @@ int main(int argc, char *argv[])
 
         printf("Starting VM back\n"); fflush(stdout);
         if ((old_slave >= 1) && (old_slave <= Test->repl->N)) {
-            sprintf(&sys1[0], "%s %s", Test->start_vm_command, Test->repl->IP[old_slave]);
-            system(sys1);fflush(stdout);
+            //sprintf(&sys1[0], "%s %s", Test->start_vm_command, Test->repl->IP[old_slave]);
+            //system(sys1);fflush(stdout);
+            Test->repl->unblock_node(old_slave);
         }
         sleep(60);
         printf("Restarting replication\n"); fflush(stdout);
@@ -118,7 +119,8 @@ void *kill_vm_thread( void *ptr )
     }
     char sys1[4096];
     printf("Killing VM %s\n", Test->repl->IP[old_slave]); fflush(stdout);
-    sprintf(&sys1[0], "%s %s", Test->kill_vm_command, Test->repl->IP[old_slave]);
-    system(sys1);
+    //sprintf(&sys1[0], "%s %s", Test->kill_vm_command, Test->repl->IP[old_slave]);
+    //system(sys1);
+    Test->repl->block_node(old_slave);
     return NULL;
 }

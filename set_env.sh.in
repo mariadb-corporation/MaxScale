@@ -57,7 +57,10 @@ export maxscale_cnf="$maxdir/etc/MaxScale.cnf"
 export maxscale_log_dir="$maxdir/log/"
 export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
 
-export test_dir="$maxdir/system-test/"
+pushd `dirname $0` > /dev/null
+export test_dir=`pwd`
+popd > /dev/null
+
 export maxscale_binlog_dir="/var/lib/maxscale/Binlog_Service/"
 
 
@@ -118,3 +121,6 @@ export maxscale_sshkey=$SSHKeysDir/`cat $TestVMsDir/image_name_$maxscale_IP`
 
 # Sysbench directory (should be sysbench >= 0.5)
 export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
+
+export access_sudo=""
+export access_user="root"

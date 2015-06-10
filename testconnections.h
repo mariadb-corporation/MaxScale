@@ -164,6 +164,16 @@ public:
     char test_dir[4096];
 
     /**
+     * @brief access_user username to access test machines
+     */
+    char access_user[256];
+
+    /**
+     * @brief access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
+     */
+    char access_sudo[64];
+
+    /**
      * @brief no_maxscale_stop if true copy_all_logs() does not stop Maxscale
      */
     bool no_maxscale_stop;
