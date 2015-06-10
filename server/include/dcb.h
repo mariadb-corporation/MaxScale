@@ -221,9 +221,7 @@ typedef struct dcb_callback {
  * gateway may be selected to execute the required actions when a network event occurs.
  */
 typedef struct dcb {
-#if defined(SS_DEBUG)
         skygw_chk_t     dcb_chk_top;
-#endif
 	bool            dcb_errhandle_called; /*< this can be called only once */
 	dcb_role_t      dcb_role;
         SPINLOCK        dcb_initlock;
@@ -268,10 +266,8 @@ typedef struct dcb {
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
 	struct server	*server;	/**< The associated backend server */
-#if defined(SS_DEBUG)
         int             dcb_port;       /**< port of target server */
         skygw_chk_t     dcb_chk_tail;
-#endif
 } DCB;
 
 /**
