@@ -74,7 +74,7 @@ int gw_MySQLWrite_client_SSL(DCB *dcb, GWBUF *queue);
 int gw_write_client_event_SSL(DCB *dcb);
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int MySQLSendHandshake(DCB* dcb);
-static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
+static int gw_mysql_do_authentication(DCB *dcb, GWBUF **queue);
 static int route_by_statement(SESSION *, GWBUF **);
 extern char* get_username_from_auth(char* ptr, uint8_t* data);
 extern int check_db_name_after_auth(DCB *, char *, int);
@@ -402,7 +402,8 @@ MySQLSendHandshake(DCB* dcb)
  * @note in case of failure, dcb->data is freed before returning. If succeed,
  * dcb->data is freed in session.c:session_free.
  */
-static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
+static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
+    GWBUF* queue = *buf;
 	MySQLProtocol *protocol = NULL;
 	/* int compress = -1; */
 	int connect_with_db = -1;
@@ -464,45 +465,57 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                         &protocol->client_capabilities);
         */
 
-	if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_DONE)
-	    goto ssl_hs_done;
-	
-	ssl = protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
-
-	/** Client didn't requested SSL when SSL mode was required*/
-	if(!ssl && protocol->owner_dcb->service->ssl_mode == SSL_REQUIRED)
+	/** Skip this if the SSL handshake is already done.
+	 * If not, start the SSL handshake.  */
+	if(protocol->protocol_auth_state != MYSQL_AUTH_SSL_HANDSHAKE_DONE)
 	{
-	    LOGIF(LT,(skygw_log_write(LT,"User %s@%s connected to service '%s' without SSL when SSL was required.",
-		    protocol->owner_dcb->user,
-	            protocol->owner_dcb->remote,
-		    protocol->owner_dcb->service->name)));
-	    return MYSQL_FAILED_AUTH_SSL;
-	}
 
-	if(LOG_IS_ENABLED(LT) && ssl)
-	{
-	    skygw_log_write(LT,"User %s@%s connected to service '%s' with SSL.",
-		    protocol->owner_dcb->user,
-		    protocol->owner_dcb->remote,
-		    protocol->owner_dcb->service->name);
-	}
+	    ssl = protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 
-	/** Do the SSL Handshake */
-	if(ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED)
-	{
-	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
-
-	    if(do_ssl_accept(protocol) < 0)
+	    /** Client didn't requested SSL when SSL mode was required*/
+	    if(!ssl && protocol->owner_dcb->service->ssl_mode == SSL_REQUIRED)
 	    {
-		return MYSQL_FAILED_AUTH;
+		LOGIF(LT,(skygw_log_write(LT,"User %s@%s connected to service '%s' without SSL when SSL was required.",
+					 protocol->owner_dcb->user,
+					 protocol->owner_dcb->remote,
+					 protocol->owner_dcb->service->name)));
+		return MYSQL_FAILED_AUTH_SSL;
 	    }
-	    else
+
+	    if(LOG_IS_ENABLED(LT) && ssl)
 	    {
-		return 0;
+		skygw_log_write(LT,"User %s@%s connected to service '%s' with SSL.",
+			 protocol->owner_dcb->user,
+			 protocol->owner_dcb->remote,
+			 protocol->owner_dcb->service->name);
+	    }
+
+	    /** Do the SSL Handshake */
+	    if(ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED)
+	    {
+		protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
+
+		if(do_ssl_accept(protocol) < 0)
+		{
+		    return MYSQL_FAILED_AUTH;
+		}
+		else
+		{
+		    return 0;
+		}
+	    }
+	    else if(dcb->service->ssl_mode == SSL_ENABLED)
+	    {
+		/** This is a non-SSL connection to a SSL enabled service
+		 * and we need to read the rest of the packet from the socket for the username */
+		int bytes = dcb_read(dcb,&queue);
+		queue = gwbuf_make_contiguous(queue);
+		client_auth_packet = GWBUF_DATA(queue);
+		client_auth_packet_size = gwbuf_length(queue);
+		*buf = queue;
+		LOGIF(LD,(skygw_log_write(LD,"%lu Read %d bytes from fd %d",pthread_self(),bytes,dcb->fd)));
 	    }
 	}
-
-	ssl_hs_done:
 
 	username = get_username_from_auth(username, client_auth_packet);
 	
@@ -848,7 +861,7 @@ int gw_read_client_event(
         {
 		int auth_val;
 		
-                auth_val = gw_mysql_do_authentication(dcb, read_buffer);
+                auth_val = gw_mysql_do_authentication(dcb, &read_buffer);
 
 		if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ ||
 		 protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_ONGOING ||
@@ -955,7 +968,7 @@ int gw_read_client_event(
 	{
 	    int auth_val;
 
-	    auth_val = gw_mysql_do_authentication(dcb, read_buffer);
+	    auth_val = gw_mysql_do_authentication(dcb, &read_buffer);
 
 
 	    if (auth_val == 0)
