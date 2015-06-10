@@ -2281,6 +2281,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
         SERVER *server = dcb->server;
         DCB *previousdcb = NULL;
         DCB *persistentdcb = server->persistent;
+        DCB *disposals = NULL;
     
         CHK_SERVER(server);
         spinlock_acquire(&server->persistlock);
@@ -2295,8 +2296,8 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
                 {
                     server->persistent = persistentdcb->nextpersistent;
                 }
-                /** Call possible callback for this DCB in case of close */
-                dcb_close_finish(persistentdcb);
+                persistentdcb->nextpersistent = disposals;
+                disposals = persistentdcb;
             }
             else 
             {
@@ -2306,6 +2307,12 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
             persistentdcb = persistentdcb->nextpersistent;
         }
         spinlock_release(&server->persistlock);
+        /** Call possible callback for this DCB in case of close */
+        while (persistentdcb = disposals)
+        {
+            dcb_close_finish(persistentdcb);
+            disposals = disposals->nextpersistent;
+        }
     }
     return count;
 }
