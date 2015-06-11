@@ -1926,6 +1926,7 @@ int serviceInitSSL(SERVICE* service)
 	}
 
 	service->ctx = SSL_CTX_new(service->method);
+	SSL_CTX_set_options(service->ctx,SSL_OP_ALL);
 
 	if(rsa_512 == NULL)
 	{
