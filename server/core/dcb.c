@@ -1046,7 +1046,7 @@ int dcb_read_SSL(
         int   rc;
         int   n;
         int   nread = 0;
-
+	int ssl_errno = 0;
         CHK_DCB(dcb);
 
 	if (dcb->fd <= 0)
@@ -1062,7 +1062,7 @@ int dcb_read_SSL(
 	while (true)
         {
                 int bufsize;
-		int ssl_errno = 0;
+		ssl_errno = 0;
                 rc = ioctl(dcb->fd, FIONREAD, &b);
 		pending = SSL_pending(dcb->ssl);
                 if (rc == -1)
@@ -1096,9 +1096,9 @@ int dcb_read_SSL(
 				    if(ssl_errno != SSL_ERROR_WANT_READ &&
 				     ssl_errno != SSL_ERROR_WANT_WRITE &&
 				     ssl_errno != SSL_ERROR_NONE)
-				    {
                                         n = -1;
-				    }
+				    else
+					n = 0;
 				    goto return_n;
                                 }
                         }
@@ -1192,7 +1192,7 @@ int dcb_read_SSL(
 				}
 			    }
 			}
-
+			n = -1;
 			gwbuf_free(buffer);
 			goto return_n;
 		    }
@@ -1595,7 +1595,7 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 
 	    if (w < 0)
 	    {
-		int ssl_errno = ERR_get_error();
+		int ssl_errno = SSL_get_error(dcb->ssl,w);
 
 		if (LOG_IS_ENABLED(LOGFILE_DEBUG))
 		{
@@ -1633,6 +1633,17 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 						 dcb,
 						 STRDCBSTATE(dcb->state),
 						 dcb->fd,ssl_errno)));
+			if(ssl_errno == SSL_ERROR_SSL ||
+			 ssl_errno == SSL_ERROR_SYSCALL)
+			{
+			    while((ssl_errno = ERR_get_error()) != 0)
+			    {
+				char errbuf[140];
+				ERR_error_string(ssl_errno,errbuf);
+				skygw_log_write(LE,"%s",errbuf);
+			    }
+			}
+			break;
 		    }
 		}
 		
@@ -3016,7 +3027,7 @@ int dcb_accept_SSL(DCB* dcb)
 	    rval = 1;
 	    LOGIF(LD,(skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL_accept done for %s",
 				     dcb->remote)));
-	    break;
+	    return rval;
 
 	case -1:
 
@@ -3035,10 +3046,10 @@ int dcb_accept_SSL(DCB* dcb)
 	    {
 		rval = -1;
 		skygw_log_write(LE,
-			 "Error: Fatal error in SSL_accept for %s: (SSL error code: %d):%s",
+			 "Error: Fatal error in SSL_accept for %s: (SSL version: %s SSL error code: %d)",
 			 dcb->remote,
-			 errnum,
-			 strerror(errno));
+			 SSL_get_version(dcb->ssl),
+			 errnum);
 		if(errnum == SSL_ERROR_SSL ||
 		 errnum == SSL_ERROR_SYSCALL)
 		{
@@ -3104,8 +3115,7 @@ int dcb_connect_SSL(DCB* dcb)
     case -1:
 	errnum = SSL_get_error(dcb->ssl,rval);
 
-	if(errnum == SSL_ERROR_WANT_READ || errnum == SSL_ERROR_WANT_WRITE ||
-	 errnum == SSL_ERROR_WANT_X509_LOOKUP)
+	if(errnum == SSL_ERROR_WANT_READ || errnum == SSL_ERROR_WANT_WRITE)
 	{
 	    /** Not all of the data has been read. Go back to the poll
 	     queue and wait for more.*/

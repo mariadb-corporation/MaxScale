@@ -40,7 +40,16 @@
  * @endverbatim
  */
 #define _XOPEN_SOURCE 700
+#define OPENSSL_THREAD_DEFINES
 #include <my_config.h>
+
+ #include <openssl/opensslconf.h>
+ #if defined(OPENSSL_THREADS)
+#define HAVE_OPENSSL_THREADS 1
+ #else
+#define HAVE_OPENSSL_THREADS 0
+ #endif
+
 #include <ftw.h>
 #include <string.h>
 #include <strings.h>
@@ -196,9 +205,46 @@ static bool resolve_maxscale_conf_fname(
 
 static char* check_dir_access(char* dirname,bool,bool);
 static int set_user();
-static void maxscale_ssl_lock(int mode,int n,const char* file, int line);
-static unsigned long maxscale_ssl_id();
-static SPINLOCK* ssl_locks;
+
+/** SSL multi-threading functions and structures */
+
+struct CRYPTO_dynlock_value
+{
+    SPINLOCK lock;
+};
+
+static struct CRYPTO_dynlock_value *ssl_create_dynlock(const char* file, int line)
+{
+    struct CRYPTO_dynlock_value* lock = malloc(sizeof(struct CRYPTO_dynlock_value));
+    if(lock)
+    {
+	spinlock_init(&lock->lock);
+    }
+    return lock;
+}
+
+static void ssl_lock_dynlock(int mode,struct CRYPTO_dynlock_value * n,const char* file, int line)
+{
+    if(mode & CRYPTO_LOCK)
+    {
+	spinlock_acquire(&n->lock);
+    }
+    else
+    {
+	spinlock_release(&n->lock);
+    }
+}
+
+static void ssl_free_dynlock(struct CRYPTO_dynlock_value * n,const char* file, int line)
+{
+    free(n);
+}
+
+static void maxscale_ssl_id(CRYPTO_THREADID* id)
+{
+    CRYPTO_THREADID_set_numeric(id,pthread_self());
+}
+
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.
@@ -1374,23 +1420,21 @@ int main(int argc, char **argv)
         }
 	
 	/** OpenSSL initialization */
-
-	SSL_library_init();
-	SSL_load_error_strings();
-	OPENSSL_add_all_algorithms_noconf();
-
-	int n_locks = CRYPTO_num_locks();
-	if((ssl_locks = malloc(n_locks*sizeof(SPINLOCK))) == NULL)
+	if(!HAVE_OPENSSL_THREADS)
 	{
+	    char* logerr = "OpenSSL library does not support multi-threading";
+	    print_log_n_stderr(true, true, logerr, logerr, eno);
 	    rc = MAXSCALE_INTERNALERROR;
 	    goto return_main;
 	}
+	SSL_library_init();
+	SSL_load_error_strings();
+	OPENSSL_add_all_algorithms_noconf();
+	CRYPTO_set_dynlock_create_callback(ssl_create_dynlock);
+	CRYPTO_set_dynlock_destroy_callback(ssl_free_dynlock);
+	CRYPTO_set_dynlock_lock_callback(ssl_lock_dynlock);
+	CRYPTO_THREADID_set_callback(maxscale_ssl_id);
 
-	for(i = 0;i<n_locks;i++)
-	    spinlock_init(&ssl_locks[i]);
-
-	CRYPTO_set_locking_callback(maxscale_ssl_lock);
-	CRYPTO_set_id_callback(maxscale_ssl_id);
 	/* register exit function for embedded MySQL library */
         l = atexit(libmysqld_done);
 
@@ -2023,19 +2067,3 @@ static int set_user(char* user)
     return rval;
 }
 
-static void maxscale_ssl_lock(int mode,int n,const char* file, int line)
-{
-    if(mode & CRYPTO_LOCK)
-    {
-	spinlock_acquire(&ssl_locks[n]);
-    }
-    else
-    {
-	spinlock_release(&ssl_locks[n]);
-    }
-}
-
-static unsigned long maxscale_ssl_id()
-{
-    return (unsigned long)pthread_self();
-}
