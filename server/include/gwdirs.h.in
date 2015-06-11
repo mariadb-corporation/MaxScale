@@ -18,9 +18,11 @@
  *
  * Copyright MariaDB Corporation Ab 2015
  */
-
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
 #include <stdlib.h>
-
+#include <string.h>
 /** Default file locations, configured by CMake */
 static const char* default_cnf_fname = "maxscale.cnf";
 static const char* default_configdir = "/etc/";
