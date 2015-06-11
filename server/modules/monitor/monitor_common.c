@@ -343,7 +343,10 @@ int mon_parse_event_string(bool* events, size_t count,char* string)
     {
 	event = mon_name_to_event(tok);
 	if(event == UNDEFINED_MONITOR_EVENT)
+	{
+	    skygw_log_write(LE,"Error: Invalid event name %s",tok);
 	    return -1;
+	}
 	events[event] = true;
 	tok = strtok_r(NULL,",| ",&saved);
     }

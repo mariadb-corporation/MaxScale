@@ -2,11 +2,12 @@
 
 
 # Create directories
-mkdir -p @MAXSCALE_LIBDIR@
-mkdir -p @MAXSCALE_BINDIR@
-mkdir -p @MAXSCALE_SHAREDIR@
-mkdir -p @MAXSCALE_DOCDIR@
-mkdir -p @MAXSCALE_CONFDIR@
+mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
+mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@
+mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@
+mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_DOCDIR@
+
+# MAXSCALE_VARDIR is an absolute path to /var by default
 mkdir -p @MAXSCALE_VARDIR@/log/maxscale
 mkdir -p @MAXSCALE_VARDIR@/lib/maxscale
 mkdir -p @MAXSCALE_VARDIR@/cache/maxscale
