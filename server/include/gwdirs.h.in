@@ -24,11 +24,11 @@
 /** Default file locations, configured by CMake */
 static const char* default_cnf_fname = "maxscale.cnf";
 static const char* default_configdir = "/etc/";
-static const char* default_piddir = "/var/run/maxscale/";
-static const char* default_logdir = "/var/log/maxscale/";
-static const char* default_datadir = "/var/lib/maxscale/";
+static const char* default_piddir = "@MAXSCALE_VARDIR@/run/maxscale/";
+static const char* default_logdir = "@MAXSCALE_VARDIR@/log/maxscale/";
+static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale/";
 static const char* default_libdir = "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@";
-static const char* default_cachedir = "/var/cache/maxscale/";
+static const char* default_cachedir = "@MAXSCALE_VARDIR@/cache/maxscale/";
 static const char* default_langdir = "@MAXSCALE_VARDIR@/lib/maxscale/";
 
 static char* configdir = NULL;
