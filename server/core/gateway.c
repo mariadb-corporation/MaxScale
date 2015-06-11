@@ -935,7 +935,7 @@ int main(int argc, char **argv)
 	char* tmp_var;
 	int      option_index;
 	int	 logtofile = 0;	      	      /* Use shared memory or file */
-	int	 syslog_enabled = 1; /** Log to syslog */
+	int	 syslog_enabled = 0; /** Log to syslog */
 	int	 maxscalelog_enabled = 1; /** Log with MaxScale */
         ssize_t  log_flush_timeout_ms = 0;
         sigset_t sigset;
@@ -1078,26 +1078,34 @@ int main(int argc, char **argv)
 		    }
 		    break;
 		case 'S':
-		    if(strstr(optarg,"="))
-		    {
-			strtok(optarg,"= ");
-			maxscalelog_enabled = config_truth_value(strtok(NULL,"= "));
-		    }
-		    else
-		    {
-			maxscalelog_enabled = config_truth_value(optarg);
-		    }
+            {
+                char* tok = strstr(optarg,"=");
+                if(tok)
+                {
+                    tok++;
+                    if(tok)
+                        maxscalelog_enabled = config_truth_value(tok);
+                }
+                else
+                {
+                    maxscalelog_enabled = config_truth_value(optarg);
+                }
+            }
 		    break;
 		case 's':
-		    if(strstr(optarg,"="))
-		    {
-			strtok(optarg,"= ");
-			syslog_enabled = config_truth_value(strtok(NULL,"= "));
-		    }
-		    else
-		    {
-			syslog_enabled = config_truth_value(optarg);
-		    }
+            {
+                char* tok = strstr(optarg,"=");
+                if(tok)
+                {
+                    tok++;
+                    if(tok)
+                        syslog_enabled = config_truth_value(tok);
+                }
+                else
+                {
+                    syslog_enabled = config_truth_value(optarg);
+                }
+            }
 		    break;
 		case 'U':
 		    if(set_user(optarg) != 0)
