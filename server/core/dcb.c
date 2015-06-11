@@ -3110,7 +3110,7 @@ int dcb_connect_SSL(DCB* dcb)
 	LOGIF(LD,(skygw_log_write_flush(LD,"SSL_connect done for %s@%s",
 			 dcb->user,
 			 dcb->remote)));
-	break;
+	return rval;
 
     case -1:
 	errnum = SSL_get_error(dcb->ssl,rval);
