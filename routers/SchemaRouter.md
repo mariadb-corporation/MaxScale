@@ -46,7 +46,7 @@ The schemarouter supports the following router options:
 
 |option				|parameter	|description|
 |-------------------|-----------|-----------|
-|max_sescmd_hitory	|integer		|Set a limit on the number of session modifying commands a session can execute. This sets an effective cap on the memory consupmtion of the session.|
+|max_sescmd_history	|integer		|Set a limit on the number of session modifying commands a session can execute. This sets an effective cap on the memory consumption of the session.|
 |disable_sescmd_history|true, false|Disable the session command history. This will prevent growing memory consumption of a long-running session and allows pooled connections to MaxScale to be used. The drawback of this is the fact that if a server goes down, the session state will not be consistent anymore.|
 |refresh_databases|true, false|Enable database map refreshing mid-session. These are triggered by a failure to change the database i.e. `USE ...``queries.|
 |refresh_interval|float|The minimum interval between database map refreshes in seconds.|
