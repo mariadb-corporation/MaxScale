@@ -1679,7 +1679,7 @@ Loaded 34 users.
 
 ## Reload config
 
-The reload config command can be used to force MaxScale to re-read the MaxScale.cnf and update itself to the latest configuration defined in that configuration file. It is also possible to force the reading of the configuration file by sending a HangUp signal (SIGHUP) to the maxscale process.
+The reload config command can be used to force MaxScale to re-read the maxscale.cnf and update itself to the latest configuration defined in that configuration file. It is also possible to force the reading of the configuration file by sending a HangUp signal (SIGHUP) to the maxscale process.
 
 **MaxScale>** reload config
 
@@ -1789,7 +1789,7 @@ MariaDB Corporation MaxScale	/home/jdoe/bin/develop/log/skygw_msg1.log Tue Dec  
 
 2014-12-09 14:47:05   Log directory   	: /home/jdoe/bin/develop/log
 
-2014-12-09 14:47:05   Configuration file  : /home/jdoe/bin/develop/etc/MaxScale.cnf
+2014-12-09 14:47:05   Configuration file  : /home/jdoe/bin/develop/etc/maxscale.cnf
 
 2014-12-09 14:47:05   Initialise CLI router module V1.0.0.
 

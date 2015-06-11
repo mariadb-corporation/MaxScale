@@ -65,7 +65,7 @@ modules it will search using a configurable search path. The priority of these p
  2. Look in the directory defined with libdir=PATH in the configuration file under the [maxscale] section
  3. Look in default directory in /usr/lib64/maxscale
 
-Configuration is read by default from the file /etc/MaxScale.cnf. An example file is included in in the installation and can be found in the /usr/share/maxscale folder within the MaxScale installation. The -f flag can be used on the command line to set the name and the location of the configuration file. The -C flag can be used to set the directory where the configuration file is searched for. Without the -f or -C flags, the file is read from the /etc directory.
+Configuration is read by default from the file /etc/maxscale.cnf. An example file is included in in the installation and can be found in the /usr/share/maxscale folder within the MaxScale installation. The -f flag can be used on the command line to set the name and the location of the configuration file. The -C flag can be used to set the directory where the configuration file is searched for. Without the -f or -C flags, the file is read from the /etc directory.
 
 ## Administration Of MaxScale
 

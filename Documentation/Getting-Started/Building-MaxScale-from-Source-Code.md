@@ -4,7 +4,7 @@ You will need a number of tools and libraries in order to achieve this.
 
 * cmake version 2.8.12 or later
 
-* gcc recommended version 4.4.7 or later
+* gcc recommended version 4.4.7 or later (MariaDB 10 libraries require gcc 4.7 or newer)
 
 * libaio
 

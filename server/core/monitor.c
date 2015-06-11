@@ -81,6 +81,8 @@ MONITOR	*mon;
 	mon->handle = NULL;
 	mon->databases = NULL;
 	mon->password = NULL;
+	mon->user = NULL;
+	mon->password = NULL;
 	mon->read_timeout = DEFAULT_READ_TIMEOUT;
 	mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
 	mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;

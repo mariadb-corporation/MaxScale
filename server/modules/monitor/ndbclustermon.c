@@ -111,7 +111,7 @@ startMonitor(void *arg,void* opt)
     MONITOR* mon = (MONITOR*)arg;
     MYSQL_MONITOR *handle = mon->handle;
     CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
-    bool have_events = false;
+    bool have_events = false,script_error = false;
 
     if (handle != NULL)
     {
@@ -140,6 +140,7 @@ startMonitor(void *arg,void* opt)
 	    }
 	    else
 	    {
+		script_error = true;
 		if(access(params->value,F_OK) == 0)
 		{
 		skygw_log_write(LE,
@@ -157,10 +158,19 @@ startMonitor(void *arg,void* opt)
 	}
 	else if(!strcmp(params->name,"events"))
 	{
-	    mon_parse_event_string(&handle->events,sizeof(handle->events),params->value);
-	    have_events = true;
+	    if(mon_parse_event_string((bool*)&handle->events,sizeof(handle->events),params->value) != 0)
+		script_error = true;
+	    else
+		have_events = true;
 	}
 	params = params->next;
+    }
+     if(script_error)
+    {
+	skygw_log_write(LE,"Error: Errors were found in the script configuration parameters "
+		"for the monitor '%s'. The script will not be used.",mon->name);
+	free(handle->script);
+	handle->script = NULL;
     }
     /** If no specific events are given, enable them all */
     if(!have_events)
