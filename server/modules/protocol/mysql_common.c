@@ -44,6 +44,7 @@
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <netinet/tcp.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -797,6 +798,23 @@ int gw_do_connect_to_backend(
 	bufsize = GW_BACKEND_SO_RCVBUF;
 
 	if(setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
+	{
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error: Failed to set socket options "
+                        "%s:%d failed.\n\t\t             Socket configuration failed "
+                        "due %d, %s.",
+                        host,
+                        port,
+                        errno,
+                        strerror(errno))));
+		rv = -1;
+		/** Close socket */
+		goto close_so;
+	}
+
+	int one = 1;
+	if(setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
 	{
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
