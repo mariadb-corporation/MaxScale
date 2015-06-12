@@ -389,15 +389,17 @@ MySQLSendHandshake(DCB* dcb)
 /**
  * gw_mysql_do_authentication
  *
- * Performs the MySQL protocol 4.1 authentication, using data in GWBUF *queue
+ * Performs the MySQL protocol 4.1 authentication, using data in GWBUF **queue.
  *
  * (MYSQL_session*)client_data including: user, db, client_sha1 are copied into 
- * the dcb->data and later to dcb->session->data.
- * 
- * client_capabilitiesa are copied into the dcb->protocol
+ * the dcb->data and later to dcb->session->data. client_capabilities are copied
+ * into the dcb->protocol.
+ *
+ * If SSL is enabled for the service, the SSL handshake will be done before the
+ * MySQL authentication.
  *
  * @param	dcb 	Descriptor Control Block of the client
- * @param	queue	The GWBUF with data from client
+ * @param	queue	Pointer to the location of the GWBUF with data from client
  * @return	0	If succeed, otherwise non-zero value
  *
  * @note in case of failure, dcb->data is freed before returning. If succeed,
@@ -507,8 +509,11 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 	    }
 	    else if(dcb->service->ssl_mode == SSL_ENABLED)
 	    {
-		/** This is a non-SSL connection to a SSL enabled service
-		 * and we need to read the rest of the packet from the socket for the username */
+		/** This is a non-SSL connection to a SSL enabled service.
+		 * We have only read enough of the packet to know that the client
+		 * is not requesting SSL and the rest of the auth packet is still
+		 * waiting in the socket. We need to read the data from the socket
+		 * to find out the username of the connecting client. */
 		int bytes = dcb_read(dcb,&queue);
 		queue = gwbuf_make_contiguous(queue);
 		client_auth_packet = GWBUF_DATA(queue);
@@ -626,7 +631,8 @@ gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
 
 
 /**
- * Write function for client DCB: writes data from MaxScale to Client
+ * Write function for client DCB: writes data from MaxScale to Client using SSL
+ * encryption. The SSH handshake must have already been done.
  *
  * @param dcb	The DCB of the client
  * @param queue	Queue of buffers to write
@@ -671,6 +677,8 @@ int gw_read_client_event(
 
 #endif
 
+	/** SSL authentication is still going on, we need to call do_ssl_accept
+	 * until it return 1 for success or -1 for error */
 	if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_ONGOING ||
 	 protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ)
 	{
@@ -704,15 +712,21 @@ int gw_read_client_event(
 
 	if(protocol->use_ssl)
 	{
+	    /** SSL handshake is done, communication is now encrypted with SSL */
 	    rc = dcb_read_SSL(dcb, &read_buffer);
 	}
 	else if(dcb->service->ssl_mode != SSL_DISABLED &&
 	 protocol->protocol_auth_state == MYSQL_AUTH_SENT)
 	{
+	    /** The service allows both SSL and non-SSL connections.
+	     * read only enough of the auth packet to know if the client is
+	     * requesting SSL. If the client is not requesting SSL the rest of
+	     the auth packet will be read later. */
 	    rc = dcb_read_n(dcb, &read_buffer,(4 + 4 + 4 + 1 + 23));
 	}
 	else
 	{
+	    /** Normal non-SSL connection */
 	    rc = dcb_read(dcb, &read_buffer);
 	}
 
@@ -869,6 +883,9 @@ int gw_read_client_event(
 		 protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_DONE ||
 		 protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_FAILED)
 		{
+		    /** SSL was requested and the handshake is either done or
+		     * still ongoing. After the handshake is done, the client
+		     * will send another auth packet. */
 		    break;
 		}
 		
@@ -1249,22 +1266,12 @@ return_1:
         return 1;
 }
 
-///////////////////////////////////////////////
-// client write event to Client triggered by EPOLLOUT
-//////////////////////////////////////////////
-/** 
- * @node Client's fd became writable, and EPOLLOUT event
- * arrived. As a consequence, client input buffer (writeq) is flushed. 
- *
- * Parameters:
- * @param dcb - in, use
- *          client dcb
- *
+/**
+ * EPOLLOUT event arrived and as a consequence, client input buffer (writeq) is
+ * flushed. The data is encrypted and SSL is used. The SSL handshake must have
+ * been successfully completed prior to this function being called.
+ * @param client dcb
  * @return constantly 1
- *
- * 
- * @details (write detailed description here)
- *
  */
 int gw_write_client_event_SSL(DCB *dcb)
 {

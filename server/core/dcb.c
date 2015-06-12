@@ -887,10 +887,13 @@ return_n:
 /**
  * General purpose read routine to read data from a socket in the
  * Descriptor Control Block and append it to a linked list of buffers.
- * The list may be empty, in which case *head == NULL
+ * This function will read at most nbytes of data.
+ * 
+ * The list may be empty, in which case *head == NULL. This
  *
  * @param dcb	The DCB to read from
  * @param head	Pointer to linked list to append data to
+ * @param nbytes Maximum number of bytes read
  * @return	-1 on error, otherwise the number of read bytes on the last
  * iteration of while loop. 0 is returned if no data available.
  */
@@ -1835,7 +1838,8 @@ int	above_water;
 /**
  * Drain the write queue of a DCB. This is called as part of the EPOLLOUT handling
  * of a socket and will try to send any buffered data from the write queue
- * up until the point the write would block.
+ * up until the point the write would block. This function uses SSL encryption
+ * and the SSL handshake should have been completed prior to calling this function.
  *
  * @param dcb	DCB to drain the write queue of
  * @return The number of bytes written
@@ -2495,9 +2499,10 @@ static bool dcb_set_state_nomutex(
 }
 
 /**
- * Write data to a DCB
+ * Write data to a socket through an SSL structure. The SSL structure is linked to a DCB's socket
+ * and all communication is encrypted and done via the SSL structure.
  *
- * @param ssl		The SSL to write the buffer to
+ * @param ssl		The SSL structure to use for writing
  * @param buf		Buffer to write
  * @param nbytes	Number of bytes to write
  * @return Number of written bytes

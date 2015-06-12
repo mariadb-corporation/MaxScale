@@ -346,6 +346,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				char *version_string;
 				char *subservices;
 				char *ssl,*ssl_cert,*ssl_key,*ssl_ca_cert,*ssl_version;
+				char* ssl_cert_verify_depth;
 				bool  is_rwsplit = false;
 				bool  is_schemarouter = false;
 				char *allow_localhost_match_wildcard_host;
@@ -359,6 +360,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				ssl_key = config_get_value(obj->parameters, "ssl_key");
 				ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
 				ssl_version = config_get_value(obj->parameters, "ssl_version");
+				ssl_cert_verify_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
@@ -511,6 +513,14 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 						if(serviceSetSSLVersion(obj->element,ssl_version) != 0)
 						{
 						    skygw_log_write(LE,"Error: Unknown parameter value for 'ssl_version' for service '%s': %s",obj->object,ssl_version);
+						    error_count++;
+						}
+					    }
+					    if(ssl_cert_verify_depth)
+					    {
+						if(serviceSetSSLVerifyDepth(obj->element,atoi(ssl_cert_verify_depth)) != 0)
+						{
+						    skygw_log_write(LE,"Error: Invalid parameter value for 'ssl_cert_verify_depth' for service '%s': %s",obj->object,ssl_cert_verify_depth);
 						    error_count++;
 						}
 					    }
@@ -2005,6 +2015,7 @@ static char *service_params[] =
 		"ssl",
 		"ssl_key",
 		"ssl_version",
+		"ssl_cert_verify_depth",
                 NULL
         };
 

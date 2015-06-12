@@ -356,6 +356,15 @@ This parameter controls the level of encryption used. Accepted values are:
  * TLSv12
  * MAX   
 
+### `ssl_cert_verification_depth`
+
+The maximum length of the certificate authority chain that will be accepted. Accepted values are positive integers.
+
+```
+# Example
+ssl_cert_verification_depth=10
+```
+
 Example SSL enabled service configuration:
 
 ```

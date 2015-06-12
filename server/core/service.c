@@ -94,7 +94,7 @@ static SPINLOCK	service_spin = SPINLOCK_INIT;
 static SERVICE	*allServices = NULL;
 
 static int find_type(typelib_t* tl, const char* needle, int maxlen);
-DH *ssl_get_dh2236();
+
 static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param);
@@ -144,7 +144,8 @@ SERVICE 	*service;
 	service->ssl_ca_cert = NULL;
 	service->ssl_cert = NULL;
 	service->ssl_key = NULL;
-	/** Use the highest possible SSL/TLS methods available */
+	service->ssl_cert_verify_depth = DEFAULT_SSL_CERT_VERIFY_DEPTH;
+	/** Support the highest possible SSL/TLS methods available as the default */
 	service->ssl_method_type = SERVICE_SSL_TLS_MAX;
 	if (service->name == NULL || service->routerModule == NULL)
 	{
@@ -875,6 +876,14 @@ serviceOptimizeWildcard(SERVICE *service, int action)
 	return 1;
 }
 
+/**
+ * Set the locations of the server's SSL certificate, server's private key and the CA
+ * certificate which both the client and the server should trust.
+ * @param service Service to configure
+ * @param cert SSL certificate
+ * @param key SSL private key
+ * @param ca_cert SSL CA certificate
+ */
 void
 serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert)
 {
@@ -891,6 +900,12 @@ serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert)
     service->ssl_ca_cert = strdup(ca_cert);
 }
 
+/**
+ * Set the maximum SSL/TLS version the service will support
+ * @param service Service to configure
+ * @param version SSL/TLS version string
+ * @return  0 on success, -1 on invalid version string
+ */
 int
 serviceSetSSLVersion(SERVICE *service, char* version)
 {
@@ -909,7 +924,34 @@ serviceSetSSLVersion(SERVICE *service, char* version)
     else return -1;
     return 0;
 }
-/** Enable or disable the service SSL capability*/
+
+/**
+ * Set the service's SSL certificate verification depth. Depth of 0 means the peer
+ * certificate, 1 is the CA and 2 is a higher CA and so on.
+ * @param service Service to configure
+ * @param depth Certificate verification depth
+ * @return 0 on success, -1 on incorrect depth value
+ */
+int serviceSetSSLVerifyDepth(SERVICE* service, int depth)
+{
+    if(depth < 0)
+	return -1;
+
+    service->ssl_cert_verify_depth = depth;
+    return 0;
+}
+
+/**
+ * Enable or disable the service SSL capability of a service.
+ * The SSL mode string passed as a parameter should be one of required, enabled
+ * or disabled. Required requires all connections to use SSL encryption, enabled
+ * allows both SSL and non-SSL connections and disabled does not use SSL encryption.
+ * If the service SSL mode is set to enabled, then the client will decide whether
+ * SSL encryption is used.
+ *  @param service Service to configure
+ *  @param action Mode string. One of required, enabled or disabled.
+ *  @return 0 on success, -1 on error
+ */
 int
 serviceSetSSL(SERVICE *service, char* action)
 {
@@ -1854,11 +1896,11 @@ int		*data;
 
 
 /**
- *
- * @param s
- * @param is_export
- * @param keylength
- * @return
+ * The RSA ket generation callback function for OpenSSL.
+ * @param s SSL structure
+ * @param is_export Not used
+ * @param keylength Length of the key
+ * @return Pointer to RSA structure
  */
  RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength)
  {
@@ -1887,6 +1929,13 @@ int		*data;
     return(rsa_tmp);
  }
 
+ /**
+  * Initialize the servce's SSL context. This sets up the generated RSA
+  * encryption keys, chooses the server encryption level and configures the server
+  * certificate, private key and certificate authority file.
+  * @param service
+  * @return
+  */
 int serviceInitSSL(SERVICE* service)
 {
     DH* dh;
@@ -1911,6 +1960,8 @@ int serviceInitSSL(SERVICE* service)
 	case SERVICE_TLS12:
 	    service->method = (SSL_METHOD*)TLSv1_2_server_method();
 	    break;
+
+	    /** Rest of these use the maximum available SSL/TLS methods */
 	case SERVICE_SSL_MAX:
 	    service->method = (SSL_METHOD*)SSLv23_server_method();
 	    break;
@@ -1926,8 +1977,11 @@ int serviceInitSSL(SERVICE* service)
 	}
 
 	service->ctx = SSL_CTX_new(service->method);
+
+	/** Enable all OpenSSL bug fixes */
 	SSL_CTX_set_options(service->ctx,SSL_OP_ALL);
 
+	/** Generate the 512-bit and 1024-bit RSA keys */
 	if(rsa_512 == NULL)
 	{
 	    rsa_512 = RSA_generate_key(512,RSA_F4,NULL,NULL);
@@ -1944,6 +1998,7 @@ int serviceInitSSL(SERVICE* service)
 	if(rsa_512 != NULL && rsa_1024 != NULL)
 	    SSL_CTX_set_tmp_rsa_callback(service->ctx,tmp_rsa_callback);
 
+	/** Load the server sertificate */
 	if (SSL_CTX_use_certificate_file(service->ctx, service->ssl_cert, SSL_FILETYPE_PEM) <= 0) {
 	    skygw_log_write(LE,"Error: Failed to set server SSL certificate.");
 	    return -1;
@@ -1971,54 +2026,9 @@ int serviceInitSSL(SERVICE* service)
 	/* Set to require peer (client) certificate verification */
 	SSL_CTX_set_verify(service->ctx,SSL_VERIFY_PEER,NULL);
 
-	/* Set the verification depth to 1 */
-	SSL_CTX_set_verify_depth(service->ctx,1);
+	/* Set the verification depth */
+	SSL_CTX_set_verify_depth(service->ctx,service->ssl_cert_verify_depth);
 	service->ssl_init_done = true;
     }
     return 0;
-}
-
-/**
- * Generated by OpenSSL.
- * @return
- */
-DH *ssl_get_dh2236()
-{
-    static unsigned char dh2236_p[]={
-	0x0B,0xC3,0xEC,0x3F,0xCB,0xD0,0x2E,0x43,0x7B,0x13,0xF9,0x0C,
-	0x4D,0xE5,0xA3,0xA4,0xDB,0x68,0x13,0xBD,0xFC,0xD2,0x35,0x05,
-	0xCB,0x62,0xA1,0x85,0x33,0x20,0xC4,0x88,0x3B,0x2B,0xD5,0x76,
-	0x94,0xCD,0xEB,0x9C,0x5A,0xD1,0x16,0xDB,0x51,0x82,0x7A,0x1E,
-	0xC6,0xC3,0xD9,0x52,0x8F,0x54,0x33,0xF4,0x50,0x96,0x01,0xF4,
-	0x71,0xA1,0x8B,0x9B,0x43,0x85,0x9C,0x95,0xFF,0x53,0x1D,0x8D,
-	0xDF,0xBC,0x60,0xEB,0x4D,0x96,0xD1,0x05,0x98,0x4A,0xEB,0xC9,
-	0x33,0xF6,0xE9,0x74,0x73,0x29,0x27,0xCA,0x0D,0x6D,0xEA,0x36,
-	0xB9,0x3B,0x54,0xF6,0x34,0x68,0x13,0xFA,0xAC,0x3B,0x57,0x55,
-	0x76,0x41,0x67,0x48,0xEF,0x3C,0xE1,0xE1,0xAF,0x3C,0x68,0x05,
-	0x9C,0x32,0xD9,0x14,0x8F,0xB2,0xEE,0xEE,0xBA,0x9F,0x0D,0x75,
-	0xA7,0x33,0x1F,0x3A,0x0E,0xD1,0xA6,0x5A,0x29,0xC7,0x9B,0x5E,
-	0x46,0xB1,0xA6,0xA5,0x1E,0x32,0xDB,0xAF,0x23,0x83,0x94,0x12,
-	0x4F,0xE4,0xC2,0x8B,0x1B,0x2C,0x01,0x79,0x92,0x21,0xFF,0x01,
-	0xED,0x46,0x27,0xF0,0x70,0x2A,0xA1,0xFD,0x5C,0x8F,0x8B,0x0C,
-	0xC6,0x8F,0xFF,0x4C,0x99,0xAE,0x19,0xDB,0x58,0x4C,0xC0,0xE8,
-	0x70,0xCC,0x7C,0x17,0xE8,0xBD,0x6B,0x19,0x93,0xB9,0x66,0xA9,
-	0xD0,0x05,0x21,0x04,0x4C,0x7E,0x87,0x9F,0xF4,0xE9,0x23,0xE1,
-	0x29,0x37,0xC5,0xE2,0x0A,0xC5,0xC1,0x92,0xC7,0x69,0xB4,0xFB,
-	0x84,0x06,0xCE,0x0E,0xFC,0x65,0x70,0x2F,0xF6,0xB8,0x11,0xF9,
-	0x0F,0x60,0x10,0xCA,0x94,0x29,0x44,0x5E,0x4A,0x05,0x46,0xE5,
-	0xE6,0xA0,0xBD,0x14,0x45,0xA6,0xA7,0xCA,0x63,0x57,0xC6,0xB0,
-	0x47,0xF9,0x71,0x24,0x19,0x75,0xD2,0x64,0x16,0xB1,0xBA,0x08,
-	0xE9,0xE9,0xFB,0xF3,
-    };
-    static unsigned char dh2236_g[]={
-	0x02,
-    };
-    DH *dh;
-
-    if ((dh=DH_new()) == NULL) return(NULL);
-    dh->p=BN_bin2bn(dh2236_p,sizeof(dh2236_p),NULL);
-    dh->g=BN_bin2bn(dh2236_g,sizeof(dh2236_g),NULL);
-    if ((dh->p == NULL) || (dh->g == NULL))
-    { DH_free(dh); return(NULL); }
-    return(dh);
 }

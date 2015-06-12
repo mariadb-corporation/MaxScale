@@ -208,11 +208,21 @@ static int set_user();
 
 /** SSL multi-threading functions and structures */
 
+/**
+ * OpenSSL requires this struct to be defined in order to use dynamic locks
+ */
 struct CRYPTO_dynlock_value
 {
     SPINLOCK lock;
 };
 
+/**
+ * Create a dynamic OpenSSL lock. The dynamic lock is just a wrapper structure
+ * around a SPINLOCK structure.
+ * @param file File name
+ * @param line Line number
+ * @return Pointer to new lock or NULL of an error occurred
+ */
 static struct CRYPTO_dynlock_value *ssl_create_dynlock(const char* file, int line)
 {
     struct CRYPTO_dynlock_value* lock = malloc(sizeof(struct CRYPTO_dynlock_value));
@@ -223,6 +233,13 @@ static struct CRYPTO_dynlock_value *ssl_create_dynlock(const char* file, int lin
     return lock;
 }
 
+/**
+ * Lock a dynamic lock for OpenSSL.
+ * @param mode
+ * @param n pointer to lock
+ * @param file File name
+ * @param line Line number
+ */
 static void ssl_lock_dynlock(int mode,struct CRYPTO_dynlock_value * n,const char* file, int line)
 {
     if(mode & CRYPTO_LOCK)
@@ -235,11 +252,21 @@ static void ssl_lock_dynlock(int mode,struct CRYPTO_dynlock_value * n,const char
     }
 }
 
+/**
+ * Free a dynamic OpenSSL lock.
+ * @param n Lock to free
+ * @param file File name
+ * @param line Line number
+ */
 static void ssl_free_dynlock(struct CRYPTO_dynlock_value * n,const char* file, int line)
 {
     free(n);
 }
 
+/**
+ * The thread ID callback function for OpenSSL dynamic locks.
+ * @param id Id to modify
+ */
 static void maxscale_ssl_id(CRYPTO_THREADID* id)
 {
     CRYPTO_THREADID_set_numeric(id,pthread_self());
