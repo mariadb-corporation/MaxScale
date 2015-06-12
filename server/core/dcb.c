@@ -49,6 +49,7 @@
  *                                      backend
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
  * 20/06/2014	Mark Riddoch		Addition of dcb_clone
+ * 11/06/2015	Martin Brampton		Persistent connnections and tidy up
  *
  * @endverbatim
  */
@@ -95,6 +96,7 @@ static int  dcb_null_close(DCB *dcb);
 static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
 static int  dcb_isvalid_nolock(DCB *dcb);
 static void dcb_close_finish(DCB *);
+static bool dcb_maybe_add_persistent(DCB *);
 
 size_t dcb_get_session_id(
 	DCB *dcb)
@@ -638,6 +640,7 @@ char            *user;
                     dcb_final_free(dcb);
                     return NULL;
                 }
+                /*
                 dcb->dcb_server_status = server->status;
                 dcb->state = DCB_STATE_ALLOC;
                 if (poll_add_dcb(dcb)) 
@@ -649,6 +652,7 @@ char            *user;
                     dcb_final_free(dcb);
                     return NULL;
                 }
+                */
                 LOGIF(LD, (skygw_log_write(
                     LOGFILE_DEBUG,
                     "%lu [dcb_connect] Reusing a persistent connection, dcb %p\n", pthread_self(), dcb)));
@@ -1272,6 +1276,8 @@ dcb_close(DCB *dcb)
         */
 	if (dcb->state == DCB_STATE_POLLING)
 	{
+            if (!dcb_maybe_add_persistent(dcb))
+            {
             if (poll_remove_dcb(dcb))
             {
                 LOGIF(LE, (skygw_log_write(
@@ -1291,32 +1297,45 @@ dcb_close(DCB *dcb)
                     dcb,
                     STRDCBSTATE(dcb->state))));
             
-                char *user;
-                user = session_getUser(dcb->session);
-                if (user 
-                    && strlen(user)
-                    && dcb->server 
-                    && dcb->server->persistpoolmax 
-                    && dcb_persistent_clean_count(dcb, false) < dcb->server->persistpoolmax)
-                {
-                    dcb->user = strdup(user);
-                    dcb->persistentstart = time(NULL);
-                    spinlock_acquire(&dcb->server->persistlock);
-                    dcb->nextpersistent = dcb->server->persistent;
-                    dcb->server->persistent = dcb;
-                    dcb->session = NULL;
-                    spinlock_release(&dcb->server->persistlock);
-                    atomic_add(&dcb->server->stats.n_persistent, 1);
-                    atomic_add(&dcb->server->stats.n_current, -1);
-                }
-                else
-                {
-                    dcb_close_finish(dcb);
-               }
+                dcb_close_finish(dcb);
+                atomic_add(&dcb->server->stats.n_current, -1);
+            }
             }
             ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
                 dcb->state == DCB_STATE_ZOMBIE);	
         }
+}
+
+/**
+ * Add DCB to persistent pool if it qualifies, close otherwise
+ *
+ * @param dcb	The DCB to go to persistent pool or be closed
+ *
+ */
+static bool
+dcb_maybe_add_persistent(DCB *dcb)
+{
+    char *user;
+    user = session_getUser(dcb->session);
+    if (user 
+        && strlen(user)
+        && dcb->server 
+        && dcb->server->persistpoolmax 
+        && !dcb->dcb_errhandle_called
+        && !(dcb->flags & DCBF_HUNG)
+        && dcb_persistent_clean_count(dcb, false) < dcb->server->persistpoolmax)
+    {
+        dcb->user = strdup(user);
+        dcb->persistentstart = time(NULL);
+        spinlock_acquire(&dcb->server->persistlock);
+        dcb->nextpersistent = dcb->server->persistent;
+        dcb->server->persistent = dcb;
+        dcb->session = NULL;
+        spinlock_release(&dcb->server->persistlock);
+        atomic_add(&dcb->server->stats.n_persistent, 1);
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -2313,7 +2332,8 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
         /** Call possible callback for this DCB in case of close */
         while (disposals)
         {
-			nextdcb = disposals->nextpersistent;
+            nextdcb = disposals->nextpersistent;
+            poll_remove_dcb(disposals);
             dcb_close_finish(disposals);
             disposals = nextdcb;
         }
