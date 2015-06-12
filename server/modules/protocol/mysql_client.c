@@ -46,6 +46,7 @@
 #include <modinfo.h>
 #include <sys/stat.h>
 #include <modutil.h>
+#include <netinet/tcp.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
@@ -1064,6 +1065,9 @@ int gw_MySQLListener(
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
 	}
 
+	if((syseno = setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one))) != 0){
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+	}
 
 	// set NONBLOCKING mode
 	setnonblocking(l_so);

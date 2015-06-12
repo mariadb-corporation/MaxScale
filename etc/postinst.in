@@ -38,7 +38,7 @@ then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
 fi
 /sbin/ldconfig
-
+mandb
 cat <<EOF >& 2
 ********** Notice: MaxScale 1.2 Changes **************
 
