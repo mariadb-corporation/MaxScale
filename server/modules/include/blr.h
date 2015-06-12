@@ -26,7 +26,8 @@
  *
  * Date		Who			Description
  * 02/04/14	Mark Riddoch		Initial implementation
- * 11/05/15	Massimilaino Pinto	Added mariadb10_compat to master and slave structs
+ * 11/05/15	Massimiliano Pinto	Added mariadb10_compat to master and slave structs
+ * 12/06/15	Massimiliano Pinto	Added mariadb10 new events
  *
  * @endverbatim
  */
@@ -44,7 +45,77 @@
 
 #define BINLOG_EVENT_HDR_LEN	19
 
-/* How often to call the binlog status function (seconds) */
+/**
+ * Binlog event types
+ */
+#define START_EVENT_V3				0x01
+#define QUERY_EVENT				0x02
+#define STOP_EVENT				0x03
+#define ROTATE_EVENT				0x04
+#define INTVAR_EVENT				0x05
+#define LOAD_EVENT				0x06
+#define SLAVE_EVENT				0x07
+#define CREATE_FILE_EVENT			0x08
+#define APPEND_BLOCK_EVENT			0x09
+#define EXEC_LOAD_EVENT				0x0A
+#define DELETE_FILE_EVENT			0x0B
+#define NEW_LOAD_EVENT				0x0C
+#define RAND_EVENT				0x0D
+#define USER_VAR_EVENT				0x0E
+#define FORMAT_DESCRIPTION_EVENT		0x0F
+#define XID_EVENT				0x10
+#define BEGIN_LOAD_QUERY_EVENT			0x11
+#define EXECUTE_LOAD_QUERY_EVENT		0x12
+#define TABLE_MAP_EVENT				0x13
+#define WRITE_ROWS_EVENTv0			0x14
+#define UPDATE_ROWS_EVENTv0			0x15
+#define DELETE_ROWS_EVENTv0			0x16
+#define WRITE_ROWS_EVENTv1			0x17
+#define UPDATE_ROWS_EVENTv1			0x18
+#define DELETE_ROWS_EVENTv1			0x19
+#define INCIDENT_EVENT				0x1A
+#define HEARTBEAT_EVENT				0x1B
+#define IGNORABLE_EVENT				0x1C
+#define ROWS_QUERY_EVENT			0x1D
+#define WRITE_ROWS_EVENTv2			0x1E
+#define UPDATE_ROWS_EVENTv2			0x1F
+#define DELETE_ROWS_EVENTv2			0x20
+#define GTID_EVENT				0x21
+#define ANONYMOUS_GTID_EVENT			0x22
+#define PREVIOUS_GTIDS_EVENT			0x23
+
+#define MAX_EVENT_TYPE				0x23
+
+/* New MariaDB event numbers start from 0xa0 */
+#define MARIADB_NEW_EVENTS_BEGIN		0xa0
+#define MARIADB_ANNOTATE_ROWS_EVENT		0xa0
+/* New MariaDB 10 event numbers start from here */
+#define MARIADB10_BINLOG_CHECKPOINT_EVENT	0xa1
+#define MARIADB10_GTID_EVENT			0xa2
+#define MARIADB10_GTID_GTID_LIST_EVENT		0xa3
+
+#define MAX_EVENT_TYPE_MARIADB10		0xa3
+
+/* Maximum event type so far */
+#define MAX_EVENT_TYPE_END			MAX_EVENT_TYPE_MARIADB10
+
+/**
+ * Binlog event flags
+ */
+#define LOG_EVENT_BINLOG_IN_USE_F		0x0001
+#define LOG_EVENT_FORCED_ROTATE_F		0x0002
+#define LOG_EVENT_THREAD_SPECIFIC_F		0x0004
+#define LOG_EVENT_SUPPRESS_USE_F		0x0008
+#define LOG_EVENT_UPDATE_TABLE_MAP_VERSION_F	0x0010
+#define LOG_EVENT_ARTIFICIAL_F			0x0020
+#define LOG_EVENT_RELAY_LOG_F			0x0040
+#define LOG_EVENT_IGNORABLE_F			0x0080
+#define LOG_EVENT_NO_FILTER_F			0x0100
+#define LOG_EVENT_MTS_ISOLATE_F			0x0200
+
+/**
+ * How often to call the binlog status function (seconds)
+ */
 #define	BLR_STATS_FREQ		60
 #define BLR_NSTATS_MINUTES	30
 
@@ -211,7 +282,7 @@ typedef struct {
 	uint64_t	n_fakeevents;	/*< Fake events not written to disk */
 	uint64_t	n_artificial;	/*< Artificial events not written to disk */
 	int		n_badcrc;	/*< No. of bad CRC's from master */
-	uint64_t	events[0x24];	/*< Per event counters */
+	uint64_t	events[MAX_EVENT_TYPE_END + 1];	/*< Per event counters */
 	uint64_t	lastsample;
 	int		minno;
 	int		minavgs[BLR_NSTATS_MINUTES];
@@ -326,7 +397,7 @@ static char *blrm_states[] = { "Unconnected", "Connecting", "Authenticated", "Ti
 	"binlog checksum rerieval", "GTID Mode retrieval", "Master UUID retrieval",
 	"Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
 	"select version()", "select @@version_comment", "select @@hostname",
-	"select @@mx_allowed_packet", "Register slave", "Binlog Dump", "Set MariaDB slave capability" };
+	"select @@max_allowed_packet", "Register slave", "Binlog Dump", "Set MariaDB slave capability" };
 
 #define BLRS_CREATED		0x0000
 #define BLRS_UNREGISTERED	0x0001
@@ -359,62 +430,6 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 #define	COM_PING				0x0e
 #define COM_REGISTER_SLAVE			0x15
 #define COM_BINLOG_DUMP				0x12
-
-/**
- * Binlog event types
- */
-#define START_EVENT_V3				0x01
-#define QUERY_EVENT				0x02
-#define STOP_EVENT				0x03
-#define ROTATE_EVENT				0x04
-#define INTVAR_EVENT				0x05
-#define LOAD_EVENT				0x06
-#define SLAVE_EVENT				0x07
-#define CREATE_FILE_EVENT			0x08
-#define APPEND_BLOCK_EVENT			0x09
-#define EXEC_LOAD_EVENT				0x0A
-#define DELETE_FILE_EVENT			0x0B
-#define NEW_LOAD_EVENT				0x0C
-#define RAND_EVENT				0x0D
-#define USER_VAR_EVENT				0x0E
-#define FORMAT_DESCRIPTION_EVENT		0x0F
-#define XID_EVENT				0x10
-#define BEGIN_LOAD_QUERY_EVENT			0x11
-#define EXECUTE_LOAD_QUERY_EVENT		0x12
-#define TABLE_MAP_EVENT				0x13
-#define WRITE_ROWS_EVENTv0			0x14
-#define UPDATE_ROWS_EVENTv0			0x15
-#define DELETE_ROWS_EVENTv0			0x16
-#define WRITE_ROWS_EVENTv1			0x17
-#define UPDATE_ROWS_EVENTv1			0x18
-#define DELETE_ROWS_EVENTv1			0x19
-#define INCIDENT_EVENT				0x1A
-#define HEARTBEAT_EVENT				0x1B
-#define IGNORABLE_EVENT				0x1C
-#define ROWS_QUERY_EVENT			0x1D
-#define WRITE_ROWS_EVENTv2			0x1E
-#define UPDATE_ROWS_EVENTv2			0x1F
-#define DELETE_ROWS_EVENTv2			0x20
-#define GTID_EVENT				0x21
-#define ANONYMOUS_GTID_EVENT			0x22
-#define PREVIOUS_GTIDS_EVENT			0x23
-
-#define MAX_EVENT_TYPE				0x23
-#define MAX_EVENT_TYPE_MARIADB10		0xa3
-
-/**
- * Binlog event flags
- */
-#define LOG_EVENT_BINLOG_IN_USE_F		0x0001
-#define LOG_EVENT_FORCED_ROTATE_F		0x0002
-#define LOG_EVENT_THREAD_SPECIFIC_F		0x0004
-#define LOG_EVENT_SUPPRESS_USE_F		0x0008
-#define LOG_EVENT_UPDATE_TABLE_MAP_VERSION_F	0x0010
-#define LOG_EVENT_ARTIFICIAL_F			0x0020
-#define LOG_EVENT_RELAY_LOG_F			0x0040
-#define LOG_EVENT_IGNORABLE_F			0x0080
-#define LOG_EVENT_NO_FILTER_F			0x0100
-#define LOG_EVENT_MTS_ISOLATE_F			0x0200
 
 /**
  * Macros to extract common fields
