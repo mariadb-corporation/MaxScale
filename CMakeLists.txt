@@ -1,4 +1,4 @@
-# libssl-dev libmariadbclient-dev
+# libssl-dev libmariadbclient-dev php5
 project(maxscale_system_test)
 cmake_minimum_required(VERSION 2.8)
 
