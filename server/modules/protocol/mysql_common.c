@@ -1319,7 +1319,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 
 	if (ret_val) {
 		/* if password was sent, fill stage1_hash with at least 1 byte in order
-		 * to create rigth error message: (using password: YES|NO)
+		 * to create right error message: (using password: YES|NO)
 		 */
 		if (token_len)
 			memcpy(stage1_hash, (char *)"_", 1);
@@ -1362,7 +1362,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 	/*<
 	 * step2: STEP2 = XOR(token, STEP1)
 	 *
-	 * token is trasmitted form client and it's based on the handshake scramble and SHA1(real_passowrd)
+	 * token is transmitted form client and it's based on the handshake scramble and SHA1(real_passowrd)
 	 * step1 has been computed in the previous step
 	 * the result STEP2 is SHA1(the_password_to_check) and is SHA_DIGEST_LENGTH long
 	 */

@@ -153,7 +153,7 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
         spinlock_acquire(&server->persistlock);
         dcb = server->persistent;
         while (dcb) {
-            if (dcb->user && dcb->protoname && 0 == strcmp(dcb->user, user) && 0 == strcmp(dcb->protoname, protocol))
+            if (dcb->user && dcb->protoname && !dcb-> dcb_errhandle_called && 0 == strcmp(dcb->user, user) && 0 == strcmp(dcb->protoname, protocol))
             {
                 if (NULL == previous)
                 {

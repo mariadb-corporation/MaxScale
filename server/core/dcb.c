@@ -656,6 +656,7 @@ char            *user;
                 LOGIF(LD, (skygw_log_write(
                     LOGFILE_DEBUG,
                     "%lu [dcb_connect] Reusing a persistent connection, dcb %p\n", pthread_self(), dcb)));
+                dcb->persistentstart = 0;
                 return dcb;
             }
         }
@@ -1298,11 +1299,14 @@ dcb_close(DCB *dcb)
                     STRDCBSTATE(dcb->state))));
             
                 dcb_close_finish(dcb);
-                atomic_add(&dcb->server->stats.n_current, -1);
-            }
-            }
+                if (dcb->server) atomic_add(&dcb->server->stats.n_current, -1);
             ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
                 dcb->state == DCB_STATE_ZOMBIE);	
+            }
+            ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+                dcb->state == DCB_STATE_ZOMBIE ||
+				dcb->state == DCB_STATE_POLLING);	
+            }
         }
 }
 

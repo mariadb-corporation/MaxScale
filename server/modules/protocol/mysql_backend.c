@@ -166,6 +166,11 @@ static int gw_read_backend_event(DCB *dcb) {
         int            rc = 0;
 
         CHK_DCB(dcb);        
+        if (!dcb->session && dcb->persistentstart)
+        {
+            dcb->dcb_errhandle_called = true;
+            goto return_rc;
+        }
 	CHK_SESSION(dcb->session);
                 
         /*< return only with complete session */
@@ -1043,6 +1048,11 @@ gw_backend_hangup(DCB *dcb)
         session_state_t ses_state;
         
         CHK_DCB(dcb);
+        if (!dcb->session && dcb->persistentstart)
+        {
+            dcb->dcb_errhandle_called = true;
+            goto retblock;
+        }
         session = dcb->session;
         CHK_SESSION(session);
         
