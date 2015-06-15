@@ -17,6 +17,7 @@ install(TARGETS HTTPD DESTINATION ${MAXSCALE_LIBDIR})
 if(BUILD_TESTS)
   add_library(testprotocol SHARED testprotocol.c)
   install(TARGETS testprotocol DESTINATION ${MAXSCALE_LIBDIR})
+  add_subdirectory(test)
 endif()
 
 add_library(maxscaled SHARED maxscaled.c)
