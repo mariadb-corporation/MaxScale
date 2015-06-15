@@ -316,7 +316,6 @@ typedef struct router_instance {
         struct router_instance* next;        /*< Next router on the list            */
 	bool			available_slaves; /*< The router has some slaves available */
 
-
 } ROUTER_INSTANCE;
 
 #define BACKEND_TYPE(b) (SERVER_IS_MASTER((b)->backend_server) ? BE_MASTER :    \
