@@ -1032,9 +1032,10 @@ return_n:
 
 
 /**
- * General purpose read routine to read data from a socket in the
- * Descriptor Control Block and append it to a linked list of buffers.
- * The list may be empty, in which case *head == NULL
+ * General purpose read routine to read data from a socket through the SSL
+ * structure lined with this DCB and append it to a linked list of buffers.
+ * The list may be empty, in which case *head == NULL. The SSL structure should
+ * be initialized and the SSL handshake should be done.
  *
  * @param dcb	The DCB to read from
  * @param head	Pointer to linked list to append data to
