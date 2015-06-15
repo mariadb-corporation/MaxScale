@@ -305,7 +305,9 @@ char		*remote, *userName;
 		sprintf(my_session->filename, "%s.%d", 
 			my_instance->filebase,
 			my_instance->sessions);
-		atomic_add(&my_instance->sessions,1);
+
+        // Multiple sessions can try to update my_instance->sessions simultaneously
+		atomic_add(&(my_instance->sessions), 1);
 		
 		if (my_session->active)
 		{

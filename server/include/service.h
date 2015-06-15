@@ -26,7 +26,10 @@
 #include <hashtable.h>
 #include <resultset.h>
 #include <maxconfig.h>
-
+#include <openssl/crypto.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+#include <openssl/dh.h>
 /**
  * @file service.h
  *
@@ -105,6 +108,25 @@ typedef struct server_ref_t{
         SERVER* server;
 }SERVER_REF;
 
+typedef enum {
+  SSL_DISABLED,
+  SSL_ENABLED,
+  SSL_REQUIRED
+} ssl_mode_t;
+
+enum{
+  SERVICE_SSLV2,
+  SERVICE_SSLV3,
+  SERVICE_TLS10,
+  SERVICE_TLS11,
+  SERVICE_TLS12,
+  SERVICE_SSL_MAX,
+  SERVICE_TLS_MAX,
+  SERVICE_SSL_TLS_MAX
+};
+
+#define DEFAULT_SSL_CERT_VERIFY_DEPTH 100 /*< The default certificate verification depth */
+
 /**
  * Defines a service within the gateway.
  *
@@ -149,8 +171,19 @@ typedef struct service {
 	FILTER_DEF	**filters;		/**< Ordered list of filters */
 	int		n_filters;		/**< Number of filters */
         int             conn_timeout;           /*< Session timeout in seconds */
+        ssl_mode_t ssl_mode; /*< one of DISABLED, ENABLED or REQUIRED */
 	char		*weightby;
 	struct service	*next;			/**< The next service in the linked list */
+        SSL_CTX         *ctx;
+        SSL_METHOD      *method;                           /*<  SSLv2/3 or TLSv1/2 methods
+                                                           * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
+        int ssl_cert_verify_depth; /*< SSL certificate verification depth */
+        int ssl_method_type; /*< Which of the SSLv2/3 or TLS1.0/1.1/1.2 methods to use */
+        char* ssl_cert; /*< SSL certificate */
+        char* ssl_key; /*< SSL private key */
+        char* ssl_ca_cert; /*< SSL CA certificate */
+        bool ssl_init_done; /*< If SSL has already been initialized for this service */
+
 } SERVICE;
 
 typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOST} count_spec_t;
@@ -178,6 +211,11 @@ extern	int	serviceRestart(SERVICE *);
 extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
 extern	void	serviceSetFilters(SERVICE *, char *);
+extern  int     serviceSetSSL(SERVICE *service, char* action);
+extern  int     serviceInitSSL(SERVICE* service);
+extern  int     serviceSetSSLVersion(SERVICE *service, char* version);
+extern  int     serviceSetSSLVerifyDepth(SERVICE* service, int depth);
+extern  void    serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert);
 extern	int	serviceEnableRootUser(SERVICE *, int );
 extern	int	serviceSetTimeout(SERVICE *, int );
 extern	void	serviceWeightBy(SERVICE *, char *);

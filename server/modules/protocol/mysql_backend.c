@@ -72,7 +72,7 @@ static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
 static GWBUF* process_response_data (DCB* dcb, GWBUF* readbuf, int nbytes_to_process); 
 extern char* create_auth_failed_msg( GWBUF* readbuf, char*  hostaddr, uint8_t*  sha1);
-extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db);
+extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
 static bool sescmd_response_complete(DCB* dcb);
 
 
@@ -1433,7 +1433,7 @@ static int gw_change_user(
 		message = create_auth_fail_str(username,
 						backend->session->client->remote,
 						password_set,
-						"");
+						"",auth_ret);
 		if (message == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(
