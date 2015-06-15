@@ -1,6 +1,4 @@
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
  *
@@ -42,6 +40,7 @@
  * 05/06/2015	Massimiliano Pinto	router->service->dbref->sever->name instead of master->remote
  *					in blr_slave_send_slave_status()
  * 08/06/2015	Massimiliano Pinto	blr_slave_send_slave_status() shows mysql_errno and error_msg
+ * 15/06/2015	Massimiliano Pinto	Added constraints to CHANGE MASTER TO MASTER_LOG_FILE/POS
  *
  * @endverbatim
  */
@@ -62,8 +61,10 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <version.h>
+#include <zlib.h>
 
 extern void blr_master_close(ROUTER_INSTANCE* router);
+int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 static uint32_t extract_field(uint8_t *src, int bits);
 static void encode_value(unsigned char *data, unsigned int value, int len);
 static int blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
@@ -94,7 +95,7 @@ static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static void blr_slave_send_error_packet(ROUTER_SLAVE *slave, char *msg, unsigned int err_num, char *status);
 static char *get_change_master_option(char *input, char *option);
-static void blr_handle_change_master(ROUTER_INSTANCE* router, char *command);
+static int blr_handle_change_master(ROUTER_INSTANCE* router, char *command);
 
 
 extern int lm_enabled_logfiles_bitmask;
@@ -476,11 +477,17 @@ int	query_len;
 			}
 			else
 			{
-				blr_handle_change_master(router, brkb);
+				int rc;
+
+				rc = blr_handle_change_master(router, brkb);
 
 				free(query_text);
 
-				return blr_slave_send_ok(router, slave);
+				if (rc) {
+					blr_slave_send_error_packet(slave, "Incorrect arguments to CHANGE MASTER TO. Check error log", (unsigned int)1210, NULL);
+					return 1;
+				} else
+					return blr_slave_send_ok(router, slave);
 			}
 		}
 	}
@@ -2390,32 +2397,40 @@ char *get_change_master_option(char *input, char *option_field) {
  *
  * @param router	The router instance
  * @param command	The change master SQL command
+ * @return 0 on success, != 0 on failure
  */
 static
-void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
+int blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
 	char *master_host=NULL;
 	char *master_port = NULL;
 	char *master_logfile = NULL;
 	char *master_log_pos = NULL;
 	char *master_user = NULL;
 	char *master_password = NULL;
+	int change_binlog = 0;
+	char *new_binlog_file = NULL;
+	char *prev_host;
+	int prev_port;
+	char *prev_binlog_file;
+	unsigned long long prev_pos;
+	char *prev_user;
+	char *prev_passwd;
 
-	/* fetch options from SQL command */
+	/* save current replication parameters */
+	prev_port = router->service->dbref->server->port;
+	prev_host = strdup(router->service->dbref->server->name);
+	prev_pos = router->binlog_position;
+	prev_binlog_file = strdup(router->binlog_name);
+	prev_user = strdup(router->user);
+	prev_passwd = strdup(router->password);
+
+	/* fetch new options from SQL command */
 	master_host = get_change_master_option(command, "MASTER_HOST");
 	master_port = get_change_master_option(command, "MASTER_PORT");
 	master_logfile = get_change_master_option(command, "MASTER_LOG_FILE");
 	master_log_pos = get_change_master_option(command, "MASTER_LOG_POS");
 	master_user = get_change_master_option(command, "MASTER_USER");
 	master_password = get_change_master_option(command, "MASTER_PASSWORD");
-	
-	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: CHANGE MASTER: MASTER_HOST=[%s], MASTER_PORT=[%s], MASTER_LOG_FILE=[%s], MASTER_LOG_POS=[%s], MASTER_USER=[%s], MASTER_PASSWORD=[%s]",
-		router->service->name,
-		master_host != NULL ? (master_host + 12) : "null",
-		master_port != NULL ? (master_port + 12) : "null",
-		master_logfile != NULL ? (master_logfile + 16) : "null",
-		master_log_pos != NULL ? (master_log_pos + 15) : "null",
-		master_user != NULL ? (master_user + 12) : "null",
-		master_password != NULL ? (master_password+ 16) : "null")));
 
 	/*
 	 * Change values in the router->service->dbref->server structure
@@ -2455,10 +2470,37 @@ void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
 		free(master_port);
 	}	
 
-	/* Change the binlog filename to request from master */
+	/**
+	 * Change the binlog filename to request from master
+	 * New binlog file should only be the next one
+	 */
 	if (master_logfile) {
 		char *ptr;
 		char *end;
+		int next_binlog_seqname;
+
+		next_binlog_seqname = blr_file_get_next_binlogname(router);
+		if (!next_binlog_seqname) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: cannot get the next MASTER_LOG_FILE name from current binlog [%s]: return an error",
+				router->service->name,
+				router->binlog_name)));
+
+			free(master_logfile);
+
+			/* restore previous master_host and master_port */
+			server_update_address(router->service->dbref->server, prev_host);
+			server_update_port(router->service->dbref->server, prev_port);
+
+			free(prev_host);
+			free(prev_binlog_file);
+			free(prev_user);
+			free(prev_passwd);
+
+			spinlock_release(&router->lock);
+
+			return 1;
+		}
+			
 		ptr = strchr(master_logfile, '\'');
 		if (ptr)
 			ptr++;
@@ -2469,28 +2511,131 @@ void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
 		if (end)
 			*end ='\0';
 
-		memset(router->binlog_name, '\0', sizeof(router->binlog_name));	
-		strncpy(router->binlog_name, ptr, BINLOG_FNAMELEN);
-
-		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
-			router->service->name,
-			router->binlog_name)));
-
-		free(master_logfile);
-	}
-
-	/* Change the position in the current binlog filename */
-	if (master_log_pos) {
-		long pos = atol(master_log_pos + 15);
-		if (pos <= 0) {
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: cannot set MASTER_LOG_POS to [%u] for binlog [%s]. Set to 4",
+		end = strchr(ptr, '.');
+		if (!end) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: current binlog name [%s] has not the format '%s.yyyyyy'",
 				router->service->name,
-				pos,
+				router->fileroot,
 				router->binlog_name)));
 
-			router->binlog_position = 4;
+			free(master_logfile);
+
+			/* restore previous master_host and master_port */
+			server_update_address(router->service->dbref->server, prev_host);
+			server_update_port(router->service->dbref->server, prev_port);
+
+			free(prev_host);
+			free(prev_binlog_file);
+			free(prev_user);
+			free(prev_passwd);
+
+			spinlock_release(&router->lock);
+
+			return 2;
+		}
+
+		end++;
+
+		if (atoi(end) != next_binlog_seqname) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: cannot set MASTER_LOG_FILE to %s: only next one %s.%06d is allowed",
+				router->service->name,
+				ptr,
+				router->fileroot,
+				next_binlog_seqname)));
+
+			free(master_logfile);
+
+			/* restore previous master_host and master_port */
+			server_update_address(router->service->dbref->server, prev_host);
+			server_update_port(router->service->dbref->server, prev_port);
+
+			free(prev_host);
+			free(prev_binlog_file);
+			free(prev_user);
+			free(prev_passwd);
+
+			spinlock_release(&router->lock);
+				
+			return 3;
+		}
+
+		/* save new filename pointer and don't free master_logfile pointer !*/
+		new_binlog_file = ptr;
+
+		/* Binlog file name succesfully changed */
+		change_binlog = 1;
+	}
+
+	/* Change the position in the current or new binlog filename */
+	if (master_log_pos) {
+		char *passed_pos = master_log_pos + 15;
+		long long pos = atoll(passed_pos);
+
+		/* if binlog name has changed to next one only position 4 is allowed */
+		if (change_binlog) {
+			if (pos != 4) {
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: cannot set MASTER_LOG_POS to %s for new binlog file [%s]",
+					router->service->name,
+					passed_pos,
+					new_binlog_file)));
+
+				if (master_logfile)
+					free(master_logfile);
+
+				/* restore previous master_host and master_port */
+				server_update_address(router->service->dbref->server, prev_host);
+				server_update_port(router->service->dbref->server, prev_port);
+
+				free(prev_host);
+				free(prev_binlog_file);
+				free(prev_user);
+				free(prev_passwd);
+
+				spinlock_release(&router->lock);
+
+				return 4;
+				
+			} else {
+				/* set new filename and pos */			
+				memset(router->binlog_name, '\0', sizeof(router->binlog_name));	
+				strncpy(router->binlog_name, new_binlog_file, BINLOG_FNAMELEN);
+
+				router->binlog_position = 4;
+
+				free(master_logfile);
+
+				LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
+					router->service->name,
+					router->binlog_name)));
+			}
 		} else {
-			router->binlog_position = atol(master_log_pos + 15);
+			if (master_logfile)
+				free(master_logfile);
+
+			/* Position cannot be different from current pos */
+			if (pos != router->binlog_position) {
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: cannot set MASTER_LOG_POS to %s for current binlog file [%s]",
+					router->service->name,
+					passed_pos,
+					router->binlog_name)));
+
+				/* restore previous master_host and master_port */
+				server_update_address(router->service->dbref->server, prev_host);
+				server_update_port(router->service->dbref->server, prev_port);
+
+				free(prev_host);
+				free(prev_binlog_file);
+				free(prev_user);
+				free(prev_passwd);
+
+				spinlock_release(&router->lock);
+
+				return 5;
+
+			} else {
+				/* set new position */
+				router->binlog_position = pos;
+			}
 		}
 
 		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
@@ -2549,5 +2694,23 @@ void blr_handle_change_master(ROUTER_INSTANCE* router, char *command) {
 		free(master_password);
 	}
 
-	spinlock_release(&router->lock);
+	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: 'CHANGE MASTER TO executed'. Previous state MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s', MASTER_PASSWORD='%s'. New state is MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s', MASTER_PASSWORD='%s'",
+		router->service->name,
+		prev_host,prev_port,prev_binlog_file, prev_pos, prev_user, prev_passwd,
+		router->service->dbref->server->name,
+		router->service->dbref->server->port,
+		router->binlog_name,
+		router->binlog_position,
+		router->user,
+		router->password)));
+
+
+		free(prev_host);
+		free(prev_binlog_file);
+		free(prev_user);
+		free(prev_passwd);
+
+		spinlock_release(&router->lock);
+
+	return 0;
 }

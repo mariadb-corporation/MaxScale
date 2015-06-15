@@ -26,6 +26,7 @@
  * Date		Who			Description
  * 14/04/2014	Mark Riddoch		Initial implementation
  * 08/06/2015	Massimiliano Pinto	Addition of blr_cache_read_master_data()
+ * 15/06/2015	Massimiliano Pinto	Addition of blr_file_get_next_binlogname()
  *
  * @endverbatim
  */
@@ -61,6 +62,7 @@ static void blr_file_append(ROUTER_INSTANCE *router, char *file);
 static uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
+int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -777,4 +779,24 @@ blr_cache_read_master_data(ROUTER_INSTANCE *router)
 	router->saved_master.selectvercom = blr_cache_read_response(router, "selectvercom");
 	router->saved_master.selecthostname = blr_cache_read_response(router, "selecthostname");
 	router->saved_master.map = blr_cache_read_response(router, "map");
+}
+
+
+/**
+ * Get the next binlog file name.
+ *
+ * @param router	The router instance
+ * @return 		0 on error, >0 as sequence number
+ */
+int
+blr_file_get_next_binlogname(ROUTER_INSTANCE *router)
+{
+char	*sptr, buf[80], bigbuf[4096];
+int	filenum;
+
+	if ((sptr = strrchr(router->binlog_name, '.')) == NULL)
+		return 0;
+	filenum = atoi(sptr+1) + 1;
+
+	return filenum;
 }
