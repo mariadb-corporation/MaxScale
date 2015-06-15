@@ -326,6 +326,63 @@ Example:
 connection_timeout=300
 ```
 
+### Service and SSL
+
+This section describes configuration parameters for services that control the SSL/TLS encrption method and the various certificate files involved in it. To enable SSL, you must configure the `ssl` parameter with either `enabled` or `required` and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`. After this, MySQL connections to this service can be encrypted with SSL.
+
+#### `ssl`
+
+This enables SSL connections to the service. If this parameter is set to either `required` or `enabled` and the three certificate files can be found (these are explained afterwards), then client connections will be encrypted with SSL. If the parameter is `enabled` then both SSL and non-SSL connections can connect to this service. If the parameter is set to `required` then only SSL connections can be used for this service and non-SSL connections will get an error when they try to connect to the service.
+
+#### `ssl_key`
+
+The SSL private key the service should use. This will be the private key that is used as the server side private key during a client-server SSL handshake. This is a required parameter for SSL enabled services.
+
+#### `ssl_cert`
+
+The SSL certificate the service should use. This will be the public certificate that is used as the server side certificate during a client-server SSL handshake. This is a required parameter for SSL enabled services.
+
+#### `ssl_ca_cert`
+
+This is the Certificate Authority file. It will be used to verify that both the client and the server certificates are valid. This is a required parameter for SSL enabled services.
+
+### `ssl_version`
+
+This parameter controls the level of encryption used. Accepted values are:
+ * SSLv2
+ * SSLv3
+ * TLSv10
+ * TLSv11
+ * TLSv12
+ * MAX   
+
+### `ssl_cert_verification_depth`
+
+The maximum length of the certificate authority chain that will be accepted. Accepted values are positive integers.
+
+```
+# Example
+ssl_cert_verification_depth=10
+```
+
+Example SSL enabled service configuration:
+
+```
+[ReadWriteSplitService]
+type=service
+router=readwritesplit
+servers=server1,server2,server3
+user=myuser
+passwd=mypasswd
+ssl=required
+ssl_cert=/home/markus/certs/server-cert.pem
+ssl_key=/home/markus/certs/server-key.pem
+ssl_ca_cert=/home/markus/certs/ca.pem
+ssl_version=TLSv12
+```
+
+This configuration requires all connections to be encryped with SSL. It also specifies that TLSv1.2 should be used as the encryption method. The paths to the server certificate files and the Certificate Authority file are also provided.
+
 ### Server
 
 Server sections are used to define the backend database servers that can be formed into a service. A server may be a member of one or more services within MaxScale. Servers are identified by a server name which is the section name in the configuration file. Servers have a type parameter of server, plus address port and protocol parameters.
