@@ -1279,33 +1279,32 @@ dcb_close(DCB *dcb)
 	{
             if (!dcb_maybe_add_persistent(dcb))
             {
-            if (poll_remove_dcb(dcb))
-            {
-                LOGIF(LE, (skygw_log_write(
-                    LOGFILE_ERROR,
-                    "Error : Removing DCB fd == %d in state %s from "
-                    "poll set failed.",
-                    dcb->fd,
-                    STRDCBSTATE(dcb->state))));
-            } 
-            else
-            {
-                LOGIF(LD, (skygw_log_write(
-                    LOGFILE_DEBUG,
-                    "%lu [dcb_close] Removed dcb %p in state %s from "
-                    "poll set.",
-                    pthread_self(),
-                    dcb,
-                    STRDCBSTATE(dcb->state))));
+                if (poll_remove_dcb(dcb))
+                {
+                    LOGIF(LE, (skygw_log_write(
+                        LOGFILE_ERROR,
+                        "Error : Removing DCB fd == %d in state %s from "
+                        "poll set failed.",
+                        dcb->fd,
+                        STRDCBSTATE(dcb->state))));
+                } 
+                else
+                {
+                    LOGIF(LD, (skygw_log_write(
+                        LOGFILE_DEBUG,
+                        "%lu [dcb_close] Removed dcb %p in state %s from "
+                        "poll set.",
+                        pthread_self(),
+                        dcb,
+                        STRDCBSTATE(dcb->state))));
             
-                dcb_close_finish(dcb);
-                if (dcb->server) atomic_add(&dcb->server->stats.n_current, -1);
-            ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                dcb->state == DCB_STATE_ZOMBIE);	
-            }
-            ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                dcb->state == DCB_STATE_ZOMBIE ||
-				dcb->state == DCB_STATE_POLLING);	
+                    dcb_close_finish(dcb);
+                    ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+                        dcb->state == DCB_STATE_ZOMBIE);	
+                }
+                ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
+                    dcb->state == DCB_STATE_ZOMBIE ||
+                    dcb->state == DCB_STATE_POLLING);	
             }
         }
 }
@@ -1337,6 +1336,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         dcb->session = NULL;
         spinlock_release(&dcb->server->persistlock);
         atomic_add(&dcb->server->stats.n_persistent, 1);
+        atomic_add(&dcb->server->stats.n_current, -1);
         return true;
     }
     return false;
@@ -1354,10 +1354,14 @@ dcb_close_finish(DCB *dcb)
     /**
      * check persistent list, close protocol and router session
      */
-    if (dcb->server && dcb->server->persistent) CHK_DCB(dcb->server->persistent);
     if (dcb->func.close)
     {
         dcb->func.close(dcb);
+    }
+    if (dcb->server)
+    {
+        if (dcb->server->persistent) CHK_DCB(dcb->server->persistent);
+        atomic_add(&dcb->server->stats.n_current, -1);
     }
     /** Call possible callback for this DCB in case of close */
     dcb_call_callback(dcb, DCB_REASON_CLOSE);
