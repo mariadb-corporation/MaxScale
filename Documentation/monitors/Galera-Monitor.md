@@ -108,7 +108,7 @@ master_down|A Master server has gone down
 master_up|A Master server has come up
 slave_down|A Slave server has gone down
 slave_up|A Slave server has come up
-server_down|A server with no assigned role has done down
+server_down|A server with no assigned role has gone down
 server_up|A server with no assigned role has come up
 synced_down|A synced Galera node has come up
 synced_up|A synced Galera node has gone down
