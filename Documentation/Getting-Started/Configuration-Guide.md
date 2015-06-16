@@ -1393,20 +1393,24 @@ In addition parameters may be added to define patterns to match against to eithe
 
 ## Encrypting Passwords
 
-Passwords stored in the maxscale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key. The default location MaxScale stores the keys is `/var/cache/maxscale`.
+Passwords stored in the maxscale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key. The default location MaxScale stores the keys is `/var/lib/maxscale`.
 
 ```
-maxkeys /var/cache/maxscale/.secrets
+ # Usage: maxkeys [PATH]
+maxkeys /var/lib/maxscale/
 ```
 
 Changing the encryption key for MaxScale will invalidate any currently encrypted keys stored in the maxscale.cnf file.
 
 ### Creating Encrypted Passwords
 
-Encrypted passwords are created by executing the maxpasswd command with the password you require to encrypt as an argument.
+Encrypted passwords are created by executing the maxpasswd command with the location of the .secrets file and the password you require to encrypt as an argument.
 
-    maxpasswd MaxScalePw001
-    61DD955512C39A4A8BC4BB1E5F116705
+```
+# Usage: maxpasswd PATH PASSWORD
+maxpasswd /var/lib/maxscale/ MaxScalePw001
+61DD955512C39A4A8BC4BB1E5F116705
+```
 
 The output of the maxpasswd command is a hexadecimal string, this should be inserted into the maxscale.cnf file in place of the ordinary, plain text, password. MaxScale will determine this as an encrypted password and automatically decrypt it before sending it the database server.
 
