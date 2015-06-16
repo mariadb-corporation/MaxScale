@@ -119,7 +119,7 @@ datadir=/home/user/maxscale_data/
 
 #### `libdir`
 
-Set the directory where MaxScale looks for modules. The library director is the only directory that MaxScale uses when it searches for modules. If you have custom modules for MaxScale, make sure you have them in this folder.
+Set the directory where MaxScale looks for modules. The library directory is the only directory that MaxScale uses when it searches for modules. If you have custom modules for MaxScale, make sure you have them in this folder.
 
 ```
 libdir=/home/user/lib64/
@@ -328,7 +328,7 @@ connection_timeout=300
 
 ### Service and SSL
 
-This section describes configuration parameters for services that control the SSL/TLS encrption method and the various certificate files involved in it. To enable SSL, you must configure the `ssl` parameter with either `enabled` or `required` and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`. After this, MySQL connections to this service can be encrypted with SSL.
+This section describes configuration parameters for services that control the SSL/TLS encryption method and the various certificate files involved in it. To enable SSL, you must configure the `ssl` parameter with either `enabled` or `required` and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`. After this, MySQL connections to this service can be encrypted with SSL.
 
 #### `ssl`
 
@@ -381,7 +381,7 @@ ssl_ca_cert=/home/markus/certs/ca.pem
 ssl_version=TLSv12
 ```
 
-This configuration requires all connections to be encryped with SSL. It also specifies that TLSv1.2 should be used as the encryption method. The paths to the server certificate files and the Certificate Authority file are also provided.
+This configuration requires all connections to be encrypted with SSL. It also specifies that TLSv1.2 should be used as the encryption method. The paths to the server certificate files and the Certificate Authority file are also provided.
 
 ### Server
 
@@ -1129,7 +1129,7 @@ MariaDB [mysql]> grant REPLICATION CLIENT on *.* to 'maxscalemon'@'maxscalehost'
 Query OK, 0 rows affected (0.00 sec)
 ```
 
-MySQL monitor fetches the `@@server_id` variable and other informations from `SHOW SLAVE STATUS` in order to compute the replication topology tree that may include intermediate master servers, called relay servers.
+MySQL monitor fetches the `@@server_id` variable and other information from `SHOW SLAVE STATUS` in order to compute the replication topology tree that may include intermediate master servers, called relay servers.
 
 The *Master* server used by router modules is the so called "root master": a server that has the `SERVER_MASTER` status bit set and it's at the lowest level of the replication depth.
 
