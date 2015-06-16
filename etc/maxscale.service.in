@@ -4,6 +4,7 @@ After=network.target
 
 [Service]
 Type=forking
+Restart=on-failure
 PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
 ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale
 

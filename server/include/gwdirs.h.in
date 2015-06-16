@@ -26,7 +26,9 @@
 /** Default file locations, configured by CMake */
 static const char* default_cnf_fname = "maxscale.cnf";
 static const char* default_configdir = "/etc/";
-static const char* default_piddir = "@MAXSCALE_VARDIR@/run/maxscale/";
+static const char* default_piddir = "@MAXSCALE_VARDIR@/run/maxscale/"; /*< This should be changed to just /run eventually, 
+                                                                        * the /var/run folder is an old standard and the newe FSH 3.0
+                                                                        * uses /run for PID files.*/
 static const char* default_logdir = "@MAXSCALE_VARDIR@/log/maxscale/";
 static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale/";
 static const char* default_libdir = "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@";
