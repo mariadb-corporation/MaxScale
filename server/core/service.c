@@ -1373,7 +1373,14 @@ void	*router_obj;
 	}
 }
 
-
+/**
+ * Refresh the database users for the service
+ * This function replaces the MySQL users used by the service with the latest
+ * version found on the backend servers. There is a limit on how often the users
+ * can be reloaded and if this limit is exceeded, the reload will fail.
+ * @param service Service to reload
+ * @return 0 on success and 1 on error
+ */
 int service_refresh_users(SERVICE *service) {
 	int ret = 1;
 	/* check for another running getUsers request */
