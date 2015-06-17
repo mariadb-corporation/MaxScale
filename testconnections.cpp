@@ -164,6 +164,7 @@ int TestConnections::init_maxscale()
         printf("configure_maxscale.sh executing FAILED!\n"); fflush(stdout);
         return(1);
     }
+    fflush(stdout);
     printf("Waiting 15 seconds\n"); fflush(stdout);
     sleep(15);
 }
