@@ -349,7 +349,6 @@ This is the Certificate Authority file. It will be used to verify that both the 
 ### `ssl_version`
 
 This parameter controls the level of encryption used. Accepted values are:
- * SSLv2
  * SSLv3
  * TLSv10
  * TLSv11

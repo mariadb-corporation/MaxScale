@@ -11,5 +11,5 @@ ssl         | disabled, enabled, required |`disable` disables SSL, `enabled` ena
 ssl_cert    | path to file              |Path to server certificate
 ssl_key     | path to file              |Path to server private key
 ssl_ca_cert | path to file              |Path to Certificate Authority file
-ssl_version|SSLV2,SSLV3,TLSV10,TLSV11,TLSV12,MAX| The SSL method level,  defaults to highest available encryption level which is TLSv1.2
+ssl_version|SSLV3,TLSV10,TLSV11,TLSV12,MAX| The SSL method level,  defaults to highest available encryption level which is TLSv1.2
 ssl_cert_verify_depth|integer|Certificate authority certificate verification depth, default is 100.
