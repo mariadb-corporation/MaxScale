@@ -1159,30 +1159,32 @@ gw_backend_close(DCB *dcb)
 	 * but client's close and adding client's DCB to zombies list is executed
 	 * only if client's DCB's state does _not_ change in parallel.
 	 */
-	spinlock_acquire(&session->ses_lock);
-	/** 
-	 * If session->state is STOPPING, start closing client session. 
-	 * Otherwise only this backend connection is closed.
-	 */
-        if (session != NULL && 
-		session->state == SESSION_STATE_STOPPING &&
-		session->client != NULL)
-        {		
-                if (session->client->state == DCB_STATE_POLLING)
-                {
-			spinlock_release(&session->ses_lock);
-			
-                        /** Close client DCB */
-                        dcb_close(session->client);
-                }
-                else 
-		{
-			spinlock_release(&session->ses_lock);
-		}
-        }
-        else
+	if(session != NULL)
 	{
+	    spinlock_acquire(&session->ses_lock);
+	    /**
+	     * If session->state is STOPPING, start closing client session.
+	     * Otherwise only this backend connection is closed.
+	     */
+	    if (session->state == SESSION_STATE_STOPPING &&
+	     session->client != NULL)
+	    {
+		if (session->client->state == DCB_STATE_POLLING)
+		{
+		    spinlock_release(&session->ses_lock);
+
+		    /** Close client DCB */
+		    dcb_close(session->client);
+		}
+		else
+		{
+		    spinlock_release(&session->ses_lock);
+		}
+	    }
+	    else
+	    {
 		spinlock_release(&session->ses_lock);
+	    }
 	}
 	return 1;
 }
