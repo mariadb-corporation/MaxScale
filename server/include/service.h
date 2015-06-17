@@ -115,7 +115,6 @@ typedef enum {
 } ssl_mode_t;
 
 enum{
-  SERVICE_SSLV2,
   SERVICE_SSLV3,
   SERVICE_TLS10,
   SERVICE_TLS11,
@@ -175,10 +174,10 @@ typedef struct service {
 	char		*weightby;
 	struct service	*next;			/**< The next service in the linked list */
         SSL_CTX         *ctx;
-        SSL_METHOD      *method;                           /*<  SSLv2/3 or TLSv1/2 methods
+        SSL_METHOD      *method;                           /*<  SSLv3 or TLS1.0/1.1/1.2 methods
                                                            * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
         int ssl_cert_verify_depth; /*< SSL certificate verification depth */
-        int ssl_method_type; /*< Which of the SSLv2/3 or TLS1.0/1.1/1.2 methods to use */
+        int ssl_method_type; /*< Which of the SSLv3 or TLS1.0/1.1/1.2 methods to use */
         char* ssl_cert; /*< SSL certificate */
         char* ssl_key; /*< SSL private key */
         char* ssl_ca_cert; /*< SSL CA certificate */

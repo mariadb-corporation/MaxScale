@@ -909,9 +909,7 @@ serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert)
 int
 serviceSetSSLVersion(SERVICE *service, char* version)
 {
-    if(strcasecmp(version,"SSLV2") == 0)
-	service->ssl_method_type = SERVICE_SSLV2;
-    else if(strcasecmp(version,"SSLV3") == 0)
+    if(strcasecmp(version,"SSLV3") == 0)
 	service->ssl_method_type = SERVICE_SSLV3;
     else if(strcasecmp(version,"TLSV10") == 0)
 	service->ssl_method_type = SERVICE_TLS10;
@@ -1952,9 +1950,6 @@ int serviceInitSSL(SERVICE* service)
     {
 	switch(service->ssl_method_type)
 	{
-	case SERVICE_SSLV2:
-	    service->method = (SSL_METHOD*)SSLv2_server_method();
-	    break;
 	case SERVICE_SSLV3:
 	    service->method = (SSL_METHOD*)SSLv3_server_method();
 	    break;
