@@ -29,7 +29,7 @@
 #include <skygw_types.h>
 #include <sys/time.h>
 #include "skygw_utils.h"
-#include "atomic.h"
+#include <atomic.h>
 
 #if defined(MLIST)
 
