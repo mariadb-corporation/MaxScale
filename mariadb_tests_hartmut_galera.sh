@@ -12,7 +12,7 @@ echo "GRANT ALL PRIVILEGES ON *.* TO maxuser@'localhost' IDENTIFIED BY 'maxpwd' 
 
 $test_dir/Hartmut_tests/mariadb_tests_hartmut_imp 4006
 
-ssh -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@$maxscale_IP "cat /home/ec2-user/maxscale-mysqltest/fail.txt" | grep "FAILED"
+ssh -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $access_galera@$maxscale_IP "cat /home/ec2-user/maxscale-mysqltest/fail.txt" | grep "FAILED"
 if [ $? -ne 0 ]; then
 	res=0
 else

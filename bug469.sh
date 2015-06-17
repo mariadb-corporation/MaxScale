@@ -11,14 +11,14 @@ $test_dir/configure_maxscale.sh
 
 res=0
 
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" 
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" 
 
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" | grep -P "Current no. of conns:\t\t0"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" | grep -P "Current no. of conns:\t\t0"
 if [ $? != 0 ] ; then
 	echo "Current no. of conns before query is not 0"
         res=1 
 fi
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" | grep -P "Number of connections:\t\t0"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" | grep -P "Number of connections:\t\t0"
 if [ $? != 0 ] ; then
 	echo "Number of connections before query is not 0"
         res=1 
@@ -28,18 +28,18 @@ fi
 
 echo "Executing quiry"
 
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4006 -u$repl_user -p$repl_password -c"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4006 -u$repl_user -p$repl_password -c"
 
 sleep 10
 
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1"
 
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" | grep -P "Current no. of conns:\t\t0"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" | grep -P "Current no. of conns:\t\t0"
 if [ $? != 0 ] ; then
 	echo "Current no. of conns after query is not 0"
         res=1 
 fi
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" | grep -P "Number of connections:\t\t1"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" | grep -P "Number of connections:\t\t1"
 if [ $? != 0 ] ; then
 	echo "Number of connections before query is not 1"
         res=1 
