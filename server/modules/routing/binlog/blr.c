@@ -183,12 +183,12 @@ unsigned char	*defuuid;
 	spinlock_init(&inst->binlog_lock);
 
 	inst->binlog_fd = -1;
+	inst->master_chksum = true;
+	inst->master_uuid = NULL;
 
 	inst->master_state = BLRM_UNCONNECTED;
 	inst->master = NULL;
 	inst->client = NULL;
-
-	inst->master_uuid = NULL;
 
 	inst->low_water = DEF_LOW_WATER;
 	inst->high_water = DEF_HIGH_WATER;
