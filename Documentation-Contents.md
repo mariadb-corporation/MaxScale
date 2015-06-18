@@ -25,6 +25,7 @@
 
  - [MaxAdmin](Reference/MaxAdmin.md)
  - [MaxScale HA with Corosync-Pacemaker](Reference/MaxScale-HA-with-Corosync-Pacemaker.md)
+ - [MaxScale HA with Lsyncd](Reference/MaxScale-HA-with-lsyncd.md)
  - [How Errors are Handled in MaxScale](Reference/How-errors-are-handled-in-MaxScale.md)
  - [Debug and Diagnostic Support](Reference/Debug-And-Diagnostic-Support.md)
  
