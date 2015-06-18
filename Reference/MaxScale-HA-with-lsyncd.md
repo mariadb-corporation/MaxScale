@@ -1,14 +1,26 @@
 # MaxScale HA with Lsyncd
 
-This document guides you in setting up multiple MaxScale instances and synchronizing the configuration files with Lsyncd. Lsyncd is a rsync wrapper which can synchronize files across the network. The lsyncd daemon uses a configuration file to control the files to synchronize and the remote targets where these files are synchronized to. This guide was writted for lsyncd 2.1.5.
+***This guide was written for lsyncd 2.1.5.***
+
+This document guides you in setting up multiple MaxScale instances and synchronizing the configuration files with lsyncd. Lsyncd is a rsync wrapper which can synchronize files across the network. The lsyncd daemon uses a configuration file to control the files to synchronize and the remote targets where these files are synchronized to. 
 
 Copying the configuration file and running the lsyncd daemon on all the hosts keeps all the configuration files in sync. Modifications in the configuration file on one of the hosts will be copied on the other hosts. This allows adinistrators to easily provide a highly available, disaster resistant MaxScale installation with up-to-date configuration files on all the hosts.
 
-You will need to have SSH access to the remote servers for.
+### Requirements
+You will need:
+
+*  Access to the remote hosts.
+*  MaxScale installed on all systems
+*  Configured maxscale.cnf file in /etc
+*  SSH daemon and clients installed on all hosts
+
+The installation and configuration of MaxScale is covered in other documents.
 
 ## Creating SSH keys
 
-For lsyncd to work, we will need to either use an existing set of SSH keys or to create a new set of keys. If you already have a SSH key generated, you can skip this next step and go to the Copying Keys part.
+For lsyncd to work, we will need to either use an existing set of SSH keys or to create a new set of keys. The creation and copying of keys needs to be repeated on all of the hosts.
+
+If you already have a SSH key generated, you can skip this next step and go to the Copying Keys part.
 
 ### Generating keys
 
@@ -51,7 +63,11 @@ Use the username and host of the remote server you wish to synchronize MaxScale'
 ssh-copy-id user@192.168.122.100
 ```
 
-## Installing Lsyncd
+Repeat the last command with the usernames and addresses of all the remote hosts you want to synchronize the configuration files to.
+
+## Installing lsyncd
+
+You will need to install lsyncd on all of the hosts for changes in the configuration file on one of the nodes to be synchronized to the other nodes.
 
 You can install lsyncd with either a package manager or by building from source code. This guide demonstrates installation using a package manager and those looking to build lsyncd from source should refer to its documentation: https://github.com/axkibe/lsyncd/wiki/Manual-to-Lsyncd-2.1.x
 
@@ -89,7 +105,7 @@ source="/etc",
 
 -- This is the user and host where the maxscale.cnf is copied to.
 -- Change this to the user and destination host where you want maxscale.cnf to be synchronized to.
-host="user@127.0.0.1", 
+host="user@192.168.122.100", 
 
 -- This is where the maxscale.cnf is copied to on the remote host.
 targetdir="/etc", 
