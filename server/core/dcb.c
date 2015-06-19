@@ -1339,8 +1339,8 @@ dcb_maybe_add_persistent(DCB *dcb)
         LOGIF(LD, (skygw_log_write(
             LOGFILE_DEBUG,
             "%lu [dcb_connect] Adding DCB to persistent pool, user %s.\n",
-            user,
-            pthread_self())));
+            pthread_self(),
+            user)));
         dcb->user = strdup(user);
         dcb->persistentstart = time(NULL);
         spinlock_acquire(&dcb->server->persistlock);
@@ -1354,16 +1354,16 @@ dcb_maybe_add_persistent(DCB *dcb)
     }
     else
     {
-        LOGIF(LD, (skygw_log_write(
+      LOGIF(LD, (skygw_log_write(
             LOGFILE_DEBUG,
             "%lu [dcb_connect] Not adding DCB to persistent pool, user %s, "
             "max for pool %d, error handle called %s, hung flag %s, pool count %d.\n",
+            pthread_self(),
             user ? user : "",
-            (dcb->server && dcb->server>persistpoolmax) ? dcb->server->persistpoolmax : 0,
+            (dcb->server && dcb->server->persistpoolmax) ? dcb->server->persistpoolmax : 0,
             dcb->dcb_errhandle_called ? "true" : "false",
             (dcb->flags & DCBF_HUNG) ? "true" : "false",
-            poolcount,
-            pthread_self())));
+            poolcount)));
     }
     return false;
 }

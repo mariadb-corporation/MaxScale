@@ -344,7 +344,7 @@ char	*stat;
                     dcb_printf(dcb, "\tPersistent pool size:            %d\n",
 						server->stats.n_persistent);
                     dcb_printf(dcb, "\tPersistent measured pool size:   %d\n",
-						dcb_persistent_clean_count(server, false));
+						dcb_persistent_clean_count(server->persistent, false));
                     dcb_printf(dcb, "\tPersistent pool max size:            %d\n",
 						server->persistpoolmax);
                     dcb_printf(dcb, "\tPersistent max time (secs):          %d\n",
@@ -506,7 +506,7 @@ SERVER_PARAM	*param;
             dcb_printf(dcb, "\tPersistent pool size:            %d\n",
 						server->stats.n_persistent);
             dcb_printf(dcb, "\tPersistent measured pool size:   %d\n",
-						dcb_persistent_clean_count(server, false));
+						dcb_persistent_clean_count(server->persistent, false));
             dcb_printf(dcb, "\tPersistent pool max size:            %d\n",
 						server->persistpoolmax);
             dcb_printf(dcb, "\tPersistent max time (secs):          %d\n",
