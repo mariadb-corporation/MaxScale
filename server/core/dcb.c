@@ -1387,7 +1387,7 @@ dcb_close_finish(DCB *dcb)
     if (dcb->server)
     {
         if (dcb->server->persistent) CHK_DCB(dcb->server->persistent);
-        atomic_add(&dcb->server->stats.n_current, -1);
+        if (0 == dcb->persistentstart) atomic_add(&dcb->server->stats.n_current, -1);
     }
     /** Call possible callback for this DCB in case of close */
     dcb_call_callback(dcb, DCB_REASON_CLOSE);
@@ -2358,7 +2358,10 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
         while (persistentdcb) {
             CHK_DCB(persistentdcb);
 			nextdcb = persistentdcb->nextpersistent;
-            if (cleanall || count >= server->persistpoolmax || time(NULL) - persistentdcb->persistentstart > server->persistmaxtime)
+            if (cleanall 
+				|| persistentdcb-> dcb_errhandle_called 
+				|| count >= server->persistpoolmax 
+				|| time(NULL) - persistentdcb->persistentstart > server->persistmaxtime)
             {
                 if (previousdcb) {
                     previousdcb->nextpersistent = nextdcb;

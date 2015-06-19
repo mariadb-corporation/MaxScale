@@ -102,38 +102,38 @@ SERVER 	*server;
  * @return	Returns true if the server was freed
  */
 int
-server_free(SERVER *server)
+server_free(SERVER *tofreeserver)
 {
-SERVER *ptr;
+SERVER *server;
 
 	/* First of all remove from the linked list */
 	spinlock_acquire(&server_spin);
-	if (allServers == server)
+	if (allServers == tofreeserver)
 	{
-		allServers = server->next;
+		allServers = tofreeserver->next;
 	}
 	else
 	{
-		ptr = allServers;
-		while (ptr && ptr->next != server)
+		server = allServers;
+		while (server && server->next != tofreeserver)
 		{
-			ptr = ptr->next;
+			server = server->next;
 		}
-		if (ptr)
-			ptr->next = server->next;
+		if (server)
+			server->next = tofreeserver->next;
 	}
 	spinlock_release(&server_spin);
 
 	/* Clean up session and free the memory */
-	free(server->name);
-	free(server->protocol);
-	if (server->unique_name)
-		free(server->unique_name);
-	if (server->server_string)
-		free(server->server_string);
-        if (server->persistent)
-            dcb_persistent_clean_count(server->persistent, true);
-	free(server);
+	free(tofreeserver->name);
+	free(tofreeserver->protocol);
+	if (tofreeserver->unique_name)
+		free(tofreeserver->unique_name);
+	if (tofreeserver->server_string)
+		free(tofreeserver->server_string);
+        if (tofreeserver->persistent)
+            dcb_persistent_clean_count(tofreeserver->persistent, true);
+	free(tofreeserver);
 	return 1;
 }
 
@@ -170,6 +170,21 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
                 atomic_add(&server->stats.n_current, 1);
                 return dcb;
             }
+			else
+			{
+				LOGIF(LD, (skygw_log_write_flush(
+					LOGFILE_DEBUG,
+					"%lu [server_get_persistent] Rejected dcb "
+					"%p from pool, user %s looking for %s, protocol %s "
+					"looking for %s, error handle called %s.",
+					pthread_self(),
+					dcb,
+					dcb->user ? dcb->user : "NULL",
+					user,
+					dcb->protoname ? dcb->protoname : "NULL",
+					protocol,
+					dcb-> dcb_errhandle_called ? "true" : "false"))); 
+			}
             previous = dcb;
             dcb = dcb->nextpersistent;
         }
@@ -265,14 +280,14 @@ printServer(SERVER *server)
 void
 printAllServers()
 {
-SERVER	*ptr;
+SERVER	*server;
 
 	spinlock_acquire(&server_spin);
-	ptr = allServers;
-	while (ptr)
+	server = allServers;
+	while (server)
 	{
-		printServer(ptr);
-		ptr = ptr->next;
+		printServer(server);
+		server = server->next;
 	}
 	spinlock_release(&server_spin);
 }
@@ -364,74 +379,74 @@ char	*stat;
 void
 dprintAllServersJson(DCB *dcb)
 {
-SERVER	*ptr;
+SERVER	*server;
 char	*stat;
 int	len = 0;
 int	el = 1;
 
 	spinlock_acquire(&server_spin);
-	ptr = allServers;
-	while (ptr)
+	server = allServers;
+	while (server)
 	{
-		ptr = ptr->next;
+		server = server->next;
 		len++;
 	}
-	ptr = allServers;
+	server = allServers;
 	dcb_printf(dcb, "[\n");
-	while (ptr)
+	while (server)
 	{
 		dcb_printf(dcb, "  {\n  \"server\": \"%s\",\n",
-								ptr->name);
-		stat = server_status(ptr);
+								server->name);
+		stat = server_status(server);
 		dcb_printf(dcb, "    \"status\": \"%s\",\n",
 									stat);
 		free(stat);
 		dcb_printf(dcb, "    \"protocol\": \"%s\",\n",
-								ptr->protocol);
+								server->protocol);
 		dcb_printf(dcb, "    \"port\": \"%d\",\n",
-								ptr->port);
-		if (ptr->server_string)
+								server->port);
+		if (server->server_string)
 			dcb_printf(dcb, "    \"version\": \"%s\",\n",
-							ptr->server_string);
+							server->server_string);
 		dcb_printf(dcb, "    \"nodeId\": \"%d\",\n",
-								ptr->node_id);
+								server->node_id);
 		dcb_printf(dcb, "    \"masterId\": \"%d\",\n",
-								ptr->master_id);
-		if (ptr->slaves) {
+								server->master_id);
+		if (server->slaves) {
 			int i;
 			dcb_printf(dcb, "    \"slaveIds\": [ ");
-			for (i = 0; ptr->slaves[i]; i++)
+			for (i = 0; server->slaves[i]; i++)
 			{
 				if (i == 0)
-					dcb_printf(dcb, "%li", ptr->slaves[i]);
+					dcb_printf(dcb, "%li", server->slaves[i]);
 				else
-					dcb_printf(dcb, ", %li ", ptr->slaves[i]);
+					dcb_printf(dcb, ", %li ", server->slaves[i]);
 			}
 			dcb_printf(dcb, "],\n");
 		}
 		dcb_printf(dcb, "    \"replDepth\": \"%d\",\n",
-							 ptr->depth);
-		if (SERVER_IS_SLAVE(ptr) || SERVER_IS_RELAY_SERVER(ptr)) {
-			if (ptr->rlag >= 0) {
-				dcb_printf(dcb, "    \"slaveDelay\": \"%d\",\n", ptr->rlag);
+							 server->depth);
+		if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) {
+			if (server->rlag >= 0) {
+				dcb_printf(dcb, "    \"slaveDelay\": \"%d\",\n", server->rlag);
 			}
 		}
-		if (ptr->node_ts > 0) {
-			dcb_printf(dcb, "    \"lastReplHeartbeat\": \"%lu\",\n", ptr->node_ts);
+		if (server->node_ts > 0) {
+			dcb_printf(dcb, "    \"lastReplHeartbeat\": \"%lu\",\n", server->node_ts);
 		}
 		dcb_printf(dcb, "    \"totalConnections\": \"%d\",\n",
-						ptr->stats.n_connections);
+						server->stats.n_connections);
 		dcb_printf(dcb, "    \"currentConnections\": \"%d\",\n",
-							ptr->stats.n_current);
+							server->stats.n_current);
                 dcb_printf(dcb, "    \"currentOps\": \"%d\"\n",
-						ptr->stats.n_current_ops);
+						server->stats.n_current_ops);
 		if (el < len) {
 			dcb_printf(dcb, "  },\n");
 		}
 		else {
 			dcb_printf(dcb, "  }\n");
 		}
-                ptr = ptr->next;
+                server = server->next;
 		el++;
 	}
 	dcb_printf(dcb, "]\n");
@@ -546,12 +561,12 @@ DCB	*dcb;
 void
 dListServers(DCB *dcb)
 {
-SERVER	*ptr;
+SERVER	*server;
 char	*stat;
 
 	spinlock_acquire(&server_spin);
-	ptr = allServers;
-	if (ptr)
+	server = allServers;
+	if (server)
 	{
 		dcb_printf(dcb, "Servers.\n");
 		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
@@ -559,15 +574,15 @@ char	*stat;
 			"Server", "Address", "Status");
 		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
 	}
-	while (ptr)
+	while (server)
 	{
-		stat = server_status(ptr);
+		stat = server_status(server);
 		dcb_printf(dcb, "%-18s | %-15s | %5d | %11d | %s\n",
-				ptr->unique_name, ptr->name,
-				ptr->port,
-				ptr->stats.n_current, stat);
+				server->unique_name, server->name,
+				server->port,
+				server->stats.n_current, stat);
 		free(stat);
-		ptr = ptr->next;
+		server = server->next;
 	}
 	if (allServers)
 		dcb_printf(dcb, "-------------------+-----------------+-------+-------------+--------------------\n");
@@ -772,16 +787,16 @@ int		*rowno = (int *)data;
 int		i = 0;;
 char		*stat, buf[20];
 RESULT_ROW	*row;
-SERVER		*ptr;
+SERVER		*server;
 
 	spinlock_acquire(&server_spin);
-	ptr = allServers;
-	while (i < *rowno && ptr)
+	server = allServers;
+	while (i < *rowno && server)
 	{
 		i++;
-		ptr = ptr->next;
+		server = server->next;
 	}
-	if (ptr == NULL)
+	if (server == NULL)
 	{
 		spinlock_release(&server_spin);
 		free(data);
@@ -789,13 +804,13 @@ SERVER		*ptr;
 	}
 	(*rowno)++;
 	row = resultset_make_row(set);
-	resultset_row_set(row, 0, ptr->unique_name);
-	resultset_row_set(row, 1, ptr->name);
-	sprintf(buf, "%d", ptr->port);
+	resultset_row_set(row, 0, server->unique_name);
+	resultset_row_set(row, 1, server->name);
+	sprintf(buf, "%d", server->port);
 	resultset_row_set(row, 2, buf);
-	sprintf(buf, "%d", ptr->stats.n_current);
+	sprintf(buf, "%d", server->stats.n_current);
 	resultset_row_set(row, 3, buf);
-	stat = server_status(ptr);
+	stat = server_status(server);
 	resultset_row_set(row, 4, stat);
 	free(stat);
 	spinlock_release(&server_spin);
