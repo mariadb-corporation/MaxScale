@@ -1,3 +1,25 @@
+#ifndef _GW_HG
+#define _GW_HG
+
+/*
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
+ * software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Copyright MariaDB Corporation Ab 2013-2014
+ */
+
+
 #include <stdio.h>
 #include <ctype.h>
 #include <errno.h>
@@ -16,8 +38,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
 #include <stdbool.h>
+#include <gwdirs.h>
 
 #define EXIT_FAILURE 1
 
@@ -65,3 +87,5 @@ int  gw_write(DCB *dcb, const void *buf, size_t nbytes);
 int  gw_getsockerrno(int fd);
 int  parse_bindconfig(char *, unsigned short, struct sockaddr_in *);
 int setipaddress(struct in_addr *, char *);
+char* get_libdir();
+#endif

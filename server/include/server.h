@@ -43,6 +43,7 @@
  * 30/08/14	Massimiliano Pinto	Addition of SERVER_STALE_STATUS
  * 27/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS
  * 19/02/15	Mark Riddoch		Addition of serverGetList
+ * 01/06/15	Massimiliano Pinto	Addition of server_update_address/port
  *
  * @endverbatim
  */
@@ -202,5 +203,7 @@ extern char	*serverGetParameter(SERVER *, char *);
 extern void	server_update(SERVER *, char *, char *, char *);
 extern void     server_set_unique_name(SERVER *, char *);
 extern DCB      *server_get_persistent(SERVER *, char *, const char *);
+extern void	server_update_address(SERVER *, char *);
+extern void	server_update_port(SERVER *,  unsigned short);
 extern RESULTSET	*serverGetList();
 #endif

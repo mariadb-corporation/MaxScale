@@ -230,7 +230,7 @@ void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len)
     MONITOR_SERVERS* ptr = start;
     bool first = true;
     int slen = strlen(str);
-
+    char arr[256];
     while(ptr && slen < len)
     {
 	if(!first)
@@ -238,7 +238,8 @@ void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len)
 	    strncat(str,",",len);
 	}
 	first = false;
-	strncat(str,ptr->server->unique_name,len);
+	sprintf(arr,"%s:%d",ptr->server->name,ptr->server->port);
+	strcat(str,arr);
 	ptr = ptr->next;
 	slen = strlen(str);
     }
@@ -299,10 +300,11 @@ void monitor_launch_script(MONITOR* mon,MONITOR_SERVERS* ptr, char* script)
     EXTERNCMD* cmd;
 
     snprintf(argstr,PATH_MAX + MON_ARG_MAX,
-	     "%s --event=%s --initiator=%s --nodelist=",
+	     "%s --event=%s --initiator=%s:%d --nodelist=",
 	     script,
 	     mon_get_event_name(ptr),
-	     ptr->server->unique_name);
+	     ptr->server->name,
+	     ptr->server->port);
 
     mon_append_node_names(mon->databases,argstr,PATH_MAX + MON_ARG_MAX + 1);
     if((cmd = externcmd_allocate(argstr)) == NULL)
@@ -343,7 +345,10 @@ int mon_parse_event_string(bool* events, size_t count,char* string)
     {
 	event = mon_name_to_event(tok);
 	if(event == UNDEFINED_MONITOR_EVENT)
+	{
+	    skygw_log_write(LE,"Error: Invalid event name %s",tok);
 	    return -1;
+	}
 	events[event] = true;
 	tok = strtok_r(NULL,",| ",&saved);
     }

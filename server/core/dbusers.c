@@ -974,19 +974,27 @@ getAllUsers(SERVICE *service, USERS *users)
 			}
 		    }
 
-		    if(service->optimize_wildcard && havedb && wildcard_db_grant(dbnm))
+		    if(havedb && wildcard_db_grant(dbnm))
 		    {
-			rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
-			skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
+			if(service->optimize_wildcard)
+			{
+			    rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
+			    skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
+			}
+			else
+			{
+			    /** Use ANYDB for wildcard grants */
+			    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
+			}
 		    }
 		    else
 		    {
 			rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, row[4], havedb ? dbnm : NULL);
 		    }
 		    
-		    skygw_log_write(LOGFILE_DEBUG,"%s: Adding user:%s host:%s anydb:%s db:%s.",
+		    LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG,"%s: Adding user:%s host:%s anydb:%s db:%s.",
 			     service->name,row[0],row[1],row[4],
-			     havedb ? dbnm : NULL);
+			     havedb ? dbnm : NULL)));
 		} else {
                     /* we don't have dbgrants, simply set ANY DB for the user */	
                     rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
@@ -1483,10 +1491,18 @@ getUsers(SERVICE *service, USERS *users)
 			}
 		    }
 
-		    if(service->optimize_wildcard && havedb && wildcard_db_grant(row[5]))
+		    if(havedb && wildcard_db_grant(row[5]))
 		    {
-			rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
-			skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,row[5],rc);
+			if(service->optimize_wildcard)
+			{
+			    rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
+			    skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,row[5],rc);
+			}
+			else
+			{
+			    /** Use ANYDB for wildcard grants */
+			    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
+			}
 		    }
 		    else
 		    {

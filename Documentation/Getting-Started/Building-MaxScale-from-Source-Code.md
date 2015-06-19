@@ -4,7 +4,7 @@ You will need a number of tools and libraries in order to achieve this.
 
 * cmake version 2.8.12 or later
 
-* gcc recommended version 4.4.7 or later
+* gcc recommended version 4.4.7 or later (MariaDB 10 libraries require gcc 4.7 or newer)
 
 * libaio
 
@@ -28,7 +28,7 @@ You will need to install all of the following packages for all versions of RHEL,
 
 ```
 gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool 
-openssl-devel libaio libaio-devel librabbitmq-devel
+openssl-devel libaio libaio-devel librabbitmq-devel libcurl-devel pcre-devel
 ```
 
 In addition, if you wish to to build an RPM package include:
@@ -68,7 +68,7 @@ These packages are required on all versions of Ubuntu and Debian.
 
 ```
 	build-essential libssl-dev libaio-dev ncurses-dev bison
-	cmake perl libtool librabbitmq-dev     
+	cmake perl libtool librabbitmq-dev libcurl-dev libpcre3-dev
 ```
 
 If you want to build a DEB package, you will also need:
