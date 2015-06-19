@@ -659,6 +659,13 @@ char            *user;
                 dcb->persistentstart = 0;
                 return dcb;
             }
+            else
+            {
+                    LOGIF(LD, (skygw_log_write(
+                        LOGFILE_DEBUG,
+			"%lu [dcb_connect] Failed to find a reusable persistent connection.\n",
+                        pthread_self())));
+            }
         }
         
 	if ((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
@@ -1319,6 +1326,7 @@ static bool
 dcb_maybe_add_persistent(DCB *dcb)
 {
     char *user;
+    int  poolcount = -1;
     user = session_getUser(dcb->session);
     if (user 
         && strlen(user)
@@ -1326,8 +1334,13 @@ dcb_maybe_add_persistent(DCB *dcb)
         && dcb->server->persistpoolmax 
         && !dcb->dcb_errhandle_called
         && !(dcb->flags & DCBF_HUNG)
-        && dcb_persistent_clean_count(dcb, false) < dcb->server->persistpoolmax)
+        && (poolcount = dcb_persistent_clean_count(dcb, false)) < dcb->server->persistpoolmax)
     {
+        LOGIF(LD, (skygw_log_write(
+            LOGFILE_DEBUG,
+            "%lu [dcb_connect] Adding DCB to persistent pool, user %s.\n",
+            user,
+            pthread_self())));
         dcb->user = strdup(user);
         dcb->persistentstart = time(NULL);
         spinlock_acquire(&dcb->server->persistlock);
@@ -1338,6 +1351,19 @@ dcb_maybe_add_persistent(DCB *dcb)
         atomic_add(&dcb->server->stats.n_persistent, 1);
         atomic_add(&dcb->server->stats.n_current, -1);
         return true;
+    }
+    else
+    {
+        LOGIF(LD, (skygw_log_write(
+            LOGFILE_DEBUG,
+            "%lu [dcb_connect] Not adding DCB to persistent pool, user %s, "
+            "max for pool %d, error handle called %s, hung flag %s, pool count %d.\n",
+            user ? user : "",
+            (dcb->server && dcb->server>persistpoolmax) ? dcb->server->persistpoolmax : 0,
+            dcb->dcb_errhandle_called ? "true" : "false",
+            (dcb->flags & DCBF_HUNG) ? "true" : "false",
+            poolcount,
+            pthread_self())));
     }
     return false;
 }
@@ -1489,6 +1515,14 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
 		dcb_printf(pdcb, "\t\tNo. of Low Water Events:	%d\n", dcb->stats.n_low_water);
 		if (dcb->flags & DCBF_CLONE)
 			dcb_printf(pdcb, "\t\tDCB is a clone.\n");
+        if (dcb->persistentstart)
+        {
+            char buff[20];
+            struct tm * timeinfo;
+            timeinfo = localtime (&dcb->persistentstart);
+            strftime(buff, sizeof(buff), "%b %d %H:%M", timeinfo);    
+            dcb_printf(pdcb, "\t\tAdded to persistent pool:         %s", buff);
+        }
 }
 /**
  * Diagnostic to print all DCB allocated in the system
@@ -1652,6 +1686,14 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 	dcb_printf(pdcb, "\tCallback Lock Statistics:\n");
 	spinlock_stats(&dcb->cb_lock, spin_reporter, pdcb);
 #endif
+        if (dcb->persistentstart)
+        {
+            char buff[20];
+            struct tm * timeinfo;
+            timeinfo = localtime (&dcb->persistentstart);
+            strftime(buff, sizeof(buff), "%b %d %H:%M", timeinfo);    
+            dcb_printf(pdcb, "\t\tAdded to persistent pool:         %s", buff);
+        }
 }
 
 /**
@@ -2332,7 +2374,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
             else 
             {
                 count++;
-				previousdcb = persistentdcb;
+                previousdcb = persistentdcb;
             }
             persistentdcb = nextdcb;
         }

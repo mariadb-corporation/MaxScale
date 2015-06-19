@@ -286,62 +286,71 @@ SERVER	*ptr;
 void
 dprintAllServers(DCB *dcb)
 {
-SERVER	*ptr;
+SERVER	*server;
 char	*stat;
 
 	spinlock_acquire(&server_spin);
-	ptr = allServers;
-	while (ptr)
+	server = allServers;
+	while (server)
 	{
-		dcb_printf(dcb, "Server %p (%s)\n", ptr, ptr->unique_name);
+		dcb_printf(dcb, "Server %p (%s)\n", server, server->unique_name);
 		dcb_printf(dcb, "\tServer:				%s\n",
-								ptr->name);
-		stat = server_status(ptr);
+								server->name);
+		stat = server_status(server);
 		dcb_printf(dcb, "\tStatus:               		%s\n",
 									stat);
 		free(stat);
 		dcb_printf(dcb, "\tProtocol:			%s\n",
-								ptr->protocol);
+								server->protocol);
 		dcb_printf(dcb, "\tPort:				%d\n",
-								ptr->port);
-		if (ptr->server_string)
+								server->port);
+		if (server->server_string)
 			dcb_printf(dcb, "\tServer Version:\t\t\t%s\n",
-							ptr->server_string);
+							server->server_string);
 		dcb_printf(dcb, "\tNode Id:			%d\n",
-								ptr->node_id);
+								server->node_id);
 		dcb_printf(dcb, "\tMaster Id:			%d\n",
-								ptr->master_id);
-		if (ptr->slaves) {
+								server->master_id);
+		if (server->slaves) {
 			int i;
 			dcb_printf(dcb, "\tSlave Ids:			");
-			for (i = 0; ptr->slaves[i]; i++)
+			for (i = 0; server->slaves[i]; i++)
 			{
 				if (i == 0)
-					dcb_printf(dcb, "%li", ptr->slaves[i]);
+					dcb_printf(dcb, "%li", server->slaves[i]);
 				else
-					dcb_printf(dcb, ", %li ", ptr->slaves[i]);
+					dcb_printf(dcb, ", %li ", server->slaves[i]);
 			}
 			dcb_printf(dcb, "\n");
 		}
 		dcb_printf(dcb, "\tRepl Depth:			%d\n",
-							 ptr->depth);
-		if (SERVER_IS_SLAVE(ptr) || SERVER_IS_RELAY_SERVER(ptr)) {
-			if (ptr->rlag >= 0) {
-				dcb_printf(dcb, "\tSlave delay:\t\t%d\n", ptr->rlag);
+							 server->depth);
+		if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server)) {
+			if (server->rlag >= 0) {
+				dcb_printf(dcb, "\tSlave delay:\t\t%d\n", server->rlag);
 			}
 		}
-		if (ptr->node_ts > 0) {
-			dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", ptr->node_ts);
+		if (server->node_ts > 0) {
+			dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", server->node_ts);
 		}
 		dcb_printf(dcb, "\tNumber of connections:		%d\n",
-						ptr->stats.n_connections);
+						server->stats.n_connections);
 		dcb_printf(dcb, "\tCurrent no. of conns:		%d\n",
-							ptr->stats.n_current);
+							server->stats.n_current);
                 dcb_printf(dcb, "\tCurrent no. of operations:	%d\n",
-						ptr->stats.n_current_ops);
-                dcb_printf(dcb, "\tPersistent pool size:            %d\n",
-						ptr->stats.n_persistent);
-                ptr = ptr->next;
+						server->stats.n_current_ops);
+                if (server->persistpoolmax)
+                {
+                    dcb_printf(dcb, "\tPersistent pool size:            %d\n",
+						server->stats.n_persistent);
+                    dcb_printf(dcb, "\tPersistent measured pool size:   %d\n",
+						dcb_persistent_clean_count(server, false));
+                    dcb_printf(dcb, "\tPersistent pool max size:            %d\n",
+						server->persistpoolmax);
+                    dcb_printf(dcb, "\tPersistent max time (secs):          %d\n",
+						server->persistmaxtime);
+                }
+                server = server->next;
 	}
 	spinlock_release(&server_spin);
 }
@@ -492,6 +501,17 @@ SERVER_PARAM	*param;
 	dcb_printf(dcb, "\tCurrent no. of conns:		%d\n",
 						server->stats.n_current);
         dcb_printf(dcb, "\tCurrent no. of operations:	%d\n", server->stats.n_current_ops);
+        if (server->persistpoolmax)
+        {
+            dcb_printf(dcb, "\tPersistent pool size:            %d\n",
+						server->stats.n_persistent);
+            dcb_printf(dcb, "\tPersistent measured pool size:   %d\n",
+						dcb_persistent_clean_count(server, false));
+            dcb_printf(dcb, "\tPersistent pool max size:            %d\n",
+						server->persistpoolmax);
+            dcb_printf(dcb, "\tPersistent max time (secs):          %d\n",
+						server->persistmaxtime);
+        }
 }
 
 /**
