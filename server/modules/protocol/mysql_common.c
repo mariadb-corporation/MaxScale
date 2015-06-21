@@ -128,7 +128,10 @@ void mysql_protocol_done (
         MySQLProtocol* p;
         server_command_t* scmd;
         server_command_t* scmd2;
-        
+
+	if(dcb->protocol == NULL)
+	    return;
+
         p = (MySQLProtocol *)dcb->protocol;
         
         spinlock_acquire(&p->protocol_lock);
