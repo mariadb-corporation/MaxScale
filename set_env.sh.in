@@ -125,4 +125,4 @@ export sysbench_dir="/home/ec2-user/sysbench_deb7/sysbench/"
 
 export access_sudo=""
 export access_user="root"
-export maxscale_restart="no"
+#export maxscale_restart="no"
