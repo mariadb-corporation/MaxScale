@@ -17,10 +17,22 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
-#include	<server.h>
-#include	<spinlock.h>
-#include	<mysql.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <monitor.h>
+#include <spinlock.h>
+#include <thread.h>
+#include <mysql.h>
+#include <mysqld_error.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+#include <secrets.h>
+#include <dcb.h>
+#include <modinfo.h>
+#include <maxconfig.h>
+#include <monitor_common.h>
+#include <externcmd.h>
 /**
  * @file mysqlmon.h - The MySQL monitor functionality within the gateway
  *
@@ -37,23 +49,9 @@
  * 07/11/14	Massimiliano	Pinto	Addition of NetworkTimeout: connect, read, write
  * 20/04/15	Guillaume Lefranc	Addition of availableWhenDonor
  * 22/04/15     Martin Brampton         Addition of disableMasterRoleSetting
- *
+ * 07/05/15	Markus Makela		Addition of command execution on Master server failure
  * @endverbatim
  */
-
-/**
- * The linked list of servers that are being monitored by the MySQL 
- * Monitor module.
- */
-typedef struct monitor_servers {
-	SERVER		*server;	/**< The server being monitored */
-	MYSQL		*con;		/**< The MySQL connection */
-	int		mon_err_count;
-	unsigned int	mon_prev_status;
-	unsigned int	pending_status; /**< Pending Status flag bitmap */	
-	struct monitor_servers
-			*next;		/**< The next server in the list */
-} MONITOR_SERVERS;
 
 /**
  * The handle for an instance of a MySQL Monitor module
@@ -63,9 +61,6 @@ typedef struct {
 	pthread_t tid;			/**< id of monitor thread */ 
 	int    	  shutdown;		/**< Flag to shutdown the monitor thread */
 	int       status;		/**< Monitor status */
-	char      *defaultUser;		/**< Default username for monitoring */
-	char      *defaultPasswd;	/**< Default password for monitoring */
-	unsigned long   interval;	/**< Monitor sampling interval */
 	unsigned long         id;	/**< Monitor ID */
 	int	replicationHeartbeat;	/**< Monitor flag for MySQL replication heartbeat */
 	int	detectStaleMaster;	/**< Monitor flag for MySQL replication Stale Master detection */
@@ -73,22 +68,8 @@ typedef struct {
 	int	availableWhenDonor;	/**< Monitor flag for Galera Cluster Donor availability */
         int     disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
 	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
-	MONITOR_SERVERS	*databases;     /**< Linked list of servers to monitor */
-	int	connect_timeout;	/**< Connect timeout in seconds for mysql_real_connect */
-	int	read_timeout;		/**< Timeout in seconds to read from the server.
-					 * There are retries and the total effective timeout value is three times the option value.
-					 */
-	int	write_timeout;		/**< Timeout in seconds for each attempt to write to the server.
-					 * There are retries and the total effective timeout value is two times the option value.
-					 */
+        char* script; /*< Script to call when state changes occur on servers */
+        bool events[MAX_MONITOR_EVENT]; /*< enabled events */
 } MYSQL_MONITOR;
-
-#define MONITOR_RUNNING		1
-#define MONITOR_STOPPING	2
-#define MONITOR_STOPPED		3
-
-#define MONITOR_INTERVAL 10000 // in milliseconds
-#define MONITOR_DEFAULT_ID 1UL // unsigned long value
-#define MONITOR_MAX_NUM_SLAVES 20 //number of MySQL slave servers associated to a MySQL master server
 
 #endif

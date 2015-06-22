@@ -17,6 +17,7 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
+#include <mysql.h>
 #include <server.h>
 #include <dcb.h>
 #include <resultset.h>
@@ -69,19 +70,14 @@
 typedef struct {
 	void 	*(*startMonitor)(void *, void*);
 	void	(*stopMonitor)(void *);
-	void	(*registerServer)(void *, SERVER *);
-	void	(*unregisterServer)(void *, SERVER *);
-	void	(*defaultUser)(void *, char *, char *);
 	void	(*diagnostics)(DCB *, void *);
-	void	(*setInterval)(void *, size_t);
-	void	(*setNetworkTimeout)(void *, int, int);
 } MONITOR_OBJECT;
 
 /**
  * The monitor API version number. Any change to the monitor module API
  * must change these versions usign the rules defined in modinfo.h
  */
-#define	MONITOR_VERSION	{2, 0, 0}
+#define	MONITOR_VERSION	{3, 0, 0}
 
 /** Monitor's poll frequency */
 #define MON_BASE_INTERVAL_MS 100
@@ -112,12 +108,46 @@ typedef enum
 #define DEFAULT_READ_TIMEOUT 1
 #define DEFAULT_WRITE_TIMEOUT 2
 
+
+#define MONITOR_RUNNING		1
+#define MONITOR_STOPPING	2
+#define MONITOR_STOPPED		3
+
+#define MONITOR_INTERVAL 10000 // in milliseconds
+#define MONITOR_DEFAULT_ID 1UL // unsigned long value
+#define MONITOR_MAX_NUM_SLAVES 20 //number of MySQL slave servers associated to a MySQL master server
+
+
+/**
+ * The linked list of servers that are being monitored by the monitor module.
+ */
+typedef struct monitor_servers {
+	SERVER		*server;	/**< The server being monitored */
+	MYSQL		*con;		/**< The MySQL connection */
+	int		mon_err_count;
+	unsigned int	mon_prev_status;
+	unsigned int	pending_status; /**< Pending Status flag bitmap */
+	struct monitor_servers
+			*next;		/**< The next server in the list */
+} MONITOR_SERVERS;
+
 /**
  * Representation of the running monitor.
  */
 typedef struct monitor {
 	char		*name;		/**< The name of the monitor module */
+        char* user; /*< Monitor username */
+        char* password; /*< Monitor password */
+        SPINLOCK lock;
+        MONITOR_SERVERS* databases; /*< List of databases the monitor monitors */
 	monitor_state_t state;		/**< The state of the monitor */
+        int	connect_timeout;	/**< Connect timeout in seconds for mysql_real_connect */
+	int	read_timeout;		/**< Timeout in seconds to read from the server.
+					 * There are retries and the total effective timeout value is three times the option value.
+					 */
+	int	write_timeout;		/**< Timeout in seconds for each attempt to write to the server.
+					 * There are retries and the total effective timeout value is two times the option value.
+					 */
 	MONITOR_OBJECT	*module;	/**< The "monitor object" */
 	void		*handle;	/**< Handle returned from startMonitor */
 	size_t		interval;	/**< The monitor interval */

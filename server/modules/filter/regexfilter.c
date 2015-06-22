@@ -23,7 +23,7 @@
 #include <log_manager.h>
 #include <string.h>
 #include <regex.h>
-
+#include <atomic.h>
 #include "maxconfig.h"
 
 /** Defined in log_manager.cc */
@@ -97,6 +97,7 @@ typedef struct {
  */
 typedef struct {
 	DOWNSTREAM	down;		/* The downstream filter */
+	SPINLOCK        lock;
 	int		no_change;	/* No. of unchanged requests */
 	int		replacements;	/* No. of changed requests */
 	int		active;		/* Is filter active */
@@ -172,7 +173,11 @@ char		*logfile = NULL;
 			else if (!strcmp(params[i]->name, "log_trace"))
 			    my_instance->log_trace = config_truth_value(params[i]->value);
 			else if (!strcmp(params[i]->name, "log_file"))
+			{
+			    if(logfile)
+				free(logfile);
 			    logfile = strdup(params[i]->value);
+			}
 			else if (!filter_standard_parameter(params[i]->name))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
@@ -207,6 +212,7 @@ char		*logfile = NULL;
 		if (my_instance->match == NULL || my_instance->replace == NULL)
 		{
 			free(my_instance);
+			free(logfile);
 			return NULL;
 		}
 
@@ -218,6 +224,7 @@ char		*logfile = NULL;
 			free(my_instance->match);
 			free(my_instance->replace);
 			free(my_instance);
+			free(logfile);
 			return NULL;
 		}
 
@@ -350,13 +357,17 @@ char		*sql, *newsql;
 			{
 				queue = modutil_replace_SQL(queue, newsql);
 				queue = gwbuf_make_contiguous(queue);
+				spinlock_acquire(&my_session->lock);
 				log_match(my_instance,my_instance->match,sql,newsql);
+				spinlock_release(&my_session->lock);
 				free(newsql);
 				my_session->replacements++;
 			}
 			else
 			{
+				spinlock_acquire(&my_session->lock);
 				log_nomatch(my_instance,my_instance->match,sql);
+				spinlock_release(&my_session->lock);
 				my_session->no_change++;
 			}
 			free(sql);

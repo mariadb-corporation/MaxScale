@@ -1686,7 +1686,8 @@ static bool fnames_conf_init(
                 "-j <log path>       ............(\"/tmp\")\n"
                 "-l <syslog log file ids> .......(no default)\n"
                 "-m <syslog ident>   ............(argv[0])\n"
-                "-s <shmem log file ids>  .......(no default)\n";
+                "-s <shmem log file ids>  .......(no default)\n"
+                "-o                       .......(write logs to stdout)\n";
 
         /**
          * When init_started is set, clean must be done for it.
@@ -1760,7 +1761,6 @@ static bool fnames_conf_init(
                         
                 case 's':
                         /** record list of log file ids for later use */
-                    if(do_syslog)
                         shmem_id_str = optarg;
                         break;
                 case 'h':
@@ -1792,12 +1792,14 @@ static bool fnames_conf_init(
                 strdup(get_logpath_default()) : fn->fn_logpath;
 
         /** Set identity string for syslog if it is not set in config.*/
+        if(do_syslog)
+        {
         syslog_ident_str =
             (syslog_ident_str == NULL ?
              (argv == NULL ? strdup(program_invocation_short_name) :  
               strdup(*argv)) :
              syslog_ident_str);
-        
+        }
         /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
            for (i=0; i<argc; i++) {
            ss_dfprintf(stderr, "%s ", argv[i]);
@@ -2580,14 +2582,14 @@ static bool logfile_init(
         }
 
 #if defined(SS_DEBUG)
-        if (store_shmem)
+        if (store_shmem && !use_stdout)
 	{
 		fprintf(stderr, "%s\t: %s->%s\n", 
 			STRLOGNAME(logfile_id),
 			logfile->lf_full_link_name,
 			logfile->lf_full_file_name);
 	}
-	else
+	else if(!use_stdout)
 	{
 		fprintf(stderr, "%s\t: %s\n", 
 			STRLOGNAME(logfile_id),
@@ -3134,7 +3136,7 @@ void flushall_logfiles(bool flush)
  */
 void skygw_log_sync_all(void)
 {
-	skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
+	if(!use_stdout)skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
 	flushall_logfiles(true);
 	skygw_message_send(lm->lm_logmes);
 	skygw_message_wait(lm->lm_clientmes);

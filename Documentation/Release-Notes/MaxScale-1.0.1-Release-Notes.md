@@ -107,11 +107,11 @@ A number of bug fixes have been applied between the 1.0 beta release and this re
   </tr>
   <tr>
     <td>479</td>
-    <td>Undefined filter reference in MaxScale.cnf causes a crash</td>
+    <td>Undefined filter reference in maxscale.cnf causes a crash</td>
   </tr>
   <tr>
     <td>410</td>
-    <td>MaxScale.cnf server option is not parsed for spaces</td>
+    <td>maxscale.cnf server option is not parsed for spaces</td>
   </tr>
   <tr>
     <td>417</td>

@@ -1,0 +1,69 @@
+.TH maxscale 1
+.SH NAME
+maxscale - The intelligent proxy
+.SH SYNOPSIS
+.B maxscale
+[\fIOPTIONS...\fR]
+.SH DESCRIPTION
+The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
+database statements to one or more database servers using complex rules,
+a semantic understanding of the database statements and the roles of
+the various servers within the backend cluster of databases.
+
+MaxScale is designed to provide load balancing and high availability
+functionality transparently to the applications. In addition it provides
+a highly scalable and flexible architecture, with plugin components to
+support different protocols and routing decisions.
+
+.SH OPTIONS
+.TP
+.BR "-d, --nodaemon"
+Run MaxScale in the terminal process
+.TP
+.BR -f " \fIFILE\fB, --config=\fIFILE\fR"
+Relative or absolute pathname of MaxScale configuration file to load.
+.TP
+.BR -l "[\fIfile|shm\fB], --log=[\fIfile|shm\fB]"
+Log trace and debug logs to file or shared memory. The debug and trace logs are disabled by default and if enabled, will log to shared memory.
+.TP
+.BR -L " \fIPATH\fB, --logdir=\fIPATH\fB"
+Path to log file directory.
+.TP
+.BR -D " \fIPATH\fB, --datadir=\fIPATH\fB"
+Path to data directory. This is where the embedded mysql tables are stored in addition to other MaxScale specific data.
+.TP
+.BR -C " \fIPATH\fB, --configdir=\fIPATH\fB"
+Path to configuration file directory. MaxScale will look for the \fImaxscale.cnf\fR file from this folder.
+.TP
+.BR -B " \fIPATH\fB, --libdir=\fIPATH\fB"
+Path to module directory. Modules are only searched from this folder.
+.TP
+.BR -A " \fIPATH\fB, --cachedir=\fIPATH\fB"
+Path to cache directory. This is where MaxScale stores cached authentication data.
+.TP
+.BR -P " \fIPATH\fB, --piddir=\fIPATH\fB"
+Location of MaxScale's PID file.
+.TP
+.BR -U " \fIUSER\fB, --user=\fIUSER\fB"
+Run MaxScale as another user. The user ID and group ID of this user are used to run MaxScale.
+.TP
+.BR -s " [\fIyes\fB|\fIno\fB], --syslog=[\fIyes\fB|\fIno\fB]"
+Log messages to syslog.
+.TP
+.BR -S " [\fIyes\fB|\fIno\fB], \fB--maxscalelog=[\fIyes\fB|\fIno\fB]"
+Log messages to MaxScale's own log files.
+.TP
+.BR "-v, --version"
+Print version information and exit.
+.TP
+.BR "-?, --help"
+Show the help information for MaxScale and exit.
+
+.SH EXAMPLES
+Tutorials on GitHub:
+.UR https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md#tutorials
+.UE
+.SH SEE ALSO
+The MaxScale documentation on GitHub:
+.UR https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md
+.UE
