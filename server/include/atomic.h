@@ -30,5 +30,9 @@
  * @endverbatim
  */
 
+#ifdef __cplusplus
+extern "C" int atomic_add(int *variable, int value);
+#else
 extern int atomic_add(int *variable, int value);
+#endif
 #endif

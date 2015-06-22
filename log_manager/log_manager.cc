@@ -26,6 +26,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
+#include <atomic.h>
 
 #include <skygw_debug.h>
 #include <skygw_types.h>
