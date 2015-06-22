@@ -31,7 +31,6 @@
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
-#include "atomic.h"
 
 #define MAX_PREFIXLEN 250
 #define MAX_SUFFIXLEN 250
