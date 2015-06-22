@@ -36,7 +36,8 @@
  * 06/02/15	Mark Riddoch		Added caching of authentication data
  * 18/02/15	Mark Riddoch		Added result set management
  * 03/03/15	Massimiliano Pinto	Added config_enable_feedback_task() call in serviceStartAll
- *
+ * 19/06/15	Martin Brampton		More meaningful names for temp variables
+
  * @endverbatim
  */
 #include <stdio.h>

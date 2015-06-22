@@ -58,15 +58,16 @@ struct service;
  * 08/05/2014	Mark Riddoch		Addition of writeq high and low watermarks
  * 27/08/2014	Mark Riddoch		Addition of write event queuing
  * 23/09/2014	Mark Riddoch		New poll processing queue
+ * 19/06/2015	Martin Brampton		Provision of persistent connections
  *
  * @endverbatim
  */
 
 struct dcb;
 
-        /**
+    /**
 	 * @verbatim
-         * The operations that can be performed on the descriptor
+     * The operations that can be performed on the descriptor
 	 *
 	 *	read		EPOLLIN handler for the socket
 	 *	write		MaxScale data write entry point
@@ -80,7 +81,7 @@ struct dcb;
 	 *	close		MaxScale close entry point for the socket
 	 *	listen		Create a listener for the protocol
 	 *	auth		Authentication entry point
-         *	session		Session handling entry point
+     *	session		Session handling entry point
 	 * @endverbatim
 	 *
 	 * This forms the "module object" for protocol modules within the gateway.
@@ -224,10 +225,10 @@ typedef struct dcb_callback {
  * gateway may be selected to execute the required actions when a network event occurs.
  */
 typedef struct dcb {
-        skygw_chk_t     dcb_chk_top;
+    skygw_chk_t     dcb_chk_top;
 	bool            dcb_errhandle_called; /*< this can be called only once */
 	dcb_role_t      dcb_role;
-        SPINLOCK        dcb_initlock;
+    SPINLOCK        dcb_initlock;
 	DCBEVENTQ	evq;		/**< The event queue for this DCB */
 	int	 	fd;		/**< The descriptor */
 	dcb_state_t	state;		/**< Current descriptor state */
@@ -235,7 +236,7 @@ typedef struct dcb {
 	char		*remote;	/**< Address of remote end */
 	char		*user;		/**< User name for connection */
 	struct sockaddr_in ipv4;	/**< remote end IPv4 address */
-        char            *protoname;     /**< Name of the protocol */
+    char            *protoname;     /**< Name of the protocol */
 	void		*protocol;	/**< The protocol specific state */
 	struct session	*session;	/**< The owning session */
 	GWPROTOCOL	func;		/**< The functions for this descriptor */
@@ -249,10 +250,10 @@ typedef struct dcb {
 	SPINLOCK	authlock;	/**< Generic Authorization spinlock */
 
 	DCBSTATS	stats;		/**< DCB related statistics */
-        unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
+    unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
 	struct dcb	*next;		/**< Next DCB in the chain of allocated DCB's */
-        struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
-        time_t          persistentstart;   /**< Time when DCB placed in persistent pool */
+    struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
+    time_t          persistentstart;   /**< Time when DCB placed in persistent pool */
 	struct service	*service;	/**< The related service */
 	void		*data;		/**< Specific client data */
 	DCBMM		memdata;	/**< The data related to DCB memory management */
@@ -265,13 +266,13 @@ typedef struct dcb {
 	SPINLOCK	polloutlock;
 	int		polloutbusy;
 	int		writecheck;
-        unsigned long   last_read;      /*< Last time the DCB received data */
+    unsigned long   last_read;      /*< Last time the DCB received data */
 	unsigned int	high_water;	/**< High water mark */
 	unsigned int	low_water;	/**< Low water mark */
 	struct server	*server;	/**< The associated backend server */
-        SSL* ssl; /*< SSL struct for connection */
-        int             dcb_port;       /**< port of target server */
-        skygw_chk_t     dcb_chk_tail;
+    SSL* ssl; /*< SSL struct for connection */
+    int             dcb_port;       /**< port of target server */
+    skygw_chk_t     dcb_chk_tail;
 } DCB;
 
 /**
@@ -362,4 +363,4 @@ int dcb_drain_writeq_SSL(DCB *dcb);
 
 #define DCB_IS_CLONE(d) ((d)->flags & DCBF_CLONE)
 #define DCB_REPLIED(d) ((d)->flags & DCBF_REPLIED)
-#endif /*  _DCB_H *
+#endif /*  _DCB_H */

@@ -1175,7 +1175,7 @@ config_get_value(CONFIG_PARAMETER *params, const char *name)
 }
 
 /**
- * Get the value of a config parameter
+ * Get the value of a config parameter as a string
  *
  * @param params	The linked list of config parameters
  * @param name		The parameter to return

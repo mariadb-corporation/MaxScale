@@ -302,8 +302,6 @@ static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
 void flushall_logfiles(bool flush);
 bool thr_flushall_check();
 
-#include "../core/atomic.c"
-
 const char* get_suffix_default(void)
 {
         return ".log";        

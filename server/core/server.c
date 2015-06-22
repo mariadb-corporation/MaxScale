@@ -33,7 +33,7 @@
  * 30/08/14	Massimiliano Pinto	Addition of new service status description 
  * 30/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS description
  * 01/06/15	Massimiliano Pinto	Addition of server_update_address/port
- *
+ * 19/06/15 Martin Brampton		Extra code for persistent connections
  * @endverbatim
  */
 #include <stdio.h>

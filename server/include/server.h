@@ -44,7 +44,8 @@
  * 27/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS
  * 19/02/15	Mark Riddoch		Addition of serverGetList
  * 01/06/15	Massimiliano Pinto	Addition of server_update_address/port
- *
+ * 19/06/15	Martin Brampton		Extra fields for persistent connections, CHK_SERVER
+
  * @endverbatim
  */
 
