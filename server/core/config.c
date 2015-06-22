@@ -428,7 +428,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 
 				    /** Add the 5.5.5- string to the start of the version string if
 				     * the version string starts with "10.".
-				     * This mimics MariaDB 10.0 behavior which adds 5.5.5- for backwards compatibility. */
+				     * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
 				    if(strncmp(version_string,"10.",3) == 0)
 				    {
 					((SERVICE *)(obj->element))->version_string = malloc((strlen(version_string) +
