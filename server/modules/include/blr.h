@@ -73,6 +73,9 @@
 #define	BLR_MASTER_BACKOFF_TIME	10
 #define BLR_MAX_BACKOFF		60
 
+/* max size for error message returned to client */
+#define BINLOG_ERROR_MSG_LEN	255
+
 /**
  * Some useful macros for examining the MySQL Response packets
  */
