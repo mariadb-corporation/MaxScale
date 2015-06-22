@@ -218,9 +218,8 @@ int		fd;
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
 	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
-	blr_file_add_magic(router, fd);
-	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
+	spinlock_release(&router->binlog_lock);
 	return 1;
 }
 
@@ -262,12 +261,13 @@ int		fd;
 	                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"%s: binlog file %s has an invalid length %d.",
 				router->service->name, path, router->binlog_position)));
-                    close(fd);
+			close(fd);
+			spinlock_release(&router->binlog_lock);
 			return;
 		}
 	}
-	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
+	spinlock_release(&router->binlog_lock);
 }
 
 /**

@@ -246,6 +246,9 @@ blr_master_reconnect(ROUTER_INSTANCE *router)
 {
 int	do_reconnect = 0;
 
+	if (router->master_state == BLRM_SLAVE_STOPPED)
+		return;
+
 	spinlock_acquire(&router->lock);
 	if (router->active_logs)
 	{
@@ -914,7 +917,8 @@ static REP_HEADER	phdr;
 
 			blr_extract_header(ptr, &hdr);
 
-			if (hdr.event_size != len - 5)	/* Sanity check */
+			/* Sanity check */
+			if (hdr.ok == 0 && hdr.event_size != len - 5)
 			{
 				LOGIF(LE,(skygw_log_write(
 				   LOGFILE_ERROR,
@@ -1145,6 +1149,9 @@ static REP_HEADER	phdr;
 				if (router->m_errmsg)
 					free(router->m_errmsg);
 				router->m_errmsg = msg_err;
+
+				/* Force stopped state */
+				router->master_state = BLRM_SLAVE_STOPPED;
 
 				spinlock_release(&router->lock);
 
