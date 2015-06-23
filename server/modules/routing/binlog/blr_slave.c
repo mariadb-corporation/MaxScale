@@ -2496,15 +2496,32 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 	/* if binlog name has changed to next one only position 4 is allowed */
 	if (strcmp(master_logfile, router->binlog_name)) {
-		if (pos > 0 && pos != 4) {
-
-			snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s for MASTER_LOG_FILE %s: "
+		int return_error = 0;
+		if (master_log_pos == NULL) {
+			snprintf(error, BINLOG_ERROR_MSG_LEN, "Please provide an explicit MASTER_LOG_POS for new MASTER_LOG_FILE %s: "
 				"Permitted binlog pos is %d. Current master_log_file=%s, master_log_pos=%lu",
-				passed_pos,
 				master_logfile,
 				4,
 				router->binlog_name,
 				router->binlog_position);
+
+			return_error = 1;
+		} else {
+			if (pos != 4) {
+				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s for MASTER_LOG_FILE %s: "
+					"Permitted binlog pos is %d. Current master_log_file=%s, master_log_pos=%lu",
+					passed_pos,
+					master_logfile,
+					4,
+					router->binlog_name,
+					router->binlog_position);
+
+				return_error = 1;
+			}
+		}
+
+		/* return an error or set new binlog name at pos 4 */
+		if (return_error) {
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
 
@@ -2520,7 +2537,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			return -1;
 
 		} else {
-			/* set new filename and pos */
+			/* set new filename at pos 4 */
 			memset(router->binlog_name, '\0', sizeof(router->binlog_name));
 			strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
 
