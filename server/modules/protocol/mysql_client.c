@@ -1771,7 +1771,7 @@ gw_client_close(DCB *dcb)
             dcb->state == DCB_STATE_NOPOLLING ||
             dcb->state == DCB_STATE_ZOMBIE)
         {
-		if (!DCB_IS_CLONE(dcb) && protocol) CHK_PROTOCOL(protocol);
+		if (!DCB_IS_CLONE(dcb)) CHK_PROTOCOL(protocol);
         }
 #endif
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
