@@ -24,3 +24,8 @@ A quick list of changes in installation directories and file names:
   * Data directory is `/var/lib/maxscale`. This is the default location for MaxScale-specific data.
   * PID file can be found at `/var/run/maxscale`
 
+### Client side SSL encryption
+MaxScale now supports SSL/TLS encrypted connections to MaxScale.
+
+### Monitor scripts
+State changes in backend servers can now trigger the execution of a custom script. With this you can easily customize MaxScale's behavior.
