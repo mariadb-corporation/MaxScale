@@ -2423,6 +2423,9 @@ static bool dcb_set_state_nomutex(
                 
         case DCB_STATE_NOPOLLING:
                 switch (new_state) {
+		    /** Stopped services which are restarting will go from
+		     *  DCB_STATE_NOPOLLING to DCB_STATE_LISTENING.*/
+			case DCB_STATE_LISTENING:
 			case DCB_STATE_ZOMBIE: /*< fall through */
 				dcb->state = new_state;
 			case DCB_STATE_POLLING: /*< ok to try but state can't change */
