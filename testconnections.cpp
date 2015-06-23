@@ -84,7 +84,6 @@ TestConnections::TestConnections(int argc, char *argv[])
         if ((repl->check_nodes() != 0) || (repl->check_replication(0) != 0)) {
             printf("Backend broken! Restarting replication nodes\n");
             repl->restart_all_vm();
-            repl->start_replication();
         }
         //  checking galera nodes VMs for availability
         /*
@@ -94,6 +93,7 @@ TestConnections::TestConnections(int argc, char *argv[])
             galera->start_galera();
         }*/
     }
+    repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
 }
 
