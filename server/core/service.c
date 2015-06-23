@@ -534,7 +534,7 @@ int		listeners = 0;
 	port = service->ports;
 	while (port)
 	{
-	    if(poll_remove_dcb(port->listener) == 0)
+	    if(port->listener && poll_remove_dcb(port->listener) == 0)
 	    {
 		port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
 		listeners++;
@@ -563,7 +563,7 @@ int		listeners = 0;
 	port = service->ports;
 	while (port)
 	{
-		if(poll_add_dcb(port->listener) == 0)
+		if(port->listener && poll_add_dcb(port->listener) == 0)
 		{
 		    port->listener->session->state = SESSION_STATE_LISTENER;
 		    listeners++;
