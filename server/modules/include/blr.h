@@ -34,6 +34,7 @@
 #include <pthread.h>
 
 #include <memlog.h>
+#include <zlib.h>
 
 #define BINLOG_FNAMELEN		16
 #define BLR_PROTOCOL		"MySQLBackend"
