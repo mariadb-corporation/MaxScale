@@ -29,6 +29,7 @@
  * 25/05/15	Massimiliano Pinto	Added BLRM_SLAVE_STOPPED state
  * 05/06/15	Massimiliano Pinto	Addition of m_errno, m_errmsg fields
  * 08/06/15	Massimiliano Pinto	Modification of MYSQL_ERROR_CODE and MYSQL_ERROR_MSG
+ * 23/06/15	Massimiliano Pinto	Addition of MASTER_SERVER_CFG struct
  *
  * @endverbatim
  */
@@ -86,6 +87,15 @@
 #define MYSQL_ERROR_MSG(buf)	((uint8_t *)GWBUF_DATA(buf) + 7)
 #define MYSQL_COMMAND(buf)	(*((uint8_t *)GWBUF_DATA(buf) + 4))
 
+/* Master Server configuration struct */
+typedef struct master_server_config {
+	char *host;
+	unsigned short port;
+	char logfile[BINLOG_FNAMELEN+1];
+	uint64_t pos;
+	char *user;
+	char *password;
+} MASTER_SERVER_CFG;
 
 /**
  * Packet header for replication messages

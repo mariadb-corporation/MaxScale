@@ -226,7 +226,6 @@ int		fd;
 	return 1;
 }
 
-
 /**
  * Prepare an existing binlog file to be appened to.
  *
@@ -807,9 +806,9 @@ int	filenum;
 /**
  * Create a new binlog file
  *
- * @param router        The router instance
+ * @param router	The router instance
  * @param file		The new binlog file
- * @return 		1 on success, 0 on failure
+ * @return		1 on success, 0 on failure
  */
 int
 blr_file_new_binlog(ROUTER_INSTANCE *router, char *file)
@@ -819,11 +818,11 @@ blr_file_new_binlog(ROUTER_INSTANCE *router, char *file)
 
 /**
  * Use current binlog file
- * @param router        The router instance
+ * @param router	The router instance
  * @param file		The binlog file
  */
 void
 blr_file_use_binlog(ROUTER_INSTANCE *router, char *file)
 {
-        return blr_file_append(router, file);
+	return blr_file_append(router, file);
 }

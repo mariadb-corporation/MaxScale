@@ -34,7 +34,10 @@
  * Date		Who			Description
  * 02/04/2014	Mark Riddoch			Initial implementation
  * 25/05/2015	Massimiliano Pinto		Added BLRM_SLAVE_STOPPED state
- * 08/06/2015	Massimiliano Pinto		Addev m_errno and m_errmsg
+ * 08/06/2015	Massimiliano Pinto		Added m_errno and m_errmsg
+ * 23/06/2015	Massimiliano Pinto		Master communication goes into BLRM_SLAVE_STOPPED state
+ *						when an error is encountered in BLRM_BINLOGDUMP state.
+ *						Server error code and msg are reported via SHOW SLAVE STATUS
  *
  * @endverbatim
  */
