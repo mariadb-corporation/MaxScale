@@ -1949,15 +1949,13 @@ dcb_close(DCB *dcb)
         }
         
         ss_dassert(dcb->state == DCB_STATE_POLLING ||
-		dcb->state == DCB_STATE_LISTENING ||
                dcb->state == DCB_STATE_NOPOLLING ||
                dcb->state == DCB_STATE_ZOMBIE);
         
         /*<
         * Stop dcb's listening and modify state accordingly.
         */
-	if (dcb->state == DCB_STATE_POLLING ||
-	 dcb->state == DCB_STATE_LISTENING)
+	if (dcb->state == DCB_STATE_POLLING)
 	{
 		rc = poll_remove_dcb(dcb);
 
@@ -2428,10 +2426,6 @@ static bool dcb_set_state_nomutex(
 			case DCB_STATE_ZOMBIE: /*< fall through */
 				dcb->state = new_state;
 			case DCB_STATE_POLLING: /*< ok to try but state can't change */
-				succp = true;
-				break;
-			case DCB_STATE_LISTENING:
-				dcb->state = new_state;
 				succp = true;
 				break;
 			default:
