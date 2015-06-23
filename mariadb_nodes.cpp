@@ -197,6 +197,7 @@ int Mariadb_nodes::start_replication()
     global_result += connect();
     global_result += execute_query(nodes[0], create_repl_user);
     execute_query(nodes[0], (char *) "reset master;");
+    execute_query(nodes[0], (char *) "stop slave;");
 
     find_field(nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
     find_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
