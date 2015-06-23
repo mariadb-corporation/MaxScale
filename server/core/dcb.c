@@ -639,22 +639,9 @@ char            *user;
 			"%lu [dcb_connect] Failed to link to session, the "
                         "session has been removed.\n",
                         pthread_self())));
-                    dcb_final_free(dcb);
+                    dcb_close(dcb);
                     return NULL;
                 }
-                /*
-                dcb->dcb_server_status = server->status;
-                dcb->state = DCB_STATE_ALLOC;
-                if (poll_add_dcb(dcb)) 
-                {
-                    LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-			"%lu [dcb_connect] Failed to add DCB %p to polling.\n",
-                        pthread_self(), dcb)));
-                    dcb_final_free(dcb);
-                    return NULL;
-                }
-                */
                 LOGIF(LD, (skygw_log_write(
                     LOGFILE_DEBUG,
                     "%lu [dcb_connect] Reusing a persistent connection, dcb %p\n", pthread_self(), dcb)));
@@ -663,10 +650,10 @@ char            *user;
             }
             else
             {
-                    LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-			"%lu [dcb_connect] Failed to find a reusable persistent connection.\n",
-                        pthread_self())));
+                LOGIF(LD, (skygw_log_write(
+                    LOGFILE_DEBUG,
+                    "%lu [dcb_connect] Failed to find a reusable persistent connection.\n",
+                    pthread_self())));
             }
         }
         
@@ -745,7 +732,7 @@ char            *user;
 
         /** Copy status field to DCB */
         dcb->dcb_server_status = server->status;
-        ss_debug(dcb->dcb_port = server->port;)
+        dcb->dcb_port = server->port;
         
 	/**
 	 * backend_dcb is connected to backend server, and once backend_dcb
@@ -760,9 +747,9 @@ char            *user;
         rc = poll_add_dcb(dcb);
 
         if (rc == DCBFD_CLOSED) {
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
-                dcb_final_free(dcb);
-                return NULL;
+            dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+            dcb_final_free(dcb);
+            return NULL;
         }
 	/**
 	 * The dcb will be addded into poll set by dcb->func.connect
@@ -2025,6 +2012,7 @@ dcb_close(DCB *dcb)
  * Add DCB to persistent pool if it qualifies, close otherwise
  *
  * @param dcb	The DCB to go to persistent pool or be closed
+ * @return      bool - whether the DCB was added to the pool
  *
  */
 static bool
@@ -2114,7 +2102,9 @@ printDCB(DCB *dcb)
 	if (dcb->remote)
 		printf("\tConnected to:		%s\n", dcb->remote);
 	if (dcb->user)
-		printf("\tUsername to:		%s\n", dcb->user);
+		printf("\tUsername:		%s\n", dcb->user);
+	if (dcb->protoname)
+		printf("\tProtocol:		%s\n", dcb->protoname);
 	if (dcb->writeq)
 		printf("\tQueued write data:	%d\n",gwbuf_length(dcb->writeq));
         char *statusname = server_status(dcb->server);
@@ -2196,6 +2186,9 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
 		if (dcb->user)
 			dcb_printf(pdcb, "\tUsername:           %s\n",
 					dcb->user);
+		if (dcb->protoname)
+			dcb_printf(pdcb, "\tProtocol:           %s\n",
+					dcb->protoname);
 		if (dcb->writeq)
 			dcb_printf(pdcb, "\tQueued write data:  %d\n",
 					gwbuf_length(dcb->writeq));
@@ -2225,7 +2218,7 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
             char buff[20];
             struct tm * timeinfo;
             timeinfo = localtime (&dcb->persistentstart);
-            strftime(buff, sizeof(buff), "%b %d %H:%M", timeinfo);    
+            strftime(buff, sizeof(buff), "%b %d %H:%M:%S", timeinfo);    
             dcb_printf(pdcb, "\t\tAdded to persistent pool:         %s", buff);
         }
 }
@@ -2256,7 +2249,7 @@ DCB	*dcb;
 }
 
 /** 
- * Diagnotic routine to print DCB data in a tabular form.
+ * Diagnostic routine to print DCB data in a tabular form.
  * 
  * @param       pdcb    DCB to print results to
  */
@@ -2339,6 +2332,9 @@ dprintDCB(DCB *pdcb, DCB *dcb)
 	if (dcb->user)
 		dcb_printf(pdcb, "\tUsername:			%s\n",
 					dcb->user);
+	if (dcb->protoname)
+		dcb_printf(pdcb, "\tProtocol:			%s\n",
+					dcb->protoname);
 	dcb_printf(pdcb, "\tOwning Session:   	%p\n", dcb->session);
 	if (dcb->writeq)
 		dcb_printf(pdcb, "\tQueued write data:	%d\n", gwbuf_length(dcb->writeq));
@@ -2396,7 +2392,7 @@ dprintDCB(DCB *pdcb, DCB *dcb)
             char buff[20];
             struct tm * timeinfo;
             timeinfo = localtime (&dcb->persistentstart);
-            strftime(buff, sizeof(buff), "%b %d %H:%M", timeinfo);    
+            strftime(buff, sizeof(buff), "%b %d %H:%M:%S", timeinfo);    
             dcb_printf(pdcb, "\t\tAdded to persistent pool:         %s", buff);
         }
 }
@@ -3069,6 +3065,9 @@ dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf)
  * Check persistent pool for expiry or excess size and count
  *
  * @param dcb		The DCB being closed.
+ * @param cleanall	Boolean, if true the whole pool is cleared for the
+ *                      server related to the given DCB
+ * @return              A count of the DCBs remaining in the pool
  */
 int
 dcb_persistent_clean_count(DCB *dcb, bool cleanall)
@@ -3083,15 +3082,16 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
     
         CHK_SERVER(server);
         spinlock_acquire(&server->persistlock);
-		persistentdcb = server->persistent;
+        persistentdcb = server->persistent;
         while (persistentdcb) {
             CHK_DCB(persistentdcb);
-			nextdcb = persistentdcb->nextpersistent;
+            nextdcb = persistentdcb->nextpersistent;
             if (cleanall 
-				|| persistentdcb-> dcb_errhandle_called 
-				|| count >= server->persistpoolmax 
-				|| time(NULL) - persistentdcb->persistentstart > server->persistmaxtime)
+		|| persistentdcb-> dcb_errhandle_called 
+		|| count >= server->persistpoolmax 
+		|| (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime)
             {
+                /* Remove from persistent pool */
                 if (previousdcb) {
                     previousdcb->nextpersistent = nextdcb;
                 }
@@ -3099,6 +3099,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
                 {
                     server->persistent = nextdcb;
                 }
+                /* Add removed DCBs to disposal list for processing outside spinlock */
                 persistentdcb->nextpersistent = disposals;
                 disposals = persistentdcb;
                 atomic_add(&server->stats.n_persistent, -1);

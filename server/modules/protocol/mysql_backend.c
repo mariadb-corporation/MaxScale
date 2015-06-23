@@ -43,6 +43,7 @@
  * 27/09/2013	Massimiliano Pinto	Changed in gw_read_backend_event the check for dcb_read(), now is if rc < 0
  * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
  * 10/11/2014	Massimiliano Pinto	Client charset is passed to backend
+ * 19/06/2015   Martin Brampton		Persistent connection handling
  *
  */
 #include <modinfo.h>

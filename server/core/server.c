@@ -141,8 +141,9 @@ SERVER *server;
 /**
  * Get a DCB from the persistent connection pool, if possible
  *
- * @param	server	The server to set the name on
- * @param	user	The name of the user needing the connection
+ * @param	server      The server to set the name on
+ * @param	user        The name of the user needing the connection
+ * @param	protocol    The name of the protocol needed for the connection
  */
 DCB *
 server_get_persistent(SERVER *server, char *user, const char *protocol)
@@ -154,7 +155,12 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
         spinlock_acquire(&server->persistlock);
         dcb = server->persistent;
         while (dcb) {
-            if (dcb->user && dcb->protoname && !dcb-> dcb_errhandle_called && 0 == strcmp(dcb->user, user) && 0 == strcmp(dcb->protoname, protocol))
+            if (dcb->user 
+                && dcb->protoname 
+                && !dcb-> dcb_errhandle_called
+                && !(dcb->flags & DCBF_HUNG)
+                && 0 == strcmp(dcb->user, user) 
+                && 0 == strcmp(dcb->protoname, protocol))
             {
                 if (NULL == previous)
                 {
@@ -171,21 +177,22 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
                 atomic_add(&server->stats.n_current, 1);
                 return dcb;
             }
-			else
-			{
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [server_get_persistent] Rejected dcb "
-					"%p from pool, user %s looking for %s, protocol %s "
-					"looking for %s, error handle called %s.",
-					pthread_self(),
-					dcb,
-					dcb->user ? dcb->user : "NULL",
-					user,
-					dcb->protoname ? dcb->protoname : "NULL",
-					protocol,
-					dcb-> dcb_errhandle_called ? "true" : "false"))); 
-			}
+            else
+            {
+                LOGIF(LD, (skygw_log_write_flush(
+                    LOGFILE_DEBUG,
+                    "%lu [server_get_persistent] Rejected dcb "
+                    "%p from pool, user %s looking for %s, protocol %s "
+                    "looking for %s, hung flag %s, error handle called %s.",
+                    pthread_self(),
+                    dcb,
+                    dcb->user ? dcb->user : "NULL",
+                    user,
+                    dcb->protoname ? dcb->protoname : "NULL",
+                    protocol,
+                    (dcb->flags & DCBF_HUNG) ? "true" : "false",
+                    dcb-> dcb_errhandle_called ? "true" : "false"))); 
+            }
             previous = dcb;
             dcb = dcb->nextpersistent;
         }

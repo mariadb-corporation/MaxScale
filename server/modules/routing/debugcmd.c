@@ -43,7 +43,7 @@
  * 29/05/14	Mark Riddoch		Add Filter support
  * 16/10/14	Mark Riddoch		Add show eventq
  * 05/03/15	Massimiliano Pinto	Added enable/disable feedback
- * 27/05/15     Martin Brampton         Add show persistent [server]
+ * 27/05/15 Martin Brampton     Add show persistent [server]
  *
  * @endverbatim
  */

@@ -38,6 +38,7 @@
  * 13/10/2014	Massimiliano Pinto	Added: dbname authentication check
  * 10/11/2014	Massimiliano Pinto	Added: client charset added to protocol struct
  * 29/05/2015   Markus Makela           Added SSL support
+ * 11/06/2015   Martin Brampton		COM_QUIT suppressed for persistent connections
  */
 #include <skygw_utils.h>
 #include <log_manager.h>

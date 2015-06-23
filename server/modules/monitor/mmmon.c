@@ -126,6 +126,7 @@ startMonitor(void *arg,void* opt)
 	handle->shutdown = 0;
 	handle->id = MONITOR_DEFAULT_ID;
 	handle->master = NULL;
+	handle->script = NULL;
 	memset(handle->events,false,sizeof(handle->events));
 	spinlock_init(&handle->lock);
     }
