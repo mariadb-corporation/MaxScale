@@ -2320,6 +2320,13 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 		spinlock_acquire(&router->lock);
 		router->master_state = BLRM_UNCONNECTED;
 		spinlock_release(&router->lock);
+
+		/* create a new binlog or just use current one */
+		if (strcmp(router->prevbinlog, router->binlog_name))
+			blr_file_new_binlog(router, router->binlog_name);
+		else
+			blr_file_use_binlog(router, router->binlog_name);
+
 		blr_start_master(router);
 
 		return blr_slave_send_ok(router, slave);

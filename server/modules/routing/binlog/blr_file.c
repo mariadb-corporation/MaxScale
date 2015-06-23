@@ -27,6 +27,7 @@
  * 14/04/2014	Mark Riddoch		Initial implementation
  * 08/06/2015	Massimiliano Pinto	Addition of blr_cache_read_master_data()
  * 15/06/2015	Massimiliano Pinto	Addition of blr_file_get_next_binlogname()
+ * 23/06/2015	Massimiliano Pinto	Addition of blr_file_use_binlog, blr_file_create_binlog
  *
  * @endverbatim
  */
@@ -63,6 +64,8 @@ static uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
+int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
+void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -799,4 +802,28 @@ int	filenum;
 	filenum = atoi(sptr+1) + 1;
 
 	return filenum;
+}
+
+/**
+ * Create a new binlog file
+ *
+ * @param router        The router instance
+ * @param file		The new binlog file
+ * @return 		1 on success, 0 on failure
+ */
+int
+blr_file_new_binlog(ROUTER_INSTANCE *router, char *file)
+{
+        return blr_file_create(router, file);
+}
+
+/**
+ * Use current binlog file
+ * @param router        The router instance
+ * @param file		The binlog file
+ */
+void
+blr_file_use_binlog(ROUTER_INSTANCE *router, char *file)
+{
+        return blr_file_append(router, file);
 }
