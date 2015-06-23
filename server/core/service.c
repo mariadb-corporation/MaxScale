@@ -534,10 +534,14 @@ int		listeners = 0;
 	port = service->ports;
 	while (port)
 	{
-	    if(port->listener && poll_remove_dcb(port->listener) == 0)
+	    if(port->listener &&
+	     port->listener->session->state == SESSION_STATE_LISTENER)
 	    {
-		port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
-		listeners++;
+		if(poll_remove_dcb(port->listener) == 0)
+		{
+		    port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+		    listeners++;
+		}
 	    }
 	    port = port->next;
 	}
@@ -563,11 +567,15 @@ int		listeners = 0;
 	port = service->ports;
 	while (port)
 	{
-		if(port->listener && poll_add_dcb(port->listener) == 0)
+	    if(port->listener &&
+	     port->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
+	    {
+		if(poll_add_dcb(port->listener) == 0)
 		{
 		    port->listener->session->state = SESSION_STATE_LISTENER;
 		    listeners++;
 		}
+	    }
 	    port = port->next;
 	}
 	service->state = SERVICE_STATE_STARTED;
