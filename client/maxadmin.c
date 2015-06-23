@@ -433,10 +433,10 @@ char	buf[20];
 }
 
 /**
- * Send a comamnd using the MaxScaled protocol, display the return data
+ * Send a command using the MaxScaled protocol, display the return data
  * on standard output.
  *
- * Input terminates with a lien containing just the text OK
+ * Input terminates with a line containing just the text OK
  *
  * @param so	The socket connect to MaxScale
  * @param cmd	The command to send
