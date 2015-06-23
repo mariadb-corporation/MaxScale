@@ -534,12 +534,8 @@ int		listeners = 0;
 	port = service->ports;
 	while (port)
 	{
-	    if(port->listener)
-	    {
-		dcb_close(port->listener);
-		port->listener = NULL;
+	    if(poll_remove_dcb(port->listener) == 0)
 		listeners++;
-	    }
 	    port = port->next;
 	}
 	service->state = SERVICE_STATE_STOPPED;
@@ -564,7 +560,8 @@ int		listeners = 0;
 	port = service->ports;
 	while (port)
 	{
-	    listeners += serviceStartPort(service,port);
+		if(poll_add_dcb(port->listener) == 0)
+		    listeners++;
 	    port = port->next;
 	}
 	service->state = SERVICE_STATE_STARTED;
