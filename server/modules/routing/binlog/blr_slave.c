@@ -2432,6 +2432,8 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 	char *master_user = NULL;
 	char *master_password = NULL;
 	int change_binlog = 0;
+	long long pos = 0;
+	char *passed_pos = NULL;
 	MASTER_SERVER_CFG *current_master = NULL;
 
 	/* save current replication parameters */
@@ -2485,80 +2487,86 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 	}
 
 	/* Change the position in the current or new binlog filename */
-	if (master_log_pos) {
-		char *passed_pos = master_log_pos + 15;
-		long long pos = atoll(passed_pos);
+	if (master_log_pos == NULL) {
+		pos = 0;
+	} else {
+		passed_pos = master_log_pos + 15;
+		pos = atoll(passed_pos);
+	}
 
-		free(master_log_pos);
+	/* if binlog name has changed to next one only position 4 is allowed */
+	if (strcmp(master_logfile, router->binlog_name)) {
+		if (pos > 0 && pos != 4) {
 
-		/* if binlog name has changed to next one only position 4 is allowed */
-		if (strcmp(master_logfile, router->binlog_name)) {
-			if (pos != 4) {
+			snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s for MASTER_LOG_FILE %s: "
+				"Permitted binlog pos is %d. Current master_log_file=%s, master_log_pos=%lu",
+				passed_pos,
+				master_logfile,
+				4,
+				router->binlog_name,
+				router->binlog_position);
 
-				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s for MASTER_LOG_FILE %s: "
-					"Permitted binlog pos is %d. Current master_log_file=%s, master_log_pos=%lu",
-					passed_pos,
-					master_logfile,
-					4,
-					router->binlog_name,
-					router->binlog_position);
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
 
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
-
-				free(master_logfile);
-
-				/* restore previous master_host and master_port */
-				blr_master_restore_config(router, current_master);
-
-				spinlock_release(&router->lock);
-
-				return -1;
-
-			} else {
-				/* set new filename and pos */
-				memset(router->binlog_name, '\0', sizeof(router->binlog_name));
-				strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
-
-				router->binlog_position = 4;
-
-				free(master_logfile);
-
-				LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
-					router->service->name,
-					router->binlog_name)));
-			}
-		} else {
+			if (master_log_pos)
+				free(master_log_pos);
 			free(master_logfile);
 
-			/* Position cannot be different from current pos */
-			if (pos != router->binlog_position) {
+			/* restore previous master_host and master_port */
+			blr_master_restore_config(router, current_master);
 
-				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
-					"Permitted binlog pos is %lu. Current master_log_file=%s, master_log_pos=%lu",
-					passed_pos,
-					router->binlog_position,
-					router->binlog_name,
-					router->binlog_position);
+			spinlock_release(&router->lock);
 
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+			return -1;
 
-				/* restore previous master_host and master_port */
-				blr_master_restore_config(router, current_master);
+		} else {
+			/* set new filename and pos */
+			memset(router->binlog_name, '\0', sizeof(router->binlog_name));
+			strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
 
-				spinlock_release(&router->lock);
+			router->binlog_position = 4;
 
-				return -1;
+			if (master_log_pos)
+				free(master_log_pos);
+			free(master_logfile);
 
-			} else {
-				/* set new position */
-				router->binlog_position = pos;
-			}
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
+				router->service->name,
+				router->binlog_name)));
 		}
+	} else {
+		/* Position cannot be different from current pos */
+		if (pos > 0 && pos != router->binlog_position) {
 
-		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
-			router->service->name,
-			router->binlog_position)));
+			snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
+				"Permitted binlog pos is %lu. Current master_log_file=%s, master_log_pos=%lu",
+				passed_pos,
+				router->binlog_position,
+				router->binlog_name,
+				router->binlog_position);
+
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+			if (master_log_pos)
+				free(master_log_pos);
+			free(master_logfile);
+
+			/* restore previous master_host and master_port */
+			blr_master_restore_config(router, current_master);
+
+			spinlock_release(&router->lock);
+
+			return -1;
+		} else {
+			if (master_log_pos)
+				free(master_log_pos);
+			free(master_logfile);
+		}
 	}
+
+	LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
+		router->service->name,
+		router->binlog_position)));
 
 	/* Change the replication user */
 	if (master_user) {
