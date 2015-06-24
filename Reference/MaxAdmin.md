@@ -8,7 +8,22 @@ Mark Riddoch
 
 Last Updated: 13th February 2015
 
+[Overview](#overview)
+[Running MaxAdmin](#running)
+[Getting Help](#help)
+[Working with Services](#services)
+[Working with Servers](#servers)
+[Working with Sessions](#sessions)
+[Descriptor Control Blocks](#dcbs)
+[Working with Filters](#filters)
+[Working with Monitors](#monitors)
+[Working With Administration Interface Users](#interface)
+[MaxScale Status Commands](#statuscommands)
+[Administration Commands](#admincommands)
+[Configuring MaxScale to Accept MaxAdmin Connections](#connections)
+[Tuning MaxScale](#tuning)
 
+<a name="overview"></a> 
 # Overview
 
 MaxAdmin is a simple client interface that can be used to interact with the MaxScale server, it allows the display of internal MaxScale statistics, status and control of MaxScale operations.
@@ -21,6 +36,7 @@ MaxAdmin supports
 
 * Execution of command scripts
 
+<a name="running"></a> 
 # Running MaxAdmin
 
 The MaxAdmin client application may be run in two different modes, either as an interactive command shell for executing commands against MaxScale or by passing commands on the MaxAdmin command line itself.
@@ -146,6 +162,7 @@ This mechanism can be used to provide a means of passwords entry into maxadmin o
 
 The .maxadmin file may  be made read only to protect any passwords written to that file.
 
+<a name="help"></a> 
 # Getting Help
 
 A help system is available that describes the commands available via the administration interface. To obtain a list of all commands available simply type the command help.
@@ -185,6 +202,7 @@ To see more detail on a particular command, and a list of the sub commands of th
         sessions   List all the active sessions within MaxScale
     MaxScale> 
 
+<a name="services"></a> 
 # Working With Services
 
 A service is a very important concept in MaxScale as it defines the mechanism by which clients interact with MaxScale and can attached to the backend databases. A number of commands exist that allow interaction with the services.
@@ -282,6 +300,7 @@ A stopped service may be restarted by using the restart service command.
     MaxScale> restart service "Split Service"
     MaxScale> 
 
+<a name="servers"></a> 
 # Working With Servers
 
 The server represents each of the instances of MySQL or MariaDB that a service may use. 
@@ -380,6 +399,7 @@ format described below in the DCB section) with a command like:
 
     MaxScale> show persistent server1
 
+<a name="sessions"></a> 
 # Working With Sessions
 
 The MaxScale session represents the state within MaxScale. Sessions are dynamic entities and not named in the configuration file, this means that sessions can not be easily named within the user interface. The sessions are referenced using ID values, these are actually memory address, however the important thing is that no two session have the same ID.
@@ -430,6 +450,7 @@ Once the session ID has been determined using one of the above method it is poss
     	Connected:		Wed Jun 25 15:27:21 2014
     MaxScale> 
 
+<a name="dcbs"></a> 
 # Descriptor Control Blocks
 
 The Descriptor Control Block or DCB is a very important entity within MaxScale, it represents the state of each connection within MaxScale. A DCB is allocated for every connection from a client, every network listener and every connection to a backend database. Statistics for each of these connections are maintained within these DCB’s.
@@ -483,7 +504,7 @@ The details of an individual DCB can be obtained by use of the show dcb command
     		No. of Accepts:			0
     		No. of High Water Events:		0
     		No. of Low Water Events:		0
-                Added to persistent pool:         Jun 24 09:09:56
+            Added to persistent pool:         Jun 24 09:09:56
     MaxScale>
 
 The information Username, Protocol, Server Status are not
@@ -491,6 +512,7 @@ always relevant, and will not be shown when they are null.
 The time the DCB was added to the persistent pool is only shown
 for a DCB that is in a persistent pool.
 
+<a name="filters"></a> 
 # Working with Filters
 
 Filters allow the request contents and result sets from a database to be modified for a client connection, pipelines of filters can be created between the client connection and MaxScale router modules.
@@ -585,6 +607,7 @@ The show session command will include details for each of the filters in use wit
 
 The data displayed varies from filter to filter, the example above is the top filter. This filter prints a report of the current top queries at the time the show session command is run.
 
+<a name="monitors"></a> 
 # Working With Monitors
 
 Monitors are used to monitor the state of databases within MaxScale in order to supply information to other modules, specifically the routers within MaxScale.
@@ -680,6 +703,7 @@ A monitor that has been shutdown may be restarted using the restart monitor comm
     	Monitored servers:	127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309
     MaxScale> 
 
+<a name="interface"></a> 
 # Working With Administration Interface Users
 
 A default installation of MaxScale allows connection to the administration interface using the username of admin and the password mariadb. This username and password stay in effect as long as no other users have been created for the administration interface. As soon as the first user is added the use of admin/mariadb as login credentials will be disabled.
@@ -723,6 +747,7 @@ To remove a user the command remove user is used, it must also be called with th
     User maria has been successfully removed.
     MaxScale> 
 
+<a name="statuscommands"></a> 
 # MaxScale Status Commands
 
 A number of commands exists that enable the internal MaxScale status to be revealed, these commands give an insight to how MaxScale is using resource internally and are used to allow the tuning process to take place.
@@ -770,6 +795,7 @@ Internally MaxScale has a housekeeper thread that is used to  perform periodic t
     Load Average              | Repeated | 10        | Wed Nov 19 15:10:51 2014
     MaxScale>
 
+<a name="admincommands"></a> 
 # Administration Commands
 
 ## What Modules Are In use?
@@ -828,6 +854,7 @@ A command, reload config, is available that will cause MaxScale to reload the ma
 
 The MaxScale server may be shutdown using the shutdown maxscale command.
 
+<a name="connections"></a> 
 # Configuring MaxScale to Accept MaxAdmin Connections
 
 In order to allow the use of the MaxAdmin client interface the service must be added to the maxscale.cnf file of the Maxscale server. The CLI service itself must be added and a listener for the maxscaled protocol.
@@ -847,6 +874,7 @@ The default entries required are shown below.
 
 Note that this uses the default port of 6603 and confines the connections to localhost connections only. Remove the address= entry to allow connections from any machine on your network. Changing the port from 6603 will mean that you must allows pass a -p option to the MaxAdmin command.
 
+<a name="tuning"></a> 
 # Tuning MaxScale
 
 The way that MaxScale does it’s polling is that each of the polling threads, as defined by the threads parameter in the configuration file, will call epoll_wait to obtain the events that are to be processed. The events are then added to a queue for execution. Any thread can read from this queue, not just the thread that added the event. 
