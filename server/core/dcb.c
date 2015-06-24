@@ -1645,7 +1645,7 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 			    {
 				char errbuf[140];
 				ERR_error_string(ssl_errno,errbuf);
-				skygw_log_write(LE,"%s",errbuf);
+				skygw_log_write(LD,"%s",errbuf);
 			    }
 			}
 			break;
@@ -1665,6 +1665,19 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 							 STRDCBSTATE(dcb->state),
 							 dcb->fd,
 							 ssl_errno)));
+			if(ssl_errno == SSL_ERROR_SSL)
+			{
+			    while((ssl_errno = ERR_get_error()) != 0)
+			    {
+				char errbuf[140];
+				ERR_error_string(ssl_errno,errbuf);
+				skygw_log_write(LE,"%s",errbuf);
+			    }
+			}
+			if(ssl_errno == SSL_ERROR_SYSCALL)
+			{
+			    skygw_log_write(LE,"%d:%s",errno,strerror(errno));
+			}
 		    }
 		}
 		break;
