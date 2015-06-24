@@ -1,2 +1,3 @@
 add_library(utils skygw_utils.cc)
-target_link_libraries(utils stdc++)
+add_dependencies(utils log_manager)
+target_link_libraries(utils stdc++ log_manager)

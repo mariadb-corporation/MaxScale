@@ -345,8 +345,6 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				char *weightby;
 				char *version_string;
 				char *subservices;
-				char *ssl,*ssl_cert,*ssl_key,*ssl_ca_cert,*ssl_version;
-				char* ssl_cert_verify_depth;
 				bool  is_rwsplit = false;
 				bool  is_schemarouter = false;
 				char *allow_localhost_match_wildcard_host;
@@ -355,12 +353,6 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 				user = config_get_value(obj->parameters, "user");
 				auth = config_get_value(obj->parameters, "passwd");
 				subservices = config_get_value(obj->parameters, "subservices");
-				ssl = config_get_value(obj->parameters, "ssl");
-				ssl_cert = config_get_value(obj->parameters, "ssl_cert");
-				ssl_key = config_get_value(obj->parameters, "ssl_key");
-				ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
-				ssl_version = config_get_value(obj->parameters, "ssl_version");
-				ssl_cert_verify_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
@@ -428,7 +420,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 
 				    /** Add the 5.5.5- string to the start of the version string if
 				     * the version string starts with "10.".
-				     * This mimics MariaDB 10.0 behavior which adds 5.5.5- for backwards compatibility. */
+				     * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
 				    if(strncmp(version_string,"10.",3) == 0)
 				    {
 					((SERVICE *)(obj->element))->version_string = malloc((strlen(version_string) +
@@ -451,84 +443,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
                                 max_slave_rlag_str = 
                                         config_get_value(obj->parameters, 
                                                          "max_slave_replication_lag");
-
-				if(ssl)
-				{
-				    if(ssl_cert == NULL)
-				    {
-					error_count++;
-					skygw_log_write(LE,"Error: Server certificate missing for service '%s'."
-						"Please provide the path to the server certificate by adding the ssl_cert=<path> parameter",
-						 obj->object);
-				    }
-				    if(ssl_ca_cert == NULL)
-				    {
-					error_count++;
-					skygw_log_write(LE,"Error: CA Certificate missing for service '%s'."						
-						"Please provide the path to the certificate authority certificate by adding the ssl_ca_cert=<path> parameter",
-						 obj->object);
-				    }
-				    if(ssl_key == NULL)
-				    {
-					error_count++;
-					skygw_log_write(LE,"Error: Server private key missing for service '%s'. "
-						"Please provide the path to the server certificate key by adding the ssl_key=<path> parameter"
-						,obj->object);
-				    }
-
-				    if(access(ssl_ca_cert,F_OK) != 0)
-				    {
-					skygw_log_write(LE,"Error: Certificate authority file for service '%s' not found: %s",
-						 obj->object,
-						 ssl_ca_cert);
-					error_count++;
-				    }
-				    if(access(ssl_cert,F_OK) != 0)
-				    {
-					skygw_log_write(LE,"Error: Server certificate file for service '%s' not found: %s",
-						 obj->object,
-						 ssl_cert);
-					error_count++;
-				    }
-				    if(access(ssl_key,F_OK) != 0)
-				    {
-					skygw_log_write(LE,"Error: Server private key file for service '%s' not found: %s",
-						 obj->object,
-						 ssl_key);
-					error_count++;
-				    }
-
-				    if(error_count == 0)
-				    {
-					if(serviceSetSSL(obj->element,ssl) != 0)
-					{
-					    skygw_log_write(LE,"Error: Unknown parameter for service '%s': %s",obj->object,ssl);
-					    error_count++;
-					}
-					else
-					{
-					    serviceSetCertificates(obj->element,ssl_cert,ssl_key,ssl_ca_cert);
-					    if(ssl_version)
-					    {
-						if(serviceSetSSLVersion(obj->element,ssl_version) != 0)
-						{
-						    skygw_log_write(LE,"Error: Unknown parameter value for 'ssl_version' for service '%s': %s",obj->object,ssl_version);
-						    error_count++;
-						}
-					    }
-					    if(ssl_cert_verify_depth)
-					    {
-						if(serviceSetSSLVerifyDepth(obj->element,atoi(ssl_cert_verify_depth)) != 0)
-						{
-						    skygw_log_write(LE,"Error: Invalid parameter value for 'ssl_cert_verify_depth' for service '%s': %s",obj->object,ssl_cert_verify_depth);
-						    error_count++;
-						}
-					    }
-					}
-				    }
-
-				}
-
+                                        
 				if (enable_root_user)
 					serviceEnableRootUser(
                                                 obj->element, 
@@ -1424,7 +1339,7 @@ int i;
         }
 	else if (strcmp(name, "ms_timestamp") == 0)
 	{
-		skygw_set_highp(config_truth_value((char*)value));
+		skygw_set_highp(config_truth_value(value));
 	}
 	else
 	{
@@ -1432,7 +1347,7 @@ int i;
 		{
 			if (strcasecmp(name, lognames[i].logname) == 0)
 			{
-				if (config_truth_value((char*)value))
+				if (config_truth_value(value))
 					skygw_log_enable(lognames[i].logfile);
 				else
 					skygw_log_disable(lognames[i].logfile);
@@ -1820,9 +1735,6 @@ SERVER			*server;
 					obj->element = server_alloc(address,
                                                                     protocol,
                                                                     atoi(port));
-
-					server_set_unique_name(obj->element, obj->object);
-
 					if (obj->element && monuser && monpw)
                                         {
 						serverAddMonUser(obj->element,
@@ -2010,12 +1922,6 @@ static char *service_params[] =
                 "version_string",
                 "filters",
                 "weightby",
-		"ssl_cert",
-		"ssl_ca_cert",
-		"ssl",
-		"ssl_key",
-		"ssl_version",
-		"ssl_cert_verify_depth",
                 NULL
         };
 
@@ -2037,8 +1943,6 @@ static char *monitor_params[] =
                 "servers",
                 "user",
                 "passwd",
-		"script",
-		"events",
 		"monitor_interval",
 		"detect_replication_lag",
 		"detect_stale_master",

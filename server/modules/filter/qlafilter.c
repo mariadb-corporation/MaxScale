@@ -50,7 +50,6 @@
 #include <sys/time.h>
 #include <regex.h>
 #include <string.h>
-#include <atomic.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -305,9 +304,7 @@ char		*remote, *userName;
 		sprintf(my_session->filename, "%s.%d", 
 			my_instance->filebase,
 			my_instance->sessions);
-
-        // Multiple sessions can try to update my_instance->sessions simultaneously
-		atomic_add(&(my_instance->sessions), 1);
+		my_instance->sessions++;
 		
 		if (my_session->active)
 		{

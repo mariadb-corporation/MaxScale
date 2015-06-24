@@ -1724,9 +1724,6 @@ uint32_t	chksum;
 
 	binlognamelen = strlen(slave->binlogfile);
 	len = 19 + 8 + 4 + binlognamelen;
-	/* no slave crc, remove 4 bytes */
-	if (slave->nocrc)
-		len -= 4;
 
 	// Build a fake rotate event
 	resp = gwbuf_alloc(len + 5);
@@ -1745,19 +1742,17 @@ uint32_t	chksum;
 	memcpy(ptr, slave->binlogfile, binlognamelen);
 	ptr += binlognamelen;
 
-	if (!slave->nocrc) {
-		/*
-		 * Now add the CRC to the fake binlog rotate event.
-		 *
-		 * The algorithm is first to compute the checksum of an empty buffer
-		 * and then the checksum of the event portion of the message, ie we do not
-		 * include the length, sequence number and ok byte that makes up the first
-		 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
-		 */
-		chksum = crc32(0L, NULL, 0);
-		chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
-		encode_value(ptr, chksum, 32);
-	}
+	/*
+	 * Now add the CRC to the fake binlog rotate event.
+	 *
+	 * The algorithm is first to compute the checksum of an empty buffer
+	 * and then the checksum of the event portion of the message, ie we do not
+	 * include the length, sequence number and ok byte that makes up the first
+	 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
+	 */
+	chksum = crc32(0L, NULL, 0);
+	chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
+	encode_value(ptr, chksum, 32);
 
 	slave->dcb->func.write(slave->dcb, resp);
 	return 1;

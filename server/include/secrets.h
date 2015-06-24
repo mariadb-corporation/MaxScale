@@ -53,5 +53,5 @@ typedef	struct maxkeys {
 
 extern int	secrets_writeKeys(char *filename);
 extern char	*decryptPassword(char *);
-extern char	*encryptPassword(char*,char *);
+extern char	*encryptPassword(char *);
 #endif

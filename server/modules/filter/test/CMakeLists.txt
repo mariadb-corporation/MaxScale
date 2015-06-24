@@ -1,3 +1,4 @@
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(harness_ui harness_ui.c harness_common.c)
 add_executable(harness harness_util.c harness_common.c)
@@ -24,3 +25,7 @@ add_test(TestTeeRecursion ${CMAKE_CURRENT_SOURCE_DIR}/tee_recursion.sh
   ${TEST_PASSWORD}
   ${TEST_HOST}
   ${TEST_PORT})
+
+set_tests_properties(TestHintfilter TestRegexfilter TestFwfilter1 TestFwfilter2 TestTeeRecursion
+PROPERTIES 
+ENVIRONMENT MAXSCALE_HOME=${CMAKE_BINARY_DIR}/)

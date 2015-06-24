@@ -72,7 +72,7 @@ static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 int
 blr_file_init(ROUTER_INSTANCE *router)
 {
-char		*ptr, path[PATH_MAX+1], filename[PATH_MAX+1];
+char		*ptr, path[PATH_MAX], filename[PATH_MAX];
 int		file_found, n = 1;
 int		root_len, i;
 DIR		*dirp;
@@ -80,8 +80,12 @@ struct dirent	*dp;
 
 	if (router->binlogdir == NULL)
 	{
-		strcpy(path, get_datadir());
-		strncat(path,"/",PATH_MAX);
+		strcpy(path, "/usr/local/mariadb-maxscale");
+		if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+		{
+			strncpy(path, ptr,PATH_MAX);
+		}
+		strncat(path, "/",PATH_MAX);
 		strncat(path, router->service->name,PATH_MAX);
 
 		if (access(path, R_OK) == -1)
@@ -211,8 +215,9 @@ int		fd;
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
 	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
-	router->binlog_fd = fd;
+	blr_file_add_magic(router, fd);
 	spinlock_release(&router->binlog_lock);
+	router->binlog_fd = fd;
 	return 1;
 }
 
@@ -254,13 +259,12 @@ int		fd;
 	                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"%s: binlog file %s has an invalid length %d.",
 				router->service->name, path, router->binlog_position)));
-			close(fd);
-			spinlock_release(&router->binlog_lock);
+                    close(fd);
 			return;
 		}
 	}
-	router->binlog_fd = fd;
 	spinlock_release(&router->binlog_lock);
+	router->binlog_fd = fd;
 }
 
 /**
@@ -668,20 +672,24 @@ struct	stat	statb;
 void
 blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 {
-char	path[PATH_MAX+1], *ptr;
+char	path[4097], *ptr;
 int	fd;
 
-	strcpy(path,get_datadir());
-	strncat(path,"/",PATH_MAX);
-	strncat(path, router->service->name, PATH_MAX);
+	strcpy(path, "/usr/local/mariadb-maxscale");
+	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+	{
+		strncpy(path, ptr, 4096);
+	}
+	strncat(path, "/", 4096);
+	strncat(path, router->service->name, 4096);
 
 	if (access(path, R_OK) == -1)
 		mkdir(path, 0777);
-	strncat(path, "/.cache", PATH_MAX);
+	strncat(path, "/.cache", 4096);
 	if (access(path, R_OK) == -1)
 		mkdir(path, 0777);
 	strncat(path, "/", 4096);
-	strncat(path, response, PATH_MAX);
+	strncat(path, response, 4096);
 
 	if ((fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
 		return;
@@ -702,15 +710,19 @@ GWBUF *
 blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
 {
 struct	stat	statb;
-char	path[PATH_MAX+1], *ptr;
+char	path[4097], *ptr;
 int	fd;
 GWBUF	*buf;
 
-	strcpy(path, get_datadir());
-	strncat(path, "/", PATH_MAX);
-	strncat(path, router->service->name, PATH_MAX);
-	strncat(path, "/.cache/", PATH_MAX);
-	strncat(path, response, PATH_MAX);
+	strcpy(path, "/usr/local/mariadb-maxscale");
+	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+	{
+		strncpy(path, ptr, 4096);
+	}
+	strncat(path, "/", 4096);
+	strncat(path, router->service->name, 4096);
+	strncat(path, "/.cache/", 4096);
+	strncat(path, response, 4096);
 
 	if ((fd = open(path, O_RDONLY)) == -1)
 		return NULL;

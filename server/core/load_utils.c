@@ -48,8 +48,6 @@
 #include	<curl/curl.h>
 #include	<sys/utsname.h>
 #include	<openssl/sha.h>
-#include        <gw.h>
-#include        <gwdirs.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -106,10 +104,21 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 	return realsize;
 }
 
+char* get_maxscale_home(void)
+{
+        char* home = getenv("MAXSCALE_HOME");
+        if (home == NULL)
+        {
+                home = "/usr/local/mariadb-maxscale";
+        }
+        return home;
+}
+                
+
 /**
  * Load the dynamic library related to a gateway module. The routine
  * will look for library files in the current directory, 
- * the configured folder and /usr/lib64/maxscale.
+ * $MAXSCALE_HOME/modules and /usr/local/mariadb-maxscale/modules.
  *
  * @param module	Name of the module to load
  * @param type		Type of module, used purely for registration
@@ -133,17 +142,22 @@ MODULE_INFO	*mod_info = NULL;
 		 *
 		 * Search of the shared object.
 		 */
-
-		snprintf(fname, MAXPATHLEN+1,"%s/lib%s.so", get_libdir(), module);
-
+		snprintf(fname,MAXPATHLEN+1, "./lib%s.so", module);
+		
 		if (access(fname, F_OK) == -1)
 		{
-		    LOGIF(LE, (skygw_log_write_flush(
-			    LOGFILE_ERROR,
-						     "Error : Unable to find library for "
-			    "module: %s. Module dir: %s",
-						     module, get_libdir())));
-		    return NULL;
+			home = get_maxscale_home ();
+			snprintf(fname, MAXPATHLEN+1,"%s/modules/lib%s.so", home, module);
+
+                        if (access(fname, F_OK) == -1)
+			{
+				LOGIF(LE, (skygw_log_write_flush(
+                                        LOGFILE_ERROR,
+					"Error : Unable to find library for "
+                                        "module: %s.",
+                                        module)));
+				return NULL;
+			}
 		}
 
 		if ((dlhandle = dlopen(fname, RTLD_NOW|RTLD_LOCAL)) == NULL)

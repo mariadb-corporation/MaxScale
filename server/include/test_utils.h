@@ -8,13 +8,11 @@
 
 void init_test_env(char *path)
 {
-    int argc = 5;
+    int argc = 3;
     
     char* argv[] =
         {
             "log_manager",
-            "-l",
-            "LOGFILE_ERROR",
             "-j",
             path? path:TEST_LOG_DIR,
             NULL

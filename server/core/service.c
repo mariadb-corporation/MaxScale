@@ -61,16 +61,11 @@
 #include <sys/types.h>
 #include <housekeeper.h>
 #include <resultset.h>
-#include <gw.h>
-#include <gwdirs.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
-
-static RSA *rsa_512 = NULL;
-static RSA *rsa_1024 = NULL;
 
 /** To be used with configuration type checks */
 typedef struct typelib_st {
@@ -117,7 +112,7 @@ SERVICE 	*service;
 		return NULL;
 	if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
 	{
-                char* home = get_libdir();
+                char* home = get_maxscale_home();
                 char* ldpath = getenv("LD_LIBRARY_PATH");
                 
                 LOGIF(LE, (skygw_log_write_flush(
@@ -125,13 +120,12 @@ SERVICE 	*service;
                         "Error : Unable to load %s module \"%s\".\n\t\t\t"
                         "      Ensure that lib%s.so exists in one of the "
                         "following directories :\n\t\t\t      "
-                        "- %s/modules\n%s%s",
+                        "- %s/modules\n\t\t\t      - %s",
                         MODULE_ROUTER,
                         router,
                         router,
                         home,
-			ldpath?"\t\t\t      - ":"",
-                        ldpath?ldpath:"")));
+                        ldpath)));
 		free(service);
 		return NULL;
 	}
@@ -139,14 +133,7 @@ SERVICE 	*service;
 	service->routerModule = strdup(router);
 	service->users_from_all = false;
 	service->resources = NULL;
-	service->ssl_mode = SSL_DISABLED;
-	service->ssl_init_done = false;
-	service->ssl_ca_cert = NULL;
-	service->ssl_cert = NULL;
-	service->ssl_key = NULL;
-	service->ssl_cert_verify_depth = DEFAULT_SSL_CERT_VERIFY_DEPTH;
-	/** Support the highest possible SSL/TLS methods available as the default */
-	service->ssl_method_type = SERVICE_SSL_TLS_MAX;
+	
 	if (service->name == NULL || service->routerModule == NULL)
 	{
 		if (service->name)
@@ -242,7 +229,11 @@ GWPROTOCOL	*funcs;
 				{
 					/* Try loading authentication data from file cache */
 					char	*ptr, path[4097];
-					strcpy(path, get_cachedir());
+					strcpy(path, "/usr/local/mariadb-maxscale");
+					if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+					{
+						strncpy(path, ptr, 4096);
+					}
 					strncat(path, "/", 4096);
 					strncat(path, service->name, 4096);
 					strncat(path, "/.cache/dbusers", 4096);
@@ -266,11 +257,15 @@ GWPROTOCOL	*funcs;
 			else
 			{
 				/* Save authentication data to file cache */
-				char	*ptr, path[PATH_MAX + 1];
+				char	*ptr, path[4097];
                                 int mkdir_rval = 0;
-				strcpy(path, get_cachedir());
+				strcpy(path, "/usr/local/mariadb-maxscale");
+				if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
+				{
+					strncpy(path, ptr, 4096);
+				}
 				strncat(path, "/", 4096);
-				strncat(path, service->name, PATH_MAX);
+				strncat(path, service->name, 4096);
 				if (access(path, R_OK) == -1)
                                 {
 					mkdir_rval = mkdir(path, 0777);
@@ -285,7 +280,7 @@ GWPROTOCOL	*funcs;
                                     mkdir_rval = 0;
                                 }
 
-				strncat(path, "/.cache", PATH_MAX);
+				strncat(path, "/.cache", 4096);
 				if (access(path, R_OK) == -1)
                                 {
 					mkdir_rval = mkdir(path, 0777);
@@ -299,7 +294,7 @@ GWPROTOCOL	*funcs;
                                                     strerror(errno));
                                     mkdir_rval = 0;
                                 }
-				strncat(path, "/dbusers", PATH_MAX);
+				strncat(path, "/dbusers", 4096);
 				dbusers_save(service->users, path);
 			}
 			if (loaded == 0)
@@ -422,17 +417,6 @@ serviceStart(SERVICE *service)
 SERV_PROTOCOL	*port;
 int		listeners = 0;
 
-if(service->ssl_mode != SSL_DISABLED)
-{
-    if(serviceInitSSL(service) != 0)
-    {
-	LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"%s: SSL initialization failed. Service not started.",
-				service->name)));
-		service->state = SERVICE_STATE_FAILED;
-		return 0;
-    }
-}
 	if ((service->router_instance = service->router->createInstance(service,
 					service->routerOptions)) == NULL)
 	{
@@ -877,97 +861,6 @@ serviceOptimizeWildcard(SERVICE *service, int action)
 }
 
 /**
- * Set the locations of the server's SSL certificate, server's private key and the CA
- * certificate which both the client and the server should trust.
- * @param service Service to configure
- * @param cert SSL certificate
- * @param key SSL private key
- * @param ca_cert SSL CA certificate
- */
-void
-serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert)
-{
-    if(service->ssl_cert)
-	free(service->ssl_cert);
-    service->ssl_cert = strdup(cert);
-
-    if(service->ssl_key)
-	free(service->ssl_key);
-    service->ssl_key = strdup(key);
-
-    if(service->ssl_ca_cert)
-	free(service->ssl_ca_cert);
-    service->ssl_ca_cert = strdup(ca_cert);
-}
-
-/**
- * Set the maximum SSL/TLS version the service will support
- * @param service Service to configure
- * @param version SSL/TLS version string
- * @return  0 on success, -1 on invalid version string
- */
-int
-serviceSetSSLVersion(SERVICE *service, char* version)
-{
-    if(strcasecmp(version,"SSLV3") == 0)
-	service->ssl_method_type = SERVICE_SSLV3;
-    else if(strcasecmp(version,"TLSV10") == 0)
-	service->ssl_method_type = SERVICE_TLS10;
-    else if(strcasecmp(version,"TLSV11") == 0)
-	service->ssl_method_type = SERVICE_TLS11;
-    else if(strcasecmp(version,"TLSV12") == 0)
-	service->ssl_method_type = SERVICE_TLS12;
-    else if(strcasecmp(version,"MAX") == 0)
-	service->ssl_method_type = SERVICE_SSL_TLS_MAX;
-    else return -1;
-    return 0;
-}
-
-/**
- * Set the service's SSL certificate verification depth. Depth of 0 means the peer
- * certificate, 1 is the CA and 2 is a higher CA and so on.
- * @param service Service to configure
- * @param depth Certificate verification depth
- * @return 0 on success, -1 on incorrect depth value
- */
-int serviceSetSSLVerifyDepth(SERVICE* service, int depth)
-{
-    if(depth < 0)
-	return -1;
-
-    service->ssl_cert_verify_depth = depth;
-    return 0;
-}
-
-/**
- * Enable or disable the service SSL capability of a service.
- * The SSL mode string passed as a parameter should be one of required, enabled
- * or disabled. Required requires all connections to use SSL encryption, enabled
- * allows both SSL and non-SSL connections and disabled does not use SSL encryption.
- * If the service SSL mode is set to enabled, then the client will decide whether
- * SSL encryption is used.
- *  @param service Service to configure
- *  @param action Mode string. One of required, enabled or disabled.
- *  @return 0 on success, -1 on error
- */
-int
-serviceSetSSL(SERVICE *service, char* action)
-{
-    int rval = 0;
-
-    if(strcasecmp(action,"required") == 0)
-	service->ssl_mode = SSL_REQUIRED;
-    else if(strcasecmp(action,"enabled") == 0)
-	service->ssl_mode = SSL_ENABLED;
-    else if(strcasecmp(action,"disabled") == 0)
-	service->ssl_mode = SSL_DISABLED;
-    else
-	rval = -1;
-
-    return rval;
-}
-
-/**
  * Whether to strip escape characters from the name of the database the client
  * is connecting to.
  * @param service Service to configure
@@ -1130,8 +1023,6 @@ int		i;
 	printf("\tUsers data:        	%p\n", (void *)service->users);
 	printf("\tTotal connections:	%d\n", service->stats.n_sessions);
 	printf("\tCurrently connected:	%d\n", service->stats.n_current);
-	printf("\tSSL:	%s\n", service->ssl_mode == SSL_DISABLED ? "Disabled":
-	    (service->ssl_mode == SSL_ENABLED ? "Enabled":"Required"));
 }
 
 /**
@@ -1241,8 +1132,6 @@ int		i;
 						service->stats.n_sessions);
 	dcb_printf(dcb, "\tCurrently connected:			%d\n",
 						service->stats.n_current);
-		dcb_printf(dcb,"\tSSL:	%s\n", service->ssl_mode == SSL_DISABLED ? "Disabled":
-	    (service->ssl_mode == SSL_ENABLED ? "Enabled":"Required"));
 }
 
 /**
@@ -1371,14 +1260,7 @@ void	*router_obj;
 	}
 }
 
-/**
- * Refresh the database users for the service
- * This function replaces the MySQL users used by the service with the latest
- * version found on the backend servers. There is a limit on how often the users
- * can be reloaded and if this limit is exceeded, the reload will fail.
- * @param service Service to reload
- * @return 0 on success and 1 on error
- */
+
 int service_refresh_users(SERVICE *service) {
 	int ret = 1;
 	/* check for another running getUsers request */
@@ -1897,140 +1779,4 @@ int		*data;
 	resultset_add_column(set, "Total Sessions", 10, COL_TYPE_VARCHAR);
 
 	return set;
-}
-
-
-/**
- * The RSA ket generation callback function for OpenSSL.
- * @param s SSL structure
- * @param is_export Not used
- * @param keylength Length of the key
- * @return Pointer to RSA structure
- */
- RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength)
- {
-    RSA *rsa_tmp=NULL;
-
-    switch (keylength) {
-    case 512:
-      if (rsa_512)
-        rsa_tmp = rsa_512;
-      else { /* generate on the fly, should not happen in this example */
-        rsa_tmp = RSA_generate_key(keylength,RSA_F4,NULL,NULL);
-        rsa_512 = rsa_tmp; /* Remember for later reuse */
-      }
-      break;
-    case 1024:
-      if (rsa_1024)
-        rsa_tmp=rsa_1024;
-      break;
-    default:
-      /* Generating a key on the fly is very costly, so use what is there */
-      if (rsa_1024)
-        rsa_tmp=rsa_1024;
-      else
-        rsa_tmp=rsa_512; /* Use at least a shorter key */
-    }
-    return(rsa_tmp);
- }
-
- /**
-  * Initialize the servce's SSL context. This sets up the generated RSA
-  * encryption keys, chooses the server encryption level and configures the server
-  * certificate, private key and certificate authority file.
-  * @param service
-  * @return
-  */
-int serviceInitSSL(SERVICE* service)
-{
-    DH* dh;
-    RSA* rsa;
-
-    if(!service->ssl_init_done)
-    {
-	switch(service->ssl_method_type)
-	{
-	case SERVICE_SSLV3:
-	    service->method = (SSL_METHOD*)SSLv3_server_method();
-	    break;
-	case SERVICE_TLS10:
-	    service->method = (SSL_METHOD*)TLSv1_server_method();
-	    break;
-	case SERVICE_TLS11:
-	    service->method = (SSL_METHOD*)TLSv1_1_server_method();
-	    break;
-	case SERVICE_TLS12:
-	    service->method = (SSL_METHOD*)TLSv1_2_server_method();
-	    break;
-
-	    /** Rest of these use the maximum available SSL/TLS methods */
-	case SERVICE_SSL_MAX:
-	    service->method = (SSL_METHOD*)SSLv23_server_method();
-	    break;
-	case SERVICE_TLS_MAX:
-	    service->method = (SSL_METHOD*)SSLv23_server_method();
-	    break;
-	case SERVICE_SSL_TLS_MAX:
-	    service->method = (SSL_METHOD*)SSLv23_server_method();
-	    break;
-	default:
-	    service->method = (SSL_METHOD*)SSLv23_server_method();
-	    break;
-	}
-
-	service->ctx = SSL_CTX_new(service->method);
-
-	/** Enable all OpenSSL bug fixes */
-	SSL_CTX_set_options(service->ctx,SSL_OP_ALL);
-
-	/** Generate the 512-bit and 1024-bit RSA keys */
-	if(rsa_512 == NULL)
-	{
-	    rsa_512 = RSA_generate_key(512,RSA_F4,NULL,NULL);
-	    if (rsa_512 == NULL)
-		skygw_log_write(LE,"Error: 512-bit RSA key generation failed.");
-	}
-	if(rsa_1024 == NULL)
-	{
-	    rsa_1024 = RSA_generate_key(1024,RSA_F4,NULL,NULL);
-	    if (rsa_1024 == NULL)
-     		skygw_log_write(LE,"Error: 1024-bit RSA key generation failed.");
-	}
-
-	if(rsa_512 != NULL && rsa_1024 != NULL)
-	    SSL_CTX_set_tmp_rsa_callback(service->ctx,tmp_rsa_callback);
-
-	/** Load the server sertificate */
-	if (SSL_CTX_use_certificate_file(service->ctx, service->ssl_cert, SSL_FILETYPE_PEM) <= 0) {
-	    skygw_log_write(LE,"Error: Failed to set server SSL certificate.");
-	    return -1;
-	}
-
-	/* Load the private-key corresponding to the server certificate */
-	if (SSL_CTX_use_PrivateKey_file(service->ctx, service->ssl_key, SSL_FILETYPE_PEM) <= 0) {
-	    skygw_log_write(LE,"Error: Failed to set server SSL key.");
-	    return -1;
-	}
-
-	/* Check if the server certificate and private-key matches */
-	if (!SSL_CTX_check_private_key(service->ctx)) {
-	    skygw_log_write(LE,"Error: Server SSL certificate and key do not match.");
-	    return -1;
-	}
-
-
-	/* Load the RSA CA certificate into the SSL_CTX structure */
-	if (!SSL_CTX_load_verify_locations(service->ctx, service->ssl_ca_cert, NULL)) {
-	    skygw_log_write(LE,"Error: Failed to set Certificate Authority file.");
-	    return -1;
-	}
-
-	/* Set to require peer (client) certificate verification */
-	SSL_CTX_set_verify(service->ctx,SSL_VERIFY_PEER,NULL);
-
-	/* Set the verification depth */
-	SSL_CTX_set_verify_depth(service->ctx,service->ssl_cert_verify_depth);
-	service->ssl_init_done = true;
-    }
-    return 0;
 }

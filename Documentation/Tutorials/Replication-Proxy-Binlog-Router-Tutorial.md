@@ -28,7 +28,7 @@ Using MaxScale as a replication proxy is much the same as using MaxScale as a pr
 
 ## Service Configuration
 
-As with any MaxScale configuration a good starting point is with the service definition with the maxscale.cnf file. The service requires a name which is the section name in the ini file, a type parameter with a value of service and the name of the router plugin that should be loaded. In the case of replication proxies this router name is binlogrouter.
+As with any MaxScale configuration a good starting point is with the service definition with the MaxScale.cnf file. The service requires a name which is the section name in the ini file, a type parameter with a value of service and the name of the router plugin that should be loaded. In the case of replication proxies this router name is binlogrouter.
 
 
     [Replication]
@@ -84,7 +84,7 @@ This optional parameter allows for the administrator to define the number of the
 
 ### binlogdir
 
-This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory /var/cache/maxscale/<Service Name>.
+This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory $MAXSCALE_HOME/<Service Name>.
 
 ### heartbeat
 

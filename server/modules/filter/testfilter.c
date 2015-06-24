@@ -19,7 +19,6 @@
 #include <filter.h>
 #include <modinfo.h>
 #include <modutil.h>
-#include <atomic.h>
 
 /**
  * @file testfilter.c - a very simple test filter.
@@ -146,7 +145,7 @@ TEST_SESSION	*my_session;
 
 	if ((my_session = calloc(1, sizeof(TEST_SESSION))) != NULL)
 	{
-		atomic_add(&my_instance->sessions,1);
+		my_instance->sessions++;
 		my_session->count = 0;
 	}
 

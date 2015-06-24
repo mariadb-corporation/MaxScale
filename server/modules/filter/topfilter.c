@@ -47,7 +47,6 @@
 #include <time.h>
 #include <sys/time.h>
 #include <regex.h>
-#include <atomic.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -297,7 +296,7 @@ char		*remote, *user;
 		}
 		sprintf(my_session->filename, "%s.%d", my_instance->filebase,
 				my_instance->sessions);
-		atomic_add(&my_instance->sessions,1);
+		my_instance->sessions++;
 		my_session->top = (TOPNQ **)calloc(my_instance->topN + 1,
 						sizeof(TOPNQ *));
 		for (i = 0; i < my_instance->topN; i++)

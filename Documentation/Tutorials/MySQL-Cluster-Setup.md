@@ -207,7 +207,7 @@ The SQL node is referenced here as [mysqld(API)], which reflects the fact that t
 
 ## Configuring MaxScale for connection load balancing of SQL nodes
 
-Add these sections in maxscale.cnf config file:
+Add these sections in MaxScale.cnf config file:
 
 	[Cluster Service]
 	type=service
@@ -249,7 +249,7 @@ Add these sections in maxscale.cnf config file:
 
 Assuming MaxScale is installed in server1, start it
 
-	[root@server1 ~]# cd /usr/bin
+	[root@server1 ~]# cd /usr/local/mariadb-maxscale/bin
 
 	[root@server1 bin]#  ./maxscale -c ../
 

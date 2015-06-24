@@ -1164,9 +1164,9 @@ static void closeSession(
                 dcb_close(router_cli_ses->dcb_reply);
                 dcb_close(router_cli_ses->dcb_route);
 
-		while(router_cli_ses->queue &&
-		    (router_cli_ses->queue = gwbuf_consume(
-				   router_cli_ses->queue,gwbuf_length(router_cli_ses->queue))));
+		if(router_cli_ses->queue)
+		    router_cli_ses->queue = gwbuf_consume(
+				   router_cli_ses->queue,gwbuf_length(router_cli_ses->queue));
 
                 /** Unlock */
                 rses_end_locked_router_action(router_cli_ses);
@@ -1195,17 +1195,18 @@ static void freeSession(
         ROUTER_CLIENT_SES* router_cli_ses;
         ROUTER_INSTANCE*   router;
 	int                i;
-	backend_ref_t*     bref;
+        backend_ref_t*     backend_ref;
         
         router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
         router         = (ROUTER_INSTANCE *)router_instance;
+        backend_ref    = router_cli_ses->rses_backend_ref;
         
         for (i=0; i<router_cli_ses->rses_nbackends; i++)
         {
-	    bref = &router_cli_ses->rses_backend_ref[i];
-                while(bref->bref_pending_cmd &&
-		    (bref->bref_pending_cmd = gwbuf_consume(
-				   bref->bref_pending_cmd,gwbuf_length(bref->bref_pending_cmd))));
+                if (!BREF_IS_IN_USE((&backend_ref[i])))
+                {
+                        continue;
+                }
         }
         spinlock_acquire(&router->lock);
 
@@ -2236,8 +2237,7 @@ static int routeQuery(
 		 */
 		if (sescmd_cursor_is_active(scur))
 		{
-			ss_dassert((bref->bref_pending_cmd == NULL ||
-				router_cli_ses->rses_closed));
+			ss_dassert(bref->bref_pending_cmd == NULL);
 			bref->bref_pending_cmd = gwbuf_clone(querybuf);
 			
 			rses_end_locked_router_action(router_cli_ses);

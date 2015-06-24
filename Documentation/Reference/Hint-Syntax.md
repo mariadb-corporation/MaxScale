@@ -15,7 +15,7 @@ name-value pairs.
 Routing queries to a server:
 -- maxscale route to [master | slave | server <server name>]
 
-The name of the server is the same as in maxscale.cnf
+The name of the server is the same as in MaxScale.cnf
 
 Creating a name-value pair:
 -- maxscale <param>=<value>

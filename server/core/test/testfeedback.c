@@ -73,8 +73,17 @@ int main(int argc, char** argv)
     char* cnf;
 
     hkinit();
+    home = getenv("MAXSCALE_HOME");
 
-    cnf = strdup("/etc/MaxScale.cnf");
+    if(home == NULL)
+    {
+        FAILTEST("MAXSCALE_HOME was not defined.");
+    }
+    printf("Home: %s\n",home);
+
+    cnf = malloc(strlen(home) + strlen("/etc/MaxScale.cnf") + 1);
+    strcpy(cnf,home);
+    strcat(cnf,"/etc/MaxScale.cnf");
 
     printf("Config: %s\n",cnf);
 

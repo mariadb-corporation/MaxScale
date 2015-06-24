@@ -54,9 +54,7 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
+
 #include <service.h>
 #include <router.h>
 #include <poll.h>
@@ -91,10 +89,6 @@
 #define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
-#define MYSQL_FAILED_AUTH 1
-#define MYSQL_FAILED_AUTH_DB 2
-#define MYSQL_FAILED_AUTH_SSL 3
-
 typedef enum {
         MYSQL_ALLOC,
         MYSQL_PENDING_CONNECT,
@@ -103,11 +97,6 @@ typedef enum {
         MYSQL_AUTH_RECV,
         MYSQL_AUTH_FAILED,
         MYSQL_HANDSHAKE_FAILED,
-        MYSQL_AUTH_SSL_REQ, /*< client requested SSL but SSL_accept hasn't beed called */
-        MYSQL_AUTH_SSL_HANDSHAKE_DONE, /*< SSL handshake has been fully completed */
-        MYSQL_AUTH_SSL_HANDSHAKE_FAILED, /*< SSL handshake failed for any reason */
-        MYSQL_AUTH_SSL_HANDSHAKE_ONGOING, /*< SSL_accept has been called but the
-                                           * SSL handshake hasn't been completed */
         MYSQL_IDLE
 } mysql_auth_state_t;
 
@@ -301,7 +290,6 @@ typedef struct {
         unsigned        long tid;                         /*< MySQL Thread ID, in
         * handshake */
         unsigned int    charset;                          /*< MySQL character set at connect time */
-        bool use_ssl;
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;
 #endif
@@ -321,7 +309,7 @@ typedef struct {
 #define MYSQL_IS_CHANGE_USER(payload)		(MYSQL_GET_COMMAND(payload)==0x11)
 #define MYSQL_GET_NATTR(payload)                ((int)payload[4])
 
-
+#endif /** _MYSQL_PROTOCOL_H */
 
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 void           mysql_protocol_done (DCB* dcb);
@@ -417,4 +405,4 @@ void init_response_status (
         int* npackets, 
         ssize_t* nbytes);
 
-#endif /** _MYSQL_PROTOCOL_H */
+

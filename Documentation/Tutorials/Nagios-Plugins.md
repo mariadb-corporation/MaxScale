@@ -44,7 +44,7 @@ In order to use these scripts on your Nagios Server, you need to copy them from 
 
 MaxScale must be configured with 'maxscaled' protocol for the administration interface:
 
-Example of maxscale.cnf file:
+Example of MaxScale.cnf file:
 
 	[AdminInterface]
 	type=service
@@ -73,9 +73,9 @@ and add (just after localhost.cfg or commnads.cfg)
 - modify server IP address in server1.cfg, pointing to MaxScale server
 - maxadmin executable must be in the nagios server
 - default MaxScale AdminInterface port is 6603 
-- default maxadmin executable path is /usr/bin/maxadmin
+- default maxadmin executable path is /usr/local/mariadb-maxscale/bin/maxadmin
 	It can be changed by -m option
-- maxadmin executable could be copied from an existing maxscale installation (default location is /usr/bin/maxadmin)
+- maxadmin executable could be copied from an existing maxscale installation (default location is /usr/local/mariadb-maxscale/bin/maxadmin)
 
 This example shows configuration that needs to be done on Nagios server in order to communicate to MaxScale server that is running on host server1.
 In this example we are using the check_maxscale_resource as the check command

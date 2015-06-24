@@ -43,7 +43,6 @@
  * 30/08/14	Massimiliano Pinto	Addition of SERVER_STALE_STATUS
  * 27/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS
  * 19/02/15	Mark Riddoch		Addition of serverGetList
- * 01/06/15	Massimiliano Pinto	Addition of server_update_address/port
  *
  * @endverbatim
  */
@@ -119,7 +118,7 @@ typedef struct server {
  */
 #define	SERVER_IS_RUNNING(server)	(((server)->status & (SERVER_RUNNING|SERVER_MAINT)) == SERVER_RUNNING)
 /**
- * Is the server marked as down - the macro returns true if the server is believed
+ * Is the server marked as down - the macro returns true if the server is beleived
  * to be inoperable.
  */
 #define	SERVER_IS_DOWN(server)		(((server)->status & SERVER_RUNNING) == 0)
@@ -190,7 +189,5 @@ extern void	serverAddParameter(SERVER *, char *, char *);
 extern char	*serverGetParameter(SERVER *, char *);
 extern void	server_update(SERVER *, char *, char *, char *);
 extern void     server_set_unique_name(SERVER *, char *);
-extern void	server_update_address(SERVER *, char *);
-extern void	server_update_port(SERVER *,  unsigned short);
 extern RESULTSET	*serverGetList();
 #endif
