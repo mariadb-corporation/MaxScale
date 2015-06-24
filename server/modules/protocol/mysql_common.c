@@ -46,6 +46,9 @@
 #include <log_manager.h>
 #include <netinet/tcp.h>
 
+/* The following can be compared using memcmp to detect a null password */
+uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN]="";
+
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
