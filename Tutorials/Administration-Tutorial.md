@@ -6,8 +6,8 @@ The purpose of this tutorial is to introduce the MaxScale Administrator to a few
 
 [Starting MaxScale](#starting)   
 [Stopping MaxScale](#stopping)   
-[Checking The Status Of The MaxScale Services](#checking)
-[Persistent Connections](#persistent) 
+[Checking The Status Of The MaxScale Services](#checking)  
+[Persistent Connections](#persistent)  
 [What Clients Are Connected To MaxScale](#clients)   
 [Rotating Log Files](#rotating)   
 [Taking A Database Server Out Of Use](#outofuse)   
