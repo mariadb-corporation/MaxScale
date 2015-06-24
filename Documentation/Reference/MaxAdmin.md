@@ -314,9 +314,24 @@ It is possible to see more details regarding a given server using the show serve
     	Port:				3307
     	Server Version:		5.5.25-MariaDB-log
     	Node Id:			124
-    	Number of connections:	0
-    	Current no. of conns:	0
+    	Number of connections:          0
+    	Current no. of conns:           0
+        Current no. of operations:      0
     MaxScale> 
+
+If the server has a non-zero value set for the server configuration item "persistpoolmax",
+then additional information will be shown:
+
+        Persistent pool size:            1
+        Persistent measured pool size:   1
+        Persistent pool max size:            10
+        Persistent max time (secs):          3660
+
+The distinction between pool size and measured pool size is that the first is a
+counter that is updated when operations affect the persistent connections pool,
+whereas the measured size is the result of checking how many persistent connections
+are currently in the pool. It can be slightly different, since any expired
+connections are removed during the check.
 
 ## Setting The State Of A Server
 
@@ -357,6 +372,13 @@ All status bits, with the exception of the maintenance bit, will be set by the m
     MaxScale> set server server3 maintenance
     MaxScale> clear server server3 maintenance
     MaxScale> 
+
+## Viewing the persistent pool of DCB
+
+The DCBs that are in the pool for a particular server can be displayed (in the
+format described below in the DCB section) with a command like:
+
+    MaxScale> show persistent server1
 
 # Working With Sessions
 
@@ -448,6 +470,10 @@ The details of an individual DCB can be obtained by use of the show dcb command
     MaxScale> show dcb 0x727900
     DCB: 0x727900
     	DCB state: 		DCB in the polling loop
+        Username:               somename
+        Protocol:               MySQLBackend
+        Server Status:          Master, running
+        Role:                   Request Handler
     	Connected to:		127.0.0.1
     	Owning Session:   	0x727da0
     	Statistics:
@@ -457,7 +483,13 @@ The details of an individual DCB can be obtained by use of the show dcb command
     		No. of Accepts:			0
     		No. of High Water Events:		0
     		No. of Low Water Events:		0
+                Added to persistent pool:         Jun 24 09:09:56
     MaxScale>
+
+The information Username, Protocol, Server Status are not
+always relevant, and will not be shown when they are null.  
+The time the DCB was added to the persistent pool is only shown
+for a DCB that is in a persistent pool.
 
 # Working with Filters
 
