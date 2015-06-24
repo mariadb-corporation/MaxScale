@@ -31,17 +31,29 @@ include(cmake/CheckPlatform.cmake)
 
 check_deps()
 check_dirs()
+find_package(OpenSSL)
 find_package(Valgrind)
 find_package(MySQLClient)
 find_package(MySQL)
 find_package(Pandoc)
 find_package(TCMalloc)
 find_package(Jemalloc)
+find_package(CURL) 
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
-find_package(CURL) 
+
 if(NOT CURL_FOUND)
   message(FATAL_ERROR "Failed to locate dependency: libcurl")
+endif()
+
+if(NOT OPENSSL_FOUND)
+  message(FATAL_ERROR "Failed to locate dependency: OpenSSL")
+else()
+  if(OPENSSL_VERSION VERSION_LESS 1 AND NOT FORCE_OPENSSL100)
+    add_definitions("-DOPENSSL_0_9")
+  else()
+    add_definitions("-DOPENSSL_1_0")
+  endif()
 endif()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBDIR})

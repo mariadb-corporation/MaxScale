@@ -264,6 +264,15 @@ static void ssl_free_dynlock(struct CRYPTO_dynlock_value * n,const char* file, i
 }
 
 /**
+ * The thread ID callback function for OpenSSL dynamic locks.
+ * @param id Id to modify
+ */
+static void maxscale_ssl_id(CRYPTO_THREADID* id)
+{
+    CRYPTO_THREADID_set_numeric(id,pthread_self());
+}
+
+/**
  * Handler for SIGHUP signal. Reload the configuration for the
  * gateway.
  */
@@ -1459,8 +1468,11 @@ int main(int argc, char **argv)
 	CRYPTO_set_dynlock_create_callback(ssl_create_dynlock);
 	CRYPTO_set_dynlock_destroy_callback(ssl_free_dynlock);
 	CRYPTO_set_dynlock_lock_callback(ssl_lock_dynlock);
+#ifdef OPENSSL_1_0
+	CRYPTO_THREADID_set_callback(maxscale_ssl_id);
+#else
 	CRYPTO_set_id_callback(pthread_self);
-
+#endif
 	/* register exit function for embedded MySQL library */
         l = atexit(libmysqld_done);
 
