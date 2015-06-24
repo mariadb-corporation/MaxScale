@@ -4,7 +4,9 @@ This document provides a short overview of the **readwritesplit** router module 
 
 ## Overview
 
-The **readwritesplit** router is designed to be used with a Master-Slave replication cluster. It automatically detects changes in the master server and will use the current master server of the cluster. With a Galera cluster, one can achieve a resilient setup and easy master failover by using one of the Galera nodes as a Write-Master node, where are write queries are routed, and spreading the read load over all the nodes.
+The **readwritesplit** router is designed to increase the read-only processing capability of a cluster while maintaining consistency. This is achieved by splitting the query load into read and write queries. Read queries, which do not modify data, are spread across multiple nodes while all write queries will be sent to a single node. 
+
+The router is designed to be used with a traditional Master-Slave replication cluster. It automatically detects changes in the master server and will use the current master server of the cluster. With a Galera cluster, one can achieve a resilient setup and easy master failover by using one of the Galera nodes as a Write-Master node, where all write queries are routed, and spreading the read load over all the nodes.
 
 ## Configuration
 
