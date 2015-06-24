@@ -23,8 +23,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
+ * Date		Who			Description
  * 14/04/2014	Mark Riddoch		Initial implementation
+ * 07/05/2015	Massimiliano Pinto	Added MAX_EVENT_TYPE_MARIADB10
  *
  * @endverbatim
  */
@@ -439,15 +440,26 @@ struct	stat	statb;
 	hdr->next_pos = EXTRACT32(&hdbuf[13]);
 	hdr->flags = EXTRACT16(&hdbuf[17]);
 
-	if (hdr->event_type > MAX_EVENT_TYPE)
-	{
-		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Invalid event type 0x%x. "
+	if (router->mariadb10_compat) {
+		if (hdr->event_type > MAX_EVENT_TYPE_MARIADB10) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Invalid MariaDB 10 event type 0x%x. "
 				"Binlog file is %s, position %d",
 				hdr->event_type,
 				file->binlogname, pos)));
-		return NULL;
-	}
+			return NULL;
+		}
+	} else {
+		if (hdr->event_type > MAX_EVENT_TYPE) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Invalid event type 0x%x. " 
+				"Binlog file is %s, position %d",
+				hdr->event_type,
+				file->binlogname, pos))); 
+
+			return NULL;
+		} 
+	} 
 
 	if (hdr->next_pos < pos && hdr->event_type != ROTATE_EVENT)
 	{
