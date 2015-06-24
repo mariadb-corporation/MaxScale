@@ -134,6 +134,8 @@ typedef struct mysql_session {
 #endif
 } MYSQL_session;
 
+/* The following can be compared using memcmp to detect a null password */
+uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN]="";
 
 /** Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) do { \
