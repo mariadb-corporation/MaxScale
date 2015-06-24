@@ -3010,7 +3010,7 @@ int dcb_accept_SSL(DCB* dcb)
     do
     {
 	ssl_rval = SSL_accept(dcb->ssl);
-	errnum = SSL_get_error(dcb->ssl,ssl_rval);
+
 	LOGIF(LD,(skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL_accept %d, error %d",
 				 ssl_rval,errnum)));
 	switch(ssl_rval)
