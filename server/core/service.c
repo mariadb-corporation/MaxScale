@@ -923,10 +923,12 @@ serviceSetSSLVersion(SERVICE *service, char* version)
 	service->ssl_method_type = SERVICE_SSLV3;
     else if(strcasecmp(version,"TLSV10") == 0)
 	service->ssl_method_type = SERVICE_TLS10;
+#ifdef OPENSSL_1_0
     else if(strcasecmp(version,"TLSV11") == 0)
 	service->ssl_method_type = SERVICE_TLS11;
     else if(strcasecmp(version,"TLSV12") == 0)
 	service->ssl_method_type = SERVICE_TLS12;
+#endif
     else if(strcasecmp(version,"MAX") == 0)
 	service->ssl_method_type = SERVICE_SSL_TLS_MAX;
     else return -1;
