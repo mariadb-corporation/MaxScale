@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
     system(str);
 
     global_result += test_script_monitor(Test, Test->repl, (char *) "/home/ec2-user/script_output_expected");
-    global_result += test_script_monitor(Test, Test->galera, (char *) "/home/ec2-user/script_output_expected");
+    global_result += test_script_monitor(Test, Test->galera, (char *) "/home/ec2-user/script_output_expected_galera");
 
     printf("Making script non-executable\n"); fflush(stdout);
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'chmod a-x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->maxscale_IP);
