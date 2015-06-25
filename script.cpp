@@ -97,24 +97,24 @@ int main(int argc, char *argv[])
 
     FILE * f;
     f = fopen("script_output_expected", "w");
-    fprintf(f, "--event=master_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[2], Test->repl->port[2], Test->repl->IP[3], Test->repl->port[3]);
-    fprintf(f, "--event=master_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[2], Test->repl->port[2], Test->repl->IP[3], Test->repl->port[3]);
-    fprintf(f, "--event=slave_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[2], Test->repl->port[2], Test->repl->IP[3], Test->repl->port[3]);
+    fprintf(f, "--event=master_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[2], Test->repl->port[2], Test->repl->IP[3], Test->repl->port[3]);
+    fprintf(f, "--event=master_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[2], Test->repl->port[2], Test->repl->IP[3], Test->repl->port[3]);
+    fprintf(f, "--event=slave_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[2], Test->repl->port[2], Test->repl->IP[3], Test->repl->port[3]);
     fclose(f);
 
     f = fopen("script_output_expected_galera", "w");
-    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
-    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
-    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
-    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
+    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
+    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
+    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
+    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
     fclose(f);
 
     printf("Copying expected script output to Maxscale machine\n"); fflush(stdout);
     sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no script_output_expected* root@%s:/home/ec2-user/", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
 
-    global_result += test_script_monitor(Test, Test->repl, (char *) "script_output_expected");
-    global_result += test_script_monitor(Test, Test->galera, (char *) "script_output_expected");
+    global_result += test_script_monitor(Test, Test->repl, (char *) "/home/ec2-user/script_output_expected");
+    global_result += test_script_monitor(Test, Test->galera, (char *) "/home/ec2-user/script_output_expected");
 
     printf("Making script non-executable\n"); fflush(stdout);
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'chmod a-x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->maxscale_IP);

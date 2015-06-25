@@ -31,6 +31,7 @@ user=skysql
 passwd= skysql
 script=/home/ec2-user/script.sh
 events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lost_slave,new_master,new_slave
+monitor_interval=1000
 
 [Galera Monitor]
 type=monitor
@@ -41,6 +42,7 @@ events=master_down,master_up, slave_up,   server_down  ,server_up,lost_master,lo
 disable_master_role_setting=true
 user=skysql
 passwd=skysql
+monitor_interval=1000
 
 # A series of service definition
 #
