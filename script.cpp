@@ -7,16 +7,16 @@
  * - block master, unblock master, block node1, unblock node1
  * - expect following as a script output:
  * @verbatim
---event=master_down --initiator=server1 --nodelist=server1,server2,server3,server4
---event=master_up --initiator=server1 --nodelist=server1,server2,server3,server4
---event=slave_up --initiator=server2 --nodelist=server1,server2,server3,server4
+--event=master_down --initiator=server1_IP:port --nodelist=server1_IP:port,server2_IP:port,server3_IP:port,server4_IP:port
+--event=master_up --initiator=server1_IP:port --nodelist=server1_IP:port,server2_IP:port,server3_IP:port,server4_IP:port
+--event=slave_up --initiator=server2_IP:port --nodelist=server1_IP:port,server2_IP:port,server3_IP:port,server4_IP:port
 @endverbatim
  * - repeat test for Galera monitor: block node0, unblock node0, block node1, unblock node1
  * - expect following as a script output:
  * @verbatim
---event=synced_down --initiator=gserver1 --nodelist=gserver1,gserver2,gserver3,gserver4
---event=synced_down --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
---event=synced_up --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
+--event=synced_down --initiator=gserver1_IP:port --nodelist=gserver1_IP:port,gserver2_IP:port,gserver3_IP:port,gserver4_IP:port
+--event=synced_down --initiator=gserver2_IP:port --nodelist=gserver1_IP:port,gserver2_IP:port,gserver3_IP:port,gserver4_IP:port
+--event=synced_up --initiator=gserver2_IP:port --nodelist=gserver1_IP:port,gserver2_IP:port,gserver3_IP:port,gserver4_IP:port
  @endverbatim
  * - make script non-executable
  * - block and unblocm node1
@@ -36,6 +36,8 @@ int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expe
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'rm /home/ec2-user/script_output'", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
+
+    sleep(30);
 
     printf("Block master node\n"); fflush(stdout);
     nodes->block_node(0);
@@ -97,8 +99,22 @@ int main(int argc, char *argv[])
 
     Test->restart_maxscale();
 
-    global_result += test_script_monitor(Test, Test->repl, (char *) "/home/ec2-user/script_output_expected");
-    global_result += test_script_monitor(Test, Test->galera, (char *) "/home/ec2-user/script_output_expected_galera");
+    FILE * f;
+    f = fopen("script_output_expected", "rw");
+    fprintf(f, "--event=master_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[2], Test->repl->port[2], Test->repl->IP[3], Test->repl->port[3]);
+    fprintf(f, "--event=master_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[2], Test->repl->port[2], Test->repl->IP[3], Test->repl->port[3]);
+    fprintf(f, "--event=slave_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[0], Test->repl->port[0], Test->repl->IP[1], Test->repl->port[1], Test->repl->IP[2], Test->repl->port[2], Test->repl->IP[3], Test->repl->port[3]);
+    fclose(f);
+
+    f = fopen("script_output_expected_galera", "rw");
+    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
+    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
+    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
+    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d", Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[0], Test->galera->port[0], Test->galera->IP[1], Test->galera->port[1], Test->galera->IP[2], Test->galera->port[2], Test->galera->IP[3], Test->galera->port[3]);
+    fclose(f);
+
+    global_result += test_script_monitor(Test, Test->repl, (char *) "script_output_expected");
+    global_result += test_script_monitor(Test, Test->galera, (char *) "script_output_expected");
 
     printf("Making script non-executable\n"); fflush(stdout);
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s 'chmod a-x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->maxscale_IP);

@@ -425,6 +425,7 @@ add_test(session_limits session_limits)
 add_test(script script)
 add_test(mm mm)
 add_test(ssl ssl)
+set_tests_properties(ssl PROPERTIES TIMEOUT 3600)
 add_test(ssl_load ssl_load)
 
 # See if we are on a RPM-capable or DEB-capable system
