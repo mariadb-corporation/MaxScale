@@ -1966,13 +1966,14 @@ int serviceInitSSL(SERVICE* service)
 	case SERVICE_TLS10:
 	    service->method = (SSL_METHOD*)TLSv1_server_method();
 	    break;
+#ifdef OPENSSL_1_0
 	case SERVICE_TLS11:
 	    service->method = (SSL_METHOD*)TLSv1_1_server_method();
 	    break;
 	case SERVICE_TLS12:
 	    service->method = (SSL_METHOD*)TLSv1_2_server_method();
 	    break;
-
+#endif
 	    /** Rest of these use the maximum available SSL/TLS methods */
 	case SERVICE_SSL_MAX:
 	    service->method = (SSL_METHOD*)SSLv23_server_method();
