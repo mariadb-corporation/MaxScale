@@ -272,6 +272,7 @@ static void ssl_free_dynlock(struct CRYPTO_dynlock_value * n,const char* file, i
     free(n);
 }
 
+#ifdef OPENSSL_1_0
 /**
  * The thread ID callback function for OpenSSL dynamic locks.
  * @param id Id to modify
@@ -280,6 +281,7 @@ static void maxscale_ssl_id(CRYPTO_THREADID* id)
 {
     CRYPTO_THREADID_set_numeric(id,pthread_self());
 }
+#endif
 
 /**
  * Handler for SIGHUP signal. Reload the configuration for the
