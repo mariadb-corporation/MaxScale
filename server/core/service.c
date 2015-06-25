@@ -268,7 +268,7 @@ GWPROTOCOL	*funcs;
 				/* Save authentication data to file cache */
 				char	*ptr, path[PATH_MAX + 1];
                                 int mkdir_rval = 0;
-				strcpy(path, get_cachedir());
+				strncpy(path, get_cachedir(),PATH_MAX);
 				strncat(path, "/", 4096);
 				strncat(path, service->name, PATH_MAX);
 				if (access(path, R_OK) == -1)

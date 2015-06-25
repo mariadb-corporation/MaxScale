@@ -939,10 +939,10 @@ int dcb_read_n(
                         goto return_n;
                 }
 
-                if (b == 0 && nread == 0)
+                if (b == 0)
                 {
                         /** Handle closed client socket */
-                        if (dcb_isclient(dcb))
+                        if (nread == 0 && dcb_isclient(dcb))
                         {
                                 char c;
                                 int l_errno = 0;
@@ -961,11 +961,6 @@ int dcb_read_n(
                                         goto return_n;
                                 }
                         }
-                        n = 0;
-                        goto return_n;
-                }
-                else if (b == 0)
-                {
                         n = 0;
                         goto return_n;
                 }
@@ -1208,6 +1203,10 @@ int dcb_read_SSL(
 		    }
 
 		    gwbuf_rtrim(buffer,bufsize - n);
+		    if(buffer == NULL)
+		    {
+			goto return_n;
+		    }
 #ifdef SS_DEBUG
 		    skygw_log_write(LD,"%lu SSL: Truncated buffer from %d to %d bytes. "
 	            "Read %d bytes, %d bytes waiting.\n",pthread_self(),
@@ -1234,9 +1233,6 @@ int dcb_read_SSL(
 
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
-		rc = ioctl(dcb->fd, FIONREAD, &b);
-		pending = SSL_pending(dcb->ssl);
-
         } /*< while (true) */
 return_n:
         return nread;
@@ -1639,16 +1635,6 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 						     dcb,
 						     STRDCBSTATE(dcb->state),
 						     dcb->fd,ssl_errno)));
-			    if(ssl_errno == SSL_ERROR_SSL ||
-			     ssl_errno == SSL_ERROR_SYSCALL)
-			    {
-				while((ssl_errno = ERR_get_error()) != 0)
-				{
-				    char errbuf[140];
-				    ERR_error_string(ssl_errno,errbuf);
-				    skygw_log_write(LD,"%s",errbuf);
-				}
-			    }
 			    break;
 			}
 		    }
@@ -1666,18 +1652,18 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 							     STRDCBSTATE(dcb->state),
 							     dcb->fd,
 							     ssl_errno)));
-			    if(ssl_errno == SSL_ERROR_SSL)
+			    if(ssl_errno == SSL_ERROR_SSL || ssl_errno == SSL_ERROR_SYSCALL)
 			    {
+				if(ssl_errno == SSL_ERROR_SYSCALL)
+				{
+				    skygw_log_write(LE,"%d:%s",errno,strerror(errno));
+				}
 				do
 				{
 				    char errbuf[140];
 				    ERR_error_string(ssl_errno,errbuf);
-				    skygw_log_write(LE,"%s",errbuf);
+				    skygw_log_write(LE,"%d:%s",ssl_errno,errbuf);
 				}while((ssl_errno = ERR_get_error()) != 0);
-			    }
-			    if(ssl_errno == SSL_ERROR_SYSCALL)
-			    {
-				skygw_log_write(LE,"%d:%s",errno,strerror(errno));
 			    }
 			}
 			else if(w == 0)
@@ -1686,7 +1672,7 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 				{
 				    char errbuf[140];
 				    ERR_error_string(ssl_errno,errbuf);
-				    skygw_log_write(LE,"%s",errbuf);
+				    skygw_log_write(LE,"%d:%s",ssl_errno,errbuf);
 				}while((ssl_errno = ERR_get_error()) != 0);
 			}
 		    }
@@ -1695,16 +1681,14 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 			break;
 		}
 	    }while(w <= 0);
-	    /*
-	     * Pull the number of bytes we have written from
-	     * queue with have.
-	     */
-	    if(w == -1)
+
+	    if(w <= 0)
 	    {
-		while((queue = GWBUF_CONSUME_ALL(queue)));
+		break;
 	    }
 	    else
 	    {
+		/** Remove written bytes from the queue */
 		queue = gwbuf_consume(queue, w);
 		LOGIF(LD, (skygw_log_write(
 		    LOGFILE_DEBUG,
@@ -1733,38 +1717,6 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 	}
     } /* if (dcb->writeq) */
 
-    if (saved_errno != 0           &&
-	queue != NULL              &&
-	saved_errno != EAGAIN      &&
-	saved_errno != EWOULDBLOCK)
-    {
-	bool dolog = true;
-
-	/**
-	 * Do not log if writing COM_QUIT to backend failed.
-	 */
-	if (GWBUF_IS_TYPE_MYSQL(queue))
-	{
-	    uint8_t* data = GWBUF_DATA(queue);
-
-	    if (data[4] == 0x01)
-	    {
-		dolog = false;
-	    }
-	}
-	if (dolog)
-	{
-	    LOGIF(LD, (skygw_log_write(
-		    LOGFILE_DEBUG,
-				     "%lu [dcb_write] Writing to %s socket failed due %d, %s.",
-				     pthread_self(),
-				     dcb_isclient(dcb) ? "client" : "backend server",
-				     saved_errno,
-				     strerror(saved_errno))));
-	}
-	spinlock_release(&dcb->writeqlock);
-	return 0;
-    }
     spinlock_release(&dcb->writeqlock);
 
     if (dcb->high_water && dcb->writeqlen > dcb->high_water && below_water)
