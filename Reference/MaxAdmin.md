@@ -6,7 +6,7 @@
 
 Mark Riddoch
 
-Last Updated: 13th February 2015
+Last Updated: 24th June 2015
 
 [Overview](#overview)   
 [Running MaxAdmin](#running)   
