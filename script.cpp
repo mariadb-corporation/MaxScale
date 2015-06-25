@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
     fclose(f);
 
     printf("Copying expected script output to Maxscale machine\n"); fflush(stdout);
-    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s/script_output_expected* root@%s:/home/ec2-user/", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
+    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no script_output_expected* root@%s:/home/ec2-user/", Test->maxscale_sshkey, Test->maxscale_IP);
     system(str);
 
     global_result += test_script_monitor(Test, Test->repl, (char *) "script_output_expected");
