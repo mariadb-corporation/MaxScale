@@ -1,3 +1,0 @@
---event=synced_down --initiator=gserver1 --nodelist=gserver1,gserver2,gserver3,gserver4
---event=synced_down --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4
---event=synced_up --initiator=gserver2 --nodelist=gserver1,gserver2,gserver3,gserver4

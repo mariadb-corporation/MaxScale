@@ -309,8 +309,6 @@ install(FILES run_session_hang.sh bug564.sh crash_out_of_files_galera DESTINATIO
 install(FILES bug648 ssl ssl_load copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
 install(FILES templates DESTINATION system-test)
-install(FILES script_output_expected DESTINATION system-test)
-install(FILES script_output_expected_galera DESTINATION system-test)
 install(FILES bug729.php DESTINATION system-test)
 install(DIRECTORY cnf DESTINATION system-test)
 install(DIRECTORY fw DESTINATION system-test)
