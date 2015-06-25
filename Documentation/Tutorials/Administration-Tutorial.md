@@ -1,5 +1,7 @@
 # MaxScale Administration Tutorial
 
+Last updated 24th June 2015
+
 ## Common Administration Tasks
 
 The purpose of this tutorial is to introduce the MaxScale Administrator to a few of the common administration tasks that need to be performed with MaxScale. It is not intended as a reference to all the tasks that may be performed, more this is aimed as an introduction for administrators who are new to MaxScale.
