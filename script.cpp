@@ -46,7 +46,7 @@ int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expe
     sleep(30);
 
     printf("Unblock master node\n"); fflush(stdout);
-    Test->repl->unblock_node(0);
+    nodes->unblock_node(0);
 
     printf("Sleeping\n"); fflush(stdout);
     sleep(30);
