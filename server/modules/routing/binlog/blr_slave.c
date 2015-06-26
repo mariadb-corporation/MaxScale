@@ -2467,23 +2467,27 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 	blr_set_master_port(router, command);
 
 	/**
-	 * Change the binlog filename to request from master
+	 * Check for binlog filename in command
 	 * New binlog file could be the next one or current one
 	 */
 	master_logfile = blr_set_master_logfile(router, command, error);
 
-	if (!master_logfile) {
+	if (master_logfile == NULL) {
+		/* if error return */
+		if (strlen(error)) {
 
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
 
-		free(master_logfile);
+			/* restore previous master_host and master_port */
+			blr_master_restore_config(router, current_master);
 
-		/* restore previous master_host and master_port */
-		blr_master_restore_config(router, current_master);
+			spinlock_release(&router->lock);
 
-		spinlock_release(&router->lock);
-
-		return -1;
+			return -1;
+		} else {
+			/* binlog file not set by CHANGE MASTER, use current binlog */
+			master_logfile = strdup(router->binlog_name);
+		}
 	}
 
 	/* Change the position in the current or new binlog filename */
@@ -2527,7 +2531,8 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			if (master_log_pos)
 				free(master_log_pos);
-			free(master_logfile);
+			if (master_logfile)
+				free(master_logfile);
 
 			/* restore previous master_host and master_port */
 			blr_master_restore_config(router, current_master);
@@ -2545,7 +2550,8 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			if (master_log_pos)
 				free(master_log_pos);
-			free(master_logfile);
+			if (master_logfile)
+				free(master_logfile);
 
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
 				router->service->name,
@@ -2566,7 +2572,8 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			if (master_log_pos)
 				free(master_log_pos);
-			free(master_logfile);
+			if (master_logfile)
+				free(master_logfile);
 
 			/* restore previous master_host and master_port */
 			blr_master_restore_config(router, current_master);
@@ -2575,9 +2582,11 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			return -1;
 		} else {
+			/* pos unchanged, binlogfile unchanged */
 			if (master_log_pos)
 				free(master_log_pos);
-			free(master_logfile);
+			if (master_logfile)
+				free(master_logfile);
 		}
 	}
 
