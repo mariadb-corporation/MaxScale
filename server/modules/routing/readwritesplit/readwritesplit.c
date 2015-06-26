@@ -4687,14 +4687,15 @@ static void handleError (
 			{
 				/**
 				* This is called in hope of getting replacement for 
-				* failed slave(s).
+				* failed slave(s).  This call may free rses.
 				*/
 				*succp = handle_error_new_connection(inst, 
-								rses, 
+								&rses, 
 								backend_dcb, 
 								errmsgbuf);
 			}
-                        rses_end_locked_router_action(rses);
+                        /* Free the lock if rses still exists */
+                        if (rses) rses_end_locked_router_action(rses);
                         break;
                 }
                 
@@ -4763,10 +4764,11 @@ static void handle_error_reply_client(
  */
 static bool handle_error_new_connection(
 	ROUTER_INSTANCE*   inst,
-	ROUTER_CLIENT_SES* rses,
+	ROUTER_CLIENT_SES** rses,
 	DCB*               backend_dcb,
 	GWBUF*             errmsg)
 {
+        ROUTER_CLIENT_SES*  myrses;
 	SESSION*       ses;
 	int            router_nservers;
 	int            max_nslaves;
@@ -4774,7 +4776,8 @@ static bool handle_error_new_connection(
 	backend_ref_t* bref;
 	bool           succp;
 	
-	ss_dassert(SPINLOCK_IS_LOCKED(&rses->rses_lock));
+        myrses = *rses;
+	ss_dassert(SPINLOCK_IS_LOCKED(&myrses->rses_lock));
 	
 	ses = backend_dcb->session;
 	CHK_SESSION(ses);
@@ -4782,7 +4785,7 @@ static bool handle_error_new_connection(
 	/**
 	 * If bref == NULL it has been replaced already with another one.
 	 */
-	if ((bref = get_bref_from_dcb(rses, backend_dcb)) == NULL)
+	if ((bref = get_bref_from_dcb(myrses, backend_dcb)) == NULL)
 	{
 		succp = true;
 		goto return_succp;
@@ -4825,25 +4828,25 @@ static bool handle_error_new_connection(
 			(void *)bref);
 	
 	router_nservers = router_get_servercount(inst);
-	max_nslaves     = rses_get_max_slavecount(rses, router_nservers);
-	max_slave_rlag  = rses_get_max_replication_lag(rses);
+	max_nslaves     = rses_get_max_slavecount(myrses, router_nservers);
+	max_slave_rlag  = rses_get_max_replication_lag(myrses);
 	/** 
 	 * Try to get replacement slave or at least the minimum 
 	 * number of slave connections for router session.
 	 */
 	if(inst->rwsplit_config.disable_slave_recovery)
 	{
-	    succp = have_enough_servers(&rses,1,router_nservers,inst) ? true : false;
+	    succp = have_enough_servers(&myrses,1,router_nservers,inst) ? true : false;
 	}
 	else
 	{
 	succp = select_connect_backend_servers(
-			&rses->rses_master_ref,
-			rses->rses_backend_ref,
+			&myrses->rses_master_ref,
+			myrses->rses_backend_ref,
 			router_nservers,
 			max_nslaves,
 			max_slave_rlag,
-			rses->rses_config.rw_slave_select_criteria,
+			myrses->rses_config.rw_slave_select_criteria,
 			ses,
 			inst);
 	}
