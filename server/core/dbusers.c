@@ -974,18 +974,10 @@ getAllUsers(SERVICE *service, USERS *users)
 			}
 		    }
 
-		    if(havedb && wildcard_db_grant(dbnm))
+		    if(havedb && wildcard_db_grant(dbnm) && service->optimize_wildcard)
 		    {
-			if(service->optimize_wildcard)
-			{
-			    rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
-			    skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
-			}
-			else
-			{
-			    /** Use ANYDB for wildcard grants */
-			    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
-			}
+			rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
+			skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
 		    }
 		    else
 		    {
@@ -1041,8 +1033,8 @@ getAllUsers(SERVICE *service, USERS *users)
 
 		} else if(rc == -1) {
 		    /** Duplicate user*/
-		    LOGIF(LE,(skygw_log_write(LT|LE,
-					     "Warning: Duplicate MySQL user found for service [%s]: %s@%s%s%s",
+		    LOGIF(LT,(skygw_log_write(LT,
+					     "Duplicate MySQL user found for service [%s]: %s@%s%s%s",
 					     service->name,
 					     row[0],row[1],havedb?" for database: ":"",
 					     havedb ?dbnm:"")));
