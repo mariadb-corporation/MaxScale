@@ -5,7 +5,7 @@
 ## About MaxScale
 
  - [About MaxScale](About/About-MaxScale.md)
- - [Release Notes 1.1](Release-Notes/MaxScale-1.1-Release-Notes.md)
+ - [MaxScale 1.2.0 Release Notes](Release-Notes/MaxScale-1.2.0-Release-Notes.md)
  - [Changelog](Changelog.md)
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
@@ -25,8 +25,10 @@
 
  - [MaxAdmin](Reference/MaxAdmin.md)
  - [MaxScale HA with Corosync-Pacemaker](Reference/MaxScale-HA-with-Corosync-Pacemaker.md)
+ - [MaxScale HA with Lsyncd](Reference/MaxScale-HA-with-lsyncd.md)
  - [How Errors are Handled in MaxScale](Reference/How-errors-are-handled-in-MaxScale.md)
  - [Debug and Diagnostic Support](Reference/Debug-And-Diagnostic-Support.md)
+ - [Routing Hints](Reference/Hint-Syntax.md)
  
 ## Tutorials
 
@@ -69,10 +71,6 @@ Here are detailed documents about the filters MaxScale offers. They contain conf
 
  - [RabbitMQ Consumer Client](filters/RabbitMQ-Consumer-Client.md)
 
-## Routers
-
- - [Simple Schema Sharding Router](routers/schemarouter/SchemaRouter.md)
-
 ## Design Documents
 
  - [Core Objects Design (in development)](http://mariadb-corporation.github.io/MaxScale/Design-Documents/core-objects-html-docs)
@@ -88,4 +86,7 @@ Here are detailed documents about the filters MaxScale offers. They contain conf
  - [MaxScale 1.0 Release Notes](Release-Notes/MaxScale-1.0-Release-Notes.md)
  - [MaxScale 1.0.1 Release Notes](Release-Notes/MaxScale-1.0.1-Release-Notes.md)
  - [MaxScale 1.0.3 Release Notes](Release-Notes/MaxScale-1.0.3-Release-Notes.md)
+ - [MaxScale 1.1.0 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
+ - [MaxScale 1.1.1 Release Notes](Release-Notes/MaxScale-1.1.1-Release-Notes.md)
+ - [MaxScale 1.2.0 Release Notes](Release-Notes/MaxScale-1.2.0-Release-Notes.md)
 

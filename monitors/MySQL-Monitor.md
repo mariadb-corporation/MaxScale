@@ -108,10 +108,40 @@ master_down|A Master server has gone down
 master_up|A Master server has come up
 slave_down|A Slave server has gone down
 slave_up|A Slave server has come up
-server_down|A server with no assigned role has done down
+server_down|A server with no assigned role has gone down
 server_up|A server with no assigned role has come up
 lost_master|A server lost Master status
 lost_slave|A server lost Slave status
 new_master|A new Master was detected
 new_slave|A new Slave was detected
 
+
+## Example 1 - Monitor script
+
+Here is an example shell script which sends an email to an admin when a server goes down.
+
+```
+#!/usr/bin/env bash
+
+#This script assumes that the local mail server is configured properly
+#The second argument is the event type
+event=${$2/.*=/}
+server=${$3/.*=/}
+message="A server has gone down at `date`."
+echo $message|mail -s "The event was $event for server $server." admin@my.org
+
+```
+
+Here is a monitor configuration that only triggers the script when a master or a slave server goes down.
+
+```
+[Database Monitor]
+type=monitor
+module=mysqlmon
+servers=server1,server2
+script=mail_to_admin.sh
+events=master_down,slave_down
+```
+
+When a master or a slave server goes down, the script is executed, a mail is sent and the administrator will be immediately notified of any possible problems.
+This is just a simple example showing what you can do with MaxScale and monitor scripts.
