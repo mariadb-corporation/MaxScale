@@ -932,7 +932,7 @@ hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 			/* if id is not set, do it now */
 			if (gateway.id == 0) {
 				setipaddress(&serv_addr.sin_addr, (address == NULL) ? "0.0.0.0" : address);
-				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + port != NULL ? atoi(port) : 0 + getpid());
+				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + (port != NULL ? atoi(port) : 0 + getpid()));
 			}
                 
 			if (service && socket && protocol) {        
