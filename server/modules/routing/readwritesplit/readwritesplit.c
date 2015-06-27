@@ -287,7 +287,7 @@ static sescmd_cursor_t* backend_ref_get_sescmd_cursor (backend_ref_t* bref);
 static int  router_handle_state_switch(DCB* dcb, DCB_REASON reason, void* data);
 static bool handle_error_new_connection(
         ROUTER_INSTANCE*   inst,
-        ROUTER_CLIENT_SES* rses,
+        ROUTER_CLIENT_SES** rses,
         DCB*               backend_dcb,
         GWBUF*             errmsg);
 static void handle_error_reply_client(
