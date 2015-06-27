@@ -1706,6 +1706,41 @@ static int uh_cmpfun( void* v1, void* v2) {
 				return 0;
 			}
 
+			if(hu2->resource && strlen(hu2->resource) && strchr(hu2->resource,'%') != NULL)
+			{
+			  regex_t re;
+			  char db[MYSQL_DATABASE_MAXLEN*2 +1];
+			  strcpy(db,hu2->resource);
+			  int len = strlen(db);
+			  char* ptr = strrchr(db,'%');
+
+			  if(ptr == NULL)
+			  {
+			    return 1;
+			  }
+
+			  while(ptr)
+			  {
+			    memmove(ptr+1,ptr,(len - (ptr - db)) + 1);
+			    *ptr = '.';
+			    *(ptr + 1) = '*';
+			    len = strlen(db);
+			    ptr = strrchr(db,'%');
+			  }
+
+			  if((regcomp(&re,db,REG_ICASE|REG_NOSUB)))
+			  {
+			    return 1;
+			  }
+
+			  if(regexec(&re,hu1->resource,0,NULL,0) == 0)
+			  {
+			    regfree(&re);
+			    return 0;
+			  }
+			  regfree(&re);
+			}
+
 			/* no matches, deny auth */
 			return 1;
 		}
