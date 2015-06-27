@@ -1552,13 +1552,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			    break;
 			}
 
-			/** See if ANYDB == Y */
-			if(key.resource)
-			{
-			    key.resource = NULL;
-			    continue;
-			}
-
 			if (!user_password) {
 				/*
 				 * user@% not found.
