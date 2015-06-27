@@ -36,9 +36,12 @@
  * 18/02/2015	Massimiliano Pinto	Addition of DISCONNECT ALL and DISCONNECT SERVER server_id
  * 18/03/2015	Markus Makela		Better detection of CRC32 | NONE  checksum
  * 19/03/2015	Massimiliano Pinto	Addition of basic MariaDB 10 compatibility support
+ * 07/05/2015   Massimiliano Pinto	Added MariaDB 10 Compatibility
+ * 11/05/2015   Massimiliano Pinto	Only MariaDB 10 Slaves can register to binlog router with a MariaDB 10 Master
  *
  * @endverbatim
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -123,7 +126,28 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		return blr_slave_query(router, slave, queue);
 		break;
 	case COM_REGISTER_SLAVE:
-		return blr_slave_register(router, slave, queue);
+		/*
+		 * If Master is MariaDB10 don't allow registration from
+		 * MariaDB/Mysql 5 Slaves
+		 */
+
+		if (router->mariadb10_compat && !slave->mariadb10_compat) {
+			slave->state = BLRS_ERRORED;
+			blr_send_custom_error(slave->dcb, 1, 0,
+				"MariaDB 10 Slave is required for Slave registration");
+
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"%s: Slave %s: a MariaDB 10 Slave is required for Slave registration",
+				router->service->name,
+				slave->dcb->remote)));
+
+			dcb_close(slave->dcb);
+			return 1;
+		} else {
+			/* Master and Slave version OK: continue with slave registration */
+			return blr_slave_register(router, slave, queue);
+		}
 		break;
 	case COM_BINLOG_DUMP:
 		return blr_slave_binlog_dump(router, slave, queue);
@@ -366,10 +390,17 @@ int	query_len;
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.heartbeat);
 		}
-		 else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
+		else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
                 {
-                        free(query_text);
-                        return blr_slave_send_ok(router, slave);
+			/* mariadb10 compatibility is set for the slave */
+			slave->mariadb10_compat=true;
+
+                       	free(query_text);
+			if (router->mariadb10_compat) {
+				return blr_slave_replay(router, slave, router->saved_master.mariadb10);
+			} else {
+				return blr_slave_send_ok(router, slave);
+			}
                 }
 		else if (strcasecmp(word, "@master_binlog_checksum") == 0)
 		{
@@ -442,7 +473,7 @@ int	query_len;
 
 	query_text = strndup(qtext, query_len);
 	LOGIF(LE, (skygw_log_write(
-		LOGFILE_ERROR, "Unexpected query from slave server %s", query_text)));
+		LOGFILE_ERROR, "Unexpected query from slave %s: %s", slave->dcb->remote, query_text)));
 	free(query_text);
 	blr_slave_send_error(router, slave, "Unexpected SQL query received from slave.");
 	return 1;
@@ -1693,6 +1724,9 @@ uint32_t	chksum;
 
 	binlognamelen = strlen(slave->binlogfile);
 	len = 19 + 8 + 4 + binlognamelen;
+	/* no slave crc, remove 4 bytes */
+	if (slave->nocrc)
+		len -= 4;
 
 	// Build a fake rotate event
 	resp = gwbuf_alloc(len + 5);
@@ -1711,17 +1745,19 @@ uint32_t	chksum;
 	memcpy(ptr, slave->binlogfile, binlognamelen);
 	ptr += binlognamelen;
 
-	/*
-	 * Now add the CRC to the fake binlog rotate event.
-	 *
-	 * The algorithm is first to compute the checksum of an empty buffer
-	 * and then the checksum of the event portion of the message, ie we do not
-	 * include the length, sequence number and ok byte that makes up the first
-	 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
-	 */
-	chksum = crc32(0L, NULL, 0);
-	chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
-	encode_value(ptr, chksum, 32);
+	if (!slave->nocrc) {
+		/*
+		 * Now add the CRC to the fake binlog rotate event.
+		 *
+		 * The algorithm is first to compute the checksum of an empty buffer
+		 * and then the checksum of the event portion of the message, ie we do not
+		 * include the length, sequence number and ok byte that makes up the first
+		 * 5 bytes of the message. We also do not include the 4 byte checksum itself.
+		 */
+		chksum = crc32(0L, NULL, 0);
+		chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
+		encode_value(ptr, chksum, 32);
+	}
 
 	slave->dcb->func.write(slave->dcb, resp);
 	return 1;

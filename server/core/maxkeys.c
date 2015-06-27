@@ -32,19 +32,24 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <gwdirs.h>
+
 int main(int argc, char **argv)
 {
-    int arg_count = 6;
+    int arg_count = 4;
     char *home;
+    char *keyfile;
     char** arg_vector;
     int rval = 0;
 
-	if (argc != 2)
+	if (argc < 2)
 	{
-		fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-		return 1;
+	    keyfile = "/var/lib/maxscale/";
+	    fprintf(stderr, "Generating .secrets file in /var/lib/maxscale/ ...\n");
 	}
-
+	else
+	{
+	    keyfile = argv[1];
+	}
 	arg_vector = malloc(sizeof(char*)*(arg_count + 1));
 
 	if(arg_vector == NULL)
@@ -53,27 +58,16 @@ int main(int argc, char **argv)
 	    return 1;
 	}
 
-	if(access("/var/log/maxscale/maxkeys/",F_OK) != 0)
-	{
-            if(mkdir("/var/log/maxscale/maxkeys/",0777) == -1)
-            {
-		if(errno != EEXIST)
-		{
-		    fprintf(stderr,"Error: %d - %s",errno,strerror(errno));
-		    return 1;
-		}
-            }
-	}
-	arg_vector[0] = strdup("logmanager");
-	arg_vector[1] = strdup("-j");
-	arg_vector[2] = strdup("/var/log/maxscale/maxkeys");
-	arg_vector[3] = NULL;
+	arg_vector[0] = "logmanager";
+	arg_vector[1] = "-j";
+	arg_vector[2] = "/var/log/maxscale/maxkeys";
+	arg_vector[3] = "-o";
+	arg_vector[4] = NULL;
 	skygw_logmanager_init(arg_count,arg_vector);
-	free(arg_vector[2]);
 	free(arg_vector);
 	
 
-	if (secrets_writeKeys(argv[1]))
+	if (secrets_writeKeys(keyfile))
 	{
 		fprintf(stderr, "Failed to encode the password\n");
 		rval = 1;

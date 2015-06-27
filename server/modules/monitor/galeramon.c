@@ -155,7 +155,10 @@ startMonitor(void *arg,void* opt)
 	else if(!strcmp(params->name,"script"))
 	{
 	    if(handle->script)
+	    {
 		free(handle->script);
+		handle->script = NULL;
+	    }
 
 	    if(access(params->value,X_OK) == 0)
 	    {

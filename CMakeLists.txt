@@ -31,17 +31,29 @@ include(cmake/CheckPlatform.cmake)
 
 check_deps()
 check_dirs()
+find_package(OpenSSL)
 find_package(Valgrind)
 find_package(MySQLClient)
 find_package(MySQL)
 find_package(Pandoc)
 find_package(TCMalloc)
 find_package(Jemalloc)
+find_package(CURL) 
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
-find_package(CURL) 
+
 if(NOT CURL_FOUND)
   message(FATAL_ERROR "Failed to locate dependency: libcurl")
+endif()
+
+if(NOT OPENSSL_FOUND)
+  message(FATAL_ERROR "Failed to locate dependency: OpenSSL")
+else()
+  if(OPENSSL_VERSION VERSION_LESS 1 AND NOT FORCE_OPENSSL100)
+    add_definitions("-DOPENSSL_0_9")
+  else()
+    add_definitions("-DOPENSSL_1_0")
+  endif()
 endif()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBDIR})
@@ -159,7 +171,9 @@ install(FILES ${ERRMSG} DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES etc/lsyncd_example.conf DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES Documentation/maxscale.1 DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man1)
+
 
 # Install startup scripts and ldconfig files
 if(WITH_SCRIPTS)
@@ -173,6 +187,7 @@ if(WITH_SCRIPTS)
   if(PACKAGE)
     message(STATUS "maxscale.conf will unpack to: /etc/ld.so.conf.d")
     message(STATUS "startup scripts will unpack to to: /etc/init.d")
+    message(STATUS "systemd service files will unpack to to: /usr/lib/systemd/system")
   install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR} 
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
   install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION ${MAXSCALE_SHAREDIR}
@@ -184,8 +199,11 @@ if(WITH_SCRIPTS)
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
   install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION /etc/ld.so.conf.d 
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.service DESTINATION /usr/lib/systemd/system
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
   message(STATUS "Installing maxscale.conf to: /etc/ld.so.conf.d")
   message(STATUS "Installing startup scripts to: /etc/init.d")
+  message(STATUS "Installing systemd service files to: /usr/lib/systemd/system")
   endif()
 endif()
 

@@ -46,9 +46,9 @@ main(int argc, char **argv)
     char** arg_vector;
     int rval = 0;
 
-	if (argc != 2)
+	if (argc != 3)
 	{
-		fprintf(stderr, "Usage: %s <password>\n", argv[0]);
+		fprintf(stderr, "Usage: %s <file> <password>\n", argv[0]);
 		return 1;
 	}
 
@@ -79,9 +79,9 @@ main(int argc, char **argv)
 		return 1;
 	}
 
-	strncpy(pw,argv[1],80);
+	strncpy(pw,argv[2],80);
 
-	if ((enc = encryptPassword(pw)) != NULL){
+	if ((enc = encryptPassword(argv[1],pw)) != NULL){
 		printf("%s\n", enc);
 	}else{
 		fprintf(stderr, "Failed to encode the password\n");

@@ -119,7 +119,7 @@ datadir=/home/user/maxscale_data/
 
 #### `libdir`
 
-Set the directory where MaxScale looks for modules. The library director is the only directory that MaxScale uses when it searches for modules. If you have custom modules for MaxScale, make sure you have them in this folder.
+Set the directory where MaxScale looks for modules. The library directory is the only directory that MaxScale uses when it searches for modules. If you have custom modules for MaxScale, make sure you have them in this folder.
 
 ```
 libdir=/home/user/lib64/
@@ -325,6 +325,62 @@ Example:
 [Test Service]
 connection_timeout=300
 ```
+
+### Service and SSL
+
+This section describes configuration parameters for services that control the SSL/TLS encryption method and the various certificate files involved in it. To enable SSL, you must configure the `ssl` parameter with either `enabled` or `required` and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`. After this, MySQL connections to this service can be encrypted with SSL.
+
+#### `ssl`
+
+This enables SSL connections to the service. If this parameter is set to either `required` or `enabled` and the three certificate files can be found (these are explained afterwards), then client connections will be encrypted with SSL. If the parameter is `enabled` then both SSL and non-SSL connections can connect to this service. If the parameter is set to `required` then only SSL connections can be used for this service and non-SSL connections will get an error when they try to connect to the service.
+
+#### `ssl_key`
+
+The SSL private key the service should use. This will be the private key that is used as the server side private key during a client-server SSL handshake. This is a required parameter for SSL enabled services.
+
+#### `ssl_cert`
+
+The SSL certificate the service should use. This will be the public certificate that is used as the server side certificate during a client-server SSL handshake. This is a required parameter for SSL enabled services.
+
+#### `ssl_ca_cert`
+
+This is the Certificate Authority file. It will be used to verify that both the client and the server certificates are valid. This is a required parameter for SSL enabled services.
+
+### `ssl_version`
+
+This parameter controls the level of encryption used. Accepted values are:
+ * SSLv3
+ * TLSv10
+ * TLSv11
+ * TLSv12
+ * MAX   
+
+### `ssl_cert_verification_depth`
+
+The maximum length of the certificate authority chain that will be accepted. Accepted values are positive integers.
+
+```
+# Example
+ssl_cert_verification_depth=10
+```
+
+Example SSL enabled service configuration:
+
+```
+[ReadWriteSplitService]
+type=service
+router=readwritesplit
+servers=server1,server2,server3
+user=myuser
+passwd=mypasswd
+ssl=required
+ssl_cert=/home/markus/certs/server-cert.pem
+ssl_key=/home/markus/certs/server-key.pem
+ssl_ca_cert=/home/markus/certs/ca.pem
+ssl_version=TLSv12
+```
+
+This configuration requires all connections to be encrypted with SSL. It also specifies that TLSv1.2 should be used as the encryption method. The paths to the server certificate files and the Certificate Authority file are also provided.
 
 ### Server
 
@@ -1072,7 +1128,7 @@ MariaDB [mysql]> grant REPLICATION CLIENT on *.* to 'maxscalemon'@'maxscalehost'
 Query OK, 0 rows affected (0.00 sec)
 ```
 
-MySQL monitor fetches the `@@server_id` variable and other informations from `SHOW SLAVE STATUS` in order to compute the replication topology tree that may include intermediate master servers, called relay servers.
+MySQL monitor fetches the `@@server_id` variable and other information from `SHOW SLAVE STATUS` in order to compute the replication topology tree that may include intermediate master servers, called relay servers.
 
 The *Master* server used by router modules is the so called "root master": a server that has the `SERVER_MASTER` status bit set and it's at the lowest level of the replication depth.
 
@@ -1336,20 +1392,24 @@ In addition parameters may be added to define patterns to match against to eithe
 
 ## Encrypting Passwords
 
-Passwords stored in the maxscale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key. The default location MaxScale stores the keys is `/var/cache/maxscale`.
+Passwords stored in the maxscale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key. The default location MaxScale stores the keys is `/var/lib/maxscale`.
 
 ```
-maxkeys /var/cache/maxscale/.secrets
+ # Usage: maxkeys [PATH]
+maxkeys /var/lib/maxscale/
 ```
 
 Changing the encryption key for MaxScale will invalidate any currently encrypted keys stored in the maxscale.cnf file.
 
 ### Creating Encrypted Passwords
 
-Encrypted passwords are created by executing the maxpasswd command with the password you require to encrypt as an argument.
+Encrypted passwords are created by executing the maxpasswd command with the location of the .secrets file and the password you require to encrypt as an argument.
 
-    maxpasswd MaxScalePw001
-    61DD955512C39A4A8BC4BB1E5F116705
+```
+# Usage: maxpasswd PATH PASSWORD
+maxpasswd /var/lib/maxscale/ MaxScalePw001
+61DD955512C39A4A8BC4BB1E5F116705
+```
 
 The output of the maxpasswd command is a hexadecimal string, this should be inserted into the maxscale.cnf file in place of the ordinary, plain text, password. MaxScale will determine this as an encrypted password and automatically decrypt it before sending it the database server.
 

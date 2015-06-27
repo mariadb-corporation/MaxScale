@@ -44,8 +44,8 @@ _RETVAL_STATUS_NOT_RUNNING=3
 # stop/start/status related vars
 #################################
 NAME=maxscale
-DAEMON=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale
-
+DAEMON=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale
+DAEMON_OPTS= --user=maxscale
 # Source function library.
 . /lib/lsb/init-functions
 
@@ -57,11 +57,11 @@ RETVAL=0
 
 start() {
         log_daemon_msg "Starting MaxScale"
-        start_daemon -p $MAXSCALE_PIDFILE $DAEMON 2> /dev/null > /dev/null
+        start_daemon -p "$MAXSCALE_PIDFILE" "$DAEMON" "$DAEMON_OPTS" 2> /dev/null > /dev/null
 
         sleep 2
 
-        status_of_proc -p $MAXSCALE_PIDFILE $DAEMON $NAME
+        status_of_proc -p "$MAXSCALE_PIDFILE" "$DAEMON" $NAME
 
         log_end_msg $?
 }
@@ -77,13 +77,13 @@ stop() {
 reload() {
         log_daemon_msg "Reloading MaxScale"
         
-        kill -HUP $(cat $MAXSCALE_PIDFILE)
+        kill -HUP $(cat "$MAXSCALE_PIDFILE")
 
         log_end_msg $?
 }
 
 maxscale_wait_stop() {
-        PIDTMP=$(pidofproc -p $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale)
+        PIDTMP=$(pidofproc -p "$MAXSCALE_PIDFILE" "$DAEMON")
         kill -TERM "${PIDTMP:-}" 2> /dev/null;
         if [ -n "${PIDTMP:-}" ] && kill -0 "${PIDTMP:-}" 2> /dev/null; then
                 local i=0
@@ -115,7 +115,7 @@ case "$1" in
 	# return 3 on any error
 
         log_daemon_msg "Checking MaxScale"
-        status_of_proc -p $MAXSCALE_PIDFILE $DAEMON $NAME
+        status_of_proc -p "$MAXSCALE_PIDFILE" "$DAEMON" $NAME
         RETVAL=$?
 
         if [ $RETVAL -ne 0 ]; then

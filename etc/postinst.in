@@ -31,14 +31,22 @@ chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
 chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
 
 # Copy init.d script and ldconfig file
-cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
-cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf /etc/ld.so.conf.d/
-if [ -d "/usr/lib/systemd/system" ]
+if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
+then
+    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
+fi
+
+if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" ]
+then
+    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf /etc/init.d/
+fi
+
+if [ -d "/usr/lib/systemd/system" -a -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ]
 then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
 fi
 /sbin/ldconfig
-mandb
+
 cat <<EOF >& 2
 ********** Notice: MaxScale 1.2 Changes **************
 

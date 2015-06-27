@@ -138,7 +138,7 @@ void mysql_protocol_done (
                 goto retblock;
         }
         scmd = p->protocol_cmd_history;
-        
+
         while (scmd != NULL)
         {
                 scmd2 = scmd->scom_next;
@@ -908,7 +908,11 @@ gw_mysql_protocol_state2string (int state) {
                 case MYSQL_AUTH_FAILED:
                         return "MySQL Authentication failed";
                 case MYSQL_IDLE:
-                        return "MySQL authentication is succesfully done.";
+		    return "MySQL authentication is succesfully done.";
+	case MYSQL_AUTH_SSL_REQ: return "MYSQL_AUTH_SSL_REQ";
+	case MYSQL_AUTH_SSL_HANDSHAKE_DONE: return "MYSQL_AUTH_SSL_HANDSHAKE_DONE";
+	case MYSQL_AUTH_SSL_HANDSHAKE_FAILED: return "MYSQL_AUTH_SSL_HANDSHAKE_FAILED";
+	case MYSQL_AUTH_SSL_HANDSHAKE_ONGOING: return "MYSQL_AUTH_SSL_HANDSHAKE_ONGOING";
                 default:
                         return "MySQL (unknown protocol state)";
         }
@@ -2217,7 +2221,8 @@ char *create_auth_fail_str(
 	char	*username,
 	char	*hostaddr,
 	char	*sha1,
-	char	*db)
+	char	*db,
+	int errcode)
 {
 	char* errstr;
 	const char* ferrstr;
@@ -2231,6 +2236,10 @@ char *create_auth_fail_str(
 	if (db_len > 0)
 	{
 		ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
+	}
+	else if(errcode == MYSQL_FAILED_AUTH_SSL)
+	{
+	    ferrstr = "Access without SSL denied";
 	}
 	else
 	{
@@ -2250,6 +2259,10 @@ char *create_auth_fail_str(
 	if (db_len > 0)
 	{
 		sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
+	}
+	else if(errcode == MYSQL_FAILED_AUTH_SSL)
+	{
+	    sprintf(errstr, ferrstr);
 	}
 	else
 	{
