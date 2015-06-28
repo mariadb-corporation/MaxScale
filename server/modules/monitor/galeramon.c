@@ -372,6 +372,13 @@ char 			*server_string;
 	if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_state'") == 0
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
+		if(mysql_field_count(database->con) < 2)
+		{
+		    mysql_free_result(result);
+		    skygw_log_write(LE,"Error: Malformed result for \"SHOW STATUS LIKE 'wsrep_local_state'\"");
+		    return;
+		}
+
 		while ((row = mysql_fetch_row(result)))
 		{
 			if (strcmp(row[1], "4") == 0) 
@@ -398,6 +405,14 @@ char 			*server_string;
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
 		long local_index = -1;
+
+		if(mysql_field_count(database->con) < 2)
+		{
+		    mysql_free_result(result);
+		    skygw_log_write(LE,"Error: Malformed result for \"SHOW STATUS LIKE 'wsrep_local_index'\"");
+		    return;
+		}
+
 		while ((row = mysql_fetch_row(result)))
 		{
 			local_index = strtol(row[1], NULL, 10);
