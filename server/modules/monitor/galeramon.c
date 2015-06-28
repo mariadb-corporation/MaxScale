@@ -375,7 +375,8 @@ char 			*server_string;
 		if(mysql_field_count(database->con) < 2)
 		{
 		    mysql_free_result(result);
-		    skygw_log_write(LE,"Error: Malformed result for \"SHOW STATUS LIKE 'wsrep_local_state'\"");
+		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_state'\". Expected 2 columns."
+				    " MySQL Version: %s",version_str);
 		    return;
 		}
 
@@ -389,6 +390,13 @@ char 			*server_string;
 				if (mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
 					&& (result = mysql_store_result(database->con)) != NULL)
 				{
+				    		if(mysql_field_count(database->con) < 2)
+						{
+						    mysql_free_result(result);
+						    skygw_log_write(LE,"Error: Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_sst_method'\". Expected 2 columns."
+							    " MySQL Version: %s",version_str);
+						    return;
+						}
 					while ((row = mysql_fetch_row(result)))
 					{
 						if (strncmp(row[1], "xtrabackup", 10) == 0)
@@ -409,7 +417,8 @@ char 			*server_string;
 		if(mysql_field_count(database->con) < 2)
 		{
 		    mysql_free_result(result);
-		    skygw_log_write(LE,"Error: Malformed result for \"SHOW STATUS LIKE 'wsrep_local_index'\"");
+		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_index'\". Expected 2 columns."
+							    " MySQL Version: %s",version_str);
 		    return;
 		}
 

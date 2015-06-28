@@ -411,7 +411,8 @@ char 		  *server_string;
 		if(mysql_field_count(database->con) != 1)
 		{
 		    mysql_free_result(result);
-		    skygw_log_write(LE,"Error: Malformed result for 'SELECT @@server_id'.");
+		    skygw_log_write(LE,"Error: Unexpected result for \"SELECT @@server_id\". Expected 1 columns."
+				    " MySQL Version: %s",version_str);
 		    return;
 		}
                 while ((row = mysql_fetch_row(result)))
@@ -443,8 +444,9 @@ char 		  *server_string;
 			if(mysql_field_count(database->con) < 42)
 			{
 			    mysql_free_result(result);
-			    skygw_log_write(LE,"Error: SHOW ALL SLAVES STATUS "
-				    "returned less than the expected amount of rows.");
+			    skygw_log_write(LE,"Error: \"SHOW ALL SLAVES STATUS\" "
+				    "returned less than the expected amount of columns. Expected 42 columns."
+				    " MySQL Version: %s",version_str);
 			    return;
 			}
 
@@ -489,8 +491,18 @@ char 		  *server_string;
 			if(mysql_field_count(database->con) < 40)
 			{
 			    mysql_free_result(result);
-			    skygw_log_write(LE,"Error: SHOW SLAVE STATUS "
-				    "returned less than the expected amount of rows.");
+			    if(server_version < 5*10000 + 5*100)
+			    {
+				skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
+					" for MySQL 5.1 does not have master_server_id, replication tree cannot be resolved."
+					" MySQL Version: %s",version_str);
+			    }
+			    else
+			    {
+				skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
+					"returned less than the expected amount of columns. Expected 40 columns."
+					" MySQL Version: %s",version_str);
+			    }
 			    return;
 			}
 

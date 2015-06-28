@@ -326,7 +326,8 @@ char 			*server_string;
 		if(mysql_field_count(database->con) < 2)
 		{
 		    mysql_free_result(result);
-		    skygw_log_write(LE,"Error: Malformed result for \"SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'\"");
+		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'\". Expected 2 columns."
+				    " MySQL Version: %s",version_str);
 		    return;
 		}
 
@@ -345,7 +346,8 @@ char 			*server_string;
 		if(mysql_field_count(database->con) < 2)
 		{
 		    mysql_free_result(result);
-		    skygw_log_write(LE,"Error: Malformed result for \"SHOW STATUS LIKE 'Ndb_cluster_node_id'\"");
+		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'Ndb_cluster_node_id'\". Expected 2 columns."
+				    " MySQL Version: %s",version_str);
 		    return;
 		}
 
