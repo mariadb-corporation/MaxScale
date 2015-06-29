@@ -280,7 +280,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 {
     GALERA_MONITOR* handle = (GALERA_MONITOR*)mon->handle;
 MYSQL_ROW	row;
-MYSQL_RES	*result;
+MYSQL_RES	*result,*result2;
 int		isjoined = 0;
 char		*uname  = mon->user;
 char		*passwd = mon->password;
@@ -388,11 +388,12 @@ char 			*server_string;
 			/* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
 			else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1) {
 				if (mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
-					&& (result = mysql_store_result(database->con)) != NULL)
+					&& (result2 = mysql_store_result(database->con)) != NULL)
 				{
 				    		if(mysql_field_count(database->con) < 2)
 						{
 						    mysql_free_result(result);
+						    mysql_free_result(result2);
 						    skygw_log_write(LE,"Error: Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_sst_method'\". Expected 2 columns."
 							    " MySQL Version: %s",version_str);
 						    return;
@@ -402,6 +403,7 @@ char 			*server_string;
 						if (strncmp(row[1], "xtrabackup", 10) == 0)
 							isjoined = 1;
 					}
+					mysql_free_result(result2);
 				}
 			}
 		}
