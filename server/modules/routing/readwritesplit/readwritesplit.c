@@ -1244,7 +1244,8 @@ static bool get_dcb(
 				SERVER_IS_SLAVE(b->backend_server) &&
 				(max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
-				b->backend_server->rlag <= max_rlag)))
+				b->backend_server->rlag <= max_rlag)) &&
+				 !rses->rses_config.master_reads)
 			{
 				/** found slave */
 				candidate_bref = &backend_ref[i];
@@ -4588,6 +4589,10 @@ static void rwsplit_process_router_options(
 			else if(strcmp(options[i],"disable_slave_recovery") == 0)
 			{
 			    router->rwsplit_config.disable_slave_recovery = config_truth_value(value);
+			}
+			else if(strcmp(options[i],"master_accept_reads") == 0)
+			{
+			    router->rwsplit_config.master_reads = config_truth_value(value);
 			}
                 }
         } /*< for */
