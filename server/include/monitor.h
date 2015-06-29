@@ -124,6 +124,7 @@ typedef enum
 typedef struct monitor_servers {
 	SERVER		*server;	/**< The server being monitored */
 	MYSQL		*con;		/**< The MySQL connection */
+        bool log_version_err;
 	int		mon_err_count;
 	unsigned int	mon_prev_status;
 	unsigned int	pending_status; /**< Pending Status flag bitmap */

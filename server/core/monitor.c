@@ -192,6 +192,7 @@ monitorAddServer(MONITOR *mon, SERVER *server)
 	db->con = NULL;
 	db->next = NULL;
         db->mon_err_count = 0;
+	db->log_version_err = true;
 	/** Server status is uninitialized */
         db->mon_prev_status = -1;
 	/* pending status is updated by get_replication_tree */

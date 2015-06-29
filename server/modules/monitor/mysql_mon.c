@@ -493,9 +493,14 @@ char 		  *server_string;
 			    mysql_free_result(result);
 			    if(server_version < 5*10000 + 5*100)
 			    {
-				skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
-					" for MySQL 5.1 does not have master_server_id, replication tree cannot be resolved."
-					" MySQL Version: %s",version_str);
+				if(database->log_version_err)
+				{
+				    skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
+					    " for versions less than 5.5 does not have master_server_id, "
+					    "replication tree cannot be resolved for server %s."
+					    " MySQL Version: %s",database->server->unique_name,version_str);
+				    database->log_version_err = false;
+				}
 			    }
 			    else
 			    {
