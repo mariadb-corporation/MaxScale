@@ -30,6 +30,7 @@
  * 05/06/15	Massimiliano Pinto	Addition of m_errno, m_errmsg fields
  * 08/06/15	Massimiliano Pinto	Modification of MYSQL_ERROR_CODE and MYSQL_ERROR_MSG
  * 23/06/15	Massimiliano Pinto	Addition of MASTER_SERVER_CFG struct
+ * 24/06/15	Massimiliano Pinto	Added BLRM_UNCONFIGURED state
  *
  * @endverbatim
  */
@@ -75,7 +76,7 @@
 #define BLR_MAX_BACKOFF		60
 
 /* max size for error message returned to client */
-#define BINLOG_ERROR_MSG_LEN	255
+#define BINLOG_ERROR_MSG_LEN	385
 
 /**
  * Some useful macros for examining the MySQL Response packets
@@ -95,6 +96,7 @@ typedef struct master_server_config {
 	uint64_t pos;
 	char *user;
 	char *password;
+	char *filestem;
 } MASTER_SERVER_CFG;
 
 /**
@@ -313,31 +315,32 @@ typedef struct router_instance {
 /**
  * State machine for the master to MaxScale replication
  */
-#define BLRM_UNCONNECTED	0x0000
-#define BLRM_CONNECTING		0x0001
-#define	BLRM_AUTHENTICATED	0x0002
-#define BLRM_TIMESTAMP		0x0003
-#define BLRM_SERVERID		0x0004
-#define BLRM_HBPERIOD		0x0005
-#define BLRM_CHKSUM1		0x0006
-#define BLRM_CHKSUM2		0x0007
-#define BLRM_GTIDMODE		0x0008
-#define BLRM_MUUID		0x0009
-#define BLRM_SUUID		0x000A
-#define	BLRM_LATIN1		0x000B
-#define	BLRM_UTF8		0x000C
-#define	BLRM_SELECT1		0x000D
-#define	BLRM_SELECTVER		0x000E
-#define BLRM_SELECTVERCOM	0x000F
-#define BLRM_SELECTHOSTNAME	0x0010
-#define BLRM_MAP		0x0011
-#define	BLRM_REGISTER		0x0012
-#define	BLRM_BINLOGDUMP		0x0013
-#define	BLRM_SLAVE_STOPPED	0x0014
+#define BLRM_UNCONFIGURED	0x0000
+#define BLRM_UNCONNECTED	0x0001
+#define BLRM_CONNECTING		0x0002
+#define	BLRM_AUTHENTICATED	0x0003
+#define BLRM_TIMESTAMP		0x0004
+#define BLRM_SERVERID		0x0005
+#define BLRM_HBPERIOD		0x0006
+#define BLRM_CHKSUM1		0x0007
+#define BLRM_CHKSUM2		0x0008
+#define BLRM_GTIDMODE		0x0009
+#define BLRM_MUUID		0x000A
+#define BLRM_SUUID		0x000B
+#define	BLRM_LATIN1		0x000C
+#define	BLRM_UTF8		0x000D
+#define	BLRM_SELECT1		0x000E
+#define	BLRM_SELECTVER		0x000F
+#define BLRM_SELECTVERCOM	0x0010
+#define BLRM_SELECTHOSTNAME	0x0011
+#define BLRM_MAP		0x0012
+#define	BLRM_REGISTER		0x0013
+#define	BLRM_BINLOGDUMP		0x0014
+#define	BLRM_SLAVE_STOPPED	0x0015
 
-#define BLRM_MAXSTATE		0x0014
+#define BLRM_MAXSTATE		0x0015
 
-static char *blrm_states[] = { "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
+static char *blrm_states[] = { "Unconfigured", "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
 	"Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
 	"binlog checksum rerieval", "GTID Mode retrieval", "Master UUID retrieval",
 	"Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",

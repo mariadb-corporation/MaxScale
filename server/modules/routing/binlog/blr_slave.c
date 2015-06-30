@@ -43,11 +43,14 @@
  * 15/06/2015	Massimiliano Pinto	Added constraints to CHANGE MASTER TO MASTER_LOG_FILE/POS
  * 23/06/2015	Massimiliano Pinto	Added utility routines for blr_handle_change_master
  *					Call create/use binlog in blr_start_slave() (START SLAVE)
+ * 29/06/2015	Massimiliano Pinto	Successfully CHANGE MASTER results in updating master.ini
+ *					in blr_handle_change_master()
  *
  * @endverbatim
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 #include <service.h>
 #include <server.h>
@@ -65,9 +68,12 @@
 #include <version.h>
 #include <zlib.h>
 
+extern int load_mysql_users(SERVICE *service);
+extern int blr_save_dbusers(ROUTER_INSTANCE *router);
 extern void blr_master_close(ROUTER_INSTANCE* router);
 extern void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
+extern int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 static uint32_t extract_field(uint8_t *src, int bits);
 static void encode_value(unsigned char *data, unsigned int value, int len);
@@ -106,6 +112,8 @@ static char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char
 static void blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *current_master);
 static void blr_master_free_config(MASTER_SERVER_CFG *current_master);
 static void blr_master_restore_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *current_master);
+static void blr_master_set_empty_config(ROUTER_INSTANCE *router);
+static void blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master);
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -146,7 +154,21 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		return blr_slave_query(router, slave, queue);
 		break;
 	case COM_REGISTER_SLAVE:
-		return blr_slave_register(router, slave, queue);
+		if (router->master_state == BLRM_UNCONFIGURED) {
+			slave->state = BLRS_ERRORED;
+			blr_slave_send_error_packet(slave,
+				"Binlog router is not yet configured for replication", (unsigned int) 1597, NULL);
+
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"%s: Slave %s: Binlog router is not yet configured for replication",
+				router->service->name,
+				slave->dcb->remote)));
+			dcb_close(slave->dcb);
+			return 1;
+		} else {
+			return blr_slave_register(router, slave, queue);
+		}
 		break;
 	case COM_BINLOG_DUMP:
 		return blr_slave_binlog_dump(router, slave, queue);
@@ -358,7 +380,13 @@ int	query_len;
 			else if (strcasecmp(word, "STATUS") == 0)
 			{
 				free(query_text);
-				return blr_slave_send_master_status(router, slave);
+
+				/* if state is BLRM_UNCONFIGURED return empty result */
+
+				if (router->master_state > BLRM_UNCONFIGURED)
+					return blr_slave_send_master_status(router, slave);
+				else
+					return blr_slave_send_ok(router, slave);	
 			}
 		}
 		else if (strcasecmp(word, "SLAVE") == 0)
@@ -372,12 +400,20 @@ int	query_len;
 			else if (strcasecmp(word, "STATUS") == 0)
 			{
 				free(query_text);
-				return blr_slave_send_slave_status(router, slave);
+				/* if state is BLRM_UNCONFIGURED return empty result */
+				if (router->master_state > BLRM_UNCONFIGURED)
+					return blr_slave_send_slave_status(router, slave);
+				else
+					return blr_slave_send_ok(router, slave);	
 			}
 			else if (strcasecmp(word, "HOSTS") == 0)
 			{
 				free(query_text);
-				return blr_slave_send_slave_hosts(router, slave);
+				/* if state is BLRM_UNCONFIGURED return empty result */
+				if (router->master_state > BLRM_UNCONFIGURED)
+					return blr_slave_send_slave_hosts(router, slave);
+				else
+					return blr_slave_send_ok(router, slave);	
 			}
 		}
 	}
@@ -437,6 +473,79 @@ int	query_len;
 				return blr_slave_replay(router, slave, router->saved_master.utf8);
 			}
 		}
+	} /* RESET current configured master */
+        else if (strcasecmp(query_text, "RESET") == 0)
+	{
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete RESET command.",
+					router->service->name)));
+		}
+		else if (strcasecmp(word, "SLAVE") == 0)
+		{
+			free(query_text);
+
+			if (router->master_state == BLRM_SLAVE_STOPPED) {
+				char path[4097] = "";
+				char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
+				MASTER_SERVER_CFG *current_master = NULL;
+				int removed_cfg = 0;
+
+				/* save current replication parameters */
+				current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
+
+				if (!current_master) {
+					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "error allocating memory for blr_master_get_config");
+					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error_string)));
+					blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
+
+					return 1;
+				}
+
+				/* get current data */
+				blr_master_get_config(router, current_master);
+
+				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: 'RESET SLAVE executed'. Previous state MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s', MASTER_PASSWORD='%s'",
+					router->service->name,
+					current_master->host,
+					current_master->port,
+					current_master->logfile,
+					current_master->pos,
+					current_master->user,
+					current_master->password)));
+
+				/* remove master.ini */
+				strncpy(path, router->binlogdir, PATH_MAX);
+
+				strncat(path,"/master.ini", PATH_MAX);
+
+				/* remove master.ini */
+				removed_cfg = unlink(path);
+
+				if (removed_cfg == -1) {
+					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error removing %s, %s, errno %u", path, strerror(errno), errno);
+					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error_string)));
+				}
+
+				spinlock_acquire(&router->lock);
+
+				router->master_state = BLRM_UNCONFIGURED;
+				blr_master_set_empty_config(router);
+				blr_master_free_config(current_master);
+
+				spinlock_release(&router->lock);
+
+				if (removed_cfg == -1) {
+					blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
+					return 1;
+				} else {
+					return blr_slave_send_ok(router, slave);
+				}
+			} else {
+				blr_slave_send_error_packet(slave, "This operation cannot be performed with a running slave; run STOP SLAVE first", (unsigned int)1198, NULL);
+				return 1;
+			}
+		}
 	}
 	/* start replication from the current configured master */
 	else if (strcasecmp(query_text, "START") == 0)
@@ -451,7 +560,6 @@ int	query_len;
 			free(query_text);
 			return blr_start_slave(router, slave);
 		}
-
 	}
 	/* stop replication from the current master*/
 	else if (strcasecmp(query_text, "STOP") == 0)
@@ -477,7 +585,7 @@ int	query_len;
 		}
 		else if (strcasecmp(word, "MASTER") == 0)
 		{
-			if (router->master_state != BLRM_SLAVE_STOPPED)
+			if (router->master_state != BLRM_SLAVE_STOPPED && router->master_state != BLRM_UNCONFIGURED)
 			{
 				free(query_text);
 				blr_slave_send_error_packet(slave, "Cannot change master with a running slave; run STOP SLAVE first", (unsigned int)1198, NULL);
@@ -487,16 +595,73 @@ int	query_len;
 			{
 				int rc;
 				char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
+				MASTER_SERVER_CFG *current_master = NULL;
+
+				current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
+
+				if (!current_master) {
+					free(query_text);
+					strcpy(error_string, "Error allocating memory for blr_master_get_config");
+					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error_string)));
+
+					blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
+
+					return 1;
+				}
+
+				blr_master_get_config(router, current_master);
 
 				rc = blr_handle_change_master(router, brkb, error_string);
 
 				free(query_text);
 
 				if (rc < 0) {
+					/* CHANGE MASTER TO has failed */
 					blr_slave_send_error_packet(slave, error_string, (unsigned int)1234, "42000");
+					blr_master_free_config(current_master);
+
 					return 1;
-				} else
+				} else {
+					int ret;
+					char error[BINLOG_ERROR_MSG_LEN + 1];
+
+					/* Write/Update master config into master.ini file */
+					ret = blr_file_write_master_config(router, error);
+
+                                        if (ret) {
+						/* file operation failure: restore config */
+						spinlock_acquire(&router->lock);
+
+						blr_master_apply_config(router, current_master);
+						blr_master_free_config(current_master);
+
+						spinlock_release(&router->lock);
+
+						snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error writing into %s/master.ini: %s", router->binlogdir, error);
+						LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: %s",
+							router->service->name, error_string)));
+
+						blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
+
+						return 1;
+					}
+
+					/**
+					 * check if router is BLRM_UNCONFIGURED
+					 * and change state to BLRM_SLAVE_STOPPED
+					 */
+					if (rc == 1 || router->master_state == BLRM_UNCONFIGURED) {
+						spinlock_acquire(&router->lock);
+
+						router->master_state = BLRM_SLAVE_STOPPED;
+
+						spinlock_release(&router->lock);
+					}
+
+					blr_master_free_config(current_master);
+
 					return blr_slave_send_ok(router, slave);
+				}
 			}
 		}
 	}
@@ -552,8 +717,12 @@ blr_slave_replay(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *master)
 {
 GWBUF	*clone;
 
+	if (router->master_state == BLRM_UNCONFIGURED)
+		return blr_slave_send_ok(router, slave);
+
 	if (!master)
 		return 0;
+
 	if ((clone = gwbuf_clone(master)) != NULL)
 	{
 		return slave->dcb->func.write(slave->dcb, clone);
@@ -2243,8 +2412,9 @@ uint8_t *ptr;
 /**
  * Stop current replication from master
  *
- * @param router          The binlog router instance
- * @param slave           The slave server to which we are sending the response* 
+ * @param router	The binlog router instance
+ * @param slave		The slave server to which we are sending the response* 
+ * @return		Always 1 for error, for send_ok the bytes sent
  *
  */
 
@@ -2253,51 +2423,64 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
 	GWBUF   *ptr;
 
-	if (router->master_state != BLRM_SLAVE_STOPPED) {
+        /* if unconfigured return an error */
+	if (router->master_state == BLRM_UNCONFIGURED) {
+		blr_slave_send_error_packet(slave, "The server is not configured as slave; fix in config file or with CHANGE MASTER TO", (unsigned int)1200, NULL);
 
-		if (router->master)
-			if (router->master->fd != -1 && router->master->state == DCB_STATE_POLLING)
-				blr_master_close(router);
-
-		spinlock_acquire(&router->lock);
-
-		router->master_state = BLRM_SLAVE_STOPPED;
-
-		spinlock_release(&router->lock);
-
-		if (router->client)
-			if (router->client->fd != -1 && router->client->state == DCB_STATE_POLLING)
-				dcb_close(router->client);
-
-		/* Discard the queued residual data */
-		ptr = router->residual;
-		while (ptr)
-		{
-			ptr = gwbuf_consume(ptr, GWBUF_LENGTH(ptr));
-		}
-		router->residual = NULL;
-
-		/* Now it is safe to unleash other threads on this router instance */
-		spinlock_acquire(&router->lock);
-		router->reconnect_pending = 0;
-		router->active_logs = 0;
-		spinlock_release(&router->lock);
-
-		LOGIF(LM, (skygw_log_write(
-			LOGFILE_MESSAGE,
-			"%s: STOP SLAVE executed by %s@%s. Disconnecting from master %s:%d, read up to log %s, pos %lu",
-			router->service->name,
-			slave->dcb->user,
-			slave->dcb->remote,
-			router->service->dbref->server->name,
-			router->service->dbref->server->port,
-			router->binlog_name, router->binlog_position)));
-
-		return blr_slave_send_ok(router, slave);
-	} else {
-		blr_slave_send_error_packet(slave, "Slave connection is not running", (unsigned int)1199, NULL);
 		return 1;
 	}
+
+        /* if already stopped return an error */
+	if (router->master_state == BLRM_SLAVE_STOPPED) {
+		blr_slave_send_error_packet(slave, "Slave connection is not running", (unsigned int)1199, NULL);
+
+		return 1;
+	}
+
+
+	if (router->master) {
+		if (router->master->fd != -1 && router->master->state == DCB_STATE_POLLING) {
+			blr_master_close(router);
+		}
+	}
+
+	spinlock_acquire(&router->lock);
+
+	router->master_state = BLRM_SLAVE_STOPPED;
+
+	spinlock_release(&router->lock);
+
+	if (router->client) {
+		if (router->client->fd != -1 && router->client->state == DCB_STATE_POLLING) {
+			dcb_close(router->client);
+		}
+	}
+
+	/* Discard the queued residual data */
+	ptr = router->residual;
+	while (ptr)
+	{
+		ptr = gwbuf_consume(ptr, GWBUF_LENGTH(ptr));
+	}
+	router->residual = NULL;
+
+	/* Now it is safe to unleash other threads on this router instance */
+	spinlock_acquire(&router->lock);
+	router->reconnect_pending = 0;
+	router->active_logs = 0;
+	spinlock_release(&router->lock);
+
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+		"%s: STOP SLAVE executed by %s@%s. Disconnecting from master %s:%d, read up to log %s, pos %lu",
+		router->service->name,
+		slave->dcb->user,
+		slave->dcb->remote,
+		router->service->dbref->server->name,
+		router->service->dbref->server->port,
+		router->binlog_name, router->binlog_position)));
+
+	return blr_slave_send_ok(router, slave);
 }
 
 /**
@@ -2305,42 +2488,75 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
  *
  * @param router          The binlog router instance
  * @param slave           The slave server to which we are sending the response
+ * @return		Always 1 for error, for send_ok the bytes sent
  * 
  */
 
 static int
 blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
-	if ( (router->master_state == BLRM_UNCONNECTED) || (router->master_state == BLRM_SLAVE_STOPPED) ) {
+	char path[4097]="";
+	int loaded;
 
-		spinlock_acquire(&router->lock);
-		router->master_state = BLRM_UNCONNECTED;
-		spinlock_release(&router->lock);
+	/* if unconfigured return an error */
+	if (router->master_state == BLRM_UNCONFIGURED) {
+		blr_slave_send_error_packet(slave, "The server is not configured as slave; fix in config file or with CHANGE MASTER TO", (unsigned int)1200, NULL);
 
-		/* create a new binlog or just use current one */
-		if (strcmp(router->prevbinlog, router->binlog_name))
-			blr_file_new_binlog(router, router->binlog_name);
-		else
-			blr_file_use_binlog(router, router->binlog_name);
-
-		blr_start_master(router);
-
-		LOGIF(LM, (skygw_log_write(
-			LOGFILE_MESSAGE,
-			"%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, binlog %s, pos %lu",
-			router->service->name,
-			slave->dcb->user,
-			slave->dcb->remote,
-			router->service->dbref->server->name,
-			router->service->dbref->server->port,
-			router->binlog_name,
-			router->binlog_position)));
-
-		return blr_slave_send_ok(router, slave);
-	} else {
-		blr_slave_send_error_packet(slave, "Slave connection is already running", (unsigned int)1254, NULL);
 		return 1;
 	}
+
+	/* if running return an error */
+	if (router->master_state != BLRM_UNCONNECTED && router->master_state != BLRM_SLAVE_STOPPED) {
+		blr_slave_send_error_packet(slave, "Slave connection is already running", (unsigned int)1254, NULL);
+
+		return 1;
+	}
+
+	spinlock_acquire(&router->lock);
+	router->master_state = BLRM_UNCONNECTED;
+	spinlock_release(&router->lock);
+
+	/* create a new binlog or just use current one */
+	if (strcmp(router->prevbinlog, router->binlog_name))
+		blr_file_new_binlog(router, router->binlog_name);
+	else
+		blr_file_use_binlog(router, router->binlog_name);
+
+	blr_start_master(router);
+
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+		"%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, binlog %s, pos %lu",
+		router->service->name,
+		slave->dcb->user,
+		slave->dcb->remote,
+		router->service->dbref->server->name,
+		router->service->dbref->server->port,
+		router->binlog_name,
+		router->binlog_position)));
+
+        /* File path for router cached authentication data */
+        strcpy(path, router->binlogdir);
+        strncat(path, "/cache", 4096);
+
+        strncat(path, "/dbusers", 4096);
+
+        /* Try loading dbusers from configured backends */
+        loaded = load_mysql_users(router->service);
+
+        if (loaded < 0)
+        {
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to load users for service %s",
+                        router->service->name)));
+	} else {
+		/* update cached data */
+		if (loaded > 0)
+			blr_save_dbusers(router);
+	}
+
+	return blr_slave_send_ok(router, slave);
 }
 
 /**
@@ -2405,6 +2621,7 @@ char *get_change_master_option(char *input, char *option_field) {
 	extern  char *strcasestr();
 	char *option = NULL;
 	char *ptr = NULL;
+	char *new_ptr = NULL;
 	ptr = strcasestr(input, option_field);
 	if (ptr) {
 		char *end;
@@ -2412,9 +2629,11 @@ char *get_change_master_option(char *input, char *option_field) {
 		end = strchr(option, ',');
 		if (end)
 			*end = '\0';
+		new_ptr = strdup(option);
+		free(option);
 	}
 
-	return option;
+	return new_ptr;
 }
 
 /**
@@ -2467,13 +2686,31 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 	blr_set_master_port(router, command);
 
 	/**
-	 * Check for binlog filename in command
+	 * Change the binlog filename to request from master
 	 * New binlog file could be the next one or current one
 	 */
 	master_logfile = blr_set_master_logfile(router, command, error);
 
+	if (master_logfile == NULL && router->master_state == BLRM_UNCONFIGURED) {
+		strcpy(error, "Router is not configured for master connection, MASTER_LOG_FILE is required");
+
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+		/* restore previous master_host and master_port */
+		blr_master_restore_config(router, current_master);
+
+		spinlock_release(&router->lock);
+
+		return -1;
+	}
+
+	/**
+	 * If MASTER_LOG_FILE is not set
+	 * and master connection is configured
+	 * set master_logfile to current binlog_name
+	 */
 	if (master_logfile == NULL) {
-		/* if error return */
+		/* if errors return */
 		if (strlen(error)) {
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
@@ -2485,12 +2722,17 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			return -1;
 		} else {
-			/* binlog file not set by CHANGE MASTER, use current binlog */
-			master_logfile = strdup(router->binlog_name);
+			/* If not set by CHANGE MASTER, use current binlog if configured */
+			if (router->master_state != BLRM_UNCONFIGURED) {
+				master_logfile = strdup(router->binlog_name);
+			} 
 		}
 	}
 
-	/* Change the position in the current or new binlog filename */
+	/**
+	 * Change the position in the current or new binlog filename
+	 */
+
 	if (master_log_pos == NULL) {
 		pos = 0;
 	} else {
@@ -2498,8 +2740,12 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 		pos = atoll(passed_pos);
 	}
 
-	/* if binlog name has changed to next one only position 4 is allowed */
-	if (strcmp(master_logfile, router->binlog_name)) {
+	/**
+	 * If master connection is configured check new binlog name:
+	 * If binlog name has changed to next one only position 4 is allowed
+	 */
+
+	if (strcmp(master_logfile, router->binlog_name) && router->master_state != BLRM_UNCONFIGURED) {
 		int return_error = 0;
 		if (master_log_pos == NULL) {
 			snprintf(error, BINLOG_ERROR_MSG_LEN, "Please provide an explicit MASTER_LOG_POS for new MASTER_LOG_FILE %s: "
@@ -2548,26 +2794,47 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			router->binlog_position = 4;
 
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
+				router->service->name,
+				router->binlog_name)));
+
 			if (master_log_pos)
 				free(master_log_pos);
 			if (master_logfile)
 				free(master_logfile);
-
-			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
-				router->service->name,
-				router->binlog_name)));
 		}
 	} else {
-		/* Position cannot be different from current pos */
-		if (pos > 0 && pos != router->binlog_position) {
+		/**
+		 * Same binlog or master connection not configured
+		 * Position cannot be different from current pos or 4 (if BLRM_UNCONFIGURED)
+		 */
+		int return_error = 0;
 
-			snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
-				"Permitted binlog pos is %lu. Current master_log_file=%s, master_log_pos=%lu",
-				passed_pos,
-				router->binlog_position,
-				router->binlog_name,
-				router->binlog_position);
+		if (router->master_state == BLRM_UNCONFIGURED) {
+			if (pos && pos != 4) {
+				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
+					"Permitted binlog pos is 4. Specified master_log_file=%s",
+					passed_pos,
+					master_logfile);
+			
+				return_error = 1;
+			}
 
+		} else {
+			if (pos > 0 && pos != router->binlog_position) {
+				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
+					"Permitted binlog pos is %lu. Current master_log_file=%s, master_log_pos=%lu",
+					passed_pos,
+					router->binlog_position,
+					router->binlog_name,
+					router->binlog_position);
+
+				return_error = 1;
+			}
+		}
+
+		/* log error and return */
+		if (return_error) {
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
 
 			if (master_log_pos)
@@ -2582,17 +2849,30 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			return -1;
 		} else {
-			/* pos unchanged, binlogfile unchanged */
+			/**
+			 * no pos change, set it to 4 if BLRM_UNCONFIGURED
+			 * Also set binlog name if UNCOFIGURED
+			 */
+			if (router->master_state == BLRM_UNCONFIGURED) {
+				router->binlog_position = 4;
+				memset(router->binlog_name, '\0', sizeof(router->binlog_name));
+				strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
+
+				LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
+					router->service->name,
+					router->binlog_name)));
+			}
+
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
+				router->service->name,
+				router->binlog_position)));
+
 			if (master_log_pos)
 				free(master_log_pos);
 			if (master_logfile)
 				free(master_logfile);
 		}
 	}
-
-	LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
-		router->service->name,
-		router->binlog_position)));
 
 	/* Change the replication user */
 	if (master_user) {
@@ -2658,9 +2938,8 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 	blr_master_free_config(current_master);
 
-
-	/* force stopped state */
-	router->master_state = BLRM_SLAVE_STOPPED;
+	if (router->master_state == BLRM_UNCONFIGURED)
+		change_binlog = 1;	
 
 	spinlock_release(&router->lock);
 
@@ -2748,24 +3027,24 @@ blr_set_master_port(ROUTER_INSTANCE *router, char *command) {
  * @param router	Current router instance
  * @param command	CHANGE MASTER TO command
  * @param error		The error msg for command
- * @return		New binlog file or NULL otherwise
+ * @return		New binlog file or NULL on error
  */
 char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error) {
 	int change_binlog = 0;
 	char *new_binlog_file = NULL;
-	char *master_logfile  = get_change_master_option(command, "MASTER_LOG_FILE");
+	char *logfile  = get_change_master_option(command, "MASTER_LOG_FILE");
 
-	if (master_logfile) {
+	if (logfile) {
 		char *ptr;
 		char *end;
 		long next_binlog_seqname;
 
-		ptr = strchr(master_logfile, '\'');
+		ptr = strchr(logfile, '\'');
 
 		if (ptr)
 			ptr++;
 		else
-			ptr = master_logfile + 16;
+			ptr = logfile + 16;
 
 		end = strchr(ptr+1, '\'');
 
@@ -2781,13 +3060,30 @@ char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error
 				router->service->name, ptr,
 				router->fileroot);
 
-			free(master_logfile);
+			free(logfile);
 
 			return NULL;
 		}
 
 		end++;
 
+		if (router->master_state == BLRM_UNCONFIGURED) {
+			char *stem_end;
+			stem_end = strrchr(ptr, '.');
+			/* set filestem */
+			if (stem_end) {
+				if (router->fileroot)
+					free(router->fileroot);
+				router->fileroot = strndup(ptr, stem_end-ptr);
+			}
+
+			/* return new filename */
+			new_binlog_file = strdup(ptr);
+			free(logfile);
+
+			return new_binlog_file;
+		}
+	
 		/* get next binlog file name, assuming filestem is the same */
 		next_binlog_seqname = blr_file_get_next_binlogname(router);
 
@@ -2797,7 +3093,7 @@ char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error
 				router->service->name,
 				router->binlog_name);
 
-			free(master_logfile);
+			free(logfile);
 
 			return NULL;
 		}
@@ -2822,7 +3118,7 @@ char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error
 					router->binlog_name,
 					router->binlog_position);
 
-				free(master_logfile);
+				free(logfile);
 
 				return NULL;
 			}
@@ -2834,7 +3130,7 @@ char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error
 		/* allocate new filename */
 		new_binlog_file = strdup(ptr);
 
-		free(master_logfile);
+		free(logfile);
 	}
 
 	return new_binlog_file;
@@ -2854,6 +3150,7 @@ blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master) {
 	strncpy(curr_master->logfile, router->binlog_name, BINLOG_FNAMELEN);
 	curr_master->user = strdup(router->user);
 	curr_master->password = strdup(router->password);
+	curr_master->filestem = strdup(router->fileroot);
 }
 
 /**
@@ -2869,6 +3166,8 @@ blr_master_free_config(MASTER_SERVER_CFG *master_cfg) {
 		free(master_cfg->user);
 	if (master_cfg->password)
 		free(master_cfg->password);
+	if (master_cfg->filestem)
+		free(master_cfg->filestem);
 
 	free(master_cfg);
 }
@@ -2886,3 +3185,44 @@ blr_master_restore_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_maste
 
 	blr_master_free_config(prev_master);
 }
+
+/**
+ * Set all the master configuration fields to empty values
+ *
+ * @param router	Current router instance
+ */
+static void
+blr_master_set_empty_config(ROUTER_INSTANCE *router) {
+	server_update_address(router->service->dbref->server, "none");
+	server_update_port(router->service->dbref->server, (unsigned short)1234);
+
+	router->binlog_position = 4;
+	strcpy(router->binlog_name, "");
+}
+
+/**
+ * Restore all master configuration values
+ *
+ * @param router	Current router instance
+ * @param prev_master	Previous saved master configuration
+ */
+static void
+blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master) {
+	server_update_address(router->service->dbref->server, prev_master->host);
+	server_update_port(router->service->dbref->server, prev_master->port);
+	router->binlog_position = prev_master->pos;
+	strcpy(router->binlog_name, prev_master->logfile);
+	if (router->user) {
+		free(router->user);
+		router->user = strdup(prev_master->user);
+	}
+	if (router->password) {
+		free(router->password);
+		router->password = strdup(prev_master->password);
+	}
+	if (router->fileroot) {
+		free(router->fileroot);
+		router->fileroot = strdup(prev_master->filestem);
+	}
+}
+

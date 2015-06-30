@@ -35,6 +35,9 @@
  * 02/04/2014	Mark Riddoch		Initial implementation
  * 17/02/2015	Massimiliano Pinto	Addition of slave port and username in diagnostics
  * 18/02/2015	Massimiliano Pinto	Addition of dcb_close in closeSession
+ * 29/06/2015	Massimiliano Pinto	Addition of master.ini for easy startup configuration
+ *					If not found router goes into BLRM_UNCONFIGURED state.
+ *					Cache dir is 'cache' under router->binlogdir.
  *
  * @endverbatim
  */
@@ -59,6 +62,8 @@
 #include <log_manager.h>
 
 #include <mysql_client_server_protocol.h>
+#include <ini.h>
+#include <sys/stat.h>
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -85,7 +90,14 @@ static  void    errorReply(
         DCB     *backend_dcb,
         error_action_t     action,
 	bool	*succp);
+
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
+static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
+static int blr_set_service_mysql_user(SERVICE *service);
+int blr_load_dbusers(ROUTER_INSTANCE *router);
+int blr_save_dbusers(ROUTER_INSTANCE *router);
+extern void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 
 
 /** The module object definition */
@@ -168,6 +180,9 @@ ROUTER_INSTANCE	*inst;
 char		*value, *name;
 int		i;
 unsigned char	*defuuid;
+char		path[PATH_MAX], filename[PATH_MAX];
+int		master_info = 0;
+int		rc = 0;
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL;
@@ -186,7 +201,7 @@ unsigned char	*defuuid;
 	inst->master_chksum = true;
 	inst->master_uuid = NULL;
 
-	inst->master_state = BLRM_UNCONNECTED;
+	inst->master_state = BLRM_UNCONFIGURED;
 	inst->master = NULL;
 	inst->client = NULL;
 
@@ -223,19 +238,16 @@ unsigned char	*defuuid;
 	 * the master from which we replicate binlog records. Therefore check
 	 * that only one server has been defined.
 	 *
-	 * A later improvement will be to define multiple servers and have the
-	 * router use the information that is supplied by the monitor to find
-	 * which of these servers is currently the master and replicate from
-	 * that server.
 	 */
-	if (service->dbref == NULL || service->dbref->next != NULL)
+
+	if (service->dbref && service->dbref->next != NULL)
 	{
 		LOGIF(LE, (skygw_log_write(
 			LOGFILE_ERROR,
-				"Error : Exactly one database server may be "
-				"for use with the binlog router.")));
+			"Error : Exactly one database server may be "
+			"for use with the binlog router.")));
+		/* report as error whether a server is defined in the service */
 	}
-
 
 	/*
 	 * Process the options.
@@ -380,6 +392,117 @@ unsigned char	*defuuid;
 
 	inst->binlog_position = 0;
 	strcpy(inst->binlog_name, "");
+	strcpy(inst->prevbinlog, "");
+
+	/**
+	 * If binlogdir is not found create it
+	 * On failure don't start the instance
+	 */
+	if (access(inst->binlogdir, R_OK) == -1) {
+		int mkdir_rval;
+		mkdir_rval = mkdir(inst->binlogdir, 0700);
+		if (mkdir_rval == -1) {
+			skygw_log_write_flush(LOGFILE_ERROR,
+				"Error : Service %s, Failed to create binlog directory '%s': [%d] %s",
+				service->name,
+				inst->binlogdir,
+				errno,
+				strerror(errno));
+
+			free(inst);
+			return NULL;
+		}
+	}
+
+	/* Allocate dbusers for this router here instead of serviceStartPort() */
+	if (service->users == NULL) {
+		service->users = (void *)mysql_users_alloc();
+		if (service->users == NULL) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"%s: Error allocating dbusers in createInstance",
+				inst->service->name)));
+
+			free(inst);
+			return NULL;
+		}
+	}
+
+	/* Dinamically allocate master_host server struct, not written in anyfile */
+	if (service->dbref == NULL) {
+		SERVICE *service = inst->service;
+		SERVER *server;
+		server = server_alloc("none", "MySQLBackend", (int)1234);
+		if (server == NULL) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"%s: Error for server_alloc in createInstance",
+				inst->service->name)));
+			if (service->users) {
+				users_free(service->users);
+			}
+
+			free(inst);
+			return NULL;
+		}
+		server_set_unique_name(server, "binlog_router_master_host");
+		serviceAddBackend(service, server);
+	}
+
+	/*
+	 * Check for master.ini file with master connection details
+	 * If not found a CHANGE MASTER TO is required via mysqsl client.
+	 * Use START SLAVE for replication startup.
+	 *
+	 * If existent master.ini will be used for
+	 * automatic master replication start phase
+	 */
+
+	strncpy(path, inst->binlogdir, PATH_MAX);
+	snprintf(filename,PATH_MAX, "%s/master.ini", path);
+
+	rc = ini_parse(filename, blr_handler_config, inst);
+
+	LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
+		"%s: %s/master.ini parse result is %d",
+		inst->service->name,
+		inst->binlogdir,
+		rc)));
+
+	/*
+	 * retcode:
+	 * -1 file not found, 0 parsing ok, > 0 error parsing the content
+	 */
+
+	if (rc != 0) {
+		if (rc == -1) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"%s: master.ini file not found in %s."
+				" Master registration cannot be started."
+				" Configure with CHANGE MASTER TO ...",
+				inst->service->name, inst->binlogdir)));
+		} else {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"%s: master.ini file with errors in %s."
+				" Master registration cannot be started."
+				" Fix errors in it or configure with CHANGE MASTER TO ...",
+				inst->service->name, inst->binlogdir)));
+		}
+
+	} else {
+		/**
+		 * master.ini configuration is ok
+		 * Master registration can start
+		 */
+		inst->master_state = BLRM_UNCONNECTED;
+
+		master_info = 1;
+	}
+
+	/* Set service user or load db users */
+	if (inst->master_state == BLRM_UNCONFIGURED) {
+		blr_set_service_mysql_user(inst->service);
+	} else {
+		blr_load_dbusers(inst);
+	}
 
 	/*
 	 * Read any cached response messages
@@ -389,20 +512,33 @@ unsigned char	*defuuid;
 	/*
 	 * Initialise the binlog file and position
 	 */
-	if (blr_file_init(inst) == 0)
-	{
-		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR,
-			"%s: Service not started due to lack of binlog directory.",
-				service->name)));
-		free(inst);
-		return NULL;
-	}
-	LOGIF(LT, (skygw_log_write(
+	if (inst->master_state == BLRM_UNCONNECTED) {
+		if (blr_file_init(inst) == 0)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"%s: Service not started due to lack of binlog directory %s",
+				service->name,
+				inst->binlogdir)));
+
+			if (service->users) {
+				users_free(service->users);
+			}
+
+			if (service->dbref && service->dbref->server) {
+				server_free(service->dbref->server);
+				free(service->dbref);
+			}
+
+			free(inst);
+			return NULL;
+		}
+
+		LOGIF(LT, (skygw_log_write_flush(
 			LOGFILE_TRACE,
 			"Binlog router: current binlog file is: %s, current position %u\n",
-						inst->binlog_name, inst->binlog_position)));
-
+			inst->binlog_name, inst->binlog_position)));
+	}
 
 	/*
 	 * We have completed the creation of the instance data, so now
@@ -424,12 +560,15 @@ unsigned char	*defuuid;
 		sprintf(name, "%s stats", service->name);
 		hktask_add(name, stats_func, inst, BLR_STATS_FREQ);
 	}
+	free(name);
 
 	/*
 	 * Now start the replication from the master to MaxScale
 	 */
-	blr_start_master(inst);
-	free(name);
+	if (inst->master_state == BLRM_UNCONNECTED) {
+		blr_start_master(inst);
+	}
+	
 	return (ROUTER *)inst;
 }
 
@@ -461,7 +600,7 @@ ROUTER_SLAVE		*slave;
 
 	if ((slave = (ROUTER_SLAVE *)calloc(1, sizeof(ROUTER_SLAVE))) == NULL)
 	{
-		LOGIF(LD, (skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Insufficient memory to create new slave session for binlog router")));
                 return NULL;
@@ -732,9 +871,12 @@ struct tm	tm;
 	min10 /= 10.0;
 	min5 /= 5.0;
 	
-
-	dcb_printf(dcb, "\tMaster connection DCB:  			%p\n",
+	if (router_inst->master)
+		dcb_printf(dcb, "\tMaster connection DCB:  			%p\n",
 			router_inst->master);
+	else
+		dcb_printf(dcb, "\tMaster connection DCB: 			0x0\n");
+
 	dcb_printf(dcb, "\tMaster connection state:			%s\n",
 			blrm_states[router_inst->master_state]);
 
@@ -781,7 +923,7 @@ struct tm	tm;
 	dcb_printf(dcb, "\tNumber of residual data packets:		%u\n",
 		   router_inst->stats.n_residuals);
 	dcb_printf(dcb, "\tAverage events per packet			%.1f\n",
-		   (double)router_inst->stats.n_binlogs / router_inst->stats.n_reads);
+		   router_inst->stats.n_reads != 0 ? ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0);
 	dcb_printf(dcb, "\tLast event from master at:  			%s",
 				buf);
 	dcb_printf(dcb, "\t					(%d seconds ago)\n",
@@ -1047,12 +1189,6 @@ unsigned long mysql_errno;
 	mysql_errno = (unsigned long) extract_field((uint8_t *)(GWBUF_DATA(message) + 5), 16);
 	errmsg = extract_message(message);
 
-       	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR, "%s: Master connection error '%s' in state '%s', "
-		"%sattempting reconnect to master",
-			router->service->name, errmsg,
-			blrm_states[router->master_state], msg)));
-
 	if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED) {
 		/* set mysql_errno */
 		router->m_errno = mysql_errno;
@@ -1061,6 +1197,18 @@ unsigned long mysql_errno;
 		if (router->m_errmsg)
 			free(router->m_errmsg);
 		router->m_errmsg = strdup(errmsg);
+
+	       	LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR, "%s: Master connection error %lu '%s' in state '%s', "
+				"%sattempting reconnect to master",
+				router->service->name, mysql_errno, errmsg,
+				blrm_states[router->master_state], msg)));
+	} else {
+       		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR, "%s: Master connection error %lu '%s' in state '%s', "
+				"%sattempting reconnect to master",
+				router->service->name, router->m_errno, router->m_errmsg,
+				blrm_states[router->master_state], msg)));
 	}
 
 	if (errmsg)
@@ -1070,7 +1218,7 @@ unsigned long mysql_errno;
 		LOGFILE_MESSAGE,
 		"%s: Master %s disconnected after %ld seconds. "
 		"%d events read.",
-		router->service->name, router->master->remote,
+		router->service->name, router->service->dbref->server->name,
 		time(0) - router->connect_time, router->stats.n_binlogs_ses)));
 	blr_master_reconnect(router);
 }
@@ -1307,4 +1455,235 @@ GWBUF		*errbuf = NULL;
         memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
         return dcb->func.write(dcb, errbuf);
+}
+
+/**
+ * Config item handler for the ini file reader
+ *
+ * @param userdata      The config context element
+ * @param section       The config file section
+ * @param name          The Parameter name
+ * @param value         The Parameter value
+ * @return zero on error
+ */
+
+static int
+blr_handler_config(void *userdata, const char *section, const char *name, const char *value)
+{
+ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) userdata;
+SERVICE         *service;
+
+	service = inst->service;
+
+	if (strcasecmp(section, "binlog_configuration") == 0)
+	{
+		return blr_handle_config_item(name, value, inst);
+	} else  {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"Error : master.ini has an invalid section [%s], it should be [binlog_configuration]. Service %s",
+			section,	
+			service->name)));
+
+		return 0;
+	}
+}
+
+/**
+ * Configuration handler for items in the [binlog_configuration] section
+ *
+ * @param name	The item name
+ * @param value	The item value
+ * @param inst	The current router instance
+ * @return 0 on error
+ */
+static  int
+blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst)
+{
+SERVICE         *service;
+
+        service = inst->service;
+
+        if (strcmp(name, "master_host") == 0) {
+                 server_update_address(service->dbref->server, (char *)value);
+
+        } else if (strcmp(name, "master_port") == 0) {
+                server_update_port(service->dbref->server, (short)atoi(value));
+        } else if (strcmp(name, "filestem") == 0) {
+                        free(inst->fileroot);
+                inst->fileroot = strdup(value);
+        }  else if (strcmp(name, "master_user") == 0) {
+                if (inst->user)
+                        free(inst->user);
+                inst->user = strdup(value);
+        } else if (strcmp(name, "master_password") == 0) {
+                if (inst->password)
+                        free(inst->password);
+                inst->password = strdup(value);
+        } else {
+                return 0;
+        }
+
+        return 1;
+}
+
+/**
+ * Add the service user to mysql dbusers (service->users)
+ * via mysql_users_alloc and add_mysql_users_with_host_ipv4
+ * User is added for '%' and 'localhost' hosts
+ *
+ * @param service	The current service
+ * @return		0 on success, 1 on failure
+ */
+static int
+blr_set_service_mysql_user(SERVICE *service) {
+char	*dpwd = NULL;
+char	*newpasswd = NULL;
+char	*service_user = NULL;
+char	*service_passwd = NULL;
+
+	if (serviceGetUser(service, &service_user, &service_passwd) == 0) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"failed to get service user details for service %s",
+			service->name)));
+
+		return 1;
+	}
+
+	dpwd = decryptPassword(service->credentials.authdata);
+
+	if (!dpwd) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"decrypt password failed for service user %s, service %s",
+			service_user,
+			service->name)));
+
+		return 1;
+        }
+
+	newpasswd = create_hex_sha1_sha1_passwd(dpwd);
+
+	if (!newpasswd) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"create hex_sha1_sha1_password failed for service user %s",
+			service_user)));
+
+		return 1;
+	}
+
+	/* add service user for % and localhost */
+	(void)add_mysql_users_with_host_ipv4(service->users, service->credentials.name, "%", newpasswd, "Y", "");
+	(void)add_mysql_users_with_host_ipv4(service->users, service->credentials.name, "localhost", newpasswd, "Y", "");
+
+	free(newpasswd);
+	free(dpwd);
+
+	return 0;
+}
+
+/* -1 is failure, >0 is success */
+int
+blr_load_dbusers(ROUTER_INSTANCE *router)
+{
+int loaded;
+char	path[4097];
+SERVICE *service;
+	service = router->service;
+
+	/* File path for router cached authentication data */
+	strcpy(path, router->binlogdir);
+	strncat(path, "/cache", 4096);
+
+	strncat(path, "/dbusers", 4096);
+
+	/* Try loading dbusers from configured backends */
+	loaded = load_mysql_users(service);
+
+	if (loaded < 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Unable to load users for service %s",
+			service->name)));
+
+		/* Try loading authentication data from file cache */
+
+		loaded = dbusers_load(router->service->users, path);
+
+		if (loaded != -1)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Service %s, Using cached credential information file %s.",
+				service->name,
+				path)));
+		} else {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: Service %s, Unable to read cache credential information from %s.",
+				" No database user added to service users table.",
+				service->name,
+				path)));
+		}
+	} else {
+		/* don't update cache if no user was loaded */
+		if (loaded == 0)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Service %s: failed to load any user "
+				"information. Authentication will "
+				"probably fail as a result.",
+				service->name)));
+		} else {
+			/* update cached data */
+			blr_save_dbusers(router);
+		}
+	}
+
+	/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
+	 * This way MaxScale could try reloading users' just after startup
+	 */
+	service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
+	service->rate_limit.nloads=1;
+
+	return loaded;
+}
+
+/* -1 is error, >= 0 is ok */
+int
+blr_save_dbusers(ROUTER_INSTANCE *router)
+{
+SERVICE *service;
+char	path[4097];
+int	mkdir_rval;
+
+        service = router->service;
+
+        /* File path for router cached authentication data */
+        strcpy(path, router->binlogdir);
+        strncat(path, "/cache", 4096);
+
+	/* check and create dir */
+	if (access(path, R_OK) == -1)
+	{
+		mkdir_rval = mkdir(path, 0700);
+	}
+
+	if (mkdir_rval == -1)
+	{
+		skygw_log_write(LOGFILE_ERROR,
+			"Error : Service %s, Failed to create directory '%s': [%d] %s",
+			service->name,
+			path,
+			errno,
+			strerror(errno));
+
+		return -1;
+	}
+
+	/* set cache file name */
+	strncat(path, "/dbusers", 4096);
+
+	return dbusers_save(service->users, path);
+
 }

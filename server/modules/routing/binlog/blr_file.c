@@ -28,6 +28,8 @@
  * 08/06/2015	Massimiliano Pinto	Addition of blr_cache_read_master_data()
  * 15/06/2015	Massimiliano Pinto	Addition of blr_file_get_next_binlogname()
  * 23/06/2015	Massimiliano Pinto	Addition of blr_file_use_binlog, blr_file_create_binlog
+ * 29/06/2015	Massimiliano Pinto	Addition of blr_file_write_master_config()
+ *					Cache directory is now 'cache' under router->binlogdir
  *
  * @endverbatim
  */
@@ -66,6 +68,7 @@ void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
+int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -95,7 +98,7 @@ struct dirent	*dp;
 		strncat(path, router->service->name,PATH_MAX);
 
 		if (access(path, R_OK) == -1)
-			mkdir(path, 0777);
+			mkdir(path, 0700);
 
 		router->binlogdir = strdup(path);
 	}
@@ -659,6 +662,8 @@ struct	stat	statb;
  * Write the response packet to a cache file so that MaxScale can respond
  * even if there is no master running when MaxScale starts.
  *
+ * cache dir is 'cache' under router->binlogdir
+ *
  * @param router	The instance of the router
  * @param response	The name of the response, used to name the cached file
  * @param buf		The buffer to written to the cache
@@ -669,25 +674,21 @@ blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 char	path[4097], *ptr;
 int	fd;
 
-	strcpy(path, "/usr/local/mariadb-maxscale");
-	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
-	{
-		strncpy(path, ptr, 4096);
-	}
-	strncat(path, "/", 4096);
-	strncat(path, router->service->name, 4096);
+	strncpy(path, router->binlogdir, 4096);
+	strncat(path, "/cache", 4096);
 
-	if (access(path, R_OK) == -1)
-		mkdir(path, 0777);
-	strncat(path, "/.cache", 4096);
-	if (access(path, R_OK) == -1)
-		mkdir(path, 0777);
+	if (access(path, R_OK) == -1) {
+		int mkdir_ret;
+		mkdir_ret = mkdir(path, 0700);
+	}
+
 	strncat(path, "/", 4096);
 	strncat(path, response, 4096);
 
 	if ((fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
 		return;
 	write(fd, GWBUF_DATA(buf), GWBUF_LENGTH(buf));
+
 	close(fd);
 }
 
@@ -695,6 +696,8 @@ int	fd;
  * Read a cached copy of a master response message. This allows
  * the router to start and serve any binlogs it already has on disk
  * if the master is not available.
+ *
+ * cache dir is 'cache' under router->binlogdir
  *
  * @param router	The router instance structure
  * @param response	The name of the response
@@ -708,14 +711,9 @@ char	path[4097], *ptr;
 int	fd;
 GWBUF	*buf;
 
-	strcpy(path, "/usr/local/mariadb-maxscale");
-	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
-	{
-		strncpy(path, ptr, 4096);
-	}
+	strncpy(path, router->binlogdir, 4096);
+	strncat(path, "/cache", 4096);
 	strncat(path, "/", 4096);
-	strncat(path, router->service->name, 4096);
-	strncat(path, "/.cache/", 4096);
 	strncat(path, response, 4096);
 
 	if ((fd = open(path, O_RDONLY)) == -1)
@@ -798,7 +796,9 @@ int	filenum;
 
 	if ((sptr = strrchr(router->binlog_name, '.')) == NULL)
 		return 0;
-	filenum = atoi(sptr+1) + 1;
+	filenum = atoi(sptr+1);
+	if (filenum)
+		filenum++;
 
 	return filenum;
 }
@@ -825,4 +825,74 @@ void
 blr_file_use_binlog(ROUTER_INSTANCE *router, char *file)
 {
 	return blr_file_append(router, file);
+}
+
+/**
+ * Write a new ini file with master configuration
+ *
+ * File is 'inst->binlogdir/master.ini.tmp'
+ * When done it's renamed to 'inst->binlogdir/master.ini'
+ *
+ * @param router	The current router instance
+ * @param error		Preallocated error message
+ * @return		0 on success, >0 on failure
+ *
+ */
+int
+blr_file_write_master_config(ROUTER_INSTANCE *router, char *error) {
+char *master_host;
+int master_port;
+char *filestem;
+char *master_user;
+char *master_password;
+char *section = "binlog_configuration";
+FILE *config_file;
+int rc;
+char path[(PATH_MAX - 15) + 1] = "";
+char filename[(PATH_MAX - 4) + 1] = "";
+char tmp_file[PATH_MAX + 1] = "";
+
+	strncpy(path, router->binlogdir, (PATH_MAX - 15));
+
+	snprintf(filename,(PATH_MAX - 4), "%s/master.ini", path);
+
+	snprintf(tmp_file, (PATH_MAX -4), filename);
+
+	strcat(tmp_file, ".tmp");
+
+	/* get data from current configuration */
+	master_host = router->service->dbref->server->name;
+	master_port = router->service->dbref->server->port;
+	master_user = router->user;
+	master_password= router->password;
+	filestem = router->fileroot;
+
+	/* open file for writing */
+	config_file = fopen(tmp_file,"wb");
+	if (config_file == NULL) {
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror(errno), errno);
+		return 2;
+	}
+
+	/* write ini file section */
+	fprintf(config_file,"[%s]\n", section);
+
+	/* write ini file key=value */
+	fprintf(config_file,"master_host=%s\n", master_host);
+	fprintf(config_file,"master_port=%d\n", master_port);
+	fprintf(config_file,"master_user=%s\n", master_user);
+	fprintf(config_file,"master_password=%s\n", master_password);
+	fprintf(config_file,"filestem=%s\n", filestem);
+
+	fclose(config_file);
+
+	/* rename tmp file to right filename */
+	rc = rename(tmp_file, filename);
+
+	if (rc == -1) {
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror(errno), errno);
+		return 3;
+	}
+
+	return 0;
 }
