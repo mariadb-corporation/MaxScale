@@ -1531,17 +1531,13 @@ int main(int argc, char **argv)
 		/** Use default log directory /var/log/maxscale/ */
 		if(logdir == NULL)
 		{
-
-		    if(access(default_logdir,F_OK) != 0)
-		    {
-			if(mkdir(logdir,0555) != 0)
-			{
-			    fprintf(stderr,
-			     "Error: Cannot create log directory: %s\n",
-			     default_logdir);
-			    goto return_main;
-			}
-		    }
+                    if(mkdir(default_logdir,0777) != 0 && errno != EEXIST)
+                    {
+                        fprintf(stderr,
+                         "Error: Cannot create log directory: %s\n",
+                         default_logdir);
+                        goto return_main;
+                    }
 		    logdir = strdup(default_logdir);
 		}
 
@@ -1598,7 +1594,7 @@ int main(int argc, char **argv)
 	/**
          * Set a data directory for the mysqld library, we use
          * a unique directory name to avoid clauses if multiple
-         * instances of the gateway are beign run on the same
+         * instances of the gateway are being run on the same
          * machine.
          */
 
