@@ -3653,7 +3653,7 @@ static mysql_sescmd_t* rses_property_get_sescmd(
 	if(prop == NULL)
 	{
 	    skygw_log_write(LE,"Error: NULL parameter passed to rses_property_get_sescmd. (%s:%d)",__FILE__,__LINE__);
-	    return;
+	    return NULL;
 	}
 
         CHK_RSES_PROP(prop);
