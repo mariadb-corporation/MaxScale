@@ -319,7 +319,7 @@ static inline bool connect_to_db(MONITOR* mon,MONITOR_SERVERS *database)
 			       0) != NULL);
 }
 
-inline void monitor_mysql100_db(MONITOR_SERVERS* database)
+static inline void monitor_mysql100_db(MONITOR_SERVERS* database)
 {
     bool isslave = false;
     MYSQL_RES* result;
@@ -395,7 +395,7 @@ inline void monitor_mysql100_db(MONITOR_SERVERS* database)
     }
 }
 
-inline void monitor_mysql55_db(MONITOR_SERVERS* database)
+static inline void monitor_mysql55_db(MONITOR_SERVERS* database)
 {
     bool isslave = false;
     MYSQL_RES* result;
@@ -461,7 +461,7 @@ inline void monitor_mysql55_db(MONITOR_SERVERS* database)
     }
 }
 
-inline void monitor_mysql51_db(MONITOR_SERVERS* database)
+static inline void monitor_mysql51_db(MONITOR_SERVERS* database)
 {
     bool isslave = false;
     MYSQL_RES* result;
@@ -515,13 +515,13 @@ inline void monitor_mysql51_db(MONITOR_SERVERS* database)
 static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 {
     MONITOR_SERVERS* database = mon->databases;
+    MONITOR_SERVERS* ptr;
 
     while(database)
     {
 	bool ismaster = false;
 	MYSQL_RES* result;
 	MYSQL_ROW row;
-	unsigned long *slaves;
 	int nslaves = 0;
 	if(database->con)
 	{
@@ -540,12 +540,13 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 		if(mysql_num_rows(result) > 0)
 		{
 		    ismaster = true;
-		    while ((row = mysql_fetch_row(result)))
+		    while (nslaves < MONITOR_MAX_NUM_SLAVES && (row = mysql_fetch_row(result)))
 		    {
 			/* get Slave_IO_Running and Slave_SQL_Running values*/
 			database->server->slaves[nslaves] = atol(row[0]);
 			nslaves++;
 		    }
+		    database->server->slaves[nslaves] = 0;
 		}
 
 		mysql_free_result(result);
@@ -557,6 +558,32 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 	    {
 		monitor_set_pending_status(database, SERVER_MASTER);
 	    }
+	}
+	database = database->next;
+    }
+
+    database = mon->databases;
+
+    /**  */
+    while(database)
+    {
+	ptr = mon->databases;
+
+	while(ptr)
+	{
+	    for(int i = 0;ptr->server->slaves[i];i++)
+	    {
+		if(ptr->server->slaves[i] == database->server->node_id)
+		{
+		    database->server->master_id = ptr->server->node_id;
+		    break;
+		}
+	    }
+	    ptr = ptr->next;
+	}
+	if(database->server->master_id <= 0)
+	{
+	    monitor_set_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
 	}
 	database = database->next;
     }
@@ -575,14 +602,12 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     MYSQL_RES	  *result;
     int               isslave = 0;
     char		  *uname  = mon->user;
-    char              *passwd = mon->password;
     unsigned long int server_version = 0;
     char 		  *server_string;
 
     if (database->server->monuser != NULL)
     {
 	uname = database->server->monuser;
-	passwd = database->server->monpw;
     }
 
     if (uname == NULL)
