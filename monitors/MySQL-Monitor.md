@@ -98,6 +98,14 @@ A list of event names which cause the script to be executed. If this option is n
 events=master_down,slave_down
 ```
 
+### `mysql51_only`
+
+Enable support for MySQL 5.1 replication monitoring. This is needed if a MySQL server older than 5.5 is used as a slave in replication.
+
+```
+mysql51_only=true
+```
+
 ## Script events
 
 Here is a table of all possible event types and their descriptions.
