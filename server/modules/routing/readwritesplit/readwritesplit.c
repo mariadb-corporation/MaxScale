@@ -5161,7 +5161,8 @@ static int router_handle_state_switch(
         backend_ref_t*     bref;
         int                rc = 1;
         SERVER*            srv;
-        
+	ROUTER_CLIENT_SES* rses;
+        SESSION*           ses;
         CHK_DCB(dcb);
         bref = (backend_ref_t *)data;
         CHK_BACKEND_REF(bref);
@@ -5180,8 +5181,10 @@ static int router_handle_state_switch(
 			srv->name,
 			srv->port,
 				STRSRVSTATUS(srv))));
-        CHK_SESSION(dcb->session);
-        CHK_CLIENT_RSES(dcb->session->router_session);
+	ses = dcb->session;
+        CHK_SESSION(ses);
+	rses = (ROUTER_CLIENT_SES *)dcb->session->router_session;
+        CHK_CLIENT_RSES(rses);
 
         switch (reason) {
                 case DCB_REASON_NOT_RESPONDING:
