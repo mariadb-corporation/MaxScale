@@ -64,7 +64,7 @@ Here are detailed documents about the filters MaxScale offers. They contain conf
 
 ## Routers
 
- - [Simple Schema Sharding Router](routers/schemarouter/SchemaRouter.md)
+ - [Simple Schema Sharding Router](routers/SchemaRouter.md)
 
 ## Design Documents
 
