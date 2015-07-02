@@ -512,10 +512,18 @@ static inline void monitor_mysql51_db(MONITOR_SERVERS* database)
     }
 }
 
+/**
+ * Build the replication tree for a MySQL 5.1 cluster
+ *
+ * This function queries each server with SHOW SLAVE HOSTS to determine which servers
+ * have slaves replicating from them.
+ * @param mon Monitor
+ * @return Lowest server ID master in the monitor
+ */
 static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 {
     MONITOR_SERVERS* database = mon->databases;
-    MONITOR_SERVERS* ptr;
+    MONITOR_SERVERS *ptr,*rval = NULL;
 
     while(database)
     {
@@ -534,7 +542,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 		    skygw_log_write(LE,"Error: \"SHOW SLAVE HOSTS\" "
 			    "returned less than the expected amount of columns. Expected 4 columns."
 			    " MySQL Version: %s",version_str);
-		    return;
+		    return NULL;
 		}
 
 		if(mysql_num_rows(result) > 0)
@@ -557,6 +565,8 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 	    if (ismaster)
 	    {
 		monitor_set_pending_status(database, SERVER_MASTER);
+		if(rval == NULL || rval->server->node_id > database->server->node_id)
+		    rval = database;
 	    }
 	}
 	database = database->next;
@@ -587,6 +597,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 	}
 	database = database->next;
     }
+    return rval;
 }
 /**
  * Monitor an individual server
