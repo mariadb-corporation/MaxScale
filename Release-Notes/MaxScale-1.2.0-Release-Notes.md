@@ -34,7 +34,7 @@ State changes in backend servers can now trigger the execution of a custom scrip
 
 Here is a list of bugs fixed since the release of MaxScale 1.1.1.
 |Key|Summary|
-------------
+|---|--------|
 |[MXS-24](https://mariadb.atlassian.net/browse/MXS-24)|bugzillaId-604: Module load path documentation issues ...|
 |[MXS-40](https://mariadb.atlassian.net/browse/MXS-40)|Display logged in users|
 |[MXS-113](https://mariadb.atlassian.net/browse/MXS-113)|MaxScale seems to fail if built against MariaDB 10.0 libraries|
