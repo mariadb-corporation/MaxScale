@@ -772,6 +772,10 @@ createInstance(SERVICE *service, char **options)
 	    {
 		router->schemarouter_config.refresh_min_interval = atof(value);
 	    }
+	    else if(strcmp(options[i],"debug") == 0)
+	    {
+		router->schemarouter_config.debug = config_truth_value(value);
+	    }
 	    else
 	    {
 		skygw_log_write(LOGFILE_ERROR,"Error: Unknown router options for Schemarouter: %s",options[i]);
@@ -2060,6 +2064,10 @@ static int routeQuery(
 		}
 		extract_database(querybuf,db);
 		snprintf(errbuf,25+MYSQL_DATABASE_MAXLEN,"Unknown database: %s",db);
+		if(router_cli_ses->rses_config.debug)
+		{
+		    sprintf(errbuf + strlen(errbuf)," ([%lu]: DB change failed)",router_cli_ses->rses_client_dcb->session->ses_id);
+		}
 		GWBUF* error = modutil_create_mysql_err_msg(1, 0, 1049, "42000", errbuf);
 
 		if (error == NULL)
@@ -2610,7 +2618,12 @@ static void clientReply (
                                               router_cli_ses->connect_db);
 			char errmsg[128 + MYSQL_DATABASE_MAXLEN+1];
 			sprintf(errmsg,"Unknown database '%s'",router_cli_ses->connect_db);
+			if(router_cli_ses->rses_config.debug)
+			{
+			    sprintf(errmsg + strlen(errmsg)," ([%lu]: DB not found on connect)",router_cli_ses->rses_client_dcb->session->ses_id);
+			}
 			GWBUF* errbuff = modutil_create_mysql_err_msg(1,0,1049,"42000",errmsg);
+
 			router_cli_ses->rses_client_dcb->func.write(router_cli_ses->rses_client_dcb,errbuff);
                         if(router_cli_ses->queue)
 			{
@@ -4274,30 +4287,7 @@ static bool handle_error_new_connection(
             succp = false;
             goto return_succp;
         }
-        
-        rses->init |= INIT_MAPPING;
 
-        for(i = 0;i<rses->rses_nbackends;i++)
-        {
-            bref_clear_state(&rses->rses_backend_ref[i],BREF_DB_MAPPED);
-	    rses->rses_backend_ref[i].n_mapping_eof = 0;
-        }
-        
-        HASHITERATOR* iter  = hashtable_iterator(rses->dbhash);
-        char* srvnm = bref->bref_backend->backend_server->unique_name;
-        char *key, *value;
-        while((key = (char*)hashtable_next(iter)))
-        {
-            value = hashtable_fetch(rses->dbhash,key);
-            if(strcmp(value,srvnm) == 0)
-            {
-                hashtable_delete(rses->dbhash,key);
-            }
-        }
-        
-        skygw_log_write(LOGFILE_TRACE,"schemarouter: Re-mapping databases");
-        gen_databaselist(rses->router,rses);
-	hashtable_iterator_free(iter);
 return_succp:
 	return succp;        
 }
