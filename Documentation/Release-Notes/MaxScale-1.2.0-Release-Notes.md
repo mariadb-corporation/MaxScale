@@ -29,3 +29,27 @@ MaxScale now supports SSL/TLS encrypted connections to MaxScale.
 
 ### Monitor scripts
 State changes in backend servers can now trigger the execution of a custom script. With this you can easily customize MaxScale's behavior.
+
+## Bug fixes
+
+Here is a list of bugs fixed since the release of MaxScale 1.1.1.
+|Key|Summary|
+|[MXS-24](https://mariadb.atlassian.net/browse/MXS-24)|bugzillaId-604: Module load path documentation issues ...|
+|[MXS-40](https://mariadb.atlassian.net/browse/MXS-40)|Display logged in users|
+|[MXS-113](https://mariadb.atlassian.net/browse/MXS-113)|MaxScale seems to fail if built against MariaDB 10.0 libraries|
+|[MXS-116](https://mariadb.atlassian.net/browse/MXS-116)|Do not run maxscale as root.|
+|[MXS-125](https://mariadb.atlassian.net/browse/MXS-125)|inconsistency in maxkeys/maxpassword output and parameters|
+|[MXS-136](https://mariadb.atlassian.net/browse/MXS-136)|Check for MaxScale replication heartbeat table existence before creating|
+|[MXS-137](https://mariadb.atlassian.net/browse/MXS-137)|cannot get sql for queries with length >= 0x80|
+|[MXS-139](https://mariadb.atlassian.net/browse/MXS-139)|Schemarouter authentication for wildcard grants fails without optimize_wildcard|
+|[MXS-140](https://mariadb.atlassian.net/browse/MXS-140)|strip_db_esc does not work without auth_all_servers|
+|[MXS-162](https://mariadb.atlassian.net/browse/MXS-162)|Fix Incorrect info in Configuration Guide|
+|[MXS-163](https://mariadb.atlassian.net/browse/MXS-163)|Reload config leaks memory|
+|[MXS-165](https://mariadb.atlassian.net/browse/MXS-165)|Concurrency issue while incrementing sessions in qlafilter|
+|[MXS-166](https://mariadb.atlassian.net/browse/MXS-166)|Memory leak when creating a new event|
+|[MXS-171](https://mariadb.atlassian.net/browse/MXS-171)|Allow reads on master for readwritesplit|
+|[MXS-176](https://mariadb.atlassian.net/browse/MXS-176)|Missing dependencies in documentation|
+|[MXS-181](https://mariadb.atlassian.net/browse/MXS-181)|Poor performance on TCP connection due to Nagle's algoritm|
+|[MXS-212](https://mariadb.atlassian.net/browse/MXS-212)|Stopped services accept connections|
+|[MXS-225](https://mariadb.atlassian.net/browse/MXS-225)|RPM Debug build packages have no debugging symbols|
+|[MXS-227](https://mariadb.atlassian.net/browse/MXS-227)|Memory leak in Galera Monitor|
