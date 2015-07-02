@@ -30,6 +30,10 @@ fi
 
 sed -i "s/###threads###/$threads/"  MaxScale.cnf
 
+if [ $mysql51_only == "yes" ] ; then
+	sed -i "s/module=mysqlmon/module=mysqlmon\nmysql51_only=true/"  MaxScale.cnf
+fi
+
 for prefix in "repl" "galera"
 do
 	N_var="$prefix"_N
