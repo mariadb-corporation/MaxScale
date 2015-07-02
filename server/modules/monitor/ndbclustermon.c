@@ -323,6 +323,14 @@ char 			*server_string;
 	if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
+		if(mysql_field_count(database->con) < 2)
+		{
+		    mysql_free_result(result);
+		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'\". Expected 2 columns."
+				    " MySQL Version: %s",version_str);
+		    return;
+		}
+
 		while ((row = mysql_fetch_row(result)))
 		{
 			if (atoi(row[1]) > 0)
@@ -335,6 +343,14 @@ char 			*server_string;
 	if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_cluster_node_id'") == 0
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
+		if(mysql_field_count(database->con) < 2)
+		{
+		    mysql_free_result(result);
+		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'Ndb_cluster_node_id'\". Expected 2 columns."
+				    " MySQL Version: %s",version_str);
+		    return;
+		}
+
 		long cluster_node_id = -1;
 		while ((row = mysql_fetch_row(result)))
 		{

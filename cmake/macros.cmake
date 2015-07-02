@@ -20,6 +20,9 @@ endmacro()
 
 macro(set_variables)
 
+  # Use C99
+  set(USE_C99 FALSE CACHE BOOL "Use C99 standard")
+
   # hostname or IP address of MaxScale's host
   set(TEST_HOST "127.0.0.1" CACHE STRING "hostname or IP address of MaxScale's host")
 

@@ -93,6 +93,13 @@ disable_sescmd_history=true
 disable_slave_recovery=true
 ```
 
+**`master_accept_reads`** allows the master server to be used for reads. This is a useful option to enable if you are using a small number of servers and wish to use the master for reads as well.
+
+```
+# Use the master for reads
+master_accept_reads=true
+```
+
 ## Limitations
 
 In Master-Slave replication cluster also read-only queries are routed to master too in the following situations:

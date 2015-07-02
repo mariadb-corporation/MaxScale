@@ -1842,18 +1842,6 @@ char *mysql_format_user_entry(void *data)
         return mysql_user;
 }
 
-/*
- * The hash function we use for storing MySQL database names.
- *
- * @param key	The key value
- * @return	The hash key
- */
-int
-resource_hash(char *key)
-{
-        return (*key + *(key + 1));
-}
-
 /**
  * Remove the resources table
  *
@@ -1877,7 +1865,7 @@ resource_alloc()
 {
 HASHTABLE       *resources;
 
-        if ((resources = hashtable_alloc(10, resource_hash, strcmp)) == NULL)
+        if ((resources = hashtable_alloc(10, simple_str_hash, strcmp)) == NULL)
         {
                 return NULL;
         }

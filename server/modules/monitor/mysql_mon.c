@@ -408,6 +408,13 @@ char 		  *server_string;
                 && (result = mysql_store_result(database->con)) != NULL)
         {
                 long server_id = -1;
+		if(mysql_field_count(database->con) != 1)
+		{
+		    mysql_free_result(result);
+		    skygw_log_write(LE,"Error: Unexpected result for \"SELECT @@server_id\". Expected 1 columns."
+				    " MySQL Version: %s",version_str);
+		    return;
+		}
                 while ((row = mysql_fetch_row(result)))
                 {
                         server_id = strtol(row[0], NULL, 10);
@@ -433,6 +440,16 @@ char 		  *server_string;
 		{
 			int i = 0;
 			long master_id = -1;
+
+			if(mysql_field_count(database->con) < 42)
+			{
+			    mysql_free_result(result);
+			    skygw_log_write(LE,"Error: \"SHOW ALL SLAVES STATUS\" "
+				    "returned less than the expected amount of columns. Expected 42 columns."
+				    " MySQL Version: %s",version_str);
+			    return;
+			}
+
 			while ((row = mysql_fetch_row(result)))
 			{
 				/* get Slave_IO_Running and Slave_SQL_Running values*/
@@ -471,6 +488,29 @@ char 		  *server_string;
 			&& (result = mysql_store_result(database->con)) != NULL)
 		{
 			long master_id = -1;
+			if(mysql_field_count(database->con) < 40)
+			{
+			    mysql_free_result(result);
+			    if(server_version < 5*10000 + 5*100)
+			    {
+				if(database->log_version_err)
+				{
+				    skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
+					    " for versions less than 5.5 does not have master_server_id, "
+					    "replication tree cannot be resolved for server %s."
+					    " MySQL Version: %s",database->server->unique_name,version_str);
+				    database->log_version_err = false;
+				}
+			    }
+			    else
+			    {
+				skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
+					"returned less than the expected amount of columns. Expected 40 columns."
+					" MySQL Version: %s",version_str);
+			    }
+			    return;
+			}
+
 			while ((row = mysql_fetch_row(result)))
 			{
 				/* get Slave_IO_Running and Slave_SQL_Running values*/
