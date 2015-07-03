@@ -208,6 +208,8 @@ static void handle_error_reply_client(
 static SPINLOCK	        instlock;
 static ROUTER_INSTANCE* instances;
 
+bool detect_show_shards(GWBUF* query);
+int process_show_shards(ROUTER_CLIENT_SES* rses);
 static int hashkeyfun(void* key);
 static int hashcmpfun (void *, void *);
 
@@ -1954,6 +1956,13 @@ static int routeQuery(
 	if (querybuf->next != NULL)
 	{
 		querybuf = gwbuf_make_contiguous(querybuf);
+	}
+
+	if(detect_show_shards(querybuf))
+	{
+	    process_show_shards(router_cli_ses);
+	    ret = 1;
+	    goto retblock;
 	}
 
         switch(packet_type) {
@@ -4402,4 +4411,86 @@ static sescmd_cursor_t* backend_ref_get_sescmd_cursor (
         return scur;
 }
 
+/**
+ * Detect if a query contains a SHOW SHARDS query.
+ * @param query Query to inspect
+ * @return true if the query is a SHOW SHARDS query otherwise false
+ */
+bool detect_show_shards(GWBUF* query)
+{
+    bool rval = false;
+    char* querystr;
 
+    if(query == NULL)
+    {
+	skygw_log_write(LE,"Fatal Error: NULL value passed at %s:%d",__FILE__,__LINE__);
+	return false;
+    }
+
+    if (!modutil_is_SQL(query) && !modutil_is_SQL_prepare(query))
+    {
+	return false;
+    }
+
+    if((querystr = modutil_get_SQL(query)) == NULL)
+    {
+	skygw_log_write(LE,"Fatal Error: failure to parse SQL at  %s:%d",__FILE__,__LINE__);
+	return false;
+    }
+
+    if(strcasestr(querystr,"show shards") != NULL)
+    {
+	rval = true;
+    }
+
+    free(querystr);
+    return rval;
+}
+
+struct shard_list{
+    HASHITERATOR* iter;
+    ROUTER_CLIENT_SES* rses;
+    RESULTSET* rset;
+};
+
+/**
+ * Callback for the shard list result set creation
+ */
+RESULT_ROW* shard_list_cb(struct resultset* rset, void* data)
+{
+    char *key,*value;
+    struct shard_list *sl = (struct shard_list*)data;
+    RESULT_ROW* rval = NULL;
+
+    if((key = hashtable_next(sl->iter)) &&
+       (value = hashtable_fetch(sl->rses->dbhash,key)))
+    {
+	if((rval = resultset_make_row(sl->rset)))
+	{
+	    resultset_row_set(rval,0,key);
+	    resultset_row_set(rval,1,value);
+	}
+    }
+    return rval;
+}
+
+/**
+ * Send a result set of all shards and their locations to the client.
+ * @param rses Router client session
+ * @return 0 on success, -1 on error
+ */
+int process_show_shards(ROUTER_CLIENT_SES* rses)
+{
+    HASHITERATOR* iter = hashtable_iterator(rses->dbhash);
+    struct shard_list sl;
+
+    sl.iter = iter;
+    sl.rses = rses;
+    sl.rset = resultset_create(shard_list_cb,&sl);
+    resultset_add_column(sl.rset,"Database",MYSQL_DATABASE_MAXLEN,COL_TYPE_VARCHAR);
+    resultset_add_column(sl.rset,"Server",MYSQL_DATABASE_MAXLEN,COL_TYPE_VARCHAR);
+    resultset_stream_mysql(sl.rset,rses->rses_client_dcb);
+    resultset_free(sl.rset);
+    hashtable_iterator_free(iter);
+    return 0;
+}
