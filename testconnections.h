@@ -124,6 +124,16 @@ public:
     char kill_vm_command[4096];
 
     /**
+     * @brief start_db_command Command to start DB server
+     */
+    char start_db_command[4096];
+
+    /**
+     * @brief stort_db_command Command to start DB server
+     */
+    char stop_db_command[4096];
+
+    /**
      * @brief GetLogsCommand    Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
      */
     char get_logs_command[4096];

@@ -151,7 +151,7 @@ int Mariadb_nodes::stop_nodes()
         printf("Stopping slave %d\n", i); fflush(stdout);
         global_result += execute_query(nodes[i], (char *) "stop slave;");
         printf("Stopping %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", sshkey[i], IP[i]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s'", sshkey[i], IP[i], stop_db_command);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
@@ -182,13 +182,13 @@ int Mariadb_nodes::start_replication()
     global_result += stop_nodes();
 
     printf("Starting back Master\n");  fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", sshkey[0], IP[0]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s'", sshkey[0], IP[0], start_db_command);
     printf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1); fflush(stdout);
 
     for (i = 1; i < N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start '", sshkey[i], IP[i]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s '", sshkey[i], IP[i], start_db_command);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
@@ -218,13 +218,13 @@ int Mariadb_nodes::start_galera()
     global_result += stop_nodes();
 
     printf("Starting new Galera cluster\n");  fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://'", sshkey[0], IP[0]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s --wsrep-cluster-address=gcomm://'", sshkey[0], IP[0], start_db_command);
     printf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1); fflush(stdout);
 
     for (i = 1; i < N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://%s'", sshkey[i], IP[i], IP[0]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s --wsrep-cluster-address=gcomm://%s'", sshkey[i], IP[i], start_db_command, IP[0]);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }

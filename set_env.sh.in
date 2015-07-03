@@ -99,6 +99,15 @@ export repl_start_vm_command="/home/ec2-user/test-scripts/start_vm.sh"
 export galera_kill_vm_command="/home/ec2-user/test-scripts/kill_vm.sh"
 export galera_start_vm_command="/home/ec2-user/test-scripts/start_vm.sh"
 
+export start_db_command="/etc/inid.d/mysql start"
+export stop_db_command="/etc/inid.d/mysql stop"
+
+if [ $mysql51_only == "yes" ] ; then 
+	export start_db_command="/etc/inid.d/mysqld start"
+	export stop_db_command="/etc/inid.d/mysqld stop"
+fi
+
+
 # command to download logs from MaxScale machine
 export get_logs_command="$test_dir/get_logs.sh"
 

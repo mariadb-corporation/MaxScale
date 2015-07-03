@@ -128,6 +128,8 @@ int TestConnections::read_env()
     env = getenv("kill_vm_command"); if (env != NULL) {sprintf(kill_vm_command, "%s", env);}
     env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
     env = getenv("start_vm_command"); if (env != NULL) {sprintf(start_vm_command, "%s", env);}
+    env = getenv("start_db_command"); if (env != NULL) {sprintf(start_db_command, "%s", env);}
+    env = getenv("stop_db_command"); if (env != NULL) {sprintf(stop_db_command, "%s", env);}
     env = getenv("sysbench_dir"); if (env != NULL) {sprintf(sysbench_dir, "%s", env);}
 
     env = getenv("maxdir"); if (env != NULL) {sprintf(maxdir, "%s", env);}
@@ -140,6 +142,11 @@ int TestConnections::read_env()
     ssl = false;
     env = getenv("ssl"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {ssl = true;}
     env = getenv("mysql51_only"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {no_nodes_check = true;}
+
+    strcpy(galera->start_db_command, start_db_command);
+    strcpy(galera->stop_db_command, stop_db_command);
+    strcpy(repl->start_db_command, start_db_command);
+    strcpy(repl->stop_db_command, stop_db_command);
 
 
 }
@@ -283,13 +290,13 @@ int TestConnections::start_binlog()
     global_result +=  system(sys1);
 
     printf("Starting back Master\n");  fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin  %s'", repl->sshkey[0], repl->IP[0], cmd_opt);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s --log-bin  %s'", repl->sshkey[0], repl->IP[0], start_db_command, cmd_opt);
     printf("%s\n", sys1);  fflush(stdout);
     global_result += system(sys1); fflush(stdout);
 
     for (i = 1; i < repl->N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --log-bin  %s'", repl->sshkey[i], repl->IP[i], cmd_opt);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s --log-bin  %s'", repl->sshkey[i], repl->IP[i], start_db_command, cmd_opt);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
@@ -355,7 +362,7 @@ int TestConnections::start_mm()
 
     for (i = 0; i < 2; i++) {
         printf("Starting back node %d\n", i);  fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start'", repl->sshkey[i], repl->IP[i]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s'", repl->sshkey[i], repl->IP[i], start_db_command);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
