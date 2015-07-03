@@ -4419,7 +4419,7 @@ static sescmd_cursor_t* backend_ref_get_sescmd_cursor (
 bool detect_show_shards(GWBUF* query)
 {
     bool rval = false;
-    char* querystr;
+    char *querystr,*tok,*sptr;
 
     if(query == NULL)
     {
@@ -4438,9 +4438,12 @@ bool detect_show_shards(GWBUF* query)
 	return false;
     }
 
-    if(strcasestr(querystr,"show shards") != NULL)
+    tok = strtok_r(querystr," ",&sptr);
+    if(tok && strcasecmp(tok,"show") == 0)
     {
-	rval = true;
+	tok = strtok_r(NULL," ",&sptr);
+	if(tok && strcasecmp(tok,"shards") == 0)
+	    rval = true;
     }
 
     free(querystr);
