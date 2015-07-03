@@ -17,7 +17,7 @@ TestConnections::TestConnections(int argc, char *argv[])
 
     no_maxscale_stop = false;
     no_maxscale_start = false;
-    no_nodes_check = false;
+    //no_nodes_check = false;
 
     int c;
     bool run_flag = true;
