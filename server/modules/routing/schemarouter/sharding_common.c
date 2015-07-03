@@ -46,7 +46,7 @@ bool extract_database(GWBUF* buf, char* str)
 	tok = strtok_r(query," ;",&saved);
 	if(tok == NULL || strcasecmp(tok,"use") != 0)
 	{
-	    skygw_log_write(LOGFILE_ERROR,"Schemarouter: Malformed chage database packet.");
+	    skygw_log_write(LOGFILE_ERROR,"extract_database: Malformed chage database packet.");
 	    succp = false;
 	    goto retblock;
 	}
@@ -54,7 +54,7 @@ bool extract_database(GWBUF* buf, char* str)
 	tok = strtok_r(NULL," ;",&saved);
 	if(tok == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR,"Schemarouter: Malformed chage database packet.");
+	    skygw_log_write(LOGFILE_ERROR,"extract_database: Malformed chage database packet.");
 	    succp = false;
 	    goto retblock;
 	}
