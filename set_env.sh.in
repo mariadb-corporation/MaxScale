@@ -99,12 +99,12 @@ export repl_start_vm_command="/home/ec2-user/test-scripts/start_vm.sh"
 export galera_kill_vm_command="/home/ec2-user/test-scripts/kill_vm.sh"
 export galera_start_vm_command="/home/ec2-user/test-scripts/start_vm.sh"
 
-export start_db_command="/etc/inid.d/mysql start"
-export stop_db_command="/etc/inid.d/mysql stop"
+export start_db_command="/etc/init.d/mysql start"
+export stop_db_command="/etc/init.d/mysql stop"
 
 if [ $mysql51_only == "yes" ] ; then 
-	export start_db_command="/etc/inid.d/mysqld start"
-	export stop_db_command="/etc/inid.d/mysqld stop"
+	export start_db_command="/etc/init.d/mysqld start"
+	export stop_db_command="/etc/init.d/mysqld stop"
 fi
 
 
