@@ -84,10 +84,6 @@ static	SPINLOCK	dcbspin = SPINLOCK_INIT;
 static	SPINLOCK	zombiespin = SPINLOCK_INIT;
 
 static void dcb_final_free(DCB *dcb);
-static bool dcb_set_state_nomutex(
-        DCB*              dcb,
-        const dcb_state_t new_state,
-        dcb_state_t*      old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static DCB* dcb_get_next (DCB* dcb);
 static int  dcb_null_write(DCB *dcb, GWBUF *buf);
@@ -291,8 +287,7 @@ dcb_add_to_zombieslist(DCB *dcb)
          * Set state which indicates that it has been added to zombies
          * list.
          */
-        succp = dcb_set_state(dcb, DCB_STATE_ZOMBIE, &prev_state);
-        ss_info_dassert(succp, "Failed to set DCB_STATE_ZOMBIE");
+        dcb->state = DCB_STATE_ZOMBIE;
         
 	spinlock_release(&zombiespin);
 }
@@ -604,7 +599,7 @@ bool    succp = false;
 			&tls_log_info.li_sesid, 
 			&tls_log_info.li_enabled_logs)));
 
-                succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb->state = DCB_STATE_DISCONNECTED;
                 ss_dassert(succp);
 		dcb_next = dcb->memdata.next;
                 dcb_final_free(dcb);
@@ -644,7 +639,7 @@ int             rc;
 	if ((funcs = (GWPROTOCOL *)load_module(protocol,
                                                MODULE_PROTOCOL)) == NULL)
 	{
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb->state = DCB_STATE_DISCONNECTED;
 		dcb_final_free(dcb);
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -682,7 +677,7 @@ int             rc;
                         dcb,
                         session->client,
                         session->client->fd)));
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb->state = DCB_STATE_DISCONNECTED;
                 dcb_final_free(dcb);
                 return NULL;
 	} else {
@@ -725,7 +720,7 @@ int             rc;
         rc = poll_add_dcb(dcb);
 
         if (rc) {
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb->state = DCB_STATE_DISCONNECTED;
                 dcb_final_free(dcb);
                 return NULL;
         }
@@ -1920,7 +1915,7 @@ dcb_drain_writeq_SSL(DCB *dcb)
 }
 
 /** 
- * Removes dcb from poll set, and adds it to zombies list. As a consequense,
+ * Removes dcb from poll set, and adds it to zombies list. As a consequence,
  * dcb first moves to DCB_STATE_NOPOLLING, and then to DCB_STATE_ZOMBIE state.
  * At the end of the function state may not be DCB_STATE_ZOMBIE because once
  * dcb_initlock is released parallel threads may change the state.
@@ -1947,7 +1942,6 @@ dcb_close(DCB *dcb)
          */
         if (dcb->state == DCB_STATE_ALLOC)
         {
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 dcb_final_free(dcb);
                 return;
         }
@@ -2339,188 +2333,6 @@ void dcb_hashtable_stats(
 		"\tAverage chain length:	%.1f\n", 
 		(hashsize == 0 ? (float)hashsize : (float)total / hashsize));
 	dcb_printf(dcb, "\tLongest chain length:	%d\n", longest);
-}
-
-
-bool dcb_set_state(
-        DCB*              dcb,
-        const dcb_state_t new_state,
-        dcb_state_t*      old_state)
-{
-        bool              succp;
-        dcb_state_t       state ;
-        
-        CHK_DCB(dcb);
-        spinlock_acquire(&dcb->dcb_initlock);
-        succp = dcb_set_state_nomutex(dcb, new_state, &state);
-        
-        spinlock_release(&dcb->dcb_initlock);
-
-        if (old_state != NULL) {
-                *old_state = state;
-        }
-        return succp;
-}
-
-void dcb_revert_state(
-        DCB*              dcb,
-        const dcb_state_t new_state,
-        dcb_state_t       old_state)
-{
-        CHK_DCB(dcb);
-        spinlock_acquire(&dcb->dcb_initlock);
-
-        if ((DCB_STATE_POLLING == new_state || DCB_STATE_LISTENING == new_state) && (DCB_STATE_ALLOC == old_state || DCB_STATE_NOPOLLING == old_state))
-        {
-            dcb->state = old_state;
-            spinlock_release(&dcb->dcb_initlock);
-            return;
-        }
-        else assert(false);
-}
-
-static bool dcb_set_state_nomutex(
-        DCB*              dcb,
-        const dcb_state_t new_state,
-        dcb_state_t*      old_state)
-{
-        bool        succp = false;
-        dcb_state_t state = DCB_STATE_UNDEFINED;
-        
-        CHK_DCB(dcb);
-
-        state = dcb->state;
-        
-        if (old_state != NULL) {
-                *old_state = state;
-        }
-        
-        switch (state) {
-        case DCB_STATE_UNDEFINED:
-                dcb->state = new_state;
-                succp = true;
-                break;
-
-        case DCB_STATE_ALLOC:
-                switch (new_state) {
-			/** fall through, for client requests */
-			case DCB_STATE_POLLING: 
-			/** fall through, for connect listeners */
-			case DCB_STATE_LISTENING: 
-			/** for failed connections */
-			case DCB_STATE_DISCONNECTED: 
-				dcb->state = new_state;
-				succp = true;
-				break;
-			default:                        
-				ss_dassert(old_state != NULL);
-				break;
-                }
-                break;
-                
-        case DCB_STATE_POLLING:
-                switch(new_state) {
-			case DCB_STATE_NOPOLLING:
-				dcb->state = new_state;
-				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
-                }
-                break;
-
-        case DCB_STATE_LISTENING:
-                switch(new_state) {
-			case DCB_STATE_NOPOLLING:
-				dcb->state = new_state;
-				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
-                }
-                break;
-                
-        case DCB_STATE_NOPOLLING:
-                switch (new_state) {
-		    /** Stopped services which are restarting will go from
-		     *  DCB_STATE_NOPOLLING to DCB_STATE_LISTENING.*/
-			case DCB_STATE_LISTENING:
-			case DCB_STATE_ZOMBIE: /*< fall through */
-				dcb->state = new_state;
-			case DCB_STATE_POLLING: /*< ok to try but state can't change */
-				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
-                }
-                break;
-
-        case DCB_STATE_ZOMBIE:
-                switch (new_state) {
-			case DCB_STATE_DISCONNECTED: /*< fall through */
-				dcb->state = new_state;
-			case DCB_STATE_POLLING: /*< ok to try but state can't change */
-				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
-                }
-                break;
-
-        case DCB_STATE_DISCONNECTED:
-                switch (new_state) {
-			case DCB_STATE_FREED:
-				dcb->state = new_state;
-				succp = true;
-				break;
-			default:
-				ss_dassert(old_state != NULL);
-				break;
-                }
-                break;
-
-        case DCB_STATE_FREED:
-                ss_dassert(old_state != NULL);
-                break;
-                
-        default:
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unknown dcb state %s for "
-                        "dcb %p",
-                        STRDCBSTATE(dcb->state),
-                        dcb)));
-                ss_dassert(false);
-                break;
-        } /*< switch (dcb->state) */
-
-        if (succp) {
-                LOGIF(LD, (skygw_log_write_flush(
-                        LOGFILE_DEBUG,
-                        "%lu [dcb_set_state_nomutex] dcb %p fd %d %s -> %s",
-                        pthread_self(),
-                        dcb,
-                        dcb->fd,
-                        STRDCBSTATE(state),
-                        STRDCBSTATE(dcb->state))));
-        }
-        else
-        {
-                LOGIF(LD, (skygw_log_write(
-                                   LOGFILE_DEBUG,
-                                   "%lu [dcb_set_state_nomutex] Failed "
-                                   "to change state of DCB %p. "
-                                   "Old state %s > new state %s.",
-                                   pthread_self(),
-                                   dcb,
-				   (old_state == NULL ? "NULL" : STRDCBSTATE(*old_state)),
-                                   STRDCBSTATE(new_state))));
-        }
-        return succp;
 }
 
 /**

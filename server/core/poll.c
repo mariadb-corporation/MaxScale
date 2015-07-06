@@ -189,7 +189,7 @@ static void	poll_loadav(void *);
 /**
  * Function to analyse error return from epoll_ctl
  */
-static int poll_resolve_error(int, bool);
+static int poll_resolve_error(DCB *, int, bool);
 
 /**
  * Initialise the polling system we are using for the gateway.
@@ -252,7 +252,7 @@ int
 poll_add_dcb(DCB *dcb)
 {
         int         rc = -1;
-        dcb_state_t old_state = DCB_STATE_UNDEFINED;
+        dcb_state_t old_state = dcb->state;
         dcb_state_t new_state;
         struct	epoll_event	ev;
 
@@ -268,47 +268,71 @@ poll_add_dcb(DCB *dcb)
         /*<
          * Choose new state according to the role of dcb.
          */
+        spinlock_acquire(&dcb->dcb_initlock);
         if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER) {
                 new_state = DCB_STATE_POLLING;
         } else {
                 ss_dassert(dcb->dcb_role == DCB_ROLE_SERVICE_LISTENER);
                 new_state = DCB_STATE_LISTENING;
         }
+        /*
+         * Check DCB current state seems sensible
+         */
+        if (DCB_STATE_DISCONNECTED == dcb->state
+            || DCB_STATE_ZOMBIE == dcb->state
+            || DCB_STATE_UNDEFINED == dcb->state)
+        {
+            LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "%lu [poll_add_dcb] Error : existing state of dcb %p "
+                "is %s, but this should be impossible, crashing.",
+                pthread_self(),
+                dcb,
+                STRDCBSTATE(dcb->state))));
+            assert(false);
+        }
+        if (DCB_STATE_POLLING == dcb->state
+            || DCB_STATE_LISTENING == dcb->state)
+        {
+            LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "%lu [poll_add_dcb] Error : existing state of dcb %p "
+                "is %s, but this is probably an error, not crashing.",
+                pthread_self(),
+                dcb,
+                STRDCBSTATE(dcb->state))));
+        }
         /*<
          * If dcb is in unexpected state, state change fails indicating that dcb
          * is not polling anymore.
          */
-        if (dcb_set_state(dcb, new_state, &old_state)) {
-                rc = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, dcb->fd, &ev);
-                if (rc) rc = poll_resolve_error(errno, true);
-                if (0 == rc) 
-                {
-                        LOGIF(LD, (skygw_log_write(
-                                LOGFILE_DEBUG,
-                                "%lu [poll_add_dcb] Added dcb %p in state %s to "
-                                "poll set.",
-                                pthread_self(),
-                                dcb,
-                                STRDCBSTATE(dcb->state))));
-                }
-                else dcb_revert_state(dcb, new_state, old_state);
-        } else {
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unable to set new state for dcb %p "
-                        "in state %s. Adding to poll set failed.",
-                        dcb,
-                        STRDCBSTATE(dcb->state))));
+        dcb->state = new_state; 
+        spinlock_release(&dcb->dcb_initlock);
+        /*
+         * The only possible failure that will not cause a crash is
+         * running out of system resources.
+         */
+        rc = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, dcb->fd, &ev);
+        if (rc) 
+        {
+            rc = poll_resolve_error(dcb, errno, true);
         }
-        
+        if (0 == rc) 
+        {
+            LOGIF(LD, (skygw_log_write(
+                LOGFILE_DEBUG,
+                "%lu [poll_add_dcb] Added dcb %p in state %s to poll set.",
+                pthread_self(),
+                dcb,
+                STRDCBSTATE(dcb->state))));
+        }
+        else dcb->state = old_state;
 	return rc; 
 }
 
 /**
  * Remove a descriptor from the set of descriptors within the
  * polling environment.
- * The state change command may fail because concurrent threads may call
- * dcb_set_state simultaneously and the conflict is prevented in dcb_set_state.
  *
  * @param dcb	The descriptor to remove
  * @return	-1 on error or 0 on success
@@ -316,52 +340,53 @@ poll_add_dcb(DCB *dcb)
 int
 poll_remove_dcb(DCB *dcb)
 {
-        struct	epoll_event ev;
         int                 rc = -1;
-        dcb_state_t         old_state = DCB_STATE_UNDEFINED;
-        dcb_state_t         new_state = DCB_STATE_NOPOLLING;
 
         CHK_DCB(dcb);
 
+        spinlock_acquire(&dcb->dcb_initlock);
         /*< It is possible that dcb has already been removed from the set */
-        if (dcb->state != DCB_STATE_POLLING &&
-	    dcb->state != DCB_STATE_LISTENING)
-	{
-                if (dcb->state == DCB_STATE_NOPOLLING ||
-                    dcb->state == DCB_STATE_ZOMBIE)
-                {
-                        rc = 0;
-                }
-                goto return_rc;
+        if (dcb->state == DCB_STATE_NOPOLLING ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
+            spinlock_release(&dcb->dcb_initlock);
+            return 0;
+        }
+        if (DCB_STATE_POLLING != dcb->state
+            && DCB_STATE_LISTENING != dcb->state)
+        {
+            LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "%lu [poll_remove_dcb] Error : existing state of dcb %p "
+                "is %s, but this is probably an error, not crashing.",
+                pthread_self(),
+                dcb,
+                STRDCBSTATE(dcb->state))));
         }
         /*<
          * Set state to NOPOLLING and remove dcb from poll set.
          */
-        if (dcb_set_state(dcb, new_state, &old_state)) 
-	{
-		/**
-		 * Only positive fds can be removed from epoll set.
-		 */		 
-		if (dcb->fd > 0) 
-		{
-			rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
-                        if (rc) rc = poll_resolve_error(errno, false);
-		}
-        }
-        /*<
-         * This call was redundant, but the end result is correct.
+        dcb->state = DCB_STATE_NOPOLLING;
+        /**
+         * Only positive fds can be removed from epoll set.
+         * But this test was removed by Martin as it is hard to
+         * see that there should ever be a situation where 
+         * fd isn't positive and the DCB is also in the poll list.
+         */		 
+        /* if (dcb->fd > 0) { */
+        spinlock_release(&dcb->dcb_initlock);
+        rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
+        /**
+         * The poll_resolve_error function will always
+         * return 0 or crash.  So if it returns non-zero result, 
+         * things have gone wrong and we crash.
          */
-        else if (old_state == new_state)
-        {
-                rc = 0;
-                goto return_rc;
-        }
-        
+        if (rc) rc = poll_resolve_error(dcb, errno, false);
+        if (rc) assert(false);
         /*< Set bit for each maxscale thread */
-        bitmask_copy(&dcb->memdata.bitmask, poll_bitmask()); 
-        rc = 0;
-return_rc:
+        bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
         return rc;
+        /* } */
 }
 
 /**
@@ -377,7 +402,7 @@ return_rc:
  * @return              -1 on error or 0 for possibly revised return code
  */
 static int
-poll_resolve_error(int errornum, bool adding)
+poll_resolve_error(DCB *dcb, int errornum, bool adding)
 {
     if (adding)
     {
@@ -385,7 +410,10 @@ poll_resolve_error(int errornum, bool adding)
         {
             LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "Error : epoll_ctl could not add, already exists.")));
+                "%lu [poll_resolve_error] Error : epoll_ctl could not add, "
+                "already exists for DCB %p.",
+                pthread_self(),
+                dcb)));
             // Assume another thread added and no serious harm done
             return 0;
         }
@@ -393,9 +421,12 @@ poll_resolve_error(int errornum, bool adding)
         {
             LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "The limit imposed by /proc/sys/fs/epoll/max_user_watches was "
+                "%lu [poll_resolve_error] The limit imposed by "
+                "/proc/sys/fs/epoll/max_user_watches was "
                 "encountered while trying to register (EPOLL_CTL_ADD) a new "
-                "file descriptor on an epoll instance.")));
+                "file descriptor on an epoll instance for dcb %p.",
+                pthread_self(),
+                dcb)));
             /* Failure - assume handled by callers */
             return -1;
         }
@@ -407,7 +438,10 @@ poll_resolve_error(int errornum, bool adding)
         {
             LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "Error : epoll_ctl could not remove, not found.")));
+                "%lu [poll_resolve_error] Error : epoll_ctl could not remove, "
+                "not found, for dcb %p.",
+                pthread_self(),
+                dcb)));
             // Assume another thread removed and no serious harm done
             return 0;
         }
