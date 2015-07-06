@@ -1883,8 +1883,6 @@ dcb_drain_writeq_SSL(DCB *dcb)
 void
 dcb_close(DCB *dcb)
 {
-    int  rc = 0;
-
     CHK_DCB(dcb);
 
     LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
@@ -1900,7 +1898,7 @@ dcb_close(DCB *dcb)
             pthread_self(),
             dcb,
             STRDCBSTATE(dcb->state))));
-        return 0;
+        return;
     }
     
     if (DCB_STATE_UNDEFINED == dcb->state
@@ -1943,9 +1941,10 @@ dcb_close(DCB *dcb)
                 dcb,
                 STRDCBSTATE(dcb->state))));
         }
-        rc = poll_remove_dcb(dcb);
+        poll_remove_dcb(dcb);
         /*
-         * Return will always be 0 or function will have crashed
+         * Return will always be 0 or function will have crashed, so we
+         * threw away return value.
          */
         LOGIF(LD, (skygw_log_write(
             LOGFILE_DEBUG,
@@ -1964,22 +1963,23 @@ dcb_close(DCB *dcb)
         /** Call possible callback for this DCB in case of close */
         dcb_call_callback(dcb, DCB_REASON_CLOSE);
     }
-    assert (dcb->state == DCB_STATE_NOPOLLING  || dcb->state == DCB_STATE_ALLOC);
+    if (dcb->state == DCB_STATE_NOPOLLING  || dcb->state == DCB_STATE_ALLOC);
+    {
+        spinlock_acquire(&zombiespin);
     
-    spinlock_acquire(&zombiespin);
-    
-    /*<
-     * Add closing dcb to the top of the list.
-     */
-    dcb->memdata.next = zombies;
-    zombies = dcb;
-    /*<
-     * Set state which indicates that it has been added to zombies
-     * list.
-     */
-    dcb->state = DCB_STATE_ZOMBIE;
+        /*<
+         * Add closing dcb to the top of the list.
+         */
+        dcb->memdata.next = zombies;
+        zombies = dcb;
+        /*<
+         * Set state which indicates that it has been added to zombies
+         * list.
+         */
+        dcb->state = DCB_STATE_ZOMBIE;
         
-    spinlock_release(&zombiespin);
+        spinlock_release(&zombiespin);
+    }
 }
 
 /**
