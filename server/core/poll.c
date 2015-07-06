@@ -341,7 +341,7 @@ int
 poll_remove_dcb(DCB *dcb)
 {
         int                 rc = -1;
-
+        struct	epoll_event	ev;
         CHK_DCB(dcb);
 
         spinlock_acquire(&dcb->dcb_initlock);
