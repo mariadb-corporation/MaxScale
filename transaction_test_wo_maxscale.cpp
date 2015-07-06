@@ -20,11 +20,9 @@ int check_sha1(TestConnections* Test)
     char buf_max[1024];
 
     printf("ls before FLUSH LOGS\n");
-    //printf("Maxscale");fflush(stdout);
-    //sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la %s/mar-bin.0000*'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxscale_binlog_dir);
-    //system(sys);
+
     printf("Master");fflush(stdout);
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la /var/lib/mysql/mar-bin.0000*'", Test->repl->sshkey[0], Test->repl->IP[0]);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.0000*'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
     system(sys);
 
     printf("FLUSH LOGS\n");fflush(stdout);
@@ -32,11 +30,9 @@ int check_sha1(TestConnections* Test)
     printf("Logs flushed\n");
     sleep(20);
     printf("ls after first FLUSH LOGS\n");
-    //printf("Maxscale\n");fflush(stdout);
-    //sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la %s/mar-bin.0000*'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxscale_binlog_dir);
-    //system(sys);
+
     printf("Master\n");fflush(stdout);
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->IP[0]);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
     system(sys);
 
 
@@ -46,34 +42,12 @@ int check_sha1(TestConnections* Test)
 
     sleep(19);
     printf("ls before FLUSH LOGS\n");
-    //printf("Maxscale");
-    //sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la %s/mar-bin.0000*'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxscale_binlog_dir);
-    //system(sys);
+
     printf("Master");
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->IP[0]);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
     system(sys);fflush(stdout);
 
-    /*for (i = 1; i < 3; i++) {
-        printf("\nFILE: 000000%d\n", i);
-        sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum %s/mar-bin.00000%d'", Test->maxscale_sshkey, Test->maxscale_IP, Test->maxscale_binlog_dir, i);
-        ls = popen(sys, "r");
-        fgets(buf_max, sizeof(buf), ls);
-        pclose(ls);
-        x = strchr(buf_max, ' '); x[0] = 0;
-        printf("Binlog checksum from Maxscale %s\n", buf_max);
 
-
-        sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sha1sum /var/lib/mysql/mar-bin.00000%d'", Test->repl->sshkey[0], Test->repl->IP[0], i);
-        ls = popen(sys, "r");
-        fgets(buf, sizeof(buf), ls);
-        pclose(ls);
-        x = strchr(buf, ' '); x[0] = 0;
-        printf("Binlog checksum from master %s\n", buf);
-        if (strcmp(buf_max, buf) != 0) {
-            printf("Binlog from master checksum is not eqiual to binlog checksum from Maxscale node\n");
-            global_result++;
-        }
-    }*/
     return(global_result);
 }
 

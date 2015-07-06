@@ -68,13 +68,10 @@ int main(int argc, char *argv[])
     printf("Connecting to ReadConn Master %s\n", Test->maxscale_IP);
     Test->connect_readconn_master();
 
-    char sys1[4096];
     sleep(1);
 
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->port[0]);
-    printf("%s\n", sys1); fflush(stdout);
-    system(sys1); fflush(stdout);
+    Test->repl->block_node(0);
 
     sleep(10);
 
@@ -88,10 +85,7 @@ int main(int argc, char *argv[])
     sleep(10);
 
 
-    printf("Setup firewall back to allow mysql\n"); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->port[0]);
-    printf("%s\n", sys1);  fflush(stdout);
-    system(sys1); fflush(stdout);
+    Test->repl->unblock_node(0);
     sleep(10);
 
     printf("Closing connection\n"); fflush(stdout);

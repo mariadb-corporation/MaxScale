@@ -95,6 +95,13 @@ public:
      */
     int ssl;
 
+    char access_user[256];
+
+    /**
+     * @brief access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
+     */
+    char access_sudo[64];
+
     int connect();
     /**
      * @brief  close connections which were previously opened by Connect()

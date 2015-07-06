@@ -36,11 +36,15 @@ int main(int argc, char *argv[])
     int N = 9;
     int i;
 
+    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null  %s@%s:'%s mkdir /home/ec2-user/; %s chown %s:%s -R /home/ec2-user", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_sudo, Test->access_user, Test->access_user);
+    system(str);
+
     for (i = 1; i < N+1; i++){
         local_result = 0;
 
         Test->stop_maxscale();
-        sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules%d root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, i, Test->maxscale_IP);
+
+        sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules%d %s@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, i, Test->access_user, Test->maxscale_IP);
         printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
         system(str);
         Test->start_maxscale();
@@ -97,7 +101,7 @@ int main(int argc, char *argv[])
     // Test for at_times clause
     printf("Trying at_times clause\n");
 
-    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_at_time root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
+    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_at_time %s@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->access_user, Test->maxscale_IP);
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
     system(str);
 
@@ -115,7 +119,7 @@ int main(int argc, char *argv[])
     struct tm * timeinfo2 = localtime (&end_time);
     sprintf(time_str, "%s-%02d:%02d:%02d", time_str1, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);*/
 
-    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'start_time=`date +%%T`; stop_time=` date --date \"now +2 mins\" +%%T`; sed -i \"s/###time###/$start_time-$stop_time/\" /home/ec2-user/rules.txt'", Test->maxscale_sshkey, Test->maxscale_IP);
+    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'start_time=`date +%%T`; stop_time=` date --date \"now +2 mins\" +%%T`; sed -i \"s/###time###/$start_time-$stop_time/\" /home/ec2-user/rules.txt'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP);
     printf("DELETE quries without WHERE clause will be blocked during next 2 minutes\n");
     printf("Put time to rules.txt: %s\n", str); fflush(stdout);
     system(str);
@@ -138,7 +142,7 @@ int main(int argc, char *argv[])
 
     printf("Trying limit_queries clause\n");
 
-    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_limit_queries root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
+    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_limit_queries %s@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->access_user, Test->maxscale_IP);
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
     system(str);
 
@@ -183,7 +187,7 @@ int main(int argc, char *argv[])
 
     printf("Trying rules with syntax error\n");
 
-    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_syntax_error root@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->maxscale_IP);
+    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_syntax_error %s@%s:/home/ec2-user/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->access_user, Test->maxscale_IP);
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
     system(str);
 

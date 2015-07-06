@@ -30,9 +30,7 @@ int main(int argc, char *argv[])
 
 
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->port[0]);
-    printf("%s\n", sys1); fflush(stdout);
-    system(sys1); fflush(stdout);
+    Test->repl->block_node(0);
 
     sleep(1);
 
@@ -46,10 +44,7 @@ int main(int argc, char *argv[])
     sleep(1);
 
 
-    printf("Setup firewall back to allow mysql\n"); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[0], Test->repl->IP[0], Test->repl->port[0]);
-    printf("%s\n", sys1);  fflush(stdout);
-    system(sys1); fflush(stdout);
+    Test->repl->unblock_node(0);
     sleep(10);
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
@@ -67,9 +62,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->repl->N; i++) {
         printf("Setup firewall to block mysql on node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j REJECT\"", Test->repl->sshkey[i], Test->repl->IP[i], Test->repl->port[i]);
-        printf("%s\n", sys1); fflush(stdout);
-        system(sys1); fflush(stdout);
+        Test->repl->block_node(i); fflush(stdout);
     }
     sleep(1);
 
@@ -84,9 +77,7 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < Test->repl->N; i++) {
         printf("Setup firewall back to allow mysql on node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"iptables -I INPUT -p tcp --dport %d -j ACCEPT\"", Test->repl->sshkey[i], Test->repl->IP[i], Test->repl->port[i]);
-        printf("%s\n", sys1);  fflush(stdout);
-        system(sys1); fflush(stdout);
+        Test->repl->unblock_node(i); fflush(stdout);
     }
 
     printf("Sleeping 60 seconds\n"); fflush(stdout);

@@ -148,6 +148,11 @@ int TestConnections::read_env()
     strcpy(repl->start_db_command, start_db_command);
     strcpy(repl->stop_db_command, stop_db_command);
 
+    strcpy(repl->access_user, access_user);
+    strcpy(repl->access_sudo, access_sudo);
+    strcpy(galera->access_user, access_user);
+    strcpy(galera->access_sudo, access_sudo);
+
 
 }
 
@@ -196,7 +201,7 @@ int TestConnections::close_maxscale_connections()
 int TestConnections::restart_maxscale()
 {
     char sys[1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale restart\"", maxscale_sshkey, maxscale_IP);
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s service maxscale restart\"", maxscale_sshkey, access_user, maxscale_IP, access_sudo);
     int res = system(sys);
     sleep(10);
     return(res);
@@ -205,7 +210,7 @@ int TestConnections::restart_maxscale()
 int TestConnections::start_maxscale()
 {
     char sys[1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale start\"", maxscale_sshkey, maxscale_IP);
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s service maxscale start\"", maxscale_sshkey, access_user, maxscale_IP, access_sudo);
     int res = system(sys);
     sleep(10);
     return(res);
@@ -214,7 +219,7 @@ int TestConnections::start_maxscale()
 int TestConnections::stop_maxscale()
 {
     char sys[1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale stop\"", maxscale_sshkey, maxscale_IP);
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s service maxscale stop\"", maxscale_sshkey, access_user, maxscale_IP, access_sudo);
     int res = system(sys);
     return(res);
 }
@@ -224,7 +229,7 @@ int TestConnections::copy_all_logs()
     char str[4096];
 
     if (!no_maxscale_stop) {
-        sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no root@%s \"service maxscale stop\"", maxscale_sshkey, maxscale_IP);
+        sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s service maxscale stop\"", maxscale_sshkey, access_user, maxscale_IP, access_sudo);
         //system(str);
     }
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
@@ -266,7 +271,7 @@ int TestConnections::start_binlog()
     printf("Master server version %s\n", version_str);
 
     if (strstr(version_str, "5.5") != NULL) {
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/,mariadb10-compatibility=1//\" %s'", maxscale_sshkey, maxscale_IP, maxscale_cnf);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s sed -i \"s/,mariadb10-compatibility=1//\" %s'", maxscale_sshkey, access_user, maxscale_IP, access_sudo, maxscale_cnf);
         printf("%s\n", sys1);  fflush(stdout);
         global_result +=  system(sys1);
     }
@@ -280,23 +285,23 @@ int TestConnections::start_binlog()
     global_result += repl->stop_nodes();
 
     printf("Removing all binlog data\n");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'rm -rf %s/*'", maxscale_sshkey, maxscale_IP, maxscale_binlog_dir);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf %s/*'", maxscale_sshkey, access_user, maxscale_IP, access_sudo, maxscale_binlog_dir);
     printf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1);
 
     printf("Set 'maxscale' as a owner of binlog dir\n");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'mkdir -p %s; chown maxscale:maxscale -R %s'", maxscale_sshkey, maxscale_IP, maxscale_binlog_dir, maxscale_binlog_dir);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s mkdir -p %s; %s chown maxscale:maxscale -R %s'", maxscale_sshkey, access_user, maxscale_IP, access_sudo, maxscale_binlog_dir, access_sudo, maxscale_binlog_dir);
     printf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1);
 
     printf("Starting back Master\n");  fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s --log-bin  %s'", repl->sshkey[0], repl->IP[0], start_db_command, cmd_opt);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --log-bin  %s'", repl->sshkey[0], access_user, repl->IP[0], access_sudo, start_db_command, cmd_opt);
     printf("%s\n", sys1);  fflush(stdout);
     global_result += system(sys1); fflush(stdout);
 
     for (i = 1; i < repl->N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s --log-bin  %s'", repl->sshkey[i], repl->IP[i], start_db_command, cmd_opt);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --log-bin  %s'", repl->sshkey[i], access_user, repl->IP[i], access_sudo, start_db_command, cmd_opt);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
@@ -362,7 +367,7 @@ int TestConnections::start_mm()
 
     for (i = 0; i < 2; i++) {
         printf("Starting back node %d\n", i);  fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '%s'", repl->sshkey[i], repl->IP[i], start_db_command);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s'", repl->sshkey[i], access_user, repl->IP[i], access_sudo, start_db_command);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }

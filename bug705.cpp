@@ -35,9 +35,8 @@ int main(int argc, char *argv[])
 
     pid_t pid = fork();
     if (!pid) {
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s \"service maxscale restart &\"", Test->maxscale_sshkey, Test->maxscale_IP);
-        printf("%s\n", sys1); fflush(stdout);
-        system(sys1); fflush(stdout);
+        Test->restart_maxscale();
+        fflush(stdout);
     } else {
 
         printf("Waiting 20 seconds\n"); fflush(stdout);
