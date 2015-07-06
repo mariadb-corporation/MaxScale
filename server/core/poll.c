@@ -187,6 +187,11 @@ static struct {
 static void	poll_loadav(void *);
 
 /**
+ * Function to analyse error return from epoll_ctl
+ */
+static int poll_resolve_error(int, bool);
+
+/**
  * Initialise the polling system we are using for the gateway.
  *
  * In this case we are using the Linux epoll mechanism
@@ -275,20 +280,9 @@ poll_add_dcb(DCB *dcb)
          */
         if (dcb_set_state(dcb, new_state, &old_state)) {
                 rc = epoll_ctl(epoll_fd, EPOLL_CTL_ADD, dcb->fd, &ev);
-
-                if (rc != 0) {
-                        int eno = errno;
-                        errno = 0;
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Adding dcb %p in state %s "
-                                "to poll set failed. epoll_ctl failed due "
-                                "%d, %s.",
-                                dcb,
-                                STRDCBSTATE(dcb->state),
-                                eno,
-                                strerror(eno))));
-                } else {
+                if (rc) rc = poll_resolve_error(errno, true);
+                if (0 == rc) 
+                {
                         LOGIF(LD, (skygw_log_write(
                                 LOGFILE_DEBUG,
                                 "%lu [poll_add_dcb] Added dcb %p in state %s to "
@@ -297,7 +291,7 @@ poll_add_dcb(DCB *dcb)
                                 dcb,
                                 STRDCBSTATE(dcb->state))));
                 }
-                ss_info_dassert(rc == 0, "Unable to add poll"); /*< trap in debug */
+                else dcb_revert_state(dcb, new_state, old_state);
         } else {
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -351,17 +345,7 @@ poll_remove_dcb(DCB *dcb)
 		if (dcb->fd > 0) 
 		{
 			rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
-
-			if (rc != 0) {
-				int eno = errno;
-				errno = 0;
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : epoll_ctl failed due %d, %s.",
-					eno,
-					strerror(eno))));
-			}
-			ss_dassert(rc == 0); /*< trap in debug */
+                        if (rc) rc = poll_resolve_error(errno, false);
 		}
         }
         /*<
@@ -378,6 +362,63 @@ poll_remove_dcb(DCB *dcb)
         rc = 0;
 return_rc:
         return rc;
+}
+
+/**
+ * Check error returns from epoll_ctl. Most result in a crash since they
+ * are "impossible". Adding when already present is assumed non-fatal.
+ * Likewise, removing when not present is assumed non-fatal.
+ * It is assumed that callers to poll routines can handle the failure
+ * that results from hitting system limit, although an error is written
+ * here to record the problem.
+ *
+ * @param errornum	The errno set by epoll_ctl
+ * @param adding        True for adding to poll list, false for removing
+ * @return              -1 on error or 0 for possibly revised return code
+ */
+static int
+poll_resolve_error(int errornum, bool adding)
+{
+    if (adding)
+    {
+        if (EEXIST == errornum)
+        {
+            LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Error : epoll_ctl could not add, already exists.")));
+            // Assume another thread added and no serious harm done
+            return 0;
+        }
+        if (ENOSPC == errornum)
+        {
+            LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "The limit imposed by /proc/sys/fs/epoll/max_user_watches was "
+                "encountered while trying to register (EPOLL_CTL_ADD) a new "
+                "file descriptor on an epoll instance.")));
+            /* Failure - assume handled by callers */
+            return -1;
+        }
+    }
+    else
+    {
+        /* Must be removing */
+        if (ENOENT == errornum)
+        {
+            LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Error : epoll_ctl could not remove, not found.")));
+            // Assume another thread removed and no serious harm done
+            return 0;
+        }
+    }
+    /* Common checks for add or remove - crash MaxScale */
+    if (EBADF == errornum) assert (!(EBADF == errornum));
+    if (EINVAL == errornum) assert (!(EINVAL == errornum));
+    if (ENOMEM == errornum) assert (!(ENOMEM == errornum));
+    if (EPERM == errornum) assert (!(EPERM == errornum));
+    /* Undocumented error number */
+    assert(false);
 }
 
 #define	BLOCKINGPOLL	0	/*< Set BLOCKING POLL to 1 if using a single thread and to make
@@ -1605,7 +1646,7 @@ RESULT_ROW	*row;
 }
 
 /**
- * Return a resultset that has the current set of services in it
+ * Return a result set that has the current set of services in it
  *
  * @return A Result set
  */

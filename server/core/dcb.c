@@ -724,7 +724,7 @@ int             rc;
          */
         rc = poll_add_dcb(dcb);
 
-        if (rc == DCBFD_CLOSED) {
+        if (rc) {
                 dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
                 dcb_final_free(dcb);
                 return NULL;
@@ -2360,6 +2360,23 @@ bool dcb_set_state(
                 *old_state = state;
         }
         return succp;
+}
+
+void dcb_revert_state(
+        DCB*              dcb,
+        const dcb_state_t new_state,
+        dcb_state_t       old_state)
+{
+        CHK_DCB(dcb);
+        spinlock_acquire(&dcb->dcb_initlock);
+
+        if ((DCB_STATE_POLLING == new_state || DCB_STATE_LISTENING == new_state) && (DCB_STATE_ALLOC == old_state || DCB_STATE_NOPOLLING == old_state))
+        {
+            dcb->state = old_state;
+            spinlock_release(&dcb->dcb_initlock);
+            return;
+        }
+        else assert(false);
 }
 
 static bool dcb_set_state_nomutex(

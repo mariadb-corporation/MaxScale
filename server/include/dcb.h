@@ -338,7 +338,8 @@ int		dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, vo
 int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 int		dcb_count_by_usage(DCB_USAGE);		/* Return counts of DCBs */
 
-bool   dcb_set_state(DCB* dcb, dcb_state_t new_state, dcb_state_t* old_state);
+bool   dcb_set_state(DCB *dcb, dcb_state_t new_state, dcb_state_t *old_state);
+void   dcb_revert_state(DCB *dcb, const dcb_state_t new_state, dcb_state_t old_state);
 void   dcb_call_foreach (struct server* server, DCB_REASON reason);
 size_t dcb_get_session_id(DCB* dcb);
 bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
