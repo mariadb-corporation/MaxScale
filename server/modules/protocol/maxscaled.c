@@ -270,9 +270,7 @@ int	n_connect = 0;
 		{
 			atomic_add(&dcb->stats.n_accepts, 1);
                         client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
-
 			if (client_dcb == NULL)
-
 			{
 				close(so);
 				return n_connect;
@@ -283,7 +281,8 @@ int	n_connect = 0;
                         if ((maxscaled_pr = (MAXSCALED *)malloc(sizeof(MAXSCALED))) == NULL)
 			{
                         	client_dcb->protocol = NULL;
-                                dcb_add_to_zombieslist(client_dcb);
+                                close(so);
+                                dcb_close(client_dcb);
 				return n_connect;
 			}
 			maxscaled_pr->username = NULL;
@@ -293,9 +292,9 @@ int	n_connect = 0;
 			client_dcb->session =
                                 session_alloc(dcb->session->service, client_dcb);
 
-			if (poll_add_dcb(client_dcb) == -1)
+			if (poll_add_dcb(client_dcb))
 			{
-                                dcb_add_to_zombieslist(dcb);
+                                dcb_close(dcb);
 				return n_connect;
 			}
 			n_connect++;

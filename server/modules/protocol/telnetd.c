@@ -315,13 +315,13 @@ int	n_connect = 0;
 
                         if (telnetd_pr == NULL)
                         {
-                                dcb_add_to_zombieslist(client_dcb);
+                                dcb_close(client_dcb);
 				return n_connect;
 			}
 
-			if (poll_add_dcb(client_dcb) == -1)
+			if (poll_add_dcb(client_dcb))
 			{
-                                dcb_add_to_zombieslist(dcb);
+                                dcb_close(dcb);
 				return n_connect;
 			}
 			n_connect++;

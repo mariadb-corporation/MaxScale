@@ -248,50 +248,6 @@ dcb_free(DCB *dcb)
 	}
 }
 
-/** 
- * Add the DCB to the end of zombies list. 
- *
- * Adding to list occurs once per DCB. This is ensured by changing the
- * state of DCB to DCB_STATE_ZOMBIE after addition. Prior insertion, DCB state
- * is checked and operation proceeds only if state differs from DCB_STATE_ZOMBIE.
- * @param dcb The DCB to add to the zombie list
- * @return none
- */
-void
-dcb_add_to_zombieslist(DCB *dcb)
-{
-        bool        succp = false;
-        dcb_state_t prev_state = DCB_STATE_UNDEFINED;
-        
-        CHK_DCB(dcb);        
-
-        /*<
-         * Protect zombies list access.
-         */
-	spinlock_acquire(&zombiespin);
-        /*<
-         * If dcb is already added to zombies list, return.
-         */
-        if (dcb->state != DCB_STATE_NOPOLLING) {
-                ss_dassert(dcb->state != DCB_STATE_POLLING &&
-                           dcb->state != DCB_STATE_LISTENING);
-                spinlock_release(&zombiespin);
-                return;
-        }
-        /*<
-         * Add closing dcb to the top of the list.
-         */
-        dcb->memdata.next = zombies;
-        zombies = dcb;
-        /*<
-         * Set state which indicates that it has been added to zombies
-         * list.
-         */
-        dcb->state = DCB_STATE_ZOMBIE;
-        
-	spinlock_release(&zombiespin);
-}
-
 /*
  * Clone a DCB for internal use, mostly used for specialist filters
  * to create dummy clients based on real clients.
@@ -600,7 +556,6 @@ bool    succp = false;
 			&tls_log_info.li_enabled_logs)));
 
                 dcb->state = DCB_STATE_DISCONNECTED;
-                ss_dassert(succp);
 		dcb_next = dcb->memdata.next;
                 dcb_final_free(dcb);
                 dcb = dcb_next;
@@ -1928,72 +1883,91 @@ dcb_drain_writeq_SSL(DCB *dcb)
 void
 dcb_close(DCB *dcb)
 {
-        int  rc = 0;
+    int  rc = 0;
 
-        CHK_DCB(dcb);
+    CHK_DCB(dcb);
 
-	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-				"%lu [dcb_close]",
-				pthread_self())));                                
-	
-        /**
-         * dcb_close may be called for freshly created dcb, in which case
-         * it only needs to be freed.
-         */
-        if (dcb->state == DCB_STATE_ALLOC)
+    LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+        "%lu [dcb_close]",
+        pthread_self())));                                
+
+    if (DCB_STATE_UNDEFINED == dcb->state
+        || DCB_STATE_DISCONNECTED == dcb->state
+        || DCB_STATE_ZOMBIE == dcb->state)
+    {
+        LOGIF(LE, (skygw_log_write(
+            LOGFILE_ERROR,
+            "%lu [dcb_close] Error : Removing DCB %p but was in state %s "
+            "which is not legal for a call to dcb_close. ",
+            pthread_self(),
+            dcb,
+            STRDCBSTATE(dcb->state))));
+        assert(false);
+    }
+    
+    /**
+     * dcb_close may be called for freshly created dcb, in which case
+     * it only needs to be freed.
+     */
+    if (dcb->state == DCB_STATE_ALLOC && dcb->fd != DCBFD_CLOSED)
+    {
+        dcb_final_free(dcb);
+        return;
+    }
+        
+    /*<
+     * Stop dcb's listening and modify state accordingly.
+     */
+    if (dcb->state == DCB_STATE_POLLING  || dcb->state == DCB_STATE_LISTENING)
+    {
+        if (dcb->state == DCB_STATE_LISTENING)
         {
-                dcb_final_free(dcb);
-                return;
+            LOGIF(LE, (skygw_log_write(
+                LOGFILE_ERROR,
+                "%lu [dcb_close] Error : Removing DCB %p but was in state %s "
+                "which is not expected for a call to dcb_close, although it"
+                "should be processed correctly. ",
+                pthread_self(),
+                dcb,
+                STRDCBSTATE(dcb->state))));
         }
+        rc = poll_remove_dcb(dcb);
+        /*
+         * Return will always be 0 or function will have crashed
+         */
+        LOGIF(LD, (skygw_log_write(
+            LOGFILE_DEBUG,
+            "%lu [dcb_close] Removed dcb %p in state %s from "
+            "poll set.",
+            pthread_self(),
+            dcb,
+            STRDCBSTATE(dcb->state))));
+        /**
+         * close protocol and router session
+         */
+        if (dcb->func.close != NULL)
+        {
+            dcb->func.close(dcb);
+        }
+        /** Call possible callback for this DCB in case of close */
+        dcb_call_callback(dcb, DCB_REASON_CLOSE);
+    }
+    assert (dcb->state == DCB_STATE_NOPOLLING  || dcb->state == DCB_STATE_ALLOC);
+    
+    spinlock_acquire(&zombiespin);
+    
+    /*<
+     * Add closing dcb to the top of the list.
+     */
+    dcb->memdata.next = zombies;
+    zombies = dcb;
+    /*<
+     * Set state which indicates that it has been added to zombies
+     * list.
+     */
+    dcb->state = DCB_STATE_ZOMBIE;
         
-        ss_dassert(dcb->state == DCB_STATE_POLLING ||
-               dcb->state == DCB_STATE_NOPOLLING ||
-               dcb->state == DCB_STATE_ZOMBIE);
-        
-        /*<
-        * Stop dcb's listening and modify state accordingly.
-        */
-	if (dcb->state == DCB_STATE_POLLING)
-	{
-		rc = poll_remove_dcb(dcb);
-
-		if (rc == 0) {
-			LOGIF(LD, (skygw_log_write(
-				LOGFILE_DEBUG,
-				"%lu [dcb_close] Removed dcb %p in state %s from "
-				"poll set.",
-				pthread_self(),
-				dcb,
-				STRDCBSTATE(dcb->state))));
-		} else {
-			LOGIF(LE, (skygw_log_write(
-				LOGFILE_ERROR,
-				"Error : Removing DCB fd == %d in state %s from "
-				"poll set failed.",
-				dcb->fd,
-				STRDCBSTATE(dcb->state))));
-		}
-	
-		if (rc == 0)
-		{
-			/**
-			 * close protocol and router session
-			 */
-			if (dcb->func.close != NULL)
-			{
-				dcb->func.close(dcb);
-			}
-			/** Call possible callback for this DCB in case of close */
-			dcb_call_callback(dcb, DCB_REASON_CLOSE);
-			
-			if (dcb->state == DCB_STATE_NOPOLLING) 
-			{
-				dcb_add_to_zombieslist(dcb);
-			}
-		}
-	        ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-					dcb->state == DCB_STATE_ZOMBIE);	
-	}
+    spinlock_release(&zombiespin);
 }
 
 /**

@@ -302,10 +302,6 @@ poll_add_dcb(DCB *dcb)
                 dcb,
                 STRDCBSTATE(dcb->state))));
         }
-        /*<
-         * If dcb is in unexpected state, state change fails indicating that dcb
-         * is not polling anymore.
-         */
         dcb->state = new_state; 
         spinlock_release(&dcb->dcb_initlock);
         /*
