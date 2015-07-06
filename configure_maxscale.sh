@@ -30,7 +30,7 @@ fi
 
 sed -i "s/###threads###/$threads/"  MaxScale.cnf
 
-if [ $mysql51_only == "yes" ] ; then
+if [ x"$mysql51_only" == "xyes" ] ; then
 	sed -i "s/module=mysqlmon/module=mysqlmon\nmysql51_only=true/"  MaxScale.cnf
 fi
 
