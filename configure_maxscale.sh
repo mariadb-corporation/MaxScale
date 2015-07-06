@@ -69,8 +69,8 @@ ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/n
 scp -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $test_dir/ssl-cert/* $access_user@$maxscale_IP:./
 ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo cp *.pem /home/ec2-user/"
 cp $test_dir/ssl-cert/* .
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP '$access_sudo chown maxscale:maxscale /home/ec2-user/*.pem'
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP '$access_sudo chmod 664 /home/ec2-user/*.pem'
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo chown maxscale:maxscale /home/ec2-user/*.pem"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo chmod 664 /home/ec2-user/*.pem"
 #ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo $maxdir_bin/maxkeys $max_dir/etc/.secrets"
 if [ -z "$maxscale_restart" ] ; then
 	export maxscale_restart="yes"
@@ -79,11 +79,11 @@ fi
 if [ "$maxscale_restart" != "no" ] ; then
 	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo service maxscale stop"
 	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo killall -9 maxscale"
-	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo mkdir -p /home/ec2-user; $access_sudo chmod 777 -R /home/ec2-user"
+#	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo mkdir -p /home/ec2-user; $access_sudo chmod 777 -R /home/ec2-user"
 	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo rm $maxscale_log_dir/*.log ; $access_sudo rm /tmp/core*; $access_sudo rm -rf /dev/shm/*;  $access_sudo ulimit -c unlimited; $access_sudo service maxscale restart" 
 else
-        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "mkdir -p /home/ec2-user; chmod 777 -R /home/ec2-user"
-	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "service maxscale status | grep running"
+#        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "mkdir -p /home/ec2-user; chmod 777 -R /home/ec2-user"
+#	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "service maxscale status | grep running"
 	if [ $? == 0 ] ; then
 		ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo echo " " > $maxscale_log_dir/error1.log"
                 ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo echo " " > $maxscale_log_dir/messages1.log"
