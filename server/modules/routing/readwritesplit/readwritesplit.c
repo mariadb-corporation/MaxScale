@@ -3787,7 +3787,7 @@ static GWBUF* sescmd_cursor_process_replies(
 				 dcb_close(bref->bref_dcb);
 			     *reconnect = true;
 			     if(replybuf)
-				 gwbuf_consume(replybuf,gwbuf_length(replybuf));
+				 while((replybuf = gwbuf_consume(replybuf,gwbuf_length(replybuf))));
 			}
                 }
                 /** This is a response from the master and it is the "right" one.
@@ -3830,7 +3830,7 @@ static GWBUF* sescmd_cursor_process_replies(
 		    skygw_log_write(LOGFILE_DEBUG,"Slave '%s' responded faster to a session command.",
 			     bref->bref_backend->backend_server->unique_name);
 		    if(replybuf)
-			gwbuf_free(replybuf);
+			while((replybuf = gwbuf_consume(replybuf,gwbuf_length(replybuf))));
 		    return NULL;
 		}
 	    
