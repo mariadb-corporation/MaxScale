@@ -1885,24 +1885,18 @@ dcb_close(DCB *dcb)
     CHK_DCB(dcb);
 
     LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-        "%lu [dcb_close]",
-        pthread_self())));                                
+        "%lu [dcb_close] DCB %p in state %s",
+        pthread_self(),
+        dcb,
+        dcb ? STRDCBSTATE(dcb->state) : "Invalid DCB")));                                
 
     if (DCB_STATE_ZOMBIE == dcb->state)
     {
-        LOGIF(LE, (skygw_log_write(
-            LOGFILE_ERROR,
-            "%lu [dcb_close] Error : Removing DCB %p but was in state %s "
-            "which is unexpected for a call to dcb_close, but not crashing. ",
-            pthread_self(),
-            dcb,
-            STRDCBSTATE(dcb->state))));
         return;
     }
     
-    if (DCB_STATE_UNDEFINED == dcb->state
-        || DCB_STATE_DISCONNECTED == dcb->state
-        || DCB_STATE_ZOMBIE == dcb->state)
+    if (DCB_STATE_UNDEFINED == dcb->state 
+        || DCB_STATE_DISCONNECTED == dcb->state)
     {
         LOGIF(LE, (skygw_log_write(
             LOGFILE_ERROR,
