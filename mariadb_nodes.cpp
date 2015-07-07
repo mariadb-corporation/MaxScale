@@ -208,6 +208,7 @@ int Mariadb_nodes::start_replication()
     for (i = 1; i < N; i++) {
         global_result += execute_query(nodes[i], (char *) "stop slave;");
         sprintf(str, setup_slave, IP_private[0], log_file, log_pos, port[0]);
+        printf("%s", str);
         global_result += execute_query(nodes[i], str);
     }
     close_connections();
