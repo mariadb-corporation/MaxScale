@@ -2039,6 +2039,7 @@ static char *monitor_params[] =
                 "passwd",
 		"script",
 		"events",
+		"mysql51_replication",
 		"monitor_interval",
 		"detect_replication_lag",
 		"detect_stale_master",

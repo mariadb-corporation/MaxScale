@@ -81,6 +81,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
 static void set_slave_heartbeat(MONITOR *, MONITOR_SERVERS *);
 static int add_slave_to_master(long *, int, long);
 bool isMySQLEvent(monitor_event_t event);
+static bool report_version_err = true;
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
 	stopMonitor, 
@@ -200,7 +201,7 @@ startMonitor(void *arg, void* opt)
 	    else
 		have_events = true;
 	}
-	else if(!strcmp(params->name,"mysql51_only"))
+	else if(!strcmp(params->name,"mysql51_replication"))
 	{
 	    handle->mysql51_replication = config_truth_value(params->value);
 	}
@@ -539,7 +540,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 		if(mysql_field_count(database->con) < 4)
 		{
 		    mysql_free_result(result);
-		    skygw_log_write(LE,"Error: \"SHOW SLAVE HOSTS\" "
+		    skygw_log_write_flush(LE,"Error: \"SHOW SLAVE HOSTS\" "
 			    "returned less than the expected amount of columns. Expected 4 columns."
 			    " MySQL Version: %s",version_str);
 		    return NULL;
@@ -553,6 +554,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 			/* get Slave_IO_Running and Slave_SQL_Running values*/
 			database->server->slaves[nslaves] = atol(row[0]);
 			nslaves++;
+			LOGIF(LD,(skygw_log_write_flush(LD,"Found slave at %s:%d",row[1],row[2])));
 		    }
 		    database->server->slaves[nslaves] = 0;
 		}
@@ -564,6 +566,10 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 	    /* Set the Slave Role */
 	    if (ismaster)
 	    {
+		LOGIF(LD,(skygw_log_write(LD,"Master server found at %s:%d with %d slaves",
+					 database->server->name,
+					 database->server->port,
+					 nslaves)));
 		monitor_set_pending_status(database, SERVER_MASTER);
 		if(rval == NULL || rval->server->node_id > database->server->node_id)
 		    rval = database;
@@ -574,7 +580,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 
     database = mon->databases;
 
-    /**  */
+    /** Set master server IDs */
     while(database)
     {
 	ptr = mon->databases;
@@ -591,7 +597,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 	    }
 	    ptr = ptr->next;
 	}
-	if(database->server->master_id <= 0)
+	if(database->server->master_id <= 0 && SERVER_IS_SLAVE(database->server))
 	{
 	    monitor_set_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
 	}
@@ -733,7 +739,17 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     }
     else
     {
-	monitor_mysql51_db(database);
+	if(handle->mysql51_replication)
+	{
+	    monitor_mysql51_db(database);
+	}
+	else if(report_version_err)
+	{
+	    report_version_err = false;
+	    skygw_log_write(LE,"Error: MySQL version is lower than 5.5 and 'mysql51_replication' option is not enabled,"
+		    " replication tree cannot be resolved. To enable MySQL 5.1 replication detection, "
+		    "add 'mysql51_replication=true' to the monitor section.");
+	}
     }
 
 }
