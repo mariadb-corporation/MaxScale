@@ -484,14 +484,13 @@ bool    succp = false;
 				/*<
 				 * Move dcb to linked list of victim dcbs.
 				 */
+				ptr->memdata.next = NULL;
 				if (dcb_list == NULL) {
 					dcb_list = ptr;
-					dcb = dcb_list;
 				} else {
 					dcb->memdata.next = ptr;
-					dcb = dcb->memdata.next;
 				}
-				dcb->memdata.next = NULL;
+                                dcb = ptr;
 				ptr = tptr;
 			}
 			else
@@ -1963,10 +1962,10 @@ dcb_close(DCB *dcb)
         /** Call possible callback for this DCB in case of close */
         dcb_call_callback(dcb, DCB_REASON_CLOSE);
     }
+    
+    spinlock_acquire(&zombiespin);
     if (dcb->state == DCB_STATE_NOPOLLING  || dcb->state == DCB_STATE_ALLOC);
     {
-        spinlock_acquire(&zombiespin);
-    
         /*<
          * Add closing dcb to the top of the list.
          */
@@ -1977,9 +1976,8 @@ dcb_close(DCB *dcb)
          * list.
          */
         dcb->state = DCB_STATE_ZOMBIE;
-        
-        spinlock_release(&zombiespin);
     }
+    spinlock_release(&zombiespin);
 }
 
 /**
