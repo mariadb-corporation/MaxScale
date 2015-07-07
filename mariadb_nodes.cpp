@@ -64,6 +64,10 @@ int Mariadb_nodes::read_env()
             sprintf(env_name, "%s_%03d", prefix, i);
             env = getenv(env_name); if (env != NULL) {sprintf(IP[i], "%s", env);}
 
+            //reading private IPs
+            sprintf(env_name, "%s_private_%03d", prefix, i);
+            env = getenv(env_name); if (env != NULL) {sprintf(IP_private[i], "%s", env);} else {sprintf(IP_private[i], "%s", IP[i]);}
+
             //reading ports
             sprintf(env_name, "%s_port_%03d", prefix, i);
             env = getenv(env_name); if (env != NULL) {
@@ -182,13 +186,13 @@ int Mariadb_nodes::start_replication()
     global_result += stop_nodes();
 
     printf("Starting back Master\n");  fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s'", sshkey[0], access_user, IP[0], access_sudo, start_db_command);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s'", sshkey[0], access_user, IP_private[0], access_sudo, start_db_command);
     printf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1); fflush(stdout);
 
     for (i = 1; i < N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s '", sshkey[i], access_user, IP[i], access_sudo, start_db_command);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s '", sshkey[i], access_user, IP_private[i], access_sudo, start_db_command);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
@@ -203,7 +207,7 @@ int Mariadb_nodes::start_replication()
     find_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
     for (i = 1; i < N; i++) {
         global_result += execute_query(nodes[i], (char *) "stop slave;");
-        sprintf(str, setup_slave, IP[0], log_file, log_pos, port[0]);
+        sprintf(str, setup_slave, IP_private[0], log_file, log_pos, port[0]);
         global_result += execute_query(nodes[i], str);
     }
     close_connections();
@@ -224,7 +228,7 @@ int Mariadb_nodes::start_galera()
 
     for (i = 1; i < N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --wsrep-cluster-address=gcomm://%s'", sshkey[i], access_user, IP[i], access_sudo, start_db_command, IP[0]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --wsrep-cluster-address=gcomm://%s'", sshkey[i], access_user, IP[i], access_sudo, start_db_command, IP_private[0]);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
