@@ -33,7 +33,6 @@
  * Date		Who			Description
  * 08/07/2013	Massimiliano Pinto	Initial version
  * 09/07/2013 	Massimiliano Pinto	Added /show?dcb|session for all dcbs|sessions
- * 07/07/2015   Martin Brampton         Fixed problems with DCBs on errors
  *
  * @endverbatim
  */

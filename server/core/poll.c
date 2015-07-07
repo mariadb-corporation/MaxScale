@@ -15,10 +15,12 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
+ 
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <sys/epoll.h>
 #include <errno.h>
 #include <poll.h>
@@ -290,7 +292,7 @@ poll_add_dcb(DCB *dcb)
                 pthread_self(),
                 dcb,
                 STRDCBSTATE(dcb->state))));
-            assert(false);
+            raise(SIGABRT);
         }
         if (DCB_STATE_POLLING == dcb->state
             || DCB_STATE_LISTENING == dcb->state)
@@ -379,7 +381,7 @@ poll_remove_dcb(DCB *dcb)
          * things have gone wrong and we crash.
          */
         if (rc) rc = poll_resolve_error(dcb, errno, false);
-        if (rc) assert(false);
+        if (rc) raise(SIGABRT);
         /*< Set bit for each maxscale thread */
         bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
         return rc;
@@ -449,7 +451,7 @@ poll_resolve_error(DCB *dcb, int errornum, bool adding)
     if (ENOMEM == errornum) assert (!(ENOMEM == errornum));
     if (EPERM == errornum) assert (!(EPERM == errornum));
     /* Undocumented error number */
-    assert(false);
+    raise(SIGABRT);
 }
 
 #define	BLOCKINGPOLL	0	/*< Set BLOCKING POLL to 1 if using a single thread and to make

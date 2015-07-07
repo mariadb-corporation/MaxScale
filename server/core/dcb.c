@@ -60,6 +60,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <dcb.h>
 #include <spinlock.h>
 #include <server.h>
@@ -1908,7 +1909,7 @@ dcb_close(DCB *dcb)
             pthread_self(),
             dcb,
             STRDCBSTATE(dcb->state))));
-        assert(false);
+        raise(SIGABRT);
     }
     
     /**

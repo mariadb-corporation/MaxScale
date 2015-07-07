@@ -58,6 +58,7 @@ extern __thread log_info_t tls_log_info;
  * Revision History
  * Date		Who			Description
  * 13/06/2014	Mark Riddoch		Initial implementation
+ * 07/07/15     Martin Brampton         Correct failure handling
  *
  * @endverbatim
  */

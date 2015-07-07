@@ -67,6 +67,7 @@ extern __thread log_info_t tls_log_info;
  * Date		Who			Description
  * 17/06/2013	Mark Riddoch		Initial version
  * 17/07/2013	Mark Riddoch		Addition of login phase
+ * 07/07/2015   Martin Brampton         Call unified dcb_close on error
  *
  * @endverbatim
  */
