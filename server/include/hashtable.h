@@ -96,7 +96,11 @@ HASHTABLE		*hashtable_alloc_flat(HASHTABLE* target,
 						int (*hashfn)(),
 						int (*cmpfn)());
 				/**< Allocate a hashtable */
-extern void		hashtable_memory_fns(HASHTABLE *, HASHMEMORYFN, HASHMEMORYFN, HASHMEMORYFN, HASHMEMORYFN);
+extern void		hashtable_memory_fns(HASHTABLE   *table,
+                                            HASHMEMORYFN kcopyfn,
+                                            HASHMEMORYFN vcopyfn,
+                                            HASHMEMORYFN kfreefn,
+                                            HASHMEMORYFN vfreefn);
 				/**< Provide an interface to control key/value memory
 				 * manipulation
 				 */

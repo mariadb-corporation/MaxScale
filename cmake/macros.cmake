@@ -9,16 +9,19 @@ macro(set_maxscale_version)
 
   # MaxScale version number
   set(MAXSCALE_VERSION_MAJOR "1")
-  set(MAXSCALE_VERSION_MINOR "1")
-  set(MAXSCALE_VERSION_PATCH "1")
+  set(MAXSCALE_VERSION_MINOR "2")
+  set(MAXSCALE_VERSION_PATCH "0")
   set(MAXSCALE_VERSION_NUMERIC "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
   set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
 
   # This should be incremented each time a package is rebuilt
-  set(MAXSCALE_BUILD_NUMBER 2)
+  set(MAXSCALE_BUILD_NUMBER 1)
 endmacro()
 
 macro(set_variables)
+
+  # Use C99
+  set(USE_C99 FALSE CACHE BOOL "Use C99 standard")
 
   # hostname or IP address of MaxScale's host
   set(TEST_HOST "127.0.0.1" CACHE STRING "hostname or IP address of MaxScale's host")
@@ -65,6 +68,9 @@ macro(set_variables)
   # Use tcmalloc as the memory allocator
   set(WITH_TCMALLOC FALSE CACHE BOOL "Use tcmalloc as the memory allocator")
 
+  # Use jemalloc as the memory allocator
+  set(WITH_JEMALLOC FALSE CACHE BOOL "Use jemalloc as the memory allocator")
+
   # Build tests
   set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
 
@@ -73,6 +79,9 @@ macro(set_variables)
 
   # Build extra tools
   set(BUILD_TOOLS FALSE CACHE BOOL "Build extra utility tools")
+
+  # Profiling
+  set(PROFILE FALSE CACHE BOOL "Profiling (gprof)")
 
 endmacro()
 
@@ -126,29 +135,9 @@ macro(check_deps)
   endif()
 
 
-  # set(MAXSCALE_DEPS aio ssl crypt crypto z m dl rt pthread)
-  # foreach(lib ${MAXSCALE_DEPS})
-  #   find_library(lib${lib} ${lib})
-  #   if((DEFINED lib${lib}) AND (${lib${lib}} MATCHES "NOTFOUND"))
-  #     set(DEPS_ERROR TRUE)
-  #     set(FAILED_DEPS "${FAILED_DEPS} lib${lib}")
-  #   elseif(DEBUG_OUTPUT)
-  #     message(STATUS "Library was found at: ${lib${lib}}")
-  #   endif()
-  # endforeach()
-
-  # if(DEPS_ERROR)
-  #   set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-  #   message(FATAL_ERROR "Cannot find dependencies: ${FAILED_DEPS}")
-  # endif()
-
 endmacro()
 
 macro(check_dirs)
-
-  # This variable is used to prevent redundant checking of dependencies
-  set(DEPS_OK TRUE CACHE BOOL "If all the dependencies were found.")
-
   # Find the MySQL headers if they were not defined
 
   if(DEFINED MYSQL_DIR)
@@ -162,7 +151,6 @@ macro(check_dirs)
 debugmsg("Search returned: ${MYSQL_DIR_LOC}")
 
   if(${MYSQL_DIR_LOC} MATCHES "NOTFOUND")
-	set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
     message(FATAL_ERROR "Fatal Error: MySQL headers were not found.")
   else()
 	set(MYSQL_DIR ${MYSQL_DIR_LOC} CACHE PATH "Path to MySQL headers" FORCE)
@@ -187,7 +175,6 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
   else()
 	find_file(ERRMSG_FILE errmsg.sys PATHS /usr/share /usr/share/mysql /usr/local/share/mysql PATH_SUFFIXES english mysql/english)
 	if(${ERRMSG_FILE} MATCHES "NOTFOUND")
-	  set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
       message(FATAL_ERROR "Fatal Error: The errmsg.sys file was not found, please define the path to it by using -DERRMSG=<path>")
 	else()
 	  message(STATUS "Using errmsg.sys found at: ${ERRMSG_FILE}")
@@ -196,83 +183,22 @@ debugmsg("Search returned: ${MYSQL_DIR_LOC}")
   set(ERRMSG ${ERRMSG_FILE} CACHE FILEPATH "Path to the errmsg.sys file." FORCE)
   unset(ERRMSG_FILE)
 
-  # Find the embedded mysql library
-
-  # if (DEFINED EMBEDDED_LIB)
-  #   if( NOT (IS_DIRECTORY ${EMBEDDED_LIB}) )
-  #     debugmsg("EMBEDDED_LIB is not a directory: ${EMBEDDED_LIB}")
-  #     if(${CMAKE_VERSION} VERSION_LESS 2.8.12 )
-  #   	set(COMP_VAR PATH)
-  #     else()
-  #   	set(COMP_VAR DIRECTORY)
-  #     endif()
-  #     get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} ${COMP_VAR})
-  #     debugmsg("EMBEDDED_LIB directory component: ${EMBEDDED_LIB}")
-  #   endif()
-  #   debugmsg("Searching for the embedded library at: ${EMBEDDED_LIB}")
-  # endif()
-
-  # if(STATIC_EMBEDDED)
-
-  #   debugmsg("Using the static embedded library...")
-  #   set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-  #   if (DEFINED EMBEDDED_LIB)
-  #     debugmsg("Searching for libmysqld.a at: ${EMBEDDED_LIB}")
-  #     find_library(EMBEDDED_LIB_STATIC libmysqld.a PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
-  #   else()
-  #     find_library(EMBEDDED_LIB_STATIC libmysqld.a PATH_SUFFIXES mysql mariadb)
-  #   endif()
-  #   debugmsg("Search returned: ${EMBEDDED_LIB_STATIC}")
-
-  #   set(EMBEDDED_LIB ${EMBEDDED_LIB_STATIC} CACHE FILEPATH "Path to libmysqld" FORCE)
-  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
-
-  # else()
-  #   debugmsg("Using the dynamic embedded library...")
-  #   set(OLD_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ".so")
-  #   if (DEFINED EMBEDDED_LIB)
-  #     debugmsg("Searching for libmysqld.so at: ${EMBEDDED_LIB}")
-  #     find_library(EMBEDDED_LIB_DYNAMIC mysqld PATHS ${EMBEDDED_LIB} PATH_SUFFIXES mysql mariadb NO_DEFAULT_PATH)
-  #   else()
-  #     find_library(EMBEDDED_LIB_DYNAMIC mysqld PATH_SUFFIXES mysql mariadb)
-  #   endif()
-  #   debugmsg("Search returned: ${EMBEDDED_LIB_DYNAMIC}")
-  #   set(EMBEDDED_LIB ${EMBEDDED_LIB_DYNAMIC} CACHE FILEPATH "Path to libmysqld" FORCE)
-  #   set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
-
-  # endif()
-
-  # unset(EMBEDDED_LIB_DYNAMIC)
-  # unset(EMBEDDED_LIB_STATIC)
-  # unset(OLD_SUFFIXES)
-
-  # # Inform the user about the embedded library
-  # if( (${EMBEDDED_LIB} MATCHES "NOTFOUND") OR (${EMBEDDED_LIB} MATCHES "NOTFOUND"))
-  #   set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-  #   message(FATAL_ERROR "Library not found: libmysqld. If your install of MySQL is in a non-default location, please provide the location with -DEMBEDDED_LIB=<path to library>")
-  # else()
-  #   get_filename_component(EMBEDDED_LIB ${EMBEDDED_LIB} REALPATH)
-  #   message(STATUS "Using embedded library: ${EMBEDDED_LIB}")
-  # endif()
-
-
   # Check which init.d script to install
-  find_file(RPM_FNC functions PATHS /etc/rc.d/init.d)
-  if(${RPM_FNC} MATCHES "RPM_FNC-NOTFOUND")
-	find_file(DEB_FNC init-functions PATHS /lib/lsb)
-	if(${DEB_FNC} MATCHES "DEB_FNC-NOTFOUND")
-	  set(DEPS_OK FALSE CACHE BOOL "If all the dependencies were found.")
-	  message(FATAL_ERROR "Cannot find required init-functions in /lib/lsb/ or /etc/rc.d/init.d/, please confirm that your system files are OK.")
-	else()
-	  set(DEB_BASED TRUE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
-	endif()
-  else()
-	set(DEB_BASED FALSE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
+  if(WITH_SCRIPTS)
+    find_file(RPM_FNC functions PATHS /etc/rc.d/init.d)
+    if(${RPM_FNC} MATCHES "RPM_FNC-NOTFOUND")
+      find_file(DEB_FNC init-functions PATHS /lib/lsb)
+      if(${DEB_FNC} MATCHES "DEB_FNC-NOTFOUND")
+	message(FATAL_ERROR "Cannot find required init-functions in /lib/lsb/ or /etc/rc.d/init.d/, please confirm that your system files are OK.")
+      else()
+	set(DEB_BASED TRUE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
+      endif()
+    else()
+      set(DEB_BASED FALSE CACHE BOOL "If init.d script uses /lib/lsb/init-functions instead of /etc/rc.d/init.d/functions.")
+    endif()
+    unset(DEB_FNC)
+    unset(RPM_FNC)
   endif()
-  unset(DEB_FNC)
-  unset(RPM_FNC)
 
   #Check RabbitMQ headers and libraries
   if(BUILD_RABBITMQ)

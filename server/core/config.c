@@ -43,6 +43,7 @@
  * 20/02/15	Markus Mäkelä		Added connection_timeout parameter for services
  * 05/03/15	Massimiliano	Pinto	Added notification_feedback support
  * 20/04/15	Guillaume Lefranc	Added available_when_donor parameter
+ * 22/04/15     Martin Brampton         Added disable_master_role_setting parameter
  *
  * @endverbatim
  */
@@ -230,7 +231,7 @@ int		rval;
 			    strcpy(version_string,tmp);
 			}
 
-			ptr = strstr(tmp, "-embedded");
+			ptr = strstr(version_string, "-embedded");
 			if (ptr) {
 				*ptr = '\0';
 			}
@@ -301,7 +302,15 @@ process_config_context(CONFIG_CONTEXT *context)
 {
 CONFIG_CONTEXT		*obj;
 int			error_count = 0;
+HASHTABLE* monitorhash;
 
+if((monitorhash = hashtable_alloc(5,simple_str_hash,strcmp)) == NULL)
+{
+    skygw_log_write(LOGFILE_ERROR,"Error: Failed to allocate ,onitor configuration check hashtable.");
+    return 0;
+}
+
+hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
 	/**
 	 * Process the data and create the services and servers defined
 	 * in the data.
@@ -336,6 +345,8 @@ int			error_count = 0;
 				char *weightby;
 				char *version_string;
 				char *subservices;
+				char *ssl,*ssl_cert,*ssl_key,*ssl_ca_cert,*ssl_version;
+				char* ssl_cert_verify_depth;
 				bool  is_rwsplit = false;
 				bool  is_schemarouter = false;
 				char *allow_localhost_match_wildcard_host;
@@ -344,6 +355,12 @@ int			error_count = 0;
 				user = config_get_value(obj->parameters, "user");
 				auth = config_get_value(obj->parameters, "passwd");
 				subservices = config_get_value(obj->parameters, "subservices");
+				ssl = config_get_value(obj->parameters, "ssl");
+				ssl_cert = config_get_value(obj->parameters, "ssl_cert");
+				ssl_key = config_get_value(obj->parameters, "ssl_key");
+				ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
+				ssl_version = config_get_value(obj->parameters, "ssl_version");
+				ssl_cert_verify_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
 				enable_root_user = config_get_value(
 							obj->parameters, 
 							"enable_root_user");
@@ -408,7 +425,21 @@ int			error_count = 0;
                                 }
 
                                 if (version_string) {
+
+				    /** Add the 5.5.5- string to the start of the version string if
+				     * the version string starts with "10.".
+				     * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
+				    if(strncmp(version_string,"10.",3) == 0)
+				    {
+					((SERVICE *)(obj->element))->version_string = malloc((strlen(version_string) +
+						strlen("5.5.5-") + 1) * sizeof(char));
+					strcpy(((SERVICE *)(obj->element))->version_string,"5.5.5-");
+					strcat(((SERVICE *)(obj->element))->version_string,version_string);
+				    }
+				    else
+				    {
 					((SERVICE *)(obj->element))->version_string = strdup(version_string);
+				    }
 				} else {
 					if (gateway.version_string)
 						((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
@@ -420,7 +451,84 @@ int			error_count = 0;
                                 max_slave_rlag_str = 
                                         config_get_value(obj->parameters, 
                                                          "max_slave_replication_lag");
-                                        
+
+				if(ssl)
+				{
+				    if(ssl_cert == NULL)
+				    {
+					error_count++;
+					skygw_log_write(LE,"Error: Server certificate missing for service '%s'."
+						"Please provide the path to the server certificate by adding the ssl_cert=<path> parameter",
+						 obj->object);
+				    }
+				    if(ssl_ca_cert == NULL)
+				    {
+					error_count++;
+					skygw_log_write(LE,"Error: CA Certificate missing for service '%s'."						
+						"Please provide the path to the certificate authority certificate by adding the ssl_ca_cert=<path> parameter",
+						 obj->object);
+				    }
+				    if(ssl_key == NULL)
+				    {
+					error_count++;
+					skygw_log_write(LE,"Error: Server private key missing for service '%s'. "
+						"Please provide the path to the server certificate key by adding the ssl_key=<path> parameter"
+						,obj->object);
+				    }
+
+				    if(access(ssl_ca_cert,F_OK) != 0)
+				    {
+					skygw_log_write(LE,"Error: Certificate authority file for service '%s' not found: %s",
+						 obj->object,
+						 ssl_ca_cert);
+					error_count++;
+				    }
+				    if(access(ssl_cert,F_OK) != 0)
+				    {
+					skygw_log_write(LE,"Error: Server certificate file for service '%s' not found: %s",
+						 obj->object,
+						 ssl_cert);
+					error_count++;
+				    }
+				    if(access(ssl_key,F_OK) != 0)
+				    {
+					skygw_log_write(LE,"Error: Server private key file for service '%s' not found: %s",
+						 obj->object,
+						 ssl_key);
+					error_count++;
+				    }
+
+				    if(error_count == 0)
+				    {
+					if(serviceSetSSL(obj->element,ssl) != 0)
+					{
+					    skygw_log_write(LE,"Error: Unknown parameter for service '%s': %s",obj->object,ssl);
+					    error_count++;
+					}
+					else
+					{
+					    serviceSetCertificates(obj->element,ssl_cert,ssl_key,ssl_ca_cert);
+					    if(ssl_version)
+					    {
+						if(serviceSetSSLVersion(obj->element,ssl_version) != 0)
+						{
+						    skygw_log_write(LE,"Error: Unknown parameter value for 'ssl_version' for service '%s': %s",obj->object,ssl_version);
+						    error_count++;
+						}
+					    }
+					    if(ssl_cert_verify_depth)
+					    {
+						if(serviceSetSSLVerifyDepth(obj->element,atoi(ssl_cert_verify_depth)) != 0)
+						{
+						    skygw_log_write(LE,"Error: Invalid parameter value for 'ssl_cert_verify_depth' for service '%s': %s",obj->object,ssl_cert_verify_depth);
+						    error_count++;
+						}
+					    }
+					}
+				    }
+
+				}
+
 				if (enable_root_user)
 					serviceEnableRootUser(
                                                 obj->element, 
@@ -824,7 +932,7 @@ int			error_count = 0;
 			/* if id is not set, do it now */
 			if (gateway.id == 0) {
 				setipaddress(&serv_addr.sin_addr, (address == NULL) ? "0.0.0.0" : address);
-				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + port != NULL ? atoi(port) : 0 + getpid());
+				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + (port != NULL ? atoi(port) : 0 + getpid()));
 			}
                 
 			if (service && socket && protocol) {        
@@ -953,6 +1061,13 @@ int			error_count = 0;
                                                             obj->element && obj1->element)
                                                         {
 								found = 1;
+								if(hashtable_add(monitorhash,obj1->object,"") == 0)
+								{
+								    skygw_log_write(LOGFILE_ERROR,
+									     "Warning: Multiple monitors are monitoring server [%s]. "
+									    "This will cause undefined behavior.",
+									     obj1->object);
+								}
 								monitorAddServer(
                                                                         obj->element,
                                                                         obj1->element);
@@ -1013,7 +1128,8 @@ int			error_count = 0;
 		obj = obj->next;
 	} /*< while */
 	/** TODO: consistency check function */
-        
+
+	hashtable_free(monitorhash);
         /**
          * error_count += consistency_checks();
          */
@@ -1308,7 +1424,7 @@ int i;
         }
 	else if (strcmp(name, "ms_timestamp") == 0)
 	{
-		skygw_set_highp(atoi(value));
+		skygw_set_highp(config_truth_value((char*)value));
 	}
 	else
 	{
@@ -1316,7 +1432,7 @@ int i;
 		{
 			if (strcasecmp(name, lognames[i].logname) == 0)
 			{
-				if (atoi(value))
+				if (config_truth_value((char*)value))
 					skygw_log_enable(lognames[i].logfile);
 				else
 					skygw_log_disable(lognames[i].logfile);
@@ -1495,10 +1611,10 @@ SERVER			*server;
                                                                user,
                                                                auth);
 						if (enable_root_user)
-							serviceEnableRootUser(service, atoi(enable_root_user));
+							serviceEnableRootUser(service, config_truth_value(enable_root_user));
 
 						if (connection_timeout)
-							serviceSetTimeout(service, atoi(connection_timeout));
+							serviceSetTimeout(service, config_truth_value(connection_timeout));
 
 
                                                 if(auth_all_servers)
@@ -1511,7 +1627,7 @@ SERVER			*server;
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
 								service,
-								atoi(allow_localhost_match_wildcard_host));
+								config_truth_value(allow_localhost_match_wildcard_host));
                                                 
                                                 /** Read, validate and set max_slave_connections */        
                                                 max_slave_conn_str = 
@@ -1651,7 +1767,7 @@ SERVER			*server;
                                                                user,
                                                                auth);
 						if (enable_root_user)
-							serviceEnableRootUser(obj->element, atoi(enable_root_user));
+							serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
 
 						if (connection_timeout)
 							serviceSetTimeout(obj->element, atoi(connection_timeout));
@@ -1659,7 +1775,7 @@ SERVER			*server;
 						if (allow_localhost_match_wildcard_host)
 							serviceEnableLocalhostMatchWildcardHost(
 								obj->element,
-								atoi(allow_localhost_match_wildcard_host));
+								config_truth_value(allow_localhost_match_wildcard_host));
                                         }
 				}
 			}
@@ -1704,6 +1820,9 @@ SERVER			*server;
 					obj->element = server_alloc(address,
                                                                     protocol,
                                                                     atoi(port));
+
+					server_set_unique_name(obj->element, obj->object);
+
 					if (obj->element && monuser && monpw)
                                         {
 						serverAddMonUser(obj->element,
@@ -1891,6 +2010,12 @@ static char *service_params[] =
                 "version_string",
                 "filters",
                 "weightby",
+		"ssl_cert",
+		"ssl_ca_cert",
+		"ssl",
+		"ssl_key",
+		"ssl_version",
+		"ssl_cert_verify_depth",
                 NULL
         };
 
@@ -1912,6 +2037,8 @@ static char *monitor_params[] =
                 "servers",
                 "user",
                 "passwd",
+		"script",
+		"events",
 		"monitor_interval",
 		"detect_replication_lag",
 		"detect_stale_master",
@@ -1920,6 +2047,7 @@ static char *monitor_params[] =
 		"backend_read_timeout",
 		"backend_write_timeout",
 		"available_when_donor",
+                "disable_master_role_setting",
                 NULL
         };
 /**
@@ -2033,15 +2161,18 @@ bool config_set_qualified_param(
 int
 config_truth_value(char *str)
 {
-	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 || strcasecmp(str, "yes") == 0)
+	if (strcasecmp(str, "true") == 0 || strcasecmp(str, "on") == 0 ||
+	 strcasecmp(str, "yes") == 0 || strcasecmp(str, "1") == 0)
 	{
 		return 1;
 	}
-	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 || strcasecmp(str, "no") == 0)
+	if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 ||
+	 strcasecmp(str, "no") == 0|| strcasecmp(str, "0") == 0)
 	{
 		return 0;
 	}
-	return atoi(str);
+	skygw_log_write(LOGFILE_ERROR,"Error: Not a boolean value: %s",str);
+	return -1;
 }
 
 

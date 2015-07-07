@@ -1204,15 +1204,15 @@ inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
 	int isize = strlen(str) + 1;
 	if(*buf == NULL || isize + *buflen >= *bufsize)
 		{
-			char *tmp = (char*)calloc((*bufsize) * 2 + isize, sizeof(char));
-			if(tmp){
-				memcpy(tmp,*buf,*bufsize);
-				if(*buf){
-					free(*buf);
-				}
-				*buf = tmp;
-				*bufsize = (*bufsize) * 2 + isize;
+                        *bufsize = (*bufsize) * 2 + isize;
+			char *tmp = (char*)realloc(*buf,(*bufsize)* sizeof(char));
+			if(tmp == NULL){
+                            skygw_log_write_flush (LE,"Error: memory reallocation failed");
+                            free(*buf);
+                            *buf = NULL;
+                            *bufsize = 0;
 			}
+                        *buf = tmp;
 		}
 
 	if(*buflen > 0){
@@ -1248,7 +1248,12 @@ char* skygw_get_affected_fields(GWBUF* buf)
 	}
 	
 	lex->current_select = lex->all_selects_list;
-	
+	if((where = (char*)malloc(sizeof(char)*1)) == NULL)
+        {
+            skygw_log_write_flush(LE,"Error: Memory allocation failed.");
+            return NULL;
+        }
+        *where = '\0';
 	while(lex->current_select)
 		{
 			
@@ -1480,7 +1485,8 @@ void parsing_info_done(
         void* ptr)
 {
         parsing_info_t* pi;
-	
+	THD* thd;
+
 	if (ptr)
 	{
 		pi = (parsing_info_t *)ptr;
@@ -1491,6 +1497,8 @@ void parsing_info_done(
 			
 			if (mysql->thd != NULL)
 			{
+                                thd = (THD*)mysql->thd;
+                                thd->end_statement ();
 				(*mysql->methods->free_embedded_thd)(mysql);
 				mysql->thd = NULL;
 			}

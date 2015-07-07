@@ -1,5 +1,5 @@
 add_library(query_classifier SHARED query_classifier.cc)
-install(TARGETS query_classifier DESTINATION lib)
+install(TARGETS query_classifier COMPONENT lib DESTINATION ${MAXSCALE_LIBDIR})
 if(BUILD_TESTS)
   add_subdirectory(test)
 endif()

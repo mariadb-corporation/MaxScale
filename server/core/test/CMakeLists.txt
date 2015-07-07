@@ -15,19 +15,19 @@ add_executable(test_adminusers testadminusers.c)
 add_executable(testmemlog testmemlog.c)
 add_executable(testfeedback testfeedback.c)
 target_link_libraries(test_mysql_users MySQLClient fullcore)
-target_link_libraries(test_hash fullcore)
-target_link_libraries(test_hint fullcore)
-target_link_libraries(test_spinlock fullcore)
+target_link_libraries(test_hash fullcore log_manager)
+target_link_libraries(test_hint fullcore log_manager)
+target_link_libraries(test_spinlock fullcore log_manager)
 target_link_libraries(test_filter fullcore)
-target_link_libraries(test_buffer fullcore)
+target_link_libraries(test_buffer fullcore log_manager)
 target_link_libraries(test_dcb fullcore)
-target_link_libraries(test_modutil fullcore)
+target_link_libraries(test_modutil fullcore utils log_manager)
 target_link_libraries(test_poll fullcore)
 target_link_libraries(test_service fullcore)
 target_link_libraries(test_server fullcore)
 target_link_libraries(test_users fullcore)
 target_link_libraries(test_adminusers fullcore)
-target_link_libraries(testmemlog fullcore)
+target_link_libraries(testmemlog fullcore log_manager)
 target_link_libraries(testfeedback fullcore)
 add_test(Internal-TestMySQLUsers test_mysql_users)
 add_test(Internal-TestHash test_hash)
@@ -44,19 +44,4 @@ add_test(Internal-TestUsers test_users)
 add_test(Internal-TestAdminUsers test_adminusers)
 add_test(Internal-TestMemlog testmemlog)
 add_test(TestFeedback testfeedback)
-set_tests_properties(Internal-TestMySQLUsers
-  Internal-TestHash
-  Internal-TestHint
-  Internal-TestSpinlock
-  Internal-TestFilter
-  Internal-TestBuffer
-  Internal-TestDCB
-  Internal-TestModutil
-  Internal-TestPoll
-  Internal-TestService
-  Internal-TestServer
-  Internal-TestUsers
-  Internal-TestAdminUsers
-  Internal-TestMemlog 
-  TestFeedback PROPERTIES ENVIRONMENT MAXSCALE_HOME=${CMAKE_BINARY_DIR}/)
 set_tests_properties(TestFeedback PROPERTIES TIMEOUT 30)

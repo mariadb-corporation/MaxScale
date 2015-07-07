@@ -41,10 +41,10 @@ extern __thread log_info_t tls_log_info;
  * Two optional parameters that define the behavior after a data modifying query
  * is executed:
  *
- *	count=<number of queries>   Queries to route to master after data modification.
- *	time=<time period>	    	Seconds to wait before queries are routed to slaves.
- *	match=<regex>				Regex for matching
- *  ignore=<regex>				Regex for ignoring
+ *      count=<number of queries>   Queries to route to master after data modification.
+ *      time=<time period>          Seconds to wait before queries are routed to slaves.
+ *      match=<regex>               Regex for matching
+ *      ignore=<regex>              Regex for ignoring
  *
  * The filter also has two options: @c case, which makes the regex case-sensitive, and @c ignorecase, which does the opposite.
  * Date		Who		Description

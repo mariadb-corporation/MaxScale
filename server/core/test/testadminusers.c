@@ -30,7 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <gwdirs.h>
 #include <adminusers.h>
 
 
@@ -40,7 +40,7 @@
  * Test that the username password admin/mariadb is accepted if no users
  * have been created and that no other users are accepted
  *
- * WARNING: $MAXSCALE_HOME/etc/passwd must be removed before this test is run
+ * WARNING: The passwd file must be removed before this test is run
  */
 static int
 test1()
@@ -269,9 +269,8 @@ int	result = 0;
 char	*home, buf[1024];
 
 	/* Unlink any existing password file before running this test */
-	if ((home = getenv("MAXSCALE_HOME")) == NULL || strlen(home) >= 1024)
-		home =  "/usr/local/mariadb-maxscale";
-	sprintf(buf, "%s/etc/passwd", home);
+	
+	sprintf(buf, "%s/passwd", default_cachedir);
     if(!is_valid_posix_path(buf))
         exit(1);
 	if (strcmp(buf, "/etc/passwd") != 0)

@@ -66,12 +66,39 @@ int     result, length, residual;
         
 }
 
+int
+test2()
+{
+GWBUF   *buffer;
+char len = 128;
+char query[129];
+
+        buffer = gwbuf_alloc(132);
+	ss_info_dassert((buffer != NULL),"Buffer should not be null");
+
+	memset(query,';',128);
+    memset(query+128,'\0',1);
+	*((unsigned char*)buffer->start) = len;
+	*((unsigned char*)buffer->start+1) = 0;
+	*((unsigned char*)buffer->start+2) = 0;
+	*((unsigned char*)buffer->start+3) = 1;
+	*((unsigned char*)buffer->start+4) = 0x03;
+	memcpy(buffer->start + 5,query,strlen(query));
+	char* result = modutil_get_SQL(buffer);
+	ss_dassert(strcmp(result,query) == 0);
+	gwbuf_free(buffer);
+	free(result);
+        ss_dfprintf(stderr, "\t..done\n");
+	return 0;
+
+}
+
 int main(int argc, char **argv)
 {
 int	result = 0;
 
 	result += test1();
-
+	result += test2();
 	exit(result);
 }
 

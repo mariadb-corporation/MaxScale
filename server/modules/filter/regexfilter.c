@@ -23,6 +23,8 @@
 #include <log_manager.h>
 #include <string.h>
 #include <regex.h>
+#include <atomic.h>
+#include "maxconfig.h"
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -86,6 +88,8 @@ typedef struct {
 	char	*match;		/* Regular expression to match */
 	char	*replace;	/* Replacement text */
 	regex_t	re;		/* Compiled regex text */
+	FILE* logfile;
+	bool log_trace;
 } REGEX_INSTANCE;
 
 /**
@@ -93,10 +97,14 @@ typedef struct {
  */
 typedef struct {
 	DOWNSTREAM	down;		/* The downstream filter */
+	SPINLOCK        lock;
 	int		no_change;	/* No. of unchanged requests */
 	int		replacements;	/* No. of changed requests */
 	int		active;		/* Is filter active */
 } REGEX_SESSION;
+
+void log_match(REGEX_INSTANCE* inst,char* re, char* old, char* new);
+void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old);
 
 /**
  * Implementation of the mandatory version entry point
@@ -146,7 +154,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 {
 REGEX_INSTANCE	*my_instance;
 int		i, cflags = REG_ICASE;
-
+char		*logfile = NULL;
 	if ((my_instance = calloc(1, sizeof(REGEX_INSTANCE))) != NULL)
 	{
 		my_instance->match = NULL;
@@ -162,6 +170,14 @@ int		i, cflags = REG_ICASE;
 				my_instance->source = strdup(params[i]->value);
 			else if (!strcmp(params[i]->name, "user"))
 				my_instance->user = strdup(params[i]->value);
+			else if (!strcmp(params[i]->name, "log_trace"))
+			    my_instance->log_trace = config_truth_value(params[i]->value);
+			else if (!strcmp(params[i]->name, "log_file"))
+			{
+			    if(logfile)
+				free(logfile);
+			    logfile = strdup(params[i]->value);
+			}
 			else if (!filter_standard_parameter(params[i]->name))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
@@ -196,6 +212,7 @@ int		i, cflags = REG_ICASE;
 		if (my_instance->match == NULL || my_instance->replace == NULL)
 		{
 			free(my_instance);
+			free(logfile);
 			return NULL;
 		}
 
@@ -207,8 +224,28 @@ int		i, cflags = REG_ICASE;
 			free(my_instance->match);
 			free(my_instance->replace);
 			free(my_instance);
+			free(logfile);
 			return NULL;
 		}
+
+		if(logfile != NULL)
+		{
+		    if((my_instance->logfile = fopen(logfile,"a")) == NULL)
+		    {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"regexfilter: Failed to open file '%s'.\n",
+					logfile)));
+			free(my_instance->match);
+			free(my_instance->replace);
+			free(my_instance);
+			free(logfile);
+			return NULL;
+		    }
+
+		    fprintf(my_instance->logfile,"\nOpened regex filter log\n");
+		    fflush(my_instance->logfile);
+		}
+		free(logfile);
 	}
 	return (FILTER *)my_instance;
 }
@@ -320,11 +357,19 @@ char		*sql, *newsql;
 			{
 				queue = modutil_replace_SQL(queue, newsql);
 				queue = gwbuf_make_contiguous(queue);
+				spinlock_acquire(&my_session->lock);
+				log_match(my_instance,my_instance->match,sql,newsql);
+				spinlock_release(&my_session->lock);
 				free(newsql);
 				my_session->replacements++;
 			}
 			else
+			{
+				spinlock_acquire(&my_session->lock);
+				log_nomatch(my_instance,my_instance->match,sql);
+				spinlock_release(&my_session->lock);
 				my_session->no_change++;
+			}
 			free(sql);
 		}
 		
@@ -440,4 +485,44 @@ regmatch_t	match[10];
 	result[res_length] = 0;
 
 	return result;
+}
+
+/**
+ * Log a matching query to either MaxScale's trace log or a separate log file.
+ * The old SQL and the new SQL statements are printed in the log.
+ * @param inst Regex filter instance
+ * @param re Regular expression
+ * @param old Old SQL statement
+ * @param new New SQL statement
+ */
+void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* new)
+{
+    if(inst->logfile)
+    {
+	fprintf(inst->logfile,"Matched %s: [%s] -> [%s]\n",re,old,new);
+	fflush(inst->logfile);
+    }
+    if(inst->log_trace)
+    {
+	LOGIF(LT,(skygw_log_write(LT,"Match %s: [%s] -> [%s]",re,old,new)));
+    }
+}
+
+/**
+ * Log a non-matching query to either MaxScale's trace log or a separate log file.
+ * @param inst Regex filter instance
+ * @param re Regular expression
+ * @param old SQL statement
+ */
+void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old)
+{
+    if(inst->logfile)
+    {
+	fprintf(inst->logfile,"No match %s: [%s]\n",re,old);
+	fflush(inst->logfile);
+    }
+    if(inst->log_trace)
+    {
+	LOGIF(LT,(skygw_log_write(LT,"No match %s: [%s]",re,old)));
+    }
 }

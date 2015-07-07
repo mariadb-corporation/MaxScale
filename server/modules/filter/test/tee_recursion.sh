@@ -17,8 +17,8 @@ function execute_test()
         return 1
     fi
 
-    LAST_LOG=$(ls $BINDIR/log -1|grep err|sort|uniq|tail -n 1)
-    TEST_RESULT=$(cat $BINDIR/log/$LAST_LOG | grep -i recursive)
+    LAST_LOG=$(ls $BINDIR/ -1|grep error|sort|uniq|tail -n 1)
+    TEST_RESULT=$(cat $BINDIR/$LAST_LOG | grep -i recursive)
     if [[ "$TEST_RESULT" != "" ]]
     then
         return 0
@@ -49,8 +49,8 @@ USER=$3
 PWD=$4
 HOST=$5
 PORT=$6
-CONF=$BINDIR/etc/MaxScale.cnf
-OLDCONF=$BINDIR/etc/MaxScale.cnf.old
+CONF=$BINDIR/etc/maxscale.cnf
+OLDCONF=$BINDIR/etc/maxscale.cnf.old
 MAXPID=$BINDIR/log/$(ls -1 $BINDIR/log|grep maxscale)
 TEST1=$SRCDIR/server/modules/filter/test/tee_recursion1.cnf
 TEST2=$SRCDIR/server/modules/filter/test/tee_recursion2.cnf

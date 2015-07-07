@@ -59,14 +59,13 @@ As well as the four major configuration choices outlined above there are also ot
 MaxScale consists of a core executable and a number of modules that implement
 the different protocols and routing algorithms. These modules are built as
 shared objects that are loaded on demand. In order for MaxScale to find these
-modules it will search using a predescribed search path. The rules are:
+modules it will search using a configurable search path. The priority of these paths are:
 
- 1. Look in the current directory for the module
- 2. Look in $MAXSCALE_HOME/modules
- 3. Look in /usr/local/mariadb-maxscale/modules
+ 1. Look in the directory defined with --libdir=PATH during startup
+ 2. Look in the directory defined with libdir=PATH in the configuration file under the [maxscale] section
+ 3. Look in default directory in /usr/lib64/maxscale
 
-Configuration is read by default from the file $MAXSCALE_HOME/etc/MaxScale.cnf, /etc/MaxScale.cnf. An example file is included in in the installation and can be found in the etc/ folder within the MaxScale installation. The default value of MAXSCALE_HOME can be overridden by using the -c flag on the command line. This should be immediately followed by the path to the MaxScale home directory. The -f flag can be used on the command line to set the name and the location of the configuration file. Without path expression the file is read from \$MAXSCALE_HOME/etc directory.
-
+Configuration is read by default from the file /etc/maxscale.cnf. An example file is included in in the installation and can be found in the /usr/share/maxscale folder within the MaxScale installation. The -f flag can be used on the command line to set the name and the location of the configuration file. The -C flag can be used to set the directory where the configuration file is searched for. Without the -f or -C flags, the file is read from the /etc directory.
 
 ## Administration Of MaxScale
 

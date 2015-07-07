@@ -44,6 +44,7 @@
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <netinet/tcp.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -137,7 +138,7 @@ void mysql_protocol_done (
                 goto retblock;
         }
         scmd = p->protocol_cmd_history;
-        
+
         while (scmd != NULL)
         {
                 scmd2 = scmd->scom_next;
@@ -287,7 +288,7 @@ int gw_read_backend_handshake(
                                         pthread_self(),
                                         conn->owner_dcb->fd,
                                         pthread_self())));
-                                
+                                while((head = gwbuf_consume(head, GWBUF_LENGTH(head))));
 				return 1;
 			}
 
@@ -812,6 +813,23 @@ int gw_do_connect_to_backend(
 		goto close_so;
 	}
 
+	int one = 1;
+	if(setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
+	{
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error: Failed to set socket options "
+                        "%s:%d failed.\n\t\t             Socket configuration failed "
+                        "due %d, %s.",
+                        host,
+                        port,
+                        errno,
+                        strerror(errno))));
+		rv = -1;
+		/** Close socket */
+		goto close_so;
+	}
+
 	/* set socket to as non-blocking here */
 	setnonblocking(so);
         rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
@@ -890,7 +908,11 @@ gw_mysql_protocol_state2string (int state) {
                 case MYSQL_AUTH_FAILED:
                         return "MySQL Authentication failed";
                 case MYSQL_IDLE:
-                        return "MySQL authentication is succesfully done.";
+		    return "MySQL authentication is succesfully done.";
+	case MYSQL_AUTH_SSL_REQ: return "MYSQL_AUTH_SSL_REQ";
+	case MYSQL_AUTH_SSL_HANDSHAKE_DONE: return "MYSQL_AUTH_SSL_HANDSHAKE_DONE";
+	case MYSQL_AUTH_SSL_HANDSHAKE_FAILED: return "MYSQL_AUTH_SSL_HANDSHAKE_FAILED";
+	case MYSQL_AUTH_SSL_HANDSHAKE_ONGOING: return "MYSQL_AUTH_SSL_HANDSHAKE_ONGOING";
                 default:
                         return "MySQL (unknown protocol state)";
         }
@@ -1528,13 +1550,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			if (user_password)
 			{
 			    break;
-			}
-
-			/** See if ANYDB == Y */
-			if(key.resource)
-			{
-			    key.resource = NULL;
-			    continue;
 			}
 
 			if (!user_password) {
@@ -2199,7 +2214,8 @@ char *create_auth_fail_str(
 	char	*username,
 	char	*hostaddr,
 	char	*sha1,
-	char	*db)
+	char	*db,
+	int errcode)
 {
 	char* errstr;
 	const char* ferrstr;
@@ -2213,6 +2229,10 @@ char *create_auth_fail_str(
 	if (db_len > 0)
 	{
 		ferrstr = "Access denied for user '%s'@'%s' (using password: %s) to database '%s'";
+	}
+	else if(errcode == MYSQL_FAILED_AUTH_SSL)
+	{
+	    ferrstr = "Access without SSL denied";
 	}
 	else
 	{
@@ -2232,6 +2252,10 @@ char *create_auth_fail_str(
 	if (db_len > 0)
 	{
 		sprintf(errstr, ferrstr, username, hostaddr, (*sha1 == '\0' ? "NO" : "YES"), db); 
+	}
+	else if(errcode == MYSQL_FAILED_AUTH_SSL)
+	{
+	    sprintf(errstr, ferrstr);
 	}
 	else
 	{
