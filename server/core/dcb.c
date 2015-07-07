@@ -1964,7 +1964,7 @@ dcb_close(DCB *dcb)
     }
     
     spinlock_acquire(&zombiespin);
-    if (dcb->state == DCB_STATE_NOPOLLING  || dcb->state == DCB_STATE_ALLOC);
+    if (dcb->state == DCB_STATE_NOPOLLING  || dcb->state == DCB_STATE_ALLOC)
     {
         /*<
          * Add closing dcb to the top of the list.
