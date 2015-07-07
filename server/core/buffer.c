@@ -197,6 +197,7 @@ GWBUF	*rval;
         rval->gwbuf_info = buf->gwbuf_info;
         rval->gwbuf_bufobj = buf->gwbuf_bufobj;
 	rval->tail = rval;
+	rval->next = NULL;
         CHK_GWBUF(rval);
 	return rval;
 }

@@ -1092,7 +1092,8 @@ int gw_read_client_event(
         case MYSQL_IDLE:
         {
                 uint8_t* payload = NULL; 
-               
+		session_state_t ses_state;
+
                 session = dcb->session;
                 ss_dassert(session!= NULL);
                 
@@ -1100,93 +1101,106 @@ int gw_read_client_event(
                 {
                         CHK_SESSION(session);
                 }
+		spinlock_acquire(&session->ses_lock);
+		ses_state = session->state;
+		spinlock_release(&session->ses_lock);
                 /* Now, we are assuming in the first buffer there is
                  * the information form mysql command */
                 payload = GWBUF_DATA(read_buffer);
 
-                /** Route COM_QUIT to backend */
-                if (MYSQL_IS_COM_QUIT(payload))
-                {
+		if(ses_state == SESSION_STATE_ROUTER_READY)
+		{
+		    /** Route COM_QUIT to backend */
+		    if (MYSQL_IS_COM_QUIT(payload))
+		    {
                         /** 
-                         * Sends COM_QUIT packets since buffer is already
-                         * created. A BREF_CLOSED flag is set so dcb_close won't
-                         * send redundant COM_QUIT.
-                         */
+			 * Sends COM_QUIT packets since buffer is already
+			 * created. A BREF_CLOSED flag is set so dcb_close won't
+			 * send redundant COM_QUIT.
+			 */
                         SESSION_ROUTE_QUERY(session, read_buffer);
                         /** 
-                         * Close router session which causes closing of backends.
-                         */
+			 * Close router session which causes closing of backends.
+			 */
                         dcb_close(dcb);
-                }
-                else
-                {
+		    }
+		    else
+		    {
 			/** Reset error handler when routing of the new query begins */
 			router->handleError(NULL, NULL, NULL, dcb, ERRACT_RESET, NULL);
 			
                         if (stmt_input)                                
                         {
-                                /** 
-                                 * Feed each statement completely and separately
-                                 * to router.
-                                 */
-                                rc = route_by_statement(session, &read_buffer);
-                                
-                                if (read_buffer != NULL)
-                                {
-                                        /** add incomplete mysql packet to read queue */
-                                        dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                                }
+			    /**
+			     * Feed each statement completely and separately
+			     * to router.
+			     */
+			    rc = route_by_statement(session, &read_buffer);
+
+			    if (read_buffer != NULL)
+			    {
+				/** add incomplete mysql packet to read queue */
+				dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+			    }
                         }
                         else
                         {
-                                /** Feed whole packet to router */
-                                rc = SESSION_ROUTE_QUERY(session, read_buffer);
+			    /** Feed whole packet to router */
+			    rc = SESSION_ROUTE_QUERY(session, read_buffer);
                         }
-                                       
+
                         /** Routing succeed */
                         if (rc)
 			{
-                                rc = 0; /**< here '0' means success */
+			    rc = 0; /**< here '0' means success */
                         }
                         else
 			{
-				bool   succp;
-				GWBUF* errbuf;
-				/** 
-				 * Create error to be sent to client if session
-				 * can't be continued.
-				 */
-				errbuf = mysql_create_custom_error(
-					1, 
-					0, 
-					"Routing failed. Session is closed.");
-				/**
-				 * Ensure that there are enough backends 
-				 * available.
-				 */
-				router->handleError(
-						router_instance,
-						session->router_session, 
-						errbuf, 
-						dcb,
-						ERRACT_NEW_CONNECTION,
-						&succp);
-				gwbuf_free(errbuf);
-				/** 
-				 * If there are not enough backends close 
-				 * session 
-				 */
-				if (!succp)
-				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Error : Routing the query failed. "
-						"Session will be closed.")));
+			    bool   succp;
+			    GWBUF* errbuf;
+			    /**
+			     * Create error to be sent to client if session
+			     * can't be continued.
+			     */
+			    errbuf = mysql_create_custom_error(
+				    1,
+							     0,
+							     "Routing failed. Session is closed.");
+			    /**
+			     * Ensure that there are enough backends
+			     * available.
+			     */
+			    router->handleError(
+			    router_instance,
+					     session->router_session,
+					     errbuf,
+					     dcb,
+					     ERRACT_NEW_CONNECTION,
+					     &succp);
+			    gwbuf_free(errbuf);
+			    /**
+			     * If there are not enough backends close
+			     * session
+			     */
+			    if (!succp)
+			    {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+								 "Error : Routing the query failed. "
+					"Session will be closed.")));
 				
-					dcb_close(dcb);
-				}
+				dcb_close(dcb);
+			    }
                         }
-                }
+		    }
+		}
+		else
+		{
+		    skygw_log_write_flush(LT,"Session received a query in state %s",
+				     STRSESSIONSTATE(ses_state));
+		    while((read_buffer = GWBUF_CONSUME_ALL(read_buffer)) != NULL);
+		    goto return_rc;
+		}
                 goto return_rc;
         } /*  MYSQL_IDLE */
         break;

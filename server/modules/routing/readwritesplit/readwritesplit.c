@@ -3915,7 +3915,7 @@ static GWBUF* sescmd_cursor_clone_querybuf(
 	}
 	ss_dassert(scur->scmd_cur_cmd != NULL);
 	
-	buf = gwbuf_clone(scur->scmd_cur_cmd->my_sescmd_buf);
+	buf = gwbuf_clone_all(scur->scmd_cur_cmd->my_sescmd_buf);
 	
 	CHK_GWBUF(buf);
 	return buf;
