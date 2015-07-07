@@ -104,8 +104,8 @@ export stop_db_command="/etc/init.d/mysql stop"
 
 if [ $mysql51_only == "yes" ] ; then 
 #	export start_db_command="/etc/init.d/mysqld start --report-user=$repl_user --report-password=$repl_password --report-host=$repl_000"
-	export start_db_command="echo \"mysqld_safe --report-user=skysql --report-password=skysql --report-host=$repl_000 & \" > mysql_start; chmod a+x mysql_start; ./mysql_start"
-	export stop_db_command="/etc/init.d/mysqld stop"
+	export start_db_command="echo \"nohup mysqld_safe --report-user=skysql --report-password=skysql --report-host=$repl_000 > /dev/null 2> /dev/null & \" > mysql_start; chmod a+x mysql_start; ./mysql_start"
+	export stop_db_command="killall mysqld"
 fi
 
 
