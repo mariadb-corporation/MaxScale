@@ -87,16 +87,13 @@ You will also need some version specific packages.
 
 #### Earlier versions of Ubuntu or Debian
 
-For these, you will need to obtain the MariaDB embedded library. It has to be manually extracted from the tarball. But first ascertain what version of glibc is installed. Run the command:
+For these, you will need to obtain the MariaDB embedded library. It has to be manually extracted from the tarballs at the MariaDB site. But first ascertain what version of glibc is installed. Run the command:
 
 ```
 	dpkg -l | grep libc6
 ```
 
-which will show the version number. If the version is less than 2.14 you should obtain the library from:
-[https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-x86_64/mariadb-5.5.41-linux-x86_64.tar.gz](https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-x86_64/mariadb-5.5.41-linux-x86_64.tar.gz). 
-Otherwise, from:
-[https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-glibc_214-x86_64/mariadb-5.5.41-linux-glibc_214-x86_64.tar.gz](https://downloads.mariadb.org/interstitial/mariadb-5.5.41/bintar-linux-glibc_214-x86_64/mariadb-5.5.41-linux-glibc_214-x86_64.tar.gz)
+which will show the version number. For versions older than 2.14 you should obtain the library which supports GLIBC versions older than 2.14 and for newer versions, the library which supports newer GLIBC versions should be used.
 
 The suggested location for extracting the tarball is `/usr` so the operation can be done by the following commands:
 
@@ -106,22 +103,6 @@ The suggested location for extracting the tarball is `/usr` so the operation can
 ```
 
 where /path/to/mariadb.library.tar.gz is replaced by the actual path and name of the downloaded tarball.
-
-## OpenSUSE
-
-At the time this guide was written, the MariaDB development packages for OpenSUSE were broken and the build failed.
-
-The packages required are:
-
-```
-gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc_s1 perl 
-make libtool libopenssl-devel libaio libaio-devel 
-libedit-devel librabbitmq-devel
-	MariaDB-devel MariaDB-client MariaDB-server
-```
-
-If zypper ask which MariaDB client should be installed `MariaDB-client` or `mariadb-client`
-	 please select `MariaDB-client`. This is the package provided by the MariaDB repository.
 
 # Obtaining the MaxScale Source Code
 
@@ -152,16 +133,15 @@ wipe the build directory clean without the danger of deleting important files wh
 something goes wrong. Building 'out-of-source' also allows you to have multiple 
 configurations of MaxScale at the same time.
 
-The default values that CMake uses can be found in the 'macros.cmake' file. 
-If you wish to change these, edit the 'macros.cmake' file or define the 
-variables manually at configuration time.
+The default values that MaxScale uses for CMake can be found in the 'macros.cmake' file under the `cmake` folder. 
+If you wish to change these, edit the 'macros.cmake' file or define the variables manually at configuration time.
 
 To display all CMake variables with their descriptions:
 
 ```
 cmake .. -LH
 ```
-This is a useful command if you have your libraries installed in non-standard locations.
+This is a useful command if you have your libraries installed in non-standard locations and need to provide them manually.
 
 When you are ready to run cmake, provide the following command:
 
@@ -241,7 +221,7 @@ $ make install
 
 This will result in an installation being created which is identical to that which would be achieved by installing the binary package.
 
-By default, MaxScale installs to `/usr/local/mariadb-maxscale` and places init.d scripts and ldconfig files into their folders. Change the `CMAKE_INSTALL_PREFIX` variable to your desired installation directory and set `WITH_SCRIPTS=N` to prevent the init.d script and ldconfig file installation.
+When building from source, MaxScale installs to `/usr/local/` and places init.d scripts and ldconfig files into their folders. Change the `CMAKE_INSTALL_PREFIX` variable to your desired installation directory and set `WITH_SCRIPTS=N` to prevent the init.d script and ldconfig file installation.
 
 Other useful targets for Make are `documentation`, which generates the Doxygen documentation, and `uninstall` which uninstall MaxScale binaries after an install.
 
