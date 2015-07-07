@@ -50,6 +50,9 @@
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
  * 20/06/2014	Mark Riddoch		Addition of dcb_clone
  * 29/05/2015	Markus Makela           Addition of dcb_write_SSL
+ * 07/07/2015   Martin Brampton         Merged add to zombieslist into dcb_close,
+ *                                      fixes for various error situations,
+ *                                      remove dcb_set_state etc, simplifications.
  *
  * @endverbatim
  */

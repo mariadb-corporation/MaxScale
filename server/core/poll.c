@@ -71,6 +71,7 @@ int	max_poll_sleep;
  *				in the loop after the epoll_wait. This allows for better
  *				thread utilisaiton and fairer scheduling of the event
  *				processing.
+ * 07/07/15     Martin Brampton Simplified add and remove DCB, improve error handling.
  *
  * @endverbatim
  */
