@@ -103,7 +103,7 @@ export start_db_command="/etc/init.d/mysql start"
 export stop_db_command="/etc/init.d/mysql stop"
 
 if [ $mysql51_only == "yes" ] ; then 
-	export start_db_command="/etc/init.d/mysqld start --report-host=$repl_user --report-password=$repl_password --report-host=$repl_000"
+	export start_db_command="/etc/init.d/mysqld start --report-user=$repl_user --report-password=$repl_password --report-host=$repl_000"
 	export stop_db_command="/etc/init.d/mysqld stop"
 fi
 
