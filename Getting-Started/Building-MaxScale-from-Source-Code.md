@@ -22,9 +22,9 @@ After following the instructions on that site you should have a working MariaDB 
 
 The full list of dependencies for the most common distributions is provided in this section. If your system is not listed here, MaxScale building isn't guaranteed to be compatible but might still be successful.
 
-## RHEL, CentOS and Fedora
+## RHEL and CentOS
 
-You will need to install all of the following packages for all versions of RHEL, CentOS and Fedora.
+You will need to install all of the following packages for all versions of RHEL and CentOS.
 
 ```
 gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool 
@@ -39,7 +39,7 @@ rpm-build
 
 There are also some version specific packages you need to install.
 
-#### RHEL 6, 7, CentOS 6, 7, Fedora:
+#### RHEL 6, 7, CentOS 6, 7:
 
 ```
 libedit-devel
@@ -51,15 +51,9 @@ libedit-devel
 mariadb-devel mariadb-embedded-devel 
 ```
 
-#### RHEL 5, 6, CentOS 5, 6, Fedora 19, 20
+#### RHEL 5, 6, CentOS 5, 6
 ```
 MariaDB-devel MariaDB-server
-```
-
-#### Fedora 19, 20
-
-```
-systemtap-sdt-devel
 ```
 
 ## Ubuntu and Debian
