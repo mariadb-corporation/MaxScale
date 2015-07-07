@@ -98,6 +98,34 @@ A list of event names which cause the script to be executed. If this option is n
 events=master_down,slave_down
 ```
 
+## Interaction with Server Priorities
+
+If a server is configured with the `priority=<int>` parameter, galeramon will use that as the basis on which the master node is chosen. This requires the `disable_master_role_setting` to be undefined or disabled. The server with the lowest value in `priority` will be chosen as the master node when a replacement Galera node is promoted to a master server inside MaxScale.
+
+Here is an example with two servers.
+
+```
+[node-1]
+type=server
+address=192.168.122.101
+port=3306
+priority=1
+
+[node-2]
+type=server
+address=192.168.122.102
+port=3306
+priority=3
+
+[node-3]
+type=server
+address=192.168.122.102
+port=3306
+priority=2
+```
+
+This will use `node-1` as the master if available and `node-3` if the first one isn't available. `node-2` will only be used as the master if both `node-1` and `node-3` are down.
+
 ## Script events
 
 Here is a table of all possible event types and their descriptions.
