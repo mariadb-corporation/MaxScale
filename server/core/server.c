@@ -85,6 +85,7 @@ SERVER 	*server;
 	server->master_id = -1;
 	server->depth = -1;
         server->persistent = NULL;
+        server->persistmax = 0;
         spinlock_init(&server->persistlock);
 
 	spinlock_acquire(&server_spin);
@@ -149,10 +150,12 @@ DCB *
 server_get_persistent(SERVER *server, char *user, const char *protocol)
 {
     DCB *dcb, *previous = NULL;
+    int poolsize;
     
-    if (server->persistent && dcb_persistent_clean_count(server->persistent, false) && server->persistent)
+    if (server->persistent && (poolsize = dcb_persistent_clean_count(server->persistent, false)) && server->persistent)
     {
         spinlock_acquire(&server->persistlock);
+        server->persistmax = MAX(server->persistmax, poolsize);
         dcb = server->persistent;
         while (dcb) {
             if (dcb->user 
@@ -277,6 +280,7 @@ printServer(SERVER *server)
 	printf("\tTotal connections:	%d\n", server->stats.n_connections);
 	printf("\tCurrent connections:	%d\n", server->stats.n_current);
 	printf("\tPersistent connections:	%d\n", server->stats.n_persistent);
+	printf("\tPersistent actual max:	%d\n", server->persistmax);
 }
 
 /**
@@ -368,7 +372,9 @@ char	*stat;
 						server->stats.n_persistent);
                     dcb_printf(dcb, "\tPersistent measured pool size:   %d\n",
 						dcb_persistent_clean_count(server->persistent, false));
-                    dcb_printf(dcb, "\tPersistent pool max size:            %d\n",
+                    dcb_printf(dcb, "\tPersistent max size achieved:    %d\n",
+						server->persistmax);
+                    dcb_printf(dcb, "\tPersistent pool size limit:      %d\n",
 						server->persistpoolmax);
                     dcb_printf(dcb, "\tPersistent max time (secs):          %d\n",
 						server->persistmaxtime);
@@ -530,7 +536,9 @@ SERVER_PARAM	*param;
 						server->stats.n_persistent);
             dcb_printf(dcb, "\tPersistent measured pool size:   %d\n",
 						dcb_persistent_clean_count(server->persistent, false));
-            dcb_printf(dcb, "\tPersistent pool max size:            %d\n",
+            dcb_printf(dcb, "\tPersistent actual size max:            %d\n",
+						server->persistmax);
+            dcb_printf(dcb, "\tPersistent pool size limit:            %d\n",
 						server->persistpoolmax);
             dcb_printf(dcb, "\tPersistent max time (secs):          %d\n",
 						server->persistmaxtime);

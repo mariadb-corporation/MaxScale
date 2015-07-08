@@ -104,6 +104,7 @@ typedef struct server {
         SPINLOCK        persistlock;   /**< Lock for adjusting the persistent connections list */
         long            persistpoolmax; /**< Maximum size of persistent connections pool */
         long            persistmaxtime; /**< Maximum number of seconds connection can live */
+        long            persistmax;     /**< Maximum pool size actually achieved since startup */
 #if defined(SS_DEBUG)
         skygw_chk_t     server_chk_tail;
 #endif

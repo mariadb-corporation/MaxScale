@@ -2056,7 +2056,7 @@ dcb_maybe_add_persistent(DCB *dcb)
     {
       LOGIF(LD, (skygw_log_write(
             LOGFILE_DEBUG,
-            "%lu [dcb_connect] Not adding DCB to persistent pool, user %s, "
+            "%lu [dcb_maybe_add_persistent] Not adding DCB to persistent pool, user %s, "
             "max for pool %d, error handle called %s, hung flag %s, pool count %d.\n",
             pthread_self(),
             user ? user : "",
