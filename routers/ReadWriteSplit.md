@@ -100,6 +100,10 @@ disable_slave_recovery=true
 master_accept_reads=true
 ```
 
+### Routing hints
+
+The readwritesplit router supports routing hints. For a detailed guide on hint syntax and functionality, please see [this](../Reference/Hint-Syntax.md) document.
+
 ## Limitations
 
 In Master-Slave replication cluster also read-only queries are routed to master too in the following situations:
