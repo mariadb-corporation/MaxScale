@@ -446,12 +446,14 @@ poll_resolve_error(DCB *dcb, int errornum, bool adding)
         }
     }
     /* Common checks for add or remove - crash MaxScale */
-    if (EBADF == errornum) assert (!(EBADF == errornum));
-    if (EINVAL == errornum) assert (!(EINVAL == errornum));
-    if (ENOMEM == errornum) assert (!(ENOMEM == errornum));
-    if (EPERM == errornum) assert (!(EPERM == errornum));
+    if (EBADF == errornum) raise(SIGABRT);
+    if (EINVAL == errornum) raise(SIGABRT);
+    if (ENOMEM == errornum) raise(SIGABRT);
+    if (EPERM == errornum) raise(SIGABRT);
     /* Undocumented error number */
     raise(SIGABRT);
+    /* The following statement should never be reached, but avoids compiler warning */
+    return -1;
 }
 
 #define	BLOCKINGPOLL	0	/*< Set BLOCKING POLL to 1 if using a single thread and to make
