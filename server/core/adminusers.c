@@ -19,7 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#define _XOPEN_SOURCE
 #include <unistd.h>
 #include <crypt.h>
 #include <users.h>

@@ -49,8 +49,11 @@
  *                                      backend
  * 07/05/2014	Mark Riddoch		Addition of callback mechanism
  * 20/06/2014	Mark Riddoch		Addition of dcb_clone
- * 29/05/2015	Markus Makela       Addition of dcb_write_SSL
+ * 29/05/2015	Markus Makela           Addition of dcb_write_SSL
  * 11/06/2015	Martin Brampton		Persistent connnections and tidy up
+ * 07/07/2015   Martin Brampton         Merged add to zombieslist into dcb_close,
+ *                                      fixes for various error situations,
+ *                                      remove dcb_set_state etc, simplifications.
  *
  * @endverbatim
  */
@@ -59,6 +62,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <signal.h>
 #include <dcb.h>
 #include <spinlock.h>
 #include <server.h>
@@ -86,10 +90,6 @@ static	SPINLOCK	dcbspin = SPINLOCK_INIT;
 static	SPINLOCK	zombiespin = SPINLOCK_INIT;
 
 static void dcb_final_free(DCB *dcb);
-static bool dcb_set_state_nolock(
-        DCB                 *dcb,
-        const dcb_state_t   new_state,
-        dcb_state_t         *old_state);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static DCB * dcb_get_next (DCB *dcb);
 static int  dcb_null_write(DCB *dcb, GWBUF *buf);
@@ -235,52 +235,6 @@ dcb_free(DCB *dcb)
     }
     assert(dcb->fd == DCBFD_CLOSED);
     dcb_final_free(dcb);
-}
-
-/** 
- * Add the DCB to the end of zombies list. 
- *
- * Adding to list occurs once per DCB. This is ensured by changing the
- * state of DCB to DCB_STATE_ZOMBIE after addition. Prior insertion, DCB state
- * is checked and operation proceeds only if state differs from DCB_STATE_ZOMBIE.
- * @param dcb The DCB to add to the zombie list
- * @return none
- */
-void
-dcb_add_to_zombieslist(DCB *dcb)
-{
-        bool        succp = false;
-        dcb_state_t prev_state = DCB_STATE_UNDEFINED;
-        
-        CHK_DCB(dcb);        
-
-        /*<
-         * Protect zombies list access.
-         */
-	spinlock_acquire(&zombiespin);
-        /*<
-         * If dcb is already added to zombies list, return.
-         */
-        if (dcb->state != DCB_STATE_NOPOLLING) {
-                ss_dassert(dcb->state != DCB_STATE_POLLING &&
-                           dcb->state != DCB_STATE_LISTENING);
-                spinlock_release(&zombiespin);
-                return;
-        }
-
-        /*<
-        * Add closing dcb to the top of the list.
-        */
-        dcb->memdata.next = zombies;
-        zombies = dcb;
-        /*<
-        * Set state which indicates that it has been added to zombies
-        * list.
-        */
-        succp = dcb_set_state(dcb, DCB_STATE_ZOMBIE, &prev_state);
-        ss_info_dassert(succp, "Failed to set DCB_STATE_ZOMBIE");
-        
-	spinlock_release(&zombiespin);
 }
 
 /*
@@ -599,8 +553,7 @@ bool    succp = false;
 			&tls_log_info.li_sesid, 
 			&tls_log_info.li_enabled_logs)));
 
-                succp = dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
-                ss_dassert(succp);
+                dcb->state = DCB_STATE_DISCONNECTED;
 		nextdcb = dcb->memdata.next;
                 dcb_final_free(dcb);
                 dcb = nextdcb;
@@ -615,7 +568,7 @@ bool    succp = false;
  * Connect to a server
  * 
  * This routine will create a server connection
- * If succesful the new dcb will be put in
+ * If successful the new dcb will be put in
  * epoll set by dcb->func.connect
  *
  * @param server	The server to connect to
@@ -626,11 +579,11 @@ bool    succp = false;
 DCB *
 dcb_connect(SERVER *server, SESSION *session, const char *protocol)
 {
-DCB		*dcb;
-GWPROTOCOL	*funcs;
-int             fd;
-int             rc;
-char            *user;
+    DCB		*dcb;
+    GWPROTOCOL	*funcs;
+    int         fd;
+    int         rc;
+    char        *user;
 
         user = session_getUser(session);
         if (user && strlen(user))
@@ -677,7 +630,7 @@ char            *user;
 	if ((funcs = (GWPROTOCOL *)load_module(protocol,
                                                MODULE_PROTOCOL)) == NULL)
 	{
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb->state = DCB_STATE_DISCONNECTED;
 		dcb_final_free(dcb);
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -716,7 +669,7 @@ char            *user;
                         dcb,
                         session->client,
                         session->client->fd)));
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
+                dcb->state = DCB_STATE_DISCONNECTED;
                 dcb_final_free(dcb);
                 return NULL;
 	} else {
@@ -758,10 +711,10 @@ char            *user;
          */
         rc = poll_add_dcb(dcb);
 
-        if (rc == DCBFD_CLOSED) {
-            dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
-            dcb_final_free(dcb);
-            return NULL;
+        if (rc) {
+                dcb->state = DCB_STATE_DISCONNECTED;
+                dcb_final_free(dcb);
+                return NULL;
         }
 	/**
 	 * The dcb will be addded into poll set by dcb->func.connect
@@ -973,10 +926,10 @@ int dcb_read_n(
                         goto return_n;
                 }
 
-                if (b == 0 && nread == 0)
+                if (b == 0)
                 {
                         /** Handle closed client socket */
-                        if (dcb_isclient(dcb))
+                        if (nread == 0 && dcb_isclient(dcb))
                         {
                                 char c;
                                 int l_errno = 0;
@@ -995,11 +948,6 @@ int dcb_read_n(
                                         goto return_n;
                                 }
                         }
-                        n = 0;
-                        goto return_n;
-                }
-                else if (b == 0)
-                {
                         n = 0;
                         goto return_n;
                 }
@@ -1242,6 +1190,10 @@ int dcb_read_SSL(
 		    }
 
 		    gwbuf_rtrim(buffer,bufsize - n);
+		    if(buffer == NULL)
+		    {
+			goto return_n;
+		    }
 #ifdef SS_DEBUG
 		    skygw_log_write(LD,"%lu SSL: Truncated buffer from %d to %d bytes. "
 	            "Read %d bytes, %d bytes waiting.\n",pthread_self(),
@@ -1268,12 +1220,9 @@ int dcb_read_SSL(
 
                 /*< Append read data to the gwbuf */
                 *head = gwbuf_append(*head, buffer);
-		rc = ioctl(dcb->fd, FIONREAD, &b);
-		pending = SSL_pending(dcb->ssl);
-
         } /*< while (true) */
 return_n:
-        return n;
+        return nread;
 }
 /**
  * General purpose routine to write to a DCB
@@ -1628,95 +1577,116 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 	    }
 #endif /* FAKE_CODE */
 	    qlen = GWBUF_LENGTH(queue);
-
-        w = gw_write_SSL(dcb->ssl, GWBUF_DATA(queue), qlen);
-	    dcb->stats.n_writes++;
-
-	    if (w < 0)
+	    do
 	    {
-		int ssl_errno = SSL_get_error(dcb->ssl,w);
+		w = gw_write_SSL(dcb->ssl, GWBUF_DATA(queue), qlen);
+		dcb->stats.n_writes++;
 
-		if (LOG_IS_ENABLED(LOGFILE_DEBUG))
+		if (w <= 0)
 		{
-		    switch(ssl_errno)
+		    int ssl_errno = SSL_get_error(dcb->ssl,w);
+
+		    if (LOG_IS_ENABLED(LOGFILE_DEBUG))
 		    {
-		    case SSL_ERROR_WANT_READ:
-			LOGIF(LD, (skygw_log_write(
-				LOGFILE_DEBUG,
-				"%lu [dcb_write] Write to dcb "
-				"%p in state %s fd %d failed "
-				"due error SSL_ERROR_WANT_READ",
-						 pthread_self(),
-						 dcb,
-						 STRDCBSTATE(dcb->state),
-						 dcb->fd)));
-			break;
-		    case SSL_ERROR_WANT_WRITE:
-			LOGIF(LD, (skygw_log_write(
-				LOGFILE_DEBUG,
-				"%lu [dcb_write] Write to dcb "
-				"%p in state %s fd %d failed "
-				"due error SSL_ERROR_WANT_WRITE",
-						 pthread_self(),
-						 dcb,
-						 STRDCBSTATE(dcb->state),
-						 dcb->fd)));
-			break;
-		    default:
-			LOGIF(LD, (skygw_log_write(
-				LOGFILE_DEBUG,
-				"%lu [dcb_write] Write to dcb "
-				"%p in state %s fd %d failed "
-				"due error %d",
-						 pthread_self(),
-						 dcb,
-						 STRDCBSTATE(dcb->state),
-						 dcb->fd,ssl_errno)));
-			if(ssl_errno == SSL_ERROR_SSL ||
-			 ssl_errno == SSL_ERROR_SYSCALL)
+			switch(ssl_errno)
 			{
-			    while((ssl_errno = ERR_get_error()) != 0)
+			case SSL_ERROR_WANT_READ:
+			    LOGIF(LD, (skygw_log_write(
+				    LOGFILE_DEBUG,
+						     "%lu [dcb_write] Write to dcb "
+				    "%p in state %s fd %d failed "
+				    "due error SSL_ERROR_WANT_READ",
+						     pthread_self(),
+						     dcb,
+						     STRDCBSTATE(dcb->state),
+						     dcb->fd)));
+			    break;
+			case SSL_ERROR_WANT_WRITE:
+			    LOGIF(LD, (skygw_log_write(
+				    LOGFILE_DEBUG,
+						     "%lu [dcb_write] Write to dcb "
+				    "%p in state %s fd %d failed "
+				    "due error SSL_ERROR_WANT_WRITE",
+						     pthread_self(),
+						     dcb,
+						     STRDCBSTATE(dcb->state),
+						     dcb->fd)));
+			    break;
+			default:
+			    LOGIF(LD, (skygw_log_write(
+				    LOGFILE_DEBUG,
+						     "%lu [dcb_write] Write to dcb "
+				    "%p in state %s fd %d failed "
+				    "due error %d",
+						     pthread_self(),
+						     dcb,
+						     STRDCBSTATE(dcb->state),
+						     dcb->fd,ssl_errno)));
+			    break;
+			}
+		    }
+
+		    if (LOG_IS_ENABLED(LOGFILE_ERROR) && ssl_errno != SSL_ERROR_WANT_WRITE)
+		    {
+			if (ssl_errno == -1)
+			{
+			    LOGIF(LE, (skygw_log_write_flush(
+				    LOGFILE_ERROR,
+							     "Error : Write to dcb %p in "
+				    "state %s fd %d failed due to "
+				    "SSL error %d",
+							     dcb,
+							     STRDCBSTATE(dcb->state),
+							     dcb->fd,
+							     ssl_errno)));
+			    if(ssl_errno == SSL_ERROR_SSL || ssl_errno == SSL_ERROR_SYSCALL)
 			    {
-				char errbuf[140];
-				ERR_error_string(ssl_errno,errbuf);
-				skygw_log_write(LE,"%s",errbuf);
+				if(ssl_errno == SSL_ERROR_SYSCALL)
+				{
+				    skygw_log_write(LE,"%d:%s",errno,strerror(errno));
+				}
+				do
+				{
+				    char errbuf[140];
+				    ERR_error_string(ssl_errno,errbuf);
+				    skygw_log_write(LE,"%d:%s",ssl_errno,errbuf);
+				}while((ssl_errno = ERR_get_error()) != 0);
 			    }
 			}
+			else if(w == 0)
+			{
+			    do
+				{
+				    char errbuf[140];
+				    ERR_error_string(ssl_errno,errbuf);
+				    skygw_log_write(LE,"%d:%s",ssl_errno,errbuf);
+				}while((ssl_errno = ERR_get_error()) != 0);
+			}
+		    }
+
+		    if(ssl_errno != SSL_ERROR_WANT_WRITE)
 			break;
-		    }
 		}
-		
-		if (LOG_IS_ENABLED(LOGFILE_ERROR))
-		{
-		    if (ssl_errno != 0)
-		    {
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Write to dcb %p in "
-				"state %s fd %d failed due "
-				"SSL error %d",
-							 dcb,
-							 STRDCBSTATE(dcb->state),
-							 dcb->fd,
-							 ssl_errno)));
-		    }
-		}
+	    }while(w <= 0);
+
+	    if(w <= 0)
+	    {
 		break;
 	    }
-	    /*
-	     * Pull the number of bytes we have written from
-	     * queue with have.
-	     */
-	    queue = gwbuf_consume(queue, w);
-	    LOGIF(LD, (skygw_log_write(
+	    else
+	    {
+		/** Remove written bytes from the queue */
+		queue = gwbuf_consume(queue, w);
+		LOGIF(LD, (skygw_log_write(
 		    LOGFILE_DEBUG,
 				     "%lu [dcb_write] Wrote %d Bytes to dcb %p in "
-		    "state %s fd %d",
+				     "state %s fd %d",
 				     pthread_self(),
 				     w,
 				     dcb,
 				     STRDCBSTATE(dcb->state),
 				     dcb->fd)));
+	    }
 	} /*< while (queue != NULL) */
 	/*<
 	 * What wasn't successfully written is stored to write queue
@@ -1734,38 +1704,6 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 	}
     } /* if (dcb->writeq) */
 
-    if (saved_errno != 0           &&
-	queue != NULL              &&
-	saved_errno != EAGAIN      &&
-	saved_errno != EWOULDBLOCK)
-    {
-	bool dolog = true;
-
-	/**
-	 * Do not log if writing COM_QUIT to backend failed.
-	 */
-	if (GWBUF_IS_TYPE_MYSQL(queue))
-	{
-	    uint8_t* data = GWBUF_DATA(queue);
-
-	    if (data[4] == 0x01)
-	    {
-		dolog = false;
-	    }
-	}
-	if (dolog)
-	{
-	    LOGIF(LD, (skygw_log_write(
-		    LOGFILE_DEBUG,
-				     "%lu [dcb_write] Writing to %s socket failed due %d, %s.",
-				     pthread_self(),
-				     dcb_isclient(dcb) ? "client" : "backend server",
-				     saved_errno,
-				     strerror(saved_errno))));
-	}
-	spinlock_release(&dcb->writeqlock);
-	return 0;
-    }
     spinlock_release(&dcb->writeqlock);
 
     if (dcb->high_water && dcb->writeqlen > dcb->high_water && below_water)
@@ -1901,28 +1839,47 @@ dcb_drain_writeq_SSL(DCB *dcb)
 	while (dcb->writeq != NULL)
 	{
 	    len = GWBUF_LENGTH(dcb->writeq);
-        w = gw_write_SSL(dcb->ssl, GWBUF_DATA(dcb->writeq), len);
+	    w = gw_write_SSL(dcb->ssl, GWBUF_DATA(dcb->writeq), len);
 
 	    if (w < 0)
 	    {
-		int ssl_errno = ERR_get_error();
+		int ssl_errno = SSL_get_error(dcb->ssl,w);
 
-		if(ssl_errno == SSL_ERROR_WANT_WRITE ||
-		 ssl_errno == SSL_ERROR_WANT_ACCEPT ||
-		 ssl_errno == SSL_ERROR_WANT_READ)
+		if(ssl_errno == SSL_ERROR_WANT_WRITE || ssl_errno == SSL_ERROR_WANT_READ)
 		{
 		    break;
 		}
+		skygw_log_write_flush(LOGFILE_ERROR,
+			"Error : Write to dcb failed due to "
+			"SSL error %d:",
+			dcb,
+			STRDCBSTATE(dcb->state),
+			dcb->fd,
+			ssl_errno);
+		switch(ssl_errno)
+		{
+		case SSL_ERROR_SSL:
+		case SSL_ERROR_SYSCALL:
+		    while((ssl_errno = ERR_get_error()) != 0)
+		    {
+			char errbuf[140];
+			ERR_error_string(ssl_errno,errbuf);
+			skygw_log_write(LE,"%s",errbuf);
+		    }
+		    if(errno != 0)
+			skygw_log_write(LE,"%d:%s",errno,strerror(errno));
+		    break;
+		case SSL_ERROR_ZERO_RETURN:
+		    skygw_log_write(LE,"Socket is closed.");
+		    break;
 
-		skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Write to dcb %p "
-			"in state %s fd %d failed: %s",
-				 dcb,
-				 STRDCBSTATE(dcb->state),
-				 dcb->fd,
-				 ERR_error_string(ssl_errno,NULL));
+		default:
+		    skygw_log_write(LE,"Unexpected error.");
+		    break;
+		}
 		break;
+
+		
 	    }
 	    /*
 	     * Pull the number of bytes we have written from
@@ -1962,62 +1919,100 @@ dcb_drain_writeq_SSL(DCB *dcb)
 void
 dcb_close(DCB *dcb)
 {
-        CHK_DCB(dcb);
+    CHK_DCB(dcb);
 
-	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-				"%lu [dcb_close]",
-				pthread_self())));                                
-	
-        /**
-         * dcb_close may be called for freshly created dcb, in which case
-         * it only needs to be freed.
-         */
-        if (dcb->state == DCB_STATE_ALLOC)
+    LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+        "%lu [dcb_close] DCB %p in state %s",
+        pthread_self(),
+        dcb,
+        dcb ? STRDCBSTATE(dcb->state) : "Invalid DCB")));                                
+
+    if (DCB_STATE_ZOMBIE == dcb->state)
+    {
+        return;
+    }
+    
+    if (DCB_STATE_UNDEFINED == dcb->state 
+        || DCB_STATE_DISCONNECTED == dcb->state)
+    {
+        LOGIF(LE, (skygw_log_write(
+            LOGFILE_ERROR,
+            "%lu [dcb_close] Error : Removing DCB %p but was in state %s "
+            "which is not legal for a call to dcb_close. ",
+            pthread_self(),
+            dcb,
+            STRDCBSTATE(dcb->state))));
+        raise(SIGABRT);
+    }
+    
+    /**
+     * dcb_close may be called for freshly created dcb, in which case
+     * it only needs to be freed.
+     */
+    if (dcb->state == DCB_STATE_ALLOC && dcb->fd != DCBFD_CLOSED)
+    {
+        dcb_final_free(dcb);
+        return;
+    }
+        
+    /*<
+     * Stop dcb's listening and modify state accordingly.
+     */
+    if (dcb->state == DCB_STATE_POLLING  || dcb->state == DCB_STATE_LISTENING)
+    {
+        if (dcb->state == DCB_STATE_LISTENING)
         {
-                dcb_set_state(dcb, DCB_STATE_DISCONNECTED, NULL);
-                dcb_final_free(dcb);
-                return;
+            LOGIF(LE, (skygw_log_write(
+                LOGFILE_ERROR,
+                "%lu [dcb_close] Error : Removing DCB %p but was in state %s "
+                "which is not expected for a call to dcb_close, although it"
+                "should be processed correctly. ",
+                pthread_self(),
+                dcb,
+                STRDCBSTATE(dcb->state))));
         }
-        
-        ss_dassert(dcb->state == DCB_STATE_POLLING ||
-               dcb->state == DCB_STATE_NOPOLLING ||
-               dcb->state == DCB_STATE_ZOMBIE);
-        
-        /*<
-        * Stop dcb's listening and modify state accordingly.
-        */
-	if (dcb->state == DCB_STATE_POLLING)
+	if ((dcb->state == DCB_STATE_POLLING && !dcb_maybe_add_persistent(dcb))
+            || (dcb->state == DCB_STATE_LISTENING))
 	{
-            if (!dcb_maybe_add_persistent(dcb))
+            poll_remove_dcb(dcb);
+            /*
+             * Return will always be 0 or function will have crashed, so we
+             * threw away return value.
+             */
+            LOGIF(LD, (skygw_log_write(
+                LOGFILE_DEBUG,
+                "%lu [dcb_close] Removed dcb %p in state %s from "
+                "poll set.",
+                pthread_self(),
+                dcb,
+                STRDCBSTATE(dcb->state))));
+            /**
+             * close protocol and router session
+             */
+            if (dcb->func.close != NULL)
             {
-                if (poll_remove_dcb(dcb))
-                {
-                    LOGIF(LE, (skygw_log_write(
-                        LOGFILE_ERROR,
-                        "Error : Removing DCB fd == %d in state %s from "
-                        "poll set failed.",
-                        dcb->fd,
-                        STRDCBSTATE(dcb->state))));
-                } 
-                else
-                {
-                    LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [dcb_close] Removed dcb %p in state %s from "
-                        "poll set.",
-                        pthread_self(),
-                        dcb,
-                        STRDCBSTATE(dcb->state))));
-            
-                    dcb_close_finish(dcb);
-                    ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                        dcb->state == DCB_STATE_ZOMBIE);	
-                }
-                ss_dassert(dcb->state == DCB_STATE_NOPOLLING ||
-                    dcb->state == DCB_STATE_ZOMBIE ||
-                    dcb->state == DCB_STATE_POLLING);	
+                dcb->func.close(dcb);
             }
+            /** Call possible callback for this DCB in case of close */
+            dcb_call_callback(dcb, DCB_REASON_CLOSE);
         }
+    }
+    
+    spinlock_acquire(&zombiespin);
+    if (dcb->state == DCB_STATE_NOPOLLING  || dcb->state == DCB_STATE_ALLOC)
+    {
+        /*<
+         * Add closing dcb to the top of the list.
+         */
+        dcb->memdata.next = zombies;
+        zombies = dcb;
+        /*<
+         * Set state which indicates that it has been added to zombies
+         * list.
+         */
+        dcb->state = DCB_STATE_ZOMBIE;
+    }
+    spinlock_release(&zombiespin);
 }
 
 /**
@@ -2097,7 +2092,7 @@ dcb_close_finish(DCB *dcb)
     /** Call possible callback for this DCB in case of close */
     dcb_call_callback(dcb, DCB_REASON_CLOSE);
     /** Must be DCB_STATE_NOPOLLING when this function is called */
-    dcb_add_to_zombieslist(dcb);
+    dcb_close(dcb);
  }
 
 /**
@@ -2291,7 +2286,7 @@ DCB     *dcb;
 }
 
 /** 
- * Diagnotic routine to print client DCB data in a tabular form.
+ * Diagnostic routine to print client DCB data in a tabular form.
  * 
  * @param       pdcb    DCB to print results to
  */
@@ -2417,7 +2412,8 @@ dprintDCB(DCB *pdcb, DCB *dcb)
  *
  */
 const char *
-gw_dcb_state2string (int state) {
+gw_dcb_state2string (int state) 
+{
 	switch(state) {
 		case DCB_STATE_ALLOC:
 			return "DCB Allocated";
@@ -2513,155 +2509,6 @@ void dcb_hashtable_stats(
 		"\tAverage chain length:	%.1f\n", 
 		(hashsize == 0 ? (float)hashsize : (float)total / hashsize));
 	dcb_printf(dcb, "\tLongest chain length:	%d\n", longest);
-}
-
-
-bool 
-dcb_set_state(
-        DCB                 *dcb,
-        const dcb_state_t   new_state,
-        dcb_state_t         *old_state_ptr)
-{
-        bool                succp;
-        dcb_state_t         old_state_buffer;
-        
-        CHK_DCB(dcb);
-        
-        spinlock_acquire(&dcb->dcb_initlock);
-        succp = dcb_set_state_nolock(dcb, new_state, &old_state_buffer);
-        spinlock_release(&dcb->dcb_initlock);
-
-        if (old_state_ptr != NULL)
-        {
-                *old_state_ptr = old_state_buffer;
-        }
-        return succp;
-}
-
-static bool 
-dcb_set_state_nolock(
-        DCB                 *dcb,
-        const dcb_state_t   new_state,
-        dcb_state_t         *old_state_ptr)
-{
-        bool                succp = false;
-        bool                old_state_supplied = true;
-        dcb_state_t         state_buffer;
-        
-        CHK_DCB(dcb);
-
-        if (NULL == old_state_ptr)
-        {
-            old_state_supplied = false;
-            old_state_ptr = &state_buffer;
-        }
-        *old_state_ptr = dcb->state;
-        
-        switch (*old_state_ptr) {
-        case DCB_STATE_UNDEFINED:
-                dcb->state = new_state;
-                succp = true;
-                break;
-
-        case DCB_STATE_ALLOC:
-                switch (new_state) {
-			/** fall through, for client requests */
-			case DCB_STATE_POLLING: 
-			/** fall through, for connect listeners */
-			case DCB_STATE_LISTENING: 
-			/** for failed connections */
-			case DCB_STATE_DISCONNECTED: 
-				dcb->state = new_state;
-				succp = true;
-                        default: ;
-                }
-                break;
-                
-        case DCB_STATE_POLLING:
-                switch(new_state) {
-			case DCB_STATE_NOPOLLING:
-				dcb->state = new_state;
-				succp = true;
-                        default: ;
-                }
-                break;
-
-        case DCB_STATE_LISTENING:
-                switch(new_state) {
-			case DCB_STATE_NOPOLLING:
-				dcb->state = new_state;
-				succp = true;
-                        default: ;
-                }
-                break;
-                
-        case DCB_STATE_NOPOLLING:
-                switch (new_state) {
-			case DCB_STATE_ZOMBIE: /*< fall through */
-				dcb->state = new_state;
-			case DCB_STATE_POLLING: /*< ok to try but state can't change */
-				succp = true;
-                        default: ;
-                }
-                break;
-
-        case DCB_STATE_ZOMBIE:
-                switch (new_state) {
-			case DCB_STATE_DISCONNECTED: /*< fall through */
-				dcb->state = new_state;
-			case DCB_STATE_POLLING: /*< ok to try but state can't change */
-				succp = true;
-                        default: ;
-                }
-                break;
-
-        case DCB_STATE_DISCONNECTED:
-                switch (new_state) {
-			case DCB_STATE_FREED:
-				dcb->state = new_state;
-				succp = true;
-                        default: ;
-                }
-                break;
-
-        case DCB_STATE_FREED:
-                break;
-                
-        default:
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unknown dcb state %s for "
-                        "dcb %p",
-                        STRDCBSTATE(dcb->state),
-                        dcb)));
-                ss_dassert(false);
-                break;
-        } /*< switch (dcb->state) */
-
-        if (succp) {
-                LOGIF(LD, (skygw_log_write_flush(
-                        LOGFILE_DEBUG,
-                        "%lu [dcb_set_state_nolock] dcb %p fd %d %s -> %s",
-                        pthread_self(),
-                        dcb,
-                        dcb->fd,
-                        STRDCBSTATE(*old_state_ptr),
-                        STRDCBSTATE(dcb->state))));
-        }
-        else
-        {
-                LOGIF(LD, (skygw_log_write(
-                                   LOGFILE_DEBUG,
-                                   "%lu [dcb_set_state_nolock] Failed "
-                                   "to change state of DCB %p. "
-                                   "Old state %s > new state %s.",
-                                   pthread_self(),
-                                   dcb,
-				   (old_state_ptr == NULL ? "NULL" : STRDCBSTATE(*old_state_ptr)),
-                                   STRDCBSTATE(new_state))));
-                ss_dassert(old_state_supplied);
-        }
-        return succp;
 }
 
 /**
@@ -3236,7 +3083,7 @@ int dcb_accept_SSL(DCB* dcb)
     do
     {
 	ssl_rval = SSL_accept(dcb->ssl);
-	errnum = SSL_get_error(dcb->ssl,ssl_rval);
+
 	LOGIF(LD,(skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL_accept %d, error %d",
 				 ssl_rval,errnum)));
 	switch(ssl_rval)

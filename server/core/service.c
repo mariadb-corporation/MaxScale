@@ -126,7 +126,7 @@ SERVICE 	*service;
                         "Error : Unable to load %s module \"%s\".\n\t\t\t"
                         "      Ensure that lib%s.so exists in one of the "
                         "following directories :\n\t\t\t      "
-                        "- %s/modules\n%s%s",
+                        "- %s\n%s%s",
                         MODULE_ROUTER,
                         router,
                         router,
@@ -269,7 +269,7 @@ GWPROTOCOL	*funcs;
 				/* Save authentication data to file cache */
 				char	*ptr, path[PATH_MAX + 1];
                                 int mkdir_rval = 0;
-				strcpy(path, get_cachedir());
+				strncpy(path, get_cachedir(),PATH_MAX);
 				strncat(path, "/", 4096);
 				strncat(path, service->name, PATH_MAX);
 				if (access(path, R_OK) == -1)
@@ -535,11 +535,16 @@ int		listeners = 0;
 	port = service->ports;
 	while (port)
 	{
-		poll_remove_dcb(port->listener);
-		port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
-		listeners++;
-
-		port = port->next;
+	    if(port->listener &&
+	     port->listener->session->state == SESSION_STATE_LISTENER)
+	    {
+		if(poll_remove_dcb(port->listener) == 0)
+		{
+		    port->listener->session->state = SESSION_STATE_LISTENER_STOPPED;
+		    listeners++;
+		}
+	    }
+	    port = port->next;
 	}
 	service->state = SERVICE_STATE_STOPPED;
 
@@ -563,13 +568,18 @@ int		listeners = 0;
 	port = service->ports;
 	while (port)
 	{
-                if (poll_add_dcb(port->listener) == 0) {
-                        port->listener->session->state = SESSION_STATE_LISTENER;
-                        listeners++;
-                }
-		port = port->next;
+	    if(port->listener &&
+	     port->listener->session->state == SESSION_STATE_LISTENER_STOPPED)
+	    {
+		if(poll_add_dcb(port->listener) == 0)
+		{
+		    port->listener->session->state = SESSION_STATE_LISTENER;
+		    listeners++;
+		}
+	    }
+	    port = port->next;
 	}
-
+	service->state = SERVICE_STATE_STARTED;
 	return listeners;
 }
 
@@ -914,10 +924,12 @@ serviceSetSSLVersion(SERVICE *service, char* version)
 	service->ssl_method_type = SERVICE_SSLV3;
     else if(strcasecmp(version,"TLSV10") == 0)
 	service->ssl_method_type = SERVICE_TLS10;
+#ifdef OPENSSL_1_0
     else if(strcasecmp(version,"TLSV11") == 0)
 	service->ssl_method_type = SERVICE_TLS11;
     else if(strcasecmp(version,"TLSV12") == 0)
 	service->ssl_method_type = SERVICE_TLS12;
+#endif
     else if(strcasecmp(version,"MAX") == 0)
 	service->ssl_method_type = SERVICE_SSL_TLS_MAX;
     else return -1;
@@ -1957,13 +1969,14 @@ int serviceInitSSL(SERVICE* service)
 	case SERVICE_TLS10:
 	    service->method = (SSL_METHOD*)TLSv1_server_method();
 	    break;
+#ifdef OPENSSL_1_0
 	case SERVICE_TLS11:
 	    service->method = (SSL_METHOD*)TLSv1_1_server_method();
 	    break;
 	case SERVICE_TLS12:
 	    service->method = (SSL_METHOD*)TLSv1_2_server_method();
 	    break;
-
+#endif
 	    /** Rest of these use the maximum available SSL/TLS methods */
 	case SERVICE_SSL_MAX:
 	    service->method = (SSL_METHOD*)SSLv23_server_method();

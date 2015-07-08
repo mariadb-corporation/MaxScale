@@ -331,7 +331,6 @@ const char 	*gw_dcb_state2string(int);		/* DCB state to string */
 void		dcb_printf(DCB *, const char *, ...);	/* DCB version of printf */
 int		dcb_isclient(DCB *);			/* the DCB is the client of the session */
 void		dcb_hashtable_stats(DCB *, void *);	/**< Print statisitics */
-void            dcb_add_to_zombieslist(DCB* dcb);
 int		dcb_add_callback(DCB *, DCB_REASON, int	(*)(struct dcb *, DCB_REASON, void *),
 			 void *);
 int		dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *),
@@ -340,7 +339,6 @@ int		dcb_isvalid(DCB *);			/* Check the DCB is in the linked list */
 int		dcb_count_by_usage(DCB_USAGE);		/* Return counts of DCBs */
 int             dcb_persistent_clean_count(DCB *, bool);      /* Clean persistent and return count */
 
-bool   dcb_set_state(DCB* dcb, dcb_state_t new_state, dcb_state_t* old_state);
 void   dcb_call_foreach (struct server* server, DCB_REASON reason);
 size_t dcb_get_session_id(DCB* dcb);
 bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);

@@ -9,16 +9,19 @@ macro(set_maxscale_version)
 
   # MaxScale version number
   set(MAXSCALE_VERSION_MAJOR "1")
-  set(MAXSCALE_VERSION_MINOR "1")
-  set(MAXSCALE_VERSION_PATCH "1")
+  set(MAXSCALE_VERSION_MINOR "2")
+  set(MAXSCALE_VERSION_PATCH "0")
   set(MAXSCALE_VERSION_NUMERIC "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
   set(MAXSCALE_VERSION "${MAXSCALE_VERSION_MAJOR}.${MAXSCALE_VERSION_MINOR}.${MAXSCALE_VERSION_PATCH}")
 
   # This should be incremented each time a package is rebuilt
-  set(MAXSCALE_BUILD_NUMBER 2)
+  set(MAXSCALE_BUILD_NUMBER 1)
 endmacro()
 
 macro(set_variables)
+
+  # Use C99
+  set(USE_C99 FALSE CACHE BOOL "Use C99 standard")
 
   # hostname or IP address of MaxScale's host
   set(TEST_HOST "127.0.0.1" CACHE STRING "hostname or IP address of MaxScale's host")

@@ -1395,7 +1395,7 @@ int skygw_log_write_flush(
         /**
          * Write log string to buffer and add to file write list.
          */
-        for(i = LOGFILE_FIRST;i<=LOGFILE_LAST;i <<=1)
+        for (i = LOGFILE_FIRST; i<LOGFILE_LAST ;i <<=1)
         {
             /**
              * If particular log is disabled in general and it is not enabled for
@@ -1458,7 +1458,7 @@ int skygw_log_write(
          * Write log string to buffer and add to file write list.
          */
 
-        for(i = LOGFILE_FIRST;i<=LOGFILE_LAST;i <<=1)
+        for (i = LOGFILE_FIRST; i<=LOGFILE_LAST; i <<=1)
         {
             /**
              * If particular log is disabled in general and it is not enabled for

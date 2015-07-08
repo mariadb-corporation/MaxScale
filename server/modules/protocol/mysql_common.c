@@ -36,6 +36,7 @@
  * 03/10/2014	Massimiliano Pinto	Added netmask for wildcard in IPv4 hosts.
  * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
  * 10/11/2014	Massimiliano Pinto	Charset at connect is passed to backend during authentication
+ * 07/07/15     Martin Brampton         Fix problem recognising null password
  *
  */
 
@@ -1548,13 +1549,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 			if (user_password)
 			{
 			    break;
-			}
-
-			/** See if ANYDB == Y */
-			if(key.resource)
-			{
-			    key.resource = NULL;
-			    continue;
 			}
 
 			if (!user_password) {

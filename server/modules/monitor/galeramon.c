@@ -155,7 +155,10 @@ startMonitor(void *arg,void* opt)
 	else if(!strcmp(params->name,"script"))
 	{
 	    if(handle->script)
+	    {
 		free(handle->script);
+		handle->script = NULL;
+	    }
 
 	    if(access(params->value,X_OK) == 0)
 	    {
@@ -277,7 +280,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 {
     GALERA_MONITOR* handle = (GALERA_MONITOR*)mon->handle;
 MYSQL_ROW	row;
-MYSQL_RES	*result;
+MYSQL_RES	*result,*result2;
 int		isjoined = 0;
 char		*uname  = mon->user;
 char		*passwd = mon->password;
@@ -369,6 +372,14 @@ char 			*server_string;
 	if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_state'") == 0
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
+		if(mysql_field_count(database->con) < 2)
+		{
+		    mysql_free_result(result);
+		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_state'\". Expected 2 columns."
+				    " MySQL Version: %s",version_str);
+		    return;
+		}
+
 		while ((row = mysql_fetch_row(result)))
 		{
 			if (strcmp(row[1], "4") == 0) 
@@ -377,13 +388,22 @@ char 			*server_string;
 			/* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
 			else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1) {
 				if (mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
-					&& (result = mysql_store_result(database->con)) != NULL)
+					&& (result2 = mysql_store_result(database->con)) != NULL)
 				{
+				    		if(mysql_field_count(database->con) < 2)
+						{
+						    mysql_free_result(result);
+						    mysql_free_result(result2);
+						    skygw_log_write(LE,"Error: Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_sst_method'\". Expected 2 columns."
+							    " MySQL Version: %s",version_str);
+						    return;
+						}
 					while ((row = mysql_fetch_row(result)))
 					{
 						if (strncmp(row[1], "xtrabackup", 10) == 0)
 							isjoined = 1;
 					}
+					mysql_free_result(result2);
 				}
 			}
 		}
@@ -395,6 +415,15 @@ char 			*server_string;
 		&& (result = mysql_store_result(database->con)) != NULL)
 	{
 		long local_index = -1;
+
+		if(mysql_field_count(database->con) < 2)
+		{
+		    mysql_free_result(result);
+		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_index'\". Expected 2 columns."
+							    " MySQL Version: %s",version_str);
+		    return;
+		}
+
 		while ((row = mysql_fetch_row(result)))
 		{
 			local_index = strtol(row[1], NULL, 10);

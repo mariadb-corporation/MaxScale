@@ -974,18 +974,10 @@ getAllUsers(SERVICE *service, USERS *users)
 			}
 		    }
 
-		    if(havedb && wildcard_db_grant(dbnm))
+		    if(havedb && wildcard_db_grant(dbnm) && service->optimize_wildcard)
 		    {
-			if(service->optimize_wildcard)
-			{
-			    rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
-			    skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
-			}
-			else
-			{
-			    /** Use ANYDB for wildcard grants */
-			    rc = add_mysql_users_with_host_ipv4(users, row[0], row[1], password, "Y", NULL);
-			}
+			rc = add_wildcard_users(users, row[0], row[1], password, row[4], dbnm, service->resources);
+			skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"%s: Converted '%s' to %d individual database grants.",service->name,dbnm,rc);
 		    }
 		    else
 		    {
@@ -1041,8 +1033,8 @@ getAllUsers(SERVICE *service, USERS *users)
 
 		} else if(rc == -1) {
 		    /** Duplicate user*/
-		    LOGIF(LE,(skygw_log_write(LT|LE,
-					     "Warning: Duplicate MySQL user found for service [%s]: %s@%s%s%s",
+		    LOGIF(LT,(skygw_log_write(LT,
+					     "Duplicate MySQL user found for service [%s]: %s@%s%s%s",
 					     service->name,
 					     row[0],row[1],havedb?" for database: ":"",
 					     havedb ?dbnm:"")));
@@ -1706,6 +1698,41 @@ static int uh_cmpfun( void* v1, void* v2) {
 				return 0;
 			}
 
+			if(hu2->resource && strlen(hu2->resource) && strchr(hu2->resource,'%') != NULL)
+			{
+			  regex_t re;
+			  char db[MYSQL_DATABASE_MAXLEN*2 +1];
+			  strcpy(db,hu2->resource);
+			  int len = strlen(db);
+			  char* ptr = strrchr(db,'%');
+
+			  if(ptr == NULL)
+			  {
+			    return 1;
+			  }
+
+			  while(ptr)
+			  {
+			    memmove(ptr+1,ptr,(len - (ptr - db)) + 1);
+			    *ptr = '.';
+			    *(ptr + 1) = '*';
+			    len = strlen(db);
+			    ptr = strrchr(db,'%');
+			  }
+
+			  if((regcomp(&re,db,REG_ICASE|REG_NOSUB)))
+			  {
+			    return 1;
+			  }
+
+			  if(regexec(&re,hu1->resource,0,NULL,0) == 0)
+			  {
+			    regfree(&re);
+			    return 0;
+			  }
+			  regfree(&re);
+			}
+
 			/* no matches, deny auth */
 			return 1;
 		}
@@ -1815,18 +1842,6 @@ char *mysql_format_user_entry(void *data)
         return mysql_user;
 }
 
-/*
- * The hash function we use for storing MySQL database names.
- *
- * @param key	The key value
- * @return	The hash key
- */
-int
-resource_hash(char *key)
-{
-        return (*key + *(key + 1));
-}
-
 /**
  * Remove the resources table
  *
@@ -1850,7 +1865,7 @@ resource_alloc()
 {
 HASHTABLE       *resources;
 
-        if ((resources = hashtable_alloc(10, resource_hash, strcmp)) == NULL)
+        if ((resources = hashtable_alloc(10, simple_str_hash, strcmp)) == NULL)
         {
                 return NULL;
         }

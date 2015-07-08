@@ -228,6 +228,12 @@ unsigned int	randval;
 MAXKEYS			key;
 char secret_file[PATH_MAX + 10];
 
+if(strlen(path) > PATH_MAX)
+{
+    skygw_log_write(LOGFILE_ERROR,"Error: Pathname too long.");
+    return 1;
+}
+
 	sprintf(secret_file,"%s/.secrets",path);
 
 	/* Open for writing | Create | Truncate the file for writing */

@@ -67,6 +67,7 @@ extern __thread log_info_t tls_log_info;
  * Date		Who			Description
  * 17/06/2013	Mark Riddoch		Initial version
  * 17/07/2013	Mark Riddoch		Addition of login phase
+ * 07/07/2015   Martin Brampton         Call unified dcb_close on error
  *
  * @endverbatim
  */
@@ -315,13 +316,13 @@ int	n_connect = 0;
 
                         if (telnetd_pr == NULL)
                         {
-                                dcb_add_to_zombieslist(client_dcb);
+                                dcb_close(client_dcb);
 				return n_connect;
 			}
 
-			if (poll_add_dcb(client_dcb) == -1)
+			if (poll_add_dcb(client_dcb))
 			{
-                                dcb_add_to_zombieslist(dcb);
+                                dcb_close(dcb);
 				return n_connect;
 			}
 			n_connect++;
