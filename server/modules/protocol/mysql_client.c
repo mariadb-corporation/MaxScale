@@ -1451,8 +1451,8 @@ int gw_MySQLListener(
         // add listening socket to poll structure
         if (poll_add_dcb(listen_dcb) == -1) {
             fprintf(stderr,
-                    "\n* Failed to start polling the socket due error "
-                    "%i, %s.\n\n",
+                    "\n* MaxScale encountered system limit while "
+                    "attempting to register on an epoll instance.\n\n",
                     errno,
                     strerror(errno));
 		return 0;
@@ -1687,7 +1687,8 @@ int gw_MySQLAccept(DCB *listener)
                                 client_dcb,
                                 1,
                                 0,
-                                "MaxScale internal error.");
+                                "MaxScale encountered system limit while "
+                                "attempting to register on an epoll instance.");
                         
                         /** close client_dcb */
                         dcb_close(client_dcb);

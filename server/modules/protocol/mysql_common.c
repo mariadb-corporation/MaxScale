@@ -36,6 +36,7 @@
  * 03/10/2014	Massimiliano Pinto	Added netmask for wildcard in IPv4 hosts.
  * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
  * 10/11/2014	Massimiliano Pinto	Charset at connect is passed to backend during authentication
+ * 07/07/15     Martin Brampton         Fix problem recognising null password
  *
  */
 
@@ -45,6 +46,9 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <netinet/tcp.h>
+
+/* The following can be compared using memcmp to detect a null password */
+uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN]="";
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -577,7 +581,7 @@ int gw_send_authentication_to_backend(
         if (strlen(dbname))
                 curr_db = dbname;
 
-        if (strlen((char *)passwd))
+        if (memcmp(passwd, null_client_sha1, MYSQL_SCRAMBLE_LEN))
                 curr_passwd = passwd;
 
 	dcb = conn->owner_dcb;
@@ -1122,7 +1126,7 @@ GWBUF* gw_create_change_user_packet(
 		curr_db = db;
 	}
 	
-	if (strlen((char *)pwd) > 0)
+	if (memcmp(pwd, null_client_sha1, MYSQL_SCRAMBLE_LEN))
 	{
 		curr_passwd = pwd;
 	}	
@@ -1358,12 +1362,7 @@ int gw_check_mysql_scramble_data(DCB *dcb, uint8_t *token, unsigned int token_le
 		gw_bin2hex(hex_double_sha1, password, SHA_DIGEST_LENGTH);
 	} else {
 		/* check if the password is not set in the user table */
-		if (!strlen((char *)password)) {
-			/* Username without password */
-			return 0;
-		} else {
-			return 1;
-		}
+		return memcmp(password, null_client_sha1, MYSQL_SCRAMBLE_LEN) ? 1 : 0;
 	}
 
 	/*<
