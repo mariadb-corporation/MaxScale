@@ -156,4 +156,4 @@ protocol=MySQLBackend
 [QLA]
 type=filter
 module=qlafilter
-options=/home/ec2-user/QueryLog
+options=/tmp/QueryLog
