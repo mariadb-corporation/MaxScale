@@ -310,7 +310,7 @@ if((monitorhash = hashtable_alloc(5,simple_str_hash,strcmp)) == NULL)
     return 0;
 }
 
-hashtable_memory_fns(monitorhash,strdup,NULL,free,NULL);
+hashtable_memory_fns(monitorhash,(HASHMEMORYFN)strdup,NULL,(HASHMEMORYFN)free,NULL);
 	/**
 	 * Process the data and create the services and servers defined
 	 * in the data.

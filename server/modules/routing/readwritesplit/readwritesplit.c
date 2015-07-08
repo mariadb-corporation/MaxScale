@@ -3554,7 +3554,6 @@ static rses_property_t* rses_property_init(
 	prop->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
 #endif
 	
-return_prop:
 	CHK_RSES_PROP(prop);
 	return prop;
 }
