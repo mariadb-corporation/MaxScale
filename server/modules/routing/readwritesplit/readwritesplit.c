@@ -4011,7 +4011,7 @@ static bool execute_sescmd_in_backend(
 	bool             succp;
 	int              rc = 0;
 	sescmd_cursor_t* scur;
-
+	GWBUF* buf;
 	if(backend_ref == NULL)
 	{
 	    skygw_log_write(LE,"Error: NULL parameter passed to execute_sescmd_in_backend. (%s:%d)",__FILE__,__LINE__);
@@ -4048,27 +4048,9 @@ static bool execute_sescmd_in_backend(
                 /** Cursor is left active when function returns. */
                 sescmd_cursor_set_active(scur, true);
         }
-#if defined(SS_DEBUG)
-        LOGIF(LT, tracelog_routed_query(scur->scmd_cur_rses, 
-                                        "execute_sescmd_in_backend", 
-                                        backend_ref, 
-                                        sescmd_cursor_clone_querybuf(scur)));
 
-        {
-                GWBUF* tmpbuf = sescmd_cursor_clone_querybuf(scur);
-                uint8_t* ptr = GWBUF_DATA(tmpbuf);
-                unsigned char cmd = MYSQL_GET_COMMAND(ptr);
-                
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [execute_sescmd_in_backend] Just before write, fd "
-                        "%d : cmd %s.",
-                        pthread_self(),
-                        dcb->fd,
-                        STRPACKETTYPE(cmd))));
-                gwbuf_free(tmpbuf);
-        }
-#endif /*< SS_DEBUG */
+	buf = sescmd_cursor_clone_querybuf(scur);
+
         switch (scur->scmd_cur_cmd->my_sescmd_packet_type) {
                 case MYSQL_COM_CHANGE_USER:
 			/** This makes it possible to handle replies correctly */
@@ -4077,7 +4059,7 @@ static bool execute_sescmd_in_backend(
                                 dcb, 
                                 NULL, 
                                 dcb->session, 
-                                sescmd_cursor_clone_querybuf(scur));
+                                buf);
                         break;
 
 		case MYSQL_COM_INIT_DB:
@@ -4103,10 +4085,11 @@ static bool execute_sescmd_in_backend(
                          * Mark session command buffer, it triggers writing 
                          * MySQL command to protocol
                          */
+
                         gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
                         rc = dcb->func.write(
                                 dcb, 
-                                sescmd_cursor_clone_querybuf(scur));
+                                buf);
                         break;
         }
 
@@ -4116,6 +4099,7 @@ static bool execute_sescmd_in_backend(
         }
         else
         {
+		while((buf = GWBUF_CONSUME_ALL(buf)) != NULL);
                 succp = false;
         }
 return_succp:
