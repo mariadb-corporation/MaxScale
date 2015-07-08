@@ -495,7 +495,7 @@ bool    succp = false;
 				 * zombiedcb is the DCB we are processing
 				 * previousdcb is the previous DCB on the zombie 
 				 * queue or NULL if the DCB is at the head of the
-				 * queue
+				 * queue.  Remove zombiedcb from the zombies list.
 				 */
 				if (previousdcb == NULL)
 					zombies = zombiedcb->memdata.next;
@@ -512,22 +512,34 @@ bool    succp = false;
 					zombiedcb->fd,
 					STRDCBSTATE(zombiedcb->state)))); 
 				ss_info_dassert(zombiedcb->state == DCB_STATE_ZOMBIE,
-						"dcb not in DCB_STATE_ZOMBIE state.");
+                                    "dcb not in DCB_STATE_ZOMBIE state.");
 				/*<
-				 * Move dcb to linked list of victim dcbs.
+				 * Move zombie dcb to linked list of victim dcbs.
+                                 * The variable dcb is used to hold the last DCB
+                                 * to have been added to the linked list, or NULL
+                                 * if none has yet been added.  If the list 
+                                 * (listofdcb) is not NULL, then it follows that
+                                 * dcb will also not be null.
 				 */
-				if (listofdcb == NULL) {
+				if (listofdcb == NULL) 
+                                {
 					listofdcb = zombiedcb;
-					dcb = listofdcb;
-				} else {
+				} 
+                                else 
+                                {
 					dcb->memdata.next = zombiedcb;
-					dcb = dcb->memdata.next;
 				}
-				dcb->memdata.next = NULL;
+                                /* Set dcb for next iteration of loop */
+                                dcb = zombiedcb;
 				zombiedcb = zombiedcb->memdata.next;
+                                /* After we've moved zombiedcb forward, set
+                                 link to null as dcb is last of the new list */
+				dcb->memdata.next = NULL;
 			}
 			else
 			{
+                            /* Since we didn't remove this dcb from the zombies 
+                             list, we need to advance the previous pointer */
 				previousdcb = zombiedcb;
 				zombiedcb = zombiedcb->memdata.next;
 			}
