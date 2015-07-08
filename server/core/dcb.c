@@ -2038,7 +2038,7 @@ dcb_maybe_add_persistent(DCB *dcb)
     {
         LOGIF(LD, (skygw_log_write(
             LOGFILE_DEBUG,
-            "%lu [dcb_connect] Adding DCB to persistent pool, user %s.\n",
+            "%lu [dcb_maybe_add_persistent] Adding DCB to persistent pool, user %s.\n",
             pthread_self(),
             user)));
         dcb->user = strdup(user);
