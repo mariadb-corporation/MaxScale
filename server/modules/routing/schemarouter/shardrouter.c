@@ -1701,7 +1701,7 @@ routeQuery(ROUTER* instance,
 						   querybuf)))
         {
 	    extract_database(querybuf,db);
-	    snprintf(errbuf,"Unknown database: %s",db);
+	    snprintf(errbuf,25+MYSQL_DATABASE_MAXLEN,"Unknown database: %s",db);
 	    create_error_reply(errbuf,router_cli_ses->replydcb);
             LOGIF(LE, (skygw_log_write_flush(
                                              LOGFILE_ERROR,
