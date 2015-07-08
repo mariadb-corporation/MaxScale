@@ -31,7 +31,7 @@ fi
 sed -i "s/###threads###/$threads/"  MaxScale.cnf
 
 if [ "x$mysql51_only" == "xyes" ] ; then
-	sed -i "s/module=mysqlmon/module=mysqlmon\nmysql51_only=true/"  MaxScale.cnf
+	sed -i "s/module=mysqlmon/module=mysqlmon\nmysql51_replication=true/"  MaxScale.cnf
 fi
 
 for prefix in "repl" "galera"
