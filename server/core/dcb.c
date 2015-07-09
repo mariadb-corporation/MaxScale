@@ -2971,6 +2971,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
             }
             persistentdcb = nextdcb;
         }
+        server->persistmax = MAX(server->persistmax, count);
         spinlock_release(&server->persistlock);
         /** Call possible callback for this DCB in case of close */
         while (disposals)

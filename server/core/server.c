@@ -150,12 +150,10 @@ DCB *
 server_get_persistent(SERVER *server, char *user, const char *protocol)
 {
     DCB *dcb, *previous = NULL;
-    int poolsize;
     
-    if (server->persistent && (poolsize = dcb_persistent_clean_count(server->persistent, false)) && server->persistent)
+    if (server->persistent && dcb_persistent_clean_count(server->persistent, false) && server->persistent)
     {
         spinlock_acquire(&server->persistlock);
-        server->persistmax = MAX(server->persistmax, poolsize);
         dcb = server->persistent;
         while (dcb) {
             if (dcb->user 
