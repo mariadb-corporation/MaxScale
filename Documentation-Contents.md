@@ -44,7 +44,7 @@
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
  - [RabbitMQ Setup and MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
  - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
- - [Simple Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
+ - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
 
 ## Routers
 
