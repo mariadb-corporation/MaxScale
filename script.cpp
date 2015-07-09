@@ -20,7 +20,7 @@
  @endverbatim
  * - make script non-executable
  * - block and unblocm node1
- * - check error log for 'Error: The file cannot be executed: /home/ec2-user/script.sh' error
+ * - check error log for 'Error: The file cannot be executed: /home/$access_user/script.sh' error
  * - check if Maxscale still alive
  */
 
@@ -35,10 +35,7 @@ int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expe
     char str[256];
 
 
-    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null  %s@%s:'%s mkdir /home/ec2-user/; %s chown %s:%s -R /home/ec2-user", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_sudo, Test->access_user, Test->access_user);
-    system(str);
-
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'rm /home/ec2-user/script_output'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'rm /home/%s/script_output'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_user);
     system(str);
 
     sleep(30);
@@ -68,11 +65,11 @@ int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expe
     sleep(30);
 
     printf("Printf results\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'cat /home/ec2-user/script_output'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'cat /home/%s/script_output'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_user);
     system(str);
 
     printf("Comparing results\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'diff /home/ec2-user/script_output %s'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, expected_filename);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'diff /home/%s/script_output %s'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_user, expected_filename);
     if (system(str) != 0) {
         printf("FAIL! Wrong script output!\n");
         global_result++;
@@ -94,7 +91,7 @@ int main(int argc, char *argv[])
 
     printf("Creating script on Maxscale machine\n"); fflush(stdout);
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'echo \"echo \\$* >> /home/ec2-user/script_output\" > /home/ec2-user/script.sh; chmod a+x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'echo \"echo \\$* >> /home/%s/script_output\" > /home/%s/script.sh; chmod a+x /home/%s/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_user, Test->access_user, Test->access_user);
     system(str);
 
     Test->restart_maxscale();
@@ -114,14 +111,16 @@ int main(int argc, char *argv[])
     fclose(f);
 
     printf("Copying expected script output to Maxscale machine\n"); fflush(stdout);
-    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no script_output_expected* %s@%s:/home/ec2-user/", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP);
+    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no script_output_expected* %s@%s:/home/%s/", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_user);
     system(str);
 
-    global_result += test_script_monitor(Test, Test->repl, (char *) "/home/ec2-user/script_output_expected");
-    global_result += test_script_monitor(Test, Test->galera, (char *) "/home/ec2-user/script_output_expected_galera");
+    sprintf(str, "/home/%s/script_output_expected", Test->access_user);
+    global_result += test_script_monitor(Test, Test->repl, str);
+    sprintf(str, "/home/%s/script_output_expected_galera", Test->access_user);
+    global_result += test_script_monitor(Test, Test->galera, str);
 
     printf("Making script non-executable\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'chmod a-x /home/ec2-user/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'chmod a-x /home/%s/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_user);
     system(str);
 
     sleep(3);
@@ -136,7 +135,8 @@ int main(int argc, char *argv[])
     Test->repl->unblock_node(1);
 
     sleep(15);
-    global_result += check_log_err((char *) "Error: Cannot execute file: /home/ec2-user/script.sh", true);
+    sprintf(str, "Error: Cannot execute file: /home/%s/script.sh", Test->access_user);
+    global_result += check_log_err(str , true);
 
     printf("checking if Maxscale is alive\n"); fflush(stdout);
     global_result += check_maxscale_alive();
