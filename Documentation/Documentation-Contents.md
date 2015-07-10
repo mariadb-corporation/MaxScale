@@ -62,6 +62,7 @@ Here are detailed documents about the filters MaxScale offers. They contain conf
  - [Top N Filter](Filters/Top-N-Filter.md)
  - [Database Firewall Filter](Filters/Database-Firewall-Filter.md)
  - [RabbitMQ Filter](Filters/RabbitMQ-Filter.md)
+ - [Named Server Filter](Filters/Named-Server-Filter.md)
 
 ## Monitors
  - [MySQL Monitor](Monitors/MySQL-Monitor.md)
