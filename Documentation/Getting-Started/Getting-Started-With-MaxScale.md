@@ -8,21 +8,19 @@ In this introduction to MaxScale the aim is to take the reader from the point of
 
 The simplest way to install MaxScale is to use one of the binary packages that are available for download from the MariaDB website.
 
-* Simply go to [www.mariadb.com](http://www.mariadb.com)
+* Simply go to [https://mariadb.com/resources/downloads](https://mariadb.com/resources/downloads)
 
-* Select the Downloads option from the Resources menu
+* Find and Click on the button "Download MariaDB MaxScale Binaries" inder the MaxScale section
 
-* Find and click on the button "Download MariaDB MaxScale Binaries"
+* Sign in to MariaDB.com
 
-* Find the section on that page entitled MariaDB MaxScale
+* Follow the instructions at the top of the page. 
 
-* Select your operating system from the drop down box
+![image alt text](images/getting_started.png)
 
-* Instructions that are specific for your operating system will then appear
+If you want to install only MaxScale, futher down you will find the product specific download pages. Click on the MariaDB MaxScale link and follow the distriution specific instructions.
 
-![image alt text](images/image_1.png)
-
-* Follow these instructions to install MaxScale on your machine
+![image alt text](images/getting_started2.png)
 
 Upon successful completion of the installation process you have a version of MaxScale that is missing only a configuration file before it can be started.
 
