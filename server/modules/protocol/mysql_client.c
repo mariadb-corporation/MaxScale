@@ -515,7 +515,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 		 * is not requesting SSL and the rest of the auth packet is still
 		 * waiting in the socket. We need to read the data from the socket
 		 * to find out the username of the connecting client. */
-		int bytes = dcb_read(dcb,&queue);
+		int bytes = dcb_read(dcb,&queue, 0);
 		queue = gwbuf_make_contiguous(queue);
 		client_auth_packet = GWBUF_DATA(queue);
 		client_auth_packet_size = gwbuf_length(queue);
@@ -723,12 +723,12 @@ int gw_read_client_event(
 	     * read only enough of the auth packet to know if the client is
 	     * requesting SSL. If the client is not requesting SSL the rest of
 	     the auth packet will be read later. */
-	    rc = dcb_read_n(dcb, &read_buffer,(4 + 4 + 4 + 1 + 23));
+	    rc = dcb_read(dcb, &read_buffer,(4 + 4 + 4 + 1 + 23));
 	}
 	else
 	{
 	    /** Normal non-SSL connection */
-	    rc = dcb_read(dcb, &read_buffer);
+	    rc = dcb_read(dcb, &read_buffer, 0);
 	}
 
         if (rc < 0)

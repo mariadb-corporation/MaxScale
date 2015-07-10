@@ -173,7 +173,7 @@ int gw_read_backend_handshake(
 	int  success = 0;
 	int packet_len = 0;
 
-	if ((n = dcb_read(dcb, &head)) != -1) 
+	if ((n = dcb_read(dcb, &head, 0)) != -1) 
         {
 	    
 	dcb->last_read = hkheartbeat;
@@ -426,7 +426,7 @@ int gw_receive_backend_auth(
 	uint8_t *ptr = NULL;
         int      rc = 0;
 
-        n = dcb_read(dcb, &head);
+        n = dcb_read(dcb, &head, 0);
 
 	dcb->last_read = hkheartbeat;
 	

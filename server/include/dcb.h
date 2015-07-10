@@ -315,8 +315,7 @@ DCB             *dcb_alloc(dcb_role_t);
 void            dcb_free(DCB *);
 DCB             *dcb_connect(struct server *, struct session *, const char *);	
 DCB		*dcb_clone(DCB *);
-int             dcb_read(DCB *, GWBUF **);
-int             dcb_read_n(DCB*,GWBUF **,int);
+int             dcb_read(DCB *, GWBUF **, int);
 int             dcb_drain_writeq(DCB *);
 void            dcb_close(DCB *);
 DCB		*dcb_process_zombies(int);		/* Process Zombies except the one behind the pointer */

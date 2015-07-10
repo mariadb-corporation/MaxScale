@@ -452,7 +452,7 @@ static int gw_read_backend_event(DCB *dcb) {
                 router_instance = session->service->router_instance;
 
                 /* read available backend data */
-                rc = dcb_read(dcb, &read_buffer);
+                rc = dcb_read(dcb, &read_buffer, 0);
 
                 if (rc < 0) 
                 {

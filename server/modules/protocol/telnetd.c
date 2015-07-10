@@ -155,7 +155,7 @@ SESSION		*session = dcb->session;
 TELNETD		*telnetd = (TELNETD *)dcb->protocol;
 char		*password, *t;
 
-	if ((n = dcb_read(dcb, &head)) != -1)
+	if ((n = dcb_read(dcb, &head, 0)) != -1)
 	{
 
 		if (head)
