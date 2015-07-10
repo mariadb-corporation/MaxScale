@@ -23,10 +23,12 @@ int main(int argc, char *argv[])
     Test->connect_rwsplit();
     sleep(5);
     global_result += check_log_err((char *) "Error : Unable to find library for module: foobar", TRUE);
-    global_result += check_log_err((char *) "Failed to create filter 'testfilter' for service", TRUE);
-    global_result += check_log_err((char *) "Error : Setting up filters failed. Terminating session RW Split Router", TRUE);
+    global_result += check_log_err((char *) "Error : Failed to load filter 'testfilter' for service 'RW Split Router'. This filter will not be used", TRUE);
+    //global_result += check_log_err((char *) "Error : Setting up filters failed. Terminating session RW Split Router", TRUE);
 
-    printf("Trying ReaConn master\n");
+    global_result += check_maxscale_alive();
+
+    /*printf("Trying ReaConn master\n");
     if (Test->connect_readconn_master() != 0) {
         global_result++;
         printf("Error connection to ReadConn master\n");
@@ -37,6 +39,8 @@ int main(int argc, char *argv[])
         printf("Error connection to ReadConn slave\n");
     }
     Test->close_readconn_master();
-    Test->close_readconn_slave();
+    Test->close_readconn_slave();*/
+
+    Test->close_maxscale_connections();
     Test->copy_all_logs(); return(global_result);
 }

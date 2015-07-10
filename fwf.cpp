@@ -19,6 +19,18 @@
 #include "maxadmin_operations.h"
 #include "sql_t1.h"
 
+void copy_rules(TestConnections* Test, char * rules_name)
+{
+    char str[4096];
+    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/%s %s@%s:/home/%s/rules.txt", Test->maxscale_sshkey, Test->test_dir, rules_name, Test->access_user, Test->maxscale_IP, Test->access_user);
+    printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
+    system(str);
+
+    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s chown maxscale /home/%s/rules.txt", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_user);
+    printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
+    system(str);
+}
+
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
@@ -41,9 +53,9 @@ int main(int argc, char *argv[])
 
         Test->stop_maxscale();
 
-        sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules%d %s@%s:/home/%s/rules.txt", Test->maxscale_sshkey, Test->test_dir, i, Test->access_user, Test->maxscale_IP, Test->access_user);
-        printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
-        system(str);
+        sprintf(str, "%d", i);
+        copy_rules(Test, str);
+
         Test->start_maxscale();
         Test->connect_rwsplit();
 
@@ -97,10 +109,7 @@ int main(int argc, char *argv[])
 
     // Test for at_times clause
     printf("Trying at_times clause\n");
-
-    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_at_time %s@%s:/home/%s/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->access_user, Test->maxscale_IP, Test->access_user);
-    printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
-    system(str);
+    copy_rules(Test, (char *) "rules_at_time");
 
 /*    char time_str[100];
     char time_str1[100];
@@ -138,10 +147,8 @@ int main(int argc, char *argv[])
     Test->stop_maxscale();
 
     printf("Trying limit_queries clause\n");
-
-    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_limit_queries %s@%s:/home/%s/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->access_user, Test->maxscale_IP, Test->access_user);
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
-    system(str);
+    copy_rules(Test, (char *) "rules_limit_queries");
 
     Test->start_maxscale();
     Test->connect_rwsplit();
@@ -158,13 +165,12 @@ int main(int argc, char *argv[])
     double elapsedTime;
     gettimeofday(&t1, NULL);
 
+
     do {
-    } while (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") != 0);
-
-    gettimeofday(&t2, NULL);
-
-    elapsedTime = (t2.tv_sec - t1.tv_sec);
-    elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
+        gettimeofday(&t2, NULL);
+        elapsedTime = (t2.tv_sec - t1.tv_sec);
+        elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
+    } while ((execute_query(Test->conn_rwsplit, "SELECT * FROM t1") != 0) || (elapsedTime < 10));
 
     printf("Quries were blocked during %f (using clock_gettime())\n", elapsedTime);
     printf("Quries were blocked during %lu (using time())\n", time(NULL)-start_time_clock);
@@ -183,10 +189,8 @@ int main(int argc, char *argv[])
     Test->stop_maxscale();
 
     printf("Trying rules with syntax error\n");
-
-    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/rules_syntax_error %s@%s:/home/%s/rules.txt", Test->maxscale_sshkey, Test->test_dir, Test->access_user, Test->maxscale_IP, Test->access_user);
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
-    system(str);
+    copy_rules(Test, (char *) "rules_syntax_error");
 
     Test->start_maxscale();
     Test->connect_rwsplit();

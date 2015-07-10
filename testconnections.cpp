@@ -148,12 +148,11 @@ int TestConnections::read_env()
     strcpy(repl->start_db_command, start_db_command);
     strcpy(repl->stop_db_command, stop_db_command);
 
-    strcpy(repl->access_user, access_user);
-    strcpy(repl->access_sudo, access_sudo);
-    strcpy(galera->access_user, access_user);
-    strcpy(galera->access_sudo, access_sudo);
+    sprintf(repl->access_user, "%s", access_user);
+    sprintf(repl->access_sudo, "%s", access_sudo);
 
-
+    sprintf(galera->access_user, "%s", access_user);
+    sprintf(galera->access_sudo, "%s", access_sudo);
 }
 
 int TestConnections::print_env()
