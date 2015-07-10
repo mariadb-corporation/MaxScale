@@ -1,4 +1,4 @@
-MaxScale Release Notes 1.0.5 GA
+# MariaDB MaxScale 1.0.5 Release Notes
 
 This document details the changes in version 1.0.5 since the release of the 1.0.4 GA of the MaxScale product.
 
