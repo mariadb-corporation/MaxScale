@@ -170,6 +170,9 @@ hashtable_free(HASHTABLE *table)
 int		i;
 HASHENTRIES	*entry, *ptr;
 
+	if(table == NULL)
+	    return;
+
 	hashtable_write_lock(table);
 	for (i = 0; i < table->hashsize; i++)
 	{
@@ -235,7 +238,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
         unsigned int		hashkey;
         HASHENTRIES	*entry;
 
-        if (key == NULL || value == NULL)
+        if (table == NULL || key == NULL || value == NULL)
             return 0;
 
         if (table->hashsize <= 0) {            
@@ -308,9 +311,13 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 int
 hashtable_delete(HASHTABLE *table, void *key)
 {
-unsigned int		hashkey = table->hashfn(key) % table->hashsize;
+unsigned int		hashkey;
 HASHENTRIES	*entry, *ptr;
 
+    if(table == NULL || key == NULL)
+	return 0;
+
+	hashkey = table->hashfn(key) % table->hashsize;
 	hashtable_write_lock(table);
 	entry = table->entries[hashkey % table->hashsize];
 	while (entry && entry->key && table->cmpfn(key, entry->key) != 0)
@@ -369,9 +376,13 @@ HASHENTRIES	*entry, *ptr;
 void *
 hashtable_fetch(HASHTABLE *table, void *key)
 {
-unsigned int		hashkey = table->hashfn(key) % table->hashsize;
+unsigned int		hashkey;
 HASHENTRIES	*entry;
 
+        if(table == NULL || key == NULL)
+	    return NULL;
+
+	hashkey = table->hashfn(key) % table->hashsize;
 	hashtable_read_lock(table);
 	entry = table->entries[hashkey % table->hashsize];
 	while (entry && entry->key && table->cmpfn(key, entry->key) != 0)
@@ -400,6 +411,9 @@ hashtable_stats(HASHTABLE *table)
 {
 int		total, longest, i, j;
 HASHENTRIES	*entries;
+
+	if(table == NULL)
+	    return;
 
 	printf("Hashtable: %p, size %d\n", table, table->hashsize);
 	total = 0;
@@ -605,6 +619,9 @@ hashtable_next(HASHITERATOR *iter)
 {
 int		i;
 HASHENTRIES	*entries;
+
+	if(iter == NULL)
+	    return NULL;
 
 	iter->depth++;
 	while (iter->chain < iter->table->hashsize)
