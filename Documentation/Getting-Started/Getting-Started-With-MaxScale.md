@@ -22,7 +22,19 @@ If you want to install only MaxScale, futher down you will find the product spec
 
 ![image alt text](images/getting_started2.png)
 
-Upon successful completion of the installation process you have a version of MaxScale that is missing only a configuration file before it can be started.
+After you have installed MaxScale, you can start it.
+
+```
+systemctl start maxscale.service
+```
+
+If your system does not support systemd you can start MaxScale using the installed init.d script.
+
+```
+service maxscale start
+```
+
+An example configuration file is installed into the `/etc/` folder. This file should be changed according to your needs.
 
 ## Building MaxScale From Source Code
 
@@ -51,6 +63,38 @@ It is also possible to use the Read/Write Splitter with Galera. Although it is n
 ### Other MaxScale Configuration
 
 As well as the four major configuration choices outlined above there are also other configurations sub-options that may be mixed with those to provide a variety of different configuration and functionality. The MaxScale filter concept allows the basic configurations to be built upon in a large variety of ways. A separate filter tutorial is available that discusses the concept and gives some examples of ways to use filters.
+
+## Encrypting Passwords
+
+Passwords stored in the maxscale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key. The default location MaxScale stores the keys is `/var/lib/maxscale`.
+
+```
+ # Usage: maxkeys [PATH]
+maxkeys /var/lib/maxscale/
+```
+
+Changing the encryption key for MaxScale will invalidate any currently encrypted keys stored in the maxscale.cnf file.
+
+### Creating Encrypted Passwords
+
+Encrypted passwords are created by executing the maxpasswd command with the location of the .secrets file and the password you require to encrypt as an argument.
+
+```
+# Usage: maxpasswd PATH PASSWORD
+maxpasswd /var/lib/maxscale/ MaxScalePw001
+61DD955512C39A4A8BC4BB1E5F116705
+```
+
+The output of the maxpasswd command is a hexadecimal string, this should be inserted into the maxscale.cnf file in place of the ordinary, plain text, password. MaxScale will determine this as an encrypted password and automatically decrypt it before sending it the database server.
+
+```
+[Split Service]
+type=service
+router=readwritesplit
+servers=server1,server2,server3,server4
+user=maxscale
+password=61DD955512C39A4A8BC4BB1E5F116705
+```
 
 ## Running MaxScale
 
