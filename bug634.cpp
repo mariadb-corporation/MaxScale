@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
             printf("Master_host files is not found in the SHOW SLAVE STATUS reply, probably query went to master\n");
             global_result++;
         }
-        if (strcmp(master_ip, Test->repl->IP[0])) {
+        if (strcmp(master_ip, Test->repl->IP_private[0])) {
             printf("Master IP is wrong\n");
             global_result++;
         }
