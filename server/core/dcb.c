@@ -96,7 +96,9 @@ static DCB * dcb_get_next (DCB *dcb);
 static int  dcb_null_write(DCB *dcb, GWBUF *buf);
 static int  dcb_null_close(DCB *dcb);
 static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
-static int  dcb_isvalid_nolock(DCB *dcb);
+static inline int  dcb_isvalid_nolock(DCB *dcb);
+static inline DCB * dcb_find_in_list(DCB *dcb);
+static inline void dcb_process_victim_queue(DCB *listofdcb);
 static void dcb_close_finish(DCB *);
 static bool dcb_maybe_add_persistent(DCB *);
 static inline bool dcb_write_parameter_check(DCB *dcb, GWBUF *queue);
@@ -243,6 +245,7 @@ dcb_free(DCB *dcb)
             "that has been associated with a descriptor.")));
     }
     raise(SIGABRT);
+    /* Another statement to avoid a compiler warning */
     dcb_final_free(dcb);
 }
 
@@ -291,7 +294,7 @@ DCB *clonedcb;
 static void
 dcb_final_free(DCB *dcb)
 {
-DCB_CALLBACK		*cb;
+    DCB_CALLBACK		*cb;
 
         CHK_DCB(dcb);
         ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED || 
@@ -468,7 +471,7 @@ bool    succp = false;
 				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
 					"%lu [dcb_process_zombies] Remove dcb "
-					"%p fd %d " "in state %s from the "
+					"%p fd %d in state %s from the "
 					"list of zombies.",
 					pthread_self(),
 					zombiedcb,
@@ -510,67 +513,76 @@ bool    succp = false;
 	}
 	spinlock_release(&zombiespin);
 
-	/*
-	 * Process the victim queue. These are DCBs that are not in
-	 * use by any thread. 
-	 * The corresponding file descriptor is closed, the DCB marked
-	 * as disconnected and the DCB itself is fianlly freed.
-	 */
-        dcb = listofdcb;
-        while (dcb != NULL) {
-		DCB *nextdcb = NULL;
-                int  rc = 0;
-
-		if (dcb->fd > 0)
-		{
-			/*<
-			* Close file descriptor and move to clean-up phase.
-			*/
-			rc = close(dcb->fd);
-
-			if (rc < 0) 
-			{
-				int eno = errno;
-				errno = 0;
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : Failed to close "
-					"socket %d on dcb %p due error %d, %s.",
-					dcb->fd,
-					dcb,
-					eno,
-					strerror(eno))));
-			}  
-			else 
-			{
-				dcb->fd = DCBFD_CLOSED;
-				
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [dcb_process_zombies] Closed socket "
-					"%d on dcb %p.",
-					pthread_self(),
-					dcb->fd,
-					dcb)));
-#if defined(FAKE_CODE)
-				conn_open[dcb->fd] = false;
-#endif /* FAKE_CODE */
-			}
-		}
-		LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
-			dcb, 
-			&tls_log_info.li_sesid, 
-			&tls_log_info.li_enabled_logs)));
-
-                dcb->state = DCB_STATE_DISCONNECTED;
-		nextdcb = dcb->memdata.next;
-                dcb_final_free(dcb);
-                dcb = nextdcb;
-        }
-        /** Reset threads session data */
-        LOGIF(LT, tls_log_info.li_sesid = 0);
-	
+        dcb_process_victim_queue(listofdcb);
+        
         return zombies;
+} 
+       
+/**
+ * Process the victim queue, selected from the list of zombies
+ *
+ * These are the DCBs that are not in use by any thread.  The corresponding
+ * file descriptor is closed, the DCB marked as disconnected and the DCB
+ * itself is finally freed.
+ *
+ * @param	listofdcb	The first victim DCB
+ */
+static inline void
+dcb_process_victim_queue(DCB *listofdcb)
+{
+    DCB *dcb;
+
+    dcb = listofdcb;
+    while (dcb != NULL) 
+    {
+        DCB *nextdcb = NULL;
+        if (dcb->fd > 0)
+        {
+            /*<
+             * Close file descriptor and move to clean-up phase.
+             */
+            if (close(dcb->fd) < 0) 
+            {
+                int eno = errno;
+                errno = 0;
+                LOGIF(LE, (skygw_log_write_flush(
+                    LOGFILE_ERROR,
+                    "%lu [dcb_process_victim_queue] Error : Failed to close "
+                    "socket %d on dcb %p due error %d, %s.",
+                    pthread_self(),
+                    dcb->fd,
+                    dcb,
+                    eno,
+                    strerror(eno))));
+            }  
+            else 
+            {
+                dcb->fd = DCBFD_CLOSED;
+				
+                LOGIF(LD, (skygw_log_write_flush(
+                    LOGFILE_DEBUG,
+                    "%lu [dcb_process_victim_queue] Closed socket "
+                    "%d on dcb %p.",
+                    pthread_self(),
+                    dcb->fd,
+                    dcb)));
+#if defined(FAKE_CODE)
+                conn_open[dcb->fd] = false;
+#endif /* FAKE_CODE */
+            }
+        }
+        LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
+            dcb, 
+            &tls_log_info.li_sesid, 
+            &tls_log_info.li_enabled_logs)));
+
+            dcb->state = DCB_STATE_DISCONNECTED;
+            nextdcb = dcb->memdata.next;
+            dcb_final_free(dcb);
+            dcb = nextdcb;
+    }
+    /** Reset threads session data */
+    LOGIF(LT, tls_log_info.li_sesid = 0);
 }
 
 /**
@@ -2628,6 +2640,26 @@ int	rval = 0;
     return rval;
 }
 
+/**
+ * Find a DCB in the list of all DCB's
+ *
+ * @param dcb       The DCB to find
+ * @return          A pointer to the DCB or NULL if not in the list
+ */
+static inline DCB *
+dcb_find_in_list (DCB *dcb)
+{
+    DCB	*ptr = NULL;
+    if (dcb) 
+    {
+	ptr = allDCBs;
+	while (ptr && ptr != dcb)
+	{
+		ptr = ptr->next;
+	}
+    }
+    return ptr;
+}
 
 /**
  * Check the passed DCB to ensure it is in the list of allDCBS.
@@ -2636,22 +2668,10 @@ int	rval = 0;
  * @param	dcb	The DCB to check
  * @return	1 if the DCB is in the list, otherwise 0
  */
-static int
+static inline int
 dcb_isvalid_nolock(DCB *dcb)
 {
-DCB	*ptr;
-int	rval = 0;
-
-    if (dcb)
-    {
-	ptr = allDCBs;
-	while (ptr && ptr != dcb)
-	{
-		ptr = ptr->next;
-	}
-        rval = (ptr == dcb);
-    }
-    return rval;
+    return (dcb == dcb_find_in_list(dcb));
 }
 
 
