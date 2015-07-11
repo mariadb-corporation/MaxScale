@@ -19,6 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
 #include <unistd.h>
 #include <crypt.h>
 #include <users.h>

@@ -44,33 +44,35 @@
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
  - [RabbitMQ Setup and MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
  - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
+ - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
 
 ## Routers
 
- - [Read Write Split](routers/ReadWriteSplit.md)
- - [Read Connnection Router](routers/ReadConnRoute.md)
- - [Schemarouter](routers/SchemaRouter.md)
+ - [Read Write Split](Routers/ReadWriteSplit.md)
+ - [Read Connnection Router](Routers/ReadConnRoute.md)
+ - [Schemarouter](Routers/SchemaRouter.md)
 
 ## Filters
 
 Here are detailed documents about the filters MaxScale offers. They contain configuration guides and example use cases. Before reading these,you should have read the filter tutorial so that you know how they work and how to configure them.
 
- - [Query Log All](filters/Query-Log-All-Filter.md)
- - [Regex Filter](filters/Regex-Filter.md)
- - [Tee Filter](filters/Tee-Filter.md)
- - [Top N Filter](filters/Top-N-Filter.md)
- - [Database Firewall Filter](filters/Database-Firewall-Filter.md)
- - [RabbitMQ Filter](filters/RabbitMQ-Filter.md)
+ - [Query Log All](Filters/Query-Log-All-Filter.md)
+ - [Regex Filter](Filters/Regex-Filter.md)
+ - [Tee Filter](Filters/Tee-Filter.md)
+ - [Top N Filter](Filters/Top-N-Filter.md)
+ - [Database Firewall Filter](Filters/Database-Firewall-Filter.md)
+ - [RabbitMQ Filter](Filters/RabbitMQ-Filter.md)
+ - [Named Server Filter](Filters/Named-Server-Filter.md)
 
 ## Monitors
- - [MySQL Monitor](monitors/MySQL-Monitor.md)
- - [Galera Monitor](monitors/Galera-Monitor.md)
- - [Multi-Master Monitor](monitors/MM-Monitor.md)
- - [MySQL Cluster Monitor](monitors/NDB-Cluster-Monitor.md)
+ - [MySQL Monitor](Monitors/MySQL-Monitor.md)
+ - [Galera Monitor](Monitors/Galera-Monitor.md)
+ - [Multi-Master Monitor](Monitors/MM-Monitor.md)
+ - [MySQL Cluster Monitor](Monitors/NDB-Cluster-Monitor.md)
 
 ## Utilities
 
- - [RabbitMQ Consumer Client](filters/RabbitMQ-Consumer-Client.md)
+ - [RabbitMQ Consumer Client](Filters/RabbitMQ-Consumer-Client.md)
 
 ## Design Documents
 

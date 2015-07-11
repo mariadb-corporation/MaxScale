@@ -723,16 +723,10 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
             SERVER_IS_DOWN(router_cli_ses->backend->server))
         {
                 LOGIF(LT, (skygw_log_write(
-                        LOGFILE_TRACE,
+                        LOGFILE_TRACE|LOGFILE_ERROR,
                         "Error : Failed to route MySQL command %d to backend "
-                        "server.",
-                        mysql_command)));
-		skygw_log_write(
-                        LOGFILE_ERROR,
-			 "Error : Failed to route MySQL command %d to backend "
-                        "server %s.",
-			 mysql_command,
-			 router_cli_ses->backend->server->unique_name);
+                        "server.%s",
+                        mysql_command,rses_is_closed ? " Session is closed." : "")));
 		rc = 0;
                 goto return_rc;
 
