@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
         gettimeofday(&t2, NULL);
         elapsedTime = (t2.tv_sec - t1.tv_sec);
         elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
-    } while ((execute_query(Test->conn_rwsplit, "SELECT * FROM t1") != 0) || (elapsedTime < 10));
+    } while ((execute_query(Test->conn_rwsplit, "SELECT * FROM t1") != 0) && (elapsedTime < 10));
 
     printf("Quries were blocked during %f (using clock_gettime())\n", elapsedTime);
     printf("Quries were blocked during %lu (using time())\n", time(NULL)-start_time_clock);
