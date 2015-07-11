@@ -106,7 +106,7 @@ static inline bool dcb_write_parameter_check(DCB *dcb, GWBUF *queue);
 static inline void dcb_write_fake_code(DCB *dcb);
 #endif
 static inline void dcb_write_when_already_queued(DCB *dcb, GWBUF *queue);
-static void dcb_log_write_failure(DCB *dcb, GWBUF *queue, int errno);
+static void dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno);
 static inline void dcb_write_tidy_up(DCB *dcb, bool below_water);
 static int dcb_write_SSL_error_report (DCB *dcb, int ret);
 
@@ -1263,6 +1263,7 @@ dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
             return false;
         }
     }
+    return true;
 }
 
 /**
@@ -1305,11 +1306,11 @@ dcb_write_when_already_queued(DCB *dcb, GWBUF *queue)
  * @return 0 on failure, 1 on success
  */
 static void
-dcb_log_write_failure(DCB *dcb, GWBUF *queue, int errno)
+dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
 {
     if (LOG_IS_ENABLED(LOGFILE_DEBUG))
     {
-        if (errno == EPIPE)
+        if (eno == EPIPE)
         {
             LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
@@ -1320,16 +1321,16 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int errno)
                 dcb,
                 STRDCBSTATE(dcb->state),
                 dcb->fd,
-                errno,
-                strerror(errno))));
+                eno,
+                strerror(eno))));
         }
     }
 
     if (LOG_IS_ENABLED(LOGFILE_ERROR))
     {
-        if (errno != EPIPE &&
-            errno != EAGAIN &&
-            errno != EWOULDBLOCK)
+        if (eno != EPIPE &&
+            eno != EAGAIN &&
+            eno != EWOULDBLOCK)
         {
             LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
@@ -1339,8 +1340,8 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int errno)
                 dcb,
                 STRDCBSTATE(dcb->state),
                 dcb->fd,
-                errno,
-                strerror(errno))));
+                eno,
+                strerror(eno))));
 
         }
 
@@ -1348,9 +1349,9 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int errno)
                 
     bool dolog = true;
 
-    if (errno != 0           &&
-        errno != EAGAIN      &&
-        errno != EWOULDBLOCK)
+    if (eno != 0           &&
+        eno != EAGAIN      &&
+        eno != EWOULDBLOCK)
     {
         /**
          * Do not log if writing COM_QUIT to backend failed.
@@ -1371,8 +1372,8 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int errno)
                 "%lu [dcb_write] Writing to %s socket failed due %d, %s.",
                 pthread_self(),
                 dcb_isclient(dcb) ? "client" : "backend server",
-                errno,
-                strerror(errno))));
+                eno,
+                strerror(eno))));
         }
     }
 }
@@ -1567,6 +1568,7 @@ dcb_write_SSL_error_report (DCB *dcb, int ret)
             } while((ssl_errno = ERR_get_error()) != 0);
         }
     }
+    return SSL_ERROR_NONE;
 }
 
 /**

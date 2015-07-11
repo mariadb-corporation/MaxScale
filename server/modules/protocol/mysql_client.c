@@ -1467,9 +1467,7 @@ int gw_MySQLListener(
         if (poll_add_dcb(listen_dcb) == -1) {
             fprintf(stderr,
                     "\n* MaxScale encountered system limit while "
-                    "attempting to register on an epoll instance.\n\n",
-                    errno,
-                    strerror(errno));
+                    "attempting to register on an epoll instance.\n\n");
 		return 0;
         }
 #if defined(FAKE_CODE)

@@ -46,7 +46,7 @@
 #include <blr.h>
 #include <dcb.h>
 #include <spinlock.h>
-
+#include <gwdirs.h>
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
