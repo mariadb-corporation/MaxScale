@@ -21,7 +21,7 @@ endmacro()
 macro(set_variables)
 
   # Use C99
-  set(USE_C99 FALSE CACHE BOOL "Use C99 standard")
+  set(USE_C99 TRUE CACHE BOOL "Use C99 standard")
 
   # Install the template maxscale.cnf file
   set(WITH_MAXSCALE_CNF TRUE CACHE BOOL "Install the template maxscale.cnf file")
