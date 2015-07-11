@@ -1,4 +1,4 @@
-MaxScale Release Notes
+# MariaDB MaxScale 0.5 Alpha Release Notes
 
 0.5 Alpha
 
