@@ -1019,7 +1019,7 @@ int dcb_read_SSL(
 			    int eno;
 			    while((eno = ERR_get_error()) != 0)
 			      {
-				ERR_error_string(eno,errbuf);
+				ERR_error_string_n(eno,errbuf,200);
 				skygw_log_write(LE,
 						"%s",
 						errbuf);
@@ -1049,7 +1049,7 @@ int dcb_read_SSL(
 			    {
 				while((ssl_errno = ERR_get_error()) != 0)
 				{
-				    ERR_error_string(ssl_errno,errbuf);
+				    ERR_error_string_n(ssl_errno,errbuf,200);
 				    skygw_log_write(LE,
 					     "%s",
 					     errbuf);
@@ -1488,7 +1488,7 @@ static int
 dcb_write_SSL_error_report (DCB *dcb, int ret)
 {
     int ssl_errno;
-    
+    char errbuf[256];
     ssl_errno = SSL_get_error(dcb->ssl,ret);
 
     if (LOG_IS_ENABLED(LOGFILE_DEBUG))
@@ -1533,7 +1533,7 @@ dcb_write_SSL_error_report (DCB *dcb, int ret)
 
     if (LOG_IS_ENABLED(LOGFILE_ERROR) && ssl_errno != SSL_ERROR_WANT_WRITE)
     {
-        if (ssl_errno == -1)
+        if (ret == -1)
         {
             LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
@@ -1548,12 +1548,14 @@ dcb_write_SSL_error_report (DCB *dcb, int ret)
             {
                 if(ssl_errno == SSL_ERROR_SYSCALL)
                 {
-                    skygw_log_write(LE,"%d:%s",errno,strerror(errno));
+		    strerror_r(errno,errbuf,255);
+		    errbuf[255] = '\0';
+                    skygw_log_write(LE,"%d:%s",errno,errbuf);
                 }
                 do
                 {
                     char errbuf[140];
-                    ERR_error_string(ssl_errno,errbuf);
+                    ERR_error_string_n(ssl_errno,errbuf,140);
                     skygw_log_write(LE,"%d:%s",ssl_errno,errbuf);
                 } while((ssl_errno = ERR_get_error()) != 0);
             }
@@ -1563,7 +1565,7 @@ dcb_write_SSL_error_report (DCB *dcb, int ret)
             do
             {
                 char errbuf[140];
-                ERR_error_string(ssl_errno,errbuf);
+                ERR_error_string_n(ssl_errno,errbuf,140);
                 skygw_log_write(LE,"%d:%s",ssl_errno,errbuf);
             } while((ssl_errno = ERR_get_error()) != 0);
         }
@@ -1719,7 +1721,7 @@ dcb_drain_writeq_SSL(DCB *dcb)
 		    while((ssl_errno = ERR_get_error()) != 0)
 		    {
 			char errbuf[140];
-			ERR_error_string(ssl_errno,errbuf);
+			ERR_error_string_n(ssl_errno,errbuf,140);
 			skygw_log_write(LE,"%s",errbuf);
 		    }
 		    if(errno != 0)
@@ -2966,7 +2968,7 @@ int dcb_accept_SSL(DCB* dcb)
 	    {
 		while((errnum = ERR_get_error()) != 0)
 		{
-		    ERR_error_string(errnum,errbuf);
+		    ERR_error_string_n(errnum,errbuf,140);
 		    skygw_log_write(LE,"%s",errbuf);
 		}
 	    }
@@ -3004,7 +3006,7 @@ int dcb_accept_SSL(DCB* dcb)
 		{
 		    while((errnum = ERR_get_error()) != 0)
 		    {
-			ERR_error_string(errnum,errbuf);
+			ERR_error_string_n(errnum,errbuf,140);
 			skygw_log_write(LE,
 				 "%s",
 				 errbuf);
@@ -3077,7 +3079,7 @@ int dcb_connect_SSL(DCB* dcb)
 	else
 	{
 	    rval = -1;
-	    ERR_error_string(errnum,errbuf);
+	    ERR_error_string_n(errnum,errbuf,140);
 	    skygw_log_write_flush(LE,
 			     "Error: Fatal error in SSL_accept for %s@%s: (SSL error code: %d) %s",
 			     dcb->user,
