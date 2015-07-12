@@ -26,7 +26,7 @@ void copy_rules(TestConnections* Test, char * rules_name)
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
     system(str);
 
-    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s chown maxscale /home/%s/rules.txt", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_user);
+    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s chown maxscale /home/%s/rules.txt'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_user);
     printf("Copying rules to Maxscale machine: %s\n", str); fflush(stdout);
     system(str);
 }

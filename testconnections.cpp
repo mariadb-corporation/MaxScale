@@ -153,6 +153,12 @@ int TestConnections::read_env()
 
     sprintf(galera->access_user, "%s", access_user);
     sprintf(galera->access_sudo, "%s", access_sudo);
+
+    if (strcmp(access_user, "root") == 0) {
+        sprintf(access_homedir, "/%s/", access_user);
+    } else {
+        sprintf(access_homedir, "/home/%s/", access_user);
+    }
 }
 
 int TestConnections::print_env()
