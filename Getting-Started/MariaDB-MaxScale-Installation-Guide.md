@@ -8,9 +8,7 @@ In this introduction to MaxScale the aim is to take the reader from the point of
 
 The simplest way to install MaxScale is to use one of the binary packages that are available for download from the MariaDB website.
 
-* Simply go to [https://mariadb.com/resources/downloads](https://mariadb.com/resources/downloads)
-
-* Find and Click on the button "Download MariaDB MaxScale Binaries" inder the MaxScale section
+* Simply go to [http://www.mariadb.com/my_portal/download](http://www.mariadb.com/my_portal/download)
 
 * Sign in to MariaDB.com
 
@@ -43,6 +41,8 @@ Alternatively you may download the MaxScale source and build your own binaries. 
 ## Configuring MaxScale
 
 The first step in configuring your MaxScale is to determine what it is you want to achieve with your MaxScale and what environment it will run in. The later is probably the easiest starting point for choosing which configuration route you wish to take. There are two distinct database environments which the first GA release of MaxScale supports; MySQL Master/Slave Replication clusters and Galera Cluster.
+
+For more details, refer to the [Configuration Guide](Configuration-Guide.md).
 
 ### Master/Slave Replication Clusters
 
@@ -111,5 +111,4 @@ Configuration is read by default from the file /etc/maxscale.cnf. An example fil
 
 ## Administration Of MaxScale
 
-There are various administration tasks that may be done with MaxScale, a client command, maxadmin, is available that will interact with a running MaxScale and allow the status of MaxScale to be monitored and give some control of the MaxScale functionality. There is a separate reference guide for the maxadmin utility and also a short administration tutorial that covers the common administration tasks that need to be done with MaxScale.
-
+There are various administration tasks that may be done with MaxScale, a client command, maxadmin, is available that will interact with a running MaxScale and allow the status of MaxScale to be monitored and give some control of the MaxScale functionality. There is [a separate reference guide](../Reference/MaxAdmin.md) for the maxadmin utility and also [a short administration tutorial](../Tutorials/Administration-Tutorial.md) that covers the common administration tasks that need to be done with MaxScale.
