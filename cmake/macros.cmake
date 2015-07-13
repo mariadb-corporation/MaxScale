@@ -23,6 +23,9 @@ macro(set_variables)
   # Use C99
   set(USE_C99 TRUE CACHE BOOL "Use C99 standard")
 
+  # Install the template maxscale.cnf file
+  set(WITH_MAXSCALE_CNF TRUE CACHE BOOL "Install the template maxscale.cnf file")
+
   # hostname or IP address of MaxScale's host
   set(TEST_HOST "127.0.0.1" CACHE STRING "hostname or IP address of MaxScale's host")
 

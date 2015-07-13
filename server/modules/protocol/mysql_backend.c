@@ -1080,7 +1080,7 @@ gw_backend_hangup(DCB *dcb)
 		len = sizeof(error);
 		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
-			if (error != 0)
+			if (error != 0 && ses_state != SESSION_STATE_STOPPING)
 			{
 				strerror_r(error, buf, 100);
 				LOGIF(LE, (skygw_log_write_flush(
@@ -1094,9 +1094,12 @@ gw_backend_hangup(DCB *dcb)
                 goto retblock;
         }
 #if defined(SS_DEBUG)
-        LOGIF(LE, (skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "Backend hangup error handling.")));
+	if(ses_state != SESSION_STATE_STOPPING)
+	{
+	    LOGIF(LE, (skygw_log_write_flush(
+		    LOGFILE_ERROR,
+		    "Backend hangup error handling.")));
+	}
 #endif
         
         router->handleError(router_instance,

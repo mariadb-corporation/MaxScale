@@ -128,6 +128,10 @@ module=regexfilter
 match=fetch
 replace=select
 
+[hint]
+type=filter
+module=hintfilter
+
 
 ## A series of service definition
 #
@@ -218,11 +222,21 @@ router=readwritesplit
 servers=server1,server2,server3
 user=myuser
 passwd=mypwd
-#use_sql_variables_in=
-#max_slave_connections=100%
+max_slave_connections=100%
+#use_sql_variables_in=master
 #max_slave_replication_lag=21
-#router_options=slave_selection_criteria=
-#filters=fetch|qla
+#filters=hint|fetch|qla
+#router_options=slave_selection_criteria=LEAST_CURRENT_OPERATIONS
+
+# Uncomment this to disable the saving of session modifying comments. Some scripting
+# languages use connection pooling and will use the same session. MaxScale sees them
+# as the same session and stores them for the slave recovery process.
+#router_options=disable_sescmd_history=true,disable_slave_recovery=true
+
+# This will allow the master server to be used for read queries. By default
+# MaxScale will only use the master for write queries.
+#router_options=master_accept_reads=true
+
 
 [Debug Interface]
 type=service
@@ -265,27 +279,26 @@ service=Read Connection Router
 protocol=MySQLClient
 address=192.168.100.102
 port=4008
-#socket=/tmp/readconn.sock
+socket=/var/lib/maxscale/readconn.sock
 
 [RW Split Listener]
 type=listener
 service=RW Split Router
 protocol=MySQLClient
 port=4006
-#socket=/tmp/rwsplit.sock
+#socket=/var/lib/maxscale/rwsplit.sock
 
 [Debug Listener]
 type=listener
 service=Debug Interface
 protocol=telnetd
-#address=127.0.0.1
+address=127.0.0.1
 port=4442
 
 [CLI Listener]
 type=listener
 service=CLI
 protocol=maxscaled
-#address=localhost
 port=6603
 
 ## Definition of the servers
@@ -314,18 +327,18 @@ port=6603
 
 [server1]
 type=server
-address=192.168.100.101
-port=3000
+address=127.0.0.1
+port=3306
 protocol=MySQLBackend
 
 [server2]
 type=server
-address=192.168.100.102
-port=3000
+address=127.0.0.1
+port=3306
 protocol=MySQLBackend
 
 [server3]
 type=server
-address=192.168.100.103
-port=3000
+address=127.0.0.1
+port=3306
 protocol=MySQLBackend
