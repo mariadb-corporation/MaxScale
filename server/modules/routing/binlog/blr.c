@@ -1618,7 +1618,7 @@ SERVICE *service;
 		} else {
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"Error: Service %s, Unable to read cache credential information from %s.",
+				"Error: Service %s, Unable to read cache credential information from %s."
 				" No database user added to service users table.",
 				service->name,
 				path)));
