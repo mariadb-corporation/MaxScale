@@ -1,4 +1,4 @@
-# MaxScale Release Notes
+# MariaDB MaxScale 1.0.4 Release Notes
 
 1.0.4 GA
 
