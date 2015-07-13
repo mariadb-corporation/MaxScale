@@ -368,11 +368,9 @@ poll_remove_dcb(DCB *dcb)
         dcb->state = DCB_STATE_NOPOLLING;
         /**
          * Only positive fds can be removed from epoll set.
-         * But this test was removed by Martin as it is hard to
-         * see that there should ever be a situation where 
-         * fd isn't positive and the DCB is also in the poll list.
+         * Cloned DCBs are in the epoll set but do not have a valid file descriptor.
          */		 
-        /* if (dcb->fd > 0) { */
+        if (dcb->fd > 0) {
         spinlock_release(&dcb->dcb_initlock);
         rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
         /**
@@ -385,7 +383,7 @@ poll_remove_dcb(DCB *dcb)
         /*< Set bit for each maxscale thread */
         bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
         return rc;
-        /* } */
+        }
 }
 
 /**
