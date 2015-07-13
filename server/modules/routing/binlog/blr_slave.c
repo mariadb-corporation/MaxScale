@@ -695,7 +695,7 @@ int	query_len;
 
 	query_text = strndup(qtext, query_len);
 	LOGIF(LE, (skygw_log_write(
-		LOGFILE_ERROR, "Unexpected query from slave server %s", query_text)));
+		LOGFILE_ERROR, "Unexpected query from slave: %s", query_text)));
 	free(query_text);
 	blr_slave_send_error(router, slave, "You have an error in your SQL syntax; Check the syntax the MaxScale binlog router accepts.");
 	return 1;

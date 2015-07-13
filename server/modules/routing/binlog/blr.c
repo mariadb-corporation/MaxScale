@@ -431,7 +431,7 @@ int		rc = 0;
 	if (service->dbref == NULL) {
 		SERVICE *service = inst->service;
 		SERVER *server;
-		server = server_alloc("none", "MySQLBackend", (int)3306);
+		server = server_alloc("_none_", "MySQLBackend", (int)3306);
 		if (server == NULL) {
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 				"%s: Error for server_alloc in createInstance",

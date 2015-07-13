@@ -1212,6 +1212,16 @@ getUsers(SERVICE *service, USERS *users)
 					NULL,
 					0) == NULL))
 		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : failure loading users data from backend "
+				"[%s:%i] for service [%s]. MySQL error %i, %s",
+				server->server->name,
+				server->server->port,
+				service->name,
+				mysql_errno(con),
+				mysql_error(con))));
+
 			server = server->next;
 		}
 		
@@ -1240,7 +1250,7 @@ getUsers(SERVICE *service, USERS *users)
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error : Unable to get user data from backend database "
-			"for service [%s]. Missing server information.",
+			"for service [%s]. No available servers.",
 			service->name)));
 		mysql_close(con);
 		return -1;
