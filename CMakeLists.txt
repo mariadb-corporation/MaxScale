@@ -219,6 +219,7 @@ endif()
 # Only do packaging if configured
 if(PACKAGE)
 
+  execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPACK_PACKAGE_ARCHITECTURE)
   # Install the files copied by the postinst script into the share folder
   install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR}
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
@@ -239,7 +240,7 @@ if(PACKAGE)
     set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
     set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
     set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
-    set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}")
+    set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}-${CPACK_PACKAGE_ARCHITECTURE}-${DISTRIB_SUFFIX}")
     set(CPACK_PACKAGE_NAME "maxscale")
     set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
     set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
@@ -253,7 +254,8 @@ if(PACKAGE)
     if(NOT ( ${RPMBUILD} STREQUAL "RPMBUILD-NOTFOUND" ) )
       include(cmake/package_rpm.cmake)
       message(STATUS "Generating RPM packages")
-    elseif(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
+    endif()
+    if(NOT ( ${DEBBUILD} STREQUAL "DEBBUILD-NOTFOUND" ) )
       include(cmake/package_deb.cmake)
       message(STATUS "Generating DEB packages for ${DEB_ARCHITECTURE}")
     endif()
@@ -269,7 +271,7 @@ add_custom_target(buildtests
 ) 
 
 add_custom_target(testall 
-  COMMAND ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} -DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DWITH_SCRIPTS=N -DMAXSCALE_VARDIR=${CMAKE_BINARY_DIR}
+  COMMAND ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} -DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DWITH_SCRIPTS=N -DWITH_MAXSCALE_CNF=N -DMAXSCALE_VARDIR=${CMAKE_BINARY_DIR}
   COMMAND make install
   COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/cmake/testall.cmake
   COMMENT "Running full test suite..." VERBATIM)

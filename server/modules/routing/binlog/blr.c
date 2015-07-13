@@ -36,6 +36,7 @@
  * 17/02/2015	Massimiliano Pinto	Addition of slave port and username in diagnostics
  * 18/02/2015	Massimiliano Pinto	Addition of dcb_close in closeSession
  * 07/05/2015   Massimiliano Pinto      Addition of MariaDB 10 compatibility support
+ * 12/06/2015   Massimiliano Pinto      Addition of MariaDB 10 events in diagnostics()
 
  *
  * @endverbatim
@@ -682,6 +683,15 @@ static char *event_names[] = {
 	"Anonymous GTID Event", "Previous GTIDS Event"
 };
 
+/* New MariaDB event numbers starts from 0xa0 */
+static char *event_names_mariadb10[] = {
+	"Annotate Rows Event",
+	/* New MariaDB 10.x event numbers */
+	"Binlog Checkpoint Event",
+	"GTID Event",
+	"GTID List Event"
+};
+
 /**
  * Display an entry from the spinlock statistics data
  *
@@ -798,11 +808,28 @@ struct tm	tm;
 				buf);
 	dcb_printf(dcb, "\t					(%d seconds ago)\n",
 			time(0) - router_inst->stats.lastReply);
-	dcb_printf(dcb, "\tLast event from master:  			0x%x, %s",
+
+	if (!router_inst->mariadb10_compat) {
+		dcb_printf(dcb, "\tLast event from master:  			0x%x, %s",
 			router_inst->lastEventReceived,
 			(router_inst->lastEventReceived >= 0 && 
-			router_inst->lastEventReceived < 0x24) ?
+			router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
 			event_names[router_inst->lastEventReceived] : "unknown");
+	} else {
+		char *ptr = NULL;
+		if (router_inst->lastEventReceived >= 0 && router_inst->lastEventReceived <= MAX_EVENT_TYPE) {
+			ptr = event_names[router_inst->lastEventReceived];
+		} else {
+			/* Check MariaDB 10 new events */
+			if (router_inst->lastEventReceived >= MARIADB_NEW_EVENTS_BEGIN && router_inst->lastEventReceived <= MAX_EVENT_TYPE_MARIADB10) {
+				ptr = event_names_mariadb10[(router_inst->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
+			}
+		}
+
+		dcb_printf(dcb, "\tLast event from master:  			0x%x, %s",
+			router_inst->lastEventReceived, (ptr != NULL) ? ptr : "unknown");
+	}
+
 	if (router_inst->lastEventTimestamp)
 	{
 		localtime_r(&router_inst->lastEventTimestamp, &tm);
@@ -815,9 +842,15 @@ struct tm	tm;
 	if (router_inst->reconnect_pending)
 		dcb_printf(dcb, "\tRouter pending reconnect to master\n");
 	dcb_printf(dcb, "\tEvents received:\n");
-	for (i = 0; i < 0x24; i++)
+	for (i = 0; i <= MAX_EVENT_TYPE; i++)
 	{
 		dcb_printf(dcb, "\t\t%-38s   %u\n", event_names[i], router_inst->stats.events[i]);
+	}
+
+	if (router_inst->mariadb10_compat) {
+		/* Display MariaDB 10 new events */
+		for (i = MARIADB_NEW_EVENTS_BEGIN; i <= MAX_EVENT_TYPE_MARIADB10; i++)
+			dcb_printf(dcb, "\t\tMariaDB 10 %-38s   %u\n", event_names_mariadb10[(i - MARIADB_NEW_EVENTS_BEGIN)], router_inst->stats.events[i]);
 	}
 
 #if SPINLOCK_PROFILE

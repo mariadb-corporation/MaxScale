@@ -210,7 +210,7 @@ HASHTABLE	*oldresources;
 	oldusers = service->users;
 
 	/* digest compare */
-	if (oldusers && memcmp(oldusers->cksum, newusers->cksum, SHA_DIGEST_LENGTH) == 0) {
+	if (oldusers != NULL && memcmp(oldusers->cksum, newusers->cksum, SHA_DIGEST_LENGTH) == 0) {
 		/* same data, nothing to do */
 		LOGIF(LD, (skygw_log_write_flush(
 			LOGFILE_DEBUG,

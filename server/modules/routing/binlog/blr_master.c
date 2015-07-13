@@ -917,6 +917,7 @@ static REP_HEADER	phdr;
 			phdr = hdr;
 			if (hdr.ok == 0)
 			{
+				int event_limit;
 				/*
 				 * First check that the checksum we calculate matches the
 				 * checksum in the packet we received.
@@ -957,8 +958,11 @@ static REP_HEADER	phdr;
 #ifdef SHOW_EVENTS
 				printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
 #endif
-				if (hdr.event_type >= 0 && hdr.event_type < 0x24)
+				event_limit = router->mariadb10_compat ? MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
+
+				if (hdr.event_type >= 0 && hdr.event_type <= event_limit)
 					router->stats.events[hdr.event_type]++;
+
 				if (hdr.event_type == FORMAT_DESCRIPTION_EVENT && hdr.next_pos == 0)
 				{
 					// Fake format description message
