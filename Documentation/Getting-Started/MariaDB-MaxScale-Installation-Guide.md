@@ -1,4 +1,4 @@
-# Getting Started With MariaDB MaxScale
+# MariaDB MaxScale Installation Guide
 
 ## First Steps With MaxScale
 
