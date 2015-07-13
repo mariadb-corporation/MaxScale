@@ -179,6 +179,11 @@ public:
     char access_user[256];
 
     /**
+     * @brief access_homedir home directory of access_user
+     */
+    char access_homedir[256];
+
+    /**
      * @brief access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
      */
     char access_sudo[64];
