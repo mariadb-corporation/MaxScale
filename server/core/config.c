@@ -301,18 +301,18 @@ int		rval;
 static	int
 process_config_context(CONFIG_CONTEXT *context)
 {
-CONFIG_CONTEXT		*obj;
-int			error_count = 0;
-HASHTABLE* monitorhash;
+    CONFIG_CONTEXT  *obj;
+    int             error_count = 0;
+    HASHTABLE*      monitorhash;
 
-if((monitorhash = hashtable_alloc(5,simple_str_hash,strcmp)) == NULL)
-{
-    skygw_log_write(LOGFILE_ERROR,"Error: Failed to allocate ,onitor configuration check hashtable.");
-    return 0;
-}
+    if((monitorhash = hashtable_alloc(5,simple_str_hash,strcmp)) == NULL)
+    {
+        skygw_log_write(LOGFILE_ERROR,"Error: Failed to allocate ,monitor configuration check hashtable.");
+        return 0;
+    }
+    hashtable_memory_fns(monitorhash,(HASHMEMORYFN)strdup,NULL,(HASHMEMORYFN)free,NULL);
 
-hashtable_memory_fns(monitorhash,(HASHMEMORYFN)strdup,NULL,(HASHMEMORYFN)free,NULL);
-	/**
+    /**
 	 * Process the data and create the services and servers defined
 	 * in the data.
 	 */

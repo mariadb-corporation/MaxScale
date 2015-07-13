@@ -871,16 +871,6 @@ unsigned long	qtime;
 		eno = gw_getsockerrno(dcb->fd);
 
 		if (eno == 0)  {
-#if MUTEX_BLOCK
-			simple_mutex_lock(&dcb->dcb_write_lock, true);
-			ss_info_dassert(!dcb->dcb_write_active,
-					"Write already active");
-			dcb->dcb_write_active = TRUE;
-			atomic_add(&pollStats.n_write, 1);
-			dcb->func.write_ready(dcb);
-			dcb->dcb_write_active = FALSE;
-			simple_mutex_unlock(&dcb->dcb_write_lock);
-#else
 			atomic_add(&pollStats.n_write, 1);
 			/** Read session id to thread's local storage */
 			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
@@ -888,7 +878,6 @@ unsigned long	qtime;
 						&tls_log_info.li_sesid, 
 						&tls_log_info.li_enabled_logs)));
 			dcb->func.write_ready(dcb);
-#endif
 		} else {
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
@@ -904,12 +893,6 @@ unsigned long	qtime;
 	}
 	if (ev & EPOLLIN)
 	{
-#if MUTEX_BLOCK
-		simple_mutex_lock(&dcb->dcb_read_lock, true);
-		ss_info_dassert(!dcb->dcb_read_active, "Read already active");
-		dcb->dcb_read_active = TRUE;
-#endif
-		
 		if (dcb->state == DCB_STATE_LISTENING)
 		{
 			LOGIF(LD, (skygw_log_write(
@@ -943,11 +926,6 @@ unsigned long	qtime;
 				&tls_log_info.li_enabled_logs)));
 			dcb->func.read(dcb);
 		}
-#if MUTEX_BLOCK
-		dcb->dcb_read_active = FALSE;
-		simple_mutex_unlock(
-			&dcb->dcb_read_lock);
-#endif
 	}
 	if (ev & EPOLLERR)
 	{
