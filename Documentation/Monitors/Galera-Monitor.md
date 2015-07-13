@@ -98,6 +98,44 @@ A list of event names which cause the script to be executed. If this option is n
 events=master_down,slave_down
 ```
 
+### `use_priority`
+
+Enable interaction with server priorities. This will allow the monitor to deterministically pick the write node for the monitored Galera cluster and will allow for controlled node replacement.
+
+```
+use_priority=true
+```
+
+## Interaction with Server Priorities
+
+If the `use_priority` option is set and a server is configured with the `priority=<int>` parameter, galeramon will use that as the basis on which the master node is chosen. This requires the `disable_master_role_setting` to be undefined or disabled. The server with the lowest value in `priority` will be chosen as the master node when a replacement Galera node is promoted to a master server inside MaxScale.
+
+Here is an example with two servers.
+
+```
+[node-1]
+type=server
+address=192.168.122.101
+port=3306
+priority=1
+
+[node-2]
+type=server
+address=192.168.122.102
+port=3306
+priority=3
+
+[node-3]
+type=server
+address=192.168.122.103
+port=3306
+priority=2
+```
+
+In this example `node-1` is always used as the master if available. If `node-1` is not available, then the next node with the highest priority rank is used. In this case it would be `node-3`. If both `node-1` and `node-3` were down, then `node-2` would be used. Nodes without priority are considered as having the lowest priority rank and will be used only if all nodes with priority ranks are not available.
+
+With priority ranks you can control the order in which MaxScale chooses the master node. This will allow for a controlled failure and replacement of nodes.
+
 ## Script events
 
 Here is a table of all possible event types and their descriptions.
