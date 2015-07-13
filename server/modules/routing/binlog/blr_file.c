@@ -874,6 +874,11 @@ char tmp_file[PATH_MAX + 1] = "";
 		return 2;
 	}
 
+	if(chmod(tmp_file, S_IRUSR | S_IWUSR) < 0) {
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror(errno), errno);
+		return 2;
+	}
+
 	/* write ini file section */
 	fprintf(config_file,"[%s]\n", section);
 
@@ -890,6 +895,11 @@ char tmp_file[PATH_MAX + 1] = "";
 	rc = rename(tmp_file, filename);
 
 	if (rc == -1) {
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror(errno), errno);
+		return 3;
+	}
+
+	if(chmod(filename, S_IRUSR | S_IWUSR) < 0) {
 		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror(errno), errno);
 		return 3;
 	}
