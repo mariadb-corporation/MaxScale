@@ -278,10 +278,13 @@ GWPROTOCOL	*funcs;
 
                                 if(mkdir_rval)
                                 {
-                                    skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
-                                                    path,
-                                                    errno,
-                                                    strerror(errno));
+				    if(errno != EEXIST)
+				    {
+					skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
+						 path,
+						 errno,
+						 strerror(errno));
+				    }
                                     mkdir_rval = 0;
                                 }
 
@@ -293,10 +296,13 @@ GWPROTOCOL	*funcs;
 
                                 if(mkdir_rval)
                                 {
-                                    skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
-                                                    path,
-                                                    errno,
-                                                    strerror(errno));
+				    if(errno != EEXIST)
+				    {
+					skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
+						 path,
+						 errno,
+						 strerror(errno));
+				    }
                                     mkdir_rval = 0;
                                 }
 				strncat(path, "/dbusers", PATH_MAX);
