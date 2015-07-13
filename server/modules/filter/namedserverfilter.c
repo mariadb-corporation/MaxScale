@@ -35,7 +35,7 @@ extern __thread log_info_t tls_log_info;
  * that routes to a named server if a regular expression match is found.
  * @verbatim
  *
- * A simple regular expression query rewrite filter.
+ * A simple regular expression based query routing filter.
  * Two parameters should be defined in the filter configuration
  *	match=<regular expression>
  *	server=<server to route statement to>

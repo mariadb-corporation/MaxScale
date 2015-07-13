@@ -125,7 +125,7 @@ SERVICE 	*service;
                         "Error : Unable to load %s module \"%s\".\n\t\t\t"
                         "      Ensure that lib%s.so exists in one of the "
                         "following directories :\n\t\t\t      "
-                        "- %s/modules\n%s%s",
+                        "- %s\n%s%s",
                         MODULE_ROUTER,
                         router,
                         router,
