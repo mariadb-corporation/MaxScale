@@ -431,7 +431,7 @@ int		rc = 0;
 	if (service->dbref == NULL) {
 		SERVICE *service = inst->service;
 		SERVER *server;
-		server = server_alloc("none", "MySQLBackend", (int)1234);
+		server = server_alloc("none", "MySQLBackend", (int)3306);
 		if (server == NULL) {
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 				"%s: Error for server_alloc in createInstance",
@@ -1505,7 +1505,6 @@ SERVICE         *service;
 
         if (strcmp(name, "master_host") == 0) {
                  server_update_address(service->dbref->server, (char *)value);
-
         } else if (strcmp(name, "master_port") == 0) {
                 server_update_port(service->dbref->server, (short)atoi(value));
         } else if (strcmp(name, "filestem") == 0) {

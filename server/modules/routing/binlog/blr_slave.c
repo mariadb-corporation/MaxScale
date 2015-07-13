@@ -3194,7 +3194,7 @@ blr_master_restore_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_maste
 static void
 blr_master_set_empty_config(ROUTER_INSTANCE *router) {
 	server_update_address(router->service->dbref->server, "none");
-	server_update_port(router->service->dbref->server, (unsigned short)1234);
+	server_update_port(router->service->dbref->server, (unsigned short)3306);
 
 	router->binlog_position = 4;
 	strcpy(router->binlog_name, "");
