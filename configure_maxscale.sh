@@ -71,7 +71,7 @@ else
 fi
 
 sed -i "s/###access_user###/$access_user/g" MaxScale.cnf
-sed -i "s/###access_homedir###/$access_homedir/g" MaxScale.cnf
+sed -i "s|###access_homedir###|$access_homedir|g" MaxScale.cnf
 
 scp -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null MaxScale.cnf $access_user@$maxscale_IP:./
 ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo cp MaxScale.cnf $maxscale_cnf"
