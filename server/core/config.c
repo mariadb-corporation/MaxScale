@@ -1757,9 +1757,6 @@ SERVER			*server;
 					char *enable_root_user;
 					char *connection_timeout;
 					char *allow_localhost_match_wildcard_host;
-					char *auth_all_servers;
-					char *optimize_wildcard;
-					char *strip_db_esc;
 
 					enable_root_user = 
                                                 config_get_value(obj->parameters, 
@@ -1767,16 +1764,6 @@ SERVER			*server;
 
 					connection_timeout = config_get_value(obj->parameters,
                                                           "connection_timeout");
-					
-					auth_all_servers = 
-                                                config_get_value(obj->parameters, 
-                                                                 "auth_all_servers");
-					optimize_wildcard =
-                                                config_get_value(obj->parameters,
-                                                                 "optimize_wildcard");
-					strip_db_esc = 
-                                                config_get_value(obj->parameters, 
-                                                                 "strip_db_esc");
 
 					allow_localhost_match_wildcard_host = 
 						config_get_value(obj->parameters, "localhost_match_wildcard_host");

@@ -148,8 +148,6 @@ char		*password;
 
 		if (head)
 		{
-			unsigned char *ptr = GWBUF_DATA(head);
-			ptr = GWBUF_DATA(head);
 			if (GWBUF_LENGTH(head))
 			{
 				switch (maxscaled->state)

@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 static	MEMLOG		*memlogs = NULL;
 static	SPINLOCK	memlock = SPINLOCK_INIT;
@@ -133,7 +134,7 @@ memlog_log(MEMLOG *log, void *value)
 	switch (log->type)
 	{
 	case ML_INT:
-		((int *)(log->values))[log->offset] = (int)value;
+		((int *)(log->values))[log->offset] = (intptr_t)value;
 		break;
 	case ML_LONG:
 		((long *)(log->values))[log->offset] = (long)value;

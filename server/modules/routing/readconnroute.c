@@ -827,12 +827,7 @@ clientReply(
         GWBUF  *queue,
         DCB    *backend_dcb)
 {
-	DCB *client ;
-
-	client = backend_dcb->session->client;
-
-	ss_dassert(client != NULL);
-
+	ss_dassert(backend_dcb->session->client != NULL);
 	SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }
 

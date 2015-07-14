@@ -1263,7 +1263,7 @@ int internal_route(DCB* dcb)
 GWBUF* clone_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF* buffer)
 {
     GWBUF* clone = NULL;
-    int length, residual = 0;
+    int residual = 0;
     char* ptr;
     
 	if (my_session->branch_session &&
@@ -1291,7 +1291,6 @@ GWBUF* clone_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF* bu
 				(my_instance->nomatch == NULL ||
 					regexec(&my_instance->nore,ptr,0,NULL, 0) != 0))
 			{
-				length = modutil_MySQL_query_len(buffer, &residual);
 				clone = gwbuf_clone_all(buffer);
 				my_session->residual = residual;
 			}

@@ -1661,7 +1661,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 {
 	char *ptr,*where,*msg = NULL;
 	char emsg[512];
-	int qlen;
+
 	unsigned char* memptr = (unsigned char*)queue->start;
 	bool is_sql, is_real, matches;
 	skygw_query_op_t optype = QUERY_OP_UNDEFINED;
@@ -1683,7 +1683,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 		}
 		optype =  query_classifier_get_operation(queue);
 		is_real = skygw_is_real_query(queue);
-		qlen = gw_mysql_get_byte3(memptr) - 1;
+
 	}
 
 	if(rulelist->rule->on_queries == QUERY_OP_UNDEFINED || rulelist->rule->on_queries & optype){

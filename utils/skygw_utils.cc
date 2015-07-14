@@ -1825,21 +1825,12 @@ int skygw_file_write(
         bool          flush)
 {
         int    rc;
-#if !defined(LAPTOP_TEST)
-        int    err = 0;
         size_t nwritten;
         int    fd;
         static int writecount;
-#else
-	struct timespec ts1;
-	ts1.tv_sec = 0;
-	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
-#endif
-        
+  
         CHK_FILE(file);
-#if defined(LAPTOP_TEST)
-	nanosleep(&ts1, NULL);
-#else
+
         nwritten = fwrite(data, nbytes, 1, file->sf_file);
         
         if (nwritten != 1) {
@@ -1857,11 +1848,11 @@ int skygw_file_write(
         if (flush || writecount == FSYNCLIMIT) 
 	{
                 fd = fileno(file->sf_file);
-                err = fflush(file->sf_file);
-                err = fsync(fd);
+                fflush(file->sf_file);
+                fsync(fd);
                 writecount = 0;
         }
-#endif
+
         rc = 0;
         CHK_FILE(file);
 return_rc:

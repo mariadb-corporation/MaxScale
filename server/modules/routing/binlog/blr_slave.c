@@ -86,7 +86,7 @@ static int blr_slave_send_disconnected_server(ROUTER_INSTANCE *router, ROUTER_SL
 static int blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int server_id);
 static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
-
+void poll_fake_write_event(DCB *dcb);
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
@@ -1122,10 +1122,9 @@ blr_slave_register(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
 GWBUF	*resp;
 uint8_t	*ptr;
-int	len, slen;
+int	slen;
 
 	ptr = GWBUF_DATA(queue);
-	len = extract_field(ptr, 24);
 	ptr += 4;		// Skip length and sequence number
 	if (*ptr++ != COM_REGISTER_SLAVE)
 		return 0;
@@ -1194,7 +1193,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
 {
 GWBUF		*resp;
 uint8_t		*ptr;
-int		len, flags, serverid, rval, binlognamelen;
+int		len, rval, binlognamelen;
 REP_HEADER	hdr;
 uint32_t	chksum;
 
@@ -1222,9 +1221,7 @@ uint32_t	chksum;
 
 	slave->binlog_pos = extract_field(ptr, 32);
 	ptr += 4;
-	flags = extract_field(ptr, 16);
 	ptr += 2;
-	serverid = extract_field(ptr, 32);
 	ptr += 4;
 	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
 	slave->binlogfile[binlognamelen] = 0;
@@ -1689,7 +1686,7 @@ int	len = EXTRACT24(ptr + 9);	// Extract the event length
 		len = BINLOG_FNAMELEN;
 	ptr += 19;	// Skip header
 	slave->binlog_pos = extract_field(ptr, 32);
-	slave->binlog_pos += (extract_field(ptr+4, 32) << 32);
+	slave->binlog_pos += (((uint64_t)extract_field(ptr+4, 32)) << 32);
 	memcpy(slave->binlogfile, ptr + 8, len);
 	slave->binlogfile[len] = 0;
 }
@@ -2055,7 +2052,6 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 	uint8_t *ptr;
 	int len, seqno;
 	GWBUF *pkt;
-	int n = 1;
 
        /* preparing output result */
 	blr_slave_send_fieldcount(router, slave, 2);
@@ -2105,7 +2101,7 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 			strncpy((char *)ptr, state, strlen(state));             // Result string
 			ptr += strlen(state);
 
-			n = slave->dcb->func.write(slave->dcb, pkt);
+			slave->dcb->func.write(slave->dcb, pkt);
 
 			/* force session close*/
 			router_obj->closeSession(router->service->router_instance, sptr);

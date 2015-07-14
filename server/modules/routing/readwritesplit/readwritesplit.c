@@ -2839,8 +2839,8 @@ static void clientReply (
         /** There is one pending session command to be executed. */
         if (sescmd_cursor_is_active(scur))
         {
-                bool succp;
-                
+	    bool succp;
+
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
                         "Backend %s:%d processed reply and starts to execute "
@@ -2849,8 +2849,15 @@ static void clientReply (
                         bref->bref_backend->backend_server->port)));
                 
                 succp = execute_sescmd_in_backend(bref);
-                
-                ss_dassert(succp);
+		ss_dassert(succp);
+		if(!succp)
+		{
+		    LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Backend %s:%d failed to execute session command.",
+                        bref->bref_backend->backend_server->name,
+                        bref->bref_backend->backend_server->port)));
+		}
         }
 	else if (bref->bref_pending_cmd != NULL) /*< non-sescmd is waiting to be routed */
 	{
@@ -2944,7 +2951,7 @@ static void bref_clear_state(
 {
     if(bref == NULL)
     {
-	skygw_log_write(LE,"Error: NULL parameter passed to bref_clear_state. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	return;
     }
         if (state != BREF_WAITING_RESULT)
@@ -2968,6 +2975,13 @@ static void bref_clear_state(
                         prev2 = atomic_add(
                                 &bref->bref_backend->backend_server->stats.n_current_ops, -1);
                         ss_dassert(prev2 > 0);
+			if(prev2 <= 0)
+			{
+			    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
+				     __FUNCTION__,
+				     &bref->bref_backend->backend_server->name,
+				     &bref->bref_backend->backend_server->port);
+			}
                 }       
         }
 }
@@ -2978,7 +2992,7 @@ static void bref_set_state(
 {
     if(bref == NULL)
     {
-	skygw_log_write(LE,"Error: NULL parameter passed to bref_set_state. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	return;
     }
         if (state != BREF_WAITING_RESULT)
@@ -2993,11 +3007,24 @@ static void bref_set_state(
                 /** Increase waiter count */
                 prev1 = atomic_add(&bref->bref_num_result_wait, 1);
                 ss_dassert(prev1 >= 0);
-                
+                if(prev1 < 0)
+		{
+		    skygw_log_write(LE,"[%s] Error: negative number of connections waiting for results in backend %s:%u",
+			     __FUNCTION__,
+			     &bref->bref_backend->backend_server->name,
+			     &bref->bref_backend->backend_server->port);
+		}
                 /** Increase global operation count */
                 prev2 = atomic_add(
                         &bref->bref_backend->backend_server->stats.n_current_ops, 1);
-                ss_dassert(prev2 >= 0);                
+                ss_dassert(prev2 >= 0);
+		if(prev2 < 0)
+		{
+		    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
+			     __FUNCTION__,
+			     &bref->bref_backend->backend_server->name,
+			     &bref->bref_backend->backend_server->port);
+		}
         }
 }
 
@@ -3565,7 +3592,7 @@ static void rses_property_done(
 {
     if(prop == NULL)
     {
-	skygw_log_write(LE,"Error: NULL parameter passed to rses_property_done. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	return;
     }
 	CHK_RSES_PROP(prop);
@@ -3650,7 +3677,7 @@ static mysql_sescmd_t* rses_property_get_sescmd(
 
 	if(prop == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to rses_property_get_sescmd. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return NULL;
 	}
 
@@ -3700,7 +3727,7 @@ static void mysql_sescmd_done(
 {
     if(sescmd == NULL)
     {
-	skygw_log_write(LE,"Error: NULL parameter passed to mysql_sescmd_done. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	return;
     }
 	CHK_RSES_PROP(sescmd->my_sescmd_prop);
@@ -3878,7 +3905,7 @@ static bool sescmd_cursor_is_active(
 
 	if(sescmd_cursor == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_is_active. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return false;
 	}
         ss_dassert(SPINLOCK_IS_LOCKED(&sescmd_cursor->scmd_cur_rses->rses_lock));
@@ -3908,7 +3935,7 @@ static GWBUF* sescmd_cursor_clone_querybuf(
 	GWBUF* buf;
 	if(scur == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_clone_querybuf. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return NULL;
 	}
 	ss_dassert(scur->scmd_cur_cmd != NULL);
@@ -3926,7 +3953,7 @@ static bool sescmd_cursor_history_empty(
 
         if(scur == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_history_empty. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return true;
 	}
         CHK_SESCMD_CUR(scur);
@@ -3950,7 +3977,7 @@ static void sescmd_cursor_reset(
         ROUTER_CLIENT_SES* rses;
 	if(scur == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_reset. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return;
 	}
         CHK_SESCMD_CUR(scur);
@@ -3971,7 +3998,7 @@ static bool execute_sescmd_history(
         sescmd_cursor_t* scur;
 	if(bref == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to execute_sescmd_history. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return false;
 	}
         CHK_BACKEND_REF(bref);
@@ -4012,7 +4039,7 @@ static bool execute_sescmd_in_backend(
 	GWBUF* buf;
 	if(backend_ref == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to execute_sescmd_in_backend. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return false;
 	}
         if (BREF_IS_CLOSED(backend_ref))
@@ -4121,7 +4148,7 @@ static bool sescmd_cursor_next(
 
 	if(scur == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_next. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return false;
 	}
 
@@ -5163,10 +5190,8 @@ static int router_handle_state_switch(
 			srv->name,
 			srv->port,
 				STRSRVSTATUS(srv))));
-	ses = dcb->session;
-        CHK_SESSION(ses);
-	rses = (ROUTER_CLIENT_SES *)dcb->session->router_session;
-        CHK_CLIENT_RSES(rses);
+        CHK_SESSION(((SESSION*)dcb->session));
+        CHK_CLIENT_RSES(((ROUTER_CLIENT_SES *)dcb->session->router_session));
 
         switch (reason) {
                 case DCB_REASON_NOT_RESPONDING:

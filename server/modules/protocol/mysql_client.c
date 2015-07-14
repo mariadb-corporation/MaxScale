@@ -641,10 +641,12 @@ gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
 int
 gw_MySQLWrite_client_SSL(DCB *dcb, GWBUF *queue)
 {
-    MySQLProtocol  *protocol = NULL;
     CHK_DCB(dcb);
+#ifdef SS_DEBUG
+    MySQLProtocol  *protocol = NULL;
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     CHK_PROTOCOL(protocol);
+#endif
     return dcb_write_SSL(dcb, queue);
 }
 

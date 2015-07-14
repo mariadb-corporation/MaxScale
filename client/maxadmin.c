@@ -105,7 +105,6 @@ EditLine	*el = NULL;
 Tokenizer	*tok;
 History		*hist;
 HistEvent	ev;
-const LineInfo	*li;
 #else
 char		buf[1024];
 #endif
@@ -266,7 +265,7 @@ char            c;
 			buf[i] = 0;
 
 #ifdef HISTORY
-		li = el_line(el);
+		el_line(el);
 		history(hist, &ev, H_ENTER, buf);
 #endif
 

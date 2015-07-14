@@ -81,7 +81,8 @@ inline uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
 static void blr_master_close(ROUTER_INSTANCE *);
 static char *blr_extract_column(GWBUF *buf, int col);
-
+void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
+void poll_fake_write_event(DCB *dcb);
 static int keepalive = 1;
 
 /**
@@ -92,8 +93,9 @@ static int keepalive = 1;
  * @param	router		The router instance
  */
 void
-blr_start_master(ROUTER_INSTANCE *router)
+blr_start_master(void* data)
 {
+    ROUTER_INSTANCE *router = (ROUTER_INSTANCE*)data;
 DCB	*client;
 GWBUF	*buf;
 
@@ -728,7 +730,6 @@ int			no_residual = 1;
 int			preslen = -1;
 int			prev_length = -1;
 int			n_bufs = -1, pn_bufs = -1;
-static REP_HEADER	phdr;
 
 	/*
 	 * Prepend any residual buffer to the buffer chain we have
@@ -914,7 +915,7 @@ static REP_HEADER	phdr;
 				}
 				break;
 			}
-			phdr = hdr;
+
 			if (hdr.ok == 0)
 			{
 				int event_limit;

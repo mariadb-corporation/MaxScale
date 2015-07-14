@@ -520,7 +520,6 @@ poll_waitevents(void *arg)
 struct epoll_event events[MAX_EVENTS];
 int		   i, nfds, timeout_bias = 1;
 intptr_t	   thread_id = (intptr_t)arg;
-DCB                *zombies = NULL;
 int		   poll_spins = 0;
 
 	/** Add this thread to the bitmask of running polling threads */
@@ -691,7 +690,7 @@ int		   poll_spins = 0;
 
 		if (thread_data)
 			thread_data[thread_id].state = THREAD_ZPROCESSING;
-		zombies = dcb_process_zombies(thread_id);
+		dcb_process_zombies(thread_id);
 		if (thread_data)
 			thread_data[thread_id].state = THREAD_IDLE;
 
