@@ -379,8 +379,8 @@ mlist_cursor_t* mlist_cursor_init(
         c = (mlist_cursor_t *)calloc(1, sizeof(mlist_cursor_t));
 
         if (c == NULL) {
-                goto return_cursor;
                 simple_mutex_unlock(&list->mlist_mutex);
+                goto return_cursor;
         }
         c->mlcursor_chk_top = CHK_NUM_MLIST_CURSOR;
         c->mlcursor_chk_tail = CHK_NUM_MLIST_CURSOR;

@@ -172,6 +172,12 @@ static int gw_read_backend_event(DCB *dcb) {
             dcb->dcb_errhandle_called = true;
             goto return_rc;
         }
+
+	if(dcb->session == NULL)
+	{
+	    goto return_rc;
+	}
+
 	CHK_SESSION(dcb->session);
                 
         /*< return only with complete session */
@@ -278,14 +284,13 @@ static int gw_read_backend_event(DCB *dcb) {
                         void            *rsession = NULL;
                         SESSION         *session = dcb->session;
                         int             receive_rc = 0;
-
-                        CHK_SESSION(session);
 	
 			if (session == NULL)
 			{
 				rc = 0;
 				goto return_with_lock;
 			}
+                        CHK_SESSION(session);
                         router = session->service->router;
                         router_instance = session->service->router_instance;
                         rsession = session->router_session;
@@ -1055,7 +1060,13 @@ gw_backend_hangup(DCB *dcb)
             goto retblock;
         }
         session = dcb->session;
-        CHK_SESSION(session);
+
+	if(session == NULL)
+	{
+	    goto retblock;
+	}
+
+	CHK_SESSION(session);
         
         rsession = session->router_session;
         router = session->service->router;

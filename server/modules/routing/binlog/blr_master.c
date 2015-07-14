@@ -1249,8 +1249,8 @@ MYSQL_session	*auth_info;
 
 	if ((auth_info = calloc(1, sizeof(MYSQL_session))) == NULL)
 		return NULL;
-	strncpy(auth_info->user, username,MYSQL_USER_MAXLEN+1);
-	strncpy(auth_info->db, database,MYSQL_DATABASE_MAXLEN+1);
+	strncpy(auth_info->user, username,MYSQL_USER_MAXLEN);
+	strncpy(auth_info->db, database,MYSQL_DATABASE_MAXLEN);
 	gw_sha1_str((const uint8_t *)password, strlen(password), auth_info->client_sha1);
 
 	return auth_info;

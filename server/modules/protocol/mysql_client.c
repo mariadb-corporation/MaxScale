@@ -1050,13 +1050,6 @@ int gw_read_client_event(
 			     (char*)((MYSQL_session *)dcb->data)->db);
 
 		    modutil_send_mysql_err_packet(dcb, 3, 0, 1049, "42000", fail_str);
-		}else if(auth_val == 3){
-		    /** Send error 1045 to client */
-		    fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
-					     dcb->remote,
-					     (char*)((MYSQL_session *)dcb->data)->client_sha1,
-					     (char*)((MYSQL_session *)dcb->data)->db,auth_val);
-		    modutil_send_mysql_err_packet(dcb, 3, 0, 1045, "28000", fail_str);
 		}else {
 		    /** Send error 1045 to client */
 		    fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,

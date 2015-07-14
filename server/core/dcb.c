@@ -1070,7 +1070,7 @@ int dcb_read_SSL(
 			goto return_n;
 		    }
 
-		    gwbuf_rtrim(buffer,bufsize - n);
+		    buffer = gwbuf_rtrim(buffer,bufsize - n);
 		    if(buffer == NULL)
 		    {
 			goto return_n;

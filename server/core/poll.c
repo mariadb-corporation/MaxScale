@@ -366,24 +366,29 @@ poll_remove_dcb(DCB *dcb)
          * Set state to NOPOLLING and remove dcb from poll set.
          */
         dcb->state = DCB_STATE_NOPOLLING;
+	spinlock_release(&dcb->dcb_initlock);
+
         /**
          * Only positive fds can be removed from epoll set.
          * Cloned DCBs are in the epoll set but do not have a valid file descriptor.
-         */		 
-        if (dcb->fd > 0) {
-        spinlock_release(&dcb->dcb_initlock);
-        rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
-        /**
-         * The poll_resolve_error function will always
-         * return 0 or crash.  So if it returns non-zero result, 
-         * things have gone wrong and we crash.
          */
-        if (rc) rc = poll_resolve_error(dcb, errno, false);
-        if (rc) raise(SIGABRT);
-        /*< Set bit for each maxscale thread */
+        if (dcb->fd > 0) {
+	    rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
+	    /**
+	     * The poll_resolve_error function will always
+	     * return 0 or crash.  So if it returns non-zero result,
+	     * things have gone wrong and we crash.
+	     */
+	    if (rc) rc = poll_resolve_error(dcb, errno, false);
+	    if (rc) raise(SIGABRT);
+        }
+	else
+	{
+	    rc = 0;
+	}
+	/*< Set bit for each maxscale thread */
         bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
         return rc;
-        }
 }
 
 /**
