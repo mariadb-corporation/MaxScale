@@ -1162,8 +1162,7 @@ static REP_HEADER	phdr;
 					"Error packet in binlog stream.%s @ %d.",
 							router->binlog_name,
 							router->binlog_position)));
-				blr_log_packet(LOGFILE_ERROR, "Error Packet:",
-					ptr, len);
+
 				router->stats.n_binlog_errors++;
 			}
 		}

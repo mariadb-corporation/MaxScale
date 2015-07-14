@@ -505,14 +505,13 @@ int	query_len;
 				/* get current data */
 				blr_master_get_config(router, current_master);
 
-				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: 'RESET SLAVE executed'. Previous state MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s', MASTER_PASSWORD='%s'",
+				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: 'RESET SLAVE executed'. Previous state MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'",
 					router->service->name,
 					current_master->host,
 					current_master->port,
 					current_master->logfile,
 					current_master->pos,
-					current_master->user,
-					current_master->password)));
+					current_master->user)));
 
 				/* remove master.ini */
 				strncpy(path, router->binlogdir, PATH_MAX);
@@ -2919,22 +2918,17 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 		}
 		router->password = strdup(ptr);
 
-		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_PASSWORD is [%s]",
-			router->service->name,
-			router->password)));
-
 		free(master_password);
 	}
 
-	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: 'CHANGE MASTER TO executed'. Previous state MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s', MASTER_PASSWORD='%s'. New state is MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s', MASTER_PASSWORD='%s'",
+	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: 'CHANGE MASTER TO executed'. Previous state MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'. New state is MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'",
 		router->service->name,
-		current_master->host,current_master->port, current_master->logfile, current_master->pos, current_master->user, current_master->password,
+		current_master->host,current_master->port, current_master->logfile, current_master->pos, current_master->user,
 		router->service->dbref->server->name,
 		router->service->dbref->server->port,
 		router->binlog_name,
 		router->binlog_position,
-		router->user,
-		router->password)));
+		router->user)));
 
 	blr_master_free_config(current_master);
 
