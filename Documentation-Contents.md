@@ -13,7 +13,7 @@
 
 ## Getting Started
 
- - [Getting Started with MaxScale](Getting-Started/Getting-Started-With-MaxScale.md)
+ - [MariaDB MaxScale Installation Guide](Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
  - [Building MaxScale from Source Code](Getting-Started/Building-MaxScale-from-Source-Code.md)
  - [Configuration Guide](Getting-Started/Configuration-Guide.md)
 
