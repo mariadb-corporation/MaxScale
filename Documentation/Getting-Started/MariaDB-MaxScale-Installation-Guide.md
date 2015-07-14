@@ -1,4 +1,4 @@
-# Getting Started With MariaDB MaxScale
+# MariaDB MaxScale Installation Guide
 
 ## First Steps With MaxScale
 
@@ -8,23 +8,31 @@ In this introduction to MaxScale the aim is to take the reader from the point of
 
 The simplest way to install MaxScale is to use one of the binary packages that are available for download from the MariaDB website.
 
-* Simply go to [www.mariadb.com](http://www.mariadb.com)
+* Simply go to [http://www.mariadb.com/my_portal/download](http://www.mariadb.com/my_portal/download)
 
-* Select the Downloads option from the Resources menu
+* Sign in to MariaDB.com
 
-* Find and click on the button "Download MariaDB MaxScale Binaries"
+* Follow the instructions at the top of the page. 
 
-* Find the section on that page entitled MariaDB MaxScale
+![image alt text](images/getting_started.png)
 
-* Select your operating system from the drop down box
+If you want to install only MaxScale, futher down you will find the product specific download pages. Click on the MariaDB MaxScale link and follow the distribution specific instructions.
 
-* Instructions that are specific for your operating system will then appear
+![image alt text](images/getting_started2.png)
 
-![image alt text](images/image_1.png)
+After you have installed MaxScale, you can start it.
 
-* Follow these instructions to install MaxScale on your machine
+```
+systemctl start maxscale.service
+```
 
-Upon successful completion of the installation process you have a version of MaxScale that is missing only a configuration file before it can be started.
+If your system does not support systemd you can start MaxScale using the installed init.d script.
+
+```
+service maxscale start
+```
+
+An example configuration file is installed into the `/etc/` folder. This file should be changed according to your needs.
 
 ## Building MaxScale From Source Code
 
@@ -33,6 +41,8 @@ Alternatively you may download the MaxScale source and build your own binaries. 
 ## Configuring MaxScale
 
 The first step in configuring your MaxScale is to determine what it is you want to achieve with your MaxScale and what environment it will run in. The later is probably the easiest starting point for choosing which configuration route you wish to take. There are two distinct database environments which the first GA release of MaxScale supports; MySQL Master/Slave Replication clusters and Galera Cluster.
+
+For more details, refer to the [Configuration Guide](Configuration-Guide.md).
 
 ### Master/Slave Replication Clusters
 
@@ -54,6 +64,38 @@ It is also possible to use the Read/Write Splitter with Galera. Although it is n
 
 As well as the four major configuration choices outlined above there are also other configurations sub-options that may be mixed with those to provide a variety of different configuration and functionality. The MaxScale filter concept allows the basic configurations to be built upon in a large variety of ways. A separate filter tutorial is available that discusses the concept and gives some examples of ways to use filters.
 
+## Encrypting Passwords
+
+Passwords stored in the maxscale.cnf file may optionally be encrypted for added security. This is done by creation of an encryption key on installation of MaxScale. Encryption keys may be created manually by executing the maxkeys utility with the argument of the filename to store the key. The default location MaxScale stores the keys is `/var/lib/maxscale`.
+
+```
+ # Usage: maxkeys [PATH]
+maxkeys /var/lib/maxscale/
+```
+
+Changing the encryption key for MaxScale will invalidate any currently encrypted keys stored in the maxscale.cnf file.
+
+### Creating Encrypted Passwords
+
+Encrypted passwords are created by executing the maxpasswd command with the location of the .secrets file and the password you require to encrypt as an argument.
+
+```
+# Usage: maxpasswd PATH PASSWORD
+maxpasswd /var/lib/maxscale/ MaxScalePw001
+61DD955512C39A4A8BC4BB1E5F116705
+```
+
+The output of the maxpasswd command is a hexadecimal string, this should be inserted into the maxscale.cnf file in place of the ordinary, plain text, password. MaxScale will determine this as an encrypted password and automatically decrypt it before sending it the database server.
+
+```
+[Split Service]
+type=service
+router=readwritesplit
+servers=server1,server2,server3,server4
+user=maxscale
+password=61DD955512C39A4A8BC4BB1E5F116705
+```
+
 ## Running MaxScale
 
 MaxScale consists of a core executable and a number of modules that implement
@@ -69,5 +111,4 @@ Configuration is read by default from the file /etc/maxscale.cnf. An example fil
 
 ## Administration Of MaxScale
 
-There are various administration tasks that may be done with MaxScale, a client command, maxadmin, is available that will interact with a running MaxScale and allow the status of MaxScale to be monitored and give some control of the MaxScale functionality. There is a separate reference guide for the maxadmin utility and also a short administration tutorial that covers the common administration tasks that need to be done with MaxScale.
-
+There are various administration tasks that may be done with MaxScale, a client command, maxadmin, is available that will interact with a running MaxScale and allow the status of MaxScale to be monitored and give some control of the MaxScale functionality. There is [a separate reference guide](../Reference/MaxAdmin.md) for the maxadmin utility and also [a short administration tutorial](../Tutorials/Administration-Tutorial.md) that covers the common administration tasks that need to be done with MaxScale.
