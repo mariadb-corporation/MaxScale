@@ -525,7 +525,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 {
     MONITOR_SERVERS* database = mon->databases;
     MONITOR_SERVERS *ptr,*rval = NULL;
-
+    int i;
     while(database)
     {
 	bool ismaster = false;
@@ -587,7 +587,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 
 	while(ptr)
 	{
-	    for(int i = 0;ptr->server->slaves[i];i++)
+	    for(i = 0;ptr->server->slaves[i];i++)
 	    {
 		if(ptr->server->slaves[i] == database->server->node_id)
 		{
