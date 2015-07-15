@@ -113,14 +113,10 @@ MAXINFO_TREE	*col, *table;
 #endif
 		default:
 			*parse_error = PARSE_SYNTAX_ERROR;
-			if (tree)
-				free_tree(tree);
 			return NULL;
 		}
 	}
 	*parse_error = PARSE_SYNTAX_ERROR;
-	if (tree)
-		free_tree(tree);
 	return NULL;
 }
 

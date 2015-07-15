@@ -31,8 +31,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
+ * Date		Who			Description
  * 02/04/2014	Mark Riddoch		Initial implementation
+ * 07/05/2015	Massimiliano Pinto	Added MariaDB 10 Compatibility
  *
  * @endverbatim
  */
@@ -448,11 +449,27 @@ char	query[128];
 			GWBUF_CONSUME_ALL(router->saved_master.chksum2);
 		router->saved_master.chksum2 = buf;
 		blr_cache_response(router, "chksum2", buf);
-		buf = blr_make_query("SELECT @@GLOBAL.GTID_MODE");
-		router->master_state = BLRM_GTIDMODE;
+
+		if (router->mariadb10_compat) {
+			buf = blr_make_query("SET @mariadb_slave_capability=4");
+			router->master_state = BLRM_MARIADB10;
+		} else {
+			buf = blr_make_query("SELECT @@GLOBAL.GTID_MODE");
+			router->master_state = BLRM_GTIDMODE;
+		}
 		router->master->func.write(router->master, buf);
 		break;
 		}
+	case BLRM_MARIADB10:
+		// Response to the SET @mariadb_slave_capability=4, should be stored
+		if (router->saved_master.mariadb10)
+			GWBUF_CONSUME_ALL(router->saved_master.mariadb10);
+		router->saved_master.mariadb10 = buf;
+		blr_cache_response(router, "mariadb10", buf);
+		buf = blr_make_query("SHOW VARIABLES LIKE 'SERVER_UUID'");
+		router->master_state = BLRM_MUUID;
+		router->master->func.write(router->master, buf);
+		break;
 	case BLRM_GTIDMODE:
 		// Response to the GTID_MODE, should be stored
 		if (router->saved_master.gtid_mode)
@@ -900,6 +917,7 @@ static REP_HEADER	phdr;
 			phdr = hdr;
 			if (hdr.ok == 0)
 			{
+				int event_limit;
 				/*
 				 * First check that the checksum we calculate matches the
 				 * checksum in the packet we received.
@@ -940,8 +958,11 @@ static REP_HEADER	phdr;
 #ifdef SHOW_EVENTS
 				printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
 #endif
-				if (hdr.event_type >= 0 && hdr.event_type < 0x24)
+				event_limit = router->mariadb10_compat ? MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
+
+				if (hdr.event_type >= 0 && hdr.event_type <= event_limit)
 					router->stats.events[hdr.event_type]++;
+
 				if (hdr.event_type == FORMAT_DESCRIPTION_EVENT && hdr.next_pos == 0)
 				{
 					// Fake format description message

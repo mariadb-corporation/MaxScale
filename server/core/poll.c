@@ -330,7 +330,8 @@ poll_remove_dcb(DCB *dcb)
         CHK_DCB(dcb);
 
         /*< It is possible that dcb has already been removed from the set */
-        if (dcb->state != DCB_STATE_POLLING) 
+        if (dcb->state != DCB_STATE_POLLING &&
+	    dcb->state != DCB_STATE_LISTENING)
 	{
                 if (dcb->state == DCB_STATE_NOPOLLING ||
                     dcb->state == DCB_STATE_ZOMBIE)

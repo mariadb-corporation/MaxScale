@@ -396,6 +396,7 @@ mlist_cursor_t* mlist_cursor_init(
 
         if (c == NULL) {
                 goto return_cursor;
+                simple_mutex_unlock(&list->mlist_mutex);
         }
         c->mlcursor_chk_top = CHK_NUM_MLIST_CURSOR;
         c->mlcursor_chk_tail = CHK_NUM_MLIST_CURSOR;
@@ -581,6 +582,7 @@ bool mlist_cursor_move_to_first(
         simple_mutex_lock(&list->mlist_mutex, true);
 
         if (mc->mlcursor_list->mlist_deleted) {
+                simple_mutex_unlock(&list->mlist_mutex);
                 return false;
         }
         /** Set position point to first node */

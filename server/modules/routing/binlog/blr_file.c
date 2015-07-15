@@ -23,8 +23,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
+ * Date		Who			Description
  * 14/04/2014	Mark Riddoch		Initial implementation
+ * 07/05/2015	Massimiliano Pinto	Added MAX_EVENT_TYPE_MARIADB10
  *
  * @endverbatim
  */
@@ -71,7 +72,7 @@ static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 int
 blr_file_init(ROUTER_INSTANCE *router)
 {
-char		*ptr, path[PATH_MAX], filename[PATH_MAX];
+char		*ptr, path[PATH_MAX+1], filename[PATH_MAX+1];
 int		file_found, n = 1;
 int		root_len, i;
 DIR		*dirp;
@@ -79,12 +80,8 @@ struct dirent	*dp;
 
 	if (router->binlogdir == NULL)
 	{
-		strcpy(path, "/usr/local/mariadb-maxscale");
-		if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
-		{
-			strncpy(path, ptr,PATH_MAX);
-		}
-		strncat(path, "/",PATH_MAX);
+		strcpy(path, get_datadir());
+		strncat(path,"/",PATH_MAX);
 		strncat(path, router->service->name,PATH_MAX);
 
 		if (access(path, R_OK) == -1)
@@ -214,9 +211,8 @@ int		fd;
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
 	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
-	blr_file_add_magic(router, fd);
-	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
+	spinlock_release(&router->binlog_lock);
 	return 1;
 }
 
@@ -258,12 +254,13 @@ int		fd;
 	                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"%s: binlog file %s has an invalid length %d.",
 				router->service->name, path, router->binlog_position)));
-                    close(fd);
+			close(fd);
+			spinlock_release(&router->binlog_lock);
 			return;
 		}
 	}
-	spinlock_release(&router->binlog_lock);
 	router->binlog_fd = fd;
+	spinlock_release(&router->binlog_lock);
 }
 
 /**
@@ -443,15 +440,26 @@ struct	stat	statb;
 	hdr->next_pos = EXTRACT32(&hdbuf[13]);
 	hdr->flags = EXTRACT16(&hdbuf[17]);
 
-	if (hdr->event_type > MAX_EVENT_TYPE)
-	{
-		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Invalid event type 0x%x. "
+	if (router->mariadb10_compat) {
+		if (hdr->event_type > MAX_EVENT_TYPE_MARIADB10) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Invalid MariaDB 10 event type 0x%x. "
 				"Binlog file is %s, position %d",
 				hdr->event_type,
 				file->binlogname, pos)));
-		return NULL;
-	}
+			return NULL;
+		}
+	} else {
+		if (hdr->event_type > MAX_EVENT_TYPE) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Invalid event type 0x%x. " 
+				"Binlog file is %s, position %d",
+				hdr->event_type,
+				file->binlogname, pos))); 
+
+			return NULL;
+		} 
+	} 
 
 	if (hdr->next_pos < pos && hdr->event_type != ROTATE_EVENT)
 	{
@@ -660,24 +668,20 @@ struct	stat	statb;
 void
 blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 {
-char	path[4097], *ptr;
+char	path[PATH_MAX+1], *ptr;
 int	fd;
 
-	strcpy(path, "/usr/local/mariadb-maxscale");
-	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
-	{
-		strncpy(path, ptr, 4096);
-	}
-	strncat(path, "/", 4096);
-	strncat(path, router->service->name, 4096);
+	strcpy(path,get_datadir());
+	strncat(path,"/",PATH_MAX);
+	strncat(path, router->service->name, PATH_MAX);
 
 	if (access(path, R_OK) == -1)
 		mkdir(path, 0777);
-	strncat(path, "/.cache", 4096);
+	strncat(path, "/.cache", PATH_MAX);
 	if (access(path, R_OK) == -1)
 		mkdir(path, 0777);
 	strncat(path, "/", 4096);
-	strncat(path, response, 4096);
+	strncat(path, response, PATH_MAX);
 
 	if ((fd = open(path, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
 		return;
@@ -698,19 +702,15 @@ GWBUF *
 blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
 {
 struct	stat	statb;
-char	path[4097], *ptr;
+char	path[PATH_MAX+1], *ptr;
 int	fd;
 GWBUF	*buf;
 
-	strcpy(path, "/usr/local/mariadb-maxscale");
-	if ((ptr = getenv("MAXSCALE_HOME")) != NULL)
-	{
-		strncpy(path, ptr, 4096);
-	}
-	strncat(path, "/", 4096);
-	strncat(path, router->service->name, 4096);
-	strncat(path, "/.cache/", 4096);
-	strncat(path, response, 4096);
+	strcpy(path, get_datadir());
+	strncat(path, "/", PATH_MAX);
+	strncat(path, router->service->name, PATH_MAX);
+	strncat(path, "/.cache/", PATH_MAX);
+	strncat(path, response, PATH_MAX);
 
 	if ((fd = open(path, O_RDONLY)) == -1)
 		return NULL;

@@ -72,7 +72,7 @@ static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
 static GWBUF* process_response_data (DCB* dcb, GWBUF* readbuf, int nbytes_to_process); 
 extern char* create_auth_failed_msg( GWBUF* readbuf, char*  hostaddr, uint8_t*  sha1);
-extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db);
+extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
 static bool sescmd_response_complete(DCB* dcb);
 
 
@@ -1080,7 +1080,7 @@ gw_backend_hangup(DCB *dcb)
 		len = sizeof(error);
 		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
-			if (error != 0)
+			if (error != 0 && ses_state != SESSION_STATE_STOPPING)
 			{
 				strerror_r(error, buf, 100);
 				LOGIF(LE, (skygw_log_write_flush(
@@ -1094,9 +1094,12 @@ gw_backend_hangup(DCB *dcb)
                 goto retblock;
         }
 #if defined(SS_DEBUG)
-        LOGIF(LE, (skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "Backend hangup error handling.")));
+	if(ses_state != SESSION_STATE_STOPPING)
+	{
+	    LOGIF(LE, (skygw_log_write_flush(
+		    LOGFILE_ERROR,
+		    "Backend hangup error handling.")));
+	}
 #endif
         
         router->handleError(router_instance,
@@ -1159,30 +1162,32 @@ gw_backend_close(DCB *dcb)
 	 * but client's close and adding client's DCB to zombies list is executed
 	 * only if client's DCB's state does _not_ change in parallel.
 	 */
-	spinlock_acquire(&session->ses_lock);
-	/** 
-	 * If session->state is STOPPING, start closing client session. 
-	 * Otherwise only this backend connection is closed.
-	 */
-        if (session != NULL && 
-		session->state == SESSION_STATE_STOPPING &&
-		session->client != NULL)
-        {		
-                if (session->client->state == DCB_STATE_POLLING)
-                {
-			spinlock_release(&session->ses_lock);
-			
-                        /** Close client DCB */
-                        dcb_close(session->client);
-                }
-                else 
-		{
-			spinlock_release(&session->ses_lock);
-		}
-        }
-        else
+	if(session != NULL)
 	{
+	    spinlock_acquire(&session->ses_lock);
+	    /**
+	     * If session->state is STOPPING, start closing client session.
+	     * Otherwise only this backend connection is closed.
+	     */
+	    if (session->state == SESSION_STATE_STOPPING &&
+	     session->client != NULL)
+	    {
+		if (session->client->state == DCB_STATE_POLLING)
+		{
+		    spinlock_release(&session->ses_lock);
+
+		    /** Close client DCB */
+		    dcb_close(session->client);
+		}
+		else
+		{
+		    spinlock_release(&session->ses_lock);
+		}
+	    }
+	    else
+	    {
 		spinlock_release(&session->ses_lock);
+	    }
 	}
 	return 1;
 }
@@ -1433,7 +1438,7 @@ static int gw_change_user(
 		message = create_auth_fail_str(username,
 						backend->session->client->remote,
 						password_set,
-						"");
+						"",auth_ret);
 		if (message == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(

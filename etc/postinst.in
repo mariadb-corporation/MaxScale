@@ -1,5 +1,62 @@
 #!/bin/sh
 
-cp @CMAKE_INSTALL_PREFIX@/maxscale /etc/init.d/
-cp @CMAKE_INSTALL_PREFIX@/maxscale.conf /etc/ld.so.conf.d/
+
+# Create directories
+mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
+mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@
+mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@
+mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_DOCDIR@
+
+# MAXSCALE_VARDIR is an absolute path to /var by default
+mkdir -p @MAXSCALE_VARDIR@/log/maxscale
+mkdir -p @MAXSCALE_VARDIR@/lib/maxscale
+mkdir -p @MAXSCALE_VARDIR@/cache/maxscale
+mkdir -p @MAXSCALE_VARDIR@/run/maxscale
+
+# Create MaxScale user
+if [ -f "/etc/passwd" -a "$(grep -c 'maxscale' /etc/passwd)" -eq 0 ]
+then
+    useradd -r -s /bin/false maxscale
+    groupadd maxscale
+fi
+
+# Change the owner of the directories to maxscale:maxscale
+chown maxscale:maxscale @MAXSCALE_VARDIR@/log/maxscale
+chown maxscale:maxscale @MAXSCALE_VARDIR@/lib/maxscale
+chown maxscale:maxscale @MAXSCALE_VARDIR@/cache/maxscale
+chown maxscale:maxscale @MAXSCALE_VARDIR@/run/maxscale
+chmod 0755 @MAXSCALE_VARDIR@/log/maxscale
+chmod 0755 @MAXSCALE_VARDIR@/lib/maxscale
+chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
+chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
+
+# Copy init.d script and ldconfig file
+if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
+then
+    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
+fi
+
+if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" ]
+then
+    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf /etc/init.d/
+fi
+
+if [ -d "/usr/lib/systemd/system" -a -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ]
+then
+    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
+fi
 /sbin/ldconfig
+
+cat <<EOF >& 2
+********** Notice: MaxScale 1.2 Changes **************
+
+MaxScale 1.2 has changed the default installation locations
+and various files have changed locations. The configuration
+file is now read from /etc/maxscale.cnf (note the lower case name)
+and MaxScale data is in /var/lib/maxscale/.
+
+The default location of binary log files and the authentication cache changed from
+/usr/local/mariadb-maxscale/<Service name> to /var/lib/maxscale/<Service name>.
+
+******************************************************
+EOF

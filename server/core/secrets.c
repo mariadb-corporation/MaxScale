@@ -22,6 +22,7 @@
 #include <log_manager.h>
 #include <ctype.h>
 #include <mysql_client_server_protocol.h>
+#include <gwdirs.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -52,31 +53,26 @@ int i;
 }
 
 /**
- * secrets_readKeys
- *
- * This routine reads data from a binary file and extracts the AES encryption key
- * and the AES Init Vector
- *
+ * This routine reads data from a binary file named ".secrets" and extracts the AES encryption key
+ * and the AES Init Vector.
+ * If the path parameter is not null the custom path is interpreted as a folder
+ * containing the .secrets file. Otherwise the default location is used.
  * @return	The keys structure or NULL on error
  */
 static MAXKEYS *
-secrets_readKeys()
+secrets_readKeys(char* path)
 {
-char		secret_file[255];
+char		secret_file[PATH_MAX+1];
 char		*home;
 MAXKEYS		*keys;
 struct stat 	secret_stats;
 int		fd;
 int             len;
 static int	reported = 0;
-
-        home = getenv("MAXSCALE_HOME");
-
-        if (home == NULL) {
-                home = "/usr/local/mariadb-maxscale";
-        }
-	snprintf(secret_file, 255, "%s/etc/.secrets", home);
-
+	if(path != NULL)
+	    snprintf(secret_file, PATH_MAX, "%s/.secrets", path);
+	else
+	    snprintf(secret_file, PATH_MAX, "%s/.secrets", get_datadir());
 	/* Try to access secrets file */
 	if (access(secret_file, R_OK) == -1) 
 	{
@@ -225,11 +221,20 @@ static int	reported = 0;
  * @param secret_file   The file with secret keys
  * @return 0 on success and 1 on failure
  */
-int secrets_writeKeys(char *secret_file)
+int secrets_writeKeys(char *path)
 {
 int				fd,randfd;
 unsigned int	randval;
 MAXKEYS			key;
+char secret_file[PATH_MAX + 10];
+
+if(strlen(path) > PATH_MAX)
+{
+    skygw_log_write(LOGFILE_ERROR,"Error: Pathname too long.");
+    return 1;
+}
+
+	sprintf(secret_file,"%s/.secrets",path);
 
 	/* Open for writing | Create | Truncate the file for writing */
         if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
@@ -332,7 +337,7 @@ char		*ptr;
 unsigned char	encrypted[80];
 int		enlen;
 
-	keys = secrets_readKeys();
+	keys = secrets_readKeys(NULL);
 	if (!keys)
 		return strdup(crypt);
 	/*
@@ -369,12 +374,12 @@ int		enlen;
  * Encrypt a password that can be stored in the MaxScale configuration file.
  *
  * Note the return is always a malloc'd string that the caller must free
- *
+ * @param path		Path the the .secrets file
  * @param password	The password to encrypt
  * @return	The encrypted password
  */
 char *
-encryptPassword(char *password)
+encryptPassword(char* path, char *password)
 {
 MAXKEYS		*keys;
 AES_KEY		aeskey;
@@ -383,7 +388,7 @@ char		*hex_output;
 unsigned char	padded_passwd[80];
 unsigned char	encrypted[80];
 
-	if ((keys = secrets_readKeys()) == NULL)
+	if ((keys = secrets_readKeys(path)) == NULL)
 		return NULL;
 
 	memset(padded_passwd, 0, 80);

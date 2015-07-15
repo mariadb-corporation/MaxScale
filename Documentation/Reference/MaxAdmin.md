@@ -591,7 +591,7 @@ Some monitors provide a replication heartbeat mechanism that monitors the delay 
     MaxScale> enable heartbeat "MySQL Monitor"
     MaxScale> 
 
-Please note that changes made via this interface will not persist across restarts of MaxScale. To make a permanent change edit the MaxScale.cnf file.
+Please note that changes made via this interface will not persist across restarts of MaxScale. To make a permanent change edit the maxscale.cnf file.
 
 Enabling the replication heartbeat mechanism will add the display of heartbeat information in the show server output
 
@@ -786,11 +786,11 @@ Two commands are provided to change the logging levels within MaxScale, disable 
     MaxScale> disable log debug
     MaxScale> 
 
-Please note that changes made via this interface will not persist across restarts of MaxScale. To make a permanent change edit the MaxScale.cnf file.
+Please note that changes made via this interface will not persist across restarts of MaxScale. To make a permanent change edit the maxscale.cnf file.
 
 ## Reloading The Configuration
 
-A command, reload config, is available that will cause MaxScale to reload the MaxScale.cnf configuration file.
+A command, reload config, is available that will cause MaxScale to reload the maxscale.cnf configuration file.
 
 ## Shutting Down MaxScale
 
@@ -798,7 +798,7 @@ The MaxScale server may be shutdown using the shutdown maxscale command.
 
 # Configuring MaxScale to Accept MaxAdmin Connections
 
-In order to allow the use of the MaxAdmin client interface the service must be added to the MaxScale.cnf file of the Maxscale server. The CLI service itself must be added and a listener for the maxscaled protocol.
+In order to allow the use of the MaxAdmin client interface the service must be added to the maxscale.cnf file of the Maxscale server. The CLI service itself must be added and a listener for the maxscaled protocol.
 
 The default entries required are shown below.
 

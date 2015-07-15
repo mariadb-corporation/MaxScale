@@ -68,7 +68,6 @@ extern	void	unload_all_modules();
 extern	void	printModules();
 extern	void	dprintAllModules(DCB *);
 extern 	RESULTSET	*moduleGetList();
-extern	char	*get_maxscale_home(void);
 extern void module_feedback_send(void*);
 extern void moduleShowFeedbackReport(DCB *dcb);
 

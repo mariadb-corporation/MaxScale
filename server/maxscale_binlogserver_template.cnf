@@ -1,5 +1,5 @@
 #
-# Example MaxScale.cnf for the Binlog Server.
+# Example maxscale.cnf for the Binlog Server.
 #
 #
 
@@ -37,14 +37,13 @@ threads=6
 # The MaxScale Binlog Server Service.
 #
 # The name of this service will be used as the directory name
-#   in $MAXSCALE_HOME where the binlogs will be saved.
+#   in the cache directory where the binlogs will be saved.
 # If this name is changed, it must be changed in the listener
 #   configuration below.
 [Binlog_Service]
 
 # type must be service
 # router must be binlogrouter
-#   (corresponding to the so file in $MAXSCALE_HOME/modules).
 type=service
 router=binlogrouter
 

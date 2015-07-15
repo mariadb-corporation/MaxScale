@@ -5,7 +5,7 @@ The database firewall filter is used to block queries that match a set of rules.
 
 ## Configuration
 
-The database firewall filter only requires minimal configuration in the MaxScale.cnf file. The actual rules of the database firewall filter are located in a separate text file. The following is an example of a database firewall filter configuration in MaxScale.cnf.
+The database firewall filter only requires minimal configuration in the maxscale.cnf file. The actual rules of the database firewall filter are located in a separate text file. The following is an example of a database firewall filter configuration in maxscale.cnf.
 
 ```
 [DatabaseFirewall]

@@ -32,6 +32,7 @@
  * 26/06/14	Mark Riddoch		Addition of server parameters
  * 30/08/14	Massimiliano Pinto	Addition of new service status description 
  * 30/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS description
+ * 01/06/15	Massimiliano Pinto	Addition of server_update_address/port
  *
  * @endverbatim
  */
@@ -731,3 +732,41 @@ int		*data;
 
 	return set;
 }
+
+/*
+ * Update the address value of a specific server
+ *
+ * @param server        The server to update
+ * @param address      	The new address
+ *
+ */
+void
+server_update_address(SERVER *server, char *address)
+{
+	spinlock_acquire(&server_spin);
+	if (server && address) {
+		if (server->name) {
+			free(server->name);
+		}
+		server->name = strdup(address);
+	}
+	spinlock_release(&server_spin);
+}
+
+/*
+ * Update the port value of a specific server
+ *
+ * @param server        The server to update
+ * @param port      	The new port value
+ *
+ */
+void
+server_update_port(SERVER *server, unsigned short port)
+{
+	spinlock_acquire(&server_spin);
+	if (server && port > 0) {
+	        server->port = port;
+	}
+	spinlock_release(&server_spin);
+}
+

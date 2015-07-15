@@ -2214,15 +2214,13 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if((home = getenv("MAXSCALE_HOME")) == NULL)
+    home = malloc(sizeof(char)*(PATH_MAX+1));
+    if(getcwd(home,PATH_MAX) == NULL)
     {
-	home = malloc(sizeof(char)*(PATH_MAX+1));
-	if(getcwd(home,PATH_MAX) == NULL)
-	{
-	    free(home);
-	    home = NULL;
-	}
+	free(home);
+	home = NULL;
     }
+
     printf("Log files written to: %s\n",home?home:"/tpm");
 
     int argc_ = 2;

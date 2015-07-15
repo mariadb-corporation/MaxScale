@@ -1413,7 +1413,7 @@ int skygw_log_write_flush(
         /**
          * Write log string to buffer and add to file write list.
          */
-        for(i = LOGFILE_FIRST;i<=LOGFILE_LAST;i <<=1)
+        for (i = LOGFILE_FIRST; i<LOGFILE_LAST ;i <<=1)
         {
             /**
              * If particular log is disabled in general and it is not enabled for
@@ -1476,7 +1476,7 @@ int skygw_log_write(
          * Write log string to buffer and add to file write list.
          */
 
-        for(i = LOGFILE_FIRST;i<=LOGFILE_LAST;i <<=1)
+        for (i = LOGFILE_FIRST; i<=LOGFILE_LAST; i <<=1)
         {
             /**
              * If particular log is disabled in general and it is not enabled for
@@ -1780,7 +1780,6 @@ static bool fnames_conf_init(
                         
                 case 's':
                         /** record list of log file ids for later use */
-                    if(do_syslog)
                         shmem_id_str = optarg;
                         break;
                 case 'h':
@@ -1812,12 +1811,14 @@ static bool fnames_conf_init(
                 strdup(get_logpath_default()) : fn->fn_logpath;
 
         /** Set identity string for syslog if it is not set in config.*/
+        if(do_syslog)
+        {
         syslog_ident_str =
             (syslog_ident_str == NULL ?
              (argv == NULL ? strdup(program_invocation_short_name) :  
               strdup(*argv)) :
              syslog_ident_str);
-        
+        }
         /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
            for (i=0; i<argc; i++) {
            ss_dfprintf(stderr, "%s ", argv[i]);

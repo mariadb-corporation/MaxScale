@@ -18,12 +18,11 @@
 ### END INIT INFO
 
 #############################################
-# MaxScale HOME, PIDFILE, LIB
+# MaxScale PIDFILE and LIB
 #############################################
 
-export MAXSCALE_HOME=@CMAKE_INSTALL_PREFIX@
-export MAXSCALE_PIDFILE=$MAXSCALE_HOME/log/maxscale.pid
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$MAXSCALE_HOME/lib
+export MAXSCALE_PIDFILE=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@/maxscale
 
 ###############################
 # LSB Exit codes (non-Status)
@@ -39,7 +38,7 @@ _RETVAL_STATUS_OK=0
 _RETVAL_STATUS_NOT_RUNNING=3
 
 # Sanity checks.
-[ -x $MAXSCALE_HOME/bin/maxscale ] || exit $_RETVAL_NOT_INSTALLED
+[ -x @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale ] || exit $_RETVAL_NOT_INSTALLED
 
 # Source function library.
 . /etc/rc.d/init.d/functions
@@ -52,23 +51,23 @@ RETVAL=0
 
 start() {
     echo -n $"Starting MaxScale: "
-    my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale`
+    my_check=`status -p $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale`
     CHECK_RET=$?
     [ $CHECK_RET -eq 0 ] && echo -n " found $my_check" && success && CHECK_RET=0
 
-    daemon --pidfile $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale >& /dev/null
+    daemon --pidfile $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale >& /dev/null
 
     RETVAL=$?
     [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$servicename
 
     if [ $CHECK_RET -ne 0 ]; then
 	sleep 2
-        my_check=`status -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale`
+        my_check=`status -p $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale`
         CHECK_RET=$?
         [ $CHECK_RET -eq 0 ] && echo -n $my_check && success || failure
     fi
 
-    # Return rigth code
+    # Return right code
     if [ $RETVAL -ne 0 ]; then
        failure
        RETVAL=$_RETVAL_NOT_RUNNING
@@ -100,7 +99,7 @@ stop() {
 reload() {
     echo -n $"Reloading MaxScale: "
 
-    killproc -p $MAXSCALE_PIDFILE $MAXSCALE_HOME/bin/maxscale -HUP
+    killproc -p $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale -HUP
     RETVAL=$?
     echo
 }
