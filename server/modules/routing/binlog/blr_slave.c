@@ -1092,10 +1092,14 @@ char    *dyn_column=NULL;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	if (router->master_state != BLRM_SLAVE_STOPPED)
-		strcpy(column, "Yes");
-	else
+	if (router->master_state != BLRM_SLAVE_STOPPED) {
+		if (router->master_state < BLRM_BINLOGDUMP)
+			strcpy(column, "Connecting");
+		else
+			strcpy(column, "Yes");
+	} else {
 		strcpy(column, "No");
+	}
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
