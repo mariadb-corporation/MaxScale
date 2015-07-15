@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     printf("%s\n", str);fflush(stdout);
     system(str);
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s touch %s/script_output; %s chmod maxscale:maxscale %s/script_output", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir, Test->access_sudo, Test->access_homedir);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s touch %s/script_output; %s chmod maxscale:maxscale %s/script_output'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir, Test->access_sudo, Test->access_homedir);
     printf("%s\n", str);fflush(stdout);
     system(str);
 
