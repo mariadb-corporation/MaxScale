@@ -37,8 +37,8 @@ int main(int argc, char *argv[])
     sleep(30);
 
     printf("Copying data from t1 to file\n");fflush(stdout);
-
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s rm /tmp/t*.csv; %s chmod 777 -R /tmp'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0], Test->repl->access_sudo, Test->repl->access_sudo);
+    printf("%s\n", str);
     system(str);
 
     printf("RWSplit:\n");fflush(stdout);
@@ -49,8 +49,8 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_slave, (char *) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
     printf("Copying t1.cvs from Maxscale machine:\n");fflush(stdout);
-    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s:/tmp/t1.csv .", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
-
+    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s:/tmp/t1.csv ./", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
+    printf("%s\n", str);
     system(str);
 
     MYSQL *srv[2];
