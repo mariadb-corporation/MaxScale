@@ -81,6 +81,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
 static void set_slave_heartbeat(MONITOR *, MONITOR_SERVERS *);
 static int add_slave_to_master(long *, int, long);
 bool isMySQLEvent(monitor_event_t event);
+static bool report_version_err = true;
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
 	stopMonitor, 
@@ -156,6 +157,7 @@ startMonitor(void *arg, void* opt)
 	handle->detectStaleMaster = 0;
 	handle->master = NULL;
 	handle->script = NULL;
+	handle->mysql51_replication = false;
 	memset(handle->events,false,sizeof(handle->events));
 	spinlock_init(&handle->lock);
     }
@@ -198,6 +200,10 @@ startMonitor(void *arg, void* opt)
 		script_error = true;
 	    else
 		have_events = true;
+	}
+	else if(!strcmp(params->name,"mysql51_replication"))
+	{
+	    handle->mysql51_replication = config_truth_value(params->value);
 	}
 	params = params->next;
     }
@@ -281,7 +287,324 @@ static void diagnostics(DCB *dcb, void *arg)
     }
     dcb_printf(dcb, "\n");
 }
+/**
+ * Connect to a database
+ * @param mon Monitor
+ * @param database Monitored database
+ * @return true if connection was successful, false if there was an error
+ */
+static inline bool connect_to_db(MONITOR* mon,MONITOR_SERVERS *database)
+{
+    char		  *uname  = mon->user;
+    char              *passwd = mon->password;
+    char *dpwd = decryptPassword(passwd);
+    int  connect_timeout = mon->connect_timeout;
+    int  read_timeout = mon->read_timeout;
+    int  write_timeout = mon->write_timeout;
 
+    if(database->con)
+	mysql_close(database->con);
+    database->con = mysql_init(NULL);
+
+    mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
+    mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
+    mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
+
+    return (mysql_real_connect(database->con,
+			       database->server->name,
+			       uname,
+			       dpwd,
+			       NULL,
+			       database->server->port,
+			       NULL,
+			       0) != NULL);
+}
+
+static inline void monitor_mysql100_db(MONITOR_SERVERS* database)
+{
+    bool isslave = false;
+    MYSQL_RES* result;
+    MYSQL_ROW row;
+
+    if (mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
+	&& (result = mysql_store_result(database->con)) != NULL)
+    {
+	int i = 0;
+	long master_id = -1;
+
+	if(mysql_field_count(database->con) < 42)
+	{
+	    mysql_free_result(result);
+	    skygw_log_write(LE,"Error: \"SHOW ALL SLAVES STATUS\" "
+		    "returned less than the expected amount of columns. Expected 42 columns."
+		    " MySQL Version: %s",version_str);
+	    return;
+	}
+
+	while ((row = mysql_fetch_row(result)))
+	{
+	    /* get Slave_IO_Running and Slave_SQL_Running values*/
+	    if (strncmp(row[12], "Yes", 3) == 0
+	     && strncmp(row[13], "Yes", 3) == 0) {
+		isslave += 1;
+	    }
+
+	    /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
+	     * the replication tree, slaves ids will be added to master(s) and we will have at least the
+	     * root master server.
+	     * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
+	     */
+	    if (strncmp(row[12], "Yes", 3) == 0) {
+		/* get Master_Server_Id values */
+		master_id = atol(row[41]);
+		if (master_id == 0)
+		    master_id = -1;
+	    }
+
+	    i++;
+	}
+	/* store master_id of current node */
+	memcpy(&database->server->master_id, &master_id, sizeof(long));
+
+	mysql_free_result(result);
+
+	/* If all configured slaves are running set this node as slave */
+	if (isslave > 0 && isslave == i)
+	    isslave = 1;
+	else
+	    isslave = 0;
+    }
+
+    /* Remove addition info */
+    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+
+    /* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
+     * will be assigned in the monitorMain() via get_replication_tree() routine
+     */
+
+    /* Set the Slave Role */
+    if (isslave)
+    {
+	monitor_set_pending_status(database, SERVER_SLAVE);
+	/* Avoid any possible stale Master state */
+	monitor_clear_pending_status(database, SERVER_MASTER);
+    } else {
+	/* Avoid any possible Master/Slave stale state */
+	monitor_clear_pending_status(database, SERVER_SLAVE);
+	monitor_clear_pending_status(database, SERVER_MASTER);
+    }
+}
+
+static inline void monitor_mysql55_db(MONITOR_SERVERS* database)
+{
+    bool isslave = false;
+    MYSQL_RES* result;
+    MYSQL_ROW row;
+
+    if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
+	&& (result = mysql_store_result(database->con)) != NULL)
+    {
+	long master_id = -1;
+	if(mysql_field_count(database->con) < 40)
+	{
+	    mysql_free_result(result);
+	    skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
+		    "returned less than the expected amount of columns. Expected 40 columns."
+		    " MySQL Version: %s",version_str);
+	    return;
+	}
+
+	while ((row = mysql_fetch_row(result)))
+	{
+	    /* get Slave_IO_Running and Slave_SQL_Running values*/
+	    if (strncmp(row[10], "Yes", 3) == 0
+	     && strncmp(row[11], "Yes", 3) == 0) {
+		isslave = 1;
+	    }
+
+	    /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
+	     * the replication tree, slaves ids will be added to master(s) and we will have at least the
+	     * root master server.
+	     * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
+	     */
+	    if (strncmp(row[10], "Yes", 3) == 0) {
+		/* get Master_Server_Id values */
+		master_id = atol(row[39]);
+		if (master_id == 0)
+		    master_id = -1;
+	    }
+	}
+	/* store master_id of current node */
+	memcpy(&database->server->master_id, &master_id, sizeof(long));
+
+	mysql_free_result(result);
+    }
+
+    /* Remove addition info */
+    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+
+    /* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
+     * will be assigned in the monitorMain() via get_replication_tree() routine
+     */
+
+    /* Set the Slave Role */
+    if (isslave)
+    {
+	monitor_set_pending_status(database, SERVER_SLAVE);
+	/* Avoid any possible stale Master state */
+	monitor_clear_pending_status(database, SERVER_MASTER);
+    } else {
+	/* Avoid any possible Master/Slave stale state */
+	monitor_clear_pending_status(database, SERVER_SLAVE);
+	monitor_clear_pending_status(database, SERVER_MASTER);
+    }
+}
+
+static inline void monitor_mysql51_db(MONITOR_SERVERS* database)
+{
+    bool isslave = false;
+    MYSQL_RES* result;
+    MYSQL_ROW row;
+
+    if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
+	&& (result = mysql_store_result(database->con)) != NULL)
+    {
+	if(mysql_field_count(database->con) < 38)
+	{
+	    mysql_free_result(result);
+
+	    skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
+		    "returned less than the expected amount of columns. Expected 38 columns."
+		    " MySQL Version: %s",version_str);
+	    return;
+	}
+
+	while ((row = mysql_fetch_row(result)))
+	{
+	    /* get Slave_IO_Running and Slave_SQL_Running values*/
+	    if (strncmp(row[10], "Yes", 3) == 0
+	     && strncmp(row[11], "Yes", 3) == 0) {
+		isslave = 1;
+	    }
+	}
+	mysql_free_result(result);
+    }
+
+    /* Remove addition info */
+    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+
+    /* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
+     * will be assigned in the monitorMain() via get_replication_tree() routine
+     */
+
+    /* Set the Slave Role */
+    if (isslave)
+    {
+	monitor_set_pending_status(database, SERVER_SLAVE);
+	/* Avoid any possible stale Master state */
+	monitor_clear_pending_status(database, SERVER_MASTER);
+    } else {
+	/* Avoid any possible Master/Slave stale state */
+	monitor_clear_pending_status(database, SERVER_SLAVE);
+	monitor_clear_pending_status(database, SERVER_MASTER);
+    }
+}
+
+/**
+ * Build the replication tree for a MySQL 5.1 cluster
+ *
+ * This function queries each server with SHOW SLAVE HOSTS to determine which servers
+ * have slaves replicating from them.
+ * @param mon Monitor
+ * @return Lowest server ID master in the monitor
+ */
+static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
+{
+    MONITOR_SERVERS* database = mon->databases;
+    MONITOR_SERVERS *ptr,*rval = NULL;
+    int i;
+    while(database)
+    {
+	bool ismaster = false;
+	MYSQL_RES* result;
+	MYSQL_ROW row;
+	int nslaves = 0;
+	if(database->con)
+	{
+	    if (mysql_query(database->con, "SHOW SLAVE HOSTS") == 0
+	     && (result = mysql_store_result(database->con)) != NULL)
+	    {
+		if(mysql_field_count(database->con) < 4)
+		{
+		    mysql_free_result(result);
+		    skygw_log_write_flush(LE,"Error: \"SHOW SLAVE HOSTS\" "
+			    "returned less than the expected amount of columns. Expected 4 columns."
+			    " MySQL Version: %s",version_str);
+		    return NULL;
+		}
+
+		if(mysql_num_rows(result) > 0)
+		{
+		    ismaster = true;
+		    while (nslaves < MONITOR_MAX_NUM_SLAVES && (row = mysql_fetch_row(result)))
+		    {
+			/* get Slave_IO_Running and Slave_SQL_Running values*/
+			database->server->slaves[nslaves] = atol(row[0]);
+			nslaves++;
+			LOGIF(LD,(skygw_log_write_flush(LD,"Found slave at %s:%d",row[1],row[2])));
+		    }
+		    database->server->slaves[nslaves] = 0;
+		}
+
+		mysql_free_result(result);
+	    }
+
+	    
+	    /* Set the Slave Role */
+	    if (ismaster)
+	    {
+		LOGIF(LD,(skygw_log_write(LD,"Master server found at %s:%d with %d slaves",
+					 database->server->name,
+					 database->server->port,
+					 nslaves)));
+		monitor_set_pending_status(database, SERVER_MASTER);
+		if(rval == NULL || rval->server->node_id > database->server->node_id)
+		    rval = database;
+	    }
+	}
+	database = database->next;
+    }
+
+    database = mon->databases;
+
+    /** Set master server IDs */
+    while(database)
+    {
+	ptr = mon->databases;
+
+	while(ptr)
+	{
+	    for(i = 0;ptr->server->slaves[i];i++)
+	    {
+		if(ptr->server->slaves[i] == database->server->node_id)
+		{
+		    database->server->master_id = ptr->server->node_id;
+		    break;
+		}
+	    }
+	    ptr = ptr->next;
+	}
+	if(database->server->master_id <= 0 && SERVER_IS_SLAVE(database->server))
+	{
+	    monitor_set_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+	}
+	database = database->next;
+    }
+    return rval;
+}
 /**
  * Monitor an individual server
  *
@@ -292,271 +615,143 @@ static void
 monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 {
     MYSQL_MONITOR* handle = mon->handle;
-MYSQL_ROW	  row;
-MYSQL_RES	  *result;
-int               isslave = 0;
-char		  *uname  = mon->user;
-char              *passwd = mon->password;
-unsigned long int server_version = 0;
-char 		  *server_string;
+    MYSQL_ROW	  row;
+    MYSQL_RES	  *result;
+    int               isslave = 0;
+    char		  *uname  = mon->user;
+    unsigned long int server_version = 0;
+    char 		  *server_string;
 
-        if (database->server->monuser != NULL)
+    if (database->server->monuser != NULL)
+    {
+	uname = database->server->monuser;
+    }
+
+    if (uname == NULL)
+	return;
+
+    /* Don't probe servers in maintenance mode */
+    if (SERVER_IN_MAINT(database->server))
+	return;
+
+    /** Store previous status */
+    database->mon_prev_status = database->server->status;
+
+    if (database->con == NULL || mysql_ping(database->con) != 0)
+    {
+	if(connect_to_db(mon,database))
 	{
-		uname = database->server->monuser;
-		passwd = database->server->monpw;
+	    server_clear_status(database->server, SERVER_AUTH_ERROR);
+	    monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
 	}
-	
-	if (uname == NULL)
-		return;
-        
-	/* Don't probe servers in maintenance mode */
-	if (SERVER_IN_MAINT(database->server))
-		return;
-
-        /** Store previous status */
-        database->mon_prev_status = database->server->status;
-        
-	if (database->con == NULL || mysql_ping(database->con) != 0)
+	else
 	{
-		char *dpwd = decryptPassword(passwd);
-                int  connect_timeout = mon->connect_timeout;
-                int  read_timeout = mon->read_timeout;
-                int  write_timeout = mon->write_timeout;
+	    /* The current server is not running
+	     *
+	     * Store server NOT running in server and monitor server pending struct
+	     *
+	     */
+	    if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+	    {
+		server_set_status(database->server, SERVER_AUTH_ERROR);
+		monitor_set_pending_status(database, SERVER_AUTH_ERROR);
+	    }
+	    server_clear_status(database->server, SERVER_RUNNING);
+	    monitor_clear_pending_status(database, SERVER_RUNNING);
 
-		if(database->con)
-		    mysql_close(database->con);
-                database->con = mysql_init(NULL);
+	    /* Also clear M/S state in both server and monitor server pending struct */
+	    server_clear_status(database->server, SERVER_SLAVE);
+	    server_clear_status(database->server, SERVER_MASTER);
+	    monitor_clear_pending_status(database, SERVER_SLAVE);
+	    monitor_clear_pending_status(database, SERVER_MASTER);
 
-                mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
-                mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
-                mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
-                
-		if (mysql_real_connect(database->con,
-                                       database->server->name,
-                                       uname,
-                                       dpwd,
-                                       NULL,
-                                       database->server->port,
-                                       NULL,
-                                       0) == NULL)
-		{
-                        free(dpwd);
-                        
-			/* The current server is not running
-			 *
-			 * Store server NOT running in server and monitor server pending struct
-			 *
-			 */
-			if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
-			{
-				server_set_status(database->server, SERVER_AUTH_ERROR);
-				monitor_set_pending_status(database, SERVER_AUTH_ERROR);
-			}
-			server_clear_status(database->server, SERVER_RUNNING);
-			monitor_clear_pending_status(database, SERVER_RUNNING);
+	    /* Clean addition status too */
+	    server_clear_status(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+	    server_clear_status(database->server, SERVER_STALE_STATUS);
+	    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
+	    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
 
-			/* Also clear M/S state in both server and monitor server pending struct */
-			server_clear_status(database->server, SERVER_SLAVE);
-			server_clear_status(database->server, SERVER_MASTER);
-			monitor_clear_pending_status(database, SERVER_SLAVE);
-			monitor_clear_pending_status(database, SERVER_MASTER);
+	    /* Log connect failure only once */
+	    if (mon_status_changed(database) && mon_print_fail_status(database))
+	    {
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+						 "Error : Monitor was unable to connect to "
+			"server %s:%d : \"%s\"",
+						 database->server->name,
+						 database->server->port,
+						 mysql_error(database->con))));
+	    }
 
-			/* Clean addition status too */
-			server_clear_status(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-			server_clear_status(database->server, SERVER_STALE_STATUS);
-			monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-			monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-
-			/* Log connect failure only once */
-			if (mon_status_changed(database) && mon_print_fail_status(database))
-			{
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Monitor was unable to connect to "
-                                        "server %s:%d : \"%s\"",
-                                        database->server->name,
-                                        database->server->port,
-                                        mysql_error(database->con))));
-			}
-
-			return;
-		}
-		else
-		{
-			server_clear_status(database->server, SERVER_AUTH_ERROR);
-			monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
-		}
-		free(dpwd);
+	    return;
 	}
-        /* Store current status in both server and monitor server pending struct */
-	server_set_status(database->server, SERVER_RUNNING);
-	monitor_set_pending_status(database, SERVER_RUNNING);
+    }
+    /* Store current status in both server and monitor server pending struct */
+    server_set_status(database->server, SERVER_RUNNING);
+    monitor_set_pending_status(database, SERVER_RUNNING);
 
-	/* get server version from current server */
-	server_version = mysql_get_server_version(database->con);
+    /* get server version from current server */
+    server_version = mysql_get_server_version(database->con);
 
-	/* get server version string */
-	server_string = (char *)mysql_get_server_info(database->con);
-	if (server_string) {
-		database->server->server_string = realloc(database->server->server_string, strlen(server_string)+1);
-		if (database->server->server_string)
-			strcpy(database->server->server_string, server_string);
-	}
+    /* get server version string */
+    server_string = (char *)mysql_get_server_info(database->con);
+    if (server_string) {
+	database->server->server_string = realloc(database->server->server_string, strlen(server_string)+1);
+	if (database->server->server_string)
+	    strcpy(database->server->server_string, server_string);
+    }
+    
+    /* get server_id form current node */
+    if (mysql_query(database->con, "SELECT @@server_id") == 0
+	&& (result = mysql_store_result(database->con)) != NULL)
+    {
+	long server_id = -1;
 
-        /* get server_id form current node */
-        if (mysql_query(database->con, "SELECT @@server_id") == 0
-                && (result = mysql_store_result(database->con)) != NULL)
-        {
-                long server_id = -1;
-		if(mysql_field_count(database->con) != 1)
-		{
-		    mysql_free_result(result);
-		    skygw_log_write(LE,"Error: Unexpected result for \"SELECT @@server_id\". Expected 1 columns."
-				    " MySQL Version: %s",version_str);
-		    return;
-		}
-                while ((row = mysql_fetch_row(result)))
-                {
-                        server_id = strtol(row[0], NULL, 10);
-                        if ((errno == ERANGE && (server_id == LONG_MAX
-                                || server_id == LONG_MIN)) || (errno != 0 && server_id == 0))
-                        {
-                                server_id = -1;
-                        }
-                        database->server->node_id = server_id;
-                }
-                mysql_free_result(result);
-        }
-
-	/* Check if the Slave_SQL_Running and Slave_IO_Running status is
-	 * set to Yes
-	 */
-
-	/* Check first for MariaDB 10.x.x and get status for multimaster replication */
-	if (server_version >= 100000) {
-
-		if (mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
-			&& (result = mysql_store_result(database->con)) != NULL)
-		{
-			int i = 0;
-			long master_id = -1;
-
-			if(mysql_field_count(database->con) < 42)
-			{
-			    mysql_free_result(result);
-			    skygw_log_write(LE,"Error: \"SHOW ALL SLAVES STATUS\" "
-				    "returned less than the expected amount of columns. Expected 42 columns."
-				    " MySQL Version: %s",version_str);
-			    return;
-			}
-
-			while ((row = mysql_fetch_row(result)))
-			{
-				/* get Slave_IO_Running and Slave_SQL_Running values*/
-				if (strncmp(row[12], "Yes", 3) == 0
-						&& strncmp(row[13], "Yes", 3) == 0) {
-					isslave += 1;
-				}
-
-				/* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building 
-				 * the replication tree, slaves ids will be added to master(s) and we will have at least the 
-				 * root master server.
-				 * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
-				 */
-				if (strncmp(row[12], "Yes", 3) == 0) {
-					/* get Master_Server_Id values */
-                                        master_id = atol(row[41]);
-                                        if (master_id == 0)
-                                                master_id = -1;
-				}
-
-				i++;
-			}
-			/* store master_id of current node */
-			memcpy(&database->server->master_id, &master_id, sizeof(long));
-
-			mysql_free_result(result);
-
-			/* If all configured slaves are running set this node as slave */
-			if (isslave > 0 && isslave == i)
-				isslave = 1;
-			else
-				isslave = 0;
-		}
-	} else {	
-		if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
-			&& (result = mysql_store_result(database->con)) != NULL)
-		{
-			long master_id = -1;
-			if(mysql_field_count(database->con) < 40)
-			{
-			    mysql_free_result(result);
-			    if(server_version < 5*10000 + 5*100)
-			    {
-				if(database->log_version_err)
-				{
-				    skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
-					    " for versions less than 5.5 does not have master_server_id, "
-					    "replication tree cannot be resolved for server %s."
-					    " MySQL Version: %s",database->server->unique_name,version_str);
-				    database->log_version_err = false;
-				}
-			    }
-			    else
-			    {
-				skygw_log_write(LE,"Error: \"SHOW SLAVE STATUS\" "
-					"returned less than the expected amount of columns. Expected 40 columns."
-					" MySQL Version: %s",version_str);
-			    }
-			    return;
-			}
-
-			while ((row = mysql_fetch_row(result)))
-			{
-				/* get Slave_IO_Running and Slave_SQL_Running values*/
-				if (strncmp(row[10], "Yes", 3) == 0
-						&& strncmp(row[11], "Yes", 3) == 0) {
-					isslave = 1;
-				}
-
-				/* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building 
-				 * the replication tree, slaves ids will be added to master(s) and we will have at least the 
-				 * root master server.
-				 * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
-				 */
-				if (strncmp(row[10], "Yes", 3) == 0) {
-					/* get Master_Server_Id values */
-					master_id = atol(row[39]);
-					if (master_id == 0)
-						master_id = -1;
-				}
-			}
-			/* store master_id of current node */
-			memcpy(&database->server->master_id, &master_id, sizeof(long));
-
-			mysql_free_result(result);
-		}
-	}
-
-	/* Remove addition info */
-	monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-	monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-
-	/* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
-	 * will be assigned in the monitorMain() via get_replication_tree() routine
-	 */
-
-	/* Set the Slave Role */
-	if (isslave)
+	if(mysql_field_count(database->con) != 1)
 	{
-		monitor_set_pending_status(database, SERVER_SLAVE);
-		/* Avoid any possible stale Master state */
-		monitor_clear_pending_status(database, SERVER_MASTER);
-	} else {
-		/* Avoid any possible Master/Slave stale state */
-		monitor_clear_pending_status(database, SERVER_SLAVE);
-		monitor_clear_pending_status(database, SERVER_MASTER);
+	    mysql_free_result(result);
+	    skygw_log_write(LE,"Error: Unexpected result for 'SELECT @@server_id'. Expected 1 column."
+		    " MySQL Version: %s",version_str);
+	    return;
 	}
+
+	while ((row = mysql_fetch_row(result)))
+	{
+	    server_id = strtol(row[0], NULL, 10);
+	    if ((errno == ERANGE && (server_id == LONG_MAX
+				     || server_id == LONG_MIN)) || (errno != 0 && server_id == 0))
+	    {
+		server_id = -1;
+	    }
+	    database->server->node_id = server_id;
+	}
+	mysql_free_result(result);
+    }
+
+    /* Check first for MariaDB 10.x.x and get status for multi-master replication */
+    if (server_version >= 100000)
+    {
+	monitor_mysql100_db(database);
+    }
+    else if(server_version >= 5*10000 + 5*100)
+    {
+	monitor_mysql55_db(database);
+    }
+    else
+    {
+	if(handle->mysql51_replication)
+	{
+	    monitor_mysql51_db(database);
+	}
+	else if(report_version_err)
+	{
+	    report_version_err = false;
+	    skygw_log_write(LE,"Error: MySQL version is lower than 5.5 and 'mysql51_replication' option is not enabled,"
+		    " replication tree cannot be resolved. To enable MySQL 5.1 replication detection, "
+		    "add 'mysql51_replication=true' to the monitor section.");
+	}
+    }
+
 }
 
 /**
@@ -723,7 +918,11 @@ detect_stale_master = handle->detectStaleMaster;
 			}
 		} else {
 			/* Compute the replication tree */
+		    if(handle->mysql51_replication)
+			root_master = build_mysql51_replication_tree(mon);
+		    else
 			root_master = get_replication_tree(mon, num_servers);
+
 		}
 
 		/* Update server status from monitor pending status on that server*/

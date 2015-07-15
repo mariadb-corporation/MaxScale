@@ -67,6 +67,7 @@ typedef struct {
 	int	disableMasterFailback;	/**< Monitor flag for Galera Cluster Master failback */
 	int	availableWhenDonor;	/**< Monitor flag for Galera Cluster Donor availability */
         int     disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
+        bool    mysql51_replication;    /**< Use MySQL 5.1 replication */
 	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
         char* script; /*< Script to call when state changes occur on servers */
         bool events[MAX_MONITOR_EVENT]; /*< enabled events */
