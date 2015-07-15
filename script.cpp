@@ -70,6 +70,7 @@ int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expe
 
     printf("Comparing results\n"); fflush(stdout);
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'diff %s/script_output %s'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir, expected_filename);
+    printf("%s\n", str);
     if (system(str) != 0) {
         printf("FAIL! Wrong script output!\n");
         global_result++;
@@ -91,8 +92,10 @@ int main(int argc, char *argv[])
 
     printf("Creating script on Maxscale machine\n"); fflush(stdout);
 
+
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'echo \"echo \\$* >> %s/script_output\" > %s/script.sh; chmod a+x %s/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir, Test->access_homedir, Test->access_homedir);
     system(str);
+    printf("%s\n", str);
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s touch %s/script_output; %s chmod maxscale:maxscale %s/script_output", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir, Test->access_sudo, Test->access_homedir);
     system(str);

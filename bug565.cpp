@@ -1,4 +1,4 @@
-/**
+    /**
  * @file bug565.cpp  regression case for bug 565 ( "Clients CLIENT_FOUND_ROWS setting is ignored by maxscale" )
  *
  * - open connection with CLIENT_FOUND_ROWS flag

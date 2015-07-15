@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
     printf("Copying data from t1 to file\n");fflush(stdout);
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s rm /tmp/t*.csv; %s chmod 777 -R /tmp'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0], Test->repl->access_sudo, Test->repl->access_sudo);
+    system(str);
 
     printf("RWSplit:\n");fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
