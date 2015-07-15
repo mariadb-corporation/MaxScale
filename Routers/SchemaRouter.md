@@ -15,7 +15,7 @@ In almost all the cases these can be avoided by proper server configuration and 
 Here is an example configuration of the schemarouter router:
 
 ```
-Shard Router]
+[Shard Router]
 type=service
 router=schemarouter
 servers=server1,server2
