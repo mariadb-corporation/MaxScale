@@ -1,6 +1,6 @@
-# MaxScale Release Notes
+# MariaDB MaxScale 1.1.1 Release Notes
 
-## 1.1 GA
+## 1.1.1 GA
 
 MaxScale 1.1 is the current stable (GA) release of MaxScale. Version 1.1.1 is mainly a bug fix release introducing fixes, but also introduces some improvements to existing functionality.
 
