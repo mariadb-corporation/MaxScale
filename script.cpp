@@ -94,10 +94,11 @@ int main(int argc, char *argv[])
 
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'echo \"echo \\$* >> %s/script_output\" > %s/script.sh; chmod a+x %s/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir, Test->access_homedir, Test->access_homedir);
+    printf("%s\n", str);fflush(stdout);
     system(str);
-    printf("%s\n", str);
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s touch %s/script_output; %s chmod maxscale:maxscale %s/script_output", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir, Test->access_sudo, Test->access_homedir);
+    printf("%s\n", str);fflush(stdout);
     system(str);
 
     Test->restart_maxscale();
