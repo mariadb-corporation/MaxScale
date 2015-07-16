@@ -311,11 +311,7 @@ const char* get_suffix_default(void)
 
 const char* get_debug_prefix_default(void)
 {
-#ifdef OLD_LOGNAMES
-    return "skygw_debug";
-#else
     return "debug";
-#endif
 }
 
 const char* get_debug_suffix_default(void)
@@ -325,11 +321,7 @@ const char* get_debug_suffix_default(void)
 
 const char* get_trace_prefix_default(void)
 {
-#ifdef OLD_LOGNAMES
-    return "skygw_trace";
-#else
     return "trace";
-#endif
 }
 
 const char* get_trace_suffix_default(void)
@@ -339,11 +331,7 @@ const char* get_trace_suffix_default(void)
 
 const char* get_msg_prefix_default(void)
 {
-#ifdef OLD_LOGNAMES
-    return "skygw_msg";
-#else
     return "messages";
-#endif
 }
 
 const char* get_msg_suffix_default(void)
@@ -353,11 +341,7 @@ const char* get_msg_suffix_default(void)
 
 const char* get_err_prefix_default(void)
 {
-#ifdef OLD_LOGNAMES
-    return "skygw_err";
-#else
     return "error";
-#endif
 }
 
 const char* get_err_suffix_default(void)
@@ -367,7 +351,7 @@ const char* get_err_suffix_default(void)
 
 const char* get_logpath_default(void)
 {
-        return "/tmp";
+        return "/var/log/maxscale";
 }
 
 static bool logmanager_init_nomutex(
