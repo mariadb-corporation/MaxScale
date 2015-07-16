@@ -1153,6 +1153,7 @@ int	below_water;
             {
                 dcb_log_write_failure(dcb, queue, errno);
                 atomic_add(&dcb->writeqlen, gwbuf_length(queue));
+		dcb->writeq = queue;
                 dcb->stats.n_buffered++;
                 spinlock_release(&dcb->writeqlock);
                 return 0;
