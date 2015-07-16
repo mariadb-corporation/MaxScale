@@ -16,7 +16,7 @@ The simplest way to install MaxScale is to use one of the binary packages that a
 
 ![image alt text](images/getting_started.png)
 
-If you want to install only MaxScale, futher down you will find the product specific download pages. Click on the MariaDB MaxScale link and follow the distribution specific instructions.
+If you want to install only MaxScale, further down you will find the product specific download pages. Click on the MariaDB MaxScale link and follow the distribution specific instructions.
 
 ![image alt text](images/getting_started2.png)
 
