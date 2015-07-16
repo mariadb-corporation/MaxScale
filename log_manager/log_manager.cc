@@ -81,9 +81,6 @@ ssize_t log_ses_count[LOGFILE_LAST] = {0};
  */
 #define MAX_LOGSTRLEN BUFSIZ
 
-/** Use the skygw_ prefix, only for 1.1 compatible builds*/
-#define OLD_LOGNAMES
-
 /**
  * Path to directory in which all files are stored to shared memory
  * by the OS.
