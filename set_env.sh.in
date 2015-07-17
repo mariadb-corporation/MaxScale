@@ -65,7 +65,7 @@ export test_dir="$maxdir"/system-test/
 export maxscale_binlog_dir="/var/lib/maxscale/Binlog_Service/"
 
 
-if [ "$new_dirs" == "yes" ] ; then
+if [ "$new_dirs" != "no" ] ; then
         export maxdir="/usr/bin/"
 	export maxdir_bin="/usr/bin/"
         export maxscale_cnf="/etc/maxscale.cnf"
