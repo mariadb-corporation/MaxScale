@@ -417,29 +417,30 @@ int check_log_err(char * err_msg, bool expected)
     fflush(stdout);
     system(sys1);
 
-    printf("Reading skygw_err1.log\n");
-    if ( read_log((char *) "skygw_err1.log", &err_log_content) != 0) {
-        printf("Reading error1.log\n");
-        read_log((char *) "error1.log", &err_log_content);
-    }
+    printf("Reading error1.log\n");
+    if ( read_log((char *) "error1.log", &err_log_content) != 0) {
+        //printf("Reading error1.log\n");
+        //read_log((char *) "skygw_err1.log", &err_log_content);
+        global_result++;
+    } else {
 
-    if (expected) {
-        if (strstr(err_log_content, err_msg) == NULL) {
-            global_result++;
-            printf("There is NO \"%s\" error in the log\n", err_msg);
-        } else {
-            printf("There is proper \"%s \" error in the log\n", err_msg);
-        }}
-    else {
-        if (strstr(err_log_content, err_msg) != NULL) {
-            global_result++;
-            printf("There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
-        } else {
-            printf("There are no unxpected errors \"%s \" error in the log\n", err_msg);
+        if (expected) {
+            if (strstr(err_log_content, err_msg) == NULL) {
+                global_result++;
+                printf("testFAILED: There is NO \"%s\" error in the log\n", err_msg);
+            } else {
+                printf("There is proper \"%s \" error in the log\n", err_msg);
+            }}
+        else {
+            if (strstr(err_log_content, err_msg) != NULL) {
+                global_result++;
+                printf("testFAILED: There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
+            } else {
+                printf("There are no unxpected errors \"%s \" error in the log\n", err_msg);
+            }
         }
+
     }
-
-
     if (err_log_content != NULL) {free(err_log_content);}
 
     return global_result;
