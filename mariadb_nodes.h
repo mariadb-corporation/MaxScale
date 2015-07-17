@@ -215,14 +215,14 @@ public:
 
     /**
      * @brief executes 'CHANGE MASTER TO ..' and 'START SLAVE'
-     * @param node Index of slave nodes
+     * @param MYSQL conn struct of slave node
      * @param master_host IP address of master node
      * @param master_port port of master node
      * @param log_file name of log file
      * @param log_pos initial position
      * @return 0 if everything is ok
      */
-    int set_slave(int node, char master_host[], int master_port, char log_file[], char log_pos[]);
+    int set_slave(MYSQL * conn, char master_host[], int master_port, char log_file[], char log_pos[]);
 
     /**
      * @brief Creates 'repl' user on all nodes

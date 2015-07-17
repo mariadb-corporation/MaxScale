@@ -306,7 +306,7 @@ install(FILES mariadb_tests_hartmut.sh configure_maxscale.sh DESTINATION system-
 install(FILES mariadb_tests_hartmut_galera.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES bug567.sh bug516.sh bug561.sh bug562.sh bug585 bug587_1 bug469.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES run_session_hang.sh bug564.sh crash_out_of_files_galera DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
-install(FILES bug648 ssl ssl_load copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES bug648 ssl ssl_load setup_binlog1 copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
 install(FILES templates DESTINATION system-test)
 install(FILES bug729.php DESTINATION system-test)
@@ -425,6 +425,7 @@ add_test(mm mm)
 add_test(ssl ssl)
 set_tests_properties(ssl PROPERTIES TIMEOUT 3600)
 add_test(ssl_load ssl_load)
+add_test(setup_binlog1 setup_binlog1)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)

@@ -251,6 +251,7 @@ int TestConnections::copy_all_logs()
 int TestConnections::start_binlog()
 {
     char sys1[4096];
+    char str[1024];
     char log_file[256];
     char log_pos[256];
     char cmd_opt[256];
@@ -331,7 +332,7 @@ int TestConnections::start_binlog()
     printf("Stopping first slave (node 1)\n");fflush(stdout);
     global_result += execute_query(repl->nodes[1], (char *) "stop slave;");
     printf("Configure first backend slave node to be slave of real master\n");fflush(stdout);
-    repl->set_slave(1, repl->IP[0],  repl->port[0], log_file, log_pos);
+    repl->set_slave(repl->nodes[1], repl->IP[0],  repl->port[0], log_file, log_pos);
 
     printf("Starting back Maxscale\n");  fflush(stdout);
     global_result += start_maxscale();
@@ -339,6 +340,11 @@ int TestConnections::start_binlog()
     printf("Connecting to MaxScale binlog router\n");fflush(stdout);
     MYSQL * binlog = open_conn(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
 
+    printf("configuring Maxscale binlog router\n");fflush(stdout);
+    repl->set_slave(binlog, repl->IP[0], repl->port[0], log_file, log_pos);
+
+
+    // get Master status from Maxscale binlog
     printf("show master status\n");fflush(stdout);
     find_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
     find_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
@@ -349,7 +355,7 @@ int TestConnections::start_binlog()
     printf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");fflush(stdout);
     for (i = 2; i < repl->N; i++) {
         global_result += execute_query(repl->nodes[i], (char *) "stop slave;");
-        repl->set_slave(i,  maxscale_IP, binlog_port, log_file, log_pos);
+        repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
     }
     repl->close_connections();
     return(global_result);
@@ -391,8 +397,8 @@ int TestConnections::start_mm()
     find_field(repl->nodes[1], (char *) "show master status", (char *) "File", log_file2);
     find_field(repl->nodes[1], (char *) "show master status", (char *) "Position", log_pos2);
 
-    repl->set_slave(0, repl->IP[1],  repl->port[1], log_file2, log_pos2);
-    repl->set_slave(1, repl->IP[0],  repl->port[0], log_file1, log_pos1);
+    repl->set_slave(repl->nodes[0], repl->IP[1],  repl->port[1], log_file2, log_pos2);
+    repl->set_slave(repl->nodes[1], repl->IP[0],  repl->port[0], log_file1, log_pos1);
 
     repl->close_connections();
 

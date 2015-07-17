@@ -97,3 +97,4 @@ session_limits session_limits
 script script
 ssl ssl
 ssl_load ssl_load
+setup_binlog1 setup_binlog1
