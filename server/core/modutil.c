@@ -540,7 +540,7 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
 {
     GWBUF *buff = NULL, *packet;
     uint8_t *ptr;
-    int len,blen,total = 0;
+    uint32_t len,blen,total = 0;
 
     if(p_readbuf == NULL || (*p_readbuf) == NULL ||
        gwbuf_length(*p_readbuf) < 3)

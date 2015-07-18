@@ -831,7 +831,7 @@ int dcb_read(
         dcb->last_read = hkheartbeat;
 
         bufsize = MIN(bytesavailable, MAX_BUFFER_SIZE);
-        if (maxbytes) bufsize = MIN(bufsize, maxbytes);
+        if (maxbytes) bufsize = MIN(bufsize, maxbytes-nreadtotal);
                 
         if ((buffer = gwbuf_alloc(bufsize)) == NULL)
         {
