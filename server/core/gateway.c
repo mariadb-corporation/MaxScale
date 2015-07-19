@@ -207,7 +207,7 @@ static bool resolve_maxscale_conf_fname(
 
 static char* check_dir_access(char* dirname,bool,bool);
 static int set_user();
-
+bool pid_file_exists();
 /** SSL multi-threading functions and structures */
 
 static SPINLOCK* ssl_locks;
@@ -1816,6 +1816,13 @@ int main(int argc, char **argv)
                 "MaxScale is running in process  %i",
                 getpid())));
 
+	/** Check if a MaxScale process is already running */
+	if(pid_file_exists())
+	{
+	    rc = MAXSCALE_ALREADYRUNNING;
+	    goto return_main;
+	}
+
 	/* Write process pid into MaxScale pidfile */
 	write_pid_file();
 
@@ -1998,6 +2005,88 @@ static void unlink_pidfile(void)
 				strerror(errno));
 		}
 	}
+}
+
+/**
+ * Check if a PID file is already written and a MaxScale process is running.
+ * @return True if the file exists and MaxScale should exit
+ */
+bool pid_file_exists()
+{
+    char pathbuf[PATH_MAX+1];
+    char pidbuf[1024];
+    pid_t pid;
+    int fd = -1;
+    int b;
+
+    snprintf(pathbuf, PATH_MAX, "%s/maxscale.pid",piddir?piddir:default_piddir);
+
+    if(access(pathbuf,F_OK) != 0)
+	return false;
+
+    if(access(pathbuf,R_OK) == 0)
+    {
+	fd = open(pathbuf, O_RDONLY);
+	if(fd == -1)
+	{
+	    close(fd);
+	    char* logerr = "Error: Failed to open PID file.";
+	    print_log_n_stderr(true, true, logerr, logerr, errno);
+	    return true;
+	}
+
+	if((b = read(fd,pidbuf,1024)) == -1)
+	{
+	    close(fd);
+	    char* logerr = "Error: Failed to read from PID file.";
+	    print_log_n_stderr(true, true, logerr, logerr, errno);
+	    return true;
+	}
+	close(fd);
+
+	if(b == 0 )
+	{
+	    /** Empty file */
+	    char* logerr = "Error: PID file was empty.";
+	    print_log_n_stderr(true, true, logerr, logerr, errno);
+	    return true;
+	}
+
+	pidbuf[b < 1024? b:1023] = '\0';
+	pid = strtol(pidbuf,NULL,0);
+
+	if(pid == 0 )
+	{
+	    /** Bad PID */
+	    char* logerr = "Error: PID file contents not valid.";
+	    print_log_n_stderr(true, true, logerr, logerr, errno);
+	    return true;
+	}
+
+	if(kill(pid,0) == -1)
+	{
+	    if(errno == ESRCH)
+	    {
+		/** no such process, old PID file */
+		return false;
+	    }
+	}
+	else
+	{
+	    char* logerr = "Error: MaxScale is already running. Process id: %d";
+	    char logbuf[1024];
+	    sprintf(logbuf,logerr,pid);
+	    print_log_n_stderr(true, true, logbuf, logbuf, 0);
+	    return true;
+	}
+    }
+    else
+    {
+	char* logerr = "Error: Cannot open PID file, no read permissions.";
+	print_log_n_stderr(true, true, logerr, logerr, 0);
+	return true;
+    }
+    return true;
 }
 
 /** 
