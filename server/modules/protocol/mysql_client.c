@@ -1115,7 +1115,9 @@ int gw_read_client_event(
                          * send redundant COM_QUIT.
                          */
                         /* Temporarily suppressed: SESSION_ROUTE_QUERY(session, read_buffer); */
-                        /** 
+						/* Replaced with freeing the read buffer. */
+				gwbuf_free(read_buffer);
+            /**
 			 * Close router session which causes closing of backends.
 			 */
                         dcb_close(dcb);
