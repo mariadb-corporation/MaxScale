@@ -67,7 +67,7 @@ done
 if [ $access_user == "root" ] ; then
 	export access_homedir="/root/"
 else
-	export access_homedir="home/$access_user/"
+	export access_homedir="/home/$access_user/"
 fi
 
 sed -i "s/###access_user###/$access_user/g" MaxScale.cnf
@@ -93,7 +93,7 @@ if [ "$maxscale_restart" != "no" ] ; then
 	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo rm $maxscale_log_dir/*.log ; $access_sudo rm /tmp/core*; $access_sudo rm -rf /dev/shm/*;  $access_sudo ulimit -c unlimited; $access_sudo service maxscale restart" 
 else
 #        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "mkdir -p $access_homedir; chmod 777 -R $access_homedir"
-#	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "service maxscale status | grep running"
+	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "service maxscale status | grep running"
 	if [ $? == 0 ] ; then
 		ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo echo " " > $maxscale_log_dir/error1.log"
                 ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo echo " " > $maxscale_log_dir/messages1.log"

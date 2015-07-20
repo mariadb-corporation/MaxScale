@@ -79,11 +79,14 @@ int main(int argc, char *argv[])
     printf("Trying to connect to all Maxscale services\n"); fflush(stdout);
     Test->connect_maxscale();
     printf("Trying to send query to RWSplit\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
+    //global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
+    execute_query(Test->conn_rwsplit, (char *) "show processlist");
     printf("Trying to send query to ReadConn master\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_master, (char *) "show processlist");
+    //global_result += execute_query(Test->conn_master, (char *) "show processlist");
+    execute_query(Test->conn_master, (char *) "show processlist");
     printf("Trying to send query to ReadConn slave\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_slave, (char *) "show processlist");
+    //global_result += execute_query(Test->conn_slave, (char *) "show processlist");
+    execute_query(Test->conn_slave, (char *) "show processlist");
     Test->close_maxscale_connections();
 
     global_result += check_log_err((char *) "Unable to find filter 'tests' for service 'RW Split2'", TRUE);
