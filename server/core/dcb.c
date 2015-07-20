@@ -1115,8 +1115,7 @@ return_n:
 int
 dcb_write(DCB *dcb, GWBUF *queue)
 {
-int	w;
-int	saved_errno = 0;
+int	written;
 int	below_water;
 
     below_water = (dcb->high_water && dcb->writeqlen < dcb->high_water) ? 1 : 0;
@@ -1124,7 +1123,6 @@ int	below_water;
     if (!dcb_write_parameter_check(dcb, queue)) return 0;
     
     spinlock_acquire(&dcb->writeqlock);
-
     if (dcb->writeq) 
     {
         dcb_write_when_already_queued(dcb, queue);
@@ -1139,17 +1137,15 @@ int	below_water;
          */
         while (queue != NULL)
         {
-            int qlen;
 #if defined(FAKE_CODE)
             dcb_write_fake_code(dcb);
 #endif /* FAKE_CODE */
-            qlen = GWBUF_LENGTH(queue);
             GW_NOINTR_CALL(
-                w = gw_write(dcb, GWBUF_DATA(queue), qlen);
+                written = gw_write(dcb, GWBUF_DATA(queue), GWBUF_LENGTH(queue));
                 dcb->stats.n_writes++;
             );
 
-            if (w < 0)
+            if (written < 0)
             {
                 dcb_log_write_failure(dcb, queue, errno);
                 /*<
@@ -1166,13 +1162,13 @@ int	below_water;
              * Pull the number of bytes we have written from
              * queue with have.
              */
-            queue = gwbuf_consume(queue, w);
+            queue = gwbuf_consume(queue, written);
             LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [dcb_write] Wrote %d Bytes to dcb %p in "
                 "state %s fd %d",
                 pthread_self(),
-                w,
+                written,
                 dcb,
                 STRDCBSTATE(dcb->state),
                 dcb->fd)));
@@ -1233,7 +1229,7 @@ dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
             LOGFILE_ERROR,
             "Error : Write failed, dcb is %s.",
             dcb->fd == DCBFD_CLOSED ? "closed" : "cloned, not writable")));
-		gwbuf_free(queue);
+        gwbuf_free(queue);
         return false;
     }
     
@@ -1264,7 +1260,7 @@ dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
                 dcb,
                 STRDCBSTATE(dcb->state),
                 dcb->fd)));
-			gwbuf_free(queue);
+            gwbuf_free(queue);
             return false;
         }
     }
@@ -1906,10 +1902,10 @@ dcb_maybe_add_persistent(DCB *dcb)
             user)));
         dcb->user = strdup(user);
         dcb->persistentstart = time(NULL);
+        session_unlink_dcb(dcb->session, dcb);
         spinlock_acquire(&dcb->server->persistlock);
         dcb->nextpersistent = dcb->server->persistent;
         dcb->server->persistent = dcb;
-        dcb->session = NULL;
         spinlock_release(&dcb->server->persistlock);
         atomic_add(&dcb->server->stats.n_persistent, 1);
         atomic_add(&dcb->server->stats.n_current, -1);
