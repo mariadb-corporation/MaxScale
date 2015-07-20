@@ -1819,6 +1819,9 @@ int main(int argc, char **argv)
 	/** Check if a MaxScale process is already running */
 	if(pid_file_exists())
 	{
+	    /** There is a process with the PID of the maxscale.pid file running.
+	     * Assuming that this is an already running MaxScale process, we
+	     * should exit with an error code.  */
 	    rc = MAXSCALE_ALREADYRUNNING;
 	    goto return_main;
 	}
@@ -2008,16 +2011,18 @@ static void unlink_pidfile(void)
 }
 
 /**
- * Check if a PID file is already written and a MaxScale process is running.
- * @return True if the file exists and MaxScale should exit
+ * Check if the maxscale.pid file exists and has a valid PID in it. If one has already been
+ * written and a MaxScale process is running, this instance of MaxScale should shut down.
+ * @return True if the conditions for starting MaxScale are not met and false if
+ * no PID file was found or there is no process running with the PID of the maxscale.pid
+ * file. If false is returned, this process should continue normally.
  */
 bool pid_file_exists()
 {
     char pathbuf[PATH_MAX+1];
     char pidbuf[1024];
     pid_t pid;
-    int fd = -1;
-    int b;
+    int fd,b;
 
     snprintf(pathbuf, PATH_MAX, "%s/maxscale.pid",piddir?piddir:default_piddir);
 
@@ -2026,11 +2031,9 @@ bool pid_file_exists()
 
     if(access(pathbuf,R_OK) == 0)
     {
-	fd = open(pathbuf, O_RDONLY);
-	if(fd == -1)
+	if((fd = open(pathbuf, O_RDONLY)) == -1)
 	{
-	    close(fd);
-	    char* logerr = "Error: Failed to open PID file.";
+	    char* logerr = "Failed to open PID file.";
 	    print_log_n_stderr(true, true, logerr, logerr, errno);
 	    return true;
 	}
@@ -2038,7 +2041,7 @@ bool pid_file_exists()
 	if((b = read(fd,pidbuf,1024)) == -1)
 	{
 	    close(fd);
-	    char* logerr = "Error: Failed to read from PID file.";
+	    char* logerr = "Failed to read from PID file.";
 	    print_log_n_stderr(true, true, logerr, logerr, errno);
 	    return true;
 	}
@@ -2047,19 +2050,19 @@ bool pid_file_exists()
 	if(b == 0 )
 	{
 	    /** Empty file */
-	    char* logerr = "Error: PID file was empty.";
-	    print_log_n_stderr(true, true, logerr, logerr, errno);
+	    char* logerr = "PID file was empty.";
+	    print_log_n_stderr(true, true, logerr, logerr, 0);
 	    return true;
 	}
 
 	pidbuf[b < 1024? b:1023] = '\0';
 	pid = strtol(pidbuf,NULL,0);
 
-	if(pid == 0 )
+	if(pid < 1)
 	{
 	    /** Bad PID */
-	    char* logerr = "Error: PID file contents not valid.";
-	    print_log_n_stderr(true, true, logerr, logerr, errno);
+	    char* logerr = "PID file contents not valid.";
+	    print_log_n_stderr(true, true, logerr, logerr, 0);
 	    return true;
 	}
 
@@ -2070,10 +2073,17 @@ bool pid_file_exists()
 		/** no such process, old PID file */
 		return false;
 	    }
+	    else
+	    {
+		char* logerr = "Failed to send signal to process %d";
+		char logbuf[1024];
+		sprintf(logbuf,logerr,pid);
+		print_log_n_stderr(true, true, logbuf, logbuf, errno);
+	    }
 	}
 	else
 	{
-	    char* logerr = "Error: MaxScale is already running. Process id: %d";
+	    char* logerr = "MaxScale is already running. Process id: %d";
 	    char logbuf[1024];
 	    sprintf(logbuf,logerr,pid);
 	    print_log_n_stderr(true, true, logbuf, logbuf, 0);
@@ -2082,7 +2092,7 @@ bool pid_file_exists()
     }
     else
     {
-	char* logerr = "Error: Cannot open PID file, no read permissions.";
+	char* logerr = "Cannot open PID file, no read permissions.";
 	print_log_n_stderr(true, true, logerr, logerr, 0);
 	return true;
     }
