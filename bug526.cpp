@@ -27,7 +27,10 @@ int main(int argc, char *argv[])
 
     sleep(5);
     global_result += check_log_err((char *) "Error : Unable to find library for module: foobar", TRUE);
-    global_result += check_log_err((char *) "Error : Failed to create filter 'testfilter' for service 'RW Split Router", TRUE);
+    if ((check_log_err((char *) "Error : Failed to create filter 'testfilter' for service 'RW Split Router", TRUE) != 0) && (check_log_err((char *) "Error : Failed to load filter 'testfilter' for service 'RW Split Router", TRUE))) {
+        global_result++;
+    }
+
     //global_result += check_log_err((char *) "Error : Setting up filters failed. Terminating session RW Split Router", TRUE);
 
     //global_result += check_maxscale_alive();

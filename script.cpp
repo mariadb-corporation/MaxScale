@@ -142,8 +142,8 @@ int main(int argc, char *argv[])
     Test->repl->unblock_node(1);
 
     sleep(15);
-    sprintf(str, "Error: Cannot execute file: %s/script.sh", Test->access_homedir);
-    global_result += check_log_err(str , true);
+
+    global_result += check_log_err((char *) "Error: Cannot execute file:" , true);
 
     printf("checking if Maxscale is alive\n"); fflush(stdout);
     global_result += check_maxscale_alive();
