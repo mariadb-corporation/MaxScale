@@ -136,3 +136,8 @@ address=###galera_server_IP_4###
 port=###galera_server_port_4###
 protocol=MySQLBackend
 
+[QLA]
+type=filter
+module=qlafilter
+options=/tmp/QueryLog
+

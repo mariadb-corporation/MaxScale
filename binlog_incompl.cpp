@@ -1,6 +1,6 @@
 /**
  * @file setup_incompl trying to start binlog setup with incomplete Maxscale.cnf
- * exectute maxadmin command to chec if there is a crash
+ * exectute maxadmin command to check if there is a crash
  */
 
 #include <my_config.h>
