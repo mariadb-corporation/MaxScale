@@ -308,7 +308,7 @@ const char* get_suffix_default(void)
 
 const char* get_debug_prefix_default(void)
 {
-        return "debug";
+    return "debug";
 }
 
 const char* get_debug_suffix_default(void)
@@ -318,7 +318,7 @@ const char* get_debug_suffix_default(void)
 
 const char* get_trace_prefix_default(void)
 {
-        return "trace";
+    return "trace";
 }
 
 const char* get_trace_suffix_default(void)
@@ -328,7 +328,7 @@ const char* get_trace_suffix_default(void)
 
 const char* get_msg_prefix_default(void)
 {
-        return "messages";
+    return "messages";
 }
 
 const char* get_msg_suffix_default(void)
@@ -338,7 +338,7 @@ const char* get_msg_suffix_default(void)
 
 const char* get_err_prefix_default(void)
 {
-        return "error";
+    return "error";
 }
 
 const char* get_err_suffix_default(void)
@@ -348,7 +348,7 @@ const char* get_err_suffix_default(void)
 
 const char* get_logpath_default(void)
 {
-        return "/tmp";
+        return "/var/log/maxscale";
 }
 
 static bool logmanager_init_nomutex(

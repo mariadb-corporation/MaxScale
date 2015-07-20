@@ -17,7 +17,7 @@ Bugs can be reported in the MariaDB Jira
 	[https://mariadb.atlassian.net](https://mariadb.atlassian.net)
 
 ## Installing MaxScale
-Information about installing MaxScale, either from a repository or by building from source code, is included in the guide [Getting Started with MaxScale](/Documentation/Getting-Started/Getting-Started-With-MaxScale.md).
+Information about installing MaxScale, either from a repository or by building from source code, is included in the [MariaDB MaxScale Installation Guide](../Getting-Started/MariaDB-MaxScale-Installation-Guide.md).
 
 The same guide also provides basic information on running MaxScale. More detailed information about configuring MaxScale is given in the [Configuration Guide](/Documentation/Getting-Started/Configuration-Guide.md).
 
