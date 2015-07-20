@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_slave, (char *) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
     printf("Copying t1.cvs from Maxscale machine:\n");fflush(stdout);
-    //sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s:/tmp/t1.csv ./", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
-    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s:/tmp/t1.csv ./", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP);
+    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s:/tmp/t1.csv ./", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
+    //sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s:/tmp/t1.csv ./", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP);
     printf("%s\n", str);
     system(str);
 

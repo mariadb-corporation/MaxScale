@@ -425,7 +425,7 @@ add_test(mm mm)
 add_test(ssl ssl)
 set_tests_properties(ssl PROPERTIES TIMEOUT 3600)
 add_test(ssl_load ssl_load)
-add_test(setup_binlog1 setup_binlog1)
+#add_test(setup_binlog1 setup_binlog1)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
