@@ -831,7 +831,7 @@ int dcb_read(
         dcb->last_read = hkheartbeat;
 
         bufsize = MIN(bytesavailable, MAX_BUFFER_SIZE);
-        if (maxbytes) bufsize = MIN(bufsize, maxbytes);
+        if (maxbytes) bufsize = MIN(bufsize, maxbytes-nreadtotal);
                 
         if ((buffer = gwbuf_alloc(bufsize)) == NULL)
         {
@@ -1152,8 +1152,12 @@ int	below_water;
             if (w < 0)
             {
                 dcb_log_write_failure(dcb, queue, errno);
+                /*<
+                 * What wasn't successfully written is stored to write queue
+                 * for suspended write.
+                 */
                 atomic_add(&dcb->writeqlen, gwbuf_length(queue));
-		dcb->writeq = queue;
+                dcb->writeq = queue;
                 dcb->stats.n_buffered++;
                 spinlock_release(&dcb->writeqlock);
                 return 0;
@@ -1173,11 +1177,6 @@ int	below_water;
                 STRDCBSTATE(dcb->state),
                 dcb->fd)));
         } /*< while (queue != NULL) */
-        /*<
-         * What wasn't successfully written is stored to write queue
-         * for suspended write.
-         */
-        dcb->writeq = queue;
 
     } /* if (dcb->writeq) */
 
@@ -1188,11 +1187,10 @@ int	below_water;
 
 #if defined(FAKE_CODE)
 /**
- * Check the parameters for dcb_write
+ * Fake code for dcb_write
+ * (Should have fuller description)
  *
  * @param dcb   The DCB of the client
- * @param queue Queue of buffers to write
- * @return true if parameters acceptable, false otherwise
  */
 static inline void
 dcb_write_fake_code(DCB *dcb)
@@ -1227,16 +1225,17 @@ dcb_write_fake_code(DCB *dcb)
 static inline bool
 dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
 {
+    if (queue == NULL) return false;
+    
     if (dcb->fd <= 0)
     {
         LOGIF(LE, (skygw_log_write_flush(
             LOGFILE_ERROR,
             "Error : Write failed, dcb is %s.",
             dcb->fd == DCBFD_CLOSED ? "closed" : "cloned, not writable")));
-            return false;
+		gwbuf_free(queue);
+        return false;
     }
-    
-    if (queue == NULL) return false;
     
     if (dcb->session == NULL || dcb->session->state != SESSION_STATE_STOPPING)
     {
@@ -1265,7 +1264,7 @@ dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
                 dcb,
                 STRDCBSTATE(dcb->state),
                 dcb->fd)));
-            //ss_dassert(false);
+			gwbuf_free(queue);
             return false;
         }
     }
@@ -1309,7 +1308,7 @@ dcb_write_when_already_queued(DCB *dcb, GWBUF *queue)
  *
  * @param dcb   The DCB of the client
  * @param queue Queue of buffers to write
- * @return 0 on failure, 1 on success
+ * @param eno	Error number for logging
  */
 static void
 dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
@@ -1385,7 +1384,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
 }
 
 /**
- * Handle writing when there is already queued data
+ * Last few things to do at end of a write
  *
  * @param dcb           The DCB of the client
  * @param below_water   A boolean
