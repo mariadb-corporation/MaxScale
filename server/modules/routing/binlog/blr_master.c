@@ -77,7 +77,6 @@ static int  blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *pkt, REP_HEADER *
 void blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
 static void *CreateMySQLAuthData(char *username, char *password, char *database);
 void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
-inline uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
 static void blr_master_close(ROUTER_INSTANCE *);
 static char *blr_extract_column(GWBUF *buf, int col);
@@ -1159,26 +1158,6 @@ blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr)
 	hdr->event_size = EXTRACT32(&ptr[14]);
 	hdr->next_pos = EXTRACT32(&ptr[18]);
 	hdr->flags = EXTRACT16(&ptr[22]);
-}
-
-/** 
- * Extract a numeric field from a packet of the specified number of bits
- *
- * @param src	The raw packet source
- * @param bits	The number of bits to extract (multiple of 8)
- */
-inline uint32_t
-extract_field(register uint8_t *src, int bits)
-{
-register uint32_t	rval = 0, shift = 0;
-
-	while (bits > 0)
-	{
-		rval |= (*src++) << shift;
-		shift += 8;
-		bits -= 8;
-	}
-	return rval;
 }
 
 /**

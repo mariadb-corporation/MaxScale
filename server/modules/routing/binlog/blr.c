@@ -111,6 +111,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *);
 void my_uuid_init(ulong seed1, ulong seed2);
 void my_uuid(char *guid);
 GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
+
 static SPINLOCK	instlock;
 static ROUTER_INSTANCE *instances;
 
@@ -1341,4 +1342,25 @@ GWBUF		*errbuf = NULL;
         memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
         return dcb->func.write(dcb, errbuf);
+}
+
+
+/**
+ * Extract a numeric field from a packet of the specified number of bits
+ *
+ * @param src	The raw packet source
+ * @param birs	The number of bits to extract (multiple of 8)
+ */
+uint32_t
+extract_field(uint8_t *src, int bits)
+{
+uint32_t	rval = 0, shift = 0;
+
+	while (bits > 0)
+	{
+		rval |= (*src++) << shift;
+		shift += 8;
+		bits -= 8;
+	}
+	return rval;
 }

@@ -60,7 +60,6 @@
 #include <log_manager.h>
 #include <version.h>
 
-static uint32_t extract_field(uint8_t *src, int bits);
 static void encode_value(unsigned char *data, unsigned int value, int len);
 static int blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
 static int blr_slave_replay(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *master);
@@ -1299,28 +1298,6 @@ uint32_t	chksum;
 		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
 		poll_fake_write_event(slave->dcb);
-	}
-	return rval;
-}
-
-/** 
- * Extract a numeric field from a packet of the specified number of bits,
- * the number of bits must be a multiple of 8.
- *
- * @param src	The raw packet source
- * @param bits	The number of bits to extract (multiple of 8)
- * @return 	The extracted value
- */
-static uint32_t
-extract_field(uint8_t *src, int bits)
-{
-uint32_t	rval = 0, shift = 0;
-
-	while (bits > 0)
-	{
-		rval |= (*src++) << shift;
-		shift += 8;
-		bits -= 8;
 	}
 	return rval;
 }
