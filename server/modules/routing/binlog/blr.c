@@ -1344,3 +1344,24 @@ GWBUF		*errbuf = NULL;
 
         return dcb->func.write(dcb, errbuf);
 }
+
+
+/**
+ * Extract a numeric field from a packet of the specified number of bits
+ *
+ * @param src	The raw packet source
+ * @param birs	The number of bits to extract (multiple of 8)
+ */
+uint32_t
+extract_field(uint8_t *src, int bits)
+{
+uint32_t	rval = 0, shift = 0;
+
+	while (bits > 0)
+	{
+		rval |= (*src++) << shift;
+		shift += 8;
+		bits -= 8;
+	}
+	return rval;
+}

@@ -58,7 +58,6 @@ extern __thread log_info_t tls_log_info;
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_file_append(ROUTER_INSTANCE *router, char *file);
-static uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 
 /**
@@ -597,26 +596,6 @@ blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
 	spinlock_release(&file->lock);
 	if (file->refcnt == 0)
 		free(file);
-}
-
-/** 
- * Extract a numeric field from a packet of the specified number of bits
- *
- * @param src	The raw packet source
- * @param birs	The number of bits to extract (multiple of 8)
- */
-static uint32_t
-extract_field(uint8_t *src, int bits)
-{
-uint32_t	rval = 0, shift = 0;
-
-	while (bits > 0)
-	{
-		rval |= (*src++) << shift;
-		shift += 8;
-		bits -= 8;
-	}
-	return rval;
 }
 
 /**
