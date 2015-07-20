@@ -772,8 +772,8 @@ static skygw_query_type_t resolve_query_type(
 						pthread_self())));
 					break;
                                 case Item_func::UNKNOWN_FUNC:
-					if (item->name != NULL &&
-						strcmp(item->name, "last_insert_id()") == 0)
+
+					if (strcmp((char*)((Item_func*)item)->func_name (), "last_insert_id") == 0)
 					{
 						func_qtype |= QUERY_TYPE_MASTER_READ;
 					}
