@@ -114,7 +114,7 @@ export get_logs_command="$test_dir/get_logs.sh"
 
 # used to generate links to ssh keys on Jenkins machine
 export ImagesDir="/home/ec2-user/kvm/images"
-export SSHKeysDir="/home/ec2-user/KEYS"
+export SSHKeysDir="$HOME/KEYS"
 export TestVMsDir="/home/ec2-user/test-machines"
 
 # links to ssh keys files for all machines

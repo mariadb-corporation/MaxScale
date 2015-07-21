@@ -12,10 +12,11 @@ echo " "
 echo "Maxscale message"
 echo "$maxscale_err"
 
-
-echo "$maxscale_err" | grep "$mariadb_err"
+res=0
+#echo "$maxscale_err" | grep "$mariadb_err"
+echo "$maxscale_err" |grep "ERROR 1045 (28000): Access denied for user 'no_such_user'@'"
 if [ "$?" != 0 ]; then
-	echo "Messages are different!"
+	echo "Maxscale message is not ok!"
 	res=1
 else
 	echo "Messages are same"
