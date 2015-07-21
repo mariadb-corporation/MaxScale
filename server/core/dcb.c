@@ -558,8 +558,6 @@ dcb_process_victim_queue(DCB *listofdcb)
             }  
             else 
             {
-		if(dcb->server)
-		    atomic_add(&dcb->server->stats.n_current,-1);
                 dcb->fd = DCBFD_CLOSED;
 				
                 LOGIF(LD, (skygw_log_write_flush(
@@ -1926,7 +1924,7 @@ dcb_close_finish(DCB *dcb)
      * threw away return value.
      */
     LOGIF(LD, (skygw_log_write(
-        LOGFILE_DEBUG,"
+        LOGFILE_DEBUG,
         "%lu [dcb_close] Removed dcb %p in state %s from poll set.",
         pthread_self(),
         dcb,
