@@ -174,6 +174,7 @@ void	dprintSession(struct dcb *, SESSION *);
 void	dListSessions(struct dcb *);
 char	*session_state(int);
 bool	session_link_dcb(SESSION *, struct dcb *);
+int		session_unlink_dcb(SESSION*, DCB*);
 SESSION* get_session_by_router_ses(void* rses);
 void session_enable_log(SESSION* ses, logfile_id_t id);
 void session_disable_log(SESSION* ses, logfile_id_t id);
