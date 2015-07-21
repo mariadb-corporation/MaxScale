@@ -80,7 +80,7 @@ int check_sha1(TestConnections* Test)
 
     for (i = 1; i < 3; i++) {
         printf("\nFILE: 000000%d\n", i);
-        sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'sha1sum %s/mar-bin.00000%d'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->maxscale_binlog_dir, i);
+        sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s sha1sum %s/mar-bin.00000%d'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->maxscale_binlog_dir, i);
         ls = popen(sys, "r");
         fgets(buf_max, sizeof(buf), ls);
         pclose(ls);
@@ -88,7 +88,7 @@ int check_sha1(TestConnections* Test)
         printf("Binlog checksum from Maxscale %s\n", buf_max);
 
 
-        sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'sha1sum /var/lib/mysql/mar-bin.00000%d'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0], i);
+        sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s sha1sum /var/lib/mysql/mar-bin.00000%d'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0], Test->access_sudo, i);
         ls = popen(sys, "r");
         fgets(buf, sizeof(buf), ls);
         pclose(ls);
