@@ -44,7 +44,10 @@ int main(int argc, char *argv[])
         sleep(20);
 
         printf("Checking if MaxScale is alive by connecting to MaxAdmin\n"); fflush(stdout);
-        global_result += execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers");
+        if (execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers") != 0) {
+            global_result++;
+            printf("testFAILED: Maxadmin execution failed.\n");
+        }
 
         for (i = 0; i < Test->repl->N; i++) {
             printf("Setup firewall back to allow mysql on node %d\n", i); fflush(stdout);
@@ -55,9 +58,10 @@ int main(int argc, char *argv[])
         sleep(60);
 
         printf("Checking Maxscale is alive\n"); fflush(stdout);
-        global_result += check_maxscale_alive(); fflush(stdout);
-        if (global_result !=0) {
-            printf("MaxScale is not alive\n");
+
+        if ( check_maxscale_alive() !=0) {
+            printf("testFAILED: MaxScale is not alive\n");
+            global_result++;
         } else {
             printf("MaxScale is still alive\n");
         }

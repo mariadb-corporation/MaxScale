@@ -42,11 +42,11 @@ int main(int argc, char *argv[])
     system(str);
 
     printf("Copying data from t1 to file...\n");fflush(stdout);
-    printf("using RWSplit:\n");fflush(stdout);
+    printf("using RWSplit: SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;\n");fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
-    printf("using ReadsConn master:\n");fflush(stdout);
+    printf("using ReadsConn master: SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;\n");fflush(stdout);
     global_result += execute_query(Test->conn_master, (char *) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
-    printf("using ReadsConn slave:\n");fflush(stdout);
+    printf("using ReadsConn slave: SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;\n");fflush(stdout);
     global_result += execute_query(Test->conn_slave, (char *) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
     printf("Copying t1.cvs from Maxscale machine:\n");fflush(stdout);
