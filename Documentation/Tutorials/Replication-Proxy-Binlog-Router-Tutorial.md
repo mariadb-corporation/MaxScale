@@ -225,11 +225,13 @@ Binlog Router currently does not work for MySQL 5.5 due to missing @@global.binl
 
 Examples of CHANGE MASTER TO command issued on a slave server that wants to gets replication events from MaxScale binlog router:
 
-	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’, MASTER_LOG_FILE=‘mysql-bin.000001'
+	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
+	MASTER_LOG_FILE=‘mysql-bin.000001'
 
-	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’, MASTER_LOG_FILE=‘mysql-bin.000159', MASTER_LOG_POS=245
+	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
+	MASTER_LOG_FILE=‘mysql-bin.000159', MASTER_LOG_POS=245
 
-The latter even specifies a MASTER_LOG_POS for the selected MASTER_LOG_FILE
+The latter example specifies a MASTER_LOG_POS for the selected MASTER_LOG_FILE
 
 Note:
 
