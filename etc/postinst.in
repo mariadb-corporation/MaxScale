@@ -44,6 +44,7 @@ fi
 if [ -d "/usr/lib/systemd/system" -a -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ]
 then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
+    systemctl daemon-reload
 fi
 /sbin/ldconfig
 
