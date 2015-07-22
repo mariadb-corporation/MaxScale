@@ -40,8 +40,8 @@ int main(int argc, char *argv[])
         Test->restart_maxscale(); fflush(stdout);
     } else {
 
-        printf("Waiting 20 seconds\n"); fflush(stdout);
-        sleep(20);
+        printf("Waiting 60 seconds\n"); fflush(stdout);
+        sleep(60);
 
         printf("Checking if MaxScale is alive by connecting to MaxAdmin\n"); fflush(stdout);
         if (execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers") != 0) {
