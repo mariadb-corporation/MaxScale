@@ -89,6 +89,7 @@ int Mariadb_nodes::print_env()
     for (int i = 0; i < N; i++) {printf("%s node %d \t%s\tPort=%d\n", prefix, i, IP[i], port[i]);}
     printf("%s User name %s\n", prefix, user_name);
     printf("%s Password %s\n", prefix, password);
+    printf("%s Access user %s\n", prefix, access_user);
 }
 
 int Mariadb_nodes::find_master()

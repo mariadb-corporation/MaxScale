@@ -169,6 +169,7 @@ int TestConnections::print_env()
     printf("Maxscale Password\t%s\n", maxscale_password);
     printf("Maxscale SSH key\t%s\n", maxscale_sshkey);
     printf("Maxadmin password\t%s\n", maxadmin_password);
+    printf("Access user\t%s\n", access_user);
     repl->print_env();
     galera->print_env();
 }
