@@ -211,6 +211,31 @@ The binlog router module of MaxScale produces diagnostic output that can be view
 
 
 
+# Binlog router compatibily
+
+Binlog Router Plugin is compatible with MySQL 5.6, MariaDB 5.5, the current default.
+
+It’s also works with a MariaDB 10.0 setup (master and slaves) but slave connection must not include any GTID feature.
+
+Binlog Router currently does not work for MySQL 5.5 due to missing @@global.binlog_checksum var
+
+# Enabling MariaDB 10 compatibilty
+
+MariaDB 10 has different slave registration phase so an option is reuqired:
+
+	router_options=...., mariadb10-compatibility=1
+
+version_string should be modified in order to present MariaDB 10 version wen MaxScale sends server handshake packet.
+
+	version_string=10.0.17-log
 
 
+# New MariaDB events in Diagnostics
+
+With a MariaDB 10 setups new events are displayed when master server is MariaDB 10.
+
+	MariaDB 10 Annotate Rows Event 0
+	MariaDB 10 Binlog Checkpoint Event 0
+	MariaDB 10 GTID Event 0
+	MariaDB 10 GTID List Event 0
 
