@@ -2019,6 +2019,7 @@ static bool route_single_stmt(
 	skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
 	mysql_server_cmd_t packet_type;
 	uint8_t*           packet;
+	size_t		   packet_len;
 	int                ret            = 0;
 	DCB*               master_dcb     = NULL;
 	DCB*               target_dcb     = NULL;
@@ -2026,11 +2027,8 @@ static bool route_single_stmt(
 	bool           	   succp          = false;
 	int                rlag_max       = MAX_RLAG_UNDEFINED;
 	backend_type_t     btype; /*< target backend type */
-	
-	
+
 	ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
-	packet = GWBUF_DATA(querybuf);
-	packet_type = packet[4];
 
 	/** 
 	 * Read stored master DCB pointer. If master is not set, routing must 
@@ -2058,7 +2056,19 @@ static bool route_single_stmt(
 	{
 		querybuf = gwbuf_make_contiguous(querybuf);
 	}
+
+	packet = GWBUF_DATA(querybuf);
+	packet_len = gw_mysql_get_byte3(packet);
 	
+	if(packet_len == 0)
+	{
+	    route_target = TARGET_MASTER;
+	    packet_type = MYSQL_COM_UNDEFINED;
+	}
+	else
+	{
+	    packet_type = packet[4];
+
 	switch(packet_type) {
 		case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
 		case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
@@ -2273,7 +2283,7 @@ static bool route_single_stmt(
 		}
 		goto retblock;
 	}
-	
+	}
 	/** Lock router session */
 	if (!rses_begin_locked_router_action(rses))
 	{
