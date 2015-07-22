@@ -101,7 +101,7 @@ A complete example of a service entry for a binlog router service would be as fo
     router=binlogrouter
     servers=masterdb
     version_string=5.6.17-log
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,filestem=mybin,heartbeat=30,binlogdir=/home/mriddoch/binlogs
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,filestem=mybin,heartbeat=30,binlogdir=/var/binlogs
     user=maxscale
     passwd=Mhu87p2D
 
@@ -215,9 +215,40 @@ The binlog router module of MaxScale produces diagnostic output that can be view
 
 Binlog Router Plugin is compatible with MySQL 5.6, MariaDB 5.5, the current default.
 
+In order to use it with MySQL 5.6, the GTID_MODE setting must be OFF and connecting slaves mustn't use MASTER_AUTO_POSITION = 1 option.
+
 It’s also works with a MariaDB 10.0 setup (master and slaves) but slave connection must not include any GTID feature.
 
-Binlog Router currently does not work for MySQL 5.5 due to missing @@global.binlog_checksum var
+Binlog Router currently does not work for MySQL 5.5 due to missing @@global.binlog_checksum var.
+
+# Slave servers setup
+
+Examples of CHANGE MASTER TO command issued on a slave server that wants to gets replication events from MaxScale binlog router:
+
+	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
+	MASTER_LOG_FILE=‘mysql-bin.000001'
+
+	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
+	MASTER_LOG_FILE=‘mysql-bin.000159', MASTER_LOG_POS=245
+
+The latter example specifies a MASTER_LOG_POS for the selected MASTER_LOG_FILE
+
+Note:
+
+ - MASTER_LOG_FILE must be set to one of existing binlog files in MaxScale binlogdir
+
+ - If MASTER_LOG_POS is not set with CHANGE MASTER TO it defaults to 4
+
+ - Latest binlog file name and pos in MaxScale could be find via maxadmin ouput or from mysql client connected to MaxScale:
+
+Example:
+
+	-bash-4.1$ mysql -h 127.0.0.1 -P 5308 -u$user -p$pass
+
+	MySQL [(none)]> show master status\G
+	*************************** 1. row ***************************
+   	         File: mysql-bin.000181
+	         Position: 2569
 
 # Enabling MariaDB 10 compatibilty
 
