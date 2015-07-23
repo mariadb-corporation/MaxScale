@@ -1344,7 +1344,7 @@ int gw_MySQLListener(
 	struct sockaddr *current_addr;
 	int  one = 1;
         int  rc;
-
+	bool is_tcp = false;
 	memset(&serv_addr,0,sizeof(serv_addr));
 	memset(&local_addr,0,sizeof(local_addr));
 
@@ -1385,6 +1385,7 @@ int gw_MySQLListener(
 		}
 
 		current_addr = (struct sockaddr *) &serv_addr;
+		is_tcp = true;
 	}
 
 	listen_dcb->fd = -1;
@@ -1394,10 +1395,12 @@ int gw_MySQLListener(
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
 	}
 
-	if((syseno = setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one))) != 0){
+	if(is_tcp)
+	{
+	    if((syseno = setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one))) != 0){
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+	    }
 	}
-
 	// set NONBLOCKING mode
 	setnonblocking(l_so);
 
