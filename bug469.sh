@@ -28,7 +28,8 @@ fi
 
 echo "Executing quiry"
 
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4006 -u$repl_user -p$repl_password -c"
+#ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "echo \"show databases;\" | mysql -h 127.0.0.1 -P 4006 -u$repl_user -p$repl_password -c"
+echo \"show databases;\" | mysql -h $maxscale_IP -P 4006 -u$repl_user -p$repl_password -c
 
 sleep 10
 
