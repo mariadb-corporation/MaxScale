@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
 
     Test->repl->unblock_node(0);
-    sleep(10);
+    sleep(30);
 
     printf("Closing connection\n"); fflush(stdout);
 
