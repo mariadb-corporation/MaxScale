@@ -425,15 +425,19 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
-	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
+	if(dcb->data == NULL)
+	{
+	    client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
 #if defined(SS_DEBUG)
-	client_data->myses_chk_top = CHK_NUM_MYSQLSES;
-	client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
+	    client_data->myses_chk_top = CHK_NUM_MYSQLSES;
+	    client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
 #endif
-	/**
-	 * Assign authentication structure with client DCB.
-	 */
-	dcb->data = client_data; 
+	    dcb->data = client_data;
+	}
+	else
+	{
+	    client_data = (MYSQL_session *)dcb->data;
+	}
 
 	stage1_hash = client_data->client_sha1;
 	username = client_data->user;
@@ -889,6 +893,7 @@ int gw_read_client_event(
 		    /** SSL was requested and the handshake is either done or
 		     * still ongoing. After the handshake is done, the client
 		     * will send another auth packet. */
+		    while((read_buffer = gwbuf_consume(read_buffer,GWBUF_LENGTH(read_buffer))));
 		    break;
 		}
 		
