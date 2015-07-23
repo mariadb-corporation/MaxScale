@@ -175,7 +175,43 @@ char		*value, *name;
 int		i;
 char	*defuuid;
 
-        if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
+	if(service->credentials.name == NULL ||
+	   service->credentials.authdata == NULL)
+	{
+	    skygw_log_write(LE,"%s: Error: Service is missing user credentials."
+		    " Add the missing username or passwd parameter to the service.",
+			    service->name);
+	    return NULL;
+	}
+
+	if(options == NULL || options[0] == NULL)
+	{
+	    skygw_log_write(LE,
+		     "%s: Error: No router options supplied for binlogrouter",
+		     service->name);
+	    return NULL;
+	}
+
+	/*
+	 * We only support one server behind this router, since the server is
+	 * the master from which we replicate binlog records. Therefore check
+	 * that only one server has been defined.
+	 *
+	 * A later improvement will be to define multiple servers and have the
+	 * router use the information that is supplied by the monitor to find
+	 * which of these servers is currently the master and replicate from
+	 * that server.
+	 */
+	if (service->dbref == NULL || service->dbref->next != NULL)
+	{
+		skygw_log_write(LE,
+			"%s: Error : Exactly one database server may be "
+			"for use with the binlog router.",
+			service->name);
+		return NULL;
+	}
+
+	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL;
         }
 
@@ -217,25 +253,6 @@ char	*defuuid;
 			defuuid[8], defuuid[9], defuuid[10], defuuid[11],
 			defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
 	}
-
-	/*
-	 * We only support one server behind this router, since the server is
-	 * the master from which we replicate binlog records. Therefore check
-	 * that only one server has been defined.
-	 *
-	 * A later improvement will be to define multiple servers and have the
-	 * router use the information that is supplied by the monitor to find
-	 * which of these servers is currently the master and replicate from
-	 * that server.
-	 */
-	if (service->dbref == NULL || service->dbref->next != NULL)
-	{
-		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR,
-				"Error : Exactly one database server may be "
-				"for use with the binlog router.")));
-	}
-
 
 	/*
 	 * Process the options.
@@ -367,7 +384,7 @@ char	*defuuid;
 	else
 	{
 		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR, "%s: No router options supplied for binlogrouter",
+			LOGFILE_ERROR, "%s: Error: No router options supplied for binlogrouter",
 				service->name)));
 	}
 
