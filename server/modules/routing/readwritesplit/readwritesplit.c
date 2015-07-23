@@ -2017,7 +2017,7 @@ static bool route_single_stmt(
 	GWBUF*             querybuf)
 {
 	skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
-	mysql_server_cmd_t packet_type;
+	mysql_server_cmd_t packet_type = MYSQL_COM_UNDEFINED;
 	uint8_t*           packet;
 	size_t		   packet_len;
 	int                ret            = 0;
