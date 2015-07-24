@@ -20,6 +20,7 @@
 #include <string.h>
 #include <users.h>
 #include <atomic.h>
+#include <log_manager.h>
 
 /**
  * @file users.c User table maintenance routines
