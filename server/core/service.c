@@ -259,7 +259,7 @@ GWPROTOCOL	*funcs;
 				{
 					hashtable_free(service->users->data);
 					free(service->users);
-					dcb_free(port->listener);
+					dcb_close(port->listener);
 					port->listener = NULL;
 					goto retblock;
 				}
@@ -347,7 +347,7 @@ GWPROTOCOL	*funcs;
 			hashtable_free(service->users->data);
 		}
 		free(service->users);
-		dcb_free(port->listener);
+		dcb_close(port->listener);
 		port->listener = NULL;
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
