@@ -84,6 +84,7 @@
 #include <execinfo.h>
 
 #include <ini.h>
+#include <sys/wait.h>
 
 /** for procname */
 #if !defined(_GNU_SOURCE)
@@ -333,6 +334,41 @@ sigint_handler (int i)
 	fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
 
+static void
+sigchld_handler (int i)
+{
+    int exit_status = 0;
+    pid_t child = -1;
+
+    if((child = wait(&exit_status)) == -1)
+    {
+	char errbuf[512];
+	strerror_r(errno,errbuf,511);
+	errbuf[511] = '\0';
+	skygw_log_write_flush(LE,"Error: failed to wait child process: %d %s",errno,errbuf);
+    }
+    else
+    {
+	if(WIFEXITED(exit_status))
+	{
+	    skygw_log_write_flush(WEXITSTATUS(exit_status) != 0 ? LE : LT,
+			     "Child process %d exited with status %d",
+			     child,WEXITSTATUS(exit_status));
+	}
+	else if(WIFSIGNALED(exit_status))
+	{
+	    skygw_log_write_flush((LE|LT),
+			     "Child process %d was stopped by signal %d.",
+			     child,WTERMSIG(exit_status));
+	}
+	else
+	{
+	    skygw_log_write_flush((LE|LT),
+			     "Child process %d did not exit normally. Exit status: %d",
+			     child,exit_status);
+	}
+    }
+}
 
 int fatal_handling = 0;
 
@@ -1431,6 +1467,14 @@ int main(int argc, char **argv)
                 {
                         logerr = strdup("Failed to set signal handler for "
                                         "SIGFPE. Exiting.");
+                        goto sigset_err;
+                }
+		l = signal_set(SIGCHLD, sigchld_handler);
+
+                if (l != 0)
+                {
+                        logerr = strdup("Failed to set signal handler for "
+                                        "SIGCHLD. Exiting.");
                         goto sigset_err;
                 }
 #ifdef SIGBUS
