@@ -942,60 +942,67 @@ process_config_context(CONFIG_CONTEXT *context)
 				setipaddress(&serv_addr.sin_addr, (address == NULL) ? "0.0.0.0" : address);
 				gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr + (port != NULL ? atoi(port) : 0 + getpid()));
 			}
-                
-			if (service && socket && protocol) {        
-				CONFIG_CONTEXT *ptr = context;
-				while (ptr && strcmp(ptr->object, service) != 0)
-					ptr = ptr->next;
-				if (ptr && ptr->element)
-				{
-					serviceAddProtocol(ptr->element,
-                                                           protocol,
-							   socket,
-                                                           0);
-				} else {
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-                                        	"Error : Listener '%s', "
-                                        	"service '%s' not found. "
-						"Listener will not execute for socket %s.",
-	                                        obj->object, service, socket)));
-					error_count++;
-				}
-			}
 
-			if (service && port && protocol) {
+			if(service && protocol && (socket || port))
+			{
+			    if (socket)
+			    {
 				CONFIG_CONTEXT *ptr = context;
 				while (ptr && strcmp(ptr->object, service) != 0)
-					ptr = ptr->next;
+				    ptr = ptr->next;
 				if (ptr && ptr->element)
 				{
-					serviceAddProtocol(ptr->element,
-                                                           protocol,
-							   address,
-                                                           atoi(port));
+				    serviceAddProtocol(ptr->element,
+						     protocol,
+						     socket,
+						     0);
+				} 
+				else
+				{
+				    LOGIF(LE, (skygw_log_write_flush(
+					    LOGFILE_ERROR,
+					    "Error : Listener '%s', "
+					    "service '%s' not found. "
+					    "Listener will not execute for socket %s.",
+					    obj->object, service, socket)));
+				    error_count++;
+				}
+			    }
+
+			    if (port)
+			    {
+				CONFIG_CONTEXT *ptr = context;
+				while (ptr && strcmp(ptr->object, service) != 0)
+				    ptr = ptr->next;
+				if (ptr && ptr->element)
+				{
+				    serviceAddProtocol(ptr->element,
+						     protocol,
+						     address,
+						     atoi(port));
 				}
 				else
 				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-                                        	"Error : Listener '%s', "
-                                        	"service '%s' not found. "
-						"Listener will not execute.",
-	                                        obj->object, service)));
-					error_count++;
+				    LOGIF(LE, (skygw_log_write_flush(
+					    LOGFILE_ERROR,
+					    "Error : Listener '%s', "
+					    "service '%s' not found. "
+					    "Listener will not execute.",
+					    obj->object, service)));
+				    error_count++;
 				}
+			    }
 			}
 			else
 			{
-				LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Listener '%s' is misisng a "
-                                        "required "
-                                        "parameter. A Listener must have a "
-                                        "service, port and protocol defined.",
-                                        obj->object)));
-				error_count++;
+			    LOGIF(LE, (skygw_log_write_flush(
+				    LOGFILE_ERROR,
+				    "Error : Listener '%s' is missing a "
+				    "required "
+				    "parameter. A Listener must have a "
+				    "service, port and protocol defined.",
+				    obj->object)));
+			    error_count++;
 			}
 		}
 		else if (!strcmp(type, "monitor"))
