@@ -211,7 +211,7 @@ The binlog router module of MaxScale produces diagnostic output that can be view
 
 
 
-# Binlog router compatibily
+# Binlog router compatibility
 
 Binlog Router Plugin is compatible with MySQL 5.6, MariaDB 5.5, the current default.
 
@@ -239,7 +239,7 @@ Note:
 
  - If MASTER_LOG_POS is not set with CHANGE MASTER TO it defaults to 4
 
- - Latest binlog file name and pos in MaxScale could be find via maxadmin ouput or from mysql client connected to MaxScale:
+ - Latest binlog file name and pos in MaxScale could be find via maxadmin output or from mysql client connected to MaxScale:
 
 Example:
 
@@ -250,13 +250,13 @@ Example:
    	         File: mysql-bin.000181
 	         Position: 2569
 
-# Enabling MariaDB 10 compatibilty
+# Enabling MariaDB 10 compatibility
 
-MariaDB 10 has different slave registration phase so an option is reuqired:
+MariaDB 10 has different slave registration phase so an option is required:
 
 	router_options=...., mariadb10-compatibility=1
 
-version_string should be modified in order to present MariaDB 10 version wen MaxScale sends server handshake packet.
+version_string should be modified in order to present MariaDB 10 version when MaxScale sends server handshake packet.
 
 	version_string=10.0.17-log
 
