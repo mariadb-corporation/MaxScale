@@ -618,7 +618,7 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 			LOGFILE_MESSAGE,
 			"%s: Master %s disconnected after %ld seconds. "
 			"%d events read,",
-			router->service->name, router->master->remote,
+			router->service->name, router->service->dbref->server->name,
 			time(0) - router->connect_time, router->stats.n_binlogs_ses)));
         	LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -1123,7 +1123,7 @@ char		msg[85], *errmsg;
 		LOGFILE_MESSAGE,
 		"%s: Master %s disconnected after %ld seconds. "
 		"%d events read.",
-		router->service->name, router->master->remote,
+		router->service->name, router->service->dbref->server->name,
 		time(0) - router->connect_time, router->stats.n_binlogs_ses)));
 	blr_master_reconnect(router);
 }
