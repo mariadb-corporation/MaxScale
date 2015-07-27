@@ -109,7 +109,6 @@ static inline void dcb_write_when_already_queued(DCB *dcb, GWBUF *queue);
 static int dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno);
 static inline void dcb_write_tidy_up(DCB *dcb, bool below_water);
 static int dcb_write_SSL_error_report (DCB *dcb, int ret);
-int session_unlink_dcb(SESSION*, DCB*);
 
 size_t dcb_get_session_id(
 	DCB *dcb)

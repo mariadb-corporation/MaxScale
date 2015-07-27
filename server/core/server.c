@@ -55,6 +55,8 @@ extern __thread log_info_t tls_log_info;
 static SPINLOCK	server_spin = SPINLOCK_INIT;
 static SERVER	*allServers = NULL;
 
+static void spin_reporter(void *, char *, int);
+
 /**
  * Allocate a new server withn the gateway
  *
@@ -541,6 +543,19 @@ SERVER_PARAM	*param;
             dcb_printf(dcb, "\tPersistent max time (secs):          %d\n",
 						server->persistmaxtime);
         }
+}
+
+/**
+ * Display an entry from the spinlock statistics data
+ *
+ * @param       dcb     The DCB to print to
+ * @param       desc    Description of the statistic
+ * @param       value   The statistic value
+ */
+static void
+spin_reporter(void *dcb, char *desc, int value)
+{
+	dcb_printf((DCB *)dcb, "\t\t%-40s  %d\n", desc, value);
 }
 
 /**
