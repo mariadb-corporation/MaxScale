@@ -157,7 +157,7 @@ GWBUF	*buf;
         LOGIF(LM,(skygw_log_write(
                         LOGFILE_MESSAGE,
 				"%s: attempting to connect to master server %s.",
-			router->service->name, router->master->remote)));
+			router->service->name, router->service->dbref->server->name)));
 	router->connect_time = time(0);
 
 if (setsockopt(router->master->fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive , sizeof(keepalive )))
@@ -587,7 +587,7 @@ char	query[128];
 				"%s: Request binlog records from %s at "
 				"position %d from master server %s.",
 			router->service->name, router->binlog_name,
-			router->binlog_position, router->master->remote)));
+			router->binlog_position, router->service->dbref->server->name)));
 		break;
 	case BLRM_BINLOGDUMP:
 		// Main body, we have received a binlog record from the master

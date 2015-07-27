@@ -809,7 +809,7 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	sprintf(column, "%s", router->master->remote ? router->master->remote : "");
+	sprintf(column, "%s", router->service->dbref->server->name ? router->service->dbref->server->name : "");
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
