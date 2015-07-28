@@ -245,14 +245,45 @@ char	*qtext, *query_text;
 char	*sep = " 	,=";
 char	*word, *brkb;
 int	query_len;
+char    *ptr;
+extern  char *strcasestr();
 
 	qtext = GWBUF_DATA(queue);
 	query_len = extract_field((uint8_t *)qtext, 24) - 1;
 	qtext += 5;		// Skip header and first byte of the payload
 	query_text = strndup(qtext, query_len);
 
-	LOGIF(LT, (skygw_log_write(
-		LOGFILE_TRACE, "Execute statement from the slave '%s'", query_text)));
+        qtext = GWBUF_DATA(queue);
+        query_len = extract_field((uint8_t *)qtext, 24) - 1;
+        qtext += 5;             // Skip header and first byte of the payload
+        query_text = strndup(qtext, query_len);
+
+	/* Don't log the full statement containg 'password', just trucate it */
+	ptr = strcasestr(query_text, "password");
+	if (ptr != NULL) {
+		char *new_text = strdup(query_text);
+		int trucate_at  = (ptr - query_text);
+		if (trucate_at > 0) {
+			if ( (trucate_at + 3) <= strlen(new_text)) {
+				int i;
+				for (i = 0; i < 3; i++) {
+					new_text[trucate_at + i] = '.';
+				}
+				new_text[trucate_at+3] = '\0';
+			} else {
+				new_text[trucate_at] = '\0';
+			}
+		}
+
+		LOGIF(LT, (skygw_log_write(
+			LOGFILE_TRACE, "Execute statement (truncated, it contains password)"
+			" from the slave '%s'", new_text)));
+		free(new_text);
+	} else {
+		LOGIF(LT, (skygw_log_write(
+			LOGFILE_TRACE, "Execute statement from the slave '%s'", query_text)));
+	}
+
 	/*
 	 * Implement a very rudimental "parsing" of the query text by extarcting the
 	 * words from the statement and matchng them against the subset of queries we

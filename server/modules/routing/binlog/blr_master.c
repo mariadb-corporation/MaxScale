@@ -619,7 +619,9 @@ char	query[128];
 			"%s: Request binlog records from %s at "
 			"position %lu from master server %s:%d",
 			router->service->name, router->binlog_name,
-			router->binlog_position, router->service->dbref->server->name)));
+			router->binlog_position,
+			router->service->dbref->server->name,
+			router->service->dbref->server->port)));
 		break;
 	case BLRM_BINLOGDUMP:
 		// Main body, we have received a binlog record from the master
