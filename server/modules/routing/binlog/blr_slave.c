@@ -253,11 +253,6 @@ extern  char *strcasestr();
 	qtext += 5;		// Skip header and first byte of the payload
 	query_text = strndup(qtext, query_len);
 
-        qtext = GWBUF_DATA(queue);
-        query_len = extract_field((uint8_t *)qtext, 24) - 1;
-        qtext += 5;             // Skip header and first byte of the payload
-        query_text = strndup(qtext, query_len);
-
 	/* Don't log the full statement containg 'password', just trucate it */
 	ptr = strcasestr(query_text, "password");
 	if (ptr != NULL) {
