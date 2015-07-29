@@ -180,7 +180,8 @@ ROUTER_INSTANCE	*inst;
 char		*value, *name;
 int		i;
 unsigned char	*defuuid;
-char		path[PATH_MAX], filename[PATH_MAX];
+char		path[PATH_MAX+1] = "";
+char		filename[PATH_MAX+1] = "";
 int		master_info = 0;
 int		rc = 0;
 
@@ -462,9 +463,9 @@ int		rc = 0;
 	rc = ini_parse(filename, blr_handler_config, inst);
 
 	LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
-		"%s: %s/master.ini parse result is %d",
+		"%s: %s parse result is %d",
 		inst->service->name,
-		inst->binlogdir,
+		filename,
 		rc)));
 
 	/*
@@ -1324,7 +1325,7 @@ blr_statistics(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
 char	result[1000], *ptr;
 GWBUF	*ret;
-int	len;
+unsigned long	len;
 
 	snprintf(result, 1000,
 		"Uptime: %u  Threads: %u  Events: %u  Slaves: %u  Master State: %s",
@@ -1358,7 +1359,6 @@ blr_ping(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
 char	*ptr;
 GWBUF	*ret;
-int	len;
 
 	if ((ret = gwbuf_alloc(5)) == NULL)
 		return 0;
@@ -1566,6 +1566,7 @@ char	*service_passwd = NULL;
 			"create hex_sha1_sha1_password failed for service user %s",
 			service_user)));
 
+		free(dpwd);
 		return 1;
 	}
 
@@ -1584,15 +1585,14 @@ int
 blr_load_dbusers(ROUTER_INSTANCE *router)
 {
 int loaded;
-char	path[4097];
+char	path[PATH_MAX+1] = "";
 SERVICE *service;
 	service = router->service;
 
 	/* File path for router cached authentication data */
-	strcpy(path, router->binlogdir);
-	strncat(path, "/cache", 4096);
-
-	strncat(path, "/dbusers", 4096);
+	strncpy(path, router->binlogdir, PATH_MAX);
+	strncat(path, "/cache", PATH_MAX);
+	strncat(path, "/dbusers", PATH_MAX);
 
 	/* Try loading dbusers from configured backends */
 	loaded = load_mysql_users(service);
@@ -1653,14 +1653,14 @@ int
 blr_save_dbusers(ROUTER_INSTANCE *router)
 {
 SERVICE *service;
-char	path[4097];
+char	path[PATH_MAX+1] = "";
 int	mkdir_rval;
 
         service = router->service;
 
         /* File path for router cached authentication data */
-        strcpy(path, router->binlogdir);
-        strncat(path, "/cache", 4096);
+        strncpy(path, router->binlogdir, PATH_MAX);
+        strncat(path, "/cache", PATH_MAX);
 
 	/* check and create dir */
 	if (access(path, R_OK) == -1)
@@ -1681,7 +1681,7 @@ int	mkdir_rval;
 	}
 
 	/* set cache file name */
-	strncat(path, "/dbusers", 4096);
+	strncat(path, "/dbusers", PATH_MAX);
 
 	return dbusers_save(service->users, path);
 
