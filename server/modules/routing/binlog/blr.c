@@ -251,7 +251,7 @@ int		rc = 0;
 
 	/*
 	 * Process the options.
-	 * We have an array of attrbute values passed to us that we must
+	 * We have an array of attribute values passed to us that we must
 	 * examine. Supported attributes are:
 	 *	uuid=
 	 *	server-id=
@@ -427,7 +427,7 @@ int		rc = 0;
 		}
 	}
 
-	/* Dinamically allocate master_host server struct, not written in anyfile */
+	/* Dynamically allocate master_host server struct, not written in anyfile */
 	if (service->dbref == NULL) {
 		SERVICE *service = inst->service;
 		SERVER *server;
