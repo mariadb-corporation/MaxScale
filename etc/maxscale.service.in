@@ -9,7 +9,7 @@ PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
 ExecStartPre=-/usr/bin/mkdir @MAXSCALE_VARDIR@/run/maxscale
 ExecStartPre=/usr/bin/chown -R maxscale:maxscale @MAXSCALE_VARDIR@/run/maxscale
 ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale
-LimitNOFILE=4096
+LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target
