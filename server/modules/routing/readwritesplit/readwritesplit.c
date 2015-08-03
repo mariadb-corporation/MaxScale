@@ -1636,7 +1636,8 @@ static skygw_query_type_t is_read_tmp_table(
   bool target_tmp_table = false;
   int tsize = 0, klen = 0,i;
   char** tbl = NULL;
-  char *hkey,*dbname;
+  char *dbname;
+  char hkey[MYSQL_DATABASE_MAXLEN+MYSQL_TABLE_MAXLEN+2];
   MYSQL_session* data;
 
   DCB*               master_dcb     = NULL;
@@ -1664,12 +1665,7 @@ static skygw_query_type_t is_read_tmp_table(
 	  /** Query targets at least one table */
 	  for(i = 0; i<tsize && !target_tmp_table && tbl[i]; i++)
 	    {
-	      klen = strlen(dbname) + strlen(tbl[i]) + 2;
-	      hkey = calloc(klen,sizeof(char));
-	      strcpy(hkey,dbname);
-	      strcat(hkey,".");
-	      strcat(hkey,tbl[i]);
-
+	      sprintf(hkey,"%s.%s",dbname,tbl[i]);
 	      if (rses_prop_tmp && 
 		  rses_prop_tmp->rses_prop_data.temp_tables)
 		{
@@ -1684,8 +1680,6 @@ static skygw_query_type_t is_read_tmp_table(
 					     "Query targets a temporary table: %s",hkey)));
 		    }
 		}
-
-	      free(hkey);
 	    }
 
 	}
