@@ -6,7 +6,9 @@ After=network.target
 Type=forking
 Restart=on-failure
 PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
+ExecStartPre=/usr/bin/install -d @MAXSCALE_VARDIR@/run/maxscale -o maxscale -g maxscale
 ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale
+LimitNOFILE=65535
 
 [Install]
 WantedBy=multi-user.target
