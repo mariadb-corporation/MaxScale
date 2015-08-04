@@ -772,8 +772,9 @@ static skygw_query_type_t resolve_query_type(
 						pthread_self())));
 					break;
                                 case Item_func::UNKNOWN_FUNC:
-					if (item->name != NULL &&
-						strcmp(item->name, "last_insert_id()") == 0)
+
+					if (((Item_func*)item)->func_name () != NULL &&
+                                         strcmp((char*)((Item_func*)item)->func_name (), "last_insert_id") == 0)
 					{
 						func_qtype |= QUERY_TYPE_MASTER_READ;
 					}
@@ -1485,7 +1486,8 @@ void parsing_info_done(
         void* ptr)
 {
         parsing_info_t* pi;
-	
+	THD* thd;
+
 	if (ptr)
 	{
 		pi = (parsing_info_t *)ptr;
@@ -1496,6 +1498,8 @@ void parsing_info_done(
 			
 			if (mysql->thd != NULL)
 			{
+                                thd = (THD*)mysql->thd;
+                                thd->end_statement ();
 				(*mysql->methods->free_embedded_thd)(mysql);
 				mysql->thd = NULL;
 			}

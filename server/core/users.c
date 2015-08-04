@@ -20,6 +20,7 @@
 #include <string.h>
 #include <users.h>
 #include <atomic.h>
+#include <log_manager.h>
 
 /**
  * @file users.c User table maintenance routines
@@ -59,12 +60,16 @@ users_alloc()
 USERS 	*rval;
 
         if ((rval = calloc(1, sizeof(USERS))) == NULL)
-		return NULL;
+	{
+	    skygw_log_write(LE,"[%s:%d] Error: Memory allocation failed.",__FUNCTION__,__LINE__);
+	    return NULL;
+	}
 
 	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE, user_hash, strcmp)) == NULL)
 	{
-		free(rval);
-		return NULL;
+	    skygw_log_write(LE,"[%s:%d] Error: Memory allocation failed.",__FUNCTION__,__LINE__);
+	    free(rval);
+	    return NULL;
 	}
 
 	hashtable_memory_fns(rval->data, (HASHMEMORYFN)strdup, (HASHMEMORYFN)strdup, (HASHMEMORYFN)free, (HASHMEMORYFN)free);
@@ -80,8 +85,15 @@ USERS 	*rval;
 void
 users_free(USERS *users)
 {
+    if(users == NULL)
+    {
+	skygw_log_write(LE,"[%s:%d] Error: NULL parameter.",__FUNCTION__,__LINE__);
+	return;
+    }
+
+    if(users->data)
 	hashtable_free(users->data);
-	free(users);
+    free(users);
 }
 
 /**

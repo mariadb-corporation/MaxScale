@@ -28,7 +28,7 @@ Using MaxScale as a replication proxy is much the same as using MaxScale as a pr
 
 ## Service Configuration
 
-As with any MaxScale configuration a good starting point is with the service definition with the MaxScale.cnf file. The service requires a name which is the section name in the ini file, a type parameter with a value of service and the name of the router plugin that should be loaded. In the case of replication proxies this router name is binlogrouter.
+As with any MaxScale configuration a good starting point is with the service definition with the maxscale.cnf file. The service requires a name which is the section name in the ini file, a type parameter with a value of service and the name of the router plugin that should be loaded. In the case of replication proxies this router name is binlogrouter.
 
 
     [Replication]
@@ -84,7 +84,7 @@ This optional parameter allows for the administrator to define the number of the
 
 ### binlogdir
 
-This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory $MAXSCALE_HOME/<Service Name>.
+This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory /var/cache/maxscale/<Service Name>.
 
 ### heartbeat
 
@@ -101,7 +101,7 @@ A complete example of a service entry for a binlog router service would be as fo
     router=binlogrouter
     servers=masterdb
     version_string=5.6.17-log
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,filestem=mybin,heartbeat=30,binlogdir=/home/mriddoch/binlogs
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,filestem=mybin,heartbeat=30,binlogdir=/var/binlogs
     user=maxscale
     passwd=Mhu87p2D
 
@@ -211,6 +211,62 @@ The binlog router module of MaxScale produces diagnostic output that can be view
 
 
 
+# Binlog router compatibility
+
+Binlog Router Plugin is compatible with MySQL 5.6, MariaDB 5.5, the current default.
+
+In order to use it with MySQL 5.6, the GTID_MODE setting must be OFF and connecting slaves mustn't use MASTER_AUTO_POSITION = 1 option.
+
+It’s also works with a MariaDB 10.0 setup (master and slaves) but slave connection must not include any GTID feature.
+
+Binlog Router currently does not work for MySQL 5.5 due to missing @@global.binlog_checksum var.
+
+# Slave servers setup
+
+Examples of CHANGE MASTER TO command issued on a slave server that wants to gets replication events from MaxScale binlog router:
+
+	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
+	MASTER_LOG_FILE=‘mysql-bin.000001'
+
+	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
+	MASTER_LOG_FILE=‘mysql-bin.000159', MASTER_LOG_POS=245
+
+The latter example specifies a MASTER_LOG_POS for the selected MASTER_LOG_FILE
+
+Note:
+
+ - MASTER_LOG_FILE must be set to one of existing binlog files in MaxScale binlogdir
+
+ - If MASTER_LOG_POS is not set with CHANGE MASTER TO it defaults to 4
+
+ - Latest binlog file name and pos in MaxScale could be find via maxadmin output or from mysql client connected to MaxScale:
+
+Example:
+
+	-bash-4.1$ mysql -h 127.0.0.1 -P 5308 -u$user -p$pass
+
+	MySQL [(none)]> show master status\G
+	*************************** 1. row ***************************
+   	         File: mysql-bin.000181
+	         Position: 2569
+
+# Enabling MariaDB 10 compatibility
+
+MariaDB 10 has different slave registration phase so an option is required:
+
+	router_options=...., mariadb10-compatibility=1
+
+version_string should be modified in order to present MariaDB 10 version when MaxScale sends server handshake packet.
+
+	version_string=10.0.17-log
 
 
+# New MariaDB events in Diagnostics
+
+With a MariaDB 10 setups new events are displayed when master server is MariaDB 10.
+
+	MariaDB 10 Annotate Rows Event 0
+	MariaDB 10 Binlog Checkpoint Event 0
+	MariaDB 10 GTID Event 0
+	MariaDB 10 GTID List Event 0
 

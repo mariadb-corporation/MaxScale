@@ -37,7 +37,8 @@
  * 09/09/2014	Massimiliano Pinto	Added: 777 permission for socket path
  * 13/10/2014	Massimiliano Pinto	Added: dbname authentication check
  * 10/11/2014	Massimiliano Pinto	Added: client charset added to protocol struct
- *
+ * 29/05/2015   Markus Makela           Added SSL support
+ * 11/06/2015   Martin Brampton		COM_QUIT suppressed for persistent connections
  */
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -46,6 +47,7 @@
 #include <modinfo.h>
 #include <sys/stat.h>
 #include <modutil.h>
+#include <netinet/tcp.h>
 
 MODULE_INFO info = {
 	MODULE_API_PROTOCOL,
@@ -69,14 +71,18 @@ static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
 static int gw_error_client_event(DCB *dcb);
 static int gw_client_close(DCB *dcb);
 static int gw_client_hangup_event(DCB *dcb);
-
+int gw_read_client_event_SSL(DCB* dcb);
+int gw_MySQLWrite_client_SSL(DCB *dcb, GWBUF *queue);
+int gw_write_client_event_SSL(DCB *dcb);
 int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 int MySQLSendHandshake(DCB* dcb);
-static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue);
+static int gw_mysql_do_authentication(DCB *dcb, GWBUF **queue);
 static int route_by_statement(SESSION *, GWBUF **);
 extern char* get_username_from_auth(char* ptr, uint8_t* data);
 extern int check_db_name_after_auth(DCB *, char *, int);
-extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db);
+extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
+
+int do_ssl_accept(MySQLProtocol* protocol);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -242,7 +248,7 @@ MySQLSendHandshake(DCB* dcb)
 	char server_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1]="";
 	char *version_string;
 	int len_version_string=0;
-
+	
 	MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 	GWBUF		*buf;
 
@@ -319,7 +325,16 @@ MySQLSendHandshake(DCB* dcb)
 
 
         mysql_server_capabilities_one[0] &= ~GW_MYSQL_CAPABILITIES_COMPRESS;
-        mysql_server_capabilities_one[0] &= ~GW_MYSQL_CAPABILITIES_SSL;
+
+	if(dcb->service->ssl_mode != SSL_DISABLED)
+	{
+	   mysql_server_capabilities_one[1] |= GW_MYSQL_CAPABILITIES_SSL >> 8;
+	}
+	else
+	{
+	    mysql_server_capabilities_one[0] &= ~GW_MYSQL_CAPABILITIES_SSL;
+	}
+
 
         memcpy(mysql_handshake_payload, mysql_server_capabilities_one, sizeof(mysql_server_capabilities_one));
         mysql_handshake_payload = mysql_handshake_payload + sizeof(mysql_server_capabilities_one);
@@ -375,21 +390,24 @@ MySQLSendHandshake(DCB* dcb)
 /**
  * gw_mysql_do_authentication
  *
- * Performs the MySQL protocol 4.1 authentication, using data in GWBUF *queue
+ * Performs the MySQL protocol 4.1 authentication, using data in GWBUF **queue.
  *
  * (MYSQL_session*)client_data including: user, db, client_sha1 are copied into 
- * the dcb->data and later to dcb->session->data.
- * 
- * client_capabilitiesa are copied into the dcb->protocol
+ * the dcb->data and later to dcb->session->data. client_capabilities are copied
+ * into the dcb->protocol.
+ *
+ * If SSL is enabled for the service, the SSL handshake will be done before the
+ * MySQL authentication.
  *
  * @param	dcb 	Descriptor Control Block of the client
- * @param	queue	The GWBUF with data from client
+ * @param	queue	Pointer to the location of the GWBUF with data from client
  * @return	0	If succeed, otherwise non-zero value
  *
  * @note in case of failure, dcb->data is freed before returning. If succeed,
  * dcb->data is freed in session.c:session_free.
  */
-static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
+static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
+    GWBUF* queue = *buf;
 	MySQLProtocol *protocol = NULL;
 	/* int compress = -1; */
 	int connect_with_db = -1;
@@ -402,20 +420,24 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	uint8_t *stage1_hash = NULL;
 	int auth_ret = -1;
 	MYSQL_session *client_data = NULL;
-
+	int ssl = 0;
         CHK_DCB(dcb);
 
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
-	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
+	if(dcb->data == NULL)
+	{
+	    client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
 #if defined(SS_DEBUG)
-	client_data->myses_chk_top = CHK_NUM_MYSQLSES;
-	client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
+	    client_data->myses_chk_top = CHK_NUM_MYSQLSES;
+	    client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
 #endif
-	/**
-	 * Assign authentication structure with client DCB.
-	 */
-	dcb->data = client_data; 
+	    dcb->data = client_data;
+	}
+	else
+	{
+	    client_data = (MYSQL_session *)dcb->data;
+	}
 
 	stage1_hash = client_data->client_sha1;
 	username = client_data->user;
@@ -437,7 +459,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
 	/* Detect now if there are enough bytes to continue */
 	if (client_auth_packet_size < (4 + 4 + 4 + 1 + 23)) 
 	{
-		return 1;
+		return MYSQL_FAILED_AUTH;
 	}
 
 	memcpy(&protocol->client_capabilities, client_auth_packet + 4, 4);
@@ -451,11 +473,66 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF *queue) {
                         &protocol->client_capabilities);
         */
 
+	/** Skip this if the SSL handshake is already done.
+	 * If not, start the SSL handshake.  */
+	if(protocol->protocol_auth_state != MYSQL_AUTH_SSL_HANDSHAKE_DONE)
+	{
+
+	    ssl = protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
+
+	    /** Client didn't requested SSL when SSL mode was required*/
+	    if(!ssl && protocol->owner_dcb->service->ssl_mode == SSL_REQUIRED)
+	    {
+		LOGIF(LT,(skygw_log_write(LT,"User %s@%s connected to service '%s' without SSL when SSL was required.",
+					 protocol->owner_dcb->user,
+					 protocol->owner_dcb->remote,
+					 protocol->owner_dcb->service->name)));
+		return MYSQL_FAILED_AUTH_SSL;
+	    }
+
+	    if(LOG_IS_ENABLED(LT) && ssl)
+	    {
+		skygw_log_write(LT,"User %s@%s connected to service '%s' with SSL.",
+			 protocol->owner_dcb->user,
+			 protocol->owner_dcb->remote,
+			 protocol->owner_dcb->service->name);
+	    }
+
+	    /** Do the SSL Handshake */
+	    if(ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED)
+	    {
+		protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
+
+		if(do_ssl_accept(protocol) < 0)
+		{
+		    return MYSQL_FAILED_AUTH;
+		}
+		else
+		{
+		    return 0;
+		}
+	    }
+	    else if(dcb->service->ssl_mode == SSL_ENABLED)
+	    {
+		/** This is a non-SSL connection to a SSL enabled service.
+		 * We have only read enough of the packet to know that the client
+		 * is not requesting SSL and the rest of the auth packet is still
+		 * waiting in the socket. We need to read the data from the socket
+		 * to find out the username of the connecting client. */
+		int bytes = dcb_read(dcb,&queue, 0);
+		queue = gwbuf_make_contiguous(queue);
+		client_auth_packet = GWBUF_DATA(queue);
+		client_auth_packet_size = gwbuf_length(queue);
+		*buf = queue;
+		LOGIF(LD,(skygw_log_write(LD,"%lu Read %d bytes from fd %d",pthread_self(),bytes,dcb->fd)));
+	    }
+	}
+
 	username = get_username_from_auth(username, client_auth_packet);
 	
 	if (username == NULL)
 	{
-		return 1;
+		return MYSQL_FAILED_AUTH;
 	}
 
 	/* get charset */
@@ -557,6 +634,26 @@ gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
  	return dcb_write(dcb, queue);
 }
 
+
+/**
+ * Write function for client DCB: writes data from MaxScale to Client using SSL
+ * encryption. The SSH handshake must have already been done.
+ *
+ * @param dcb	The DCB of the client
+ * @param queue	Queue of buffers to write
+ */
+int
+gw_MySQLWrite_client_SSL(DCB *dcb, GWBUF *queue)
+{
+    CHK_DCB(dcb);
+#ifdef SS_DEBUG
+    MySQLProtocol  *protocol = NULL;
+    protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
+    CHK_PROTOCOL(protocol);
+#endif
+    return dcb_write_SSL(dcb, queue);
+}
+
 /**
  * Client read event triggered by EPOLLIN
  *
@@ -580,9 +677,66 @@ int gw_read_client_event(
         CHK_DCB(dcb);
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
-        rc = dcb_read(dcb, &read_buffer);
-        
-	
+
+#ifdef SS_DEBUG
+	skygw_log_write(LD,"[gw_read_client_event] Protocol state: %s",
+		 gw_mysql_protocol_state2string(protocol->protocol_auth_state));
+
+#endif
+
+	/** SSL authentication is still going on, we need to call do_ssl_accept
+	 * until it return 1 for success or -1 for error */
+	if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_ONGOING ||
+	 protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ)
+	{
+
+	    switch(do_ssl_accept(protocol))
+	    {
+	    case 0:
+		return 0;
+		break;
+	    case 1:
+	    {
+		int b = 0;
+		ioctl(dcb->fd,FIONREAD,&b);
+		if(b == 0) 
+		{
+		    skygw_log_write(LD,
+			     "[gw_read_client_event] No data in socket after SSL auth");
+		    return 0;
+		}
+		break;
+	    }
+
+	    case -1:
+		return 1;
+		break;
+	    default:
+		return 1;
+		break;
+	    }
+	}
+
+	if(protocol->use_ssl)
+	{
+	    /** SSL handshake is done, communication is now encrypted with SSL */
+	    rc = dcb_read_SSL(dcb, &read_buffer);
+	}
+	else if(dcb->service->ssl_mode != SSL_DISABLED &&
+	 protocol->protocol_auth_state == MYSQL_AUTH_SENT)
+	{
+	    /** The service allows both SSL and non-SSL connections.
+	     * read only enough of the auth packet to know if the client is
+	     * requesting SSL. If the client is not requesting SSL the rest of
+	     the auth packet will be read later. */
+	    rc = dcb_read(dcb, &read_buffer,(4 + 4 + 4 + 1 + 23));
+	}
+	else
+	{
+	    /** Normal non-SSL connection */
+	    rc = dcb_read(dcb, &read_buffer, 0);
+	}
+
         if (rc < 0)
         {
                 dcb_close(dcb);
@@ -690,8 +844,8 @@ int gw_read_client_event(
 			dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
 			nbytes_read = gwbuf_length(dcb->dcb_readqueue);
 			data = (uint8_t *)GWBUF_DATA(dcb->dcb_readqueue);
-
-			if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data))
+			int plen = MYSQL_GET_PACKET_LEN(data);
+			if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data) + 4)
 			{
 				rc = 0;
 				goto return_rc;
@@ -719,7 +873,7 @@ int gw_read_client_event(
 		}
 
 	}
-        
+
         /**
          * Now there should be at least one complete mysql packet in read_buffer.
          */
@@ -729,8 +883,20 @@ int gw_read_client_event(
         {
 		int auth_val;
 		
-                auth_val = gw_mysql_do_authentication(dcb, read_buffer);
-	
+                auth_val = gw_mysql_do_authentication(dcb, &read_buffer);
+
+		if(protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ ||
+		 protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_ONGOING ||
+		 protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_DONE ||
+		 protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_FAILED)
+		{
+		    /** SSL was requested and the handshake is either done or
+		     * still ongoing. After the handshake is done, the client
+		     * will send another auth packet. */
+		    while((read_buffer = gwbuf_consume(read_buffer,GWBUF_LENGTH(read_buffer))));
+		    break;
+		}
+		
 		if (auth_val == 0)
 		{
 			SESSION *session;
@@ -796,7 +962,7 @@ int gw_read_client_event(
 				fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user, 
 							dcb->remote, 
 							(char*)((MYSQL_session *)dcb->data)->client_sha1,
-							(char*)((MYSQL_session *)dcb->data)->db);
+							(char*)((MYSQL_session *)dcb->data)->db,auth_val);
 				modutil_send_mysql_err_packet(dcb, 2, 0, 1045, "28000", fail_str);
 			}
 			if (fail_str)
@@ -824,10 +990,111 @@ int gw_read_client_event(
 	}
         break;
         
+	case MYSQL_AUTH_SSL_HANDSHAKE_DONE:
+	{
+	    int auth_val;
+
+	    auth_val = gw_mysql_do_authentication(dcb, &read_buffer);
+
+
+	    if (auth_val == 0)
+	    {
+		SESSION *session;
+
+		protocol->protocol_auth_state = MYSQL_AUTH_RECV;
+		/**
+		 * Create session, and a router session for it.
+		 * If successful, there will be backend connection(s)
+		 * after this point.
+		 */
+		session = session_alloc(dcb->service, dcb);
+
+		if (session != NULL)
+		{
+		    CHK_SESSION(session);
+		    ss_dassert(session->state != SESSION_STATE_ALLOC);
+
+		    protocol->protocol_auth_state = MYSQL_IDLE;
+		    /**
+		     * Send an AUTH_OK packet to the client,
+		     * packet sequence is # 2
+		     */
+		    mysql_send_ok(dcb, 3, 0, NULL);
+		}
+		else
+		{
+		    protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
+		    LOGIF(LD, (skygw_log_write(
+			    LOGFILE_DEBUG,
+					     "%lu [gw_read_client_event] session "
+			    "creation failed. fd %d, "
+			    "state = MYSQL_AUTH_FAILED.",
+					     pthread_self(),
+					     protocol->owner_dcb->fd)));
+
+		    /** Send ERR 1045 to client */
+		    mysql_send_auth_error(
+			    dcb,
+				     3,
+				     0,
+				     "failed to create new session");
+
+		    dcb_close(dcb);
+		}
+	    }
+	    else
+	    {
+		char* fail_str = NULL;
+
+		protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
+
+		if (auth_val == 2) {
+		    /** Send error 1049 to client */
+		    int message_len = 25 + MYSQL_DATABASE_MAXLEN;
+
+		    fail_str = calloc(1, message_len+1);
+		    snprintf(fail_str, message_len, "Unknown database '%s'",
+			     (char*)((MYSQL_session *)dcb->data)->db);
+
+		    modutil_send_mysql_err_packet(dcb, 3, 0, 1049, "42000", fail_str);
+		}else {
+		    /** Send error 1045 to client */
+		    fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
+					     dcb->remote,
+					     (char*)((MYSQL_session *)dcb->data)->client_sha1,
+					     (char*)((MYSQL_session *)dcb->data)->db,auth_val);
+		    modutil_send_mysql_err_packet(dcb, 3, 0, 1045, "28000", fail_str);
+		}
+		if (fail_str)
+		    free(fail_str);
+
+		LOGIF(LD, (skygw_log_write(
+			LOGFILE_DEBUG,
+					 "%lu [gw_read_client_event] after "
+			"gw_mysql_do_authentication, fd %d, "
+			"state = MYSQL_AUTH_FAILED.",
+					 protocol->owner_dcb->fd,
+					 pthread_self())));
+		/**
+		 * Release MYSQL_session since it is not used anymore.
+		 */
+		if (!DCB_IS_CLONE(dcb))
+		{
+		    free(dcb->data);
+		}
+		dcb->data = NULL;
+
+		dcb_close(dcb);
+	    }
+	    read_buffer = gwbuf_consume(read_buffer, nbytes_read);
+	}
+	break;
+
         case MYSQL_IDLE:
         {
                 uint8_t* payload = NULL; 
-               
+		session_state_t ses_state;
+
                 session = dcb->session;
                 ss_dassert(session!= NULL);
                 
@@ -835,93 +1102,108 @@ int gw_read_client_event(
                 {
                         CHK_SESSION(session);
                 }
+		spinlock_acquire(&session->ses_lock);
+		ses_state = session->state;
+		spinlock_release(&session->ses_lock);
                 /* Now, we are assuming in the first buffer there is
                  * the information form mysql command */
                 payload = GWBUF_DATA(read_buffer);
 
-                /** Route COM_QUIT to backend */
-                if (MYSQL_IS_COM_QUIT(payload))
-                {
+		if(ses_state == SESSION_STATE_ROUTER_READY)
+		{
+		    /** Route COM_QUIT to backend */
+		    if (MYSQL_IS_COM_QUIT(payload))
+		    {
                         /** 
                          * Sends COM_QUIT packets since buffer is already
                          * created. A BREF_CLOSED flag is set so dcb_close won't
                          * send redundant COM_QUIT.
                          */
-                        SESSION_ROUTE_QUERY(session, read_buffer);
-                        /** 
-                         * Close router session which causes closing of backends.
-                         */
+                        /* Temporarily suppressed: SESSION_ROUTE_QUERY(session, read_buffer); */
+						/* Replaced with freeing the read buffer. */
+				gwbuf_free(read_buffer);
+            /**
+			 * Close router session which causes closing of backends.
+			 */
                         dcb_close(dcb);
-                }
-                else
-                {
+		    }
+		    else
+		    {
 			/** Reset error handler when routing of the new query begins */
 			router->handleError(NULL, NULL, NULL, dcb, ERRACT_RESET, NULL);
 			
                         if (stmt_input)                                
                         {
-                                /** 
-                                 * Feed each statement completely and separately
-                                 * to router.
-                                 */
-                                rc = route_by_statement(session, &read_buffer);
-                                
-                                if (read_buffer != NULL)
-                                {
-                                        /** add incomplete mysql packet to read queue */
-                                        dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                                }
+			    /**
+			     * Feed each statement completely and separately
+			     * to router.
+			     */
+			    rc = route_by_statement(session, &read_buffer);
+
+			    if (read_buffer != NULL)
+			    {
+				/** add incomplete mysql packet to read queue */
+				dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+			    }
                         }
                         else
                         {
-                                /** Feed whole packet to router */
-                                rc = SESSION_ROUTE_QUERY(session, read_buffer);
+			    /** Feed whole packet to router */
+			    rc = SESSION_ROUTE_QUERY(session, read_buffer);
                         }
-                                       
+
                         /** Routing succeed */
                         if (rc)
 			{
-                                rc = 0; /**< here '0' means success */
+			    rc = 0; /**< here '0' means success */
                         }
                         else
 			{
-				bool   succp;
-				GWBUF* errbuf;
-				/** 
-				 * Create error to be sent to client if session
-				 * can't be continued.
-				 */
-				errbuf = mysql_create_custom_error(
-					1, 
-					0, 
-					"Routing failed. Session is closed.");
-				/**
-				 * Ensure that there are enough backends 
-				 * available.
-				 */
-				router->handleError(
-						router_instance,
-						session->router_session, 
-						errbuf, 
-						dcb,
-						ERRACT_NEW_CONNECTION,
-						&succp);
-				gwbuf_free(errbuf);
-				/** 
-				 * If there are not enough backends close 
-				 * session 
-				 */
-				if (!succp)
-				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Error : Routing the query failed. "
-						"Session will be closed.")));
+			    bool   succp;
+			    GWBUF* errbuf;
+			    /**
+			     * Create error to be sent to client if session
+			     * can't be continued.
+			     */
+			    errbuf = mysql_create_custom_error(
+				    1,
+							     0,
+							     "Routing failed. Session is closed.");
+			    /**
+			     * Ensure that there are enough backends
+			     * available.
+			     */
+			    router->handleError(
+			    router_instance,
+					     session->router_session,
+					     errbuf,
+					     dcb,
+					     ERRACT_NEW_CONNECTION,
+					     &succp);
+			    gwbuf_free(errbuf);
+			    /**
+			     * If there are not enough backends close
+			     * session
+			     */
+			    if (!succp)
+			    {
+				LOGIF(LE, (skygw_log_write_flush(
+					LOGFILE_ERROR,
+								 "Error : Routing the query failed. "
+					"Session will be closed.")));
 				
-					dcb_close(dcb);
-				}
+				dcb_close(dcb);
+			    }
                         }
-                }
+		    }
+		}
+		else
+		{
+		    skygw_log_write_flush(LT,"Session received a query in state %s",
+				     STRSESSIONSTATE(ses_state));
+		    while((read_buffer = GWBUF_CONSUME_ALL(read_buffer)) != NULL);
+		    goto return_rc;
+		}
                 goto return_rc;
         } /*  MYSQL_IDLE */
         break;
@@ -943,12 +1225,13 @@ return_rc:
 	return rc;
 }
 
+
 ///////////////////////////////////////////////
 // client write event to Client triggered by EPOLLOUT
 //////////////////////////////////////////////
-/** 
+/**
  * @node Client's fd became writable, and EPOLLOUT event
- * arrived. As a consequence, client input buffer (writeq) is flushed. 
+ * arrived. As a consequence, client input buffer (writeq) is flushed.
  *
  * Parameters:
  * @param dcb - in, use
@@ -956,11 +1239,58 @@ return_rc:
  *
  * @return constantly 1
  *
- * 
+ *
  * @details (write detailed description here)
  *
  */
 int gw_write_client_event(DCB *dcb)
+{
+	MySQLProtocol *protocol = NULL;
+
+        CHK_DCB(dcb);
+
+        ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
+
+	if (dcb == NULL) {
+		goto return_1;
+	}
+
+	if (dcb->state == DCB_STATE_DISCONNECTED) {
+		goto return_1;
+	}
+
+	if (dcb->protocol == NULL) {
+	        goto return_1;
+	}
+        protocol = (MySQLProtocol *)dcb->protocol;
+        CHK_PROTOCOL(protocol);
+
+        if (protocol->protocol_auth_state == MYSQL_IDLE)
+        {
+		dcb_drain_writeq(dcb);
+                goto return_1;
+	}
+
+return_1:
+#if defined(SS_DEBUG)
+        if (dcb->state == DCB_STATE_POLLING ||
+            dcb->state == DCB_STATE_NOPOLLING ||
+            dcb->state == DCB_STATE_ZOMBIE)
+        {
+                CHK_PROTOCOL(protocol);
+        }
+#endif
+        return 1;
+}
+
+/**
+ * EPOLLOUT event arrived and as a consequence, client input buffer (writeq) is
+ * flushed. The data is encrypted and SSL is used. The SSL handshake must have
+ * been successfully completed prior to this function being called.
+ * @param client dcb
+ * @return constantly 1
+ */
+int gw_write_client_event_SSL(DCB *dcb)
 {
 	MySQLProtocol *protocol = NULL;
 
@@ -984,7 +1314,7 @@ int gw_write_client_event(DCB *dcb)
 
         if (protocol->protocol_auth_state == MYSQL_IDLE)
         {
-		dcb_drain_writeq(dcb);
+		dcb_drain_writeq_SSL(dcb);
                 goto return_1;
 	}
 
@@ -1014,7 +1344,7 @@ int gw_MySQLListener(
 	struct sockaddr *current_addr;
 	int  one = 1;
         int  rc;
-
+	bool is_tcp = false;
 	memset(&serv_addr,0,sizeof(serv_addr));
 	memset(&local_addr,0,sizeof(local_addr));
 
@@ -1055,6 +1385,7 @@ int gw_MySQLListener(
 		}
 
 		current_addr = (struct sockaddr *) &serv_addr;
+		is_tcp = true;
 	}
 
 	listen_dcb->fd = -1;
@@ -1064,7 +1395,12 @@ int gw_MySQLListener(
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
 	}
 
-
+	if(is_tcp)
+	{
+	    if((syseno = setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one))) != 0){
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+	    }
+	}
 	// set NONBLOCKING mode
 	setnonblocking(l_so);
 
@@ -1135,10 +1471,8 @@ int gw_MySQLListener(
         // add listening socket to poll structure
         if (poll_add_dcb(listen_dcb) == -1) {
             fprintf(stderr,
-                    "\n* Failed to start polling the socket due error "
-                    "%i, %s.\n\n",
-                    errno,
-                    strerror(errno));
+                    "\n* MaxScale encountered system limit while "
+                    "attempting to register on an epoll instance.\n\n");
 		return 0;
         }
 #if defined(FAKE_CODE)
@@ -1371,7 +1705,8 @@ int gw_MySQLAccept(DCB *listener)
                                 client_dcb,
                                 1,
                                 0,
-                                "MaxScale internal error.");
+                                "MaxScale encountered system limit while "
+                                "attempting to register on an epoll instance.");
                         
                         /** close client_dcb */
                         dcb_close(client_dcb);
@@ -1605,61 +1940,79 @@ return_rc:
         return rc;
 }
 
-
 /**
- * Create a character array including the query string. 
- * GWBUF given as input includes either one complete or partial query.
- * Length of buffer is at most the query length+4 (length of packet header).
+ * Do the SSL authentication handshake.
+ * This creates the DCB SSL structure if one has not been created and starts the
+ * SSL handshake handling.
+ * @param protocol Protocol to connect with SSL
+ * @return 1 on success, 0 when the handshake is ongoing or -1 on error
  */
-#if defined(NOT_USED)
-static char* gw_get_or_create_querystr (
-        void*  data,
-        bool*  new_allocation)
+int do_ssl_accept(MySQLProtocol* protocol)
 {
-        GWBUF* buf = (GWBUF *)data;
-        size_t buflen;    /*< first gw buffer data length */
-        size_t packetlen; /*< length of mysql packet */
-        size_t querylen;  /*< total buffer length-<length of type indicator> */
-        size_t nbytes_copied;
-        char*  startpos;  /*< first byte of query in gw buffer */
-        char*  str;       /*< resulting query string */
-        
-        CHK_GWBUF(buf);
-        packetlen = MYSQL_GET_PACKET_LEN((uint8_t *)GWBUF_DATA(buf)); 
-        str = (char *)malloc(packetlen); /*< leave space for terminating null */
-        
-        if (str == NULL)
-        {
-                goto return_str;
-        }
-        *new_allocation = true;
-        /** 
-         * First buffer includes 4 bytes header and a type indicator byte.
-         */
-        buflen    = GWBUF_LENGTH(buf);
-        querylen  = packetlen-1;        
-        ss_dassert(buflen<=querylen+5); /*< 5 == header+type indicator */
-        startpos = (char *)GWBUF_DATA(buf)+5;
-        nbytes_copied = MIN(querylen, buflen-5);
-        memcpy(str, startpos, nbytes_copied);
-        memset(&str[querylen-1], 0, 1);
-        buf = gwbuf_consume(buf, querylen-1);
-        
-        /** 
-         * In case of multi-packet statement whole buffer consists of query
-         * string.
-         */
-        while (buf != NULL)
-        {
-                buflen = GWBUF_LENGTH(buf);
-                memcpy(str+nbytes_copied, GWBUF_DATA(buf), buflen);
-                nbytes_copied += buflen;
-                buf = gwbuf_consume(buf, buflen);
-        }
-        ss_dassert(str[querylen-1] == 0);
-        
-return_str:
-        return str;
-}
+    int rval,errnum;
+    char errbuf[2014];
+    DCB* dcb = protocol->owner_dcb;
+    if(dcb->ssl == NULL)
+    {
+	if(dcb_create_SSL(dcb) != 0)
+	{
+	    return -1;
+	}
+    }
+
+    rval = dcb_accept_SSL(dcb);
+    
+    switch(rval)
+    {
+    case 0:
+	/** Not all of the data has been read. Go back to the poll
+	 queue and wait for more.*/
+
+	rval = 0;
+	skygw_log_write_flush(LT,"SSL_accept ongoing for %s@%s",
+			 protocol->owner_dcb->user,
+			 protocol->owner_dcb->remote);
+	return 0;
+	break;
+    case 1:
+	spinlock_acquire(&protocol->protocol_lock);
+	protocol->protocol_auth_state = MYSQL_AUTH_SSL_HANDSHAKE_DONE;
+	protocol->use_ssl = true;
+	spinlock_release(&protocol->protocol_lock);
+
+	spinlock_acquire(&dcb->authlock);
+	dcb->func.write = gw_MySQLWrite_client_SSL;
+	dcb->func.write_ready = gw_write_client_event_SSL;
+	spinlock_release(&dcb->authlock);
+
+	rval = 1;
+
+	skygw_log_write_flush(LT,"SSL_accept done for %s@%s",
+			 protocol->owner_dcb->user,
+			 protocol->owner_dcb->remote);
+	break;
+
+    case -1:
+
+	    spinlock_acquire(&protocol->protocol_lock);
+	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_HANDSHAKE_FAILED;
+	    spinlock_release(&protocol->protocol_lock);
+	    rval = -1;
+	    skygw_log_write_flush(LE,
+			     "Error: Fatal error in SSL_accept for %s",
+			     protocol->owner_dcb->remote);
+	break;
+
+    default:
+	skygw_log_write_flush(LE,
+			 "Error: Fatal error in SSL_accept, returned value was %d.",
+			 rval);
+	break;
+    }
+#ifdef SS_DEBUG
+	skygw_log_write(LD,"[do_ssl_accept] Protocol state: %s",
+		 gw_mysql_protocol_state2string(protocol->protocol_auth_state));
 #endif
 
+    return rval;
+}

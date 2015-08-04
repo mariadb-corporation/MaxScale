@@ -193,7 +193,7 @@ This generates RPM or DEB packages based on your system. These packages can then
 
 ## Step 5 - Configure new applications
 
-The new filter needs to be configured in MaxScale.cnf.
+The new filter needs to be configured in maxscale.cnf.
 
     [Test Service]
     type=service

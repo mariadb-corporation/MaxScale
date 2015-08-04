@@ -34,6 +34,8 @@
  * 18/02/2015	Massimiliano Pinto	Addition of DISCONNECT ALL and DISCONNECT SERVER server_id
  * 18/03/2015	Markus Makela		Better detection of CRC32 | NONE  checksum
  * 19/03/2015	Massimiliano Pinto	Addition of basic MariaDB 10 compatibility support
+ * 07/05/2015   Massimiliano Pinto	Added MariaDB 10 Compatibility
+ * 11/05/2015   Massimiliano Pinto	Only MariaDB 10 Slaves can register to binlog router with a MariaDB 10 Master
  * 25/05/2015	Massimiliano Pinto	Addition of BLRM_SLAVE_STOPPED state and blr_start/stop_slave.
  *					New commands STOP SLAVE, START SLAVE added.	
  * 29/05/2015	Massimiliano Pinto	Addition of CHANGE MASTER TO ...
@@ -48,6 +50,7 @@
  *
  * @endverbatim
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -115,6 +118,8 @@ static void blr_master_restore_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG
 static void blr_master_set_empty_config(ROUTER_INSTANCE *router);
 static void blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master);
 
+void poll_fake_write_event(DCB *dcb);
+
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
@@ -166,7 +171,28 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 				slave->dcb->remote)));
 			dcb_close(slave->dcb);
 			return 1;
+		}
+
+		/*
+		 * If Master is MariaDB10 don't allow registration from
+		 * MariaDB/Mysql 5 Slaves
+		 */
+
+		if (router->mariadb10_compat && !slave->mariadb10_compat) {
+			slave->state = BLRS_ERRORED;
+			blr_send_custom_error(slave->dcb, 1, 0,
+				"MariaDB 10 Slave is required for Slave registration");
+
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"%s: Slave %s: a MariaDB 10 Slave is required for Slave registration",
+				router->service->name,
+				slave->dcb->remote)));
+
+			dcb_close(slave->dcb);
+			return 1;
 		} else {
+			/* Master and Slave version OK: continue with slave registration */
 			return blr_slave_register(router, slave, queue);
 		}
 		break;
@@ -455,10 +481,17 @@ extern  char *strcasestr();
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.heartbeat);
 		}
-		 else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
+		else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
                 {
-                        free(query_text);
-                        return blr_slave_send_ok(router, slave);
+			/* mariadb10 compatibility is set for the slave */
+			slave->mariadb10_compat=true;
+
+                       	free(query_text);
+			if (router->mariadb10_compat) {
+				return blr_slave_replay(router, slave, router->saved_master.mariadb10);
+			} else {
+				return blr_slave_send_ok(router, slave);
+			}
                 }
 		else if (strcasecmp(word, "@master_binlog_checksum") == 0)
 		{
@@ -1404,10 +1437,9 @@ blr_slave_register(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
 GWBUF	*resp;
 uint8_t	*ptr;
-int	len, slen;
+int	slen;
 
 	ptr = GWBUF_DATA(queue);
-	len = extract_field(ptr, 24);
 	ptr += 4;		// Skip length and sequence number
 	if (*ptr++ != COM_REGISTER_SLAVE)
 		return 0;
@@ -1476,7 +1508,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
 {
 GWBUF		*resp;
 uint8_t		*ptr;
-int		len, flags, serverid, rval, binlognamelen;
+int		len, rval, binlognamelen;
 REP_HEADER	hdr;
 uint32_t	chksum;
 
@@ -1504,9 +1536,7 @@ uint32_t	chksum;
 
 	slave->binlog_pos = extract_field(ptr, 32);
 	ptr += 4;
-	flags = extract_field(ptr, 16);
 	ptr += 2;
-	serverid = extract_field(ptr, 32);
 	ptr += 4;
 	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
 	slave->binlogfile[binlognamelen] = 0;
@@ -1584,28 +1614,6 @@ uint32_t	chksum;
 		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
 		poll_fake_write_event(slave->dcb);
-	}
-	return rval;
-}
-
-/** 
- * Extract a numeric field from a packet of the specified number of bits,
- * the number of bits must be a multiple of 8.
- *
- * @param src	The raw packet source
- * @param bits	The number of bits to extract (multiple of 8)
- * @return 	The extracted value
- */
-static uint32_t
-extract_field(uint8_t *src, int bits)
-{
-uint32_t	rval = 0, shift = 0;
-
-	while (bits > 0)
-	{
-		rval |= (*src++) << shift;
-		shift += 8;
-		bits -= 8;
 	}
 	return rval;
 }
@@ -1971,7 +1979,7 @@ int	len = EXTRACT24(ptr + 9);	// Extract the event length
 		len = BINLOG_FNAMELEN;
 	ptr += 19;	// Skip header
 	slave->binlog_pos = extract_field(ptr, 32);
-	slave->binlog_pos += (extract_field(ptr+4, 32) << 32);
+	slave->binlog_pos += (((uint64_t)extract_field(ptr+4, 32)) << 32);
 	memcpy(slave->binlogfile, ptr + 8, len);
 	slave->binlogfile[len] = 0;
 }
@@ -2006,6 +2014,9 @@ uint32_t	chksum;
 
 	binlognamelen = strlen(slave->binlogfile);
 	len = 19 + 8 + 4 + binlognamelen;
+	/* no slave crc, remove 4 bytes */
+	if (slave->nocrc)
+		len -= 4;
 
 	/* no slave crc, remove 4 bytes */
 	if (slave->nocrc)
@@ -2339,7 +2350,6 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 	uint8_t *ptr;
 	int len, seqno;
 	GWBUF *pkt;
-	int n = 1;
 
        /* preparing output result */
 	blr_slave_send_fieldcount(router, slave, 2);
@@ -2389,7 +2399,7 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 			strncpy((char *)ptr, state, strlen(state));             // Result string
 			ptr += strlen(state);
 
-			n = slave->dcb->func.write(slave->dcb, pkt);
+			slave->dcb->func.write(slave->dcb, pkt);
 
 			/* force session close*/
 			router_obj->closeSession(router->service->router_instance, sptr);

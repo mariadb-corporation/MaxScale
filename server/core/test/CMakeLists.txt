@@ -44,19 +44,4 @@ add_test(Internal-TestUsers test_users)
 add_test(Internal-TestAdminUsers test_adminusers)
 add_test(Internal-TestMemlog testmemlog)
 add_test(TestFeedback testfeedback)
-set_tests_properties(Internal-TestMySQLUsers
-  Internal-TestHash
-  Internal-TestHint
-  Internal-TestSpinlock
-  Internal-TestFilter
-  Internal-TestBuffer
-  Internal-TestDCB
-  Internal-TestModutil
-  Internal-TestPoll
-  Internal-TestService
-  Internal-TestServer
-  Internal-TestUsers
-  Internal-TestAdminUsers
-  Internal-TestMemlog 
-  TestFeedback PROPERTIES ENVIRONMENT MAXSCALE_HOME=${CMAKE_BINARY_DIR}/)
 set_tests_properties(TestFeedback PROPERTIES TIMEOUT 30)

@@ -962,7 +962,7 @@ void session_close_timeouts(void* data)
 	 ses->service->conn_timeout > 0 && 
 	 hkheartbeat - ses->client->last_read > ses->service->conn_timeout * 10)
 	{
-	    ses->client->func.hangup(ses->client);
+	   dcb_close(ses->client);
 	}
 	
 	spinlock_acquire(&session_spin);

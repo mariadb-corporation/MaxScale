@@ -32,12 +32,13 @@
  * Revision History
  *
  * Date		Who			Description
- * 02/04/2014	Mark Riddoch			Initial implementation
- * 25/05/2015	Massimiliano Pinto		Added BLRM_SLAVE_STOPPED state
- * 08/06/2015	Massimiliano Pinto		Added m_errno and m_errmsg
- * 23/06/2015	Massimiliano Pinto		Master communication goes into BLRM_SLAVE_STOPPED state
- *						when an error is encountered in BLRM_BINLOGDUMP state.
- *						Server error code and msg are reported via SHOW SLAVE STATUS
+ * 02/04/2014	Mark Riddoch		Initial implementation
+ * 07/05/2015	Massimiliano Pinto	Added MariaDB 10 Compatibility
+ * 25/05/2015	Massimiliano Pinto	Added BLRM_SLAVE_STOPPED state
+ * 08/06/2015	Massimiliano Pinto	Added m_errno and m_errmsg
+ * 23/06/2015	Massimiliano Pinto	Master communication goes into BLRM_SLAVE_STOPPED state
+ *					when an error is encountered in BLRM_BINLOGDUMP state.
+ *					Server error code and msg are reported via SHOW SLAVE STATUS
  *
  * @endverbatim
  */
@@ -81,11 +82,11 @@ static int  blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *pkt, REP_HEADER *
 void blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
 static void *CreateMySQLAuthData(char *username, char *password, char *database);
 void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
-inline uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
 void blr_master_close(ROUTER_INSTANCE *);
 static char *blr_extract_column(GWBUF *buf, int col);
-
+void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
+void poll_fake_write_event(DCB *dcb);
 static int keepalive = 1;
 
 /**
@@ -96,8 +97,9 @@ static int keepalive = 1;
  * @param	router		The router instance
  */
 void
-blr_start_master(ROUTER_INSTANCE *router)
+blr_start_master(void* data)
 {
+    ROUTER_INSTANCE *router = (ROUTER_INSTANCE*)data;
 DCB	*client;
 GWBUF	*buf;
 
@@ -488,11 +490,27 @@ char	query[128];
 			GWBUF_CONSUME_ALL(router->saved_master.chksum2);
 		router->saved_master.chksum2 = buf;
 		blr_cache_response(router, "chksum2", buf);
-		buf = blr_make_query("SELECT @@GLOBAL.GTID_MODE");
-		router->master_state = BLRM_GTIDMODE;
+
+		if (router->mariadb10_compat) {
+			buf = blr_make_query("SET @mariadb_slave_capability=4");
+			router->master_state = BLRM_MARIADB10;
+		} else {
+			buf = blr_make_query("SELECT @@GLOBAL.GTID_MODE");
+			router->master_state = BLRM_GTIDMODE;
+		}
 		router->master->func.write(router->master, buf);
 		break;
 		}
+	case BLRM_MARIADB10:
+		// Response to the SET @mariadb_slave_capability=4, should be stored
+		if (router->saved_master.mariadb10)
+			GWBUF_CONSUME_ALL(router->saved_master.mariadb10);
+		router->saved_master.mariadb10 = buf;
+		blr_cache_response(router, "mariadb10", buf);
+		buf = blr_make_query("SHOW VARIABLES LIKE 'SERVER_UUID'");
+		router->master_state = BLRM_MUUID;
+		router->master->func.write(router->master, buf);
+		break;
 	case BLRM_GTIDMODE:
 		// Response to the GTID_MODE, should be stored
 		if (router->saved_master.gtid_mode)
@@ -763,7 +781,6 @@ int			no_residual = 1;
 int			preslen = -1;
 int			prev_length = -1;
 int			n_bufs = -1, pn_bufs = -1;
-static REP_HEADER	phdr;
 
 	/*
 	 * Prepend any residual buffer to the buffer chain we have
@@ -950,7 +967,7 @@ static REP_HEADER	phdr;
 				}
 				break;
 			}
-			phdr = hdr;
+
 			if (hdr.ok == 0)
 			{
 				/* set mysql errno to 0 */
@@ -960,6 +977,8 @@ static REP_HEADER	phdr;
 				if (router->m_errmsg)
 					free(router->m_errmsg);
 				router->m_errmsg = NULL;
+
+				int event_limit;
 
 				/*
 				 * First check that the checksum we calculate matches the
@@ -1001,8 +1020,11 @@ static REP_HEADER	phdr;
 #ifdef SHOW_EVENTS
 				printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
 #endif
-				if (hdr.event_type >= 0 && hdr.event_type < 0x24)
+				event_limit = router->mariadb10_compat ? MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
+
+				if (hdr.event_type >= 0 && hdr.event_type <= event_limit)
 					router->stats.events[hdr.event_type]++;
+
 				if (hdr.event_type == FORMAT_DESCRIPTION_EVENT && hdr.next_pos == 0)
 				{
 					// Fake format description message
@@ -1224,26 +1246,6 @@ blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr)
 	hdr->flags = EXTRACT16(&ptr[22]);
 }
 
-/** 
- * Extract a numeric field from a packet of the specified number of bits
- *
- * @param src	The raw packet source
- * @param bits	The number of bits to extract (multiple of 8)
- */
-inline uint32_t
-extract_field(register uint8_t *src, int bits)
-{
-register uint32_t	rval = 0, shift = 0;
-
-	while (bits > 0)
-	{
-		rval |= (*src++) << shift;
-		shift += 8;
-		bits -= 8;
-	}
-	return rval;
-}
-
 /**
  * Process a binlog rotate event.
  *
@@ -1313,8 +1315,8 @@ MYSQL_session	*auth_info;
 
 	if ((auth_info = calloc(1, sizeof(MYSQL_session))) == NULL)
 		return NULL;
-	strncpy(auth_info->user, username,MYSQL_USER_MAXLEN+1);
-	strncpy(auth_info->db, database,MYSQL_DATABASE_MAXLEN+1);
+	strncpy(auth_info->user, username,MYSQL_USER_MAXLEN);
+	strncpy(auth_info->db, database,MYSQL_DATABASE_MAXLEN);
 	gw_sha1_str((const uint8_t *)password, strlen(password), auth_info->client_sha1);
 
 	return auth_info;

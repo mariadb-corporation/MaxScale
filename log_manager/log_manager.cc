@@ -26,6 +26,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <syslog.h>
+#include <atomic.h>
 
 #include <skygw_debug.h>
 #include <skygw_types.h>
@@ -79,9 +80,6 @@ ssize_t log_ses_count[LOGFILE_LAST] = {0};
  * its multiplication.
  */
 #define MAX_LOGSTRLEN BUFSIZ
-
-/** Use the skygw_ prefix, only for 1.1 compatible builds*/
-#define OLD_LOGNAMES
 
 /**
  * Path to directory in which all files are stored to shared memory
@@ -311,11 +309,7 @@ const char* get_suffix_default(void)
 
 const char* get_debug_prefix_default(void)
 {
-#ifdef OLD_LOGNAMES
-    return "skygw_debug";
-#else
     return "debug";
-#endif
 }
 
 const char* get_debug_suffix_default(void)
@@ -325,11 +319,7 @@ const char* get_debug_suffix_default(void)
 
 const char* get_trace_prefix_default(void)
 {
-#ifdef OLD_LOGNAMES
-    return "skygw_trace";
-#else
     return "trace";
-#endif
 }
 
 const char* get_trace_suffix_default(void)
@@ -339,11 +329,7 @@ const char* get_trace_suffix_default(void)
 
 const char* get_msg_prefix_default(void)
 {
-#ifdef OLD_LOGNAMES
-    return "skygw_msg";
-#else
     return "messages";
-#endif
 }
 
 const char* get_msg_suffix_default(void)
@@ -353,11 +339,7 @@ const char* get_msg_suffix_default(void)
 
 const char* get_err_prefix_default(void)
 {
-#ifdef OLD_LOGNAMES
-    return "skygw_err";
-#else
     return "error";
-#endif
 }
 
 const char* get_err_suffix_default(void)
@@ -367,7 +349,7 @@ const char* get_err_suffix_default(void)
 
 const char* get_logpath_default(void)
 {
-        return "/tmp";
+        return "/var/log/maxscale";
 }
 
 static bool logmanager_init_nomutex(
@@ -1413,7 +1395,7 @@ int skygw_log_write_flush(
         /**
          * Write log string to buffer and add to file write list.
          */
-        for(i = LOGFILE_FIRST;i<=LOGFILE_LAST;i <<=1)
+        for (i = LOGFILE_FIRST; i<LOGFILE_LAST ;i <<=1)
         {
             /**
              * If particular log is disabled in general and it is not enabled for
@@ -1476,7 +1458,7 @@ int skygw_log_write(
          * Write log string to buffer and add to file write list.
          */
 
-        for(i = LOGFILE_FIRST;i<=LOGFILE_LAST;i <<=1)
+        for (i = LOGFILE_FIRST; i<=LOGFILE_LAST; i <<=1)
         {
             /**
              * If particular log is disabled in general and it is not enabled for
@@ -1780,7 +1762,6 @@ static bool fnames_conf_init(
                         
                 case 's':
                         /** record list of log file ids for later use */
-                    if(do_syslog)
                         shmem_id_str = optarg;
                         break;
                 case 'h':
@@ -1812,12 +1793,14 @@ static bool fnames_conf_init(
                 strdup(get_logpath_default()) : fn->fn_logpath;
 
         /** Set identity string for syslog if it is not set in config.*/
+        if(do_syslog)
+        {
         syslog_ident_str =
             (syslog_ident_str == NULL ?
              (argv == NULL ? strdup(program_invocation_short_name) :  
               strdup(*argv)) :
              syslog_ident_str);
-        
+        }
         /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
            for (i=0; i<argc; i++) {
            ss_dfprintf(stderr, "%s ", argv[i]);

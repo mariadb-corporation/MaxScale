@@ -29,6 +29,8 @@
  * 25/05/15	Massimiliano Pinto	Added BLRM_SLAVE_STOPPED state
  * 05/06/15	Massimiliano Pinto	Addition of m_errno, m_errmsg fields
  * 08/06/15	Massimiliano Pinto	Modification of MYSQL_ERROR_CODE and MYSQL_ERROR_MSG
+ * 11/05/15	Massimiliano Pinto	Added mariadb10_compat to master and slave structs
+ * 12/06/15	Massimiliano Pinto	Added mariadb10 new events
  * 23/06/15	Massimiliano Pinto	Addition of MASTER_SERVER_CFG struct
  * 24/06/15	Massimiliano Pinto	Added BLRM_UNCONFIGURED state
  *
@@ -37,7 +39,7 @@
 #include <dcb.h>
 #include <buffer.h>
 #include <pthread.h>
-
+#include <stdint.h>
 #include <memlog.h>
 #include <zlib.h>
 
@@ -49,7 +51,77 @@
 
 #define BINLOG_EVENT_HDR_LEN	19
 
-/* How often to call the binlog status function (seconds) */
+/**
+ * Binlog event types
+ */
+#define START_EVENT_V3				0x01
+#define QUERY_EVENT				0x02
+#define STOP_EVENT				0x03
+#define ROTATE_EVENT				0x04
+#define INTVAR_EVENT				0x05
+#define LOAD_EVENT				0x06
+#define SLAVE_EVENT				0x07
+#define CREATE_FILE_EVENT			0x08
+#define APPEND_BLOCK_EVENT			0x09
+#define EXEC_LOAD_EVENT				0x0A
+#define DELETE_FILE_EVENT			0x0B
+#define NEW_LOAD_EVENT				0x0C
+#define RAND_EVENT				0x0D
+#define USER_VAR_EVENT				0x0E
+#define FORMAT_DESCRIPTION_EVENT		0x0F
+#define XID_EVENT				0x10
+#define BEGIN_LOAD_QUERY_EVENT			0x11
+#define EXECUTE_LOAD_QUERY_EVENT		0x12
+#define TABLE_MAP_EVENT				0x13
+#define WRITE_ROWS_EVENTv0			0x14
+#define UPDATE_ROWS_EVENTv0			0x15
+#define DELETE_ROWS_EVENTv0			0x16
+#define WRITE_ROWS_EVENTv1			0x17
+#define UPDATE_ROWS_EVENTv1			0x18
+#define DELETE_ROWS_EVENTv1			0x19
+#define INCIDENT_EVENT				0x1A
+#define HEARTBEAT_EVENT				0x1B
+#define IGNORABLE_EVENT				0x1C
+#define ROWS_QUERY_EVENT			0x1D
+#define WRITE_ROWS_EVENTv2			0x1E
+#define UPDATE_ROWS_EVENTv2			0x1F
+#define DELETE_ROWS_EVENTv2			0x20
+#define GTID_EVENT				0x21
+#define ANONYMOUS_GTID_EVENT			0x22
+#define PREVIOUS_GTIDS_EVENT			0x23
+
+#define MAX_EVENT_TYPE				0x23
+
+/* New MariaDB event numbers start from 0xa0 */
+#define MARIADB_NEW_EVENTS_BEGIN		0xa0
+#define MARIADB_ANNOTATE_ROWS_EVENT		0xa0
+/* New MariaDB 10 event numbers start from here */
+#define MARIADB10_BINLOG_CHECKPOINT_EVENT	0xa1
+#define MARIADB10_GTID_EVENT			0xa2
+#define MARIADB10_GTID_GTID_LIST_EVENT		0xa3
+
+#define MAX_EVENT_TYPE_MARIADB10		0xa3
+
+/* Maximum event type so far */
+#define MAX_EVENT_TYPE_END			MAX_EVENT_TYPE_MARIADB10
+
+/**
+ * Binlog event flags
+ */
+#define LOG_EVENT_BINLOG_IN_USE_F		0x0001
+#define LOG_EVENT_FORCED_ROTATE_F		0x0002
+#define LOG_EVENT_THREAD_SPECIFIC_F		0x0004
+#define LOG_EVENT_SUPPRESS_USE_F		0x0008
+#define LOG_EVENT_UPDATE_TABLE_MAP_VERSION_F	0x0010
+#define LOG_EVENT_ARTIFICIAL_F			0x0020
+#define LOG_EVENT_RELAY_LOG_F			0x0040
+#define LOG_EVENT_IGNORABLE_F			0x0080
+#define LOG_EVENT_NO_FILTER_F			0x0100
+#define LOG_EVENT_MTS_ISOLATE_F			0x0200
+
+/**
+ * How often to call the binlog status function (seconds)
+ */
 #define	BLR_STATS_FREQ		60
 #define BLR_NSTATS_MINUTES	30
 
@@ -194,6 +266,7 @@ typedef struct router_slave {
 	uint32_t	lastEventTimestamp;/*< Last event timestamp sent */
 	SPINLOCK	catch_lock;	/*< Event catchup lock */
 	unsigned int	cstate;		/*< Catch up state */
+	bool            mariadb10_compat;/*< MariaDB 10.0 compatibility */
         SPINLOCK        rses_lock;	/*< Protects rses_deleted */
 	pthread_t	pthread;
 	struct router_instance
@@ -228,7 +301,7 @@ typedef struct {
 	uint64_t	n_fakeevents;	/*< Fake events not written to disk */
 	uint64_t	n_artificial;	/*< Artificial events not written to disk */
 	int		n_badcrc;	/*< No. of bad CRC's from master */
-	uint64_t	events[0x24];	/*< Per event counters */
+	uint64_t	events[MAX_EVENT_TYPE_END + 1];	/*< Per event counters */
 	uint64_t	lastsample;
 	int		minno;
 	int		minavgs[BLR_NSTATS_MINUTES];
@@ -252,6 +325,7 @@ typedef struct {
 	GWBUF		*selectvercom;	/*< select @@version_comment */
 	GWBUF		*selecthostname;/*< select @@hostname */
 	GWBUF		*map;		/*< select @@max_allowed_packet */
+	GWBUF		*mariadb10;	/*< set @mariadb_slave_capability */
 	uint8_t		*fde_event;	/*< Format Description Event */
 	int		fde_len;	/*< Length of fde_event */
 } MASTER_RESPONSES;
@@ -260,33 +334,34 @@ typedef struct {
  * The per instance data for the router.
  */
 typedef struct router_instance {
-	SERVICE		  *service;     /*< Pointer to the service using this router */
-	ROUTER_SLAVE	  *slaves;	/*< Link list of all the slave connections  */
-	SPINLOCK	  lock;	        /*< Spinlock for the instance data */
-	char		  *uuid;	/*< UUID for the router to use w/master */
-	int		  masterid;	/*< Server ID of the master */
-	int		  serverid;	/*< Server ID to use with master */
-	int		  initbinlog;	/*< Initial binlog file number */
-	char		  *user;	/*< User name to use with master */
-	char		  *password;	/*< Password to use with master */
-	char		  *fileroot;	/*< Root of binlog filename */
-	bool		  master_chksum;/*< Does the master provide checksums */
-	char		  *master_uuid;	/*< UUID of the master */
-	DCB		  *master;	/*< DCB for master connection */
-	DCB		  *client;	/*< DCB for dummy client */
-	SESSION		  *session;	/*< Fake session for master connection */
-	unsigned int	  master_state;	/*< State of the master FSM */
-	uint8_t		  lastEventReceived;
-	uint32_t	  lastEventTimestamp; /*< Timestamp from last event */
-	GWBUF	 	  *residual;	/*< Any residual binlog event */
-	MASTER_RESPONSES  saved_master;	/*< Saved master responses */
-	char		  *binlogdir;	/*< The directory with the binlog files */
-	SPINLOCK	  binlog_lock;	/*< Lock to control update of the binlog position */
-	char		  binlog_name[BINLOG_FNAMELEN+1];
+	SERVICE			*service;	/*< Pointer to the service using this router */
+	ROUTER_SLAVE		*slaves;	/*< Link list of all the slave connections  */
+	SPINLOCK		lock;	        /*< Spinlock for the instance data */
+	char			*uuid;		/*< UUID for the router to use w/master */
+	int			masterid;	/*< Server ID of the master */
+	int			serverid;	/*< Server ID to use with master */
+	int			initbinlog;	/*< Initial binlog file number */
+	char			*user;		/*< User name to use with master */
+	char			*password;	/*< Password to use with master */
+	char			*fileroot;	/*< Root of binlog filename */
+	bool			master_chksum;	/*< Does the master provide checksums */
+	bool			mariadb10_compat; /*< MariaDB 10.0 compatibility */
+	char			*master_uuid;	/*< UUID of the master */
+	DCB			*master;	/*< DCB for master connection */
+	DCB			*client;	/*< DCB for dummy client */
+	SESSION			*session;	/*< Fake session for master connection */
+	unsigned int		master_state;	/*< State of the master FSM */
+	uint8_t			lastEventReceived;
+	uint32_t		lastEventTimestamp; /*< Timestamp from last event */
+	GWBUF	 		*residual;	/*< Any residual binlog event */
+	MASTER_RESPONSES	saved_master;	/*< Saved master responses */
+	char			*binlogdir;	/*< The directory with the binlog files */
+	SPINLOCK		binlog_lock;	/*< Lock to control update of the binlog position */
+	char			binlog_name[BINLOG_FNAMELEN+1];
 					/*< Name of the current binlog file */
-	uint64_t	  binlog_position;
+	uint64_t		binlog_position;
 					/*< Current binlog position */
-	int		  binlog_fd;	/*< File descriptor of the binlog
+	int			binlog_fd;	/*< File descriptor of the binlog
 					 *  file being written
 					 */
 	uint64_t	  last_written;	/*< Position of last event written */
@@ -308,8 +383,7 @@ typedef struct router_instance {
 	int		  handling_threads;
 	unsigned long	  m_errno;	/*< master response mysql errno */
 	char		  *m_errmsg;	/*< master response mysql error message */
-	struct router_instance
-                          *next;
+	struct router_instance	*next;
 } ROUTER_INSTANCE;
 
 /**
@@ -337,15 +411,16 @@ typedef struct router_instance {
 #define	BLRM_REGISTER		0x0013
 #define	BLRM_BINLOGDUMP		0x0014
 #define	BLRM_SLAVE_STOPPED	0x0015
+#define	BLRM_MARIADB10		0x0016
 
-#define BLRM_MAXSTATE		0x0015
+#define BLRM_MAXSTATE		0x0016
 
 static char *blrm_states[] = { "Unconfigured", "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
 	"Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
 	"binlog checksum rerieval", "GTID Mode retrieval", "Master UUID retrieval",
 	"Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
 	"select version()", "select @@version_comment", "select @@hostname",
-	"select @@mx_allowed_packet", "Register slave", "Binlog Dump" , "Slave stopped"};
+	"select @@max_allowed_packet", "Register slave", "Binlog Dump", "Slave stopped", "Set MariaDB slave capability" };
 
 #define BLRS_CREATED		0x0000
 #define BLRS_UNREGISTERED	0x0001
@@ -380,61 +455,6 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 #define COM_BINLOG_DUMP				0x12
 
 /**
- * Binlog event types
- */
-#define START_EVENT_V3				0x01
-#define QUERY_EVENT				0x02
-#define STOP_EVENT				0x03
-#define ROTATE_EVENT				0x04
-#define INTVAR_EVENT				0x05
-#define LOAD_EVENT				0x06
-#define SLAVE_EVENT				0x07
-#define CREATE_FILE_EVENT			0x08
-#define APPEND_BLOCK_EVENT			0x09
-#define EXEC_LOAD_EVENT				0x0A
-#define DELETE_FILE_EVENT			0x0B
-#define NEW_LOAD_EVENT				0x0C
-#define RAND_EVENT				0x0D
-#define USER_VAR_EVENT				0x0E
-#define FORMAT_DESCRIPTION_EVENT		0x0F
-#define XID_EVENT				0x10
-#define BEGIN_LOAD_QUERY_EVENT			0x11
-#define EXECUTE_LOAD_QUERY_EVENT		0x12
-#define TABLE_MAP_EVENT				0x13
-#define WRITE_ROWS_EVENTv0			0x14
-#define UPDATE_ROWS_EVENTv0			0x15
-#define DELETE_ROWS_EVENTv0			0x16
-#define WRITE_ROWS_EVENTv1			0x17
-#define UPDATE_ROWS_EVENTv1			0x18
-#define DELETE_ROWS_EVENTv1			0x19
-#define INCIDENT_EVENT				0x1A
-#define HEARTBEAT_EVENT				0x1B
-#define IGNORABLE_EVENT				0x1C
-#define ROWS_QUERY_EVENT			0x1D
-#define WRITE_ROWS_EVENTv2			0x1E
-#define UPDATE_ROWS_EVENTv2			0x1F
-#define DELETE_ROWS_EVENTv2			0x20
-#define GTID_EVENT				0x21
-#define ANONYMOUS_GTID_EVENT			0x22
-#define PREVIOUS_GTIDS_EVENT			0x23
-
-#define MAX_EVENT_TYPE				0x23
-
-/**
- * Binlog event flags
- */
-#define LOG_EVENT_BINLOG_IN_USE_F		0x0001
-#define LOG_EVENT_FORCED_ROTATE_F		0x0002
-#define LOG_EVENT_THREAD_SPECIFIC_F		0x0004
-#define LOG_EVENT_SUPPRESS_USE_F		0x0008
-#define LOG_EVENT_UPDATE_TABLE_MAP_VERSION_F	0x0010
-#define LOG_EVENT_ARTIFICIAL_F			0x0020
-#define LOG_EVENT_RELAY_LOG_F			0x0040
-#define LOG_EVENT_IGNORABLE_F			0x0080
-#define LOG_EVENT_NO_FILTER_F			0x0100
-#define LOG_EVENT_MTS_ISOLATE_F			0x0200
-
-/**
  * Macros to extract common fields
  */
 #define INLINE_EXTRACT		1	/* Set to 0 for debug purposes */
@@ -457,7 +477,7 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 /*
  * Externals within the router
  */
-extern void blr_start_master(ROUTER_INSTANCE *);
+extern void blr_start_master(void *);
 extern void blr_master_response(ROUTER_INSTANCE *, GWBUF *);
 extern void blr_master_reconnect(ROUTER_INSTANCE *);
 extern int blr_master_connected(ROUTER_INSTANCE *);
@@ -479,4 +499,5 @@ extern int blr_statistics(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_ping(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_send_custom_error(DCB *, int, int, char *);
 extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
+uint32_t extract_field(uint8_t *src, int bits);
 #endif

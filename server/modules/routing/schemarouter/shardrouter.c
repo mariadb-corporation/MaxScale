@@ -319,7 +319,7 @@ parse_mapping_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
    if(PTR_IS_RESULTSET(((unsigned char*)buf->start)) &&
       modutil_count_signal_packets(buf,0,0,&more) == 2)
    {
-       ptr = (char*)buf->start;
+       ptr = (unsigned char*)buf->start;
 
        if(ptr[5] != 1)
        {
@@ -1701,7 +1701,7 @@ routeQuery(ROUTER* instance,
 						   querybuf)))
         {
 	    extract_database(querybuf,db);
-	    snprintf(errbuf,"Unknown database: %s",db);
+	    snprintf(errbuf,25+MYSQL_DATABASE_MAXLEN,"Unknown database: %s",db);
 	    create_error_reply(errbuf,router_cli_ses->replydcb);
             LOGIF(LE, (skygw_log_write_flush(
                                              LOGFILE_ERROR,
