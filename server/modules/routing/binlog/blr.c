@@ -120,7 +120,7 @@ static void	stats_func(void *);
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
 void my_uuid_init(ulong seed1, ulong seed2);
-void my_uuid(char *guid);
+void my_uuid(unsigned char *guid);
 GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
 
 static SPINLOCK	instlock;
@@ -189,7 +189,6 @@ char		path[PATH_MAX+1] = "";
 char		filename[PATH_MAX+1] = "";
 int		master_info = 0;
 int		rc = 0;
-char	*defuuid;
 
 	if(service->credentials.name == NULL ||
 	   service->credentials.authdata == NULL)
@@ -266,7 +265,7 @@ char	*defuuid;
 	inst->m_errmsg = NULL;
 
 	my_uuid_init((ulong)rand()*12345,12345);
-	if ((defuuid = (char *)malloc(20)) != NULL)
+	if ((defuuid = (unsigned char *)malloc(20)) != NULL)
 	{
 		my_uuid(defuuid);
 		if ((inst->uuid = (char *)malloc(38)) != NULL)

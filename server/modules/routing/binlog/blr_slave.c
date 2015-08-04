@@ -78,7 +78,7 @@ extern void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
-static uint32_t extract_field(uint8_t *src, int bits);
+uint32_t extract_field(uint8_t *src, int bits);
 static void encode_value(unsigned char *data, unsigned int value, int len);
 static int blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
 static int blr_slave_replay(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *master);
