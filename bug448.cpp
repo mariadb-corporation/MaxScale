@@ -31,9 +31,9 @@ int main(int argc, char *argv[])
     printf("Test machine IP with %% %s\n", my_ip);
 
 
-    printf("Creating user 'user' with 3 different passwords for %s host\n", my_ip);  fflush(stdout);
+    printf("Creating user 'user1' for %s host\n", my_ip);  fflush(stdout);
     sprintf(sql, "GRANT ALL PRIVILEGES ON *.* TO user1@'%s' identified by 'pass1';  FLUSH PRIVILEGES;", my_ip);
-    printf("Query: %s\n,", sql); fflush(stdout);
+    printf("Query: %s\n", sql); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, sql);
 
     printf("Trying to open connection using user1\n");
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 
     MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user1", (char *) "pass1", Test->ssl);
     if (conn == NULL) {
-        printf("Authentification failed!\n");
+        printf("TEST_FAILED! Authentification failed!\n");
         global_result++;
     } else {
         printf("Authentification for user@'%s' is ok", my_ip);

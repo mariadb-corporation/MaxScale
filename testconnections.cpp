@@ -434,14 +434,14 @@ int check_log_err(char * err_msg, bool expected)
         if (expected) {
             if (strstr(err_log_content, err_msg) == NULL) {
                 global_result++;
-                printf("testFAILED: There is NO \"%s\" error in the log\n", err_msg);
+                printf("TEST_FAILED!: There is NO \"%s\" error in the log\n", err_msg);
             } else {
                 printf("There is proper \"%s \" error in the log\n", err_msg);
             }}
         else {
             if (strstr(err_log_content, err_msg) != NULL) {
                 global_result++;
-                printf("testFAILED: There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
+                printf("TEST_FAILED!: There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
             } else {
                 printf("There are no unxpected errors \"%s \" error in the log\n", err_msg);
             }

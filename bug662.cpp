@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
         printf("Checking if MaxScale is alive by connecting to MaxAdmin\n"); fflush(stdout);
         if (execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers") != 0) {
             global_result++;
-            printf("testFAILED: Maxadmin execution failed.\n");
+            printf("TEST_FAILED!: Maxadmin execution failed.\n");
         }
 
         for (i = 0; i < Test->repl->N; i++) {
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
         printf("Checking Maxscale is alive\n"); fflush(stdout);
 
         if ( check_maxscale_alive() !=0) {
-            printf("testFAILED: MaxScale is not alive\n");
+            printf("TEST_FAILED!: MaxScale is not alive\n");
             global_result++;
         } else {
             printf("MaxScale is still alive\n");
