@@ -1161,7 +1161,7 @@ int			n_bufs = -1, pn_bufs = -1;
 				int msg_len=0;
 				msg_err = (char *)ptr+7+6;	// err msg starts after 7 bytes + 6 of status message
 				msg_len = len-7-6;	// msg len is decreased by 7 and 6
-				msg_err = (uint8_t *)malloc(msg_len + 1);
+				msg_err = (char *)malloc(msg_len + 1);
 				strncpy(msg_err, (char *)ptr+7+6, msg_len);
 				/* NULL terminate error string */
 				*(msg_err+msg_len)='\0';

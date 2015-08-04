@@ -211,24 +211,27 @@ int		rc = 0;
 	 * We only support one server behind this router, since the server is
 	 * the master from which we replicate binlog records. Therefore check
 	 * that only one server has been defined.
-	 *
-	 * A later improvement will be to define multiple servers and have the
-	 * router use the information that is supplied by the monitor to find
-	 * which of these servers is currently the master and replicate from
-	 * that server.
 	 */
-	if (service->dbref == NULL || service->dbref->next != NULL)
+	if (service->dbref != NULL)
 	{
-		skygw_log_write(LE,
-			"%s: Error : Exactly one database server may be "
-			"for use with the binlog router.",
-			service->name);
-		return NULL;
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Warning: backend database server is provided by master.ini file "
+			"for use with the binlog router."
+			" Server section is no longer required.",
+			service->name)));
+
+		server_free(service->dbref->server);
+		free(service->dbref);
+		service->dbref = NULL;
 	}
 
 	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
-                return NULL;
-        }
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Error: failed to allocate memory for router instance.",
+			service->name)));
+
+		return NULL;
+	}
 
 	memset(&inst->stats, 0, sizeof(ROUTER_STATS));
 	memset(&inst->saved_master, 0, sizeof(MASTER_RESPONSES));
