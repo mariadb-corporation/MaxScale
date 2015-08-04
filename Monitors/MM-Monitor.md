@@ -70,7 +70,7 @@ detect_stale_master=true
  
 ### `script`
 
-This script will be executed when a server changes its state. The parameter should be an absolute path to the script or it should be in the executable path.
+This script will be executed when a server changes its state. The parameter should be an absolute path to the script or it should be in the executable path. The user which is used to run MaxScale should have execution rights to the file itself and the directory it resides in.
 
 ```
 script=/home/user/script.sh
