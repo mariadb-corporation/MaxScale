@@ -100,7 +100,8 @@ static int blr_set_service_mysql_user(SERVICE *service);
 int blr_load_dbusers(ROUTER_INSTANCE *router);
 int blr_save_dbusers(ROUTER_INSTANCE *router);
 extern void blr_cache_read_master_data(ROUTER_INSTANCE *router);
-
+extern char *decryptPassword(char *crypt);
+extern char *create_hex_sha1_sha1_passwd(char *passwd);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
