@@ -595,8 +595,8 @@ int		rc = 0;
 	{
 		sprintf(name, "%s stats", service->name);
 		hktask_add(name, stats_func, inst, BLR_STATS_FREQ);
+		free(name);
 	}
-	free(name);
 
 	/*
 	 * Now start the replication from the master to MaxScale
@@ -1649,7 +1649,12 @@ char	*service_passwd = NULL;
 	return 0;
 }
 
-/* -1 is failure, >0 is success */
+/**
+ * Load mysql dbusers into (service->users)
+ *
+ * @param router	The router instance
+ * @return              -1 on failure, 0 for no users found, > 0 for found users
+ */
 int
 blr_load_dbusers(ROUTER_INSTANCE *router)
 {
@@ -1717,7 +1722,12 @@ SERVICE *service;
 	return loaded;
 }
 
-/* -1 is error, >= 0 is ok */
+/**
+ * Save dbusers to cache file
+ *
+ * @param router	The router instance
+ * @return              -1 on failure, >= 0 on success
+ */
 int
 blr_save_dbusers(ROUTER_INSTANCE *router)
 {

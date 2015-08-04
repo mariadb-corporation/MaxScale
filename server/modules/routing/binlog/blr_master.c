@@ -101,7 +101,6 @@ blr_start_master(void* data)
 {
     ROUTER_INSTANCE *router = (ROUTER_INSTANCE*)data;
 DCB	*client;
-GWBUF	*buf;
 
 	router->stats.n_binlogs_ses = 0;
 	spinlock_acquire(&router->lock);
@@ -122,10 +121,9 @@ GWBUF	*buf;
 	router->master_state = BLRM_CONNECTING;
 
 	/* Discard the queued residual data */
-	buf = router->residual;
-	while (buf)
+	while (router->residual)
 	{
-		buf = gwbuf_consume(buf, GWBUF_LENGTH(buf));
+		router->residual = gwbuf_consume(router->residual, GWBUF_LENGTH(router->residual));
 	}
 	router->residual = NULL;
 
@@ -173,12 +171,11 @@ GWBUF	*buf;
 
 	router->connect_time = time(0);
 
-if (setsockopt(router->master->fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive , sizeof(keepalive )))
-perror("setsockopt");
+	if (setsockopt(router->master->fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive , sizeof(keepalive )))
+		perror("setsockopt");
 
 	router->master_state = BLRM_AUTHENTICATED;
-	buf = blr_make_query("SELECT UNIX_TIMESTAMP()");
-	router->master->func.write(router->master, buf);
+	router->master->func.write(router->master, blr_make_query("SELECT UNIX_TIMESTAMP()"));
 	router->master_state = BLRM_TIMESTAMP;
 
 	router->stats.n_masterstarts++;
@@ -195,15 +192,12 @@ perror("setsockopt");
 static void
 blr_restart_master(ROUTER_INSTANCE *router)
 {
-GWBUF	*ptr;
-
 	dcb_close(router->client);
 
 	/* Discard the queued residual data */
-	ptr = router->residual;
-	while (ptr)
+	while (router->residual)
 	{
-		ptr = gwbuf_consume(ptr, GWBUF_LENGTH(ptr));
+		router->residual = gwbuf_consume(router->residual, GWBUF_LENGTH(router->residual));
 	}
 	router->residual = NULL;
 
@@ -1497,7 +1491,8 @@ int		action;
 static void
 blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len)
 {
-char	buf[400], *bufp;
+char	buf[400] = "";
+char	*bufp;
 int	i;
 
 	bufp = buf;
