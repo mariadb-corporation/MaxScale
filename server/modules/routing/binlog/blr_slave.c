@@ -545,7 +545,7 @@ extern  char *strcasestr();
 			free(query_text);
 
 			if (router->master_state == BLRM_SLAVE_STOPPED) {
-				char path[4097] = "";
+				char path[PATH_MAX + 1] = "";
 				char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
 				MASTER_SERVER_CFG *current_master = NULL;
 				int removed_cfg = 0;
@@ -1013,7 +1013,9 @@ int	len, file_len;
 
 	sprintf(file, "%s", router->binlog_name);
 	file_len = strlen(file);
-	sprintf(position, "%ld", router->binlog_position);
+
+	sprintf(position, "%lu", router->binlog_position);
+
 	len = 5 + file_len + strlen(position) + 1 + 3;
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
@@ -1125,7 +1127,12 @@ char    *dyn_column=NULL;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	sprintf(column, "%ld", router->binlog_position);
+	/* if router->trx_safe report current_pos*/
+	if (router->trx_safe)
+		sprintf(column, "%lu", router->current_pos);
+	else
+		sprintf(column, "%lu", router->binlog_position);
+
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
@@ -2517,7 +2524,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 		slave->dcb->remote,
 		router->service->dbref->server->name,
 		router->service->dbref->server->port,
-		router->binlog_name, router->binlog_position)));
+		router->binlog_name, router->current_pos)));
 
 	return blr_slave_send_ok(router, slave);
 }
@@ -2534,7 +2541,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 static int
 blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
-	char path[4097]="";
+	char path[PATH_MAX+1]="";
 	int loaded;
 
 	/* if unconfigured return an error */
@@ -2556,10 +2563,27 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 	spinlock_release(&router->lock);
 
 	/* create a new binlog or just use current one */
-	if (strcmp(router->prevbinlog, router->binlog_name))
+	if (strcmp(router->prevbinlog, router->binlog_name)) {
+		if (router->trx_safe && router->pending_transaction) {
+			char msg[1024+1] = "";
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+					"Warning: a transaction is still opened at pos %lu. "
+					"Current pos is %lu in file %s",
+					router->binlog_position,
+					router->current_pos, router->prevbinlog)));
+
+			snprintf(msg, 1024, "A transaction is still opened at pos %lu. Current pos is %lu in file %s", router->binlog_position, router->current_pos, router->prevbinlog);
+
+			blr_slave_send_error_packet(slave, msg, (unsigned int)1254, NULL);
+
+			return 1;
+		}
+
 		blr_file_new_binlog(router, router->binlog_name);
-	else
+	} else {
 		blr_file_use_binlog(router, router->binlog_name);
+	}
 
 	blr_start_master(router);
 
@@ -2572,13 +2596,13 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 		router->service->dbref->server->name,
 		router->service->dbref->server->port,
 		router->binlog_name,
-		router->binlog_position)));
+		router->current_pos)));
 
         /* File path for router cached authentication data */
         strcpy(path, router->binlogdir);
-        strncat(path, "/cache", 4096);
+        strncat(path, "/cache", PATH_MAX);
 
-        strncat(path, "/dbusers", 4096);
+        strncat(path, "/dbusers", PATH_MAX);
 
         /* Try loading dbusers from configured backends */
         loaded = load_mysql_users(router->service);
@@ -2792,7 +2816,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 				master_logfile,
 				4,
 				router->binlog_name,
-				router->binlog_position);
+				router->current_pos);
 
 			return_error = 1;
 		} else {
@@ -2803,7 +2827,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 					master_logfile,
 					4,
 					router->binlog_name,
-					router->binlog_position);
+					router->current_pos);
 
 				return_error = 1;
 			}
@@ -2831,6 +2855,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			memset(router->binlog_name, '\0', sizeof(router->binlog_name));
 			strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
 
+			router->current_pos = 4;
 			router->binlog_position = 4;
 
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
@@ -2860,13 +2885,13 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			}
 
 		} else {
-			if (pos > 0 && pos != router->binlog_position) {
+			if (pos > 0 && pos != router->current_pos) {
 				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
 					"Permitted binlog pos is %lu. Current master_log_file=%s, master_log_pos=%lu",
 					passed_pos,
-					router->binlog_position,
+					router->current_pos,
 					router->binlog_name,
-					router->binlog_position);
+					router->current_pos);
 
 				return_error = 1;
 			}
@@ -2893,6 +2918,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			 * Also set binlog name if UNCOFIGURED
 			 */
 			if (router->master_state == BLRM_UNCONFIGURED) {
+				router->current_pos = 4;
 				router->binlog_position = 4;
 				memset(router->binlog_name, '\0', sizeof(router->binlog_name));
 				strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
@@ -2904,7 +2930,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
 				router->service->name,
-				router->binlog_position)));
+				router->current_pos)));
 
 			if (master_log_pos)
 				free(master_log_pos);
@@ -2967,7 +2993,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 		router->service->dbref->server->name,
 		router->service->dbref->server->port,
 		router->binlog_name,
-		router->binlog_position,
+		router->current_pos,
 		router->user)));
 
 	blr_master_free_config(current_master);
@@ -3150,7 +3176,7 @@ char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error
 					router->fileroot,
 					next_binlog_seqname,
 					router->binlog_name,
-					router->binlog_position);
+					router->current_pos);
 
 				free(logfile);
 
@@ -3180,7 +3206,7 @@ static void
 blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master) {
 	curr_master->port = router->service->dbref->server->port;
 	curr_master->host = strdup(router->service->dbref->server->name);
-	curr_master->pos = router->binlog_position;
+	curr_master->pos = router->current_pos;
 	strncpy(curr_master->logfile, router->binlog_name, BINLOG_FNAMELEN);
 	curr_master->user = strdup(router->user);
 	curr_master->password = strdup(router->password);
@@ -3230,6 +3256,7 @@ blr_master_set_empty_config(ROUTER_INSTANCE *router) {
 	server_update_address(router->service->dbref->server, "none");
 	server_update_port(router->service->dbref->server, (unsigned short)3306);
 
+	router->current_pos = 4;
 	router->binlog_position = 4;
 	strcpy(router->binlog_name, "");
 }
@@ -3244,7 +3271,7 @@ static void
 blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master) {
 	server_update_address(router->service->dbref->server, prev_master->host);
 	server_update_port(router->service->dbref->server, prev_master->port);
-	router->binlog_position = prev_master->pos;
+	router->current_pos = prev_master->pos;
 	strcpy(router->binlog_name, prev_master->logfile);
 	if (router->user) {
 		free(router->user);

@@ -33,6 +33,7 @@
  * 12/06/15	Massimiliano Pinto	Added mariadb10 new events
  * 23/06/15	Massimiliano Pinto	Addition of MASTER_SERVER_CFG struct
  * 24/06/15	Massimiliano Pinto	Added BLRM_UNCONFIGURED state
+ * 05/08/15	Massimiliano Pinto	Initial implementation of transaction safety
  *
  * @endverbatim
  */
@@ -357,9 +358,13 @@ typedef struct router_instance {
 	MASTER_RESPONSES	saved_master;	/*< Saved master responses */
 	char			*binlogdir;	/*< The directory with the binlog files */
 	SPINLOCK		binlog_lock;	/*< Lock to control update of the binlog position */
+	int			trx_safe;	/*< Detect and handle partial transactions */
+	int			pending_transaction; /*< Pending transaction */
 	char			binlog_name[BINLOG_FNAMELEN+1];
 					/*< Name of the current binlog file */
 	uint64_t		binlog_position;
+					/*< last committed transaction position */
+	uint64_t		current_pos;
 					/*< Current binlog position */
 	int			binlog_fd;	/*< File descriptor of the binlog
 					 *  file being written

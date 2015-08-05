@@ -31,6 +31,7 @@
  * 23/06/2015	Massimiliano Pinto	Addition of blr_file_use_binlog, blr_file_create_binlog
  * 29/06/2015	Massimiliano Pinto	Addition of blr_file_write_master_config()
  *					Cache directory is now 'cache' under router->binlogdir
+ * 05/08/2015	Massimiliano Pinto	Initial implementation of transaction safety
  *
  * @endverbatim
  */
@@ -184,7 +185,8 @@ blr_file_add_magic(ROUTER_INSTANCE *router, int fd)
 unsigned char	magic[] = BINLOG_MAGIC;
 
 	write(fd, magic, 4);
-	router->binlog_position = 4;			/* Initial position after the magic number */
+	router->current_pos = 4;			/* Initial position after the magic number */
+	//router->binlog_position = 4;			/* Initial position after the magic number */
 }
 
 
@@ -252,16 +254,20 @@ int		fd;
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
 	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
-	router->binlog_position = lseek(fd, 0L, SEEK_END);
-	if (router->binlog_position < 4) {
-		if (router->binlog_position == 0) {
+	//router->binlog_position = lseek(fd, 0L, SEEK_END);
+	router->current_pos = lseek(fd, 0L, SEEK_END);
+	//if (router->binlog_position < 4) {
+	if (router->current_pos < 4) {
+		//if (router->binlog_position == 0) {
+		if (router->current_pos == 0) {
 			blr_file_add_magic(router, fd);
 		} else {
 			/* If for any reason the file's length is between 1 and 3 bytes
 			 * then report an error. */
 	                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"%s: binlog file %s has an invalid length %d.",
-				router->service->name, path, router->binlog_position)));
+				//router->service->name, path, router->binlog_position)));
+				router->service->name, path, router->current_pos)));
 			close(fd);
 			spinlock_release(&router->binlog_lock);
 			return;
@@ -298,7 +304,8 @@ int	n;
 		return 0;
 	}
 	spinlock_acquire(&router->binlog_lock);
-	router->binlog_position = hdr->next_pos;
+	//router->binlog_position = hdr->next_pos;
+	router->current_pos = hdr->next_pos;
 	router->last_written = hdr->next_pos - hdr->event_size;
 	spinlock_release(&router->binlog_lock);
 	return n;
@@ -892,4 +899,422 @@ char tmp_file[PATH_MAX + 1] = "";
 	}
 
 	return 0;
+}
+
+/**
+ * Read all replication events from a binlog file in order to detect pending transactions
+ *
+ * @param router        The router instance
+ * @param fix           Whether to fix or not errors
+ * @param debug         Whether to enable or not the debug for events
+ * @return              0 on success, >0 on failure
+ */
+int
+blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug) {
+unsigned long   filelen = 0;
+struct  stat    statb;
+uint8_t         hdbuf[19];
+uint8_t         *data;
+GWBUF           *result;
+unsigned long long pos = 4;
+unsigned long long last_known_commit = 4;
+
+REP_HEADER hdr;
+int pending_transaction = 0;
+int n;
+int db_name_len;
+char *statement_sql;
+uint8_t *ptr;
+int len;
+int var_block_len;
+int statement_len;
+int checksum_len=0;
+int found_chksum = 0;
+
+        if (router->binlog_fd == -1) {
+                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                        "*** ERROR: Current binlog file %s is not open",
+                        router->binlog_name)));
+                return 1;
+        }
+
+        if (fstat(router->binlog_fd, &statb) == 0)
+                filelen = statb.st_size;
+
+        while (1){
+                //fprintf(stderr, "Pos %llu pending trx = %i\n", pos, pending_transaction);
+
+                /* Read the header information from the file */
+                if ((n = pread(router->binlog_fd, hdbuf, 19, pos)) != 19) {
+                        switch (n)
+                        {
+                                case 0:
+                                        LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                                "End of binlog file [%s] at %llu.",
+                                                router->binlog_name,
+                                                pos)));
+
+                                        if (pending_transaction) {
+                                                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
+                                                        "WARNING: Binlog file %s contains a previous Opened Transaction, "
+                                                        "Not Truncate file @ %llu but pos for slave is safe",
+                                                        router->binlog_name,
+                                                        last_known_commit)));
+
+                                                //ftruncate(router->binlog_fd, last_known_commit);
+                                        }
+
+                                        break;
+                                case -1:
+                                        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                                "*** ERROR: Failed to read binlog file %s at position %llu"
+                                                " (%s).", router->binlog_name,
+                                                pos, strerror(errno))));
+                                        if (errno == EBADF)
+                                                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                                        "*** ERROR: Bad file descriptor in read binlog for file %s"
+                                                        ", descriptor %d.",
+                                                        router->binlog_name, router->binlog_fd)));
+                                        break;
+                                default:
+                                        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                                "*** ERROR: Short read when reading the header. "
+                                                "Expected 19 bytes but got %d bytes. "
+                                                "Binlog file is %s, position %llu",
+                                                n, router->binlog_name, pos)));
+                                        break;
+                        }
+
+                        /* force last_known_commit position */
+                        if (pending_transaction) {
+                                router->binlog_position = last_known_commit;
+                                router->pending_transaction = 1;
+                                pending_transaction = 0;
+                        } else {
+                                router->binlog_position = pos;
+                        }
+
+                        /* Truncate file in case of any error */
+                        if (n != 0) {
+                                ftruncate(router->binlog_fd, pos);
+
+                                router->binlog_position = pos;
+                                return 1;
+                        } else {
+                                return 0;
+                        }
+                }
+
+		/* fill replication header struct */
+                hdr.timestamp = EXTRACT32(hdbuf);
+                hdr.event_type = hdbuf[4];
+                hdr.serverid = EXTRACT32(&hdbuf[5]);
+                hdr.event_size = extract_field(&hdbuf[9], 32);
+                hdr.next_pos = EXTRACT32(&hdbuf[13]);
+                hdr.flags = EXTRACT16(&hdbuf[17]);
+
+                //fprintf(stderr, ">>>> pos [%llu] event type %i\n", pos, hdr.event_type);
+                //fprintf(stderr, ">>>> pos [%llu] event size %lu\n", pos, hdr.event_size);
+                //fprintf(stderr, ">>>> pos [%llu] event next_pos %lu\n", pos, hdr.next_pos);
+
+		/* TO DO */
+
+		/* Add MariaDB 10 check */
+
+                /* Check event type against MAX_EVENT_TYPE */
+                if (hdr.event_type > MAX_EVENT_TYPE)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                "*** ERROR: Found an Invalid event type 0x%x. "
+                                "Binlog file is %s, position %llu",
+                                hdr.event_type,
+                                router->binlog_name, pos)));
+
+                        ftruncate(router->binlog_fd, pos);
+
+                        router->binlog_position = pos;
+
+                        return 1;
+                }
+
+                /* Allocate a GWBUF for the event */
+                if ((result = gwbuf_alloc(hdr.event_size)) == NULL)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                "*** ERROR: Failed to allocate memory for binlog entry, "
+                                "size %d at %llu.",
+                                hdr.event_size, pos)));
+
+                        ftruncate(router->binlog_fd, pos);
+
+                        router->binlog_position = pos;
+
+                        return 1;
+                }
+
+                /* Copy the header in the buffer */
+                data = GWBUF_DATA(result);
+                memcpy(data, hdbuf, 19);// Copy the header in
+
+                /* Read event data */
+                if ((n = pread(router->binlog_fd, &data[19], hdr.event_size - 19, pos + 19)) != hdr.event_size - 19)
+                {
+                        if (n == -1)
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                        "*** ERROR: Error reading the event at %llu in %s. "
+                                        "%s, expected %d bytes.",
+                                        pos, router->binlog_name,
+                                        strerror(errno), hdr.event_size - 19)));
+                        }
+                        else
+                        {
+                                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                        "*** ERROR: Short read when reading the event at %llu in %s. "
+                                        "Expected %d bytes got %d bytes.",
+                                        pos, router->binlog_name, hdr.event_size - 19, n)));
+
+                                if (filelen > 0 && filelen - pos < hdr.event_size)
+                                {
+                                        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                                "*** ERROR: Binlog event is close to the end of the binlog file %s, "
+                                                " size is %lu.",
+                                                router->binlog_name, filelen)));
+                                }
+                        }
+
+                        gwbuf_free(result);
+
+                        ftruncate(router->binlog_fd, pos);
+
+                        router->binlog_position = pos;
+
+                        return 1;
+                }
+
+                /* check for pending transaction */
+                if (pending_transaction == 0) {
+                        last_known_commit = pos;
+                }
+
+                /* get event content */
+                ptr = data+19;
+
+                /* check for FORMAT DESCRIPTION EVENT */
+                if(hdr.event_type == FORMAT_DESCRIPTION_EVENT) {
+                        int event_header_length;
+                        int event_header_ntypes;
+                        int n_events;
+                        int check_alg;
+                        uint8_t *checksum;
+
+                        if(debug)
+                                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                        "- Format Description event FDE @ %llu, size %lu",
+                                        pos, hdr.event_size)));
+
+                        event_header_length =  ptr[2 + 50 + 4];
+                        event_header_ntypes = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
+
+                        if (event_header_ntypes == 168) {
+                                /* mariadb 10 LOG_EVENT_TYPES*/
+                                event_header_ntypes -= 163;
+                        } else {
+                                if (event_header_ntypes == 165) {
+                                        /* mariadb 5 LOG_EVENT_TYPES*/
+                                        event_header_ntypes -= 160;
+                                } else {
+                                        /* mysql 5.6 LOG_EVENT_TYPES = 35 */
+                                        event_header_ntypes -= 35;
+                                }
+                        }
+
+                        n_events = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
+
+                        if(debug) {
+                                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                        "       FDE ServerVersion [%50s]", ptr + 2)));
+
+                                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                        "       FDE Header EventLength %i"
+                                        ", N. of supported MySQL/MAriaDB events %i",
+                                        event_header_length,
+                                        (n_events - event_header_ntypes))));
+                        }
+
+                        if (event_header_ntypes < n_events) {
+                                checksum = ptr + hdr.event_size - event_header_length - event_header_ntypes;
+                                check_alg = checksum[0];
+
+                                if(debug)
+                                        LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                                "       FDE Checksum alg desc %i, alg type %s",
+                                                check_alg,
+                                                check_alg == 1 ? "BINLOG_CHECKSUM_ALG_CRC32" : "NONE or UNDEF")));
+                                if (check_alg == 1) {
+                                        checksum_len = 4;
+                                        found_chksum = 1;
+                                } else  {
+                                        found_chksum = 0;
+                                }
+                        }
+                }
+                /* Decode ROTATE EVENT */
+                if(hdr.event_type == ROTATE_EVENT) {
+                        int             len, slen;
+                        uint64_t        new_pos;
+                        char            file[BINLOG_FNAMELEN+1];
+
+                        len = hdr.event_size - 19;
+                        new_pos = extract_field(ptr+4, 32);
+                        new_pos <<= 32;
+                        new_pos |= extract_field(ptr, 32);
+                        slen = len - (8 + 4);           // Allow for position and CRC
+                        if (found_chksum == 0)
+                                slen += 4;
+                        if (slen > BINLOG_FNAMELEN)
+                                slen = BINLOG_FNAMELEN;
+                        memcpy(file, ptr + 8, slen);
+                        file[slen] = 0;
+
+                        if(debug)
+                                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                        "- Rotate event @ %llu, next file is [%s] @ %llu",
+                                        pos, file, new_pos)));
+                }
+
+
+                /* Check QUERY_EVENT */
+                if(hdr.event_type == QUERY_EVENT) {
+                        char *statement_sql;
+                        db_name_len = ptr[4 + 4];
+                        var_block_len = ptr[4 + 4 + 1 + 2];
+
+                        statement_len = hdr.event_size - 19 - (4+4+1+2+2+var_block_len+1+db_name_len);
+                        //if (checksum_len)
+                        //              statement_len -= checksum_len;
+
+                        statement_sql = calloc(1, statement_len+1);
+                        strncpy(statement_sql, (char *)ptr+4+4+1+2+2+var_block_len+1+db_name_len, statement_len);
+
+                        //fprintf(stderr, "QUERY_EVENT = [%s] %i / %i\n", statement_sql, (4+4+1+2+2+var_block_len+1+db_name_len), statement_len);
+
+                        /* A transaction starts with this event */
+                        if (strncmp(statement_sql, "BEGIN", 5) == 0) {
+                                if (pending_transaction > 0) {
+                                        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                        "*** ERROR: Transaction cannot be @ pos %llu: "
+                                        "Another transaction was opened at %ll",
+                                        pos, last_known_commit)));
+
+                                        free(statement_sql);
+                                        gwbuf_free(result);
+
+                                        break;
+                                } else {
+                                        pending_transaction = 1;
+
+                                        if (debug)
+                                                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                                        "> Transaction starts @ pos %llu", pos)));
+                                }
+                        }
+
+                        /* Commit received for non transactional tables, i.e. MyISAM */
+                        if (strncmp(statement_sql, "COMMIT", 6) == 0) {
+                                if (pending_transaction > 0) {
+                                        pending_transaction = 3;
+
+                                if (debug)
+                                        LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                                "       Transaction @ pos %llu, closing @ %llu", last_known_commit, pos)));
+                                }
+                        }
+                        free(statement_sql);
+
+                }
+
+                if(hdr.event_type == XID_EVENT) {
+                        /* Commit received for a transactional tables, i.e. InnoDB */
+                        uint64_t xid;
+                        xid = extract_field(ptr, 64);
+
+                        if (pending_transaction > 0) {
+                                pending_transaction = 2;
+                                if (debug)
+                                        LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                                "       Transaction XID @ pos %llu, closing @ %llu", last_known_commit, pos)));
+                        }
+                }
+
+                if (pending_transaction > 1) {
+                        unsigned long long prev_pos = last_known_commit;
+                        if (debug)
+                                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                        "< Transaction @ pos %llu, is now closed @ %llu", last_known_commit, pos)));
+                        pending_transaction = 0;
+                        last_known_commit = pos;
+                }
+
+                gwbuf_free(result);
+
+                /* pos and next_pos sanity checks */
+                if (hdr.next_pos > 0 && hdr.next_pos < pos) {
+                        LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
+                                "Binlog %s: next pos %llu < pos %llu, truncating to %llu",
+                                router->binlog_name,
+                                hdr.next_pos,
+                                pos,
+                                pos)));
+
+                        ftruncate(router->binlog_fd, pos);
+
+                        router->binlog_position = pos;
+
+                        return 3;
+                }
+
+                if (hdr.next_pos > 0 && hdr.next_pos != (pos + hdr.event_size)) {
+                        LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
+                                "Binlog %s: next pos %llu != (pos %llu + event_size %llu), truncating to %llu",
+                                router->binlog_name,
+                                hdr.next_pos,
+                                pos,
+                                hdr.event_size,
+                                pos)));
+
+                        ftruncate(router->binlog_fd, pos);
+
+                        router->binlog_position = pos;
+
+                        return 3;
+                }
+
+                /* set pos to new value */
+                if (hdr.next_pos > 0) {
+                        pos = hdr.next_pos;
+                } else {
+
+                        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                "*** ERROR: Current event type %lu @ %llu has nex pos = %llu : exiting", hdr.event_type, pos, hdr.next_pos)));
+                        break;
+                }
+        }
+
+        if (pending_transaction) {
+                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
+                        "Binlog %s contains an Open Transaction, truncating to %llu",
+                        router->binlog_name,
+                        last_known_commit)));
+
+                ftruncate(router->binlog_fd, last_known_commit);
+
+                router->binlog_position = last_known_commit;
+
+                return 2;
+        } else {
+                router->binlog_position = pos;
+
+                return 0;
+        }
 }

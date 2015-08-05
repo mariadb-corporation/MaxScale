@@ -39,6 +39,7 @@
  * 23/06/2015	Massimiliano Pinto	Master communication goes into BLRM_SLAVE_STOPPED state
  *					when an error is encountered in BLRM_BINLOGDUMP state.
  *					Server error code and msg are reported via SHOW SLAVE STATUS
+ * 03/08/2015	Massimiliano Pinto	Initial implementation of transaction safety
  *
  * @endverbatim
  */
@@ -87,6 +88,7 @@ void blr_master_close(ROUTER_INSTANCE *);
 static char *blr_extract_column(GWBUF *buf, int col);
 void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
 void poll_fake_write_event(DCB *dcb);
+GWBUF *blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr);
 static int keepalive = 1;
 
 /**
@@ -167,7 +169,7 @@ DCB	*client;
 	LOGIF(LM,(skygw_log_write(
 		LOGFILE_MESSAGE,
 		"%s: attempting to connect to master server %s:%d, binlog %s, pos %lu",
-		router->service->name, router->service->dbref->server->name, router->service->dbref->server->port, router->binlog_name, router->binlog_position)));
+		router->service->name, router->service->dbref->server->name, router->service->dbref->server->port, router->binlog_name, router->current_pos)));
 
 	router->connect_time = time(0);
 
@@ -631,7 +633,7 @@ char	query[128];
 			"%s: Request binlog records from %s at "
 			"position %lu from master server %s:%d",
 			router->service->name, router->binlog_name,
-			router->binlog_position,
+			router->current_pos,
 			router->service->dbref->server->name,
 			router->service->dbref->server->port)));
 		break;
@@ -729,7 +731,7 @@ int		len = 0x1b;
 	data[3] = 0;					// Sequence ID
 	data[4] = COM_BINLOG_DUMP;			// Command
 	encode_value(&data[5],
-		router->binlog_position, 32);		// binlog position
+		router->current_pos, 32);		// binlog position
 	encode_value(&data[9], 0, 16);			// Flags
 	encode_value(&data[11],
 		router->serverid, 32);			// Server-id of MaxScale
@@ -842,7 +844,7 @@ int			n_bufs = -1, pn_bufs = -1;
 					"Insufficient memory to buffer event "
 					"of %d bytes. Binlog %s @ %d.",
 					len, router->binlog_name,
-					router->binlog_position)));
+					router->current_pos)));
 				break;
 			}
 
@@ -867,7 +869,7 @@ int			n_bufs = -1, pn_bufs = -1;
 					"chain, but failed to create complete "
 					"message as expected. %s @ %d",
 					router->binlog_name,
-					router->binlog_position)));
+					router->current_pos)));
 				free(msg);
 				msg = NULL;
 				break;
@@ -888,7 +890,7 @@ int			n_bufs = -1, pn_bufs = -1;
                            LOGFILE_DEBUG,
 			   "Residual data left after %d records. %s @ %d",
 					router->stats.n_binlogs,
-			   router->binlog_name, router->binlog_position)));
+			   router->binlog_name, router->current_pos)));
 			break;
 		}
 		else
@@ -943,7 +945,7 @@ int			n_bufs = -1, pn_bufs = -1;
 					"length of previous event %d. %s",
 						len, hdr.event_size,
 						router->binlog_name,
-						router->binlog_position,
+						router->current_pos,
 						reslen, preslen, prev_length,
 					(prev_length == -1 ?
 					(no_residual ? "No residual data from previous call" : "Residual data from previous call") : "")
@@ -1000,7 +1002,7 @@ int			n_bufs = -1, pn_bufs = -1;
 							"Closing master connection.",
 							router->service->name,
 							router->binlog_name,
-							router->binlog_position)));
+							router->current_pos)));
 						blr_master_close(router);
 						blr_master_delayed_connect(router);
 						return;
@@ -1010,10 +1012,109 @@ int			n_bufs = -1, pn_bufs = -1;
 				router->lastEventReceived = hdr.event_type;
 				router->lastEventTimestamp = hdr.timestamp;
 
+				/**
+				 * Check for an open transaction, if the option is set
+				 * Only complete transactions should be sent to sleves
+				 *
+				 * If a trasaction is pending router->last_commit_pos
+				 * won't be updated.
+				 */
+
+				if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0)) {
+					/* set last_commit_pos to binlog_position */
+
+					spinlock_acquire(&router->binlog_lock);
+
+					router->binlog_position = router->current_pos;
+
+					spinlock_release(&router->binlog_lock);
+				} else {
+					/**
+					 * A transaction is pending.
+					 * Last_commit_pos is on hold.
+					 *
+					 * Log a message if the transaction was opened
+					 * at binlog router start
+					 */
+
+					if (router->last_written == 0) {
+						fprintf(stderr, "*** Router started with an Open transaction at %lu / %lu\n", router->binlog_position, router->current_pos);
+					}
+				}
+
 // #define SHOW_EVENTS
 #ifdef SHOW_EVENTS
 				printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
 #endif
+
+				//fprintf(stderr, "*** binlog last_commit_pos = %lu, binlog_pos = %lu\n", router->binlog_position, router->current_pos);
+
+				/**
+				 * Detect transactions in events
+				 * Only complete transactions should be sent to sleves
+				*/
+
+				if (router->trx_safe) {
+					/**
+					 * look for QUERY_EVENT [BEGIN / COMMIT] and XID_EVENT
+					 */
+
+					if(hdr.event_type == QUERY_EVENT) {
+						char *statement_sql;
+						int db_name_len, var_block_len, statement_len;
+						db_name_len = ptr[4+20+ 4 + 4];
+						var_block_len = ptr[4+20+ 4 + 4 + 1 + 2];
+
+						statement_len = len - (4+20+4+4+1+2+2+var_block_len+1+db_name_len);
+						statement_sql = calloc(1, statement_len+1);
+						strncpy(statement_sql, (char *)ptr+4+20+4+4+1+2+2+var_block_len+1+db_name_len, statement_len);
+
+						/* Check for BEGIN (it comes for START TRANSACTION too) */
+						if (strncmp(statement_sql, "BEGIN", 5) == 0) {
+							spinlock_acquire(&router->binlog_lock);
+
+							if (router->pending_transaction > 0) {
+								//fprintf(stderr, "*** A transaction is already open!!!!\n");
+								// stop replication ????
+							}
+							router->pending_transaction = 1;
+
+							spinlock_release(&router->binlog_lock);
+
+							//fprintf(stderr, "Transaction is starting @ %llu / %llu\n", router->binlog_position, router->current_pos);
+						}
+
+						/* Check for COMMIT in non transactional store engines */
+						if (strncmp(statement_sql, "COMMIT", 6) == 0) {
+							spinlock_acquire(&router->binlog_lock);
+
+							router->pending_transaction = 2;
+
+							spinlock_release(&router->binlog_lock);
+
+							//fprintf(stderr, "Transaction closed @ %llu / %llu\n", router->binlog_position, router->current_pos);
+
+						}
+
+						free(statement_sql);
+					}
+
+					/* Check for COMMIT in Transactional engines, i.e InnoDB */
+					if(hdr.event_type == XID_EVENT) {
+						uint64_t xid;
+						xid = extract_field(ptr+4+20, 64);
+
+						if (router->pending_transaction) {
+							spinlock_acquire(&router->binlog_lock);
+
+							router->pending_transaction = 3;
+
+							//fprintf(stderr, "Transaction XID closed @ %llu / %llu", router->binlog_position, router->current_pos);
+							spinlock_release(&router->binlog_lock);
+						}
+					}
+				}
+
 				event_limit = router->mariadb10_compat ? MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
 
 				if (hdr.event_type >= 0 && hdr.event_type <= event_limit)
@@ -1026,7 +1127,7 @@ int			n_bufs = -1, pn_bufs = -1;
 						"Replication fake event. "
 							"Binlog %s @ %d.",
 						router->binlog_name,
-						router->binlog_position)));
+						router->current_pos)));
 					router->stats.n_fakeevents++;
 					if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
 					{
@@ -1071,7 +1172,7 @@ int			n_bufs = -1, pn_bufs = -1;
 							"Replication heartbeat. "
 							"Binlog %s @ %d.",
 							router->binlog_name,
-							router->binlog_position)));
+							router->current_pos)));
 						router->stats.n_heartbeats++;
 					}
 					else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
@@ -1080,6 +1181,8 @@ int			n_bufs = -1, pn_bufs = -1;
 								// into the binlog file
 						if (hdr.event_type == ROTATE_EVENT)
 							router->rotating = 1;
+
+						/* current event is being written to disk file */
 						if (blr_write_binlog_record(router, &hdr, ptr) == 0)
 						{
 							/*
@@ -1094,6 +1197,8 @@ int			n_bufs = -1, pn_bufs = -1;
 							blr_master_delayed_connect(router);
 							return;
 						}
+
+						/* Check for rotete event */
 						if (hdr.event_type == ROTATE_EVENT)
 						{
 							if (!blr_rotate_event(router, ptr, &hdr))
@@ -1111,7 +1216,76 @@ int			n_bufs = -1, pn_bufs = -1;
 								return;
 							}
 						}
-						blr_distribute_binlog_record(router, &hdr, ptr);
+
+						/**
+						 * Distributing binlog events to slaves
+						 * may depend on pending transaction
+						 */
+
+						if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0)) {
+							spinlock_acquire(&router->binlog_lock);
+
+							router->binlog_position = router->current_pos;
+
+							spinlock_release(&router->binlog_lock);
+
+							/* Now distribute events */
+							blr_distribute_binlog_record(router, &hdr, ptr);
+						} else {
+							/**
+							 * If transaction is closed:
+							 *
+							 * 1) read current binlog starting
+							 * 	from router->last_commit_pos
+							 *
+							 * 2) distribute read event
+							 *
+							 * 3) if current pos = router->binlog_position
+							 *	update router->last_commit_pos
+							 *
+							 */
+
+							 if (router->pending_transaction > 1) {
+								unsigned long pos;
+								GWBUF   *record;
+								uint8_t *raw_data;
+								REP_HEADER      new_hdr;
+								int i=0;
+
+								//fprintf(stderr, "Time to feed slaves with complete transaction from %llu / %llu\n", router->binlog_position, router->current_pos);
+
+								spinlock_acquire(&router->binlog_lock);
+
+								pos = router->binlog_position;
+
+								spinlock_release(&router->binlog_lock);
+								
+
+								while ((record = blr_read_events_from_pos(router, pos, &new_hdr)) != NULL) {
+									i++;
+									raw_data = GWBUF_DATA(record);
+									//fprintf(stderr, "Read event %i, last commit @ %lu / %lu. *** Distributing event: Type [%i], size %u: pos @ %llu (next is %llu)\n", i, pos, router->current_pos, new_hdr.event_type, new_hdr.event_size, router->binlog_position, new_hdr.next_pos);
+									/* distribute event */
+									blr_distribute_binlog_record(router, &new_hdr, raw_data);
+									spinlock_acquire(&router->binlog_lock);
+
+									pos = new_hdr.next_pos;
+
+									spinlock_release(&router->binlog_lock);
+									gwbuf_free(record);
+								}
+
+								spinlock_acquire(&router->binlog_lock);
+								router->binlog_position = router->current_pos;
+								router->pending_transaction = 0;
+								spinlock_release(&router->binlog_lock);
+							} else {
+								/* A transaction is still pending */
+								//fprintf(stderr, "A Transaction is still pending @ %llu, master is @ %llu\n", router->binlog_position, router->current_pos);
+							}
+
+						}
+
 					}
 					else
 					{
@@ -1125,7 +1299,7 @@ int			n_bufs = -1, pn_bufs = -1;
 							hdr.event_type,
 							hdr.event_size,
 							router->binlog_name,
-							router->binlog_position)));
+							router->current_pos)));
 						ptr += 5;
 						if (hdr.event_type == ROTATE_EVENT)
 						{
@@ -1178,7 +1352,7 @@ int			n_bufs = -1, pn_bufs = -1;
 				LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
 					"Error packet in binlog stream.%s @ %d.",
 							router->binlog_name,
-							router->binlog_position)));
+							router->current_pos)));
 
 				router->stats.n_binlog_errors++;
 			}
@@ -1573,4 +1747,147 @@ char	*rval;
 	rval[collen] = 0;		// NULL terminate
 
 	return rval;
+}
+
+/**
+ * Read a replication event form current opened binlog into a GWBUF structure.
+ *
+ * @param router	The router instance
+ * @param pos		Position of binlog record to read
+ * @param hdr		Binlog header to populate
+ * @return		The binlog record wrapped in a GWBUF structure
+ */
+GWBUF
+*blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr) {
+unsigned long long end_pos = 0;
+struct  stat    statb;
+uint8_t         hdbuf[19];
+uint8_t         *data;
+GWBUF           *result;
+int             n;
+
+	/* Get current binnlog position */
+	end_pos = router->current_pos;
+
+	/* end of file reached, we're done */
+	if (pos == end_pos) {
+		return NULL;
+	}
+
+	/* error */
+	if (pos > end_pos)
+	{
+                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                        "Error: Reading saved events, the specified pos %lu "
+			"is ahead of current pos %lu for file %s",
+                        pos, router->current_pos, router->binlog_name)));
+		return NULL;
+	}
+
+	/* Read the event header information from the file */
+	if ((n = pread(router->binlog_fd, hdbuf, 19, pos)) != 19)
+	{
+		switch (n)
+		{
+		case 0:
+			LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+				"Reading saved events: reached end of binlog file at %d.", pos)));
+                        break;
+                case -1:
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Error: Reading saved events: failed to read binlog "
+				"file %s at position %d"
+				" (%s).", router->binlog_name,
+				pos, strerror(errno))));
+
+			if (errno == EBADF)
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+					"Error: Reading saved events: bad file descriptor for file %s"
+                                        ", descriptor %d.",
+                                        router->binlog_name, router->binlog_fd)));
+			break;
+		default:
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Error: Reading saved events: short read when reading the header. "
+				"Expected 19 bytes but got %d bytes. "
+				"Binlog file is %s, position %d",
+				n, router->binlog_name, pos)));
+			break;
+		}
+
+		return NULL;
+	}
+
+	//fprintf(stderr, "blr_read_events_from_pos read %i bytes. ptr[0]=[%i]\n", n, hdbuf[0]);
+
+	hdr->timestamp = EXTRACT32(hdbuf);
+	hdr->event_type = hdbuf[4];
+	hdr->serverid = EXTRACT32(&hdbuf[5]);
+	hdr->event_size = extract_field(&hdbuf[9], 32);
+	hdr->next_pos = EXTRACT32(&hdbuf[13]);
+	hdr->flags = EXTRACT16(&hdbuf[17]);
+
+	//fprintf(stderr, ">>>> event type %i\n", hdr->event_type);
+	//fprintf(stderr, ">>>> event size %lu\n", hdr->event_size);
+	//fprintf(stderr, ">>>> event next_pos %lu\n", hdr->next_pos);
+
+	/* Add MariaDB 10 checks */
+	if (hdr->event_type > MAX_EVENT_TYPE)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Error: Reading saved events: invalid event type 0x%x. "
+			"Binlog file is %s, position %d",
+			hdr->event_type,
+			router->binlog_name, pos)));
+		return NULL;
+	}
+
+	if ((result = gwbuf_alloc(hdr->event_size)) == NULL)
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Error: Reading saved events: failed to allocate memory for binlog entry, "
+			"size %d at %d.",
+			hdr->event_size, pos)));
+		return NULL;
+	}
+
+	/* Copy event header*/
+	data = GWBUF_DATA(result);
+	memcpy(data, hdbuf, 19);
+
+	/* Read event data and put int into buffer after header */
+	if ((n = pread(router->binlog_fd, &data[19], hdr->event_size - 19, pos + 19)) != hdr->event_size - 19)
+	{
+		if (n == -1)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Error: Reading saved events: the event at %ld in %s. "
+				"%s, expected %d bytes.",
+				pos, router->binlog_name,
+				strerror(errno), hdr->event_size - 19)));
+		} else {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Error: Reading saved events: short read when reading "
+				"the event at %ld in %s. "
+				"Expected %d bytes got %d bytes.",
+				pos, router->binlog_name, hdr->event_size - 19, n)));
+
+                        if (end_pos - pos < hdr->event_size)
+                        {
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+	                                "Error: Reading saved events: binlog event "
+					"is close to the end of the binlog file, "
+					"current file size is %u.", end_pos)));
+			}
+		}
+
+		/* free buffer */
+                gwbuf_free(result);
+
+		return NULL;
+	}
+
+//      fprintf(stderr, "blr_read_events_from_pos read [%i] next bytes, raw data size is [%i]\n", n, hdr->event_size);
+
+	return result;
 }

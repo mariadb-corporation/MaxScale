@@ -268,6 +268,9 @@ int		rc = 0;
 	inst->m_errno = 0;
 	inst->m_errmsg = NULL;
 
+	inst->trx_safe = 0;
+	inst->pending_transaction = 0;
+
 	my_uuid_init((ulong)rand()*12345,12345);
 	if ((defuuid = (unsigned char *)malloc(20)) != NULL)
 	{
@@ -348,6 +351,10 @@ int		rc = 0;
 				{
 					inst->initbinlog = atoi(value);
 				}
+				else if (strcmp(options[i], "transaction_safety") == 0)
+				{
+					inst->trx_safe = atoi(value);
+				}
 				else if (strcmp(options[i], "lowwater") == 0)
 				{
 					inst->low_water = atoi(value);
@@ -414,6 +421,8 @@ int		rc = 0;
 				service->name)));
 	}
 
+	fprintf(stderr, "Transaction safety is [%i]\n", inst->trx_safe);
+
 	if (inst->fileroot == NULL)
 		inst->fileroot = strdup(BINLOG_NAME_ROOT);
 	inst->active_logs = 0;
@@ -426,6 +435,8 @@ int		rc = 0;
 	inst->lastEventTimestamp = 0;
 
 	inst->binlog_position = 0;
+	inst->current_pos = 0;
+
 	strcpy(inst->binlog_name, "");
 	strcpy(inst->prevbinlog, "");
 
@@ -602,6 +613,18 @@ int		rc = 0;
 	 * Now start the replication from the master to MaxScale
 	 */
 	if (inst->master_state == BLRM_UNCONNECTED) {
+
+		/* NOTE: This setting will be replaced by calling
+		 * blr_read_events_all() routine soon
+		 * The routine may truncate binlog file or put
+		 * master_state into BLR_SLAVE_STOPPED state.
+		 * If an open transaction is detected @ pos xxx
+		 * inst->binlog_position will be set to xxx
+		 */
+		if (inst->binlog_position == 0)
+			inst->binlog_position = inst->current_pos;
+
+		/* Start replication from master server */
 		blr_start_master(inst);
 	}
 	
