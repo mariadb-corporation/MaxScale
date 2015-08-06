@@ -117,6 +117,7 @@ static void blr_master_free_config(MASTER_SERVER_CFG *current_master);
 static void blr_master_restore_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *current_master);
 static void blr_master_set_empty_config(ROUTER_INSTANCE *router);
 static void blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master);
+static int blr_slave_send_ok_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -716,9 +717,25 @@ extern  char *strcasestr();
 						spinlock_release(&router->lock);
 					}
 
-					blr_master_free_config(current_master);
+					if (!router->trx_safe)
+						blr_master_free_config(current_master);
 
-					return blr_slave_send_ok(router, slave);
+					if (router->trx_safe && router->pending_transaction) {
+						if (strcmp(router->binlog_name, router->prevbinlog) != 0)
+						{
+							char message[1024+1] = "";
+							snprintf(message, 1024, "A transaction is open in current binlog file %s, It will be truncated at pos %lu by next START SLAVE command", current_master->logfile, current_master->safe_pos);
+							blr_master_free_config(current_master);
+
+							return blr_slave_send_ok_message(router, slave, message);
+						} else {
+							blr_master_free_config(current_master);
+							return blr_slave_send_ok(router, slave);
+						}
+
+					} else {
+						return blr_slave_send_ok(router, slave);
+					}
 				}
 			}
 		}
@@ -2454,6 +2471,39 @@ uint8_t *ptr;
 
         return slave->dcb->func.write(slave->dcb, pkt);
 }
+static int
+blr_slave_send_ok_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+
+        if ((pkt = gwbuf_alloc(11+strlen(message)+1)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        *ptr++ = 7 + strlen(message) +1;     // Payload length
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 1;     // Seqno
+        *ptr++ = 0;     // ok
+        *ptr++ = 0;
+        *ptr++ = 0;
+
+        *ptr++ = 2;
+        *ptr++ = 0;
+
+	if(strlen(message) == 0) {
+                *ptr++ = 0;
+                *ptr++ = 0;
+	} else {
+        	*ptr++ = 1;
+        	*ptr++ = 0;
+        	*ptr++ = strlen(message);
+		strcpy((char *)ptr, message);
+	}
+
+        return slave->dcb->func.write(slave->dcb, pkt);
+}
+
 
 /**
  * Stop current replication from master
@@ -2494,6 +2544,16 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 	router->master_state = BLRM_SLAVE_STOPPED;
 
+	router->last_safe_pos = router->binlog_position;
+
+	/**
+	 * Set router->prevbinlog to router->binlog_name
+	 * The FDE event with current filename may arrive after STOP SLAVE is received
+	 */
+
+	if (strcmp(router->binlog_name, router->prevbinlog) !=0)
+		strncpy(router->prevbinlog, router->binlog_name, BINLOG_FNAMELEN);
+
 	spinlock_release(&router->lock);
 
 	if (router->client) {
@@ -2526,7 +2586,13 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 		router->service->dbref->server->port,
 		router->binlog_name, router->current_pos)));
 
-	return blr_slave_send_ok(router, slave);
+	if (router->trx_safe && router->pending_transaction) {
+		char message[1024+1] = "";
+		snprintf(message, 1024, "A transaction is open at pos %lu, file %s", router->binlog_position, router->binlog_name);
+		return blr_slave_send_ok_message(router, slave, message);
+	} else {
+		return blr_slave_send_ok(router, slave);
+	}
 }
 
 /**
@@ -2563,18 +2629,43 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 	spinlock_release(&router->lock);
 
 	/* create a new binlog or just use current one */
-	if (strcmp(router->prevbinlog, router->binlog_name)) {
+	if (strlen(router->prevbinlog) && strcmp(router->prevbinlog, router->binlog_name)) {
 		if (router->trx_safe && router->pending_transaction) {
 			char msg[1024+1] = "";
+			char file[PATH_MAX+1] = "";
+
+			snprintf(msg, 1024, "A transaction is still opened at pos %lu in file %s. Truncating it ... Try START SLAVE again.", router->last_safe_pos, router->prevbinlog);
+
+
+			/* Truncate previous binlog file to safe pos */
+
+			snprintf(file, PATH_MAX, "%s/%s", router->binlogdir, router->prevbinlog);
+			truncate(file, router->last_safe_pos);
+
+			/* Log it */
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
-					"Warning: a transaction is still opened at pos %lu. "
-					"Current pos is %lu in file %s",
-					router->binlog_position,
-					router->current_pos, router->prevbinlog)));
+					"Warning: a transaction is still opened at pos %lu"
+					" File %s will be truncated. "
+					"Next binlog file is %s at pos %lu, "
+					"START SLAVE is required again.",
+					router->last_safe_pos,
+					router->prevbinlog,
+					router->binlog_name,
+					4)));
 
-			snprintf(msg, 1024, "A transaction is still opened at pos %lu. Current pos is %lu in file %s", router->binlog_position, router->current_pos, router->prevbinlog);
+			spinlock_acquire(&router->lock);
 
+			router->pending_transaction = 0;
+			router->last_safe_pos = 0;
+			router->last_safe_pos = 0;
+			router->master_state = BLRM_SLAVE_STOPPED;
+			router->current_pos = 4;
+			router->binlog_position = 4;
+
+			spinlock_release(&router->lock);
+
+			/* Send error message to mysql command */
 			blr_slave_send_error_packet(slave, msg, (unsigned int)1254, NULL);
 
 			return 1;
@@ -2586,7 +2677,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 	}
 
 	blr_start_master(router);
-
+	
 	LOGIF(LM, (skygw_log_write(
 		LOGFILE_MESSAGE,
 		"%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, binlog %s, pos %lu",
@@ -3207,6 +3298,7 @@ blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master) {
 	curr_master->port = router->service->dbref->server->port;
 	curr_master->host = strdup(router->service->dbref->server->name);
 	curr_master->pos = router->current_pos;
+	curr_master->safe_pos = router->binlog_position;
 	strncpy(curr_master->logfile, router->binlog_name, BINLOG_FNAMELEN);
 	curr_master->user = strdup(router->user);
 	curr_master->password = strdup(router->password);
@@ -3272,6 +3364,7 @@ blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master)
 	server_update_address(router->service->dbref->server, prev_master->host);
 	server_update_port(router->service->dbref->server, prev_master->port);
 	router->current_pos = prev_master->pos;
+	router->binlog_position = prev_master->safe_pos;
 	strcpy(router->binlog_name, prev_master->logfile);
 	if (router->user) {
 		free(router->user);

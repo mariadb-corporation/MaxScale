@@ -270,6 +270,7 @@ int		rc = 0;
 
 	inst->trx_safe = 0;
 	inst->pending_transaction = 0;
+	inst->last_safe_pos = 0;
 
 	my_uuid_init((ulong)rand()*12345,12345);
 	if ((defuuid = (unsigned char *)malloc(20)) != NULL)
@@ -580,11 +581,6 @@ int		rc = 0;
 			free(inst);
 			return NULL;
 		}
-
-		LOGIF(LT, (skygw_log_write_flush(
-			LOGFILE_TRACE,
-			"Binlog router: current binlog file is: %s, current position %u\n",
-			inst->binlog_name, inst->binlog_position)));
 	}
 
 	/*
@@ -614,15 +610,28 @@ int		rc = 0;
 	 */
 	if (inst->master_state == BLRM_UNCONNECTED) {
 
-		/* NOTE: This setting will be replaced by calling
-		 * blr_read_events_all() routine soon
-		 * The routine may truncate binlog file or put
+		/** blr_read_events_all() may truncate binlog file or put
 		 * master_state into BLR_SLAVE_STOPPED state.
 		 * If an open transaction is detected @ pos xxx
 		 * inst->binlog_position will be set to xxx
+		 *
+		 * Files are now truncated and router is not in BLR_SLAVE_STOPPED state
 		 */
-		if (inst->binlog_position == 0)
-			inst->binlog_position = inst->current_pos;
+
+		int n;
+		n = blr_read_events_all_events(inst, 1, 0);
+
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"blr_read_events_all_events() ret = %i\n", n)));
+
+		fprintf(stderr, "blr_read_events_all_events() ret = %i\n", n);
+		fprintf(stderr, "current_pos / binlog_pos are [%llu] / [%llu]\n", inst->current_pos, inst->binlog_position);
+
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"Binlog router: current binlog file is: %s, current position %u\n",
+			inst->binlog_name, inst->binlog_position)));
 
 		/* Start replication from master server */
 		blr_start_master(inst);

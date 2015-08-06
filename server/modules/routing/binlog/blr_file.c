@@ -186,7 +186,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 
 	write(fd, magic, 4);
 	router->current_pos = 4;			/* Initial position after the magic number */
-	//router->binlog_position = 4;			/* Initial position after the magic number */
+	router->binlog_position = 4;			/* Initial position after the magic number */
 }
 
 
@@ -254,11 +254,8 @@ int		fd;
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
 	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
-	//router->binlog_position = lseek(fd, 0L, SEEK_END);
 	router->current_pos = lseek(fd, 0L, SEEK_END);
-	//if (router->binlog_position < 4) {
 	if (router->current_pos < 4) {
-		//if (router->binlog_position == 0) {
 		if (router->current_pos == 0) {
 			blr_file_add_magic(router, fd);
 		} else {
@@ -266,7 +263,6 @@ int		fd;
 			 * then report an error. */
 	                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"%s: binlog file %s has an invalid length %d.",
-				//router->service->name, path, router->binlog_position)));
 				router->service->name, path, router->current_pos)));
 			close(fd);
 			spinlock_release(&router->binlog_lock);
@@ -304,7 +300,6 @@ int	n;
 		return 0;
 	}
 	spinlock_acquire(&router->binlog_lock);
-	//router->binlog_position = hdr->next_pos;
 	router->current_pos = hdr->next_pos;
 	router->last_written = hdr->next_pos - hdr->event_size;
 	spinlock_release(&router->binlog_lock);
@@ -931,8 +926,8 @@ int statement_len;
 int checksum_len=0;
 int found_chksum = 0;
 
-        if (router->binlog_fd == -1) {
-                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+	if (router->binlog_fd == -1) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
                         "*** ERROR: Current binlog file %s is not open",
                         router->binlog_name)));
                 return 1;
@@ -941,8 +936,10 @@ int found_chksum = 0;
         if (fstat(router->binlog_fd, &statb) == 0)
                 filelen = statb.st_size;
 
+	router->current_pos = 4;
+	router->binlog_position = 4;
+
         while (1){
-                //fprintf(stderr, "Pos %llu pending trx = %i\n", pos, pending_transaction);
 
                 /* Read the header information from the file */
                 if ((n = pread(router->binlog_fd, hdbuf, 19, pos)) != 19) {
@@ -961,7 +958,6 @@ int found_chksum = 0;
                                                         router->binlog_name,
                                                         last_known_commit)));
 
-                                                //ftruncate(router->binlog_fd, last_known_commit);
                                         }
 
                                         break;
@@ -985,23 +981,43 @@ int found_chksum = 0;
                                         break;
                         }
 
-                        /* force last_known_commit position */
+                        /**
+			 * Check for errors and force last_known_commit position
+			 * and current pos
+			 */
+
                         if (pending_transaction) {
                                 router->binlog_position = last_known_commit;
+				router->current_pos = pos;
                                 router->pending_transaction = 1;
                                 pending_transaction = 0;
-                        } else {
-                                router->binlog_position = pos;
-                        }
 
-                        /* Truncate file in case of any error */
-                        if (n != 0) {
-                                ftruncate(router->binlog_fd, pos);
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+					"warning : pending transaction has been found. "
+					"Setting safe pos to %lu, current pos %lu",
+					router->binlog_position, router->current_pos)));
 
-                                router->binlog_position = pos;
-                                return 1;
+				return 0;
                         } else {
-                                return 0;
+                        	/* any error */
+                        	if (n != 0) {
+					router->binlog_position = last_known_commit;
+					router->current_pos = pos;
+
+					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+						"warning : an error has been found. "
+						"Setting safe pos to %lu, current pos %lu",
+						router->binlog_position, router->current_pos)));
+
+					ftruncate(router->binlog_fd, router->binlog_position);
+					fsync(router->binlog_fd);
+				
+					return 1;
+				} else {
+					router->binlog_position = pos;
+					router->current_pos = pos;
+                                	return 0;
+				}
                         }
                 }
 
@@ -1030,12 +1046,40 @@ int found_chksum = 0;
                                 hdr.event_type,
                                 router->binlog_name, pos)));
 
-                        ftruncate(router->binlog_fd, pos);
+                        router->binlog_position = last_known_commit;
+                        router->current_pos = pos;
 
-                        router->binlog_position = pos;
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"warning : an error has been found. "
+				"Setting safe pos to %lu, current pos %lu",
+				router->binlog_position, router->current_pos)));
+
+				ftruncate(router->binlog_fd, router->binlog_position);
+				fsync(router->binlog_fd);
 
                         return 1;
                 }
+
+		if (hdr.event_size <= 0)
+                {
+                        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                "*** ERROR: event size error: "
+                                "size %d at %llu.",
+                                hdr.event_size, pos)));
+
+                        router->binlog_position = last_known_commit;
+                        router->current_pos = pos;
+
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"warning : an error has been found. "
+				"Setting safe pos to %lu, current pos %lu",
+				router->binlog_position, router->current_pos)));
+
+			ftruncate(router->binlog_fd, router->binlog_position);
+			fsync(router->binlog_fd);
+
+                        return 1;
+		}
 
                 /* Allocate a GWBUF for the event */
                 if ((result = gwbuf_alloc(hdr.event_size)) == NULL)
@@ -1045,9 +1089,16 @@ int found_chksum = 0;
                                 "size %d at %llu.",
                                 hdr.event_size, pos)));
 
-                        ftruncate(router->binlog_fd, pos);
+                        router->binlog_position = last_known_commit;
+                        router->current_pos = pos;
 
-                        router->binlog_position = pos;
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"warning : an error has been found. "
+				"Setting safe pos to %lu, current pos %lu",
+				router->binlog_position, router->current_pos)));
+
+			ftruncate(router->binlog_fd, router->binlog_position);
+			fsync(router->binlog_fd);
 
                         return 1;
                 }
@@ -1085,9 +1136,16 @@ int found_chksum = 0;
 
                         gwbuf_free(result);
 
-                        ftruncate(router->binlog_fd, pos);
+                        router->binlog_position = last_known_commit;
+                        router->current_pos = pos;
 
-                        router->binlog_position = pos;
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"warning : an error has been found. "
+				"Setting safe pos to %lu, current pos %lu",
+				router->binlog_position, router->current_pos)));
+
+			ftruncate(router->binlog_fd, router->binlog_position);
+			fsync(router->binlog_fd);
 
                         return 1;
                 }
@@ -1267,11 +1325,18 @@ int found_chksum = 0;
                                 pos,
                                 pos)));
 
-                        ftruncate(router->binlog_fd, pos);
+                        router->binlog_position = last_known_commit;
+                        router->current_pos = pos;
 
-                        router->binlog_position = pos;
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"warning : an error has been found. "
+				"Setting safe pos to %lu, current pos %lu",
+				router->binlog_position, router->current_pos)));
 
-                        return 3;
+			ftruncate(router->binlog_fd, router->binlog_position);
+			fsync(router->binlog_fd);
+
+                        return 2;
                 }
 
                 if (hdr.next_pos > 0 && hdr.next_pos != (pos + hdr.event_size)) {
@@ -1283,11 +1348,18 @@ int found_chksum = 0;
                                 hdr.event_size,
                                 pos)));
 
-                        ftruncate(router->binlog_fd, pos);
+                        router->binlog_position = last_known_commit;
+                        router->current_pos = pos;
 
-                        router->binlog_position = pos;
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"warning : an error has been found. "
+				"Setting safe pos to %lu, current pos %lu",
+				router->binlog_position, router->current_pos)));
 
-                        return 3;
+			ftruncate(router->binlog_fd, router->binlog_position);
+			fsync(router->binlog_fd);
+
+                        return 2;
                 }
 
                 /* set pos to new value */
@@ -1307,13 +1379,19 @@ int found_chksum = 0;
                         router->binlog_name,
                         last_known_commit)));
 
-                ftruncate(router->binlog_fd, last_known_commit);
+		router->binlog_position = last_known_commit;
+		router->current_pos = pos;
+		router->pending_transaction = 1;
 
-                router->binlog_position = last_known_commit;
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"warning : an error has been found. "
+			"Setting safe pos to %lu, current pos %lu",
+			router->binlog_position, router->current_pos)));
 
-                return 2;
+                return 0;
         } else {
                 router->binlog_position = pos;
+                router->current_pos = pos;
 
                 return 0;
         }

@@ -1275,10 +1275,10 @@ int			n_bufs = -1, pn_bufs = -1;
 									gwbuf_free(record);
 								}
 
-								spinlock_acquire(&router->binlog_lock);
+								spinlock_acquire(&router->lock);
 								router->binlog_position = router->current_pos;
 								router->pending_transaction = 0;
-								spinlock_release(&router->binlog_lock);
+								spinlock_release(&router->lock);
 							} else {
 								/* A transaction is still pending */
 								//fprintf(stderr, "A Transaction is still pending @ %llu, master is @ %llu\n", router->binlog_position, router->current_pos);
@@ -1450,8 +1450,12 @@ char		file[BINLOG_FNAMELEN+1];
 #endif
 
 	strcpy(router->prevbinlog, router->binlog_name);
+
+	printf("New file: %s/%s @ %ld, pending transaction [%i]\n", file, router->prevbinlog, pos, router->pending_transaction);
+
 	if (strncmp(router->binlog_name, file, slen) != 0)
 	{
+		fprintf(stderr, "Calling rotate for [%s]/[%s] prev [%s]\n", router->binlog_name, file, router->prevbinlog);
 		router->stats.n_rotates++;
 		if (blr_file_rotate(router, file, pos) == 0)
 		{

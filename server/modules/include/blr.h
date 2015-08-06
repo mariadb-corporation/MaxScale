@@ -167,6 +167,7 @@ typedef struct master_server_config {
 	unsigned short port;
 	char logfile[BINLOG_FNAMELEN+1];
 	uint64_t pos;
+	uint64_t safe_pos;
 	char *user;
 	char *password;
 	char *filestem;
@@ -360,6 +361,7 @@ typedef struct router_instance {
 	SPINLOCK		binlog_lock;	/*< Lock to control update of the binlog position */
 	int			trx_safe;	/*< Detect and handle partial transactions */
 	int			pending_transaction; /*< Pending transaction */
+	uint64_t		last_safe_pos; /* last committed transaction */
 	char			binlog_name[BINLOG_FNAMELEN+1];
 					/*< Name of the current binlog file */
 	uint64_t		binlog_position;
