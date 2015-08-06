@@ -40,6 +40,7 @@
 #include <modules.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <secrets.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -48,6 +49,8 @@ extern __thread log_info_t tls_log_info;
 
 static MONITOR	*allMonitors = NULL;
 static SPINLOCK	monLock = SPINLOCK_INIT;
+
+void valid_monitor_permissions(MONITOR* monitor);
 
 /**
  * Allocate a new monitor, load the associated module for the monitor
@@ -447,4 +450,59 @@ int		*data;
 	resultset_add_column(set, "Status", 10, COL_TYPE_VARCHAR);
 
 	return set;
+}
+
+/**
+ * Check if the monitor user has all required permissions to operate properly.
+ * this checks for ...
+ * @param service Monitor to inspect
+ */
+void valid_monitor_permissions(MONITOR* monitor)
+{
+    MYSQL* mysql;
+    MYSQL_RES* res;
+    char *user,*dpasswd;
+    SERVER* server;
+    int conn_timeout = 1;
+
+    user = monitor->user;
+    dpasswd = decryptPassword(monitor->password);
+
+    if((mysql = mysql_init(NULL)) == NULL)
+    {
+	skygw_log_write(LE,"[%s] Error: MySQL connection initialization failed.",__FUNCTION__);
+	free(dpasswd);
+	return;
+    }
+
+    server = monitor->databases->server;
+    mysql_options(mysql,MYSQL_OPT_USE_REMOTE_CONNECTION,NULL);
+    mysql_options(mysql,MYSQL_OPT_CONNECT_TIMEOUT,&conn_timeout);
+
+    /** Connect to the first server. This assumes all servers have identical
+     * user permissions. */
+    if(mysql_real_connect(mysql,server->name,user,dpasswd,NULL,server->port,NULL,0) == NULL)
+    {
+	skygw_log_write(LE,"[%s] Error: Failed to connect to server %s(%s:%d) when"
+		" checking monitor user credentials and permissions.",
+		 monitor->name,
+		 server->unique_name,
+		 server->name,
+		 server->port);
+	mysql_close(mysql);
+	free(dpasswd);
+	return;
+    }
+
+    if(mysql_query(mysql,"show slave status") != 0)
+    {
+	skygw_log_write(LE,"[%s] Error: Monitor failed to query for slave status. MySQL error message: %s",monitor->name,mysql_error(mysql));
+	mysql_close(mysql);
+	free(dpasswd);
+	return;
+    }
+
+    mysql_free_result(mysql_use_result(mysql));
+    mysql_close(mysql);
+    free(dpasswd);
 }

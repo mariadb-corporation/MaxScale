@@ -246,4 +246,5 @@ void  service_shutdown();
 extern	int	serviceSessionCountAll();
 extern  RESULTSET	*serviceGetList();
 extern  RESULTSET	*serviceGetListenerList();
+bool service_is_internal(SERVICE* service);
 #endif

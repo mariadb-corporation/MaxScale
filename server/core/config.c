@@ -1107,6 +1107,7 @@ process_config_context(CONFIG_CONTEXT *context)
 					monitorAddUser(obj->element,
                                                        user,
                                                        passwd);
+					valid_monitor_permissions(obj->element);
 				}
 				else if (obj->element && user)
 				{

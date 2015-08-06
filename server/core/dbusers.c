@@ -2315,3 +2315,107 @@ int add_wildcard_users(USERS *users, char* name, char* host, char* password, cha
 
     return rval;
 }
+
+/**
+ * Check if the service user has all required permissions to operate properly.
+ * this checks for SELECT permissions on mysql.user and mysql.db tables and for
+ * SHOW DATABASES permissions. If permissions are not adequate, an error message
+ * is logged.
+ * @param service Service to inspect
+ */
+void valid_service_permissions(SERVICE* service)
+{
+    MYSQL* mysql;
+    MYSQL_RES* res;
+    char *user,*password,*dpasswd;
+    SERVER_REF* server;
+    int conn_timeout = 1;
+
+    if(service_is_internal(service))
+	return;
+
+    if(service->dbref == NULL)
+    {
+	skygw_log_write(LE,"[%s] Error: Service is missing the servers parameter.",service->name);
+	return;
+    }
+
+    server = service->dbref;
+
+    if (serviceGetUser(service, &user, &password) == 0)
+    {
+	skygw_log_write(LE,"[%s] Error: Service %s is missing the user credentials for authentication.",
+		 __FUNCTION__,service->name);
+	return;
+    }
+
+    dpasswd = decryptPassword(password);
+
+    if((mysql = mysql_init(NULL)) == NULL)
+    {
+	skygw_log_write(LE,"[%s] Error: MySQL connection initialization failed.",__FUNCTION__);
+	free(dpasswd);
+	return;
+    }
+
+    mysql_options(mysql,MYSQL_OPT_USE_REMOTE_CONNECTION,NULL);
+    mysql_options(mysql,MYSQL_OPT_CONNECT_TIMEOUT,&conn_timeout);
+    /** Connect to the first server. This assumes all servers have identical
+     * user permissions. */
+
+    if(mysql_real_connect(mysql,server->server->name,user,dpasswd,NULL,server->server->port,NULL,0) == NULL)
+    {
+	skygw_log_write(LE,"[%s] Error: Failed to connect to server %s(%s:%d) when"
+		" checking authentication user credentials and permissions.",
+		 service->name,
+		 server->server->unique_name,
+		 server->server->name,
+		 server->server->port);
+	mysql_close(mysql);
+	free(dpasswd);
+	return;
+    }
+
+    if(mysql_query(mysql,"select * from mysql.user limit 1") != 0)
+    {
+	skygw_log_write(LE,"[%s] Error: Failed to query from mysql.user table. MySQL error message: %s",service->name,mysql_error(mysql));
+	mysql_close(mysql);
+	free(dpasswd);
+	return;
+    }
+
+    mysql_free_result(mysql_use_result(mysql));
+
+    if(mysql_query(mysql,"select * from mysql.db limit 1") != 0)
+    {
+	skygw_log_write(LM|LE,"The user '%s' for service '%s' does not have"
+		" SELECT permissions on the mysql.db table. MaxScale will not use the database in authentication. MySQL error message: %s",
+		 user,service->name,mysql_error(mysql));
+	mysql_close(mysql);
+	free(dpasswd);
+	return;
+    }
+    else
+    {
+	mysql_free_result(mysql_use_result(mysql));
+    }
+
+    if(mysql_query(mysql,LOAD_MYSQL_DATABASE_NAMES) != 0)
+    {
+	skygw_log_write(LE,"[%s] Error: Failed to query for SHOW DATABASES permissions. MySQL error message: %s.",service->name,mysql_error(mysql));
+    }
+    else
+    {
+	res = mysql_use_result(mysql);
+	if(mysql_num_rows(res) == 0)
+	{
+	    skygw_log_write(LM|LE,"The user '%s' for service '%s' does not have"
+		    " SHOW DATABASES permissions. MaxScale will not use the database in authentication.",
+		     user,service->name);
+	}
+	mysql_free_result(res);
+    }
+
+    mysql_close(mysql);
+    free(dpasswd);
+}
