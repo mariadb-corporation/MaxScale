@@ -2544,6 +2544,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 	router->master_state = BLRM_SLAVE_STOPPED;
 
+	/* set last_safe_pos */
 	router->last_safe_pos = router->binlog_position;
 
 	/**
@@ -2637,7 +2638,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 			snprintf(msg, 1024, "A transaction is still opened at pos %lu in file %s. Truncating it ... Try START SLAVE again.", router->last_safe_pos, router->prevbinlog);
 
 
-			/* Truncate previous binlog file to safe pos */
+			/* Truncate previous binlog file to last_safe pos */
 
 			snprintf(file, PATH_MAX, "%s/%s", router->binlogdir, router->prevbinlog);
 			truncate(file, router->last_safe_pos);
@@ -2657,7 +2658,6 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 			spinlock_acquire(&router->lock);
 
 			router->pending_transaction = 0;
-			router->last_safe_pos = 0;
 			router->last_safe_pos = 0;
 			router->master_state = BLRM_SLAVE_STOPPED;
 			router->current_pos = 4;

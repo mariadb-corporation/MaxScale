@@ -1008,14 +1008,16 @@ int found_chksum = 0;
 						"warning : an error has been found. "
 						"Setting safe pos to %lu, current pos %lu",
 						router->binlog_position, router->current_pos)));
-
-					ftruncate(router->binlog_fd, router->binlog_position);
-					fsync(router->binlog_fd);
+					if (fix) {
+						ftruncate(router->binlog_fd, router->binlog_position);
+						fsync(router->binlog_fd);
+					}
 				
 					return 1;
 				} else {
 					router->binlog_position = pos;
 					router->current_pos = pos;
+
                                 	return 0;
 				}
                         }
@@ -1054,8 +1056,10 @@ int found_chksum = 0;
 				"Setting safe pos to %lu, current pos %lu",
 				router->binlog_position, router->current_pos)));
 
+			if (fix) {
 				ftruncate(router->binlog_fd, router->binlog_position);
 				fsync(router->binlog_fd);
+			}
 
                         return 1;
                 }
@@ -1074,9 +1078,10 @@ int found_chksum = 0;
 				"warning : an error has been found. "
 				"Setting safe pos to %lu, current pos %lu",
 				router->binlog_position, router->current_pos)));
-
-			ftruncate(router->binlog_fd, router->binlog_position);
-			fsync(router->binlog_fd);
+			if (fix) {
+				ftruncate(router->binlog_fd, router->binlog_position);
+				fsync(router->binlog_fd);
+			}
 
                         return 1;
 		}
@@ -1097,8 +1102,10 @@ int found_chksum = 0;
 				"Setting safe pos to %lu, current pos %lu",
 				router->binlog_position, router->current_pos)));
 
-			ftruncate(router->binlog_fd, router->binlog_position);
-			fsync(router->binlog_fd);
+			if (fix) {
+				ftruncate(router->binlog_fd, router->binlog_position);
+				fsync(router->binlog_fd);
+			}
 
                         return 1;
                 }
@@ -1143,9 +1150,10 @@ int found_chksum = 0;
 				"warning : an error has been found. "
 				"Setting safe pos to %lu, current pos %lu",
 				router->binlog_position, router->current_pos)));
-
-			ftruncate(router->binlog_fd, router->binlog_position);
-			fsync(router->binlog_fd);
+			if (fix) {
+				ftruncate(router->binlog_fd, router->binlog_position);
+				fsync(router->binlog_fd);
+			}
 
                         return 1;
                 }
@@ -1332,9 +1340,10 @@ int found_chksum = 0;
 				"warning : an error has been found. "
 				"Setting safe pos to %lu, current pos %lu",
 				router->binlog_position, router->current_pos)));
-
-			ftruncate(router->binlog_fd, router->binlog_position);
-			fsync(router->binlog_fd);
+			if (fix) {
+				ftruncate(router->binlog_fd, router->binlog_position);
+				fsync(router->binlog_fd);
+			}
 
                         return 2;
                 }
@@ -1356,8 +1365,10 @@ int found_chksum = 0;
 				"Setting safe pos to %lu, current pos %lu",
 				router->binlog_position, router->current_pos)));
 
-			ftruncate(router->binlog_fd, router->binlog_position);
-			fsync(router->binlog_fd);
+			if (fix) {
+				ftruncate(router->binlog_fd, router->binlog_position);
+				fsync(router->binlog_fd);
+			}
 
                         return 2;
                 }

@@ -966,6 +966,8 @@ int			n_bufs = -1, pn_bufs = -1;
 
 			if (hdr.ok == 0)
 			{
+				spinlock_acquire(&router->lock);
+
 				/* set mysql errno to 0 */
 				router->m_errno = 0;
 
@@ -973,6 +975,8 @@ int			n_bufs = -1, pn_bufs = -1;
 				if (router->m_errmsg)
 					free(router->m_errmsg);
 				router->m_errmsg = NULL;
+
+				spinlock_release(&router->lock);
 
 				int event_limit;
 
