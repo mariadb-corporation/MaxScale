@@ -966,6 +966,8 @@ int			n_bufs = -1, pn_bufs = -1;
 
 			if (hdr.ok == 0)
 			{
+				int event_limit;
+
 				spinlock_acquire(&router->lock);
 
 				/* set mysql errno to 0 */
@@ -977,8 +979,6 @@ int			n_bufs = -1, pn_bufs = -1;
 				router->m_errmsg = NULL;
 
 				spinlock_release(&router->lock);
-
-				int event_limit;
 
 				/*
 				 * First check that the checksum we calculate matches the
@@ -1046,12 +1046,9 @@ int			n_bufs = -1, pn_bufs = -1;
 					}
 				}
 
-// #define SHOW_EVENTS
 #ifdef SHOW_EVENTS
 				printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
 #endif
-
-				//fprintf(stderr, "*** binlog last_commit_pos = %lu, binlog_pos = %lu\n", router->binlog_position, router->current_pos);
 
 				/**
 				 * Detect transactions in events
@@ -1078,14 +1075,12 @@ int			n_bufs = -1, pn_bufs = -1;
 							spinlock_acquire(&router->binlog_lock);
 
 							if (router->pending_transaction > 0) {
-								//fprintf(stderr, "*** A transaction is already open!!!!\n");
-								// stop replication ????
+								fprintf(stderr, "*** A transaction is already open @ %lu and a new one starts @ %lu\n", router->binlog_position, router->current_pos);
 							}
+
 							router->pending_transaction = 1;
 
 							spinlock_release(&router->binlog_lock);
-
-							//fprintf(stderr, "Transaction is starting @ %llu / %llu\n", router->binlog_position, router->current_pos);
 						}
 
 						/* Check for COMMIT in non transactional store engines */
@@ -1095,9 +1090,6 @@ int			n_bufs = -1, pn_bufs = -1;
 							router->pending_transaction = 2;
 
 							spinlock_release(&router->binlog_lock);
-
-							//fprintf(stderr, "Transaction closed @ %llu / %llu\n", router->binlog_position, router->current_pos);
-
 						}
 
 						free(statement_sql);
@@ -1113,7 +1105,6 @@ int			n_bufs = -1, pn_bufs = -1;
 
 							router->pending_transaction = 3;
 
-							//fprintf(stderr, "Transaction XID closed @ %llu / %llu", router->binlog_position, router->current_pos);
 							spinlock_release(&router->binlog_lock);
 						}
 					}
@@ -1256,8 +1247,6 @@ int			n_bufs = -1, pn_bufs = -1;
 								REP_HEADER      new_hdr;
 								int i=0;
 
-								//fprintf(stderr, "Time to feed slaves with complete transaction from %llu / %llu\n", router->binlog_position, router->current_pos);
-
 								spinlock_acquire(&router->binlog_lock);
 
 								pos = router->binlog_position;
@@ -1268,7 +1257,7 @@ int			n_bufs = -1, pn_bufs = -1;
 								while ((record = blr_read_events_from_pos(router, pos, &new_hdr)) != NULL) {
 									i++;
 									raw_data = GWBUF_DATA(record);
-									//fprintf(stderr, "Read event %i, last commit @ %lu / %lu. *** Distributing event: Type [%i], size %u: pos @ %llu (next is %llu)\n", i, pos, router->current_pos, new_hdr.event_type, new_hdr.event_size, router->binlog_position, new_hdr.next_pos);
+
 									/* distribute event */
 									blr_distribute_binlog_record(router, &new_hdr, raw_data);
 									spinlock_acquire(&router->binlog_lock);
@@ -1280,12 +1269,11 @@ int			n_bufs = -1, pn_bufs = -1;
 								}
 
 								spinlock_acquire(&router->lock);
+
 								router->binlog_position = router->current_pos;
 								router->pending_transaction = 0;
+
 								spinlock_release(&router->lock);
-							} else {
-								/* A transaction is still pending */
-								//fprintf(stderr, "A Transaction is still pending @ %llu, master is @ %llu\n", router->binlog_position, router->current_pos);
 							}
 
 						}
@@ -1455,11 +1443,8 @@ char		file[BINLOG_FNAMELEN+1];
 
 	strcpy(router->prevbinlog, router->binlog_name);
 
-	printf("New file: %s/%s @ %ld, pending transaction [%i]\n", file, router->prevbinlog, pos, router->pending_transaction);
-
 	if (strncmp(router->binlog_name, file, slen) != 0)
 	{
-		fprintf(stderr, "Calling rotate for [%s]/[%s] prev [%s]\n", router->binlog_name, file, router->prevbinlog);
 		router->stats.n_rotates++;
 		if (blr_file_rotate(router, file, pos) == 0)
 		{
@@ -1826,18 +1811,12 @@ int             n;
 		return NULL;
 	}
 
-	//fprintf(stderr, "blr_read_events_from_pos read %i bytes. ptr[0]=[%i]\n", n, hdbuf[0]);
-
 	hdr->timestamp = EXTRACT32(hdbuf);
 	hdr->event_type = hdbuf[4];
 	hdr->serverid = EXTRACT32(&hdbuf[5]);
 	hdr->event_size = extract_field(&hdbuf[9], 32);
 	hdr->next_pos = EXTRACT32(&hdbuf[13]);
 	hdr->flags = EXTRACT16(&hdbuf[17]);
-
-	//fprintf(stderr, ">>>> event type %i\n", hdr->event_type);
-	//fprintf(stderr, ">>>> event size %lu\n", hdr->event_size);
-	//fprintf(stderr, ">>>> event next_pos %lu\n", hdr->next_pos);
 
 	/* Add MariaDB 10 checks */
 	if (hdr->event_type > MAX_EVENT_TYPE)
@@ -1894,8 +1873,6 @@ int             n;
 
 		return NULL;
 	}
-
-//      fprintf(stderr, "blr_read_events_from_pos read [%i] next bytes, raw data size is [%i]\n", n, hdr->event_size);
 
 	return result;
 }
