@@ -43,6 +43,7 @@
  * 27/09/2013	Massimiliano Pinto	Changed in gw_read_backend_event the check for dcb_read(), now is if rc < 0
  * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
  * 10/11/2014	Massimiliano Pinto	Client charset is passed to backend
+ * 19/06/2015   Martin Brampton		Persistent connection handling
  *
  */
 #include <modinfo.h>
@@ -72,7 +73,7 @@ static void backend_set_delayqueue(DCB *dcb, GWBUF *queue);
 static int gw_change_user(DCB *backend_dcb, SERVER *server, SESSION *in_session, GWBUF *queue);
 static GWBUF* process_response_data (DCB* dcb, GWBUF* readbuf, int nbytes_to_process); 
 extern char* create_auth_failed_msg( GWBUF* readbuf, char*  hostaddr, uint8_t*  sha1);
-extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
+extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db, int errcode);
 static bool sescmd_response_complete(DCB* dcb);
 
 
@@ -166,6 +167,17 @@ static int gw_read_backend_event(DCB *dcb) {
         int            rc = 0;
 
         CHK_DCB(dcb);        
+        if (!dcb->session && dcb->persistentstart)
+        {
+            dcb->dcb_errhandle_called = true;
+            goto return_rc;
+        }
+
+	if(dcb->session == NULL)
+	{
+	    goto return_rc;
+	}
+
 	CHK_SESSION(dcb->session);
                 
         /*< return only with complete session */
@@ -272,14 +284,13 @@ static int gw_read_backend_event(DCB *dcb) {
                         void            *rsession = NULL;
                         SESSION         *session = dcb->session;
                         int             receive_rc = 0;
-
-                        CHK_SESSION(session);
 	
 			if (session == NULL)
 			{
 				rc = 0;
 				goto return_with_lock;
 			}
+                        CHK_SESSION(session);
                         router = session->service->router;
                         router_instance = session->service->router_instance;
                         rsession = session->router_session;
@@ -446,7 +457,7 @@ static int gw_read_backend_event(DCB *dcb) {
                 router_instance = session->service->router_instance;
 
                 /* read available backend data */
-                rc = dcb_read(dcb, &read_buffer);
+                rc = dcb_read(dcb, &read_buffer, 0);
 
                 if (rc < 0) 
                 {
@@ -1043,8 +1054,19 @@ gw_backend_hangup(DCB *dcb)
         session_state_t ses_state;
         
         CHK_DCB(dcb);
+        if (!dcb->session && dcb->persistentstart)
+        {
+            dcb->dcb_errhandle_called = true;
+            goto retblock;
+        }
         session = dcb->session;
-        CHK_SESSION(session);
+
+	if(session == NULL)
+	{
+	    goto retblock;
+	}
+
+	CHK_SESSION(session);
         
         rsession = session->router_session;
         router = session->service->router;
@@ -1143,7 +1165,6 @@ gw_backend_close(DCB *dcb)
         
         CHK_DCB(dcb);
         session = dcb->session;
-        CHK_SESSION(session);
 
 	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
 			"%lu [gw_backend_close]",
@@ -1156,39 +1177,41 @@ gw_backend_close(DCB *dcb)
         mysql_send_com_quit(dcb, 0, quitbuf);
         
         mysql_protocol_done(dcb);
-	/** 
-	 * The lock is needed only to protect the read of session->state and 
-	 * session->client values. Client's state may change by other thread
-	 * but client's close and adding client's DCB to zombies list is executed
-	 * only if client's DCB's state does _not_ change in parallel.
-	 */
-	if(session != NULL)
-	{
-	    spinlock_acquire(&session->ses_lock);
-	    /**
-	     * If session->state is STOPPING, start closing client session.
-	     * Otherwise only this backend connection is closed.
-	     */
-	    if (session->state == SESSION_STATE_STOPPING &&
-	     session->client != NULL)
-	    {
-		if (session->client->state == DCB_STATE_POLLING)
+        
+        if (session)
+        {
+            CHK_SESSION(session);
+            /** 
+             * The lock is needed only to protect the read of session->state and 
+             * session->client values. Client's state may change by other thread
+             * but client's close and adding client's DCB to zombies list is executed
+             * only if client's DCB's state does _not_ change in parallel.
+             */
+            spinlock_acquire(&session->ses_lock);
+            /** 
+             * If session->state is STOPPING, start closing client session. 
+             * Otherwise only this backend connection is closed.
+             */
+            if (session->state == SESSION_STATE_STOPPING &&
+		session->client != NULL)
+            {		
+                if (session->client->state == DCB_STATE_POLLING)
+                {
+			spinlock_release(&session->ses_lock);
+			
+                        /** Close client DCB */
+                        dcb_close(session->client);
+                }
+                else 
 		{
-		    spinlock_release(&session->ses_lock);
-
-		    /** Close client DCB */
-		    dcb_close(session->client);
+			spinlock_release(&session->ses_lock);
 		}
-		else
-		{
-		    spinlock_release(&session->ses_lock);
-		}
-	    }
-	    else
-	    {
+            }
+            else
+            {
 		spinlock_release(&session->ses_lock);
-	    }
-	}
+            }
+        }
 	return 1;
 }
 
@@ -1438,7 +1461,8 @@ static int gw_change_user(
 		message = create_auth_fail_str(username,
 						backend->session->client->remote,
 						password_set,
-						"",auth_ret);
+						"",
+                        auth_ret);
 		if (message == NULL)
 		{
 			LOGIF(LE, (skygw_log_write_flush(

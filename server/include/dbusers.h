@@ -47,6 +47,7 @@
 #define MYSQL_PASSWORD_LEN	41
 #define MYSQL_HOST_MAXLEN	60
 #define MYSQL_DATABASE_MAXLEN	128
+#define MYSQL_TABLE_MAXLEN	64
 
 /**
  * MySQL user and host data structure

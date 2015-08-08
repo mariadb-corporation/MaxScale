@@ -61,7 +61,7 @@ MODULE_INFO	info = {
 static	void 	*startMonitor(void *,void*);
 static	void	stopMonitor(void *);
 static	void	diagnostics(DCB *, void *);
-static	MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *);
+static	MONITOR_SERVERS *get_candidate_master(MONITOR*);
 static	MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
 static	void	disableMasterFailback(void *, int);
 bool isGaleraEvent(monitor_event_t event);
@@ -139,6 +139,7 @@ startMonitor(void *arg,void* opt)
 	handle->disableMasterRoleSetting = 0;
 	handle->master = NULL;
 	handle->script = NULL;
+	handle->use_priority = false;
 	memset(handle->events,false,sizeof(handle->events));
 	spinlock_init(&handle->lock);
     }
@@ -152,6 +153,8 @@ startMonitor(void *arg,void* opt)
 	    handle->availableWhenDonor = config_truth_value(params->value);
 	else if(!strcmp(params->name,"disable_master_role_setting"))
 	    handle->disableMasterRoleSetting = config_truth_value(params->value);
+	else if(!strcmp(params->name,"use_priority"))
+	    handle->use_priority = config_truth_value(params->value);
 	else if(!strcmp(params->name,"script"))
 	{
 	    if(handle->script)
@@ -513,7 +516,7 @@ monitor_event_t evtype;
 			monitorDatabase(mon, ptr);
 
 			/* clear bits for non member nodes */
-			if ( ! SERVER_IN_MAINT(ptr->server) && (ptr->server->node_id < 0 || ! SERVER_IS_JOINED(ptr->server))) {
+			if ( ! SERVER_IN_MAINT(ptr->server) && (! SERVER_IS_JOINED(ptr->server))) {
 				ptr->server->depth = -1;
 
 				/* clear M/S status */
@@ -565,7 +568,7 @@ monitor_event_t evtype;
 		 */
 
 		/* get the candidate master, following MIN(node_id) rule */
-		candidate_master = get_candidate_master(mon->databases);
+		candidate_master = get_candidate_master(mon);
 
 		/* Select the master, based on master_stickiness */
                 if (1 == handle->disableMasterRoleSetting) {
@@ -661,32 +664,45 @@ monitor_event_t evtype;
  * @param	servers The monitored servers list
  * @return	The candidate master on success, NULL on failure
  */
-static MONITOR_SERVERS *get_candidate_master(MONITOR_SERVERS *servers) {
-	MONITOR_SERVERS *ptr = servers;
+static MONITOR_SERVERS *get_candidate_master(MONITOR* mon) {
+	MONITOR_SERVERS *moitor_servers = mon->databases;
 	MONITOR_SERVERS *candidate_master = NULL;
+	GALERA_MONITOR* handle = mon->handle;
 	long min_id = -1;
-	
-	/* set min_id to the lowest value of ptr->server->node_id */
-	while(ptr) {
-		if ((! SERVER_IN_MAINT(ptr->server)) && ptr->server->node_id >= 0 && SERVER_IS_JOINED(ptr->server)) {
-			ptr->server->depth = 0;
-			if ((ptr->server->node_id < min_id) && min_id >= 0) {
-				min_id = ptr->server->node_id;
-				candidate_master = ptr;
-			} else {
-				if (min_id < 0) {
-					min_id = ptr->server->node_id;
-					candidate_master = ptr;
-				}
+	int minval = INT_MAX;
+	int currval;
+	char* value;
+	/* set min_id to the lowest value of moitor_servers->server->node_id */
+	while(moitor_servers) {
+		if (!SERVER_IN_MAINT(moitor_servers->server) && SERVER_IS_JOINED(moitor_servers->server)) {
+
+			moitor_servers->server->depth = 0;
+
+			if(handle->use_priority && (value = serverGetParameter(moitor_servers->server,"priority")) != NULL)
+			{
+			    currval = atoi(value);
+			    if(currval < minval && currval > 0)
+			    {
+				minval = currval;
+				candidate_master = moitor_servers;
+			    }
+			}
+			else if(moitor_servers->server->node_id >= 0 &&
+			 (!handle->use_priority || /** Server priority disabled*/
+			  candidate_master == NULL || /** No candidate chosen */
+			  serverGetParameter(candidate_master->server,"priority") == NULL)) /** Candidate has no priority */
+			{
+			    if (min_id < 0 || moitor_servers->server->node_id < min_id) {
+				min_id = moitor_servers->server->node_id;
+				candidate_master = moitor_servers;
+			    }
 			}
 		}
-
-		ptr = ptr->next;
+		moitor_servers = moitor_servers->next;
 	}
 
 	return candidate_master;
 }
-
 /**
  * set the master server in the cluster
  *

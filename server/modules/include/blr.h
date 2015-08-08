@@ -34,7 +34,7 @@
 #include <dcb.h>
 #include <buffer.h>
 #include <pthread.h>
-
+#include <stdint.h>
 #include <memlog.h>
 #include <zlib.h>
 
@@ -455,7 +455,7 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 /*
  * Externals within the router
  */
-extern void blr_start_master(ROUTER_INSTANCE *);
+extern void blr_start_master(void *);
 extern void blr_master_response(ROUTER_INSTANCE *, GWBUF *);
 extern void blr_master_reconnect(ROUTER_INSTANCE *);
 extern int blr_master_connected(ROUTER_INSTANCE *);
@@ -477,4 +477,5 @@ extern int blr_statistics(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_ping(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_send_custom_error(DCB *, int, int, char *);
 extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
+uint32_t extract_field(uint8_t *src, int bits);
 #endif

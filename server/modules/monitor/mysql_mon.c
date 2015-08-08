@@ -310,7 +310,7 @@ static inline bool connect_to_db(MONITOR* mon,MONITOR_SERVERS *database)
     mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
     mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
 
-    return (mysql_real_connect(database->con,
+    bool result = (mysql_real_connect(database->con,
 			       database->server->name,
 			       uname,
 			       dpwd,
@@ -318,6 +318,8 @@ static inline bool connect_to_db(MONITOR* mon,MONITOR_SERVERS *database)
 			       database->server->port,
 			       NULL,
 			       0) != NULL);
+	free(dpwd);
+	return result;
 }
 
 static inline void monitor_mysql100_db(MONITOR_SERVERS* database)

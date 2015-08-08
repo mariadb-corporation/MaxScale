@@ -349,11 +349,14 @@ TOPN_SESSION	*my_session = (TOPN_SESSION *)session;
 struct timeval	diff;
 int		i;
 FILE		*fp;
+int statements;
 
 	gettimeofday(&my_session->disconnect, NULL);
 	timersub((&my_session->disconnect), &(my_session->connect), &diff);
 	if ((fp = fopen(my_session->filename, "w")) != NULL)
 	{
+		statements = my_session->n_statements != 0?my_session->n_statements:1;
+
 		fprintf(fp, "Top %d longest running queries in session.\n",
 						my_instance->topN);
 		fprintf(fp, "==========================================\n\n");
@@ -379,14 +382,14 @@ FILE		*fp;
 			fprintf(fp, "Username        %s\n",
 				my_session->userName);
 		fprintf(fp, "\nTotal of %d statements executed.\n",
-					my_session->n_statements);
+					statements);
 		fprintf(fp, "Total statement execution time   %5d.%d seconds\n",
 				(int)my_session->total.tv_sec,
 				(int)my_session->total.tv_usec / 1000);
 		fprintf(fp, "Average statement execution time %9.3f seconds\n",
 				(double)((my_session->total.tv_sec * 1000)
 				+ (my_session->total.tv_usec / 1000))
-				/ (1000 * my_session->n_statements));
+				/ (1000 * statements));
 		fprintf(fp, "Total connection time            %5d.%d seconds\n",
 				(int)diff.tv_sec, (int)diff.tv_usec / 1000);
 		fclose(fp);

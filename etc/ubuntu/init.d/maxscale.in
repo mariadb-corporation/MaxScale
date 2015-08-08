@@ -45,7 +45,7 @@ _RETVAL_STATUS_NOT_RUNNING=3
 #################################
 NAME=maxscale
 DAEMON=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale
-DAEMON_OPTS= --user=maxscale
+DAEMON_OPTS=--user=maxscale
 # Source function library.
 . /lib/lsb/init-functions
 

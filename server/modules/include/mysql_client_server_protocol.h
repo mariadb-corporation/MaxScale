@@ -134,7 +134,6 @@ typedef struct mysql_session {
 #endif
 } MYSQL_session;
 
-
 /** Protocol packing macros. */
 #define gw_mysql_set_byte2(__buffer, __int) do { \
   (__buffer)[0]= (uint8_t)((__int) & 0xFF); \

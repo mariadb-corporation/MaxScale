@@ -8,11 +8,7 @@ This section describes the limitations that are common to all configuration of p
 
 ## Limitations with MySQL Protocol support
 
-* Compression
-
-* SSL
-
-Both capabilities are not included in MySQL server handshake
+Compression is not included in MySQL server handshake
 
 ## Limitations with MySQL Master/Slave Replication monitoring
 
@@ -22,7 +18,9 @@ Master selection is based only on MIN(wsrep_local_index), no other server parame
 
 ## Limitations in the connection router
 
-If Master changes (ie. new Master promotion) during current connection the router cannot  check the change
+* If Master changes (ie. new Master promotion) during current connection the router cannot check the change
+
+* LONGBLOB is not supported
 
 ## Limitations in the Read/Write Splitter
 
@@ -93,4 +91,3 @@ Most imaginable reasons are related to replication lag but it could be possible 
 ## Authentication Related Limitations
 
 MySQL old passwords are not supported
-

@@ -67,6 +67,7 @@
  * 06/03/2014	Massimiliano Pinto	Server connection counter is now updated in closeSession
  * 24/06/2014	Massimiliano Pinto	New rules for selecting the Master server
  * 27/06/2014	Mark Riddoch		Addition of server weighting
+ * 11/06/2015   Martin Brampton     Remove decrement n_current (moved to dcb.c)
  *
  * @endverbatim
  */
@@ -657,7 +658,6 @@ DCB*              backend_dcb;
         if (rses_begin_locked_router_action(router_cli_ses))
         {
 		/* decrease server current connection counter */
-		atomic_add(&router_cli_ses->backend->server->stats.n_current, -1);
 
                 backend_dcb = router_cli_ses->backend_dcb;
                 router_cli_ses->backend_dcb = NULL;
@@ -827,12 +827,7 @@ clientReply(
         GWBUF  *queue,
         DCB    *backend_dcb)
 {
-	DCB *client ;
-
-	client = backend_dcb->session->client;
-
-	ss_dassert(client != NULL);
-
+	ss_dassert(backend_dcb->session->client != NULL);
 	SESSION_ROUTE_REPLY(backend_dcb->session, queue);
 }
 

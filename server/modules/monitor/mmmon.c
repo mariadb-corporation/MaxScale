@@ -127,6 +127,7 @@ startMonitor(void *arg,void* opt)
 	handle->id = MONITOR_DEFAULT_ID;
 	handle->master = NULL;
 	handle->script = NULL;
+	handle->detectStaleMaster = false;
 	memset(handle->events,false,sizeof(handle->events));
 	spinlock_init(&handle->lock);
     }
@@ -198,7 +199,8 @@ startMonitor(void *arg,void* opt)
 static	void	
 stopMonitor(void *arg)
 {
-MM_MONITOR	*handle = (MM_MONITOR *)arg;
+    MONITOR* mon = arg;
+    MM_MONITOR	*handle = (MM_MONITOR *)mon->handle;
 
         handle->shutdown = 1;
         thread_wait((void *)handle->tid);
@@ -564,8 +566,8 @@ monitorMain(void *arg)
     MONITOR* mon = (MONITOR*)arg;
 MM_MONITOR	*handle;
 MONITOR_SERVERS	*ptr;
-int detect_stale_master;
-MONITOR_SERVERS *root_master;
+int detect_stale_master = false;
+MONITOR_SERVERS *root_master = NULL;
 size_t nrounds = 0;
 
 spinlock_acquire(&mon->lock);

@@ -77,11 +77,11 @@ static int  blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *pkt, REP_HEADER *
 void blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
 static void *CreateMySQLAuthData(char *username, char *password, char *database);
 void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
-inline uint32_t extract_field(uint8_t *src, int bits);
 static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
 static void blr_master_close(ROUTER_INSTANCE *);
 static char *blr_extract_column(GWBUF *buf, int col);
-
+void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
+void poll_fake_write_event(DCB *dcb);
 static int keepalive = 1;
 
 /**
@@ -92,8 +92,9 @@ static int keepalive = 1;
  * @param	router		The router instance
  */
 void
-blr_start_master(ROUTER_INSTANCE *router)
+blr_start_master(void* data)
 {
+    ROUTER_INSTANCE *router = (ROUTER_INSTANCE*)data;
 DCB	*client;
 GWBUF	*buf;
 
@@ -156,7 +157,7 @@ GWBUF	*buf;
         LOGIF(LM,(skygw_log_write(
                         LOGFILE_MESSAGE,
 				"%s: attempting to connect to master server %s.",
-			router->service->name, router->master->remote)));
+			router->service->name, router->service->dbref->server->name)));
 	router->connect_time = time(0);
 
 if (setsockopt(router->master->fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive , sizeof(keepalive )))
@@ -586,7 +587,7 @@ char	query[128];
 				"%s: Request binlog records from %s at "
 				"position %d from master server %s.",
 			router->service->name, router->binlog_name,
-			router->binlog_position, router->master->remote)));
+			router->binlog_position, router->service->dbref->server->name)));
 		break;
 	case BLRM_BINLOGDUMP:
 		// Main body, we have received a binlog record from the master
@@ -728,7 +729,6 @@ int			no_residual = 1;
 int			preslen = -1;
 int			prev_length = -1;
 int			n_bufs = -1, pn_bufs = -1;
-static REP_HEADER	phdr;
 
 	/*
 	 * Prepend any residual buffer to the buffer chain we have
@@ -914,7 +914,7 @@ static REP_HEADER	phdr;
 				}
 				break;
 			}
-			phdr = hdr;
+
 			if (hdr.ok == 0)
 			{
 				int event_limit;
@@ -1160,26 +1160,6 @@ blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr)
 	hdr->flags = EXTRACT16(&ptr[22]);
 }
 
-/** 
- * Extract a numeric field from a packet of the specified number of bits
- *
- * @param src	The raw packet source
- * @param bits	The number of bits to extract (multiple of 8)
- */
-inline uint32_t
-extract_field(register uint8_t *src, int bits)
-{
-register uint32_t	rval = 0, shift = 0;
-
-	while (bits > 0)
-	{
-		rval |= (*src++) << shift;
-		shift += 8;
-		bits -= 8;
-	}
-	return rval;
-}
-
 /**
  * Process a binlog rotate event.
  *
@@ -1249,8 +1229,8 @@ MYSQL_session	*auth_info;
 
 	if ((auth_info = calloc(1, sizeof(MYSQL_session))) == NULL)
 		return NULL;
-	strncpy(auth_info->user, username,MYSQL_USER_MAXLEN+1);
-	strncpy(auth_info->db, database,MYSQL_DATABASE_MAXLEN+1);
+	strncpy(auth_info->user, username,MYSQL_USER_MAXLEN);
+	strncpy(auth_info->db, database,MYSQL_DATABASE_MAXLEN);
 	gw_sha1_str((const uint8_t *)password, strlen(password), auth_info->client_sha1);
 
 	return auth_info;

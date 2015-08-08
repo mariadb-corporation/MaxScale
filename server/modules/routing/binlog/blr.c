@@ -108,6 +108,9 @@ static void	stats_func(void *);
 
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
+void my_uuid_init(ulong seed1, ulong seed2);
+void my_uuid(char *guid);
+GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
 
 static SPINLOCK	instlock;
 static ROUTER_INSTANCE *instances;
@@ -170,9 +173,45 @@ createInstance(SERVICE *service, char **options)
 ROUTER_INSTANCE	*inst;
 char		*value, *name;
 int		i;
-unsigned char	*defuuid;
+char	*defuuid;
 
-        if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
+	if(service->credentials.name == NULL ||
+	   service->credentials.authdata == NULL)
+	{
+	    skygw_log_write(LE,"%s: Error: Service is missing user credentials."
+		    " Add the missing username or passwd parameter to the service.",
+			    service->name);
+	    return NULL;
+	}
+
+	if(options == NULL || options[0] == NULL)
+	{
+	    skygw_log_write(LE,
+		     "%s: Error: No router options supplied for binlogrouter",
+		     service->name);
+	    return NULL;
+	}
+
+	/*
+	 * We only support one server behind this router, since the server is
+	 * the master from which we replicate binlog records. Therefore check
+	 * that only one server has been defined.
+	 *
+	 * A later improvement will be to define multiple servers and have the
+	 * router use the information that is supplied by the monitor to find
+	 * which of these servers is currently the master and replicate from
+	 * that server.
+	 */
+	if (service->dbref == NULL || service->dbref->next != NULL)
+	{
+		skygw_log_write(LE,
+			"%s: Error : Exactly one database server may be "
+			"for use with the binlog router.",
+			service->name);
+		return NULL;
+	}
+
+	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL;
         }
 
@@ -214,25 +253,6 @@ unsigned char	*defuuid;
 			defuuid[8], defuuid[9], defuuid[10], defuuid[11],
 			defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
 	}
-
-	/*
-	 * We only support one server behind this router, since the server is
-	 * the master from which we replicate binlog records. Therefore check
-	 * that only one server has been defined.
-	 *
-	 * A later improvement will be to define multiple servers and have the
-	 * router use the information that is supplied by the monitor to find
-	 * which of these servers is currently the master and replicate from
-	 * that server.
-	 */
-	if (service->dbref == NULL || service->dbref->next != NULL)
-	{
-		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR,
-				"Error : Exactly one database server may be "
-				"for use with the binlog router.")));
-	}
-
 
 	/*
 	 * Process the options.
@@ -364,7 +384,7 @@ unsigned char	*defuuid;
 	else
 	{
 		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR, "%s: No router options supplied for binlogrouter",
+			LOGFILE_ERROR, "%s: Error: No router options supplied for binlogrouter",
 				service->name)));
 	}
 
@@ -598,7 +618,7 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 			LOGFILE_MESSAGE,
 			"%s: Master %s disconnected after %ld seconds. "
 			"%d events read,",
-			router->service->name, router->master->remote,
+			router->service->name, router->service->dbref->server->name,
 			time(0) - router->connect_time, router->stats.n_binlogs_ses)));
         	LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -832,7 +852,7 @@ struct tm	tm;
 
 	if (router_inst->lastEventTimestamp)
 	{
-		localtime_r(&router_inst->lastEventTimestamp, &tm);
+		localtime_r((const time_t*)&router_inst->lastEventTimestamp, &tm);
 		asctime_r(&tm, buf);
 		dcb_printf(dcb, "\tLast binlog event timestamp:  			%ld (%s)\n",
 				router_inst->lastEventTimestamp, buf);
@@ -960,7 +980,7 @@ struct tm	tm;
 			if (session->lastEventTimestamp
 					&& router_inst->lastEventTimestamp)
 			{
-				localtime_r(&session->lastEventTimestamp, &tm);
+				localtime_r((const time_t*)&session->lastEventTimestamp, &tm);
 				asctime_r(&tm, buf);
 				dcb_printf(dcb, "\t\tLast binlog event timestamp			%u, %s", session->lastEventTimestamp, buf);
 				dcb_printf(dcb, "\t\tSeconds behind master				%u\n", router_inst->lastEventTimestamp - session->lastEventTimestamp);
@@ -1058,7 +1078,8 @@ static  void
 errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_dcb, error_action_t action, bool *succp)
 {
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
-int		error, len;
+int		error;
+socklen_t len;
 char		msg[85], *errmsg;
 
 	if (action == ERRACT_RESET)
@@ -1101,7 +1122,7 @@ char		msg[85], *errmsg;
 		LOGFILE_MESSAGE,
 		"%s: Master %s disconnected after %ld seconds. "
 		"%d events read.",
-		router->service->name, router->master->remote,
+		router->service->name, router->service->dbref->server->name,
 		time(0) - router->connect_time, router->stats.n_binlogs_ses)));
 	blr_master_reconnect(router);
 }
@@ -1211,10 +1232,10 @@ int	len;
 
 	snprintf(result, 1000,
 		"Uptime: %u  Threads: %u  Events: %u  Slaves: %u  Master State: %s",
-			time(0) - router->connect_time,
-			config_threadcount(),
-			router->stats.n_binlogs_ses,
-			router->stats.n_slaves,
+			(unsigned int)(time(0) - router->connect_time),
+			(unsigned int)config_threadcount(),
+			(unsigned int)router->stats.n_binlogs_ses,
+			(unsigned int)router->stats.n_slaves,
 			blrm_states[router->master_state]);
 	if ((ret = gwbuf_alloc(4 + strlen(result))) == NULL)
 		return 0;
@@ -1338,4 +1359,25 @@ GWBUF		*errbuf = NULL;
         memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 
         return dcb->func.write(dcb, errbuf);
+}
+
+
+/**
+ * Extract a numeric field from a packet of the specified number of bits
+ *
+ * @param src	The raw packet source
+ * @param birs	The number of bits to extract (multiple of 8)
+ */
+uint32_t
+extract_field(uint8_t *src, int bits)
+{
+uint32_t	rval = 0, shift = 0;
+
+	while (bits > 0)
+	{
+		rval |= (*src++) << shift;
+		shift += 8;
+		bits -= 8;
+	}
+	return rval;
 }

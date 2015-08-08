@@ -131,6 +131,7 @@ typedef enum skygw_chk_t {
     CHK_NUM_DCB,
     CHK_NUM_PROTOCOL,
     CHK_NUM_SESSION,
+    CHK_NUM_SERVER,
     CHK_NUM_ROUTER_SES,
     CHK_NUM_MY_SESCMD,
     CHK_NUM_ROUTER_PROPERTY,
@@ -504,6 +505,12 @@ typedef enum skygw_chk_t {
             ss_info_dassert(s->ses_chk_top == CHK_NUM_SESSION &&  \
                             s->ses_chk_tail == CHK_NUM_SESSION,         \
                             "Session under- or overflow");              \
+    }
+
+#define CHK_SERVER(s) {                                          \
+            ss_info_dassert(s->server_chk_top == CHK_NUM_SERVER &&  \
+                            s->server_chk_tail == CHK_NUM_SERVER,         \
+                            "Server under- or overflow");              \
     }
 
 #define CHK_GWBUF(b) {                                                  \

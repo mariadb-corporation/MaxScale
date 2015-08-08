@@ -37,6 +37,9 @@ _RETVAL_NOT_RUNNING=7
 _RETVAL_STATUS_OK=0
 _RETVAL_STATUS_NOT_RUNNING=3
 
+# Create PID directory if not exists
+/usr/bin/install -d -o maxscale -g maxscale @MAXSCALE_VARDIR@/run/maxscale
+
 # Sanity checks.
 [ -x @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale ] || exit $_RETVAL_NOT_INSTALLED
 

@@ -95,3 +95,32 @@ You can also push anonymous hints onto the stack which are only used as long as 
 ```
 -- maxscale begin <hint content>
 ```
+
+## Examples
+
+### Example 1 - Routing SELECT queries to master
+
+In this example, MaxScale is configured with the readwritesplit router and the hint filter.
+
+```
+[ReadWriteService]
+type=service
+router=readwritesplit
+servers=server1,server2
+user=maxuser
+passwd=maxpwd
+filters=Hint
+
+[Hint]
+type=filter
+module=hintfilter
+```
+
+Behind MaxScale is a master server and a slave server. If there is replication lag between the master and the slave, read queries sent to the slave might return old data. To guarantee up-to-date data, we can add a routing hint to the query.
+
+```
+INSERT INTO table1 VALUES ("John","Doe",1);
+SELECT * from table1; -- maxscale route to master
+```
+
+The first INSERT query will be routed to the master. The following SELECT query would normally be routed to the slave but with the added routing hint it will be routed to the master. This way we can do an INSERT and a SELECT right after it and still get up-to-date data.

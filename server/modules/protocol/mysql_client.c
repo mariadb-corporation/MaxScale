@@ -38,6 +38,7 @@
  * 13/10/2014	Massimiliano Pinto	Added: dbname authentication check
  * 10/11/2014	Massimiliano Pinto	Added: client charset added to protocol struct
  * 29/05/2015   Markus Makela           Added SSL support
+ * 11/06/2015   Martin Brampton		COM_QUIT suppressed for persistent connections
  */
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -424,15 +425,19 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 
         protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
         CHK_PROTOCOL(protocol);
-	client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
+	if(dcb->data == NULL)
+	{
+	    client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session));
 #if defined(SS_DEBUG)
-	client_data->myses_chk_top = CHK_NUM_MYSQLSES;
-	client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
+	    client_data->myses_chk_top = CHK_NUM_MYSQLSES;
+	    client_data->myses_chk_tail = CHK_NUM_MYSQLSES;
 #endif
-	/**
-	 * Assign authentication structure with client DCB.
-	 */
-	dcb->data = client_data; 
+	    dcb->data = client_data;
+	}
+	else
+	{
+	    client_data = (MYSQL_session *)dcb->data;
+	}
 
 	stage1_hash = client_data->client_sha1;
 	username = client_data->user;
@@ -514,7 +519,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 		 * is not requesting SSL and the rest of the auth packet is still
 		 * waiting in the socket. We need to read the data from the socket
 		 * to find out the username of the connecting client. */
-		int bytes = dcb_read(dcb,&queue);
+		int bytes = dcb_read(dcb,&queue, 0);
 		queue = gwbuf_make_contiguous(queue);
 		client_auth_packet = GWBUF_DATA(queue);
 		client_auth_packet_size = gwbuf_length(queue);
@@ -640,10 +645,12 @@ gw_MySQLWrite_client(DCB *dcb, GWBUF *queue)
 int
 gw_MySQLWrite_client_SSL(DCB *dcb, GWBUF *queue)
 {
-    MySQLProtocol  *protocol = NULL;
     CHK_DCB(dcb);
+#ifdef SS_DEBUG
+    MySQLProtocol  *protocol = NULL;
     protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
     CHK_PROTOCOL(protocol);
+#endif
     return dcb_write_SSL(dcb, queue);
 }
 
@@ -722,12 +729,12 @@ int gw_read_client_event(
 	     * read only enough of the auth packet to know if the client is
 	     * requesting SSL. If the client is not requesting SSL the rest of
 	     the auth packet will be read later. */
-	    rc = dcb_read_n(dcb, &read_buffer,(4 + 4 + 4 + 1 + 23));
+	    rc = dcb_read(dcb, &read_buffer,(4 + 4 + 4 + 1 + 23));
 	}
 	else
 	{
 	    /** Normal non-SSL connection */
-	    rc = dcb_read(dcb, &read_buffer);
+	    rc = dcb_read(dcb, &read_buffer, 0);
 	}
 
         if (rc < 0)
@@ -886,6 +893,7 @@ int gw_read_client_event(
 		    /** SSL was requested and the handshake is either done or
 		     * still ongoing. After the handshake is done, the client
 		     * will send another auth packet. */
+		    while((read_buffer = gwbuf_consume(read_buffer,GWBUF_LENGTH(read_buffer))));
 		    break;
 		}
 		
@@ -1049,13 +1057,6 @@ int gw_read_client_event(
 			     (char*)((MYSQL_session *)dcb->data)->db);
 
 		    modutil_send_mysql_err_packet(dcb, 3, 0, 1049, "42000", fail_str);
-		}else if(auth_val == 3){
-		    /** Send error 1045 to client */
-		    fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
-					     dcb->remote,
-					     (char*)((MYSQL_session *)dcb->data)->client_sha1,
-					     (char*)((MYSQL_session *)dcb->data)->db,auth_val);
-		    modutil_send_mysql_err_packet(dcb, 3, 0, 1045, "28000", fail_str);
 		}else {
 		    /** Send error 1045 to client */
 		    fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
@@ -1114,12 +1115,14 @@ int gw_read_client_event(
 		    if (MYSQL_IS_COM_QUIT(payload))
 		    {
                         /** 
-			 * Sends COM_QUIT packets since buffer is already
-			 * created. A BREF_CLOSED flag is set so dcb_close won't
-			 * send redundant COM_QUIT.
-			 */
-                        SESSION_ROUTE_QUERY(session, read_buffer);
-                        /** 
+                         * Sends COM_QUIT packets since buffer is already
+                         * created. A BREF_CLOSED flag is set so dcb_close won't
+                         * send redundant COM_QUIT.
+                         */
+                        /* Temporarily suppressed: SESSION_ROUTE_QUERY(session, read_buffer); */
+						/* Replaced with freeing the read buffer. */
+				gwbuf_free(read_buffer);
+            /**
 			 * Close router session which causes closing of backends.
 			 */
                         dcb_close(dcb);
@@ -1341,7 +1344,7 @@ int gw_MySQLListener(
 	struct sockaddr *current_addr;
 	int  one = 1;
         int  rc;
-
+	bool is_tcp = false;
 	memset(&serv_addr,0,sizeof(serv_addr));
 	memset(&local_addr,0,sizeof(local_addr));
 
@@ -1382,6 +1385,7 @@ int gw_MySQLListener(
 		}
 
 		current_addr = (struct sockaddr *) &serv_addr;
+		is_tcp = true;
 	}
 
 	listen_dcb->fd = -1;
@@ -1391,10 +1395,12 @@ int gw_MySQLListener(
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
 	}
 
-	if((syseno = setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one))) != 0){
+	if(is_tcp)
+	{
+	    if((syseno = setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one))) != 0){
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+	    }
 	}
-
 	// set NONBLOCKING mode
 	setnonblocking(l_so);
 
@@ -1465,10 +1471,8 @@ int gw_MySQLListener(
         // add listening socket to poll structure
         if (poll_add_dcb(listen_dcb) == -1) {
             fprintf(stderr,
-                    "\n* Failed to start polling the socket due error "
-                    "%i, %s.\n\n",
-                    errno,
-                    strerror(errno));
+                    "\n* MaxScale encountered system limit while "
+                    "attempting to register on an epoll instance.\n\n");
 		return 0;
         }
 #if defined(FAKE_CODE)
@@ -1701,7 +1705,8 @@ int gw_MySQLAccept(DCB *listener)
                                 client_dcb,
                                 1,
                                 0,
-                                "MaxScale internal error.");
+                                "MaxScale encountered system limit while "
+                                "attempting to register on an epoll instance.");
                         
                         /** close client_dcb */
                         dcb_close(client_dcb);

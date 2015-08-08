@@ -319,7 +319,7 @@ parse_mapping_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
    if(PTR_IS_RESULTSET(((unsigned char*)buf->start)) &&
       modutil_count_signal_packets(buf,0,0,&more) == 2)
    {
-       ptr = (char*)buf->start;
+       ptr = (unsigned char*)buf->start;
 
        if(ptr[5] != 1)
        {

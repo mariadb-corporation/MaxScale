@@ -29,6 +29,7 @@
 #include <skygw_types.h>
 #include <sys/time.h>
 #include "skygw_utils.h"
+#include <atomic.h>
 
 #if defined(MLIST)
 
@@ -70,23 +71,6 @@ static void simple_mutex_free_memory(simple_mutex_t* sm);
 static void mlist_free_memory(mlist_t* ml, char* name);
 static void thread_free_memory(skygw_thread_t* th, char* name);
 /** End of static function declarations */
-
-int atomic_add(
-        int *variable,
-        int value)
-{
-#ifdef __GNUC__
-        return (int) __sync_fetch_and_add (variable, value);
-#else
-	asm volatile(
-		"lock; xaddl %%eax, %2;"
-		:"=a" (value)
-		: "a" (value), "m" (*variable)
-		: "memory" );
-	return value;
-#endif
-}
-
 
 /** mutexed list, mlist */
 
@@ -395,8 +379,8 @@ mlist_cursor_t* mlist_cursor_init(
         c = (mlist_cursor_t *)calloc(1, sizeof(mlist_cursor_t));
 
         if (c == NULL) {
-                goto return_cursor;
                 simple_mutex_unlock(&list->mlist_mutex);
+                goto return_cursor;
         }
         c->mlcursor_chk_top = CHK_NUM_MLIST_CURSOR;
         c->mlcursor_chk_tail = CHK_NUM_MLIST_CURSOR;
@@ -1841,21 +1825,12 @@ int skygw_file_write(
         bool          flush)
 {
         int    rc;
-#if !defined(LAPTOP_TEST)
-        int    err = 0;
         size_t nwritten;
         int    fd;
         static int writecount;
-#else
-	struct timespec ts1;
-	ts1.tv_sec = 0;
-	ts1.tv_nsec = DISKWRITE_LATENCY*1000000;
-#endif
-        
+  
         CHK_FILE(file);
-#if defined(LAPTOP_TEST)
-	nanosleep(&ts1, NULL);
-#else
+
         nwritten = fwrite(data, nbytes, 1, file->sf_file);
         
         if (nwritten != 1) {
@@ -1873,11 +1848,11 @@ int skygw_file_write(
         if (flush || writecount == FSYNCLIMIT) 
 	{
                 fd = fileno(file->sf_file);
-                err = fflush(file->sf_file);
-                err = fsync(fd);
+                fflush(file->sf_file);
+                fsync(fd);
                 writecount = 0;
         }
-#endif
+
         rc = 0;
         CHK_FILE(file);
 return_rc:
