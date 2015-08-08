@@ -460,6 +460,21 @@ The `socket` option may be included in a listener definition, this configures th
 
 If a socket option and an address option is given then the listener will listen on both the specific IP address and the Unix socket.
 
+#### `persistpoolmax`
+
+The `persistpoolmax` parameter defaults to zero but can be set to an integer value for a back end server.
+If it is non zero, then when a DCB connected to a back end server is discarded by the
+system, it will be held in a pool for reuse, remaining connected to the back end server.
+If the number of DCBs in the pool has reached the value given by `persistpoolmax` then
+any further DCB that is discarded will not be retained, but disconnected and discarded.
+
+#### `persistmaxtime`
+
+The `persistmaxtime` parameter defaults to zero but can be set to an integer value
+indicating a number of seconds. A DCB placed in the persistent pool for a server will
+only be reused if the elapsed time since it joined the pool is less than the given
+value. Otherwise, the DCB will be discarded and the connection closed.
+
 ### Filter
 
 Filters provide a means to manipulate or process requests as they pass through MaxScale between the client side protocol and the query router. A filter should be defined in a section with a type of filter.

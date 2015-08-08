@@ -1,12 +1,15 @@
 # MaxScale Administration Tutorial
 
+Last updated 24th June 2015
+
 ## Common Administration Tasks
 
 The purpose of this tutorial is to introduce the MaxScale Administrator to a few of the common administration tasks that need to be performed with MaxScale. It is not intended as a reference to all the tasks that may be performed, more this is aimed as an introduction for administrators who are new to MaxScale.
 
 [Starting MaxScale](#starting)   
 [Stopping MaxScale](#stopping)   
-[Checking The Status Of The MaxScale Services](#checking)   
+[Checking The Status Of The MaxScale Services](#checking)  
+[Persistent Connections](#persistent)  
 [What Clients Are Connected To MaxScale](#clients)   
 [Rotating Log Files](#rotating)   
 [Taking A Database Server Out Of Use](#outofuse)   
@@ -93,6 +96,37 @@ It is possible to use the maxadmin command to obtain statistics regarding the se
 ```
 
 It should be noted that network listeners count as a user of the service, therefore there will always be one user per network port in which the service listens. More detail can be obtained by use of the "show service" command which is passed a service name.
+
+<a name="persistent"></a>
+### Persistent Connections
+
+Where the clients who are accessing a database system through MaxScale make frequent
+short connections, there may be a benefit from invoking the MaxScale Persistent
+Connection feature.  This is controlled by two configuration values that are specified
+per server in the relevant server section of the configuration file.  The configuration
+options are `persistpoolmax` and `persistmaxtime`.
+
+Normally, when a client connection is terminated, all the related back end database
+connections are also terminated.  If the `persistpoolmax` options is set to a non-zero
+integer, then up to that number of connections will be kept in a pool for that 
+server. When a new connection is requested by the system to meet a new client request, 
+then a connection from the pool will be used if possible.
+
+The connection will only be taken from the pool if it has been there for no more
+than `persistmaxtime` seconds.  It was also be discarded if it has been disconnected
+by the back end server. Connections will be selected that match the user name and
+protocol for the new request.
+
+Please note that because persistent connections have previously been in use, they
+may give a different environment from a fresh connection. For example, if the 
+previous use of the connection issued "use mydatabase" then this setting will be
+carried over into the reuse of the same connection. For many applications this will
+not be noticeable, since each request will assume that nothing has been set and
+will issue fresh requests such as "use" to establish the desired configuration.  In 
+exceptional cases this feature could be a problem.
+
+It is possible to have pools for as many servers as you wish, with configuration
+values in each server section.
 
 <a name="clients"></a> 
 ### What Clients Are Connected To MaxScale
