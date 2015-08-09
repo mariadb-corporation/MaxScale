@@ -397,9 +397,10 @@ struct	stat	statb;
 	}
 	if (fstat(file->fd, &statb) == 0)
 		filelen = statb.st_size;
-	if (pos >= filelen)
+
+	if (pos > filelen)
 	{
-		LOGIF(LD, (skygw_log_write(LOGFILE_ERROR,
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"Attempting to read off the end of the binlog file %s, "
 			"event at %lu.", file->binlogname, pos)));
 		return NULL;
@@ -408,9 +409,15 @@ struct	stat	statb;
 	if (strcmp(router->binlog_name, file->binlogname) == 0 &&
 			pos >= router->binlog_position)
 	{
+		if (pos > router->binlog_position)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Attempting to read off the binlog pos in file %s, "
+				"event at %lu.", file->binlogname, pos)));
+		}
+
 		return NULL;
 	}
-		
 
 	/* Read the header information from the file */
 	if ((n = pread(file->fd, hdbuf, 19, pos)) != 19)
@@ -1032,19 +1039,14 @@ int found_chksum = 0;
                 hdr.next_pos = EXTRACT32(&hdbuf[13]);
                 hdr.flags = EXTRACT16(&hdbuf[17]);
 
-                //fprintf(stderr, ">>>> pos [%llu] event type %i\n", pos, hdr.event_type);
-                //fprintf(stderr, ">>>> pos [%llu] event size %lu\n", pos, hdr.event_size);
-                //fprintf(stderr, ">>>> pos [%llu] event next_pos %lu\n", pos, hdr.next_pos);
-
 		/* TO DO */
-
-		/* Add MariaDB 10 check */
+		/* Add MariaDB 10 check for MAX_EVENT_TYPE */
 
                 /* Check event type against MAX_EVENT_TYPE */
                 if (hdr.event_type > MAX_EVENT_TYPE)
                 {
                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                "*** ERROR: Found an Invalid event type 0x%x. "
+                                "Found an Invalid event type 0x%x. "
                                 "Binlog file is %s, position %llu",
                                 hdr.event_type,
                                 router->binlog_name, pos)));
@@ -1068,7 +1070,7 @@ int found_chksum = 0;
 		if (hdr.event_size <= 0)
                 {
                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                "*** ERROR: event size error: "
+                                "Event size error: "
                                 "size %d at %llu.",
                                 hdr.event_size, pos)));
 
@@ -1121,7 +1123,7 @@ int found_chksum = 0;
                         if (n == -1)
                         {
                                 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                        "*** ERROR: Error reading the event at %llu in %s. "
+                                        "Error reading the event at %llu in %s. "
                                         "%s, expected %d bytes.",
                                         pos, router->binlog_name,
                                         strerror(errno), hdr.event_size - 19)));
@@ -1129,14 +1131,14 @@ int found_chksum = 0;
                         else
                         {
                                 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                        "*** ERROR: Short read when reading the event at %llu in %s. "
+                                        "Short read when reading the event at %llu in %s. "
                                         "Expected %d bytes got %d bytes.",
                                         pos, router->binlog_name, hdr.event_size - 19, n)));
 
                                 if (filelen > 0 && filelen - pos < hdr.event_size)
                                 {
                                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                "*** ERROR: Binlog event is close to the end of the binlog file %s, "
+                                                "Binlog event is close to the end of the binlog file %s, "
                                                 " size is %lu.",
                                                 router->binlog_name, filelen)));
                                 }
@@ -1264,8 +1266,6 @@ int found_chksum = 0;
                         statement_sql = calloc(1, statement_len+1);
                         strncpy(statement_sql, (char *)ptr+4+4+1+2+2+var_block_len+1+db_name_len, statement_len);
 
-                        //fprintf(stderr, "QUERY_EVENT = [%s] %i / %i\n", statement_sql, (4+4+1+2+2+var_block_len+1+db_name_len), statement_len);
-
                         /* A transaction starts with this event */
                         if (strncmp(statement_sql, "BEGIN", 5) == 0) {
                                 if (pending_transaction > 0) {
@@ -1380,7 +1380,7 @@ int found_chksum = 0;
                 } else {
 
                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                "*** ERROR: Current event type %lu @ %llu has nex pos = %llu : exiting", hdr.event_type, pos, hdr.next_pos)));
+                                "Current event type %lu @ %llu has nex pos = %llu : exiting", hdr.event_type, pos, hdr.next_pos)));
                         break;
                 }
         }

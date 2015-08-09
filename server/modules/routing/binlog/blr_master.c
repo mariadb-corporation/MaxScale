@@ -1016,39 +1016,26 @@ int			n_bufs = -1, pn_bufs = -1;
 				router->lastEventReceived = hdr.event_type;
 				router->lastEventTimestamp = hdr.timestamp;
 
+#ifdef SHOW_EVENTS
+				printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
+#endif
 				/**
 				 * Check for an open transaction, if the option is set
 				 * Only complete transactions should be sent to sleves
 				 *
-				 * If a trasaction is pending router->last_commit_pos
-				 * won't be updated.
+				 * If a trasaction is pending router->binlog_position
+				 * won't be updated to router->current_pos
 				 */
 
 				if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0)) {
-					/* set last_commit_pos to binlog_position */
+					/* no pending transaction: set current_pos to binlog_position */
 
 					spinlock_acquire(&router->binlog_lock);
 
 					router->binlog_position = router->current_pos;
 
 					spinlock_release(&router->binlog_lock);
-				} else {
-					/**
-					 * A transaction is pending.
-					 * Last_commit_pos is on hold.
-					 *
-					 * Log a message if the transaction was opened
-					 * at binlog router start
-					 */
-
-					if (router->last_written == 0) {
-						fprintf(stderr, "*** Router started with an Open transaction at %lu / %lu\n", router->binlog_position, router->current_pos);
-					}
 				}
-
-#ifdef SHOW_EVENTS
-				printf("blr: event type 0x%02x, flags 0x%04x, event size %d", hdr.event_type, hdr.flags, hdr.event_size);
-#endif
 
 				/**
 				 * Detect transactions in events
@@ -1072,24 +1059,31 @@ int			n_bufs = -1, pn_bufs = -1;
 
 						/* Check for BEGIN (it comes for START TRANSACTION too) */
 						if (strncmp(statement_sql, "BEGIN", 5) == 0) {
-							spinlock_acquire(&router->binlog_lock);
 
 							if (router->pending_transaction > 0) {
-								fprintf(stderr, "*** A transaction is already open @ %lu and a new one starts @ %lu\n", router->binlog_position, router->current_pos);
+								LOGIF(LE,(skygw_log_write_flush(LOGFILE_ERROR,
+									"Error: a transaction is already open "
+									"@ %lu and a new one starts @ %lu",
+									router->binlog_position,
+									router->current_pos)));
+
+									// An action should be taken here
 							}
+
+							spinlock_acquire(&router->lock);
 
 							router->pending_transaction = 1;
 
-							spinlock_release(&router->binlog_lock);
+							spinlock_release(&router->lock);
 						}
 
 						/* Check for COMMIT in non transactional store engines */
 						if (strncmp(statement_sql, "COMMIT", 6) == 0) {
-							spinlock_acquire(&router->binlog_lock);
+							spinlock_acquire(&router->lock);
 
 							router->pending_transaction = 2;
 
-							spinlock_release(&router->binlog_lock);
+							spinlock_release(&router->lock);
 						}
 
 						free(statement_sql);
@@ -1101,11 +1095,11 @@ int			n_bufs = -1, pn_bufs = -1;
 						xid = extract_field(ptr+4+20, 64);
 
 						if (router->pending_transaction) {
-							spinlock_acquire(&router->binlog_lock);
+							spinlock_acquire(&router->lock);
 
 							router->pending_transaction = 3;
 
-							spinlock_release(&router->binlog_lock);
+							spinlock_release(&router->lock);
 						}
 					}
 				}
@@ -1231,12 +1225,12 @@ int			n_bufs = -1, pn_bufs = -1;
 							 * If transaction is closed:
 							 *
 							 * 1) read current binlog starting
-							 * 	from router->last_commit_pos
+							 * 	from router->binlog_position
 							 *
 							 * 2) distribute read event
 							 *
-							 * 3) if current pos = router->binlog_position
-							 *	update router->last_commit_pos
+							 * 3) set router->binlog_position to
+							 *    router->current_pos
 							 *
 							 */
 
@@ -1538,7 +1532,7 @@ int		action;
 
 		if (action == 1)
 		{
-			if (slave->binlog_pos == router->last_written &&
+			if (slave->binlog_pos <= router->last_written &&
 				(strcmp(slave->binlogfile, router->binlog_name) == 0 ||
 				(hdr->event_type == ROTATE_EVENT &&
 				strcmp(slave->binlogfile, router->prevbinlog))))

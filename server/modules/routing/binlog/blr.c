@@ -271,7 +271,7 @@ int		rc = 0;
 	inst->m_errno = 0;
 	inst->m_errmsg = NULL;
 
-	inst->trx_safe = 0;
+	inst->trx_safe = 1;
 	inst->pending_transaction = 0;
 	inst->last_safe_pos = 0;
 
@@ -424,8 +424,6 @@ int		rc = 0;
 			LOGFILE_ERROR, "%s: Error: No router options supplied for binlogrouter",
 				service->name)));
 	}
-
-	fprintf(stderr, "Transaction safety is [%i]\n", inst->trx_safe);
 
 	if (inst->fileroot == NULL)
 		inst->fileroot = strdup(BINLOG_NAME_ROOT);
@@ -602,6 +600,14 @@ int		rc = 0;
 		free(name);
 	}
 
+	/* Log whether the transaction safety option value is on*/
+	if (inst->trx_safe) {
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"%s: Service has transaction safety option set to ON",
+			service->name)));
+	}
+
 	/**
 	 * Check whether replication can be started
 	 */
@@ -613,9 +619,9 @@ int		rc = 0;
 		}
 
 		LOGIF(LT, (skygw_log_write_flush(
-		LOGFILE_TRACE,
-		"Binlog router: current binlog file is: %s, current position %u\n",
-		inst->binlog_name, inst->binlog_position)));
+			LOGFILE_TRACE,
+			"Current binlog file is %s, current pos is %lu\n",
+			inst->binlog_name, inst->binlog_position)));
 
 		/* Start replication from master server */
 		blr_start_master(inst);
@@ -954,7 +960,13 @@ struct tm	tm;
 	dcb_printf(dcb, "\tCurrent binlog file:		  		%s\n",
                    router_inst->binlog_name);
 	dcb_printf(dcb, "\tCurrent binlog position:	  		%u\n",
-                   router_inst->binlog_position);
+                   router_inst->current_pos);
+	if (router_inst->trx_safe) {
+		if (router_inst->pending_transaction) {	
+			dcb_printf(dcb, "\tCurrent open transaction pos:	  		%u\n",
+	                   router_inst->binlog_position);
+		}
+	}
 	dcb_printf(dcb, "\tNumber of slave servers:	   		%u\n",
                    router_inst->stats.n_slaves);
 	dcb_printf(dcb, "\tNo. of binlog events received this session:	%u\n",
@@ -1828,12 +1840,9 @@ static int blr_check_binlog(ROUTER_INSTANCE *router) {
 
 	n = blr_read_events_all_events(router, 0, 0);
 
-	LOGIF(LT, (skygw_log_write_flush(
-		LOGFILE_TRACE,
+	LOGIF(LD, (skygw_log_write_flush(
+		LOGFILE_DEBUG,
 		"blr_read_events_all_events() ret = %i\n", n)));
-
-	fprintf(stderr, "blr_read_events_all_events() ret = %i\n", n);
-	fprintf(stderr, "current_pos / binlog_pos are [%llu] / [%llu]\n", router->current_pos, router->binlog_position);
 
 	if (n != 0) {
 		char msg_err[1024 + 1] = "";
@@ -1841,7 +1850,7 @@ static int blr_check_binlog(ROUTER_INSTANCE *router) {
 
 		snprintf(msg_err, 1024, "Error found in binlog %s. Safe pos is %lu", router->binlog_name, router->binlog_position);
 		/* set mysql_errno */
-		router->m_errno = 1111;
+		router->m_errno = 2032;
 
 		/* set io error message */
 		router->m_errmsg = strdup(msg_err);
@@ -1849,7 +1858,11 @@ static int blr_check_binlog(ROUTER_INSTANCE *router) {
 		/* set last_safe_pos */
 		router->last_safe_pos = router->binlog_position;
 
-		/** LOG THE ERROR **/
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error found in binlog file %s. Safe starting pos is %lu",
+			router->binlog_name,
+			router->binlog_position)));
 
 		return 0;
 	} else {

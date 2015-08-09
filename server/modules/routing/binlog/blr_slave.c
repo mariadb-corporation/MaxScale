@@ -1769,6 +1769,7 @@ uint8_t		*ptr;
 		}
 	}
 	slave->stats.n_bursts++;
+
 	while (burst-- && burst_size > 0 &&
 		(record = blr_read_binlog(router, slave->file, slave->binlog_pos, &hdr)) != NULL)
 	{
