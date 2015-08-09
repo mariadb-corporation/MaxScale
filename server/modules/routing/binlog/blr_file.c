@@ -768,6 +768,7 @@ blr_cache_read_master_data(ROUTER_INSTANCE *router)
 	router->saved_master.selectvercom = blr_cache_read_response(router, "selectvercom");
 	router->saved_master.selecthostname = blr_cache_read_response(router, "selecthostname");
 	router->saved_master.map = blr_cache_read_response(router, "map");
+	router->saved_master.mariadb10 = blr_cache_read_response(router, "mariadb10");
 }
 
 
