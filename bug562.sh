@@ -17,6 +17,7 @@ res=0
 echo "$maxscale_err" |grep "ERROR 1045 (28000): Access denied for user 'no_such_user'@'"
 if [ "$?" != 0 ]; then
 	echo "Maxscale message is not ok!"
+    echo "Message: $maxscale_err"
 	res=1
 else
 	echo "Messages are same"
