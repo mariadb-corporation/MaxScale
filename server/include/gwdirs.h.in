@@ -42,10 +42,19 @@ static char* cachedir = NULL;
 static char* maxscaledatadir = NULL;
 static char* langdir = NULL;
 static char* piddir = NULL;
+
 void set_libdir(char* param);
 void set_datadir(char* param);
 void set_cachedir(char* param);
+void set_configdir(char* param);
+void set_logdir(char* param);
+void set_langdir(char* param);
+void set_piddir(char* param);
 char* get_libdir();
 char* get_datadir();
 char* get_cachedir();
+char* get_configdir();
+char* get_piddir();
+char* get_logdir();
+char* get_langdir();
 #endif

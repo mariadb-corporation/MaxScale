@@ -104,6 +104,8 @@ typedef struct {
 	unsigned long		id;					/**< MaxScale ID */
 	unsigned int		n_nbpoll;		/**< Tune number of non-blocking polls */
 	unsigned int		pollsleep;		/**< Wait time in blocking polls */
+        int syslog; /*< Log to syslog */
+        int maxlog; /*< Log to MaxScale's own logs */
 } GATEWAY_CONF;
 
 extern int		config_load(char *);
@@ -143,4 +145,5 @@ bool config_get_valtarget(
 void config_enable_feedback_task(void);
 void config_disable_feedback_task(void);
 unsigned long  config_get_gateway_id(void);
+GATEWAY_CONF* config_get_global_options();
 #endif
