@@ -1,5 +1,26 @@
 #include <gwdirs.h>
 
+void set_configdir(char* str)
+{
+    free(configdir);
+    configdir = str;
+}
+void set_logdir(char* str)
+{
+    free(logdir);
+    logdir = str;
+}
+void set_langdir(char* str)
+{
+    free(langdir);
+    langdir = str;
+}
+void set_piddir(char* str)
+{
+    free(piddir);
+    piddir = str;
+}
+
 /**
  * Get the directory with all the modules.
  * @return The module directory
@@ -45,4 +66,24 @@ void set_datadir(char* param)
     if(maxscaledatadir)
 	free(maxscaledatadir);
     maxscaledatadir = param;
+}
+
+char* get_configdir()
+{
+    return configdir?configdir:(char*)default_configdir;
+}
+
+char* get_piddir()
+{
+    return piddir?piddir:(char*)default_piddir;
+}
+
+char* get_logdir()
+{
+    return logdir?logdir:(char*)default_logdir;
+}
+
+char* get_langdir()
+{
+    return langdir?langdir:(char*)default_langdir;
 }

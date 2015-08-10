@@ -2480,3 +2480,12 @@ void config_add_param(CONFIG_CONTEXT* obj, char* key,char* value)
     nptr->next = obj->parameters;
     obj->parameters = nptr;
 }
+/**
+ * Return the pointer to the global options for MaxScale.
+ * @return Pointer to the GATEWAY_CONF structure. This is a static structure and
+ * should not be modified.
+ */
+GATEWAY_CONF* config_get_global_options()
+{
+    return &gateway;
+}
