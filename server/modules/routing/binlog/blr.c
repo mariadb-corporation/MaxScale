@@ -442,6 +442,14 @@ int		rc = 0;
 	strcpy(inst->binlog_name, "");
 	strcpy(inst->prevbinlog, "");
 
+	if ((inst->binlogdir == NULL) || (inst->binlogdir != NULL && !strlen(inst->binlogdir))) {
+		skygw_log_write_flush(LOGFILE_ERROR,
+			"Error : Service %s, binlog directory is not specified",
+			service->name);
+		free(inst);
+		return NULL;
+	}
+
 	/**
 	 * If binlogdir is not found create it
 	 * On failure don't start the instance
