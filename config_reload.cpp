@@ -23,11 +23,17 @@ int main(int argc, char *argv[])
     if((global_result += execute_query(Test->conn_rwsplit, "select 1")))
         cout << "Error: Query failed" << endl;
     cout << "Testing ReadConnRoute Master, expecting failure" << endl;
-    if((global_result += !execute_query(Test->conn_master, "select 1")))
+    if(execute_query(Test->conn_master, "select 1") == 0)
+    {
         cout << "Error: Query succeeded" << endl;
+        global_result++;
+    }
     cout << "Testing ReadConnRoute Slave, expecting failure" << endl;
-    if((global_result += !execute_query(Test->conn_slave, "select 1")))
+    if(execute_query(Test->conn_slave, "select 1") == 0)
+    {
         cout << "Error: Query succeeded" << endl;
+        global_result++;
+    }
 
     cout << "Reloading configuration via SIGHUP" << endl;
     if(Test->execute_ssh_maxscale((char*)"sed -i -e 's/#//g' /etc/maxscale.cnf"))
