@@ -525,3 +525,12 @@ int check_maxscale_alive()
     Test->close_maxscale_connections();
     return(global_result);
 }
+
+int TestConnections::execute_ssh_maxscale(char* ssh)
+{
+    char *sys = (char*)new char[strlen(ssh) + 1024];
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s %s\"",
+            maxscale_sshkey, access_user, maxscale_IP, access_sudo, ssh);
+    int res = system(sys);
+    return(res);
+}

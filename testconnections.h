@@ -335,6 +335,13 @@ public:
      * @brief Copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
      */
     int copy_all_logs();
+
+    /**
+     * @brief Execute a command via ssh on the MaxScale machine
+     * @param ssh ssh command to execute on the MaxScale machine
+     * @return  0 in case of success
+     */
+    int execute_ssh_maxscale(char* ssh);
 };
 
 /**
