@@ -1,0 +1,8 @@
+# various auto-backup stuff
+*~
+*#
+.#*
+._*
+
+# Netbeans Project files
+nbproject/
