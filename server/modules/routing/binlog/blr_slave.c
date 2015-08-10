@@ -2553,7 +2553,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 	 * The FDE event with current filename may arrive after STOP SLAVE is received
 	 */
 
-	if (strcmp(router->binlog_name, router->prevbinlog) !=0)
+	if (strcmp(router->binlog_name, router->prevbinlog) != 0)
 		strncpy(router->prevbinlog, router->binlog_name, BINLOG_FNAMELEN);
 
 	spinlock_release(&router->lock);
@@ -2580,13 +2580,13 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 	LOGIF(LM, (skygw_log_write(
 		LOGFILE_MESSAGE,
-		"%s: STOP SLAVE executed by %s@%s. Disconnecting from master %s:%d, read up to log %s, pos %lu",
+		"%s: STOP SLAVE executed by %s@%s. Disconnecting from master %s:%d, read up to log %s, pos %lu, transaction safe pos %lu",
 		router->service->name,
 		slave->dcb->user,
 		slave->dcb->remote,
 		router->service->dbref->server->name,
 		router->service->dbref->server->port,
-		router->binlog_name, router->current_pos)));
+		router->binlog_name, router->current_pos, router->binlog_position)));
 
 	if (router->trx_safe && router->pending_transaction) {
 		char message[1024+1] = "";
@@ -2672,23 +2672,30 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 			return 1;
 		}
 
+		/* create new one */
 		blr_file_new_binlog(router, router->binlog_name);
 	} else {
-		blr_file_use_binlog(router, router->binlog_name);
+		if (router->binlog_fd == -1) {
+			/* create new one */
+			blr_file_new_binlog(router, router->binlog_name);
+		} else {
+			/* use existing one */
+			blr_file_use_binlog(router, router->binlog_name);
+		}
 	}
 
 	blr_start_master(router);
 	
 	LOGIF(LM, (skygw_log_write(
 		LOGFILE_MESSAGE,
-		"%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, binlog %s, pos %lu",
+		"%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, binlog %s, pos %lu, transaction safe pos %lu",
 		router->service->name,
 		slave->dcb->user,
 		slave->dcb->remote,
 		router->service->dbref->server->name,
 		router->service->dbref->server->port,
 		router->binlog_name,
-		router->current_pos)));
+		router->current_pos, router->binlog_position)));
 
         /* File path for router cached authentication data */
         strcpy(path, router->binlogdir);
