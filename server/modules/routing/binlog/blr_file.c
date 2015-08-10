@@ -933,6 +933,7 @@ int var_block_len;
 int statement_len;
 int checksum_len=0;
 int found_chksum = 0;
+int event_error = 0;
 
 	if (router->binlog_fd == -1) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -1039,25 +1040,41 @@ int found_chksum = 0;
                 hdr.next_pos = EXTRACT32(&hdbuf[13]);
                 hdr.flags = EXTRACT16(&hdbuf[17]);
 
-		/* TO DO */
-		/* Add MariaDB 10 check for MAX_EVENT_TYPE */
-
                 /* Check event type against MAX_EVENT_TYPE */
-                if (hdr.event_type > MAX_EVENT_TYPE)
-                {
-                        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                "Found an Invalid event type 0x%x. "
-                                "Binlog file is %s, position %llu",
-                                hdr.event_type,
-                                router->binlog_name, pos)));
 
-                        router->binlog_position = last_known_commit;
-                        router->current_pos = pos;
+		if (router->mariadb10_compat) {
+			if (hdr.event_type > MAX_EVENT_TYPE_MARIADB10) {
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+					"Invalid MariaDB 10 event type 0x%x. "
+					"Binlog file is %s, position %d",
+					hdr.event_type,
+					router->binlog_name, pos)));
+
+				event_error = 1;
+			}
+		} else {
+			if (hdr.event_type > MAX_EVENT_TYPE) {
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+					"Invalid event type 0x%x. "
+					"Binlog file is %s, position %d",
+					hdr.event_type,
+					router->binlog_name, pos)));
+
+				event_error = 1;
+			}
+		}
+
+		if (event_error) {
+
+			router->binlog_position = last_known_commit;
+			router->current_pos = pos;
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"warning : an error has been found. "
+				"warning : an error has been found in %s. "
 				"Setting safe pos to %lu, current pos %lu",
-				router->binlog_position, router->current_pos)));
+				router->binlog_name,
+				router->binlog_position,
+				router->current_pos)));
 
 			if (fix) {
 				ftruncate(router->binlog_fd, router->binlog_position);
@@ -1065,7 +1082,7 @@ int found_chksum = 0;
 			}
 
                         return 1;
-                }
+		}
 
 		if (hdr.event_size <= 0)
                 {
