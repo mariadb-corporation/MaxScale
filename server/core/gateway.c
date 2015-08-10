@@ -1981,7 +1981,7 @@ static int write_pid_file(char *home_dir) {
 
 	int fd = -1;
 
-        snprintf(pidfile, PATH_MAX, "%smaxscale.pid",piddir?piddir:default_piddir);
+        snprintf(pidfile, PATH_MAX, "%s/maxscale.pid",piddir?piddir:default_piddir);
 
         fd = open(pidfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
         if (fd == -1) {
