@@ -1164,18 +1164,29 @@ int main(int argc, char **argv)
 		    {
 			set_logdir(tmp_path);
 		    }
-
+		    else
+		    {
+			succp = false;
+		    }
 		    break;
 		case 'N':
 		    if(handle_path_arg(&tmp_path,optarg,NULL,true,false))
 		    {
 			set_langdir(tmp_path);
 		    }
+		    else
+		    {
+			succp = false;
+		    }
 		    break;
 		case 'P':
 		    if(handle_path_arg(&tmp_path,optarg,NULL,true,true))
 		    {
 			set_piddir(tmp_path);
+		    }
+		    else
+		    {
+			succp = false;
 		    }
 		    break;
 		case 'D':
@@ -1188,17 +1199,29 @@ int main(int argc, char **argv)
 		    {
 			set_configdir(tmp_path);
 		    }
+		    else
+		    {
+			succp = false;
+		    }
 		    break;
 		case 'B':
 		    if(handle_path_arg(&tmp_path,optarg,NULL,true,false))
 		    {
 			set_libdir(tmp_path);
 		    }
+		    else
+		    {
+			succp = false;
+		    }
 		    break;
 		case 'A':
 		    if(handle_path_arg(&tmp_path,optarg,NULL,true,true))
 		    {
 			set_cachedir(tmp_path);
+		    }
+		    else
+		    {
+			succp = false;
 		    }
 		    break;
 		case 'S':
