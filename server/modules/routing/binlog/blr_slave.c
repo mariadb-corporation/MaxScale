@@ -447,7 +447,7 @@ extern  char *strcasestr();
 			if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
 			{
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-					"%s: Expected SHOW MASTER STATUS command",
+					"%s: Expected SHOW SLAVE STATUS command",
 						router->service->name)));
 			}
 			else if (strcasecmp(word, "STATUS") == 0)

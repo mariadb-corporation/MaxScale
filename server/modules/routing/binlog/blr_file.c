@@ -90,7 +90,7 @@ struct dirent	*dp;
 
 	if (router->binlogdir == NULL)
 	{
-		strcpy(path, get_datadir());
+		strncpy(path, get_datadir(), PATH_MAX);
 		strncat(path,"/",PATH_MAX);
 		strncat(path, router->service->name,PATH_MAX);
 
@@ -200,7 +200,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 static int
 blr_file_create(ROUTER_INSTANCE *router, char *file)
 {
-char		path[1024];
+char		path[PATH_MAX + 1];
 int		fd;
 
 	strcpy(path, router->binlogdir);
@@ -573,7 +573,9 @@ struct	stat	statb;
 			}
 			blr_log_header(LOGFILE_ERROR, "Possible malformed event header", hdbuf);
 		}
-		gwbuf_consume(result, hdr->event_size);
+
+		gwbuf_free(result);
+
 		return NULL;
 	}
 	return result;
@@ -611,9 +613,10 @@ blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
 		close(file->fd);
 		file->fd = -1;
 	}
-	spinlock_release(&file->lock);
 	if (file->refcnt == 0)
 		free(file);
+
+	spinlock_release(&file->lock);
 }
 
 /**
@@ -671,7 +674,7 @@ char	path[PATH_MAX+1], *ptr;
 int	fd;
 
 	strncpy(path, router->binlogdir, PATH_MAX);
-	strncat(path, "/cache", 4096);
+	strncat(path, "/cache", PATH_MAX);
 
 	if (access(path, R_OK) == -1) {
 		int mkdir_ret;
@@ -740,7 +743,7 @@ GWBUF	*buf;
 int
 blr_file_next_exists(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
-char	*sptr, buf[80], bigbuf[4096];
+char	*sptr, buf[80], bigbuf[PATH_MAX + 1];
 int	filenum;
 
 	if ((sptr = strrchr(slave->binlogfile, '.')) == NULL)
@@ -837,11 +840,6 @@ blr_file_use_binlog(ROUTER_INSTANCE *router, char *file)
  */
 int
 blr_file_write_master_config(ROUTER_INSTANCE *router, char *error) {
-char *master_host;
-int master_port;
-char *filestem;
-char *master_user;
-char *master_password;
 char *section = "binlog_configuration";
 FILE *config_file;
 int rc;
@@ -856,13 +854,6 @@ char tmp_file[PATH_MAX + 1] = "";
 	snprintf(tmp_file, (PATH_MAX -4), filename);
 
 	strcat(tmp_file, ".tmp");
-
-	/* get data from current configuration */
-	master_host = router->service->dbref->server->name;
-	master_port = router->service->dbref->server->port;
-	master_user = router->user;
-	master_password= router->password;
-	filestem = router->fileroot;
 
 	/* open file for writing */
 	config_file = fopen(tmp_file,"wb");
@@ -880,11 +871,11 @@ char tmp_file[PATH_MAX + 1] = "";
 	fprintf(config_file,"[%s]\n", section);
 
 	/* write ini file key=value */
-	fprintf(config_file,"master_host=%s\n", master_host);
-	fprintf(config_file,"master_port=%d\n", master_port);
-	fprintf(config_file,"master_user=%s\n", master_user);
-	fprintf(config_file,"master_password=%s\n", master_password);
-	fprintf(config_file,"filestem=%s\n", filestem);
+	fprintf(config_file,"master_host=%s\n", router->service->dbref->server->name);
+	fprintf(config_file,"master_port=%d\n", router->service->dbref->server->port);
+	fprintf(config_file,"master_user=%s\n", router->user);
+	fprintf(config_file,"master_password=%s\n", router->password);
+	fprintf(config_file,"filestem=%s\n", router->fileroot);
 
 	fclose(config_file);
 
