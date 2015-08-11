@@ -2454,24 +2454,29 @@ blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
 GWBUF   *pkt;
 uint8_t *ptr;
+uint8_t	ok_packet[] = {7, 0, 0, // Payload length
+			1, // Seqno,
+			0, // OK,
+			0, 0, 2, 0, 0, 0};
 
-        if ((pkt = gwbuf_alloc(11)) == NULL)
-                return 0;
-        ptr = GWBUF_DATA(pkt);
-        *ptr++ = 7;     // Payload length
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 1;     // Seqno
-        *ptr++ = 0;     // ok
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 2;
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 0;
+	if ((pkt = gwbuf_alloc(sizeof(ok_packet))) == NULL)
+		return 0;
 
-        return slave->dcb->func.write(slave->dcb, pkt);
+	memcpy(GWBUF_DATA(pkt), ok_packet, sizeof(ok_packet));
+
+	return slave->dcb->func.write(slave->dcb, pkt);
 }
+
+ /**
+ * Send a MySQL OK packet with a message to the slave backend
+ *
+ * @param       router          The binlog router instance
+ * @param	message		The message to send
+ * @param       slave           The slave server to which we are sending the response
+ *
+ * @return result of a write call, non-zero if write was successful
+ */
+
 static int
 blr_slave_send_ok_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message)
 {
@@ -2518,8 +2523,6 @@ uint8_t *ptr;
 static int
 blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
-	GWBUF   *ptr;
-
         /* if unconfigured return an error */
 	if (router->master_state == BLRM_UNCONFIGURED) {
 		blr_slave_send_error_packet(slave, "The server is not configured as slave; fix in config file or with CHANGE MASTER TO", (unsigned int)1200, NULL);
@@ -2533,7 +2536,6 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 		return 1;
 	}
-
 
 	if (router->master) {
 		if (router->master->fd != -1 && router->master->state == DCB_STATE_POLLING) {
@@ -2556,26 +2558,24 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 	if (strcmp(router->binlog_name, router->prevbinlog) != 0)
 		strncpy(router->prevbinlog, router->binlog_name, BINLOG_FNAMELEN);
 
-	spinlock_release(&router->lock);
-
 	if (router->client) {
 		if (router->client->fd != -1 && router->client->state == DCB_STATE_POLLING) {
 			dcb_close(router->client);
+			router->client = NULL;
 		}
 	}
 
 	/* Discard the queued residual data */
-	ptr = router->residual;
-	while (ptr)
+	while (router->residual)
 	{
-		ptr = gwbuf_consume(ptr, GWBUF_LENGTH(ptr));
+		router->residual = gwbuf_consume(router->residual, GWBUF_LENGTH(router->residual));
 	}
 	router->residual = NULL;
 
 	/* Now it is safe to unleash other threads on this router instance */
-	spinlock_acquire(&router->lock);
 	router->reconnect_pending = 0;
 	router->active_logs = 0;
+
 	spinlock_release(&router->lock);
 
 	LOGIF(LM, (skygw_log_write(
@@ -2821,7 +2821,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 	current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
 
 	if (!current_master) {
-		strcpy(error, "error allocating memory for blr_master_get_config");
+		strncpy(error, "error allocating memory for blr_master_get_config", BINLOG_ERROR_MSG_LEN);
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
 
 		return -1;
@@ -3183,6 +3183,8 @@ blr_set_master_port(ROUTER_INSTANCE *router, char *command) {
 /*
  * Set new master binlog file
  *
+ * The routing must be called holding router->lock 
+ *
  * @param router	Current router instance
  * @param command	CHANGE MASTER TO command
  * @param error		The error msg for command
@@ -3320,14 +3322,10 @@ blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master) {
  */
 static void
 blr_master_free_config(MASTER_SERVER_CFG *master_cfg) {
-	if (master_cfg->host)
-		free(master_cfg->host);
-	if (master_cfg->user)
-		free(master_cfg->user);
-	if (master_cfg->password)
-		free(master_cfg->password);
-	if (master_cfg->filestem)
-		free(master_cfg->filestem);
+	free(master_cfg->host);
+	free(master_cfg->user);
+	free(master_cfg->password);
+	free(master_cfg->filestem);
 
 	free(master_cfg);
 }
