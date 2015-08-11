@@ -1288,7 +1288,7 @@ int event_error = 0;
                                 if (pending_transaction > 0) {
                                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
                                         "*** ERROR: Transaction cannot be @ pos %llu: "
-                                        "Another transaction was opened at %ll",
+                                        "Another transaction was opened at %llu",
                                         pos, last_known_commit)));
 
                                         free(statement_sql);
@@ -1332,7 +1332,6 @@ int event_error = 0;
                 }
 
                 if (pending_transaction > 1) {
-                        unsigned long long prev_pos = last_known_commit;
                         if (debug)
                                 LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
                                         "< Transaction @ pos %llu, is now closed @ %llu", last_known_commit, pos)));
