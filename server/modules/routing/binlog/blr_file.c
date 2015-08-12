@@ -482,8 +482,8 @@ struct	stat	statb;
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"Next position in header appears to be incorrect "
-			"rereading event header at pos %ul in file %s, "
-			"file size is %ul. Master will write %ul in %s next.",
+			"rereading event header at pos %lu in file %s, "
+			"file size is %lu. Master will write %lu in %s next.",
 			pos, file->binlogname, filelen, router->binlog_position,
 			router->binlog_name)));
 		if ((n = pread(file->fd, hdbuf, 19, pos)) != 19)
