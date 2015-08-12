@@ -27,8 +27,8 @@ The full list of dependencies for the most common distributions is provided in t
 You will need to install all of the following packages for all versions of RHEL and CentOS.
 
 ```
-gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool 
-openssl-devel libaio libaio-devel librabbitmq-devel libcurl-devel pcre-devel
+gcc gcc-c++ ncurses-devel bison glibc-devel cmake libgcc perl make libtool \
+    openssl-devel libaio libaio-devel librabbitmq-devel libcurl-devel pcre-devel
 ```
 
 In addition, if you wish to to build an RPM package include:
@@ -61,7 +61,7 @@ MariaDB-devel MariaDB-server
 These packages are required on all versions of Ubuntu and Debian.
 
 ```
-	build-essential libssl-dev libaio-dev ncurses-dev bison
+	build-essential libssl-dev libaio-dev ncurses-dev bison \
 	cmake perl libtool librabbitmq-dev libcurl-dev libpcre3-dev
 ```
 
