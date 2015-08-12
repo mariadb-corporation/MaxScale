@@ -305,7 +305,7 @@ install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572
 install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 bug699 bug705 bug519 setup_binlog setup_binlog_crc_none setup_binlog_crc_32 binlog_incompl bug729 bug718 bug730 bug711 bug656 DESTINATION system-test)
-install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 session_limits script config_reload DESTINATION system-test)
+install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 session_limits script config_reload setup_binlog_no_pos DESTINATION system-test)
 
 install(FILES set_env.sh get_logs.sh run_ctrl_c.sh long_insert.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut.sh configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
