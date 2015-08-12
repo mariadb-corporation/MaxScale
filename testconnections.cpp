@@ -338,8 +338,12 @@ int TestConnections::start_binlog()
     printf("Starting back Maxscale\n");  fflush(stdout);
     global_result += start_maxscale();
 
-    printf("Connecting to MaxScale binlog router\n");fflush(stdout);
+    printf("Connecting to MaxScale binlog router (with any DB)\n");fflush(stdout);
     MYSQL * binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+
+    if (mysql_errno(binlog) != 0) {
+        printf("Error connection to binlog router %s\n", mysql_error(binlog));
+    }
 
     printf("configuring Maxscale binlog router\n");fflush(stdout);
     repl->set_slave(binlog, repl->IP[0], repl->port[0], log_file, log_pos);
