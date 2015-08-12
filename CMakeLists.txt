@@ -234,6 +234,7 @@ if(PACKAGE)
   else()
 
     # Generic CPack configuration variables
+    SET(CPACK_SET_DESTDIR ON)
     set(CPACK_STRIP_FILES FALSE)
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "MaxScale")
     set(CPACK_PACKAGE_VERSION_MAJOR "${MAXSCALE_VERSION_MAJOR}")
