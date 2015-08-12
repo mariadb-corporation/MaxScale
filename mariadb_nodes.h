@@ -106,6 +106,15 @@ public:
      */
     char access_sudo[64];
 
+    /**
+     * @brief no_set_pos if set to true setup_binlog function do not set log position
+     */
+    bool no_set_pos;
+
+    /**
+     * @brief connect open connecxtions to all Maxscale services
+     * @return 0  in case of success
+     */
     int connect();
     /**
      * @brief  close connections which were previously opened by Connect()

@@ -17,6 +17,7 @@
 Mariadb_nodes::Mariadb_nodes(char * pref)
 {
     strcpy(prefix, pref);
+    no_set_pos = false;
 }
 
 int Mariadb_nodes::connect()
@@ -404,7 +405,9 @@ int Mariadb_nodes::restart_all_vm()
 int Mariadb_nodes::set_slave(MYSQL * conn, char master_host[], int master_port, char log_file[], char log_pos[])
 {
     char str[1024];
+
     sprintf(str, setup_slave, master_host, log_file, log_pos, master_port);
+    if (no_set_pos) {sprintf(str, setup_slave_no_pos, master_host, log_file, master_port);}
 
     printf("Setup slave SQL: %s\n", str);
     return(execute_query(conn, str));

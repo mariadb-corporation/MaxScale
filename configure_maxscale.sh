@@ -91,7 +91,7 @@ if [ "$maxscale_restart" != "no" ] ; then
 	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo service maxscale stop"
 	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo killall -9 maxscale"
 #	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo mkdir -p $access_homedir; $access_sudo chmod 777 -R $access_homedir"
-	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo  truncate -s 0 $maxscale_log_dir/*.log ; $access_sudo rm /tmp/core*; $access_sudo rm -rf /dev/shm/*;  $access_sudo ulimit -c unlimited; $access_sudo service maxscale restart" 
+	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo  truncate -s 0 $maxscale_log_dir/error1.log ; $access_sudo rm /tmp/core*; $access_sudo rm -rf /dev/shm/*;  $access_sudo ulimit -c unlimited; $access_sudo service maxscale restart" 
 else
 #        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "mkdir -p $access_homedir; chmod 777 -R $access_homedir"
 	ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo service maxscale status | grep running"
@@ -101,9 +101,9 @@ else
 #                ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo echo " " > $maxscale_log_dir/debug1.log"
 #                ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo echo " " > $maxscale_log_dir/trace1.log"
 
-	        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo rm /tmp/core*; $access_sudo truncate -s 0 $maxscale_log_dir/*.log ; $access_sudo ulimit -c unlimited; $access_sudo killall -HUP maxscale" 
+	        ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo rm /tmp/core*; $access_sudo truncate -s 0 $maxscale_log_dir/error1.log ; $access_sudo ulimit -c unlimited; $access_sudo killall -HUP maxscale" 
 	else
-		ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo rm /tmp/core*; $access_sudo truncate -s 0 $maxscale_log_dir/*.log ; $access_sudo ulimit -c unlimited; $access_sudo service maxscale start"
+		ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$access_sudo rm /tmp/core*; $access_sudo truncate -s 0 $maxscale_log_dir/error1.log ; $access_sudo ulimit -c unlimited; $access_sudo service maxscale start"
 	fi
 fi
 #sleep 15
