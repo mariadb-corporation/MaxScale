@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     }
 
     cout << "Reloading configuration via SIGHUP" << endl;
-    if(Test->execute_ssh_maxscale((char*)"sed -i -e 's/#//g' /etc/maxscale.cnf"))
+    if(Test->execute_ssh_maxscale((char*)"sed -i -e 's/# *//g' /etc/maxscale.cnf"))
     {
         cout << "SSH command failed!" << endl;
         global_result++;
