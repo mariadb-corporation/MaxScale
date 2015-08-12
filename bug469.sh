@@ -9,6 +9,9 @@ export test_name=bug469
 
 $test_dir/configure_maxscale.sh
 
+echo "Waiting for 15 seconds"
+sleep 15
+
 res=0
 
 ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 show server server1" 
