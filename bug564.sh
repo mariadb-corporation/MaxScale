@@ -3,6 +3,9 @@
 export test_name=bug564
 $test_dir/configure_maxscale.sh
 
+echo "Waiting for 15 seconds"
+sleep 15
+
 for char_set in "latin1" "latin2"
 do
 
