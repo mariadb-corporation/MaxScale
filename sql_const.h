@@ -13,4 +13,13 @@ const char * setup_slave =
          MASTER_PORT=%d;\
         start slave;";
 
+const char * setup_slave_no_pos =
+        "change master to MASTER_HOST='%s',\
+         MASTER_USER='repl',\
+         MASTER_PASSWORD='repl',\
+         MASTER_LOG_FILE='%s',\
+         MASTER_PORT=%d;\
+        start slave;";
+
+
 #endif // SQL_CONST_H
