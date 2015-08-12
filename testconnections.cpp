@@ -347,7 +347,7 @@ int TestConnections::start_binlog()
 
     printf("configuring Maxscale binlog router\n");fflush(stdout);
     repl->set_slave(binlog, repl->IP[0], repl->port[0], log_file, log_pos);
-
+    execute_query(binlog, "start slave");
 
     // get Master status from Maxscale binlog
     printf("show master status\n");fflush(stdout);
