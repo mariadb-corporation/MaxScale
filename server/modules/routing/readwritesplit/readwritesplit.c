@@ -1584,9 +1584,24 @@ void check_drop_tmp_table(
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
+  if(master_dcb == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
+	      "This means that the connection to the master server is already "
+	      "closed while a query is still being routed.",__FUNCTION__);
+      return;
+  }
+
   CHK_DCB(master_dcb);
 
   data = (MYSQL_session*)master_dcb->session->data;
+
+  if(data == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      return;
+  }
+
   dbname = (char*)data->db;
 
   if (is_drop_table_query(querybuf))
@@ -1647,9 +1662,23 @@ static skygw_query_type_t is_read_tmp_table(
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
+  if(master_dcb == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
+	      "This means that the connection to the master server is already "
+	      "closed while a query is still being routed.",__FUNCTION__);
+      return qtype;
+  }
   CHK_DCB(master_dcb);
 
   data = (MYSQL_session*)master_dcb->session->data;
+
+  if(data == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      return qtype;
+  }
+
   dbname = (char*)data->db;
 
   if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) || 
@@ -1724,9 +1753,24 @@ static void check_create_tmp_table(
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
+  if(master_dcb == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
+	      "This means that the connection to the master server is already "
+	      "closed while a query is still being routed.",__FUNCTION__);
+      return;
+  }
+
   CHK_DCB(master_dcb);
 
   data = (MYSQL_session*)master_dcb->session->data;
+
+  if(data == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      return;
+  }
+
   dbname = (char*)data->db;
 
 
