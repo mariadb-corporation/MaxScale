@@ -633,7 +633,7 @@ char** tokenize_string(char* str)
  */
 int internalRoute(DCB* dcb)
 {
-    if(dcb->dcb_readqueue)
+    if(dcb->dcb_readqueue && dcb->session)
     {
         GWBUF* tmp = dcb->dcb_readqueue;
         void* rinst = dcb->session->service->router_instance;
@@ -652,7 +652,7 @@ int internalRoute(DCB* dcb)
  */
 int internalReply(DCB* dcb)
 {
-    if(dcb->dcb_readqueue)
+    if(dcb->dcb_readqueue && dcb->session)
     {
         GWBUF* tmp = dcb->dcb_readqueue;
         dcb->dcb_readqueue = NULL;
