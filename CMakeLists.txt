@@ -422,6 +422,7 @@ add_test(script script)
 add_test(mm mm)
 add_test(ssl_load ssl_load)
 add_test(config_reload config_reload)
+add_test(config_reload_server config_reload_server.sh)
 
 add_test(sql_queries sql_queries)
 set_tests_properties(sql_queries PROPERTIES TIMEOUT 3600)
