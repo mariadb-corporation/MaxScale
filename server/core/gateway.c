@@ -85,6 +85,7 @@
 
 #include <ini.h>
 #include <sys/wait.h>
+#include <sys/prctl.h>
 
 /** for procname */
 #if !defined(_GNU_SOURCE)
@@ -2217,6 +2218,15 @@ static int set_user(char* user)
 	printf("Error: Failed to change user to '%s': %d %s\n",
 	 pwname->pw_name,errno,strerror(errno));
 	return rval;
+    }
+    if(prctl(PR_GET_DUMPABLE) == 0)
+    {
+	if(prctl(PR_SET_DUMPABLE ,1) == -1)
+	{
+	    printf("Error: Failed to set dumpable flag on for the process '%s': %d %s\n",
+	     pwname->pw_name,errno,strerror(errno));
+	    return -1;
+	}
     }
 #ifdef SS_DEBUG
     else
