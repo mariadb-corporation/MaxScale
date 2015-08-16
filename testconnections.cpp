@@ -259,6 +259,9 @@ int TestConnections::start_binlog()
     char version_str[1024];
     int i;
     int global_result = 0;
+    bool no_pos;
+
+    no_pos = repl->no_set_pos;
 
     switch (binlog_cmd_option) {
     case 1:
@@ -332,18 +335,26 @@ int TestConnections::start_binlog()
 
     printf("Stopping first slave (node 1)\n");fflush(stdout);
     global_result += execute_query(repl->nodes[1], (char *) "stop slave;");
+    repl->no_set_pos = false;
     printf("Configure first backend slave node to be slave of real master\n");fflush(stdout);
     repl->set_slave(repl->nodes[1], repl->IP[0],  repl->port[0], log_file, log_pos);
 
     printf("Starting back Maxscale\n");  fflush(stdout);
     global_result += start_maxscale();
 
-    printf("Connecting to MaxScale binlog router\n");fflush(stdout);
+    printf("Connecting to MaxScale binlog router (with any DB)\n");fflush(stdout);
     MYSQL * binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
 
+    if (mysql_errno(binlog) != 0) {
+        printf("Error connection to binlog router %s\n", mysql_error(binlog));
+    }
+
+    repl->no_set_pos = no_pos;
     printf("configuring Maxscale binlog router\n");fflush(stdout);
     repl->set_slave(binlog, repl->IP[0], repl->port[0], log_file, log_pos);
+    execute_query(binlog, "start slave");
 
+    repl->no_set_pos = false;
 
     // get Master status from Maxscale binlog
     printf("show master status\n");fflush(stdout);
@@ -359,6 +370,8 @@ int TestConnections::start_binlog()
         repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
     }
     repl->close_connections();
+    mysql_close(binlog);
+    repl->no_set_pos = no_pos;
     return(global_result);
 }
 

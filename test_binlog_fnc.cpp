@@ -88,9 +88,10 @@ int start_transaction(TestConnections* Test)
     return(global_result);
 }
 
-int test_binlog(TestConnections* Test, MYSQL* binlog)
+int test_binlog(TestConnections* Test)
 {
     int i;
+    MYSQL* binlog;
     int global_result = 0;
     Test->repl->connect();
 

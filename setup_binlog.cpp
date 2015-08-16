@@ -40,8 +40,6 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
-    MYSQL * binlog;
-    int i;
 
     Test->read_env();
     Test->print_env();
@@ -49,7 +47,7 @@ int main(int argc, char *argv[])
     for (int option = 0; option < 3; option++) {
         Test->binlog_cmd_option = option;
         Test->start_binlog();
-        global_result += test_binlog(Test, binlog);
+        global_result += test_binlog(Test);
     }
 
     Test->copy_all_logs(); return(global_result);
