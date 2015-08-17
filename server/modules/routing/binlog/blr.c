@@ -403,16 +403,16 @@ int		rc = 0;
 				}
 				else if (strcmp(options[i], "heartbeat") == 0)
 				{
-					inst->heartbeat = atoi(value);
-					if (inst->heartbeat <= 0) {
-						/* set default value */
-						inst->heartbeat = BLR_HEARTBEAT_DEFAULT_INTERVAL;
+					int h_val = (int)strtol(value, NULL, 10);
 
+					if (h_val <= 0 || (errno == ERANGE)) {
 						LOGIF(LE, (skygw_log_write_flush(
 							LOGFILE_ERROR,
 							"Warning : invalid heartbeat period %s."
 							" Setting it to default value %d.",
 							value, inst->heartbeat )));
+					} else {
+						inst->heartbeat = h_val;
 					}
 				}
 				else if (strcmp(options[i], "binlogdir") == 0)
@@ -973,6 +973,8 @@ struct tm	tm;
 	
 	dcb_printf(dcb, "\tBinlog directory:				%s\n",
 		   router_inst->binlogdir);
+	dcb_printf(dcb, "\tHeartbeat period (seconds):			%lu\n",
+		   router_inst->heartbeat);
 	dcb_printf(dcb, "\tNumber of master connects:	  		%d\n",
                    router_inst->stats.n_masterstarts);
 	dcb_printf(dcb, "\tNumber of delayed reconnects:      		%d\n",
