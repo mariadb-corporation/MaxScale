@@ -2669,6 +2669,7 @@ ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
 int		  i = 0;
 BACKEND		  *backend;
 char		  *weightby;
+double master_pct = 0.0;
 
 	spinlock_acquire(&router->lock);
 	router_cli_ses = router->connections;
@@ -2678,7 +2679,12 @@ char		  *weightby;
 		router_cli_ses = router_cli_ses->next;
 	}
 	spinlock_release(&router->lock);
-	
+
+	if(router->stats.n_master + router->stats.n_slave > 0)
+	{
+	    master_pct = (double)router->stats.n_master/(double)(router->stats.n_master + router->stats.n_slave);
+	}
+
 	dcb_printf(dcb,
                    "\tNumber of router sessions:           	%d\n",
                    router->stats.n_sessions);
@@ -2697,6 +2703,10 @@ char		  *weightby;
 	dcb_printf(dcb,
                    "\tNumber of queries forwarded to all:   	%d\n",
                    router->stats.n_all);
+	dcb_printf(dcb,
+                   "\tMaster/Slave percentage:		%.2f%%\n",
+                   master_pct * 100.0);
+
 	if ((weightby = serviceGetWeightingParameter(router->service)) != NULL)
         {
                 dcb_printf(dcb,
