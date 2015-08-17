@@ -1638,7 +1638,12 @@ static GWBUF* process_response_data (
 				 * bytes in the buffer or it is NULL, we need to
 				 wait for more data from the backend server.*/
 				if(readbuf == NULL || GWBUF_LENGTH(readbuf) < 3)
+				{
+				    skygw_log_write(LD," %lu [%s] Read %s packet with %d bytes. Waiting for %d packets.",
+					     pthread_self(),__FUNCTION__,readbuf?"partial":"empty",
+					     readbuf?GWBUF_LENGTH(readbuf):0,npackets_left);
 				    break;
+				}
 
 				data = GWBUF_DATA(readbuf);
 				nbytes_left = MYSQL_GET_PACKET_LEN(data)+MYSQL_HEADER_LEN;
