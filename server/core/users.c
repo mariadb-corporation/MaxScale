@@ -38,18 +38,6 @@
  */
 
 /**
- * The hash function we user for storing users.
- *
- * @param key	The key value, i.e. username
- * @return The hash key
- */
-static int
-user_hash(char *key)
-{
-	return (*key + *(key + 1));
-}
-
-/**
  * Allocate a new users table
  *
  * @return The users table
@@ -65,7 +53,7 @@ USERS 	*rval;
 	    return NULL;
 	}
 
-	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE, user_hash, strcmp)) == NULL)
+	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE, simple_str_hash, strcmp)) == NULL)
 	{
 	    skygw_log_write(LE,"[%s:%d] Error: Memory allocation failed.",__FUNCTION__,__LINE__);
 	    free(rval);

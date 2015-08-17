@@ -1,6 +1,9 @@
 #Changelog
 
-These are the changes introduced in the next MaxScale version. This is not the official change log and the latest changelog can always be found in here: [MaxScale 1.1 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
+These are the changes introduced in the next MaxScale version. This is not the official change log and the latest changelog can always be found in here7: [MaxScale 1.1 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
+
+## MaxScale 1.3
+* Added support for persistent backend connections
 
 ## MaxScale 1.2
 * Logfiles have been renamed. The log names are now named error.log, messages.log, trace.log and debug.log.

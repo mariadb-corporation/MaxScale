@@ -1584,9 +1584,24 @@ void check_drop_tmp_table(
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
+  if(master_dcb == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
+	      "This means that the connection to the master server is already "
+	      "closed while a query is still being routed.",__FUNCTION__);
+      return;
+  }
+
   CHK_DCB(master_dcb);
 
   data = (MYSQL_session*)master_dcb->session->data;
+
+  if(data == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      return;
+  }
+
   dbname = (char*)data->db;
 
   if (is_drop_table_query(querybuf))
@@ -1647,9 +1662,23 @@ static skygw_query_type_t is_read_tmp_table(
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
+  if(master_dcb == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
+	      "This means that the connection to the master server is already "
+	      "closed while a query is still being routed.",__FUNCTION__);
+      return qtype;
+  }
   CHK_DCB(master_dcb);
 
   data = (MYSQL_session*)master_dcb->session->data;
+
+  if(data == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      return qtype;
+  }
+
   dbname = (char*)data->db;
 
   if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) || 
@@ -1724,9 +1753,24 @@ static void check_create_tmp_table(
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
+  if(master_dcb == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
+	      "This means that the connection to the master server is already "
+	      "closed while a query is still being routed.",__FUNCTION__);
+      return;
+  }
+
   CHK_DCB(master_dcb);
 
   data = (MYSQL_session*)master_dcb->session->data;
+
+  if(data == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      return;
+  }
+
   dbname = (char*)data->db;
 
 
@@ -2110,10 +2154,15 @@ static bool route_single_stmt(
 	/**
 	 * Check if the query has anything to do with temporary tables.
 	 */
+	if (!rses_begin_locked_router_action(rses))
+	{
+	    succp = false;
+	    goto retblock;
+	}
 	qtype = is_read_tmp_table(rses, querybuf, qtype);
 	check_create_tmp_table(rses, querybuf, qtype);
 	check_drop_tmp_table(rses, querybuf,qtype);
-	
+	rses_end_locked_router_action(rses);
 	/**
 	 * If autocommit is disabled or transaction is explicitly started
 	 * transaction becomes active and master gets all statements until
@@ -2561,7 +2610,10 @@ static bool rses_begin_locked_router_action(
         ROUTER_CLIENT_SES* rses)
 {
         bool succp = false;
-        
+
+        if(rses == NULL)
+	    return false;
+
         CHK_CLIENT_RSES(rses);
 
         if (rses->rses_closed) {
@@ -2617,6 +2669,7 @@ ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
 int		  i = 0;
 BACKEND		  *backend;
 char		  *weightby;
+double master_pct = 0.0;
 
 	spinlock_acquire(&router->lock);
 	router_cli_ses = router->connections;
@@ -2626,7 +2679,12 @@ char		  *weightby;
 		router_cli_ses = router_cli_ses->next;
 	}
 	spinlock_release(&router->lock);
-	
+
+	if(router->stats.n_master + router->stats.n_slave > 0)
+	{
+	    master_pct = (double)router->stats.n_master/(double)(router->stats.n_master + router->stats.n_slave);
+	}
+
 	dcb_printf(dcb,
                    "\tNumber of router sessions:           	%d\n",
                    router->stats.n_sessions);
@@ -2645,6 +2703,10 @@ char		  *weightby;
 	dcb_printf(dcb,
                    "\tNumber of queries forwarded to all:   	%d\n",
                    router->stats.n_all);
+	dcb_printf(dcb,
+                   "\tMaster/Slave percentage:		%.2f%%\n",
+                   master_pct * 100.0);
+
 	if ((weightby = serviceGetWeightingParameter(router->service)) != NULL)
         {
                 dcb_printf(dcb,

@@ -241,6 +241,10 @@ typedef struct schemarouter_config_st {
 	target_t          rw_use_sql_variables_in;
         int max_sescmd_hist;
         bool disable_sescmd_hist;
+        time_t last_refresh; /*< Last time the database list was refreshed */
+        double refresh_min_interval; /*< Minimum required interval between refreshes of databases */
+        bool refresh_databases; /*< Are databases refreshed when they are not found in the hashtable */
+        bool debug; /*< Enable verbose debug messages to clients */
 } schemarouter_config_t;
 
 /**
