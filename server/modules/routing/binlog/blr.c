@@ -105,6 +105,8 @@ extern void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 extern char *decryptPassword(char *crypt);
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
 extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
+void blr_master_close(ROUTER_INSTANCE *);
+int blr_check_heartbeat(ROUTER_INSTANCE *router);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
@@ -967,11 +969,11 @@ struct tm	tm;
                    router_inst->stats.n_delayedreconnects);
 	dcb_printf(dcb, "\tCurrent binlog file:		  		%s\n",
                    router_inst->binlog_name);
-	dcb_printf(dcb, "\tCurrent binlog position:	  		%u\n",
+	dcb_printf(dcb, "\tCurrent binlog position:	  		%lu\n",
                    router_inst->current_pos);
 	if (router_inst->trx_safe) {
 		if (router_inst->pending_transaction) {	
-			dcb_printf(dcb, "\tCurrent open transaction pos:	  		%u\n",
+			dcb_printf(dcb, "\tCurrent open transaction pos:	  		%lu\n",
 	                   router_inst->binlog_position);
 		}
 	}
@@ -1004,41 +1006,53 @@ struct tm	tm;
 		   router_inst->stats.n_reads);
 	dcb_printf(dcb, "\tNumber of residual data packets:		%u\n",
 		   router_inst->stats.n_residuals);
-	dcb_printf(dcb, "\tAverage events per packet			%.1f\n",
+	dcb_printf(dcb, "\tAverage events per packet:			%.1f\n",
 		   router_inst->stats.n_reads != 0 ? ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0);
-	dcb_printf(dcb, "\tLast event from master at:  			%s",
-				buf);
-	dcb_printf(dcb, "\t					(%d seconds ago)\n",
-			time(0) - router_inst->stats.lastReply);
 
-	if (!router_inst->mariadb10_compat) {
-		dcb_printf(dcb, "\tLast event from master:  			0x%x, %s",
-			router_inst->lastEventReceived,
-			(router_inst->lastEventReceived >= 0 && 
-			router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
-			event_names[router_inst->lastEventReceived] : "unknown");
-	} else {
-		char *ptr = NULL;
-		if (router_inst->lastEventReceived >= 0 && router_inst->lastEventReceived <= MAX_EVENT_TYPE) {
-			ptr = event_names[router_inst->lastEventReceived];
+	spinlock_acquire(&router_inst->lock);
+	if (router_inst->stats.lastReply) {
+		if (buf[strlen(buf)-1] == '\n') {
+			buf[strlen(buf)-1] = '\0';
+		}
+		dcb_printf(dcb, "\tLast event from master at:  			%s (%d seconds ago)\n",
+			buf, time(0) - router_inst->stats.lastReply);
+
+		if (!router_inst->mariadb10_compat) {
+			dcb_printf(dcb, "\tLast event from master:  			0x%x, %s\n",
+				router_inst->lastEventReceived,
+				(router_inst->lastEventReceived >= 0 && 
+				router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
+				event_names[router_inst->lastEventReceived] : "unknown");
 		} else {
-			/* Check MariaDB 10 new events */
-			if (router_inst->lastEventReceived >= MARIADB_NEW_EVENTS_BEGIN && router_inst->lastEventReceived <= MAX_EVENT_TYPE_MARIADB10) {
-				ptr = event_names_mariadb10[(router_inst->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
+			char *ptr = NULL;
+			if (router_inst->lastEventReceived >= 0 && router_inst->lastEventReceived <= MAX_EVENT_TYPE) {
+				ptr = event_names[router_inst->lastEventReceived];
+			} else {
+				/* Check MariaDB 10 new events */
+				if (router_inst->lastEventReceived >= MARIADB_NEW_EVENTS_BEGIN && router_inst->lastEventReceived <= MAX_EVENT_TYPE_MARIADB10) {
+					ptr = event_names_mariadb10[(router_inst->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
+				}
 			}
+
+			dcb_printf(dcb, "\tLast event from master:  			0x%x, %s\n",
+				router_inst->lastEventReceived, (ptr != NULL) ? ptr : "unknown");
 		}
 
-		dcb_printf(dcb, "\tLast event from master:  			0x%x, %s",
-			router_inst->lastEventReceived, (ptr != NULL) ? ptr : "unknown");
-	}
-
-	if (router_inst->lastEventTimestamp)
-	{
-		localtime_r((const time_t*)&router_inst->lastEventTimestamp, &tm);
-		asctime_r(&tm, buf);
-		dcb_printf(dcb, "\tLast binlog event timestamp:  			%ld (%s)\n",
+		if (router_inst->lastEventTimestamp) {
+			time_t	last_event = (time_t)router_inst->lastEventTimestamp;
+			localtime_r(&last_event, &tm);
+			asctime_r(&tm, buf);
+			if (buf[strlen(buf)-1] == '\n') {
+				buf[strlen(buf)-1] = '\0';
+			}
+			dcb_printf(dcb, "\tLast binlog event timestamp:  			%ld (%s)\n",
 				router_inst->lastEventTimestamp, buf);
+		}
+	} else {
+		dcb_printf(dcb, "\tNo events received from master yet\n");
 	}
+	spinlock_release(&router_inst->lock);
+
 	if (router_inst->active_logs)
 		dcb_printf(dcb, "\tRouter processing binlog records\n");
 	if (router_inst->reconnect_pending)
@@ -1162,7 +1176,8 @@ struct tm	tm;
 			if (session->lastEventTimestamp
 					&& router_inst->lastEventTimestamp)
 			{
-				localtime_r((const time_t*)&session->lastEventTimestamp, &tm);
+				time_t	session_last_event = (time_t)session->lastEventTimestamp;
+				localtime_r(&session_last_event, &tm);
 				asctime_r(&tm, buf);
 				dcb_printf(dcb, "\t\tLast binlog event timestamp			%u, %s", session->lastEventTimestamp, buf);
 				dcb_printf(dcb, "\t\tSeconds behind master				%u\n", router_inst->lastEventTimestamp - session->lastEventTimestamp);
@@ -1306,15 +1321,19 @@ unsigned long mysql_errno;
 
 	       	LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR, "%s: Master connection error %lu '%s' in state '%s', "
-				"%sattempting reconnect to master",
+				"%sattempting reconnect to master %s:%d",
 				router->service->name, mysql_errno, errmsg,
-				blrm_states[router->master_state], msg)));
+				blrm_states[router->master_state], msg,
+				router->service->dbref->server->name,
+				router->service->dbref->server->port)));
 	} else {
        		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR, "%s: Master connection error %lu '%s' in state '%s', "
-				"%sattempting reconnect to master",
+				"%sattempting reconnect to master %s:%d",
 				router->service->name, router->m_errno, router->m_errmsg,
-				blrm_states[router->master_state], msg)));
+				blrm_states[router->master_state], msg,
+				router->service->dbref->server->name,
+				router->service->dbref->server->port)));
 	}
 
 	if (errmsg)
@@ -1877,3 +1896,56 @@ static int blr_check_binlog(ROUTER_INSTANCE *router) {
 		return 1;
 	}
 }
+
+/**
+ * Checks last heartbeat or last received event against router->heartbeat time interval
+ *
+ * @param router	Current router instance
+ * @return		0 if master connection must be closed and opened again, 1 otherwise
+ */
+
+int
+blr_check_heartbeat(ROUTER_INSTANCE *router) {
+time_t	t_now = time(0);
+char 	*event_desc  = NULL;
+
+	if (router->master_state != BLRM_BINLOGDUMP) {
+		return 1;
+	}
+
+	if (!router->mariadb10_compat) {
+		 event_desc = (router->lastEventReceived >= 0 &&
+			router->lastEventReceived <= MAX_EVENT_TYPE) ?
+			event_names[router->lastEventReceived] : "unknown";
+	} else {
+		if (router->lastEventReceived >= 0 &&
+			router->lastEventReceived <= MAX_EVENT_TYPE) {
+			event_desc = event_names[router->lastEventReceived];
+		} else {
+			/* Check MariaDB 10 new events */
+			if (router->lastEventReceived >= MARIADB_NEW_EVENTS_BEGIN &&
+				router->lastEventReceived <= MAX_EVENT_TYPE_MARIADB10) {
+				event_desc = event_names_mariadb10[(router->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
+			}
+		}
+
+	}
+
+	if (router->master_state == BLRM_BINLOGDUMP && router->lastEventReceived > 0) {
+		if ((t_now - router->stats.lastReply) > (router->heartbeat + 1)) {
+			 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"ERROR: No event received from master %s:%d in heartbeat period (%d seconds), last event (%s %d) received %lu seconds ago. Assuming connection is dead and reconnecting.",
+				router->service->dbref->server->name,
+				router->service->dbref->server->port,
+				router->heartbeat,
+				event_desc,
+				router->lastEventReceived,
+				t_now - router->stats.lastReply)));
+
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
