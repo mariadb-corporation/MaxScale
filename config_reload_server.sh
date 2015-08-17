@@ -25,7 +25,8 @@ $test_dir/configure_maxscale.sh
 echo "Waiting for 15 seconds"
 sleep 15
 
-if [[ check_server_count(4) -ne 0 ]]
+check_server_count 4
+if [[ $? -ne 0 ]]
 then
     exit 1
 fi
@@ -37,8 +38,8 @@ $test_dir/configure_maxscale.sh
 echo "Waiting for 15 seconds"
 sleep 15
 
-# 
-if [[ check_server_count(5) -ne 0 ]]
+check_server_count 5
+if [[ $?  -ne 0 ]]
 then
     exit 1
 fi
@@ -50,7 +51,8 @@ $test_dir/configure_maxscale.sh
 echo "Waiting for 15 seconds"
 sleep 15
 
-if [[ check_server_count(4) -ne 0 ]]
+check_server_count 4
+if [[ $? -ne 0 ]]
 then
     exit 1
 fi
