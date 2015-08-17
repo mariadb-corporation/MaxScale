@@ -106,7 +106,7 @@ extern char *decryptPassword(char *crypt);
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
 extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
-int blr_check_heartbeat(ROUTER_INSTANCE *router);
+char * blr_last_event_description(ROUTER_INSTANCE *router);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
@@ -264,7 +264,7 @@ int		rc = 0;
 	inst->burst_size = DEF_BURST_SIZE;
 	inst->retry_backoff = 1;
 	inst->binlogdir = NULL;
-	inst->heartbeat = 300;	// Default is every 5 minutes
+	inst->heartbeat = BLR_HEARTBEAT_DEFAULT_INTERVAL;
 	inst->mariadb10_compat = false;
 
 	inst->user = strdup(service->credentials.name);
@@ -404,6 +404,16 @@ int		rc = 0;
 				else if (strcmp(options[i], "heartbeat") == 0)
 				{
 					inst->heartbeat = atoi(value);
+					if (inst->heartbeat <= 0) {
+						/* set default value */
+						inst->heartbeat = BLR_HEARTBEAT_DEFAULT_INTERVAL;
+
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"Warning : invalid heartbeat period %s."
+							" Setting it to default value %d.",
+							value, inst->heartbeat )));
+					}
 				}
 				else if (strcmp(options[i], "binlogdir") == 0)
 				{
@@ -1897,26 +1907,22 @@ static int blr_check_binlog(ROUTER_INSTANCE *router) {
 	}
 }
 
+
 /**
- * Checks last heartbeat or last received event against router->heartbeat time interval
+ * Return last event description
  *
- * @param router	Current router instance
- * @return		0 if master connection must be closed and opened again, 1 otherwise
+ * @param router	The router instance
+ * @return		The event description or NULL
  */
-
-int
-blr_check_heartbeat(ROUTER_INSTANCE *router) {
-time_t	t_now = time(0);
-char 	*event_desc  = NULL;
-
-	if (router->master_state != BLRM_BINLOGDUMP) {
-		return 1;
-	}
+char *
+blr_last_event_description(ROUTER_INSTANCE *router) {
+char *event_desc = NULL;
 
 	if (!router->mariadb10_compat) {
-		 event_desc = (router->lastEventReceived >= 0 &&
-			router->lastEventReceived <= MAX_EVENT_TYPE) ?
-			event_names[router->lastEventReceived] : "unknown";
+		if (router->lastEventReceived >= 0 &&
+			router->lastEventReceived <= MAX_EVENT_TYPE) {
+			event_desc = event_names[router->lastEventReceived];
+		}
 	} else {
 		if (router->lastEventReceived >= 0 &&
 			router->lastEventReceived <= MAX_EVENT_TYPE) {
@@ -1931,21 +1937,6 @@ char 	*event_desc  = NULL;
 
 	}
 
-	if (router->master_state == BLRM_BINLOGDUMP && router->lastEventReceived > 0) {
-		if ((t_now - router->stats.lastReply) > (router->heartbeat + 1)) {
-			 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"ERROR: No event received from master %s:%d in heartbeat period (%d seconds), last event (%s %d) received %lu seconds ago. Assuming connection is dead and reconnecting.",
-				router->service->dbref->server->name,
-				router->service->dbref->server->port,
-				router->heartbeat,
-				event_desc,
-				router->lastEventReceived,
-				t_now - router->stats.lastReply)));
-
-			return 0;
-		}
-	}
-
-	return 1;
+	return event_desc;
 }
 

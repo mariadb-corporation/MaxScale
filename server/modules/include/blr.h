@@ -151,6 +151,12 @@
 /* max size for error message returned to client */
 #define BINLOG_ERROR_MSG_LEN	385
 
+/* network latency extra wait tme for heartbeat check */
+#define BLR_NET_LATENCY_WAIT_TIME	1
+
+/* default heartbeat interval in seconds */
+#define BLR_HEARTBEAT_DEFAULT_INTERVAL	300
+
 /**
  * Some useful macros for examining the MySQL Response packets
  */
@@ -353,7 +359,7 @@ typedef struct router_instance {
 	DCB			*client;	/*< DCB for dummy client */
 	SESSION			*session;	/*< Fake session for master connection */
 	unsigned int		master_state;	/*< State of the master FSM */
-	uint8_t			lastEventReceived;
+	uint8_t			lastEventReceived; /*< Last even received */
 	uint32_t		lastEventTimestamp; /*< Timestamp from last event */
 	GWBUF	 		*residual;	/*< Any residual binlog event */
 	MASTER_RESPONSES	saved_master;	/*< Saved master responses */

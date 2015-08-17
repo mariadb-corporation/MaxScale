@@ -92,6 +92,8 @@ void poll_fake_write_event(DCB *dcb);
 GWBUF *blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr);
 static void blr_check_last_master_event(void *inst);
 extern int blr_check_heartbeat(ROUTER_INSTANCE *router);
+extern char * blr_last_event_description(ROUTER_INSTANCE *router);
+
 static int keepalive = 1;
 
 /**
@@ -1989,5 +1991,44 @@ char *name = NULL;
                         free(name);
 		}
 	}
+}
+
+/**
+ * Check last heartbeat or last received event against router->heartbeat time interval
+ *
+ * checked interval is againts (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME)
+ * that is currently set to 1
+ *
+ * @param router	Current router instance
+ * @return		0 if master connection must be closed and opened again, 1 otherwise
+ */
+
+int
+blr_check_heartbeat(ROUTER_INSTANCE *router) {
+time_t	t_now = time(0);
+char 	*event_desc  = NULL;
+
+	if (router->master_state != BLRM_BINLOGDUMP) {
+		return 1;
+	}
+
+	event_desc = blr_last_event_description(router);
+
+	if (router->master_state == BLRM_BINLOGDUMP && router->lastEventReceived > 0) {
+		if ((t_now - router->stats.lastReply) > (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME)) {
+			 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"ERROR: No event received from master %s:%d in heartbeat period (%d seconds), last event (%s %d) received %lu seconds ago. Assuming connection is dead and reconnecting.",
+				router->service->dbref->server->name,
+				router->service->dbref->server->port,
+				router->heartbeat,
+				event_desc != NULL ? event_desc : "unknown",
+				router->lastEventReceived,
+				t_now - router->stats.lastReply)));
+
+			return 0;
+		}
+	}
+
+	return 1;
 }
 
