@@ -234,7 +234,8 @@ if(strlen(path) > PATH_MAX)
     return 1;
 }
 
-	sprintf(secret_file,"%s/.secrets",path);
+	snprintf(secret_file,PATH_MAX + 9,"%s/.secrets",path);
+	secret_file[PATH_MAX + 9] = '\0';
 
 	/* Open for writing | Create | Truncate the file for writing */
         if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)

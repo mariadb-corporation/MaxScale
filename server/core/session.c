@@ -1031,7 +1031,8 @@ SESSION		*ptr;
 	}
 	cbdata->index++;
 	row = resultset_make_row(set);
-	sprintf(buf, "%p", ptr);
+	snprintf(buf,19, "%p", ptr);
+	buf[19] = '\0';
 	resultset_row_set(row, 0, buf);
 	resultset_row_set(row, 1, ((ptr->client && ptr->client->remote)
                                 ? ptr->client->remote : ""));

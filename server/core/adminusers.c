@@ -122,7 +122,8 @@ char	fname[1024], *home;
 char	uname[80], passwd[80];
 
 	initialise();
-    sprintf(fname, "%s/passwd", get_datadir());
+    snprintf(fname,1023, "%s/passwd", get_datadir());
+    fname[1023] = '\0';
 	if ((fp = fopen(fname, "r")) == NULL)
 		return NULL;
 	if ((rval = users_alloc()) == NULL)
@@ -153,8 +154,8 @@ FILE	*fp;
 char	fname[1024], *home, *cpasswd;
 
 	initialise();
-    sprintf(fname, "%s/passwd", get_datadir());
-        
+    snprintf(fname,1023, "%s/passwd", get_datadir());
+    fname[1023] = '\0';
 	if (users == NULL)
 	{
                 LOGIF(LM,
@@ -246,8 +247,10 @@ char* admin_remove_user(
         /**
          * Open passwd file and remove user from the file.
          */
-        sprintf(fname, "%s/passwd", get_datadir());
-        sprintf(fname_tmp, "%s/passwd_tmp", get_datadir());
+        snprintf(fname,1023, "%s/passwd", get_datadir());
+        snprintf(fname_tmp,1023, "%s/passwd_tmp", get_datadir());
+	fname[1023] = '\0';
+	fname_tmp[1023] = '\0';
         /**
          * Rewrite passwd file from memory.
          */

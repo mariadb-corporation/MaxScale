@@ -27,7 +27,7 @@ int main(int argc, char** argv)
 {
   int iterations = 0, i, interval = 10;
   int block_size;
-  int succp = 0, err = 0;
+  int succp, err = 0;
   char cwd[1024];
   char tmp[2048];
   char *message;
@@ -71,6 +71,8 @@ int main(int argc, char** argv)
   interval = atoi(argv[2]);
   
   succp = skygw_logmanager_init( 3, optstr);
+  if(!succp)
+      fprintf(stderr,"Error, log manager initialization failed.\n");
   ss_dassert(succp);
 
   skygw_log_disable(LOGFILE_TRACE);

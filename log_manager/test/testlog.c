@@ -106,6 +106,8 @@ int main(int argc, char* argv[])
         }
         
         succp = skygw_logmanager_init( log_argc, log_argv);
+	if(!succp)
+	    fprintf(stderr, "Log manager initialization failed.\n");
         ss_dassert(succp);
 
         t = time(NULL);
@@ -476,16 +478,22 @@ static void* thr_run(
         skygw_log_flush(LOGFILE_MESSAGE);
         logstr = ("Hi, how are you?");
         err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_done();
         skygw_log_flush(LOGFILE_TRACE);
         skygw_log_flush(LOGFILE_MESSAGE);
         logstr = ("I was wondering, you know, it has been such a lovely weather whole morning and I thought that would you like to come to my place and have a little piece of cheese with us. Just me and my mom - and you, of course. Then, if you wish, we could listen to the radio and keep company for our little Steven, my mom's cat, you know.");
-        ss_dassert(err == 0);
+        if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
+	ss_dassert(err == 0);
         err = skygw_log_write(LOGFILE_MESSAGE, logstr);
         skygw_logmanager_init( 0, NULL);
         logstr = ("Testing. One, two, three\n");
         err = skygw_log_write(LOGFILE_ERROR, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_init( 0, NULL);
         skygw_logmanager_init( 0, NULL);
@@ -494,11 +502,15 @@ static void* thr_run(
 
         skygw_log_enable(LOGFILE_TRACE);
         err = skygw_log_write(LOGFILE_TRACE, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);    
         skygw_logmanager_done();
         skygw_logmanager_init( 0, NULL);
         logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
         err = skygw_log_write(LOGFILE_ERROR, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_init( 0, NULL);
         skygw_logmanager_done();
@@ -507,6 +519,8 @@ static void* thr_run(
         skygw_logmanager_done();
         logstr = ("..and you?");
         err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_init( 0, NULL);
         skygw_logmanager_init( 0, NULL);
@@ -515,14 +529,20 @@ static void* thr_run(
         skygw_log_enable(LOGFILE_TRACE);
 #endif
         err = skygw_log_write(LOGFILE_TRACE, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_init( 0, NULL);
         logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
         err = skygw_log_write(LOGFILE_ERROR, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_init( 0, NULL);
         logstr = ("..... and you too?");
         err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_done();
 #if !defined(SS_DEBUG)
@@ -534,14 +554,20 @@ static void* thr_run(
         skygw_log_enable(LOGFILE_TRACE);
 #endif
         err = skygw_log_write(LOGFILE_TRACE, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_done();
         logstr = ("Testing. One, two, three, four\n");
         err = skygw_log_write(LOGFILE_ERROR, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_init( 0, NULL);
         logstr = ("Testing. One, two, three, .. where was I?\n");
         err = skygw_log_write(LOGFILE_ERROR, logstr);
+	if(err != 0)
+	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
         skygw_logmanager_init( 0, NULL);
         skygw_logmanager_init( 0, NULL);
@@ -597,6 +623,8 @@ static void* thr_run_morelog(
                                       "%s - iteration # %d",
                                       str,
                                       i);
+		if(err != 0)
+		    fprintf(stderr,"Error, log write failed.\n");
         }
         simple_mutex_lock(td->mtx, true);
         *td->nactive -= 1;
