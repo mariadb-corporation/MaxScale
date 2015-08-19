@@ -495,9 +495,10 @@ MODULES		*ptr;
 	resultset_row_set(row, 0, ptr->module);
 	resultset_row_set(row, 1, ptr->type);
 	resultset_row_set(row, 2, ptr->version);
-	sprintf(buf, "%d.%d.%d", ptr->info->api_version.major,
+	snprintf(buf,19, "%d.%d.%d", ptr->info->api_version.major,
 			ptr->info->api_version.minor,
 			ptr->info->api_version.patch);
+	buf[19] = '\0';
 	resultset_row_set(row, 3, buf);
 	resultset_row_set(row, 4, ptr->info->status == MODULE_IN_DEVELOPMENT
                                         ? "In Development"

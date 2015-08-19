@@ -1645,17 +1645,21 @@ RESULT_ROW	*row;
 		resultset_row_set(row, 0, "< 100ms");
 	else if (*rowno == N_QUEUE_TIMES - 1)
 	{
-		sprintf(buf, "> %2d00ms", N_QUEUE_TIMES);
+		snprintf(buf,39, "> %2d00ms", N_QUEUE_TIMES);
+		buf[39] = '\0';
 		resultset_row_set(row, 0, buf);
 	}
 	else
 	{
-		sprintf(buf, "%2d00 - %2d00ms", *rowno, (*rowno) + 1);
+		snprintf(buf,39, "%2d00 - %2d00ms", *rowno, (*rowno) + 1);
+		buf[39] = '\0';
 		resultset_row_set(row, 0, buf);
 	}
-	sprintf(buf, "%d", queueStats.qtimes[*rowno]);
+	snprintf(buf,39, "%d", queueStats.qtimes[*rowno]);
+	buf[39] = '\0';
 	resultset_row_set(row, 1, buf);
-	sprintf(buf, "%d", queueStats.exectimes[*rowno]);
+	snprintf(buf,39, "%d", queueStats.exectimes[*rowno]);
+	buf[39] = '\0';
 	resultset_row_set(row, 2, buf);
 	(*rowno)++;
 	return row;

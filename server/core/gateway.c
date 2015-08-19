@@ -719,23 +719,26 @@ static char* check_dir_access(
 
 	if(access(dirname,F_OK) != 0)
 	{
-	    sprintf(errbuf,"Can't access '%s'.",dirname);
+	    snprintf(errbuf,PATH_MAX*2-1,"Can't access '%s'.",dirname);
+	    errbuf[PATH_MAX*2-1] = '\0';
 		errstr = strdup(errbuf);
 		goto retblock;
 	}
 
 	if (rd && !file_is_readable(dirname))
 	{
-	    sprintf(errbuf,"MaxScale doesn't have read permission "
-				"to '%s'.",dirname);
+	    snprintf(errbuf,PATH_MAX*2-1,"MaxScale doesn't have read permission "
+		    "to '%s'.",dirname);
+	    errbuf[PATH_MAX*2-1] = '\0';
 		errstr = strdup(errbuf);
 		goto retblock;
 	}
 	
 	if (wr && !file_is_writable(dirname))
 	{
-	    	    sprintf(errbuf,"MaxScale doesn't have write permission "
-				"to '%s'.",dirname);
+	    snprintf(errbuf,PATH_MAX*2-1,"MaxScale doesn't have write permission "
+		    "to '%s'.",dirname);
+		    errbuf[PATH_MAX*2-1] = '\0';
 		errstr = strdup(errbuf);
 		goto retblock;
 	}
@@ -1076,7 +1079,8 @@ int main(int argc, char **argv)
         sigemptyset(&sigpipe_mask);
         sigaddset(&sigpipe_mask, SIGPIPE);
 	progname = *argv;
-        sprintf(datadir, "%s", default_datadir);
+        snprintf(datadir,PATH_MAX, "%s", default_datadir);
+	datadir[PATH_MAX] = '\0';
 #if defined(FAKE_CODE)
         memset(conn_open, 0, sizeof(bool)*10240);
         memset(dcb_fake_write_errno, 0, sizeof(unsigned char)*10240);
@@ -1191,7 +1195,8 @@ int main(int argc, char **argv)
 		    }
 		    break;
 		case 'D':
-		    sprintf(datadir,"%s",optarg);
+		    snprintf(datadir,PATH_MAX,"%s",optarg);
+		    datadir[PATH_MAX] = '\0';
 		    set_datadir(strdup(optarg));
 		    datadir_defined = true;
 		    break;
@@ -1566,6 +1571,7 @@ int main(int argc, char **argv)
          */
 	char pathbuf[PATH_MAX+1];
 	snprintf(pathbuf,PATH_MAX,"%s",get_configdir());
+	pathbuf[PATH_MAX] = '\0';
 	if(pathbuf[strlen(pathbuf)-1] != '/')
 	    strcat(pathbuf,"/");
 
@@ -1584,7 +1590,8 @@ int main(int argc, char **argv)
 
 
         /** Use the cache dir for the mysql folder of the embedded library */
-	sprintf(mysql_home, "%s/mysql", get_cachedir());
+	snprintf(mysql_home,PATH_MAX, "%s/mysql", get_cachedir());
+	mysql_home[PATH_MAX] = '\0';
 	setenv("MYSQL_HOME", mysql_home, 1);
 
 
@@ -1657,7 +1664,8 @@ int main(int argc, char **argv)
          * machine.
          */
 
-	sprintf(datadir,"%s/data",get_datadir());
+	snprintf(datadir,PATH_MAX,"%s/data",get_datadir());
+	datadir[PATH_MAX] = '\0';
 	if(mkdir(datadir, 0777) != 0){
 
 	    if(errno != EEXIST){
@@ -1667,7 +1675,7 @@ int main(int argc, char **argv)
 	    }
 	}
 
-        sprintf(datadir, "%s/data/data%d", get_datadir(), getpid());
+        snprintf(datadir,PATH_MAX, "%s/data/data%d", get_datadir(), getpid());
 
 	if(mkdir(datadir, 0777) != 0){
 
@@ -2139,7 +2147,8 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
 	    {
 		if(handle_path_arg(&tmp,(char*)value,NULL,true,false))
 		{
-		    sprintf(datadir,"%s",tmp);
+		    snprintf(datadir,PATH_MAX,"%s",tmp);
+		    datadir[PATH_MAX] = '\0';
 		    set_datadir(tmp);
 		    datadir_defined = true;
 		}

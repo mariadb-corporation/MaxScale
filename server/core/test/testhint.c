@@ -37,7 +37,7 @@
  * test1	Allocate table of users and mess around with it
  *
   */
-
+void skygw_log_sync_all(void);
 static int
 test1()
 {
