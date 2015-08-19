@@ -640,10 +640,12 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		LOGIF(LM, (skygw_log_write_flush(
 			LOGFILE_MESSAGE,
 			"%s: Slave %s, server id %d, disconnected after %ld seconds. "
-			"%d events sent, %lu bytes.",
+			"%d SQL commands, %d events sent (%lu bytes).",
 			router->service->name, slave->dcb->remote,
 			slave->serverid,
-			time(0) - slave->connect_time, slave->stats.n_events,
+			time(0) - slave->connect_time,
+			slave->stats.n_queries,
+			slave->stats.n_events,
 			slave->stats.n_bytes)));
 
 		/*
