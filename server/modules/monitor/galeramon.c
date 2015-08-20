@@ -401,7 +401,7 @@ char 			*server_string;
 							    " MySQL Version: %s",version_str);
 						    return;
 						}
-					while ((row = mysql_fetch_row(result)))
+					while ((row = mysql_fetch_row(result2)))
 					{
 						if (strncmp(row[1], "xtrabackup", 10) == 0)
 							isjoined = 1;
