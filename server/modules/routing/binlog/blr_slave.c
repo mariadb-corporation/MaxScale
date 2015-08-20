@@ -122,6 +122,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 	switch (MYSQL_COMMAND(queue))
 	{
 	case COM_QUERY:
+		slave->stats.n_queries++;
 		return blr_slave_query(router, slave, queue);
 		break;
 	case COM_REGISTER_SLAVE:

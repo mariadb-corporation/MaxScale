@@ -207,6 +207,7 @@ typedef struct {
 	int		n_bursts;	/*< Number of bursts sent */
 	int		n_requests;	/*< Number of requests received */
 	int		n_flows;	/*< Number of flow control restarts */
+	int		n_queries;	/*< Number of SQL queries */
 	int		n_upd;
 	int		n_cb;
 	int		n_cbna;

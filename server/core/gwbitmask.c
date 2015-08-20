@@ -20,20 +20,33 @@
 #include <gwbitmask.h>
 
 /**
- * @file gwbitmask.c  Implementation of bitmask opertions for the gateway
+ * @file gwbitmask.c  Implementation of bitmask operations for the gateway
  *
  * We provide basic bitmask manipulation routines, the size of
  * the bitmask will grow dynamically based on the highest bit
  * number that is set or cleared within the bitmask.
  *
- * Bitmsk growth happens in increments rather than via a single bit as
+ * Bitmask growth happens in increments rather than via a single bit as
  * a time.
+ * 
+ * Please note limitations to these mechanisms:
+ * 
+ * 1. The initial size and increment size MUST be exact multiples of 8
+ * 2. Only suitable for a compact set of bit numbers i.e. the numbering
+ * needs to start near to 0 and grow without sizeable gaps
+ * 3. It is assumed that a bit number bigger than the current size can
+ * be accommodated by adding a single extra block of bits
+ * 4. During copy, if memory cannot be allocated, a zero length bitmap is
+ * created as the destination. This will test true for all bits clear, which
+ * may be a serious error. However, the memory requirement is very small and
+ * is only likely to fail in circumstances where a lot else is going wrong.
  *
   * @verbatim
  * Revision History
  *
- * Date		Who		Description
+ * Date		Who		        Description
  * 28/06/13	Mark Riddoch	Initial implementation
+ * 20/08/15 Martin Brampton	Added caveats about limitations (above)
  *
  * @endverbatim
  */
@@ -42,7 +55,7 @@
  * Initialise a bitmask
  *
  * @param bitmask	Pointer the bitmask
- * @return		The value of *variable before the add occured
+ * @return		The value of *variable before the add occurred
  */
 void
 bitmask_init(GWBITMASK *bitmask)
@@ -77,7 +90,9 @@ bitmask_free(GWBITMASK *bitmask)
 /**
  * Set the bit at the specified bit position in the bitmask.
  * The bitmask will automatically be extended if the bit is 
- * beyond the current bitmask length
+ * beyond the current bitmask length. Note that growth is only
+ * by a single increment - the bit numbers used need to be a
+ * fairly dense set.
  *
  * @param bitmask	Pointer the bitmask
  * @param bit		Bit to set
@@ -106,7 +121,9 @@ unsigned	char mask;
 /**
  * Clear the bit at the specified bit position in the bitmask.
  * The bitmask will automatically be extended if the bit is 
- * beyond the current bitmask length
+ * beyond the current bitmask length. This could be optimised
+ * by always assuming that a bit beyond the current length is
+ * unset (i.e. 0) and not extending the actual bitmask.
  *
  * @param bitmask	Pointer the bitmask
  * @param bit		Bit to clear
@@ -134,7 +151,8 @@ unsigned	char mask;
  * Return a non-zero value if the bit at the specified bit
  * position in the bitmask is set.
  * The bitmask will automatically be extended if the bit is 
- * beyond the current bitmask length
+ * beyond the current bitmask length. This could be optimised
+ * by assuming that a bit beyond the length is unset.
  *
  * @param bitmask	Pointer the bitmask
  * @param bit		Bit to clear
@@ -162,7 +180,9 @@ unsigned	char mask;
 
 /**
  * Return a non-zero value of the bitmask has no bits set
- * in it.
+ * in it.  This logic could be defeated if the bitmask is a
+ * copy and there was insufficient memory when the copy was
+ * made.
  *
  * @param bitmask	Pointer the bitmask
  * @return		Non-zero if the bitmask has no bits set
@@ -191,6 +211,10 @@ unsigned char	*ptr, *eptr;
 
 /**
  * Copy the contents of one bitmap to another.
+ * 
+ * On memory failure, a zero length bitmask is created in the destination,
+ * which could seriously undermine the logic.  Given the small size of the
+ * bitmask, this is unlikely to happen.
  *
  * @param dest	Bitmap tp update
  * @param src	Bitmap to copy

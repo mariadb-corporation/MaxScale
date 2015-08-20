@@ -1581,10 +1581,17 @@ void check_drop_tmp_table(
   DCB*               master_dcb     = NULL;
   rses_property_t*   rses_prop_tmp;
 
+  if(router_cli_ses == NULL || querybuf == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: NULL parameters passed: %p %p",
+		      __FUNCTION__,router_cli_ses,querybuf);
+      return;
+  }
+
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
-  if(master_dcb == NULL)
+  if(master_dcb == NULL || master_dcb->session == NULL)
   {
       skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
 	      "This means that the connection to the master server is already "
@@ -1659,10 +1666,17 @@ static skygw_query_type_t is_read_tmp_table(
   skygw_query_type_t qtype = type;
   rses_property_t*   rses_prop_tmp;
 
+  if(router_cli_ses == NULL || querybuf == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: NULL parameters passed: %p %p",
+		      __FUNCTION__,router_cli_ses,querybuf);
+      return type;
+  }
+
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
-  if(master_dcb == NULL)
+  if(master_dcb == NULL || master_dcb->session == NULL)
   {
       skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
 	      "This means that the connection to the master server is already "
@@ -1740,22 +1754,26 @@ static void check_create_tmp_table(
 	GWBUF*  querybuf,
 	skygw_query_type_t type)
 {
-
   int klen = 0;
-
   char *hkey,*dbname;
   MYSQL_session* data;
+  DCB* master_dcb = NULL;
+  rses_property_t* rses_prop_tmp;
+  HASHTABLE* h;
 
-  DCB*               master_dcb     = NULL;
-  rses_property_t*   rses_prop_tmp;
-  HASHTABLE*	   h;
+  if(router_cli_ses == NULL || querybuf == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: NULL parameters passed: %p %p",
+		      __FUNCTION__,router_cli_ses,querybuf);
+      return;
+  }
 
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
-  if(master_dcb == NULL)
+  if(master_dcb == NULL || master_dcb->session == NULL)
   {
-      skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
+      skygw_log_write(LE,"[%s] Error: Master server DCB is NULL. "
 	      "This means that the connection to the master server is already "
 	      "closed while a query is still being routed.",__FUNCTION__);
       return;
