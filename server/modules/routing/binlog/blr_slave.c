@@ -47,6 +47,7 @@
  *					Call create/use binlog in blr_start_slave() (START SLAVE)
  * 29/06/2015	Massimiliano Pinto	Successfully CHANGE MASTER results in updating master.ini
  *					in blr_handle_change_master()
+ * 20/08/2015	Massimiliano Pinto	Added parsing and validation for CHANGE MASTER TO
  *
  * @endverbatim
  */
@@ -107,17 +108,23 @@ static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 static void blr_slave_send_error_packet(ROUTER_SLAVE *slave, char *msg, unsigned int err_num, char *status);
-static char *get_change_master_option(char *input, char *option);
 static int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error);
-static int blr_set_master_hostname(ROUTER_INSTANCE *router, char *command);
+static int blr_set_master_hostname(ROUTER_INSTANCE *router, char *hostname);
 static int blr_set_master_port(ROUTER_INSTANCE *router, char *command);
-static char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error);
+static char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error);
 static void blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *current_master);
 static void blr_master_free_config(MASTER_SERVER_CFG *current_master);
 static void blr_master_restore_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *current_master);
 static void blr_master_set_empty_config(ROUTER_INSTANCE *router);
 static void blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master);
 static int blr_slave_send_ok_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message);
+static char *blr_get_parsed_command_value(char *input);
+static char **blr_validate_change_master_option(char *option, CHANGE_MASTER_OPTIONS *config);
+static int blr_set_master_user(ROUTER_INSTANCE *router, char *user);
+static int blr_set_master_password(ROUTER_INSTANCE *router, char *password);
+static int blr_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config);
+static int blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *config);
+static void blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -724,8 +731,8 @@ extern  char *strcasestr();
 					if (router->trx_safe && router->pending_transaction) {
 						if (strcmp(router->binlog_name, router->prevbinlog) != 0)
 						{
-							char message[1024+1] = "";
-							snprintf(message, 1024, "A transaction is open in current binlog file %s, It will be truncated at pos %lu by next START SLAVE command", current_master->logfile, current_master->safe_pos);
+							char message[BINLOG_ERROR_MSG_LEN+1] = "";
+							snprintf(message, BINLOG_ERROR_MSG_LEN, "A transaction is open in current binlog file %s, It will be truncated at pos %lu by next START SLAVE command", current_master->logfile, current_master->safe_pos);
 							blr_master_free_config(current_master);
 
 							return blr_slave_send_ok_message(router, slave, message);
@@ -2590,8 +2597,8 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 		router->binlog_name, router->current_pos, router->binlog_position)));
 
 	if (router->trx_safe && router->pending_transaction) {
-		char message[1024+1] = "";
-		snprintf(message, 1024, "A transaction is open at pos %lu, file %s", router->binlog_position, router->binlog_name);
+		char message[BINLOG_ERROR_MSG_LEN+1] = "";
+		snprintf(message, BINLOG_ERROR_MSG_LEN, "A transaction is open at pos %lu, file %s", router->binlog_position, router->binlog_name);
 		return blr_slave_send_ok_message(router, slave, message);
 	} else {
 		return blr_slave_send_ok(router, slave);
@@ -2601,8 +2608,8 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 /**
  * Start replication from current configured master
  *
- * @param router          The binlog router instance
- * @param slave           The slave server to which we are sending the response
+ * @param router	The binlog router instance
+ * @param slave		The slave server to which we are sending the response
  * @return		Always 1 for error, for send_ok the bytes sent
  * 
  */
@@ -2634,10 +2641,10 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 	/* create a new binlog or just use current one */
 	if (strlen(router->prevbinlog) && strcmp(router->prevbinlog, router->binlog_name)) {
 		if (router->trx_safe && router->pending_transaction) {
-			char msg[1024+1] = "";
+			char msg[BINLOG_ERROR_MSG_LEN+1] = "";
 			char file[PATH_MAX+1] = "";
 
-			snprintf(msg, 1024, "A transaction is still opened at pos %lu in file %s. Truncating it ... Try START SLAVE again.", router->last_safe_pos, router->prevbinlog);
+			snprintf(msg, BINLOG_ERROR_MSG_LEN, "A transaction is still opened at pos %lu in file %s. Truncating it ... Try START SLAVE again.", router->last_safe_pos, router->prevbinlog);
 
 
 			/* Truncate previous binlog file to last_safe pos */
@@ -2774,56 +2781,60 @@ uint8_t		mysql_err[2];
 }
 
 /**
- * Get a 'change master to' option
- *
- * @param input		The current command
- * @param option_field	The option to fetch
- */
-static
-char *get_change_master_option(char *input, char *option_field) {
-	extern  char *strcasestr();
-	char *option = NULL;
-	char *ptr = NULL;
-	char *new_ptr = NULL;
-	ptr = strcasestr(input, option_field);
-	if (ptr) {
-		char *end;
-		option = strdup(ptr);
-		end = strchr(option, ',');
-		if (end)
-			*end = '\0';
-		new_ptr = strdup(option);
-		free(option);
-	}
-
-	return new_ptr;
-}
-
-/**
  * handle a 'change master' operation
  *
  * @param router	The router instance
  * @param command	The change master SQL command
- * @param error		The error message, preallocated
+ * @param error		The error message, preallocated BINLOG_ERROR_MSG_LEN + 1 bytes
  * @return		0 on success, 1 on success with new binlog, -1 on failure
  */
 static
 int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error) {
 	char *master_logfile = NULL;
 	char *master_log_pos = NULL;
-	char *master_user = NULL;
-	char *master_password = NULL;
 	int change_binlog = 0;
 	long long pos = 0;
-	char *passed_pos = NULL;
 	MASTER_SERVER_CFG *current_master = NULL;
+	CHANGE_MASTER_OPTIONS change_master;
+	int parse_ret;
+	char *cmd_ptr;
+	char *cmd_string;
+	
+	if ((cmd_ptr = strcasestr(command, "TO")) == NULL) {
+		strncpy(error, "statement doesn't have the CHANGE MASTER TO syntax", BINLOG_ERROR_MSG_LEN);
+		return -1;
+	}
 
-	/* save current replication parameters */
+	if ((cmd_string = strdup(cmd_ptr + 2)) == NULL) {
+		strncpy(error, "error allocating memory for statement parsing", BINLOG_ERROR_MSG_LEN);
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+		return -1;
+	}
+
+	/* Parse SQL command and populate with found options the change_master struct */
+	memset(&change_master, 0, sizeof(change_master));
+
+	parse_ret = blr_parse_change_master_command(cmd_string, error, &change_master);
+
+	free(cmd_string);
+
+	if (parse_ret) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s CHANGE MASTER TO parse error: %s", router->service->name, error)));
+
+		blr_master_free_parsed_options(&change_master);
+
+		return -1;
+	}
+
+	/* allocate struct for current replication parameters */
 	current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
 
 	if (!current_master) {
 		strncpy(error, "error allocating memory for blr_master_get_config", BINLOG_ERROR_MSG_LEN);
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+		blr_master_free_parsed_options(&change_master);
 
 		return -1;
 	}
@@ -2831,36 +2842,51 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 	/* save data */
 	blr_master_get_config(router, current_master);
 
-	/* fetch new options from SQL command */
-	master_log_pos = get_change_master_option(command, "MASTER_LOG_POS");
-	master_user = get_change_master_option(command, "MASTER_USER");
-	master_password = get_change_master_option(command, "MASTER_PASSWORD");
+	spinlock_acquire(&router->lock);
 
 	/*
 	 * Change values in the router->service->dbref->server structure
 	 * Change filename and position in the router structure
 	 */
-	spinlock_acquire(&router->lock);
+
+	/* Set new binlog position from parsed SQL command */
+	master_log_pos = change_master.binlog_pos;
+        if (master_log_pos == NULL) {
+                pos = 0;
+        } else {
+                pos = atoll(master_log_pos);
+        }
+
+	/* Change the replication user */
+	blr_set_master_user(router, change_master.user);
+
+	/* Change the replication password */
+	blr_set_master_password(router, change_master.password);
 
 	/* Change the master name/address */
-	blr_set_master_hostname(router, command);
+	blr_set_master_hostname(router, change_master.host);
 
 	/* Change the master port */
-	blr_set_master_port(router, command);
+	blr_set_master_port(router, change_master.port);
 
 	/**
 	 * Change the binlog filename to request from master
 	 * New binlog file could be the next one or current one
 	 */
-	master_logfile = blr_set_master_logfile(router, command, error);
+	master_logfile = blr_set_master_logfile(router, change_master.binlog_file, error);
 
 	if (master_logfile == NULL && router->master_state == BLRM_UNCONFIGURED) {
-		strcpy(error, "Router is not configured for master connection, MASTER_LOG_FILE is required");
+		/* if there is another error message keep it */
+		if (!strlen(error)) {
+			strcpy(error, "Router is not configured for master connection, MASTER_LOG_FILE is required");
+		}
 
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
 
 		/* restore previous master_host and master_port */
 		blr_master_restore_config(router, current_master);
+
+		blr_master_free_parsed_options(&change_master);
 
 		spinlock_release(&router->lock);
 
@@ -2873,13 +2899,15 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 	 * set master_logfile to current binlog_name
 	 */
 	if (master_logfile == NULL) {
-		/* if errors return */
+		/* if errors returned */
 		if (strlen(error)) {
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
 
 			/* restore previous master_host and master_port */
 			blr_master_restore_config(router, current_master);
+
+			blr_master_free_parsed_options(&change_master);
 
 			spinlock_release(&router->lock);
 
@@ -2890,17 +2918,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 				master_logfile = strdup(router->binlog_name);
 			} 
 		}
-	}
-
-	/**
-	 * Change the position in the current or new binlog filename
-	 */
-
-	if (master_log_pos == NULL) {
-		pos = 0;
-	} else {
-		passed_pos = master_log_pos + 15;
-		pos = atoll(passed_pos);
 	}
 
 	/**
@@ -2923,7 +2940,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			if (pos != 4) {
 				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s for MASTER_LOG_FILE %s: "
 					"Permitted binlog pos is %d. Current master_log_file=%s, master_log_pos=%lu",
-					passed_pos,
+					master_log_pos,
 					master_logfile,
 					4,
 					router->binlog_name,
@@ -2938,13 +2955,12 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
 
-			if (master_log_pos)
-				free(master_log_pos);
-			if (master_logfile)
-				free(master_logfile);
-
 			/* restore previous master_host and master_port */
 			blr_master_restore_config(router, current_master);
+
+			blr_master_free_parsed_options(&change_master);
+
+			free(master_logfile);
 
 			spinlock_release(&router->lock);
 
@@ -2961,11 +2977,6 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
 				router->service->name,
 				router->binlog_name)));
-
-			if (master_log_pos)
-				free(master_log_pos);
-			if (master_logfile)
-				free(master_logfile);
 		}
 	} else {
 		/**
@@ -2975,20 +2986,20 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 		int return_error = 0;
 
 		if (router->master_state == BLRM_UNCONFIGURED) {
-			if (pos && pos != 4) {
+			if (master_log_pos != NULL && pos != 4) {
 				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
 					"Permitted binlog pos is 4. Specified master_log_file=%s",
-					passed_pos,
+					master_log_pos,
 					master_logfile);
 			
 				return_error = 1;
 			}
 
 		} else {
-			if (pos > 0 && pos != router->current_pos) {
+			if (master_log_pos != NULL && pos != router->current_pos) {
 				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
 					"Permitted binlog pos is %lu. Current master_log_file=%s, master_log_pos=%lu",
-					passed_pos,
+					master_log_pos,
 					router->current_pos,
 					router->binlog_name,
 					router->current_pos);
@@ -3001,13 +3012,12 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 		if (return_error) {
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
 
-			if (master_log_pos)
-				free(master_log_pos);
-			if (master_logfile)
-				free(master_logfile);
-
 			/* restore previous master_host and master_port */
 			blr_master_restore_config(router, current_master);
+
+			blr_master_free_parsed_options(&change_master);
+
+			free(master_logfile);
 
 			spinlock_release(&router->lock);
 
@@ -3031,61 +3041,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
 				router->service->name,
 				router->current_pos)));
-
-			if (master_log_pos)
-				free(master_log_pos);
-			if (master_logfile)
-				free(master_logfile);
 		}
 	}
 
-	/* Change the replication user */
-	if (master_user) {
-		char *ptr;
-		char *end;
-		ptr = strchr(master_user, '\'');
-		if (ptr)
-			ptr++;
-		else
-			ptr = master_user + 12;
-
-		end = strchr(ptr, '\'');
-		if (end)
-			*end ='\0';
-
-		if (router->user) {
-			free(router->user);
-		}
-		router->user = strdup(ptr);
-
-		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_USER is [%s]",
-			router->service->name,
-			router->user)));
-
-		free(master_user);
-	}
-
-	/* Change the replication password */
-	if (master_password) {
-		char *ptr;
-		char *end;
-		ptr = strchr(master_password, '\'');
-		if (ptr)
-			ptr++;
-		else
-			ptr = master_password + 16;
-
-		end = strchr(ptr, '\'');
-		if (end)
-			*end ='\0';
-
-		if (router->password) {
-			free(router->password);
-		}
-		router->password = strdup(ptr);
-
-		free(master_password);
-	}
+	/* Log config changes (without passwords) */
 
 	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: 'CHANGE MASTER TO executed'. Previous state MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'. New state is MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'",
 		router->service->name,
@@ -3097,6 +3056,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 		router->user)));
 
 	blr_master_free_config(current_master);
+
+	blr_master_free_parsed_options(&change_master);
+
+	free(master_logfile);
 
 	if (router->master_state == BLRM_UNCONFIGURED)
 		change_binlog = 1;	
@@ -3110,22 +3073,18 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
  * Set new master hostname
  *
  * @param router	Current router instance
- * @param command	CHANGE MASTER TO command
+ * @param hostname	The hostname to set
  * @return		1 for applied change, 0 otherwise
  */
 static int
-blr_set_master_hostname(ROUTER_INSTANCE *router, char *command) {
+blr_set_master_hostname(ROUTER_INSTANCE *router, char *hostname) {
 
-	char *master_host = get_change_master_option(command, "MASTER_HOST");
-
-	if (master_host) {
+	if (hostname) {
 		char *ptr;
 		char *end;
-		ptr = strchr(master_host, '\'');
+		ptr = strchr(hostname, '\'');
 		if (ptr)
 			ptr++;
-		else
-			ptr = master_host + 12;
 
 		end = strchr(ptr, '\'');
 
@@ -3138,34 +3097,27 @@ blr_set_master_hostname(ROUTER_INSTANCE *router, char *command) {
 			router->service->name,
 			router->service->dbref->server->name)));
 
-		free(master_host);
-
 		return 1;
 	}
 
 	return 0;
 }
 
-/*
+/**
  * Set new master port
  *
  * @param router	Current router instance
- * @param command	CHANGE MASTER TO command
+ * @param port		The server TCP port
  * @return		1 for applied change, 0 otherwise
  */
 
 static int
-blr_set_master_port(ROUTER_INSTANCE *router, char *command) {
-	char *master_port = get_change_master_option(command, "MASTER_PORT");
-	char *ptr;
+blr_set_master_port(ROUTER_INSTANCE *router, char *port) {
 	unsigned short new_port;
 
-	if (master_port) {
-		ptr = master_port + 12;
+	if (port != NULL) {
 
-		new_port = atoi(ptr);
-
-		free(master_port);
+		new_port = atoi(port);
 
 		if (new_port) {
 			server_update_port(router->service->dbref->server, new_port);
@@ -3187,42 +3139,37 @@ blr_set_master_port(ROUTER_INSTANCE *router, char *command) {
  * The routing must be called holding router->lock 
  *
  * @param router	Current router instance
- * @param command	CHANGE MASTER TO command
- * @param error		The error msg for command
+ * @param filename	Binlog file name
+ * @param error		The error msg for command, pre-allocated BINLOG_ERROR_MSG_LEN + 1 bytes
  * @return		New binlog file or NULL on error
  */
-char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error) {
+char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
 	int change_binlog = 0;
 	char *new_binlog_file = NULL;
-	char *logfile  = get_change_master_option(command, "MASTER_LOG_FILE");
 
-	if (logfile) {
-		char *ptr;
-		char *end;
+	if (filename) {
 		long next_binlog_seqname;
+		char *file_ptr;
+		char *end;
 
-		ptr = strchr(logfile, '\'');
+		file_ptr = strchr(filename, '\'');
+		if (file_ptr)
+			file_ptr++;
 
-		if (ptr)
-			ptr++;
-		else
-			ptr = logfile + 16;
-
-		end = strchr(ptr+1, '\'');
-
-		if (end)
-			*end ='\0';
+		end = strchr(file_ptr, '\'');	
+                if (end)
+                        *end ='\0';
 
 		/* check binlog filename format */
-		end = strchr(ptr, '.');
+		end = strchr(file_ptr, '.');
 
 		if (!end) {
 
-			snprintf(error, BINLOG_ERROR_MSG_LEN, "%s: selected binlog [%s] has not the format '%s.yyyyyy'",
-				router->service->name, ptr,
+			snprintf(error, BINLOG_ERROR_MSG_LEN, "%s: selected binlog [%s] is not in the format"
+				" '%s.yyyyyy'",
+				router->service->name,
+				file_ptr,
 				router->fileroot);
-
-			free(logfile);
 
 			return NULL;
 		}
@@ -3231,17 +3178,16 @@ char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error
 
 		if (router->master_state == BLRM_UNCONFIGURED) {
 			char *stem_end;
-			stem_end = strrchr(ptr, '.');
+			stem_end = strrchr(file_ptr, '.');
 			/* set filestem */
 			if (stem_end) {
 				if (router->fileroot)
 					free(router->fileroot);
-				router->fileroot = strndup(ptr, stem_end-ptr);
+				router->fileroot = strndup(file_ptr, stem_end-file_ptr);
 			}
 
 			/* return new filename */
-			new_binlog_file = strdup(ptr);
-			free(logfile);
+			new_binlog_file = strdup(file_ptr);
 
 			return new_binlog_file;
 		}
@@ -3255,13 +3201,11 @@ char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error
 				router->service->name,
 				router->binlog_name);
 
-			free(logfile);
-
 			return NULL;
 		}
 
 		/* Compare binlog file name with current one */
-		if (strcmp(router->binlog_name, ptr) == 0) {
+		if (strcmp(router->binlog_name, file_ptr) == 0) {
 			/* No binlog name change, eventually new position will be checked later */
 			change_binlog = 0;
 		} else {
@@ -3273,14 +3217,12 @@ char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error
 
 				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_FILE to %s: Permitted binlog file names are "
 					"%s or %s.%06li. Current master_log_file=%s, master_log_pos=%lu",
-					ptr,
+					file_ptr,
 					router->binlog_name,
 					router->fileroot,
 					next_binlog_seqname,
 					router->binlog_name,
 					router->current_pos);
-
-				free(logfile);
 
 				return NULL;
 			}
@@ -3290,9 +3232,8 @@ char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *command, char *error
 		}
 
 		/* allocate new filename */
-		new_binlog_file = strdup(ptr);
+		new_binlog_file = strdup(file_ptr);
 
-		free(logfile);
 	}
 
 	return new_binlog_file;
@@ -3387,3 +3328,228 @@ blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master)
 	}
 }
 
+/**
+ * Change the replication user
+ *
+ * @param router	Current router instance
+ * @param user		The userto set
+ * @return		1 for applied change, 0 otherwise
+ */
+static int
+blr_set_master_user(ROUTER_INSTANCE *router, char *user) {
+
+        if (user != NULL) {
+                char *ptr;
+                char *end;
+                ptr = strchr(user, '\'');
+                if (ptr)
+                        ptr++;
+
+                end = strchr(ptr, '\'');
+                if (end)
+                        *end ='\0';
+
+                if (router->user) {
+                        free(router->user);
+                }
+                router->user = strdup(ptr);
+
+                LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_USER is [%s]",
+                        router->service->name,
+                        router->user)));
+
+		return 1;
+        }
+
+	return 0;
+}
+
+/**
+ * Change the replication password
+ *
+ * @param router	Current router instance
+ * @param password	The password to set
+ * @return		1 for applied change, 0 otherwise
+ */
+static int
+blr_set_master_password(ROUTER_INSTANCE *router, char *password) {
+        if (password != NULL) {
+                char *ptr;
+                char *end;
+                ptr = strchr(password, '\'');
+                if (ptr)
+                        ptr++;
+
+                end = strchr(ptr, '\'');
+                if (end)
+                        *end ='\0';
+
+                if (router->password) {
+                        free(router->password);
+                }
+                router->password = strdup(ptr);
+
+		/* don't log new password */
+
+		return 1;
+        }
+
+	return 0;
+}
+
+
+/**
+ * Parse a CHANGE MASTER TO SQL command
+ *
+ * @param input		The command to be parsed
+ * @param error_string	Pre-allocated string for error message, BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @param config	master option struct to fill
+ * @return		0 on success, 1 on failure
+ */
+static int
+blr_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config) {
+char    *sep = ",";
+char    *word, *brkb;
+
+	if ((word = strtok_r(input, sep, &brkb)) == NULL) {
+		sprintf(error_string, "Unable to parse query [%s]", input);
+		return 1;
+        } else {
+		/* parse options key=val */
+		if (blr_handle_change_master_token(word, error_string, config))
+			return 1;
+	}  
+
+	while ((word = strtok_r(NULL, sep, &brkb)) != NULL) {
+		/* parse options key=val */
+		if (blr_handle_change_master_token(word, error_string, config))
+			return 1;
+	}
+
+	return 0;
+}
+
+/**
+ * Validate option and set the value for a change master option
+ *
+ * @param input		Current option with value
+ * @param error		pre-allocted string for error message, BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @param config	master option struct to fill
+ * @return		0 on success, 1 on error
+ */
+static int
+blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *config) {
+/* space+TAB+= */
+char    *sep = " 	=";
+char    *word, *brkb;
+char	*value = NULL;
+char	**option_field = NULL;
+
+	if ((word = strtok_r(input, sep, &brkb)) == NULL) {
+		sprintf(error, "error parsing %s", brkb);
+		return 1;
+	} else {
+		if ((option_field = blr_validate_change_master_option(word, config)) == NULL) {
+			sprintf(error, "option '%s' is not supported", word);
+
+			return 1;
+		}
+
+		/* value must be freed after usage */
+		if ((value = blr_get_parsed_command_value(brkb)) == NULL) {
+			sprintf(error, "missing value for '%s'", word);
+			return 1;
+		} else {
+			*option_field = value;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * Get value of a change master option
+ *
+ * @param input		Current option with value
+ * @return		The new allocated option value or NULL
+ */
+static char *
+blr_get_parsed_command_value(char *input) {
+/* space+TAB+= */
+char    *sep = "	 =";
+char	*ret = NULL;
+char 	*word;
+char	*value = NULL;
+
+	if (strlen(input))
+		value = strdup(input);
+	else
+		return ret;
+
+	if ((word = strtok_r(NULL, sep, &input)) != NULL) {
+		char *ptr;
+
+		/* remove trailing spaces */
+		ptr = value + strlen(value) - 1;
+		while (ptr > value && isspace(*ptr))
+			*ptr-- = 0;
+
+		ret = strdup(strstr(value, word));
+
+		free(value);
+	}
+
+	return ret;
+}
+
+/**
+ * Validate a change master option
+ *
+ * @param option	The option to check
+ * @param config	The option structure
+ * @return		A pointer to the field in the option strucure or NULL
+ */
+static char
+**blr_validate_change_master_option(char *option, CHANGE_MASTER_OPTIONS *config) {
+	if (strcasecmp(option, "master_host") == 0) {
+		return &config->host;
+	} else if (strcasecmp(option, "master_port") == 0) {
+		return &config->port;
+	} else if (strcasecmp(option, "master_log_file") == 0) {
+		return &config->binlog_file;
+	} else if (strcasecmp(option, "master_log_pos") == 0) {
+		return &config->binlog_pos;
+	} else if (strcasecmp(option, "master_user") == 0) {
+		return &config->user;
+	} else if (strcasecmp(option, "master_password") == 0) {
+		return &config->password;
+	} else {
+		return NULL;
+	}
+}
+
+/**
+ *  Free parsed master options struct pointers
+ *
+ * @param options    Parsed option struct
+ */
+static void
+blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options) {
+        free(options->host);
+	options->host = NULL;
+
+        free(options->port);
+	options->port = NULL;
+
+        free(options->user);
+	options->user = NULL;
+
+        free(options->password);
+	options->password = NULL;
+
+        free(options->binlog_file);
+	options->binlog_file = NULL;
+
+        free(options->binlog_pos);
+	options->binlog_pos = NULL;
+}

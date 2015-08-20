@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab 2014
+ * Copyright MariaDB Corporation Ab 2014-2015
  */
 
 /**
@@ -178,6 +178,16 @@ typedef struct master_server_config {
 	char *password;
 	char *filestem;
 } MASTER_SERVER_CFG;
+
+/* Config struct for CHANGE MASTER TO options */
+typedef struct change_master_options {
+	char *host;
+	char *port;
+	char *binlog_file;
+	char *binlog_pos;
+	char *user;
+	char *password;
+} CHANGE_MASTER_OPTIONS;
 
 /**
  * Packet header for replication messages
