@@ -541,7 +541,7 @@ static int gw_read_backend_event(DCB *dcb) {
                 if (protocol_get_srv_command((MySQLProtocol *)dcb->protocol, false) != 
                         MYSQL_COM_UNDEFINED)
                 {
-                        read_buffer = process_response_data(dcb, read_buffer, nbytes_read);
+                        read_buffer = process_response_data(dcb, read_buffer, gwbuf_length(read_buffer));
 			/** 
 			 * Received incomplete response to session command.
 			 * Store it to readqueue and return.
@@ -1517,7 +1517,9 @@ static GWBUF* process_response_data (
         ssize_t        nbytes_left   = 0; /*< nbytes to be read for the packet */
         MySQLProtocol* p;
         GWBUF*         outbuf = NULL;
-      
+	int initial_packets = npackets_left;
+	ssize_t initial_bytes = nbytes_left;
+
         /** Get command which was stored in gw_MySQLWrite_backend */
         p = DCB_PROTOCOL(dcb, MySQLProtocol);
 	if (!DCB_IS_CLONE(dcb)) CHK_PROTOCOL(p);
@@ -1560,11 +1562,13 @@ static GWBUF* process_response_data (
                                 * enough data to read the packet length.
                                 */
                                 init_response_status(readbuf, srvcmd, &npackets_left, &nbytes_left);
+				initial_packets = npackets_left;
+				initial_bytes = nbytes_left;
                         }
                 }
                 /** Only session commands with responses should be processed */
                 ss_dassert(npackets_left > 0);
-                
+
                 /** Read incomplete packet. */
                 if (nbytes_left > nbytes_to_process)
                 {
@@ -1639,10 +1643,15 @@ static GWBUF* process_response_data (
 				 wait for more data from the backend server.*/
 				if(readbuf == NULL || GWBUF_LENGTH(readbuf) < 3)
 				{
-				    skygw_log_write(LD," %lu [%s] Read %s packet with %d bytes. Waiting for %d packets.",
-					     pthread_self(),__FUNCTION__,readbuf?"partial":"empty",
-					     readbuf?GWBUF_LENGTH(readbuf):0,npackets_left);
-				    break;
+				    skygw_log_write(LD," %lu [%s] Read %d packets. Waiting for %d more packets for a total of %d packets.",
+					     pthread_self(),__FUNCTION__,initial_packets - npackets_left,
+					     npackets_left,initial_packets);
+
+				    /** Store the already read data into the readqueue of the DCB
+				     * and restore the response status to the initial number of packets */
+				    dcb->dcb_readqueue = gwbuf_append(outbuf,dcb->dcb_readqueue);
+				    protocol_set_response_status(p, initial_packets, initial_bytes);
+				    return NULL;
 				}
 
 				data = GWBUF_DATA(readbuf);
