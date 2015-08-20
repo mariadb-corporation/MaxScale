@@ -362,11 +362,14 @@ poll_remove_dcb(DCB *dcb)
                 dcb,
                 STRDCBSTATE(dcb->state))));
         }
+        /*< Set bit for each maxscale thread. This should be done before
+		 * the state is changed, so as to protect the DCB from premature
+		 * destruction. */
+        bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
         /*<
          * Set state to NOPOLLING and remove dcb from poll set.
          */
         dcb->state = DCB_STATE_NOPOLLING;
-	spinlock_release(&dcb->dcb_initlock);
 
         /**
          * Only positive fds can be removed from epoll set.
@@ -375,8 +378,6 @@ poll_remove_dcb(DCB *dcb)
          * only action for them is already done - the change of state to 
          * DCB_STATE_NOPOLLING.
          */		 
-        /*< Set bit for each maxscale thread */
-        bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
         dcbfd = dcb->fd;
         spinlock_release(&dcb->dcb_initlock);
         if (dcbfd > 0) 

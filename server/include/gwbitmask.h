@@ -20,22 +20,23 @@
 #include <spinlock.h>
 
 /**
- * @file gwbitmask.h An implementation of an arbitarly long bitmask
+ * @file gwbitmask.h An implementation of an arbitrarily long bitmask
  *
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
+ * Date		Who		        Description
  * 28/06/13	Mark Riddoch	Initial implementation
  *
  * @endverbatim
  */
 
+/* Both these numbers MUST be exact multiples of 8 */
 #define BIT_LENGTH_INITIAL	32	/**< Initial number of bits in the bitmask */
 #define BIT_LENGTH_INC		32	/**< Number of bits to add on each increment */
 
 /**
- * The bitmask structure used to store an arbitary large bitmask
+ * The bitmask structure used to store an arbitrary large bitmask
  */
 typedef struct {
 	SPINLOCK	lock;		/**< Lock to protect the bitmask */
