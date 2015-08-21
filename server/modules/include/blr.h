@@ -357,15 +357,15 @@ typedef struct router_instance {
 	ROUTER_SLAVE		*slaves;	/*< Link list of all the slave connections  */
 	SPINLOCK		lock;	        /*< Spinlock for the instance data */
 	char			*uuid;		/*< UUID for the router to use w/master */
-	int			masterid;	/*< Server ID of the master */
-	int			serverid;	/*< Server ID to use with master */
+	int			masterid;	/*< Set ID of the master, sent to slaves */
+	int			serverid;	/*< ID for the router to use w/master */
 	int			initbinlog;	/*< Initial binlog file number */
 	char			*user;		/*< User name to use with master */
 	char			*password;	/*< Password to use with master */
 	char			*fileroot;	/*< Root of binlog filename */
 	bool			master_chksum;	/*< Does the master provide checksums */
 	bool			mariadb10_compat; /*< MariaDB 10.0 compatibility */
-	char			*master_uuid;	/*< UUID of the master */
+	char			*master_uuid;	/*< Set UUID of the master, sent to slaves */
 	DCB			*master;	/*< DCB for master connection */
 	DCB			*client;	/*< DCB for dummy client */
 	SESSION			*session;	/*< Fake session for master connection */
@@ -407,6 +407,10 @@ typedef struct router_instance {
 	int		  handling_threads;
 	unsigned long	  m_errno;	/*< master response mysql errno */
 	char		  *m_errmsg;	/*< master response mysql error message */
+	char		  *set_master_version; /*< Send custom Version to slaves */
+	char		  *set_master_hostname; /*< Send custom Hostname to slaves */
+	char		  *set_master_uuid; /*< Send custom Master UUID to slaves */
+	char		  *set_master_server_id; /*< Send custom Master server_id to slaves */
 	struct router_instance	*next;
 } ROUTER_INSTANCE;
 

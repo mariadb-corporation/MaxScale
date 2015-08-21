@@ -48,6 +48,10 @@
  * 29/06/2015	Massimiliano Pinto	Successfully CHANGE MASTER results in updating master.ini
  *					in blr_handle_change_master()
  * 20/08/2015	Massimiliano Pinto	Added parsing and validation for CHANGE MASTER TO
+ * 21/08/2015	Massimiliano Pinto	Added support for new config options:
+ *					master_uuid, master_hostname, master_version
+ *					If set those values are sent to slaves instead of
+ *					saved master responses
  *
  * @endverbatim
  */
@@ -78,6 +82,7 @@ extern void blr_master_close(ROUTER_INSTANCE* router);
 extern void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
+extern char *blr_extract_column(GWBUF *buf, int col);
 int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 uint32_t extract_field(uint8_t *src, int bits);
 static void encode_value(unsigned char *data, unsigned int value, int len);
@@ -125,6 +130,9 @@ static int blr_set_master_password(ROUTER_INSTANCE *router, char *password);
 static int blr_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config);
 static int blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *config);
 static void blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
+static int blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value);
+static int blr_slave_send_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
+static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -358,7 +366,20 @@ extern  char *strcasestr();
 		else if (strcasecmp(word, "VERSION()") == 0)
 		{
 			free(query_text);
-			return blr_slave_replay(router, slave, router->saved_master.selectver);
+			if (router->set_master_version)
+				return blr_slave_send_var_value(router, slave, "VERSION()", router->set_master_version);
+			else
+				return blr_slave_replay(router, slave, router->saved_master.selectver);
+		}
+		else if (strcasecmp(word, "@@version") == 0)
+		{
+			free(query_text);
+			if (router->set_master_version)
+				return blr_slave_send_var_value(router, slave, "@@version", router->set_master_version);
+			else {
+				char *version = blr_extract_column(router->saved_master.selectver, 1);
+				return blr_slave_send_var_value(router, slave, "@@version", version);
+			}
 		}
 		else if (strcasecmp(word, "@@version_comment") == 0)
 		{
@@ -372,7 +393,20 @@ extern  char *strcasestr();
 		else if (strcasecmp(word, "@@hostname") == 0)
 		{
 			free(query_text);
-			return blr_slave_replay(router, slave, router->saved_master.selecthostname);
+			if (router->set_master_hostname)
+				return blr_slave_send_var_value(router, slave, "@@hostname", router->set_master_hostname);
+			else
+				return blr_slave_replay(router, slave, router->saved_master.selecthostname);
+		}
+		else if (strcasecmp(word, "@@server_uuid") == 0)
+		{
+			free(query_text);
+			if (router->set_master_uuid)
+				return blr_slave_send_var_value(router, slave, "@@server_uuid", router->master_uuid);
+			else {
+				char *master_uuid = blr_extract_column(router->saved_master.uuid, 2);
+				return blr_slave_send_var_value(router, slave, "@@server_uuid", master_uuid);
+			}
 		}
 		else if (strcasecmp(word, "@@max_allowed_packet") == 0)
 		{
@@ -416,12 +450,19 @@ extern  char *strcasestr();
 				else if (strcasecmp(word, "'SERVER_ID'") == 0)
 				{
 					free(query_text);
-					return blr_slave_replay(router, slave, router->saved_master.server_id);
+
+					if (router->set_master_server_id)
+						return blr_slave_send_variable(router, slave, "'SERVER_ID'", router->set_master_server_id, 0x03);
+					else
+						return blr_slave_replay(router, slave, router->saved_master.server_id);
 				}
 				else if (strcasecmp(word, "'SERVER_UUID'") == 0)
 				{
 					free(query_text);
-					return blr_slave_replay(router, slave, router->saved_master.uuid);
+					if (router->set_master_uuid)
+						return blr_slave_send_variable(router, slave, "'SERVER_UUID'", router->master_uuid, 0xf);
+					else
+						return blr_slave_replay(router, slave, router->saved_master.uuid);
 				}
 				else if (strcasecmp(word, "'MAXSCALE%'") == 0)
 				{
@@ -3553,3 +3594,159 @@ blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options) {
         free(options->binlog_pos);
 	options->binlog_pos = NULL;
 }
+
+/**
+ * Send a MySQL protocol response for selected variable
+ *
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ * @param	variable	The variable name
+ * @param	value		The variable value
+ * @return	Non-zero if data was sent
+ */
+static int
+blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value)
+{
+GWBUF	*pkt;
+uint8_t *ptr;
+int	len, vers_len;
+
+	vers_len = strlen(value);
+	blr_slave_send_fieldcount(router, slave, 1);
+	blr_slave_send_columndef(router, slave, variable, 0xf, vers_len, 2);
+	blr_slave_send_eof(router, slave, 3);
+
+	len = 5 + vers_len;
+	if ((pkt = gwbuf_alloc(len)) == NULL)
+		return 0;
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, vers_len + 1, 24);		// Add length of data packet
+	ptr += 3;
+	*ptr++ = 0x04;					// Sequence number in response
+	*ptr++ = vers_len;				// Length of result string
+	strncpy((char *)ptr, value, vers_len);		// Result string
+	ptr += vers_len;
+	slave->dcb->func.write(slave->dcb, pkt);
+	return blr_slave_send_eof(router, slave, 5);
+}
+
+/**
+ * Send the response to the SQL command "SHOW VARIABLES LIKE 'xxx'
+ *
+ * @param       router          The binlog router instance
+ * @param       slave           The slave server to which we are sending the response
+ * @return      Non-zero if data was sent
+ */
+static int
+blr_slave_send_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+int     len, vers_len, seqno = 2;
+char	*p = strdup(variable);
+int	var_len;
+char	*old_value = p;
+
+	if(*p == '\'')
+		p++;
+	if (p[strlen(p)-1] == '\'')
+		p[strlen(p)-1] = '\0';
+
+	var_len  = strlen(p);
+
+	for(int i = 0; i< var_len; i++) {
+		p[i] = tolower(p[i]);
+	}
+
+        blr_slave_send_fieldcount(router, slave, 2);
+	blr_slave_send_columndef_with_info_schema(router, slave, "Variable_name", 0xf, 40, seqno++);
+	blr_slave_send_columndef_with_info_schema(router, slave, "Value", column_type, 40, seqno++);
+        blr_slave_send_eof(router, slave, seqno++);
+
+        vers_len = strlen(value);
+        len = 5 + vers_len + var_len + 1;
+        if ((pkt = gwbuf_alloc(len)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        encode_value(ptr, vers_len + 2 + var_len, 24);	// Add length of data packet
+        ptr += 3;
+        *ptr++ = seqno++;				// Sequence number in response
+        *ptr++ = var_len;				// Length of result string
+        strncpy((char *)ptr, p, var_len);		// Result string
+        ptr += var_len;
+        *ptr++ = vers_len;				// Length of result string
+        strncpy((char *)ptr, value, vers_len);		// Result string
+        ptr += vers_len;
+        slave->dcb->func.write(slave->dcb, pkt);
+
+	free(old_value);
+
+        return blr_slave_send_eof(router, slave, seqno++);
+}
+
+/**
+ * Send the column definition packet for a variable in a response packet sequence.
+ *
+ * It adds information_schema and variables an variable_name
+ * @param router	The router
+ * @param slave		The slave connection
+ * @param name		Name of the column
+ * @param type		Column type
+ * @param len		Column length
+ * @param seqno		Packet sequence number
+ * @return		Non-zero on success
+ */
+static int
+blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno)
+{
+GWBUF	*pkt;
+uint8_t *ptr;
+int	info_len = strlen("information_schema");
+int	virtual_table_name_len = strlen("VARIABLES");
+int	table_name_len = strlen("VARIABLES");
+int	column_name_len = strlen("Variable_name");
+int	orig_column_name_len = strlen("VARIABLE_NAME");
+
+	if ((pkt = gwbuf_alloc(4 + 22 + strlen(name) + info_len + virtual_table_name_len + table_name_len + orig_column_name_len)) == NULL)
+		return 0;
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, 22 + strlen(name) + info_len + virtual_table_name_len + table_name_len + orig_column_name_len, 24);	// Add length of data packet
+	ptr += 3;
+	*ptr++ = seqno;					// Sequence number in response
+	*ptr++ = 3;					// Catalog is always def
+	*ptr++ = 'd';
+	*ptr++ = 'e';
+	*ptr++ = 'f';
+	*ptr++ = info_len;		// Schema name length
+	strcpy((char *)ptr,"information_schema");
+	ptr += info_len;
+	*ptr++ = virtual_table_name_len;		// virtual table name length
+	strcpy((char *)ptr, "VARIABLES");
+	ptr += virtual_table_name_len;
+	*ptr++ = table_name_len;			// Table name length
+	strcpy((char *)ptr, "VARIABLES");
+	ptr += table_name_len;
+	*ptr++ = strlen(name);				// Column name length;
+	while (*name)
+		*ptr++ = *name++;			// Copy the column name
+	*ptr++ = orig_column_name_len;			// Orginal column name
+	strcpy((char *)ptr, "VARIABLE_NAME");
+	ptr += orig_column_name_len;
+	*ptr++ = 0x0c;					// Length of next fields always 12
+	*ptr++ = 0x3f;					// Character set
+	*ptr++ = 0;
+	encode_value(ptr, len, 32);			// Add length of column
+	ptr += 4;
+	*ptr++ = type;
+	*ptr++ = 0x81;					// Two bytes of flags
+	if (type == 0xfd)
+		*ptr++ = 0x1f;
+	else
+		*ptr++ = 0x00;
+	*ptr++= 0;
+	*ptr++= 0;
+	*ptr++= 0;
+	return slave->dcb->func.write(slave->dcb, pkt);
+}
+
+

@@ -86,7 +86,7 @@ static void *CreateMySQLAuthData(char *username, char *password, char *database)
 void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
 static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
 void blr_master_close(ROUTER_INSTANCE *);
-static char *blr_extract_column(GWBUF *buf, int col);
+char *blr_extract_column(GWBUF *buf, int col);
 void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
 void poll_fake_write_event(DCB *dcb);
 GWBUF *blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr);
@@ -533,9 +533,11 @@ char	query[128];
 		if (key)
 			free(key);
 
-		if (router->master_uuid)
-			free(router->master_uuid);
-		router->master_uuid = val;
+		/* set the master_uuid from master if not set by the option */
+		if (router->set_master_uuid == NULL)
+			router->master_uuid = val;
+		else
+			router->master_uuid = router->set_master_uuid;
 
 		// Response to the SERVER_UUID, should be stored
 		if (router->saved_master.uuid)
@@ -948,7 +950,6 @@ int			n_bufs = -1, pn_bufs = -1;
 		{
 			router->stats.n_binlogs++;
 			router->stats.n_binlogs_ses++;
-			router->lastEventReceived = hdr.event_type;
 
 			blr_extract_header(ptr, &hdr);
 
@@ -996,15 +997,11 @@ int			n_bufs = -1, pn_bufs = -1;
 					free(router->m_errmsg);
 				router->m_errmsg = NULL;
 
-				router->stats.n_binlogs++;
-				router->lastEventReceived = hdr.event_type;
-				router->lastEventTimestamp = hdr.timestamp;
+				spinlock_release(&router->lock);
 
 #ifdef SHOW_EVENTS
 				printf("blr: event type 0x%02x, flags 0x%04x, event size %d, event timestamp %lu\n", hdr.event_type, hdr.flags, hdr.event_size, hdr.timestamp);
 #endif
-
-				spinlock_release(&router->lock);
 
 				/*
 				 * First check that the checksum we calculate matches the
@@ -1038,6 +1035,12 @@ int			n_bufs = -1, pn_bufs = -1;
 						return;
 					}
 				}
+
+				router->stats.n_binlogs++;
+				router->stats.n_binlogs_ses++;
+
+				router->lastEventReceived = hdr.event_type;
+				router->lastEventTimestamp = hdr.timestamp;
 
 				/**
 				 * Check for an open transaction, if the option is set
@@ -1711,7 +1714,7 @@ blr_master_connected(ROUTER_INSTANCE *router)
  * @param col	The column number to return
  * @return	The result form the column or NULL. The caller must free the result
  */
-static char *
+char *
 blr_extract_column(GWBUF *buf, int col)
 {
 uint8_t	*ptr;

@@ -41,6 +41,10 @@
  *					If not found router goes into BLRM_UNCONFIGURED state.
  *					Cache dir is 'cache' under router->binlogdir.
  * 07/08/2015	Massimiliano Pinto	Addition of binlog check at startup if trx_safe is on
+ * 21/08/2015	Massimiliano Pinto	Added support for new config options:
+ *					master_uuid, master_hostname, master_version
+ *					If set those values are sent to slaves instead of
+ *					saved master responses
  *
  * @endverbatim
  */
@@ -277,6 +281,11 @@ int		rc = 0;
 	inst->pending_transaction = 0;
 	inst->last_safe_pos = 0;
 
+	inst->set_master_version = NULL;
+	inst->set_master_hostname = NULL;
+	inst->set_master_uuid = NULL;
+	inst->set_master_server_id = NULL;
+
 	my_uuid_init((ulong)rand()*12345,12345);
 	if ((defuuid = (unsigned char *)malloc(20)) != NULL)
 	{
@@ -340,6 +349,19 @@ int		rc = 0;
 				else if (strcmp(options[i], "master-id") == 0)
 				{
 					inst->masterid = atoi(value);
+					inst->set_master_server_id = value;
+				}
+				else if (strcmp(options[i], "master_uuid") == 0)
+				{
+					inst->set_master_uuid = strdup(value);
+				}
+				else if (strcmp(options[i], "master_version") == 0)
+				{
+					inst->set_master_version = strdup(value);
+				}
+				else if (strcmp(options[i], "master_hostname") == 0)
+				{
+					inst->set_master_hostname = strdup(value);
 				}
 				else if (strcmp(options[i], "mariadb10-compatibility") == 0)
 				{
@@ -349,17 +371,13 @@ int		rc = 0;
 				{
 					inst->fileroot = strdup(value);
 				}
-				else if (strcmp(options[i], "initialfile") == 0)
-				{
-					inst->initbinlog = atoi(value);
-				}
 				else if (strcmp(options[i], "file") == 0)
 				{
 					inst->initbinlog = atoi(value);
 				}
 				else if (strcmp(options[i], "transaction_safety") == 0)
 				{
-					inst->trx_safe = atoi(value);
+					inst->trx_safe = config_truth_value(value);
 				}
 				else if (strcmp(options[i], "lowwater") == 0)
 				{
