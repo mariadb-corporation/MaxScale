@@ -992,7 +992,7 @@ int	len, id_len;
 	sprintf(server_id, "%d", router->masterid);
 	id_len = strlen(server_id);
 	blr_slave_send_fieldcount(router, slave, 1);
-	blr_slave_send_columndef(router, slave, "SERVER_ID", 0xf, id_len, 2);
+	blr_slave_send_columndef(router, slave, "SERVER_ID", 0x03, id_len, 2);
 	blr_slave_send_eof(router, slave, 3);
 
 	len = 5 + id_len;
@@ -1028,7 +1028,7 @@ int	len, vers_len, seqno = 2;
 
 	blr_slave_send_fieldcount(router, slave, 2);
 	blr_slave_send_columndef(router, slave, "Variable_name", 0xf, 40, seqno++);
-	blr_slave_send_columndef(router, slave, "value", 0xf, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "Value", 0xf, 40, seqno++);
 	blr_slave_send_eof(router, slave, seqno++);
 
 	sprintf(version, "%s", MAXSCALE_VERSION);
@@ -3627,6 +3627,7 @@ int	len, vers_len;
 	strncpy((char *)ptr, value, vers_len);		// Result string
 	ptr += vers_len;
 	slave->dcb->func.write(slave->dcb, pkt);
+
 	return blr_slave_send_eof(router, slave, 5);
 }
 
@@ -3645,8 +3646,9 @@ uint8_t *ptr;
 int     len, vers_len, seqno = 2;
 char	*p = strdup(variable);
 int	var_len;
-char	*old_value = p;
+char	*old_ptr = p;
 
+	/* Remove heading and trailing "'" */
 	if(*p == '\'')
 		p++;
 	if (p[strlen(p)-1] == '\'')
@@ -3654,13 +3656,16 @@ char	*old_value = p;
 
 	var_len  = strlen(p);
 
+	/* force lowercase */
 	for(int i = 0; i< var_len; i++) {
 		p[i] = tolower(p[i]);
 	}
 
         blr_slave_send_fieldcount(router, slave, 2);
+
 	blr_slave_send_columndef_with_info_schema(router, slave, "Variable_name", 0xf, 40, seqno++);
 	blr_slave_send_columndef_with_info_schema(router, slave, "Value", column_type, 40, seqno++);
+
         blr_slave_send_eof(router, slave, seqno++);
 
         vers_len = strlen(value);
@@ -3672,14 +3677,14 @@ char	*old_value = p;
         ptr += 3;
         *ptr++ = seqno++;				// Sequence number in response
         *ptr++ = var_len;				// Length of result string
-        strncpy((char *)ptr, p, var_len);		// Result string
+        strncpy((char *)ptr, p, var_len);		// Result string with var name
         ptr += var_len;
         *ptr++ = vers_len;				// Length of result string
-        strncpy((char *)ptr, value, vers_len);		// Result string
+        strncpy((char *)ptr, value, vers_len);		// Result string with var value
         ptr += vers_len;
         slave->dcb->func.write(slave->dcb, pkt);
 
-	free(old_value);
+	free(old_ptr);
 
         return blr_slave_send_eof(router, slave, seqno++);
 }
@@ -3687,7 +3692,8 @@ char	*old_value = p;
 /**
  * Send the column definition packet for a variable in a response packet sequence.
  *
- * It adds information_schema and variables an variable_name
+ * It adds information_schema and variables and variable_name
+ *
  * @param router	The router
  * @param slave		The slave connection
  * @param name		Name of the column
@@ -3704,20 +3710,22 @@ uint8_t *ptr;
 int	info_len = strlen("information_schema");
 int	virtual_table_name_len = strlen("VARIABLES");
 int	table_name_len = strlen("VARIABLES");
-int	column_name_len = strlen("Variable_name");
+int	column_name_len = strlen(name);
 int	orig_column_name_len = strlen("VARIABLE_NAME");
+int	packet_data_len = 22 + strlen(name) + info_len + virtual_table_name_len + table_name_len + orig_column_name_len;
 
-	if ((pkt = gwbuf_alloc(4 + 22 + strlen(name) + info_len + virtual_table_name_len + table_name_len + orig_column_name_len)) == NULL)
+	if ((pkt = gwbuf_alloc(4 + packet_data_len)) == NULL)
 		return 0;
+
 	ptr = GWBUF_DATA(pkt);
-	encode_value(ptr, 22 + strlen(name) + info_len + virtual_table_name_len + table_name_len + orig_column_name_len, 24);	// Add length of data packet
+	encode_value(ptr, packet_data_len, 24);		// Add length of data packet
 	ptr += 3;
 	*ptr++ = seqno;					// Sequence number in response
 	*ptr++ = 3;					// Catalog is always def
 	*ptr++ = 'd';
 	*ptr++ = 'e';
 	*ptr++ = 'f';
-	*ptr++ = info_len;		// Schema name length
+	*ptr++ = info_len;				// Schema name length
 	strcpy((char *)ptr,"information_schema");
 	ptr += info_len;
 	*ptr++ = virtual_table_name_len;		// virtual table name length
@@ -3726,7 +3734,7 @@ int	orig_column_name_len = strlen("VARIABLE_NAME");
 	*ptr++ = table_name_len;			// Table name length
 	strcpy((char *)ptr, "VARIABLES");
 	ptr += table_name_len;
-	*ptr++ = strlen(name);				// Column name length;
+	*ptr++ = column_name_len;			// Column name length;
 	while (*name)
 		*ptr++ = *name++;			// Copy the column name
 	*ptr++ = orig_column_name_len;			// Orginal column name
@@ -3746,6 +3754,7 @@ int	orig_column_name_len = strlen("VARIABLE_NAME");
 	*ptr++= 0;
 	*ptr++= 0;
 	*ptr++= 0;
+
 	return slave->dcb->func.write(slave->dcb, pkt);
 }
 
