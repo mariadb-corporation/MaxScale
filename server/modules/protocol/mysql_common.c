@@ -556,7 +556,7 @@ int gw_send_authentication_to_backend(
         uint8_t *payload = NULL;
         uint8_t *payload_start = NULL;
         long bytes;
-        uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
+        uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1];
         uint8_t client_capabilities[4];
         uint32_t server_capabilities = 0;
         uint32_t final_capabilities  = 0;
@@ -1109,7 +1109,7 @@ GWBUF* gw_create_change_user_packet(
 	uint8_t* payload = NULL;
 	uint8_t* payload_start = NULL;
 	long 	 bytes;
-	uint8_t  client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
+	uint8_t  client_scramble[GW_MYSQL_SCRAMBLE_SIZE + 1];
 	uint32_t server_capabilities = 0;
 	uint32_t final_capabilities  = 0;
 	char 	 dbpass[MYSQL_USER_MAXLEN + 1]="";
