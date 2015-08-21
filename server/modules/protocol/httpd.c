@@ -383,6 +383,16 @@ int	n_connect = 0;
 static int
 httpd_close(DCB *dcb)
 {
+	if(dcb->dcb_readqueue)
+	{
+	    while((dcb->dcb_readqueue = GWBUF_CONSUME_ALL(dcb->dcb_readqueue)));
+	}
+
+	if(dcb->writeq)
+	{
+	    while((dcb->writeq = GWBUF_CONSUME_ALL(dcb->writeq)));
+	}
+
 	return 0;
 }
 
