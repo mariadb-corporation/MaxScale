@@ -106,7 +106,7 @@ static inline bool dcb_write_parameter_check(DCB *dcb, GWBUF *queue);
 static inline void dcb_write_fake_code(DCB *dcb);
 #endif
 static inline void dcb_write_when_already_queued(DCB *dcb, GWBUF *queue);
-static int dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno);
+static void dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno);
 static inline void dcb_write_tidy_up(DCB *dcb, bool below_water);
 static int dcb_write_SSL_error_report (DCB *dcb, int ret);
 
@@ -1147,7 +1147,8 @@ int	below_water;
 
             if (written < 0)
             {
-                int rv = dcb_log_write_failure(dcb, queue, errno);
+		int saved_errno = errno;
+                dcb_log_write_failure(dcb, queue, saved_errno);
 
                 /*<
                  * What wasn't successfully written is stored to write queue
@@ -1161,7 +1162,9 @@ int	below_water;
 		/** Return 1 if the write failure was due to EWOULDBLOCK or EAGAIN.
 		 The rest of the buffer will be written once an EPOLL_OUT event
 		 arrives.*/
-                return rv == 0 ? 1 : 0;
+		return saved_errno == 0 ||
+			saved_errno == EAGAIN ||
+			saved_errno == EWOULDBLOCK;
             }
             /*
              * Pull the number of bytes we have written from
@@ -1311,10 +1314,9 @@ dcb_write_when_already_queued(DCB *dcb, GWBUF *queue)
  * @param queue Queue of buffers to write
  * @param eno	Error number for logging
  */
-static int
+static void
 dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
 {
-    int rval = 0;
     if (LOG_IS_ENABLED(LOGFILE_DEBUG))
     {
         if (eno == EPIPE)
@@ -1330,7 +1332,6 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
                 dcb->fd,
                 eno,
                 strerror(eno))));
-	    rval = -1;
         }
     }
 
@@ -1350,7 +1351,6 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
                 dcb->fd,
                 eno,
                 strerror(eno))));
-	    rval = -1;
 
         }
 
@@ -1383,10 +1383,8 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
                 dcb_isclient(dcb) ? "client" : "backend server",
                 eno,
                 strerror(eno))));
-	    rval = -1;
         }
     }
-    return rval;
 }
 
 /**
