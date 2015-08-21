@@ -1162,12 +1162,9 @@ int	below_water;
 		/** Return 1 if the write failure was due to EWOULDBLOCK or EAGAIN.
 		 The rest of the buffer will be written once an EPOLL_OUT event
 		 arrives.*/
-		if (saved_errno == 0 ||
-		 saved_errno == EAGAIN ||
-		 saved_errno == EWOULDBLOCK)
-		    return 1;
-		else
-		    return 0;
+		return saved_errno == 0 ||
+			saved_errno == EAGAIN ||
+			saved_errno == EWOULDBLOCK;
             }
             /*
              * Pull the number of bytes we have written from
