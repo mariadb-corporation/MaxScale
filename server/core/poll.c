@@ -71,7 +71,7 @@ int	max_poll_sleep;
  * 24/09/14	Mark Riddoch	Introduction of the event queue for processing the
  *				incoming events rather than processing them immediately
  *				in the loop after the epoll_wait. This allows for better
- *				thread utilisaiton and fairer scheduling of the event
+ *				thread utilisation and fairer scheduling of the event
  *				processing.
  * 07/07/15     Martin Brampton Simplified add and remove DCB, improve error handling.
  *
@@ -96,7 +96,7 @@ static	int		process_pollq(int thread_id);
 static	void		poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, __uint32_t ev);
 
 
-DCB		*eventq = NULL;
+DCB			*eventq = NULL;
 SPINLOCK	pollqlock = SPINLOCK_INIT;
 
 /**
@@ -104,13 +104,13 @@ SPINLOCK	pollqlock = SPINLOCK_INIT;
  * poll completion, a value of 1 or less is the ideal.
  */
 static double	load_average = 0.0;
-static int	load_samples = 0;
-static int	load_nfds = 0;
+static int		load_samples = 0;
+static int		load_nfds = 0;
 static double	current_avg = 0.0;
 static double	*avg_samples = NULL;
-static int	*evqp_samples = NULL;
-static int	next_sample = 0;
-static int	n_avg_samples;
+static int		*evqp_samples = NULL;
+static int		next_sample = 0;
+static int		n_avg_samples;
 
 /* Thread statistics data */
 static	int		n_threads;	/*< No. of threads */
@@ -128,9 +128,9 @@ typedef enum { THREAD_STOPPED, THREAD_IDLE,
  */
 typedef	struct {
 	THREAD_STATE	state;	  /*< Current thread state */
-	int		n_fds;	  /*< No. of descriptors thread is processing */
-	DCB		*cur_dcb; /*< Current DCB being processed */
-	uint32_t	event;	  /*< Current event being processed */
+	int				n_fds;	  /*< No. of descriptors thread is processing */
+	DCB				*cur_dcb; /*< Current DCB being processed */
+	uint32_t		event;	  /*< Current event being processed */
 } THREAD_DATA;
 
 static	THREAD_DATA	*thread_data = NULL;	/*< Status of each thread */
@@ -381,8 +381,8 @@ poll_remove_dcb(DCB *dcb)
         dcbfd = dcb->fd;
         spinlock_release(&dcb->dcb_initlock);
         if (dcbfd > 0) 
-        {
-            rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcb->fd, &ev);
+		{
+            rc = epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dcbfd, &ev);
             /**
              * The poll_resolve_error function will always
              * return 0 or crash.  So if it returns non-zero result, 
