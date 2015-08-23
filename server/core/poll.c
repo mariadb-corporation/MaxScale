@@ -299,23 +299,6 @@ poll_add_dcb(DCB *dcb)
             STRDCBSTATE(dcb->state))));
         raise(SIGABRT);
     }
-    /*
-     * This test could be wrong. On the face of it, we don't want to add a
-     * DCB to the poll list if it is not linked to a session because the code
-     * that handles events will expect to find a session.  Test added by
-     * Martin as an experiment on 23 August 2015
-     */
-    if (false && NULL == dcb->session)
-    {
-        LOGIF(LE, (skygw_log_write_flush(
-            LOGFILE_ERROR,
-            "%lu [%s] Error : Attempt to add dcb %p "
-            "to poll list but it is not linked to a session, crashing.",
-            __func__,
-            pthread_self(),
-            dcb)));
-        raise(SIGABRT);
-    }
     if (DCB_STATE_POLLING == dcb->state
         || DCB_STATE_LISTENING == dcb->state)
     {
@@ -925,6 +908,10 @@ unsigned long	qtime;
 	{
 		if (dcb->state == DCB_STATE_LISTENING)
 		{
+            if (NULL == dcb->session)
+            {
+                dcb->session = session_alloc(dcb->service, dcb);
+            }
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
 				"%lu [poll_waitevents] "
