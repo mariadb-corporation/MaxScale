@@ -1684,7 +1684,7 @@ static skygw_query_type_t is_read_tmp_table(
   {
       skygw_log_write(LE,"[%s] Error: Master server reference is NULL.",
 		      __FUNCTION__);
-      return;
+      return type;
   }
 
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
