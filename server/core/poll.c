@@ -305,7 +305,7 @@ poll_add_dcb(DCB *dcb)
      * that handles events will expect to find a session.  Test added by
      * Martin as an experiment on 23 August 2015
      */
-    if (NULL == dcb->session)
+    if (false && NULL == dcb->session)
     {
         LOGIF(LE, (skygw_log_write_flush(
             LOGFILE_ERROR,
