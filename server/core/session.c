@@ -26,6 +26,7 @@
  * 17/06/13	Mark Riddoch		Initial implementation
  * 02/09/13	Massimiliano Pinto	Added session refcounter
  * 29/05/14	Mark Riddoch		Addition of filter mechanism
+ * 23/08/15 Martin Brampton     Tidying; slight improvement in safety
  *
  * @endverbatim
  */
@@ -72,65 +73,66 @@ static int session_setup_filters(SESSION *session);
 SESSION *
 session_alloc(SERVICE *service, DCB *client_dcb)
 {
-        SESSION 	*session;
+    SESSION 	*session;
 
-        session = (SESSION *)calloc(1, sizeof(SESSION));
-        ss_info_dassert(session != NULL,
-                        "Allocating memory for session failed.");
+    session = (SESSION *)calloc(1, sizeof(SESSION));
+    ss_info_dassert(session != NULL,
+        "Allocating memory for session failed.");
         
-        if (session == NULL) 
-	{
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Failed to allocate memory for "
-                        "session object due error %d, %s.",
-                        errno,
-                        strerror(errno))));
-		if (client_dcb->data && !DCB_IS_CLONE(client_dcb))
-		{
-			free(client_dcb->data);
-			client_dcb->data = NULL;
-		}
-		goto return_session;
+    if (session == NULL) 
+    {
+        LOGIF(LE, (skygw_log_write_flush(
+            LOGFILE_ERROR,
+            "Error : Failed to allocate memory for "
+            "session object due error %d, %s.",
+            errno,
+            strerror(errno))));
+        if (client_dcb->data && !DCB_IS_CLONE(client_dcb))
+        {
+            void *clientdata = client_dcb->data;
+            client_dcb->data = NULL;
+            free(clientdata);
         }
+        goto return_session;
+    }
 #if defined(SS_DEBUG)
-        session->ses_chk_top = CHK_NUM_SESSION;
-        session->ses_chk_tail = CHK_NUM_SESSION;
+    session->ses_chk_top = CHK_NUM_SESSION;
+    session->ses_chk_tail = CHK_NUM_SESSION;
 #endif
-	if (DCB_IS_CLONE(client_dcb))
-	{
-		session->ses_is_child = true;
-	}
-        spinlock_init(&session->ses_lock);
-        /*<
-         * Prevent backend threads from accessing before session is completely
-         * initialized.
-         */
-        spinlock_acquire(&session->ses_lock);
-        session->service = service;
+    if (DCB_IS_CLONE(client_dcb))
+    {
+        session->ses_is_child = true;
+    }
+    spinlock_init(&session->ses_lock);
+    /*<
+     * Prevent backend threads from accessing before session is completely
+     * initialized.
+     */
+    spinlock_acquire(&session->ses_lock);
+    session->service = service;
 	session->client = client_dcb;
 	session->n_filters = 0;
 	memset(&session->stats, 0, sizeof(SESSION_STATS));
 	session->stats.connect = time(0);
 	session->state = SESSION_STATE_ALLOC;
-        /*<
+    /*<
 	 * Associate the session to the client DCB and set the reference count on
 	 * the session to indicate that there is a single reference to the
-         * session. There is no need to protect this or use atomic add as the
-         * session has not been made available to the other threads at this
-         * point.
-         */
-        session->data = client_dcb->data;
-	client_dcb->session = session;
-	session->refcount = 1;
-        /*<
-         * This indicates that session is ready to be shared with backend
-         * DCBs. Note that this doesn't mean that router is initialized yet!
-         */
-        session->state = SESSION_STATE_READY;
+     * session. There is no need to protect this or use atomic add as the
+     * session has not been made available to the other threads at this
+     * point.
+     */
+    session->data = client_dcb->data;
+    client_dcb->session = session;
+    session->refcount = 1;
+    /*<
+     * This indicates that session is ready to be shared with backend
+     * DCBs. Note that this doesn't mean that router is initialized yet!
+     */
+    session->state = SESSION_STATE_READY;
         
-        /*< Release session lock */
-        spinlock_release(&session->ses_lock);
+    /*< Release session lock */
+    spinlock_release(&session->ses_lock);
 
 	/*
 	 * Only create a router session if we are not the listening 
@@ -140,36 +142,34 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 	 *
 	 * Router session creation may create other DCBs that link to the
 	 * session, therefore it is important that the session lock is
-         * relinquished beforethe router call.
+     * relinquished before the router call.
 	 */
 	if (client_dcb->state != DCB_STATE_LISTENING && 
-                client_dcb->dcb_role != DCB_ROLE_INTERNAL)
+        client_dcb->dcb_role != DCB_ROLE_INTERNAL)
 	{
 		session->router_session =
-                    service->router->newSession(service->router_instance,
-                                                session);
-
-                if (session->router_session == NULL) 
+            service->router->newSession(service->router_instance, session);
+        if (session->router_session == NULL) 
 		{
-                        /**
-                         * Inform other threads that session is closing.
-                         */
-                        session->state = SESSION_STATE_STOPPING;
-                        /*<
-                         * Decrease refcount, set dcb's session pointer NULL
-                         * and set session pointer to NULL.
-                         */
-			session->client = NULL;
-                        session_free(session);
-                        client_dcb->session = NULL;
-                        session = NULL;
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Failed to create %s session.",
-                                service->name)));
+            /**
+             * Inform other threads that session is closing.
+             */
+            session->state = SESSION_STATE_STOPPING;
+            /*<
+             * Decrease refcount, set dcb's session pointer NULL
+             * and set session pointer to NULL.
+             */
+            session->client = NULL;
+            session_free(session);
+            client_dcb->session = NULL;
+            session = NULL;
+            LOGIF(LE, (skygw_log_write_flush(
+                LOGFILE_ERROR,
+                "Error : Failed to create %s session.",
+                service->name)));
                         
-                        goto return_session;
-                }
+            goto return_session;
+        }
 		/*
 		 * Pending filter chain being setup set the head of the chain to
 		 * be the router. As filters are inserted the current head will
