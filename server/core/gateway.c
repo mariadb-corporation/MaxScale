@@ -2057,7 +2057,7 @@ bool pid_file_exists()
     {
         int fd, b;
 
-	if((fd = open(pathbuf, O_RDONLY)) == -1)
+	if((fd = open(pathbuf, O_RDWR)) == -1)
 	{
 	    char* logerr = "Failed to open PID file '%s'.";
             snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
