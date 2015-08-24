@@ -130,7 +130,7 @@ static int blr_set_master_password(ROUTER_INSTANCE *router, char *password);
 static int blr_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config);
 static int blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *config);
 static void blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
-static int blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value);
+static int blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
 static int blr_slave_send_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
 static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
 
@@ -367,7 +367,7 @@ extern  char *strcasestr();
 		{
 			free(query_text);
 			if (router->set_master_version)
-				return blr_slave_send_var_value(router, slave, "VERSION()", router->set_master_version);
+				return blr_slave_send_var_value(router, slave, "VERSION()", router->set_master_version, BLR_TYPE_STRING);
 			else
 				return blr_slave_replay(router, slave, router->saved_master.selectver);
 		}
@@ -375,10 +375,10 @@ extern  char *strcasestr();
 		{
 			free(query_text);
 			if (router->set_master_version)
-				return blr_slave_send_var_value(router, slave, "@@version", router->set_master_version);
+				return blr_slave_send_var_value(router, slave, "@@version", router->set_master_version, BLR_TYPE_STRING);
 			else {
 				char *version = blr_extract_column(router->saved_master.selectver, 1);
-				return blr_slave_send_var_value(router, slave, "@@version", version);
+				return blr_slave_send_var_value(router, slave, "@@version", version, BLR_TYPE_STRING);
 			}
 		}
 		else if (strcasecmp(word, "@@version_comment") == 0)
@@ -394,7 +394,7 @@ extern  char *strcasestr();
 		{
 			free(query_text);
 			if (router->set_master_hostname)
-				return blr_slave_send_var_value(router, slave, "@@hostname", router->set_master_hostname);
+				return blr_slave_send_var_value(router, slave, "@@hostname", router->set_master_hostname, BLR_TYPE_STRING);
 			else
 				return blr_slave_replay(router, slave, router->saved_master.selecthostname);
 		}
@@ -402,10 +402,10 @@ extern  char *strcasestr();
 		{
 			free(query_text);
 			if (router->set_master_uuid)
-				return blr_slave_send_var_value(router, slave, "@@server_uuid", router->master_uuid);
+				return blr_slave_send_var_value(router, slave, "@@server_uuid", router->master_uuid, BLR_TYPE_STRING);
 			else {
 				char *master_uuid = blr_extract_column(router->saved_master.uuid, 2);
-				return blr_slave_send_var_value(router, slave, "@@server_uuid", master_uuid);
+				return blr_slave_send_var_value(router, slave, "@@server_uuid", master_uuid, BLR_TYPE_STRING);
 			}
 		}
 		else if (strcasecmp(word, "@@max_allowed_packet") == 0)
@@ -420,8 +420,11 @@ extern  char *strcasestr();
 		}
 		else if (strcasecmp(word, "@@server_id") == 0)
 		{
+			char    server_id[40];
+			sprintf(server_id, "%d", router->masterid);
+
 			free(query_text);
-			return blr_slave_send_server_id(router, slave);
+			return blr_slave_send_var_value(router, slave, "@@server_id", server_id, BLR_TYPE_INT);
 		}
 	}
 	else if (strcasecmp(word, "SHOW") == 0)
@@ -451,16 +454,18 @@ extern  char *strcasestr();
 				{
 					free(query_text);
 
-					if (router->set_master_server_id)
-						return blr_slave_send_variable(router, slave, "'SERVER_ID'", router->set_master_server_id, 0x03);
-					else
+					if (router->set_master_server_id) {
+						char    server_id[40];
+						sprintf(server_id, "%d", router->masterid);
+						return blr_slave_send_variable(router, slave, "'SERVER_ID'", server_id, BLR_TYPE_INT);
+					} else
 						return blr_slave_replay(router, slave, router->saved_master.server_id);
 				}
 				else if (strcasecmp(word, "'SERVER_UUID'") == 0)
 				{
 					free(query_text);
 					if (router->set_master_uuid)
-						return blr_slave_send_variable(router, slave, "'SERVER_UUID'", router->master_uuid, 0xf);
+						return blr_slave_send_variable(router, slave, "'SERVER_UUID'", router->master_uuid, BLR_TYPE_STRING);
 					else
 						return blr_slave_replay(router, slave, router->saved_master.uuid);
 				}
@@ -957,7 +962,7 @@ int	len, vers_len;
 	sprintf(version, "%s", MAXSCALE_VERSION);
 	vers_len = strlen(version);
 	blr_slave_send_fieldcount(router, slave, 1);
-	blr_slave_send_columndef(router, slave, "MAXSCALE_VERSION", 0xf, vers_len, 2);
+	blr_slave_send_columndef(router, slave, "MAXSCALE_VERSION", BLR_TYPE_STRING, vers_len, 2);
 	blr_slave_send_eof(router, slave, 3);
 
 	len = 5 + vers_len;
@@ -992,7 +997,7 @@ int	len, id_len;
 	sprintf(server_id, "%d", router->masterid);
 	id_len = strlen(server_id);
 	blr_slave_send_fieldcount(router, slave, 1);
-	blr_slave_send_columndef(router, slave, "SERVER_ID", 0x03, id_len, 2);
+	blr_slave_send_columndef(router, slave, "SERVER_ID", BLR_TYPE_INT, id_len, 2);
 	blr_slave_send_eof(router, slave, 3);
 
 	len = 5 + id_len;
@@ -1027,8 +1032,8 @@ uint8_t *ptr;
 int	len, vers_len, seqno = 2;
 
 	blr_slave_send_fieldcount(router, slave, 2);
-	blr_slave_send_columndef(router, slave, "Variable_name", 0xf, 40, seqno++);
-	blr_slave_send_columndef(router, slave, "Value", 0xf, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "Variable_name", BLR_TYPE_STRING, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "Value", BLR_TYPE_STRING, 40, seqno++);
 	blr_slave_send_eof(router, slave, seqno++);
 
 	sprintf(version, "%s", MAXSCALE_VERSION);
@@ -1070,11 +1075,11 @@ uint8_t *ptr;
 int	len, file_len;
 
 	blr_slave_send_fieldcount(router, slave, 5);
-	blr_slave_send_columndef(router, slave, "File", 0xf, 40, 2);
-	blr_slave_send_columndef(router, slave, "Position", 0xf, 40, 3);
-	blr_slave_send_columndef(router, slave, "Binlog_Do_DB", 0xf, 40, 4);
-	blr_slave_send_columndef(router, slave, "Binlog_Ignore_DB", 0xf, 40, 5);
-	blr_slave_send_columndef(router, slave, "Execute_Gtid_Set", 0xf, 40, 6);
+	blr_slave_send_columndef(router, slave, "File", BLR_TYPE_STRING, 40, 2);
+	blr_slave_send_columndef(router, slave, "Position", BLR_TYPE_STRING, 40, 3);
+	blr_slave_send_columndef(router, slave, "Binlog_Do_DB", BLR_TYPE_STRING, 40, 4);
+	blr_slave_send_columndef(router, slave, "Binlog_Ignore_DB", BLR_TYPE_STRING, 40, 5);
+	blr_slave_send_columndef(router, slave, "Execute_Gtid_Set", BLR_TYPE_STRING, 40, 6);
 	blr_slave_send_eof(router, slave, 7);
 
 	sprintf(file, "%s", router->binlog_name);
@@ -1145,7 +1150,7 @@ char    *dyn_column=NULL;
 	blr_slave_send_fieldcount(router, slave, ncols);
 	seqno = 2;
 	for (i = 0; slave_status_columns[i]; i++)
-		blr_slave_send_columndef(router, slave, slave_status_columns[i], 0xf, 40, seqno++);
+		blr_slave_send_columndef(router, slave, slave_status_columns[i], BLR_TYPE_STRING, 40, seqno++);
 	blr_slave_send_eof(router, slave, seqno++);
 
 	len = 5 + (ncols * 41) + 250;	// Max length + 250 bytes error message
@@ -1444,11 +1449,11 @@ int		len, seqno;
 ROUTER_SLAVE	*sptr;
 
 	blr_slave_send_fieldcount(router, slave, 5);
-	blr_slave_send_columndef(router, slave, "Server_id", 0xf, 40, 2);
-	blr_slave_send_columndef(router, slave, "Host", 0xf, 40, 3);
-	blr_slave_send_columndef(router, slave, "Port", 0xf, 40, 4);
-	blr_slave_send_columndef(router, slave, "Master_id", 0xf, 40, 5);
-	blr_slave_send_columndef(router, slave, "Slave_UUID", 0xf, 40, 6);
+	blr_slave_send_columndef(router, slave, "Server_id", BLR_TYPE_STRING, 40, 2);
+	blr_slave_send_columndef(router, slave, "Host", BLR_TYPE_STRING, 40, 3);
+	blr_slave_send_columndef(router, slave, "Port", BLR_TYPE_STRING, 40, 4);
+	blr_slave_send_columndef(router, slave, "Master_id", BLR_TYPE_STRING, 40, 5);
+	blr_slave_send_columndef(router, slave, "Slave_UUID", BLR_TYPE_STRING, 40, 6);
 	blr_slave_send_eof(router, slave, 7);
 
 	seqno = 8;
@@ -2315,8 +2320,8 @@ int	len, id_len, seqno = 2;
 		return 0;
 
 	blr_slave_send_fieldcount(router, slave, 2);
-	blr_slave_send_columndef(router, slave, "server_id", 0x03, 40, seqno++);
-	blr_slave_send_columndef(router, slave, "state", 0xf, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "server_id", BLR_TYPE_INT, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "state", BLR_TYPE_STRING, 40, seqno++);
 	blr_slave_send_eof(router, slave, seqno++);
 
 	ptr = GWBUF_DATA(pkt);
@@ -2427,8 +2432,8 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
        /* preparing output result */
 	blr_slave_send_fieldcount(router, slave, 2);
-	blr_slave_send_columndef(router, slave, "server_id", 0x03, 40, 2);
-	blr_slave_send_columndef(router, slave, "state", 0xf, 40, 3);
+	blr_slave_send_columndef(router, slave, "server_id", BLR_TYPE_INT, 40, 2);
+	blr_slave_send_columndef(router, slave, "state", BLR_TYPE_STRING, 40, 3);
 	blr_slave_send_eof(router, slave, 4);
 	seqno = 5;
 
@@ -3602,10 +3607,11 @@ blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options) {
  * @param	slave		The slave server to which we are sending the response
  * @param	variable	The variable name
  * @param	value		The variable value
+ * @param       column_type     The variable value type (string or int)
  * @return	Non-zero if data was sent
  */
 static int
-blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value)
+blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type)
 {
 GWBUF	*pkt;
 uint8_t *ptr;
@@ -3613,7 +3619,7 @@ int	len, vers_len;
 
 	vers_len = strlen(value);
 	blr_slave_send_fieldcount(router, slave, 1);
-	blr_slave_send_columndef(router, slave, variable, 0xf, vers_len, 2);
+	blr_slave_send_columndef(router, slave, variable, column_type, vers_len, 2);
 	blr_slave_send_eof(router, slave, 3);
 
 	len = 5 + vers_len;
@@ -3636,6 +3642,9 @@ int	len, vers_len;
  *
  * @param       router          The binlog router instance
  * @param       slave           The slave server to which we are sending the response
+ * @param       variable        The variable name
+ * @param       value        	The variable value
+ * @param       column_type     The variable value type (string or int)
  * @return      Non-zero if data was sent
  */
 static int
@@ -3663,7 +3672,7 @@ char	*old_ptr = p;
 
         blr_slave_send_fieldcount(router, slave, 2);
 
-	blr_slave_send_columndef_with_info_schema(router, slave, "Variable_name", 0xf, 40, seqno++);
+	blr_slave_send_columndef_with_info_schema(router, slave, "Variable_name", BLR_TYPE_STRING, 40, seqno++);
 	blr_slave_send_columndef_with_info_schema(router, slave, "Value", column_type, 40, seqno++);
 
         blr_slave_send_eof(router, slave, seqno++);
@@ -3757,5 +3766,4 @@ int	packet_data_len = 22 + strlen(name) + info_len + virtual_table_name_len + ta
 
 	return slave->dcb->func.write(slave->dcb, pkt);
 }
-
 

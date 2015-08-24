@@ -348,8 +348,11 @@ int		rc = 0;
 				}
 				else if (strcmp(options[i], "master-id") == 0)
 				{
-					inst->masterid = atoi(value);
-					inst->set_master_server_id = value;
+					int master_id = atoi(value);
+					if (master_id > 0) {
+						inst->masterid = master_id;
+						inst->set_master_server_id = strdup(value);
+					}
 				}
 				else if (strcmp(options[i], "master_uuid") == 0)
 				{

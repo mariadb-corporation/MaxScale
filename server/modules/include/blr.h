@@ -157,6 +157,10 @@
 /* default heartbeat interval in seconds */
 #define BLR_HEARTBEAT_DEFAULT_INTERVAL	300
 
+/* strings and numbers in SQL replies */
+#define BLR_TYPE_STRING			0xf
+#define BLR_TYPE_INT			0x03
+
 /**
  * Some useful macros for examining the MySQL Response packets
  */
