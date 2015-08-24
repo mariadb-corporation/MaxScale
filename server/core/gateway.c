@@ -86,6 +86,9 @@
 #include <ini.h>
 #include <sys/wait.h>
 #include <sys/prctl.h>
+#include <sys/file.h>
+
+#define STRING_BUFFER_SIZE 1024
 
 /** for procname */
 #if !defined(_GNU_SOURCE)
@@ -139,7 +142,7 @@ static char	datadir[PATH_MAX+1] = "";
 static bool	datadir_defined = false; /*< If the datadir was already set */
 /* The data directory we created for this gateway instance */
 static char	pidfile[PATH_MAX+1] = "";
-
+static int pidfd = -1;
 
 /**
  * exit flag for log flusher.
@@ -181,6 +184,7 @@ static void log_flush_shutdown(void);
 static void log_flush_cb(void* arg);
 static int write_pid_file(); /* write MaxScale pidfile */
 static void unlink_pidfile(void); /* remove pidfile */
+static void unlock_pidfile();
 static void libmysqld_done(void);
 static bool file_write_header(FILE* outfile);
 static bool file_write_footer(FILE* outfile);
@@ -1827,7 +1831,12 @@ int main(int argc, char **argv)
 	}
 
 	/* Write process pid into MaxScale pidfile */
-	write_pid_file();
+	if(write_pid_file() != 0)
+        {
+            skygw_log_write(LE,"Error: Failed to write PID file. Exiting.");
+            rc = MAXSCALE_ALREADYRUNNING;
+            goto return_main;
+        }
 
 	/* Init MaxScale poll system */
         poll_init();
@@ -1932,6 +1941,7 @@ int main(int argc, char **argv)
 
 	unload_all_modules();
 	/* Remove Pidfile */
+        unlock_pidfile();
 	unlink_pidfile();
 	
 return_main:
@@ -1993,6 +2003,19 @@ static void log_flush_cb(
                                    "Finished MaxScale log flusher.")));
 }
 
+static void unlock_pidfile()
+{
+    if(pidfd != -1)
+        if(flock(pidfd,LOCK_UN|LOCK_NB) != 0)
+        {
+            char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
+            char* logerr = "Failed to unlock PID file '%s'.";
+            snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
+            print_log_n_stderr(true, true, logbuf, logbuf, errno);
+        }
+    close(pidfd);
+}
+
 /** 
  * Unlink pid file, called at program exit
  */
@@ -2020,49 +2043,67 @@ static void unlink_pidfile(void)
 bool pid_file_exists()
 {
     char pathbuf[PATH_MAX+1];
-    char pidbuf[1024];
+    char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
+    char pidbuf[STRING_BUFFER_SIZE];
     pid_t pid;
-    int fd,b;
 
     snprintf(pathbuf, PATH_MAX, "%s/maxscale.pid",piddir?piddir:default_piddir);
+    pathbuf[PATH_MAX] = '\0';
 
     if(access(pathbuf,F_OK) != 0)
 	return false;
 
     if(access(pathbuf,R_OK) == 0)
     {
+        int fd, b;
+
 	if((fd = open(pathbuf, O_RDONLY)) == -1)
 	{
-	    char* logerr = "Failed to open PID file.";
-	    print_log_n_stderr(true, true, logerr, logerr, errno);
+	    char* logerr = "Failed to open PID file '%s'.";
+            snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
+	    print_log_n_stderr(true, true, logbuf, logbuf, errno);
 	    return true;
 	}
+        if(flock(fd,LOCK_EX|LOCK_NB) != 0)
+        {
+            close(fd);
+            char* logerr = "Failed to lock PID file '%s'.";
+            snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
+            print_log_n_stderr(true, true, logbuf, logbuf, errno);
+            return true;
+        }
 
-	if((b = read(fd,pidbuf,1024)) == -1)
+        pidfd = fd;
+        b = read(fd,pidbuf,sizeof(pidbuf));
+
+	if(b == -1)
 	{
-	    close(fd);
-	    char* logerr = "Failed to read from PID file.";
-	    print_log_n_stderr(true, true, logerr, logerr, errno);
+	    char* logerr = "Failed to read from PID file '%s'.";
+            snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
+	    print_log_n_stderr(true, true, logbuf, logbuf, errno);
+            unlock_pidfile();
 	    return true;
 	}
-	close(fd);
-
-	if(b == 0 )
+        else if(b == 0)
 	{
 	    /** Empty file */
-	    char* logerr = "PID file was empty.";
-	    print_log_n_stderr(true, true, logerr, logerr, 0);
+	    char* logerr = "PID file read from '%s'. File was empty.";
+            snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
+	    print_log_n_stderr(true, true, logbuf, logbuf, errno);
+            unlock_pidfile();
 	    return true;
 	}
 
-	pidbuf[b < 1024? b:1023] = '\0';
+	pidbuf[b < sizeof(pidbuf) ? b : sizeof(pidbuf) - 1] = '\0';
 	pid = strtol(pidbuf,NULL,0);
 
 	if(pid < 1)
 	{
 	    /** Bad PID */
-	    char* logerr = "PID file contents not valid.";
-	    print_log_n_stderr(true, true, logerr, logerr, 0);
+	    char* logerr = "PID file read from '%s'. File contents not valid.";
+	    snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
+	    print_log_n_stderr(true, true, logbuf, logbuf, errno);
+            unlock_pidfile();
 	    return true;
 	}
 
@@ -2075,25 +2116,26 @@ bool pid_file_exists()
 	    }
 	    else
 	    {
-		char* logerr = "Failed to send signal to process %d";
-		char logbuf[1024];
-		sprintf(logbuf,logerr,pid);
+		char* logerr = "Failed to check the existence of process %d";
+		snprintf(logbuf,sizeof(logbuf),logerr,pid);
 		print_log_n_stderr(true, true, logbuf, logbuf, errno);
+                unlock_pidfile();
 	    }
 	}
 	else
 	{
 	    char* logerr = "MaxScale is already running. Process id: %d";
-	    char logbuf[1024];
-	    sprintf(logbuf,logerr,pid);
+	    snprintf(logbuf,sizeof(logbuf),logerr,pid);
 	    print_log_n_stderr(true, true, logbuf, logbuf, 0);
+            unlock_pidfile();
 	    return true;
 	}
     }
     else
     {
-	char* logerr = "Cannot open PID file, no read permissions.";
-	print_log_n_stderr(true, true, logerr, logerr, 0);
+	char* logerr = "Cannot open PID file '%s', no read permissions.";
+	snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
+        print_log_n_stderr(true, true, logbuf, logbuf, errno);
 	return true;
     }
     return true;
@@ -2108,33 +2150,46 @@ bool pid_file_exists()
  */
 
 static int write_pid_file() {
+        char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
+        char pidstr[STRING_BUFFER_SIZE];
 
-	int fd = -1;
+        if(pidfd == -1)
+        {
+            int fd = -1;
+            snprintf(pidfile, PATH_MAX, "%s/maxscale.pid",get_piddir());
+            fd = open(pidfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+            if (fd == -1 && errno != ENOENT) {
+                char* logerr = "Failed to open PID file '%s'.";
+                snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
+                print_log_n_stderr(true, true, logbuf, logbuf, errno);
+                return -1;
+            }
 
-        snprintf(pidfile, PATH_MAX, "%s/maxscale.pid",get_piddir());
-
-        fd = open(pidfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-        if (fd == -1) {
-                fprintf(stderr, "MaxScale failed to open pidFile %s: error %d, %s\n", pidfile, errno, strerror(errno));
-		return 1;
-        } else {
-                char pidstr[50]="";
-		/* truncate pidfile content */
-                if (ftruncate(fd, 0) == -1) {
-                        fprintf(stderr, "MaxScale failed to truncate pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
-                }
-
-                snprintf(pidstr, sizeof(pidstr)-1, "%d", getpid());
-
-                if (pwrite(fd, pidstr, strlen(pidstr), 0) != (ssize_t)strlen(pidstr)) {
-                        fprintf(stderr, "MaxScale failed to write into pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
-			/* close file and return */
-                	close(fd);
-			return 1;
-                }
-
-		/* close file */
+            if(flock(fd,LOCK_EX|LOCK_NB) != 0)
+            {
+                char* logerr = "Failed to lock PID file '%s'.";
+                snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
+                print_log_n_stderr(true, true, logbuf, logbuf, errno);
                 close(fd);
+                return -1;
+            }
+            pidfd = fd;
+        }
+
+        /* truncate pidfile content */
+        if (ftruncate(pidfd, 0) == -1) {
+            fprintf(stderr, "MaxScale failed to truncate pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
+            unlock_pidfile();
+            return -1;
+        }
+
+        snprintf(pidstr, sizeof(pidstr)-1, "%d", getpid());
+
+        if (pwrite(pidfd, pidstr, strlen(pidstr), 0) != (ssize_t)strlen(pidstr)) {
+            fprintf(stderr, "MaxScale failed to write into pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
+            /* close file and return */
+            unlock_pidfile();
+            return -1;
         }
 
 	/* success */
