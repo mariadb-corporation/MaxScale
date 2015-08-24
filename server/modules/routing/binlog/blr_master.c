@@ -1111,9 +1111,6 @@ int			n_bufs = -1, pn_bufs = -1;
 
 					/* Check for COMMIT in Transactional engines, i.e InnoDB */
 					if(hdr.event_type == XID_EVENT) {
-						uint64_t xid;
-						xid = extract_field(ptr+4+20, 64);
-
 						if (router->pending_transaction) {
 							spinlock_acquire(&router->lock);
 
