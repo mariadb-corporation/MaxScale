@@ -955,7 +955,7 @@ static int
 blr_slave_send_maxscale_version(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
 GWBUF	*pkt;
-char	version[40];
+char	version[80] = "";
 uint8_t *ptr;
 int	len, vers_len;
 
@@ -1026,7 +1026,7 @@ static int
 blr_slave_send_maxscale_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
 GWBUF	*pkt;
-char	name[40];
+char	name[80];
 char	version[40];
 uint8_t *ptr;
 int	len, vers_len, seqno = 2;

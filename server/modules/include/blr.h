@@ -161,6 +161,9 @@
 #define BLR_TYPE_STRING			0xf
 #define BLR_TYPE_INT			0x03
 
+/* string len for COM_STATISTICS output */
+#define BLRM_COM_STATISTICS_SIZE	1000
+
 /**
  * Some useful macros for examining the MySQL Response packets
  */

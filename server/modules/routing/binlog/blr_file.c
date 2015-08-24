@@ -82,7 +82,9 @@ int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 int
 blr_file_init(ROUTER_INSTANCE *router)
 {
-char		*ptr, path[PATH_MAX+1], filename[PATH_MAX+1];
+char		*ptr;
+char 		path[PATH_MAX+1] = "";
+char		filename[PATH_MAX+1] = "";
 int		file_found, n = 1;
 int		root_len, i;
 DIR		*dirp;
@@ -221,7 +223,7 @@ int		fd;
 	fsync(fd);
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
-	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
+	strncpy(router->binlog_name, file, BINLOG_FNAMELEN);
 	router->binlog_fd = fd;
 	spinlock_release(&router->binlog_lock);
 	return 1;
@@ -236,7 +238,7 @@ int		fd;
 static void
 blr_file_append(ROUTER_INSTANCE *router, char *file)
 {
-char		path[1024];
+char		path[PATH_MAX+1] = "";
 int		fd;
 
 	strcpy(path, router->binlogdir);
@@ -253,7 +255,7 @@ int		fd;
 	fsync(fd);
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
-	strncpy(router->binlog_name, file,BINLOG_FNAMELEN);
+	strncpy(router->binlog_name, file, BINLOG_FNAMELEN);
 	router->current_pos = lseek(fd, 0L, SEEK_END);
 	if (router->current_pos < 4) {
 		if (router->current_pos == 0) {
@@ -327,7 +329,7 @@ blr_file_flush(ROUTER_INSTANCE *router)
 BLFILE *
 blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
 {
-char		path[1025];
+char		path[PATH_MAX + 1] = "";
 BLFILE		*file;
 
 	spinlock_acquire(&router->fileslock);
@@ -347,14 +349,14 @@ BLFILE		*file;
 		spinlock_release(&router->fileslock);
 		return NULL;
 	}
-	strncpy(file->binlogname, binlog,BINLOG_FNAMELEN+1);
+	strncpy(file->binlogname, binlog, BINLOG_FNAMELEN);
 	file->refcnt = 1;
 	file->cache = 0;
 	spinlock_init(&file->lock);
 
-	strncpy(path, router->binlogdir,1024);
-	strncat(path, "/",1024);
-	strncat(path, binlog,1024);
+	strncpy(path, router->binlogdir, PATH_MAX);
+	strncat(path, "/", PATH_MAX);
+	strncat(path, binlog, PATH_MAX);
 
 	if ((file->fd = open(path, O_RDONLY, 0666)) == -1)
 	{
@@ -670,7 +672,8 @@ struct	stat	statb;
 void
 blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 {
-char	path[PATH_MAX+1], *ptr;
+char	path[PATH_MAX+1] = "";
+char	 *ptr;
 int	fd;
 
 	strncpy(path, router->binlogdir, PATH_MAX);
@@ -706,7 +709,8 @@ GWBUF *
 blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
 {
 struct	stat	statb;
-char	path[PATH_MAX+1], *ptr;
+char	path[PATH_MAX+1] = "";
+char	*ptr;
 int	fd;
 GWBUF	*buf;
 

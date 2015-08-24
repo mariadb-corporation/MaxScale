@@ -1482,11 +1482,12 @@ ROUTER_SLAVE	*slave;
 int
 blr_statistics(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
-char	result[1000], *ptr;
+char	result[BLRM_COM_STATISTICS_SIZE + 1] = "";
+char	*ptr;
 GWBUF	*ret;
 unsigned long	len;
 
-	snprintf(result, 1000,
+	snprintf(result, BLRM_COM_STATISTICS_SIZE,
 		"Uptime: %u  Threads: %u  Events: %u  Slaves: %u  Master State: %s",
 			(unsigned int)(time(0) - router->connect_time),
 			(unsigned int)config_threadcount(),
@@ -1907,10 +1908,10 @@ static int blr_check_binlog(ROUTER_INSTANCE *router) {
 		"blr_read_events_all_events() ret = %i\n", n)));
 
 	if (n != 0) {
-		char msg_err[1024 + 1] = "";
+		char msg_err[BINLOG_ERROR_MSG_LEN + 1] = "";
 		router->master_state = BLRM_SLAVE_STOPPED;
 
-		snprintf(msg_err, 1024, "Error found in binlog %s. Safe pos is %lu", router->binlog_name, router->binlog_position);
+		snprintf(msg_err, BINLOG_ERROR_MSG_LEN, "Error found in binlog %s. Safe pos is %lu", router->binlog_name, router->binlog_position);
 		/* set mysql_errno */
 		router->m_errno = 2032;
 
