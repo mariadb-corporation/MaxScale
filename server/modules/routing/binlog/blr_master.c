@@ -950,7 +950,7 @@ int			n_bufs = -1, pn_bufs = -1;
 						return;
 					}
 				}
-				router->stats.n_binlogs++;
+
 				router->lastEventReceived = hdr.event_type;
 				router->lastEventTimestamp = hdr.timestamp;
 
