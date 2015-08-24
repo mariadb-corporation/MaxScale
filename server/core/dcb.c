@@ -1845,20 +1845,15 @@ dcb_close(DCB *dcb)
     }
         
     spinlock_acquire(&zombiespin);
-    if (dcb->dcb_is_zombie)
+    if (!dcb->dcb_is_zombie)
     {
-        return;
+        /*<
+         * Add closing dcb to the top of the list, setting zombie marker
+         */
+        dcb->dcb_is_zombie = true;
+        dcb->memdata.next = zombies;
+        zombies = dcb;
     }
-    /*<
-     * Add closing dcb to the top of the list.
-     */
-    dcb->dcb_is_zombie = true;
-    dcb->memdata.next = zombies;
-    zombies = dcb;
-    /*<
-     * Set state which indicates that it has been added to zombies
-     * list.
-     */
     spinlock_release(&zombiespin);
 }
 
