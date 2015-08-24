@@ -227,6 +227,7 @@ typedef struct dcb_callback {
 typedef struct dcb {
     skygw_chk_t     dcb_chk_top;
 	bool            dcb_errhandle_called; /*< this can be called only once */
+        bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
 	dcb_role_t      dcb_role;
     SPINLOCK        dcb_initlock;
 	DCBEVENTQ	evq;		/**< The event queue for this DCB */

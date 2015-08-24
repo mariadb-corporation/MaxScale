@@ -536,6 +536,33 @@ dcb_process_victim_queue(DCB *listofdcb)
     while (dcb != NULL) 
     {
         DCB *nextdcb = NULL;
+        /*<
+         * Stop dcb's listening and modify state accordingly.
+         */
+        if (dcb->state == DCB_STATE_POLLING  || dcb->state == DCB_STATE_LISTENING)
+        {
+            if (dcb->state == DCB_STATE_LISTENING)
+            {
+                LOGIF(LE, (skygw_log_write(
+                    LOGFILE_ERROR,
+                    "%lu [%s] Error : Removing DCB %p but was in state %s "
+                    "which is not expected for a call to dcb_close, although it"
+                    "should be processed correctly. ",
+                    pthread_self(),
+                    __func__,
+                    dcb,
+                    STRDCBSTATE(dcb->state))));
+            }
+            if ((dcb->state == DCB_STATE_POLLING && !dcb_maybe_add_persistent(dcb))
+                || (dcb->state == DCB_STATE_LISTENING))
+            {
+                dcb_close_finish(dcb);
+            }
+        }
+        
+        /* If DCB was put into persistent queue, will no longer be flagged zombie */
+        if (!dcb->dcb_is_zombie) continue;
+    
         if (dcb->fd > 0)
         {
             /*<
@@ -1794,11 +1821,6 @@ dcb_close(DCB *dcb)
         dcb,
         dcb ? STRDCBSTATE(dcb->state) : "Invalid DCB")));                                
 
-    if (DCB_STATE_ZOMBIE == dcb->state)
-    {
-        return;
-    }
-    
     if (DCB_STATE_UNDEFINED == dcb->state 
         || DCB_STATE_DISCONNECTED == dcb->state)
     {
@@ -1822,43 +1844,21 @@ dcb_close(DCB *dcb)
         return;
     }
         
-    /*<
-     * Stop dcb's listening and modify state accordingly.
-     */
-    if (dcb->state == DCB_STATE_POLLING  || dcb->state == DCB_STATE_LISTENING)
-    {
-        if (dcb->state == DCB_STATE_LISTENING)
-        {
-            LOGIF(LE, (skygw_log_write(
-                LOGFILE_ERROR,
-                "%lu [dcb_close] Error : Removing DCB %p but was in state %s "
-                "which is not expected for a call to dcb_close, although it"
-                "should be processed correctly. ",
-                pthread_self(),
-                dcb,
-                STRDCBSTATE(dcb->state))));
-        }
-	if ((dcb->state == DCB_STATE_POLLING && !dcb_maybe_add_persistent(dcb))
-            || (dcb->state == DCB_STATE_LISTENING))
-	{
-            dcb_close_finish(dcb);
-        }
-    }
-    
     spinlock_acquire(&zombiespin);
-    if (dcb->state == DCB_STATE_NOPOLLING  || dcb->state == DCB_STATE_ALLOC)
+    if (dcb->dcb_is_zombie)
     {
-        /*<
-         * Add closing dcb to the top of the list.
-         */
-        dcb->memdata.next = zombies;
-        zombies = dcb;
-        /*<
-         * Set state which indicates that it has been added to zombies
-         * list.
-         */
-        dcb->state = DCB_STATE_ZOMBIE;
+        return;
     }
+    /*<
+     * Add closing dcb to the top of the list.
+     */
+    dcb->dcb_is_zombie = true;
+    dcb->memdata.next = zombies;
+    zombies = dcb;
+    /*<
+     * Set state which indicates that it has been added to zombies
+     * list.
+     */
     spinlock_release(&zombiespin);
 }
 
@@ -1889,6 +1889,7 @@ dcb_maybe_add_persistent(DCB *dcb)
             pthread_self(),
             user)));
         dcb->user = strdup(user);
+        dcb->dcb_is_zombie = false;
         dcb->persistentstart = time(NULL);
         session_unlink_dcb(dcb->session, dcb);
         spinlock_acquire(&dcb->server->persistlock);

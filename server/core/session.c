@@ -353,7 +353,6 @@ session_free(SESSION *session)
         if (atomic_add(&session->refcount, -1) - 1) 
         {
             /* Must be one or more references left */
-            ss_dassert(nlink > 0);
             return false;
         }
         session->state = SESSION_STATE_TO_BE_FREED;
