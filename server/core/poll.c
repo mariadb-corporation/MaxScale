@@ -26,7 +26,6 @@
 #include <poll.h>
 #include <dcb.h>
 #include <atomic.h>
-#include <session.h>
 #include <gwbitmask.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -909,14 +908,6 @@ unsigned long	qtime;
 	{
 		if (dcb->state == DCB_STATE_LISTENING)
 		{
-            if (NULL == dcb->session)
-            {
-                dcb->session = (SESSION *)session_alloc(dcb->service, dcb);
-                if (dcb->session)
-                {
-                    dcb->session->state = SESSION_STATE_LISTENER;
-                }
-            }
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
 				"%lu [poll_waitevents] "

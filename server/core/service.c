@@ -354,7 +354,6 @@ GWPROTOCOL	*funcs;
 		goto retblock;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
-	port->listener->session = NULL;
 	
 	if (port->address)
 		sprintf(config_bind, "%s:%d", port->address, port->port);
@@ -363,21 +362,38 @@ GWPROTOCOL	*funcs;
 
 	if (port->listener->func.listen(port->listener, config_bind)) 
 	{
-        listeners += 1;
-        /* If lazy session creation fails, how does listeners get decremented? */
-    } 
-    else 
-    {       
-        LOGIF(LE, (skygw_log_write_flush(
-            LOGFILE_ERROR,
+                port->listener->session = session_alloc(service, port->listener);
+
+                if (port->listener->session != NULL) 
+		{
+                        port->listener->session->state = SESSION_STATE_LISTENER;
+                        listeners += 1;
+                } 
+                else 
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : Failed to create session to service %s.",
+				service->name)));
+			
+			users_free(service->users);
+                        dcb_close(port->listener);
+			port->listener = NULL;
+			goto retblock;
+                }
+        } 
+        else 
+	{       
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
 			"Error : Unable to start to listen port %d for %s %s.",
 			port->port,
-            port->protocol,
-            service->name)));
-        users_free(service->users);
-        dcb_close(port->listener);
-        port->listener = NULL;
-    }
+                        port->protocol,
+                        service->name)));
+		users_free(service->users);
+		dcb_close(port->listener);
+		port->listener = NULL;
+        }
         
 retblock:
 	return listeners;

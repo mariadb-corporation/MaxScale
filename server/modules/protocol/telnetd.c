@@ -311,6 +311,11 @@ int	n_connect = 0;
 			memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
 			client_dcb->session =
                                 session_alloc(dcb->session->service, client_dcb);
+                        if (NULL == client_dcb->session)
+                        {
+                            dcb_close(client_dcb);
+                            return n_connect;
+                        }
                         telnetd_pr = (TELNETD *)malloc(sizeof(TELNETD));
                         client_dcb->protocol = (void *)telnetd_pr;
 

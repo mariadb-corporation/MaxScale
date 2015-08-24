@@ -291,7 +291,7 @@ int	n_connect = 0;
 			client_dcb->session =
                                 session_alloc(dcb->session->service, client_dcb);
 
-			if (poll_add_dcb(client_dcb))
+			if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
 			{
                                 dcb_close(dcb);
 				return n_connect;
