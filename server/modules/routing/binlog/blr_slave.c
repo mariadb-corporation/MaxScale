@@ -636,7 +636,9 @@ extern  char *strcasestr();
 				removed_cfg = unlink(path);
 
 				if (removed_cfg == -1) {
-					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error removing %s, %s, errno %u", path, strerror(errno), errno);
+					char err_msg[BLRM_STRERROR_R_MSG_SIZE+1]="";
+					strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error removing %s, %s, errno %u", path, err_msg, errno);
 					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error_string)));
 				}
 
@@ -1026,8 +1028,8 @@ static int
 blr_slave_send_maxscale_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
 GWBUF	*pkt;
-char	name[80];
-char	version[40];
+char	name[40];
+char	version[80];
 uint8_t *ptr;
 int	len, vers_len, seqno = 2;
 

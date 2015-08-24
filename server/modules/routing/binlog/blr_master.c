@@ -41,6 +41,7 @@
  *					Server error code and msg are reported via SHOW SLAVE STATUS
  * 03/08/2015	Massimiliano Pinto	Initial implementation of transaction safety
  * 13/08/2015	Massimiliano Pinto	Addition of heartbeat check
+ * 23/08/2015	Massimiliano Pinto	Added strerror_r
  *
  * @endverbatim
  */
@@ -325,6 +326,7 @@ void
 blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
 {
 char	query[128];
+char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
 	atomic_add(&router->handling_threads, 1);
 	ss_dassert(router->handling_threads == 1);
@@ -447,7 +449,7 @@ char	query[128];
 		}
 
 		{
-		char str[80];
+		char str[BLRM_SET_HEARTBEAT_QUERY_LEN];
 		sprintf(str, "SET @master_heartbeat_period = %lu000000000", router->heartbeat);
 		buf = blr_make_query(str);
 		}
@@ -645,22 +647,18 @@ char	query[128];
 			router->service->dbref->server->port)));
 		break;
 	case BLRM_BINLOGDUMP:
-		{
-		char *name;
-
-		// Main body, we have received a binlog record from the master
+		/**
+		 * Main body, we have received a binlog record from the master
+		 */
 		blr_handle_binlog_record(router, buf);
 
-		// set heartbeat check task
-		if ((name = (char *)malloc(80)) != NULL)
-		{
-			sprintf(name, "%s heartbeat", router->service->name);
-			hktask_add(name, blr_check_last_master_event, router, router->heartbeat);
-			free(name);
-		}
+		/**
+		 * Set heartbeat check task
+		 */
+		snprintf(task_name, BLRM_TASK_NAME_LEN, "%s heartbeat", router->service->name);
+		hktask_add(task_name, blr_check_last_master_event, router, router->heartbeat);
 
 		break;
-		}
 	}
 
 	if (router->reconnect_pending)
@@ -1801,11 +1799,14 @@ int             n;
 				"Reading saved events: reached end of binlog file at %d.", pos)));
                         break;
                 case -1:
+			{
+			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: failed to read binlog "
 				"file %s at position %d"
 				" (%s).", router->binlog_name,
-				pos, strerror(errno))));
+				pos, err_msg)));
 
 			if (errno == EBADF)
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
@@ -1813,6 +1814,7 @@ int             n;
                                         ", descriptor %d.",
                                         router->binlog_name, router->binlog_fd)));
 			break;
+			}
 		default:
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: short read when reading the header. "
@@ -1861,11 +1863,13 @@ int             n;
 	{
 		if (n == -1)
 		{
+			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: the event at %ld in %s. "
 				"%s, expected %d bytes.",
 				pos, router->binlog_name,
-				strerror(errno), hdr->event_size - 19)));
+				err_msg, hdr->event_size - 19)));
 		} else {
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: short read when reading "
@@ -1956,7 +1960,7 @@ blr_check_last_master_event(void *inst) {
 ROUTER_INSTANCE *router = (ROUTER_INSTANCE *)inst;
 int	master_check = 1;
 int	master_state =  BLRM_UNCONNECTED;
-char *name = NULL;
+char task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
 	spinlock_acquire(&router->lock);
 
@@ -1980,13 +1984,9 @@ char *name = NULL;
 		 * when master state is back to BLRM_BINLOGDUMP
 		 * by blr_master_response()
 		 */
-                if ((name = (char *)malloc(80)) != NULL) {
-                        sprintf(name, "%s heartbeat", router->service->name);
+		snprintf(task_name, BLRM_TASK_NAME_LEN, "%s heartbeat", router->service->name);
 
-			hktask_remove(name);
-
-                        free(name);
-		}
+		hktask_remove(task_name);
 	}
 }
 

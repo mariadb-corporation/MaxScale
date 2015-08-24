@@ -164,6 +164,18 @@
 /* string len for COM_STATISTICS output */
 #define BLRM_COM_STATISTICS_SIZE	1000
 
+/* string len for strerror_r message */
+#define BLRM_STRERROR_R_MSG_SIZE	128
+
+/* string len for task message name */
+#define BLRM_TASK_NAME_LEN		80
+
+/* string len for temp binlog filename  */
+#define BLRM_BINLOG_NAME_STR_LEN	80
+
+/* string len for temp binlog filename  */
+#define BLRM_SET_HEARTBEAT_QUERY_LEN	80
+
 /**
  * Some useful macros for examining the MySQL Response packets
  */

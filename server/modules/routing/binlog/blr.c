@@ -45,6 +45,7 @@
  *					master_uuid, master_hostname, master_version
  *					If set those values are sent to slaves instead of
  *					saved master responses
+ * 23/08/2015	Massimiliano Pinto	Added strerror_r
  *
  * @endverbatim
  */
@@ -192,13 +193,14 @@ static	ROUTER	*
 createInstance(SERVICE *service, char **options)
 {
 ROUTER_INSTANCE	*inst;
-char		*value, *name;
+char		*value;
 int		i;
 unsigned char	*defuuid;
 char		path[PATH_MAX+1] = "";
 char		filename[PATH_MAX+1] = "";
 int		master_info = 0;
 int		rc = 0;
+char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 	if(service->credentials.name == NULL ||
 	   service->credentials.authdata == NULL)
@@ -491,12 +493,14 @@ int		rc = 0;
 		int mkdir_rval;
 		mkdir_rval = mkdir(inst->binlogdir, 0700);
 		if (mkdir_rval == -1) {
+			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 			skygw_log_write_flush(LOGFILE_ERROR,
 				"Error : Service %s, Failed to create binlog directory '%s': [%d] %s",
 				service->name,
 				inst->binlogdir,
 				errno,
-				strerror(errno));
+				err_msg);
 
 			free(inst);
 			return NULL;
@@ -634,12 +638,11 @@ int		rc = 0;
 	 */
 	blr_init_cache(inst);
 
-	if ((name = (char *)malloc(80)) != NULL)
-	{
-		sprintf(name, "%s stats", service->name);
-		hktask_add(name, stats_func, inst, BLR_STATS_FREQ);
-		free(name);
-	}
+	/*
+	 * Add tasks for statistic computation
+	 */
+	snprintf(task_name, BLRM_TASK_NAME_LEN, "%s stats", service->name);
+	hktask_add(task_name, stats_func, inst, BLR_STATS_FREQ);
 
 	/* Log whether the transaction safety option value is on*/
 	if (inst->trx_safe) {
@@ -1311,9 +1314,10 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
 {
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error;
-socklen_t len;
-char		msg[85], *errmsg;
-unsigned long mysql_errno;
+socklen_t	len;
+char		msg[BLRM_STRERROR_R_MSG_SIZE + 1 + 5] = "";
+char 		*errmsg;
+unsigned long	mysql_errno;
 
 	if (action == ERRACT_RESET)
 	{
@@ -1336,7 +1340,7 @@ unsigned long mysql_errno;
 	len = sizeof(error);
 	if (router->master && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
 	{
-		strerror_r(error, msg, 80);
+		strerror_r(error, msg, BLRM_STRERROR_R_MSG_SIZE);
 		strcat(msg, " ");
 	}
 	else
@@ -1840,12 +1844,14 @@ int	mkdir_rval;
 
 	if (mkdir_rval == -1)
 	{
+		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 		skygw_log_write(LOGFILE_ERROR,
 			"Error : Service %s, Failed to create directory '%s': [%d] %s",
 			service->name,
 			path,
 			errno,
-			strerror(errno));
+			err_msg);
 
 		return -1;
 	}

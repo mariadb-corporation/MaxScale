@@ -32,6 +32,7 @@
  * 29/06/2015	Massimiliano Pinto	Addition of blr_file_write_master_config()
  *					Cache directory is now 'cache' under router->binlogdir
  * 05/08/2015	Massimiliano Pinto	Initial implementation of transaction safety
+ * 24/08/2015	Massimiliano Pinto	Added strerror_r
  *
  * @endverbatim
  */
@@ -117,10 +118,13 @@ struct dirent	*dp;
 	root_len = strlen(router->fileroot);
 	if ((dirp = opendir(path)) == NULL)
 	{
+		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1]="";
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Unable to read the binlog directory %s, %s.",
-				router->service->name, router->binlogdir,
-				strerror(errno))));
+			router->service->name, router->binlogdir,
+			err_msg)));
 		return 0;
 	}
 	while ((dp = readdir(dirp)) != NULL)
@@ -202,7 +206,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 static int
 blr_file_create(ROUTER_INSTANCE *router, char *file)
 {
-char		path[PATH_MAX + 1];
+char		path[PATH_MAX + 1] = "";
 int		fd;
 
 	strcpy(path, router->binlogdir);
@@ -215,9 +219,12 @@ int		fd;
 	}
 	else
 	{
+		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Failed to create binlog file %s, %s.",
-				router->service->name, path, strerror(errno))));
+				router->service->name, path, err_msg)));
 		return 0;
 	}
 	fsync(fd);
@@ -291,12 +298,14 @@ int	n;
 	if ((n = pwrite(router->binlog_fd, buf, hdr->event_size,
 				hdr->next_pos - hdr->event_size)) != hdr->event_size)
 	{
+		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Failed to write binlog record at %d of %s, %s. "
 			"Truncating to previous record.",
 			router->service->name, hdr->next_pos - hdr->event_size,
 			router->binlog_name,
-			strerror(errno))));
+			err_msg)));
 		/* Remove any partual event that was written */
 		ftruncate(router->binlog_fd, hdr->next_pos - hdr->event_size);
 		return 0;
@@ -429,19 +438,23 @@ struct	stat	statb;
 		case 0:
 			LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
 				"Reached end of binlog file at %d.",
-					pos)));
+				pos)));
 			break;
 		case -1:
+			{
+			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Failed to read binlog file %s at position %d"
 				" (%s).", file->binlogname,
-						pos, strerror(errno))));
+				pos, err_msg)));
 			if (errno == EBADF)
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 					"Bad file descriptor in read binlog for file %s"
 					", reference count is %d, descriptor %d.",
-						file->binlogname, file->refcnt, file->fd)));
+					file->binlogname, file->refcnt, file->fd)));
 			break;
+			}
 		default:
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Short read when reading the header. "
@@ -495,19 +508,24 @@ struct	stat	statb;
 			case 0:
 				LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
 					"Reached end of binlog file at %d.",
-						pos)));
+					pos)));
 				break;
 			case -1:
+				{
+				char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+				strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 					"Failed to read binlog file %s at position %d"
 					" (%s).", file->binlogname,
-							pos, strerror(errno))));
+					pos, err_msg)));
+
 				if (errno == EBADF)
 					LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 						"Bad file descriptor in read binlog for file %s"
 						", reference count is %d, descriptor %d.",
-							file->binlogname, file->refcnt, file->fd)));
+						file->binlogname, file->refcnt, file->fd)));
 				break;
+				}
 			default:
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 					"Short read when reading the header. "
@@ -554,11 +572,13 @@ struct	stat	statb;
 	{
 		if (n == -1)
 		{
+			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error reading the event at %ld in %s. "
 				"%s, expected %d bytes.",
 				pos, file->binlogname, 
-				strerror(errno), hdr->event_size - 19)));
+				err_msg, hdr->event_size - 19)));
 		}
 		else
 		{
@@ -747,7 +767,7 @@ GWBUF	*buf;
 int
 blr_file_next_exists(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
-char	*sptr, buf[80], bigbuf[PATH_MAX + 1];
+char	*sptr, buf[BLRM_BINLOG_NAME_STR_LEN], bigbuf[PATH_MAX + 1];
 int	filenum;
 
 	if ((sptr = strrchr(slave->binlogfile, '.')) == NULL)
@@ -795,7 +815,7 @@ blr_cache_read_master_data(ROUTER_INSTANCE *router)
 int
 blr_file_get_next_binlogname(ROUTER_INSTANCE *router)
 {
-char	*sptr, buf[80], bigbuf[4096];
+char	*sptr;
 int	filenum;
 
 	if ((sptr = strrchr(router->binlog_name, '.')) == NULL)
@@ -850,6 +870,7 @@ int rc;
 char path[(PATH_MAX - 15) + 1] = "";
 char filename[(PATH_MAX - 4) + 1] = "";
 char tmp_file[PATH_MAX + 1] = "";
+char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
 
 	strncpy(path, router->binlogdir, (PATH_MAX - 15));
 
@@ -862,12 +883,14 @@ char tmp_file[PATH_MAX + 1] = "";
 	/* open file for writing */
 	config_file = fopen(tmp_file,"wb");
 	if (config_file == NULL) {
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror(errno), errno);
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
 		return 2;
 	}
 
 	if(chmod(tmp_file, S_IRUSR | S_IWUSR) < 0) {
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror(errno), errno);
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
 		return 2;
 	}
 
@@ -887,12 +910,14 @@ char tmp_file[PATH_MAX + 1] = "";
 	rc = rename(tmp_file, filename);
 
 	if (rc == -1) {
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror(errno), errno);
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
 		return 3;
 	}
 
 	if(chmod(filename, S_IRUSR | S_IWUSR) < 0) {
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror(errno), errno);
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
 		return 3;
 	}
 
@@ -966,16 +991,21 @@ int event_error = 0;
 
                                         break;
                                 case -1:
+					{
+					char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+					strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
                                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
                                                 "*** ERROR: Failed to read binlog file %s at position %llu"
                                                 " (%s).", router->binlog_name,
-                                                pos, strerror(errno))));
+                                                pos, err_msg)));
+
                                         if (errno == EBADF)
                                                 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
                                                         "*** ERROR: Bad file descriptor in read binlog for file %s"
                                                         ", descriptor %d.",
                                                         router->binlog_name, router->binlog_fd)));
                                         break;
+					}
                                 default:
                                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
                                                 "*** ERROR: Short read when reading the header. "
@@ -1134,11 +1164,13 @@ int event_error = 0;
                 {
                         if (n == -1)
                         {
+				char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+				strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
                                 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
                                         "Error reading the event at %llu in %s. "
                                         "%s, expected %d bytes.",
                                         pos, router->binlog_name,
-                                        strerror(errno), hdr.event_size - 19)));
+                                        err_msg, hdr.event_size - 19)));
                         }
                         else
                         {
