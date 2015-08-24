@@ -2064,7 +2064,7 @@ bool pid_file_exists()
 	    print_log_n_stderr(true, true, logbuf, logbuf, errno);
 	    return true;
 	}
-        if(flock(fd,LOCK_EX|LOCK_NB) != 0)
+        if(flock(fd,LOCK_EX|LOCK_NB))
         {
             close(fd);
             char* logerr = "Failed to lock PID file '%s'.";
@@ -2158,14 +2158,14 @@ static int write_pid_file() {
             int fd = -1;
             snprintf(pidfile, PATH_MAX, "%s/maxscale.pid",get_piddir());
             fd = open(pidfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
-            if (fd == -1 && errno != ENOENT) {
+            if (fd == -1) {
                 char* logerr = "Failed to open PID file '%s'.";
                 snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
                 print_log_n_stderr(true, true, logbuf, logbuf, errno);
                 return -1;
             }
 
-            if(flock(fd,LOCK_EX|LOCK_NB) != 0)
+            if(flock(fd,LOCK_EX|LOCK_NB))
             {
                 char* logerr = "Failed to lock PID file '%s'.";
                 snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
@@ -2177,7 +2177,7 @@ static int write_pid_file() {
         }
 
         /* truncate pidfile content */
-        if (ftruncate(pidfd, 0) == -1) {
+        if (ftruncate(pidfd, 0)) {
             fprintf(stderr, "MaxScale failed to truncate pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
             unlock_pidfile();
             return -1;
