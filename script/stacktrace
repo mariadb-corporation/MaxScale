@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# How we recognize whether a line in the file is from the stack-trace.
+STACK_LINE=".*\(.*\) \[.*\]"
+# How we match the date + time part of a line.
+DATE_TIME="[0-9]\+-[0-9]\+-[0-9]\+ [0-9]\+:[0-9]\+:[0-9]\+"
+
+function print_usage {
+    echo "usage: stacktrace [-p prefix] [stacktrace.txt]"
+    echo
+    echo "-p frefix: The path prefix (e.g. /usr/local/mariadb-maxscale/) "
+    echo "           to remove when searching for files."
+    echo
+    echo "stacktrace.txt: A file containing a stack-trace."
+    exit 1
+}
+
+function print_usage_and_exit {
+    print_usage
+    exit 1
+}
+
+function parse_stack_trace {
+    local prefix=$1
+    local file=$2
+
+    cat $file | egrep "$STACK_LINE" | sed "s/$DATE_TIME//" | \
+    while read line
+    do
+	local path=${line%%(*}
+	local entry="("${line##*(}
+
+	path=${path#$prefix}
+
+	if [ -e "${path}" ]
+	then
+	    file ${path} | fgrep -q executable
+	    let rc=$?
+	    local address;
+	    
+	    if [ $rc -eq 0 ]
+	    then
+		address=${entry#*\[}
+		address=${address%\]*}
+	    else
+		address=${entry#*\+}
+		address=${address%\)*}
+	    fi
+
+	    addr2line -e ${path} ${address}
+        else
+	    echo ${line}
+	fi
+    done
+}
+
+function main {
+    local prefix
+    local key
+    
+    while [[ $# > 1 ]]
+    do
+	key="$1"
+	
+	case $key in
+	    -h)
+		print_usage
+		exit
+		;;
+	    -p|--prefix)
+		prefix="$2";
+		shift
+		;;
+
+	    *)
+		echo "error: Unknown parameter $key"
+		print_usage_and_exit
+	esac
+	shift
+    done
+
+    local file=$1
+
+    parse_stack_trace "$prefix" "$file"
+}
+
+main $*
