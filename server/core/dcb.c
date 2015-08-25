@@ -1852,7 +1852,7 @@ dcb_close(DCB *dcb)
     {
         char *user;
         user = session_getUser(dcb->session);
-        dcb->user = strdup(user);
+        if (NULL != user) dcb->user = strdup(user);
         /*<
          * Add closing dcb to the top of the list, setting zombie marker
          */

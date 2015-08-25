@@ -96,7 +96,7 @@ static  simple_mutex_t  epoll_wait_mutex; /*< serializes calls to epoll_wait */
 static	int		n_waiting = 0;	  /*< No. of threads in epoll_wait */
 static	int		process_pollq(int thread_id);
 static	void		poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, __uint32_t ev);
-
+static bool             poll_dcb_session_check(DCB *dcb);
 
 DCB			*eventq = NULL;
 SPINLOCK	pollqlock = SPINLOCK_INIT;
@@ -885,7 +885,10 @@ unsigned long	qtime;
 						dcb, 
 						&tls_log_info.li_sesid, 
 						&tls_log_info.li_enabled_logs)));
-			dcb->func.write_ready(dcb);
+                        if (poll_dcb_session_check(dcb))
+                        {
+                            dcb->func.write_ready(dcb);
+                        }
 		} else {
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
@@ -915,7 +918,10 @@ unsigned long	qtime;
 				dcb, 
 				&tls_log_info.li_sesid, 
 				&tls_log_info.li_enabled_logs)));
-			dcb->func.accept(dcb);
+                        if (poll_dcb_session_check(dcb))
+                        {
+                            dcb->func.accept(dcb);
+                        }
 		}
 		else
 		{
@@ -932,7 +938,10 @@ unsigned long	qtime;
 				dcb, 
 				&tls_log_info.li_sesid, 
 				&tls_log_info.li_enabled_logs)));
-			dcb->func.read(dcb);
+                        if (poll_dcb_session_check(dcb))
+                        {
+                            dcb->func.read(dcb);
+                        }
 		}
 	}
 	if (ev & EPOLLERR)
@@ -967,7 +976,10 @@ unsigned long	qtime;
 			dcb, 
 			&tls_log_info.li_sesid, 
 			&tls_log_info.li_enabled_logs)));
-		dcb->func.error(dcb);
+                        if (poll_dcb_session_check(dcb))
+                        {
+                            dcb->func.error(dcb);
+                        }
 	}
 
 	if (ev & EPOLLHUP)
@@ -996,7 +1008,10 @@ unsigned long	qtime;
 				dcb, 
 				&tls_log_info.li_sesid, 
 				&tls_log_info.li_enabled_logs)));
-			dcb->func.hangup(dcb);
+                        if (poll_dcb_session_check(dcb))
+                        {
+                            dcb->func.hangup(dcb);
+                        }
 		}
 		else
 			spinlock_release(&dcb->dcb_initlock);
@@ -1029,7 +1044,10 @@ unsigned long	qtime;
 				dcb, 
 				&tls_log_info.li_sesid, 
 				&tls_log_info.li_enabled_logs)));
-			dcb->func.hangup(dcb);
+                        if (poll_dcb_session_check(dcb))
+                        {
+                            dcb->func.hangup(dcb);
+                        }
 		}
 		else
 			spinlock_release(&dcb->dcb_initlock);
@@ -1098,6 +1116,29 @@ unsigned long	qtime;
 }
 
 /**
+ * 
+ * Check that the DCB has a session link before processing.
+ * If not, log an error.  Processing will be bypassed
+ * 
+ * @param   dcb     The DCB to check
+ * @return  bool    Does the DCB have a non-null session link
+ */
+static bool
+poll_dcb_session_check(DCB *dcb)
+{
+    if (dcb->session)
+    {
+        return true;
+    }
+    else
+    {
+        LOGIF;
+        return false;
+    }
+}
+    
+/**
+ * 
  * Shutdown the polling loop
  */
 void
