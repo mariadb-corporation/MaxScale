@@ -75,12 +75,12 @@ There is a possibility for misbehavior; if `USE mytable` was executed in one of 
 The above-mentioned behavior can be partially controller with the `use_sql_variables_in` configuration parameter.
 
 ```
-use_sql_variables_in=[master|all] (master)
+use_sql_variables_in=[master|all] (default: all)
 ```
 
-Server-side session variables are called as SQL variables. If "master" or no value is set, SQL variables are read and written in master only. Autocommit values and prepared statements are routed to all nodes always.
+Server-side session variables are called as SQL variables. If "master" is set, SQL variables are read and written in master only. Autocommit values and prepared statements are routed to all nodes always.
 
-**NOTE**: If variable is written as a part of write query, it is treated like write query and not routed to all servers. For example, `INSERT INTO test.t1 VALUES (@myvar:= 7)` will be routed to the master and an error in the error log will be written.
+**NOTE**: If variable is written as a part of write query, it is treated like write query and not routed to all servers. For example, `INSERT INTO test.t1 VALUES (@myvar:= 7)` will not be routed and an error in the error log will be written. Add the `use_sql_variables_in=master` to the service definition to allow these queries.
 
 #### Examples of session command limitations
 
