@@ -560,6 +560,7 @@ dcb_process_victim_queue(DCB *listofdcb)
                 if (dcb_maybe_add_persistent(dcb))
                 {
                     /* Have taken DCB into persistent pool, no further killing */
+                    dcb = dcb->memdata.next;
                     continue;
                 }
             }
@@ -1858,6 +1859,10 @@ dcb_close(DCB *dcb)
         dcb->dcb_is_zombie = true;
         dcb->memdata.next = zombies;
         zombies = dcb;
+        /*< Set bit for each maxscale thread. This should be done before
+		 * the state is changed, so as to protect the DCB from premature
+		 * destruction. */
+        bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
     }
     spinlock_release(&zombiespin);
 }
@@ -1873,7 +1878,7 @@ static bool
 dcb_maybe_add_persistent(DCB *dcb)
 {
     int  poolcount = -1;
-    if (dcb->user 
+    if (dcb->user != NULL
         && strlen(dcb->user)
         && dcb->server 
         && dcb->server->persistpoolmax 
@@ -1888,7 +1893,6 @@ dcb_maybe_add_persistent(DCB *dcb)
             dcb->user)));
         dcb->dcb_is_zombie = false;
         dcb->persistentstart = time(NULL);
-        session_unlink_dcb(dcb->session, dcb);
         spinlock_acquire(&dcb->server->persistlock);
         dcb->nextpersistent = dcb->server->persistent;
         dcb->server->persistent = dcb;
