@@ -40,6 +40,7 @@
 #include <housekeeper.h>
 #include <buffer.h>
 #include <regex.h>
+#include <modules.h>
 
 static char* server_options[] = {
     "MariaDB Corporation MaxScale",
