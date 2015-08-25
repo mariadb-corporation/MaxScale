@@ -89,6 +89,7 @@
 #include <sys/file.h>
 
 #define STRING_BUFFER_SIZE 1024
+#define PIDFD_CLOSED -2
 
 /** for procname */
 #if !defined(_GNU_SOURCE)
@@ -142,7 +143,7 @@ static char	datadir[PATH_MAX+1] = "";
 static bool	datadir_defined = false; /*< If the datadir was already set */
 /* The data directory we created for this gateway instance */
 static char	pidfile[PATH_MAX+1] = "";
-static int pidfd = -1;
+static int pidfd = PIDFD_CLOSED;
 
 /**
  * exit flag for log flusher.
@@ -2005,7 +2006,7 @@ static void log_flush_cb(
 
 static void unlock_pidfile()
 {
-    if(pidfd != -1)
+    if(pidfd != PIDFD_CLOSED)
         if(flock(pidfd,LOCK_UN|LOCK_NB) != 0)
         {
             char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
@@ -2153,7 +2154,7 @@ static int write_pid_file() {
         char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
         char pidstr[STRING_BUFFER_SIZE];
 
-        if(pidfd == -1)
+        if(pidfd == PIDFD_CLOSED)
         {
             int fd = -1;
             snprintf(pidfile, PATH_MAX, "%s/maxscale.pid",get_piddir());
