@@ -179,7 +179,6 @@ typedef enum {
         DCB_STATE_DISCONNECTED, /*< The socket is now closed */
         DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
         DCB_STATE_ZOMBIE,       /*< DCB is no longer active, waiting to free it */
-        DCB_STATE_FREED         /*< Memory freed */
 } dcb_state_t;
 
 typedef enum {

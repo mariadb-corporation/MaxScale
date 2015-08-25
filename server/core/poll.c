@@ -866,7 +866,6 @@ unsigned long	qtime;
 	ss_debug(spinlock_acquire(&dcb->dcb_initlock);)
 	ss_dassert(dcb->state != DCB_STATE_ALLOC);
 	ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
-	ss_dassert(dcb->state != DCB_STATE_FREED);
 	ss_debug(spinlock_release(&dcb->dcb_initlock);)
 
 	LOGIF(LD, (skygw_log_write(

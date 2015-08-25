@@ -409,7 +409,6 @@ dcb_process_zombies(int threadid)
 DCB	*zombiedcb, *previousdcb;
 DCB     *listofdcb = NULL;
 DCB     *dcb = NULL;
-bool    succp = false;
 
 	/**
 	 * Perform a dirty read to see if there is anything in the queue.
@@ -470,15 +469,14 @@ bool    succp = false;
 				
 				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
-					"%lu [dcb_process_zombies] Remove dcb "
+					"%lu [%s] Remove dcb "
 					"%p fd %d in state %s from the "
 					"list of zombies.",
 					pthread_self(),
+                                        __func__,
 					zombiedcb,
 					zombiedcb->fd,
 					STRDCBSTATE(zombiedcb->state)))); 
-				ss_info_dassert(zombiedcb->state == DCB_STATE_ZOMBIE,
-                                    "dcb not in DCB_STATE_ZOMBIE state.");
 				/*<
 				 * Move zombie dcb to linked list of victim dcbs.
                                  * The variable dcb is used to hold the last DCB
@@ -553,15 +551,16 @@ dcb_process_victim_queue(DCB *listofdcb)
                     dcb,
                     STRDCBSTATE(dcb->state))));
             }
-            if ((dcb->state == DCB_STATE_POLLING && !dcb_maybe_add_persistent(dcb))
-                || (dcb->state == DCB_STATE_LISTENING))
-            {
-                dcb_close_finish(dcb);
+            else {
+                /* Must be DCB_STATE_POLLING */
+                if (dcb_maybe_add_persistent(dcb))
+                {
+                    /* Have taken DCB into persistent pool, no further killing */
+                    continue;
+                }
             }
+            dcb_close_finish(dcb);
         }
-        
-        /* If DCB was put into persistent queue, will no longer be flagged zombie */
-        if (!dcb->dcb_is_zombie) continue;
     
         if (dcb->fd > 0)
         {
@@ -603,10 +602,10 @@ dcb_process_victim_queue(DCB *listofdcb)
             &tls_log_info.li_sesid, 
             &tls_log_info.li_enabled_logs)));
 
-            dcb->state = DCB_STATE_DISCONNECTED;
-            nextdcb = dcb->memdata.next;
-            dcb_final_free(dcb);
-            dcb = nextdcb;
+        dcb->state = DCB_STATE_DISCONNECTED;
+        nextdcb = dcb->memdata.next;
+        dcb_final_free(dcb);
+        dcb = nextdcb;
     }
     /** Reset threads session data */
     LOGIF(LT, tls_log_info.li_sesid = 0);
@@ -732,7 +731,6 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
                         session->client,
                         session->client->fd)));
         }
-        ss_dassert(dcb->fd == DCBFD_CLOSED); /*< must be uninitialized at this point */
         /**
          * Successfully connected to backend. Assign file descriptor to dcb
          */
@@ -2281,8 +2279,6 @@ gw_dcb_state2string (int state)
 			return "DCB for listening socket";
 		case DCB_STATE_DISCONNECTED:
 			return "DCB socket closed";
-		case DCB_STATE_FREED:
-			return "DCB memory could be freed";
 		case DCB_STATE_ZOMBIE:
 			return "DCB Zombie";
 		case DCB_STATE_UNDEFINED:
