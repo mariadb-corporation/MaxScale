@@ -1441,7 +1441,8 @@ static route_target_t get_route_target (
 		{
 			target = TARGET_SLAVE;
 		}
-		else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
+
+                if (QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
 			/** Configured not to allow reading variables from slaves */
 			(use_sql_variables_in == TYPE_MASTER && 
