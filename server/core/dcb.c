@@ -481,7 +481,6 @@ DCB     *dcb = NULL;
 					zombiedcb,
 					zombiedcb->fd,
 					STRDCBSTATE(zombiedcb->state))));
-                                }
 				/*<
 				 * Move zombie dcb to linked list of victim dcbs.
                                  * The variable dcb is used to hold the last DCB
