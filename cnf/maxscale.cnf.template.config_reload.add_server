@@ -56,8 +56,8 @@ address=###repl_server_IP_4###
 port=###repl_server_port_4###
 protocol=MySQLBackend
 
-# [server5]
-# type=server
-# address=###repl_server_IP_4###
-# port=###repl_server_port_4###
-# protocol=MySQLBackend
+[server5]
+type=server
+address=###repl_server_IP_4###
+port=###repl_server_port_4###
+protocol=MySQLBackend
