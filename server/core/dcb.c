@@ -462,12 +462,18 @@ DCB     *dcb = NULL;
 				 * queue or NULL if the DCB is at the head of the
 				 * queue.  Remove zombiedcb from the zombies list.
 				 */
-				if (previousdcb == NULL)
+				if (NULL == previousdcb)
+                                {
 					zombies = zombiedcb->memdata.next;
-				else
+				}
+                                else
+                                {
 					previousdcb->memdata.next = zombiedcb->memdata.next;
+                                }
 				
-				LOGIF(LD, (skygw_log_write_flush(
+				if (LOG_IS_ENABLED(LD))
+                                { 
+                                    (skygw_log_write_flush(
 					LOGFILE_DEBUG,
 					"%lu [%s] Remove dcb "
 					"%p fd %d in state %s from the "
@@ -476,7 +482,8 @@ DCB     *dcb = NULL;
                                         __func__,
 					zombiedcb,
 					zombiedcb->fd,
-					STRDCBSTATE(zombiedcb->state)))); 
+					STRDCBSTATE(zombiedcb->state)));
+                                }
 				/*<
 				 * Move zombie dcb to linked list of victim dcbs.
                                  * The variable dcb is used to hold the last DCB
