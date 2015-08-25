@@ -1849,6 +1849,9 @@ dcb_close(DCB *dcb)
     spinlock_acquire(&zombiespin);
     if (!dcb->dcb_is_zombie)
     {
+        char *user;
+        user = session_getUser(dcb->session);
+        dcb->user = strdup(user);
         /*<
          * Add closing dcb to the top of the list, setting zombie marker
          */
@@ -1869,11 +1872,9 @@ dcb_close(DCB *dcb)
 static bool
 dcb_maybe_add_persistent(DCB *dcb)
 {
-    char *user;
     int  poolcount = -1;
-    user = session_getUser(dcb->session);
-    if (user 
-        && strlen(user)
+    if (dcb->user 
+        && strlen(dcb->user)
         && dcb->server 
         && dcb->server->persistpoolmax 
         && !dcb->dcb_errhandle_called
