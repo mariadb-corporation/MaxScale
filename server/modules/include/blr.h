@@ -176,6 +176,9 @@
 /* string len for temp binlog filename  */
 #define BLRM_SET_HEARTBEAT_QUERY_LEN	80
 
+/* string len for master registration query  */
+#define BLRM_MASTER_REGITRATION_QUERY_LEN	255
+
 /**
  * Some useful macros for examining the MySQL Response packets
  */

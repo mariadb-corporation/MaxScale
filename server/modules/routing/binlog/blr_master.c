@@ -325,7 +325,7 @@ char *name;
 void
 blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
 {
-char	query[128];
+char	query[BLRM_MASTER_REGITRATION_QUERY_LEN+1];
 char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
 	atomic_add(&router->handling_threads, 1);
