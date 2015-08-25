@@ -89,7 +89,7 @@
 #include <sys/file.h>
 
 #define STRING_BUFFER_SIZE 1024
-#define PIDFD_CLOSED -2
+#define PIDFD_CLOSED -1
 
 /** for procname */
 #if !defined(_GNU_SOURCE)
@@ -1834,7 +1834,6 @@ int main(int argc, char **argv)
 	/* Write process pid into MaxScale pidfile */
 	if(write_pid_file() != 0)
         {
-            skygw_log_write(LE,"Error: Failed to write PID file. Exiting.");
             rc = MAXSCALE_ALREADYRUNNING;
             goto return_main;
         }
@@ -2007,6 +2006,7 @@ static void log_flush_cb(
 static void unlock_pidfile()
 {
     if(pidfd != PIDFD_CLOSED)
+    {
         if(flock(pidfd,LOCK_UN|LOCK_NB) != 0)
         {
             char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
@@ -2014,7 +2014,8 @@ static void unlock_pidfile()
             snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
             print_log_n_stderr(true, true, logbuf, logbuf, errno);
         }
-    close(pidfd);
+        close(pidfd);
+    }
 }
 
 /** 
@@ -2047,8 +2048,9 @@ bool pid_file_exists()
     char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
     char pidbuf[STRING_BUFFER_SIZE];
     pid_t pid;
+    bool lock_failed = false;
 
-    snprintf(pathbuf, PATH_MAX, "%s/maxscale.pid",piddir?piddir:default_piddir);
+    snprintf(pathbuf, PATH_MAX, "%s/maxscale.pid",get_piddir());
     pathbuf[PATH_MAX] = '\0';
 
     if(access(pathbuf,F_OK) != 0)
@@ -2067,11 +2069,15 @@ bool pid_file_exists()
 	}
         if(flock(fd,LOCK_EX|LOCK_NB))
         {
-            close(fd);
-            char* logerr = "Failed to lock PID file '%s'.";
-            snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
-            print_log_n_stderr(true, true, logbuf, logbuf, errno);
-            return true;
+            if(errno != EWOULDBLOCK)
+            {
+                char* logerr = "Failed to lock PID file '%s'.";
+                snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
+                print_log_n_stderr(true, true, logbuf, logbuf, errno);
+                close(fd);
+                return true;
+            }
+            lock_failed = true;
         }
 
         pidfd = fd;
@@ -2088,7 +2094,9 @@ bool pid_file_exists()
         else if(b == 0)
 	{
 	    /** Empty file */
-	    char* logerr = "PID file read from '%s'. File was empty.";
+	    char* logerr = "PID file read from '%s'. File was empty.\n"
+            "If the file is the correct PID file and no other MaxScale processes "
+            "are running, please remove it manually and start MaxScale again.";
             snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
 	    print_log_n_stderr(true, true, logbuf, logbuf, errno);
             unlock_pidfile();
@@ -2101,7 +2109,9 @@ bool pid_file_exists()
 	if(pid < 1)
 	{
 	    /** Bad PID */
-	    char* logerr = "PID file read from '%s'. File contents not valid.";
+	    char* logerr = "PID file read from '%s'. File contents not valid.\n"
+            "If the file is the correct PID file and no other MaxScale processes "
+            "are running, please remove it manually and start MaxScale again.";
 	    snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
 	    print_log_n_stderr(true, true, logbuf, logbuf, errno);
             unlock_pidfile();
@@ -2113,31 +2123,39 @@ bool pid_file_exists()
 	    if(errno == ESRCH)
 	    {
 		/** no such process, old PID file */
-		return false;
+                if(lock_failed)
+                {
+                    char* logerr = "Locking the PID file '%s' failed. Read PID from file and no process found with PID %d. "
+                    "Confirm that no other process holds the lock on the PID file.";
+                    snprintf(logbuf,sizeof(logbuf),logerr,pathbuf,pid);
+                    print_log_n_stderr(true, true, logbuf, logbuf, 0);
+                    close(fd);
+                }
+		return lock_failed;
 	    }
 	    else
 	    {
-		char* logerr = "Failed to check the existence of process %d";
-		snprintf(logbuf,sizeof(logbuf),logerr,pid);
+		char* logerr = "Failed to check the existence of process %d read from file '%s'";
+		snprintf(logbuf,sizeof(logbuf),logerr,pid,pathbuf);
 		print_log_n_stderr(true, true, logbuf, logbuf, errno);
                 unlock_pidfile();
 	    }
 	}
 	else
 	{
-	    char* logerr = "MaxScale is already running. Process id: %d";
+	    char* logerr = "MaxScale is already running. Process id: %d. "
+            "Use another location for the PID file to run multiple instances of MaxScale on the same machine.";
 	    snprintf(logbuf,sizeof(logbuf),logerr,pid);
 	    print_log_n_stderr(true, true, logbuf, logbuf, 0);
             unlock_pidfile();
-	    return true;
 	}
     }
     else
     {
-	char* logerr = "Cannot open PID file '%s', no read permissions.";
+	char* logerr = "Cannot open PID file '%s', no read permissions. "
+        "Please confirm that the user running MaxScale has read permissions on the file.";
 	snprintf(logbuf,sizeof(logbuf),logerr,pathbuf);
         print_log_n_stderr(true, true, logbuf, logbuf, errno);
-	return true;
     }
     return true;
 }
@@ -2154,11 +2172,13 @@ static int write_pid_file() {
         char logbuf[STRING_BUFFER_SIZE + PATH_MAX];
         char pidstr[STRING_BUFFER_SIZE];
 
+        snprintf(pidfile, PATH_MAX, "%s/maxscale.pid",get_piddir());
+
         if(pidfd == PIDFD_CLOSED)
         {
             int fd = -1;
-            snprintf(pidfile, PATH_MAX, "%s/maxscale.pid",get_piddir());
-            fd = open(pidfile, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+
+            fd = open(pidfile, O_WRONLY | O_CREAT, 0777);
             if (fd == -1) {
                 char* logerr = "Failed to open PID file '%s'.";
                 snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
@@ -2168,8 +2188,15 @@ static int write_pid_file() {
 
             if(flock(fd,LOCK_EX|LOCK_NB))
             {
-                char* logerr = "Failed to lock PID file '%s'.";
-                snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
+                if(errno == EWOULDBLOCK)
+                {
+                    snprintf(logbuf,sizeof(logbuf),"Failed to lock PID file '%s', another process is holding a lock on it. "
+                            "Please confirm that no other MaxScale process is using the same PID file location.",pidfile);
+                }
+                else
+                {
+                    snprintf(logbuf,sizeof(logbuf),"Failed to lock PID file '%s'.",pidfile);
+                }
                 print_log_n_stderr(true, true, logbuf, logbuf, errno);
                 close(fd);
                 return -1;
@@ -2179,7 +2206,9 @@ static int write_pid_file() {
 
         /* truncate pidfile content */
         if (ftruncate(pidfd, 0)) {
-            fprintf(stderr, "MaxScale failed to truncate pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
+            char* logerr = "MaxScale failed to truncate PID file '%s'.";
+            snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
+            print_log_n_stderr(true, true, logbuf, logbuf, errno);
             unlock_pidfile();
             return -1;
         }
@@ -2187,8 +2216,9 @@ static int write_pid_file() {
         snprintf(pidstr, sizeof(pidstr)-1, "%d", getpid());
 
         if (pwrite(pidfd, pidstr, strlen(pidstr), 0) != (ssize_t)strlen(pidstr)) {
-            fprintf(stderr, "MaxScale failed to write into pidfile %s: error %d, %s\n", pidfile, errno, strerror(errno));
-            /* close file and return */
+            char* logerr = "MaxScale failed to write into PID file '%s'.";
+            snprintf(logbuf,sizeof(logbuf),logerr,pidfile);
+            print_log_n_stderr(true, true, logbuf, logbuf, errno);
             unlock_pidfile();
             return -1;
         }
