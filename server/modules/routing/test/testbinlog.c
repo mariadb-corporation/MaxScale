@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 
 	if(arg_vector == NULL)
 	{
-		fprintf(stderr,"Error: Memory allocation failed for log manager arg_vector.\n");
+		fprintf(stderr,"Error: Memory allocation FAILED for log manager arg_vector.\n");
 		return 1;
 	}
 
@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
 
 	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Error: Memory allocation failed for ROUTER_INSTANCE")));
+			"Error: Memory allocation FAILED for ROUTER_INSTANCE")));
 
 		skygw_log_sync_all();
 		skygw_logmanager_done();
@@ -163,6 +163,7 @@ int main(int argc, char **argv) {
 	 *
 	 ********************************************/
 
+	printf("--------- CHANGE MASTER TO parsing tests ---------\n");
 	/**
 	 * Test 1: no given options
 	 *
@@ -173,9 +174,9 @@ int main(int argc, char **argv) {
 	/* Expected rc is 1, if 0 test fails */
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: no options for [%s] failed\n", tests, query);
+		printf("Test %d: no options for [%s] FAILED\n", tests, query);
 		return 1;
-	} else printf("Test %d Passed, no given options for [%s]\n", tests, query);
+	} else printf("Test %d PASSED, no given options for [%s]\n", tests, query);
 
 	tests++;
 
@@ -189,9 +190,9 @@ int main(int argc, char **argv) {
 	/* Expected rc is 1, if 0 test fails */
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 1 wrong option for [%s] failed\n", tests, query);
+		printf("Test %d: wrong options for [%s] FAILED\n", tests, query);
 		return 1;
-	} else printf("Test %d Passed, 1 wrong option for [%s]\n", tests, query);
+	} else printf("Test %d PASSED, wrong options for [%s]\n", tests, query);
 
 	tests++;
 
@@ -205,9 +206,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 1 wrong option for [%s] failed\n", tests, saved_query);
+		printf("Test %d: wrong options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 1 wrong option for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, wrong options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -221,9 +222,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 1 wrong option for [%s] failed\n", tests, saved_query);
+		printf("Test %d: wrong options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 1 wrong option for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, wrong options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -237,9 +238,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 1 wrong option for [%s] failed\n", tests, saved_query);
+		printf("Test %d: wrong options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 1 wrong option for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, wrong options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -253,9 +254,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 1 wrong option for [%s] failed\n", tests, saved_query);
+		printf("Test %d: wrong options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 1 wrong option for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, wrong options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -269,9 +270,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 1 wrong option for [%s] failed\n", tests, saved_query);
+		printf("Test %d: wrong options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 1 wrong option for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, wrong options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -285,9 +286,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 1 wrong option for [%s] failed\n", tests, saved_query);
+		printf("Test %d: wrong options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 1 wrong option for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, wrong options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -301,9 +302,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 1) {
-		printf("Test %d: 1 valid option for [%s] failed\n", tests, saved_query);
+		printf("Test %d: valid option for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 1 valid option for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, valid options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -317,9 +318,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 1 valid option and 2 wrong ones for [%s] failed\n", tests, saved_query);
+		printf("Test %d: valid / not valid options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 1 valid option and 2 wrong ones for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, valid / not valid options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -333,9 +334,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 1 valid option and 1 wrong for [%s] failed\n", tests, saved_query);
+		printf("Test %d: valid / not valid options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 1 valid option and 1 wrong for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, valid / not valid options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -349,9 +350,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 1) {
-		printf("Test %d: 2 valid options for [%s] failed\n", tests, saved_query);
+		printf("Test %d: valid options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 2 valid options for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, valid options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -365,9 +366,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 2 valid options and 1 wrong for [%s] failed\n", tests, saved_query);
+		printf("Test %d: valid / not valid options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 2 valid options and 1 wrong for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, valid / not valid options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -381,9 +382,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 1) {
-		printf("Test %d: 3 valid options [%s] failed\n", tests, saved_query);
+		printf("Test %d: valid options [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 3 valid options for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, valid options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -397,9 +398,9 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 0) {
-		printf("Test %d: 5 valid options and 1 wrong for [%s] failed\n", tests, saved_query);
+		printf("Test %d: valid / not valid options for [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 5 valid options and 1 wrong for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, valid / not valid options for [%s]\n", tests, saved_query);
 
 	tests++;
 
@@ -414,11 +415,13 @@ int main(int argc, char **argv) {
 	strcpy(saved_query, query);
 	rc = blr_test_parse_change_master_command(query, error_string, &change_master);
 	if (rc == 1) {
-		printf("Test %d: 6 valid options [%s] failed\n", tests, saved_query);
+		printf("Test %d: valid options [%s] FAILED\n", tests, saved_query);
 		return 1;
-	} else printf("Test %d Passed, 6 valid options for [%s]\n", tests, saved_query);
+	} else printf("Test %d PASSED, valid options for [%s]\n", tests, saved_query);
 
 	tests++;
+
+	printf("--------- MASTER_LOG_FILE tests ---------\n");
 
 	/**
  	 * Test 17: use current binlog filename in master_state != BLRM_UNCONFIGURED
@@ -433,21 +436,23 @@ int main(int argc, char **argv) {
 
 	if (master_log_file == NULL) {
 		if (strlen(error_string)) {
-			printf("Test %d Passed, MASTER_LOG_FILE [%s]: [%s]\n", tests, change_master.binlog_file, error_string);
+			printf("Test %d PASSED, MASTER_LOG_FILE [%s]: [%s]\n", tests, change_master.binlog_file, error_string);
 		} else {
-			printf("Test %d: set MASTER_LOG_FILE [%s] failed, an error message was expected\n", tests, change_master.binlog_file);
+			printf("Test %d: set MASTER_LOG_FILE [%s] FAILED, an error message was expected\n", tests, change_master.binlog_file);
 			return 1;
 		}
 	} else {
-		printf("Test %d: set MASTER_LOG_FILE [%s] failed, NULL was expected from blr_test_set_master_logfile()\n", tests, change_master.binlog_file);
+		printf("Test %d: set MASTER_LOG_FILE [%s] FAILED, NULL was expected from blr_test_set_master_logfile()\n", tests, change_master.binlog_file);
 		return 1;
 	}
 
 	tests++;
 
+	printf("--- MASTER_LOG_POS and MASTER_LOG_FILE rule/constraints checks ---\n");
+
 	/********************************************
 	 *
-	 * Second aprt of test suite is for checking
+	 * Second part of test suite is for checking
 	 * rules and constraints once syntax is OK
 	 *
 	 ********************************************/
@@ -464,7 +469,7 @@ int main(int argc, char **argv) {
 	rc = blr_test_handle_change_master(inst, query, error_string);
 
 	if (rc == -1 && inst->master_state == BLRM_UNCONFIGURED) {
-		printf("Test %d Passed, in BLRM_UNCONFIGURED state. Message [%s]\n", tests, error_string);
+		printf("Test %d PASSED, in BLRM_UNCONFIGURED state. Message [%s]\n", tests, error_string);
 	} else {
 		printf("Test %d: an error message was expected from blr_test_handle_change_master(), Master State is %s. Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
 		return 1;
@@ -485,9 +490,9 @@ int main(int argc, char **argv) {
 	rc = blr_test_handle_change_master(inst, query, error_string);
 
 	if (rc == -1 && inst->master_state == BLRM_UNCONFIGURED) {
-		printf("Test %d Passed, cannot set MASTER_LOG_FILE in BLRM_UNCONFIGURED state for [%s]. Message [%s]\n", tests, query, error_string);
+		printf("Test %d PASSED, cannot set MASTER_LOG_FILE in BLRM_UNCONFIGURED state for [%s]. Message [%s]\n", tests, query, error_string);
 	} else {
-		printf("Test %d: set MASTER_LOG_FILE in BLRM_UNCONFIGURED state failed, an error message was expected from blr_test_handle_change_master(), Master State is %s. Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
+		printf("Test %d: set MASTER_LOG_FILE in BLRM_UNCONFIGURED state FAILED, an error message was expected from blr_test_handle_change_master(), Master State is %s. Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
 		return 1;
 	}
 
@@ -508,9 +513,9 @@ int main(int argc, char **argv) {
 	rc = blr_test_handle_change_master(inst, query, error_string);
 
 	if (rc == 0) {
-		printf("Test %d Passed, set MASTER_LOG_FILE and MASTER_LOG_POS for [%s]\n", tests, query);
+		printf("Test %d PASSED, set MASTER_LOG_FILE and MASTER_LOG_POS for [%s]\n", tests, query);
 	} else {
-		printf("Test %d: set MASTER_LOG_FILE and MASTER_LOG_POS failed, Master State is %s. Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
+		printf("Test %d: set MASTER_LOG_FILE and MASTER_LOG_POS FAILED, Master State is %s. Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
 		return 1;
 	}
 
@@ -533,7 +538,7 @@ int main(int argc, char **argv) {
 	rc = blr_test_handle_change_master(inst, query, error_string);
 
 	if (rc == -1) {
-		printf("Test %d Passed, cannot set MASTER_LOG_FILE for [%s], Message [%s]\n", tests, query, error_string);
+		printf("Test %d PASSED, cannot set MASTER_LOG_FILE for [%s], Message [%s]\n", tests, query, error_string);
 	} else {
 		printf("Test %d: set MASTER_LOG_FILE, Master State is %s Failed, Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
 		return 1;
@@ -543,9 +548,9 @@ int main(int argc, char **argv) {
 
 	/**
 	 * Test 22: use selected binlog filename is next one in sequence and specified pos is 4
-	 * in state != BLRM_UNCONFIGURED
+	 * in any state
 	 *
-	 * Expected rc = 0
+	 * Expected rc >= 0
 	 */
 	strcpy(error_string, "");
 	strncpy(inst->binlog_name, "file.100506", BINLOG_FNAMELEN);
@@ -555,10 +560,10 @@ int main(int argc, char **argv) {
 
 	rc = blr_test_handle_change_master(inst, query, error_string);
 
-	if (rc == 0) {
-		printf("Test %d Passed, set MASTER_LOG_FILE for [%s]\n", tests, query);
+	if (rc >= 0) {
+		printf("Test %d PASSED, set MASTER_LOG_FILE for [%s]\n", tests, query);
 	} else {
-		printf("Test %d: set MASTER_LOG_FILE failed, Master State is %s. Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
+		printf("Test %d: set MASTER_LOG_FILE FAILED, Master State is %s. Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
 		return 1;
 	}
 
@@ -570,6 +575,7 @@ int main(int argc, char **argv) {
 	 *
 	 * Expected rc = -1
 	 */
+	inst->master_state = BLRM_UNCONNECTED;
 	strcpy(error_string, "");
 	strncpy(inst->binlog_name, "file.100506", BINLOG_FNAMELEN);
 	inst->current_pos = 138;
@@ -579,9 +585,9 @@ int main(int argc, char **argv) {
 	rc = blr_test_handle_change_master(inst, query, error_string);
 
 	if (rc == -1) {
-		printf("Test %d Passed, cannot set MASTER_LOG_POS for [%s], Message [%s]\n", tests, query, error_string);
+		printf("Test %d PASSED, cannot set MASTER_LOG_POS for [%s], Message [%s]\n", tests, query, error_string);
 	} else {
-		printf("Test %d: set MASTER_LOG_POS failed, Master State is %s. Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
+		printf("Test %d: set MASTER_LOG_POS FAILED, Master State is %s. Message [%s]\n", tests, blrm_states[inst->master_state], error_string);
 		return 1;
 	}
 
