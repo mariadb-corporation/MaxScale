@@ -207,7 +207,7 @@ typedef enum skygw_chk_t {
                           ((s) == DCB_STATE_DISCONNECTED ? "DCB_STATE_DISCONNECTED" : \
                            ((s) == DCB_STATE_NOPOLLING ? "DCB_STATE_NOPOLLING" : \
                             ((s) == DCB_STATE_ZOMBIE ? "DCB_STATE_ZOMBIE" : \
-                             ((s) == DCB_STATE_UNDEFINED ? "DCB_STATE_UNDEFINED" : "DCB_STATE_UNKNOWN"))))))))
+                             ((s) == DCB_STATE_UNDEFINED ? "DCB_STATE_UNDEFINED" : "DCB_STATE_UNKNOWN")))))))
 
 #define STRSESSIONSTATE(s) ((s) == SESSION_STATE_ALLOC ? "SESSION_STATE_ALLOC" : \
                             ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY" : \

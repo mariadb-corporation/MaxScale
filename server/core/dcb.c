@@ -471,9 +471,7 @@ DCB     *dcb = NULL;
 					previousdcb->memdata.next = zombiedcb->memdata.next;
                                 }
 				
-				if (LOG_IS_ENABLED(LD))
-                                { 
-                                    (skygw_log_write_flush(
+				LOGIF(LD, (skygw_log_write_flush(
 					LOGFILE_DEBUG,
 					"%lu [%s] Remove dcb "
 					"%p fd %d in state %s from the "
@@ -482,7 +480,7 @@ DCB     *dcb = NULL;
                                         __func__,
 					zombiedcb,
 					zombiedcb->fd,
-					STRDCBSTATE(zombiedcb->state)));
+					STRDCBSTATE(zombiedcb->state))));
                                 }
 				/*<
 				 * Move zombie dcb to linked list of victim dcbs.
