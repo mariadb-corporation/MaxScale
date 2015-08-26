@@ -20,6 +20,9 @@
  * This utility checks a MySQL 5.6 and MariaDB 10.0.X binlog file and reports
  * any found error or an incomplete transaction.
  * It suggests the pos the file should be trucatetd at.
+ * MariaDB 10 compatibility must be activated with --mariadb | -M option
+ *
+ * Note: transactions are not currently checked for MariaDB 10
  *
  * @verbatim
  * Revision History
