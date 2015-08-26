@@ -43,7 +43,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
-#include <random.h>
+#include <random_jkiss.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;

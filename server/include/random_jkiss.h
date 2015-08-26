@@ -1,5 +1,5 @@
 /* 
- * File:   random.h
+ * File:   random_jkiss.h
  * Author: mbrampton
  *
  * Created on 26 August 2015, 15:34

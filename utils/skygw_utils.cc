@@ -30,7 +30,7 @@
 #include <sys/time.h>
 #include "skygw_utils.h"
 #include <atomic.h>
-#include <random.h>
+#include <random_jkiss.h>
 
 #if defined(MLIST)
 

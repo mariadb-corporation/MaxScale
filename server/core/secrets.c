@@ -23,7 +23,7 @@
 #include <ctype.h>
 #include <mysql_client_server_protocol.h>
 #include <gwdirs.h>
-#include <random.h>
+#include <random_jkiss.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;

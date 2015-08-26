@@ -17,7 +17,7 @@
  */
 
 /**
- * @file random.c  -  Random number generator for the MariaDB Corporation MaxScale
+ * @file random_jkiss.c  -  Random number generator for the MariaDB Corporation MaxScale
  *
  * @verbatim
  * Revision History
@@ -32,7 +32,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <random.h>
+#include <random_jkiss.h>
 
 /* Public domain code for JKISS RNG - Comments added */
 static unsigned int x = 123456789,y = 987654321,z = 43219876,c = 6543217; /* Seed variables */
