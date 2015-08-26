@@ -58,6 +58,6 @@ protocol=MySQLBackend
 
 [server5]
 type=server
-address=###repl_server_IP_4###
-port=###repl_server_port_4###
+address=127.0.0.1
+port=3005
 protocol=MySQLBackend
