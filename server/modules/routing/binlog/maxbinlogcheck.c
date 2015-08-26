@@ -75,6 +75,8 @@ static struct option long_options[] = {
   {0, 0, 0, 0}
 };
 
+char *binlog_check_version = "1.0.0";
+
 int main(int argc, char **argv) {
 	char** arg_vector;
 	int arg_count = 4;
@@ -173,7 +175,7 @@ int main(int argc, char **argv) {
 		strncpy(inst->binlog_name, ptr+1, 16);
 
 	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-		"maxbinlogcheck v1.0")));
+		"maxbinlogcheck %s", binlog_check_version)));
 
 	if (fstat(inst->binlog_fd, &statb) == 0)
 		filelen = statb.st_size;
@@ -205,7 +207,7 @@ int main(int argc, char **argv) {
 static void
 printVersion(const char *progname)
 {
-	printf("%s Version %s\n", progname, MAXSCALE_VERSION);
+	printf("%s Version %s\n", progname, binlog_check_version);
 }
 
 /**
