@@ -1135,7 +1135,7 @@ poll_dcb_session_check(DCB *dcb)
         LOGIF(LE, (skygw_log_write_flush(
             LOGFILE_ERROR,
             "%lu [%s] The dcb %p that was about to be processed does not "
-            "have a non-null session pointer "
+            "have a non-null session pointer ",
             pthread_self(),
             __func__,
             dcb)));

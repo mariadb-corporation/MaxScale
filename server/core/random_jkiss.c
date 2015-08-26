@@ -38,6 +38,8 @@
 static unsigned int x = 123456789,y = 987654321,z = 43219876,c = 6543217; /* Seed variables */
 static bool init = false;
 
+static void random_init_jkiss();
+
 /***
  * 
  * Return a random number
