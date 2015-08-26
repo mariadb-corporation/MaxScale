@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-unsigned int random_jkiss(void);
+extern unsigned int random_jkiss(void);
     
 #ifdef	__cplusplus
 }
