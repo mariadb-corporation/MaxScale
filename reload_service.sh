@@ -41,7 +41,7 @@ fi
 
 # Reload the same config file but with new service
 # and check that the new service is detected.
-export test_name=config_reload.add_service
+export test_name=reload_service
 $test_dir/configure_maxscale.sh
 echo "Waiting for 15 seconds"
 sleep 15

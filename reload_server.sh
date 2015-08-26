@@ -33,7 +33,7 @@ fi
 
 # Reload the same config file but with one extra server
 # and check that the new server is detected
-export test_name=config_reload.add_server
+export test_name=reload_server
 $test_dir/configure_maxscale.sh
 echo "Waiting for 15 seconds"
 sleep 15
