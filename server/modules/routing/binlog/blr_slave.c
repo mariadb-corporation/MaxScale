@@ -83,8 +83,8 @@ extern void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern char *blr_extract_column(GWBUF *buf, int col);
+extern uint32_t extract_field(uint8_t *src, int bits);
 int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
-uint32_t extract_field(uint8_t *src, int bits);
 static void encode_value(unsigned char *data, unsigned int value, int len);
 static int blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
 static int blr_slave_replay(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *master);
@@ -133,6 +133,8 @@ static void blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
 static int blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
 static int blr_slave_send_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
 static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
+int blr_test_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config);
+char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -3191,7 +3193,8 @@ blr_set_master_port(ROUTER_INSTANCE *router, char *port) {
  * @param error		The error msg for command, pre-allocated BINLOG_ERROR_MSG_LEN + 1 bytes
  * @return		New binlog file or NULL on error
  */
-char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
+static char *
+blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
 	int change_binlog = 0;
 	char *new_binlog_file = NULL;
 
@@ -3769,3 +3772,42 @@ int	packet_data_len = 22 + strlen(name) + info_len + virtual_table_name_len + ta
 	return slave->dcb->func.write(slave->dcb, pkt);
 }
 
+/**
+ * Interface for testing blr_parse_change_master_command()
+ *
+ * @param input		The command to be parsed
+ * @param error_string	Pre-allocated string for error message, BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @param config	master option struct to fill
+ * @return		0 on success, 1 on failure
+ */
+int
+blr_test_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config) {
+	return blr_parse_change_master_command(input, error_string, config);
+}
+
+/*
+ * Interface for testing set new master binlog file
+ *
+ *
+ * @param router	Current router instance
+ * @param filename	Binlog file name
+ * @param error		The error msg for command, pre-allocated BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @return		New binlog file or NULL on error
+ */
+char *
+blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
+	return blr_set_master_logfile(router, filename, error);
+}
+
+/**
+ * Interface for testing a 'change master' operation
+ *
+ * @param router	The router instance
+ * @param command	The change master SQL command
+ * @param error		The error message, preallocated BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @return		0 on success, 1 on success with new binlog, -1 on failure
+ */
+int
+blr_test_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error) {
+	return blr_handle_change_master(router, command, error);
+}
