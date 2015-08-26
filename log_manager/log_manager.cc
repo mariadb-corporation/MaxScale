@@ -2981,7 +2981,7 @@ static void* thr_filewriter_fun(
                                                != 0);
                                         node = node->mlnode_next;
                                         vn2 = bb_list->mlist_versno;
-                                } while (vn1 != vn2);
+                                } while (vn1 != vn2 && node);
                     
                         } /* while (node != NULL) */
 
