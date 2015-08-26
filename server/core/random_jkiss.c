@@ -51,7 +51,11 @@ unsigned int
 random_jkiss(void)
 {
     unsigned long long t;
-    if (!init) random_init_jkiss();
+    if (!init)
+    {
+        random_init_jkiss();
+        init = true;
+    }
     x = 314527869 * x + 1234567;
     y ^= y << 5; y ^= y >> 7; y ^= y << 22;
     t = 4294584393ULL * z + c; c = t >> 32; z = t;
