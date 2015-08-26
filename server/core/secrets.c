@@ -23,6 +23,7 @@
 #include <ctype.h>
 #include <mysql_client_server_protocol.h>
 #include <gwdirs.h>
+#include <random.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -36,15 +37,13 @@ extern __thread log_info_t tls_log_info;
 static unsigned char
 secrets_randomchar()
 {
-	return (char)((rand() % ('~' - ' ')) + ' ');
+	return (char)((random_jkiss() % ('~' - ' ')) + ' ');
 }
 
 static int
 secrets_random_str(unsigned char *output, int len)
 {
 int i;
-	srand((unsigned long )time(0L) ^ (unsigned long )output);
-
 	for ( i = 0; i < len; ++i )
 	{
                 output[i] = secrets_randomchar();
@@ -273,7 +272,6 @@ if(strlen(path) > PATH_MAX)
     }
 
     close(randfd);
-	srand(randval);
 	secrets_random_str(key.enckey, MAXSCALE_KEYLEN);
 	secrets_random_str(key.initvector, MAXSCALE_IV_LEN);
 

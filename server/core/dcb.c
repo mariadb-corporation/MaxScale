@@ -230,23 +230,15 @@ DCB	*newdcb;
 
 
 /**
- * Free a DCB that has not been associated with a descriptor.
+ * Provided only for consistency, simply calls dcb_close to guarantee
+ * safe disposal of a DCB
  *
  * @param dcb	The DCB to free
  */
 void
 dcb_free(DCB *dcb)
 {
-    if (dcb->fd != DCBFD_CLOSED)
-    {
-        LOGIF(LE, (skygw_log_write_flush(
-            LOGFILE_ERROR,
-            "Error : Attempt to free a DCB via dcb_free "
-            "that has been associated with a descriptor.")));
-    }
-    raise(SIGABRT);
-    /* Another statement to avoid a compiler warning */
-    dcb_final_free(dcb);
+    dcb_close(dcb);
 }
 
 /*

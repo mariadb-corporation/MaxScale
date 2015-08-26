@@ -43,6 +43,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
+#include <random.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -100,7 +101,7 @@ char *gw_strend(register const char *s) {
 * generate a random char 
 *****************************************/
 static char gw_randomchar() {
-   return (char)((rand() % 78) + 30);
+   return (char)((random_jkiss() % 78) + 30);
 }
 
 /*****************************************
@@ -110,7 +111,6 @@ static char gw_randomchar() {
 int gw_generate_random_str(char *output, int len) {
 
 	int i;
-	srand(time(0L));
 
 	for ( i = 0; i < len; ++i ) {
 		output[i] = gw_randomchar();
