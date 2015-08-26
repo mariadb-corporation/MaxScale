@@ -242,11 +242,11 @@ GWPROTOCOL	*funcs;
 				
 				{
 					/* Try loading authentication data from file cache */
-					char	*ptr, path[4097];
-					strcpy(path, get_cachedir());
-					strncat(path, "/", 4096);
-					strncat(path, service->name, 4096);
-					strncat(path, "/.cache/dbusers", 4096);
+					char	*ptr, path[PATH_MAX+1];
+					strncpy(path, get_cachedir(),sizeof(path)-1);
+					strncat(path, "/", sizeof(path)-1);
+					strncat(path, service->name, sizeof(path)-1);
+					strncat(path, "/.cache/dbusers", sizeof(path)-1);
 					loaded = dbusers_load(service->users, path);
 					if (loaded != -1)
 					{

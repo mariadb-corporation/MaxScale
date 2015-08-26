@@ -239,7 +239,7 @@ void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len)
 	}
 	first = false;
 	sprintf(arr,"%s:%d",ptr->server->name,ptr->server->port);
-	strcat(str,arr);
+	strncat(str,arr,len);
 	ptr = ptr->next;
 	slen = strlen(str);
     }
@@ -306,10 +306,10 @@ void monitor_launch_script(MONITOR* mon,MONITOR_SERVERS* ptr, char* script)
 	     ptr->server->name,
 	     ptr->server->port);
 
-    mon_append_node_names(mon->databases,argstr,PATH_MAX + MON_ARG_MAX + 1);
+    mon_append_node_names(mon->databases,argstr,PATH_MAX + MON_ARG_MAX);
     if((cmd = externcmd_allocate(argstr)) == NULL)
     {
-	skygw_log_write(LE,"Failed to execute script: %s",script);
+	skygw_log_write(LE,"Failed to initialize script: %s",script);
 	return;
     }
 
