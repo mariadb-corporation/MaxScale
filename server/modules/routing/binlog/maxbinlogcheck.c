@@ -141,6 +141,8 @@ int main(int argc, char **argv) {
 
 	if (!debug_out)
 		skygw_log_disable(LOGFILE_DEBUG);
+	else
+		skygw_log_enable(LOGFILE_DEBUG);
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
         	LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
