@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function check_servive_count()
+function check_service_count()
 {
     maxadmin_output=$(ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin list servers")
     echo "$maxadmin_output"
