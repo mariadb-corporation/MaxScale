@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
 	int fd;
 	int ret;
 	char *ptr;
-	char path[4097] = "";
+	char path[PATH_MAX+1] = "";
 	unsigned long   filelen = 0;
 	struct  stat    statb;
 	char	c;
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	strncpy(path, argv[num_args], 4096);
+	strncpy(path, argv[num_args], PATH_MAX);
 
 	if ((fd = open(path, O_RDONLY, 0666)) == -1)
         {
@@ -172,7 +172,9 @@ int main(int argc, char **argv) {
 
 	ptr = strrchr(path, '/');
 	if (ptr)
-		strncpy(inst->binlog_name, ptr+1, 16);
+		strncpy(inst->binlog_name, ptr+1, BINLOG_FNAMELEN);
+	else
+		strncpy(inst->binlog_name, ptr, BINLOG_FNAMELEN);
 
 	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
 		"maxbinlogcheck %s", binlog_check_version)));
