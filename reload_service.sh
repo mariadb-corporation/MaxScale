@@ -2,9 +2,9 @@
 
 function check_service_count()
 {
-    maxadmin_output=$(ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin list servers")
+    maxadmin_output=$(ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin list services")
     echo "$maxadmin_output"
-    service_count=$(echo "$maxadmin_output"|grep -i 'server[1-5]'|wc -l)
+    service_count=$(echo "$maxadmin_output"|grep -v -- '-----'|awk 'BEGIN {output=0}/^.+$/{if(output){print}}/Service Name/{output=1}'|wc -l)
     if [[ $service_count -ne $1 ]]
     then
         echo "Error: Incorrect amount of services!"
