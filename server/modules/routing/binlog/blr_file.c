@@ -71,6 +71,7 @@ int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
+extern uint32_t extract_field(uint8_t *src, int bits);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -957,7 +958,7 @@ int event_error = 0;
 
 	if (router->binlog_fd == -1) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                        "*** ERROR: Current binlog file %s is not open",
+                        "ERROR: Current binlog file %s is not open",
                         router->binlog_name)));
                 return 1;
         }
@@ -982,8 +983,8 @@ int event_error = 0;
 
                                         if (pending_transaction) {
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
-                                                        "WARNING: Binlog file %s contains a previous Opened Transaction, "
-                                                        "Not Truncate file @ %llu but pos for slave is safe",
+                                                        "Warning : Binlog file %s contains a previous Opened Transaction"
+                                                        " @ %llu. This pos is safe for slaves",
                                                         router->binlog_name,
                                                         last_known_commit)));
 
@@ -995,20 +996,20 @@ int event_error = 0;
 					char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
 					strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
                                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                "*** ERROR: Failed to read binlog file %s at position %llu"
+                                                "ERROR: Failed to read binlog file %s at position %llu"
                                                 " (%s).", router->binlog_name,
                                                 pos, err_msg)));
 
                                         if (errno == EBADF)
                                                 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                        "*** ERROR: Bad file descriptor in read binlog for file %s"
+                                                        "ERROR: Bad file descriptor in read binlog for file %s"
                                                         ", descriptor %d.",
                                                         router->binlog_name, router->binlog_fd)));
                                         break;
 					}
                                 default:
                                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                "*** ERROR: Short read when reading the header. "
+                                                "ERROR: Short read when reading the header. "
                                                 "Expected 19 bytes but got %d bytes. "
                                                 "Binlog file is %s, position %llu",
                                                 n, router->binlog_name, pos)));
@@ -1027,7 +1028,7 @@ int event_error = 0;
                                 pending_transaction = 0;
 
 				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-					"warning : pending transaction has been found. "
+					"Warning : pending transaction has been found. "
 					"Setting safe pos to %lu, current pos %lu",
 					router->binlog_position, router->current_pos)));
 
@@ -1135,7 +1136,7 @@ int event_error = 0;
                 if ((result = gwbuf_alloc(hdr.event_size)) == NULL)
                 {
                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                "*** ERROR: Failed to allocate memory for binlog entry, "
+                                "ERROR: Failed to allocate memory for binlog entry, "
                                 "size %d at %llu.",
                                 hdr.event_size, pos)));
 
@@ -1314,7 +1315,7 @@ int event_error = 0;
                         if (strncmp(statement_sql, "BEGIN", 5) == 0) {
                                 if (pending_transaction > 0) {
                                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                        "*** ERROR: Transaction cannot be @ pos %llu: "
+                                        "ERROR: Transaction cannot be @ pos %llu: "
                                         "Another transaction was opened at %llu",
                                         pos, last_known_commit)));
 
@@ -1451,3 +1452,4 @@ int event_error = 0;
                 return 0;
         }
 }
+

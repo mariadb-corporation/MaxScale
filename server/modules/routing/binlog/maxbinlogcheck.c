@@ -26,6 +26,8 @@
  *
  * Date		Who			Description
  * 24/07/2015	Massimiliano Pinto	Initial implementation
+ * 26/08/2015	Massimiliano Pinto	Added mariadb10 option
+ *					for MariaDB 10 binlog compatibility
  *
  * @endverbatim
  */
