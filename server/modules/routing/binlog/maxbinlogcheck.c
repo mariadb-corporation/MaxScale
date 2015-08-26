@@ -71,6 +71,7 @@ static struct option long_options[] = {
   {"verbose",	no_argument,		0,	'v'},
   {"version",	no_argument,		0,	'V'},
   {"fix",	no_argument,		0,	'f'},
+  {"mariadb10",	no_argument,		0,	'M'},
   {"help",	no_argument,		0,	'?'},
   {0, 0, 0, 0}
 };
@@ -93,8 +94,9 @@ int main(int argc, char **argv) {
 	int	debug_out = 0;
 	int	verbose_out = 0;
 	int	fix_file = 0;
+	int	mariadb10_compat = 0;
 
-	while ((c = getopt_long(argc, argv, "dvVf?", long_options, &option_index)) >= 0)
+	while ((c = getopt_long(argc, argv, "dvVfM?", long_options, &option_index)) >= 0)
 	{
 		switch (c) {
 			case 'd':
@@ -109,6 +111,9 @@ int main(int argc, char **argv) {
 				break;
 			case 'f':
 				fix_file = 1;
+				break;
+			case 'M':
+				mariadb10_compat = 1;
 				break;
 			case '?':
 				printUsage(*argv);
@@ -170,6 +175,9 @@ int main(int argc, char **argv) {
 
         inst->binlog_fd = fd;
 
+	if (mariadb10_compat == 1)
+		inst->mariadb10_compat = 1;
+
 	ptr = strrchr(path, '/');
 	if (ptr)
 		strncpy(inst->binlog_name, ptr+1, BINLOG_FNAMELEN);
@@ -224,6 +232,7 @@ printUsage(const char *progname)
         printf("Usage: %s [-f] [-d] [-v] [<binlog file>]\n\n", progname);
         printf("  -f|--fix		Fix binlog file, require write permissions (truncate)\n");
         printf("  -d|--debug		Print debug messages\n");
+        printf("  -M|--mariadb10	MariaDB 10 binlog compatibility\n");
         printf("  -v|--verbose		Verbose output\n");
         printf("  -V|--version          print version information and exit\n");
         printf("  -?|--help             Print this help text\n");
