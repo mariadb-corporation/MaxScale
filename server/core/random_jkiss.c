@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <random_jkiss.h>
 
 /* Public domain code for JKISS RNG - Comments added */
@@ -53,12 +54,16 @@ random_jkiss(void)
     unsigned long long t;
     if (!init)
     {
-        random_init_jkiss();
         init = true;
+        random_init_jkiss();
     }
     x = 314527869 * x + 1234567;
-    y ^= y << 5; y ^= y >> 7; y ^= y << 22;
-    t = 4294584393ULL * z + c; c = t >> 32; z = t;
+    y ^= y << 5;
+    y ^= y >> 7;
+    y ^= y << 22;
+    t = 4294584393ULL * z + c;
+    c = t >> 32;
+    z = t;
     return x + y + z;
 }
 
@@ -99,5 +104,5 @@ random_init_jkiss()
     if ((newrand = random_devrand()) != 0) z = newrand;
     if ((newrand = random_devrand()) != 0) 
         c = newrand % 698769068 + 1; /* Should be less than 698769069 */
-    for (i = 0; i < 1000; i++) random_jkiss();
+    for (i = 0; i < 100; i++) random_jkiss();
 }
