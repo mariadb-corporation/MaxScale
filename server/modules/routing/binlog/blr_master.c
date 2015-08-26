@@ -42,6 +42,10 @@
  * 03/08/2015	Massimiliano Pinto	Initial implementation of transaction safety
  * 13/08/2015	Massimiliano Pinto	Addition of heartbeat check
  * 23/08/2015	Massimiliano Pinto	Added strerror_r
+ * 26/08/2015	Massimiliano Pinto	Added MariaDB 10 GTID event check with flags = 0
+ *					This is the current supported condition for detecting
+ *					MariaDB 10 transaction start point.
+ *					It's no longer using QUERY_EVENT with BEGIN	
  *
  * @endverbatim
  */
@@ -1060,7 +1064,44 @@ int			n_bufs = -1, pn_bufs = -1;
 				 * Only complete transactions should be sent to sleves
 				*/
 
+		                /* If MariaDB 10 compatibility:
+				 * check for MARIADB10_GTID_EVENT with flags = 0
+				 * This marks the transaction starts instead of
+				 * QUERY_EVENT with "BEGIN"
+				*/
 				if (router->trx_safe) {
+					if (router->mariadb10_compat) {
+						if (hdr.event_type == MARIADB10_GTID_EVENT) {
+							uint64_t n_sequence;
+							uint32_t domainid;
+							unsigned int flags;	
+							n_sequence = extract_field(ptr+4+20, 64);
+							domainid = extract_field(ptr+4+20 + 8, 32);
+							flags = *(ptr+4+20 + 8 + 4);
+
+							if (flags == 0) {
+								if (router->pending_transaction > 0) {
+									LOGIF(LE,(skygw_log_write_flush(LOGFILE_ERROR,
+										"Error: a MariaDB 10 transaction "
+										"is already open "
+										"@ %lu (GTID %lu-%lu-%llu) and "
+										"a new one starts @ %lu",
+										router->binlog_position,
+										domainid, hdr.serverid, n_sequence,
+										router->current_pos)));
+
+										// An action should be taken here
+								}
+
+								spinlock_acquire(&router->lock);
+
+								router->pending_transaction = 1;
+
+								spinlock_release(&router->lock);
+							}
+						}
+					}
+
 					/**
 					 * look for QUERY_EVENT [BEGIN / COMMIT] and XID_EVENT
 					 */
@@ -1253,7 +1294,7 @@ int			n_bufs = -1, pn_bufs = -1;
 							 */
 
 							 if (router->pending_transaction > 1) {
-								unsigned long pos;
+								unsigned long long pos;
 								GWBUF   *record;
 								uint8_t *raw_data;
 								REP_HEADER      new_hdr;

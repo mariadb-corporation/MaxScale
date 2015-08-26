@@ -33,6 +33,10 @@
  *					Cache directory is now 'cache' under router->binlogdir
  * 05/08/2015	Massimiliano Pinto	Initial implementation of transaction safety
  * 24/08/2015	Massimiliano Pinto	Added strerror_r
+ * 26/08/2015	Massimiliano Pinto	Added MariaDB 10 GTID event check with flags = 0
+ *					This is the current supported condition for detecting
+ *					MariaDB 10 transaction start point.
+ *					It's no longer using QUERY_EVENT with BEGIN
  *
  * @endverbatim
  */
@@ -1297,8 +1301,52 @@ int event_error = 0;
                                         pos, file, new_pos)));
                 }
 
+		/* If MariaDB 10 compatibility:
+		 * check for MARIADB10_GTID_EVENT with flags = 0
+		 * This marks the transaction starts instead of
+		 * QUERY_EVENT with "BEGIN"
+		 */
 
-                /* Check QUERY_EVENT */
+		if (router->mariadb10_compat) {
+			if (hdr.event_type == MARIADB10_GTID_EVENT) {
+				uint64_t n_sequence;	/* 8 bytes */
+				uint32_t domainid;	/* 4 bytes */
+				unsigned int flags;	/* 1 byte */
+				n_sequence = extract_field(ptr, 64);
+				domainid = extract_field(ptr + 8, 32);
+				flags = *(ptr + 8 + 4);
+
+				if (flags == 0) {
+					if (pending_transaction > 0) {
+						LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+							"ERROR: Transaction cannot be @ pos %llu: "
+							"Another MariaDB 10 transaction (GTID %lu-%lu-%llu)"
+							" was opened at %llu",
+							pos, domainid, hdr.serverid, n_sequence, last_known_commit)));
+
+						gwbuf_free(result);
+
+						break;
+					} else {
+						pending_transaction = 1;
+
+						if (debug)
+							LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+								"> MariaDB 10 Transaction (GTID %lu-%lu-%llu)"
+								" starts @ pos %llu",
+								domainid, hdr.serverid, n_sequence, pos)));
+					}
+				}
+			}
+		}
+
+                /**
+		 * Check QUERY_EVENT 
+		 *
+		 * Check for BEGIN ( ONLY for mysql 5.6, mariadb 5.5 )
+		 * Check for COMMIT (not transactional engines)
+		 */
+
                 if(hdr.event_type == QUERY_EVENT) {
                         char *statement_sql;
                         db_name_len = ptr[4 + 4];
