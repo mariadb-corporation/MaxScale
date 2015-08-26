@@ -68,7 +68,6 @@ static void printUsage(const char *progname);
 
 static struct option long_options[] = {
   {"debug",	no_argument,		0,	'd'},
-  {"verbose",	no_argument,		0,	'v'},
   {"version",	no_argument,		0,	'V'},
   {"fix",	no_argument,		0,	'f'},
   {"mariadb10",	no_argument,		0,	'M'},
@@ -92,18 +91,14 @@ int main(int argc, char **argv) {
 	int	option_index = 0;
 	int	num_args = 0;
 	int	debug_out = 0;
-	int	verbose_out = 0;
 	int	fix_file = 0;
 	int	mariadb10_compat = 0;
 
-	while ((c = getopt_long(argc, argv, "dvVfM?", long_options, &option_index)) >= 0)
+	while ((c = getopt_long(argc, argv, "dVfM?", long_options, &option_index)) >= 0)
 	{
 		switch (c) {
 			case 'd':
 				debug_out = 1;
-				break;
-			case 'v':
-				verbose_out = 1;
 				break;
 			case 'V':
 				printVersion(*argv);
@@ -233,7 +228,6 @@ printUsage(const char *progname)
         printf("  -f|--fix		Fix binlog file, require write permissions (truncate)\n");
         printf("  -d|--debug		Print debug messages\n");
         printf("  -M|--mariadb10	MariaDB 10 binlog compatibility\n");
-        printf("  -v|--verbose		Verbose output\n");
         printf("  -V|--version          print version information and exit\n");
         printf("  -?|--help             Print this help text\n");
 }
