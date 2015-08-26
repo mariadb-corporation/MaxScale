@@ -1,0 +1,228 @@
+/*
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Copyright MariaDB Corporation Ab 2015
+ */
+
+/**
+ * @file maxbinlogcheck.c - The MaxScale binlog check utility
+ *
+ * This utility checks a MySQL 5.6 and MariaDB 10.0.X binlog file and reports
+ * any found error or an incomplete transaction.
+ * It suggests the pos the file should be trucatetd at.
+ *
+ * @verbatim
+ * Revision History
+ *
+ * Date		Who			Description
+ * 24/07/2015	Massimiliano Pinto	Initial implementation
+ *
+ * @endverbatim
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <time.h>
+#include <service.h>
+#include <server.h>
+#include <router.h>
+#include <atomic.h>
+#include <spinlock.h>
+#include <blr.h>
+#include <dcb.h>
+#include <spinlock.h>
+#include <housekeeper.h>
+#include <time.h>
+
+#include <skygw_types.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+
+#include <mysql_client_server_protocol.h>
+#include <ini.h>
+#include <sys/stat.h>
+#include <getopt.h>
+
+#include <version.h>
+#include <gwdirs.h>
+
+extern int lm_enabled_logfiles_bitmask;
+extern size_t         log_ses_count[];
+extern __thread log_info_t tls_log_info;
+extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
+extern uint32_t extract_field(uint8_t *src, int bits);
+static void printVersion(const char *progname);
+static void printUsage(const char *progname);
+
+static struct option long_options[] = {
+  {"debug",	no_argument,		0,	'd'},
+  {"verbose",	no_argument,		0,	'v'},
+  {"version",	no_argument,		0,	'V'},
+  {"fix",	no_argument,		0,	'f'},
+  {"help",	no_argument,		0,	'?'},
+  {0, 0, 0, 0}
+};
+
+int main(int argc, char **argv) {
+	char** arg_vector;
+	int arg_count = 4;
+	ROUTER_INSTANCE *inst;
+	int fd;
+	int ret;
+	char *ptr;
+	char path[4097] = "";
+	unsigned long   filelen = 0;
+	struct  stat    statb;
+	char	c;
+	int	option_index = 0;
+	int	num_args = 0;
+	int	debug_out = 0;
+	int	verbose_out = 0;
+	int	fix_file = 0;
+
+	while ((c = getopt_long(argc, argv, "dvVf?", long_options, &option_index)) >= 0)
+	{
+		switch (c) {
+			case 'd':
+				debug_out = 1;
+				break;
+			case 'v':
+				verbose_out = 1;
+				break;
+			case 'V':
+				printVersion(*argv);
+				exit(EXIT_SUCCESS);
+				break;
+			case 'f':
+				fix_file = 1;
+				break;
+			case '?':
+				printUsage(*argv);
+				exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
+		}      
+	}
+
+	num_args = optind;
+
+	arg_vector = malloc(sizeof(char*)*(arg_count + 1));
+
+        if(arg_vector == NULL)
+        {
+            fprintf(stderr,"Error: Memory allocation failed for log manager arg_vector.\n");
+            return 1;
+        }
+
+        arg_vector[0] = "logmanager";
+        arg_vector[1] = "-j";
+        arg_vector[2] = "/tmp/maxbinlogcheck";
+        arg_vector[3] = "-o";
+        arg_vector[4] = NULL;
+        skygw_logmanager_init(arg_count,arg_vector);
+        free(arg_vector);
+
+	if (!debug_out)
+		skygw_log_disable(LOGFILE_DEBUG);
+
+        if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
+        	LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+            		"Error: Memory allocation failed for ROUTER_INSTANCE")));
+
+		skygw_log_sync_all();
+      		skygw_logmanager_done();
+
+                return 1;
+        }
+
+	if (argv[num_args] == NULL) {
+		printf("ERROR: No binlog file was specified\n");
+		exit(EXIT_FAILURE);
+	}
+
+	strncpy(path, argv[num_args], 4096);
+
+	if ((fd = open(path, O_RDONLY, 0666)) == -1)
+        {
+                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+                        "Failed to open binlog file %s: %s",
+                                path, strerror(errno))));
+        
+		skygw_log_sync_all();
+      		skygw_logmanager_done();
+
+		free(inst);
+
+                return 1;
+        }
+
+        inst->binlog_fd = fd;
+
+	ptr = strrchr(path, '/');
+	if (ptr)
+		strncpy(inst->binlog_name, ptr+1, 16);
+
+	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+		"maxbinlogcheck v1.0")));
+
+	if (fstat(inst->binlog_fd, &statb) == 0)
+		filelen = statb.st_size;
+
+	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+		"Checking %s (%s), size %lu", path, inst->binlog_name, filelen)));
+
+	/* read binary log */
+	ret = blr_read_events_all_events(inst, fix_file, debug_out);
+
+	close(inst->binlog_fd);
+
+        skygw_log_sync_all();
+
+	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+		"Check retcode: %i, Binlog Pos = %llu", ret, inst->binlog_position)));
+
+        skygw_log_sync_all();
+        skygw_logmanager_done();
+
+	free(inst);
+
+	return 0;
+}
+
+/**
+ * Print version information
+ */
+static void
+printVersion(const char *progname)
+{
+	printf("%s Version %s\n", progname, MAXSCALE_VERSION);
+}
+
+/**
+ * Display the --help text.
+ */
+static void
+printUsage(const char *progname)
+{
+	printVersion(progname);
+
+	printf("The MaxScale binlog check utility.\n\n");
+        printf("Usage: %s [-f] [-d] [-v] [<binlog file>]\n\n", progname);
+        printf("  -f|--fix		Fix binlog file, require write permissions (truncate)\n");
+        printf("  -d|--debug		Print debug messages\n");
+        printf("  -v|--verbose		Verbose output\n");
+        printf("  -V|--version          print version information and exit\n");
+        printf("  -?|--help             Print this help text\n");
+}
+
+
