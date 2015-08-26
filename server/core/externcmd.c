@@ -109,7 +109,7 @@ EXTERNCMD* externcmd_allocate(char* argstr)
 	if(access(cmd->parameters[0],X_OK) != 0)
 	{
 	    skygw_log_write(LE,
-		     "Error: Cannot execute file: %s",
+		     "Error: Cannot execute file '%s'. Missing execution permissions.",
 		     cmd->parameters[0]);
 	    externcmd_free(cmd);
 	    return NULL;
