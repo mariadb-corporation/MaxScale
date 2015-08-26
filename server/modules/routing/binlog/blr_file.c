@@ -1251,7 +1251,7 @@ int event_error = 0;
 
                                 LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
                                         "       FDE Header EventLength %i"
-                                        ", N. of supported MySQL/MAriaDB events %i",
+                                        ", N. of supported MySQL/MariaDB events %i",
                                         event_header_length,
                                         (n_events - event_header_ntypes))));
                         }
