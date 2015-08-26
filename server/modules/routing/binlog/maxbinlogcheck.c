@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
 	if (ptr)
 		strncpy(inst->binlog_name, ptr+1, BINLOG_FNAMELEN);
 	else
-		strncpy(inst->binlog_name, ptr, BINLOG_FNAMELEN);
+		strncpy(inst->binlog_name, path, BINLOG_FNAMELEN);
 
 	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
 		"maxbinlogcheck %s", binlog_check_version)));
