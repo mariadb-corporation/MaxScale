@@ -41,6 +41,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
+#include <mysql/mysqld_error.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -496,7 +497,16 @@ void valid_monitor_permissions(MONITOR* monitor)
 
     if(mysql_query(mysql,"show slave status") != 0)
     {
-	skygw_log_write(LE,"[%s] Error: Monitor failed to query for slave status. MySQL error message: %s",monitor->name,mysql_error(mysql));
+        if(mysql_errno(mysql) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
+        {
+            skygw_log_write(LE,"[%s] Error: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
+                            monitor->name,mysql_error(mysql));
+        }
+        else
+        {
+            skygw_log_write(LE,"[%s] Error: Monitor failed to query for slave status. MySQL error message: %s",
+                            monitor->name,mysql_error(mysql));
+        }
 	mysql_close(mysql);
 	free(dpasswd);
 	return;

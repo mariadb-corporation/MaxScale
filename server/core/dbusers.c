@@ -2376,46 +2376,43 @@ void valid_service_permissions(SERVICE* service)
 	return;
     }
 
-    if(mysql_query(mysql,"select * from mysql.user limit 1") != 0)
+    if(mysql_query(mysql,"SELECT user, host, password,Select_priv FROM mysql.user limit 1") != 0)
     {
-	skygw_log_write(LE,"[%s] Error: Failed to query from mysql.user table. MySQL error message: %s",service->name,mysql_error(mysql));
-	mysql_close(mysql);
+        if(mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
+        {
+            skygw_log_write(LE,"[%s] Error: User '%s' is missing SELECT privileges on mysql.user table. MySQL error message: %s",
+                            service->name,user,mysql_error(mysql));
+        }
+        else
+        {
+            skygw_log_write(LE,"[%s] Error: Failed to query from mysql.user table. MySQL error message: %s",
+                            service->name,mysql_error(mysql));
+	}
+        mysql_close(mysql);
 	free(dpasswd);
 	return;
     }
 
     mysql_free_result(mysql_use_result(mysql));
 
-    if(mysql_query(mysql,"select * from mysql.db limit 1") != 0)
+    if(mysql_query(mysql,"SELECT user, host, db FROM mysql.db limit 1") != 0)
     {
-	skygw_log_write(LM|LE,"The user '%s' for service '%s' does not have"
-		" SELECT permissions on the mysql.db table. MaxScale will not use the database in authentication. MySQL error message: %s",
-		 user,service->name,mysql_error(mysql));
-	mysql_close(mysql);
+        if(mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
+        {
+            skygw_log_write(LE,"[%s] Error: User '%s' is missing SELECT privileges on mysql.db table. MySQL error message: %s",
+                            service->name,user,mysql_error(mysql));
+        }
+        else
+        {
+            skygw_log_write(LE,"[%s] Error: Failed to query from mysql.user table. MySQL error message: %s",
+                            service->name,mysql_error(mysql));
+	}
+        mysql_close(mysql);
 	free(dpasswd);
 	return;
     }
-    else
-    {
-	mysql_free_result(mysql_use_result(mysql));
-    }
 
-    if(mysql_query(mysql,LOAD_MYSQL_DATABASE_NAMES) != 0)
-    {
-	skygw_log_write(LE,"[%s] Error: Failed to query for SHOW DATABASES permissions. MySQL error message: %s.",service->name,mysql_error(mysql));
-    }
-    else
-    {
-	res = mysql_use_result(mysql);
-	if(mysql_num_rows(res) == 0)
-	{
-	    skygw_log_write(LM|LE,"The user '%s' for service '%s' does not have"
-		    " SHOW DATABASES permissions. MaxScale will not use the database in authentication.",
-		     user,service->name);
-	}
-	mysql_free_result(res);
-    }
-
+    mysql_free_result(mysql_use_result(mysql));
     mysql_close(mysql);
     free(dpasswd);
 }
