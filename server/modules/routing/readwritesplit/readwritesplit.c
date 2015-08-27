@@ -2586,8 +2586,8 @@ static bool route_single_stmt(
 			rses_end_locked_router_action(rses);
 			goto retblock;
 		}
-		GWBUF* wbuf = gwbuf_clone(querybuf);
-		if ((ret = target_dcb->func.write(target_dcb, wbuf)) == 1)
+
+		if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
 		{
 			backend_ref_t* bref;
 			
@@ -2601,7 +2601,6 @@ static bool route_single_stmt(
 		}
 		else
 		{
-		    gwbuf_free(wbuf);
 			LOGIF((LE|LT), (skygw_log_write_flush(
 				LOGFILE_ERROR,
 				"Error : Routing query failed.")));
