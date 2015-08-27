@@ -454,7 +454,7 @@ int		*data;
 
 /**
  * Check if the monitor user has all required permissions to operate properly.
- * this checks for ...
+ * this checks for REPLICATION CLIENT permissions
  * @param service Monitor to inspect
  */
 void valid_monitor_permissions(MONITOR* monitor)
