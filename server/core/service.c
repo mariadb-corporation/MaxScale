@@ -421,7 +421,7 @@ int		listeners = 0;
 if(!check_service_permissions(service))
 {
     skygw_log_write_flush(LE,
-			"%s: Inadequate user permissions for service. Service not started.",
+			"%s: Error: Inadequate user permissions for service. Service not started.",
                         service->name);
     service->state = SERVICE_STATE_FAILED;
     return 0;

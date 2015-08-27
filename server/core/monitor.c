@@ -455,6 +455,8 @@ int		*data;
  * Check if the monitor user has all required permissions to operate properly.
  * this checks for REPLICATION CLIENT permissions
  * @param service Monitor to inspect
+ * @return False if an error with monitor permissions was detected or if an
+ * error occurred. True if permissions are correct.
  */
 bool check_monitor_permissions(MONITOR* monitor)
 {
@@ -499,7 +501,7 @@ bool check_monitor_permissions(MONITOR* monitor)
         if(mysql_errno(mysql) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
         {
             skygw_log_write(LE,"%s: Error: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
-                            monitor->name,mysql_error(mysql));
+                            monitor->name,user,mysql_error(mysql));
             rval = false;
         }
         else

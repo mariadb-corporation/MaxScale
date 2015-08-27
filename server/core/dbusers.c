@@ -2322,6 +2322,8 @@ int add_wildcard_users(USERS *users, char* name, char* host, char* password, cha
  * SHOW DATABASES permissions. If permissions are not adequate, an error message
  * is logged.
  * @param service Service to inspect
+ * @return True if service permissions are correct. False if one or more permissions
+ * are missing or if an error occurred.
  */
 bool check_service_permissions(SERVICE* service)
 {
@@ -2394,19 +2396,20 @@ bool check_service_permissions(SERVICE* service)
                             service->name,mysql_error(mysql));
 	}
     }
-
-    if((res = mysql_use_result(mysql)) == NULL)
+    else
     {
-        skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for"
-                " permissions to the mysql.user table: %s",
+        if((res = mysql_use_result(mysql)) == NULL)
+        {
+            skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for"
+                    " permissions to the mysql.user table: %s",
                             service->name,mysql_error(mysql));
-        mysql_close(mysql);
-        free(dpasswd);
-        return rval;
+            mysql_close(mysql);
+            free(dpasswd);
+            return rval;
+        }
+
+        mysql_free_result(res);
     }
-
-    mysql_free_result(res);
-
     if(mysql_query(mysql,"SELECT user, host, db FROM mysql.db limit 1") != 0)
     {
         if(mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
@@ -2421,17 +2424,18 @@ bool check_service_permissions(SERVICE* service)
                             service->name,mysql_error(mysql));
 	}
     }
-
-    if((res = mysql_use_result(mysql)) == NULL)
-    {
-         skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for permissions to the mysql.db table: %s",
-                            service->name,mysql_error(mysql));
-    }
     else
     {
-        mysql_free_result(res);
+        if((res = mysql_use_result(mysql)) == NULL)
+        {
+            skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for permissions to the mysql.db table: %s",
+                            service->name,mysql_error(mysql));
+        }
+        else
+        {
+            mysql_free_result(res);
+        }
     }
-
     mysql_close(mysql);
     free(dpasswd);
     return rval;
