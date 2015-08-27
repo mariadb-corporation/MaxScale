@@ -493,7 +493,7 @@ bool check_monitor_permissions(MONITOR* monitor)
 		 server->port);
 	mysql_close(mysql);
 	free(dpasswd);
-	return true;
+	return false;
     }
 
     if(mysql_query(mysql,"show slave status") != 0)
@@ -502,13 +502,13 @@ bool check_monitor_permissions(MONITOR* monitor)
         {
             skygw_log_write(LE,"%s: Error: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
                             monitor->name,user,mysql_error(mysql));
-            rval = false;
         }
         else
         {
             skygw_log_write(LE,"%s: Error: Monitor failed to query for slave status. MySQL error message: %s",
                             monitor->name,mysql_error(mysql));
         }
+        rval = false;
     }
     else
     {
@@ -516,11 +516,12 @@ bool check_monitor_permissions(MONITOR* monitor)
         {
             skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for REPLICATION CLIENT permissions: %s",
                             monitor->name,mysql_error(mysql));
-            free(dpasswd);
-            mysql_close(mysql);
-            return rval;
+            rval = false;
         }
-        mysql_free_result(res);
+        else
+        {
+            mysql_free_result(res);
+        }
     }
     mysql_close(mysql);
     free(dpasswd);

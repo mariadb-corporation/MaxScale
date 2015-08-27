@@ -2387,7 +2387,6 @@ bool check_service_permissions(SERVICE* service)
             skygw_log_write(LE,"%s: Error: User '%s' is missing SELECT privileges"
                     " on mysql.user table. MySQL error message: %s",
                             service->name,user,mysql_error(mysql));
-            rval = false;
         }
         else
         {
@@ -2395,6 +2394,7 @@ bool check_service_permissions(SERVICE* service)
                     " MySQL error message: %s",
                             service->name,mysql_error(mysql));
 	}
+         rval = false;
     }
     else
     {
@@ -2405,7 +2405,7 @@ bool check_service_permissions(SERVICE* service)
                             service->name,mysql_error(mysql));
             mysql_close(mysql);
             free(dpasswd);
-            return rval;
+            return false;
         }
 
         mysql_free_result(res);
@@ -2416,13 +2416,13 @@ bool check_service_permissions(SERVICE* service)
         {
             skygw_log_write(LE,"%s: Error: User '%s' is missing SELECT privileges on mysql.db table. MySQL error message: %s",
                             service->name,user,mysql_error(mysql));
-            rval = false;
         }
         else
         {
             skygw_log_write(LE,"%s: Error: Failed to query from mysql.db table. MySQL error message: %s",
                             service->name,mysql_error(mysql));
 	}
+        rval = false;
     }
     else
     {
@@ -2430,6 +2430,7 @@ bool check_service_permissions(SERVICE* service)
         {
             skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for permissions to the mysql.db table: %s",
                             service->name,mysql_error(mysql));
+            rval = false;
         }
         else
         {

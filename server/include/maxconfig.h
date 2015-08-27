@@ -146,5 +146,5 @@ void config_enable_feedback_task(void);
 void config_disable_feedback_task(void);
 unsigned long  config_get_gateway_id(void);
 GATEWAY_CONF* config_get_global_options();
-int isInternalService(char *router);
+bool isInternalService(char *router);
 #endif
