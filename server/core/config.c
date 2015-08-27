@@ -92,7 +92,7 @@ static	void	global_defaults();
 static	void	feedback_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
 int	config_truth_value(char *str);
-static	int	internalService(char *router);
+int	internalService(char *router);
 int	config_get_ifaddr(unsigned char *output);
 int	config_get_release_string(char* release);
 FEEDBACK_CONF * config_get_feedback_data();
@@ -2230,7 +2230,7 @@ static char *InternalRouters[] = {
  * @param router	The router name
  * @return	Non-zero if the router is in the InternalRouters table
  */
-static int
+int
 internalService(char *router)
 {
 int	i;

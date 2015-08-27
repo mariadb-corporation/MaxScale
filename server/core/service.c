@@ -458,7 +458,7 @@ if(service->ssl_mode != SSL_DISABLED)
 	    hktask_add("connection_timeout",session_close_timeouts,NULL,5);
 	}
 
-	    return listeners;
+	return listeners;
 }
 
 /**
@@ -2043,15 +2043,4 @@ int serviceInitSSL(SERVICE* service)
 	service->ssl_init_done = true;
     }
     return 0;
-}
-
-/**
- * Check if the service is an internal service. Internal services are special
- * services which do not require the servers parameter.
- * @param service Service to check
- * @return True if this service is used only internally
- */
-bool service_is_internal(SERVICE* service)
-{
-    return strcmp(service->routerModule,"cli") == 0 || strcmp(service->routerModule,"debugcli") == 0;
 }

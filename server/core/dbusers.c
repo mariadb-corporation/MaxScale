@@ -2331,7 +2331,7 @@ void valid_service_permissions(SERVICE* service)
     SERVER_REF* server;
     int conn_timeout = 1;
 
-    if(service_is_internal(service))
+    if(internalService(service->routerModule))
 	return;
 
     if(service->dbref == NULL)
