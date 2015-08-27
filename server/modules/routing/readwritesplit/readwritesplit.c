@@ -1442,7 +1442,8 @@ static route_target_t get_route_target (
 		{
 			target = TARGET_SLAVE;
 		}
-		else if (QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
+
+                if (QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
 			/** Configured not to allow reading variables from slaves */
 			(use_sql_variables_in == TYPE_MASTER && 
@@ -1582,12 +1583,41 @@ void check_drop_tmp_table(
   DCB*               master_dcb     = NULL;
   rses_property_t*   rses_prop_tmp;
 
+  if(router_cli_ses == NULL || querybuf == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: NULL parameters passed: %p %p",
+		      __FUNCTION__,router_cli_ses,querybuf);
+      return;
+  }
+
+  if(router_cli_ses->rses_master_ref == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server reference is NULL.",
+		      __FUNCTION__);
+      return;
+  }
+
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
+
+  if(master_dcb == NULL || master_dcb->session == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
+	      "This means that the connection to the master server is already "
+	      "closed while a query is still being routed.",__FUNCTION__);
+      return;
+  }
 
   CHK_DCB(master_dcb);
 
   data = (MYSQL_session*)master_dcb->session->data;
+
+  if(data == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      return;
+  }
+
   dbname = (char*)data->db;
 
   if (is_drop_table_query(querybuf))
@@ -1637,19 +1667,48 @@ static skygw_query_type_t is_read_tmp_table(
   bool target_tmp_table = false;
   int tsize = 0, klen = 0,i;
   char** tbl = NULL;
-  char *hkey,*dbname;
+  char *dbname;
+  char hkey[MYSQL_DATABASE_MAXLEN+64+2];
   MYSQL_session* data;
 
   DCB*               master_dcb     = NULL;
   skygw_query_type_t qtype = type;
   rses_property_t*   rses_prop_tmp;
 
+  if(router_cli_ses == NULL || querybuf == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: NULL parameters passed: %p %p",
+		      __FUNCTION__,router_cli_ses,querybuf);
+      return type;
+  }
+
+  if(router_cli_ses->rses_master_ref == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server reference is NULL.",
+		      __FUNCTION__);
+      return type;
+  }
+
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
+  if(master_dcb == NULL || master_dcb->session == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server DBC is NULL. "
+	      "This means that the connection to the master server is already "
+	      "closed while a query is still being routed.",__FUNCTION__);
+      return qtype;
+  }
   CHK_DCB(master_dcb);
 
   data = (MYSQL_session*)master_dcb->session->data;
+
+  if(data == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      return qtype;
+  }
+
   dbname = (char*)data->db;
 
   if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) || 
@@ -1665,12 +1724,7 @@ static skygw_query_type_t is_read_tmp_table(
 	  /** Query targets at least one table */
 	  for(i = 0; i<tsize && !target_tmp_table && tbl[i]; i++)
 	    {
-	      klen = strlen(dbname) + strlen(tbl[i]) + 2;
-	      hkey = calloc(klen,sizeof(char));
-	      strcpy(hkey,dbname);
-	      strcat(hkey,".");
-	      strcat(hkey,tbl[i]);
-
+	      sprintf(hkey,"%s.%s",dbname,tbl[i]);
 	      if (rses_prop_tmp && 
 		  rses_prop_tmp->rses_prop_data.temp_tables)
 		{
@@ -1685,8 +1739,6 @@ static skygw_query_type_t is_read_tmp_table(
 					     "Query targets a temporary table: %s",hkey)));
 		    }
 		}
-
-	      free(hkey);
 	    }
 
 	}
@@ -1718,22 +1770,48 @@ static void check_create_tmp_table(
 	GWBUF*  querybuf,
 	skygw_query_type_t type)
 {
-
   int klen = 0;
-
   char *hkey,*dbname;
   MYSQL_session* data;
+  DCB* master_dcb = NULL;
+  rses_property_t* rses_prop_tmp;
+  HASHTABLE* h;
 
-  DCB*               master_dcb     = NULL;
-  rses_property_t*   rses_prop_tmp;
-  HASHTABLE*	   h;
+  if(router_cli_ses == NULL || querybuf == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: NULL parameters passed: %p %p",
+		      __FUNCTION__,router_cli_ses,querybuf);
+      return;
+  }
+
+  if(router_cli_ses->rses_master_ref == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server reference is NULL.",
+		      __FUNCTION__);
+      return;
+  }
 
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
+  if(master_dcb == NULL || master_dcb->session == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: Master server DCB is NULL. "
+	      "This means that the connection to the master server is already "
+	      "closed while a query is still being routed.",__FUNCTION__);
+      return;
+  }
+
   CHK_DCB(master_dcb);
 
   data = (MYSQL_session*)master_dcb->session->data;
+
+  if(data == NULL)
+  {
+      skygw_log_write(LE,"[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      return;
+  }
+
   dbname = (char*)data->db;
 
 
@@ -2018,8 +2096,9 @@ static bool route_single_stmt(
 	GWBUF*             querybuf)
 {
 	skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
-	mysql_server_cmd_t packet_type;
+	mysql_server_cmd_t packet_type = MYSQL_COM_UNDEFINED;
 	uint8_t*           packet;
+	size_t		   packet_len;
 	int                ret            = 0;
 	DCB*               master_dcb     = NULL;
 	DCB*               target_dcb     = NULL;
@@ -2027,11 +2106,8 @@ static bool route_single_stmt(
 	bool           	   succp          = false;
 	int                rlag_max       = MAX_RLAG_UNDEFINED;
 	backend_type_t     btype; /*< target backend type */
-	
-	
+
 	ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
-	packet = GWBUF_DATA(querybuf);
-	packet_type = packet[4];
 
 	/** 
 	 * Read stored master DCB pointer. If master is not set, routing must 
@@ -2059,7 +2135,19 @@ static bool route_single_stmt(
 	{
 		querybuf = gwbuf_make_contiguous(querybuf);
 	}
+
+	packet = GWBUF_DATA(querybuf);
+	packet_len = gw_mysql_get_byte3(packet);
 	
+	if(packet_len == 0)
+	{
+	    route_target = TARGET_MASTER;
+	    packet_type = MYSQL_COM_UNDEFINED;
+	}
+	else
+	{
+	    packet_type = packet[4];
+
 	switch(packet_type) {
 		case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
 		case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
@@ -2107,10 +2195,15 @@ static bool route_single_stmt(
 	/**
 	 * Check if the query has anything to do with temporary tables.
 	 */
+	if (!rses_begin_locked_router_action(rses))
+	{
+	    succp = false;
+	    goto retblock;
+	}
 	qtype = is_read_tmp_table(rses, querybuf, qtype);
 	check_create_tmp_table(rses, querybuf, qtype);
 	check_drop_tmp_table(rses, querybuf,qtype);
-	
+	rses_end_locked_router_action(rses);
 	/**
 	 * If autocommit is disabled or transaction is explicitly started
 	 * transaction becomes active and master gets all statements until
@@ -2274,7 +2367,7 @@ static bool route_single_stmt(
 		}
 		goto retblock;
 	}
-	
+	}
 	/** Lock router session */
 	if (!rses_begin_locked_router_action(rses))
 	{
@@ -2494,8 +2587,8 @@ static bool route_single_stmt(
 			rses_end_locked_router_action(rses);
 			goto retblock;
 		}
-		
-		if ((ret = target_dcb->func.write(target_dcb, gwbuf_clone(querybuf))) == 1)
+		GWBUF* wbuf = gwbuf_clone(querybuf);
+		if ((ret = target_dcb->func.write(target_dcb, wbuf)) == 1)
 		{
 			backend_ref_t* bref;
 			
@@ -2509,7 +2602,9 @@ static bool route_single_stmt(
 		}
 		else
 		{
-			LOGIF(LE, (skygw_log_write_flush(
+                    if(wbuf)
+                        gwbuf_free(wbuf);
+			LOGIF((LE|LT), (skygw_log_write_flush(
 				LOGFILE_ERROR,
 				"Error : Routing query failed.")));
 			succp = false;
@@ -2557,7 +2652,10 @@ static bool rses_begin_locked_router_action(
         ROUTER_CLIENT_SES* rses)
 {
         bool succp = false;
-        
+
+        if(rses == NULL)
+	    return false;
+
         CHK_CLIENT_RSES(rses);
 
         if (rses->rses_closed) {
@@ -2613,6 +2711,7 @@ ROUTER_INSTANCE	  *router = (ROUTER_INSTANCE *)instance;
 int		  i = 0;
 BACKEND		  *backend;
 char		  *weightby;
+double master_pct = 0.0;
 
 	spinlock_acquire(&router->lock);
 	router_cli_ses = router->connections;
@@ -2622,7 +2721,12 @@ char		  *weightby;
 		router_cli_ses = router_cli_ses->next;
 	}
 	spinlock_release(&router->lock);
-	
+
+	if(router->stats.n_master + router->stats.n_slave > 0)
+	{
+	    master_pct = (double)router->stats.n_master/(double)(router->stats.n_master + router->stats.n_slave);
+	}
+
 	dcb_printf(dcb,
                    "\tNumber of router sessions:           	%d\n",
                    router->stats.n_sessions);
@@ -2641,6 +2745,10 @@ char		  *weightby;
 	dcb_printf(dcb,
                    "\tNumber of queries forwarded to all:   	%d\n",
                    router->stats.n_all);
+	dcb_printf(dcb,
+                   "\tMaster/Slave percentage:		%.2f%%\n",
+                   master_pct * 100.0);
+
 	if ((weightby = serviceGetWeightingParameter(router->service)) != NULL)
         {
                 dcb_printf(dcb,
@@ -2840,8 +2948,8 @@ static void clientReply (
         /** There is one pending session command to be executed. */
         if (sescmd_cursor_is_active(scur))
         {
-                bool succp;
-                
+	    bool succp;
+
                 LOGIF(LT, (skygw_log_write(
                         LOGFILE_TRACE,
                         "Backend %s:%d processed reply and starts to execute "
@@ -2850,8 +2958,15 @@ static void clientReply (
                         bref->bref_backend->backend_server->port)));
                 
                 succp = execute_sescmd_in_backend(bref);
-                
-                ss_dassert(succp);
+		ss_dassert(succp);
+		if(!succp)
+		{
+		    LOGIF(LT, (skygw_log_write(
+                        LOGFILE_TRACE,
+                        "Backend %s:%d failed to execute session command.",
+                        bref->bref_backend->backend_server->name,
+                        bref->bref_backend->backend_server->port)));
+		}
         }
 	else if (bref->bref_pending_cmd != NULL) /*< non-sescmd is waiting to be routed */
 	{
@@ -2945,7 +3060,7 @@ static void bref_clear_state(
 {
     if(bref == NULL)
     {
-	skygw_log_write(LE,"Error: NULL parameter passed to bref_clear_state. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	return;
     }
         if (state != BREF_WAITING_RESULT)
@@ -2969,6 +3084,13 @@ static void bref_clear_state(
                         prev2 = atomic_add(
                                 &bref->bref_backend->backend_server->stats.n_current_ops, -1);
                         ss_dassert(prev2 > 0);
+			if(prev2 <= 0)
+			{
+			    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
+				     __FUNCTION__,
+				     &bref->bref_backend->backend_server->name,
+				     &bref->bref_backend->backend_server->port);
+			}
                 }       
         }
 }
@@ -2979,7 +3101,7 @@ static void bref_set_state(
 {
     if(bref == NULL)
     {
-	skygw_log_write(LE,"Error: NULL parameter passed to bref_set_state. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	return;
     }
         if (state != BREF_WAITING_RESULT)
@@ -2994,11 +3116,24 @@ static void bref_set_state(
                 /** Increase waiter count */
                 prev1 = atomic_add(&bref->bref_num_result_wait, 1);
                 ss_dassert(prev1 >= 0);
-                
+                if(prev1 < 0)
+		{
+		    skygw_log_write(LE,"[%s] Error: negative number of connections waiting for results in backend %s:%u",
+			     __FUNCTION__,
+			     &bref->bref_backend->backend_server->name,
+			     &bref->bref_backend->backend_server->port);
+		}
                 /** Increase global operation count */
                 prev2 = atomic_add(
                         &bref->bref_backend->backend_server->stats.n_current_ops, 1);
-                ss_dassert(prev2 >= 0);                
+                ss_dassert(prev2 >= 0);
+		if(prev2 < 0)
+		{
+		    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
+			     __FUNCTION__,
+			     &bref->bref_backend->backend_server->name,
+			     &bref->bref_backend->backend_server->port);
+		}
         }
 }
 
@@ -3554,7 +3689,6 @@ static rses_property_t* rses_property_init(
 	prop->rses_prop_chk_tail = CHK_NUM_ROUTER_PROPERTY;
 #endif
 	
-return_prop:
 	CHK_RSES_PROP(prop);
 	return prop;
 }
@@ -3567,7 +3701,7 @@ static void rses_property_done(
 {
     if(prop == NULL)
     {
-	skygw_log_write(LE,"Error: NULL parameter passed to rses_property_done. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	return;
     }
 	CHK_RSES_PROP(prop);
@@ -3652,7 +3786,7 @@ static mysql_sescmd_t* rses_property_get_sescmd(
 
 	if(prop == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to rses_property_get_sescmd. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return NULL;
 	}
 
@@ -3702,7 +3836,7 @@ static void mysql_sescmd_done(
 {
     if(sescmd == NULL)
     {
-	skygw_log_write(LE,"Error: NULL parameter passed to mysql_sescmd_done. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	return;
     }
 	CHK_RSES_PROP(sescmd->my_sescmd_prop);
@@ -3800,7 +3934,7 @@ static GWBUF* sescmd_cursor_process_replies(
                         /** Mark the rest session commands as replied */
                         scmd->my_sescmd_is_replied = true;
                         scmd->reply_cmd = *((unsigned char*)replybuf->start + 4);
-			skygw_log_write(LOGFILE_DEBUG,"Master '%s' responded to a session command.",
+			skygw_log_write(LT,"Master '%s' responded to a session command.",
 			     bref->bref_backend->backend_server->unique_name);
 			int i;
 			
@@ -3820,6 +3954,11 @@ static GWBUF* sescmd_cursor_process_replies(
 				    if(ses->rses_backend_ref[i].bref_dcb)
 					dcb_close(ses->rses_backend_ref[i].bref_dcb);
 				    *reconnect = true;
+				    skygw_log_write(LT,"Disabling slave %s:%d, result differs from master's result. Master: %d Slave: %d",
+					    ses->rses_backend_ref[i].bref_backend->backend_server->name,
+					     ses->rses_backend_ref[i].bref_backend->backend_server->port,
+					     bref->reply_cmd,
+					     ses->rses_backend_ref[i].reply_cmd);
 				}
 			    }
 			}
@@ -3827,11 +3966,17 @@ static GWBUF* sescmd_cursor_process_replies(
                 }
 		else
 		{
-		    skygw_log_write(LOGFILE_DEBUG,"Slave '%s' responded faster to a session command.",
-			     bref->bref_backend->backend_server->unique_name);
+		    skygw_log_write(LT,"Slave '%s' responded before master to a session command. Result: %d",
+			     bref->bref_backend->backend_server->unique_name,
+			     (int)bref->reply_cmd);
+		    if(bref->reply_cmd == 0xff)
+		    {
+			SERVER* serv = bref->bref_backend->backend_server;
+			skygw_log_write(LE,"Error: Slave '%s' (%s:%u) failed to execute session command.",
+				 serv->unique_name,serv->name,serv->port);
+		    }
 		    if(replybuf)
 			while((replybuf = gwbuf_consume(replybuf,gwbuf_length(replybuf))));
-		    return NULL;
 		}
 	    
 	    
@@ -3880,7 +4025,7 @@ static bool sescmd_cursor_is_active(
 
 	if(sescmd_cursor == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_is_active. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return false;
 	}
         ss_dassert(SPINLOCK_IS_LOCKED(&sescmd_cursor->scmd_cur_rses->rses_lock));
@@ -3910,7 +4055,7 @@ static GWBUF* sescmd_cursor_clone_querybuf(
 	GWBUF* buf;
 	if(scur == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_clone_querybuf. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return NULL;
 	}
 	ss_dassert(scur->scmd_cur_cmd != NULL);
@@ -3928,7 +4073,7 @@ static bool sescmd_cursor_history_empty(
 
         if(scur == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_history_empty. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return true;
 	}
         CHK_SESCMD_CUR(scur);
@@ -3952,7 +4097,7 @@ static void sescmd_cursor_reset(
         ROUTER_CLIENT_SES* rses;
 	if(scur == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_reset. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return;
 	}
         CHK_SESCMD_CUR(scur);
@@ -3973,7 +4118,7 @@ static bool execute_sescmd_history(
         sescmd_cursor_t* scur;
 	if(bref == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to execute_sescmd_history. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return false;
 	}
         CHK_BACKEND_REF(bref);
@@ -4014,7 +4159,7 @@ static bool execute_sescmd_in_backend(
 	GWBUF* buf;
 	if(backend_ref == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to execute_sescmd_in_backend. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return false;
 	}
         if (BREF_IS_CLOSED(backend_ref))
@@ -4123,7 +4268,7 @@ static bool sescmd_cursor_next(
 
 	if(scur == NULL)
 	{
-	    skygw_log_write(LE,"Error: NULL parameter passed to sescmd_cursor_next. (%s:%d)",__FILE__,__LINE__);
+	skygw_log_write(LE,"[%s] Error: NULL parameter.",__FUNCTION__);
 	    return false;
 	}
 
@@ -5165,10 +5310,8 @@ static int router_handle_state_switch(
 			srv->name,
 			srv->port,
 				STRSRVSTATUS(srv))));
-	ses = dcb->session;
-        CHK_SESSION(ses);
-	rses = (ROUTER_CLIENT_SES *)dcb->session->router_session;
-        CHK_CLIENT_RSES(rses);
+        CHK_SESSION(((SESSION*)dcb->session));
+        CHK_CLIENT_RSES(((ROUTER_CLIENT_SES *)dcb->session->router_session));
 
         switch (reason) {
                 case DCB_REASON_NOT_RESPONDING:
