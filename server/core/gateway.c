@@ -1056,6 +1056,9 @@ int main(int argc, char **argv)
         int      n_services;
         int      eno = 0;   /*< local variable for errno */
         int      opt;
+        int      daemon_pipe[2];
+        bool     parent_process;
+        int      child_status;
         void**	 threads = NULL;   /*< thread list */
         char	 mysql_home[PATH_MAX+1];
         char	 datadir_arg[10+PATH_MAX+1];  /*< '--datadir='  + PATH_MAX */
@@ -1301,6 +1304,13 @@ int main(int argc, char **argv)
         }
         else 
         {
+            if(pipe(daemon_pipe) == -1)
+            {
+                fprintf(stderr,"Error: Failed to create pipe for inter-process communication: %d %s",errno,strerror(errno));
+                rc = MAXSCALE_INTERNALERROR;
+                goto return_main;
+            }
+
                 /*<
                  * Maxscale must be daemonized before opening files, initializing
                  * embedded MariaDB and in general, as early as possible.
@@ -1433,7 +1443,37 @@ int main(int argc, char **argv)
                         rc = MAXSCALE_INTERNALERROR;
                         goto return_main;
                 }
-                gw_daemonize();
+
+                /** Daemonize the process and wait for the child process to notify
+                 * the parent process of its exit status. */
+                parent_process = gw_daemonize();
+
+                if(parent_process)
+                {
+                    int nread = read(daemon_pipe[0],(void*)&child_status,sizeof(int));
+                    close(daemon_pipe[1]);
+                    close(daemon_pipe[0]);
+
+                    if(nread == -1)
+                    {
+                        char* logerr = "Failed to read data from child process pipe.";
+                        print_log_n_stderr(true, true, logerr, logerr, errno);
+                        exit(MAXSCALE_INTERNALERROR);
+                    }
+                    else if(nread == 0)
+                    {
+                        /** Child process has exited or closed write pipe */
+                        char* logerr = "No data read from child process pipe.";
+                        print_log_n_stderr(true, true, logerr, logerr, 0);
+                        exit(MAXSCALE_INTERNALERROR);
+                    }
+
+                    exit(child_status);
+                }
+
+                /** This is the child process and we can close the read end of
+                 * the pipe. */
+                close(daemon_pipe[0]);
         }
         /*<
          * Set signal handlers for SIGHUP, SIGTERM, SIGINT and critical signals like SIGSEGV.
@@ -1907,6 +1947,13 @@ int main(int argc, char **argv)
 	CRYPTO_set_id_callback(pthread_self);
 #endif
 
+        /**
+         * Successful start, notify the parent process that it can exit.
+         */
+        ss_dassert(rc == MAXSCALE_SHUTDOWN);
+        write(daemon_pipe[1],&rc,sizeof(int));
+        close(daemon_pipe[1]);
+
 	MaxScaleStarted = time(0);
         /*<
          * Serve clients.
@@ -1945,6 +1992,14 @@ int main(int argc, char **argv)
 	unlink_pidfile();
 	
 return_main:
+
+        if(daemon_mode && rc != MAXSCALE_SHUTDOWN)
+        {
+            /** Notify the parent process that an error has occurred */
+            write(daemon_pipe[1],&rc,sizeof(int));
+            close(daemon_pipe[1]);
+        }
+
 	if (threads)
 		free(threads);
 	if (cnf_file_path)
