@@ -92,7 +92,7 @@ static	void	global_defaults();
 static	void	feedback_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
 int	config_truth_value(char *str);
-int	internalService(char *router);
+int	isInternalService(char *router);
 int	config_get_ifaddr(unsigned char *output);
 int	config_get_release_string(char* release);
 FEEDBACK_CONF * config_get_feedback_data();
@@ -898,7 +898,7 @@ process_config_context(CONFIG_CONTEXT *context)
 					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
-			else if (servers == NULL && internalService(router) == 0)
+			else if (servers == NULL && isInternalService(router) == 0)
 			{
 				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -1107,7 +1107,7 @@ process_config_context(CONFIG_CONTEXT *context)
 					monitorAddUser(obj->element,
                                                        user,
                                                        passwd);
-					valid_monitor_permissions(obj->element);
+					check_monitor_permissions(obj->element);
 				}
 				else if (obj->element && user)
 				{
@@ -2231,7 +2231,7 @@ static char *InternalRouters[] = {
  * @return	Non-zero if the router is in the InternalRouters table
  */
 int
-internalService(char *router)
+isInternalService(char *router)
 {
 int	i;
 

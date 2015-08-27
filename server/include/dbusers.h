@@ -68,5 +68,5 @@ extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 extern int replace_mysql_users(SERVICE *service);
 extern int dbusers_save(USERS *, char *);
 extern int dbusers_load(USERS *, char *);
-void valid_service_permissions(SERVICE* service);
+bool check_service_permissions(SERVICE* service);
 #endif

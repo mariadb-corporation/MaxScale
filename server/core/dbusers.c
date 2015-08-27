@@ -2323,30 +2323,32 @@ int add_wildcard_users(USERS *users, char* name, char* host, char* password, cha
  * is logged.
  * @param service Service to inspect
  */
-void valid_service_permissions(SERVICE* service)
+bool check_service_permissions(SERVICE* service)
 {
     MYSQL* mysql;
     MYSQL_RES* res;
     char *user,*password,*dpasswd;
     SERVER_REF* server;
     int conn_timeout = 1;
+    bool rval = true;
 
-    if(internalService(service->routerModule))
-	return;
+    if(isInternalService(service->routerModule))
+	return true;
 
     if(service->dbref == NULL)
     {
-	skygw_log_write(LE,"[%s] Error: Service is missing the servers parameter.",service->name);
-	return;
+	skygw_log_write(LE,"%s: Error: Service is missing the servers parameter.",service->name);
+	return false;
     }
 
     server = service->dbref;
 
     if (serviceGetUser(service, &user, &password) == 0)
     {
-	skygw_log_write(LE,"[%s] Error: Service %s is missing the user credentials for authentication.",
-		 __FUNCTION__,service->name);
-	return;
+	skygw_log_write(LE,
+                 "%s: Error: Service is missing the user credentials for authentication.",
+		 service->name);
+	return false;
     }
 
     dpasswd = decryptPassword(password);
@@ -2355,7 +2357,7 @@ void valid_service_permissions(SERVICE* service)
     {
 	skygw_log_write(LE,"[%s] Error: MySQL connection initialization failed.",__FUNCTION__);
 	free(dpasswd);
-	return;
+	return false;
     }
 
     mysql_options(mysql,MYSQL_OPT_USE_REMOTE_CONNECTION,NULL);
@@ -2365,7 +2367,7 @@ void valid_service_permissions(SERVICE* service)
 
     if(mysql_real_connect(mysql,server->server->name,user,dpasswd,NULL,server->server->port,NULL,0) == NULL)
     {
-	skygw_log_write(LE,"[%s] Error: Failed to connect to server %s(%s:%d) when"
+	skygw_log_write(LE,"%s: Error: Failed to connect to server %s(%s:%d) when"
 		" checking authentication user credentials and permissions.",
 		 service->name,
 		 server->server->unique_name,
@@ -2373,46 +2375,64 @@ void valid_service_permissions(SERVICE* service)
 		 server->server->port);
 	mysql_close(mysql);
 	free(dpasswd);
-	return;
+        return false;
     }
 
     if(mysql_query(mysql,"SELECT user, host, password,Select_priv FROM mysql.user limit 1") != 0)
     {
         if(mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
-            skygw_log_write(LE,"[%s] Error: User '%s' is missing SELECT privileges on mysql.user table. MySQL error message: %s",
+            skygw_log_write(LE,"%s: Error: User '%s' is missing SELECT privileges"
+                    " on mysql.user table. MySQL error message: %s",
                             service->name,user,mysql_error(mysql));
+            rval = false;
         }
         else
         {
-            skygw_log_write(LE,"[%s] Error: Failed to query from mysql.user table. MySQL error message: %s",
+            skygw_log_write(LE,"%s: Error: Failed to query from mysql.user table."
+                    " MySQL error message: %s",
                             service->name,mysql_error(mysql));
 	}
-        mysql_close(mysql);
-	free(dpasswd);
-	return;
     }
 
-    mysql_free_result(mysql_use_result(mysql));
+    if((res = mysql_use_result(mysql)) == NULL)
+    {
+        skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for"
+                " permissions to the mysql.user table: %s",
+                            service->name,mysql_error(mysql));
+        mysql_close(mysql);
+        free(dpasswd);
+        return rval;
+    }
+
+    mysql_free_result(res);
 
     if(mysql_query(mysql,"SELECT user, host, db FROM mysql.db limit 1") != 0)
     {
         if(mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
-            skygw_log_write(LE,"[%s] Error: User '%s' is missing SELECT privileges on mysql.db table. MySQL error message: %s",
+            skygw_log_write(LE,"%s: Error: User '%s' is missing SELECT privileges on mysql.db table. MySQL error message: %s",
                             service->name,user,mysql_error(mysql));
+            rval = false;
         }
         else
         {
-            skygw_log_write(LE,"[%s] Error: Failed to query from mysql.user table. MySQL error message: %s",
+            skygw_log_write(LE,"%s: Error: Failed to query from mysql.db table. MySQL error message: %s",
                             service->name,mysql_error(mysql));
 	}
-        mysql_close(mysql);
-	free(dpasswd);
-	return;
     }
 
-    mysql_free_result(mysql_use_result(mysql));
+    if((res = mysql_use_result(mysql)) == NULL)
+    {
+         skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for permissions to the mysql.db table: %s",
+                            service->name,mysql_error(mysql));
+    }
+    else
+    {
+        mysql_free_result(res);
+    }
+
     mysql_close(mysql);
     free(dpasswd);
+    return rval;
 }

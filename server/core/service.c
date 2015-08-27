@@ -417,6 +417,16 @@ serviceStart(SERVICE *service)
 SERV_PROTOCOL	*port;
 int		listeners = 0;
 
+
+if(!check_service_permissions(service))
+{
+    skygw_log_write_flush(LE,
+			"%s: Inadequate user permissions for service. Service not started.",
+                        service->name);
+    service->state = SERVICE_STATE_FAILED;
+    return 0;
+}
+
 if(service->ssl_mode != SSL_DISABLED)
 {
     if(serviceInitSSL(service) != 0)
@@ -437,8 +447,6 @@ if(service->ssl_mode != SSL_DISABLED)
 		service->state = SERVICE_STATE_FAILED;
 		return 0;
 	}
-
-	valid_service_permissions(service);
 
 	port = service->ports;
 	while (!service->svc_do_shutdown && port)

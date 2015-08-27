@@ -51,8 +51,6 @@ extern __thread log_info_t tls_log_info;
 static MONITOR	*allMonitors = NULL;
 static SPINLOCK	monLock = SPINLOCK_INIT;
 
-void valid_monitor_permissions(MONITOR* monitor);
-
 /**
  * Allocate a new monitor, load the associated module for the monitor
  * and start execution on the monitor.
@@ -458,13 +456,14 @@ int		*data;
  * this checks for REPLICATION CLIENT permissions
  * @param service Monitor to inspect
  */
-void valid_monitor_permissions(MONITOR* monitor)
+bool check_monitor_permissions(MONITOR* monitor)
 {
     MYSQL* mysql;
     MYSQL_RES* res;
     char *user,*dpasswd;
     SERVER* server;
     int conn_timeout = 1;
+    bool rval = true;
 
     user = monitor->user;
     dpasswd = decryptPassword(monitor->password);
@@ -473,7 +472,7 @@ void valid_monitor_permissions(MONITOR* monitor)
     {
 	skygw_log_write(LE,"[%s] Error: MySQL connection initialization failed.",__FUNCTION__);
 	free(dpasswd);
-	return;
+	return false;
     }
 
     server = monitor->databases->server;
@@ -484,7 +483,7 @@ void valid_monitor_permissions(MONITOR* monitor)
      * user permissions. */
     if(mysql_real_connect(mysql,server->name,user,dpasswd,NULL,server->port,NULL,0) == NULL)
     {
-	skygw_log_write(LE,"[%s] Error: Failed to connect to server %s(%s:%d) when"
+	skygw_log_write(LE,"%s: Error: Failed to connect to server %s(%s:%d) when"
 		" checking monitor user credentials and permissions.",
 		 monitor->name,
 		 server->unique_name,
@@ -492,27 +491,36 @@ void valid_monitor_permissions(MONITOR* monitor)
 		 server->port);
 	mysql_close(mysql);
 	free(dpasswd);
-	return;
+	return true;
     }
 
     if(mysql_query(mysql,"show slave status") != 0)
     {
         if(mysql_errno(mysql) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
         {
-            skygw_log_write(LE,"[%s] Error: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
+            skygw_log_write(LE,"%s: Error: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
                             monitor->name,mysql_error(mysql));
+            rval = false;
         }
         else
         {
-            skygw_log_write(LE,"[%s] Error: Monitor failed to query for slave status. MySQL error message: %s",
+            skygw_log_write(LE,"%s: Error: Monitor failed to query for slave status. MySQL error message: %s",
                             monitor->name,mysql_error(mysql));
         }
-	mysql_close(mysql);
-	free(dpasswd);
-	return;
     }
-
-    mysql_free_result(mysql_use_result(mysql));
+    else
+    {
+        if((res = mysql_use_result(mysql)) == NULL)
+        {
+            skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for REPLICATION CLIENT permissions: %s",
+                            monitor->name,mysql_error(mysql));
+            free(dpasswd);
+            mysql_close(mysql);
+            return rval;
+        }
+        mysql_free_result(res);
+    }
     mysql_close(mysql);
     free(dpasswd);
+    return rval;
 }

@@ -169,5 +169,5 @@ extern void	monitorList(DCB *);
 extern void     monitorSetInterval (MONITOR *, unsigned long);
 extern void     monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
-void valid_monitor_permissions(MONITOR* monitor);
+bool check_monitor_permissions(MONITOR* monitor);
 #endif
