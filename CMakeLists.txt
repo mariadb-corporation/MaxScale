@@ -437,6 +437,8 @@ set_tests_properties(bug648 PROPERTIES TIMEOUT 3600)
 add_test(sysbench_kill_slave sysbench_kill_slave)
 set_tests_properties(sysbench_kill_slave PROPERTIES TIMEOUT 3600)
 
+add_test(setup_binlog_no_pos setup_binlog_no_pos)
+
 #add_test(setup_binlog1 setup_binlog1)
 
 # See if we are on a RPM-capable or DEB-capable system
