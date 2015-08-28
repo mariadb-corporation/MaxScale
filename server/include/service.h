@@ -129,6 +129,12 @@ enum{
 #define DEFAULT_SSL_CERT_VERIFY_DEPTH 100 /*< The default certificate verification depth */
 
 /**
+ * Parameters that are automatically detected but can also be configured by the
+ * user are initially set to this value.
+ */
+#define SERVICE_PARAM_UNINIT -1
+
+/**
  * Defines a service within the gateway.
  *
  * A service is a combination of a set of backend servers, a routing mechanism

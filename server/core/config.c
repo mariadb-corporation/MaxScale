@@ -92,7 +92,7 @@ static	void	global_defaults();
 static	void	feedback_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
 int	config_truth_value(char *str);
-static	int	internalService(char *router);
+bool	isInternalService(char *router);
 int	config_get_ifaddr(unsigned char *output);
 int	config_get_release_string(char* release);
 FEEDBACK_CONF * config_get_feedback_data();
@@ -898,7 +898,7 @@ process_config_context(CONFIG_CONTEXT *context)
 					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
-			else if (servers == NULL && internalService(router) == 0)
+			else if (servers == NULL && !isInternalService(router))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -1107,6 +1107,7 @@ process_config_context(CONFIG_CONTEXT *context)
 					monitorAddUser(obj->element,
                                                        user,
                                                        passwd);
+					check_monitor_permissions(obj->element);
 				}
 				else if (obj->element && user)
 				{
@@ -2229,18 +2230,16 @@ static char *InternalRouters[] = {
  * @param router	The router name
  * @return	Non-zero if the router is in the InternalRouters table
  */
-static int
-internalService(char *router)
+bool
+isInternalService(char *router)
 {
-int	i;
-
 	if (router)
 	{
-		for (i = 0; InternalRouters[i]; i++)
+		for (int i = 0; InternalRouters[i]; i++)
 			if (strcmp(router, InternalRouters[i]) == 0)
-				return 1;
+				return true;
 	}
-	return 0;
+	return false;
 }
 /**
  * Get the MAC address of first network interface

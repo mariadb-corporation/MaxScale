@@ -140,6 +140,7 @@ SERVICE 	*service;
 	service->routerModule = strdup(router);
 	service->users_from_all = false;
 	service->resources = NULL;
+        service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
 	service->ssl_mode = SSL_DISABLED;
 	service->ssl_init_done = false;
 	service->ssl_ca_cert = NULL;
@@ -416,6 +417,16 @@ serviceStart(SERVICE *service)
 {
 SERV_PROTOCOL	*port;
 int		listeners = 0;
+
+
+if(!check_service_permissions(service))
+{
+    skygw_log_write_flush(LE,
+			"%s: Error: Inadequate user permissions for service. Service not started.",
+                        service->name);
+    service->state = SERVICE_STATE_FAILED;
+    return 0;
+}
 
 if(service->ssl_mode != SSL_DISABLED)
 {
