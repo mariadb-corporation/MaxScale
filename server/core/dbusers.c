@@ -82,7 +82,7 @@
 #define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
 
 #define MYSQL_USERS_WITH_DB_ORDER " ORDER BY host DESC"
-#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT user.user AS user,user.host AS host,user.password AS password,concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, user.Select_priv AS anydb,db.db AS db FROM mysql.user LEFT JOIN mysql.db ON user.user=db.user AND user.host=db.host WHERE user.user IS NOT NULL AND user.user <> ''" MYSQL_USERS_WITH_DB_ORDER
+#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT user.user AS user,user.host AS host,user.password AS password,concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, user.Select_priv AS anydb,db.db AS db FROM mysql.user LEFT JOIN mysql.db ON user.user=db.user AND user.host=db.host WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
 
 #define MYSQL_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS tbl_count"
 
@@ -584,7 +584,8 @@ getAllUsers(SERVICE *service, USERS *users)
 						MYSQL_DATABASE_MAXLEN;
 	int		dbnames = 0;
 	int		db_grants = 0;
-	
+	bool anon_user = false;
+
 	if (serviceGetUser(service, &service_user, &service_passwd) == 0)
 	{
 		ss_dassert(service_passwd == NULL || service_user == NULL);
@@ -928,7 +929,16 @@ getAllUsers(SERVICE *service, USERS *users)
 		
 		int rc = 0;
 		char *password = NULL;
-                
+
+                /** If the username is empty, the backend server still has anonymous
+                 * user in it. This will mean that localhost addresses do not match
+                 * the wildcard host '%' */
+                if(strlen(row[0]) == 0)
+                {
+                    anon_user = true;
+                    continue;
+                }
+
 		if (row[2] != NULL) {
                     /* detect mysql_old_password (pre 4.1 protocol) */
                     if (strlen(row[2]) == 16) {
@@ -1077,7 +1087,10 @@ getAllUsers(SERVICE *service, USERS *users)
         SHA1((const unsigned char *) final_data, strlen(final_data), hash);
 
 	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
-        
+
+        /** Set the parameter if it is not configured by the user */
+        if(service->localhost_match_wildcard_host == SERVICE_PARAM_UNINIT)
+            service->localhost_match_wildcard_host = anon_user ? 0 : 1;
         cleanup:
         
         free(dpwd);
@@ -1119,6 +1132,7 @@ getUsers(SERVICE *service, USERS *users)
 	int		dbnames = 0;
 	int		db_grants = 0;
 	char		dbnm[MYSQL_DATABASE_MAXLEN+1];
+        bool anon_user = false;
 	
 	if (serviceGetUser(service, &service_user, &service_passwd) == 0)
 	{
@@ -1438,6 +1452,15 @@ getUsers(SERVICE *service, USERS *users)
 		int rc = 0;
 		char *password = NULL;
 
+                /** If the username is empty, the backend server still has anonymous
+                 * user in it. This will mean that localhost addresses do not match
+                 * the wildcard host '%' */
+                if(strlen(row[0]) == 0)
+                {
+                    anon_user = true;
+                    continue;
+                }
+
 		if (row[2] != NULL) {
 			/* detect mysql_old_password (pre 4.1 protocol) */
 			if (strlen(row[2]) == 16) {
@@ -1567,6 +1590,10 @@ getUsers(SERVICE *service, USERS *users)
         SHA1((const unsigned char *) users_data, strlen(users_data), hash);
 
 	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
+
+        /** Set the parameter if it is not configured by the user */
+        if(service->localhost_match_wildcard_host == SERVICE_PARAM_UNINIT)
+            service->localhost_match_wildcard_host = anon_user ? 0 : 1;
 
 	free(users_data);
 	mysql_free_result(result);
