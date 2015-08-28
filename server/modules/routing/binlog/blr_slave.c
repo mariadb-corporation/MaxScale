@@ -3135,9 +3135,9 @@ blr_set_master_hostname(ROUTER_INSTANCE *router, char *hostname) {
 		ptr = strchr(hostname, '\'');
 		if (ptr)
 			ptr++;
-
+		else
+			ptr = hostname;
 		end = strchr(ptr, '\'');
-
 		if (end)
 			*end ='\0';
 
@@ -3206,6 +3206,8 @@ blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
 		file_ptr = strchr(filename, '\'');
 		if (file_ptr)
 			file_ptr++;
+		else
+			file_ptr = filename;
 
 		end = strchr(file_ptr, '\'');	
                 if (end)
@@ -3395,6 +3397,8 @@ blr_set_master_user(ROUTER_INSTANCE *router, char *user) {
                 ptr = strchr(user, '\'');
                 if (ptr)
                         ptr++;
+		else
+			ptr = user;
 
                 end = strchr(ptr, '\'');
                 if (end)
@@ -3430,6 +3434,8 @@ blr_set_master_password(ROUTER_INSTANCE *router, char *password) {
                 ptr = strchr(password, '\'');
                 if (ptr)
                         ptr++;
+		else
+			ptr = password;
 
                 end = strchr(ptr, '\'');
                 if (end)
