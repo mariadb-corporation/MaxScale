@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <spinlock.h>
 #include <random_jkiss.h>
 
 /* Public domain code for JKISS RNG - Comment header added */
@@ -63,6 +64,7 @@ random_jkiss(void)
 {
     unsigned long long t;
     unsigned int result;
+    
     spinlock_acquire(&random_jkiss_spinlock);
     if (!init)
     {
