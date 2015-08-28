@@ -140,7 +140,7 @@ static MYSQL_session* gw_get_shared_session_auth_info(
 
         spinlock_acquire(&dcb->session->ses_lock);
 
-        if (dcb->session->state != SESSION_STATE_ALLOC) { 
+        if (dcb->session->state != SESSION_STATE_ALLOC && dcb->session->state != SESSION_STATE_DUMMY) { 
                 auth_info = dcb->session->data;
         } else {
                 LOGIF(LE, (skygw_log_write_flush(

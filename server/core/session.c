@@ -56,6 +56,7 @@ static size_t session_id;
 static SPINLOCK	session_spin = SPINLOCK_INIT;
 static SESSION	*allSessions = NULL;
 
+static struct session session_dummy_struct;
 
 static int session_setup_filters(SESSION *session);
 static void session_simple_free(SESSION *session, DCB *dcb);
@@ -213,6 +214,48 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 }
 
 /**
+ * Allocate a dummy session so that DCBs can always have sessions.
+ *
+ * Only one dummy session exists, it is statically declared
+ * 
+ * @param client_dcb	The client side DCB
+ * @return		The dummy created session
+ */
+SESSION *
+session_alloc_dummy(DCB *client_dcb)
+{
+    SESSION 	*session;
+    
+    session = &session_dummy_struct;
+#if defined(SS_DEBUG)
+    session->ses_chk_top = CHK_NUM_SESSION;
+    session->ses_chk_tail = CHK_NUM_SESSION;
+#endif
+    session->ses_is_child = false;
+    spinlock_init(&session->ses_lock);
+    session->service = NULL;
+    session->client = NULL;
+    session->n_filters = 0;
+    memset(&session->stats, 0, sizeof(SESSION_STATS));
+    session->stats.connect = 0;
+    session->state = SESSION_STATE_DUMMY;
+    /*<
+     * Associate the session to the client DCB and set the reference count on
+     * the session to indicate that there is a single reference to the
+     * session. There is no need to protect this or use atomic add as the
+     * session has not been made available to the other threads at this
+     * point.
+     */
+    session->data = NULL;
+    session->refcount = 1;
+    session->ses_id = 0; 
+    session->next = NULL;
+
+    client_dcb->session = session;
+    return session;
+}
+
+/**
  * Enable specified logging for the current session and increase logger 
  * counter.
  * Generic logging setting has precedence over session-specific setting.
@@ -323,6 +366,10 @@ session_simple_free(SESSION *session, DCB *dcb)
     }
     if (session)
     {
+        if (SESSION_STATE_DUMMY == session->state)
+        {
+            return;
+        }
         if (session && session->router_session)
         {
             session->service->router->freeSession(
@@ -344,6 +391,10 @@ session_simple_free(SESSION *session, DCB *dcb)
 bool
 session_free(SESSION *session)
 {
+    if (session && SESSION_STATE_DUMMY == session->state)
+    {
+        return true;
+    }
         CHK_SESSION(session);
         
         /*
@@ -711,6 +762,8 @@ session_state(int state)
 	{
 	case SESSION_STATE_ALLOC:
 		return "Session Allocated";
+	case SESSION_STATE_DUMMY:
+		return "Dummy Session";
 	case SESSION_STATE_READY:
 		return "Session Ready";
 	case SESSION_STATE_ROUTER_READY:

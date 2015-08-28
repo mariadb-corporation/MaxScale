@@ -912,7 +912,7 @@ int gw_read_client_event(
 			if (session != NULL) 
 			{
 				CHK_SESSION(session);
-				ss_dassert(session->state != SESSION_STATE_ALLOC);
+				ss_dassert(session->state != SESSION_STATE_ALLOC && session->state != SESSION_STATE_DUMMY);
 				
 				protocol->protocol_auth_state = MYSQL_IDLE;
 				/** 
@@ -1012,7 +1012,7 @@ int gw_read_client_event(
 		if (session != NULL)
 		{
 		    CHK_SESSION(session);
-		    ss_dassert(session->state != SESSION_STATE_ALLOC);
+		    ss_dassert(session->state != SESSION_STATE_ALLOC && session->state != SESSION_STATE_DUMMY);
 
 		    protocol->protocol_auth_state = MYSQL_IDLE;
 		    /**
@@ -1643,6 +1643,7 @@ int gw_MySQLAccept(DCB *listener)
 		}
 
                 client_dcb->service = listener->session->service;
+                client_dcb->session = session_alloc_dummy(client_dcb);
                 client_dcb->fd = c_sock;
 
 		// get client address

@@ -117,11 +117,13 @@ static void
 random_init_jkiss(void)
 {
     int newrand, i;
+    spinlock_acquire(&random_jkiss_spinlock);
     if ((newrand = random_jkiss_devrand()) != 0) x = newrand;
     if ((newrand = random_jkiss_devrand()) != 0) y = newrand;
     if ((newrand = random_jkiss_devrand()) != 0) z = newrand;
     if ((newrand = random_jkiss_devrand()) != 0) 
         c = newrand % 698769068 + 1; /* Should be less than 698769069 */
+    spinlock_release(&random_jkiss_spinlock);
     
     /* "Warm up" our random number generator */
     for (i = 0; i < 100; i++) random_jkiss();

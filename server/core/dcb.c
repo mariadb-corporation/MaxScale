@@ -346,7 +346,10 @@ dcb_final_free(DCB *dcb)
 				local_session->client = NULL;
 				spinlock_release(&local_session->ses_lock);
 			}
-			session_free(local_session);
+                        if (SESSION_STATE_DUMMY != local_session->state)
+                        {
+                            session_free(local_session);
+                        }
 		}
 	}
 
