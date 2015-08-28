@@ -235,11 +235,11 @@ GWPROTOCOL	*funcs;
 			{
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"Error : Unable to load users from %s:%d for "
-					"service %s.",
+					"Error : Unable to load users for "
+					"service %s listening at %s:%d.",
+                                        service->name,
 					(port->address == NULL ? "0.0.0.0" : port->address),
-					port->port,
-					service->name)));
+					port->port)));
 				
 				{
 					/* Try loading authentication data from file cache */
