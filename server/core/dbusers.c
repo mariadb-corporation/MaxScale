@@ -2396,19 +2396,21 @@ bool check_service_permissions(SERVICE* service)
 
     if(mysql_real_connect(mysql,server->server->name,user,dpasswd,NULL,server->server->port,NULL,0) == NULL)
     {
+        int my_errno = mysql_errno(mysql);
+
 	skygw_log_write(LE,"%s: Error: Failed to connect to server %s(%s:%d) when"
 		" checking authentication user credentials and permissions: %d %s",
 		 service->name,
 		 server->server->unique_name,
 		 server->server->name,
 		 server->server->port,
-                 mysql_errno(mysql),
+                 my_errno,
                  mysql_error(mysql));
 	mysql_close(mysql);
 	free(dpasswd);
 
         /** We don't know enough about user permissions */
-        return true;
+        return my_errno != ER_ACCESS_DENIED_ERROR;
     }
 
     if(mysql_query(mysql,"SELECT user, host, password,Select_priv FROM mysql.user limit 1") != 0)
