@@ -578,7 +578,7 @@ char		*remote, *userName;
                         my_session->branch_dcb = dcb;
                         my_session->dummy_filterdef = dummy;
 
-                        if(true || (dummy_upstream = filterUpstream(
+                        if((dummy_upstream = filterUpstream(
                                 dummy, my_session, &ses->tail)) == NULL)
                         {
                             filter_free(dummy);
