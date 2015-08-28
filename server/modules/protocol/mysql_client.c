@@ -750,7 +750,7 @@ int gw_read_client_event(
 
 	session = dcb->session;
 
-	if (protocol->protocol_auth_state == MYSQL_IDLE && session != NULL)
+	if (protocol->protocol_auth_state == MYSQL_IDLE && session != NULL && SESSION_STATE_DUMMY != session->state)
 	{
 		CHK_SESSION(session);
 		router = session->service->router;
@@ -1096,7 +1096,7 @@ int gw_read_client_event(
 		session_state_t ses_state;
 
                 session = dcb->session;
-                ss_dassert(session!= NULL);
+                ss_dassert(session!= NULL && SESSION_STATE_DUMMY != session->state);
                 
                 if (session != NULL) 
                 {
@@ -1803,7 +1803,7 @@ gw_client_close(DCB *dcb)
          * session may be NULL if session_alloc failed.
          * In that case, router session wasn't created.
          */
-        if (session != NULL)
+        if (session != NULL && SESSION_STATE_DUMMY != session->state)
         {
                 CHK_SESSION(session);
                 spinlock_acquire(&session->ses_lock);
