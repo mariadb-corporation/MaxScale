@@ -182,6 +182,11 @@ CONFIG_PARAMETER	*param, *p1;
                         skygw_log_write(LE,"[%s] Error: Memory allocation failed.",__FUNCTION__);
                         return 0;
                     }
+                    /** This is a parameter with no comma or separate definition of
+                     * an already existing parameter. Add a comma to it and concatenate
+                     * the values. */
+                    if(p1->value[strlen(p1->value)-1] != ',')
+                        strcat(tmp,",");
                     strcat(tmp,value);
                     p1->value = tmp;
                     return 1;
