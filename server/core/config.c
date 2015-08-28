@@ -174,35 +174,18 @@ CONFIG_PARAMETER	*param, *p1;
 	{
 		if (!strcmp(p1->name, name))
 		{
-                    if(strcmp(name,"router_options") == 0 || strcmp(name,"options"))
-                    {
-                        char* tmp;
+                    char* tmp;
 
-                        if((tmp = malloc(sizeof(char) * (strlen(p1->value) + strlen(value) + 2))) == NULL)
-                        {
-                            skygw_log_write(LE,"[%s] Error: Memory allocation failed.",__FUNCTION__);
-                            return 0;
-                        }
-                        strcpy(tmp,p1->value);
-                        strcat(tmp,value);
-                        free(p1->value);
-                        p1->value = tmp;
-                        if(p1->qfd_param_type == STRING_TYPE && p1->qfd.valstr != NULL)
-                        {
-                            free(p1->qfd.valstr);
-                            p1->qfd.valstr = strdup(p1->value);
-                        }
-                        return 1;
-                    }
-                    else
+                    if((tmp = malloc(sizeof(char) * (strlen(p1->value) + strlen(value) + 2))) == NULL)
                     {
-			LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Configuration object '%s' has multiple "
-				"parameters names '%s'.",
-                                ptr->object, name)));
-			return 0;
+                        skygw_log_write(LE,"[%s] Error: Memory allocation failed.",__FUNCTION__);
+                        return 0;
                     }
+                    strcpy(tmp,p1->value);
+                    strcat(tmp,value);
+                    free(p1->value);
+                    p1->value = tmp;
+                    return 1;
 		}
 		p1 = p1->next;
 	}
