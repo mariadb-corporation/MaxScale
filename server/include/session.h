@@ -163,7 +163,7 @@ typedef struct session {
 
 SESSION *get_all_sessions();
 SESSION	*session_alloc(struct service *, struct dcb *);
-SESSION	*session_alloc_dummy(struct dcb *);
+SESSION	*session_set_dummy(struct dcb *);
 bool    session_free(SESSION *);
 int	session_isvalid(SESSION *);
 int	session_reply(void *inst, void *session, GWBUF *data);

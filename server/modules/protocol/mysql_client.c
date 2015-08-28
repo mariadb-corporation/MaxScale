@@ -1643,7 +1643,7 @@ int gw_MySQLAccept(DCB *listener)
 		}
 
                 client_dcb->service = listener->session->service;
-                client_dcb->session = session_alloc_dummy(client_dcb);
+                client_dcb->session = session_set_dummy(client_dcb);
                 client_dcb->fd = c_sock;
 
 		// get client address

@@ -222,7 +222,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
  * @return		The dummy created session
  */
 SESSION *
-session_alloc_dummy(DCB *client_dcb)
+session_set_dummy(DCB *client_dcb)
 {
     SESSION 	*session;
     
