@@ -212,6 +212,7 @@ int route_single_query(TEE_INSTANCE* my_instance,
 		       GWBUF* buffer,
 		       GWBUF* clone);
 int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer);
+void create_orphan(SESSION* ses);
 
 static void
 orphan_free(void* data)
@@ -557,6 +558,7 @@ char		*remote, *userName;
                         
 			if ((ses = session_alloc(my_instance->service, dcb)) == NULL)
 			{
+                                filter_free(dummy);
 				dcb_close(dcb);
 				freeSession(instance, (void *)my_session);
 				my_session = NULL;
@@ -572,39 +574,27 @@ char		*remote, *userName;
 
                         dummy->obj = GetModuleObject();
                         dummy->filter = NULL;
-                        
+                        my_session->branch_session = ses;
+                        my_session->branch_dcb = dcb;
+                        my_session->dummy_filterdef = dummy;
 
-                        if((dummy_upstream = filterUpstream(
+                        if(true || (dummy_upstream = filterUpstream(
                                 dummy, my_session, &ses->tail)) == NULL)
                         {
-                            spinlock_acquire(&ses->ses_lock);
-                            ses->state = SESSION_STATE_STOPPING;
-                            spinlock_release(&ses->ses_lock);                            
-                            
-                            ses->service->router->closeSession(
-                                ses->service->router_instance,
-                                ses->router_session);
-                            
-                            ses->client = NULL;
-                            dcb->session = NULL;
-                            session_free(ses);
+                            filter_free(dummy);
+                            closeSession(instance,(void*)my_session);
                             dcb_close(dcb);
-                            freeSession(instance, (void *) my_session);
-                            my_session = NULL;
+                            free(my_session);
                             LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : tee: Allocating memory for"
                                         "dummy upstream failed."
                                         " Terminating session.")));
 
-                            goto retblock;
+                            return NULL;
                         }
                         
                         ses->tail = *dummy_upstream;
-                        my_session->branch_session = ses;
-                        my_session->branch_dcb = dcb;
-                        my_session->dummy_filterdef = dummy;
-                        
                         MySQLProtocol* protocol = (MySQLProtocol*)session->client->protocol;
                         my_session->use_ok = protocol->client_capabilities & (1 << 6);
                         free(dummy_upstream);
@@ -712,19 +702,7 @@ skygw_log_write(LOGFILE_TRACE,"Tee free: %d", atomic_add(&debug_seq,1));
 		}
                 else if(state == SESSION_STATE_STOPPING)
                 {
-                    orphan_session_t* orphan;
-                    if((orphan = malloc(sizeof(orphan_session_t))) == NULL)
-                    {
-                        skygw_log_write(LOGFILE_ERROR,"Error : Failed to "
-                                "allocate memory for orphan session struct, "
-                                "child session might leak memory.");
-                    }else{
-                        orphan->session = ses;
-                        spinlock_acquire(&orphanLock);
-                        orphan->next = allOrphans;
-                        allOrphans = orphan;
-                        spinlock_release(&orphanLock);
-                    }
+                    create_orphan(ses);
                 }
 	}
 	if (my_session->dummy_filterdef)
@@ -1400,4 +1378,21 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
         my_session->command = command;
 
 	return 1;
+}
+
+void create_orphan(SESSION* ses)
+{
+    orphan_session_t* orphan;
+    if((orphan = malloc(sizeof(orphan_session_t))) == NULL)
+    {
+        skygw_log_write(LOGFILE_ERROR,"Error : Failed to "
+                "allocate memory for orphan session struct, "
+                "child session might leak memory.");
+    }else{
+        orphan->session = ses;
+        spinlock_acquire(&orphanLock);
+        orphan->next = allOrphans;
+        allOrphans = orphan;
+        spinlock_release(&orphanLock);
+    }
 }
