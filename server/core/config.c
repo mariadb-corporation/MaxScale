@@ -175,15 +175,14 @@ CONFIG_PARAMETER	*param, *p1;
 		if (!strcmp(p1->name, name))
 		{
                     char* tmp;
+                    int paramlen = strlen(p1->value) + strlen(value) + 2;
 
-                    if((tmp = malloc(sizeof(char) * (strlen(p1->value) + strlen(value) + 2))) == NULL)
+                    if((tmp = realloc(p1->value,sizeof(char) * (paramlen))) == NULL)
                     {
                         skygw_log_write(LE,"[%s] Error: Memory allocation failed.",__FUNCTION__);
                         return 0;
                     }
-                    strcpy(tmp,p1->value);
                     strcat(tmp,value);
-                    free(p1->value);
                     p1->value = tmp;
                     return 1;
 		}
