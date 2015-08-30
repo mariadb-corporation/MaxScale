@@ -355,7 +355,7 @@ sigfatal_handler (int i)
 
         skygw_log_write_flush(LE,"Commit ID: "MAXSCALE_COMMIT" System name: %s "
                 "Release string: %s Embedded library version: %s",
-                cnf->sysname,cnf->release_string,cnf->version_string);
+                cnf->sysname, cnf->release_string, cnf->version_string);
 
 	{
 		void *addrs[128];
@@ -1104,7 +1104,7 @@ int main(int argc, char **argv)
 			
 		case 'v':
 		  rc = EXIT_SUCCESS;
-                  printf("MaxScale %s\n",MAXSCALE_VERSION);
+                  printf("MaxScale %s\n", MAXSCALE_VERSION);
                   goto return_main;		  
 
 		case 'l':
