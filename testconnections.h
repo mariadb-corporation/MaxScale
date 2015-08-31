@@ -2,6 +2,7 @@
 #define TESTCONNECTIONS_H
 
 #include "mariadb_nodes.h"
+#include <iostream>
 
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
@@ -342,6 +343,24 @@ public:
      * @return  0 in case of success
      */
     int execute_ssh_maxscale(char* ssh);
+
+    /**
+     * @brief Test that connections to MaxScale are in the expected state
+     * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false for no connection. 
+     * @param rc_master State of the MaxScale connection to Readconnroute Master. True for working connection, false for no connection.
+     * @param rc_slave State of the MaxScale connection to Readconnroute Slave. True for working connection, false for no connection.
+     * @return  True if connections are in the expected state
+     */
+    bool test_maxscale_connections(bool rw_split,
+                                   bool rc_master,
+                                   bool rc_slave);
+
+    /**
+     * @brief Reconfigure MaxScale according to a configuration template
+     * @param config_template Name on the configuration template
+     * @return  0 in case of success
+     */
+    int reconfigure_maxscale(char* config_template);
 };
 
 /**

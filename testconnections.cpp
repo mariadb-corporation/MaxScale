@@ -1,3 +1,4 @@
+
 #include "testconnections.h"
 #include <getopt.h>
 
@@ -539,11 +540,52 @@ int check_maxscale_alive()
     return(global_result);
 }
 
+bool TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bool rc_slave)
+{
+    bool rval = true;
+    int rc;
+
+    std::cout << "Testing RWSplit, expecting " << (rw_split ? "success" : "failure") << std::endl;
+    rc = execute_query(conn_rwsplit, "select 1");
+    if((rc == 0) != rw_split)
+    {
+        std::cout << "Error: Query " << (rw_split ? "failed" : "succeeded") << std::endl;
+        rval = false;
+    }
+
+    std::cout << "Testing ReadConnRoute Master, expecting " << (rc_master ? "success" : "failure") << std::endl;
+    rc = execute_query(conn_master, "select 1");
+    if((rc == 0) != rc_master)
+    {
+        std::cout << "Error: Query " << (rc_master ? "failed" : "succeeded") << std::endl;
+        rval = false;
+    }
+
+    std::cout << "Testing ReadConnRoute Slave, expecting " << (rc_slave ? "success" : "failure") << std::endl;
+    rc = execute_query(conn_slave, "select 1");
+    if((rc == 0) != rc_slave)
+    {
+        std::cout << "Error: Query " << (rc_slave ? "failed" : "succeeded") << std::endl;
+        rval = false;
+    }
+    return rval;
+}
+
 int TestConnections::execute_ssh_maxscale(char* ssh)
 {
     char *sys = (char*)new char[strlen(ssh) + 1024];
     sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s %s\"",
             maxscale_sshkey, access_user, maxscale_IP, access_sudo, ssh);
-    int res = system(sys);
-    return(res);
+    return system(sys);
 }
+
+
+int TestConnections::reconfigure_maxscale(char* config_template)
+{
+    char cmd[1024];
+    setenv("test_name",config_template,1);
+    sprintf(cmd,"%s/configure_maxscale.sh",test_dir);
+    return system(cmd); 
+}
+
+
