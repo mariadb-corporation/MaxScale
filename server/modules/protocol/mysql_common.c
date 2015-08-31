@@ -731,8 +731,8 @@ int gw_send_authentication_to_backend(
 
         rv = dcb_write(dcb, buffer);
 
-        if (rv < 0) {
-                return rv;
+        if (rv == 0) {
+                return 1;
         } else {
                 return 0;
         }
