@@ -50,13 +50,13 @@ typedef struct log_info_st
 	size_t li_sesid;
 	int    li_enabled_logs;
 } log_info_t;
-    
+
 #define LE LOGFILE_ERROR
 #define LM LOGFILE_MESSAGE
 #define LT LOGFILE_TRACE
 #define LD LOGFILE_DEBUG
 
-/** 
+/**
  * Check if specified log type is enabled in general or if it is enabled
  * for the current session.
  */
@@ -75,11 +75,11 @@ typedef struct log_info_st
 	{						\
 		cmd;					\
 	}
-	
+
 /**
  * Execute the given command if specified log is enabled in general or
  * if the log is enabled for the current session.
- */	
+ */
 #define LOGIF(id,cmd) if (LOG_IS_ENABLED(id))	\
 	{					\
 		cmd;				\
@@ -99,7 +99,7 @@ typedef struct log_info_st
  * RUN    Struct is valid for run-time checking.
  * DONE   means that possible memory allocations have been released.
  */
-typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t; 
+typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t;
 
 EXTERN_C_BLOCK_BEGIN
 
