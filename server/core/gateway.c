@@ -1592,7 +1592,7 @@ int main(int argc, char **argv)
                 goto return_main;
         }
 
-	if((ini_rval = ini_parse(cnf_file_path,cnf_preparser,NULL)) != 0)
+	if((ini_rval = ini_parse(cnf_file_path, cnf_preparser,NULL)) != 0)
 	{
             char errorbuffer[STRING_BUFFER_SIZE + 1];
 
@@ -1609,7 +1609,7 @@ int main(int argc, char **argv)
             skygw_log_write(LE, errorbuffer);
             if(!daemon_mode)
             {
-                strncat(errorbuffer,"\n",STRING_BUFFER_SIZE);
+                strncat(errorbuffer, "\n", STRING_BUFFER_SIZE);
                 fprintf(stderr, errorbuffer);
             }
 
