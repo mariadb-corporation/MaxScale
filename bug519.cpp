@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     sleep(30);
 
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s rm /tmp/t*.csv; %s chmod 777 -R /tmp'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0], Test->repl->access_sudo, Test->repl->access_sudo);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s rm /tmp/t*.csv; %s chmod 777 /tmp'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0], Test->repl->access_sudo, Test->repl->access_sudo);
     printf("%s\n", str);
     system(str);
 
