@@ -2,7 +2,6 @@
 #define TESTCONNECTIONS_H
 
 #include "mariadb_nodes.h"
-#include <iostream>
 
 /**
  * @brief Class contains references to Master/Slave and Galera test setups
