@@ -271,7 +271,7 @@ int
 config_load(char *file)
 {
 CONFIG_CONTEXT	config;
-int		rval;
+int		rval, ini_rval;
 
 	MYSQL *conn;
 	conn = mysql_init(NULL);
@@ -314,8 +314,23 @@ int		rval;
 	config.object = "";
 	config.next = NULL;
 
-	if (ini_parse(file, handler, &config) < 0)
+	if (( ini_rval = ini_parse(file, handler, &config)) != 0)
+        {
+             char errorbuffer[1024 + 1];
+
+            if(ini_rval > 0)
+                snprintf(errorbuffer, 1024,
+                         "Error: Failed to parse configuration file. Error on line %d.", ini_rval);
+            else if(ini_rval == -1)
+                snprintf(errorbuffer, 1024,
+                         "Error: Failed to parse configuration file. Failed to open file.");
+            else
+                snprintf(errorbuffer, 1024,
+                         "Error: Failed to parse configuration file. Memory allocation failed.");
+
+            skygw_log_write(LE, errorbuffer);
 		return 0;
+        }
 
 	config_file = file;
 
