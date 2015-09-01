@@ -236,7 +236,7 @@ CONFIG_PARAMETER	*param, *p1;
                         skygw_log_write(LE,"[%s] Error: Memory allocation failed.",__FUNCTION__);
                         return 0;
                     }
-
+                    strcat(tmp,",");
                     strcat(tmp,value);
                     if((p1->value = config_clean_string_list(tmp)) == NULL)
                     {
