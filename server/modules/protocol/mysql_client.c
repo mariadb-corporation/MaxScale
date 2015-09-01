@@ -1859,8 +1859,10 @@ gw_client_hangup_event(DCB *dcb)
         }
 #if defined(SS_DEBUG)
         LOGIF(LE, (skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "Client hangup error handling.")));
+            LOGFILE_ERROR,
+            "Client hangup error handling, session state %s, dcb state %s.",
+            session_state(session->state),
+            STRDCBSTATE(dcb->state))));
 #endif
         dcb_close(dcb);
  

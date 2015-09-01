@@ -1845,6 +1845,16 @@ dcb_close(DCB *dcb)
     spinlock_acquire(&zombiespin);
     if (!dcb->dcb_is_zombie)
     {
+        if (dcb->server && DCB_STATE_POLLING == dcb->state)
+        {
+            /* May be a candidate for persistence, so save user name */
+            char *user;
+            user = session_getUser(dcb->session);
+            if (user && strlen(user) && !dcb->user)
+            {
+                dcb->user = strdup(user);
+            }
+        }
         /*<
          * Add closing dcb to the top of the list, setting zombie marker
          */
@@ -1870,10 +1880,8 @@ static bool
 dcb_maybe_add_persistent(DCB *dcb)
 {
     int  poolcount = -1;
-    char *user;
-    user = session_getUser(dcb->session);
-    if (user != NULL
-        && strlen(user)
+    if (dcb->user != NULL
+        && strlen(dcb->user)
         && dcb->server 
         && dcb->server->persistpoolmax 
         && !dcb->dcb_errhandle_called
@@ -1887,8 +1895,6 @@ dcb_maybe_add_persistent(DCB *dcb)
             dcb->user)));
         dcb->dcb_is_zombie = false;
         dcb->persistentstart = time(NULL);
-        if (dcb->user) free(dcb->user);
-        dcb->user = strdup(user);
         spinlock_acquire(&dcb->server->persistlock);
         dcb->nextpersistent = dcb->server->persistent;
         dcb->server->persistent = dcb;
