@@ -1594,16 +1594,16 @@ int main(int argc, char **argv)
 
 	if((ini_rval = ini_parse(cnf_file_path, cnf_preparser,NULL)) != 0)
 	{
-            char errorbuffer[STRING_BUFFER_SIZE + 1];
+            char errorbuffer[STRING_BUFFER_SIZE];
 
             if(ini_rval > 0)
-                snprintf(errorbuffer, STRING_BUFFER_SIZE,
+                snprintf(errorbuffer, sizeof(errorbuffer),
                          "Error: Failed to pre-parse configuration file. Error on line %d.", ini_rval);
             else if(ini_rval == -1)
-                snprintf(errorbuffer, STRING_BUFFER_SIZE,
+                snprintf(errorbuffer, sizeof(errorbuffer),
                          "Error: Failed to pre-parse configuration file. Failed to open file.");
             else
-                snprintf(errorbuffer, STRING_BUFFER_SIZE,
+                snprintf(errorbuffer, sizeof(errorbuffer),
                          "Error: Failed to pre-parse configuration file. Memory allocation failed.");
 
             skygw_log_write(LE, errorbuffer);

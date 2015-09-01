@@ -318,14 +318,14 @@ int		rval, ini_rval;
         {
              char errorbuffer[1024 + 1];
 
-            if(ini_rval > 0)
-                snprintf(errorbuffer, 1024,
+            if (ini_rval > 0)
+                snprintf(errorbuffer, sizeof(errorbuffer),
                          "Error: Failed to parse configuration file. Error on line %d.", ini_rval);
             else if(ini_rval == -1)
-                snprintf(errorbuffer, 1024,
+                snprintf(errorbuffer, sizeof(errorbuffer),
                          "Error: Failed to parse configuration file. Failed to open file.");
             else
-                snprintf(errorbuffer, 1024,
+                snprintf(errorbuffer, sizeof(errorbuffer),
                          "Error: Failed to parse configuration file. Memory allocation failed.");
 
             skygw_log_write(LE, errorbuffer);
