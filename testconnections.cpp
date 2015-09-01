@@ -179,7 +179,7 @@ int TestConnections::init_maxscale()
 {
     char str[4096];
     sprintf(str, "export test_name=%s; export test_dir=%s; %s/configure_maxscale.sh", test_name, test_dir, test_dir);
-    printf("Executing configure_maxscale.sh\n"); fflush(stdout);
+    printf("\nExecuting configure_maxscale.sh\n"); fflush(stdout);
     if (system(str) !=0) {
         printf("configure_maxscale.sh executing FAILED!\n"); fflush(stdout);
         return(1);
