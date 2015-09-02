@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
     struct tm * timeinfo2 = localtime (&end_time);
     sprintf(time_str, "%s-%02d:%02d:%02d", time_str1, timeinfo2->tm_hour, timeinfo2->tm_min, timeinfo2->tm_sec);*/
 
-    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'start_time=`date +%%T`; stop_time=` date --date \"now +2 mins\" +%%T`; sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules.txt'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir);
+    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'start_time=`date +%%T`; stop_time=` date --date \"now +2 mins\" +%%T`; %s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir);
     printf("DELETE quries without WHERE clause will be blocked during next 2 minutes\n");
     printf("Put time to rules.txt: %s\n", str); fflush(stdout);
     system(str);
