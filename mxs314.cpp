@@ -29,6 +29,8 @@ int main(int argc, char *argv[])
     for(int i = 0;i<start;i++)
         query += ",1";
 
+    printf("Query: %s\n", query.c_str());
+
     for(int i = start;i<1000;i++)
     {
         cout << i << " ";
