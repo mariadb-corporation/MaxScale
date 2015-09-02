@@ -55,9 +55,9 @@ max_slave_connections=100%
 router_options=slave_selection_criteria=LEAST_CURRENT_OPERATIONS
 #filters=QLA
 ssl=required
-ssl_cert=/###access_homedir###/server-cert.pem
-ssl_key=/###access_homedir###/server-key.pem
-ssl_ca_cert=/###access_homedir###/ca.pem
+ssl_cert=/###access_homedir###/certs/server-cert.pem
+ssl_key=/###access_homedir###/certs/server-key.pem
+ssl_ca_cert=/###access_homedir###/certs/ca.pem
 ssl_version=TLSv12
 
 [Read Connection Router Slave]
@@ -69,9 +69,9 @@ user=skysql
 passwd=skysql
 #filters=QLA
 ssl=required
-ssl_cert=/###access_homedir###/server-cert.pem
-ssl_key=/###access_homedir###/server-key.pem
-ssl_ca_cert=/###access_homedir###/ca.pem
+ssl_cert=/###access_homedir###/certs/server-cert.pem
+ssl_key=/###access_homedir###/certs/server-key.pem
+ssl_ca_cert=/###access_homedir###/certs/ca.pem
 ssl_version=TLSv12
 
 
@@ -84,9 +84,9 @@ user=skysql
 passwd=skysql
 #filters=QLA
 ssl=required
-ssl_cert=/###access_homedir###/server-cert.pem
-ssl_key=/###access_homedir###/server-key.pem
-ssl_ca_cert=/###access_homedir###/ca.pem
+ssl_cert=/###access_homedir###/certs/server-cert.pem
+ssl_key=/###access_homedir###/certs/server-key.pem
+ssl_ca_cert=/###access_homedir###/certs/ca.pem
 ssl_version=TLSv12
 
 [Debug Interface]
