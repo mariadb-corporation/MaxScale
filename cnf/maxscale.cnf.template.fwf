@@ -159,4 +159,4 @@ options=/tmp/QueryLog
 [Database Firewall]
 type=filter
 module=dbfwfilter
-rules=/###access_homedir###/rules.txt
+rules=/###access_homedir###/rules/rules.txt
