@@ -22,8 +22,8 @@
 void copy_rules(TestConnections* Test, char * rules_name)
 {
     char str[4096];
-    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'mkdir %s/rules'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir);
-    printf("Creating rules dir\n"); fflush(stdout);
+    sprintf(str, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf %s/rules; mkdir %s/rules'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir,  Test->access_homedir);
+    printf("Creating rules dir: %s\n", str); fflush(stdout);
     system(str);
 
     sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/%s %s@%s:%s/rules/rules.txt", Test->maxscale_sshkey, Test->test_dir, rules_name, Test->access_user, Test->maxscale_IP, Test->access_homedir);
