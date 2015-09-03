@@ -148,7 +148,9 @@ int main(int argc, char *argv[])
 
     sleep(15);
 
-    global_result += check_log_err((char *) "Error: Cannot execute file:" , true);
+    printf("Cheching Maxscale logs\n"); fflush(stdout);
+    global_result += check_log_err((char *) "Error: Cannot execute file" , true);fflush(stdout);
+    global_result += check_log_err((char *) "Missing execution permissions" , true);fflush(stdout);
 
     printf("checking if Maxscale is alive\n"); fflush(stdout);
     global_result += check_maxscale_alive();
