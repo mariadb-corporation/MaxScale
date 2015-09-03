@@ -107,10 +107,10 @@ This parameter is used to define the maximum amount of data that will be sent to
 
 ### transaction_safety
 
-This parameter is used to enable/disable opened transactions detection in binlog router.
-When MaxScale starts an error message may appear if current binlog file is corrupted or an opened transaction is found.
+This parameter is used to enable/disable incomplete transactions detection in binlog router.
+When MaxScale starts an error message may appear if current binlog file is corrupted or an incomplete transaction is found.
 During normal operations binlog events are not distributed to the slaves until a COMMIT is seen.
-The default value is on, set transaction_safety=off to completly disable the opened transactions detection.
+The default value is on, set transaction_safety=off to completly disable the incomplete transactions detection.
 
 A complete example of a service entry for a binlog router service would be as follows.
 
@@ -306,12 +306,12 @@ If there is a master server maintenance and a slave is beeing promoted as master
 	MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000100',MASTER_LOG_POS=4
 
 This could be applied with current master_host/port or a new one
-If transaction safety option is on and the current binlog file contains a prevously opened transaction it will be truncated to the position where transaction started.  
+If transaction safety option is on and the current binlog file contains an incomplete transaction it will be truncated to the position where transaction started.  
 In such situation a proper message is reported in MySQL connection and with next START SLAVE binlog file truncation will occurr and MaxScale will request events from the master using the next binlog file at position 4.
 
 The above scenario might refer to a master crash/failure:
  the new server that has just been promoted as master doesn't have last transaction events but it should have the new binlog file (the next in sequence).  
-Truncating the previous MaxScale binlog is safe as that open transaction is lost.
+Truncating the previous MaxScale binlog is safe as that incomplete transaction is lost.
 It should be checked that current master or new one has the new bnlog file, in case of any error replication stops and errors are reported via SHOW SLAVE STATUS and in error logs.
 
 	MySQL> START SLAVE;
