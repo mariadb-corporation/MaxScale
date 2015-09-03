@@ -299,7 +299,7 @@ Examples:
 	MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000003',MASTER_LOG_POS=8888
 
 This could be applied to current master_host/port or a new one.  
-If there is a master server maintenance and salve is beeing promoted as master it should be checked that binlog file and position are valid: in case of any error replication stops and error are reported via SHOW SLAVE STATUS and in error logs.
+If there is a master server maintenance and a slave is beeing promoted as master it should be checked that binlog file and position are valid: in case of any error replication stops and errors are reported via SHOW SLAVE STATUS and in error logs.
 
 2) Current binlog file is ‘mysql-bin.000099', position 1234
 
@@ -310,9 +310,9 @@ If transaction safety option is on and the current binlog file contains a prevou
 In such situation a proper message is reported in MySQL connection and with next START SLAVE binlog file truncation will occurr and MaxScale will request events from the master using the next binlog file at position 4.
 
 The above scenario might refer to a master crash/failure:
- the new server that has just been promoted as master doesn't have last transaction events but it must have the new binlog file (the next in sequence).  
+ the new server that has just been promoted as master doesn't have last transaction events but it should have the new binlog file (the next in sequence).  
 Truncating the previous MaxScale binlog is safe as that open transaction is lost.
-It should be checked that current master or new one has the new bnlog file, in case of any error replication stops and error are reported via SHOW SLAVE STATUS and in error logs.
+It should be checked that current master or new one has the new bnlog file, in case of any error replication stops and errors are reported via SHOW SLAVE STATUS and in error logs.
 
 	MySQL> START SLAVE;
 
