@@ -32,7 +32,7 @@
 int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expected_filename)
 {
     int global_result = 0;
-    char str[256];
+    char str[1024];
 
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'rm %s/script_output'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir);
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
     int i;
-    char str[256];
+    char str[1024];
 
     Test->read_env();
     Test->print_env();
@@ -97,7 +97,12 @@ int main(int argc, char *argv[])
     printf("Creating script on Maxscale machine\n"); fflush(stdout);
 
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir, Test->access_homedir, Test->access_homedir, Test->access_homedir, Test->access_homedir, Test->access_sudo, Test->access_homedir);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \
+            '%s rm -rf %s/script; mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; \
+            chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R'", \
+            Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir,\
+            Test->access_homedir, Test->access_homedir, \
+            Test->access_homedir, Test->access_homedir, Test->access_homedir, Test->access_sudo, Test->access_homedir);
     printf("%s\n", str);fflush(stdout);
     system(str);
 
@@ -127,7 +132,7 @@ int main(int argc, char *argv[])
     global_result += test_script_monitor(Test, Test->galera, str);
 
     printf("Making script non-executable\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'chmod a-x %s/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'chmod a-x %s/script/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir);
     system(str);
 
     sleep(3);
