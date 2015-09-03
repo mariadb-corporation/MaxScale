@@ -298,6 +298,9 @@ target_link_libraries(script ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(config_reload config_reload.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(config_reload ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(config_reload_stress config_reload_stress.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(config_reload_stress ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 add_executable(mxs314 mxs314.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(mxs314 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -308,7 +311,7 @@ install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572
 install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 bug699 bug705 bug519 setup_binlog setup_binlog_crc_none setup_binlog_crc_32 binlog_incompl bug729 bug718 bug730 bug711 bug656 DESTINATION system-test)
-install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 session_limits script config_reload setup_binlog_no_pos mxs314 DESTINATION system-test)
+install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 session_limits script config_reload config_reload_stress setup_binlog_no_pos mxs314 DESTINATION system-test)
 
 install(FILES set_env.sh get_logs.sh run_ctrl_c.sh long_insert.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut.sh configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
@@ -425,6 +428,7 @@ add_test(script script)
 add_test(mm mm)
 add_test(ssl_load ssl_load)
 add_test(config_reload config_reload)
+add_test(config_reload_stress config_reload_stress)
 add_test(reload_server reload_server.sh)
 add_test(reload_service reload_service.sh)
 add_test(mxs314 mxs314)
@@ -442,6 +446,7 @@ add_test(bug648 bug648)
 set_tests_properties(bug648 PROPERTIES TIMEOUT 3600)
 add_test(sysbench_kill_slave sysbench_kill_slave)
 set_tests_properties(sysbench_kill_slave PROPERTIES TIMEOUT 3600)
+set_tests_properties(config_reload config_reload_stress reload_server reload_service PROPERTIES LABELS "CONFIG_RELOAD")
 
 add_test(setup_binlog_no_pos setup_binlog_no_pos)
 
