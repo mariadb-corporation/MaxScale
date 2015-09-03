@@ -33,7 +33,18 @@ The MaxScale configuration is read from a file which can be located in a number 
 
 An explicit path to a configuration file can be passed by using the `-f` option to MaxScale.
 
-The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration, these sections define services, servers, listeners, monitors and global settings.
+The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration, these sections define services, servers, listeners, monitors and global settings. Parameters which expect a comma-separated list of values can be defined on multiple lines. The following is an example of a multi-line definition.
+
+```
+[MyService]
+type=service
+router=readconnroute
+servers=server1,
+        server2,
+        server3
+```
+
+The values of the parameter that are not on the first line need to have at least one whitespace character before them in order for them to be recognized as a part of the multi-line parameter.
 
 Please see the section about [Protocol Modules](#protocol-modules) for more details about MaxScale and the default directories where modules will be searched for.
 

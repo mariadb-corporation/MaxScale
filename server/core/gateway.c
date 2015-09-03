@@ -160,6 +160,8 @@ static bool libmysqld_started = FALSE;
  */
 static bool     daemon_mode = true;
 
+static const char* maxscale_commit = MAXSCALE_COMMIT;
+
 const char *progname = NULL;
 static struct option long_options[] = {
   {"homedir",  required_argument, 0, 'c'},
@@ -178,6 +180,7 @@ static struct option long_options[] = {
   {"user",required_argument,0,'U'},
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},
+  {"version-full", no_argument, 0, 'V'},
   {0, 0, 0, 0}
 };
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
@@ -388,12 +391,16 @@ sigfatal_handler (int i)
 		_exit(1);
 	}
 	fatal_handling = 1;
-
-	fprintf(stderr, "\n\nMaxScale received fatal signal %d\n", i);
+        GATEWAY_CONF* cnf = config_get_global_options();
+	fprintf(stderr, "\n\nMaxScale "MAXSCALE_VERSION" received fatal signal %d\n", i);
 
 	LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "Fatal: MaxScale received fatal signal %d. Attempting backtrace.", i)));
+                "Fatal: MaxScale "MAXSCALE_VERSION" received fatal signal %d. Attempting backtrace.", i)));
+
+        skygw_log_write_flush(LE,"Commit ID: %s System name: %s "
+                "Release string: %s Embedded library version: %s",
+                maxscale_commit, cnf->sysname, cnf->release_string, cnf->version_string);
 
 	{
 		void *addrs[128];
@@ -1011,6 +1018,7 @@ static void usage(void)
 		"  -s, --syslog=[yes|no]      log messages to syslog (default:yes)\n"
 		"  -S, --maxscalelog=[yes|no] log messages to MaxScale log (default: yes)\n"
 		"  -v, --version              print version info and exit\n"
+                "  -V, --version-full         print full version info and exit\n"
                 "  -?, --help                 show this help\n"
 		, progname);
 }
@@ -1051,6 +1059,7 @@ int main(int argc, char **argv)
         int 	 l;
         int	 i;
         int      n;
+        int      ini_rval;
 	intptr_t thread_id;
         int      n_threads; /*< number of epoll listener threads */ 
         int      n_services;
@@ -1113,7 +1122,7 @@ int main(int argc, char **argv)
                 }
         }
 
-        while ((opt = getopt_long(argc, argv, "dc:f:l:vs:S:?L:D:C:B:U:A:P:",
+        while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:",
 				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
@@ -1148,8 +1157,13 @@ int main(int argc, char **argv)
 			
 		case 'v':
 		  rc = EXIT_SUCCESS;
-          printf("%s\n",MAXSCALE_VERSION);
-                  goto return_main;		  
+                  printf("MaxScale %s\n", MAXSCALE_VERSION);
+                  goto return_main;
+
+                case 'V':
+		  rc = EXIT_SUCCESS;
+                  printf("MaxScale %s - %s\n", MAXSCALE_VERSION, maxscale_commit);
+                  goto return_main;
 
 		case 'l':
 			if (strncasecmp(optarg, "file", PATH_MAX) == 0)
@@ -1587,8 +1601,27 @@ int main(int argc, char **argv)
                 goto return_main;
         }
 
-	if(ini_parse(cnf_file_path,cnf_preparser,NULL) != 0)
+	if((ini_rval = ini_parse(cnf_file_path, cnf_preparser,NULL)) != 0)
 	{
+            char errorbuffer[STRING_BUFFER_SIZE];
+
+            if(ini_rval > 0)
+                snprintf(errorbuffer, sizeof(errorbuffer),
+                         "Error: Failed to pre-parse configuration file. Error on line %d.", ini_rval);
+            else if(ini_rval == -1)
+                snprintf(errorbuffer, sizeof(errorbuffer),
+                         "Error: Failed to pre-parse configuration file. Failed to open file.");
+            else
+                snprintf(errorbuffer, sizeof(errorbuffer),
+                         "Error: Failed to pre-parse configuration file. Memory allocation failed.");
+
+            skygw_log_write(LE, errorbuffer);
+            if(!daemon_mode)
+            {
+                strncat(errorbuffer, "\n", STRING_BUFFER_SIZE);
+                fprintf(stderr, errorbuffer);
+            }
+
 	    rc = MAXSCALE_BADCONFIG;
 	    goto return_main;
 	}
