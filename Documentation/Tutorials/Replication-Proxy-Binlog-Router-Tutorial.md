@@ -314,13 +314,21 @@ The above scenario might refer to a master crash/failure:
 Truncating the previous MaxScale binlog is safe as that incomplete transaction is lost.
 It should be checked that current master or new one has the new bnlog file, in case of any error replication stops and errors are reported via SHOW SLAVE STATUS and in error logs.
 
-	MySQL> START SLAVE;
+	MariaDB> START SLAVE;
 
 Check for any error in log files and with
 
-	MySQL> SHOW SLAVE STATUS;
+	MariaDB> SHOW SLAVE STATUS;
 
 In some situations replication state could be STOPPED and proper messages are displyed in error logs and in SHOW SLAVE STATUS
+
+In order to resolve any mistake done with CHANGE MASTER TO MASTER_LOG_FILE / MASTER_LOG_POS, another administrative command would be helpful.
+
+	MariaDB> RESET SLAVE;
+
+This command removes master.ini file, blanks all master configuration in memory and sets binlog router in unconfigured state: a CHANHE MASTER TO command should be issued for the new configuration.
+
+Note: existing binlog files are not touched by this command.
 
 ### Slave servers setup
 
