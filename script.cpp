@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
     global_result += test_script_monitor(Test, Test->galera, str);
 
     printf("Making script non-executable\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '&s chmod a-x %s/script/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s chmod a-x %s/script/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir);
     system(str);
 
     sleep(3);
