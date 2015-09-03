@@ -52,6 +52,7 @@
  *					master_uuid, master_hostname, master_version
  *					If set those values are sent to slaves instead of
  *					saved master responses
+ * 03/09/2015	Massimiliano Pinto	Added support for SHOW GLOBAL VARIABLES LIKE
  *
  * @endverbatim
  */
@@ -135,6 +136,7 @@ static int blr_slave_send_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave,
 static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
 int blr_test_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config);
 char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error);
+static int blr_slave_handle_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -252,7 +254,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  * order to support some commands that are useful for monitoring the binlog
  * router.
  *
- * Eight select statements are currently supported:
+ * Twelve select statements are currently supported:
  *	SELECT UNIX_TIMESTAMP();
  *	SELECT @master_binlog_checksum
  *	SELECT @@GLOBAL.GTID_MODE
@@ -263,20 +265,30 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SELECT @@max_allowed_packet
  *	SELECT @@maxscale_version
  *	SELECT @@server_id
+ *	SELECT @@version
+ *	SELECT @@server_uuid
  *
- * Five show commands are supported:
- *	SHOW VARIABLES LIKE 'SERVER_ID'
- *	SHOW VARIABLES LIKE 'SERVER_UUID'
- *	SHOW VARIABLES LIKE 'MAXSCALE%
+ * Six show commands are supported:
+ *	SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
+ *	SHOW [GLOBAL] VARIABLES LIKE 'SERVER_UUID'
+ *	SHOW [GLOBAL] VARIABLES LIKE 'MAXSCALE%'
+ *	SHOW SLAVE STATUS
  *	SHOW MASTER STATUS
  *	SHOW SLAVE HOSTS
  *
- * Five set commands are supported:
+ * Six set commands are supported:
  *	SET @master_binlog_checksum = @@global.binlog_checksum
  *	SET @master_heartbeat_period=...
  *	SET @slave_slave_uuid=...
  *	SET NAMES latin1
  *	SET NAMES utf8
+ *	SET mariadb_slave_capability=...
+ *
+ * Four administrative commands are supported:
+ *	STOP SLAVE
+ *	START SLAVE
+ *	CHANGE MASTER TO
+ *	RESET SLAVE
  *
  * @param router        The router instance this defines the master for this replication chain
  * @param slave         The slave specific data
@@ -436,47 +448,59 @@ extern  char *strcasestr();
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete show query.",
 					router->service->name)));
 		}
-		else if (strcasecmp(word, "VARIABLES") == 0)
+		else if (strcasecmp(word, "GLOBAL") == 0)
 		{
+			if (router->master_state == BLRM_UNCONFIGURED) {
+				free(query_text);
+				return blr_slave_send_ok(router, slave);
+			}
+
 			if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
 			{
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-					"%s: Expected LIKE clause in SHOW VARIABLES.",
+					"%s: Expected VARIABLES in SHOW GLOBAL",
 					router->service->name)));
 			}
-			else if (strcasecmp(word, "LIKE") == 0)
+			else if (strcasecmp(word, "VARIABLES") == 0)
 			{
-				if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-				{
-					LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-					"%s: Missing LIKE clause in SHOW VARIABLES.",
-					router->service->name)));
-				}
-				else if (strcasecmp(word, "'SERVER_ID'") == 0)
-				{
+				int rc = blr_slave_handle_variables(router, slave, brkb);
+
+				/* if no var found, send empty result set */
+				if (rc == 0)
+					blr_slave_send_ok(router, slave);
+
+				if (rc >= 0) {
 					free(query_text);
 
-					if (router->set_master_server_id) {
-						char    server_id[40];
-						sprintf(server_id, "%d", router->masterid);
-						return blr_slave_send_variable(router, slave, "'SERVER_ID'", server_id, BLR_TYPE_INT);
-					} else
-						return blr_slave_replay(router, slave, router->saved_master.server_id);
-				}
-				else if (strcasecmp(word, "'SERVER_UUID'") == 0)
-				{
-					free(query_text);
-					if (router->set_master_uuid)
-						return blr_slave_send_variable(router, slave, "'SERVER_UUID'", router->master_uuid, BLR_TYPE_STRING);
-					else
-						return blr_slave_replay(router, slave, router->saved_master.uuid);
-				}
-				else if (strcasecmp(word, "'MAXSCALE%'") == 0)
-				{
-					free(query_text);
-					return blr_slave_send_maxscale_variables(router, slave);
-				}
+					return 1;
+				} else
+					LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+						"%s: Expected LIKE clause in SHOW GLOBAL VARIABLES.",
+						router->service->name)));
 			}
+		}
+		else if (strcasecmp(word, "VARIABLES") == 0)
+		{
+			int rc;
+			if (router->master_state == BLRM_UNCONFIGURED) {
+				free(query_text);
+				return blr_slave_send_ok(router, slave);
+			}
+
+			rc = blr_slave_handle_variables(router, slave, brkb);
+
+			/* if no var found, send empty result set */
+			if (rc == 0)
+				blr_slave_send_ok(router, slave);
+
+			if (rc >= 0) {
+				free(query_text);
+
+				return 1;
+			} else
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+					"%s: Expected LIKE clause in SHOW VARIABLES.",
+					router->service->name)));
 		}
 		else if (strcasecmp(word, "MASTER") == 0)
 		{
@@ -3817,3 +3841,48 @@ int
 blr_test_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error) {
 	return blr_handle_change_master(router, command, error);
 }
+
+
+/**
+ * Handle the response to the SQL command "SHOW GLOBAL VARIABLES LIKE or SHOW VARIABLES LIKE
+ *
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ * @param	stmt		The SQL statement
+ * @return	Non-zero if the variable is handled, 0 if variable is unknown, -1 for syntax error
+ */
+static int
+blr_slave_handle_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt) {
+char *brkb;
+char *word;
+/* SPACE,TAB,= */
+char	*sep = " 	,=";
+
+	if ((word = strtok_r(stmt, sep, &brkb)) == NULL) {
+		return 0;
+	} else if (strcasecmp(word, "LIKE") == 0) {
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"%s: Missing LIKE clause in SHOW [GLOBAL] VARIABLES.",
+				router->service->name)));
+			return 0;
+		} else if (strcasecmp(word, "'SERVER_ID'") == 0) {
+			if (router->set_master_server_id) {
+				char    server_id[40];
+				sprintf(server_id, "%d", router->masterid);
+				return blr_slave_send_variable(router, slave, "'SERVER_ID'", server_id, BLR_TYPE_INT);
+			} else
+				return blr_slave_replay(router, slave, router->saved_master.server_id);
+		} else if (strcasecmp(word, "'SERVER_UUID'") == 0) {
+			if (router->set_master_uuid)
+				return blr_slave_send_variable(router, slave, "'SERVER_UUID'", router->master_uuid, BLR_TYPE_STRING);
+			else
+				return blr_slave_replay(router, slave, router->saved_master.uuid);
+		} else if (strcasecmp(word, "'MAXSCALE%'") == 0) {
+			return blr_slave_send_maxscale_variables(router, slave);
+		} else
+			return 0;
+	} else
+		return -1;
+}
+
