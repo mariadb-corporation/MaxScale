@@ -30,7 +30,7 @@ static const char* default_piddir = "@MAXSCALE_VARDIR@/run/maxscale"; /*< This s
                                                                         * the /var/run folder is an old standard and the newer FSH 3.0
                                                                         * uses /run for PID files.*/
 static const char* default_logdir = "@MAXSCALE_VARDIR@/log/maxscale";
-static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale";
+static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale/data";
 static const char* default_libdir = "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@";
 static const char* default_cachedir = "@MAXSCALE_VARDIR@/cache/maxscale";
 static const char* default_langdir = "@MAXSCALE_VARDIR@/lib/maxscale";

@@ -1359,59 +1359,104 @@ return_succp:
         return succp;
 }
 
+/**
+ * Helper for skygw_log_write and friends.
+ *
+ * @param id     The id of the log file.
+ * @param flush  Whether the log should be flushed.
+ * @param len    The length of the formatted string, as calculated by vsnprintf.
+ * @param str    The printf format string.
+ * @param valist The arguments of /str/.
+ *
+ * @return 0 if the logging to at least one log succeeded.
+ */
+
+static int log_write(logfile_id_t id,
+                     bool         flush,
+                     size_t       len,
+                     const char*  str,
+                     va_list      valist)
+{
+    int rv = 0;
+
+    if (logmanager_register(true))
+    {
+        CHK_LOGMANAGER(lm);
+
+        int attempts = 0;
+        int successes = 0;
+
+        /**
+         * Add one for line feed.
+         */
+        len += sizeof(char);
+
+        for (int i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
+        {
+            /**
+             * If a particular log is enabled in general and it is enabled for
+             * the current session, log the stuff.
+             */
+            if (LOG_IS_ENABLED(i) && ((i & id) != 0))
+            {
+                ++attempts;
+
+                const bool use_valist = true;
+                const bool spread_down = true;
+                const bool rotate = false;
+
+                if (logmanager_write_log((logfile_id_t)i, flush, use_valist, spread_down, rotate,
+                                         len, str, valist) == 0)
+                {
+                    ++successes;
+                }
+            }
+        }
+
+        logmanager_unregister();
+
+        // Only if logging was attempted and nothing succeeded, it is considered a failure.
+        if ((attempts != 0) && (successes == 0))
+        {
+            rv = -1;
+        }
+    }
+    else
+    {
+        rv = -1;
+    }
+
+    return rv;
+}
 
 int skygw_log_write_flush(
         logfile_id_t  id,
         const char*   str,
         ...)
 {
-        int     i,err = 0;
+        int     err = 0;
         va_list valist;
-        size_t  len;
-
-        if (!logmanager_register(true))
-	{
-		err = -1;
-		goto return_err;
-        }
-        CHK_LOGMANAGER(lm);
 
         /**
          * Find out the length of log string (to be formatted str).
          */
         va_start(valist, str);
-        len = sizeof(char) * vsnprintf(NULL, 0, str, valist);
+        size_t len = vsnprintf(NULL, 0, str, valist);
         va_end(valist);
-        /**
-         * Add one for line feed.
-         */
-        len += sizeof(char);
-        /**
-         * Write log string to buffer and add to file write list.
-         */
-        for (i = LOGFILE_FIRST; i<=LOGFILE_LAST ;i <<=1)
-        {
-            /**
-             * If particular log is disabled in general and it is not enabled for
-             * the current session, check the next log.
-             */
-            if (!LOG_IS_ENABLED(i) || (i & id) == 0)
-            {
-                continue;
-            }
+
+        if (len >= 0) {
+            const bool flush = true;
 
             va_start(valist, str);
-            err = logmanager_write_log((logfile_id_t)i, true, true, true, false, len, str, valist);
+            err = log_write(id, flush, len, str, valist);
             va_end(valist);
 
-            if (err != 0) {
+            if (err != 0)
+            {
                 fprintf(stderr, "skygw_log_write_flush failed.\n");
-                break;
             }
         }
 
-        logmanager_unregister();
-return_err:
         return err;
 }
 
@@ -1422,60 +1467,29 @@ int skygw_log_write(
         const char*   str,
         ...)
 {
-        int     i,err = 0;
-        va_list valist;
-        size_t  len;
+    int     err = 0;
+    va_list valist;
 
-        if (!logmanager_register(true))
-	{
-		err = -1;
-		goto return_err;
-        }
-        CHK_LOGMANAGER(lm);
+    /**
+     * Find out the length of log string (to be formatted str).
+     */
+    va_start(valist, str);
+    size_t len = vsnprintf(NULL, 0, str, valist);
+    va_end(valist);
 
-        /**
-         * If particular log is disabled in general and it is not enabled for
-	 * the current session, then unregister and return.
-         */
+    if (len >= 0) {
+        const bool flush = false;
 
-        /**
-         * Find out the length of log string (to be formatted str).
-         */
         va_start(valist, str);
-            len = vsnprintf(NULL, 0, str, valist);
+        err = log_write(id, flush, len, str, valist);
         va_end(valist);
-        /**
-         * Add one for line feed.
-         */
-        len += 1;
-        /**
-         * Write log string to buffer and add to file write list.
-         */
 
-        for (i = LOGFILE_FIRST; i<=LOGFILE_LAST; i <<=1)
-        {
-            /**
-             * If particular log is disabled in general and it is not enabled for
-             * the current session, check the next log.
-             */
-            if (!LOG_IS_ENABLED(i) || (i & id) == 0)
-            {
-                continue;
-            }
-
-            va_start(valist, str);
-            err = logmanager_write_log((logfile_id_t)i, false, true, true, false, len, str, valist);
-            va_end(valist);
-
-            if (err != 0) {
-                fprintf(stderr, "skygw_log_write failed.\n");
-                break;
-            }
+        if (err != 0) {
+            fprintf(stderr, "skygw_log_write failed.\n");
         }
+    }
 
-        logmanager_unregister();
-return_err:
-        return err;
+    return err;
 }
 
 

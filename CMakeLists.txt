@@ -61,9 +61,17 @@ if(GIT_FOUND)
   message(STATUS "Found git ${GIT_VERSION_STRING}")
   execute_process(COMMAND ${GIT_EXECUTABLE} rev-list --max-count=1 HEAD
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT)
-  string(REPLACE "\n" "" MAXSCALE_COMMIT ${GIT_COMMIT})
-  message(STATUS "Commit ID: ${MAXSCALE_COMMIT}")
+    OUTPUT_VARIABLE GIT_COMMIT
+    ERROR_VARIABLE GIT_ERROR
+    RESULT_VARIABLE GIT_RVAL)
+  if(${GIT_RVAL} EQUAL 0)
+    string(REPLACE "\n" "" MAXSCALE_COMMIT ${GIT_COMMIT})
+    message(STATUS "Commit ID: ${MAXSCALE_COMMIT}")
+  else()
+    message(STATUS "Git exited with non-zero value: ${GIT_ERROR}")
+    message(STATUS "Could not find repository in source folder, MaxScale commit ID will not be resolved. Will use 'source-build' for commit ID.")
+    set(MAXSCALE_COMMIT "source-build")
+  endif()
 else()
   message(WARNING "Could not find git, MaxScale commit ID will not be resolved. Will use 'source-build' for commit ID.")
   set(MAXSCALE_COMMIT "source-build")
