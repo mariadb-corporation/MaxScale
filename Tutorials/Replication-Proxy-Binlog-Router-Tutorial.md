@@ -272,6 +272,7 @@ First step is stop the replication from the master.
 	MariaDB> STOP SLAVE;
 
 Next step is the master configuration
+
 	MariaDB> CHANGE MASTER TO ...
 
 A succesfull configuration change results in master.ini being updated.
