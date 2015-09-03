@@ -221,7 +221,7 @@ The binlog router module of MaxScale produces diagnostic output that can be view
 
 # Binlog router compatibility
 
-Binlog Router Plugin is compatible with MySQL 5.6, MariaDB 5.5, the current default.
+Binlog Router Plugin is compatible with MySQL 5.6 and MariaDB 5.5, the current default.
 
 In order to use it with MySQL 5.6, the GTID_MODE setting must be OFF and connecting slaves mustn't use MASTER_AUTO_POSITION = 1 option.
 
