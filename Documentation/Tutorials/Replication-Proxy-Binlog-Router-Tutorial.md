@@ -148,7 +148,7 @@ The binlog router module of MaxScale produces diagnostic output that can be view
     	State: 					Started
     	Master connection DCB:  					0x15693c0
     	Master connection state:					Binlog Dump
-    	Binlog directory:						    /home/mriddoch/binlogs
+    	Binlog directory:						    /var/maxscale/binlogs
         Heartbeat period (seconds):					200
     	Number of master connects:		  			1
     	Number of delayed reconnects:	      		0
