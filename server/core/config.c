@@ -2299,9 +2299,11 @@ config_percentage_value(char *str)
 }
 
 static char *InternalRouters[] = {
-	"debugcli",
-	"cli",
-	NULL
+    "debugcli",
+    "cli",
+    "maxinfo",
+    "binlogrouter",
+    NULL
 };
 
 /**
