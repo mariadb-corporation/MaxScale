@@ -53,6 +53,7 @@
  *					If set those values are sent to slaves instead of
  *					saved master responses
  * 03/09/2015	Massimiliano Pinto	Added support for SHOW GLOBAL VARIABLES LIKE
+ * 04/09/2015	Massimiliano Pinto	Added support for SHOW WARNINGS
  *
  * @endverbatim
  */
@@ -137,6 +138,8 @@ static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router, RO
 int blr_test_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config);
 char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error);
 static int blr_slave_handle_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt);
+static int blr_slave_send_warning_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message);
+static int blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -275,6 +278,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SHOW SLAVE STATUS
  *	SHOW MASTER STATUS
  *	SHOW SLAVE HOSTS
+ *	SHOW WARNINGS
  *
  * Six set commands are supported:
  *	SET @master_binlog_checksum = @@global.binlog_checksum
@@ -447,6 +451,11 @@ extern  char *strcasestr();
 		{
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete show query.",
 					router->service->name)));
+		}
+		else if (strcasecmp(word, "WARNINGS") == 0)
+		{
+			free(query_text);
+			return blr_slave_show_warnings(router, slave);
 		}
 		else if (strcasecmp(word, "GLOBAL") == 0)
 		{
@@ -683,7 +692,10 @@ extern  char *strcasestr();
 					return blr_slave_send_ok(router, slave);
 				}
 			} else {
-				blr_slave_send_error_packet(slave, "This operation cannot be performed with a running slave; run STOP SLAVE first", (unsigned int)1198, NULL);
+				if (router->master_state == BLRM_UNCONFIGURED)
+					blr_slave_send_ok(router, slave);
+				else
+					blr_slave_send_error_packet(slave, "This operation cannot be performed with a running slave; run STOP SLAVE first", (unsigned int)1198, NULL);
 				return 1;
 			}
 		}
@@ -1707,10 +1719,10 @@ uint32_t	chksum;
 
 	LOGIF(LM, (skygw_log_write(
 		LOGFILE_MESSAGE,
-			"%s: New slave %s, server id %d,  requested binlog file %s from position %lu",
-				router->service->name, slave->dcb->remote,
-					slave->serverid,
-					slave->binlogfile, (unsigned long)slave->binlog_pos)));
+			"%s: Slave %s, server id %d requested binlog file %s from position %lu",
+			router->service->name, slave->dcb->remote,
+			slave->serverid,
+			slave->binlogfile, (unsigned long)slave->binlog_pos)));
 
 	if (slave->binlog_pos != router->binlog_position ||
 			strcmp(slave->binlogfile, router->binlog_name) != 0)
@@ -2607,14 +2619,14 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
         /* if unconfigured return an error */
 	if (router->master_state == BLRM_UNCONFIGURED) {
-		blr_slave_send_error_packet(slave, "The server is not configured as slave; fix in config file or with CHANGE MASTER TO", (unsigned int)1200, NULL);
+		blr_slave_send_warning_message(router, slave, "1255:Slave already has been stopped");
 
 		return 1;
 	}
 
         /* if already stopped return an error */
 	if (router->master_state == BLRM_SLAVE_STOPPED) {
-		blr_slave_send_error_packet(slave, "Slave connection is not running", (unsigned int)1199, NULL);
+		blr_slave_send_warning_message(router, slave, "1255:Slave already has been stopped");
 
 		return 1;
 	}
@@ -2703,7 +2715,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 	/* if running return an error */
 	if (router->master_state != BLRM_UNCONNECTED && router->master_state != BLRM_SLAVE_STOPPED) {
-		blr_slave_send_error_packet(slave, "Slave connection is already running", (unsigned int)1254, NULL);
+		blr_slave_send_warning_message(router, slave, "1254:Slave is already running");
 
 		return 1;
 	}
@@ -3884,5 +3896,137 @@ char	*sep = " 	,=";
 			return 0;
 	} else
 		return -1;
+}
+
+ /**
+ * Send a MySQL OK packet with a warning flag to the slave backend
+ * and set the warning message in slave structure
+ * The message should be retrieved by SHOW WARNINGS command
+ *
+ * @param       router          The binlog router instance
+ * @param       message         The message to send
+ * @param       slave           The slave server to which we are sending the response
+ *
+ * @return result of a write call, non-zero if write was successful
+ */
+
+static int
+blr_slave_send_warning_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+
+        if ((pkt = gwbuf_alloc(11)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        *ptr++ = 7;     // Payload length
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 1;     // Seqno
+        *ptr++ = 0;     // ok
+        *ptr++ = 0;
+        *ptr++ = 0;
+
+        *ptr++ = 2;
+        *ptr++ = 0;
+
+        if(strlen(message) == 0) {
+                *ptr++ = 0;
+                *ptr++ = 0;
+        } else {
+                *ptr++ = 1; /* warning byte set to 1 */
+                *ptr++ = 0;
+                *ptr++ = 0;
+        }
+
+	/* set the new warning in this slave connection */
+	if (slave->warning_msg)
+		free(slave->warning_msg);
+	slave->warning_msg = strdup(message);
+
+        return slave->dcb->func.write(slave->dcb, pkt);
+}
+
+ /**
+ * Send a MySQL SHOW WARNINGS packet with a message that has been stored in slave struct
+ *
+ * If there is no wanring message an OK packet is sent
+ *
+ * @param       router          The binlog router instance
+ * @param       message         The message to send
+ * @param       slave           The slave server to which we are sending the response
+ *
+ * @return result of a write call, non-zero if write was successful
+ */
+
+static int
+blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+int     len;
+int vers_len = 0;
+int code_len = 0;
+
+	/* check whether a warning message is available */
+	if (slave->warning_msg) {
+		char *msg_ptr;
+		char err_code[16+1]="";
+		msg_ptr = strchr(slave->warning_msg, ':');
+		if (msg_ptr) {
+			strncpy(err_code, slave->warning_msg,
+				(msg_ptr-slave->warning_msg > 16) ? 16 : (msg_ptr-slave->warning_msg));
+			code_len = strlen(err_code);
+
+			msg_ptr++;
+		}
+
+		if (!msg_ptr)
+			msg_ptr = slave->warning_msg;
+
+		vers_len = strlen(msg_ptr);
+
+		blr_slave_send_fieldcount(router, slave, 3);	// 3 columns
+
+		blr_slave_send_columndef(router, slave, "Code", BLR_TYPE_STRING, 40, 2);
+		blr_slave_send_columndef(router, slave, "Level", BLR_TYPE_STRING, 40, 3);
+		blr_slave_send_columndef(router, slave, "Message", BLR_TYPE_STRING, 80, 4);
+
+		blr_slave_send_eof(router, slave, 5);
+
+		len = 4 + (1 + strlen("Note")) + (1 + code_len) + (1 + vers_len);
+
+		if ((pkt = gwbuf_alloc(len)) == NULL)
+			return blr_slave_send_ok(router, slave);
+
+		ptr = GWBUF_DATA(pkt);
+
+		encode_value(ptr, len - 4, 24); // Add length of data packet
+		ptr += 3;
+
+		*ptr++ = 0x06;                  // Sequence number in response
+
+		*ptr++ = strlen("Note");        // Length of result string
+		strncpy((char *)ptr, "Note", strlen("Note")); // Result string
+		ptr += strlen("Note");
+
+		*ptr++ = code_len;
+		if (code_len) {
+			strncpy((char *)ptr, err_code, code_len); // Result string
+			ptr += code_len;
+		}
+
+		*ptr++ = vers_len;
+		if (vers_len) {
+			strncpy((char *)ptr, msg_ptr, vers_len); // Result string
+			ptr += vers_len;
+		}
+
+		slave->dcb->func.write(slave->dcb, pkt);
+
+		return blr_slave_send_eof(router, slave, 7);
+	} else {
+		return blr_slave_send_ok(router, slave);
+	}
 }
 
