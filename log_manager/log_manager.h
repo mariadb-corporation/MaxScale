@@ -118,17 +118,27 @@ void skygw_logmanager_exit(void);
  * free private write buffer list
  */
 void skygw_log_done(void);
-int  skygw_log_write(logfile_id_t id, const char* format, ...);
+int  skygw_log_write_context(logfile_id_t id,
+                             const char* file, int line, const char* function,
+                             const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
 void skygw_log_sync_all(void);
 int  skygw_log_rotate(logfile_id_t id);
-int  skygw_log_write_flush(logfile_id_t id, const char* format, ...);
+int  skygw_log_write_context_flush(logfile_id_t id,
+                                   const char* file, int line, const char* function,
+                                   const char* format, ...);
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
 void skygw_log_sync_all(void);
 void skygw_set_highp(int);
 void logmanager_enable_syslog(int);
 void logmanager_enable_maxscalelog(int);
+
+#define skygw_log_write(id, format, ...)\
+    skygw_log_write_context(id, __FILE__, __LINE__, __FUNCTION__, format, ##__VA_ARGS__)
+
+#define skygw_log_write_flush(id, format, ...)\
+    skygw_log_write_context_flush(id, __FILE__, __LINE__, __FUNCTION__, format, ##__VA_ARGS__)
 
 EXTERN_C_BLOCK_END
 
