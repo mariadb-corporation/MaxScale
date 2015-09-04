@@ -510,7 +510,10 @@ DCB     *dcb = NULL;
 	}
 	spinlock_release(&zombiespin);
 
-        dcb_process_victim_queue(listofdcb);
+        if (listofdcb)
+        {
+            dcb_process_victim_queue(listofdcb);
+        }
         
         return zombies;
 } 
@@ -527,12 +530,11 @@ DCB     *dcb = NULL;
 static inline void
 dcb_process_victim_queue(DCB *listofdcb)
 {
-    DCB *dcb;
+    DCB *dcb = listofdcb;
 
-    dcb = listofdcb;
     while (dcb != NULL) 
     {
-        DCB *nextdcb = NULL;
+        DCB *nextdcb;
         /*<
          * Stop dcb's listening and modify state accordingly.
          */
@@ -1812,12 +1814,6 @@ void
 dcb_close(DCB *dcb)
 {
     CHK_DCB(dcb);
-
-    LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-        "%lu [dcb_close] DCB %p in state %s",
-        pthread_self(),
-        dcb,
-        dcb ? STRDCBSTATE(dcb->state) : "Invalid DCB")));                                
 
     if (DCB_STATE_UNDEFINED == dcb->state 
         || DCB_STATE_DISCONNECTED == dcb->state)
