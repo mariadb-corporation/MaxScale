@@ -401,9 +401,9 @@ dcb_final_free(DCB *dcb)
 DCB *
 dcb_process_zombies(int threadid)
 {
-DCB	*zombiedcb, *previousdcb;
+DCB     *zombiedcb;
+DCB     *previousdcb = NULL, *nextdcb;
 DCB     *listofdcb = NULL;
-DCB     *dcb = NULL;
 
 	/**
 	 * Perform a dirty read to see if there is anything in the queue.
@@ -413,7 +413,9 @@ DCB     *dcb = NULL;
 	 * dcb_final_free.
 	 */
 	if (!zombies)
+    {
 		return NULL;
+    }
 
 	/*
 	 * Process the zombie queue and create a list of DCB's that can be
@@ -426,11 +428,10 @@ DCB     *dcb = NULL;
 	 */
 	spinlock_acquire(&zombiespin);
 	zombiedcb = zombies;
-	previousdcb = NULL;
 	while (zombiedcb)
 	{
 		CHK_DCB(zombiedcb);
-
+        nextdcb = zombiedcb->memdata.next;
 		/*
 		 * Skip processing of DCB's that are
 		 * in the event queue waiting to be processed.
@@ -438,7 +439,6 @@ DCB     *dcb = NULL;
 		if (zombiedcb->evq.next || zombiedcb->evq.prev)
 		{
 			previousdcb = zombiedcb;
-			zombiedcb = zombiedcb->memdata.next;
 		}
 		else
 		{
@@ -484,29 +484,17 @@ DCB     *dcb = NULL;
                                  * (listofdcb) is not NULL, then it follows that
                                  * dcb will also not be null.
 				 */
-				if (listofdcb == NULL) 
-                                {
-					listofdcb = zombiedcb;
-				} 
-                                else 
-                                {
-					dcb->memdata.next = zombiedcb;
-				}
-                                /* Set dcb for next iteration of loop */
-                                dcb = zombiedcb;
-				zombiedcb = zombiedcb->memdata.next;
-                                /* After we've moved zombiedcb forward, set
-                                 link to null as dcb is last of the new list */
-				dcb->memdata.next = NULL;
+                zombiedcb->memdata.next = listofdcb;
+                listofdcb = zombiedcb;
 			}
 			else
 			{
-                            /* Since we didn't remove this dcb from the zombies 
-                             list, we need to advance the previous pointer */
+                /* Since we didn't remove this dcb from the zombies 
+                list, we need to advance the previous pointer */
 				previousdcb = zombiedcb;
-				zombiedcb = zombiedcb->memdata.next;
 			}
 		}
+        zombiedcb = nextdcb;
 	}
 	spinlock_release(&zombiespin);
 
