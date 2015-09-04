@@ -979,7 +979,7 @@ process_config_context(CONFIG_CONTEXT *context)
 					s = strtok_r(NULL, ",", &lasts);
 				}
 			}
-			else if (servers == NULL && !isInternalService(router) && strcmp(router,"binlogrouter"))
+			else if (servers == NULL && !isInternalService(router))
 			{
 				LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
@@ -2299,9 +2299,11 @@ config_percentage_value(char *str)
 }
 
 static char *InternalRouters[] = {
-	"debugcli",
-	"cli",
-	NULL
+    "debugcli",
+    "cli",
+    "maxinfo",
+    "binlogrouter",
+    NULL
 };
 
 /**
