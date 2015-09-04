@@ -3944,7 +3944,7 @@ uint8_t *ptr;
 		free(slave->warning_msg);
 	slave->warning_msg = strdup(message);
 
-        return slave->dcb->func.write(slave->dcb, pkt);
+	return slave->dcb->func.write(slave->dcb, pkt);
 }
 
  /**
@@ -3979,10 +3979,9 @@ int code_len = 0;
 			code_len = strlen(err_code);
 
 			msg_ptr++;
-		}
-
-		if (!msg_ptr)
+		} else {
 			msg_ptr = slave->warning_msg;
+		}
 
 		vers_len = strlen(msg_ptr);
 
@@ -4010,13 +4009,13 @@ int code_len = 0;
 		strncpy((char *)ptr, "Note", strlen("Note")); // Result string
 		ptr += strlen("Note");
 
-		*ptr++ = code_len;
+		*ptr++ = code_len;		// Length of result string
 		if (code_len) {
 			strncpy((char *)ptr, err_code, code_len); // Result string
 			ptr += code_len;
 		}
 
-		*ptr++ = vers_len;
+		*ptr++ = vers_len;		// Length of result string
 		if (vers_len) {
 			strncpy((char *)ptr, msg_ptr, vers_len); // Result string
 			ptr += vers_len;
