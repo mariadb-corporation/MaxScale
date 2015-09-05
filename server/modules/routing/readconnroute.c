@@ -74,6 +74,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <service.h>
 #include <server.h>
 #include <router.h>
@@ -855,6 +856,7 @@ static void handleError(
 	DCB             *client_dcb;
 	SESSION         *session = backend_dcb->session;
 	session_state_t sesstate;
+    ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
 
 	/** Reset error handle flag from a given DCB */
 	if (action == ERRACT_RESET)
@@ -888,6 +890,14 @@ static void handleError(
 	{
 		spinlock_release(&session->ses_lock);
 	}
+    
+    if (backend_dcb != router_cli_ses->backend_dcb)
+    {
+        /* Linkages have gone badly wrong - this may not be best solution */
+        raise(SIGABRT);
+    }
+    router_cli_ses->backend_dcb = NULL;
+    dcb_close(backend_dcb);
 	
 	/** false because connection is not available anymore */
 	*succp = false;

@@ -1145,7 +1145,6 @@ gw_backend_hangup(DCB *dcb)
                 spinlock_release(&session->ses_lock);
         }
         ss_dassert(dcb->dcb_errhandle_called);
-        dcb_close(dcb);
         
 retblock:
         return 1;
