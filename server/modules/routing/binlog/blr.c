@@ -1084,7 +1084,7 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error;
 socklen_t len;
-char		msg[85], *errmsg;
+char		msg[STRERROR_BUFLEN + 1], *errmsg;
 
 	if (action == ERRACT_RESET)
 	{
@@ -1107,8 +1107,8 @@ char		msg[85], *errmsg;
 	len = sizeof(error);
 	if (router->master && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
 	{
-		strerror_r(error, msg, 80);
-		strcat(msg, " ");
+                char errbuf[STRERROR_BUFLEN];
+                sprintf(msg, "%s ", strerror_r(error, errbuf, sizeof(errbuf)));
 	}
 	else
 		strcpy(msg, "");

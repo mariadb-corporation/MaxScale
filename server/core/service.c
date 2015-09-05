@@ -282,10 +282,11 @@ GWPROTOCOL	*funcs;
                                 {
 				    if(errno != EEXIST)
 				    {
+                                        char errbuf[STRERROR_BUFLEN];
 					skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
 						 path,
 						 errno,
-						 strerror(errno));
+                                                        strerror_r(errno, errbuf, sizeof(errbuf)));
 				    }
                                     mkdir_rval = 0;
                                 }
@@ -300,10 +301,11 @@ GWPROTOCOL	*funcs;
                                 {
 				    if(errno != EEXIST)
 				    {
+                                        char errbuf[STRERROR_BUFLEN];
 					skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
 						 path,
 						 errno,
-						 strerror(errno));
+                                                        strerror_r(errno, errbuf, sizeof(errbuf)));
 				    }
                                     mkdir_rval = 0;
                                 }

@@ -380,12 +380,13 @@ int                     rc;
         } else {
             int eno = errno;
             errno = 0;
+            char errbuf[STRERROR_BUFLEN];
 	    LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
                     "Failed to start listening for maxscale admin connections "
 		    "due error %d, %s\n\n",
                     eno,
-                    strerror(eno))));
+                           strerror_r(eno, errbuf, sizeof(errbuf)))));
             return 0;
         }
 

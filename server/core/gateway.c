@@ -351,10 +351,9 @@ sigchld_handler (int i)
 
     if((child = wait(&exit_status)) == -1)
     {
-	char errbuf[512];
-	strerror_r(errno,errbuf,511);
-	errbuf[511] = '\0';
-	skygw_log_write_flush(LE,"Error: failed to wait child process: %d %s",errno,errbuf);
+        char errbuf[STRERROR_BUFLEN];
+	skygw_log_write_flush(LE,"Error: failed to wait child process: %d %s",
+                              errno,strerror_r(errno, errbuf, sizeof(errbuf)));
     }
     else
     {
@@ -456,12 +455,13 @@ static int signal_set (int sig, void (*handler)(int)) {
         {
                 int eno = errno;
                 errno = 0;
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed call sigaction() in %s due to %d, %s.",
                         program_invocation_short_name,
                         eno,
-                        strerror(eno))));
+                        strerror_r(eno, errbuf, sizeof(errbuf)))));
                 rc = 1;
 	}
         return rc;
@@ -484,14 +484,14 @@ int ntfw_cb(
         {
                 int eno = errno;
                 errno = 0;
-                
+                char errbuf[STRERROR_BUFLEN];
                 LOGIF(LE, (skygw_log_write(
                         LOGFILE_ERROR,
                         "Error : Failed to remove the data directory %s of "
                         "MaxScale due to %d, %s.",
                         datadir,
                         eno,
-                        strerror(eno))));
+                        strerror_r(eno, errbuf, sizeof(errbuf)))));
         }
         return rc;
 }
@@ -785,21 +785,23 @@ static void print_log_n_stderr(
         char* fpr_end   = "\n*\n";
         
         if (do_log) {
+                char errbuf[STRERROR_BUFLEN];
                 LOGIF(LE, (skygw_log_write_flush(
                                    LOGFILE_ERROR,
                                    "%s %s %s %s",
                                    log_err,
                                    logstr,
                                    eno == 0 ? " " : "Error :",
-                                   eno == 0 ? " " : strerror(eno))));
+                                   eno == 0 ? " " : strerror_r(eno, errbuf, sizeof(errbuf)))));
         }
         if (do_stderr) {
+                char errbuf[STRERROR_BUFLEN];
                 fprintf(stderr,
                         "%s %s %s %s %s",
                         fpr_err,
                         fprstr,
                         eno == 0 ? " " : "Error :",
-                        eno == 0 ? " " : strerror(eno),
+                        eno == 0 ? " " : strerror_r(eno, errbuf, sizeof(errbuf)),
                         fpr_end);
         }
 }
@@ -813,6 +815,7 @@ static bool file_is_readable(
         {
                 int eno = errno;
                 errno = 0;
+                char errbuf[STRERROR_BUFLEN];
 
                 if (!daemon_mode)
                 {
@@ -820,7 +823,7 @@ static bool file_is_readable(
                                 "*\n* Warning : Failed to read the configuration "
                                 "file %s. %s.\n*\n",
                                 absolute_pathname,
-                                strerror(eno));
+                                strerror_r(eno, errbuf, sizeof(errbuf)));
                 }
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -828,7 +831,7 @@ static bool file_is_readable(
                         "to %d, %s.",
                         absolute_pathname,
                         eno,
-                        strerror(eno))));
+                        strerror_r(eno, errbuf, sizeof(errbuf)))));
 		LOGIF(LE,(skygw_log_sync_all()));
                 succp = false;
         }
@@ -844,6 +847,7 @@ static bool file_is_writable(
         {
                 int eno = errno;
                 errno = 0;
+                char errbuf[STRERROR_BUFLEN];
 
                 if (!daemon_mode)
                 {
@@ -852,7 +856,7 @@ static bool file_is_writable(
                                 "due %d, %s.\n*\n",
                                 absolute_pathname,
                                 eno,
-                                strerror(eno));
+                                strerror_r(eno, errbuf, sizeof(errbuf)));
                 }
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -860,7 +864,7 @@ static bool file_is_writable(
                         "to %d, %s.",
                         absolute_pathname,
                         eno,
-                        strerror(eno))));
+                        strerror_r(eno, errbuf, sizeof(errbuf)))));
                 succp = false;
         }
         return succp;
@@ -907,13 +911,14 @@ static char* get_expanded_pathname(
         {
                 int eno = errno;
                 errno = 0;
-                
+                char errbuf[STRERROR_BUFLEN];
+
                 fprintf(stderr,
                         "*\n* Warning : Failed to read the "
                         "directory %s. %s.\n*\n",
                         relative_path,
-                        strerror(eno));
-                
+                        strerror_r(eno, errbuf, sizeof(errbuf)));
+
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Warning : Failed to read the "
@@ -921,7 +926,7 @@ static char* get_expanded_pathname(
                         "to %d, %s.",
                         relative_path,
                         eno,
-                        strerror(eno))));
+                        strerror_r(eno, errbuf, sizeof(errbuf)))));
                 free(expanded_path);
                 *output_path = NULL;
                 goto return_cnf_file_buf;
@@ -942,11 +947,12 @@ static char* get_expanded_pathname(
                 if (cnf_file_buf == NULL)
                 {
 			ss_dassert(cnf_file_buf != NULL);
-			
+                        char errbuf[STRERROR_BUFLEN];
+
 			LOGIF(LE, (skygw_log_write_flush(
 				LOGFILE_ERROR,
-				"Error : Memory allocation failed due to %s.", 
-				strerror(errno))));		
+				"Error : Memory allocation failed due to %s.",
+				strerror_r(errno, errbuf, sizeof(errbuf)))));
 			
                         free(expanded_path);
                         expanded_path = NULL;
@@ -1707,8 +1713,10 @@ int main(int argc, char **argv)
 	if(mkdir(datadir, 0777) != 0){
 
 	    if(errno != EEXIST){
+                char errbuf[STRERROR_BUFLEN];
 		fprintf(stderr,
-		 "Error: Cannot create data directory '%s': %d %s\n",datadir,errno,strerror(errno));
+                        "Error: Cannot create data directory '%s': %d %s\n",
+                        datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 		goto return_main;
 	    }
 	}
@@ -1718,8 +1726,10 @@ int main(int argc, char **argv)
 	if(mkdir(datadir, 0777) != 0){
 
 	    if(errno != EEXIST){
+                char errbuf[STRERROR_BUFLEN];
 		fprintf(stderr,
-		 "Error: Cannot create data directory '%s': %d %s\n",datadir,errno,strerror(errno));
+                        "Error: Cannot create data directory '%s': %d %s\n",
+                        datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 		goto return_main;
 	    }
 	}
@@ -2059,11 +2069,12 @@ static void unlink_pidfile(void)
 	if (strlen(pidfile)) {
 		if (unlink(pidfile)) 
 		{
+                        char errbuf[STRERROR_BUFLEN];
 			fprintf(stderr, 
 				"MaxScale failed to remove pidfile %s: error %d, %s\n", 
 				pidfile, 
 				errno, 
-				strerror(errno));
+				strerror_r(errno, errbuf, sizeof(errbuf)));
 		}
 	}
 }
@@ -2426,32 +2437,36 @@ static int set_user(char* user)
     pwname = getpwnam(user);
     if(pwname == NULL)
     {
+        char errbuf[STRERROR_BUFLEN];
 	printf("Error: Failed to retrieve user information for '%s': %d %s\n",
-	 user,errno,errno == 0 ? "User not found" : strerror(errno));
+               user,errno,errno == 0 ? "User not found" : strerror_r(errno, errbuf, sizeof(errbuf)));
 	return -1;
     }
     
     rval = setgid(pwname->pw_gid);
     if(rval != 0)
     {
+        char errbuf[STRERROR_BUFLEN];
 	printf("Error: Failed to change group to '%d': %d %s\n",
-	 pwname->pw_gid,errno,strerror(errno));
+               pwname->pw_gid, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 	return rval;
     }
 
     rval = setuid(pwname->pw_uid);
     if(rval != 0)
     {
+        char errbuf[STRERROR_BUFLEN];
 	printf("Error: Failed to change user to '%s': %d %s\n",
-	 pwname->pw_name,errno,strerror(errno));
+               pwname->pw_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 	return rval;
     }
     if(prctl(PR_GET_DUMPABLE) == 0)
     {
 	if(prctl(PR_SET_DUMPABLE ,1) == -1)
 	{
+            char errbuf[STRERROR_BUFLEN];
 	    printf("Error: Failed to set dumpable flag on for the process '%s': %d %s\n",
-	     pwname->pw_name,errno,strerror(errno));
+                   pwname->pw_name, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 	    return -1;
 	}
     }

@@ -566,9 +566,11 @@ tokenize_string(char* str)
             char** tmp = realloc(list, sizeof(char*)*(sz * 2));
             if(tmp == NULL)
             {
+                char errbuf[STRERROR_BUFLEN];
                 LOGIF(LE, (skygw_log_write_flush(
                                                  LOGFILE_ERROR,
-                                                 "Error : realloc returned NULL: %s.", strerror(errno))));
+                                                 "Error : realloc returned NULL: %s.",
+                                                 strerror_r(errno, errbuf, sizeof(errbuf)))));
                 free(list);
                 return NULL;
             }

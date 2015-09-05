@@ -277,12 +277,13 @@ char		*remote, *userName;
 			(char *)malloc(strlen(my_instance->filebase) + 20))
 						== NULL)
 		{
+                        char errbuf[STRERROR_BUFLEN];
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
 			      "Error : Memory allocation for qla filter "
 			      "file name failed due to %d, %s.",
 			      errno,
-			      strerror(errno))));
+                                strerror_r(errno, errbuf, sizeof(errbuf)))));
 			free(my_session);
 			return NULL;
 		}
@@ -315,12 +316,13 @@ char		*remote, *userName;
 			
 			if (my_session->fp == NULL)
 			{
+                                char errbuf[STRERROR_BUFLEN];
 				LOGIF(LE, (skygw_log_write(
 					LOGFILE_ERROR,
 					"Error : Opening output file for qla "
 					"fileter failed due to %d, %s",
 					errno,
-					strerror(errno))));
+					strerror_r(errno, errbuf, sizeof(errbuf)))));
 				free(my_session->filename);
 				free(my_session);
 				my_session = NULL;
@@ -329,12 +331,13 @@ char		*remote, *userName;
 	}
 	else
 	{
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write(
 			LOGFILE_ERROR,
 			"Error : Memory allocation for qla filter failed due to "
 			"%d, %s.",
 			errno,
-			strerror(errno))));
+			strerror_r(errno, errbuf, sizeof(errbuf)))));
 	}
 	return my_session;
 }

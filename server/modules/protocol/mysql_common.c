@@ -90,13 +90,14 @@ MySQLProtocol* mysql_protocol_init(
         if (p == NULL) {
             int eno = errno;
             errno = 0;
+            char errbuf[STRERROR_BUFLEN];
             LOGIF(LE, (skygw_log_write_flush(
                     LOGFILE_ERROR,
                     "%lu [mysql_init_protocol] MySQL protocol init failed : "
                     "memory allocation due error  %d, %s.",
                     pthread_self(),
                     eno,
-                    strerror(eno))));
+                    strerror_r(eno, errbuf, sizeof(errbuf)))));
             goto return_p;
         }
         p->protocol_state = MYSQL_PROTOCOL_ALLOC;
@@ -767,6 +768,7 @@ int gw_do_connect_to_backend(
 	so = socket(AF_INET,SOCK_STREAM,0);
         
 	if (so < 0) {
+                char errbuf[STRERROR_BUFLEN];
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Establishing connection to backend server "
@@ -775,7 +777,7 @@ int gw_do_connect_to_backend(
                         host,
                         port,
                         errno,
-                        strerror(errno))));
+                        strerror_r(errno, errbuf, sizeof(errbuf)))));
                 rv = -1;
                 goto return_rv;
 	}
@@ -786,6 +788,7 @@ int gw_do_connect_to_backend(
 
 	if(setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
 	{
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error: Failed to set socket options "
@@ -794,7 +797,7 @@ int gw_do_connect_to_backend(
 			host,
 			port,
 			errno,
-			strerror(errno))));
+			strerror_r(errno, errbuf, sizeof(errbuf)))));
 		rv = -1;
 		/** Close socket */
 		goto close_so;
@@ -803,6 +806,7 @@ int gw_do_connect_to_backend(
 
 	if(setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
 	{
+                char errbuf[STRERROR_BUFLEN];
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Failed to set socket options "
@@ -811,7 +815,7 @@ int gw_do_connect_to_backend(
                         host,
                         port,
                         errno,
-                        strerror(errno))));
+                        strerror_r(errno, errbuf, sizeof(errbuf)))));
 		rv = -1;
 		/** Close socket */
 		goto close_so;
@@ -820,6 +824,7 @@ int gw_do_connect_to_backend(
 	int one = 1;
 	if(setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
 	{
+                char errbuf[STRERROR_BUFLEN];
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error: Failed to set socket options "
@@ -828,7 +833,7 @@ int gw_do_connect_to_backend(
                         host,
                         port,
                         errno,
-                        strerror(errno))));
+                        strerror_r(errno, errbuf, sizeof(errbuf)))));
 		rv = -1;
 		/** Close socket */
 		goto close_so;
@@ -846,6 +851,7 @@ int gw_do_connect_to_backend(
                 } 
                 else 
 		{                        
+                        char errbuf[STRERROR_BUFLEN];
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error:  Failed to connect backend server %s:%d, "
@@ -853,7 +859,7 @@ int gw_do_connect_to_backend(
                                 host,
                                 port,
                                 errno,
-                                strerror(errno))));
+                                strerror_r(errno, errbuf, sizeof(errbuf)))));
 			/** Close socket */
 			goto close_so;
                 }
@@ -878,13 +884,14 @@ close_so:
 	/*< Close newly created socket. */
 	if (close(so) != 0)
 	{
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error: Failed to "
 			"close socket %d due %d, %s.",
 			so,
 			errno,
-			strerror(errno))));
+			strerror_r(errno, errbuf, sizeof(errbuf)))));
 	}
 	goto return_rv;
 }
@@ -2240,10 +2247,11 @@ char *create_auth_fail_str(
 	
 	if (errstr == NULL)
 	{
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error : Memory allocation failed due to %s.", 
-			strerror(errno)))); 
+			strerror_r(errno, errbuf, sizeof(errbuf))))); 
 		goto retblock;
 	}
 

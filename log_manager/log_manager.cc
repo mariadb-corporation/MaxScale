@@ -2217,12 +2217,13 @@ static bool logfile_open_file(
 
             if (err != 0)
             {
+                char errbuf[STRERROR_BUFLEN];
 		fprintf(stderr,
                  "Error : writing to file %s failed due to %d, %s. "
 			"Exiting MaxScale.\n",
                  lf->lf_full_file_name,
                  err,
-                 strerror(err));
+                 strerror_r(err, errbuf, sizeof(errbuf)));
 		succp = false;
 		goto return_succp;
             }
@@ -2433,20 +2434,22 @@ static bool check_file_and_path(
 
                     if (do_log && file_is_symlink(filename))
                       {
+                        char errbuf[STRERROR_BUFLEN];
                         fprintf(stderr,
                                 "*\n* Error : Can't access "
                                 "file pointed to by %s due "
                                 "to %s.\n",
                                 filename,
-                                strerror(errno));
+                                strerror_r(errno, errbuf, sizeof(errbuf)));
                       }
                     else if (do_log)
                       {
+                        char errbuf[STRERROR_BUFLEN];
                         fprintf(stderr,
                                 "*\n* Error : Can't access %s due "
                                 "to %s.\n",
                                 filename,
-                                strerror(errno));
+                                strerror_r(errno, errbuf, sizeof(errbuf)));
                       }
 
                     if(writable)
@@ -2954,6 +2957,7 @@ static void* thr_filewriter_fun(
 						    do_flushall));
 					if (err)
 					{
+                                                char errbuf[STRERROR_BUFLEN];
 						fprintf(stderr,
 							"Error : Write to %s log "
 							": %s failed due to %d, "
@@ -2961,7 +2965,7 @@ static void* thr_filewriter_fun(
 							STRLOGNAME((logfile_id_t)i),
 							lf->lf_full_file_name,
 							err,
-							strerror(err));
+							strerror_r(err, errbuf, sizeof(errbuf)));
 						/** Force log off */
 						skygw_log_disable_raw((logfile_id_t)i, true);
 					}

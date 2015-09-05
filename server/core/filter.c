@@ -349,12 +349,13 @@ DOWNSTREAM	*me;
 	}
 	if ((me = (DOWNSTREAM *)calloc(1, sizeof(DOWNSTREAM))) == NULL)
 	{
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error : Memory allocation for filter session failed "
 			"due to %d,%s.",
 			errno,
-			strerror(errno))));
+			strerror_r(errno, errbuf, sizeof(errbuf)))));
 		
 		return NULL;
 	}

@@ -545,6 +545,7 @@ dcb_process_victim_queue(DCB *listofdcb)
             {
                 int eno = errno;
                 errno = 0;
+                char errbuf[STRERROR_BUFLEN];
                 LOGIF(LE, (skygw_log_write_flush(
                     LOGFILE_ERROR,
                     "%lu [dcb_process_victim_queue] Error : Failed to close "
@@ -553,7 +554,7 @@ dcb_process_victim_queue(DCB *listofdcb)
                     dcb->fd,
                     dcb,
                     eno,
-                    strerror(eno))));
+                    strerror_r(eno, errbuf, sizeof(errbuf)))));
             }  
             else 
             {
@@ -789,6 +790,7 @@ int dcb_read(
                 
         if (-1 == ioctl(dcb->fd, FIONREAD, &bytesavailable)) 
         {
+            char errbuf[STRERROR_BUFLEN];
             /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
             LOGIF(LE, (skygw_log_write_flush(
                     LOGFILE_ERROR,
@@ -799,7 +801,7 @@ int dcb_read(
                     STRDCBSTATE(dcb->state),
                     dcb->fd,
                     errno,
-                    strerror(errno))));
+                    strerror_r(errno, errbuf, sizeof(errbuf)))));
             /* </editor-fold> */
             return -1;
         }
@@ -839,6 +841,7 @@ int dcb_read(
              * This is a fatal error which should cause shutdown.
              * Todo shutdown if memory allocation fails.
              */
+            char errbuf[STRERROR_BUFLEN];
             /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
             LOGIF(LE, (skygw_log_write_flush(
                     LOGFILE_ERROR,
@@ -848,7 +851,7 @@ int dcb_read(
                     dcb,
                     dcb->fd,
                     errno,
-                    strerror(errno))));
+                    strerror_r(errno, errbuf, sizeof(errbuf)))));
             /* </editor-fold> */                        
             return -1;
         }
@@ -859,6 +862,7 @@ int dcb_read(
         {                        
             if (errno != 0 && errno != EAGAIN && errno != EWOULDBLOCK) 
             {
+                char errbuf[STRERROR_BUFLEN];
                 /* <editor-fold defaultstate="collapsed" desc=" Error Logging "> */
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -869,7 +873,7 @@ int dcb_read(
                         STRDCBSTATE(dcb->state),
                         dcb->fd,
                         errno,
-                        strerror(errno))));
+                        strerror_r(errno, errbuf, sizeof(errbuf)))));
                 /* </editor-fold> */
             }
             gwbuf_free(buffer);
@@ -935,6 +939,7 @@ int dcb_read_SSL(
 		pending = SSL_pending(dcb->ssl);
                 if (rc == -1)
                 {
+                        char errbuf[STRERROR_BUFLEN];
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : ioctl FIONREAD for dcb %p in "
@@ -943,7 +948,7 @@ int dcb_read_SSL(
                                 STRDCBSTATE(dcb->state),
                                 dcb->fd,
                                 errno,
-                                strerror(errno))));
+                                strerror_r(errno, errbuf, sizeof(errbuf)))));
                         n = -1;
                         goto return_n;
                 }
@@ -996,6 +1001,7 @@ int dcb_read_SSL(
                         * This is a fatal error which should cause shutdown.
                         * Todo shutdown if memory allocation fails.
                         */
+                        char errbuf[STRERROR_BUFLEN];
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Failed to allocate read buffer "
@@ -1003,7 +1009,7 @@ int dcb_read_SSL(
                                 dcb,
                                 dcb->fd,
                                 errno,
-                                strerror(errno))));
+                                strerror_r(errno, errbuf, sizeof(errbuf)))));
 
                         n = -1;
                         goto return_n;
@@ -1038,6 +1044,7 @@ int dcb_read_SSL(
 			}
 			else
 			{
+                            char errbuf[STRERROR_BUFLEN];
 			    LOGIF(LE, (skygw_log_write_flush(
 				    LOGFILE_ERROR,
 				"Error : Read failed, dcb %p in state "
@@ -1046,7 +1053,7 @@ int dcb_read_SSL(
 				STRDCBSTATE(dcb->state),
 				dcb->fd,
 				ssl_errno,
-				strerror(errno))));
+                                    strerror_r(errno, errbuf, sizeof(errbuf)))));
 
 			    if(ssl_errno == SSL_ERROR_SSL ||
 			     ssl_errno == SSL_ERROR_SYSCALL)
@@ -1321,6 +1328,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
     {
         if (eno == EPIPE)
         {
+            char errbuf[STRERROR_BUFLEN];
             LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [dcb_write] Write to dcb "
@@ -1331,7 +1339,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
                 STRDCBSTATE(dcb->state),
                 dcb->fd,
                 eno,
-                strerror(eno))));
+                strerror_r(eno, errbuf, sizeof(errbuf)))));
         }
     }
 
@@ -1341,6 +1349,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
             eno != EAGAIN &&
             eno != EWOULDBLOCK)
         {
+            char errbuf[STRERROR_BUFLEN];
             LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
                 "Error : Write to dcb %p in "
@@ -1350,7 +1359,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
                 STRDCBSTATE(dcb->state),
                 dcb->fd,
                 eno,
-                strerror(eno))));
+                strerror_r(eno, errbuf, sizeof(errbuf)))));
 
         }
 
@@ -1376,13 +1385,14 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
         }
         if (dolog)
         {
+            char errbuf[STRERROR_BUFLEN];
             LOGIF(LD, (skygw_log_write(
                 LOGFILE_DEBUG,
                 "%lu [dcb_write] Writing to %s socket failed due %d, %s.",
                 pthread_self(),
                 dcb_isclient(dcb) ? "client" : "backend server",
                 eno,
-                strerror(eno))));
+                strerror_r(eno, errbuf, sizeof(errbuf)))));
         }
     }
 }
@@ -1497,7 +1507,7 @@ static int
 dcb_write_SSL_error_report (DCB *dcb, int ret)
 {
     int ssl_errno;
-    char errbuf[256];
+    char errbuf[STRERROR_BUFLEN];
     ssl_errno = SSL_get_error(dcb->ssl,ret);
 
     if (LOG_IS_ENABLED(LOGFILE_DEBUG))
@@ -1557,9 +1567,7 @@ dcb_write_SSL_error_report (DCB *dcb, int ret)
             {
                 if(ssl_errno == SSL_ERROR_SYSCALL)
                 {
-		    strerror_r(errno,errbuf,255);
-		    errbuf[255] = '\0';
-                    skygw_log_write(LE,"%d:%s",errno,errbuf);
+                    skygw_log_write(LE,"%d:%s", errno, strerror_r(errno, errbuf, sizeof(errbuf)));
                 }
                 do
                 {
@@ -1630,6 +1638,7 @@ int	above_water;
                                 {
                                         break;
                                 }
+                                char errbuf[STRERROR_BUFLEN];
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Write to dcb %p "
@@ -1638,7 +1647,7 @@ int	above_water;
                                         STRDCBSTATE(dcb->state),
                                         dcb->fd,
                                         saved_errno,
-                                        strerror(saved_errno))));
+                                        strerror_r(saved_errno, errbuf, sizeof(errbuf)))));
                                 break;
 			}
 			/*
@@ -1734,7 +1743,10 @@ dcb_drain_writeq_SSL(DCB *dcb)
 			skygw_log_write(LE,"%s",errbuf);
 		    }
 		    if(errno != 0)
-			skygw_log_write(LE,"%d:%s",errno,strerror(errno));
+                    {
+                        char errbuf[STRERROR_BUFLEN];
+			skygw_log_write(LE,"%d:%s", errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                    }
 		    break;
 		case SSL_ERROR_ZERO_RETURN:
 		    skygw_log_write(LE,"Socket is closed.");

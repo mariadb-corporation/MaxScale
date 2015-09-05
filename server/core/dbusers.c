@@ -907,12 +907,13 @@ getAllUsers(SERVICE *service, USERS *users)
             users_data = (char *)calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
             
             if (users_data == NULL) {
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-                                                 "Error : Memory allocation for user data failed due to "
+                        "Error : Memory allocation for user data failed due to "
 			"%d, %s.",
-                                                 errno,
-                                                 strerror(errno))));
+                        errno,
+                        strerror_r(errno, errbuf, sizeof(errbuf)))));
 		mysql_free_result(result);
 		mysql_close(con);
                 
@@ -1416,12 +1417,13 @@ getUsers(SERVICE *service, USERS *users)
 	users_data = (char *)calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
 
 	if (users_data == NULL) {
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error : Memory allocation for user data failed due to "
 			"%d, %s.",
 			errno,
-			strerror(errno))));
+			strerror_r(errno, errbuf, sizeof(errbuf)))));
 		mysql_free_result(result);
 		mysql_close(con);
 
