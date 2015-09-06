@@ -323,9 +323,9 @@ static void sigusr1_handler (int i)
 static void sigterm_handler (int i) {
         extern void shutdown_server();
         
-	LOGIF(LE, (skygw_log_write_flush(
+	skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "MaxScale received signal SIGTERM. Exiting.")));
+                "MaxScale received signal SIGTERM. Exiting.");
 	skygw_log_sync_all();
 	shutdown_server();
 }
@@ -335,9 +335,9 @@ sigint_handler (int i)
 {
         extern void shutdown_server();
 
-	LOGIF(LE, (skygw_log_write_flush(
+	skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "MaxScale received signal SIGINT. Shutting down.")));
+                "MaxScale received signal SIGINT. Shutting down.");
 	skygw_log_sync_all();
 	shutdown_server();
 	fprintf(stderr, "\n\nShutting down MaxScale\n\n");
@@ -393,9 +393,9 @@ sigfatal_handler (int i)
         GATEWAY_CONF* cnf = config_get_global_options();
 	fprintf(stderr, "\n\nMaxScale "MAXSCALE_VERSION" received fatal signal %d\n", i);
 
-	LOGIF(LE, (skygw_log_write_flush(
+	skygw_log_write_flush(
                 LOGFILE_ERROR,
-                "Fatal: MaxScale "MAXSCALE_VERSION" received fatal signal %d. Attempting backtrace.", i)));
+                "Fatal: MaxScale "MAXSCALE_VERSION" received fatal signal %d. Attempting backtrace.", i);
 
         skygw_log_write_flush(LE,"Commit ID: %s System name: %s "
                 "Release string: %s Embedded library version: %s",
@@ -408,9 +408,9 @@ sigfatal_handler (int i)
 
 		if (symbols) {
 			for( n = 0; n < count; n++ ) {
-				LOGIF(LE, (skygw_log_write_flush(
+				skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"  %s\n", symbols[n])));
+					"  %s\n", symbols[n]);
 			}
 			free(symbols);
 		} else {
@@ -456,12 +456,12 @@ static int signal_set (int sig, void (*handler)(int)) {
                 int eno = errno;
                 errno = 0;
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(
+		skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed call sigaction() in %s due to %d, %s.",
                         program_invocation_short_name,
                         eno,
-                        strerror_r(eno, errbuf, sizeof(errbuf)))));
+                        strerror_r(eno, errbuf, sizeof(errbuf)));
                 rc = 1;
 	}
         return rc;
@@ -485,13 +485,13 @@ int ntfw_cb(
                 int eno = errno;
                 errno = 0;
                 char errbuf[STRERROR_BUFLEN];
-                LOGIF(LE, (skygw_log_write(
+                skygw_log_write(
                         LOGFILE_ERROR,
                         "Error : Failed to remove the data directory %s of "
                         "MaxScale due to %d, %s.",
                         datadir,
                         eno,
-                        strerror_r(eno, errbuf, sizeof(errbuf)))));
+                        strerror_r(eno, errbuf, sizeof(errbuf)));
         }
         return rc;
 }
@@ -786,13 +786,13 @@ static void print_log_n_stderr(
         
         if (do_log) {
                 char errbuf[STRERROR_BUFLEN];
-                LOGIF(LE, (skygw_log_write_flush(
+                skygw_log_write_flush(
                                    LOGFILE_ERROR,
                                    "%s %s %s %s",
                                    log_err,
                                    logstr,
                                    eno == 0 ? " " : "Error :",
-                                   eno == 0 ? " " : strerror_r(eno, errbuf, sizeof(errbuf)))));
+                                   eno == 0 ? " " : strerror_r(eno, errbuf, sizeof(errbuf)));
         }
         if (do_stderr) {
                 char errbuf[STRERROR_BUFLEN];
@@ -825,14 +825,14 @@ static bool file_is_readable(
                                 absolute_pathname,
                                 strerror_r(eno, errbuf, sizeof(errbuf)));
                 }
-                LOGIF(LE, (skygw_log_write_flush(
+                skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Warning : Failed to read the configuration file %s due "
                         "to %d, %s.",
                         absolute_pathname,
                         eno,
-                        strerror_r(eno, errbuf, sizeof(errbuf)))));
-		LOGIF(LE,(skygw_log_sync_all()));
+                        strerror_r(eno, errbuf, sizeof(errbuf)));
+                skygw_log_sync_all();
                 succp = false;
         }
         return succp;
@@ -858,13 +858,13 @@ static bool file_is_writable(
                                 eno,
                                 strerror_r(eno, errbuf, sizeof(errbuf)));
                 }
-                LOGIF(LE, (skygw_log_write_flush(
+                skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : unable to open file %s for write due "
                         "to %d, %s.",
                         absolute_pathname,
                         eno,
-                        strerror_r(eno, errbuf, sizeof(errbuf)))));
+                        strerror_r(eno, errbuf, sizeof(errbuf)));
                 succp = false;
         }
         return succp;
@@ -919,14 +919,14 @@ static char* get_expanded_pathname(
                         relative_path,
                         strerror_r(eno, errbuf, sizeof(errbuf)));
 
-                LOGIF(LE, (skygw_log_write_flush(
+                skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Warning : Failed to read the "
                         "directory %s, due "
                         "to %d, %s.",
                         relative_path,
                         eno,
-                        strerror_r(eno, errbuf, sizeof(errbuf)))));
+                        strerror_r(eno, errbuf, sizeof(errbuf)));
                 free(expanded_path);
                 *output_path = NULL;
                 goto return_cnf_file_buf;
@@ -949,10 +949,10 @@ static char* get_expanded_pathname(
 			ss_dassert(cnf_file_buf != NULL);
                         char errbuf[STRERROR_BUFLEN];
 
-			LOGIF(LE, (skygw_log_write_flush(
+			skygw_log_write_flush(
 				LOGFILE_ERROR,
 				"Error : Memory allocation failed due to %s.",
-				strerror_r(errno, errbuf, sizeof(errbuf)))));
+				strerror_r(errno, errbuf, sizeof(errbuf)));
 			
                         free(expanded_path);
                         expanded_path = NULL;
@@ -1828,7 +1828,7 @@ int main(int argc, char **argv)
                                 }
                         }
                 }
-                LOGIF(LE, (skygw_log_write_flush(
+                skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : mysql_library_init failed. It is a "
                         "mandatory component, required by router services and "
@@ -1836,7 +1836,7 @@ int main(int argc, char **argv)
                         mysql_errno(NULL),
                         mysql_error(NULL),
                         __FILE__,
-                        __LINE__)));
+                        __LINE__);
                 rc = MAXSCALE_NOLIBRARY;
                 goto return_main;
         }
@@ -1847,11 +1847,11 @@ int main(int argc, char **argv)
                 char* fprerr = "Failed to load MaxScale configuration "
                         "file. Exiting. See the error log for details.";
                 print_log_n_stderr(false, !daemon_mode, fprerr, fprerr, 0);
-                LOGIF(LE, (skygw_log_write_flush(
+                skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Failed to load MaxScale configuration file %s. "
                         "Exiting.",
-                        cnf_file_path)));
+                        cnf_file_path);
                 rc = MAXSCALE_BADCONFIG;
                 goto return_main;
         }
