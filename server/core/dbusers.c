@@ -52,11 +52,6 @@
 #include <mysqld_error.h>
 #include <regex.h>
 
-
-#define DEFAULT_CONNECT_TIMEOUT 3
-#define DEFAULT_READ_TIMEOUT 1
-#define DEFAULT_WRITE_TIMEOUT 2
-
 #define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
 
 #if 0
@@ -121,11 +116,7 @@ int add_wildcard_users(USERS *users,
 		       char* db,
 		       HASHTABLE* hash);
 
-static int gw_mysql_set_timeouts(
-	MYSQL* handle,
-	int    read_timeout,
-	int    write_timeout,
-	int    connect_timeout);
+static int gw_mysql_set_timeouts(MYSQL* handle);
 
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
@@ -630,10 +621,7 @@ getAllUsers(SERVICE *service, USERS *users)
             }
 
             /** Set read, write and connect timeout values */
-            if (gw_mysql_set_timeouts(con,
-                                      DEFAULT_READ_TIMEOUT,
-                                      DEFAULT_WRITE_TIMEOUT,
-                                      DEFAULT_CONNECT_TIMEOUT))
+            if (gw_mysql_set_timeouts(con))
             {
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -702,10 +690,7 @@ getAllUsers(SERVICE *service, USERS *users)
             }
             
             /** Set read, write and connect timeout values */
-            if (gw_mysql_set_timeouts(con, 
-                                      DEFAULT_READ_TIMEOUT, 
-                                      DEFAULT_WRITE_TIMEOUT,
-                                      DEFAULT_CONNECT_TIMEOUT))
+            if (gw_mysql_set_timeouts(con))
             {
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -1156,10 +1141,7 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 	/** Set read, write and connect timeout values */
-	if (gw_mysql_set_timeouts(con, 
-		DEFAULT_READ_TIMEOUT, 
-		DEFAULT_WRITE_TIMEOUT,
-		DEFAULT_CONNECT_TIMEOUT))
+	if (gw_mysql_set_timeouts(con))
 	{
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -2026,17 +2008,15 @@ int	useorig = 0;
  * 
  * @return 0 if succeed, 1 if failed
  */
-static int gw_mysql_set_timeouts(
-	MYSQL* handle,
-	int    read_timeout,
-	int    write_timeout,
-	int    connect_timeout)
+static int gw_mysql_set_timeouts(MYSQL* handle)
 {	
 	int rc;
 	
+    GATEWAY_CONF* cnf = config_get_global_options();
+
 	if ((rc = mysql_options(handle, 
 		MYSQL_OPT_READ_TIMEOUT, 
-		(void *)&read_timeout)))
+		(void *)&cnf->auth_read_timeout)))
 	{
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -2047,7 +2027,7 @@ static int gw_mysql_set_timeouts(
 	
 	if ((rc = mysql_options(handle, 
 			MYSQL_OPT_CONNECT_TIMEOUT, 
-			(void *)&connect_timeout)))
+			(void *)&cnf->auth_conn_timeout)))
 	{
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -2058,7 +2038,7 @@ static int gw_mysql_set_timeouts(
 	
 	if ((rc = mysql_options(handle, 
 			MYSQL_OPT_WRITE_TIMEOUT, 
-			(void *)&write_timeout)))
+			(void *)&cnf->auth_write_timeout)))
 	{
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,

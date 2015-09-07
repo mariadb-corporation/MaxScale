@@ -74,6 +74,7 @@
 #include <string.h>
 #include <sys/utsname.h>
 #include <pcre.h>
+#include <dbusers.h>
 
 /** According to the PCRE manual, this should be a multiple of 3 */
 #define MAXSCALE_PCRE_BUFSZ 24
@@ -1542,6 +1543,33 @@ int i;
 	{
 		skygw_set_highp(config_truth_value((char*)value));
 	}
+    else if (strcmp(name, "auth_connect_timeout") == 0)
+	{
+        char* endptr;
+		int intval = strtol(value, &endptr, 0);
+        if(*endptr == '\0' && intval > 0)
+            gateway.auth_conn_timeout = intval;
+        else
+            skygw_log_write(LE, "Invalid timeout value for 'auth_connect_timeout': %s", value);
+	}
+    else if (strcmp(name, "auth_read_timeout") == 0)
+	{
+        char* endptr;
+		int intval = strtol(value, &endptr, 0);
+        if(*endptr == '\0' && intval > 0)
+            gateway.auth_read_timeout = intval;
+        else
+            skygw_log_write(LE, "Invalid timeout value for 'auth_read_timeout': %s", value);
+	}
+    else if (strcmp(name, "auth_write_timeout") == 0)
+	{
+        char* endptr;
+		int intval = strtol(value, &endptr, 0);
+        if(*endptr == '\0' && intval > 0)
+            gateway.auth_write_timeout = intval;
+        else
+            skygw_log_write(LE, "Invalid timeout value for 'auth_write_timeout': %s", value);
+	}
 	else
 	{
 		for (i = 0; lognames[i].logname; i++)
@@ -1607,6 +1635,9 @@ global_defaults()
 	gateway.n_threads = 1;
 	gateway.n_nbpoll = DEFAULT_NBPOLLS;
 	gateway.pollsleep = DEFAULT_POLLSLEEP;
+    gateway.auth_conn_timeout = DEFAULT_AUTH_CONNECT_TIMEOUT;
+    gateway.auth_read_timeout = DEFAULT_AUTH_READ_TIMEOUT;
+    gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
 	if (version_string != NULL)
 		gateway.version_string = strdup(version_string);
 	else
