@@ -358,10 +358,11 @@ int main(int argc, char** argv)
                         "set.\n");
                 ss_dassert(workingdir != NULL);
         } else if (access(workingdir, R_OK) != 0) {
+                char errbuf[STRERROR_BUFLEN];
                 fprintf(stderr,
                         "Failed to access the working directory due %d, %s\n",
                         errno,
-                        strerror(errno));
+                        strerror_r(errno, errbuf, sizeof(errbuf)));
                 ss_dassert(false);
         } else {
                 char** so = server_options;

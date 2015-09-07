@@ -381,7 +381,8 @@ int			syseno = 0;
 	syseno = setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
 	
 	if(syseno != 0){
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+                char errbuf[STRERROR_BUFLEN];
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)))));
 		return 0;
 	}
         // set NONBLOCKING mode
@@ -399,10 +400,11 @@ int			syseno = 0;
         } else {
             int eno = errno;
             errno = 0;
+            char errbuf[STRERROR_BUFLEN];
             fprintf(stderr,
                     "\n* Failed to start listening telnet due error %d, %s\n\n",
                     eno,
-                    strerror(eno));
+                    strerror_r(eno, errbuf, sizeof(errbuf)));
             return 0;
         }
 

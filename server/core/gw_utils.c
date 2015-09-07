@@ -147,7 +147,8 @@ void gw_daemonize(void) {
 	pid = fork();
 
 	if (pid < 0) {
-		fprintf(stderr, "fork() error %s\n", strerror(errno));
+                char errbuf[STRERROR_BUFLEN];
+		fprintf(stderr, "fork() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
 		exit(1);
 	}
 
@@ -157,7 +158,8 @@ void gw_daemonize(void) {
 	}
 
 	if (setsid() < 0) {
-		fprintf(stderr, "setsid() error %s\n", strerror(errno));
+                char errbuf[STRERROR_BUFLEN];
+                fprintf(stderr, "setsid() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
 		exit(1);
 	}
 }

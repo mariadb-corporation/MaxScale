@@ -840,7 +840,6 @@ static int gw_error_backend_event(DCB *dcb)
         if (dcb->state != DCB_STATE_POLLING)
         {
 		int	error, len;
-		char	buf[100];
 
 		len = sizeof(error);
 		
@@ -848,12 +847,12 @@ static int gw_error_backend_event(DCB *dcb)
 		{
 			if (error != 0)
 			{
-				strerror_r(error, buf, 100);
+                                char errbuf[STRERROR_BUFLEN];
 				LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
 						"DCB in state %s got error '%s'.",
 						STRDCBSTATE(dcb->state),
-						buf)));
+						strerror_r(error, errbuf, sizeof(errbuf)))));
 			}
 		}
                 return 1;
@@ -883,18 +882,17 @@ static int gw_error_backend_event(DCB *dcb)
         if (ses_state != SESSION_STATE_ROUTER_READY)
         {
 		int	error, len;
-		char	buf[100];
 
 		len = sizeof(error);
 		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0)
 			{
-				strerror_r(error, buf, 100);
+                                char errbuf[STRERROR_BUFLEN];
 				LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
 						"Error '%s' in session that is not ready for routing.",
-						buf)));
+						strerror_r(error, errbuf, sizeof(errbuf)))));
 			}
 		}		
                 gwbuf_free(errbuf);
@@ -1109,19 +1107,18 @@ gw_backend_hangup(DCB *dcb)
         if (ses_state != SESSION_STATE_ROUTER_READY)
         {
 		int	error, len;
-		char	buf[100];
 
 		len = sizeof(error);
 		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0 && ses_state != SESSION_STATE_STOPPING)
 			{
-				strerror_r(error, buf, 100);
+                                char errbuf[STRERROR_BUFLEN];
 				LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
 						"Hangup in session that is not ready for routing, "
 						"Error reported is '%s'.",
-						buf)));
+						strerror_r(error, errbuf, sizeof(errbuf)))));
 			}
 		}
                 gwbuf_free(errbuf);

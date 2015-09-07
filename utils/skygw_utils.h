@@ -1,6 +1,13 @@
 #if !defined(SKYGW_UTILS_H)
 #define SKYGW_UTILS_H
 
+/*
+ * We need a common.h file that is included by every component.
+ */
+#if !defined(STRERROR_BUFLEN)
+#define STRERROR_BUFLEN 512
+#endif
+
 #define MLIST
 #ifndef MIN
 #define MIN(a,b) (a<b ? a : b)

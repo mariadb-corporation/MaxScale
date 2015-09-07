@@ -1355,11 +1355,12 @@ int gw_MySQLListener(
 
 		// UNIX socket create
 		if ((l_so = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+                        char errbuf[STRERROR_BUFLEN];
 			fprintf(stderr,
 				"\n* Error: can't create UNIX socket due "
 				"error %i, %s.\n\n\t",
 				errno,
-				strerror(errno));
+				strerror_r(errno, errbuf, sizeof(errbuf)));
 			return 0;
 		}
 		memset(&local_addr, 0, sizeof(local_addr));
@@ -1376,11 +1377,12 @@ int gw_MySQLListener(
 		}
 		// TCP socket create
 		if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+                        char errbuf[STRERROR_BUFLEN];
 			fprintf(stderr,
 				"\n* Error: can't create socket due "
 				"error %i, %s.\n\n\t",
 				errno,
-				strerror(errno));
+				strerror_r(errno, errbuf, sizeof(errbuf)));
 			return 0;
 		}
 
@@ -1392,13 +1394,15 @@ int gw_MySQLListener(
 
 	// socket options
 	if((syseno = setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one))) != 0){
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+                char errbuf[STRERROR_BUFLEN];
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)))));
 	}
 
 	if(is_tcp)
 	{
+            char errbuf[STRERROR_BUFLEN];
 	    if((syseno = setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one))) != 0){
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+              LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)))));
 	    }
 	}
 	// set NONBLOCKING mode
@@ -1413,10 +1417,11 @@ int gw_MySQLListener(
 			}
 
 			if (bind(l_so, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0) {
+                                char errbuf[STRERROR_BUFLEN];
 				fprintf(stderr,
 					"\n* Bind failed due error %i, %s.\n",
 					errno,
-					strerror(errno));
+					strerror_r(errno, errbuf, sizeof(errbuf)));
 				fprintf(stderr, "* Can't bind to %s\n\n", config_bind);
 				close(l_so);
 				return 0;
@@ -1424,21 +1429,23 @@ int gw_MySQLListener(
 
 			/* set permission for all users */
 			if (chmod(config_bind, 0777) < 0) {
+                                char errbuf[STRERROR_BUFLEN];
 				fprintf(stderr,
 					"\n* chmod failed for %s due error %i, %s.\n\n",
 					config_bind,
 					errno,
-					strerror(errno));
+					strerror_r(errno, errbuf, sizeof(errbuf)));
 			}
 
 			break;
 
 		case AF_INET:
 			if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+                                char errbuf[STRERROR_BUFLEN];
 				fprintf(stderr,
 					"\n* Bind failed due error %i, %s.\n",
 					errno,
-					strerror(errno));
+					strerror_r(errno, errbuf, sizeof(errbuf)));
 				fprintf(stderr, "* Can't bind to %s\n\n", config_bind);
 				close(l_so);
 				return 0;
@@ -1458,10 +1465,11 @@ int gw_MySQLListener(
         } else {
                 int eno = errno;
                 errno = 0;
+                char errbuf[STRERROR_BUFLEN];
                 fprintf(stderr,
                         "\n* Failed to start listening MySQL due error %d, %s\n\n",
                         eno,
-                        strerror(eno));
+                        strerror_r(eno, errbuf, sizeof(errbuf)));
 		close(l_so);
                 return 0;
         }
@@ -1554,22 +1562,24 @@ int gw_MySQLAccept(DCB *listener)
                                  * Exceeded system's (ENFILE) or processes
                                  * (EMFILE) max. number of files limit.
                                  */
+                                char errbuf[STRERROR_BUFLEN];
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_MySQLAccept] Error %d, %s. ",
                                         pthread_self(),
                                         eno,
-                                        strerror(eno))));
+                                        strerror_r(eno, errbuf, sizeof(errbuf)))));
                                 
                                 if (i == 0)
                                 {
+                                        char errbuf[STRERROR_BUFLEN];
                                         LOGIF(LE, (skygw_log_write_flush(
                                                 LOGFILE_ERROR,
                                                 "Error %d, %s. "
                                                 "Failed to accept new client "
                                                 "connection.",
                                                 eno,
-                                                strerror(eno))));
+                                                strerror_r(eno, errbuf, sizeof(errbuf)))));
                                 }
                                 i++;
 				ts1.tv_nsec = 100*i*i*1000000;
@@ -1586,18 +1596,19 @@ int gw_MySQLAccept(DCB *listener)
                                 /**
                                  * Other error.
                                  */
+                                char errbuf[STRERROR_BUFLEN];
                                 LOGIF(LD, (skygw_log_write(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_MySQLAccept] Error %d, %s.",
                                         pthread_self(),
                                         eno,
-                                        strerror(eno))));
+                                        strerror_r(eno, errbuf, sizeof(errbuf)))));
                                 LOGIF(LE, (skygw_log_write_flush(
                                         LOGFILE_ERROR,
                                         "Error : Failed to accept new client "
                                         "connection due to %d, %s.",
                                         eno,
-                                        strerror(eno))));
+                                        strerror_r(eno, errbuf, sizeof(errbuf)))));
                                 rc = 1;
                                 goto return_rc;
                         } /* if (eno == ..) */
@@ -1618,15 +1629,16 @@ int gw_MySQLAccept(DCB *listener)
 #endif /* FAKE_CODE */
                 /* set nonblocking  */
         	sendbuf = GW_CLIENT_SO_SNDBUF;
+                char errbuf[STRERROR_BUFLEN];
 
 			if((syseno = setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen)) != 0){
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+                          LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)))));
 			}
 
         	sendbuf = GW_CLIENT_SO_RCVBUF;
 
 			if((syseno = setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen)) != 0){
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno))));
+                          LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)))));
 			}
                 setnonblocking(c_sock);
                 

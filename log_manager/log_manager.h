@@ -18,6 +18,13 @@
 #if !defined(LOG_MANAGER_H)
 # define LOG_MANAGER_H
 
+/*
+ * We need a common.h file that is included by every component.
+ */
+#if !defined(STRERROR_BUFLEN)
+#define STRERROR_BUFLEN 512
+#endif
+
 typedef struct filewriter_st  filewriter_t;
 typedef struct logfile_st     logfile_t;
 typedef struct fnames_conf_st fnames_conf_t;

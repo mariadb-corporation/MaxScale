@@ -1464,7 +1464,7 @@ static void fail_accept(
 {
         int failcount = MIN(atoi(arg2), 100);
         fail_accept_errno = atoi(arg1);
-
+        char errbuf[STRERROR_BUFLEN];
 
         switch(fail_accept_errno) {
                 case EAGAIN:
@@ -1486,7 +1486,7 @@ static void fail_accept(
                         dcb_printf(dcb,
                                    "[%d, %s] is not valid errno for accept.\n",
                                    fail_accept_errno,
-                                   strerror(fail_accept_errno));
+                                   strerror_r(fail_accept_errno, errbuf, sizeof(errbuf)));
                 return ;
         }
 }

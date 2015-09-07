@@ -427,7 +427,10 @@ int			syseno = 0;
                    sizeof(one));
 
 	if(syseno != 0){
-		skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s",errno,strerror(errno));
+                char errbuf[STRERROR_BUFLEN];
+		skygw_log_write_flush(LOGFILE_ERROR,
+                                      "Error: Failed to set socket options. Error %d: %s",
+                                      errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 		return 0;
 	}
         /* set NONBLOCKING mode */
@@ -446,10 +449,11 @@ int			syseno = 0;
         } else {
             int eno = errno;
             errno = 0;
+            char errbuf[STRERROR_BUFLEN];
             fprintf(stderr,
                     "\n* Failed to start listening http due error %d, %s\n\n",
                     eno,
-                    strerror(eno));
+                    strerror_r(eno, errbuf, sizeof(errbuf)));
             return 0;
         }
 

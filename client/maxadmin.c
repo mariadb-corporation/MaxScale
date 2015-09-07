@@ -55,6 +55,13 @@
 #include <histedit.h>
 #endif
 
+/*
+ * We need a common.h file that is included by every component.
+ */
+#if !defined(STRERROR_BUFLEN)
+#define STRERROR_BUFLEN 512
+#endif
+
 static int connectMaxScale(char *hostname, char *port);
 static int setipaddress(struct in_addr *a, char *p);
 static int authMaxScale(int so, char *user, char *password);
@@ -329,8 +336,9 @@ int			keepalive = 1;
 
 	if ((so = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
+                char errbuf[STRERROR_BUFLEN];
 		fprintf(stderr, "Unable to create socket: %s\n",
-				strerror(errno));
+                        strerror_r(errno, errbuf, sizeof(errbuf)));
 		return -1;
 	}
 	memset(&addr, 0, sizeof addr);
@@ -339,8 +347,9 @@ int			keepalive = 1;
 	addr.sin_port = htons(atoi(port));
 	if (connect(so, (struct sockaddr *)&addr, sizeof(addr)) < 0)
 	{
+                char errbuf[STRERROR_BUFLEN];
 		fprintf(stderr, "Unable to connect to MaxScale at %s, %s: %s\n",
-				hostname, port, strerror(errno));
+                        hostname, port, strerror_r(errno, errbuf, sizeof(errbuf)));
 		close(so);
 		return -1;
 	}
