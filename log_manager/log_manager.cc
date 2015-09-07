@@ -1404,9 +1404,14 @@ static int log_write(logfile_id_t id,
                 const bool use_valist = true;
                 const bool spread_down = true;
                 const bool rotate = false;
+                va_list vlist;
+
+                /** Copy the value of valist to a local variable because
+                 * logmanager_write_log modifies it. */
+                memcpy(vlist, valist, sizeof(va_list));
 
                 if (logmanager_write_log((logfile_id_t)i, flush, use_valist, spread_down, rotate,
-                                         len, str, valist) == 0)
+                                         len, str, vlist) == 0)
                 {
                     ++successes;
                 }
