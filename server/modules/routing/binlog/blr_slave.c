@@ -71,7 +71,7 @@
 #include <dcb.h>
 #include <spinlock.h>
 #include <housekeeper.h>
-
+#include <sys/stat.h>
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -818,7 +818,7 @@ extern  char *strcasestr();
 						if (strcmp(router->binlog_name, router->prevbinlog) != 0)
 						{
 							char message[BINLOG_ERROR_MSG_LEN+1] = "";
-							snprintf(message, BINLOG_ERROR_MSG_LEN, "1105:Partial transaction in file %s starting at pos %lu, ending at pos %lu will be lost with next START SLAVE command", current_master->logfile, current_master->safe_pos, router->current_pos);
+							snprintf(message, BINLOG_ERROR_MSG_LEN, "1105:Partial transaction in file %s starting at pos %lu, ending at pos %lu will be lost with next START SLAVE command", current_master->logfile, current_master->safe_pos, current_master->pos);
 							blr_master_free_config(current_master);
 
 							return blr_slave_send_warning_message(router, slave, message);
@@ -2730,12 +2730,18 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 		if (router->trx_safe && router->pending_transaction) {
 			char msg[BINLOG_ERROR_MSG_LEN+1] = "";
 			char file[PATH_MAX+1] = "";
-
-			snprintf(msg, BINLOG_ERROR_MSG_LEN, "1105:Truncated partial transaction in file %s, starting at pos %lu, ending at pos %lu. File %s now has length %lu.", router->prevbinlog, router->last_safe_pos, router->current_pos, router->prevbinlog, router->last_safe_pos);
-
-			/* Truncate previous binlog file to last_safe pos */
+			struct stat statb;
+			unsigned long filelen = 0;
 
 			snprintf(file, PATH_MAX, "%s/%s", router->binlogdir, router->prevbinlog);
+
+			/* Get file size */
+			if (stat(file, &statb) == 0)
+				filelen = statb.st_size;
+
+			/* Prepare warning message */
+			snprintf(msg, BINLOG_ERROR_MSG_LEN, "1105:Truncated partial transaction in file %s, starting at pos %lu, ending at pos %lu. File %s now has length %lu.", router->prevbinlog, router->last_safe_pos, filelen, router->prevbinlog, router->last_safe_pos);
+			/* Truncate previous binlog file to last_safe pos */
 			truncate(file, router->last_safe_pos);
 
 			/* Log it */
