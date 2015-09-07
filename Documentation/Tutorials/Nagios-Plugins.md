@@ -45,17 +45,17 @@ In order to use these scripts on your Nagios Server, you need to copy them from 
 MaxScale must be configured with 'maxscaled' protocol for the administration interface:
 
 Example of maxscale.cnf file:
+```
+[AdminInterface]
+type=service
+router=cli
 
-	[AdminInterface]
-	type=service
-	router=cli
-
-	[AdminListener]
-	type=listener
-	service=AdminInterface
-	protocol=maxscaled
-	port=6603
-
+[AdminListener]
+type=listener
+service=AdminInterface
+protocol=maxscaled
+port=6603
+```
 ## Prepare Nagios configuration files.
 
 Assuming Nagios installed on a separated server and the plugins are in /usr/lib64/nagios/plugins and configuration files are in /etc/nagios:
@@ -66,8 +66,10 @@ Assuming Nagios installed on a separated server and the plugins are in /usr/lib6
 
 and add (just after localhost.cfg or commnads.cfg)
 
-	cfg_file=/etc/nagios/objects/maxscale_commands.cfg
-	cfg_file=/etc/nagios/objects/server1.cfg
+```
+cfg_file=/etc/nagios/objects/maxscale_commands.cfg
+cfg_file=/etc/nagios/objects/server1.cfg
+```
 
 ### Please note:
 - modify server IP address in server1.cfg, pointing to MaxScale server
@@ -80,6 +82,7 @@ and add (just after localhost.cfg or commnads.cfg)
 This example shows configuration that needs to be done on Nagios server in order to communicate to MaxScale server that is running on host server1.
 In this example we are using the check_maxscale_resource as the check command
 
+```
 	#Check MaxScale sessions, on the remote machine.
 	define service{
 		use			local-service
@@ -88,6 +91,7 @@ In this example we are using the check_maxscale_resource as the check command
 		check_command		check_maxscale_resource!6603!admin!mariadb!sessions!/path_to/maxadmin
 		notifications_enabled	0
 	}
+```
 
 ### Check new running monitors
 * Restart Nagios and check new monitors are running in HTTP Interface "Current Status -> Services" on Nagios Server
@@ -143,15 +147,17 @@ In this example we are using the check_maxscale_resource as the check command
 # Output description:
 
 Example for 'services'
+```
+#./check_maxscale_resources.pl -r resources
 
-	#./check_maxscale_resources.pl -r resources
-
-	OK: 7 services found | services1=RW_Router;readwritesplit;1;1 services2=RW_Split;readwritesplit;1;1 services3=Test Service;readconnroute;1;1 services4=Master Service;readconnroute;2;2 services5=Debug Service;debugcli;1;1 services6=CLI;cli;2;145 services7=MaxInfo;maxinfo;2;2
-
+OK: 7 services found | services1=RW_Router;readwritesplit;1;1 services2=RW_Split;readwritesplit;1;1 services3=Test Service;readconnroute;1;1 services4=Master Service;readconnroute;2;2 services5=Debug Service;debugcli;1;1 services6=CLI;cli;2;145 services7=MaxInfo;maxinfo;2;2
+```
 Returns OK and the number of services
 
 Returns CRITICAL if no services are found
 
 The data after | char are so called performance data and may be collected by Nagios
 output format is:
-  servicex=Name;router_module;NumUsers;TotalSessions
+```
+servicex=Name;router_module;NumUsers;TotalSessions
+```
