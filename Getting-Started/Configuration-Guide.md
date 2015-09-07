@@ -66,6 +66,18 @@ threads=1
 
 It should be noted that additional threads will be created to execute other internal services within MaxScale. This setting is used to configure the number of threads that will be used to manage the user connections.
 
+#### `auth_connect_timeout`
+
+The connection timeout in seconds for the MySQL connections to the backend server when user authentication data is fetched. Increasing the value of this parameter will cause MaxScale to wait longer for a response from the backend server before aborting the connection process when creating a new connection is made.
+
+#### `auth_read_timeout`
+
+The read timeout in seconds for the MySQL connection to the backend database when user authentication data is fetched. Increasing the value of this parameter will cause MaxScale to wait longer for a response from the backend server when user data is being actively fetched. If you have a large number of database users and grants and the authentication is failing, it is a good idea. Slower networks will also benefit from an increased timeout value.
+
+#### `auth_write_timeout`
+
+The write timeout in seconds for the MySQL connection to the backend database when user authentication data is fetched. Currently MaxScale does not write or modify the data in the backend server.
+
 #### `ms_timestamp`
 
 Enable or disable the high precision timestamps in logfiles. Enabling this adds millisecond precision to all logfile timestamps.
