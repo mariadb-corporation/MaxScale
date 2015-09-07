@@ -1362,26 +1362,40 @@ return_succp:
 /**
  * Helper for skygw_log_write and friends.
  *
- * @param id     The id of the log file.
- * @param flush  Whether the log should be flushed.
- * @param len    The length of the formatted string, as calculated by vsnprintf.
- * @param str    The printf format string.
- * @param valist The arguments of /str/.
+ * @param id         The id of the log file.
+ * @param file       The name of the file where the logging was made.
+ * @param int        The line where the logging was made.
+ * @param function   The function where the logging was made.
+ * @param str        String or printf format string.
+ * @param flush      Whether the message should be flushed.
  *
  * @return 0 if the logging to at least one log succeeded.
  */
 
 static int log_write(logfile_id_t id,
-                     bool         flush,
+                     const char*  file,
+                     int          line,
+                     const char*  function,
                      size_t       len,
                      const char*  str,
-                     va_list      valist)
+                     bool         flush)
 {
     int rv = 0;
 
     if (logmanager_register(true))
     {
         CHK_LOGMANAGER(lm);
+
+        const char format[] = "%s [%s]";
+        len += sizeof(format); // A bit too much, but won't hurt.
+        assert(function);
+        len += strlen(function);
+        len += 1; // For the trailing NULL.
+
+        char message[len];
+
+        len = snprintf(message, sizeof(message), format, str, function);
+        assert(len > 0);
 
         int attempts = 0;
         int successes = 0;
@@ -1401,17 +1415,13 @@ static int log_write(logfile_id_t id,
             {
                 ++attempts;
 
-                const bool use_valist = true;
+                const bool use_valist = false;
                 const bool spread_down = true;
                 const bool rotate = false;
-                va_list vlist;
-
-                /** Copy the value of valist to a local variable because
-                 * logmanager_write_log modifies it. */
-                memcpy(vlist, valist, sizeof(va_list));
+                va_list valist; // Not used
 
                 if (logmanager_write_log((logfile_id_t)i, flush, use_valist, spread_down, rotate,
-                                         len, str, vlist) == 0)
+                                         len, message, valist) == 0)
                 {
                     ++successes;
                 }
@@ -1434,8 +1444,11 @@ static int log_write(logfile_id_t id,
     return rv;
 }
 
-int skygw_log_write_flush(
+int skygw_log_write_context_flush(
         logfile_id_t  id,
+        const char*   file,
+        int           line,
+        const char*   function,
         const char*   str,
         ...)
 {
@@ -1446,15 +1459,20 @@ int skygw_log_write_flush(
          * Find out the length of log string (to be formatted str).
          */
         va_start(valist, str);
-        size_t len = vsnprintf(NULL, 0, str, valist);
+        int len = vsnprintf(NULL, 0, str, valist);
         va_end(valist);
 
         if (len >= 0) {
-            const bool flush = true;
+            char message[len + 1];
 
             va_start(valist, str);
-            err = log_write(id, flush, len, str, valist);
+            int len2 = vsnprintf(message, sizeof(message), str, valist);
             va_end(valist);
+            assert(len2 == len);
+
+            const bool flush = true;
+
+            err = log_write(id, file, line, function, len2, message, flush);
 
             if (err != 0)
             {
@@ -1467,8 +1485,11 @@ int skygw_log_write_flush(
 
 
 
-int skygw_log_write(
+int skygw_log_write_context(
         logfile_id_t  id,
+        const char*   file,
+        int           line,
+        const char*   function,
         const char*   str,
         ...)
 {
@@ -1479,15 +1500,20 @@ int skygw_log_write(
      * Find out the length of log string (to be formatted str).
      */
     va_start(valist, str);
-    size_t len = vsnprintf(NULL, 0, str, valist);
+    int len = vsnprintf(NULL, 0, str, valist);
     va_end(valist);
 
     if (len >= 0) {
-        const bool flush = false;
+        char message[len + 1];
 
         va_start(valist, str);
-        err = log_write(id, flush, len, str, valist);
+        int len2 = vsnprintf(message, sizeof(message), str, valist);
         va_end(valist);
+        assert(len2 == len);
+
+        const bool flush = false;
+
+        err = log_write(id, file, line, function, len2, message, flush);
 
         if (err != 0) {
             fprintf(stderr, "skygw_log_write failed.\n");

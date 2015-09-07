@@ -28,22 +28,23 @@ Using MaxScale as a replication proxy is much the same as using MaxScale as a pr
 
 ## Service Configuration
 
-As with any MaxScale configuration a good starting point is with the service definition with the maxscale.cnf file. The service requires a name which is the section name in the MaxScale ini file, a type parameter with a value of service and the name of the router plugin that should be loaded. In the case of replication proxies this router name is binlogrouter.
+As with any MaxScale configuration a good starting point is with the service definition with the maxscale.cnf file. The service requires a name which is the section name in the ini file, a type parameter with a value of service and the name of the router plugin that should be loaded. In the case of replication proxies this router name is binlogrouter.
+```
 
-
-    [Replication]
-    type=service
-    router=binlogrouter
-
-Other standard service parameters need to be given in the configuration section that are used to retrieve the set of users from the backend (master) database, also a version string can be given such that the MaxScale instance will report this version string to the slave servers that connect to MaxScale.
-
-    [Replication]
-    type=service
-    router=binlogrouter
-    version_string=5.6.17-log
-    user=maxscale
-    passwd=Mhu87p2D
-
+[Replication]
+type=service
+router=binlogrouter
+```
+Other standard service parameters need to be given in the configuration section that are used to retrieve the set of users from the backend (master) database, also a version string can be given such that the MaxScale instance will report this version string to the slave servers that connect to MaxScale. The master server entry must also be given. In the current implementation of the router only a single server can be given.
+```
+[Replication]
+type=service
+router=binlogrouter
+servers=masterdb
+version_string=5.6.17-log
+user=maxscale
+passwd=Mhu87p2D
+```
 The user and passwd entries in the above example are used in order for MaxScale to populate the credential information that is required to allow the slaves to connect to MaxScale. This user should be configured in exactly the same way a for any other MaxScale service, i.e. the user needs access to the mysql.user table and the mysql.db table as well as having the ability to perform a SHOW DATABASES command.
 
 The master server details are provided by a master.ini file located in binlog directory and could be changed via CHANGE MASTER TO command issued via MySQL connection to MaxScale, check Master setup section below for further details.
@@ -90,8 +91,10 @@ This is the user name that MaxScale uses when it connects to the master. This us
 
 The user that is used for replication, either defined using the user= option in the router options or using the username and password defined of the service must be granted replication privileges on the database server.
 
+```
     MariaDB> CREATE USER 'repl'@'maxscalehost' IDENTIFIED by 'password';
     MariaDB> GRANT REPLICATION SLAVE ON *.* TO 'repl'@'maxscalehost';
+```
 
 ### password
 
@@ -113,7 +116,7 @@ During normal operations binlog events are not distributed to the slaves until a
 The default value is on, set transaction_safety=off to completly disable the incomplete transactions detection.
 
 A complete example of a service entry for a binlog router service would be as follows.
-
+```
     [Replication]
     type=service
     router=binlogrouter
@@ -122,6 +125,7 @@ A complete example of a service entry for a binlog router service would be as fo
     user=maxscale
     passwd=Mhu87p2D
     router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,filestem=mybin,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1
+```
 
 The minimum set of router options that must be given in the configuration are are server-id and master-id, default values may be used for all other options.
 
@@ -140,8 +144,8 @@ The protocol used by slaves for connection to MaxScale is the same MySQLClient p
 #  MaxScale replication diagnostics
 
 The binlog router module of MaxScale produces diagnostic output that can be viewed via the `maxadmin` client application. Running the maxadmin command and issuing a show service command will produce a considerable amount of output that will show both the master connection status and statistics and also a block for each of the slaves currently connected.
-
-    -bash-4.1$ maxadmin show service Replication
+```
+-bash-4.1$ maxadmin show service Replication
     Service 0x1567ef0
     	Service:				Replication
     	Router: 				binlogrouter (0x7f4ceb96a820)
@@ -215,9 +219,8 @@ The binlog router module of MaxScale produces diagnostic output that can be view
     	Users data:        				0x156c030
     	Total connections:				2
     	Currently connected:			2
-    -bash-4.1$
-
-
+-bash-4.1$
+```
 
 # Binlog router compatibility
 
@@ -333,13 +336,13 @@ Note: existing binlog files are not touched by this command.
 ### Slave servers setup
 
 Examples of CHANGE MASTER TO command issued on a slave server that wants to gets replication events from MaxScale binlog router:
+```
+CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
+MASTER_LOG_FILE=‘mysql-bin.000001'
 
-	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
-	MASTER_LOG_FILE=‘mysql-bin.000001'
-
-	CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
-	MASTER_LOG_FILE=‘mysql-bin.000159', MASTER_LOG_POS=245
-
+CHANGE MASTER TO MASTER_HOST=‘$maxscale_IP’, MASTER_PORT=5308, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’,
+MASTER_LOG_FILE=‘mysql-bin.000159', MASTER_LOG_POS=245
+```
 The latter example specifies a MASTER_LOG_POS for the selected MASTER_LOG_FILE
 
 Note:
@@ -351,31 +354,31 @@ Note:
  - Latest binlog file name and pos in MaxScale could be find via maxadmin output or from mysql client connected to MaxScale:
 
 Example:
-
-	-bash-4.1$ mysql -h 127.0.0.1 -P 5308 -u$user -p$pass
+```
+-bash-4.1$ mysql -h 127.0.0.1 -P 5308 -u$user -p$pass
 
 	MySQL [(none)]> show master status\G
 	*************************** 1. row ***************************
    	         File: mysql-bin.000181
 	         Position: 2569
-
+```
 # Enabling MariaDB 10 compatibility
 
 MariaDB 10 has different slave registration phase so an option is required:
-
-	router_options=...., mariadb10-compatibility=1
-
+```
+router_options=...., mariadb10-compatibility=1
+```
 version_string should be modified in order to present MariaDB 10 version when MaxScale sends server handshake packet.
-
-	version_string=10.0.17-log
-
+```
+version_string=10.0.17-log
+```
 
 # New MariaDB events in Diagnostics
 
 With a MariaDB 10 setups new events are displayed when master server is MariaDB 10.
-
-	MariaDB 10 Annotate Rows Event 0
-	MariaDB 10 Binlog Checkpoint Event 0
-	MariaDB 10 GTID Event 0
-	MariaDB 10 GTID List Event 0
-
+```
+MariaDB 10 Annotate Rows Event 0
+MariaDB 10 Binlog Checkpoint Event 0
+MariaDB 10 GTID Event 0
+MariaDB 10 GTID List Event 0
+```
