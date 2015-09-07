@@ -38,12 +38,14 @@ int main(int argc, char *argv[])
         {
             cout << "Error: " << mysql_error(Test->conn_rwsplit) << endl;
             cout << "Failed at " << i << endl;
+            Test->copy_all_logs();
             return 1;
         }
         if(mysql_stmt_reset(stmt))
         {
             cout << "Error: " << mysql_error(Test->conn_rwsplit) << endl;
             cout << "Failed at " << i << endl;
+            Test->copy_all_logs();
             return 1;
         }
         query += ",1";
@@ -56,5 +58,6 @@ int main(int argc, char *argv[])
     cout << endl;
     mysql_stmt_close(stmt);
     mysql_close(Test->conn_rwsplit);
+    Test->copy_all_logs();
     return 0;
 }

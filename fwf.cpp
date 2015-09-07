@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
     printf("Trying 'DELETE FROM t1' and expecting FAILURE\n");
     execute_query(Test->conn_rwsplit, "DELETE FROM t1");
     if (mysql_errno(Test->conn_rwsplit) != 1141) {
-        printf("Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));fflush(stdout);
+        printf("TEST_FAILED: Query succeded, but fail expected, errono is %d\n", mysql_errno(Test->conn_rwsplit));fflush(stdout);
         global_result++;
     }
     printf("Waiting 3 minutes and trying 'DELETE FROM t1', expecting OK\n");
@@ -159,7 +159,10 @@ int main(int argc, char *argv[])
 
     printf("Trying 10 quries as fast as possible\n");
     for (i = 0; i < 10; i++) {
-        global_result += execute_query(Test->conn_rwsplit, "SELECT * FROM t1");
+        if (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") != 0) {
+            global_result++;
+            printf("TEST_FAILED: %d -query failed\n", i);
+        }
     }
 
     printf("Expecting failures during next 5 seconds\n");
@@ -179,14 +182,17 @@ int main(int argc, char *argv[])
     printf("Quries were blocked during %f (using clock_gettime())\n", elapsedTime);
     printf("Quries were blocked during %lu (using time())\n", time(NULL)-start_time_clock);
     if ((elapsedTime > 6) or (elapsedTime < 4)) {
-        printf("Queries were blocked during wrong time\n");
+        printf("TEST_FAILED: Queries were blocked during wrong time\n");
         global_result++;
     }
 
     printf("Trying 20 quries, 1 query / second\n");
     for (i = 0; i < 20; i++) {
         sleep(1);
-        global_result += execute_query(Test->conn_rwsplit, "SELECT * FROM t1");
+        if (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") != 0) {
+            global_result++;
+            printf("TEST_FAILED: query failed\n");
+        }
         printf("%d ", i);
     }
     printf("\n");
@@ -199,9 +205,10 @@ int main(int argc, char *argv[])
     Test->start_maxscale();
     Test->connect_rwsplit();
 
+    printf("Trying to connectt to Maxscale when 'rules' has syntax error, expecting failures\n");
     if (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") == 0) {
         global_result++;
-        printf("Rule has syntax error, but query OK");
+        printf("TEST_FAILED: Rule has syntax error, but query OK");
     }
 
     Test->copy_all_logs(); return(global_result);
