@@ -818,10 +818,10 @@ extern  char *strcasestr();
 						if (strcmp(router->binlog_name, router->prevbinlog) != 0)
 						{
 							char message[BINLOG_ERROR_MSG_LEN+1] = "";
-							snprintf(message, BINLOG_ERROR_MSG_LEN, "A transaction is open in current binlog file %s, It will be truncated at pos %lu by next START SLAVE command", current_master->logfile, current_master->safe_pos);
+							snprintf(message, BINLOG_ERROR_MSG_LEN, "1105:Partial transaction in file %s starting at pos %lu, ending at pos %lu will be lost with next START SLAVE command", current_master->logfile, current_master->safe_pos, router->current_pos);
 							blr_master_free_config(current_master);
 
-							return blr_slave_send_ok_message(router, slave, message);
+							return blr_slave_send_warning_message(router, slave, message);
 						} else {
 							blr_master_free_config(current_master);
 							return blr_slave_send_ok(router, slave);
@@ -2684,8 +2684,9 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 	if (router->trx_safe && router->pending_transaction) {
 		char message[BINLOG_ERROR_MSG_LEN+1] = "";
-		snprintf(message, BINLOG_ERROR_MSG_LEN, "A transaction is open at pos %lu, file %s", router->binlog_position, router->binlog_name);
-		return blr_slave_send_ok_message(router, slave, message);
+		snprintf(message, BINLOG_ERROR_MSG_LEN, "1105:Stopped slave mid-transaction in binlog file %s, pos %lu, incomplete transaction starts at pos %lu", router->binlog_name, router->current_pos, router->binlog_position);
+
+		return blr_slave_send_warning_message(router, slave, message);
 	} else {
 		return blr_slave_send_ok(router, slave);
 	}
@@ -2730,8 +2731,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 			char msg[BINLOG_ERROR_MSG_LEN+1] = "";
 			char file[PATH_MAX+1] = "";
 
-			snprintf(msg, BINLOG_ERROR_MSG_LEN, "A transaction is still opened at pos %lu in file %s. Truncating it ... Try START SLAVE again.", router->last_safe_pos, router->prevbinlog);
-
+			snprintf(msg, BINLOG_ERROR_MSG_LEN, "1105:Truncated partial transaction in file %s, starting at pos %lu, ending at pos %lu. File %s now has length %lu.", router->prevbinlog, router->last_safe_pos, router->current_pos, router->prevbinlog, router->last_safe_pos);
 
 			/* Truncate previous binlog file to last_safe pos */
 
@@ -2754,16 +2754,14 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
 			router->pending_transaction = 0;
 			router->last_safe_pos = 0;
-			router->master_state = BLRM_SLAVE_STOPPED;
+			router->master_state = BLRM_UNCONNECTED;
 			router->current_pos = 4;
 			router->binlog_position = 4;
 
 			spinlock_release(&router->lock);
 
-			/* Send error message to mysql command */
-			blr_slave_send_error_packet(slave, msg, (unsigned int)1254, NULL);
-
-			return 1;
+			/* Send warning message to mysql command */
+			blr_slave_send_warning_message(router, slave, msg);
 		}
 
 		/* create new one */
@@ -3965,11 +3963,13 @@ blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 GWBUF   *pkt;
 uint8_t *ptr;
 int     len;
-int vers_len = 0;
+int msg_len = 0;
 int code_len = 0;
+int level_len = 0;
 
 	/* check whether a warning message is available */
 	if (slave->warning_msg) {
+		char	*level="Warning";
 		char *msg_ptr;
 		char err_code[16+1]="";
 		msg_ptr = strchr(slave->warning_msg, ':');
@@ -3983,17 +3983,18 @@ int code_len = 0;
 			msg_ptr = slave->warning_msg;
 		}
 
-		vers_len = strlen(msg_ptr);
+		msg_len = strlen(msg_ptr);
+		level_len = strlen(level);
 
 		blr_slave_send_fieldcount(router, slave, 3);	// 3 columns
 
-		blr_slave_send_columndef(router, slave, "Code", BLR_TYPE_STRING, 40, 2);
-		blr_slave_send_columndef(router, slave, "Level", BLR_TYPE_STRING, 40, 3);
+		blr_slave_send_columndef(router, slave, "Level", BLR_TYPE_STRING, 40, 2);
+		blr_slave_send_columndef(router, slave, "Code", BLR_TYPE_STRING, 40, 3);
 		blr_slave_send_columndef(router, slave, "Message", BLR_TYPE_STRING, 80, 4);
 
 		blr_slave_send_eof(router, slave, 5);
 
-		len = 4 + (1 + strlen("Note")) + (1 + code_len) + (1 + vers_len);
+		len = 4 + (1 + level_len) + (1 + code_len) + (1 + msg_len);
 
 		if ((pkt = gwbuf_alloc(len)) == NULL)
 			return blr_slave_send_ok(router, slave);
@@ -4005,9 +4006,9 @@ int code_len = 0;
 
 		*ptr++ = 0x06;                  // Sequence number in response
 
-		*ptr++ = strlen("Note");        // Length of result string
-		strncpy((char *)ptr, "Note", strlen("Note")); // Result string
-		ptr += strlen("Note");
+		*ptr++ = level_len;	        // Length of result string
+		strncpy((char *)ptr, level, level_len); // Result string
+		ptr += level_len;
 
 		*ptr++ = code_len;		// Length of result string
 		if (code_len) {
@@ -4015,10 +4016,10 @@ int code_len = 0;
 			ptr += code_len;
 		}
 
-		*ptr++ = vers_len;		// Length of result string
-		if (vers_len) {
-			strncpy((char *)ptr, msg_ptr, vers_len); // Result string
-			ptr += vers_len;
+		*ptr++ = msg_len;		// Length of result string
+		if (msg_len) {
+			strncpy((char *)ptr, msg_ptr, msg_len); // Result string
+			ptr += msg_len;
 		}
 
 		slave->dcb->func.write(slave->dcb, pkt);
