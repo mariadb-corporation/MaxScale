@@ -76,6 +76,7 @@ int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern uint32_t extract_field(uint8_t *src, int bits);
+static void blr_format_event_size(unsigned long *event_size, char *label);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -959,6 +960,15 @@ int statement_len;
 int checksum_len=0;
 int found_chksum = 0;
 int event_error = 0;
+unsigned long transaction_events = 0;
+unsigned long total_events = 0;
+unsigned long total_bytes = 0;
+unsigned long n_transactions = 0;
+unsigned long max_events = 0;
+unsigned long event_bytes = 0;
+unsigned long max_bytes = 0;
+double average_events = 0;
+double average_bytes = 0;
 
 	if (router->binlog_fd == -1) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -984,6 +994,37 @@ int event_error = 0;
                                                 "End of binlog file [%s] at %llu.",
                                                 router->binlog_name,
                                                 pos)));
+					if (n_transactions)
+						average_events = (double)((double)total_events / (double)n_transactions) * (1.0);
+					if (n_transactions)
+						average_bytes = (double)((double)total_bytes / (double)n_transactions) * (1.0);
+
+					if (n_transactions == 0) {
+                                        	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+                                                	"Transaction Summary:\n"
+							"\t\t\tDescription        %16s%16s%16s\n\t\t\t"
+							      "No. of Transactions%16u", "Total", "Average", "Max", 0)));
+					} else {
+						char total_label[2]="";
+						char average_label[2]="";
+						char max_label[2]="";
+						unsigned long avg_bytes = (unsigned long) average_bytes;
+
+						blr_format_event_size(&total_bytes, total_label);
+						blr_format_event_size(&avg_bytes, average_label);
+						blr_format_event_size(&max_bytes, max_label);
+
+                                        	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+							"Transaction Summary:\n"
+							"\t\t\tDescription        %17s%17s%17s\n\t\t\t"
+							 "No. of Transactions %16llu\n\t\t\t"
+							"No. of Events       %16llu %16.1f %16llu\n\t\t\t"
+							"No. of Bytes       %16llu%s%16llu%s%16llu%s",
+							"Total", "Average", "Max",
+							n_transactions, total_events,
+							average_events, max_events,
+							total_bytes, total_label, avg_bytes, average_label, max_bytes, max_label)));
+					}
 
                                         if (pending_transaction) {
                                                 LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
@@ -1330,6 +1371,9 @@ int event_error = 0;
 					} else {
 						pending_transaction = 1;
 
+						transaction_events = 0;
+						event_bytes = 0;
+
 						if (debug)
 							LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
 								"> MariaDB 10 Transaction (GTID %lu-%lu-%llu)"
@@ -1374,6 +1418,9 @@ int event_error = 0;
                                 } else {
                                         pending_transaction = 1;
 
+					transaction_events = 0;
+					event_bytes = 0;
+
                                         if (debug)
                                                 LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
                                                         "> Transaction starts @ pos %llu", pos)));
@@ -1410,9 +1457,16 @@ int event_error = 0;
                 if (pending_transaction > 1) {
                         if (debug)
                                 LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-                                        "< Transaction @ pos %llu, is now closed @ %llu", last_known_commit, pos)));
+                                        "< Transaction @ pos %llu, is now closed @ %llu. %lu events seen", last_known_commit, pos, transaction_events)));
                         pending_transaction = 0;
                         last_known_commit = pos;
+
+			total_events += transaction_events;
+
+			if (transaction_events > max_events)
+				max_events = transaction_events;
+
+			n_transactions++;
                 }
 
                 gwbuf_free(result);
@@ -1468,6 +1522,15 @@ int event_error = 0;
 
                 /* set pos to new value */
                 if (hdr.next_pos > 0) {
+
+			if (pending_transaction) {
+				total_bytes += hdr.event_size;
+				event_bytes += hdr.event_size;
+
+				if (event_bytes > max_bytes)
+					max_bytes = event_bytes;
+			}
+
                         pos = hdr.next_pos;
                 } else {
 
@@ -1475,6 +1538,8 @@ int event_error = 0;
                                 "Current event type %lu @ %llu has nex pos = %llu : exiting", hdr.event_type, pos, hdr.next_pos)));
                         break;
                 }
+
+		transaction_events++;
         }
 
         if (pending_transaction) {
@@ -1499,5 +1564,27 @@ int event_error = 0;
 
                 return 0;
         }
+}
+
+/**
+ * Format a number to G, M, k, or B size
+ *
+ * @param event_size	The number to format
+ * @param label		Label to use for display the formattted number
+ */
+static void
+blr_format_event_size(unsigned long *event_size, char *label)
+{
+	if (*event_size > (1024 * 1024 * 1024)) {
+		*event_size = *event_size / (1024 * 1024 * 1024);
+		label[0] = 'G';
+	} else if (*event_size > (1024 * 1024)) {
+		*event_size = *event_size / (1024 * 1024);
+		label[0] = 'M';
+	} else if (*event_size > 1024) {
+		*event_size = *event_size / (1024);
+		label[0] = 'k';
+	} else
+		label[0] = 'B';
 }
 

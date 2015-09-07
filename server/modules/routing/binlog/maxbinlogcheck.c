@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
 		filelen = statb.st_size;
 
 	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-		"Checking %s (%s), size %lu", path, inst->binlog_name, filelen)));
+		"Checking %s (%s), size %lu bytes", path, inst->binlog_name, filelen)));
 
 	/* read binary log */
 	ret = blr_read_events_all_events(inst, fix_file, debug_out);
