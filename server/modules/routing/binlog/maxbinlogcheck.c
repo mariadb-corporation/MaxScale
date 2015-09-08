@@ -161,7 +161,12 @@ int main(int argc, char **argv) {
 
 	strncpy(path, argv[num_args], PATH_MAX);
 
-	if ((fd = open(path, O_RDONLY, 0666)) == -1)
+	if (fix_file)
+		fd = open(path, O_RDWR, 0666);
+	else
+		fd = open(path, O_RDONLY, 0666);
+
+	if (fd == -1)
         {
                 LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
                         "Failed to open binlog file %s: %s",

@@ -76,7 +76,7 @@ int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern uint32_t extract_field(uint8_t *src, int bits);
-static void blr_format_event_size(unsigned long *event_size, char *label);
+static void blr_format_event_size(double *event_size, char *label);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -1008,22 +1008,23 @@ double average_bytes = 0;
 						char total_label[2]="";
 						char average_label[2]="";
 						char max_label[2]="";
-						unsigned long avg_bytes = (unsigned long) average_bytes;
+						double format_total_bytes = total_bytes;
+						double format_max_bytes = max_bytes;
 
-						blr_format_event_size(&total_bytes, total_label);
-						blr_format_event_size(&avg_bytes, average_label);
-						blr_format_event_size(&max_bytes, max_label);
+						blr_format_event_size(&format_total_bytes, total_label);
+						blr_format_event_size(&average_bytes, average_label);
+						blr_format_event_size(&format_max_bytes, max_label);
 
                                         	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
 							"Transaction Summary:\n"
 							"\t\t\tDescription        %17s%17s%17s\n\t\t\t"
 							 "No. of Transactions %16llu\n\t\t\t"
 							"No. of Events       %16llu %16.1f %16llu\n\t\t\t"
-							"No. of Bytes       %16llu%s%16llu%s%16llu%s",
+							"No. of Bytes       %16.1f%s%16.1f%s%16.1f%s",
 							"Total", "Average", "Max",
 							n_transactions, total_events,
 							average_events, max_events,
-							total_bytes, total_label, avg_bytes, average_label, max_bytes, max_label)));
+							format_total_bytes, total_label, average_bytes, average_label, format_max_bytes, max_label)));
 					}
 
                                         if (pending_transaction) {
@@ -1270,7 +1271,7 @@ double average_bytes = 0;
                         if(debug)
                                 LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
                                         "- Format Description event FDE @ %llu, size %lu",
-                                        pos, hdr.event_size)));
+                                        pos, (unsigned long)hdr.event_size)));
 
                         event_header_length =  ptr[2 + 50 + 4];
                         event_header_ntypes = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
@@ -1573,7 +1574,7 @@ double average_bytes = 0;
  * @param label		Label to use for display the formattted number
  */
 static void
-blr_format_event_size(unsigned long *event_size, char *label)
+blr_format_event_size(double *event_size, char *label)
 {
 	if (*event_size > (1024 * 1024 * 1024)) {
 		*event_size = *event_size / (1024 * 1024 * 1024);
