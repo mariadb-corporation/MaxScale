@@ -325,3 +325,25 @@ Check result:
 2015-09-08 10:54:17   Check retcode: 0, Binlog Pos = 572
 ```
 
+### MariaDB 10 binlog check
+
+```
+[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck -M -d /mariadb-10.0.11/data/mysql-bin.000008
+2015-09-08 12:49:18   maxbinlogcheck 1.0.0
+2015-09-08 12:49:18   Checking /mariadb-10.0.11/data/mysql-bin.000008 (mysql-bin.000008), size 1215327 bytes
+2015-09-08 12:49:18   - Format Description event FDE @ 4, size 244
+2015-09-08 12:49:18          FDE ServerVersion [                               10.0.11-MariaDB-log]
+2015-09-08 12:49:18          FDE Header EventLength 19, N. of supported MySQL/MariaDB events 163
+2015-09-08 12:49:18          FDE Checksum alg desc 0, alg type NONE or UNDEF
+2015-09-08 12:49:18   > MariaDB 10 Transaction (GTID 0-29-60) starts @ pos 802
+2015-09-08 12:49:18          Transaction XID @ pos 802, closing @ 1214943
+2015-09-08 12:49:18   < Transaction @ pos 802, is now closed @ 1214943. 76 events seen
+2015-09-08 12:49:18   End of binlog file [mysql-bin.000008] at 1215327.
+2015-09-08 12:49:18   Transaction Summary:
+			Description                    Total          Average              Max
+			No. of Transactions                1
+			No. of Events                     76             76.0               76
+			No. of Bytes                    1.2M             1.2M             1.2M
+2015-09-08 12:49:18   Check retcode: 0, Binlog Pos = 1215327
+```
+
