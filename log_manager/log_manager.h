@@ -108,6 +108,15 @@ typedef struct log_info_st
  */
 typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t;
 
+/**
+ * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].
+ */
+typedef enum
+{
+    LOG_AUGMENT_WITH_FUNCTION = 1,
+    LOG_AUGMENTATION_MASK     = (LOG_AUGMENT_WITH_FUNCTION)
+} log_augmentation_t;
+
 EXTERN_C_BLOCK_BEGIN
 
 bool skygw_logmanager_init(int argc, char* argv[]);
@@ -139,6 +148,14 @@ void logmanager_enable_maxscalelog(int);
 
 #define skygw_log_write_flush(id, format, ...)\
     skygw_log_write_context_flush(id, __FILE__, __LINE__, __FUNCTION__, format, ##__VA_ARGS__)
+
+/**
+ * What augmentation if any should a logged message be augmented with.
+ *
+ * Currently this is a global setting and affects all loggers.
+ */
+void skygw_log_set_augmentation(int bits);
+int skygw_log_get_augmentation();
 
 EXTERN_C_BLOCK_END
 
