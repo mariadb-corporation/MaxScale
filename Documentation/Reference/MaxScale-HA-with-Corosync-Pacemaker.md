@@ -10,7 +10,7 @@ The document shows an example of a Pacemaker / Corosync setup with MaxScale base
 
 Please note the solution is a quick setup example that may not be suited for all production environments.
 
-# Clustering Software installation
+## Clustering Software installation
 
 On each node in the cluster do the following steps:
 
@@ -32,7 +32,9 @@ gpgcheck=0
 
 (2) Install the software 
 
+```
 # yum install pacemaker corosync crmsh
+```
 
 Package versions used
 
@@ -258,7 +260,7 @@ property cib-bootstrap-options: \
 
 The Corosync / Pacemaker cluster is ready to be configured to manage resources.
 
-# MaxScale init script /etc/init.d/maxscale
+## MaxScale init script /etc/init.d/maxscale
 
 The MaxScale /etc/init.d./maxscale script allows to start/stop/restart and monitor MaxScale process running in the system.
 
@@ -349,9 +351,9 @@ Online: [ node1 node2 node3 ]
  MaxScale	(lsb:maxscale):	Started node1
 ```
 
-#Basic use cases:
+##Basic use cases:
 
-## 1. Resource restarted after a failure:
+### 1. Resource restarted after a failure:
 
 In the example MaxScale PID is 26114, kill the process immediately:
 
@@ -395,7 +397,7 @@ Online: [ node1 node2 node3 ]
  MaxScale	(lsb:maxscale):	Started node1 
 ```
 
-## 2. The resource cannot be migrated to node1 for a failure:
+### 2. The resource cannot be migrated to node1 for a failure:
 
 First, migrate the the resource to another node, say node3
 
@@ -463,7 +465,7 @@ Online: [ node1 node2 node3 ]
  MaxScale	(lsb:maxscale):	Started node2
 ```
 
-# Add a Virtual IP (VIP) to the cluster
+## Add a Virtual IP (VIP) to the cluster
 
 It’s possible to add a virtual IP to the cluster:
 
