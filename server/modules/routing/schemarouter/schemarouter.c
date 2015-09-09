@@ -4096,8 +4096,8 @@ return_succp:
  * @param       router_session  The router session
  * @param       errmsgbuf       The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action          The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
- * @param       succp           Result of action. 
+ * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param	succp		Result of action: true iff router can continue
  * 
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
@@ -4115,10 +4115,7 @@ static void handleError (
         ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
 
         CHK_DCB(backend_dcb);
-        if(succp == NULL || action == ERRACT_RESET)
-        {
-            return;
-        }
+        
 	/** Don't handle same error twice on same DCB */
 	if (backend_dcb->dcb_errhandle_called)
 	{

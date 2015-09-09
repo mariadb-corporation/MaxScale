@@ -1072,8 +1072,8 @@ int	len;
  * @param       router_session  The router session
  * @param       message         The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action     	The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
- * @param	succp		Result of action
+ * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param	succp		Result of action: true iff router can continue
  *
  */
 static  void
@@ -1083,12 +1083,6 @@ ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error;
 socklen_t len;
 char		msg[85], *errmsg;
-
-	if (action == ERRACT_RESET)
-	{
-		backend_dcb->dcb_errhandle_called = false;
-		return;
-	}
 
 	/** Don't handle same error twice on same DCB */
         if (backend_dcb->dcb_errhandle_called)

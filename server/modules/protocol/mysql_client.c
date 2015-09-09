@@ -1130,7 +1130,7 @@ int gw_read_client_event(
 		    else
 		    {
 			/** Reset error handler when routing of the new query begins */
-			router->handleError(NULL, NULL, NULL, dcb, ERRACT_RESET, NULL);
+			dcb->dcb_errhandle_called = false;
 			
                         if (stmt_input)                                
                         {
