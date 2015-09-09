@@ -1,6 +1,7 @@
 #ifndef _SHARDING_COMMON_HG
 #define _SHARDING_COMMON_HG
 
+#include <my_config.h>
 #include <poll.h>
 #include <buffer.h>
 #include <modutil.h>
