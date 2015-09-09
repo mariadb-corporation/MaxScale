@@ -10,18 +10,14 @@
 #include "testconnections.h"
 #include "maxadmin_operations.h"
 
-int check_pers_conn(TestConnections* Test)
+int check_pers_conn(TestConnections* Test, int pers_conn_expected[])
 {
     char result[1024];
     char str[256];
     int pers_conn[4];
-    int pers_conn_expected[4];
+
     int global_result = 0;
 
-    pers_conn_expected[0] = 1;
-    pers_conn_expected[1] = 5;
-    pers_conn_expected[2] = 10;
-    pers_conn_expected[3] = 100;
 
     int i;
     for (i = 0; i < 4; i++) {
@@ -43,7 +39,14 @@ int check_pers_conn(TestConnections* Test)
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
+    int pers_conn_expected[4];
     int global_result = 0;
+
+    pers_conn_expected[0] = 1;
+    pers_conn_expected[1] = 5;
+    pers_conn_expected[2] = 10;
+    pers_conn_expected[3] = 30;
+
     int i;
 
 
@@ -71,7 +74,7 @@ int main(int argc, char *argv[])
         execute_query(slave_conn[i], "select 1;");
     }
 
-    global_result += check_pers_conn(Test);
+    global_result += check_pers_conn(Test, pers_conn_expected);
     printf("Closing all connections\n");
     for (i=0; i<100; i++) {
         mysql_close(rwsplit_conn[i]);
@@ -79,10 +82,30 @@ int main(int argc, char *argv[])
         mysql_close(slave_conn[i]);
     }
 
-    global_result += check_pers_conn(Test);
+    global_result += check_pers_conn(Test, pers_conn_expected);
 
     printf("Sleeping 10 seconds\n");
     sleep(10);
 
-    global_result += check_pers_conn(Test);
+    global_result += check_pers_conn(Test, pers_conn_expected);
+
+    printf("Sleeping 30 seconds\n");
+    sleep(30);
+
+    pers_conn_expected[0] = 1;
+    pers_conn_expected[1] = 5;
+    pers_conn_expected[2] = 10;
+    pers_conn_expected[3] = 0;
+
+    global_result += check_pers_conn(Test, pers_conn_expected);
+
+    printf("Sleeping 30 seconds\n");
+    sleep(30);
+
+    pers_conn_expected[0] = 1;
+    pers_conn_expected[1] = 0;
+    pers_conn_expected[2] = 0;
+    pers_conn_expected[3] = 0;
+
+    global_result += check_pers_conn(Test, pers_conn_expected);
 }
