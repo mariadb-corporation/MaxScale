@@ -137,6 +137,9 @@ int main(int argc, char **argv) {
         arg_vector[3] = "-o";
         arg_vector[4] = NULL;
         skygw_logmanager_init(arg_count,arg_vector);
+
+	skygw_log_set_augmentation(0);
+
         free(arg_vector);
 
 	if (!debug_out)
