@@ -23,13 +23,27 @@ int main(int argc, char *argv[])
     pers_conn_expected[2] = 10;
     pers_conn_expected[3] = 100;
 
-    for (i=0; i<100; i++) {
-        if (Test->connect_maxscale() != 0) {
-            printf("TEST_FAILED: connection error\n");
-            global_result++;
-        }
-        Test->close_maxscale_connections();
+    int conn_N = 100;
+
+    MYSQL * rwsplit_conn[conn_N];
+    MYSQL * master_conn[conn_N];
+    MYSQL * slave_conn[conn_N];
+
+
+    printf("Opening 100 connections to each backend\n");
+    for (i = 0; i < conn_N; i++) {
+        rwsplit_conn[i] = Test->open_rwsplit_connection();
+        master_conn[i] = Test->open_readconn_master_connection();
+        slave_conn[i] = Test->open_readconn_slave_connection();
     }
+    printf("Closing all connections\n");
+    for (i=0; i<100; i++) {
+        mysql_close(rwsplit_conn[i]);
+        mysql_close(master_conn[i]);
+        mysql_close(slave_conn[i]);
+    }
+
+    printf("Sleeping 10 seconds\n");
     sleep(10);
 
     char result[1024];
@@ -44,8 +58,7 @@ int main(int argc, char *argv[])
         sscanf(result, "%d", &pers_conn[i]);
 
         if (pers_conn[i] != pers_conn_expected[i]) {
-            printf("TEST_FAILED: server%d has %d, but expected %d", i+1, pers_conn[i], pers_conn_expected[i]);fflush(stdout);
+            printf("TEST_FAILED: server%d has %d, but expected %d\n", i+1, pers_conn[i], pers_conn_expected[i]);fflush(stdout);
         }
     }
-
 }
