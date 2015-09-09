@@ -53,8 +53,6 @@ user=skysql
 passwd=skysql
 router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS
 filters=QLA
-persistpoolmax=1
-persistmaxtime=3660
 
 [Read Connection Router Slave]
 type=service
@@ -64,8 +62,6 @@ servers=server1,server2,server3,server4
 user=skysql
 passwd=skysql
 filters=QLA
-persistpoolmax=1
-persistmaxtime=3660
 
 [Read Connection Router Master]
 type=service
@@ -75,8 +71,6 @@ servers=server1,server2,server3,server4
 user=skysql
 passwd=skysql
 filters=QLA
-persistpoolmax=1
-persistmaxtime=3660
 
 [Debug Interface]
 type=service
@@ -138,24 +132,32 @@ type=server
 address=###repl_server_IP_1###
 port=###repl_server_port_1###
 protocol=MySQLBackend
+persistpoolmax=1
+persistmaxtime=3660
 
 [server2]
 type=server
 address=###repl_server_IP_2###
 port=###repl_server_port_2###
 protocol=MySQLBackend
+persistpoolmax=1
+persistmaxtime=3660
 
 [server3]
 type=server
 address=###repl_server_IP_3###
 port=###repl_server_port_3###
 protocol=MySQLBackend
+persistpoolmax=1
+persistmaxtime=3660
 
 [server4]
 type=server
 address=###repl_server_IP_4###
 port=###repl_server_port_4###
 protocol=MySQLBackend
+persistpoolmax=1
+persistmaxtime=3660
 
 [QLA]
 type=filter
