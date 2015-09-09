@@ -103,3 +103,4 @@ config_reload config_reload
 config_reload_stress config_reload
 reload_server add_server
 reload_service add_service
+pers_01 pers_01
