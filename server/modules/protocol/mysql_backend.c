@@ -1190,10 +1190,13 @@ gw_backend_close(DCB *dcb)
             {		
                 if (session->client->state == DCB_STATE_POLLING)
                 {
+                    DCB *temp;
 			spinlock_release(&session->ses_lock);
 			
                         /** Close client DCB */
-                        dcb_close(session->client);
+                        temp = session->client;
+                        session->client = NULL;
+                        dcb_close(temp);
                 }
                 else 
 		{
