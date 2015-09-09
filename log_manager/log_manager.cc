@@ -103,6 +103,12 @@ static bool flushall_flag;
 static bool flushall_started_flag;
 static bool flushall_done_flag;
 
+/**
+ * Default augmentation.
+ */
+static int default_log_augmentation = LOG_AUGMENT_WITH_FUNCTION;
+static int log_augmentation = default_log_augmentation;
+
 /** Writer thread structure */
 struct filewriter_st {
 #if defined(SS_DEBUG)
@@ -1359,6 +1365,16 @@ return_succp:
         return succp;
 }
 
+void skygw_log_set_augmentation(int bits)
+{
+    log_augmentation = bits & LOG_AUGMENTATION_MASK;
+}
+
+int skygw_log_get_augmentation()
+{
+    return log_augmentation;
+}
+
 /**
  * Helper for skygw_log_write and friends.
  *
@@ -1386,16 +1402,41 @@ static int log_write(logfile_id_t id,
     {
         CHK_LOGMANAGER(lm);
 
-        const char format[] = "%s [%s]";
-        len += sizeof(format); // A bit too much, but won't hurt.
-        assert(function);
-        len += strlen(function);
+        const char* format;
+
+        if (log_augmentation == LOG_AUGMENT_WITH_FUNCTION)
+        {
+            static const char function_format[] = "%s [%s]";
+
+            format = function_format;
+
+            len += sizeof(function_format); // A little bit more than needed, but won't hurt.
+            assert(function);
+            len += strlen(function);
+        }
+        else
+        {
+            static const char default_format[] = "%s";
+
+            format = default_format;
+
+            len += sizeof(default_format);  // A little bit more than needed, but won't hurt.
+        }
+
         len += 1; // For the trailing NULL.
 
         char message[len];
 
-        len = snprintf(message, sizeof(message), format, str, function);
-        assert(len > 0);
+        if (log_augmentation == LOG_AUGMENT_WITH_FUNCTION)
+        {
+            len = snprintf(message, sizeof(message), format, str, function);
+        }
+        else
+        {
+            len = snprintf(message, sizeof(message), format, str);
+        }
+
+        assert(len >= 0);
 
         int attempts = 0;
         int successes = 0;
