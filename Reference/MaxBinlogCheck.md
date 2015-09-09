@@ -68,9 +68,6 @@ The maxbinlogcheck command accepts a number of switches
 [root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/mar-bin.000002
 2015-09-08 09:38:03   maxbinlogcheck 1.0.0
 2015-09-08 09:38:03   Checking /servers/binlogs/new-trx/mar-bin.000002 (mar-bin.000002), size 290 bytes
-2015-09-08 09:38:03   Transaction Summary:
-			Description                   Total         Average             Max
-			No. of Transactions               0
 2015-09-08 09:38:03   Check retcode: 0, Binlog Pos = 290
 ```
 
@@ -155,9 +152,6 @@ The maxbinlogcheck command accepts a number of switches
 2015-09-08 09:41:08          FDE Checksum alg desc 1, alg type BINLOG_CHECKSUM_ALG_CRC32
 2015-09-08 09:41:08   - Rotate event @ 245, next file is [mar-bin.000003] @ 4
 2015-09-08 09:41:08   End of binlog file [mar-bin.000002] at 290.
-2015-09-08 09:41:08   Transaction Summary:
-			Description                   Total         Average             Max
-			No. of Transactions               0
 2015-09-08 09:41:08   Check retcode: 0, Binlog Pos = 290
 ```
 
@@ -166,6 +160,7 @@ The maxbinlogcheck command accepts a number of switches
 This file is corrupted, as reported by the utility:
 
 ```
+[root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/bin.000002 
 2015-09-08 10:03:16   maxbinlogcheck 1.0.0
 2015-09-08 10:03:16   Checking /servers/binlogs/new-trx/bin.000002 (bin.000002), size 109498 bytes
 2015-09-08 10:03:16   Event size error: size 0 at 290.
@@ -188,6 +183,7 @@ Use -f option for fix with debug:
 2015-09-08 09:56:52   - Rotate event @ 245, next file is [mar-bin.000003] @ 4
 2015-09-08 09:56:52   Event size error: size 0 at 290.
 2015-09-08 09:56:52   warning : an error has been found. Setting safe pos to 245, current pos 290
+2015-09-09 09:56:52   Binlog file bin.000002 has been truncated at 245
 2015-09-08 09:56:52   Check retcode: 1, Binlog Pos = 245
 ```
 
@@ -202,9 +198,6 @@ Check it again, last pos will be 245 and no errors will be reported:
 2015-09-08 09:56:56          FDE Header EventLength 19, N. of supported MySQL/MariaDB events 160
 2015-09-08 09:56:56          FDE Checksum alg desc 1, alg type BINLOG_CHECKSUM_ALG_CRC32
 2015-09-08 09:56:56   End of binlog file [bin.000002] at 245.
-2015-09-08 09:56:56   Transaction Summary:
-			Description                   Total         Average             Max
-			No. of Transactions               0
 2015-09-08 09:56:56   Check retcode: 0, Binlog Pos = 245
 ```
 
@@ -215,9 +208,6 @@ Check it again, last pos will be 245 and no errors will be reported:
 2015-09-08 10:10:21   maxbinlogcheck 1.0.0
 2015-09-08 10:10:21   Checking /servers/binlogs/new-trx/mar-bin.000003 (mar-bin.000003), size 16476284 bytes
 2015-09-08 10:10:21   Warning : pending transaction has been found. Setting safe pos to 572, current pos 16476284
-2015-09-08 10:10:21   Transaction Summary:
-			Description                   Total         Average             Max
-			No. of Transactions               0
 2015-09-08 10:10:21   Check retcode: 0, Binlog Pos = 572
 ```
 
@@ -234,9 +224,6 @@ with debug option:
 2015-09-08 10:11:08   > Transaction starts @ pos 572
 2015-09-08 10:11:08   Warning : pending transaction has been found. Setting safe pos to 572, current pos 16476284
 2015-09-08 10:11:08   End of binlog file [mar-bin.000003] at 16476284.
-2015-09-08 10:11:08   Transaction Summary:
-			Description                   Total         Average             Max
-			No. of Transactions               0
 2015-09-08 10:11:08   Check retcode: 0, Binlog Pos = 572
 ```
 
@@ -254,10 +241,6 @@ Another check ...
 2015-09-08 10:17:13          FDE Checksum alg desc 1, alg type BINLOG_CHECKSUM_ALG_CRC32
 2015-09-08 10:17:13   > Transaction starts @ pos 572
 2015-09-08 10:17:14   End of binlog file [mar-bin.000003] at 577567062.
-2015-09-08 10:17:14   Transaction Summary:
-			Description                   Total         Average             Max
-			No. of Transactions               0
-2015-09-08 10:17:14   Warning : pending transaction has been found. Setting safe pos to 572, current pos 577567062
 2015-09-08 10:17:14   Check retcode: 0, Binlog Pos = 572
 ```
 
@@ -292,7 +275,7 @@ If that is really desired it will be possible with UNIX command line:
 # truncate /servers/binlogs/new-trx/mar-bin.000003 --size=572
 ```
 
-In case of an error and incomplete transactions fix will work
+In case of an error and incomplete transaction, the fix will work
 
 ```
 [root@maxscale-02 build]# /usr/local/bin/maxbinlogcheck /servers/binlogs/new-trx/mar-bin.000003 -d -f
@@ -305,6 +288,7 @@ In case of an error and incomplete transactions fix will work
 2015-09-08 10:35:57   > Transaction starts @ pos 572
 2015-09-08 10:35:57   Short read when reading the event at 304898502 in mar-bin.000003. Expected 65563 bytes got 15911 bytes.
 2015-09-08 10:35:57   warning : an error has been found. Setting safe pos to 572, current pos 304898502
+2015-09-09 10:35:57   Binlog file bin.000003 has been truncated at 572
 2015-09-08 10:35:57   Check retcode: 1, Binlog Pos = 572
 ```
 
@@ -318,9 +302,6 @@ Check result:
 2015-09-08 10:54:17          FDE ServerVersion [                                5.5.35-MariaDB-log]
 2015-09-08 10:54:17          FDE Header EventLength 19, N. of supported MySQL/MariaDB events 160
 2015-09-08 10:54:17          FDE Checksum alg desc 1, alg type BINLOG_CHECKSUM_ALG_CRC32
-2015-09-08 10:54:17   Transaction Summary:
-			Description                   Total         Average             Max
-			No. of Transactions               0
 2015-09-08 10:54:17   End of binlog file [mar-bin.000003] at 572.
 2015-09-08 10:54:17   Check retcode: 0, Binlog Pos = 572
 ```
