@@ -140,7 +140,7 @@ type=server
 address=###repl_server_IP_2###
 port=###repl_server_port_2###
 protocol=MySQLBackend
-persistpoolmax=1
+persistpoolmax=5
 persistmaxtime=3660
 
 [server3]
@@ -148,7 +148,7 @@ type=server
 address=###repl_server_IP_3###
 port=###repl_server_port_3###
 protocol=MySQLBackend
-persistpoolmax=1
+persistpoolmax=10
 persistmaxtime=3660
 
 [server4]
@@ -156,7 +156,7 @@ type=server
 address=###repl_server_IP_4###
 port=###repl_server_port_4###
 protocol=MySQLBackend
-persistpoolmax=1
+persistpoolmax=100
 persistmaxtime=3660
 
 [QLA]
