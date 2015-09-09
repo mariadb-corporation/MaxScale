@@ -39,12 +39,12 @@ int main(int argc, char *argv[])
         sprintf(str, "show server server%d", i+1);
         get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str, (char *) "Persistent measured pool size:", result);
 
-        printf("%s\n", result);
+        printf("%s: %s\n", str, result);fflush(stdout);
 
         sscanf(result, "%d", &pers_conn[i]);
 
         if (pers_conn[i] != pers_conn_expected[i]) {
-            printf("TEST_FAILED: server%d has %d, but expected %d", i+1, pers_conn[i], pers_conn_expected[i]);
+            printf("TEST_FAILED: server%d has %d, but expected %d", i+1, pers_conn[i], pers_conn_expected[i]);fflush(stdout);
         }
     }
 
