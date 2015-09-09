@@ -55,6 +55,7 @@
  *                                      fixes for various error situations,
  *                                      remove dcb_set_state etc, simplifications.
  * 10/07/2015   Martin Brampton         Simplify, merge dcb_read and dcb_read_n
+ * 04/09/2015   Martin Brampton         Changes to ensure DCB always has session pointer
  *
  * @endverbatim
  */

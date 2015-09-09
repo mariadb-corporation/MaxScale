@@ -67,7 +67,8 @@
  * 06/03/2014	Massimiliano Pinto	Server connection counter is now updated in closeSession
  * 24/06/2014	Massimiliano Pinto	New rules for selecting the Master server
  * 27/06/2014	Mark Riddoch		Addition of server weighting
- * 11/06/2015   Martin Brampton     Remove decrement n_current (moved to dcb.c)
+ * 11/06/2015   Martin Brampton         Remove decrement n_current (moved to dcb.c)
+ * 09/09/2015   Martin Brampton         Modify error handler
  *
  * @endverbatim
  */

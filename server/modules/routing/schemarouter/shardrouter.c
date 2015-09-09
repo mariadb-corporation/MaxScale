@@ -63,6 +63,7 @@ extern __thread log_info_t tls_log_info;
  *
  * Date		Who			Description
  * 20/01/2015	Markus Mäkelä/Vilho Raatikka		Initial implementation
+ * 09/09/2015   Martin Brampton         Modify error handler
  *
  * @endverbatim
  */
@@ -2826,38 +2827,39 @@ handleError(
 
     if(session == NULL || rses == NULL)
     {
-        if(succp)
-            *succp = false;
-        return;
-    }
-    CHK_SESSION(session);
-    CHK_CLIENT_RSES(rses);
-
-    switch(action)
-    {
-    case ERRACT_NEW_CONNECTION:
-    {
-        if(!rses_begin_locked_router_action(rses))
-        {
-            *succp = false;
-            return;
-        }
-
-        rses_end_locked_router_action(rses);
-        break;
-    }
-
-    case ERRACT_REPLY_CLIENT:
-    {
-
-        *succp = false; /*< no new backend servers were made available */
-        break;
-    }
-
-    default:
         *succp = false;
-        break;
     }
+    else
+    {
+        CHK_SESSION(session);
+        CHK_CLIENT_RSES(rses);
+
+        switch(action)
+        {
+            case ERRACT_NEW_CONNECTION:
+            {
+                if(!rses_begin_locked_router_action(rses))
+                {
+                    *succp = false;
+                    break;
+                }
+
+                rses_end_locked_router_action(rses);
+                break;
+            }
+
+            case ERRACT_REPLY_CLIENT:
+            {
+                *succp = false; /*< no new backend servers were made available */
+                break;
+            }
+
+            default:
+                *succp = false;
+                break;
+        }
+    }
+    dcb_close(backend_dcb);
 }
 
 

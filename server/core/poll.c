@@ -74,8 +74,7 @@ int	max_poll_sleep;
  *				thread utilisation and fairer scheduling of the event
  *				processing.
  * 07/07/15     Martin Brampton Simplified add and remove DCB, improve error handling.
- * 23/08/15     Martin Brampton Provisionally added test so only DCB with a 
- *              session link can be added to the poll list
+ * 23/08/15     Martin Brampton Added test so only DCB with a session link can be added to the poll list
  *
  * @endverbatim
  */

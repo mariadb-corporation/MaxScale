@@ -26,6 +26,7 @@
  * Date		Who			Description
  * 16/02/15	Mark Riddoch		Initial implementation
  * 27/02/15	Massimiliano Pinto	Added maxinfo_add_mysql_user
+ * 09/09/2015   Martin Brampton         Modify error handler
  *
  * @endverbatim
  */
@@ -335,6 +336,7 @@ static void handleError(
 	}
 	
 	/** false because connection is not available anymore */
+        dcb_close(backend_dcb);
 	*succp = false;
 }
 

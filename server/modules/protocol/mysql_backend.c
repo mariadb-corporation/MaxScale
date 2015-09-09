@@ -415,7 +415,6 @@ static int gw_read_backend_event(DCB *dcb) {
 				session->state = SESSION_STATE_STOPPING;
 				spinlock_release(&session->ses_lock);
 				ss_dassert(dcb->dcb_errhandle_called);
-				dcb_close(dcb);
                                 rc = 1;
                                 goto return_rc;
                         }
@@ -488,8 +487,6 @@ static int gw_read_backend_event(DCB *dcb) {
                                 session->state = SESSION_STATE_STOPPING;
                                 spinlock_release(&session->ses_lock);
                         }
-                        ss_dassert(dcb->dcb_errhandle_called);
-                        dcb_close(dcb);
                         rc = 0;
                         goto return_rc;
                 }
@@ -912,8 +909,6 @@ static int gw_error_backend_event(DCB *dcb)
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
         }
-        ss_dassert(dcb->dcb_errhandle_called);
-        dcb_close(dcb);
         
 retblock:
         return 1;        
@@ -1144,7 +1139,6 @@ gw_backend_hangup(DCB *dcb)
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
         }
-        ss_dassert(dcb->dcb_errhandle_called);
         
 retblock:
         return 1;
@@ -1324,8 +1318,6 @@ static int backend_write_delayqueue(DCB *dcb)
                                 spinlock_acquire(&session->ses_lock);
                                 session->state = SESSION_STATE_STOPPING;
                                 spinlock_release(&session->ses_lock);
-				ss_dassert(dcb->dcb_errhandle_called);
-				dcb_close(dcb);
 			}                
 		}
 	}

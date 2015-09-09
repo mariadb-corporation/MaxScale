@@ -37,7 +37,7 @@
  * 18/02/2015	Massimiliano Pinto	Addition of dcb_close in closeSession
  * 07/05/2015   Massimiliano Pinto      Addition of MariaDB 10 compatibility support
  * 12/06/2015   Massimiliano Pinto      Addition of MariaDB 10 events in diagnostics()
-
+ * 09/09/2015   Martin Brampton         Modify error handler
  *
  * @endverbatim
  */
@@ -1114,6 +1114,7 @@ char		msg[85], *errmsg;
 	if (errmsg)
 		free(errmsg);
 	*succp = true;
+        dcb_close(backend_dcb);
 	LOGIF(LM, (skygw_log_write_flush(
 		LOGFILE_MESSAGE,
 		"%s: Master %s disconnected after %ld seconds. "

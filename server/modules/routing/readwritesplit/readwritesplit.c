@@ -67,6 +67,8 @@ extern __thread log_info_t tls_log_info;
  * 18/07/2013	Massimiliano Pinto	routeQuery now handles COM_QUIT
  *					as QUERY_TYPE_SESSION_WRITE
  * 17/07/2014	Massimiliano Pinto	Server connection counter is updated in closeSession
+ * 
+ * 09/09/2015   Martin Brampton         Modify error handler
  *
  * @endverbatim
  */
@@ -4825,17 +4827,14 @@ static void handleError (
 
         CHK_DCB(backend_dcb);
 
-	/** Reset error handle flag from a given DCB */
-	if (action == ERRACT_RESET)
-	{
-		backend_dcb->dcb_errhandle_called = false;
-		return;
-	}
-	
 	/** Don't handle same error twice on same DCB */
 	if (backend_dcb->dcb_errhandle_called)
 	{
-		/** we optimistically assume that previous call succeed */
+            /** we optimistically assume that previous call succeed */
+            /*
+             * The return of true is potentially misleading, but appears to
+             * be safe with the code as it stands on 9 Sept 2015 - MNB
+             */
 		*succp = true;
 		return;
 	}
@@ -4848,12 +4847,13 @@ static void handleError (
         if (session == NULL || rses == NULL)
 	{
                 *succp = false;
-		return;
 	}
-	CHK_SESSION(session);
-	CHK_CLIENT_RSES(rses);
+        else
+        {
+            CHK_SESSION(session);
+            CHK_CLIENT_RSES(rses);
         
-        switch (action) {
+            switch (action) {
                 case ERRACT_NEW_CONNECTION:
                 {
 			SERVER* srv;
@@ -4861,7 +4861,7 @@ static void handleError (
 			if (!rses_begin_locked_router_action(rses))
 			{
 				*succp = false;
-				return;
+				break;
 			}
 			srv = rses->rses_master_ref->bref_backend->backend_server;
 			/**
@@ -4914,7 +4914,9 @@ static void handleError (
 		default:                        
                         *succp = false;
                         break;
+            }
         }
+        dcb_close(backend_dcb);
 }
 
 

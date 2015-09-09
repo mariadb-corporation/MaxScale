@@ -39,6 +39,8 @@
  * 10/11/2014	Massimiliano Pinto	Added: client charset added to protocol struct
  * 29/05/2015   Markus Makela           Added SSL support
  * 11/06/2015   Martin Brampton		COM_QUIT suppressed for persistent connections
+ * 04/09/2015   Martin Brampton         Introduce DUMMY session to fulfill guarantee DCB always has session
+ * 09/09/2015   Martin Brampton         Modify error handler calls 
  */
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -813,7 +815,6 @@ int gw_read_client_event(
 						LOGFILE_ERROR,
 						"Error : Routing the query failed. "
 						"Session will be closed.")));
-					dcb_close(dcb);
 				}
                         	rc = 1;
                         	goto return_rc;
@@ -1192,7 +1193,6 @@ int gw_read_client_event(
 								 "Error : Routing the query failed. "
 					"Session will be closed.")));
 				
-				dcb_close(dcb);
 			    }
                         }
 		    }
