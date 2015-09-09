@@ -63,6 +63,15 @@ int main(int argc, char *argv[])
         master_conn[i] = Test->open_readconn_master_connection();
         slave_conn[i] = Test->open_readconn_slave_connection();
     }
+    for (i = 0; i < conn_N; i++) {
+        if (execute_query(rwsplit_conn[i], "select 1;") != 0) {
+            printf("Query failed!\n");
+        }
+        execute_query(master_conn[i], "select 1;");
+        execute_query(slave_conn[i], "select 1;");
+    }
+
+    global_result += check_pers_conn(Test);
     printf("Closing all connections\n");
     for (i=0; i<100; i++) {
         mysql_close(rwsplit_conn[i]);
