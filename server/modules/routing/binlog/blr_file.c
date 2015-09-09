@@ -999,12 +999,7 @@ double average_bytes = 0;
 					if (n_transactions)
 						average_bytes = (double)((double)total_bytes / (double)n_transactions) * (1.0);
 
-					if (n_transactions == 0) {
-                                        	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-                                                	"Transaction Summary:\n"
-							"\t\t\tDescription        %16s%16s%16s\n\t\t\t"
-							      "No. of Transactions%16u", "Total", "Average", "Max", 0)));
-					} else {
+					if (n_transactions != 0) {
 						char total_label[2]="";
 						char average_label[2]="";
 						char max_label[2]="";
@@ -1016,11 +1011,11 @@ double average_bytes = 0;
 						blr_format_event_size(&format_max_bytes, max_label);
 
                                         	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-							"Transaction Summary:\n"
+							"Transaction Summary for binlog '%s'\n"
 							"\t\t\tDescription        %17s%17s%17s\n\t\t\t"
 							 "No. of Transactions %16llu\n\t\t\t"
 							"No. of Events       %16llu %16.1f %16llu\n\t\t\t"
-							"No. of Bytes       %16.1f%s%16.1f%s%16.1f%s",
+							"No. of Bytes       %16.1f%s%16.1f%s%16.1f%s", router->binlog_name,
 							"Total", "Average", "Max",
 							n_transactions, total_events,
 							average_events, max_events,
@@ -1090,8 +1085,13 @@ double average_bytes = 0;
 						"Setting safe pos to %lu, current pos %lu",
 						router->binlog_position, router->current_pos)));
 					if (fix) {
-						ftruncate(router->binlog_fd, router->binlog_position);
-						fsync(router->binlog_fd);
+						if (ftruncate(router->binlog_fd, router->binlog_position) == 0) {
+							LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+								"Binlog file %s has been truncated at %lu",
+								router->binlog_name,
+								router->binlog_position)));
+							fsync(router->binlog_fd);
+						}
 					}
 				
 					return 1;
@@ -1149,8 +1149,13 @@ double average_bytes = 0;
 				router->current_pos)));
 
 			if (fix) {
-				ftruncate(router->binlog_fd, router->binlog_position);
-				fsync(router->binlog_fd);
+				if (ftruncate(router->binlog_fd, router->binlog_position) == 0) {
+					LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+						"Binlog file %s has been truncated at %lu",
+						router->binlog_name,
+						router->binlog_position)));
+					fsync(router->binlog_fd);
+				}
 			}
 
                         return 1;
@@ -1171,8 +1176,13 @@ double average_bytes = 0;
 				"Setting safe pos to %lu, current pos %lu",
 				router->binlog_position, router->current_pos)));
 			if (fix) {
-				ftruncate(router->binlog_fd, router->binlog_position);
-				fsync(router->binlog_fd);
+				if (ftruncate(router->binlog_fd, router->binlog_position) == 0) {
+					LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+						"Binlog file %s has been truncated at %lu",
+						router->binlog_name,
+						router->binlog_position)));
+					fsync(router->binlog_fd);
+				}
 			}
 
                         return 1;
@@ -1195,8 +1205,13 @@ double average_bytes = 0;
 				router->binlog_position, router->current_pos)));
 
 			if (fix) {
-				ftruncate(router->binlog_fd, router->binlog_position);
-				fsync(router->binlog_fd);
+				if (ftruncate(router->binlog_fd, router->binlog_position) == 0) {
+					LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+						"Binlog file %s has been truncated at %lu",
+						router->binlog_name,
+						router->binlog_position)));
+					fsync(router->binlog_fd);
+				}
 			}
 
                         return 1;
@@ -1245,8 +1260,13 @@ double average_bytes = 0;
 				"Setting safe pos to %lu, current pos %lu",
 				router->binlog_position, router->current_pos)));
 			if (fix) {
-				ftruncate(router->binlog_fd, router->binlog_position);
-				fsync(router->binlog_fd);
+				if (ftruncate(router->binlog_fd, router->binlog_position) == 0) {
+					LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+						"Binlog file %s has been truncated at %lu",
+						router->binlog_name,
+						router->binlog_position)));
+					fsync(router->binlog_fd);
+				}
 			}
 
                         return 1;
@@ -1489,8 +1509,13 @@ double average_bytes = 0;
 				"Setting safe pos to %lu, current pos %lu",
 				router->binlog_position, router->current_pos)));
 			if (fix) {
-				ftruncate(router->binlog_fd, router->binlog_position);
-				fsync(router->binlog_fd);
+				if (ftruncate(router->binlog_fd, router->binlog_position) == 0) {
+					LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+						"Binlog file %s has been truncated at %lu",
+						router->binlog_name,
+						router->binlog_position)));
+					fsync(router->binlog_fd);
+				}
 			}
 
                         return 2;
@@ -1514,8 +1539,13 @@ double average_bytes = 0;
 				router->binlog_position, router->current_pos)));
 
 			if (fix) {
-				ftruncate(router->binlog_fd, router->binlog_position);
-				fsync(router->binlog_fd);
+				if (ftruncate(router->binlog_fd, router->binlog_position) == 0) {
+					LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+						"Binlog file %s has been truncated at %lu",
+						router->binlog_name,
+						router->binlog_position)));
+					fsync(router->binlog_fd);
+				}
 			}
 
                         return 2;
