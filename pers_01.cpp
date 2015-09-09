@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
 
     //global_result += check_pers_conn(Test, pers_conn_expected);
     printf("Closing all connections\n");
-    for (i=0; i<100; i++) {
+    for (i=0; i<conn_N; i++) {
         mysql_close(rwsplit_conn[i]);
         mysql_close(master_conn[i]);
         mysql_close(slave_conn[i]);
