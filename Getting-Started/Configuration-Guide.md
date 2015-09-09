@@ -68,11 +68,11 @@ It should be noted that additional threads will be created to execute other inte
 
 #### `auth_connect_timeout`
 
-The connection timeout in seconds for the MySQL connections to the backend server when user authentication data is fetched. Increasing the value of this parameter will cause MaxScale to wait longer for a response from the backend server before aborting the connection process when creating a new connection is made.
+The connection timeout in seconds for the MySQL connections to the backend server when user authentication data is fetched. Increasing the value of this parameter will cause MaxScale to wait longer for a response from the backend server before aborting the authentication process.
 
 #### `auth_read_timeout`
 
-The read timeout in seconds for the MySQL connection to the backend database when user authentication data is fetched. Increasing the value of this parameter will cause MaxScale to wait longer for a response from the backend server when user data is being actively fetched. If you have a large number of database users and grants and the authentication is failing, it is a good idea. Slower networks will also benefit from an increased timeout value.
+The read timeout in seconds for the MySQL connection to the backend database when user authentication data is fetched. Increasing the value of this parameter will cause MaxScale to wait longer for a response from the backend server when user data is being actively fetched. If the authentication is failing and you either have a large number of database users and grants or the connection to the backend servers is slow, it is a good idea to increase this value.
 
 #### `auth_write_timeout`
 
