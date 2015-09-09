@@ -846,44 +846,44 @@ clientReply(
  *
  */
 static void handleError(
-	ROUTER           *instance,
-	void             *router_session,
-	GWBUF            *errbuf,
-	DCB              *backend_dcb,
-	error_action_t   action,
-	bool             *succp)
+    ROUTER           *instance,
+    void             *router_session,
+    GWBUF            *errbuf,
+    DCB              *backend_dcb,
+    error_action_t   action,
+    bool             *succp)
 
 {
-	DCB             *client_dcb;
-	SESSION         *session = backend_dcb->session;
-	session_state_t sesstate;
+    DCB             *client_dcb;
+    SESSION         *session = backend_dcb->session;
+    session_state_t sesstate;
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
 
-	/** Don't handle same error twice on same DCB */
-	if (backend_dcb->dcb_errhandle_called)
-	{
-		/** we optimistically assume that previous call succeed */
-		*succp = true;
-		return;
-	}
-	else
-	{
-		backend_dcb->dcb_errhandle_called = true;
-	}
-	spinlock_acquire(&session->ses_lock);
-	sesstate = session->state;
-	client_dcb = session->client;
+    /** Don't handle same error twice on same DCB */
+    if (backend_dcb->dcb_errhandle_called)
+    {
+        /** we optimistically assume that previous call succeed */
+        *succp = true;
+        return;
+    }
+    else
+    {
+        backend_dcb->dcb_errhandle_called = true;
+    }
+    spinlock_acquire(&session->ses_lock);
+    sesstate = session->state;
+    client_dcb = session->client;
 	
-	if (sesstate == SESSION_STATE_ROUTER_READY)
-	{
-		CHK_DCB(client_dcb);
-		spinlock_release(&session->ses_lock);	
-		client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
-	}
-	else 
-	{
-		spinlock_release(&session->ses_lock);
-	}
+    if (sesstate == SESSION_STATE_ROUTER_READY)
+    {
+        CHK_DCB(client_dcb);
+        spinlock_release(&session->ses_lock);	
+        client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
+    }
+    else 
+    {
+        spinlock_release(&session->ses_lock);
+    }
     
     if (backend_dcb != router_cli_ses->backend_dcb)
     {
@@ -893,8 +893,8 @@ static void handleError(
     router_cli_ses->backend_dcb = NULL;
     dcb_close(backend_dcb);
 	
-	/** false because connection is not available anymore */
-	*succp = false;
+    /** false because connection is not available anymore */
+    *succp = false;
 }
 
 /** to be inline'd */
