@@ -10,12 +10,13 @@
 #include "testconnections.h"
 #include "maxadmin_operations.h"
 
-void check_pers_conn(TestConnections* Test)
+int check_pers_conn(TestConnections* Test)
 {
     char result[1024];
     char str[256];
     int pers_conn[4];
     int pers_conn_expected[4];
+    int global_result = 0;
 
     pers_conn_expected[0] = 1;
     pers_conn_expected[1] = 5;
@@ -33,8 +34,10 @@ void check_pers_conn(TestConnections* Test)
 
         if (pers_conn[i] != pers_conn_expected[i]) {
             printf("TEST_FAILED: server%d has %d, but expected %d\n", i+1, pers_conn[i], pers_conn_expected[i]);fflush(stdout);
+            global_result++;
         }
     }
+    return(global_result);
 }
 
 int main(int argc, char *argv[])
@@ -54,6 +57,9 @@ int main(int argc, char *argv[])
     printf("Opening 100 connections to each backend\n");
     for (i = 0; i < conn_N; i++) {
         rwsplit_conn[i] = Test->open_rwsplit_connection();
+        if (mysql_errno(rwsplit_conn[i]) != 0) {
+            printf("%s\n", mysql_error(rwsplit_conn[i]));
+        }
         master_conn[i] = Test->open_readconn_master_connection();
         slave_conn[i] = Test->open_readconn_slave_connection();
     }
@@ -64,10 +70,10 @@ int main(int argc, char *argv[])
         mysql_close(slave_conn[i]);
     }
 
-    check_pers_conn(Test);
+    global_result += check_pers_conn(Test);
 
     printf("Sleeping 10 seconds\n");
     sleep(10);
 
-    check_pers_conn(Test);
+    global_result += check_pers_conn(Test);
 }
