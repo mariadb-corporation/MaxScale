@@ -140,6 +140,7 @@ SERVICE 	*service;
 	service->routerModule = strdup(router);
 	service->users_from_all = false;
 	service->resources = NULL;
+        service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
 	service->ssl_mode = SSL_DISABLED;
 	service->ssl_init_done = false;
 	service->ssl_ca_cert = NULL;
@@ -234,19 +235,19 @@ GWPROTOCOL	*funcs;
 			{
 				LOGIF(LE, (skygw_log_write_flush(
 					LOGFILE_ERROR,
-					"Error : Unable to load users from %s:%d for "
-					"service %s.",
+					"Error : Unable to load users for "
+					"service %s listening at %s:%d.",
+                                        service->name,
 					(port->address == NULL ? "0.0.0.0" : port->address),
-					port->port,
-					service->name)));
+					port->port)));
 				
 				{
 					/* Try loading authentication data from file cache */
-					char	*ptr, path[4097];
-					strcpy(path, get_cachedir());
-					strncat(path, "/", 4096);
-					strncat(path, service->name, 4096);
-					strncat(path, "/.cache/dbusers", 4096);
+					char	*ptr, path[PATH_MAX+1];
+					strncpy(path, get_cachedir(),sizeof(path)-1);
+					strncat(path, "/", sizeof(path)-1);
+					strncat(path, service->name, sizeof(path)-1);
+					strncat(path, "/.cache/dbusers", sizeof(path)-1);
 					loaded = dbusers_load(service->users, path);
 					if (loaded != -1)
 					{
@@ -281,10 +282,11 @@ GWPROTOCOL	*funcs;
                                 {
 				    if(errno != EEXIST)
 				    {
+                                        char errbuf[STRERROR_BUFLEN];
 					skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
 						 path,
 						 errno,
-						 strerror(errno));
+                                                        strerror_r(errno, errbuf, sizeof(errbuf)));
 				    }
                                     mkdir_rval = 0;
                                 }
@@ -299,10 +301,11 @@ GWPROTOCOL	*funcs;
                                 {
 				    if(errno != EEXIST)
 				    {
+                                        char errbuf[STRERROR_BUFLEN];
 					skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
 						 path,
 						 errno,
-						 strerror(errno));
+                                                        strerror_r(errno, errbuf, sizeof(errbuf)));
 				    }
                                     mkdir_rval = 0;
                                 }
@@ -415,6 +418,16 @@ serviceStart(SERVICE *service)
 {
 SERV_PROTOCOL	*port;
 int		listeners = 0;
+
+
+if(!check_service_permissions(service))
+{
+    skygw_log_write_flush(LE,
+			"%s: Error: Inadequate user permissions for service. Service not started.",
+                        service->name);
+    service->state = SERVICE_STATE_FAILED;
+    return 0;
+}
 
 if(service->ssl_mode != SSL_DISABLED)
 {

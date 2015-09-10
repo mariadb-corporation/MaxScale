@@ -889,6 +889,7 @@ unsigned long	qtime;
                             dcb->func.write_ready(dcb);
                         }
 		} else {
+                        char errbuf[STRERROR_BUFLEN];
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
 				"%lu [poll_waitevents] "
@@ -896,7 +897,7 @@ unsigned long	qtime;
 				"dcb %p, fd %i",
 				pthread_self(),
 				eno,
-				strerror(eno),
+				strerror_r(eno, errbuf, sizeof(errbuf)),
 				dcb,
 				dcb->fd)));
 		}
@@ -949,6 +950,7 @@ unsigned long	qtime;
 #if defined(FAKE_CODE)
 		if (eno == 0) {
 			eno = dcb_fake_write_errno[dcb->fd];
+                        char errbuf[STRERROR_BUFLEN];
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
 				"%lu [poll_waitevents] "
@@ -956,18 +958,19 @@ unsigned long	qtime;
 				"%s",
 				pthread_self(),
 				eno,
-				strerror(eno))));
+				strerror_r(eno, errbuf, sizeof(errbuf)))));
 		}
 		dcb_fake_write_errno[dcb->fd] = 0;
 #endif /* FAKE_CODE */
 		if (eno != 0) {
+                        char errbuf[STRERROR_BUFLEN];
 			LOGIF(LD, (skygw_log_write(
 				LOGFILE_DEBUG,
 				"%lu [poll_waitevents] "
 				"EPOLLERR due %d, %s.",
 				pthread_self(),
 				eno,
-				strerror(eno))));
+				strerror_r(eno, errbuf, sizeof(errbuf)))));
 		}
 		atomic_add(&pollStats.n_error, 1);
 		/** Read session id to thread's local storage */
@@ -985,7 +988,7 @@ unsigned long	qtime;
 	{
 		int eno = 0;
 		eno = gw_getsockerrno(dcb->fd);
-		
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LD, (skygw_log_write(
 			LOGFILE_DEBUG,
 			"%lu [poll_waitevents] "
@@ -995,7 +998,7 @@ unsigned long	qtime;
 			dcb,
 			dcb->fd,
 			eno,
-			strerror(eno))));
+			strerror_r(eno, errbuf, sizeof(errbuf)))));
 		atomic_add(&pollStats.n_hup, 1);
 		spinlock_acquire(&dcb->dcb_initlock);
 		if ((dcb->flags & DCBF_HUNG) == 0)
@@ -1021,7 +1024,7 @@ unsigned long	qtime;
 	{
 		int eno = 0;
 		eno = gw_getsockerrno(dcb->fd);
-		
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LD, (skygw_log_write(
 			LOGFILE_DEBUG,
 			"%lu [poll_waitevents] "
@@ -1031,7 +1034,7 @@ unsigned long	qtime;
 			dcb,
 			dcb->fd,
 			eno,
-			strerror(eno))));
+			strerror_r(eno, errbuf, sizeof(errbuf)))));
 		atomic_add(&pollStats.n_hup, 1);
 		spinlock_acquire(&dcb->dcb_initlock);
 		if ((dcb->flags & DCBF_HUNG) == 0)

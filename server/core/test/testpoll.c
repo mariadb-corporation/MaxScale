@@ -61,7 +61,8 @@ int     result;
         dcb->fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
         if(dcb->fd < 0){
-			ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n",errno,strerror(errno));
+                        char errbuf[STRERROR_BUFLEN];
+			ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n",errno,strerror_r(errno,errbuf,sizeof(errbuf)));
 				    return 1;
 		}
 

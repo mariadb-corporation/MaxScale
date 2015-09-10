@@ -32,7 +32,7 @@
  * 17/06/2013	Massimiliano Pinto	Added MaxScale To Backends routines
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.
  * 03/07/2013	Massimiliano Pinto	Added delayq for incoming data before mysql connection
- * 04/07/2013	Massimiliano Pinto	Added asyncrhronous MySQL protocol connection to backend
+ * 04/07/2013	Massimiliano Pinto	Added asynchronous MySQL protocol connection to backend
  * 05/07/2013	Massimiliano Pinto	Added closeSession if backend auth fails
  * 12/07/2013	Massimiliano Pinto	Added Mysql Change User via dcb->func.auth()
  * 15/07/2013	Massimiliano Pinto	Added Mysql session change via dcb->func.session()
@@ -548,6 +548,18 @@ static int gw_read_backend_event(DCB *dcb) {
 				rc = 0;
 				goto return_rc;
 			}
+
+			if (!read_buffer) {
+                                LOGIF(LM, (skygw_log_write_flush(
+					LOGFILE_MESSAGE,
+                                        "%lu [gw_read_backend_event] "
+					"Read buffer unexpectedly null, even though response "
+					"not marked as complete. User: %s",
+                                        pthread_self(),
+                                        current_session->user)));
+				rc = 0;
+				goto return_rc;
+			}
                 }
                 /**
                  * Check that session is operable, and that client DCB is 
@@ -825,7 +837,6 @@ static int gw_error_backend_event(DCB *dcb)
         if (dcb->state != DCB_STATE_POLLING)
         {
 		int	error, len;
-		char	buf[100];
 
 		len = sizeof(error);
 		
@@ -833,12 +844,12 @@ static int gw_error_backend_event(DCB *dcb)
 		{
 			if (error != 0)
 			{
-				strerror_r(error, buf, 100);
+                                char errbuf[STRERROR_BUFLEN];
 				LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
 						"DCB in state %s got error '%s'.",
 						STRDCBSTATE(dcb->state),
-						buf)));
+						strerror_r(error, errbuf, sizeof(errbuf)))));
 			}
 		}
                 return 1;
@@ -868,18 +879,17 @@ static int gw_error_backend_event(DCB *dcb)
         if (ses_state != SESSION_STATE_ROUTER_READY)
         {
 		int	error, len;
-		char	buf[100];
 
 		len = sizeof(error);
 		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0)
 			{
-				strerror_r(error, buf, 100);
+                                char errbuf[STRERROR_BUFLEN];
 				LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
 						"Error '%s' in session that is not ready for routing.",
-						buf)));
+						strerror_r(error, errbuf, sizeof(errbuf)))));
 			}
 		}		
                 gwbuf_free(errbuf);
@@ -1092,19 +1102,18 @@ gw_backend_hangup(DCB *dcb)
         if (ses_state != SESSION_STATE_ROUTER_READY)
         {
 		int	error, len;
-		char	buf[100];
 
 		len = sizeof(error);
 		if (getsockopt(dcb->fd, SOL_SOCKET, SO_ERROR, &error, (socklen_t *)&len) == 0)
 		{
 			if (error != 0 && ses_state != SESSION_STATE_STOPPING)
 			{
-				strerror_r(error, buf, 100);
+                                char errbuf[STRERROR_BUFLEN];
 				LOGIF(LE, (skygw_log_write_flush(
 						LOGFILE_ERROR,
 						"Hangup in session that is not ready for routing, "
 						"Error reported is '%s'.",
-						buf)));
+						strerror_r(error, errbuf, sizeof(errbuf)))));
 			}
 		}
                 gwbuf_free(errbuf);
@@ -1556,9 +1565,10 @@ static GWBUF* process_response_data (
                                 * enough data to read the packet length.
                                 */
                                 init_response_status(readbuf, srvcmd, &npackets_left, &nbytes_left);
-				initial_packets = npackets_left;
-				initial_bytes = nbytes_left;
                         }
+
+			initial_packets = npackets_left;
+			initial_bytes = nbytes_left;
                 }
                 /** Only session commands with responses should be processed */
                 ss_dassert(npackets_left > 0);

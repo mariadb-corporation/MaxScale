@@ -82,12 +82,13 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         
     if (session == NULL) 
     {
+      char errbuf[STRERROR_BUFLEN];
         LOGIF(LE, (skygw_log_write_flush(
             LOGFILE_ERROR,
             "Error : Failed to allocate memory for "
             "session object due error %d, %s.",
             errno,
-            strerror(errno))));
+            strerror_r(errno, errbuf, sizeof(errbuf)))));
         session_simple_free(session, client_dcb);
         return NULL;
     }

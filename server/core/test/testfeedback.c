@@ -40,6 +40,7 @@
 #include <housekeeper.h>
 #include <buffer.h>
 #include <regex.h>
+#include <modules.h>
 
 static char* server_options[] = {
     "MariaDB Corporation MaxScale",
@@ -63,6 +64,9 @@ static char* server_groups[] = {
     NULL
 };
 
+int config_load(char *);
+int module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *cfg);
+int do_http_post(GWBUF *buffer, void *cfg);
 
 int main(int argc, char** argv)
 {

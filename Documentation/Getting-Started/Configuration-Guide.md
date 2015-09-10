@@ -33,7 +33,18 @@ The MaxScale configuration is read from a file which can be located in a number 
 
 An explicit path to a configuration file can be passed by using the `-f` option to MaxScale.
 
-The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration, these sections define services, servers, listeners, monitors and global settings.
+The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration, these sections define services, servers, listeners, monitors and global settings. Parameters which expect a comma-separated list of values can be defined on multiple lines. The following is an example of a multi-line definition.
+
+```
+[MyService]
+type=service
+router=readconnroute
+servers=server1,
+        server2,
+        server3
+```
+
+The values of the parameter that are not on the first line need to have at least one whitespace character before them in order for them to be recognized as a part of the multi-line parameter.
 
 Please see the section about [Protocol Modules](#protocol-modules) for more details about MaxScale and the default directories where modules will be searched for.
 
@@ -54,6 +65,18 @@ threads=1
 ```
 
 It should be noted that additional threads will be created to execute other internal services within MaxScale. This setting is used to configure the number of threads that will be used to manage the user connections.
+
+#### `auth_connect_timeout`
+
+The connection timeout in seconds for the MySQL connections to the backend server when user authentication data is fetched. Increasing the value of this parameter will cause MaxScale to wait longer for a response from the backend server before aborting the authentication process.
+
+#### `auth_read_timeout`
+
+The read timeout in seconds for the MySQL connection to the backend database when user authentication data is fetched. Increasing the value of this parameter will cause MaxScale to wait longer for a response from the backend server when user data is being actively fetched. If the authentication is failing and you either have a large number of database users and grants or the connection to the backend servers is slow, it is a good idea to increase this value.
+
+#### `auth_write_timeout`
+
+The write timeout in seconds for the MySQL connection to the backend database when user authentication data is fetched. Currently MaxScale does not write or modify the data in the backend server.
 
 #### `ms_timestamp`
 

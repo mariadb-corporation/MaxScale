@@ -131,7 +131,8 @@ int open_file(char* str, unsigned int write)
 		mode = O_RDONLY;
 	}
 	if((fd = open(str,mode,S_IRWXU|S_IRGRP|S_IXGRP|S_IXOTH)) < 0){
-		printf("Error %d: %s\n",errno,strerror(errno));
+                char errbuf[STRERROR_BUFLEN];
+		printf("Error %d: %s\n", errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 	}
 	return fd;
 }

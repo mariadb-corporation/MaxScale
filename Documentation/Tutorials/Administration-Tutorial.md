@@ -44,6 +44,7 @@ Switch|Long Option|Description
 `-s [yes no]`|`--syslog=[yes no]`|log messages to syslog (default:yes)
 `-S [yes no]`|`--maxscalelog=[yes no]`|log messages to MaxScale log (default: yes)
 `-v`|`--version`|print version info and exit
+`-V`|`--version-full`|print version info and the commit ID the binary was built from
 `-?`|`--help`|show this help
 
 <a name="stopping"></a> 

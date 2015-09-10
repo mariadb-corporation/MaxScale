@@ -42,6 +42,11 @@
 #define USERS_REFRESH_TIME 30           /* Allowed time interval (in seconds) after last update*/
 #define USERS_REFRESH_MAX_PER_TIME 4    /* Max number of load calls within the time interval */
 
+/** Default timeout values used by the connections which fetch user authentication data */
+#define DEFAULT_AUTH_CONNECT_TIMEOUT 3
+#define DEFAULT_AUTH_READ_TIMEOUT 1
+#define DEFAULT_AUTH_WRITE_TIMEOUT 2
+
 /* Max length of fields in the mysql.user table */
 #define MYSQL_USER_MAXLEN	128
 #define MYSQL_PASSWORD_LEN	41
@@ -68,4 +73,5 @@ extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
 extern int replace_mysql_users(SERVICE *service);
 extern int dbusers_save(USERS *, char *);
 extern int dbusers_load(USERS *, char *);
+bool check_service_permissions(SERVICE* service);
 #endif

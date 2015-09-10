@@ -34,11 +34,12 @@ It tries to send data and if there is any failure (timeout, server is down, etc)
 
 This feature is not enabled by default: MaxScale must be configured in [feedback] section:
 
-
-	[feedback]
-	feedback_enable=1
-	feedback_url=https://enterprise.mariadb.com/feedback/post
-	feedback_user_info=x-y-z-w
+```
+[feedback]
+feedback_enable=1
+feedback_url=https://enterprise.mariadb.com/feedback/post
+feedback_user_info=x-y-z-w
+```
 
 The activation code that will be provided by MariaDB corp upon request by the customer and it should be put in feedback_user_info.
 
@@ -63,32 +64,33 @@ MaxScale shall send the generated feedback report to a feedback server specified
 
 If it’s not possible to send data due to firewall or security settings the report could be generated manually (feedback_user_info is required) via MaxAdmin
 
-
+```
 MaxScale>show feedbackreport
-
+```
 
 Report could be saved to report.txt file:
 
-
+```
 maxadmin -uxxx -pyyy show feedbackreport > ./report.txt
 
 curl -F data=@./report.txt https://mariadb.org/feedback_plugin/post
-
+```
 
 Report Example:
-
-	FEEDBACK_SERVER_UID     6B5C44AEA73137D049B02E6D1C7629EF431A350F
-	FEEDBACK_USER_INFO      0467009f-b04d-45b1-a77b-b6b2ec9c6cf4
-	VERSION 1.0.6-unstable
-	NOW     1425914890
-	PRODUCT maxscale
-	Uname_sysname   Linux
-	Uname_distribution      CentOS release 6.5 (Final)
-	module_maxscaled_type   Protocol
-	module_maxscaled_version        V1.0.0
-	module_maxscaled_api    1.0.0
-	module_maxscaled_releasestatus  GA
-	module_telnetd_type     Protocol
-	module_telnetd_version  V1.0.1
-	module_telnetd_api      1.0.0
-	module_telnetd_releasestatus    GA
+```
+FEEDBACK_SERVER_UID     6B5C44AEA73137D049B02E6D1C7629EF431A350F
+FEEDBACK_USER_INFO      0467009f-b04d-45b1-a77b-b6b2ec9c6cf4
+VERSION 1.0.6-unstable
+NOW     1425914890
+PRODUCT maxscale
+Uname_sysname   Linux
+Uname_distribution      CentOS release 6.5 (Final)
+module_maxscaled_type   Protocol
+module_maxscaled_version        V1.0.0
+module_maxscaled_api    1.0.0
+module_maxscaled_releasestatus  GA
+module_telnetd_type     Protocol
+module_telnetd_version  V1.0.1
+module_telnetd_api      1.0.0
+module_telnetd_releasestatus    GA
+```

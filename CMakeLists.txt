@@ -38,6 +38,7 @@ find_package(MySQL)
 find_package(Pandoc)
 find_package(TCMalloc)
 find_package(Jemalloc)
+find_package(Git)
 find_package(CURL) 
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
@@ -54,6 +55,26 @@ else()
   else()
     add_definitions("-DOPENSSL_1_0")
   endif()
+endif()
+
+if(GIT_FOUND)
+  message(STATUS "Found git ${GIT_VERSION_STRING}")
+  execute_process(COMMAND ${GIT_EXECUTABLE} rev-list --max-count=1 HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT
+    ERROR_VARIABLE GIT_ERROR
+    RESULT_VARIABLE GIT_RVAL)
+  if(${GIT_RVAL} EQUAL 0)
+    string(REPLACE "\n" "" MAXSCALE_COMMIT ${GIT_COMMIT})
+    message(STATUS "Commit ID: ${MAXSCALE_COMMIT}")
+  else()
+    message(STATUS "Git exited with non-zero value: ${GIT_ERROR}")
+    message(STATUS "Could not find repository in source folder, MaxScale commit ID will not be resolved. Will use 'source-build' for commit ID.")
+    set(MAXSCALE_COMMIT "source-build")
+  endif()
+else()
+  message(WARNING "Could not find git, MaxScale commit ID will not be resolved. Will use 'source-build' for commit ID.")
+  set(MAXSCALE_COMMIT "source-build")
 endif()
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_RPATH}:${CMAKE_INSTALL_PREFIX}/${MAXSCALE_LIBDIR})
@@ -172,7 +193,7 @@ install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION ${MAXSCALE_SHARED
 install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale120.txt DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES server/maxscale_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
 if(WITH_MAXSCALE_CNF)
-  install(FILES server/maxscale_template.cnf DESTINATION ${MAXSCALE_CONFDIR} RENAME maxscale.cnf)
+  install(FILES server/maxscale_template.cnf DESTINATION ${MAXSCALE_CONFDIR} RENAME maxscale.cnf.template)
 endif()
 install(FILES server/maxscale_binlogserver_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${ERRMSG} DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale 

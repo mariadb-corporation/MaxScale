@@ -18,6 +18,13 @@
 #if !defined(LOG_MANAGER_H)
 # define LOG_MANAGER_H
 
+/*
+ * We need a common.h file that is included by every component.
+ */
+#if !defined(STRERROR_BUFLEN)
+#define STRERROR_BUFLEN 512
+#endif
+
 typedef struct filewriter_st  filewriter_t;
 typedef struct logfile_st     logfile_t;
 typedef struct fnames_conf_st fnames_conf_t;
@@ -50,13 +57,13 @@ typedef struct log_info_st
 	size_t li_sesid;
 	int    li_enabled_logs;
 } log_info_t;
-    
+
 #define LE LOGFILE_ERROR
 #define LM LOGFILE_MESSAGE
 #define LT LOGFILE_TRACE
 #define LD LOGFILE_DEBUG
 
-/** 
+/**
  * Check if specified log type is enabled in general or if it is enabled
  * for the current session.
  */
@@ -75,11 +82,11 @@ typedef struct log_info_st
 	{						\
 		cmd;					\
 	}
-	
+
 /**
  * Execute the given command if specified log is enabled in general or
  * if the log is enabled for the current session.
- */	
+ */
 #define LOGIF(id,cmd) if (LOG_IS_ENABLED(id))	\
 	{					\
 		cmd;				\
@@ -99,7 +106,16 @@ typedef struct log_info_st
  * RUN    Struct is valid for run-time checking.
  * DONE   means that possible memory allocations have been released.
  */
-typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t; 
+typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t;
+
+/**
+ * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].
+ */
+typedef enum
+{
+    LOG_AUGMENT_WITH_FUNCTION = 1,
+    LOG_AUGMENTATION_MASK     = (LOG_AUGMENT_WITH_FUNCTION)
+} log_augmentation_t;
 
 EXTERN_C_BLOCK_BEGIN
 
@@ -111,17 +127,35 @@ void skygw_logmanager_exit(void);
  * free private write buffer list
  */
 void skygw_log_done(void);
-int  skygw_log_write(logfile_id_t id, const char* format, ...);
+int  skygw_log_write_context(logfile_id_t id,
+                             const char* file, int line, const char* function,
+                             const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
 void skygw_log_sync_all(void);
 int  skygw_log_rotate(logfile_id_t id);
-int  skygw_log_write_flush(logfile_id_t id, const char* format, ...);
+int  skygw_log_write_context_flush(logfile_id_t id,
+                                   const char* file, int line, const char* function,
+                                   const char* format, ...);
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
 void skygw_log_sync_all(void);
 void skygw_set_highp(int);
 void logmanager_enable_syslog(int);
 void logmanager_enable_maxscalelog(int);
+
+#define skygw_log_write(id, format, ...)\
+    skygw_log_write_context(id, __FILE__, __LINE__, __FUNCTION__, format, ##__VA_ARGS__)
+
+#define skygw_log_write_flush(id, format, ...)\
+    skygw_log_write_context_flush(id, __FILE__, __LINE__, __FUNCTION__, format, ##__VA_ARGS__)
+
+/**
+ * What augmentation if any should a logged message be augmented with.
+ *
+ * Currently this is a global setting and affects all loggers.
+ */
+void skygw_log_set_augmentation(int bits);
+int skygw_log_get_augmentation();
 
 EXTERN_C_BLOCK_END
 

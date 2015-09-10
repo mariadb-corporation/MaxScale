@@ -37,7 +37,7 @@
 #define MAXSCALE_BADCONFIG	1	/* Configuration fiel error */
 #define MAXSCALE_NOLIBRARY	2	/* No embedded library found */
 #define MAXSCALE_NOSERVICES	3	/* No servics are running */
-#define MAXSCALE_HOMELESS	4	/* No MaxScale Home */
+#define MAXSCALE_ALREADYRUNNING	4	/* MaxScale is already runing */
 #define MAXSCALE_BADARG		5	/* Bad command line argument */
 #define MAXSCALE_INTERNALERROR	6	/* Internal error, see error log */
 #endif

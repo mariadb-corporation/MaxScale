@@ -109,7 +109,7 @@ EXTERNCMD* externcmd_allocate(char* argstr)
 	if(access(cmd->parameters[0],X_OK) != 0)
 	{
 	    skygw_log_write(LE,
-		     "Error: Cannot execute file: %s",
+		     "Error: Cannot execute file '%s'. Missing execution permissions.",
 		     cmd->parameters[0]);
 	    externcmd_free(cmd);
 	    return NULL;
@@ -147,8 +147,9 @@ int externcmd_execute(EXTERNCMD* cmd)
 
     if(pid < 0)
     {
+        char errbuf[STRERROR_BUFLEN];
         skygw_log_write(LOGFILE_ERROR,"Error: Failed to execute command '%s', fork failed: [%d] %s",
-                        cmd->parameters[0],errno,strerror(errno));
+                        cmd->parameters[0],errno,strerror_r(errno, errbuf, sizeof(errbuf)));
         rval = -1;
     }
     else if(pid == 0)

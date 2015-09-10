@@ -52,11 +52,6 @@
 #include <mysqld_error.h>
 #include <regex.h>
 
-
-#define DEFAULT_CONNECT_TIMEOUT 3
-#define DEFAULT_READ_TIMEOUT 1
-#define DEFAULT_WRITE_TIMEOUT 2
-
 #define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
 
 #if 0
@@ -82,7 +77,7 @@
 #define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
 
 #define MYSQL_USERS_WITH_DB_ORDER " ORDER BY host DESC"
-#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT user.user AS user,user.host AS host,user.password AS password,concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, user.Select_priv AS anydb,db.db AS db FROM mysql.user LEFT JOIN mysql.db ON user.user=db.user AND user.host=db.host WHERE user.user IS NOT NULL AND user.user <> ''" MYSQL_USERS_WITH_DB_ORDER
+#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT user.user AS user,user.host AS host,user.password AS password,concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, user.Select_priv AS anydb,db.db AS db FROM mysql.user LEFT JOIN mysql.db ON user.user=db.user AND user.host=db.host WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
 
 #define MYSQL_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS tbl_count"
 
@@ -121,11 +116,7 @@ int add_wildcard_users(USERS *users,
 		       char* db,
 		       HASHTABLE* hash);
 
-static int gw_mysql_set_timeouts(
-	MYSQL* handle,
-	int    read_timeout,
-	int    write_timeout,
-	int    connect_timeout);
+static int gw_mysql_set_timeouts(MYSQL* handle);
 
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
@@ -584,7 +575,8 @@ getAllUsers(SERVICE *service, USERS *users)
 						MYSQL_DATABASE_MAXLEN;
 	int		dbnames = 0;
 	int		db_grants = 0;
-	
+	bool anon_user = false;
+
 	if (serviceGetUser(service, &service_user, &service_passwd) == 0)
 	{
 		ss_dassert(service_passwd == NULL || service_user == NULL);
@@ -629,10 +621,7 @@ getAllUsers(SERVICE *service, USERS *users)
             }
 
             /** Set read, write and connect timeout values */
-            if (gw_mysql_set_timeouts(con,
-                                      DEFAULT_READ_TIMEOUT,
-                                      DEFAULT_WRITE_TIMEOUT,
-                                      DEFAULT_CONNECT_TIMEOUT))
+            if (gw_mysql_set_timeouts(con))
             {
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -701,10 +690,7 @@ getAllUsers(SERVICE *service, USERS *users)
             }
             
             /** Set read, write and connect timeout values */
-            if (gw_mysql_set_timeouts(con, 
-                                      DEFAULT_READ_TIMEOUT, 
-                                      DEFAULT_WRITE_TIMEOUT,
-                                      DEFAULT_CONNECT_TIMEOUT))
+            if (gw_mysql_set_timeouts(con))
             {
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -906,12 +892,13 @@ getAllUsers(SERVICE *service, USERS *users)
             users_data = (char *)calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
             
             if (users_data == NULL) {
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
-                                                 "Error : Memory allocation for user data failed due to "
+                        "Error : Memory allocation for user data failed due to "
 			"%d, %s.",
-                                                 errno,
-                                                 strerror(errno))));
+                        errno,
+                        strerror_r(errno, errbuf, sizeof(errbuf)))));
 		mysql_free_result(result);
 		mysql_close(con);
                 
@@ -928,7 +915,16 @@ getAllUsers(SERVICE *service, USERS *users)
 		
 		int rc = 0;
 		char *password = NULL;
-                
+
+                /** If the username is empty, the backend server still has anonymous
+                 * user in it. This will mean that localhost addresses do not match
+                 * the wildcard host '%' */
+                if(strlen(row[0]) == 0)
+                {
+                    anon_user = true;
+                    continue;
+                }
+
 		if (row[2] != NULL) {
                     /* detect mysql_old_password (pre 4.1 protocol) */
                     if (strlen(row[2]) == 16) {
@@ -1077,7 +1073,10 @@ getAllUsers(SERVICE *service, USERS *users)
         SHA1((const unsigned char *) final_data, strlen(final_data), hash);
 
 	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
-        
+
+        /** Set the parameter if it is not configured by the user */
+        if(service->localhost_match_wildcard_host == SERVICE_PARAM_UNINIT)
+            service->localhost_match_wildcard_host = anon_user ? 0 : 1;
         cleanup:
         
         free(dpwd);
@@ -1119,6 +1118,7 @@ getUsers(SERVICE *service, USERS *users)
 	int		dbnames = 0;
 	int		db_grants = 0;
 	char		dbnm[MYSQL_DATABASE_MAXLEN+1];
+        bool anon_user = false;
 	
 	if (serviceGetUser(service, &service_user, &service_passwd) == 0)
 	{
@@ -1141,10 +1141,7 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 	/** Set read, write and connect timeout values */
-	if (gw_mysql_set_timeouts(con, 
-		DEFAULT_READ_TIMEOUT, 
-		DEFAULT_WRITE_TIMEOUT,
-		DEFAULT_CONNECT_TIMEOUT))
+	if (gw_mysql_set_timeouts(con))
 	{
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -1402,12 +1399,13 @@ getUsers(SERVICE *service, USERS *users)
 	users_data = (char *)calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
 
 	if (users_data == NULL) {
+                char errbuf[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error : Memory allocation for user data failed due to "
 			"%d, %s.",
 			errno,
-			strerror(errno))));
+			strerror_r(errno, errbuf, sizeof(errbuf)))));
 		mysql_free_result(result);
 		mysql_close(con);
 
@@ -1437,6 +1435,15 @@ getUsers(SERVICE *service, USERS *users)
 		
 		int rc = 0;
 		char *password = NULL;
+
+                /** If the username is empty, the backend server still has anonymous
+                 * user in it. This will mean that localhost addresses do not match
+                 * the wildcard host '%' */
+                if(strlen(row[0]) == 0)
+                {
+                    anon_user = true;
+                    continue;
+                }
 
 		if (row[2] != NULL) {
 			/* detect mysql_old_password (pre 4.1 protocol) */
@@ -1567,6 +1574,10 @@ getUsers(SERVICE *service, USERS *users)
         SHA1((const unsigned char *) users_data, strlen(users_data), hash);
 
 	memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
+
+        /** Set the parameter if it is not configured by the user */
+        if(service->localhost_match_wildcard_host == SERVICE_PARAM_UNINIT)
+            service->localhost_match_wildcard_host = anon_user ? 0 : 1;
 
 	free(users_data);
 	mysql_free_result(result);
@@ -1997,17 +2008,15 @@ int	useorig = 0;
  * 
  * @return 0 if succeed, 1 if failed
  */
-static int gw_mysql_set_timeouts(
-	MYSQL* handle,
-	int    read_timeout,
-	int    write_timeout,
-	int    connect_timeout)
+static int gw_mysql_set_timeouts(MYSQL* handle)
 {	
 	int rc;
 	
+    GATEWAY_CONF* cnf = config_get_global_options();
+
 	if ((rc = mysql_options(handle, 
 		MYSQL_OPT_READ_TIMEOUT, 
-		(void *)&read_timeout)))
+		(void *)&cnf->auth_read_timeout)))
 	{
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -2018,7 +2027,7 @@ static int gw_mysql_set_timeouts(
 	
 	if ((rc = mysql_options(handle, 
 			MYSQL_OPT_CONNECT_TIMEOUT, 
-			(void *)&connect_timeout)))
+			(void *)&cnf->auth_conn_timeout)))
 	{
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -2029,7 +2038,7 @@ static int gw_mysql_set_timeouts(
 	
 	if ((rc = mysql_options(handle, 
 			MYSQL_OPT_WRITE_TIMEOUT, 
-			(void *)&write_timeout)))
+			(void *)&cnf->auth_write_timeout)))
 	{
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
@@ -2313,5 +2322,135 @@ int add_wildcard_users(USERS *users, char* name, char* host, char* password, cha
     regfree(&re);
     free(restr);
 
+    return rval;
+}
+
+/**
+ * Check if the service user has all required permissions to operate properly.
+ * this checks for SELECT permissions on mysql.user and mysql.db tables and for
+ * SHOW DATABASES permissions. If permissions are not adequate, an error message
+ * is logged.
+ * @param service Service to inspect
+ * @return True if service permissions are correct. False if one or more permissions
+ * are missing or if an error occurred.
+ */
+bool check_service_permissions(SERVICE* service)
+{
+    MYSQL* mysql;
+    MYSQL_RES* res;
+    char *user,*password,*dpasswd;
+    SERVER_REF* server;
+    int conn_timeout = 1;
+    bool rval = true;
+
+    if(isInternalService(service->routerModule))
+	return true;
+
+    if(service->dbref == NULL)
+    {
+	skygw_log_write(LE,"%s: Error: Service is missing the servers parameter.",service->name);
+	return false;
+    }
+
+    server = service->dbref;
+
+    if (serviceGetUser(service, &user, &password) == 0)
+    {
+	skygw_log_write(LE,
+                 "%s: Error: Service is missing the user credentials for authentication.",
+		 service->name);
+	return false;
+    }
+
+    dpasswd = decryptPassword(password);
+
+    if((mysql = mysql_init(NULL)) == NULL)
+    {
+	skygw_log_write(LE,"[%s] Error: MySQL connection initialization failed.",__FUNCTION__);
+	free(dpasswd);
+	return false;
+    }
+
+    mysql_options(mysql,MYSQL_OPT_USE_REMOTE_CONNECTION,NULL);
+    mysql_options(mysql,MYSQL_OPT_CONNECT_TIMEOUT,&conn_timeout);
+    /** Connect to the first server. This assumes all servers have identical
+     * user permissions. */
+
+    if(mysql_real_connect(mysql,server->server->name,user,dpasswd,NULL,server->server->port,NULL,0) == NULL)
+    {
+        int my_errno = mysql_errno(mysql);
+
+	skygw_log_write(LE,"%s: Error: Failed to connect to server %s(%s:%d) when"
+		" checking authentication user credentials and permissions: %d %s",
+		 service->name,
+		 server->server->unique_name,
+		 server->server->name,
+		 server->server->port,
+                 my_errno,
+                 mysql_error(mysql));
+	mysql_close(mysql);
+	free(dpasswd);
+
+        /** We don't know enough about user permissions */
+        return my_errno != ER_ACCESS_DENIED_ERROR;
+    }
+
+    if(mysql_query(mysql,"SELECT user, host, password,Select_priv FROM mysql.user limit 1") != 0)
+    {
+        if(mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
+        {
+            skygw_log_write(LE,"%s: Error: User '%s' is missing SELECT privileges"
+                    " on mysql.user table. MySQL error message: %s",
+                            service->name,user,mysql_error(mysql));
+             rval = false;
+        }
+        else
+        {
+            skygw_log_write(LE,"%s: Error: Failed to query from mysql.user table."
+                    " MySQL error message: %s",
+                            service->name,mysql_error(mysql));
+	}
+    }
+    else
+    {
+        if((res = mysql_use_result(mysql)) == NULL)
+        {
+            skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for"
+                    " permissions to the mysql.user table: %s",
+                            service->name,mysql_error(mysql));
+            mysql_close(mysql);
+            free(dpasswd);
+            return true;
+        }
+        mysql_free_result(res);
+    }
+    if(mysql_query(mysql,"SELECT user, host, db FROM mysql.db limit 1") != 0)
+    {
+        if(mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
+        {
+            skygw_log_write(LE,"%s: Error: User '%s' is missing SELECT privileges on mysql.db table. MySQL error message: %s",
+                            service->name,user,mysql_error(mysql));
+            rval = false;
+        }
+        else
+        {
+            skygw_log_write(LE,"%s: Error: Failed to query from mysql.db table. MySQL error message: %s",
+                            service->name,mysql_error(mysql));
+	}
+    }
+    else
+    {
+        if((res = mysql_use_result(mysql)) == NULL)
+        {
+            skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for permissions to the mysql.db table: %s",
+                            service->name,mysql_error(mysql));
+        }
+        else
+        {
+            mysql_free_result(res);
+        }
+    }
+    mysql_close(mysql);
+    free(dpasswd);
     return rval;
 }

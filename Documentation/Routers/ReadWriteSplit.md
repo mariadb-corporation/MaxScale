@@ -65,7 +65,7 @@ where *<criteria>* is one of the following:
 
 **`use_sql_variables_in`** specifies where should queries, which read session variable, be routed. The syntax for `use_sql_variable_in` is:
 
-    use_sql_variables_in=[master|all]
+    use_sql_variables_in=[master|all] (default: all)
 
 When value all is used, queries reading session variables can be routed to any available slave (depending on selection criteria). Note, that queries modifying session variables are routed to all backend servers by default, excluding write queries with embedded session variable modifications, such as:
 

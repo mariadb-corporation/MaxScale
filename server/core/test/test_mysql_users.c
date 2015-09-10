@@ -67,7 +67,7 @@ int set_and_get_single_mysql_users_ipv4(char *username, unsigned long ipv4, char
         }
         if ((service = (SERVICE *)calloc(1, sizeof(SERVICE))) == NULL) {
                 fprintf(stderr, "service_alloc() failed\n");
-                dcb_free(dcb);
+                dcb_close(dcb);
                 return 1;
         }
 
@@ -97,7 +97,7 @@ int set_and_get_single_mysql_users_ipv4(char *username, unsigned long ipv4, char
 		fprintf(stderr, "Failed adding %s@%s(%lu)\n", username, ret_ip, fix_ipv4);
 		users_free(mysql_users);
 		free(service);
-		dcb_free(dcb);
+		dcb_close(dcb);
 		return 1;
 	}
 
@@ -114,7 +114,7 @@ int set_and_get_single_mysql_users_ipv4(char *username, unsigned long ipv4, char
 
 	users_free(mysql_users);
 	free(service);
-	dcb_free(dcb);
+	dcb_close(dcb);
 
 	if (!fetch_data)
 		return 1;
@@ -198,7 +198,7 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 	}
         if ((service = (SERVICE *)calloc(1, sizeof(SERVICE))) == NULL) {
 		fprintf(stderr, "service_alloc() failed\n");
-		dcb_free(dcb);
+		dcb_close(dcb);
 		return ret;
 	}
 
@@ -208,7 +208,7 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 		if(!setipaddress(&client_addr.sin_addr, from)) {
 			fprintf(stderr, "setipaddress failed for host [%s]\n", from);
 			free(service);
-			dcb_free(dcb);
+			dcb_close(dcb);
 			return ret;
 		}
 	}
@@ -216,7 +216,7 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 	if ((data = (MYSQL_session *) calloc(1, sizeof(MYSQL_session))) == NULL) {
 		fprintf(stderr, "MYSQL_session alloc failed\n");
 		free(service);
-		dcb_free(dcb);
+		dcb_close(dcb);
 		return ret;
 	}
 
@@ -235,7 +235,7 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 	else
 		strncpy(data->db, "",MYSQL_DATABASE_MAXLEN);
 
-	/* freed by dcb_free(dcb) */
+	/* freed by dcb_close(dcb) */
 	dcb->data = data;
 
 	// the routine returns 1 on success
@@ -264,7 +264,7 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 
 	users_free(mysql_users);
 	free(service);
-	dcb_free(dcb);
+	dcb_close(dcb);
 
 	return ret;
 }

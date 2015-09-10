@@ -854,7 +854,8 @@ struct tm	tm;
 
 	if (router_inst->lastEventTimestamp)
 	{
-		localtime_r((const time_t*)&router_inst->lastEventTimestamp, &tm);
+		time_t	last_event = (time_t)router_inst->lastEventTimestamp;
+		localtime_r(&last_event, &tm);
 		asctime_r(&tm, buf);
 		dcb_printf(dcb, "\tLast binlog event timestamp:  			%ld (%s)\n",
 				router_inst->lastEventTimestamp, buf);
@@ -982,7 +983,8 @@ struct tm	tm;
 			if (session->lastEventTimestamp
 					&& router_inst->lastEventTimestamp)
 			{
-				localtime_r((const time_t*)&session->lastEventTimestamp, &tm);
+				time_t	session_last_event = (time_t)session->lastEventTimestamp;
+				localtime_r(&session_last_event, &tm);
 				asctime_r(&tm, buf);
 				dcb_printf(dcb, "\t\tLast binlog event timestamp			%u, %s", session->lastEventTimestamp, buf);
 				dcb_printf(dcb, "\t\tSeconds behind master				%u\n", router_inst->lastEventTimestamp - session->lastEventTimestamp);
@@ -1082,7 +1084,7 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error;
 socklen_t len;
-char		msg[85], *errmsg;
+char		msg[STRERROR_BUFLEN + 1], *errmsg;
 
 	/** Don't handle same error twice on same DCB */
         if (backend_dcb->dcb_errhandle_called)
@@ -1099,8 +1101,8 @@ char		msg[85], *errmsg;
 	len = sizeof(error);
 	if (router->master && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
 	{
-		strerror_r(error, msg, 80);
-		strcat(msg, " ");
+                char errbuf[STRERROR_BUFLEN];
+                sprintf(msg, "%s ", strerror_r(error, errbuf, sizeof(errbuf)));
 	}
 	else
 		strcpy(msg, "");

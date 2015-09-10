@@ -8,22 +8,22 @@ Mark Riddoch
 
 Last Updated: 24th June 2015
 
-[Overview](#overview)   
-[Running MaxAdmin](#running)   
-[Getting Help](#help)   
-[Working with Services](#services)   
-[Working with Servers](#servers)   
-[Working with Sessions](#sessions)   
-[Descriptor Control Blocks](#dcbs)   
-[Working with Filters](#filters)   
-[Working with Monitors](#monitors)   
-[Working With Administration Interface Users](#interface)   
-[MaxScale Status Commands](#statuscommands)   
-[Administration Commands](#admincommands)   
-[Configuring MaxScale to Accept MaxAdmin Connections](#connections)   
-[Tuning MaxScale](#tuning)   
+[Overview](#overview)
+[Running MaxAdmin](#running)
+[Working With Administration Interface Users](#interface)
+[Getting Help](#help)
+[Working with Services](#services)
+[Working with Servers](#servers)
+[Working with Sessions](#sessions)
+[Descriptor Control Blocks](#dcbs)
+[Working with Filters](#filters)
+[Working with Monitors](#monitors)
+[MaxScale Status Commands](#statuscommands)
+[Administration Commands](#admincommands)
+[Configuring MaxScale to Accept MaxAdmin Connections](#connections)
+[Tuning MaxScale](#tuning)
 
-<a name="overview"></a> 
+<a name="overview"></a>
 # Overview
 
 MaxAdmin is a simple client interface that can be used to interact with the MaxScale server, it allows the display of internal MaxScale statistics, status and control of MaxScale operations.
@@ -36,12 +36,57 @@ MaxAdmin supports
 
 * Execution of command scripts
 
-<a name="running"></a> 
+<a name="running"></a>
 # Running MaxAdmin
 
 The MaxAdmin client application may be run in two different modes, either as an interactive command shell for executing commands against MaxScale or by passing commands on the MaxAdmin command line itself.
 
-## Command Line Switches
+<a name="interface"></a>
+# Working With Administration Interface Users
+
+A default installation of MaxScale allows connection to the administration interface using the username of `admin` and the password `mariadb`. This username and password stay in effect as long as no other users have been created for the administration interface. As soon as the first user is added the use of `admin/mariadb` as login credentials will be disabled.
+
+
+## What Users Have Been Defined?
+
+In order to see the current users that have been defined for the administration interface use the command show users.
+
+    MaxScale> show users
+    Administration interface users:
+    Users table data
+    Hashtable: 0x734470, size 52
+    	No. of entries:     		5
+    	Average chain length:	0.1
+    	Longest chain length:	2
+    User names: vilho, root, dba, massi, mark
+    MaxScale>
+
+Please note that if no users have been configured the default admin/mariadb user will not be shown.
+
+    MaxScale> show users
+    Administration interface users:
+    No administration users have been defined.
+    MaxScale> 
+
+## Add A New User
+
+To add a new administrative user to the MaxScale server use the command add user. This command is passed a user name and a password.
+
+    MaxScale> add user maria dtbse243
+    User maria has been successfully added.
+    MaxScale> 
+
+## Delete A User
+
+To remove a user the command remove user is used, it must also be called with the username and password of the user. The password will be checked.
+
+    MaxScale> remove user maria des
+    Failed to remove user maria. Authentication failed
+    MaxScale> remove user maria dtbse243
+    User maria has been successfully removed.
+    MaxScale> 
+
+# Command Line Switches
 
 The MaxAdmin command accepts a number of switches
 
@@ -701,50 +746,6 @@ A monitor that has been shutdown may be restarted using the restart monitor comm
     	MaxScale MonitorId:	24201552
     	Replication lag:	enabled
     	Monitored servers:	127.0.0.1:3306, 127.0.0.1:3307, 127.0.0.1:3308, 127.0.0.1:3309
-    MaxScale> 
-
-<a name="interface"></a> 
-# Working With Administration Interface Users
-
-A default installation of MaxScale allows connection to the administration interface using the username of admin and the password mariadb. This username and password stay in effect as long as no other users have been created for the administration interface. As soon as the first user is added the use of admin/mariadb as login credentials will be disabled.
-
-## What Users Have Been Defined?
-
-In order to see the current users that have been defined for the administration interface use the command show users.
-
-    MaxScale> show users
-    Administration interface users:
-    Users table data
-    Hashtable: 0x734470, size 52
-    	No. of entries:     		5
-    	Average chain length:	0.1
-    	Longest chain length:	2
-    User names: vilho, root, dba, massi, mark
-    MaxScale>
-
-Please note that if no users have been configured the default admin/mariadb user will not be shown.
-
-    MaxScale> show users
-    Administration interface users:
-    No administration users have been defined.
-    MaxScale> 
-
-## Add A New User
-
-To add a new administrative user to the MaxScale server use the command add user. This command is passed a user name and a password.
-
-    MaxScale> add user maria dtbse243
-    User maria has been successfully added.
-    MaxScale> 
-
-## Delete A User
-
-To remove a user the command remove user is used, it must also be called with the username and password of the user. The password will be checked.
-
-    MaxScale> remove user maria des
-    Failed to remove user maria. Authentication failed
-    MaxScale> remove user maria dtbse243
-    User maria has been successfully removed.
     MaxScale> 
 
 <a name="statuscommands"></a> 
