@@ -208,6 +208,8 @@ int main(int argc, char **argv) {
 
 	close(inst->binlog_fd);
 
+	skygw_log_sync_all();
+
 	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
 		"Check retcode: %i, Binlog Pos = %llu", ret, inst->binlog_position)));
 
