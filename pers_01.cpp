@@ -91,36 +91,16 @@ int check_pers_conn(TestConnections* Test, int pers_conn_expected[], char * serv
     return(global_result);
 }
 
-int main(int argc, char *argv[])
+int create_connections(int conn_N, TestConnections* Test)
 {
-    TestConnections * Test = new TestConnections(argc, argv);
-    int pers_conn_expected[4];
-    int galera_pers_conn_expected[4];
-    int global_result = 0;
-
-    pers_conn_expected[0] = 1;
-    pers_conn_expected[1] = 5;
-    pers_conn_expected[2] = 10;
-    pers_conn_expected[3] = 30;
-
-    galera_pers_conn_expected[0] = 10;
-    galera_pers_conn_expected[1] = 15;
-    galera_pers_conn_expected[2] = 0;
-    galera_pers_conn_expected[3] = 0;
-
-
     int i;
-
-
-    int conn_N = 40;
-
     MYSQL * rwsplit_conn[conn_N];
     MYSQL * master_conn[conn_N];
     MYSQL * slave_conn[conn_N];
     MYSQL * galera_conn[conn_N];
 
 
-    printf("Opening 40 connections to each backend\n");
+    printf("Opening %d connections to each backend\n", conn_N);
     for (i = 0; i < conn_N; i++) {
         rwsplit_conn[i] = Test->open_rwsplit_connection();
         if (mysql_errno(rwsplit_conn[i]) != 0) {
@@ -145,9 +125,36 @@ int main(int argc, char *argv[])
         mysql_close(rwsplit_conn[i]);
         mysql_close(master_conn[i]);
         mysql_close(slave_conn[i]);
+        mysql_close(galera_conn[i]);
     }
 
     sleep(5);
+    return(0);
+}
+
+int main(int argc, char *argv[])
+{
+    TestConnections * Test = new TestConnections(argc, argv);
+    int pers_conn_expected[4];
+    int galera_pers_conn_expected[4];
+    int global_result = 0;
+    int i;
+
+    pers_conn_expected[0] = 1;
+    pers_conn_expected[1] = 5;
+    pers_conn_expected[2] = 10;
+    pers_conn_expected[3] = 30;
+
+    galera_pers_conn_expected[0] = 10;
+    galera_pers_conn_expected[1] = 15;
+    galera_pers_conn_expected[2] = 0;
+    galera_pers_conn_expected[3] = 0;
+
+    int conn_N = 75;
+    create_connections(conn_N, Test);
+    Test->restart_maxscale();
+    conn_N = 70;
+    create_connections(conn_N, Test);
 
     printf("Test 1:\n");
     global_result += check_pers_conn(Test, pers_conn_expected, (char *) "server");
