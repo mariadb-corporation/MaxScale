@@ -15,7 +15,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab 2014
+ * Copyright MariaDB Corporation Ab 2014-2015
  */
 
 /**
@@ -141,6 +141,9 @@
  */
 #define	BLR_MASTER_BACKOFF_TIME	10
 #define BLR_MAX_BACKOFF		60
+
+/* string len for strerror_r message */
+#define BLRM_STRERROR_R_MSG_SIZE	128
 
 /**
  * Some useful macros for examining the MySQL Response packets
@@ -340,9 +343,12 @@ typedef struct router_instance {
 	MASTER_RESPONSES	saved_master;	/*< Saved master responses */
 	char			*binlogdir;	/*< The directory with the binlog files */
 	SPINLOCK		binlog_lock;	/*< Lock to control update of the binlog position */
+	int			pending_transaction; /*< Pending transaction */
 	char			binlog_name[BINLOG_FNAMELEN+1];
 					/*< Name of the current binlog file */
 	uint64_t		binlog_position;
+					/*< Current binlog position, safe pos */
+	uint64_t		current_pos;
 					/*< Current binlog position */
 	int			binlog_fd;	/*< File descriptor of the binlog
 					 *  file being written
