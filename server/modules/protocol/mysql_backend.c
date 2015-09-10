@@ -32,7 +32,7 @@
  * 17/06/2013	Massimiliano Pinto	Added MaxScale To Backends routines
  * 01/07/2013	Massimiliano Pinto	Put Log Manager example code behind SS_DEBUG macros.
  * 03/07/2013	Massimiliano Pinto	Added delayq for incoming data before mysql connection
- * 04/07/2013	Massimiliano Pinto	Added asyncrhronous MySQL protocol connection to backend
+ * 04/07/2013	Massimiliano Pinto	Added asynchronous MySQL protocol connection to backend
  * 05/07/2013	Massimiliano Pinto	Added closeSession if backend auth fails
  * 12/07/2013	Massimiliano Pinto	Added Mysql Change User via dcb->func.auth()
  * 15/07/2013	Massimiliano Pinto	Added Mysql session change via dcb->func.session()
