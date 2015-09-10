@@ -1476,7 +1476,6 @@ blr_format_event_size(double *event_size, char *label)
 		label[0] = 'B';
 }
 
-<<<<<<< HEAD
 /**
  * Read any previously saved master data
  *
