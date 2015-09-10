@@ -44,10 +44,12 @@ do
 		ip=`expr $IP_end + $i`
 		num=`printf "%03d" $i`
 		ip_var="$prefix"_"$num"
+		private_ip_var="$prefix"_private_"$num"
 		ip=${!ip_var}
+		private_ ip=${!private_ip_var}
 		server_num=`expr $i + 1`
 		IP_str="s/###$prefix"
-		IP_str+="_server_IP_$server_num###/$ip/"
+		IP_str+="_server_IP_$server_num###/$private_ip/"
 		sed -i "$IP_str"  MaxScale.cnf
 
         	port_var="$prefix"_port_"$num"
