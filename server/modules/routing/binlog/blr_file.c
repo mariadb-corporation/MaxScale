@@ -66,7 +66,6 @@ extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
-
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_file_append(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
@@ -1477,6 +1476,7 @@ blr_format_event_size(double *event_size, char *label)
 		label[0] = 'B';
 }
 
+<<<<<<< HEAD
 /**
  * Read any previously saved master data
  *

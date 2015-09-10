@@ -148,6 +148,7 @@
 #define	BLR_MASTER_BACKOFF_TIME	10
 #define BLR_MAX_BACKOFF		60
 
+<<<<<<< HEAD
 /* max size for error message returned to client */
 #define BINLOG_ERROR_MSG_LEN	385
 

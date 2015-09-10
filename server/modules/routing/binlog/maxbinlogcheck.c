@@ -125,37 +125,37 @@ int main(int argc, char **argv) {
 
 	arg_vector = malloc(sizeof(char*)*(arg_count + 1));
 
-        if(arg_vector == NULL)
-        {
-            fprintf(stderr,"Error: Memory allocation failed for log manager arg_vector.\n");
-            return 1;
-        }
+	if(arg_vector == NULL)
+	{
+		fprintf(stderr,"Error: Memory allocation failed for log manager arg_vector.\n");
+		return 1;
+	}
 
-        arg_vector[0] = "logmanager";
-        arg_vector[1] = "-j";
-        arg_vector[2] = "/tmp/maxbinlogcheck";
-        arg_vector[3] = "-o";
-        arg_vector[4] = NULL;
-        skygw_logmanager_init(arg_count,arg_vector);
+	arg_vector[0] = "logmanager";
+	arg_vector[1] = "-j";
+	arg_vector[2] = "/tmp/maxbinlogcheck";
+	arg_vector[3] = "-o";
+	arg_vector[4] = NULL;
+	skygw_logmanager_init(arg_count,arg_vector);
 
 	skygw_log_set_augmentation(0);
 
-        free(arg_vector);
+	free(arg_vector);
 
 	if (!debug_out)
 		skygw_log_disable(LOGFILE_DEBUG);
 	else
 		skygw_log_enable(LOGFILE_DEBUG);
 
-        if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
-        	LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-            		"Error: Memory allocation failed for ROUTER_INSTANCE")));
+	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"Error: Memory allocation failed for ROUTER_INSTANCE")));
 
 		skygw_log_sync_all();
       		skygw_logmanager_done();
 
-                return 1;
-        }
+		return 1;
+	}
 
 	if (argv[num_args] == NULL) {
 		printf("ERROR: No binlog file was specified\n");
@@ -170,20 +170,20 @@ int main(int argc, char **argv) {
 		fd = open(path, O_RDONLY, 0666);
 
 	if (fd == -1)
-        {
-                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-                        "Failed to open binlog file %s: %s",
-                                path, strerror(errno))));
+	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Failed to open binlog file %s: %s",
+			path, strerror(errno))));
         
 		skygw_log_sync_all();
-      		skygw_logmanager_done();
+		skygw_logmanager_done();
 
 		free(inst);
 
-                return 1;
-        }
+		return 1;
+	}
 
-        inst->binlog_fd = fd;
+	inst->binlog_fd = fd;
 
 	if (mariadb10_compat == 1)
 		inst->mariadb10_compat = 1;
@@ -208,13 +208,11 @@ int main(int argc, char **argv) {
 
 	close(inst->binlog_fd);
 
-        skygw_log_sync_all();
-
 	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
 		"Check retcode: %i, Binlog Pos = %llu", ret, inst->binlog_position)));
 
-        skygw_log_sync_all();
-        skygw_logmanager_done();
+	skygw_log_sync_all();
+	skygw_logmanager_done();
 
 	free(inst);
 
@@ -239,12 +237,11 @@ printUsage(const char *progname)
 	printVersion(progname);
 
 	printf("The MaxScale binlog check utility.\n\n");
-        printf("Usage: %s [-f] [-d] [-v] [<binlog file>]\n\n", progname);
-        printf("  -f|--fix		Fix binlog file, require write permissions (truncate)\n");
-        printf("  -d|--debug		Print debug messages\n");
-        printf("  -M|--mariadb10	MariaDB 10 binlog compatibility\n");
-        printf("  -V|--version          print version information and exit\n");
-        printf("  -?|--help             Print this help text\n");
+	printf("Usage: %s [-f] [-d] [-v] [<binlog file>]\n\n", progname);
+	printf("  -f|--fix		Fix binlog file, require write permissions (truncate)\n");
+	printf("  -d|--debug		Print debug messages\n");
+	printf("  -M|--mariadb10	MariaDB 10 binlog compatibility\n");
+	printf("  -V|--version          print version information and exit\n");
+	printf("  -?|--help             Print this help text\n");
 }
-
 
