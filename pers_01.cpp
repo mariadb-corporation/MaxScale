@@ -136,6 +136,7 @@ int main(int argc, char *argv[])
         }
         execute_query(master_conn[i], "select 1;");
         execute_query(slave_conn[i], "select 1;");
+        execute_query(galera_conn[i], "select 1;");
     }
 
     //global_result += check_pers_conn(Test, pers_conn_expected);
@@ -145,6 +146,8 @@ int main(int argc, char *argv[])
         mysql_close(master_conn[i]);
         mysql_close(slave_conn[i]);
     }
+
+    sleep(5);
 
     printf("Test 1:\n");
     global_result += check_pers_conn(Test, pers_conn_expected, (char *) "server");
