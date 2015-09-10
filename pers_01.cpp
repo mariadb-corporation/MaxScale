@@ -91,47 +91,6 @@ int check_pers_conn(TestConnections* Test, int pers_conn_expected[], char * serv
     return(global_result);
 }
 
-int create_connections(int conn_N, TestConnections* Test)
-{
-    int i;
-    MYSQL * rwsplit_conn[conn_N];
-    MYSQL * master_conn[conn_N];
-    MYSQL * slave_conn[conn_N];
-    MYSQL * galera_conn[conn_N];
-
-
-    printf("Opening %d connections to each backend\n", conn_N);
-    for (i = 0; i < conn_N; i++) {
-        rwsplit_conn[i] = Test->open_rwsplit_connection();
-        if (mysql_errno(rwsplit_conn[i]) != 0) {
-            printf("%s\n", mysql_error(rwsplit_conn[i]));
-        }
-        master_conn[i] = Test->open_readconn_master_connection();
-        slave_conn[i] = Test->open_readconn_slave_connection();
-        galera_conn[i] = open_conn(4016, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
-    }
-    for (i = 0; i < conn_N; i++) {
-        if (execute_query(rwsplit_conn[i], "select 1;") != 0) {
-            printf("Query failed!\n");
-        }
-        execute_query(master_conn[i], "select 1;");
-        execute_query(slave_conn[i], "select 1;");
-        execute_query(galera_conn[i], "select 1;");
-    }
-
-    //global_result += check_pers_conn(Test, pers_conn_expected);
-    printf("Closing all connections\n");
-    for (i=0; i<conn_N; i++) {
-        mysql_close(rwsplit_conn[i]);
-        mysql_close(master_conn[i]);
-        mysql_close(slave_conn[i]);
-        mysql_close(galera_conn[i]);
-    }
-
-    sleep(5);
-    return(0);
-}
-
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
@@ -150,11 +109,9 @@ int main(int argc, char *argv[])
     galera_pers_conn_expected[2] = 0;
     galera_pers_conn_expected[3] = 0;
 
-    int conn_N = 75;
-    create_connections(conn_N, Test);
     Test->restart_maxscale();
-    conn_N = 70;
-    create_connections(conn_N, Test);
+
+    Test->create_connections(70);
 
     printf("Test 1:\n");
     global_result += check_pers_conn(Test, pers_conn_expected, (char *) "server");

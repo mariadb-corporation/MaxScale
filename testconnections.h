@@ -360,6 +360,13 @@ public:
      * @return  0 in case of success
      */
     int reconfigure_maxscale(char* config_template);
+
+    /**
+     * @brief Create a number of connections to all services, run simple query, close all connections
+     * @param conn_N number of connections
+     * @return  0 in case of success
+     */
+    int create_connections(int conn_N);
 };
 
 /**

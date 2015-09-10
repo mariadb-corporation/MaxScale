@@ -588,4 +588,43 @@ int TestConnections::reconfigure_maxscale(char* config_template)
     return system(cmd); 
 }
 
+int TestConnections::create_connections(int conn_N)
+{
+    int i;
+    MYSQL * rwsplit_conn[conn_N];
+    MYSQL * master_conn[conn_N];
+    MYSQL * slave_conn[conn_N];
+    MYSQL * galera_conn[conn_N];
 
+
+    printf("Opening %d connections to each backend\n", conn_N);
+    for (i = 0; i < conn_N; i++) {
+        rwsplit_conn[i] = open_rwsplit_connection();
+        if (mysql_errno(rwsplit_conn[i]) != 0) {
+            printf("%s\n", mysql_error(rwsplit_conn[i]));
+        }
+        master_conn[i] = open_readconn_master_connection();
+        slave_conn[i] = open_readconn_slave_connection();
+        galera_conn[i] = open_conn(4016, maxscale_IP, maxscale_user, maxscale_password, ssl);
+    }
+    for (i = 0; i < conn_N; i++) {
+        if (execute_query(rwsplit_conn[i], "select 1;") != 0) {
+            printf("Query failed!\n");
+        }
+        execute_query(master_conn[i], "select 1;");
+        execute_query(slave_conn[i], "select 1;");
+        execute_query(galera_conn[i], "select 1;");
+    }
+
+    //global_result += check_pers_conn(Test, pers_conn_expected);
+    printf("Closing all connections\n");
+    for (i=0; i<conn_N; i++) {
+        mysql_close(rwsplit_conn[i]);
+        mysql_close(master_conn[i]);
+        mysql_close(slave_conn[i]);
+        mysql_close(galera_conn[i]);
+    }
+
+    sleep(5);
+    return(0);
+}
