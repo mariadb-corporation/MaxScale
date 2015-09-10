@@ -142,7 +142,6 @@ port=4016
 type=monitor
 module=galeramon
 servers=gserver1,gserver2,gserver3,gserver4
-disable_master_role_setting=true
 user=skysql
 passwd=skysql
 monitor_interval=1000
