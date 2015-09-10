@@ -37,7 +37,7 @@ persistmaxtime=30
 @endverbatim
  * open 75 connections to all Maxscale services
  * close connections
- * restart maxscale
+ * restart replication (stop all nodes and start them again, execute CHANGE MASTER TO again)
  * open 70 connections to all Maxscale services
  * close connections
  * check there is not crash during restart
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     int global_result = 0;
 
     Test->create_connections(75);
-    Test->restart_maxscale();
+    Test->repl->start_replication();
     Test->create_connections(70);
 
     global_result += check_log_err((char *) "fatal signal 11", false);
