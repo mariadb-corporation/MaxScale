@@ -787,151 +787,9 @@ int	filenum;
 }
 
 /**
- * Read any previously saved master data
+ * Read all replication events from a binlog file.
  *
- * @param       router          The router instance
- */
-void
-blr_cache_read_master_data(ROUTER_INSTANCE *router)
-{
-	router->saved_master.server_id = blr_cache_read_response(router, "serverid");
-	router->saved_master.heartbeat = blr_cache_read_response(router, "heartbeat");
-	router->saved_master.chksum1 = blr_cache_read_response(router, "chksum1");
-	router->saved_master.chksum2 = blr_cache_read_response(router, "chksum2");
-	router->saved_master.gtid_mode = blr_cache_read_response(router, "gtidmode");
-	router->saved_master.uuid = blr_cache_read_response(router, "uuid");
-	router->saved_master.setslaveuuid = blr_cache_read_response(router, "ssuuid");
-	router->saved_master.setnames = blr_cache_read_response(router, "setnames");
-	router->saved_master.utf8 = blr_cache_read_response(router, "utf8");
-	router->saved_master.select1 = blr_cache_read_response(router, "select1");
-	router->saved_master.selectver = blr_cache_read_response(router, "selectver");
-	router->saved_master.selectvercom = blr_cache_read_response(router, "selectvercom");
-	router->saved_master.selecthostname = blr_cache_read_response(router, "selecthostname");
-	router->saved_master.map = blr_cache_read_response(router, "map");
-	router->saved_master.mariadb10 = blr_cache_read_response(router, "mariadb10");
-}
-
-
-/**
- * Get the next binlog file name.
- *
- * @param router	The router instance
- * @return 		0 on error, >0 as sequence number
- */
-int
-blr_file_get_next_binlogname(ROUTER_INSTANCE *router)
-{
-char	*sptr;
-int	filenum;
-
-	if ((sptr = strrchr(router->binlog_name, '.')) == NULL)
-		return 0;
-	filenum = atoi(sptr+1);
-	if (filenum)
-		filenum++;
-
-	return filenum;
-}
-
-/**
- * Create a new binlog file
- *
- * @param router	The router instance
- * @param file		The new binlog file
- * @return		1 on success, 0 on failure
- */
-int
-blr_file_new_binlog(ROUTER_INSTANCE *router, char *file)
-{
-        return blr_file_create(router, file);
-}
-
-/**
- * Use current binlog file
- * @param router	The router instance
- * @param file		The binlog file
- */
-void
-blr_file_use_binlog(ROUTER_INSTANCE *router, char *file)
-{
-	return blr_file_append(router, file);
-}
-
-/**
- * Write a new ini file with master configuration
- *
- * File is 'inst->binlogdir/master.ini.tmp'
- * When done it's renamed to 'inst->binlogdir/master.ini'
- *
- * @param router	The current router instance
- * @param error		Preallocated error message
- * @return		0 on success, >0 on failure
- *
- */
-int
-blr_file_write_master_config(ROUTER_INSTANCE *router, char *error) {
-char *section = "binlog_configuration";
-FILE *config_file;
-int rc;
-char path[(PATH_MAX - 15) + 1] = "";
-char filename[(PATH_MAX - 4) + 1] = "";
-char tmp_file[PATH_MAX + 1] = "";
-char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-
-	strncpy(path, router->binlogdir, (PATH_MAX - 15));
-
-	snprintf(filename,(PATH_MAX - 4), "%s/master.ini", path);
-
-	snprintf(tmp_file, (PATH_MAX -4), filename);
-
-	strcat(tmp_file, ".tmp");
-
-	/* open file for writing */
-	config_file = fopen(tmp_file,"wb");
-	if (config_file == NULL) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
-		return 2;
-	}
-
-	if(chmod(tmp_file, S_IRUSR | S_IWUSR) < 0) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
-		return 2;
-	}
-
-	/* write ini file section */
-	fprintf(config_file,"[%s]\n", section);
-
-	/* write ini file key=value */
-	fprintf(config_file,"master_host=%s\n", router->service->dbref->server->name);
-	fprintf(config_file,"master_port=%d\n", router->service->dbref->server->port);
-	fprintf(config_file,"master_user=%s\n", router->user);
-	fprintf(config_file,"master_password=%s\n", router->password);
-	fprintf(config_file,"filestem=%s\n", router->fileroot);
-
-	fclose(config_file);
-
-	/* rename tmp file to right filename */
-	rc = rename(tmp_file, filename);
-
-	if (rc == -1) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
-		return 3;
-	}
-
-	if(chmod(filename, S_IRUSR | S_IWUSR) < 0) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
-		return 3;
-	}
-
-	return 0;
-}
-
-/**
- * Read all replication events from a binlog file in order to detect pending transactions
+ * Routine detects errors and pending transactions
  *
  * @param router        The router instance
  * @param fix           Whether to fix or not errors
@@ -1617,5 +1475,148 @@ blr_format_event_size(double *event_size, char *label)
 		label[0] = 'k';
 	} else
 		label[0] = 'B';
+}
+
+/**
+ * Read any previously saved master data
+ *
+ * @param       router          The router instance
+ */
+void
+blr_cache_read_master_data(ROUTER_INSTANCE *router)
+{
+	router->saved_master.server_id = blr_cache_read_response(router, "serverid");
+	router->saved_master.heartbeat = blr_cache_read_response(router, "heartbeat");
+	router->saved_master.chksum1 = blr_cache_read_response(router, "chksum1");
+	router->saved_master.chksum2 = blr_cache_read_response(router, "chksum2");
+	router->saved_master.gtid_mode = blr_cache_read_response(router, "gtidmode");
+	router->saved_master.uuid = blr_cache_read_response(router, "uuid");
+	router->saved_master.setslaveuuid = blr_cache_read_response(router, "ssuuid");
+	router->saved_master.setnames = blr_cache_read_response(router, "setnames");
+	router->saved_master.utf8 = blr_cache_read_response(router, "utf8");
+	router->saved_master.select1 = blr_cache_read_response(router, "select1");
+	router->saved_master.selectver = blr_cache_read_response(router, "selectver");
+	router->saved_master.selectvercom = blr_cache_read_response(router, "selectvercom");
+	router->saved_master.selecthostname = blr_cache_read_response(router, "selecthostname");
+	router->saved_master.map = blr_cache_read_response(router, "map");
+	router->saved_master.mariadb10 = blr_cache_read_response(router, "mariadb10");
+}
+
+/**
+ * Get the next binlog file name.
+ *
+ * @param router	The router instance
+ * @return 		0 on error, >0 as sequence number
+ */
+int
+blr_file_get_next_binlogname(ROUTER_INSTANCE *router)
+{
+char	*sptr;
+int	filenum;
+
+	if ((sptr = strrchr(router->binlog_name, '.')) == NULL)
+		return 0;
+	filenum = atoi(sptr+1);
+	if (filenum)
+		filenum++;
+
+	return filenum;
+}
+
+/**
+ * Create a new binlog file
+ *
+ * @param router	The router instance
+ * @param file		The new binlog file
+ * @return		1 on success, 0 on failure
+ */
+int
+blr_file_new_binlog(ROUTER_INSTANCE *router, char *file)
+{
+        return blr_file_create(router, file);
+}
+
+/**
+ * Use current binlog file
+ * @param router	The router instance
+ * @param file		The binlog file
+ */
+void
+blr_file_use_binlog(ROUTER_INSTANCE *router, char *file)
+{
+	return blr_file_append(router, file);
+}
+
+/**
+ * Write a new ini file with master configuration
+ *
+ * File is 'inst->binlogdir/master.ini.tmp'
+ * When done it's renamed to 'inst->binlogdir/master.ini'
+ *
+ * @param router	The current router instance
+ * @param error		Preallocated error message
+ * @return		0 on success, >0 on failure
+ *
+ */
+int
+blr_file_write_master_config(ROUTER_INSTANCE *router, char *error) {
+char *section = "binlog_configuration";
+FILE *config_file;
+int rc;
+char path[(PATH_MAX - 15) + 1] = "";
+char filename[(PATH_MAX - 4) + 1] = "";
+char tmp_file[PATH_MAX + 1] = "";
+char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+
+	strncpy(path, router->binlogdir, (PATH_MAX - 15));
+
+	snprintf(filename,(PATH_MAX - 4), "%s/master.ini", path);
+
+	snprintf(tmp_file, (PATH_MAX -4), filename);
+
+	strcat(tmp_file, ".tmp");
+
+	/* open file for writing */
+	config_file = fopen(tmp_file,"wb");
+	if (config_file == NULL) {
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		return 2;
+	}
+
+	if(chmod(tmp_file, S_IRUSR | S_IWUSR) < 0) {
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		return 2;
+	}
+
+	/* write ini file section */
+	fprintf(config_file,"[%s]\n", section);
+
+	/* write ini file key=value */
+	fprintf(config_file,"master_host=%s\n", router->service->dbref->server->name);
+	fprintf(config_file,"master_port=%d\n", router->service->dbref->server->port);
+	fprintf(config_file,"master_user=%s\n", router->user);
+	fprintf(config_file,"master_password=%s\n", router->password);
+	fprintf(config_file,"filestem=%s\n", router->fileroot);
+
+	fclose(config_file);
+
+	/* rename tmp file to right filename */
+	rc = rename(tmp_file, filename);
+
+	if (rc == -1) {
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		return 3;
+	}
+
+	if(chmod(filename, S_IRUSR | S_IWUSR) < 0) {
+		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		return 3;
+	}
+
+	return 0;
 }
 
