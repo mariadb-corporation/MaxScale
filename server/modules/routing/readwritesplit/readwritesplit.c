@@ -45,6 +45,8 @@ MODULE_INFO 	info = {
 #  include <mysql_client_server_protocol.h>
 #endif
 
+#define RWSPLIT_TRACE_MSG_LEN 1000
+
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -2247,7 +2249,7 @@ static bool route_single_stmt(
 		size_t        len = MIN(GWBUF_LENGTH(querybuf), 
 					MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start)-1);
 		char*         data = (char*)&packet[5];
-		char*         contentstr = strndup(data, len);
+		char*         contentstr = strndup(data, MIN(len, RWSPLIT_TRACE_MSG_LEN));
 		char*         qtypestr = skygw_get_qtype_str(qtype);
 		
 		skygw_log_write(
