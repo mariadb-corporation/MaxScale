@@ -106,7 +106,7 @@ static bool flushall_done_flag;
 /**
  * Default augmentation.
  */
-static int default_log_augmentation = LOG_AUGMENT_WITH_FUNCTION;
+static int default_log_augmentation = 0;
 static int log_augmentation = default_log_augmentation;
 
 /** Writer thread structure */

@@ -108,7 +108,7 @@ static inline void dcb_write_fake_code(DCB *dcb);
 static inline void dcb_write_when_already_queued(DCB *dcb, GWBUF *queue);
 static void dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno);
 static inline void dcb_write_tidy_up(DCB *dcb, bool below_water);
-static int dcb_write_SSL_error_report (DCB *dcb, int ret);
+static void dcb_write_SSL_error_report (DCB *dcb, int ret, int ssl_errno);
 
 size_t dcb_get_session_id(
 	DCB *dcb)
@@ -1453,23 +1453,31 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
 #if defined(FAKE_CODE)
             dcb_write_fake_code(dcb);
 #endif /* FAKE_CODE */
-	    do
-	    {
-                w = gw_write_SSL(dcb->ssl, GWBUF_DATA(queue), GWBUF_LENGTH(queue));
-		dcb->stats.n_writes++;
+            do
+            {
+                w = gw_write_SSL (dcb->ssl, GWBUF_DATA (queue), GWBUF_LENGTH (queue));
+                dcb->stats.n_writes++;
 
-		if (w <= 0)
-		{
-                    int ssl_errno = dcb_write_SSL_error_report (dcb, w);
-                    if(ssl_errno != SSL_ERROR_WANT_WRITE)
+                if (w <= 0)
+                {
+                    int ssl_errno = SSL_get_error (dcb->ssl, w);
+                    dcb_write_SSL_error_report (dcb, w, ssl_errno);
+                    if (ssl_errno != SSL_ERROR_WANT_WRITE)
                     {
-                        atomic_add(&dcb->writeqlen, gwbuf_length(queue));
+                        atomic_add (&dcb->writeqlen, gwbuf_length (queue));
                         dcb->stats.n_buffered++;
-                        dcb_write_tidy_up(dcb, below_water);
+                        dcb_write_tidy_up (dcb, below_water);
                         return 1;
                     }
+#ifdef SS_DEBUG
+                    else
+                    {
+                        skygw_log_write (LD, "SSL error: SSL_ERROR_WANT_WRITE, retrying SSL_write...");
+                    }
+#endif
                 }
-            } while(w <= 0);
+            }
+            while(w <= 0);
 
             /** Remove written bytes from the queue */
             queue = gwbuf_consume(queue, w);
@@ -1501,14 +1509,12 @@ dcb_write_SSL(DCB *dcb, GWBUF *queue)
  *
  * @param dcb   The DCB of the client
  * @param ret   The SSL operation return code
- * @return      The final SSL error number
+ * @param ssl_errno   The SSL error code
  */
-static int
-dcb_write_SSL_error_report (DCB *dcb, int ret)
+static void
+dcb_write_SSL_error_report (DCB *dcb, int ret, int ssl_errno)
 {
-    int ssl_errno;
     char errbuf[STRERROR_BUFLEN];
-    ssl_errno = SSL_get_error(dcb->ssl,ret);
 
     if (LOG_IS_ENABLED(LOGFILE_DEBUG))
     {
@@ -1587,7 +1593,6 @@ dcb_write_SSL_error_report (DCB *dcb, int ret)
             } while((ssl_errno = ERR_get_error()) != 0);
         }
     }
-    return SSL_ERROR_NONE;
 }
 
 /**
