@@ -124,6 +124,18 @@ log_debug=1
 
 To disable the log use the value 0 and to enable it use the value 1.
 
+#### `log_augmentation`
+
+Enable or disable the augmentation of messages. If this is enabled, then each logged message is appended with the name of the function where the message was logged. This is primarily for development purposes and hence is disabled by default.
+
+```
+# Valid options are:
+#       log_augmentation=<0|1>
+log_augmentation=1
+```
+
+To disable the augmentation use the value 0 and to enable it use the value 1.
+
 #### `logdir`
 
 Set the directory where the logfiles are stored. The folder needs to be both readable and writable by the user running MaxScale.

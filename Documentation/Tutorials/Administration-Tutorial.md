@@ -43,6 +43,7 @@ Switch|Long Option|Description
 `-U USER`|`--user=USER`|run MaxScale as another user. The user ID and group ID of this user are used to run MaxScale.
 `-s [yes no]`|`--syslog=[yes no]`|log messages to syslog (default:yes)
 `-S [yes no]`|`--maxscalelog=[yes no]`|log messages to MaxScale log (default: yes)
+`-G [0 1]`|`--log_augmentation=[0 1]`|augment messages with the name of the function where the message was logged (default: 0). Primarily for development purposes.
 `-v`|`--version`|print version info and exit
 `-V`|`--version-full`|print version info and the commit ID the binary was built from
 `-?`|`--help`|show this help

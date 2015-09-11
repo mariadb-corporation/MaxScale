@@ -181,6 +181,7 @@ static struct option long_options[] = {
   {"version",  no_argument,       0, 'v'},
   {"help",     no_argument,       0, '?'},
   {"version-full", no_argument, 0, 'V'},
+  {"log_augmentation", required_argument, 0, 'G'},
   {0, 0, 0, 0}
 };
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
@@ -197,6 +198,7 @@ static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
 static bool file_is_readable(char* absolute_pathname);
 static bool file_is_writable(char* absolute_pathname);
 bool handle_path_arg(char** dest, char* path, char* arg, bool rd, bool wr);
+static void set_log_augmentation(const char* value);
 static void usage(void);
 static char* get_expanded_pathname(
         char** abs_path,
@@ -1128,7 +1130,7 @@ int main(int argc, char **argv)
                 }
         }
 
-        while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:",
+        while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:G:",
 				 long_options, &option_index)) != -1)
         {
                 bool succp = true;
@@ -1291,6 +1293,9 @@ int main(int argc, char **argv)
 			succp = false;
 		    }
 		    break;
+                case 'G':
+                    set_log_augmentation(optarg);
+                    break;
 		case '?':
 		  usage();
 		  rc = EXIT_SUCCESS;
@@ -2312,6 +2317,21 @@ bool handle_path_arg(char** dest, char* path, char* arg, bool rd, bool wr)
 	return rval;
 }
 
+void set_log_augmentation(const char* value)
+{
+    // Command line arguments are handled first, thus command line argument
+    // has priority.
+
+    static bool augmentation_set = false;
+
+    if (!augmentation_set)
+    {
+        skygw_log_set_augmentation(atoi(value));
+
+        augmentation_set = true;
+    }
+}
+
 /**
  * Pre-parse the MaxScale.cnf for config, log and module directories.
  * @param data Parameter passed by inih
@@ -2423,6 +2443,10 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
 	{
 	    cnf->maxlog = config_truth_value((char*)value);
 	}
+        else if(strcmp(name, "log_augmentation") == 0)
+        {
+            set_log_augmentation(value);
+        }
     }
 
     return 1;
