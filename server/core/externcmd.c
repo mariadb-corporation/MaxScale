@@ -114,6 +114,7 @@ EXTERNCMD* externcmd_allocate(char* argstr)
 	    externcmd_free(cmd);
 	    return NULL;
 	}
+    skygw_log_write(LT, "Executing script %s.", cmd->parameters[0]);
     }
     return cmd;
 }
