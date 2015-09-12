@@ -1238,7 +1238,7 @@ getUsers(SERVICE *service, USERS *users)
 		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Error : Unable to get user data from backend database "
-			"for service [%s]. Missing server information.",
+			"for service [%s]. Failed to connect to any of the backend databases.",
 			service->name)));
 		mysql_close(con);
 		return -1;
