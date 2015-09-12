@@ -350,6 +350,10 @@ This parameter takes a boolean value and when enabled, will strip all `\` charac
 
 Enabling this feature will transform wildcard grants to individual database grants. This will consume more memory but authentication in MaxScale will be done faster. The parameter takes a boolean value.
 
+#### `retry_on_failure`
+
+The retry_on_failure parameter controls whether MaxScale will try to restart failed services and accepts a boolean value. This functionality is enabled by default to prevent services being permanently disabled if the starting of the service failed due to a network outage. Disabling the restarting of the failed services will cause them to be permanently disabled if the services can't be started when MaxScale is started.
+
 #### `connection_timeout`
 
 The connection_timeout parameter is used to disconnect sessions to MaxScale that have been idle for too long. The session timeouts are disabled by default. To enable them, define the timeout in seconds in the service's configuration section.
