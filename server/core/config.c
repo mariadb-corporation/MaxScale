@@ -622,7 +622,9 @@ process_config_context(CONFIG_CONTEXT *context)
 
 				}
 
-				if (enable_root_user)
+                serviceSetRetryOnFailure(obj->element, config_get_value(obj->parameters, "retry_on_failure"));
+
+                if (enable_root_user)
 					serviceEnableRootUser(
                                                 obj->element, 
                                                 config_truth_value(enable_root_user));
