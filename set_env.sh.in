@@ -35,6 +35,18 @@ export galera_001="192.168.122.$g2"
 export galera_002="192.168.122.$g3"
 export galera_003="192.168.122.$g4"
 
+export repl_private_000="192.168.122.$r1"
+export repl_private_001="192.168.122.$r2"
+export repl_private_002="192.168.122.$r3"
+export repl_private_003="192.168.122.$r4"
+
+# IP of Galera cluster nodes
+export galera_private_000="192.168.122.$g1"
+export galera_private_001="192.168.122.$g2"
+export galera_private_002="192.168.122.$g3"
+export galera_private_003="192.168.122.$g4"
+
+
 # MariaDB/Mysql port of of Master/Slave replication setup nodes
 export repl_port_000=3306
 export repl_port_001=3306
