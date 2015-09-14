@@ -325,7 +325,7 @@ install(FILES mariadb_tests_hartmut.sh configure_maxscale.sh DESTINATION system-
 install(FILES mariadb_tests_hartmut_galera.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES bug567.sh bug516.sh bug561.sh bug562.sh bug585 bug587_1 bug469.sh reload_server.sh reload_service.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES run_session_hang.sh bug564.sh crash_out_of_files_galera DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
-install(FILES bug648 ssl ssl_load setup_binlog1 mxs361 copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES bug648 ssl ssl_load setup_binlog1 mxs361 set_env.sh copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
 install(FILES templates DESTINATION system-test)
 install(FILES bug729.php DESTINATION system-test)
