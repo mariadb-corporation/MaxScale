@@ -1267,8 +1267,6 @@ double average_bytes = 0;
 
                 if(hdr.event_type == XID_EVENT) {
                         /* Commit received for a transactional tables, i.e. InnoDB */
-                        unsigned long long xid = (unsigned long long)extract_field(ptr, 64);
-                        skygw_log_write(LD, "XID_EVENT: %llu", xid);
 
                         if (pending_transaction > 0) {
                                 pending_transaction = 2;
