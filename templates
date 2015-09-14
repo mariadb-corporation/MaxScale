@@ -105,3 +105,4 @@ reload_server add_server
 reload_service add_service
 pers_01 pers_01
 pers_02 pers_01
+mxs361 mxs361
