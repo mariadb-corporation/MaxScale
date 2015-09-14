@@ -8,10 +8,10 @@
 #include "get_com_select_insert.h"
 #include "maxadmin_operations.h"
 
-int selects[256];
-int inserts[256];
-int new_selects[256];
-int new_inserts[256];
+long int selects[256];
+long int inserts[256];
+long int new_selects[256];
+long int new_inserts[256];
 int silent = 0;
 int tolerance;
 

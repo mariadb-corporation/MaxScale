@@ -9,13 +9,13 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
-    int q;
-    int i1, i2;
+    //int q;
+    long int i1, i2;
 
-    int selects[256];
-    int inserts[256];
-    int new_selects[256];
-    int new_inserts[256];
+    long int selects[256];
+    long int inserts[256];
+    long int new_selects[256];
+    long int new_inserts[256];
 
     Test->read_env();
     Test->print_env();

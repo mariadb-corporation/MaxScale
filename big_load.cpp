@@ -1,6 +1,6 @@
 #include "big_load.h"
 
-int load(int *new_inserts, int *new_selects, int *selects, int *inserts, int threads_num, TestConnections * Test, int *i1, int *i2, int rwsplit_only, bool galera)
+int load(long int *new_inserts, long int *new_selects, long int *selects, long int *inserts, int threads_num, TestConnections * Test, long int *i1, long int *i2, int rwsplit_only, bool galera)
 {
     int global_result;
     char sql[1000000];

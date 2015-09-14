@@ -21,13 +21,13 @@ int main(int argc, char *argv[])
 
     TestConnections * Test = new TestConnections(argc, argv);
     int global_result = 0;
-    int q;
+    long int q;
 
-    int selects[256];
-    int inserts[256];
-    int new_selects[256];
-    int new_inserts[256];
-    int i1, i2;
+    long int selects[256];
+    long int inserts[256];
+    long int new_selects[256];
+    long int new_inserts[256];
+    long int i1, i2;
 
     Test->read_env();
     Test->print_env();
@@ -41,10 +41,10 @@ int main(int argc, char *argv[])
 
     global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25, Test, &i1, &i2, 1, FALSE);
 
-    int avr = (i1 + i2 ) / (Test->repl->N);
+    long int avr = (i1 + i2 ) / (Test->repl->N);
     printf("average number of quries per node %d\n", avr);
-    int min_q = avr / 3;
-    int max_q = avr * 3;
+    long int min_q = avr / 3;
+    long int max_q = avr * 3;
     printf("Acceplable value for every node from %d until %d\n", min_q, max_q);
 
     for (int i = 1; i < Test->repl->N; i++) {

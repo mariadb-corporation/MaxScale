@@ -3,7 +3,7 @@
 /**
 Reads COM_SELECT and COM_INSERT variables from all nodes and stores into 'selects' and 'inserts'
 */
-int get_global_status_allnodes(int *selects, int *inserts, Mariadb_nodes * nodes, int silent)
+int get_global_status_allnodes(long int *selects, long int *inserts, Mariadb_nodes * nodes, int silent)
 {
     int i;
     MYSQL_RES *res;
@@ -23,7 +23,7 @@ int get_global_status_allnodes(int *selects, int *inserts, Mariadb_nodes * nodes
                 while((row = mysql_fetch_row(res)) != NULL)
                 {
                     if (silent == 0) {printf("Node %d COM_SELECT=%s\n", i, row[1]);}
-                    sscanf(row[1], "%d", &selects[i]);
+                    sscanf(row[1], "%ld", &selects[i]);
                 }
             }
 
@@ -44,7 +44,7 @@ int get_global_status_allnodes(int *selects, int *inserts, Mariadb_nodes * nodes
                 while((row = mysql_fetch_row(res)) != NULL)
                 {
                     if (silent == 0) {printf("Node %d COM_INSERT=%s\n", i, row[1]);}
-                    sscanf(row[1], "%d", &inserts[i]);
+                    sscanf(row[1], "%ld", &inserts[i]);
                 }
             }
 
@@ -64,12 +64,12 @@ int get_global_status_allnodes(int *selects, int *inserts, Mariadb_nodes * nodes
 /**
 Prints difference in COM_SELECT and COM_INSERT 
 */
-int print_delta(int *new_selects, int *new_inserts, int *selects, int *inserts, int NodesNum)
+int print_delta(long int *new_selects, long int *new_inserts, long int *selects, long int *inserts, int NodesNum)
 {
     int i;
     for (i=0; i<NodesNum; i++) {
-        printf("COM_SELECT increase on node %d is %d\n", i, new_selects[i]-selects[i]);
-        printf("COM_INSERT increase on node %d is %d\n", i, new_inserts[i]-inserts[i]);
+        printf("COM_SELECT increase on node %d is %ld\n", i, new_selects[i]-selects[i]);
+        printf("COM_INSERT increase on node %d is %ld\n", i, new_inserts[i]-inserts[i]);
     }
     return(0);
 }

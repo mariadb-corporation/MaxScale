@@ -15,10 +15,10 @@
 #include "get_com_select_insert.h"
 #include "maxadmin_operations.h"
 
-int selects[256];
-int inserts[256];
-int new_selects[256];
-int new_inserts[256];
+long int selects[256];
+long int inserts[256];
+long int new_selects[256];
+long int new_inserts[256];
 int silent = 0;
 int tolerance;
 
@@ -31,7 +31,7 @@ int tolerance;
  * @param Nodes pointer to Mariadb_nodes object that contains references to Master/Slave setup
  * @return 0 if COM_SELECT increased only on slave node and there is no COM_INSERT increase anywhere
  */
-int check_com_select(int *new_selects, int *new_inserts, int *selects, int *inserts, Mariadb_nodes * Nodes)
+int check_com_select(long int *new_selects, long int *new_inserts, long int *selects, long int *inserts, Mariadb_nodes * Nodes)
 {
     int i;
     int result = 0;
@@ -42,7 +42,7 @@ int check_com_select(int *new_selects, int *new_inserts, int *selects, int *inse
     for (i = 0; i < NodesNum; i++) {
         if (new_inserts[i]-inserts[i] != 0) {result = 1; printf("SELECT query executed, but COM_INSERT increased\n"); }
         if (!((new_selects[i]-selects[i] == 0) || (new_selects[i]-selects[i] == 1))) {
-            printf("SELECT query executed, but COM_SELECT change is %d\n", new_selects[i]-selects[i]);
+            printf("SELECT query executed, but COM_SELECT change is %ld\n", new_selects[i]-selects[i]);
             if (tolerance > 0) {
                 tolerance--;
             } else {
@@ -78,7 +78,7 @@ int check_com_select(int *new_selects, int *new_inserts, int *selects, int *inse
  * @param Nodes pointer to Mariadb_nodes object that contains references to Master/Slave setup
  * @return 0 if COM_INSERT increases on all nodes and there is no COM_SELECT increate anywhere
  */
-int check_com_insert(int *new_selects, int *new_inserts, int *selects, int *inserts, Mariadb_nodes * Nodes)
+int check_com_insert(long int *new_selects, long int *new_inserts, long int *selects, long int *inserts, Mariadb_nodes * Nodes)
 {
     int i;
     int result = 0;
@@ -88,9 +88,9 @@ int check_com_insert(int *new_selects, int *new_inserts, int *selects, int *inse
             sleep(1);
             get_global_status_allnodes(&new_selects[0], &new_inserts[0], Nodes, silent);
         }
-        if (new_inserts[i]-inserts[i] != 1) {result = 1; printf("INSERT query executed, but COM_INSERT increase is %d\n", new_inserts[i]-inserts[i]); }
+        if (new_inserts[i]-inserts[i] != 1) {result = 1; printf("INSERT query executed, but COM_INSERT increase is %ld\n", new_inserts[i]-inserts[i]); }
         if (new_selects[i]-selects[i] != 0) {
-            printf("INSERT query executed, but COM_SELECT increase is %d\n", new_selects[i]-selects[i]);
+            printf("INSERT query executed, but COM_SELECT increase is %ld\n", new_selects[i]-selects[i]);
             if (tolerance > 0) {
                 tolerance--;
             } else {
@@ -153,8 +153,8 @@ int main(int argc, char *argv[])
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
     global_result += check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
 
-    int selects_before_100[255];
-    int inserts_before_100[255];
+    long int selects_before_100[255];
+    long int inserts_before_100[255];
     silent = 1;
     get_global_status_allnodes(&selects_before_100[0], &inserts_before_100[0], Test->repl, silent);
     printf("Doing 100 selects\n");
