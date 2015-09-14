@@ -294,31 +294,37 @@ bool mon_print_fail_status(
         return succp;
 }
 
-void monitor_launch_script(MONITOR* mon,MONITOR_SERVERS* ptr, char* script)
+/**
+ * Launch a script
+ * @param mon Owning monitor
+ * @param ptr The server which has changed state
+ * @param script Script to execute
+ */
+void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 {
     char argstr[PATH_MAX + MON_ARG_MAX + 1];
     EXTERNCMD* cmd;
 
-    snprintf(argstr,PATH_MAX + MON_ARG_MAX,
-	     "%s --event=%s --initiator=%s:%d --nodelist=",
-	     script,
-	     mon_get_event_name(ptr),
-	     ptr->server->name,
-	     ptr->server->port);
+    snprintf(argstr, PATH_MAX + MON_ARG_MAX,
+             "%s --event=%s --initiator=%s:%d --nodelist=",
+             script,
+             mon_get_event_name(ptr),
+             ptr->server->name,
+             ptr->server->port);
 
-    mon_append_node_names(mon->databases,argstr,PATH_MAX + MON_ARG_MAX);
-    if((cmd = externcmd_allocate(argstr)) == NULL)
+    mon_append_node_names(mon->databases, argstr, PATH_MAX + MON_ARG_MAX);
+    if ((cmd = externcmd_allocate(argstr)) == NULL)
     {
-	skygw_log_write(LE,"Failed to initialize script: %s",script);
-	return;
+        skygw_log_write(LE, "Failed to initialize script: %s", script);
+        return;
     }
 
-    if(externcmd_execute(cmd))
+    if (externcmd_execute(cmd))
     {
-	skygw_log_write(LOGFILE_ERROR,
-		 "Error: Failed to execute script "
-		"'%s' on server state change event %s.",
-		 script,mon_get_event_type(ptr));
+        skygw_log_write(LOGFILE_ERROR,
+                        "Error: Failed to execute script "
+                        "'%s' on server state change event %s.",
+                        script, mon_get_event_name(ptr));
     }
     externcmd_free(cmd);
 }

@@ -814,7 +814,6 @@ uint8_t *ptr;
 int len;
 int var_block_len;
 int statement_len;
-int checksum_len=0;
 int found_chksum = 0;
 int event_error = 0;
 unsigned long transaction_events = 0;
@@ -1189,7 +1188,6 @@ double average_bytes = 0;
                                                 check_alg,
                                                 check_alg == 1 ? "BINLOG_CHECKSUM_ALG_CRC32" : "NONE or UNDEF")));
                                 if (check_alg == 1) {
-                                        checksum_len = 4;
                                         found_chksum = 1;
                                 } else  {
                                         found_chksum = 0;
@@ -1275,8 +1273,6 @@ double average_bytes = 0;
                         var_block_len = ptr[4 + 4 + 1 + 2];
 
                         statement_len = hdr.event_size - 19 - (4+4+1+2+2+var_block_len+1+db_name_len);
-                        //if (checksum_len)
-                        //              statement_len -= checksum_len;
 
                         statement_sql = calloc(1, statement_len+1);
                         strncpy(statement_sql, (char *)ptr+4+4+1+2+2+var_block_len+1+db_name_len, statement_len);
@@ -1321,8 +1317,6 @@ double average_bytes = 0;
 
                 if(hdr.event_type == XID_EVENT) {
                         /* Commit received for a transactional tables, i.e. InnoDB */
-                        uint64_t xid;
-                        xid = extract_field(ptr, 64);
 
                         if (pending_transaction > 0) {
                                 pending_transaction = 2;

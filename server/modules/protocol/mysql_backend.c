@@ -713,6 +713,7 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
 	MySQLProtocol *backend_protocol = dcb->protocol;
         int rc = 0; 
 
+        CHK_DCB(dcb);
         spinlock_acquire(&dcb->authlock);
         /**
          * Pick action according to state of protocol. 
@@ -722,10 +723,12 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         switch (backend_protocol->protocol_auth_state) {
                 case MYSQL_HANDSHAKE_FAILED:
                 case MYSQL_AUTH_FAILED:
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Unable to write to backend due to "
-                                "authentication failure.")));
+            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                             "Error : Unable to write to backend '%s' due to "
+                                             "%s failure. Server in state %s.",
+                                             dcb->server->unique_name,
+                                             backend_protocol->protocol_auth_state == MYSQL_HANDSHAKE_FAILED ? "handshake" : "authentication",
+                                             STRSRVSTATUS(dcb->server))));
                         /** Consume query buffer */
                         while ((queue = gwbuf_consume(
                                                 queue,
