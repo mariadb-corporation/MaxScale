@@ -4871,6 +4871,24 @@ static void handleError (
                         if (rses->rses_master_ref->bref_dcb == backend_dcb &&
 				!SERVER_IS_MASTER(srv))
 			{
+                        	backend_ref_t*  bref;
+                            bref = get_bref_from_dcb(rses, backend_dcb);
+                        	if (bref != NULL)
+                            {
+                                    CHK_BACKEND_REF(bref);
+                                    bref_clear_state(bref, BREF_IN_USE);
+                                    bref_set_state(bref, BREF_CLOSED);
+                            }
+                            else
+                            {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                    LOGFILE_ERROR,
+                                    "Error : server %s:%d lost the "
+                                    "master status but could not locate the "
+                                    "corresponding backend ref.",
+                                    srv->name,
+                                    srv->port)));	
+                            }
 				if (!srv->master_err_is_logged)
 				{
 					LOGIF(LE, (skygw_log_write_flush(
