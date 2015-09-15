@@ -541,10 +541,12 @@ char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 			free(key);
 
 		/* set the master_uuid from master if not set by the option */
-		if (router->set_master_uuid == NULL)
+		if (router->set_master_uuid == NULL) {
+			free(router->master_uuid);
 			router->master_uuid = val;
-		else
+		} else {
 			router->master_uuid = router->set_master_uuid;
+		}
 
 		// Response to the SERVER_UUID, should be stored
 		if (router->saved_master.uuid)
@@ -2082,6 +2084,12 @@ char 	*event_desc  = NULL;
 	return 1;
 }
 
+/**
+ * Log binlog router identy after master registration, state is BLRM_BINLOG_DUMP
+ *
+ * @param	router	The router instance
+ */
+
 static void blr_log_identity(ROUTER_INSTANCE *router) {
 
 	char *master_uuid;
@@ -2093,41 +2101,47 @@ static void blr_log_identity(ROUTER_INSTANCE *router) {
 	else {
 		master_version = blr_extract_column(router->saved_master.selectver, 1);
 	}
+
 	if (router->set_master_hostname)
 		master_hostname  = router->set_master_hostname;
 	else {
 		master_hostname = blr_extract_column(router->saved_master.selecthostname, 1);
 	}
+
 	if (router->set_master_uuid)
 		master_uuid = router->master_uuid;
 	else {
 		master_uuid = blr_extract_column(router->saved_master.uuid, 2);
 	}
 
-        LOGIF(LT, (skygw_log_write_flush(
-                LOGFILE_TRACE,
-                "%s: identity seen by the master: "
-                "server-id: %d, uuid: %s",
-                router->service->name,
-                router->serverid, (router->uuid == NULL ? "not available" : router->uuid))));
+	/* Seen by the master */
+	LOGIF(LT, (skygw_log_write_flush(
+		LOGFILE_TRACE,
+		"%s: identity seen by the master: "
+		"server-id: %d, uuid: %s",
+		router->service->name,
+		router->serverid, (router->uuid == NULL ? "not available" : router->uuid))));
+
+	/* Seen by the slaves */
 
 	/* MariaDB 5.5 and MariaDB don't have the MASTER_UUID var */
 	if (master_uuid == NULL) {
-        	LOGIF(LT, (skygw_log_write_flush(
-              	LOGFILE_TRACE,
-                "%s: identity seen by the slaves: "
-                "server-id: %d, hostname: %s, MySQL version: %s",
-                router->service->name,
-                router->masterid, (master_hostname == NULL ? "not available" : master_hostname),
-		(master_version == NULL ? "not available" : master_version))));
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"%s: identity seen by the slaves: "
+			"server-id: %d, hostname: %s, MySQL version: %s",
+			router->service->name,
+			router->masterid, (master_hostname == NULL ? "not available" : master_hostname),
+			(master_version == NULL ? "not available" : master_version))));
 	} else {
         	LOGIF(LT, (skygw_log_write_flush(
-              	LOGFILE_TRACE,
-                "%s: identity seen by the slaves: "
-                "server-id: %d, uuid: %s, hostname: %s, MySQL version: %s",
-                router->service->name,
-                router->masterid, master_uuid,
-                (master_hostname == NULL ? "not available" : master_hostname),
-		(master_version == NULL ? "not available" : master_version))));
+	              	LOGFILE_TRACE,
+			"%s: identity seen by the slaves: "
+			"server-id: %d, uuid: %s, hostname: %s, MySQL version: %s",
+			router->service->name,
+			router->masterid, master_uuid,
+			(master_hostname == NULL ? "not available" : master_hostname),
+			(master_version == NULL ? "not available" : master_version))));
 	}
 }
+
