@@ -267,7 +267,7 @@ int		fd;
 	fsync(fd);
 	close(router->binlog_fd);
 	spinlock_acquire(&router->binlog_lock);
-	strncpy(router->binlog_name, file, BINLOG_FNAMELEN);
+	memmove(router->binlog_name, file, BINLOG_FNAMELEN);
 	router->current_pos = lseek(fd, 0L, SEEK_END);
 	if (router->current_pos < 4) {
 		if (router->current_pos == 0) {

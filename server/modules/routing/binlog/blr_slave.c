@@ -3984,7 +3984,6 @@ uint8_t *ptr;
         } else {
                 *ptr++ = 1; /* warning byte set to 1 */
                 *ptr++ = 0;
-                *ptr++ = 0;
         }
 
 	/* set the new warning in this slave connection */
