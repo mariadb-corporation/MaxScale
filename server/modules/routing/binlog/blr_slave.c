@@ -505,8 +505,14 @@ extern  char *strcasestr();
 				if (rc == 0)
 					blr_slave_send_ok(router, slave);
 
-				free(query_text);
-				return 1;
+				if (rc >= 0) {
+					free(query_text);
+
+					return 1;
+				} else
+					LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+						"%s: Expected LIKE clause in SHOW GLOBAL STATUS.",
+						router->service->name)));
 			}
 		}
 		else if (strcasecmp(word, "VARIABLES") == 0)
@@ -587,8 +593,14 @@ extern  char *strcasestr();
 			if (rc == 0)
 				blr_slave_send_ok(router, slave);
 
-			free(query_text);
-			return 1;
+			if (rc >= 0) {
+				free(query_text);
+
+				return 1;
+			} else
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+					"%s: Expected LIKE clause in SHOW STATUS.",
+					router->service->name)));
 		}
 	}
 	else if (strcasecmp(query_text, "SET") == 0)
