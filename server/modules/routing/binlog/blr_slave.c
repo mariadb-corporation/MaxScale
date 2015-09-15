@@ -401,7 +401,10 @@ extern  char *strcasestr();
 				return blr_slave_send_var_value(router, slave, "@@version", router->set_master_version, BLR_TYPE_STRING);
 			else {
 				char *version = blr_extract_column(router->saved_master.selectver, 1);
-				return blr_slave_send_var_value(router, slave, "@@version", version == NULL ? "" : version, BLR_TYPE_STRING);
+				
+				blr_slave_send_var_value(router, slave, "@@version", version == NULL ? "" : version, BLR_TYPE_STRING);
+				free(version);
+				return 1;
 			}
 		}
 		else if (strcasecmp(word, "@@version_comment") == 0)
@@ -428,7 +431,9 @@ extern  char *strcasestr();
 				return blr_slave_send_var_value(router, slave, "@@server_uuid", router->master_uuid, BLR_TYPE_STRING);
 			else {
 				char *master_uuid = blr_extract_column(router->saved_master.uuid, 2);
-				return blr_slave_send_var_value(router, slave, "@@server_uuid", master_uuid == NULL ? "" : master_uuid, BLR_TYPE_STRING);
+				blr_slave_send_var_value(router, slave, "@@server_uuid", master_uuid == NULL ? "" : master_uuid, BLR_TYPE_STRING);
+				free(master_uuid);
+				return 1;
 			}
 		}
 		else if (strcasecmp(word, "@@max_allowed_packet") == 0)
@@ -494,8 +499,14 @@ extern  char *strcasestr();
 			}
 			else if (strcasecmp(word, "STATUS") == 0)
 			{
+				int rc = blr_slave_handle_status_variables(router, slave, brkb);
+
+				/* if no var found, send empty result set */
+				if (rc == 0)
+					blr_slave_send_ok(router, slave);
+
 				free(query_text);
-				return blr_slave_handle_status_variables(router, slave, brkb);
+				return 1;
 			}
 		}
 		else if (strcasecmp(word, "VARIABLES") == 0)
@@ -570,8 +581,14 @@ extern  char *strcasestr();
 		}
 		else if (strcasecmp(word, "STATUS") == 0)
 		{
+			int rc = blr_slave_handle_status_variables(router, slave, brkb);
+
+			/* if no var found, send empty result set */
+			if (rc == 0)
+				blr_slave_send_ok(router, slave);
+
 			free(query_text);
-			return blr_slave_handle_status_variables(router, slave, brkb);
+			return 1;
 		}
 	}
 	else if (strcasecmp(query_text, "SET") == 0)
@@ -3890,13 +3907,13 @@ char *word;
 char	*sep = " 	,=";
 
 	if ((word = strtok_r(stmt, sep, &brkb)) == NULL) {
-		return 0;
+		return -1;
 	} else if (strcasecmp(word, "LIKE") == 0) {
 		if ((word = strtok_r(NULL, sep, &brkb)) == NULL) {
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"%s: Missing LIKE clause in SHOW [GLOBAL] VARIABLES.",
 				router->service->name)));
-			return 0;
+			return -1;
 		} else if (strcasecmp(word, "'SERVER_ID'") == 0) {
 			if (router->set_master_server_id) {
 				char    server_id[40];
@@ -3911,10 +3928,6 @@ char	*sep = " 	,=";
 				return blr_slave_replay(router, slave, router->saved_master.uuid);
 		} else if (strcasecmp(word, "'MAXSCALE%'") == 0) {
 			return blr_slave_send_maxscale_variables(router, slave);
-		} else if (strcasecmp(word, "'Uptime'") == 0) {
-			char uptime[41]="";
-			snprintf(uptime, 40, "%d", MaxScaleUptime());
-			return blr_slave_send_variable(router, slave, "Uptime", uptime, BLR_TYPE_INT);
 		} else
 			return 0;
 	} else
@@ -4065,19 +4078,19 @@ int level_len = 0;
  */
 static int
 blr_slave_handle_status_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt) {
-char *brkb;
-char *word;
+char *brkb = NULL;
+char *word = NULL;
 /* SPACE,TAB,= */
 char	*sep = " 	,=";
 
 	if ((word = strtok_r(stmt, sep, &brkb)) == NULL) {
-		return 0;
+		return -1;
 	} else if (strcasecmp(word, "LIKE") == 0) {
 		if ((word = strtok_r(NULL, sep, &brkb)) == NULL) {
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"%s: Missing LIKE clause in SHOW [GLOBAL] VARIABLES.",
+				"%s: Missing LIKE clause in SHOW [GLOBAL] STATUS.",
 				router->service->name)));
-			return 0;
+			return -1;
 		} else if (strcasecmp(word, "'Uptime'") == 0) {
 			char uptime[41]="";
 			snprintf(uptime, 40, "%d", MaxScaleUptime());

@@ -1790,7 +1790,7 @@ char	*service_passwd = NULL;
 int
 blr_load_dbusers(ROUTER_INSTANCE *router)
 {
-int loaded;
+int loaded = -1;
 char	path[PATH_MAX+1] = "";
 SERVICE *service;
 	service = router->service;
@@ -1865,7 +1865,7 @@ blr_save_dbusers(ROUTER_INSTANCE *router)
 {
 SERVICE *service;
 char	path[PATH_MAX+1] = "";
-int	mkdir_rval;
+int	mkdir_rval = 0;
 
         service = router->service;
 
