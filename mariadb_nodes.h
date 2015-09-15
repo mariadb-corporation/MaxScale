@@ -87,12 +87,12 @@ public:
     /**
      * @brief start_db_command Command to start DB server
      */
-    char start_db_command[4096];
+    char start_db_command[256][4096];
 
     /**
-     * @brief stort_db_command Command to start DB server
+     * @brief stop_db_command Command to start DB server
      */
-    char stop_db_command[4096];
+    char stop_db_command[256][4096];
 
     /**
      * @brief ssl if true ssl  will be used

@@ -144,10 +144,10 @@ int TestConnections::read_env()
     env = getenv("ssl"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {ssl = true;}
     env = getenv("mysql51_only"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {no_nodes_check = true;}
 
-    strcpy(galera->start_db_command, start_db_command);
-    strcpy(galera->stop_db_command, stop_db_command);
-    strcpy(repl->start_db_command, start_db_command);
-    strcpy(repl->stop_db_command, stop_db_command);
+    //strcpy(galera->start_db_command, start_db_command);
+    //strcpy(galera->stop_db_command, stop_db_command);
+    //strcpy(repl->start_db_command, start_db_command);
+    //strcpy(repl->stop_db_command, stop_db_command);
 
     sprintf(repl->access_user, "%s", access_user);
     sprintf(repl->access_sudo, "%s", access_sudo);
