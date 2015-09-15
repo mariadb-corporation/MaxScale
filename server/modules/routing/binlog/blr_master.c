@@ -1825,6 +1825,7 @@ uint8_t         hdbuf[19];
 uint8_t         *data;
 GWBUF           *result;
 int             n;
+int		event_limit;
 
 	/* Get current binnlog position */
 	end_pos = router->current_pos;
@@ -1889,8 +1890,9 @@ int             n;
 	hdr->next_pos = EXTRACT32(&hdbuf[13]);
 	hdr->flags = EXTRACT16(&hdbuf[17]);
 
-	/* Add MariaDB 10 checks */
-	if (hdr->event_type > MAX_EVENT_TYPE)
+	event_limit = router->mariadb10_compat ? MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
+
+	if (hdr->event_type > event_limit)
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"Error: Reading saved events: invalid event type 0x%x. "
