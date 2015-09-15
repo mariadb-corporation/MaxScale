@@ -3655,10 +3655,10 @@ static bool select_connect_backend_servers(
                                 ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
                                 
                                 /** disconnect opened connections */
-                                dcb_close(backend_ref[i].bref_dcb);
                                 bref_clear_state(&backend_ref[i], BREF_IN_USE);
                                 /** Decrease backend's connection counter. */
                                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
+                                dcb_close(backend_ref[i].bref_dcb);
                         }
                 }
         }

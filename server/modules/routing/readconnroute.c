@@ -885,14 +885,21 @@ static void handleError(
     {
         spinlock_release(&session->ses_lock);
     }
-    
-    if (backend_dcb != router_cli_ses->backend_dcb)
-    {
-        /* Linkages have gone badly wrong - this may not be best solution */
-        raise(SIGABRT);
+
+    if (router_cli_ses->backend_dcb) {
+        if (backend_dcb != router_cli_ses->backend_dcb)
+        {
+            /* Linkages have gone badly wrong */
+            LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+                "Read Connection Router error in handleError: router client "
+                "session DCB %p is not null, but does not match backend DCB %p "
+                "either. \n",
+                router_cli_ses->backend_dcb,
+                backend_dcb)));
+        }
+        router_cli_ses->backend_dcb = NULL;
+        dcb_close(backend_dcb);
     }
-    router_cli_ses->backend_dcb = NULL;
-    dcb_close(backend_dcb);
 	
     /** false because connection is not available anymore */
     *succp = false;
