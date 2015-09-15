@@ -142,6 +142,8 @@ static int blr_slave_handle_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *sla
 static int blr_slave_send_warning_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message);
 static int blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
 extern int MaxScaleUptime();
+static int blr_slave_send_status_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
+static int blr_slave_handle_status_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -493,7 +495,7 @@ extern  char *strcasestr();
 			else if (strcasecmp(word, "STATUS") == 0)
 			{
 				free(query_text);
-				return blr_slave_handle_variables(router, slave, brkb);
+				return blr_slave_handle_status_variables(router, slave, brkb);
 			}
 		}
 		else if (strcasecmp(word, "VARIABLES") == 0)
@@ -569,7 +571,7 @@ extern  char *strcasestr();
 		else if (strcasecmp(word, "STATUS") == 0)
 		{
 			free(query_text);
-			return blr_slave_handle_variables(router, slave, brkb);
+			return blr_slave_handle_status_variables(router, slave, brkb);
 		}
 	}
 	else if (strcasecmp(query_text, "SET") == 0)
@@ -4051,5 +4053,103 @@ int level_len = 0;
 	} else {
 		return blr_slave_send_ok(router, slave);
 	}
+}
+
+/**
+ * Handle the response to the SQL command "SHOW [GLOBAL] STATUS LIKE or SHOW STATUS LIKE
+ *
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ * @param	stmt		The SQL statement
+ * @return	Non-zero if the variable is handled, 0 if variable is unknown, -1 for syntax error
+ */
+static int
+blr_slave_handle_status_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt) {
+char *brkb;
+char *word;
+/* SPACE,TAB,= */
+char	*sep = " 	,=";
+
+	if ((word = strtok_r(stmt, sep, &brkb)) == NULL) {
+		return 0;
+	} else if (strcasecmp(word, "LIKE") == 0) {
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"%s: Missing LIKE clause in SHOW [GLOBAL] VARIABLES.",
+				router->service->name)));
+			return 0;
+		} else if (strcasecmp(word, "'Uptime'") == 0) {
+			char uptime[41]="";
+			snprintf(uptime, 40, "%d", MaxScaleUptime());
+			return blr_slave_send_status_variable(router, slave, "Uptime", uptime, BLR_TYPE_INT);
+		} else
+			return 0;
+	} else
+		return -1;
+}
+
+
+/**
+ * Send the response to the SQL command "SHOW [GLOBAL] STATUS LIKE 'xxx'
+ *
+ * @param       router          The binlog router instance
+ * @param       slave           The slave server to which we are sending the response
+ * @param       variable        The variable name
+ * @param       value        	The variable value
+ * @param       column_type     The variable value type (string or int)
+ * @return      Non-zero if data was sent
+ */
+static int
+blr_slave_send_status_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+int     len, vers_len, seqno = 2;
+char	*p = strdup(variable);
+int	var_len;
+char	*old_ptr = p;
+
+	/* Remove heading and trailing "'" */
+	if(*p == '\'')
+		p++;
+	if (p[strlen(p)-1] == '\'')
+		p[strlen(p)-1] = '\0';
+
+	var_len  = strlen(p);
+
+	/* force lowercase */
+	for(int i = 0; i< var_len; i++) {
+		p[i] = tolower(p[i]);
+	}
+
+	/* First char is uppercase */
+	p[0]=toupper(p[0]);
+
+        blr_slave_send_fieldcount(router, slave, 2);
+
+	blr_slave_send_columndef_with_info_schema(router, slave, "Variable_name", BLR_TYPE_STRING, 40, seqno++);
+	blr_slave_send_columndef_with_info_schema(router, slave, "Value", column_type, 40, seqno++);
+
+        blr_slave_send_eof(router, slave, seqno++);
+
+        vers_len = strlen(value);
+        len = 5 + vers_len + var_len + 1;
+        if ((pkt = gwbuf_alloc(len)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        encode_value(ptr, vers_len + 2 + var_len, 24);	// Add length of data packet
+        ptr += 3;
+        *ptr++ = seqno++;				// Sequence number in response
+        *ptr++ = var_len;				// Length of result string
+        strncpy((char *)ptr, p, var_len);		// Result string with var name
+        ptr += var_len;
+        *ptr++ = vers_len;				// Length of result string
+        strncpy((char *)ptr, value, vers_len);		// Result string with var value
+        ptr += vers_len;
+        slave->dcb->func.write(slave->dcb, pkt);
+
+	free(old_ptr);
+
+        return blr_slave_send_eof(router, slave, seqno++);
 }
 

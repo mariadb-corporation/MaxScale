@@ -288,6 +288,8 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 	inst->set_master_uuid = NULL;
 	inst->set_master_server_id = NULL;
 
+	inst->serverid = 0;
+
 	my_uuid_init((ulong)rand()*12345,12345);
 	if ((defuuid = (unsigned char *)malloc(20)) != NULL)
 	{
@@ -332,9 +334,28 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 				{
 					inst->uuid = strdup(value);
 				}
-				else if (strcmp(options[i], "server-id") == 0)
+				else if ( (strcmp(options[i], "server_id") == 0) || (strcmp(options[i], "server-id") == 0) )
 				{
 					inst->serverid = atoi(value);
+					if (strcmp(options[i], "server-id") == 0) {
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"WARNING: Configuration setting '%s' in router_options is deprecated"
+							" and will be removed in a later version of MaxScale. "
+							"Please use the new setting '%s' instead.",
+							"server-id", "server_id")));
+					}
+
+					if (inst->serverid <= 0) {
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"Error : Service %s, invalid server-id '%s'. "
+							"Please configure it with a unique positive integer value (1..2^32-1)",
+							service->name, value)));
+
+						free(inst);
+						return NULL;
+					}
 				}
 				else if (strcmp(options[i], "user") == 0)
 				{
@@ -348,12 +369,20 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 				{
 					inst->password = strdup(value);
 				}
-				else if (strcmp(options[i], "master-id") == 0)
+				else if ( (strcmp(options[i], "master_id") == 0) || (strcmp(options[i], "master-id") == 0) )
 				{
 					int master_id = atoi(value);
 					if (master_id > 0) {
 						inst->masterid = master_id;
 						inst->set_master_server_id = strdup(value);
+					}
+					if (strcmp(options[i], "master-id") == 0) {
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"WARNING: Configuration setting '%s' in router_options is deprecated"
+							" and will be removed in a later version of MaxScale. "
+							"Please use the new setting '%s' instead.",
+							"master-id", "master_id")));
 					}
 				}
 				else if (strcmp(options[i], "master_uuid") == 0)
@@ -481,6 +510,14 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 		skygw_log_write_flush(LOGFILE_ERROR,
 			"Error : Service %s, binlog directory is not specified",
 			service->name);
+		free(inst);
+		return NULL;
+	}
+
+	if (inst->serverid <= 0) {
+		skygw_log_write_flush(LOGFILE_ERROR,
+			"Error : Service %s, server-id is not configured. Please configure it with a unique positive integer value (1..2^32-1)",
+			service->name, inst->serverid);
 		free(inst);
 		return NULL;
 	}
