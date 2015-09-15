@@ -213,6 +213,7 @@ static bool resolve_maxscale_conf_fname(
 static char* check_dir_access(char* dirname,bool,bool);
 static int set_user();
 bool pid_file_exists();
+void write_child_exit_code(int fd, int code);
 /** SSL multi-threading functions and structures */
 
 static SPINLOCK* ssl_locks;
@@ -1450,8 +1451,8 @@ int main(int argc, char **argv)
 
                 if(parent_process)
                 {
-                    int nread = read(daemon_pipe[0],(void*)&child_status,sizeof(int));
                     close(daemon_pipe[1]);
+                    int nread = read(daemon_pipe[0],(void*)&child_status,sizeof(int));
                     close(daemon_pipe[0]);
 
                     if(nread == -1)
@@ -1951,8 +1952,7 @@ int main(int argc, char **argv)
          * Successful start, notify the parent process that it can exit.
          */
         ss_dassert(rc == MAXSCALE_SHUTDOWN);
-        write(daemon_pipe[1],&rc,sizeof(int));
-        close(daemon_pipe[1]);
+        write_child_exit_code(daemon_pipe[1], rc);
 
 	MaxScaleStarted = time(0);
         /*<
@@ -1996,8 +1996,7 @@ return_main:
         if(daemon_mode && rc != MAXSCALE_SHUTDOWN)
         {
             /** Notify the parent process that an error has occurred */
-            write(daemon_pipe[1],&rc,sizeof(int));
-            close(daemon_pipe[1]);
+            write_child_exit_code(daemon_pipe[1], rc);
         }
 
 	if (threads)
@@ -2488,3 +2487,14 @@ static int set_user(char* user)
     return rval;
 }
 
+/**
+ * Write the exit status of the child process to the parent process.
+ * @param fd File descriptor to write to
+ * @param code Exit status of the child process
+ */
+void write_child_exit_code(int fd, int code)
+{
+    /** Notify the parent process that an error has occurred */
+    write(fd, &code, sizeof (int));
+    close(fd);
+}
