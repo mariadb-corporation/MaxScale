@@ -1480,6 +1480,14 @@ char	*rval;
 	// Finally we have reached the row
 	len = EXTRACT24(ptr);
 	ptr += 4;
+
+    /** The first EOF packet signals the start of the resultset rows and the second
+     EOF packet signals the end of the result set. If the resultset
+     contains a second EOF packet right after the first one, the result set is empty and
+     contains no rows. */
+    if(len == 5 && *ptr == 0xfe)
+        return NULL;
+
 	while (--col > 0)
 	{
 		collen = *ptr++;
