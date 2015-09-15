@@ -11,7 +11,7 @@ Here is a list of bugs fixed since the release of MaxScale 1.2.0.
 * [MXS-328](https://mariadb.atlassian.net/browse/MXS-328): Read-Write router frees buffer after write (which also frees)
 * [MXS-325](https://mariadb.atlassian.net/browse/MXS-325): Maxinfo HTTP interface leaks memory
 * [MXS-324](https://mariadb.atlassian.net/browse/MXS-324): HTTPD protocol leaks memory
-* [MXS-322](https://mariadb.atlassian.net/browse/MXS-322): https://mariadb.atlassian.net/browse/MXS-322
+* [MXS-322](https://mariadb.atlassian.net/browse/MXS-322): Available_when_donor is not working
 * [MXS-270](https://mariadb.atlassian.net/browse/MXS-270): Crash with MySQLBackend protocol module
 * [MXS-207](https://mariadb.atlassian.net/browse/MXS-207): MaxScale received fatal signal 11 (libreadwritesplit)
 
