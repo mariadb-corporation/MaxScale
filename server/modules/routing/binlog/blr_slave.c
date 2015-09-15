@@ -399,7 +399,7 @@ extern  char *strcasestr();
 				return blr_slave_send_var_value(router, slave, "@@version", router->set_master_version, BLR_TYPE_STRING);
 			else {
 				char *version = blr_extract_column(router->saved_master.selectver, 1);
-				return blr_slave_send_var_value(router, slave, "@@version", version, BLR_TYPE_STRING);
+				return blr_slave_send_var_value(router, slave, "@@version", version == NULL ? "" : version, BLR_TYPE_STRING);
 			}
 		}
 		else if (strcasecmp(word, "@@version_comment") == 0)
@@ -426,7 +426,7 @@ extern  char *strcasestr();
 				return blr_slave_send_var_value(router, slave, "@@server_uuid", router->master_uuid, BLR_TYPE_STRING);
 			else {
 				char *master_uuid = blr_extract_column(router->saved_master.uuid, 2);
-				return blr_slave_send_var_value(router, slave, "@@server_uuid", master_uuid, BLR_TYPE_STRING);
+				return blr_slave_send_var_value(router, slave, "@@server_uuid", master_uuid == NULL ? "" : master_uuid, BLR_TYPE_STRING);
 			}
 		}
 		else if (strcasecmp(word, "@@max_allowed_packet") == 0)
