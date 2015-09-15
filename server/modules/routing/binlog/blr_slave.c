@@ -52,8 +52,9 @@
  *					master_uuid, master_hostname, master_version
  *					If set those values are sent to slaves instead of
  *					saved master responses
- * 03/09/2015	Massimiliano Pinto	Added support for SHOW GLOBAL VARIABLES LIKE
+ * 03/09/2015	Massimiliano Pinto	Added support for SHOW [GLOBAL] VARIABLES LIKE
  * 04/09/2015	Massimiliano Pinto	Added support for SHOW WARNINGS
+ * 15/09/2015	Massimiliano Pinto	Added support for SHOW [GLOBAL] STATUS LIKE 'Uptime'
  *
  * @endverbatim
  */
@@ -140,6 +141,7 @@ char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char 
 static int blr_slave_handle_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt);
 static int blr_slave_send_warning_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message);
 static int blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
+extern int MaxScaleUptime();
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -271,7 +273,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SELECT @@version
  *	SELECT @@server_uuid
  *
- * Six show commands are supported:
+ * Eight show commands are supported:
  *	SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
  *	SHOW [GLOBAL] VARIABLES LIKE 'SERVER_UUID'
  *	SHOW [GLOBAL] VARIABLES LIKE 'MAXSCALE%'
@@ -279,6 +281,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SHOW MASTER STATUS
  *	SHOW SLAVE HOSTS
  *	SHOW WARNINGS
+ *	SHOW [GLOBAL] STATUS LIKE 'Uptime'
  *
  * Six set commands are supported:
  *	SET @master_binlog_checksum = @@global.binlog_checksum
@@ -487,6 +490,11 @@ extern  char *strcasestr();
 						"%s: Expected LIKE clause in SHOW GLOBAL VARIABLES.",
 						router->service->name)));
 			}
+			else if (strcasecmp(word, "STATUS") == 0)
+			{
+				free(query_text);
+				return blr_slave_handle_variables(router, slave, brkb);
+			}
 		}
 		else if (strcasecmp(word, "VARIABLES") == 0)
 		{
@@ -557,6 +565,11 @@ extern  char *strcasestr();
 				else
 					return blr_slave_send_ok(router, slave);	
 			}
+		}
+		else if (strcasecmp(word, "STATUS") == 0)
+		{
+			free(query_text);
+			return blr_slave_handle_variables(router, slave, brkb);
 		}
 	}
 	else if (strcasecmp(query_text, "SET") == 0)
@@ -3896,6 +3909,10 @@ char	*sep = " 	,=";
 				return blr_slave_replay(router, slave, router->saved_master.uuid);
 		} else if (strcasecmp(word, "'MAXSCALE%'") == 0) {
 			return blr_slave_send_maxscale_variables(router, slave);
+		} else if (strcasecmp(word, "'Uptime'") == 0) {
+			char uptime[41]="";
+			snprintf(uptime, 40, "%d", MaxScaleUptime());
+			return blr_slave_send_variable(router, slave, "Uptime", uptime, BLR_TYPE_INT);
 		} else
 			return 0;
 	} else

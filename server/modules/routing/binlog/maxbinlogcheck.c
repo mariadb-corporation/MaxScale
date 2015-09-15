@@ -82,6 +82,12 @@ static struct option long_options[] = {
 
 char *binlog_check_version = "1.0.0";
 
+int
+MaxScaleUptime()
+{
+return 1;
+}
+
 int main(int argc, char **argv) {
 	char** arg_vector;
 	int arg_count = 4;
