@@ -2428,9 +2428,8 @@ bool check_service_permissions(SERVICE* service)
     {
         if(mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
-            skygw_log_write(LE,"%s: Error: User '%s' is missing SELECT privileges on mysql.db table. MySQL error message: %s",
+            skygw_log_write(LE,"%s: Warning: User '%s' is missing SELECT privileges on mysql.db table. Database name will be ignored in authentication. MySQL error message: %s",
                             service->name,user,mysql_error(mysql));
-            rval = false;
         }
         else
         {
