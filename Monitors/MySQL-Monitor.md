@@ -6,7 +6,7 @@ The MySQL Monitor is a monitoring module for MaxScale that monitors a Master-Sla
 
 ## Configuration
 
-A minimal configuration for a  monitor requires a set of servers for monitoring and a username and a password to connect to these servers. The user requires the REPLICATION CLIENT privilege to successfully monitor the state of the servers.
+A minimal configuration for a  monitor requires a set of servers for monitoring and a username and a password to connect to these servers.
 
 ```
 [MySQL Monitor]
@@ -16,6 +16,13 @@ servers=server1,server2,server3
 user=myuser
 passwd=mypwd
 
+```
+
+The user requires the REPLICATION CLIENT privilege to successfully monitor the state of the servers.
+
+```
+MariaDB [(none)]> grant replication client on *.* to 'maxscale'@'maxscalehost';
+Query OK, 0 rows affected (0.00 sec)
 ```
 
 ## Optional parameters for all monitors
