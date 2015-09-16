@@ -2128,16 +2128,16 @@ static void blr_log_identity(ROUTER_INSTANCE *router) {
 
 	/* MariaDB 5.5 and MariaDB don't have the MASTER_UUID var */
 	if (master_uuid == NULL) {
-		LOGIF(LT, (skygw_log_write_flush(
-			LOGFILE_TRACE,
+		LOGIF(LM, (skygw_log_write_flush(
+			LOGFILE_MESSAGE,
 			"%s: identity seen by the slaves: "
 			"server-id: %d, hostname: %s, MySQL version: %s",
 			router->service->name,
 			router->masterid, (master_hostname == NULL ? "not available" : master_hostname),
 			(master_version == NULL ? "not available" : master_version))));
 	} else {
-        	LOGIF(LT, (skygw_log_write_flush(
-	              	LOGFILE_TRACE,
+        	LOGIF(LM, (skygw_log_write_flush(
+	              	LOGFILE_MESSAGE,
 			"%s: identity seen by the slaves: "
 			"server-id: %d, uuid: %s, hostname: %s, MySQL version: %s",
 			router->service->name,
