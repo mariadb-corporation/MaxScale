@@ -32,7 +32,7 @@
 #include <dcb.h>
 #include <hashtable.h>
 #include <mysql_client_server_protocol.h>
-
+#include <pcre.h>
 /**
  * Bitmask values for the router session's initialization. These values are used
  * to prevent responses from internal commands being forwarded to the client.
@@ -42,8 +42,8 @@ typedef enum init_mask
   INIT_READY = 0x0,
   INIT_MAPPING = 0x1,
   INIT_USE_DB = 0x02,
-  INIT_UNINT = 0x04
-
+  INIT_UNINT = 0x04,
+  INIT_FAILED = 0x08
 } init_mask_t;
 
 /** 
@@ -64,6 +64,10 @@ typedef enum bref_state {
 #define BREF_IS_CLOSED(s)           ((s)->bref_state & BREF_CLOSED)
 #define BREF_IS_MAPPED(s)           ((s)->bref_mapped)
 
+#define SCHEMA_ERR_DUPLICATEDB 5000
+#define SCHEMA_ERRSTR_DUPLICATEDB "DUPDB"
+#define SCHEMA_ERR_DBNOTFOUND  1049
+#define SCHEMA_ERRSTR_DBNOTFOUND "42000"
 /** 
  * The type of the backend server
  */
@@ -316,6 +320,12 @@ typedef struct router_instance {
 	ROUTER_STATS            stats;       /*< Statistics for this router         */
         struct router_instance* next;        /*< Next router on the list            */
 	bool			available_slaves; /*< The router has some slaves available */
+    HASHTABLE*              ignored_dbs; /*< List of databases to ignore when the
+                                          * database mapping finds multiple servers
+                                          * with the same database */
+    pcre*                   ignore_regex; /*< Databases matching this regex will
+                                           * not cause the session to be terminated
+                                           * if they are found on more than one server. */
 
 } ROUTER_INSTANCE;
 
