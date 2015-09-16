@@ -6,6 +6,8 @@ These are the changes introduced in the next MaxScale version. This is not the o
 * Authentication timeouts are now configurable.
 
 ## MaxScale 1.2
+* MaxScale no longer runs as root.
+* Client side SSL supported.
 * Logfiles have been renamed. The log names are now named error.log, messages.log, trace.log and debug.log.
 
 ## MaxScale 1.1.1
