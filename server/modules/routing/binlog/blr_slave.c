@@ -144,6 +144,7 @@ static int blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 extern int MaxScaleUptime();
 static int blr_slave_send_status_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
 static int blr_slave_handle_status_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt);
+static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -4151,8 +4152,8 @@ char	*old_ptr = p;
 
         blr_slave_send_fieldcount(router, slave, 2);
 
-	blr_slave_send_columndef_with_info_schema(router, slave, "Variable_name", BLR_TYPE_STRING, 40, seqno++);
-	blr_slave_send_columndef_with_info_schema(router, slave, "Value", column_type, 40, seqno++);
+	blr_slave_send_columndef_with_status_schema(router, slave, "Variable_name", BLR_TYPE_STRING, 40, seqno++);
+	blr_slave_send_columndef_with_status_schema(router, slave, "Value", column_type, 40, seqno++);
 
         blr_slave_send_eof(router, slave, seqno++);
 
@@ -4175,5 +4176,84 @@ char	*old_ptr = p;
 	free(old_ptr);
 
         return blr_slave_send_eof(router, slave, seqno++);
+}
+
+/**
+ * Send the column definition packet for a STATUS variable in a response packet sequence.
+ *
+ * It adds information_schema.STATUS and variables and variable_name
+ *
+ * @param router	The router
+ * @param slave		The slave connection
+ * @param name		Name of the column
+ * @param type		Column type
+ * @param len		Column length
+ * @param seqno		Packet sequence number
+ * @return		Non-zero on success
+ */
+static int
+blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno)
+{
+GWBUF	*pkt;
+uint8_t *ptr;
+int	info_len = strlen("information_schema");
+int	virtual_table_name_len = strlen("STATUS");
+int	table_name_len = strlen("STATUS");
+int	column_name_len = strlen(name);
+int	orig_column_name_len = strlen("VARIABLE_NAME");
+int	packet_data_len = 0;
+char 	*ptr_name_start = name;
+
+	if (strcasecmp(ptr_name_start, "value") == 0)
+		orig_column_name_len = strlen("VARIABLE_VALUE");
+
+	packet_data_len = 22 + strlen(name) + info_len + virtual_table_name_len + table_name_len + orig_column_name_len;
+
+	if ((pkt = gwbuf_alloc(4 + packet_data_len)) == NULL)
+		return 0;
+
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, packet_data_len, 24);		// Add length of data packet
+	ptr += 3;
+	*ptr++ = seqno;					// Sequence number in response
+	*ptr++ = 3;					// Catalog is always def
+	*ptr++ = 'd';
+	*ptr++ = 'e';
+	*ptr++ = 'f';
+	*ptr++ = info_len;				// Schema name length
+	strcpy((char *)ptr,"information_schema");
+	ptr += info_len;
+	*ptr++ = virtual_table_name_len;		// virtual table name length
+	strcpy((char *)ptr, "STATUS");
+	ptr += virtual_table_name_len;
+	*ptr++ = table_name_len;			// Table name length
+	strcpy((char *)ptr, "STATUS");
+	ptr += table_name_len;
+	*ptr++ = column_name_len;			// Column name length;
+	while (*name)
+		*ptr++ = *name++;			// Copy the column name
+	*ptr++ = orig_column_name_len;			// Orginal column name
+
+	if (strcasecmp(ptr_name_start, "value") == 0)
+		strcpy((char *)ptr, "VARIABLE_VALUE");
+	else
+		strcpy((char *)ptr, "VARIABLE_NAME");
+	ptr += orig_column_name_len;
+	*ptr++ = 0x0c;					// Length of next fields always 12
+	*ptr++ = 0x3f;					// Character set
+	*ptr++ = 0;
+	encode_value(ptr, len, 32);			// Add length of column
+	ptr += 4;
+	*ptr++ = type;
+	*ptr++ = 0x81;					// Two bytes of flags
+	if (type == 0xfd)
+		*ptr++ = 0x1f;
+	else
+		*ptr++ = 0x00;
+	*ptr++= 0;
+	*ptr++= 0;
+	*ptr++= 0;
+
+	return slave->dcb->func.write(slave->dcb, pkt);
 }
 
