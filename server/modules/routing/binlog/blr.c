@@ -694,6 +694,10 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 	 */
 	if (inst->master_state == BLRM_UNCONNECTED) {
 		/* Check current binlog */
+		LOGIF(LM, (skygw_log_write_flush(
+			LOGFILE_MESSAGE, "Validating binlog file '%s' ...",
+			inst->binlog_name)));
+
 		if (inst->trx_safe && !blr_check_binlog(inst)) {
 			/* Don't start replication, just return */
 			return (ROUTER *)inst;
