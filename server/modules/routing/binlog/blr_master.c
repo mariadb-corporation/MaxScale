@@ -652,6 +652,10 @@ char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 			router->current_pos,
 			router->service->dbref->server->name,
 			router->service->dbref->server->port)));
+
+		/* Log binlog router identity */
+		blr_log_identity(router);
+
 		break;
 	case BLRM_BINLOGDUMP:
 		/**
@@ -664,9 +668,6 @@ char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 		 */
 		snprintf(task_name, BLRM_TASK_NAME_LEN, "%s heartbeat", router->service->name);
 		hktask_add(task_name, blr_check_last_master_event, router, router->heartbeat);
-
-		/* Log binlog router identity */
-		blr_log_identity(router);
 
 		break;
 	}
