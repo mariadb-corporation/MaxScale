@@ -771,6 +771,8 @@ static int logmanager_write_log(
                     wp = (char*)malloc(sizeof(char)*(timestamp_len-sizeof(char)+cmplen+str_len + 1));
                 }
 
+        if(wp == NULL)
+            return -1;
 
 #if defined (SS_LOG_DEBUG)
 		{
@@ -1042,7 +1044,9 @@ static char* blockbuf_get_writepos(
                         /**
                          * New node is created
                          */
-                        bb = blockbuf_init(id);
+                        if((bb = blockbuf_init(id)) == NULL)
+                            return NULL;
+
                         CHK_BLOCKBUF(bb);
 
                         /**
@@ -1128,7 +1132,9 @@ static char* blockbuf_get_writepos(
              * Create the first block buffer to logfile's blockbuf list.
              */
 
-            bb = blockbuf_init(id);
+            if((bb = blockbuf_init(id)) == NULL)
+                return NULL;
+
             CHK_BLOCKBUF(bb);
 
             /** Lock buffer */
@@ -1210,9 +1216,10 @@ static void blockbuf_node_done(
 static blockbuf_t* blockbuf_init(
         logfile_id_t id)
 {
-        blockbuf_t* bb;
+    blockbuf_t* bb;
 
-        bb = (blockbuf_t *)calloc(1, sizeof(blockbuf_t));
+    if ((bb = (blockbuf_t *) calloc(1, sizeof (blockbuf_t))))
+    {
         bb->bb_fileid = id;
 #if defined(SS_DEBUG)
         bb->bb_chk_top = CHK_NUM_BLOCKBUF;
@@ -1221,15 +1228,18 @@ static blockbuf_t* blockbuf_init(
         simple_mutex_init(&bb->bb_mutex, "Blockbuf mutex");
         bb->bb_buf_left = MAX_LOGSTRLEN;
         bb->bb_buf_size = MAX_LOGSTRLEN;
-
 #if defined(SS_LOG_DEBUG)
-	sprintf(bb->bb_buf,"[block:%d]",atomic_add(&block_start_index,1));
-	bb->bb_buf_used += strlen(bb->bb_buf);
-	bb->bb_buf_left -= strlen(bb->bb_buf);
+        sprintf(bb->bb_buf, "[block:%d]", atomic_add(&block_start_index, 1));
+        bb->bb_buf_used += strlen(bb->bb_buf);
+        bb->bb_buf_left -= strlen(bb->bb_buf);
 #endif
-
         CHK_BLOCKBUF(bb);
-        return bb;
+    }
+    else
+    {
+        fprintf(stderr, "Error: Memory allocation failed when initializing log manager block buffers.");
+    }
+    return bb;
 }
 
 
