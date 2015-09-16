@@ -3048,42 +3048,42 @@ char	*name = NULL;
  * @param nread Number of bytes we have already read
  * @return Number of bytes readable or -1 on error
  */
-int dcb_bytes_readable_SSL (DCB *dcb, int nread)
+int dcb_bytes_readable_SSL(DCB *dcb, int nread)
 {
     int rval = 0;
     int nbytes;
-    int rc = ioctl (dcb->fd, FIONREAD, &nbytes);
-    int pending = SSL_pending (dcb->ssl);
+    int rc = ioctl(dcb->fd, FIONREAD, &nbytes);
 
     if (rc == -1)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF (LE, (skygw_log_write_flush (LOGFILE_ERROR,
-                                           "Error : ioctl FIONREAD for dcb %p in "
-                                           "state %s fd %d failed due error %d, %s.",
-                                           dcb,
-                                           STRDCBSTATE (dcb->state),
-                                           dcb->fd,
-                                           errno,
-                                           strerror_r (errno, errbuf, sizeof (errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : ioctl FIONREAD for dcb %p in "
+                                         "state %s fd %d failed due error %d, %s.",
+                                         dcb,
+                                         STRDCBSTATE(dcb->state),
+                                         dcb->fd,
+                                         errno,
+                                         strerror_r(errno, errbuf, sizeof (errbuf)))));
         rval = -1;
     }
     else
     {
+        int pending = SSL_pending(dcb->ssl);
         rval = nbytes + pending;
         if (rval == 0 && nread == 0)
         {
             /** Handle closed client socket */
-            if (dcb_isclient (dcb))
+            if (dcb_isclient(dcb))
             {
                 char c = 0;
                 int r = -1;
 
                 /* try to read 1 byte, without consuming the socket buffer */
-                r = SSL_peek (dcb->ssl, &c, sizeof (char));
+                r = SSL_peek(dcb->ssl, &c, sizeof (char));
                 if (r <= 0)
                 {
-                    int ssl_errno = SSL_get_error (dcb->ssl, r);
+                    int ssl_errno = SSL_get_error(dcb->ssl, r);
                     if (ssl_errno != SSL_ERROR_WANT_READ &&
                         ssl_errno != SSL_ERROR_WANT_WRITE &&
                         ssl_errno != SSL_ERROR_NONE)
@@ -3094,8 +3094,8 @@ int dcb_bytes_readable_SSL (DCB *dcb, int nread)
 #ifdef SS_DEBUG
         else if (nbytes != 0 || pending != 0)
         {
-            skygw_log_write_flush (LD, "Total: %d Socket: %d Pending: %d",
-                                   nread, nbytes, pending);
+            skygw_log_write_flush(LD, "Total: %d Socket: %d Pending: %d",
+                                  nread, nbytes, pending);
         }
         else
         {
@@ -3134,7 +3134,7 @@ void dcb_log_ssl_read_error(DCB *dcb, int ssl_errno, int rc)
         {
             while ((ssl_errno = ERR_get_error()) != 0)
             {
-                ERR_error_string_n(ssl_errno, errbuf, 200);
+                ERR_error_string_n(ssl_errno, errbuf, STRERROR_BUFLEN);
                 skygw_log_write(LE,
                                 "%s",
                                 errbuf);
