@@ -1331,164 +1331,186 @@ return_1:
 }
 
 /**
- * set listener for mysql protocol, retur 1 on success and 0 in failure
+ * Bind the DCB to a network port or a UNIX Domain Socket.
+ * @param listen_dcb Listener DCB
+ * @param config_bind Bind address in either IP:PORT format for network sockets or PATH for UNIX Domain Sockets
+ * @return 1 on success, 0 on error
  */
-int gw_MySQLListener(
-        DCB  *listen_dcb,
-        char *config_bind)
+int gw_MySQLListener(DCB *listen_dcb,
+                     char *config_bind)
 {
-	int l_so;
-	int syseno = 0;
-	struct sockaddr_in serv_addr;
-	struct sockaddr_un local_addr;
-	struct sockaddr *current_addr;
-	int  one = 1;
-        int  rc;
-	bool is_tcp = false;
-	memset(&serv_addr,0,sizeof(serv_addr));
-	memset(&local_addr,0,sizeof(local_addr));
+    int l_so;
+    struct sockaddr_in serv_addr;
+    struct sockaddr_un local_addr;
+    struct sockaddr *current_addr;
+    int one = 1;
+    int rc;
+    bool is_tcp = false;
+    memset(&serv_addr, 0, sizeof (serv_addr));
+    memset(&local_addr, 0, sizeof (local_addr));
 
-	if (strchr(config_bind, '/')) {
-		char *tmp = strrchr(config_bind, ':');
-		if (tmp)
-			*tmp = '\0';
+    if (strchr(config_bind, '/'))
+    {
+        char *tmp = strrchr(config_bind, ':');
+        if (tmp)
+            *tmp = '\0';
 
-		// UNIX socket create
-		if ((l_so = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
-                        char errbuf[STRERROR_BUFLEN];
-			fprintf(stderr,
-				"\n* Error: can't create UNIX socket due "
-				"error %i, %s.\n\n\t",
-				errno,
-				strerror_r(errno, errbuf, sizeof(errbuf)));
-			return 0;
-		}
-		memset(&local_addr, 0, sizeof(local_addr));
-		local_addr.sun_family = AF_UNIX;
-		strncpy(local_addr.sun_path, config_bind, sizeof(local_addr.sun_path) - 1);
-
-		current_addr = (struct sockaddr *) &local_addr;
-
-	} else {
-		/* MaxScale, as default, will bind on port 4406 */
-		if (!parse_bindconfig(config_bind, 4406, &serv_addr)) {
-			fprintf(stderr, "Error in parse_bindconfig for [%s]\n", config_bind);
-			return 0;
-		}
-		// TCP socket create
-		if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-                        char errbuf[STRERROR_BUFLEN];
-			fprintf(stderr,
-				"\n* Error: can't create socket due "
-				"error %i, %s.\n\n\t",
-				errno,
-				strerror_r(errno, errbuf, sizeof(errbuf)));
-			return 0;
-		}
-
-		current_addr = (struct sockaddr *) &serv_addr;
-		is_tcp = true;
-	}
-
-	listen_dcb->fd = -1;
-
-	// socket options
-	if((syseno = setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one))) != 0){
-                char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)))));
-	}
-
-	if(is_tcp)
-	{
+        // UNIX socket create
+        if ((l_so = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+        {
             char errbuf[STRERROR_BUFLEN];
-	    if((syseno = setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *)&one, sizeof(one))) != 0){
-              LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)))));
-	    }
-	}
-	// set NONBLOCKING mode
-	setnonblocking(l_so);
+            skygw_log_write(LE,
+                            "Error: Can't create UNIX socket: %i, %s",
+                            errno,
+                            strerror_r(errno, errbuf, sizeof (errbuf)));
+            return 0;
+        }
+        memset(&local_addr, 0, sizeof (local_addr));
+        local_addr.sun_family = AF_UNIX;
+        strncpy(local_addr.sun_path, config_bind, sizeof (local_addr.sun_path) - 1);
 
-	/* get the right socket family for bind */
-	switch (current_addr->sa_family) {
-		case AF_UNIX:
-			rc = unlink(config_bind);
-			if ( (rc == -1) && (errno!=ENOENT) ) {
-				fprintf(stderr, "Error unlink Unix Socket %s\n", config_bind);
-			}
+        current_addr = (struct sockaddr *) &local_addr;
 
-			if (bind(l_so, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0) {
-                                char errbuf[STRERROR_BUFLEN];
-				fprintf(stderr,
-					"\n* Bind failed due error %i, %s.\n",
-					errno,
-					strerror_r(errno, errbuf, sizeof(errbuf)));
-				fprintf(stderr, "* Can't bind to %s\n\n", config_bind);
-				close(l_so);
-				return 0;
-			}
+    }
+    else
+    {
+        /* This is partially dead code, MaxScale will never start without explicit
+         * ports defined for all listeners. Thus the default port is never used.
+         */
+        if (!parse_bindconfig(config_bind, 4406, &serv_addr))
+        {
+            skygw_log_write(LE, "Error in parse_bindconfig for [%s]", config_bind);
+            return 0;
+        }
 
-			/* set permission for all users */
-			if (chmod(config_bind, 0777) < 0) {
-                                char errbuf[STRERROR_BUFLEN];
-				fprintf(stderr,
-					"\n* chmod failed for %s due error %i, %s.\n\n",
-					config_bind,
-					errno,
-					strerror_r(errno, errbuf, sizeof(errbuf)));
-			}
+        /** Create the TCP socket */
+        if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        {
+            char errbuf[STRERROR_BUFLEN];
+            skygw_log_write(LE,
+                            "Error: Can't create socket: %i, %s",
+                            errno,
+                            strerror_r(errno, errbuf, sizeof (errbuf)));
+            return 0;
+        }
 
-			break;
+        current_addr = (struct sockaddr *) &serv_addr;
+        is_tcp = true;
+    }
 
-		case AF_INET:
-			if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-                                char errbuf[STRERROR_BUFLEN];
-				fprintf(stderr,
-					"\n* Bind failed due error %i, %s.\n",
-					errno,
-					strerror_r(errno, errbuf, sizeof(errbuf)));
-				fprintf(stderr, "* Can't bind to %s\n\n", config_bind);
-				close(l_so);
-				return 0;
-			}
-			break;
+    listen_dcb->fd = -1;
 
-		default:
-			fprintf(stderr, "* Socket Family %i not supported\n", current_addr->sa_family);
-			close(l_so);
-			return 0;
-	}
+    // socket options
+    if (setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof (one)) != 0)
+    {
+        char errbuf[STRERROR_BUFLEN];
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof (errbuf)))));
+    }
 
-        rc = listen(l_so, 10 * SOMAXCONN);
+    if (is_tcp)
+    {
+        char errbuf[STRERROR_BUFLEN];
+        if (setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *) &one, sizeof (one)) != 0)
+        {
+            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof (errbuf)))));
+        }
+    }
+    // set NONBLOCKING mode
+    if (setnonblocking(l_so) != 0)
+    {
+        skygw_log_write(LE, "Error: Failed to set socket to non-blocking mode.");
+        close(l_so);
+        return 0;
+    }
 
-        if (rc == 0) {
-		LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,"Listening MySQL connections at %s", config_bind)));
-        } else {
-                int eno = errno;
-                errno = 0;
+    /* get the right socket family for bind */
+    switch (current_addr->sa_family)
+    {
+        case AF_UNIX:
+            rc = unlink(config_bind);
+            if ((rc == -1) && (errno != ENOENT))
+            {
                 char errbuf[STRERROR_BUFLEN];
-                fprintf(stderr,
-                        "\n* Failed to start listening MySQL due error %d, %s\n\n",
-                        eno,
-                        strerror_r(eno, errbuf, sizeof(errbuf)));
-		close(l_so);
+                skygw_log_write(LE, "Error: Failed to unlink Unix Socket %s: %d %s",
+                                config_bind, errno, strerror_r(errno, errbuf, sizeof (errbuf)));
+            }
+
+            if (bind(l_so, (struct sockaddr *) &local_addr, sizeof (local_addr)) < 0)
+            {
+                char errbuf[STRERROR_BUFLEN];
+                skygw_log_write(LE,
+                                "Error: Failed to bind to UNIX Domain socket '%s': %i, %s",
+                                config_bind,
+                                errno,
+                                strerror_r(errno, errbuf, sizeof (errbuf)));
+                close(l_so);
                 return 0;
-        }
-	// assign l_so to dcb
-	listen_dcb->fd = l_so;
+            }
 
-        // add listening socket to poll structure
-        if (poll_add_dcb(listen_dcb) == -1) {
-            fprintf(stderr,
-                    "\n* MaxScale encountered system limit while "
-                    "attempting to register on an epoll instance.\n\n");
-		return 0;
-        }
+            /* set permission for all users */
+            if (chmod(config_bind, 0777) < 0)
+            {
+                char errbuf[STRERROR_BUFLEN];
+                skygw_log_write(LE,
+                                "Error: Failed to change permissions on UNIX Domain socket '%s': %i, %s",
+                                config_bind,
+                                errno,
+                                strerror_r(errno, errbuf, sizeof (errbuf)));
+            }
+
+            break;
+
+        case AF_INET:
+            if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0)
+            {
+                char errbuf[STRERROR_BUFLEN];
+                skygw_log_write(LE,
+                                "Error: Failed to bind on '%s': %i, %s",
+                                config_bind,
+                                errno,
+                                strerror_r(errno, errbuf, sizeof (errbuf)));
+                close(l_so);
+                return 0;
+            }
+            break;
+
+        default:
+            skygw_log_write(LE, "Error: Socket Family %i not supported\n", current_addr->sa_family);
+            close(l_so);
+            return 0;
+    }
+
+    if (listen(l_so, 10 * SOMAXCONN) != 0)
+    {
+        char errbuf[STRERROR_BUFLEN];
+        skygw_log_write(LE,
+                        "Failed to start listening on '%s': %d, %s",
+                        config_bind,
+                        errno,
+                        strerror_r(errno, errbuf, sizeof (errbuf)));
+        close(l_so);
+        return 0;
+    }
+
+    LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE, "Listening MySQL connections at %s", config_bind)));
+
+    // assign l_so to dcb
+    listen_dcb->fd = l_so;
+
+    // add listening socket to poll structure
+    if (poll_add_dcb(listen_dcb) != 0)
+    {
+        skygw_log_write(LE,
+                        "MaxScale encountered system limit while "
+                        "attempting to register on an epoll instance.");
+        return 0;
+    }
 #if defined(FAKE_CODE)
-        conn_open[l_so] = true;
+    conn_open[l_so] = true;
 #endif /* FAKE_CODE */
-	listen_dcb->func.accept = gw_MySQLAccept;
+    listen_dcb->func.accept = gw_MySQLAccept;
 
-	return 1;
+    return 1;
 }
 
 
