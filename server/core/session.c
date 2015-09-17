@@ -101,10 +101,10 @@ session_alloc(SERVICE *service, DCB *client_dcb)
          * the point of crashing anyway.
          * 
          */
-        if (dcb->data && !DCB_IS_CLONE(dcb))
+        if (client_dcb->data && !DCB_IS_CLONE(client_dcb))
         {
-            void * clientdata = dcb->data;
-            dcb->data = NULL;
+            void * clientdata = client_dcb->data;
+            client_dcb->data = NULL;
             free(clientdata);
         }
         return NULL;
