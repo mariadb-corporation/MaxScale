@@ -1838,6 +1838,15 @@ dcb_close(DCB *dcb)
         dcb_final_free(dcb);
         return;
     }
+    
+    /*
+     * If DCB is in persistent pool, mark it as an error and exit
+     */
+    if (dcb->persistentstart)
+    {
+        dcb->dcb_errhandle_called = true;
+        return;
+    }
         
     spinlock_acquire(&zombiespin);
     if (!dcb->dcb_is_zombie)
@@ -1879,6 +1888,8 @@ dcb_maybe_add_persistent(DCB *dcb)
     int  poolcount = -1;
     if (dcb->user != NULL
         && strlen(dcb->user)
+        && dcb->session->state != SESSION_STATE_STOPPING
+        && dcb->session->state != SESSION_STATE_TO_BE_FREED
         && dcb->server 
         && dcb->server->persistpoolmax 
         && (dcb->server->status & SERVER_RUNNING)
@@ -2817,6 +2828,8 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
 		|| persistentdcb-> dcb_errhandle_called 
 		|| count >= server->persistpoolmax 
         || persistentdcb->server == NULL
+        || persistentdcb->session->state == SESSION_STATE_STOPPING
+        || persistentdcb->session->state == SESSION_STATE_TO_BE_FREED
         || !(persistentdcb->server->status & SERVER_RUNNING)
 		|| (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime)
             {
@@ -2846,6 +2859,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
         while (disposals)
         {
             nextdcb = disposals->nextpersistent;
+            disposals->persistentstart = 0;
             dcb_close_finish(disposals);
             dcb_close(disposals);
             disposals = nextdcb;
