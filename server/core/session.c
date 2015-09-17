@@ -27,6 +27,7 @@
  * 02/09/13	Massimiliano Pinto	Added session refcounter
  * 29/05/14	Mark Riddoch		Addition of filter mechanism
  * 23/08/15 Martin Brampton     Tidying; slight improvement in safety
+ * 17/09/15 Martin Brampton     Keep failed session in existence - leave DCBs to close
  *
  * @endverbatim
  */
@@ -82,14 +83,30 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         
     if (session == NULL) 
     {
-      char errbuf[STRERROR_BUFLEN];
+        char errbuf[STRERROR_BUFLEN];
         LOGIF(LE, (skygw_log_write_flush(
             LOGFILE_ERROR,
             "Error : Failed to allocate memory for "
             "session object due error %d, %s.",
             errno,
             strerror_r(errno, errbuf, sizeof(errbuf)))));
-        session_simple_free(session, client_dcb);
+        /* Does this possibly need a lock? */
+        /* 
+         * This is really not the right way to do this.  The data in a DCB is
+         * router specific and should be freed by a function in the relevant
+         * router.  This would be better achieved by placing a function reference
+         * in the DCB and having dcb_final_free call it to dispose of the data
+         * at the final destruction of the DCB.  However, this piece of code is
+         * only run following a calloc failure, so the system is probably on
+         * the point of crashing anyway.
+         * 
+         */
+        if (dcb->data && !DCB_IS_CLONE(dcb))
+        {
+            void * clientdata = dcb->data;
+            dcb->data = NULL;
+            free(clientdata);
+        }
         return NULL;
     }
 #if defined(SS_DEBUG)
@@ -135,7 +152,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         session->router_session = service->router->newSession(service->router_instance, session);
         if (session->router_session == NULL) 
         {
-            session_simple_free(session, client_dcb);
+            session->state = SESSION_STATE_TO_BE_FREED;
             
             LOGIF(LE, (skygw_log_write_flush(
                 LOGFILE_ERROR,
@@ -145,7 +162,6 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                 __func__,
                 service->name)));
                         
-            return NULL;
         }
         /*
          * Pending filter chain being setup set the head of the chain to
@@ -165,53 +181,65 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         session->tail.session = session;
         session->tail.clientReply = session_reply;
 
-        if (service->n_filters > 0)
+        if (SESSION_STATE_TO_BE_FREED != session->state
+            && service->n_filters > 0
+            && !session_setup_filters(session))
         {
-            if (!session_setup_filters(session))
-            {
-                session_simple_free(session, client_dcb);
+                session->state = SESSION_STATE_TO_BE_FREED;
                 LOGIF(LE, (skygw_log_write(
                     LOGFILE_ERROR,
                     "Error : Setting up filters failed. "
                     "Terminating session %s.",
                     service->name)));
-                return NULL;
-            }
         }
     }
 
-    session->state = SESSION_STATE_ROUTER_READY;
+    if (SESSION_STATE_TO_BE_FREED != session->state)
+    {
+        session->state = SESSION_STATE_ROUTER_READY;
+        
+        if (session->client->user == NULL)
+        {
+            LOGIF(LT, (skygw_log_write(
+                LOGFILE_TRACE,
+                "Started session [%lu] for %s service ",
+                session->ses_id,
+                service->name)));
+        }
+        else
+        {
+            LOGIF(LT, (skygw_log_write(
+                LOGFILE_TRACE,
+                "Started %s client session [%lu] for '%s' from %s",
+                service->name,
+                session->ses_id,
+                session->client->user,
+                session->client->remote)));			
+        }
+    }
+    else
+    {
+        LOGIF(LT, (skygw_log_write(
+            LOGFILE_TRACE,
+            "Start %s client session [%lu] for '%s' from %s failed, will be "
+            "closed as soon as all related DCBs have been closed.",
+            service->name,
+            session->ses_id,
+            session->client->user,
+            session->client->remote)));			
+    }
     spinlock_acquire(&session_spin);
     /** Assign a session id and increase, insert session into list */
     session->ses_id = ++session_id; 
     session->next = allSessions;
     allSessions = session;
     spinlock_release(&session_spin);
-                
-    if (session->client->user == NULL)
-    {
-        LOGIF(LT, (skygw_log_write(
-            LOGFILE_TRACE,
-            "Started session [%lu] for %s service ",
-            session->ses_id,
-            service->name)));
-    }
-    else
-    {
-        LOGIF(LT, (skygw_log_write(
-            LOGFILE_TRACE,
-            "Started %s client session [%lu] for '%s' from %s",
-            service->name,
-            session->ses_id,
-            session->client->user,
-            session->client->remote)));			
-    }
     atomic_add(&service->stats.n_sessions, 1);
     atomic_add(&service->stats.n_current, 1);
     CHK_SESSION(session);
     
     client_dcb->session = session;
-    return session;
+    return SESSION_STATE_TO_BE_FREED == session->state ? NULL : session;
 }
 
 /**
@@ -240,13 +268,6 @@ session_set_dummy(DCB *client_dcb)
     memset(&session->stats, 0, sizeof(SESSION_STATS));
     session->stats.connect = 0;
     session->state = SESSION_STATE_DUMMY;
-    /*<
-     * Associate the session to the client DCB and set the reference count on
-     * the session to indicate that there is a single reference to the
-     * session. There is no need to protect this or use atomic add as the
-     * session has not been made available to the other threads at this
-     * point.
-     */
     session->data = NULL;
     session->refcount = 1;
     session->ses_id = 0; 
@@ -352,6 +373,9 @@ int session_unlink_dcb(
 
 /**
  * Deallocate the specified session, minimal actions during session_alloc
+ * Since changes to keep new session in existence until all related DCBs 
+ * have been destroyed, this function is redundant.  Just left until we are
+ * sure of the direction taken.
  *
  * @param session	The session to deallocate
  */
@@ -402,7 +426,7 @@ session_free(SESSION *session)
          * Remove one reference. If there are no references left,
          * free session.
          */
-        if (atomic_add(&session->refcount, -1) - 1) 
+        if (atomic_add(&session->refcount, -1) > 1) 
         {
             /* Must be one or more references left */
             return false;

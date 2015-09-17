@@ -100,10 +100,9 @@ random_jkiss_devrand(void)
     int fn;
     unsigned int r;
     if ((fn = open("/dev/urandom", O_RDONLY)) == -1) return 0;
-    if (read(fn, &r, 4) != 4)
+    if (read(fn, &r, sizeof(r)) != sizeof(r))
     {
-        close(fn);
-        return 0;
+        r = 0;
     }
     close(fn);
     return r;

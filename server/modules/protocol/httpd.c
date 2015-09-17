@@ -350,10 +350,6 @@ int	n_connect = 0;
 				client->remote = strdup(inet_ntoa(addr.sin_addr));
 				memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 
-				/* we don't need the session */
-                                /* But not clear that we have one! */
-				/* client->session = NULL; */
-
 				/* create the session data for HTTPD */
 				client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
 				client->data = client_data;
