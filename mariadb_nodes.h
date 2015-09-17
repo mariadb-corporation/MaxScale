@@ -204,10 +204,31 @@ public:
     int unblock_node(int node);
 
     /**
-     * @brief Check if all nodes are avaliable (via ssh)
+     * @brief Check if all nodes are avaliable (via ssh) and restart nodes that are not available
      * @return 0 if everything is ok
      */
-    int check_nodes();
+    int check_and_restart_nodes();
+
+    /**
+     * @brief Check if all node is avaliable (via ssh)
+     * @param node Node index
+     * @return 0 if node is ok, 1 if broken
+     */
+    int check_node(int node);
+
+    /**
+     * @brief Execute kill and start command agains node
+     * @param node Node index
+     * @return 0 if node is ok, 1 if start failed
+     */
+    int restart_node(int node);
+
+    /**
+     * @brief Check node via ssh and restart it if it is not resposible
+     * @param node Node index
+     * @return 0 if node is ok, 1 if start failed
+     */
+    int check_and_restart_node(int node);
 
     /**
      * @brief Check if all slaves have "Slave_IO_Running" set to "Yes" and master has N-1 slaves

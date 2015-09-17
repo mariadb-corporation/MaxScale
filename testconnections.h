@@ -119,29 +119,9 @@ public:
     char maxscale_sshkey[4096];
 
     /**
-     * @brief KillVMCommand Command to kill a node (should handle one parameter: IP address of virtual machine to kill)
-     */
-    char kill_vm_command[4096];
-
-    /**
-     * @brief start_db_command Command to start DB server
-     */
-    //char start_db_command[4096];
-
-    /**
-     * @brief stort_db_command Command to start DB server
-     */
-    //char stop_db_command[4096];
-
-    /**
      * @brief GetLogsCommand    Command to copy log files from node virtual machines (should handle one parameter: IP address of virtual machine to kill)
      */
     char get_logs_command[4096];
-
-    /**
-     * @brief StartVMCommand    Command to restart virtual machine (should handle one parameter: IP address of virtual machine to kill)
-     */
-    char start_vm_command[4096];
 
     /**
      * @brief SysbenchDir   path to SysBench directory (sysbanch should be >= 0.5)

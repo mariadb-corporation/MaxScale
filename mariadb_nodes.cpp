@@ -269,21 +269,43 @@ int Mariadb_nodes::unblock_node(int node)
     return(system(sys1));
 }
 
-int Mariadb_nodes::check_nodes()
+int Mariadb_nodes::check_and_restart_nodes()
+{
+    int res = 0;
+    for (int i = 0; i < N; i++) {
+        res += check_and_restart_node(i);
+    }
+    return(res);
+}
+
+int Mariadb_nodes::check_node(int node)
 {
     int res = 0;
     char str[1024];
     printf("Checking nodes\n"); fflush(stdout);
-    for (int i = 0; i < N; i++) {
-        sprintf(str, "ssh  -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s ls > /dev/null", sshkey[i], access_user, IP[i]);
-        if (system(str) != 0) {
-            printf("Node %d is not available\n", i); fflush(stdout);
-            res = 1;
-        } else {
-            printf("Node %d is OK\n", i); fflush(stdout);
-        }
+
+    sprintf(str, "ssh  -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s ls > /dev/null", sshkey[node], access_user, IP[node]);
+    if (system(str) != 0) {
+        printf("Node %d is not available\n", node); fflush(stdout);
+        res = 1;
+    } else {
+        printf("Node %d is OK\n", node); fflush(stdout);
     }
+
     return(res);
+}
+
+int Mariadb_nodes::restart_node(int node)
+{
+    int res = 0;
+    res =  system(kill_vm_command[node]);
+    res += system(start_vm_command[node]);
+    return(res);
+}
+
+int Mariadb_nodes::check_and_restart_node(int node)
+{
+    if (check_node(node) != 0) {return(restart_node(node));} else {return(0);}
 }
 
 int Mariadb_nodes::check_replication(int master)
@@ -375,10 +397,10 @@ int Mariadb_nodes::wait_all_vm()
 {
     int i = 0;
 
-    while ((check_nodes() != 0) && (i < 20)) {
+    while ((check_and_restart_nodes() != 0) && (i < 20)) {
         sleep(10);
     }
-    return(check_nodes());
+    return(check_and_restart_nodes());
 }
 
 int Mariadb_nodes::kill_all_vm()
@@ -406,7 +428,7 @@ int Mariadb_nodes::start_all_vm()
 
 int Mariadb_nodes::restart_all_vm()
 {
-    //kill_all_vm();
+    kill_all_vm();
     start_all_vm();
     return(wait_all_vm());
 }

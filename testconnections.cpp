@@ -81,20 +81,21 @@ TestConnections::TestConnections(int argc, char *argv[])
         }
     }
     if (!no_nodes_check) {
-        //  checking repl nodes VMs for availability
-        if ((repl->check_nodes() != 0) || (repl->check_replication(0) != 0)) {
+        //  checking all nodes and restart if needed
+        repl->check_and_restart_nodes();
+        galera->check_and_restart_nodes();
+        //  checking repl
+        if (repl->check_replication(0) != 0) {
             printf("Backend broken! Restarting replication nodes\n");
-            repl->restart_all_vm();
+            repl->start_replication();
         }
-        //  checking galera nodes VMs for availability
-        /*
-        if ((galera->check_nodes() != 0) || (galera->check_galera() != 0)) {
+        //  checking galera
+        if  (galera->check_galera() != 0) {
             printf("Backend broken! Restarting Galera nodes\n");
-            galera->restart_all_vm();
             galera->start_galera();
-        }*/
+        }
     }
-    repl->start_replication();
+    //repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
 }
 
@@ -126,11 +127,7 @@ int TestConnections::read_env()
     env = getenv("maxadmin_password"); if (env != NULL) {sprintf(maxadmin_password, "%s", env); } else {sprintf(maxadmin_password, "mariadb");}
     env = getenv("maxscale_sshkey"); if (env != NULL) {sprintf(maxscale_sshkey, "%s", env); } else {sprintf(maxscale_sshkey, "skysql");}
 
-    env = getenv("kill_vm_command"); if (env != NULL) {sprintf(kill_vm_command, "%s", env);}
     env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
-    env = getenv("start_vm_command"); if (env != NULL) {sprintf(start_vm_command, "%s", env);}
-    //env = getenv("start_db_command"); if (env != NULL) {sprintf(start_db_command, "%s", env);}
-    //env = getenv("stop_db_command"); if (env != NULL) {sprintf(stop_db_command, "%s", env);}
     env = getenv("sysbench_dir"); if (env != NULL) {sprintf(sysbench_dir, "%s", env);}
 
     env = getenv("maxdir"); if (env != NULL) {sprintf(maxdir, "%s", env);}
@@ -143,11 +140,6 @@ int TestConnections::read_env()
     ssl = false;
     env = getenv("ssl"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {ssl = true;}
     env = getenv("mysql51_only"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {no_nodes_check = true;}
-
-    //strcpy(galera->start_db_command, start_db_command);
-    //strcpy(galera->stop_db_command, stop_db_command);
-    //strcpy(repl->start_db_command, start_db_command);
-    //strcpy(repl->stop_db_command, stop_db_command);
 
     sprintf(repl->access_user, "%s", access_user);
     sprintf(repl->access_sudo, "%s", access_sudo);
