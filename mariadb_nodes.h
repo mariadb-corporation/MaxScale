@@ -74,11 +74,11 @@ public:
     /**
      * @brief     command to kill node virtual machine
      */
-    char kill_vm_command[1024];
+    char kill_vm_command[256][4096];
     /**
      * @brief     command to start node virtual machine
      */
-    char start_vm_command[1024];
+    char start_vm_command[256][4096];
     /**
     * @brief  Opens connctions to all backend nodes (to 'test' DB)
     * @return 0 in case of success

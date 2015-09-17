@@ -48,11 +48,7 @@ int Mariadb_nodes::read_env()
     env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", password); } else {sprintf(password, "skysql"); }
 
 
-    sprintf(env_name, "%s_kill_vm_command", prefix);
-    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", kill_vm_command); } else {sprintf(kill_vm_command, "exit 1"); }
 
-    sprintf(env_name, "%s_start_vm_command", prefix);
-    env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", start_vm_command); } else {sprintf(start_vm_command, "exit 1"); }
 
     ssl = false;
     sprintf(env_name, "%s_ssl", prefix);
@@ -87,6 +83,12 @@ int Mariadb_nodes::read_env()
             //reading stop_db_command
             sprintf(env_name, "%s_stop_db_command_%03d", prefix, i);
             env = getenv(env_name); if (env != NULL) {sprintf(stop_db_command[i], "%s", env);} else {sprintf(start_db_command[i], "%s", "service mysql stop");}
+
+            sprintf(env_name, "%s_kill_vm_command_%03d", prefix, i);
+            env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", kill_vm_command[i]); } else {sprintf(kill_vm_command[i], "exit 1"); }
+
+            sprintf(env_name, "%s_start_vm_command_%03d", prefix, i);
+            env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", start_vm_command[i]); } else {sprintf(start_vm_command[i], "exit 1"); }
 
         }
     }
@@ -384,7 +386,7 @@ int Mariadb_nodes::kill_all_vm()
     int res = 0;
     char sys[1024];
     for (int i = 0; i < N; i++) {
-        sprintf(sys, "%s %s", kill_vm_command, IP[i]);
+        sprintf(sys, "%s", kill_vm_command[i]);
         if (system(sys) != 0) {res = 1;}
     }
     return(res);
@@ -396,7 +398,7 @@ int Mariadb_nodes::start_all_vm()
     char sys[1024];
     for (int i = 0; i < N; i++) {
         printf("starting node %d\n", i);
-        sprintf(sys, "%s %s", start_vm_command, IP[i]);
+        sprintf(sys, "%s", start_vm_command[i]);
         if (system(sys) != 0) {res = 1;}
     }
     return(res);

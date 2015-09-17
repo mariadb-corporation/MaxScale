@@ -22,13 +22,13 @@ int main(int argc, char *argv[])
         global_result++;
 
     cout << "Changing configuration..." << endl;
-    Test->reconfigure_maxscale("replication");
+    Test->reconfigure_maxscale((char *) "replication");
 
     if(!Test->test_maxscale_connections(true, true, true))
         global_result++;
 
     cout << "Changing configuration..." << endl;
-    Test->reconfigure_maxscale("config_reload");
+    Test->reconfigure_maxscale((char *) "config_reload");
 
     if(!Test->test_maxscale_connections(true, false, false))
         global_result++;

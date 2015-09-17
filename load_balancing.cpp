@@ -42,15 +42,15 @@ int main(int argc, char *argv[])
     global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25, Test, &i1, &i2, 1, FALSE);
 
     long int avr = (i1 + i2 ) / (Test->repl->N);
-    printf("average number of quries per node %d\n", avr);
+    printf("average number of quries per node %ld\n", avr);
     long int min_q = avr / 3;
     long int max_q = avr * 3;
-    printf("Acceplable value for every node from %d until %d\n", min_q, max_q);
+    printf("Acceplable value for every node from %ld until %ld\n", min_q, max_q);
 
     for (int i = 1; i < Test->repl->N; i++) {
         q = new_selects[i] - selects[i];
         if ((q > max_q) || (q < min_q)) {
-            printf("FAILED: number of queries for node %d is %d\n", i+1, q);
+            printf("FAILED: number of queries for node %d is %ld\n", i+1, q);
             global_result++;
         }
     }
