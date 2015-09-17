@@ -35,10 +35,12 @@ int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expe
     char str[1024];
 
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'rm %s/script_output'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'rm %s/script_output'", Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
     system(str);
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s touch %s/script_output; %s chown maxscale:maxscale %s/script_output'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir, Test->access_sudo, Test->access_homedir);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s touch %s/script_output; %s chown maxscale:maxscale %s/script_output'",
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo,
+            Test->maxscale_access_homedir, Test->maxscale_access_sudo, Test->maxscale_access_homedir);
     printf("%s\n", str);fflush(stdout);
     system(str);
 
@@ -69,11 +71,13 @@ int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expe
     sleep(30);
 
     printf("Printf results\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'cat %s/script_output'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'cat %s/script_output'",
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
     system(str);
 
     printf("Comparing results\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'diff %s/script_output %s'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir, expected_filename);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'diff %s/script_output %s'",
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir, expected_filename);
     printf("%s\n", str);
     if (system(str) != 0) {
         printf("TEST_FAILED! Wrong script output!\n");
@@ -100,9 +104,10 @@ int main(int argc, char *argv[])
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \
             '%s rm -rf %s/script; mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; \
             chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R'", \
-            Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir,\
-            Test->access_homedir, Test->access_homedir, \
-            Test->access_homedir, Test->access_homedir, Test->access_homedir, Test->access_sudo, Test->access_homedir);
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_access_homedir,
+            Test->maxscale_access_homedir, Test->maxscale_access_homedir,
+            Test->maxscale_access_homedir, Test->maxscale_access_homedir, Test->maxscale_access_homedir, Test->maxscale_access_sudo,
+            Test->maxscale_access_homedir);
     printf("%s\n", str);fflush(stdout);
     system(str);
 
@@ -110,29 +115,60 @@ int main(int argc, char *argv[])
 
     FILE * f;
     f = fopen("script_output_expected", "w");
-    fprintf(f, "--event=master_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->repl->IP_private[0], Test->repl->port[0], Test->repl->IP_private[0], Test->repl->port[0], Test->repl->IP_private[1], Test->repl->port[1], Test->repl->IP_private[2], Test->repl->port[2], Test->repl->IP_private[3], Test->repl->port[3]);
-    fprintf(f, "--event=master_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->repl->IP_private[0], Test->repl->port[0], Test->repl->IP_private[0], Test->repl->port[0], Test->repl->IP_private[1], Test->repl->port[1], Test->repl->IP_private[2], Test->repl->port[2], Test->repl->IP_private[3], Test->repl->port[3]);
-    fprintf(f, "--event=slave_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->repl->IP_private[1], Test->repl->port[1], Test->repl->IP_private[0], Test->repl->port[0], Test->repl->IP_private[1], Test->repl->port[1], Test->repl->IP_private[2], Test->repl->port[2], Test->repl->IP_private[3], Test->repl->port[3]);
+    fprintf(f, "--event=master_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n",
+            Test->repl->IP_private[0], Test->repl->port[0], Test->repl->IP_private[0],
+            Test->repl->port[0], Test->repl->IP_private[1], Test->repl->port[1],
+            Test->repl->IP_private[2], Test->repl->port[2], Test->repl->IP_private[3],
+            Test->repl->port[3]);
+    fprintf(f, "--event=master_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n",
+            Test->repl->IP_private[0], Test->repl->port[0], Test->repl->IP_private[0],
+            Test->repl->port[0], Test->repl->IP_private[1], Test->repl->port[1],
+            Test->repl->IP_private[2], Test->repl->port[2], Test->repl->IP_private[3],
+            Test->repl->port[3]);
+    fprintf(f, "--event=slave_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n",
+            Test->repl->IP_private[1], Test->repl->port[1], Test->repl->IP_private[0],
+            Test->repl->port[0], Test->repl->IP_private[1], Test->repl->port[1],
+            Test->repl->IP_private[2], Test->repl->port[2], Test->repl->IP_private[3],
+            Test->repl->port[3]);
     fclose(f);
 
     f = fopen("script_output_expected_galera", "w");
-    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->galera->IP_private[0], Test->galera->port[0], Test->galera->IP_private[0], Test->galera->port[0], Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[2], Test->galera->port[2], Test->galera->IP_private[3], Test->galera->port[3]);
-    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->galera->IP_private[0], Test->galera->port[0], Test->galera->IP_private[0], Test->galera->port[0], Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[2], Test->galera->port[2], Test->galera->IP_private[3], Test->galera->port[3]);
-    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[0], Test->galera->port[0], Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[2], Test->galera->port[2], Test->galera->IP_private[3], Test->galera->port[3]);
-    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n", Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[0], Test->galera->port[0], Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[2], Test->galera->port[2], Test->galera->IP_private[3], Test->galera->port[3]);
+    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n",
+            Test->galera->IP_private[0], Test->galera->port[0], Test->galera->IP_private[0],
+            Test->galera->port[0], Test->galera->IP_private[1], Test->galera->port[1],
+            Test->galera->IP_private[2], Test->galera->port[2], Test->galera->IP_private[3],
+            Test->galera->port[3]);
+    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n",
+            Test->galera->IP_private[0], Test->galera->port[0], Test->galera->IP_private[0],
+            Test->galera->port[0], Test->galera->IP_private[1], Test->galera->port[1],
+            Test->galera->IP_private[2], Test->galera->port[2], Test->galera->IP_private[3],
+            Test->galera->port[3]);
+    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n",
+            Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[0],
+            Test->galera->port[0], Test->galera->IP_private[1], Test->galera->port[1],
+            Test->galera->IP_private[2], Test->galera->port[2], Test->galera->IP_private[3],
+            Test->galera->port[3]);
+    fprintf(f, "--event=synced_up --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n",
+            Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[0],
+            Test->galera->port[0], Test->galera->IP_private[1], Test->galera->port[1],
+            Test->galera->IP_private[2], Test->galera->port[2], Test->galera->IP_private[3],
+            Test->galera->port[3]);
     fclose(f);
 
     printf("Copying expected script output to Maxscale machine\n"); fflush(stdout);
-    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no script_output_expected* %s@%s:%s/", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_homedir);
+    sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no script_output_expected* %s@%s:%s/",
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
     system(str);
 
-    sprintf(str, "%s/script_output_expected", Test->access_homedir);
+    sprintf(str, "%s/script_output_expected", Test->maxscale_access_homedir);
     global_result += test_script_monitor(Test, Test->repl, str);
-    sprintf(str, "%s/script_output_expected_galera", Test->access_homedir);
+    sprintf(str, "%s/script_output_expected_galera", Test->maxscale_access_homedir);
     global_result += test_script_monitor(Test, Test->galera, str);
 
     printf("Making script non-executable\n"); fflush(stdout);
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s chmod a-x %s/script/script.sh'", Test->maxscale_sshkey, Test->access_user, Test->maxscale_IP, Test->access_sudo, Test->access_homedir);
+    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s chmod a-x %s/script/script.sh'",
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo,
+            Test->maxscale_access_homedir);
     system(str);
 
     sleep(3);

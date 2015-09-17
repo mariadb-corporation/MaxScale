@@ -99,12 +99,18 @@ public:
      */
     int ssl;
 
-    char access_user[256];
+    char access_user[256][256];
 
     /**
      * @brief access_sudo empty if sudo is not needed or "sudo " if sudo is needed.
      */
-    char access_sudo[64];
+    char access_sudo[256][64];
+
+
+    /**
+     * @brief access_homedir home directory of access_user
+     */
+    char access_homedir[256][256];
 
     /**
      * @brief no_set_pos if set to true setup_binlog function do not set log position

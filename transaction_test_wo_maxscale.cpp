@@ -22,7 +22,7 @@ int check_sha1(TestConnections* Test)
     printf("ls before FLUSH LOGS\n");
 
     printf("Master");fflush(stdout);
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.0000*'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.0000*'", Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
     system(sys);
 
     printf("FLUSH LOGS\n");fflush(stdout);
@@ -32,7 +32,7 @@ int check_sha1(TestConnections* Test)
     printf("ls after first FLUSH LOGS\n");
 
     printf("Master\n");fflush(stdout);
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
     system(sys);
 
 
@@ -44,7 +44,7 @@ int check_sha1(TestConnections* Test)
     printf("ls before FLUSH LOGS\n");
 
     printf("Master");
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->access_user, Test->repl->IP[0]);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
     system(sys);fflush(stdout);
 
 
