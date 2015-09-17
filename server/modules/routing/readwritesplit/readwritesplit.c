@@ -4875,10 +4875,12 @@ static void handleError (
                             bref = get_bref_from_dcb(rses, backend_dcb);
                         	if (bref != NULL)
                             {
+                                bool bref_was_in_use = BREF_IS_IN_USE(bref);
                                     CHK_BACKEND_REF(bref);
                                     bref_clear_state(bref, BREF_IN_USE);
                                     bref_set_state(bref, BREF_CLOSED);
-                                    dcb_close(backend_dcb);
+                                    if (bref_was_in_use)
+                                        dcb_close(backend_dcb);
                             }
                             else
                             {
@@ -4958,10 +4960,14 @@ static void handle_error_reply_client(
 	 */
 	if ((bref = get_bref_from_dcb(rses, backend_dcb)) != NULL)
 	{
+        bool bref_was_in_use = BREF_IS_IN_USE(bref);
 		CHK_BACKEND_REF(bref);
 		bref_clear_state(bref, BREF_IN_USE);
 		bref_set_state(bref, BREF_CLOSED);
-        dcb_close(backend_dcb);
+        if (bref_was_in_use)
+        {
+            dcb_close(backend_dcb);
+        }
 	}
 	
 	if (sesstate == SESSION_STATE_ROUTER_READY)
@@ -4991,13 +4997,14 @@ static bool handle_error_new_connection(
 	DCB*               backend_dcb,
 	GWBUF*             errmsg)
 {
-        ROUTER_CLIENT_SES*  myrses;
+    ROUTER_CLIENT_SES*  myrses;
 	SESSION*       ses;
 	int            router_nservers;
 	int            max_nslaves;
 	int            max_slave_rlag;
 	backend_ref_t* bref;
 	bool           succp;
+    bool bref_was_in_use;
 	
         myrses = *rses;
 	ss_dassert(SPINLOCK_IS_LOCKED(&myrses->rses_lock));
@@ -5014,6 +5021,7 @@ static bool handle_error_new_connection(
 		goto return_succp;
 	}
 	CHK_BACKEND_REF(bref);
+    bref_was_in_use = BREF_IS_IN_USE(bref);
 	
 	/** 
 	 * If query was sent through the bref and it is waiting for reply from
@@ -5049,8 +5057,10 @@ static bool handle_error_new_connection(
 			DCB_REASON_NOT_RESPONDING, 
 			&router_handle_state_switch, 
 			(void *)bref);
-    dcb_close(backend_dcb);
-	
+    if (bref_was_in_use)
+    {
+        dcb_close(backend_dcb);
+	}
 	router_nservers = router_get_servercount(inst);
 	max_nslaves     = rses_get_max_slavecount(myrses, router_nservers);
 	max_slave_rlag  = rses_get_max_replication_lag(myrses);

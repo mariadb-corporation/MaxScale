@@ -1881,6 +1881,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         && strlen(dcb->user)
         && dcb->server 
         && dcb->server->persistpoolmax 
+        && (dcb->server->status & SERVER_RUNNING)
         && !dcb->dcb_errhandle_called
         && !(dcb->flags & DCBF_HUNG)
         && (poolcount = dcb_persistent_clean_count(dcb, false)) < dcb->server->persistpoolmax)
@@ -2815,6 +2816,8 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
             if (cleanall 
 		|| persistentdcb-> dcb_errhandle_called 
 		|| count >= server->persistpoolmax 
+        || persistentdcb->server == NULL
+        || !(persistentdcb->server->status & SERVER_RUNNING)
 		|| (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime)
             {
                 /* Remove from persistent pool */
