@@ -4890,7 +4890,8 @@ static void handleError (
                                     "master status but could not locate the "
                                     "corresponding backend ref.",
                                     srv->name,
-                                    srv->port)));	
+                                    srv->port)));
+                                dcb_close(backend_dcb);
                             }
 				if (!srv->master_err_is_logged)
 				{
@@ -4969,6 +4970,10 @@ static void handle_error_reply_client(
             dcb_close(backend_dcb);
         }
 	}
+    else
+    {
+        dcb_close(backend_dcb);
+    }
 	
 	if (sesstate == SESSION_STATE_ROUTER_READY)
 	{
@@ -5004,9 +5009,9 @@ static bool handle_error_new_connection(
 	int            max_slave_rlag;
 	backend_ref_t* bref;
 	bool           succp;
-    bool bref_was_in_use;
+    bool           bref_was_in_use;
 	
-        myrses = *rses;
+    myrses = *rses;
 	ss_dassert(SPINLOCK_IS_LOCKED(&myrses->rses_lock));
 	
 	ses = backend_dcb->session;
@@ -5018,6 +5023,7 @@ static bool handle_error_new_connection(
 	if ((bref = get_bref_from_dcb(myrses, backend_dcb)) == NULL)
 	{
 		succp = true;
+        dcb_close(backend_dcb);
 		goto return_succp;
 	}
 	CHK_BACKEND_REF(bref);
