@@ -4879,8 +4879,6 @@ static void handleError (
                                     CHK_BACKEND_REF(bref);
                                     bref_clear_state(bref, BREF_IN_USE);
                                     bref_set_state(bref, BREF_CLOSED);
-                                    if (bref_was_in_use)
-                                        dcb_close(backend_dcb);
                             }
                             else
                             {
@@ -4938,6 +4936,7 @@ static void handleError (
                         break;
             }
         }
+        dcb_close(backend_dcb);
 }
 
 
@@ -4965,15 +4964,7 @@ static void handle_error_reply_client(
 		CHK_BACKEND_REF(bref);
 		bref_clear_state(bref, BREF_IN_USE);
 		bref_set_state(bref, BREF_CLOSED);
-        if (bref_was_in_use)
-        {
-            dcb_close(backend_dcb);
-        }
 	}
-    else
-    {
-        dcb_close(backend_dcb);
-    }
 	
 	if (sesstate == SESSION_STATE_ROUTER_READY)
 	{
@@ -5023,7 +5014,6 @@ static bool handle_error_new_connection(
 	if ((bref = get_bref_from_dcb(myrses, backend_dcb)) == NULL)
 	{
 		succp = true;
-        dcb_close(backend_dcb);
 		goto return_succp;
 	}
 	CHK_BACKEND_REF(bref);
@@ -5063,10 +5053,6 @@ static bool handle_error_new_connection(
 			DCB_REASON_NOT_RESPONDING, 
 			&router_handle_state_switch, 
 			(void *)bref);
-    if (bref_was_in_use)
-    {
-        dcb_close(backend_dcb);
-	}
 	router_nservers = router_get_servercount(inst);
 	max_nslaves     = rses_get_max_slavecount(myrses, router_nservers);
 	max_slave_rlag  = rses_get_max_replication_lag(myrses);
