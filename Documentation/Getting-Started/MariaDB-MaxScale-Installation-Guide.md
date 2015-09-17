@@ -12,7 +12,7 @@ The simplest way to install MaxScale is to use one of the binary packages that a
 
 * Sign in to MariaDB.com
 
-* Follow the instructions at the top of the page. 
+* Follow the instructions at the top of the page.
 
 ![image alt text](images/getting_started.png)
 
@@ -20,7 +20,9 @@ If you want to install only MaxScale, further down you will find the product spe
 
 ![image alt text](images/getting_started2.png)
 
-After you have installed MaxScale, you can start it.
+After you have installed MaxScale, you need to create a `/etc/maxscale.cfg` configuration file. There is an example configuration file `/etc/maxscale.cfg.template` that can be used as a base.
+
+Once you have created the configuration file, you can start maxscale.
 
 ```
 systemctl start maxscale.service
@@ -31,8 +33,6 @@ If your system does not support systemd you can start MaxScale using the install
 ```
 service maxscale start
 ```
-
-An example configuration file is installed into the `/etc/` folder. This file should be changed according to your needs.
 
 ## Building MaxScale From Source Code
 
