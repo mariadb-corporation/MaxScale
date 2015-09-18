@@ -395,7 +395,8 @@ static int gw_read_backend_event(DCB *dcb) {
 					"Authentication with backend failed. "
 					"Session will be closed.");
 
-				router->handleError(router_instance,
+                                if (rsession)
+                                    router->handleError(router_instance,
 						rsession, 
 						errbuf, 
 						dcb,
