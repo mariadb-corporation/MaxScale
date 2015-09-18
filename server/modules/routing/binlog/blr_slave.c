@@ -2571,11 +2571,11 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 	return 1;
 }
 
- /**
+/**
  * Send a MySQL OK packet to the slave backend
  *
- * @param       router          The binlog router instance
- * @param       slave           The slave server to which we are sending the response
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
  *
  * @return result of a write call, non-zero if write was successful
  */
@@ -2598,7 +2598,7 @@ uint8_t	ok_packet[] = {7, 0, 0, // Payload length
 	return slave->dcb->func.write(slave->dcb, pkt);
 }
 
- /**
+/**
  * Send a MySQL OK packet with a message to the slave backend
  *
  * @param       router          The binlog router instance
@@ -2640,7 +2640,6 @@ uint8_t *ptr;
 
         return slave->dcb->func.write(slave->dcb, pkt);
 }
-
 
 /**
  * Stop current replication from master
@@ -3531,7 +3530,6 @@ blr_set_master_password(ROUTER_INSTANCE *router, char *password) {
 	return 0;
 }
 
-
 /**
  * Parse a CHANGE MASTER TO SQL command
  *
@@ -3939,7 +3937,7 @@ char	*sep = " 	,=";
 		return -1;
 }
 
- /**
+/**
  * Send a MySQL OK packet with a warning flag to the slave backend
  * and set the warning message in slave structure
  * The message should be retrieved by SHOW WARNINGS command
@@ -3987,7 +3985,7 @@ uint8_t *ptr;
 	return slave->dcb->func.write(slave->dcb, pkt);
 }
 
- /**
+/**
  * Send a MySQL SHOW WARNINGS packet with a message that has been stored in slave struct
  *
  * If there is no wanring message an OK packet is sent
@@ -4104,7 +4102,6 @@ char	*sep = " 	,=";
 	} else
 		return -1;
 }
-
 
 /**
  * Send the response to the SQL command "SHOW [GLOBAL] STATUS LIKE 'xxx'
