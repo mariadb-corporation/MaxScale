@@ -1588,7 +1588,7 @@ ROUTER_SLAVE	*sptr;
  * Process a slave replication registration message.
  *
  * We store the various bits of information the slave gives us and generate
- * a reply message.
+ * a reply message: OK packet.
  *
  * @param	router		The router instance
  * @param	slave		The slave server
@@ -1601,6 +1601,10 @@ blr_slave_register(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 GWBUF	*resp;
 uint8_t	*ptr;
 int	slen;
+uint8_t	ok_packet[] = {7, 0, 0, // Payload length
+			1, // Seqno,
+			0, // OK,
+			0, 0, 2, 0, 0, 0};
 
 	ptr = GWBUF_DATA(queue);
 	ptr += 4;		// Skip length and sequence number
@@ -1637,18 +1641,13 @@ int	slen;
 	slave->rank = extract_field(ptr, 32);
 
 	/*
-	 * Now construct a response
+	 * Now construct a response: OK packet
 	 */
-	if ((resp = gwbuf_alloc(11)) == NULL)
+	if ((resp = gwbuf_alloc(sizeof(ok_packet))) == NULL)
 		return 0;
-	ptr = GWBUF_DATA(resp);
-	encode_value(ptr, 7, 24);	// Payload length
-	ptr += 3;
-	*ptr++ = 1;			// Sequence number
-	encode_value(ptr, 0, 24);
-	ptr += 3;
-	encode_value(ptr, slave->serverid, 32);
-	slave->state = BLRS_REGISTERED;
+
+	memcpy(GWBUF_DATA(resp), ok_packet, sizeof(ok_packet));
+
 	return slave->dcb->func.write(slave->dcb, resp);
 }
 
