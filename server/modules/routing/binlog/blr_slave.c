@@ -1636,8 +1636,10 @@ int	slen;
 	ptr += 2;
 	slave->rank = extract_field(ptr, 32);
 
+	slave->state = BLRS_REGISTERED;
+
 	/*
-	 * Now construct a response: OK packet
+	 * Send OK responset
 	 */
 	return blr_slave_send_ok(router, slave);
 }
