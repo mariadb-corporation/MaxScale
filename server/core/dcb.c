@@ -1888,8 +1888,6 @@ dcb_maybe_add_persistent(DCB *dcb)
     int  poolcount = -1;
     if (dcb->user != NULL
         && strlen(dcb->user)
-        && dcb->session->state != SESSION_STATE_STOPPING
-        && dcb->session->state != SESSION_STATE_TO_BE_FREED
         && dcb->server 
         && dcb->server->persistpoolmax 
         && (dcb->server->status & SERVER_RUNNING)
@@ -1916,14 +1914,16 @@ dcb_maybe_add_persistent(DCB *dcb)
     {
       LOGIF(LD, (skygw_log_write(
             LOGFILE_DEBUG,
-            "%lu [dcb_maybe_add_persistent] Not adding DCB %p to persistent pool, user %s, "
-            "max for pool %d, error handle called %s, hung flag %s, pool count %d.\n",
+            "%lu [dcb_maybe_add_persistent] Not adding DCB %p to persistent pool, "
+            "user %s, max for pool %d, error handle called %s, hung flag %s, "
+            "server status %d, pool count %d.\n",
             pthread_self(),
             dcb,
             dcb->user ? dcb->user : "",
             (dcb->server && dcb->server->persistpoolmax) ? dcb->server->persistpoolmax : 0,
             dcb->dcb_errhandle_called ? "true" : "false",
             (dcb->flags & DCBF_HUNG) ? "true" : "false",
+            dcb->server ? dcb->server->status : 0,
             poolcount)));
     }
     return false;
@@ -2828,8 +2828,6 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
 		|| persistentdcb-> dcb_errhandle_called 
 		|| count >= server->persistpoolmax 
         || persistentdcb->server == NULL
-        || persistentdcb->session->state == SESSION_STATE_STOPPING
-        || persistentdcb->session->state == SESSION_STATE_TO_BE_FREED
         || !(persistentdcb->server->status & SERVER_RUNNING)
 		|| (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime)
             {

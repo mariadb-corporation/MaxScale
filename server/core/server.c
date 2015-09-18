@@ -153,7 +153,10 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
 {
     DCB *dcb, *previous = NULL;
     
-    if (server->persistent && dcb_persistent_clean_count(server->persistent, false) && server->persistent)
+    if (server->persistent 
+        && dcb_persistent_clean_count(server->persistent, false) 
+        && server->persistent
+        && (server->status & SERVER_RUNNING))
     {
         spinlock_acquire(&server->persistlock);
         dcb = server->persistent;
