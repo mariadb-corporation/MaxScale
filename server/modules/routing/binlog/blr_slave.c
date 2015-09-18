@@ -1601,10 +1601,6 @@ blr_slave_register(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 GWBUF	*resp;
 uint8_t	*ptr;
 int	slen;
-uint8_t	ok_packet[] = {7, 0, 0, // Payload length
-			1, // Seqno,
-			0, // OK,
-			0, 0, 2, 0, 0, 0};
 
 	ptr = GWBUF_DATA(queue);
 	ptr += 4;		// Skip length and sequence number
@@ -1643,12 +1639,7 @@ uint8_t	ok_packet[] = {7, 0, 0, // Payload length
 	/*
 	 * Now construct a response: OK packet
 	 */
-	if ((resp = gwbuf_alloc(sizeof(ok_packet))) == NULL)
-		return 0;
-
-	memcpy(GWBUF_DATA(resp), ok_packet, sizeof(ok_packet));
-
-	return slave->dcb->func.write(slave->dcb, resp);
+	return blr_slave_send_ok(router, slave);
 }
 
 /**
