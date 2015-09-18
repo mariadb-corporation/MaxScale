@@ -1903,7 +1903,7 @@ int main(int argc, char **argv)
         }
         LOGIF(LM, (skygw_log_write(
                 LOGFILE_MESSAGE,
-                "MariaDB Corporation MaxScale %s (C) MariaDB Corporation Ab 2013-2014",
+                "MariaDB Corporation MaxScale %s (C) MariaDB Corporation Ab 2013-2015",
 		MAXSCALE_VERSION))); 
         LOGIF(LM, (skygw_log_write(
                 LOGFILE_MESSAGE,
@@ -2570,3 +2570,4 @@ void write_child_exit_code(int fd, int code)
     write(fd, &code, sizeof (int));
     close(fd);
 }
+
