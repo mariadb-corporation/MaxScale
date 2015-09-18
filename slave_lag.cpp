@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
 
     if (Test->conn_rwsplit == NULL ) {
         printf("Can't connect to MaxScale\n");
+        Test->copy_all_logs();
         exit(1);
     } else {
 

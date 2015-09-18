@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \
             '%s rm -rf %s/script; mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; \
-            chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R'", \
+            chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R'",
             Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_access_homedir,
             Test->maxscale_access_homedir, Test->maxscale_access_homedir,
             Test->maxscale_access_homedir, Test->maxscale_access_homedir, Test->maxscale_access_homedir, Test->maxscale_access_sudo,

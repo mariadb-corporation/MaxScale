@@ -20,7 +20,9 @@ int main(int argc, char *argv[])
     printf("Connecting to RWSplit\n");
     Test->conn_rwsplit = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
     if (Test->conn_rwsplit == NULL) {
-        printf("Error connecting to MaxScale\n"); return(1);
+        printf("Error connecting to MaxScale\n");
+        Test->copy_all_logs();
+        return(1);
     }
     printf("Removing 'test' DB\n");
     execute_query(Test->conn_rwsplit, (char *) "DROP DATABASE IF EXISTS test;");
@@ -35,7 +37,9 @@ int main(int argc, char *argv[])
     printf("Connecting to RWSplit again to recreate 'test' db\n");
     Test->conn_rwsplit = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
     if (Test->conn_rwsplit == NULL) {
-        printf("Error connecting to MaxScale\n"); return(1);
+        printf("Error connecting to MaxScale\n");
+        Test->copy_all_logs();
+        return(1);
     }
 
     printf("Creating and selecting 'test' DB\n");

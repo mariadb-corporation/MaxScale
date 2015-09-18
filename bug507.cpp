@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
 
     if (Test->repl->N < 3) {
         printf("There is not enoght nodes for test\n");
+        Test->copy_all_logs();
         exit(1);
     }
 
@@ -52,6 +53,7 @@ int main(int argc, char *argv[])
                  "@@server_id", &last_insert_id2[0])
              != 0 )) {
         printf("@@server_id fied not found!!\n");
+        Test->copy_all_logs();
         exit(1);
     } else {
         printf("'%s' to RWSplit gave @@server_id %s\n", sel1, last_insert_id1);

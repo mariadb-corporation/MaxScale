@@ -147,6 +147,7 @@ int main(int argc, char *argv[])
 
     if (conn == 0) {
         printf("Error connection to RW Split\n");
+        Test->copy_all_logs();
         exit(1);
     }
 

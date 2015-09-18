@@ -31,6 +31,7 @@ int main(int argc, char *argv[])
 
     if (Test->galera->N < 3) {
         printf("There is not enoght nodes for test\n");
+        Test->copy_all_logs();
         exit(1);
     }
 
@@ -68,6 +69,7 @@ int main(int argc, char *argv[])
                  "last_insert_id()", &last_insert_id2[0])
              != 0 )) {
         printf("last_insert_id() fied not found!!\n");
+        Test->copy_all_logs();
         exit(1);
     } else {
         printf("'%s' gave last_insert_id() %s\n", sel1, last_insert_id1);

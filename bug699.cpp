@@ -41,6 +41,7 @@ int main(int argc, char *argv[])
                  "@@server_id", &serverid2[0])
              != 0 )) {
         printf("@@server_id field not found!!\n");
+        Test->copy_all_logs();
         exit(1);
     } else {
         printf("'%s' to RWSplit gave @@server_id %s\n", sel3, serverid1);
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
                  "@@hostname", &serverid2[0])
              != 0 )) {
         printf("@@hostname field not found!!\n");
+        Test->copy_all_logs();
         exit(1);
     } else {
         printf("'%s' to RWSplit gave @@hostname %s\n", sel1, serverid1);

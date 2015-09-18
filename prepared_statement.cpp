@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     if (Test->connect_maxscale() !=0 ) {
         printf("Error connecting to MaxScale\n");
+        Test->copy_all_logs();
         exit(1);
     }
 
