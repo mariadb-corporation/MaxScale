@@ -72,8 +72,8 @@ else
 	export maxscale_access_homedir="/home/$maxscale_access_user/"
 fi
 
-sed -i "s/###maxscale_access_user###/$maxscale_access_user/g" MaxScale.cnf
-sed -i "s|###maxscale_access_homedir###|$maxscale_access_homedir|g" MaxScale.cnf
+sed -i "s/###access_user###/$maxscale_access_user/g" MaxScale.cnf
+sed -i "s|###access_homedir###|$maxscale_access_homedir|g" MaxScale.cnf
 
 echo "copying maxscale.cnf using ssh $maxscale_access_user"
 scp -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null MaxScale.cnf $maxscale_access_user@$maxscale_IP:./
