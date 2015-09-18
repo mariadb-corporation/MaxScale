@@ -84,7 +84,10 @@ int main(int argc, char *argv[])
         execute_query(Test->repl->nodes[i], "CREATE DATABASE shard_db");
         sprintf(str, "GRANT SELECT,USAGE,CREATE ON shard_db.* TO 'user%d'@'%%'", i);
         printf("%s\n", str);
-        global_result += execute_query(Test->repl->nodes[i], str);
+        if (execute_query(Test->repl->nodes[i], str) != 0) {
+            printf("TEST_FAILED\n");
+            global_result++;
+        }
     }
 
     Test->repl->close_connections();
@@ -99,8 +102,10 @@ int main(int argc, char *argv[])
 
         sprintf(str, "CREATE TABLE table%d (x1 int, fl int);", i);
         printf("%s\n", str);
-        global_result += execute_query(conn, str);
-        mysql_close(conn);
+        if (execute_query(conn, str) != 0)  {
+            printf("TEST_FAILED\n");
+            global_result++;
+        }
     }
 
     for (i = 0; i < Test->repl->N; i++) {
@@ -113,7 +118,10 @@ int main(int argc, char *argv[])
         printf("%s\n", str);
         sprintf(str1, "table%d", i);
         printf("Table should be %s\n", str1);
-        global_result += execute_query_check_one(conn, str, str1);
+        if (execute_query_check_one(conn, str, str1) !=0 ) {
+                    printf("TEST_FAILED\n");
+                    global_result++;
+                }
         mysql_close(conn);
     }
 
@@ -125,7 +133,10 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++) {
         sprintf(str, "USE shard_db%d", i);
         printf("%s\n", str);
-        global_result += execute_query(Test->conn_rwsplit, str);
+        if (execute_query(Test->conn_rwsplit, str) != 0) {
+            printf("TEST_FAILED\n");
+            global_result++;
+        }
     }
 
     mysql_close(Test->conn_rwsplit);
