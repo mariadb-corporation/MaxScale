@@ -1158,20 +1158,12 @@ int	slen;
 	ptr += 2;
 	slave->rank = extract_field(ptr, 32);
 
-	/*
-	 * Now construct a response
-	 */
-	if ((resp = gwbuf_alloc(11)) == NULL)
-		return 0;
-	ptr = GWBUF_DATA(resp);
-	encode_value(ptr, 7, 24);	// Payload length
-	ptr += 3;
-	*ptr++ = 1;			// Sequence number
-	encode_value(ptr, 0, 24);
-	ptr += 3;
-	encode_value(ptr, slave->serverid, 32);
 	slave->state = BLRS_REGISTERED;
-	return slave->dcb->func.write(slave->dcb, resp);
+
+	/*
+	 * Send OK response
+	 */
+	return blr_slave_send_ok(router, slave);
 }
 
 /**
@@ -2094,31 +2086,31 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
 	return 1;
 }
+
  /**
- * Send a MySQL OK packet to the DCB
+ * Send a MySQL OK packet to the slave backend
  *
- * @param dcb   The DCB to send the OK packet to
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ *
  * @return result of a write call, non-zero if write was successful
  */
+
 static int
 blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
 GWBUF   *pkt;
 uint8_t *ptr;
+uint8_t ok_packet[] = {7, 0, 0, // Payload length
+			1, // Seqno,
+			0, // OK,
+			0, 0, 2, 0, 0, 0};
 
-        if ((pkt = gwbuf_alloc(11)) == NULL)
-                return 0;
-        ptr = GWBUF_DATA(pkt);
-        *ptr++ = 7;     // Payload length
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 1;     // Seqno
-        *ptr++ = 0;     // ok
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 2;
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 0;
-        return slave->dcb->func.write(slave->dcb, pkt);
+	if ((pkt = gwbuf_alloc(sizeof(ok_packet))) == NULL)
+		return 0;
+
+	memcpy(GWBUF_DATA(pkt), ok_packet, sizeof(ok_packet));
+
+	return slave->dcb->func.write(slave->dcb, pkt);
 }
+
