@@ -2121,7 +2121,7 @@ static void blr_log_identity(ROUTER_INSTANCE *router) {
 	LOGIF(LM, (skygw_log_write_flush(
 		LOGFILE_MESSAGE,
 		"%s: identity seen by the master: "
-		"server-id: %d, uuid: %s",
+		"server_id: %d, uuid: %s",
 		router->service->name,
 		router->serverid, (router->uuid == NULL ? "not available" : router->uuid))));
 
