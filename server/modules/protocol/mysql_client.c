@@ -758,9 +758,9 @@ int gw_read_client_event(
 		router = session->service->router;
 		router_instance = session->service->router_instance;
 		rsession = session->router_session;
-		ss_dassert(rsession != NULL);
 
-		if (router_instance != NULL && rsession != NULL) {
+		if (router_instance != NULL && rsession != NULL)
+                {
 
 	                /** Ask what type of input the router expects */
 			cap = router->getCapabilities(router_instance, rsession);
@@ -820,7 +820,17 @@ int gw_read_client_event(
                         	goto return_rc;
                 	}
 		}
-	}
+                else
+                {
+                    /** Send ERR 1045 to client */
+			mysql_send_auth_error(
+				dcb,
+				2,
+				0,
+				"failed to create new session");
+                    return 0;
+                }
+        }
 
 	if (stmt_input) {
                 
