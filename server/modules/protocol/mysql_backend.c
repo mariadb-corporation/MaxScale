@@ -396,12 +396,18 @@ static int gw_read_backend_event(DCB *dcb) {
 					"Session will be closed.");
 
                                 if (rsession)
+                                {
                                     router->handleError(router_instance,
 						rsession, 
 						errbuf, 
 						dcb,
 						ERRACT_REPLY_CLIENT,
 						&succp);
+                                }
+                                else
+                                {
+                                    dcb->dcb_errhandle_called = true;
+                                }
 				gwbuf_free(errbuf);
 				LOGIF(LD, (skygw_log_write(
 					LOGFILE_DEBUG,
