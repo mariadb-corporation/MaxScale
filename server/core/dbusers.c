@@ -2174,6 +2174,7 @@ int			tmp;
 			free(dbkey);
 			return NULL;
 		}
+		dbkey->resource[tmp] = 0;	// NULL Terminate
 	}
 	else		// NULL is valid, so represent with a length of -1
 	{
