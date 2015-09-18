@@ -1639,7 +1639,7 @@ int	slen;
 	slave->state = BLRS_REGISTERED;
 
 	/*
-	 * Send OK responset
+	 * Send OK response
 	 */
 	return blr_slave_send_ok(router, slave);
 }
