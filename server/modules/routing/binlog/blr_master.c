@@ -2132,7 +2132,7 @@ static void blr_log_identity(ROUTER_INSTANCE *router) {
 		LOGIF(LM, (skygw_log_write_flush(
 			LOGFILE_MESSAGE,
 			"%s: identity seen by the slaves: "
-			"server-id: %d, hostname: %s, MySQL version: %s",
+			"server_id: %d, hostname: %s, MySQL version: %s",
 			router->service->name,
 			router->masterid, (master_hostname == NULL ? "not available" : master_hostname),
 			(master_version == NULL ? "not available" : master_version))));
@@ -2140,7 +2140,7 @@ static void blr_log_identity(ROUTER_INSTANCE *router) {
         	LOGIF(LM, (skygw_log_write_flush(
 	              	LOGFILE_MESSAGE,
 			"%s: identity seen by the slaves: "
-			"server-id: %d, uuid: %s, hostname: %s, MySQL version: %s",
+			"server_id: %d, uuid: %s, hostname: %s, MySQL version: %s",
 			router->service->name,
 			router->masterid, master_uuid,
 			(master_hostname == NULL ? "not available" : master_hostname),
