@@ -66,7 +66,7 @@ typedef enum bref_state {
 
 #define SCHEMA_ERR_DUPLICATEDB 5000
 #define SCHEMA_ERRSTR_DUPLICATEDB "DUPDB"
-#define SCHEMA_ERR_DBNOTFOUND  1049
+#define SCHEMA_ERR_DBNOTFOUND 1049
 #define SCHEMA_ERRSTR_DBNOTFOUND "42000"
 /** 
  * The type of the backend server
