@@ -2,7 +2,7 @@
 
 function check_server_count()
 {
-    maxadmin_output=$(ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin list servers")
+    maxadmin_output=$(ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $maxscale_access_user@$maxscale_IP "$maxdir_bin/maxadmin -p$maxadmin_password -uadmin list servers")
     echo "$maxadmin_output"
     server_count=$(echo "$maxadmin_output"|grep -i 'server[1-5]'|wc -l)
     if [[ $server_count -ne $1 ]]

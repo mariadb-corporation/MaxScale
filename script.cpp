@@ -20,7 +20,7 @@
  @endverbatim
  * - make script non-executable
  * - block and unblocm node1
- * - check error log for 'Error: The file cannot be executed: /home/$access_user/script.sh' error
+ * - check error log for 'Error: The file cannot be executed: /home/$maxscale_access_user/script.sh' error
  * - check if Maxscale still alive
  */
 
