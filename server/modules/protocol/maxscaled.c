@@ -156,7 +156,7 @@ char		*password;
 					maxscaled->username = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
 					maxscaled->state = MAXSCALED_STATE_PASSWD;
 					dcb_printf(dcb, "PASSWORD");
-					gwbuf_consume(head, GWBUF_LENGTH(head));
+					while ((head = gwbuf_consume(head, GWBUF_LENGTH(head))) != NULL);
 					break;
 				case MAXSCALED_STATE_PASSWD:
 					password = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
@@ -170,7 +170,7 @@ char		*password;
 						dcb_printf(dcb, "FAILED");
 						maxscaled->state = MAXSCALED_STATE_LOGIN;
 					}
-					gwbuf_consume(head, GWBUF_LENGTH(head));
+					while ((head = gwbuf_consume(head, GWBUF_LENGTH(head))) != NULL);
 					free(password);
 					break;
 				case MAXSCALED_STATE_DATA:
@@ -182,7 +182,7 @@ char		*password;
 			else
 			{
 				// Force the free of the buffer header
-				gwbuf_consume(head, 0);
+				while ((head = gwbuf_consume(head, GWBUF_LENGTH(head))) != NULL);
 			}
 		}
 	}

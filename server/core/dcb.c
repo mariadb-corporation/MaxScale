@@ -1926,6 +1926,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         && !(dcb->flags & DCBF_HUNG)
         && (poolcount = dcb_persistent_clean_count(dcb, false)) < dcb->server->persistpoolmax)
     {
+        DCB_CALLBACK *loopcallback;
         LOGIF(LD, (skygw_log_write(
             LOGFILE_DEBUG,
             "%lu [dcb_maybe_add_persistent] Adding DCB to persistent pool, user %s.\n",
@@ -1946,7 +1947,13 @@ dcb_maybe_add_persistent(DCB *dcb)
                 session_free(local_session);
             }
         }
-        dcb->callbacks = NULL;
+	spinlock_acquire(&dcb->cb_lock);
+	while ((loopcallback = dcb->callbacks) != NULL)
+	{
+		dcb->callbacks = loopcallback->next;
+		free(loopcallback);
+	}
+	spinlock_release(&dcb->cb_lock);
         spinlock_acquire(&dcb->server->persistlock);
         dcb->nextpersistent = dcb->server->persistent;
         dcb->server->persistent = dcb;

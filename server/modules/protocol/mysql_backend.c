@@ -569,7 +569,8 @@ static int gw_read_backend_event(DCB *dcb) {
                  */
 		if (dcb->session->state == SESSION_STATE_ROUTER_READY &&
 			dcb->session->client != NULL && 
-			dcb->session->client->state == DCB_STATE_POLLING)
+			dcb->session->client->state == DCB_STATE_POLLING &&
+                        session->router_session)
                 {
                         client_protocol = SESSION_PROTOCOL(dcb->session,
                                                            MySQLProtocol);

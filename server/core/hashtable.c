@@ -762,7 +762,11 @@ char		buf[40];
 		key = keyread(fd);
 		value = valueread(fd);
 		if (key == NULL || value == NULL)
-			break;
+                {
+                    free(key);
+                    free(value);
+                    break;
+                }
 		hashtable_add(table, key, value);
 		rval++;
 	}
