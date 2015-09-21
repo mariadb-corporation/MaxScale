@@ -1919,7 +1919,7 @@ int	len, id_len, seqno = 2;
 	blr_slave_send_eof(router, slave, seqno++);
 
 	ptr = GWBUF_DATA(pkt);
-	encode_value(ptr, len - 4), 24);	// Add length of data packet
+	encode_value(ptr, len - 4, 24);	// Add length of data packet
 	ptr += 3;
 	*ptr++ = seqno++;					// Sequence number in response
 
