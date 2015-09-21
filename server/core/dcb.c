@@ -3156,7 +3156,7 @@ void dcb_log_ssl_read_error(DCB *dcb, int ssl_errno, int rc)
         {
             while ((ssl_errno = ERR_get_error()) != 0)
             {
-                ERR_error_string_n(ssl_errno, errbuf, STRERROR_BUFLEN);
+                ERR_error_string_n(ssl_errno, errbuf, 512);
                 skygw_log_write(LE,
                                 "%s",
                                 errbuf);
