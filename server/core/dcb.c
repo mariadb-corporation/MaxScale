@@ -289,10 +289,10 @@ dcb_final_free(DCB *dcb)
 {
     DCB_CALLBACK		*cb;
 
-        CHK_DCB(dcb);
-        ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED || 
-                        dcb->state == DCB_STATE_ALLOC,
-                        "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
+    CHK_DCB(dcb);
+    ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED || 
+        dcb->state == DCB_STATE_ALLOC,
+        "dcb not in DCB_STATE_DISCONNECTED not in DCB_STATE_ALLOC state.");
 
 	if (DCB_POLL_BUSY(dcb))
 	{
@@ -326,53 +326,58 @@ dcb_final_free(DCB *dcb)
 		if (ptr)
 			ptr->next = dcb->next;
 	}
-	spinlock_release(&dcbspin);
+    spinlock_release(&dcbspin);
 
-        if (dcb->session) {
-                /*<
-                 * Terminate client session.
-                 */
-                {
-                        SESSION *local_session = dcb->session;
-			dcb->session = NULL;
-                        CHK_SESSION(local_session);
-                        /** 
-			 * Set session's client pointer NULL so that other threads
-			 * won't try to call dcb_close for client DCB
-			 * after this call.
-			 */
-                        if (local_session->client == dcb)
-			{
-				spinlock_acquire(&local_session->ses_lock);
-				local_session->client = NULL;
-				spinlock_release(&local_session->ses_lock);
-			}
-                        if (SESSION_STATE_DUMMY != local_session->state)
-                        {
-                            session_free(local_session);
-                        }
-		}
+    if (dcb->session) {
+        /*<
+         * Terminate client session.
+         */
+        SESSION *local_session = dcb->session;
+        dcb->session = NULL;
+        CHK_SESSION(local_session);
+        /** 
+         * Set session's client pointer NULL so that other threads
+         * won't try to call dcb_close for client DCB
+         * after this call.
+         */
+        if (local_session->client == dcb)
+        {
+            spinlock_acquire(&local_session->ses_lock);
+            local_session->client = NULL;
+            spinlock_release(&local_session->ses_lock);
+        }
+        if (SESSION_STATE_DUMMY != local_session->state)
+        {
+            session_free(local_session);
+        }
 	}
 
 	if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
 		free(dcb->protocol);
-        if (dcb->protoname)
-                free(dcb->protoname);
+    if (dcb->protoname)
+        free(dcb->protoname);
 	if (dcb->remote)
 		free(dcb->remote);
 	if (dcb->user)
 		free(dcb->user);
 
-	/* Clear write and read buffers */	
-	if (dcb->delayq) {
-		GWBUF *queue = dcb->delayq;
-		while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
-	}
-	if (dcb->dcb_readqueue)
-        {
-                GWBUF* queue = dcb->dcb_readqueue;
-                while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
-        }
+    /* Clear write and read buffers */	
+    if (dcb->delayq) {
+        GWBUF *queue = dcb->delayq;
+        while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
+        dcb->delayq = NULL;
+    }
+    if (dcb->writeq) {
+        GWBUF *queue = dcb->writeq;
+        while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
+        dcb->writeq = NULL;
+    }
+    if (dcb->dcb_readqueue)
+    {
+        GWBUF* queue = dcb->dcb_readqueue;
+        while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
+        dcb->dcb_readqueue = NULL;
+    }
 
 	spinlock_acquire(&dcb->cb_lock);
 	while ((cb = dcb->callbacks) != NULL)
@@ -549,10 +554,36 @@ dcb_process_victim_queue(DCB *listofdcb)
                     dcb = dcb->memdata.next;
                     continue;
                 }
+                else
+                {
+                    DCB *nextdcb;
+                    poll_remove_dcb(dcb);
+                    spinlock_acquire(&zombiespin);
+                    bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
+                    nextdcb = dcb->memdata.next;
+                    dcb->memdata.next = zombies;
+                    zombies = dcb;
+                    spinlock_release(&zombiespin);
+                    if (dcb->server)
+                    {
+                        atomic_add(&dcb->server->stats.n_current, -1);
+                    }
+                    dcb = nextdcb;
+                    continue;
+                }
             }
-            dcb_close_finish(dcb);
         }
-    
+        /**
+         * close protocol and router session
+         */
+        if (dcb->func.close != NULL)
+        {
+            dcb->func.close(dcb);
+        }
+        /** Call possible callback for this DCB in case of close */
+        dcb_call_callback(dcb, DCB_REASON_CLOSE);
+           
+ 
         if (dcb->fd > 0)
         {
             /*<
@@ -1826,7 +1857,7 @@ dcb_close(DCB *dcb)
             pthread_self(),
             dcb,
             STRDCBSTATE(dcb->state))));
-        raise(SIGABRT);
+       raise(SIGABRT);
     }
     
     /**
@@ -1902,6 +1933,20 @@ dcb_maybe_add_persistent(DCB *dcb)
             dcb->user)));
         dcb->dcb_is_zombie = false;
         dcb->persistentstart = time(NULL);
+        if (dcb->session)
+        /*<
+         * Terminate client session.
+         */
+        {
+            SESSION *local_session = dcb->session;
+            session_set_dummy(dcb);
+            CHK_SESSION(local_session);
+            if (SESSION_STATE_DUMMY != local_session->state)
+            {
+                session_free(local_session);
+            }
+        }
+        dcb->callbacks = NULL;
         spinlock_acquire(&dcb->server->persistlock);
         dcb->nextpersistent = dcb->server->persistent;
         dcb->server->persistent = dcb;
@@ -2063,6 +2108,15 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
 		if (dcb->remote)
 			dcb_printf(pdcb, "\tConnected to:       %s\n",
 					dcb->remote);
+        if (dcb->server)
+        {
+            if (dcb->server->name)
+                dcb_printf(pdcb, "\tServer name/IP:     %s\n",
+                    dcb->server->name);
+            if (dcb->server->port)
+                dcb_printf(pdcb, "\tPort number:        %d\n",
+                    dcb->server->port);
+        }
 		if (dcb->user)
 			dcb_printf(pdcb, "\tUsername:           %s\n",
 					dcb->user);
@@ -2858,7 +2912,10 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
         {
             nextdcb = disposals->nextpersistent;
             disposals->persistentstart = 0;
-            dcb_close_finish(disposals);
+            if (DCB_STATE_POLLING == dcb->state)
+            {
+                poll_remove_dcb(dcb);
+            }
             dcb_close(disposals);
             disposals = nextdcb;
         }

@@ -990,7 +990,7 @@ static void closeSession(
 		int i;
                 /** 
                  * This sets router closed. Nobody is allowed to use router
-                 * whithout checking this first.
+                 * without checking this first.
                  */
                 router_cli_ses->rses_closed = true;
 
@@ -5306,8 +5306,6 @@ static int router_handle_state_switch(
         backend_ref_t*     bref;
         int                rc = 1;
         SERVER*            srv;
-	ROUTER_CLIENT_SES* rses;
-        SESSION*           ses;
         CHK_DCB(dcb);
         bref = (backend_ref_t *)data;
         CHK_BACKEND_REF(bref);
@@ -5327,7 +5325,10 @@ static int router_handle_state_switch(
 			srv->port,
 				STRSRVSTATUS(srv))));
         CHK_SESSION(((SESSION*)dcb->session));
-        CHK_CLIENT_RSES(((ROUTER_CLIENT_SES *)dcb->session->router_session));
+        if (dcb->session->router_session)
+        {
+            CHK_CLIENT_RSES(((ROUTER_CLIENT_SES *)dcb->session->router_session));
+        }
 
         switch (reason) {
                 case DCB_REASON_NOT_RESPONDING:

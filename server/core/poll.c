@@ -860,7 +860,12 @@ unsigned long	qtime;
 #endif /* FAKE_CODE */
 	ss_debug(spinlock_acquire(&dcb->dcb_initlock);)
 	ss_dassert(dcb->state != DCB_STATE_ALLOC);
-	ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
+        /* It isn't obvious that this is impossible */
+	/* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
+        if (DCB_STATE_DISCONNECTED == dcb->state)
+        {
+            return 0;
+        }
 	ss_debug(spinlock_release(&dcb->dcb_initlock);)
 
 	LOGIF(LD, (skygw_log_write(

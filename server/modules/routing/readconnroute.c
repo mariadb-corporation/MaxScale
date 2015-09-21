@@ -886,7 +886,7 @@ static void handleError(
         spinlock_release(&session->ses_lock);
     }
 
-    if (router_cli_ses->backend_dcb) {
+    if (router_cli_ses && router_cli_ses->backend_dcb) {
         if (backend_dcb != router_cli_ses->backend_dcb)
         {
             /* Linkages have gone badly wrong */
@@ -898,9 +898,9 @@ static void handleError(
                 backend_dcb)));
         }
         router_cli_ses->backend_dcb = NULL;
-        dcb_close(backend_dcb);
     }
-	
+    dcb_close(backend_dcb);
+
     /** false because connection is not available anymore */
     *succp = false;
 }

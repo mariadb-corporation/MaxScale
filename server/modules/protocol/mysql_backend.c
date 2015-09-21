@@ -167,7 +167,7 @@ static int gw_read_backend_event(DCB *dcb) {
         int            rc = 0;
 
         CHK_DCB(dcb);        
-        if (!dcb->session && dcb->persistentstart)
+        if (dcb->persistentstart)
         {
             dcb->dcb_errhandle_called = true;
             goto return_rc;
@@ -407,16 +407,11 @@ static int gw_read_backend_event(DCB *dcb) {
                                 else
                                 {
                                     dcb->dcb_errhandle_called = true;
+				    dcb_close(dcb);
+				    rc = 1;
+				    goto return_rc;
                                 }
 				gwbuf_free(errbuf);
-				LOGIF(LD, (skygw_log_write(
-					LOGFILE_DEBUG,
-					"%lu [gw_read_backend_event] "
-					"after calling handleError. Backend "
-					"DCB %p, session %p",
-					pthread_self(),
-					dcb,
-					dcb->session)));
 				
 				spinlock_acquire(&session->ses_lock);
 				session->state = SESSION_STATE_STOPPING;
@@ -1066,7 +1061,7 @@ gw_backend_hangup(DCB *dcb)
         session_state_t ses_state;
         
         CHK_DCB(dcb);
-        if (!dcb->session && dcb->persistentstart)
+        if (dcb->persistentstart)
         {
             dcb->dcb_errhandle_called = true;
             goto retblock;
@@ -1124,6 +1119,7 @@ gw_backend_hangup(DCB *dcb)
 			}
 		}
                 gwbuf_free(errbuf);
+                dcb_close(dcb);
                 goto retblock;
         }
 #if defined(SS_DEBUG)
