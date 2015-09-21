@@ -2000,7 +2000,8 @@ int main(int argc, char **argv)
          * Successful start, notify the parent process that it can exit.
          */
         ss_dassert(rc == MAXSCALE_SHUTDOWN);
-        write_child_exit_code(daemon_pipe[1], rc);
+        if(daemon_mode)
+            write_child_exit_code(daemon_pipe[1], rc);
 
 	MaxScaleStarted = time(0);
         /*<
