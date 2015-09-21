@@ -763,8 +763,6 @@ char		buf[40];
 		value = valueread(fd);
 		if (key == NULL || value == NULL)
                 {
-                    free(key);
-                    free(value);
                     break;
                 }
 		hashtable_add(table, key, value);
