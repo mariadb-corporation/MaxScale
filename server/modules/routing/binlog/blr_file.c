@@ -334,7 +334,7 @@ BLFILE		*file;
 		return file;
 	}
 
-	if ((file = (BLFILE *)malloc(sizeof(BLFILE))) == NULL)
+	if ((file = (BLFILE *)calloc(1, sizeof(BLFILE))) == NULL)
 	{
 		spinlock_release(&router->fileslock);
 		return NULL;
