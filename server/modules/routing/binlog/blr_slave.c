@@ -899,8 +899,9 @@ extern  char *strcasestr();
 					"%s: Expected DISCONNECT SERVER $server_id",
 						router->service->name)));
 			} else {
+				int serverid = atoi(word);
 				free(query_text);
-				return blr_slave_disconnect_server(router, slave, atoi(word));
+				return blr_slave_disconnect_server(router, slave, serverid);
 			}
 		}
 	}
@@ -1553,7 +1554,7 @@ ROUTER_SLAVE	*sptr;
 			sprintf(port, "%d", sptr->port);
 			sprintf(master_id, "%d", router->serverid);
 			sprintf(slave_uuid, "%s", sptr->uuid ? sptr->uuid : "");
-			len = 5 + strlen(server_id) + strlen(host) + strlen(port)
+			len = 4 + strlen(server_id) + strlen(host) + strlen(port)
 					+ strlen(master_id) + strlen(slave_uuid) + 5;
 			if ((pkt = gwbuf_alloc(len)) == NULL)
 				return 0;
@@ -2391,7 +2392,7 @@ int	len, id_len, seqno = 2;
 		strcpy(state, "not found");
 
 	id_len = strlen(serverid);
-	len = 5 + id_len + strlen(state) + 1;
+	len = 4 + (1 + id_len) + (1 + strlen(state));
 
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
@@ -2402,7 +2403,7 @@ int	len, id_len, seqno = 2;
 	blr_slave_send_eof(router, slave, seqno++);
 
 	ptr = GWBUF_DATA(pkt);
-	encode_value(ptr, id_len + 2 + strlen(state), 24);	// Add length of data packet
+	encode_value(ptr, len - 4), 24);	// Add length of data packet
 	ptr += 3;
 	*ptr++ = seqno++;					// Sequence number in response
 
