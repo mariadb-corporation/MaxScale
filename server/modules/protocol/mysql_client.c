@@ -1346,8 +1346,8 @@ int gw_MySQLListener(DCB *listen_dcb,
     int one = 1;
     int rc;
     bool is_tcp = false;
-    memset(&serv_addr, 0, sizeof (serv_addr));
-    memset(&local_addr, 0, sizeof (local_addr));
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    memset(&local_addr, 0, sizeof(local_addr));
 
     if (strchr(config_bind, '/'))
     {
@@ -1362,12 +1362,12 @@ int gw_MySQLListener(DCB *listen_dcb,
             skygw_log_write(LE,
                             "Error: Can't create UNIX socket: %i, %s",
                             errno,
-                            strerror_r(errno, errbuf, sizeof (errbuf)));
+                            strerror_r(errno, errbuf, sizeof(errbuf)));
             return 0;
         }
-        memset(&local_addr, 0, sizeof (local_addr));
+        memset(&local_addr, 0, sizeof(local_addr));
         local_addr.sun_family = AF_UNIX;
-        strncpy(local_addr.sun_path, config_bind, sizeof (local_addr.sun_path) - 1);
+        strncpy(local_addr.sun_path, config_bind, sizeof(local_addr.sun_path) - 1);
 
         current_addr = (struct sockaddr *) &local_addr;
 
@@ -1390,7 +1390,7 @@ int gw_MySQLListener(DCB *listen_dcb,
             skygw_log_write(LE,
                             "Error: Can't create socket: %i, %s",
                             errno,
-                            strerror_r(errno, errbuf, sizeof (errbuf)));
+                            strerror_r(errno, errbuf, sizeof(errbuf)));
             return 0;
         }
 
@@ -1401,18 +1401,24 @@ int gw_MySQLListener(DCB *listen_dcb,
     listen_dcb->fd = -1;
 
     // socket options
-    if (setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof (one)) != 0)
+    if (setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof(one)) != 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof (errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error: Failed to set socket options. Error %d: %s",
+                                         errno,
+                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
     }
 
     if (is_tcp)
     {
         char errbuf[STRERROR_BUFLEN];
-        if (setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *) &one, sizeof (one)) != 0)
+        if (setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *) &one, sizeof(one)) != 0)
         {
-            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof (errbuf)))));
+            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                             "Error: Failed to set socket options. Error %d: %s",
+                                             errno,
+                                             strerror_r(errno, errbuf, sizeof(errbuf)))));
         }
     }
     // set NONBLOCKING mode
@@ -1432,17 +1438,17 @@ int gw_MySQLListener(DCB *listen_dcb,
             {
                 char errbuf[STRERROR_BUFLEN];
                 skygw_log_write(LE, "Error: Failed to unlink Unix Socket %s: %d %s",
-                                config_bind, errno, strerror_r(errno, errbuf, sizeof (errbuf)));
+                                config_bind, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
             }
 
-            if (bind(l_so, (struct sockaddr *) &local_addr, sizeof (local_addr)) < 0)
+            if (bind(l_so, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0)
             {
                 char errbuf[STRERROR_BUFLEN];
                 skygw_log_write(LE,
                                 "Error: Failed to bind to UNIX Domain socket '%s': %i, %s",
                                 config_bind,
                                 errno,
-                                strerror_r(errno, errbuf, sizeof (errbuf)));
+                                strerror_r(errno, errbuf, sizeof(errbuf)));
                 close(l_so);
                 return 0;
             }
@@ -1455,20 +1461,20 @@ int gw_MySQLListener(DCB *listen_dcb,
                                 "Error: Failed to change permissions on UNIX Domain socket '%s': %i, %s",
                                 config_bind,
                                 errno,
-                                strerror_r(errno, errbuf, sizeof (errbuf)));
+                                strerror_r(errno, errbuf, sizeof(errbuf)));
             }
 
             break;
 
         case AF_INET:
-            if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0)
+            if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
             {
                 char errbuf[STRERROR_BUFLEN];
                 skygw_log_write(LE,
                                 "Error: Failed to bind on '%s': %i, %s",
                                 config_bind,
                                 errno,
-                                strerror_r(errno, errbuf, sizeof (errbuf)));
+                                strerror_r(errno, errbuf, sizeof(errbuf)));
                 close(l_so);
                 return 0;
             }
@@ -1487,7 +1493,7 @@ int gw_MySQLListener(DCB *listen_dcb,
                         "Failed to start listening on '%s': %d, %s",
                         config_bind,
                         errno,
-                        strerror_r(errno, errbuf, sizeof (errbuf)));
+                        strerror_r(errno, errbuf, sizeof(errbuf)));
         close(l_so);
         return 0;
     }
