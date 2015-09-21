@@ -4243,7 +4243,6 @@ static bool execute_sescmd_in_backend(
         }
         else
         {
-		while((buf = GWBUF_CONSUME_ALL(buf)) != NULL);
                 succp = false;
         }
 return_succp:
