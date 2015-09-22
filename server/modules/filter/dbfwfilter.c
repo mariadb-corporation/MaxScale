@@ -473,7 +473,10 @@ bool check_time(char* str)
 
 #define IS_RVRS_TIME(tr) (mktime(&tr->end) < mktime(&tr->start))
 /**
- * Parses a null-terminated string into two tm_t structs that mark a timerange
+ * Parses a null-terminated string into a timerange defined by two ISO-8601 compliant
+ * times separated by a single dash. The times are interpreted at one second precision
+ * and follow the extended format by separating the hours, minutes and seconds with
+ * semicolons.
  * @param str String to parse
  * @param instance FW_FILTER instance
  * @return If successful returns a pointer to the new TIMERANGE instance. If errors occurred or
@@ -482,62 +485,84 @@ bool check_time(char* str)
 TIMERANGE* parse_time(char* str, FW_INSTANCE* instance)
 {
 
-	TIMERANGE* tr = NULL;
-	int intbuffer[3];
-	int* idest = intbuffer;
-	char strbuffer[3];
-	char *ptr,*sdest;
-	struct tm* tmptr;
-
 	assert(str != NULL && instance != NULL);
-	
-	tr = (TIMERANGE*)calloc(1,sizeof(TIMERANGE));
+
+    char strbuf[strlen(str) + 1];
+    char *tok, *saved, *numend;
+	struct tm start, end;
+
+    memset(&start,0,sizeof(struct tm));
+	memset(&end,0,sizeof(struct tm));
+    strncpy(strbuf, str, sizeof(strbuf));
+
+    /** Process the start of the timerange */
+    if((tok = strtok_r(strbuf, "-: ", &saved)) == NULL)
+        return NULL;
+
+    start.tm_hour = strtol(tok, &numend, 10);
+
+    if(*numend != '\0')
+        return NULL;
+
+    if((tok = strtok_r(NULL, "-: ", &saved)) == NULL)
+        return NULL;
+
+    start.tm_min = strtol(tok, &numend, 10);
+
+    if(*numend != '\0')
+        return NULL;
+
+    if((tok = strtok_r(NULL, "-: ", &saved)) == NULL)
+        return NULL;
+
+    start.tm_sec = strtol(tok, &numend, 10);
+
+    if(*numend != '\0')
+        return NULL;
+
+    /** Process the end of the timerange */
+
+    if((tok = strtok_r(NULL, "-: ", &saved)) == NULL)
+        return NULL;
+
+    start.tm_hour = strtol(tok, &numend, 10);
+
+    if(*numend != '\0')
+        return NULL;
+
+    if((tok = strtok_r(NULL, "-: ", &saved)) == NULL)
+        return NULL;
+
+    start.tm_min = strtol(tok, &numend, 10);
+
+    if(*numend != '\0')
+        return NULL;
+
+    if((tok = strtok_r(NULL, "-: ", &saved)) == NULL)
+        return NULL;
+
+    start.tm_sec = strtol(tok, &numend, 10);
+
+    if(*numend != '\0')
+        return NULL;
+
+    CHK_TIMES((&start));
+    CHK_TIMES((&end));
+
+    /** The time string was valid */
+
+	TIMERANGE* tr = (TIMERANGE*)malloc(sizeof(TIMERANGE));
 
 	if(tr == NULL){
 		skygw_log_write(LOGFILE_ERROR, "dbfwfilter: malloc returned NULL.");
 		return NULL;
 	}
 
-	memset(&tr->start,0,sizeof(struct tm));
-	memset(&tr->end,0,sizeof(struct tm));
-	ptr = str;
-	sdest = strbuffer;
-	tmptr = &tr->start;
-
-	while(ptr - str < 19){
-		if(isdigit(*ptr)){
-			*sdest = *ptr;
-		}else if(*ptr == ':' ||*ptr == '-' || *ptr == '\0' || *ptr == ' '){
-			*sdest = '\0';
-			*idest++ = atoi(strbuffer);
-			sdest = strbuffer;
-			
-			if(*ptr == '-' || *ptr == '\0'){
-				
-				tmptr->tm_hour = intbuffer[0];
-				tmptr->tm_min = intbuffer[1];
-				tmptr->tm_sec = intbuffer[2];
-
-				CHK_TIMES(tmptr);
-
-				if(*ptr == '\0' || *ptr == ' '){
-					return tr;
-				}
-
-				idest = intbuffer;
-				tmptr = &tr->end;
-			}
-			ptr++;
-			continue;
-		}
-		ptr++;
-		sdest++;
-	}
-
-	free(tr);
-	return NULL;
+    memcpy(&tr->start, &start, sizeof(start));
+    memcpy(&tr->end, &end, sizeof(end));
+    tr->next = NULL;
+	return tr;
 }
-
 
 /**
  * Splits the reversed timerange into two.
