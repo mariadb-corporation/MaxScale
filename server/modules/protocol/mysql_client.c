@@ -817,6 +817,10 @@ int gw_read_client_event(
 						"Session will be closed.")));
 				}
                         	rc = 1;
+                                while (read_buffer)
+                                {
+                                    read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
+                                }
                         	goto return_rc;
                 	}
 		}
@@ -828,6 +832,10 @@ int gw_read_client_event(
 				2,
 				0,
 				"failed to create new session");
+                    while (read_buffer)
+                    {
+                        read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
+                    }
                     return 0;
                 }
         }
@@ -1204,6 +1212,10 @@ int gw_read_client_event(
 					"Session will be closed.")));
 				
 			    }
+                            while (read_buffer)
+                            {
+                                read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
+                            }
                         }
 		    }
 		}

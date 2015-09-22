@@ -406,6 +406,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                 }
                                 else
                                 {
+                                    gwbuf_free(errbuf);
                                     dcb->dcb_errhandle_called = true;
 				    dcb_close(dcb);
 				    rc = 1;

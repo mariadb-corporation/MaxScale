@@ -168,6 +168,9 @@ typedef struct gwbuf {
 /*< Consume a number of bytes in the buffer */
 #define GWBUF_CONSUME(b, bytes)	((b)->start = bytes > ((char *)(b)->end - (char *)(b)->start) ? (b)->end : (void *)((char *)(b)->start + (bytes)));
 
+/*< Check if a given pointer is within the buffer */
+#define GWBUF_POINTER_IN_BUFFER (ptr, b) ((char *)(ptr) >= (char *)(b)->start && (char *)(ptr) < (char *)(b)->end)
+
 /*< Consume a complete buffer */
 #define GWBUF_CONSUME_ALL(b)	gwbuf_consume((b), GWBUF_LENGTH((b)))
 
