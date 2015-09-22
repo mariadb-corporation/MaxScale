@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
     sleep(5);
     printf("Checking number of connections ot backend servers\n");
     for (int i = 0; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("connections: %u\n", conn_num);
         if ((i == 0) && (conn_num != 1)) {
             printf("FAILED: Master should have only 1 connection, but it has %d connection(s)\n", conn_num);

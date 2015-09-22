@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
     Nc[3] = 0;
 
     for (i = 0; i < 4; i++) {
-        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
         if ((i<4) && (Nc[i] != conn_num)) {
             global_result++;
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 
     int slave_found = 0;
     for (i = 1; i < Test->galera->N; i++) {
-        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("connections to node %d: %u \n", i, conn_num);
         if ((conn_num != 0) && (conn_num != maxscale_conn_num)) {
             global_result++;

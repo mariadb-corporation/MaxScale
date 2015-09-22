@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     int TotalConn = 0;
 
     printf("Checking connections to Master: should be 0\n");
-    conn_num = get_conn_num(Test->repl->nodes[0], Test->maxscale_IP, (char *) "test");
+    conn_num = get_conn_num(Test->repl->nodes[0], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
     if (conn_num != 0) {
         res++;
         printf("FAILED: number of connections to Master is %d\n", conn_num);
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     printf("Number of connections to each slave should be between %d and %d\n", ConnFloor, ConnCell);
     printf("Checking connections to each node\n");
     for (int i = 1; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         TotalConn += conn_num;
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
         if ((conn_num > ConnCell) || (conn_num < ConnFloor)) {

@@ -99,6 +99,11 @@ public:
     char maxscale_IP[16];
 
     /**
+     * @brief maxscale_hostname  Maxscale machine 'hostname' value
+     */
+    char maxscale_hostname[1024];
+
+    /**
      * @brief Maxscale_User User name to access Maxscale services
      */
     char maxscale_user[256];

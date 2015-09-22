@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     fflush(stdout);
 
     for (i = 0; i < Test->repl->N; i++) {
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn > 2*conn_N)) {
             printf("FAILED: to many connections to master\n");
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
     }
 
     for (i = 0; i < Test->repl->N; i++) {
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn > 2*conn_N)) {
             printf("FAILED: to many connections to master\n");
@@ -109,7 +109,7 @@ int main(int argc, char *argv[])
 
 
     for (i = 0; i < Test->repl->N; i++) {
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn > 2*conn_N)) {
             printf("FAILED: to many connections to master\n");
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     sleep(15);
 
     for (i = 0; i < Test->repl->N; i++) {
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn != 0)) {
             printf("FAILED: there are still connections to master\n");
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
     }
 
     for (i = 0; i < Test->repl->N; i++) {
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn != 0)) {
             printf("FAILED: there are still connections to master\n");
@@ -153,7 +153,7 @@ int main(int argc, char *argv[])
     }
 
     for (i = 0; i < Test->repl->N; i++) {
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn != 0)) {
             printf("FAILED: there are still connections to master\n");
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
     exit_flag = 1;
 
     for (i = 0; i < Test->repl->N; i++) {
-        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        num_conn = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("Connections to node %d (%s): %d\n", i, Test->repl->IP[i], num_conn);
         if ((i == 0) && (num_conn != 0)) {
             printf("FAILED: there are still connections to master\n");

@@ -141,6 +141,8 @@ int TestConnections::read_env()
     env = getenv("ssl"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {ssl = true;}
     env = getenv("mysql51_only"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {no_nodes_check = true;}
 
+    env = getenv("maxscale_hostname"); if (env != NULL) {sprintf(maxscale_hostname, "%s", env);} else {sprintf(maxscale_hostname, "%s", maxscale_IP);}
+
     if (strcmp(maxscale_access_user, "root") == 0) {
         sprintf(maxscale_access_homedir, "/%s/", maxscale_access_user);
     } else {
@@ -460,7 +462,7 @@ int find_connected_slave(TestConnections* Test, int * global_result)
     int current_slave = -1;
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("connections to %d: %u\n", i, conn_num);
         if ((i == 0) && (conn_num != 1)) {printf("There is no connection to master\n"); *global_result = 1;}
         all_conn += conn_num;
@@ -479,7 +481,7 @@ int find_connected_slave1(TestConnections* Test)
     int current_slave = -1;
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("connections to %d: %u\n", i, conn_num); fflush(stdout);
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0)) {current_slave = i;}

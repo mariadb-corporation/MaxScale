@@ -24,13 +24,13 @@ using namespace std;
  * @param master Master node index
  * @return 0 if check succedded
  */
-int CheckConnnectionsOnlyToMaster(TestConnections * Test, int master)
+int check_connnections_only_to_master(TestConnections * Test, int master)
 {
     int res = 0;
     int conn_num;
     printf("Checking number of connections to each node\n");
     for (int i = 0; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, (char *) "test");
+        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
         printf("Connections to node %d (%s):\t%d\n", i, Test->repl->IP[i], conn_num);
         if (((i == master) && (conn_num != 1)) || ((i != master) && (conn_num != 0))) {
             res++;
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     Test->connect_readconn_master();
     printf("Sleeping 10 seconds\n");
     sleep(10);
-    res += CheckConnnectionsOnlyToMaster(Test, 0);
+    res += check_connnections_only_to_master(Test, 0);
     Test->close_readconn_master();
     printf("Changing master to node 1\n");
     Test->repl->change_master(1, 0);
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     Test->connect_readconn_master();
     printf("Sleeping 10 seconds\n");
     sleep(10);
-    res += CheckConnnectionsOnlyToMaster(Test, 1);
+    res += check_connnections_only_to_master(Test, 1);
     Test->close_readconn_master();
 
     printf("Changing master back to node 0\n");

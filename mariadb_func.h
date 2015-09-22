@@ -37,7 +37,7 @@ int execute_query_silent(MYSQL *conn, const char *sql);
 int execute_query1(MYSQL *conn, const char *sql, bool silent);
 int execute_query_affected_rows(MYSQL *conn, const char *sql, my_ulonglong * affected_rows);
 int execute_query_check_one(MYSQL *conn, const char *sql, const char *expected);
-int get_conn_num(MYSQL *conn, char * ip, char * db);
+int get_conn_num(MYSQL *conn, char * ip, char * hostname, char * db);
 int find_field(MYSQL *conn, const char * sql, const char * field_name, char * value);
 unsigned int get_seconds_behind_master(MYSQL *conn);
 int read_log(char * name, char ** err_log_content);

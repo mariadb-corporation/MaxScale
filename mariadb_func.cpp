@@ -240,7 +240,7 @@ int execute_query_affected_rows(MYSQL *conn, const char *sql, my_ulonglong * aff
  * @param db    name of DB to which connections are counted
  * @return number of connections
  */
-int get_conn_num(MYSQL *conn, char * ip, char * db)
+int get_conn_num(MYSQL *conn, char * ip, char *hostname, char * db)
 {
     MYSQL_RES *res;
     MYSQL_ROW row;
@@ -266,6 +266,7 @@ int get_conn_num(MYSQL *conn, char * ip, char * db)
                     row = mysql_fetch_row(res);
                     if ( (row[2] != NULL ) && (row[3] != NULL) ) {
                         if ((strstr(row[2], ip) != NULL) && (strstr(row[3], db) != NULL)) {conn_num++;}
+                        if ((strstr(row[2], hostname) != NULL) && (strstr(row[3], db) != NULL)) {conn_num++;}
                     }
                 }
             }
