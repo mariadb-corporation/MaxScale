@@ -292,13 +292,13 @@ int TestConnections::start_binlog()
     global_result +=  system(sys1);
 
     printf("Starting back Master\n");  fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --log-bin  %s'", repl->sshkey[0], maxscale_access_user, repl->IP[0], maxscale_access_sudo, repl->start_db_command[0], cmd_opt);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[0], maxscale_access_user, repl->IP[0], maxscale_access_sudo, repl->start_db_command[0], cmd_opt);
     printf("%s\n", sys1);  fflush(stdout);
     global_result += system(sys1); fflush(stdout);
 
     for (i = 1; i < repl->N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --log-bin  %s'", repl->sshkey[i], maxscale_access_user, repl->IP[i], maxscale_access_sudo, repl->start_db_command[i], cmd_opt);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[i], maxscale_access_user, repl->IP[i], maxscale_access_sudo, repl->start_db_command[i], cmd_opt);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
