@@ -2175,10 +2175,6 @@ uint32_t	chksum;
 	if (slave->nocrc)
 		len -= 4;
 
-	/* no slave crc, remove 4 bytes */
-	if (slave->nocrc)
-		len -= 4;
-
 	// Build a fake rotate event
 	resp = gwbuf_alloc(len + 5);
 	hdr.payload_len = len + 1;
