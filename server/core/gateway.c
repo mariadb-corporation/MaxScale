@@ -1648,7 +1648,6 @@ int main(int argc, char **argv)
 
         if (!resolve_maxscale_conf_fname(&cnf_file_path, pathbuf, cnf_file_arg))
         {
-                ss_dassert(cnf_file_path == NULL);
                 rc = MAXSCALE_BADCONFIG;
                 goto return_main;
         }
