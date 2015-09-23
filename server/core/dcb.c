@@ -424,6 +424,11 @@ DCB_CALLBACK		*cb;
 		GWBUF *queue = dcb->delayq;
 		while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
 	}
+    if (dcb->writeq) {
+        GWBUF *queue = dcb->writeq;
+        while ((queue = gwbuf_consume(queue, GWBUF_LENGTH(queue))) != NULL);
+        dcb->writeq = NULL;
+    }
 	if (dcb->dcb_readqueue)
         {
                 GWBUF* queue = dcb->dcb_readqueue;
