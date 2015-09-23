@@ -72,20 +72,39 @@
 	WHERE user.user IS NOT NULL AND user.user <> ''"
 
 #else
-# define LOAD_MYSQL_USERS_QUERY "SELECT user, host, password, concat(user,host,password,Select_priv) AS userdata, Select_priv AS anydb FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
+# define LOAD_MYSQL_USERS_QUERY "SELECT \
+    user, host, password, concat(user,host,password,Select_priv) AS userdata, \
+    Select_priv AS anydb FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
 #endif
 #define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
 
 #define MYSQL_USERS_WITH_DB_ORDER " ORDER BY host DESC"
-#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT user.user AS user,user.host AS host,user.password AS password,concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, user.Select_priv AS anydb,db.db AS db FROM mysql.user LEFT JOIN mysql.db ON user.user=db.user AND user.host=db.host WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
+#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT \
+    user.user AS user, \
+    user.host AS host, \
+    user.password AS password, \
+    concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, \
+    user.Select_priv AS anydb, \
+    db.db AS db \
+    FROM mysql.user LEFT JOIN mysql.db \
+    ON user.user=db.user AND user.host=db.host \
+    WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
 
 #define MYSQL_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS tbl_count"
 
-#define LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS t1 WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
+#define LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * \
+    FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS t1 \
+    WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
 
-#define LOAD_MYSQL_DATABASE_NAMES "SELECT * FROM ( (SELECT COUNT(1) AS ndbs FROM INFORMATION_SCHEMA.SCHEMATA) AS tbl1, (SELECT GRANTEE,PRIVILEGE_TYPE from INFORMATION_SCHEMA.USER_PRIVILEGES WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \'\\'\',\'\')=CURRENT_USER()) AS tbl2)"
+#define LOAD_MYSQL_DATABASE_NAMES "SELECT * \
+    FROM ( (SELECT COUNT(1) AS ndbs \
+    FROM INFORMATION_SCHEMA.SCHEMATA) AS tbl1, \
+    (SELECT GRANTEE,PRIVILEGE_TYPE from INFORMATION_SCHEMA.USER_PRIVILEGES \
+    WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \'\\'\',\'\')=CURRENT_USER()) AS tbl2)"
 
-#define ERROR_NO_SHOW_DATABASES "%s: Unable to load database grant information, MaxScale authentication will proceed without including database permissions. To correct this GRANT SHOW DATABASES ON *.* privilege to the user %s."
+#define ERROR_NO_SHOW_DATABASES "%s: Unable to load database grant information, \
+    MaxScale authentication will proceed without including database permissions. \
+    To correct this GRANT SHOW DATABASES ON *.* privilege to the user %s."
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
