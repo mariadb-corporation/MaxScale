@@ -483,17 +483,16 @@ bool check_time(char* str)
  * @return If successful returns a pointer to the new TIMERANGE instance. If errors occurred or
  * the timerange was invalid, a NULL pointer is returned.
  */
-TIMERANGE* parse_time(char* str, FW_INSTANCE* instance)
+static TIMERANGE* parse_time(const char* str)
 {
-
-    assert(str != NULL && instance != NULL);
+    assert(str != NULL);
 
     char strbuf[strlen(str) + 1];
     char *separator;
     struct tm start, end;
     TIMERANGE* tr = NULL;
 
-    strncpy(strbuf, str, sizeof(strbuf));
+    strcpy(strbuf, str);
 
     if ((separator = strchr(strbuf, '-')))
     {
@@ -501,22 +500,22 @@ TIMERANGE* parse_time(char* str, FW_INSTANCE* instance)
         if (strptime(strbuf, "%H:%M:%S", &start) &&
             strptime(separator, "%H:%M:%S", &end))
         {
+            /** The time string was valid */
             CHK_TIMES((&start));
             CHK_TIMES((&end));
 
-            /** The time string was valid */
-
             tr = (TIMERANGE*) malloc(sizeof(TIMERANGE));
 
-            if (tr == NULL)
+            if (tr)
+            {
+                tr->start = start;
+                tr->end = end;
+                tr->next = NULL;
+            }
+            else
             {
                 skygw_log_write(LOGFILE_ERROR, "dbfwfilter: malloc returned NULL.");
-                return NULL;
             }
-
-            memcpy(&tr->start, &start, sizeof(start));
-            memcpy(&tr->end, &end, sizeof(end));
-            tr->next = NULL;
         }
     }
     return tr;
@@ -1003,7 +1002,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 			goto retblock;
 		    }
 
-                    TIMERANGE *tmp = parse_time(tok,instance);
+                    TIMERANGE *tmp = parse_time(tok);
 
 		    if(tmp == NULL)
 		    {
