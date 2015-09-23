@@ -1057,7 +1057,8 @@ int	len;
 		return NULL;
 	memcpy(rval, (char *)(errpkt->start) + 7, 6);
 	rval[6] = ' ';
-	memcpy(&rval[7], (char *)(errpkt->start) + 13, len - 8);
+	/* message size is len - (1 byte field count + 2 bytes errno + 6 bytes status) */
+	memcpy(&rval[7], (char *)(errpkt->start) + 13, len - 9);
 	rval[len-2] = 0;
 	return rval;
 }
