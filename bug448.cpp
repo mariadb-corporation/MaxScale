@@ -11,7 +11,7 @@
 
 int main(int argc, char *argv[])
 {
-    char my_ip[16];
+    char my_ip[1024];
     char sql[1024];
     char * first_dot;
     TestConnections * Test = new TestConnections(argc, argv);
@@ -23,7 +23,13 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
 
     get_my_ip(Test->maxscale_IP, my_ip);
-    printf("Test machine IP %s\n", my_ip);
+    printf("Test machine IP (got via network request) %s\n", my_ip);
+
+    if (Test->get_client_ip(my_ip) != 0) {
+        printf("TEST_FAILED: Unable to get IP using connection to DB");
+        global_result++;
+    }
+    printf("Test machine IP (got via Show processlist) %s\n", my_ip);
 
     first_dot = strstr(my_ip, ".");
     strcpy(first_dot, ".%.%.%");

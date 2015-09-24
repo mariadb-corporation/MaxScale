@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
         int j;
         exit_flag=0;
         /* Create independent threads each of them will execute function */
-        for (j=0; j<16; j++) {
+        for (j=0; j<32; j++) {
             iret[j] = pthread_create( &threads[j], NULL, query_thread, NULL);
         }
         //check_iret = pthread_create( &check_thread, NULL, checks_thread, NULL);
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
         do {
             get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Slave delay:", result);
             sscanf(result, "%d", &res_d);
-            printf("server2: %d\n", res_d);
+            printf("server2 lag: %d\n", res_d);
             find_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
             sscanf(server_id, "%d", &server_id_d);
             printf("%d\n", server_id_d);

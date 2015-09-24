@@ -283,6 +283,12 @@ int TestConnections::start_binlog()
     printf("Stopping all backend nodes\n");fflush(stdout);
     global_result += repl->stop_nodes();
 
+    for (i = 0; i < repl->N; i++) {
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm /var/lib/mysql/mar-bin.0*'", repl->sshkey[i], repl->access_user[i], repl->IP[i], repl->access_sudo[i]);
+        printf("%s\n", sys1);  fflush(stdout);
+        system(sys1);
+    }
+
     printf("Removing all binlog data\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf %s/*'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
     printf("%s\n", sys1);  fflush(stdout);
@@ -294,13 +300,13 @@ int TestConnections::start_binlog()
     global_result +=  system(sys1);
 
     printf("Starting back Master\n");  fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[0], maxscale_access_user, repl->IP[0], maxscale_access_sudo, repl->start_db_command[0], cmd_opt);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[0], repl->access_user[0], repl->IP[0], repl->access_sudo[0], repl->start_db_command[0], cmd_opt);
     printf("%s\n", sys1);  fflush(stdout);
     global_result += system(sys1); fflush(stdout);
 
     for (i = 1; i < repl->N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[i], maxscale_access_user, repl->IP[i], maxscale_access_sudo, repl->start_db_command[i], cmd_opt);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[i], repl->access_user[i], repl->IP[i], repl->access_sudo[i], repl->start_db_command[i], cmd_opt);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
@@ -615,4 +621,54 @@ int TestConnections::create_connections(int conn_N)
 
     sleep(5);
     return(0);
+}
+
+int TestConnections::get_client_ip(char * ip)
+{
+    MYSQL * conn;
+    MYSQL_RES *res;
+    MYSQL_ROW row;
+    int ret = 1;
+    unsigned long long int num_fields;
+    //unsigned long long int row_i=0;
+    unsigned long long int rows;
+    unsigned long long int i;
+    unsigned int conn_num = 0;
+
+    connect_rwsplit();
+    if (execute_query(conn_rwsplit, (char *) "CREATE DATABASE IF NOT EXISTS db_to_check_clent_ip") !=0 ) {
+        return(ret);
+    }
+    close_rwsplit();
+    conn = open_conn_db(rwsplit_port, maxscale_IP, (char *) "db_to_check_clent_ip", maxscale_user, maxscale_password, ssl);
+
+    if (conn != NULL) {
+        if(mysql_query(conn, "show processlist;") != 0) {
+            printf("Error: can't execute SQL-query: show processlist\n");
+            printf("%s\n\n", mysql_error(conn));
+            conn_num = 0;
+        } else {
+            res = mysql_store_result(conn);
+            if(res == NULL) {
+                printf("Error: can't get the result description\n");
+                conn_num = -1;
+            } else {
+                num_fields = mysql_num_fields(res);
+                rows = mysql_num_rows(res);
+                for (i = 0; i < rows; i++) {
+                    row = mysql_fetch_row(res);
+                    if ( (row[2] != NULL ) && (row[3] != NULL) ) {
+                        if  (strstr(row[3], "db_to_check_clent_ip") != NULL) {
+                            ret = 0;
+                            strcpy(ip, row[2]);
+                        }
+                    }
+                }
+            }
+            mysql_free_result(res);
+        }
+    }
+
+    mysql_close(conn);
+    return(ret);
 }

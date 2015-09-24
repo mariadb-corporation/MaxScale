@@ -352,6 +352,16 @@ public:
      * @return  0 in case of success
      */
     int create_connections(int conn_N);
+
+
+    /**
+     * Trying to get client IP address by connection to DB and execution 'show processlist'
+     *
+     * @param ip	connections from this IP address are counted
+     * @param db    name of DB to which connections are counted
+     * @return number of connections
+     */
+    int get_client_ip(char * ip);
 };
 
 /**
