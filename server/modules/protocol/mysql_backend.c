@@ -828,6 +828,11 @@ static int gw_error_backend_event(DCB *dcb)
 	CHK_DCB(dcb);
 	session = dcb->session;
 	CHK_SESSION(session);
+    if (SESSION_STATE_DUMMY == session->state)
+    {
+        dcb_close(dcb);
+        return 1;
+    }
         rsession = session->router_session;
         router = session->service->router;
         router_instance = session->service->router_instance;
