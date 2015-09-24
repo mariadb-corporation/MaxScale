@@ -6,6 +6,7 @@ This document details the changes in version 1.2.1 since the release of the 1.2.
 
 Here is a list of bugs fixed since the release of MaxScale 1.2.0.
 
+* [MXS-380](https://mariadb.atlassian.net/browse/MXS-380): Upgrade overwrites existing /etc/maxscale.cfg
 * [MXS-376](https://mariadb.atlassian.net/browse/MXS-376): MaxScale terminates with SIGABRT
 * [MXS-374](https://mariadb.atlassian.net/browse/MXS-374): Maxscale is running under 'root' in Ubuntu/Debina
 * [MXS-356](https://mariadb.atlassian.net/browse/MXS-356): Connection timeouts for authentication are not configurable
