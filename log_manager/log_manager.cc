@@ -106,8 +106,12 @@ static bool flushall_done_flag;
 /**
  * Default augmentation.
  */
-static int default_log_augmentation = LOG_AUGMENT_WITH_FUNCTION;
+static int default_log_augmentation = 0;
 static int log_augmentation = default_log_augmentation;
+
+/** This is used to detect if the initialization of the log manager has failed
+ * and that it isn't initialized again after a failure has occurred. */
+static bool fatal_error = false;
 
 /** Writer thread structure */
 struct filewriter_st {
@@ -771,6 +775,8 @@ static int logmanager_write_log(
                     wp = (char*)malloc(sizeof(char)*(timestamp_len-sizeof(char)+cmplen+str_len + 1));
                 }
 
+        if(wp == NULL)
+            return -1;
 
 #if defined (SS_LOG_DEBUG)
 		{
@@ -1042,7 +1048,9 @@ static char* blockbuf_get_writepos(
                         /**
                          * New node is created
                          */
-                        bb = blockbuf_init(id);
+                        if((bb = blockbuf_init(id)) == NULL)
+                            return NULL;
+
                         CHK_BLOCKBUF(bb);
 
                         /**
@@ -1128,7 +1136,9 @@ static char* blockbuf_get_writepos(
              * Create the first block buffer to logfile's blockbuf list.
              */
 
-            bb = blockbuf_init(id);
+            if((bb = blockbuf_init(id)) == NULL)
+                return NULL;
+
             CHK_BLOCKBUF(bb);
 
             /** Lock buffer */
@@ -1210,9 +1220,10 @@ static void blockbuf_node_done(
 static blockbuf_t* blockbuf_init(
         logfile_id_t id)
 {
-        blockbuf_t* bb;
+    blockbuf_t* bb;
 
-        bb = (blockbuf_t *)calloc(1, sizeof(blockbuf_t));
+    if ((bb = (blockbuf_t *) calloc(1, sizeof (blockbuf_t))))
+    {
         bb->bb_fileid = id;
 #if defined(SS_DEBUG)
         bb->bb_chk_top = CHK_NUM_BLOCKBUF;
@@ -1221,15 +1232,18 @@ static blockbuf_t* blockbuf_init(
         simple_mutex_init(&bb->bb_mutex, "Blockbuf mutex");
         bb->bb_buf_left = MAX_LOGSTRLEN;
         bb->bb_buf_size = MAX_LOGSTRLEN;
-
 #if defined(SS_LOG_DEBUG)
-	sprintf(bb->bb_buf,"[block:%d]",atomic_add(&block_start_index,1));
-	bb->bb_buf_used += strlen(bb->bb_buf);
-	bb->bb_buf_left -= strlen(bb->bb_buf);
+        sprintf(bb->bb_buf, "[block:%d]", atomic_add(&block_start_index, 1));
+        bb->bb_buf_used += strlen(bb->bb_buf);
+        bb->bb_buf_left -= strlen(bb->bb_buf);
 #endif
-
         CHK_BLOCKBUF(bb);
-        return bb;
+    }
+    else
+    {
+        fprintf(stderr, "Error: Memory allocation failed when initializing log manager block buffers.");
+    }
+    return bb;
 }
 
 
@@ -1671,7 +1685,7 @@ static bool logmanager_register(
              * and its members which would probabaly lead to NULL pointer
              * reference.
              */
-            if (!writep) {
+            if (!writep || fatal_error) {
                 succp = false;
                 goto return_succp;
             }
@@ -1699,6 +1713,11 @@ static bool logmanager_register(
         }
 
     return_succp:
+
+        if(!succp)
+        {
+            fatal_error = true;
+        }
         release_lock(&lmlock);
         return succp;
 }
@@ -3222,9 +3241,15 @@ void flushall_logfiles(bool flush)
 void skygw_log_sync_all(void)
 {
 	if(!use_stdout)skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
-	flushall_logfiles(true);
-	skygw_message_send(lm->lm_logmes);
-	skygw_message_wait(lm->lm_clientmes);
+
+    /** If initialization of the log manager has not been done, lm pointer can be
+     * NULL. */
+    if(lm)
+    {
+        flushall_logfiles(true);
+        skygw_message_send(lm->lm_logmes);
+        skygw_message_wait(lm->lm_clientmes);
+    }
 }
 
 /**

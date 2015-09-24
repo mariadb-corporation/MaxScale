@@ -74,7 +74,7 @@
 
 #include "dcb.h"
 
-void gw_daemonize(void);
+bool gw_daemonize(void);
 int  do_read_dcb(DCB *dcb);
 void MySQLListener(int epfd, char *config_bind);
 int  MySQLAccept(DCB *listener);

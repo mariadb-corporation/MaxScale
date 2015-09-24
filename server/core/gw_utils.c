@@ -141,7 +141,7 @@ setipaddress(struct in_addr *a, char *p) {
  * Daemonize the process by forking and putting the process into the
  * background.
  */
-void gw_daemonize(void) {
+bool gw_daemonize(void) {
 	pid_t pid;
 
 	pid = fork();
@@ -154,7 +154,7 @@ void gw_daemonize(void) {
 
 	if (pid != 0) {
 		/* exit from main */
-		exit(0);
+		return true;
 	}
 
 	if (setsid() < 0) {
@@ -162,6 +162,7 @@ void gw_daemonize(void) {
                 fprintf(stderr, "setsid() error %s\n", strerror_r(errno, errbuf, sizeof(errbuf)));
 		exit(1);
 	}
+        return false;
 }
 
 /**

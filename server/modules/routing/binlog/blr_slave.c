@@ -463,8 +463,9 @@ int	query_len;
 					"%s: Expected DISCONNECT SERVER $server_id",
 						router->service->name)));
 			} else {
+				int serverid = atoi(word);
 				free(query_text);
-				return blr_slave_disconnect_server(router, slave, atoi(word));
+				return blr_slave_disconnect_server(router, slave, serverid);
 			}
 		}
 	}
@@ -1075,7 +1076,7 @@ ROUTER_SLAVE	*sptr;
 			sprintf(port, "%d", sptr->port);
 			sprintf(master_id, "%d", router->serverid);
 			sprintf(slave_uuid, "%s", sptr->uuid ? sptr->uuid : "");
-			len = 5 + strlen(server_id) + strlen(host) + strlen(port)
+			len = 4 + strlen(server_id) + strlen(host) + strlen(port)
 					+ strlen(master_id) + strlen(slave_uuid) + 5;
 			if ((pkt = gwbuf_alloc(len)) == NULL)
 				return 0;
@@ -1158,20 +1159,12 @@ int	slen;
 	ptr += 2;
 	slave->rank = extract_field(ptr, 32);
 
-	/*
-	 * Now construct a response
-	 */
-	if ((resp = gwbuf_alloc(11)) == NULL)
-		return 0;
-	ptr = GWBUF_DATA(resp);
-	encode_value(ptr, 7, 24);	// Payload length
-	ptr += 3;
-	*ptr++ = 1;			// Sequence number
-	encode_value(ptr, 0, 24);
-	ptr += 3;
-	encode_value(ptr, slave->serverid, 32);
 	slave->state = BLRS_REGISTERED;
-	return slave->dcb->func.write(slave->dcb, resp);
+
+	/*
+	 * Send OK response
+	 */
+	return blr_slave_send_ok(router, slave);
 }
 
 /**
@@ -1915,7 +1908,7 @@ int	len, id_len, seqno = 2;
 		strcpy(state, "not found");
 
 	id_len = strlen(serverid);
-	len = 5 + id_len + strlen(state) + 1;
+	len = 4 + (1 + id_len) + (1 + strlen(state));
 
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
@@ -1926,7 +1919,7 @@ int	len, id_len, seqno = 2;
 	blr_slave_send_eof(router, slave, seqno++);
 
 	ptr = GWBUF_DATA(pkt);
-	encode_value(ptr, id_len + 2 + strlen(state), 24);	// Add length of data packet
+	encode_value(ptr, len - 4, 24);	// Add length of data packet
 	ptr += 3;
 	*ptr++ = seqno++;					// Sequence number in response
 
@@ -2094,31 +2087,31 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
 	return 1;
 }
+
  /**
- * Send a MySQL OK packet to the DCB
+ * Send a MySQL OK packet to the slave backend
  *
- * @param dcb   The DCB to send the OK packet to
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ *
  * @return result of a write call, non-zero if write was successful
  */
+
 static int
 blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
 GWBUF   *pkt;
 uint8_t *ptr;
+uint8_t ok_packet[] = {7, 0, 0, // Payload length
+			1, // Seqno,
+			0, // OK,
+			0, 0, 2, 0, 0, 0};
 
-        if ((pkt = gwbuf_alloc(11)) == NULL)
-                return 0;
-        ptr = GWBUF_DATA(pkt);
-        *ptr++ = 7;     // Payload length
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 1;     // Seqno
-        *ptr++ = 0;     // ok
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 2;
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 0;
-        return slave->dcb->func.write(slave->dcb, pkt);
+	if ((pkt = gwbuf_alloc(sizeof(ok_packet))) == NULL)
+		return 0;
+
+	memcpy(GWBUF_DATA(pkt), ok_packet, sizeof(ok_packet));
+
+	return slave->dcb->func.write(slave->dcb, pkt);
 }
+
