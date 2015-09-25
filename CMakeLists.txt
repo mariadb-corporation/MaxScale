@@ -190,7 +190,7 @@ ${CMAKE_SOURCE_DIR}/Documentation/Upgrading/Upgrading-To-MaxScale-1.2.md
 
 install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION ${MAXSCALE_SHAREDIR})
-install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale120.txt DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES server/maxscale_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
 if(WITH_MAXSCALE_CNF)
   install(FILES server/maxscale_template.cnf DESTINATION ${MAXSCALE_CONFDIR} RENAME maxscale.cnf.template)
