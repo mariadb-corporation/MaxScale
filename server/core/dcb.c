@@ -2574,11 +2574,6 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
 {
 DCB_CALLBACK	*cb, *nextcb;
 
-    if (NULL == dcb->session->router_session)
-    {
-        dcb_close(dcb);
-        return;
-    }
 	spinlock_acquire(&dcb->cb_lock);
 	cb = dcb->callbacks;
 	while (cb)

@@ -38,6 +38,7 @@
  * 19/03/2015	Massimiliano Pinto	Addition of basic MariaDB 10 compatibility support
  * 07/05/2015   Massimiliano Pinto	Added MariaDB 10 Compatibility
  * 11/05/2015   Massimiliano Pinto	Only MariaDB 10 Slaves can register to binlog router with a MariaDB 10 Master
+ * 25/09/2015   Martin Brampton         Block callback processing when no router session in the DCB
  *
  * @endverbatim
  */
@@ -1606,6 +1607,15 @@ blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data)
 ROUTER_SLAVE		*slave = (ROUTER_SLAVE *)data;
 ROUTER_INSTANCE		*router = slave->router;
 
+    if (NULL == dcb->session->router_session)
+    {
+        /*
+         * The following processing will fail if there is no router session,
+         * because the "data" parameter will not contain meaningful data,
+         * so we have no choice but to stop here.
+         */
+        return;
+    }
 	if (reason == DCB_REASON_DRAINED)
 	{
 		if (slave->state == BLRS_DUMPING)

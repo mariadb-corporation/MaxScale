@@ -59,6 +59,7 @@ extern __thread log_info_t tls_log_info;
  *  Date	Who                             Description
  *  01/12/2014	Vilho Raatikka/Markus Mäkelä	Initial implementation
  *  09/09/2015  Martin Brampton         Modify error handler
+ *  25/09/2015  Martin Brampton         Block callback processing when no router session in the DCB
  *
  * @endverbatim
  */
@@ -4404,6 +4405,15 @@ router_handle_state_switch(
     SERVER* srv;
     
     CHK_DCB(dcb);
+    if (NULL == dcb->session->router_session)
+    {
+        /*
+         * The following processing will fail if there is no router session,
+         * because the "data" parameter will not contain meaningful data,
+         * so we have no choice but to stop here.
+         */
+        return;
+    }
     bref = (backend_ref_t *) data;
     CHK_BACKEND_REF(bref);
 

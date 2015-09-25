@@ -69,6 +69,7 @@
  * 27/06/2014	Mark Riddoch		Addition of server weighting
  * 11/06/2015   Martin Brampton         Remove decrement n_current (moved to dcb.c)
  * 09/09/2015   Martin Brampton         Modify error handler
+ * 25/09/2015   Martin Brampton         Block callback processing when no router session in the DCB
  *
  * @endverbatim
  */
@@ -1010,6 +1011,14 @@ static int handle_state_switch(DCB* dcb,DCB_REASON reason, void * routersession)
     SERVICE* service = session->service;
     ROUTER* router = (ROUTER *)service->router;
 
+    if (NULL == dcb->session->router_session  && DCB_REASON_ERROR != reason)
+    {
+        /* 
+         * We cannot handle a DCB that does not have a router session,
+         * except in the case where error processing is invoked.
+         */
+        return;
+    }
     switch(reason)
     {
 	case DCB_REASON_CLOSE:
