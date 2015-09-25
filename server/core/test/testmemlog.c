@@ -67,7 +67,7 @@ int
 main()
 {
 MEMLOG		*log, *log2;
-int		i;
+long int	i;
 long		j;
 long long	k;
 int		failures = 0;
