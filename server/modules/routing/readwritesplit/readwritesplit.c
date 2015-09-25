@@ -702,7 +702,7 @@ createInstance(SERVICE *service, char **options)
 	}
 
 	/** These options cancel each other out */
-	if(router->rwsplit_config.disable_sescmd_hist && router->rwsplit_config.rw_max_sescmd_history_size > 0)
+	if(router->rwsplit_config.rw_disable_sescmd_hist && router->rwsplit_config.rw_max_sescmd_history_size > 0)
 	{
 	    router->rwsplit_config.rw_max_sescmd_history_size = 0;
 	}
@@ -1246,7 +1246,7 @@ static bool get_dcb(
 				(max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
 				b->backend_server->rlag <= max_rlag)) &&
-				 !rses->rses_config.master_reads)
+				 !rses->rses_config.rw_master_reads)
 			{
 				/** found slave */
 				candidate_bref = &backend_ref[i];
@@ -2897,7 +2897,7 @@ static void clientReply (
 			bool rconn = false;
                         writebuf = sescmd_cursor_process_replies(writebuf, bref, &rconn);
 
-			if(rconn && !router_inst->rwsplit_config.disable_slave_recovery)
+			if(rconn && !router_inst->rwsplit_config.rw_disable_sescmd_hist)
 			{
 			    select_connect_backend_servers(&router_cli_ses->rses_master_ref,
 						     router_cli_ses->rses_backend_ref,
@@ -4541,21 +4541,17 @@ static bool route_session_write(
 		goto return_succp;
 	}
 
-	if(router_cli_ses->rses_config.rw_max_sescmd_history_size > 0 &&
-	 router_cli_ses->rses_nsescmd >= router_cli_ses->rses_config.rw_max_sescmd_history_size)
-	{
-	    LOGIF(LT, (skygw_log_write(
-		    LOGFILE_TRACE,
-			"Router session exceeded session command history limit. "
-		        "Closing router session. <")));
-		gwbuf_free(querybuf);
-		rses_end_locked_router_action(router_cli_ses);
-		router_cli_ses->client_dcb->func.hangup(router_cli_ses->client_dcb);
-		
-		goto return_succp;
-	}
+        if (router_cli_ses->rses_config.rw_max_sescmd_history_size > 0 &&
+            router_cli_ses->rses_nsescmd >= router_cli_ses->rses_config.rw_max_sescmd_history_size)
+    {
+        skygw_log_write(LE, "Warning: Router session exceeded session command history limit. "
+                        "Slave recovery is disabled and only slave servers with consistent session state are used "
+                        "for the duration of the session.");
+        router_cli_ses->rses_config.rw_disable_sescmd_hist = true;
+        router_cli_ses->rses_config.rw_max_sescmd_history_size = 0;
+    }
 
-	if(router_cli_ses->rses_config.disable_sescmd_hist)
+	if(router_cli_ses->rses_config.rw_disable_sescmd_hist)
 	{
 	    rses_property_t *prop, *tmp;
 	    backend_ref_t* bref;
@@ -4784,15 +4780,11 @@ static void rwsplit_process_router_options(
 			}
 			else if(strcmp(options[i],"disable_sescmd_history") == 0)
 			{
-			    router->rwsplit_config.disable_sescmd_hist = config_truth_value(value);
-			}
-			else if(strcmp(options[i],"disable_slave_recovery") == 0)
-			{
-			    router->rwsplit_config.disable_slave_recovery = config_truth_value(value);
+			    router->rwsplit_config.rw_disable_sescmd_hist = config_truth_value(value);
 			}
 			else if(strcmp(options[i],"master_accept_reads") == 0)
 			{
-			    router->rwsplit_config.master_reads = config_truth_value(value);
+			    router->rwsplit_config.rw_master_reads = config_truth_value(value);
 			}
                 }
         } /*< for */
@@ -5039,7 +5031,7 @@ static bool handle_error_new_connection(
 	 * Try to get replacement slave or at least the minimum 
 	 * number of slave connections for router session.
 	 */
-	if(inst->rwsplit_config.disable_slave_recovery)
+	if(inst->rwsplit_config.rw_disable_sescmd_hist)
 	{
 	    succp = have_enough_servers(&myrses,1,router_nservers,inst) ? true : false;
 	}
