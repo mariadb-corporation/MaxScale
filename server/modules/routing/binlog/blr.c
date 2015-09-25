@@ -771,6 +771,8 @@ ROUTER_SLAVE		*slave;
 	slave->connect_time = time(0);
 	slave->lastEventTimestamp = 0;
 	slave->mariadb10_compat = false;
+	slave->heartbeat = 0;
+	slave->lastEventReceived = 0;
 
 	/**
          * Add this session to the list of active sessions.
@@ -1234,6 +1236,9 @@ struct tm	tm;
 			dcb_printf(dcb,
 					"\t\tNo. transitions to follow mode:			%u\n",
 						session->stats.n_bursts);
+			dcb_printf(dcb, "\t\tHeartbeat period (seconds):			%lu\n",
+				   session->heartbeat);
+
 			minno = session->stats.minno - 1;
 			if (minno == -1)
 				minno = 30;
@@ -1254,13 +1259,20 @@ struct tm	tm;
 			dcb_printf(dcb, "\t\tNo. of distribute action 3			%u\n", session->stats.n_actions[2]);
 #endif
 			if (session->lastEventTimestamp
-					&& router_inst->lastEventTimestamp)
+					&& router_inst->lastEventTimestamp && session->lastEventReceived != HEARTBEAT_EVENT)
 			{
+				unsigned long seconds_behind;
 				time_t	session_last_event = (time_t)session->lastEventTimestamp;
+
+				if (router_inst->lastEventTimestamp > session->lastEventTimestamp)
+					seconds_behind  = router_inst->lastEventTimestamp - session->lastEventTimestamp;
+				else
+					seconds_behind = 0;
+
 				localtime_r(&session_last_event, &tm);
 				asctime_r(&tm, buf);
 				dcb_printf(dcb, "\t\tLast binlog event timestamp			%u, %s", session->lastEventTimestamp, buf);
-				dcb_printf(dcb, "\t\tSeconds behind master				%u\n", router_inst->lastEventTimestamp - session->lastEventTimestamp);
+				dcb_printf(dcb, "\t\tSeconds behind master				%lu\n", seconds_behind);
 			}
 
 			if (session->state == 0)

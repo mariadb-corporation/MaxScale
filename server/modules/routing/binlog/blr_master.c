@@ -46,6 +46,7 @@
  *					This is the current supported condition for detecting
  *					MariaDB 10 transaction start point.
  *					It's no longer using QUERY_EVENT with BEGIN	
+ * 25/09/2015	Massimiliano Pinto	Addition of lastEventReceived for slaves
  *
  * @endverbatim
  */
@@ -1610,6 +1611,8 @@ int		action;
 				 * memory to the slave.
 				 */
 				slave->lastEventTimestamp = hdr->timestamp;
+				slave->lastEventReceived = hdr->event_type;
+
 				pkt = gwbuf_alloc(hdr->event_size + 5);
 				buf = GWBUF_DATA(pkt);
 				encode_value(buf, hdr->event_size + 1, 24);
@@ -1760,6 +1763,9 @@ blr_extract_column(GWBUF *buf, int col)
 uint8_t	*ptr;
 int	len, ncol, collen;
 char	*rval;
+
+	if (buf == NULL)
+		return NULL;
 
 	ptr = (uint8_t *)GWBUF_DATA(buf);
 	/* First packet should be the column count */

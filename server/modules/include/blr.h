@@ -316,6 +316,8 @@ typedef struct router_slave {
 	SLAVE_STATS	stats;		/*< Slave statistics */
 	time_t		connect_time;	/*< Connect time of slave */
 	char		*warning_msg;	/*< Warning message */
+	int		heartbeat;	/*< Heartbeat in seconds */
+	uint8_t		lastEventReceived; /*< Last event received */
 #if defined(SS_DEBUG)
         skygw_chk_t     rses_chk_tail;
 #endif
