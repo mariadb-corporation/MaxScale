@@ -349,7 +349,7 @@ int TestConnections::start_binlog()
     repl->no_set_pos = no_pos;
     printf("configuring Maxscale binlog router\n");fflush(stdout);
     repl->set_slave(binlog, repl->IP[0], repl->port[0], log_file, log_pos);
-    execute_query(binlog, "start slave");
+    //execute_query(binlog, "start slave");
 
     repl->no_set_pos = false;
 
