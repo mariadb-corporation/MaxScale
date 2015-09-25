@@ -283,11 +283,13 @@ int TestConnections::start_binlog()
     printf("Stopping all backend nodes\n");fflush(stdout);
     global_result += repl->stop_nodes();
 
-    for (i = 0; i < repl->N; i++) {
+    /*
+       for (i = 0; i < repl->N; i++) {
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm /var/lib/mysql/mar-bin.0*'", repl->sshkey[i], repl->access_user[i], repl->IP[i], repl->access_sudo[i]);
         printf("%s\n", sys1);  fflush(stdout);
         system(sys1);
     }
+    */
 
     printf("Removing all binlog data\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf %s/*'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
