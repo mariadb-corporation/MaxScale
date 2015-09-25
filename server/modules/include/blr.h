@@ -455,7 +455,7 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 /*
  * Externals within the router
  */
-extern void blr_start_master(ROUTER_INSTANCE *);
+extern void blr_start_master(void *);
 extern void blr_master_response(ROUTER_INSTANCE *, GWBUF *);
 extern void blr_master_reconnect(ROUTER_INSTANCE *);
 extern int blr_master_connected(ROUTER_INSTANCE *);

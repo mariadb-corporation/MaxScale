@@ -108,6 +108,9 @@ static void	stats_func(void *);
 
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
+void my_uuid_init(ulong seed1, ulong seed2);
+void my_uuid(char *guid);
+GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
 
 static SPINLOCK	instlock;
 static ROUTER_INSTANCE *instances;
@@ -170,7 +173,7 @@ createInstance(SERVICE *service, char **options)
 ROUTER_INSTANCE	*inst;
 char		*value, *name;
 int		i;
-unsigned char	*defuuid;
+char	*defuuid;
 
         if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
                 return NULL;
@@ -832,7 +835,7 @@ struct tm	tm;
 
 	if (router_inst->lastEventTimestamp)
 	{
-		localtime_r(&router_inst->lastEventTimestamp, &tm);
+		localtime_r((const time_t*)&router_inst->lastEventTimestamp, &tm);
 		asctime_r(&tm, buf);
 		dcb_printf(dcb, "\tLast binlog event timestamp:  			%ld (%s)\n",
 				router_inst->lastEventTimestamp, buf);
@@ -960,7 +963,7 @@ struct tm	tm;
 			if (session->lastEventTimestamp
 					&& router_inst->lastEventTimestamp)
 			{
-				localtime_r(&session->lastEventTimestamp, &tm);
+				localtime_r((const time_t*)&session->lastEventTimestamp, &tm);
 				asctime_r(&tm, buf);
 				dcb_printf(dcb, "\t\tLast binlog event timestamp			%u, %s", session->lastEventTimestamp, buf);
 				dcb_printf(dcb, "\t\tSeconds behind master				%u\n", router_inst->lastEventTimestamp - session->lastEventTimestamp);
@@ -1059,7 +1062,8 @@ static  void
 errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_dcb, error_action_t action, bool *succp)
 {
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
-int		error, len;
+int		error;
+socklen_t len;
 char		msg[85], *errmsg;
 
 	if (action == ERRACT_RESET)
@@ -1212,10 +1216,10 @@ int	len;
 
 	snprintf(result, 1000,
 		"Uptime: %u  Threads: %u  Events: %u  Slaves: %u  Master State: %s",
-			time(0) - router->connect_time,
-			config_threadcount(),
-			router->stats.n_binlogs_ses,
-			router->stats.n_slaves,
+			(unsigned int)(time(0) - router->connect_time),
+			(unsigned int)config_threadcount(),
+			(unsigned int)router->stats.n_binlogs_ses,
+			(unsigned int)router->stats.n_slaves,
 			blrm_states[router->master_state]);
 	if ((ret = gwbuf_alloc(4 + strlen(result))) == NULL)
 		return 0;
