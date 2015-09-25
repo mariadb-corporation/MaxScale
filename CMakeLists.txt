@@ -184,8 +184,8 @@ execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
 ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes/MaxScale-1.2.0-Release-Notes.md
  ${CMAKE_BINARY_DIR}/ReleaseNotes.txt)
 execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl 
-${CMAKE_SOURCE_DIR}/Documentation/Upgrading/Upgrading-To-MaxScale-1.2.0.md
- ${CMAKE_BINARY_DIR}/UpgradingToMaxScale120.txt)
+${CMAKE_SOURCE_DIR}/Documentation/Upgrading/Upgrading-To-MaxScale-1.2.md
+ ${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt)
 
 
 install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION ${MAXSCALE_SHAREDIR})
