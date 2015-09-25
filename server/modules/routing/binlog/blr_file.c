@@ -358,7 +358,7 @@ BLFILE		*file;
 		return file;
 	}
 
-	if ((file = (BLFILE *)malloc(sizeof(BLFILE))) == NULL)
+	if ((file = (BLFILE *)calloc(1, sizeof(BLFILE))) == NULL)
 	{
 		spinlock_release(&router->fileslock);
 		return NULL;
@@ -400,12 +400,14 @@ BLFILE		*file;
 GWBUF *
 blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned int pos, REP_HEADER *hdr)
 {
-uint8_t		hdbuf[19];
+uint8_t		hdbuf[BINLOG_EVENT_HDR_LEN];
 GWBUF		*result;
 unsigned char	*data;
 int		n;
 unsigned long	filelen = 0;
 struct	stat	statb;
+
+	memset(&hdbuf, '\0', BINLOG_EVENT_HDR_LEN);
 
 	if (!file)
 	{
@@ -436,7 +438,7 @@ struct	stat	statb;
 	}
 
 	/* Read the header information from the file */
-	if ((n = pread(file->fd, hdbuf, 19, pos)) != 19)
+	if ((n = pread(file->fd, hdbuf, BINLOG_EVENT_HDR_LEN, pos)) != BINLOG_EVENT_HDR_LEN)
 	{
 		switch (n)
 		{
@@ -506,7 +508,7 @@ struct	stat	statb;
 			"file size is %lu. Master will write %lu in %s next.",
 			pos, file->binlogname, filelen, router->binlog_position,
 			router->binlog_name)));
-		if ((n = pread(file->fd, hdbuf, 19, pos)) != 19)
+		if ((n = pread(file->fd, hdbuf, BINLOG_EVENT_HDR_LEN, pos)) != BINLOG_EVENT_HDR_LEN)
 		{
 			switch (n)
 			{
@@ -571,9 +573,9 @@ struct	stat	statb;
 		return NULL;
 	}
 	data = GWBUF_DATA(result);
-	memcpy(data, hdbuf, 19);	// Copy the header in
-	if ((n = pread(file->fd, &data[19], hdr->event_size - 19, pos + 19))
-			!= hdr->event_size - 19)	// Read the balance
+	memcpy(data, hdbuf, BINLOG_EVENT_HDR_LEN);	// Copy the header in
+	if ((n = pread(file->fd, &data[BINLOG_EVENT_HDR_LEN], hdr->event_size - BINLOG_EVENT_HDR_LEN, pos + BINLOG_EVENT_HDR_LEN))
+			!= hdr->event_size - BINLOG_EVENT_HDR_LEN)	// Read the balance
 	{
 		if (n == -1)
 		{
@@ -583,14 +585,14 @@ struct	stat	statb;
 				"Error reading the event at %ld in %s. "
 				"%s, expected %d bytes.",
 				pos, file->binlogname, 
-				err_msg, hdr->event_size - 19)));
+				err_msg, hdr->event_size - BINLOG_EVENT_HDR_LEN)));
 		}
 		else
 		{
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Short read when reading the event at %ld in %s. "
 				"Expected %d bytes got %d bytes.",
-				pos, file->binlogname, hdr->event_size - 19, n)));
+				pos, file->binlogname, hdr->event_size - BINLOG_EVENT_HDR_LEN, n)));
 			if (filelen != 0 && filelen - pos < hdr->event_size)
 			{
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
@@ -640,10 +642,14 @@ blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
 		close(file->fd);
 		file->fd = -1;
 	}
-	if (file->refcnt == 0)
-		free(file);
 
-	spinlock_release(&file->lock);
+	if (file->refcnt == 0) {
+		spinlock_release(&file->lock);
+
+		free(file);
+	} else {
+		spinlock_release(&file->lock);
+	}
 }
 
 /**
@@ -661,7 +667,7 @@ int	i;
 
 	bufp = buf;
 	bufp += sprintf(bufp, "%s: ", msg);
-	for (i = 0; i < 19; i++)
+	for (i = 0; i < BINLOG_EVENT_HDR_LEN; i++)
 		bufp += sprintf(bufp, "0x%02x ", ptr[i]);
 	skygw_log_write_flush(file, "%s", buf);
 	
@@ -799,7 +805,7 @@ int
 blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug) {
 unsigned long   filelen = 0;
 struct  stat    statb;
-uint8_t         hdbuf[19];
+uint8_t         hdbuf[BINLOG_EVENT_HDR_LEN];
 uint8_t         *data;
 GWBUF           *result;
 unsigned long long pos = 4;
@@ -842,7 +848,7 @@ double average_bytes = 0;
         while (1){
 
                 /* Read the header information from the file */
-                if ((n = pread(router->binlog_fd, hdbuf, 19, pos)) != 19) {
+                if ((n = pread(router->binlog_fd, hdbuf, BINLOG_EVENT_HDR_LEN, pos)) != BINLOG_EVENT_HDR_LEN) {
                         switch (n)
                         {
                                 case 0:
@@ -1075,10 +1081,10 @@ double average_bytes = 0;
 
                 /* Copy the header in the buffer */
                 data = GWBUF_DATA(result);
-                memcpy(data, hdbuf, 19);// Copy the header in
+                memcpy(data, hdbuf, BINLOG_EVENT_HDR_LEN);// Copy the header in
 
                 /* Read event data */
-                if ((n = pread(router->binlog_fd, &data[19], hdr.event_size - 19, pos + 19)) != hdr.event_size - 19)
+                if ((n = pread(router->binlog_fd, &data[BINLOG_EVENT_HDR_LEN], hdr.event_size - BINLOG_EVENT_HDR_LEN, pos + BINLOG_EVENT_HDR_LEN)) != hdr.event_size - BINLOG_EVENT_HDR_LEN)
                 {
                         if (n == -1)
                         {
@@ -1088,14 +1094,14 @@ double average_bytes = 0;
                                         "Error reading the event at %llu in %s. "
                                         "%s, expected %d bytes.",
                                         pos, router->binlog_name,
-                                        err_msg, hdr.event_size - 19)));
+                                        err_msg, hdr.event_size - BINLOG_EVENT_HDR_LEN)));
                         }
                         else
                         {
                                 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
                                         "Short read when reading the event at %llu in %s. "
                                         "Expected %d bytes got %d bytes.",
-                                        pos, router->binlog_name, hdr.event_size - 19, n)));
+                                        pos, router->binlog_name, hdr.event_size - BINLOG_EVENT_HDR_LEN, n)));
 
                                 if (filelen > 0 && filelen - pos < hdr.event_size)
                                 {
@@ -1134,7 +1140,7 @@ double average_bytes = 0;
                 }
 
                 /* get event content */
-                ptr = data+19;
+                ptr = data+BINLOG_EVENT_HDR_LEN;
 
                 /* check for FORMAT DESCRIPTION EVENT */
                 if(hdr.event_type == FORMAT_DESCRIPTION_EVENT) {
@@ -1200,7 +1206,7 @@ double average_bytes = 0;
                         uint64_t        new_pos;
                         char            file[BINLOG_FNAMELEN+1];
 
-                        len = hdr.event_size - 19;
+                        len = hdr.event_size - BINLOG_EVENT_HDR_LEN;
                         new_pos = extract_field(ptr+4, 32);
                         new_pos <<= 32;
                         new_pos |= extract_field(ptr, 32);
@@ -1272,7 +1278,7 @@ double average_bytes = 0;
                         db_name_len = ptr[4 + 4];
                         var_block_len = ptr[4 + 4 + 1 + 2];
 
-                        statement_len = hdr.event_size - 19 - (4+4+1+2+2+var_block_len+1+db_name_len);
+                        statement_len = hdr.event_size - BINLOG_EVENT_HDR_LEN - (4+4+1+2+2+var_block_len+1+db_name_len);
 
                         statement_sql = calloc(1, statement_len+1);
                         strncpy(statement_sql, (char *)ptr+4+4+1+2+2+var_block_len+1+db_name_len, statement_len);

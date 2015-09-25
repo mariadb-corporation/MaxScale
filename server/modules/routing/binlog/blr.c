@@ -388,6 +388,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 				else if (strcmp(options[i], "master_uuid") == 0)
 				{
 					inst->set_master_uuid = strdup(value);
+					inst->master_uuid = inst->set_master_uuid;
 				}
 				else if (strcmp(options[i], "master_version") == 0)
 				{
@@ -770,6 +771,8 @@ ROUTER_SLAVE		*slave;
 	slave->connect_time = time(0);
 	slave->lastEventTimestamp = 0;
 	slave->mariadb10_compat = false;
+	slave->heartbeat = 0;
+	slave->lastEventReceived = 0;
 
 	/**
          * Add this session to the list of active sessions.
@@ -1233,6 +1236,9 @@ struct tm	tm;
 			dcb_printf(dcb,
 					"\t\tNo. transitions to follow mode:			%u\n",
 						session->stats.n_bursts);
+			dcb_printf(dcb, "\t\tHeartbeat period (seconds):			%lu\n",
+				   session->heartbeat);
+
 			minno = session->stats.minno - 1;
 			if (minno == -1)
 				minno = 30;
@@ -1253,13 +1259,20 @@ struct tm	tm;
 			dcb_printf(dcb, "\t\tNo. of distribute action 3			%u\n", session->stats.n_actions[2]);
 #endif
 			if (session->lastEventTimestamp
-					&& router_inst->lastEventTimestamp)
+					&& router_inst->lastEventTimestamp && session->lastEventReceived != HEARTBEAT_EVENT)
 			{
+				unsigned long seconds_behind;
 				time_t	session_last_event = (time_t)session->lastEventTimestamp;
+
+				if (router_inst->lastEventTimestamp > session->lastEventTimestamp)
+					seconds_behind  = router_inst->lastEventTimestamp - session->lastEventTimestamp;
+				else
+					seconds_behind = 0;
+
 				localtime_r(&session_last_event, &tm);
 				asctime_r(&tm, buf);
 				dcb_printf(dcb, "\t\tLast binlog event timestamp			%u, %s", session->lastEventTimestamp, buf);
-				dcb_printf(dcb, "\t\tSeconds behind master				%u\n", router_inst->lastEventTimestamp - session->lastEventTimestamp);
+				dcb_printf(dcb, "\t\tSeconds behind master				%lu\n", seconds_behind);
 			}
 
 			if (session->state == 0)
@@ -1329,7 +1342,8 @@ int	len;
 		return NULL;
 	memcpy(rval, (char *)(errpkt->start) + 7, 6);
 	rval[6] = ' ';
-	memcpy(&rval[7], (char *)(errpkt->start) + 13, len - 8);
+	/* message size is len - (1 byte field count + 2 bytes errno + 6 bytes status) */
+	memcpy(&rval[7], (char *)(errpkt->start) + 13, len - 9);
 	rval[len-2] = 0;
 	return rval;
 }

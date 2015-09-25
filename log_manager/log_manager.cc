@@ -109,6 +109,10 @@ static bool flushall_done_flag;
 static int default_log_augmentation = 0;
 static int log_augmentation = default_log_augmentation;
 
+/** This is used to detect if the initialization of the log manager has failed
+ * and that it isn't initialized again after a failure has occurred. */
+static bool fatal_error = false;
+
 /** Writer thread structure */
 struct filewriter_st {
 #if defined(SS_DEBUG)
@@ -1681,7 +1685,7 @@ static bool logmanager_register(
              * and its members which would probabaly lead to NULL pointer
              * reference.
              */
-            if (!writep) {
+            if (!writep || fatal_error) {
                 succp = false;
                 goto return_succp;
             }
@@ -1709,6 +1713,11 @@ static bool logmanager_register(
         }
 
     return_succp:
+
+        if(!succp)
+        {
+            fatal_error = true;
+        }
         release_lock(&lmlock);
         return succp;
 }
@@ -3232,9 +3241,15 @@ void flushall_logfiles(bool flush)
 void skygw_log_sync_all(void)
 {
 	if(!use_stdout)skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
-	flushall_logfiles(true);
-	skygw_message_send(lm->lm_logmes);
-	skygw_message_wait(lm->lm_clientmes);
+
+    /** If initialization of the log manager has not been done, lm pointer can be
+     * NULL. */
+    if(lm)
+    {
+        flushall_logfiles(true);
+        skygw_message_send(lm->lm_logmes);
+        skygw_message_wait(lm->lm_clientmes);
+    }
 }
 
 /**

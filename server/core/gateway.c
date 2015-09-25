@@ -1648,7 +1648,6 @@ int main(int argc, char **argv)
 
         if (!resolve_maxscale_conf_fname(&cnf_file_path, pathbuf, cnf_file_arg))
         {
-                ss_dassert(cnf_file_path == NULL);
                 rc = MAXSCALE_BADCONFIG;
                 goto return_main;
         }
@@ -2000,7 +1999,8 @@ int main(int argc, char **argv)
          * Successful start, notify the parent process that it can exit.
          */
         ss_dassert(rc == MAXSCALE_SHUTDOWN);
-        write_child_exit_code(daemon_pipe[1], rc);
+        if(daemon_mode)
+            write_child_exit_code(daemon_pipe[1], rc);
 
 	MaxScaleStarted = time(0);
         /*<
