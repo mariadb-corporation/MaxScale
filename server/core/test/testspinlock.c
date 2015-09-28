@@ -151,11 +151,14 @@ test3_helper(void *data)
 // SPINLOCK   *lck = (SPINLOCK *)data;
 int         i;
 int         n = *(int *)data;
-struct timespec sleeptime;
 time_t          rawtime;
+
+#if defined(ADD_SOME_NANOSLEEP)
+struct timespec sleeptime;
 
     sleeptime.tv_sec = 0;
     sleeptime.tv_nsec = 1;
+#endif
 
     while (1) {
         if (spinlock_acquire_nowait(&lck)) {
@@ -185,7 +188,9 @@ time_t          rawtime;
         active = 0;
         spinlock_release(&lck);
         for (i=0; i<(4*PROCESS_LOOP); i++);
-        // nanosleep(&sleeptime, NULL);
+#if defined(ADD_SOME_NANOSLEEP)
+        nanosleep(&sleeptime, NULL);
+#endif
     }
     spinlock_release(&lck);
 }
@@ -198,11 +203,6 @@ void		*handle[THREADS];
 int             i;
 int             tnum[THREADS];
 time_t          rawtime;
-
-struct timespec sleeptime;
-
-    sleeptime.tv_sec = 20;
-    sleeptime.tv_nsec = NANOTIME;
 
     times_run = 0;
     active = 0;
