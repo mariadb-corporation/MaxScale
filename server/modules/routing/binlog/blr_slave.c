@@ -291,7 +291,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SELECT @@maxscale_version
  *	SELECT @@[GLOBAL.]server_id
  *	SELECT @@version
- *	SELECT @@[GLOBAL]server_uuid
+ *	SELECT @@[GLOBAL.]server_uuid
  *
  * Eight show commands are supported:
  *	SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
