@@ -289,9 +289,9 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SELECT @@hostname
  *	SELECT @@max_allowed_packet
  *	SELECT @@maxscale_version
- *	SELECT @@server_id
+ *	SELECT @@[GLOBAL.]server_id
  *	SELECT @@version
- *	SELECT @@server_uuid
+ *	SELECT @@[GLOBAL]server_uuid
  *
  * Eight show commands are supported:
  *	SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
@@ -442,14 +442,17 @@ extern  char *strcasestr();
 			else
 				return blr_slave_replay(router, slave, router->saved_master.selecthostname);
 		}
-		else if (strcasecmp(word, "@@server_uuid") == 0)
+		else if ((strcasecmp(word, "@@server_uuid") == 0) || (strcasecmp(word, "@@global.server_uuid") == 0))
 		{
+			char	heading[40]; /* to ensure we match the case in query and response */
+			strcpy(heading, word);
+
 			free(query_text);
 			if (router->set_master_uuid)
-				return blr_slave_send_var_value(router, slave, "@@server_uuid", router->master_uuid, BLR_TYPE_STRING);
+				return blr_slave_send_var_value(router, slave, heading, router->master_uuid, BLR_TYPE_STRING);
 			else {
 				char *master_uuid = blr_extract_column(router->saved_master.uuid, 2);
-				blr_slave_send_var_value(router, slave, "@@server_uuid", master_uuid == NULL ? "" : master_uuid, BLR_TYPE_STRING);
+				blr_slave_send_var_value(router, slave, heading, master_uuid == NULL ? "" : master_uuid, BLR_TYPE_STRING);
 				free(master_uuid);
 				return 1;
 			}
@@ -464,13 +467,17 @@ extern  char *strcasestr();
 			free(query_text);
 			return blr_slave_send_maxscale_version(router, slave);
 		}
-		else if (strcasecmp(word, "@@server_id") == 0)
+		else if ((strcasecmp(word, "@@server_id") == 0) || (strcasecmp(word, "@@global.server_id") == 0))
 		{
 			char    server_id[40];
+			char	heading[40]; /* to ensure we match the case in query and response */
+
 			sprintf(server_id, "%d", router->masterid);
+			strcpy(heading, word);
 
 			free(query_text);
-			return blr_slave_send_var_value(router, slave, "@@server_id", server_id, BLR_TYPE_INT);
+
+			return blr_slave_send_var_value(router, slave, heading, server_id, BLR_TYPE_INT);
 		}
 	}
 	else if (strcasecmp(word, "SHOW") == 0)
