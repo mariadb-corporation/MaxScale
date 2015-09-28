@@ -34,7 +34,7 @@
 #include <dcb.h>
 #include <buffer.h>
 #include <pthread.h>
-
+#include <stdint.h>
 #include <memlog.h>
 #include <zlib.h>
 
@@ -207,6 +207,7 @@ typedef struct {
 	int		n_bursts;	/*< Number of bursts sent */
 	int		n_requests;	/*< Number of requests received */
 	int		n_flows;	/*< Number of flow control restarts */
+	int		n_queries;	/*< Number of SQL queries */
 	int		n_upd;
 	int		n_cb;
 	int		n_cbna;
@@ -455,7 +456,7 @@ static char *blrs_states[] = { "Created", "Unregistered", "Registered",
 /*
  * Externals within the router
  */
-extern void blr_start_master(ROUTER_INSTANCE *);
+extern void blr_start_master(void *);
 extern void blr_master_response(ROUTER_INSTANCE *, GWBUF *);
 extern void blr_master_reconnect(ROUTER_INSTANCE *);
 extern int blr_master_connected(ROUTER_INSTANCE *);
@@ -477,4 +478,5 @@ extern int blr_statistics(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_ping(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_send_custom_error(DCB *, int, int, char *);
 extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
+uint32_t extract_field(uint8_t *src, int bits);
 #endif

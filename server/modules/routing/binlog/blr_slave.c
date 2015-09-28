@@ -60,7 +60,6 @@
 #include <log_manager.h>
 #include <version.h>
 
-static uint32_t extract_field(uint8_t *src, int bits);
 static void encode_value(unsigned char *data, unsigned int value, int len);
 static int blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
 static int blr_slave_replay(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *master);
@@ -86,6 +85,7 @@ static int blr_slave_send_disconnected_server(ROUTER_INSTANCE *router, ROUTER_SL
 static int blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int server_id);
 static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
+void poll_fake_write_event(DCB *dcb);
 
 extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -123,6 +123,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 	switch (MYSQL_COMMAND(queue))
 	{
 	case COM_QUERY:
+		slave->stats.n_queries++;
 		return blr_slave_query(router, slave, queue);
 		break;
 	case COM_REGISTER_SLAVE:
@@ -463,8 +464,9 @@ int	query_len;
 					"%s: Expected DISCONNECT SERVER $server_id",
 						router->service->name)));
 			} else {
+				int serverid = atoi(word);
 				free(query_text);
-				return blr_slave_disconnect_server(router, slave, atoi(word));
+				return blr_slave_disconnect_server(router, slave, serverid);
 			}
 		}
 	}
@@ -810,7 +812,7 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	sprintf(column, "%s", router->master->remote ? router->master->remote : "");
+	sprintf(column, "%s", router->service->dbref->server->name ? router->service->dbref->server->name : "");
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
@@ -1075,7 +1077,7 @@ ROUTER_SLAVE	*sptr;
 			sprintf(port, "%d", sptr->port);
 			sprintf(master_id, "%d", router->serverid);
 			sprintf(slave_uuid, "%s", sptr->uuid ? sptr->uuid : "");
-			len = 5 + strlen(server_id) + strlen(host) + strlen(port)
+			len = 4 + strlen(server_id) + strlen(host) + strlen(port)
 					+ strlen(master_id) + strlen(slave_uuid) + 5;
 			if ((pkt = gwbuf_alloc(len)) == NULL)
 				return 0;
@@ -1122,10 +1124,9 @@ blr_slave_register(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
 GWBUF	*resp;
 uint8_t	*ptr;
-int	len, slen;
+int	slen;
 
 	ptr = GWBUF_DATA(queue);
-	len = extract_field(ptr, 24);
 	ptr += 4;		// Skip length and sequence number
 	if (*ptr++ != COM_REGISTER_SLAVE)
 		return 0;
@@ -1159,20 +1160,12 @@ int	len, slen;
 	ptr += 2;
 	slave->rank = extract_field(ptr, 32);
 
-	/*
-	 * Now construct a response
-	 */
-	if ((resp = gwbuf_alloc(11)) == NULL)
-		return 0;
-	ptr = GWBUF_DATA(resp);
-	encode_value(ptr, 7, 24);	// Payload length
-	ptr += 3;
-	*ptr++ = 1;			// Sequence number
-	encode_value(ptr, 0, 24);
-	ptr += 3;
-	encode_value(ptr, slave->serverid, 32);
 	slave->state = BLRS_REGISTERED;
-	return slave->dcb->func.write(slave->dcb, resp);
+
+	/*
+	 * Send OK response
+	 */
+	return blr_slave_send_ok(router, slave);
 }
 
 /**
@@ -1194,7 +1187,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
 {
 GWBUF		*resp;
 uint8_t		*ptr;
-int		len, flags, serverid, rval, binlognamelen;
+int		len, rval, binlognamelen;
 REP_HEADER	hdr;
 uint32_t	chksum;
 
@@ -1222,9 +1215,7 @@ uint32_t	chksum;
 
 	slave->binlog_pos = extract_field(ptr, 32);
 	ptr += 4;
-	flags = extract_field(ptr, 16);
 	ptr += 2;
-	serverid = extract_field(ptr, 32);
 	ptr += 4;
 	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
 	slave->binlogfile[binlognamelen] = 0;
@@ -1302,28 +1293,6 @@ uint32_t	chksum;
 		slave->cstate |= CS_EXPECTCB;
 		spinlock_release(&slave->catch_lock);
 		poll_fake_write_event(slave->dcb);
-	}
-	return rval;
-}
-
-/** 
- * Extract a numeric field from a packet of the specified number of bits,
- * the number of bits must be a multiple of 8.
- *
- * @param src	The raw packet source
- * @param bits	The number of bits to extract (multiple of 8)
- * @return 	The extracted value
- */
-static uint32_t
-extract_field(uint8_t *src, int bits)
-{
-uint32_t	rval = 0, shift = 0;
-
-	while (bits > 0)
-	{
-		rval |= (*src++) << shift;
-		shift += 8;
-		bits -= 8;
 	}
 	return rval;
 }
@@ -1689,7 +1658,7 @@ int	len = EXTRACT24(ptr + 9);	// Extract the event length
 		len = BINLOG_FNAMELEN;
 	ptr += 19;	// Skip header
 	slave->binlog_pos = extract_field(ptr, 32);
-	slave->binlog_pos += (extract_field(ptr+4, 32) << 32);
+	slave->binlog_pos += (((uint64_t)extract_field(ptr+4, 32)) << 32);
 	memcpy(slave->binlogfile, ptr + 8, len);
 	slave->binlogfile[len] = 0;
 }
@@ -1940,7 +1909,7 @@ int	len, id_len, seqno = 2;
 		strcpy(state, "not found");
 
 	id_len = strlen(serverid);
-	len = 5 + id_len + strlen(state) + 1;
+	len = 4 + (1 + id_len) + (1 + strlen(state));
 
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
@@ -1951,7 +1920,7 @@ int	len, id_len, seqno = 2;
 	blr_slave_send_eof(router, slave, seqno++);
 
 	ptr = GWBUF_DATA(pkt);
-	encode_value(ptr, id_len + 2 + strlen(state), 24);	// Add length of data packet
+	encode_value(ptr, len - 4, 24);	// Add length of data packet
 	ptr += 3;
 	*ptr++ = seqno++;					// Sequence number in response
 
@@ -2055,7 +2024,6 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 	uint8_t *ptr;
 	int len, seqno;
 	GWBUF *pkt;
-	int n = 1;
 
        /* preparing output result */
 	blr_slave_send_fieldcount(router, slave, 2);
@@ -2105,7 +2073,7 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 			strncpy((char *)ptr, state, strlen(state));             // Result string
 			ptr += strlen(state);
 
-			n = slave->dcb->func.write(slave->dcb, pkt);
+			slave->dcb->func.write(slave->dcb, pkt);
 
 			/* force session close*/
 			router_obj->closeSession(router->service->router_instance, sptr);
@@ -2120,31 +2088,31 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
 	return 1;
 }
+
  /**
- * Send a MySQL OK packet to the DCB
+ * Send a MySQL OK packet to the slave backend
  *
- * @param dcb   The DCB to send the OK packet to
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ *
  * @return result of a write call, non-zero if write was successful
  */
+
 static int
 blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
 GWBUF   *pkt;
 uint8_t *ptr;
+uint8_t ok_packet[] = {7, 0, 0, // Payload length
+			1, // Seqno,
+			0, // OK,
+			0, 0, 2, 0, 0, 0};
 
-        if ((pkt = gwbuf_alloc(11)) == NULL)
-                return 0;
-        ptr = GWBUF_DATA(pkt);
-        *ptr++ = 7;     // Payload length
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 1;     // Seqno
-        *ptr++ = 0;     // ok
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 2;
-        *ptr++ = 0;
-        *ptr++ = 0;
-        *ptr++ = 0;
-        return slave->dcb->func.write(slave->dcb, pkt);
+	if ((pkt = gwbuf_alloc(sizeof(ok_packet))) == NULL)
+		return 0;
+
+	memcpy(GWBUF_DATA(pkt), ok_packet, sizeof(ok_packet));
+
+	return slave->dcb->func.write(slave->dcb, pkt);
 }
+
