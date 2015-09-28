@@ -1670,7 +1670,7 @@ int main(int argc, char **argv)
             if(!daemon_mode)
             {
                 strncat(errorbuffer, "\n", STRING_BUFFER_SIZE);
-                fprintf(stderr, errorbuffer);
+                fprintf(stderr, "%s", errorbuffer);
             }
 
 	    rc = MAXSCALE_BADCONFIG;

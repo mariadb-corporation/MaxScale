@@ -6,7 +6,7 @@ then
     rm -f /usr/lib/systemd/system/maxscale.service
 else
     # Copy and rename config from old location
-    if [ -f "/usr/local/mariadb-maxscale/etc/MaxScale.cnf" ]
+    if [ -f "/usr/local/mariadb-maxscale/etc/MaxScale.cnf" -a ! -f "/etc/maxscale.cnf" ]
     then
         cp "/usr/local/mariadb-maxscale/etc/MaxScale.cnf" "/etc/maxscale.cnf"
     fi

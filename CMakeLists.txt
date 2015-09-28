@@ -184,13 +184,13 @@ execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
 ${CMAKE_SOURCE_DIR}/Documentation/Release-Notes/MaxScale-1.2.0-Release-Notes.md
  ${CMAKE_BINARY_DIR}/ReleaseNotes.txt)
 execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl 
-${CMAKE_SOURCE_DIR}/Documentation/Upgrading/Upgrading-To-MaxScale-1.2.0.md
- ${CMAKE_BINARY_DIR}/UpgradingToMaxScale120.txt)
+${CMAKE_SOURCE_DIR}/Documentation/Upgrading/Upgrading-To-MaxScale-1.2.md
+ ${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt)
 
 
 install(FILES ${CMAKE_BINARY_DIR}/Changelog.txt DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_BINARY_DIR}/ReleaseNotes.txt DESTINATION ${MAXSCALE_SHAREDIR})
-install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale120.txt DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES server/maxscale_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
 if(WITH_MAXSCALE_CNF)
   install(FILES server/maxscale_template.cnf DESTINATION ${MAXSCALE_CONFDIR} RENAME maxscale.cnf.template)
@@ -262,7 +262,11 @@ if(PACKAGE)
     set(CPACK_PACKAGE_VERSION_MINOR "${MAXSCALE_VERSION_MINOR}")
     set(CPACK_PACKAGE_VERSION_PATCH "${MAXSCALE_VERSION_PATCH}")
     set(CPACK_PACKAGE_CONTACT "MariaDB Corporation Ab")
-    set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}-${CPACK_PACKAGE_ARCHITECTURE}-${DISTRIB_SUFFIX}")
+    if(DISTRIB_SUFFIX)
+      set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}-${MAXSCALE_BUILD_NUMBER}.${DISTRIB_SUFFIX}.${CPACK_PACKAGE_ARCHITECTURE}")
+    else()
+      set(CPACK_PACKAGE_FILE_NAME "maxscale-${MAXSCALE_VERSION}-${MAXSCALE_BUILD_NUMBER}.${CPACK_PACKAGE_ARCHITECTURE}")
+    endif()
     set(CPACK_PACKAGE_NAME "maxscale")
     set(CPACK_PACKAGE_VENDOR "MariaDB Corporation Ab")
     set(CPACK_PACKAGE_DESCRIPTION_FILE ${CMAKE_SOURCE_DIR}/etc/DESCRIPTION)
