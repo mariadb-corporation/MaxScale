@@ -59,7 +59,7 @@ int     buflen;
         printAllDCBs();
         ss_info_dassert(true, "Something is true");
         ss_dfprintf(stderr, "\t..done\n");
-        dcb_free(dcb);
+        dcb_close(dcb);
         ss_dfprintf(stderr, "Freed original dcb");
         ss_info_dassert(!dcb_isvalid(dcb), "Freed DCB must not be valid");
         ss_dfprintf(stderr, "\t..done\nMake clone DCB a zombie");

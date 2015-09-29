@@ -26,7 +26,7 @@ else
     TDIR=.
 fi
 
-RUNCMD=mysql\ --host=$THOST\ -P$TPORT\ -u$TUSER\ -p$TPWD\ --unbuffered=true\ --disable-reconnect\ --silent\ --comment
+RUNCMD="mysql --host=$THOST -P$TPORT -u$TUSER -p$TPWD --unbuffered=true --disable-reconnect --silent -c"
 i=0
 
 while read -r LINE
