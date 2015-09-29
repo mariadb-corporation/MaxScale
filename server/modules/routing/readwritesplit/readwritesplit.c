@@ -2022,6 +2022,9 @@ static int routeQuery(
 			}
 			else
 			{
+				/** route_single_stmt expects the buffer to be contiguous. */
+				querybuf = gwbuf_make_contiguous(querybuf);
+
 				succp = route_single_stmt(inst, router_cli_ses, querybuf);
 			}
 		}
@@ -2053,6 +2056,9 @@ static int routeQuery(
 	}
 	else
 	{
+		/** route_single_stmt expects the buffer to be contiguous. */
+		querybuf = gwbuf_make_contiguous(querybuf);
+
 		succp = route_single_stmt(inst, router_cli_ses, querybuf);
 	}
 	
@@ -2108,6 +2114,7 @@ static bool route_single_stmt(
 	int                rlag_max       = MAX_RLAG_UNDEFINED;
 	backend_type_t     btype; /*< target backend type */
 
+	ss_dassert(querybuf->next == NULL); // The buffer must be contiguous.
 	ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
 
 	/** 
@@ -2129,12 +2136,6 @@ static bool route_single_stmt(
 		free(query_str);
 		succp = false;
 		goto retblock;
-	}
-	
-	/** If buffer is not contiguous, make it such */
-	if (querybuf->next != NULL)
-	{
-		querybuf = gwbuf_make_contiguous(querybuf);
 	}
 
 	packet = GWBUF_DATA(querybuf);
