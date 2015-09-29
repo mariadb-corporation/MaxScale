@@ -3,8 +3,21 @@ set_target_properties(binlogrouter PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_RPAT
 target_link_libraries(binlogrouter ssl pthread log_manager)
 install(TARGETS binlogrouter DESTINATION ${MAXSCALE_LIBDIR})
 
-add_executable(maxbinlogcheck maxbinlogcheck.c blr_file.c blr_cache.c blr_master.c blr_slave.c blr.c ${CMAKE_SOURCE_DIR}/server/core/service.c ${CMAKE_SOURCE_DIR}/server/core/spinlock.c ${CMAKE_SOURCE_DIR}/server/core/buffer.c ${CMAKE_SOURCE_DIR}/server/core/atomic.c ${CMAKE_SOURCE_DIR}/server/core/hint.c ${CMAKE_SOURCE_DIR}/server/core/gwdirs.c ${CMAKE_SOURCE_DIR}/server/core/server.c ${CMAKE_SOURCE_DIR}/server/core/dcb.c ${CMAKE_SOURCE_DIR}/server/core/users.c ${CMAKE_SOURCE_DIR}/server/core/dbusers.c ${CMAKE_SOURCE_DIR}/server/core/utils.c ${CMAKE_SOURCE_DIR}/server/core/hashtable.c ${CMAKE_SOURCE_DIR}/server/core/poll.c ${CMAKE_SOURCE_DIR}/server/core/gwbitmask.c ${CMAKE_SOURCE_DIR}/server/core/config.c ${CMAKE_SOURCE_DIR}/server/core/session.c ${CMAKE_SOURCE_DIR}/server/core/housekeeper.c ${CMAKE_SOURCE_DIR}/server/core/filter.c  ${CMAKE_SOURCE_DIR}/server/core/resultset.c ${CMAKE_SOURCE_DIR}/server/core/load_utils.c ${CMAKE_SOURCE_DIR}/server/core/monitor.c ${CMAKE_SOURCE_DIR}/server/core/gw_utils.c ${CMAKE_SOURCE_DIR}/server/core/thread.c ${CMAKE_SOURCE_DIR}/server/core/secrets.c)
+add_executable(maxbinlogcheck maxbinlogcheck.c blr_file.c blr_cache.c blr_master.c blr_slave.c blr.c
+  ${CMAKE_SOURCE_DIR}/server/core/service.c ${CMAKE_SOURCE_DIR}/server/core/spinlock.c
+  ${CMAKE_SOURCE_DIR}/server/core/buffer.c ${CMAKE_SOURCE_DIR}/server/core/atomic.c
+  ${CMAKE_SOURCE_DIR}/server/core/hint.c ${CMAKE_SOURCE_DIR}/server/core/gwdirs.c
+  ${CMAKE_SOURCE_DIR}/server/core/server.c ${CMAKE_SOURCE_DIR}/server/core/dcb.c
+  ${CMAKE_SOURCE_DIR}/server/core/users.c ${CMAKE_SOURCE_DIR}/server/core/dbusers.c
+  ${CMAKE_SOURCE_DIR}/server/core/utils.c ${CMAKE_SOURCE_DIR}/server/core/hashtable.c
+  ${CMAKE_SOURCE_DIR}/server/core/poll.c ${CMAKE_SOURCE_DIR}/server/core/gwbitmask.c
+  ${CMAKE_SOURCE_DIR}/server/core/config.c ${CMAKE_SOURCE_DIR}/server/core/session.c
+  ${CMAKE_SOURCE_DIR}/server/core/housekeeper.c ${CMAKE_SOURCE_DIR}/server/core/filter.c
+  ${CMAKE_SOURCE_DIR}/server/core/resultset.c ${CMAKE_SOURCE_DIR}/server/core/load_utils.c
+  ${CMAKE_SOURCE_DIR}/server/core/monitor.c ${CMAKE_SOURCE_DIR}/server/core/gw_utils.c
+  ${CMAKE_SOURCE_DIR}/server/core/thread.c ${CMAKE_SOURCE_DIR}/server/core/secrets.c
+  ${CMAKE_SOURCE_DIR}/log_manager/log_manager.cc)
 
-target_link_libraries(maxbinlogcheck utils ssl pthread log_manager ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} aio rt crypt dl crypto inih z m stdc++ ${CURL_LIBRARIES})
+target_link_libraries(maxbinlogcheck utils ssl pthread ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} aio rt crypt dl crypto inih z m stdc++ ${CURL_LIBRARIES})
 
 install(TARGETS maxbinlogcheck DESTINATION bin)
