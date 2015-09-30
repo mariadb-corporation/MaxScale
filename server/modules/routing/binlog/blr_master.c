@@ -1614,7 +1614,7 @@ int		action;
 				slave->lastEventReceived = hdr->event_type;
 
 				/* set lastReply */
-				if (router->send_slave_heartbeat == 1)
+				if (router->send_slave_heartbeat)
 					slave->lastReply = time(0);
 
 				pkt = gwbuf_alloc(hdr->event_size + 5);

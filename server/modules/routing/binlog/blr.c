@@ -472,7 +472,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 				}
 				else if (strcmp(options[i], "send_slave_heartbeat") == 0)
 				{
-					inst->send_slave_heartbeat = atoi(value);
+					inst->send_slave_heartbeat = config_truth_value(value);
 				}
 				else if (strcmp(options[i], "binlogdir") == 0)
 				{
@@ -1242,8 +1242,9 @@ struct tm	tm;
 			dcb_printf(dcb,
 					"\t\tNo. transitions to follow mode:			%u\n",
 						session->stats.n_bursts);
-			dcb_printf(dcb, "\t\tHeartbeat period (seconds):			%lu\n",
-				   session->heartbeat);
+			if (router_inst->send_slave_heartbeat)
+				dcb_printf(dcb, "\t\tHeartbeat period (seconds):			%lu\n",
+					session->heartbeat);
 
 			minno = session->stats.minno - 1;
 			if (minno == -1)

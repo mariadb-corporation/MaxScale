@@ -237,7 +237,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
 		rc = blr_slave_binlog_dump(router, slave, queue);
 
-		if (router->send_slave_heartbeat == 1 && rc && slave->heartbeat > 0) {
+		if (router->send_slave_heartbeat && rc && slave->heartbeat > 0) {
 			snprintf(task_name, BLRM_TASK_NAME_LEN, "%s slaves heartbeat send", router->service->name);
 
 			/* Add slave heartbeat check task: it runs with 1 second frequency */
