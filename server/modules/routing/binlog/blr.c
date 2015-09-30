@@ -46,6 +46,7 @@
  *					If set those values are sent to slaves instead of
  *					saved master responses
  * 23/08/2015	Massimiliano Pinto	Added strerror_r
+ * 30/09/2015	Massimiliano Pinto	Addition of send_slave_heartbeat option
  *
  * @endverbatim
  */
@@ -287,6 +288,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 	inst->set_master_hostname = NULL;
 	inst->set_master_uuid = NULL;
 	inst->set_master_server_id = NULL;
+	inst->send_slave_heartbeat = 0;
 
 	inst->serverid = 0;
 
@@ -467,6 +469,10 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 					} else {
 						inst->heartbeat = h_val;
 					}
+				}
+				else if (strcmp(options[i], "send_slave_heartbeat") == 0)
+				{
+					inst->send_slave_heartbeat = config_truth_value(value);
 				}
 				else if (strcmp(options[i], "binlogdir") == 0)
 				{
@@ -1236,8 +1242,9 @@ struct tm	tm;
 			dcb_printf(dcb,
 					"\t\tNo. transitions to follow mode:			%u\n",
 						session->stats.n_bursts);
-			dcb_printf(dcb, "\t\tHeartbeat period (seconds):			%lu\n",
-				   session->heartbeat);
+			if (router_inst->send_slave_heartbeat)
+				dcb_printf(dcb, "\t\tHeartbeat period (seconds):			%lu\n",
+					session->heartbeat);
 
 			minno = session->stats.minno - 1;
 			if (minno == -1)
@@ -1597,17 +1604,18 @@ GWBUF	*ret;
  * mysql_send_custom_error
  *
  * Send a MySQL protocol Generic ERR message, to the dcb
- * Note the errno and state are still fixed now
  *
- * @param dcb Owner_Dcb Control Block for the connection to which the OK is sent
+ * @param dcb Owner_Dcb Control Block for the connection to which the error message is sent
  * @param packet_number
  * @param in_affected_rows
- * @param msg
+ * @param msg		Message to send
+ * @param statemsg	MySQL State message
+ * @param errcode	MySQL Error code
  * @return 1 Non-zero if data was sent
  *
  */
 int
-blr_send_custom_error(DCB *dcb, int packet_number, int affected_rows, char *msg) 
+blr_send_custom_error(DCB *dcb, int packet_number, int affected_rows, char *msg, char *statemsg, unsigned int errcode) 
 {
 uint8_t		*outbuf = NULL;
 uint32_t	mysql_payload_size = 0;
@@ -1620,10 +1628,17 @@ unsigned int	mysql_errno = 0;
 const char	*mysql_error_msg = NULL;
 const char	*mysql_state = NULL;
 GWBUF		*errbuf = NULL;
-        
-        mysql_errno = 1064;
-        mysql_error_msg = "An errorr occurred ...";
-        mysql_state = "42000";
+       
+	if (errcode == 0) 
+		mysql_errno = 1064;
+	else
+		mysql_errno = errcode;
+
+	mysql_error_msg = "An errorr occurred ...";
+	if (statemsg == NULL)
+        	mysql_state = "42000";
+	else
+		mysql_state = statemsg;
         
         field_count = 0xff;
         gw_mysql_set_byte2(mysql_err, mysql_errno);

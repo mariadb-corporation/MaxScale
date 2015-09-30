@@ -29,7 +29,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <gwdirs.h>
-
+#include <sys/stat.h>
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
@@ -154,6 +154,11 @@ FILE	*fp;
 char	fname[1024], *home, *cpasswd;
 
 	initialise();
+
+    if(access(get_datadir(), F_OK) != 0)
+        if(mkdir(get_datadir(), S_IRWXU) != 0 && errno != EEXIST)
+           return ADMIN_ERR_PWDFILEOPEN;
+
     snprintf(fname,1023, "%s/passwd", get_datadir());
     fname[1023] = '\0';
 	if (users == NULL)

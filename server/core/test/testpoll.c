@@ -86,7 +86,7 @@ int     result;
         sleep(10);
         poll_shutdown();
         ss_dfprintf(stderr, "\t..done\nTidy up.");
-        dcb_free(dcb);
+        dcb_close(dcb);
         ss_dfprintf(stderr, "\t..done\n");
 		
 	return 0;

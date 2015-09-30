@@ -70,10 +70,11 @@ int
 test2()
 {
 GWBUF   *buffer;
-char len = 128;
+unsigned int len = 128;
 char query[129];
 
-        buffer = gwbuf_alloc(132);
+	/** Allocate space for the COM_QUERY header and payload */
+    buffer = gwbuf_alloc(5 + 128);
 	ss_info_dassert((buffer != NULL),"Buffer should not be null");
 
 	memset(query,';',128);

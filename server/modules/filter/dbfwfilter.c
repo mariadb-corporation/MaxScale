@@ -472,72 +472,54 @@ bool check_time(char* str)
 #endif
 
 #define IS_RVRS_TIME(tr) (mktime(&tr->end) < mktime(&tr->start))
+
 /**
- * Parses a null-terminated string into two tm_t structs that mark a timerange
+ * Parses a null-terminated string into a timerange defined by two ISO-8601 compliant
+ * times separated by a single dash. The times are interpreted at one second precision
+ * and follow the extended format by separating the hours, minutes and seconds with
+ * semicolons.
  * @param str String to parse
  * @param instance FW_FILTER instance
  * @return If successful returns a pointer to the new TIMERANGE instance. If errors occurred or
  * the timerange was invalid, a NULL pointer is returned.
  */
-TIMERANGE* parse_time(char* str, FW_INSTANCE* instance)
+static TIMERANGE* parse_time(const char* str)
 {
+    assert(str != NULL);
 
-	TIMERANGE* tr = NULL;
-	int intbuffer[3];
-	int* idest = intbuffer;
-	char strbuffer[3];
-	char *ptr,*sdest;
-	struct tm* tmptr;
+    char strbuf[strlen(str) + 1];
+    char *separator;
+    struct tm start, end;
+    TIMERANGE* tr = NULL;
 
-	assert(str != NULL && instance != NULL);
-	
-	tr = (TIMERANGE*)calloc(1,sizeof(TIMERANGE));
+    strcpy(strbuf, str);
 
-	if(tr == NULL){
-		skygw_log_write(LOGFILE_ERROR, "dbfwfilter: malloc returned NULL.");
-		return NULL;
-	}
+    if ((separator = strchr(strbuf, '-')))
+    {
+        *separator++ = '\0';
+        if (strptime(strbuf, "%H:%M:%S", &start) &&
+            strptime(separator, "%H:%M:%S", &end))
+        {
+            /** The time string was valid */
+            CHK_TIMES((&start));
+            CHK_TIMES((&end));
 
-	memset(&tr->start,0,sizeof(struct tm));
-	memset(&tr->end,0,sizeof(struct tm));
-	ptr = str;
-	sdest = strbuffer;
-	tmptr = &tr->start;
+            tr = (TIMERANGE*) malloc(sizeof(TIMERANGE));
 
-	while(ptr - str < 19){
-		if(isdigit(*ptr)){
-			*sdest = *ptr;
-		}else if(*ptr == ':' ||*ptr == '-' || *ptr == '\0' || *ptr == ' '){
-			*sdest = '\0';
-			*idest++ = atoi(strbuffer);
-			sdest = strbuffer;
-			
-			if(*ptr == '-' || *ptr == '\0'){
-				
-				tmptr->tm_hour = intbuffer[0];
-				tmptr->tm_min = intbuffer[1];
-				tmptr->tm_sec = intbuffer[2];
-
-				CHK_TIMES(tmptr);
-
-				if(*ptr == '\0' || *ptr == ' '){
-					return tr;
-				}
-
-				idest = intbuffer;
-				tmptr = &tr->end;
-			}
-			ptr++;
-			continue;
-		}
-		ptr++;
-		sdest++;
-	}
-
-	free(tr);
-	return NULL;
+            if (tr)
+            {
+                tr->start = start;
+                tr->end = end;
+                tr->next = NULL;
+            }
+            else
+            {
+                skygw_log_write(LOGFILE_ERROR, "dbfwfilter: malloc returned NULL.");
+            }
+        }
+    }
+    return tr;
 }
-
 
 /**
  * Splits the reversed timerange into two.
@@ -1020,7 +1002,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 			goto retblock;
 		    }
 
-                    TIMERANGE *tmp = parse_time(tok,instance);
+                    TIMERANGE *tmp = parse_time(tok);
 
 		    if(tmp == NULL)
 		    {
