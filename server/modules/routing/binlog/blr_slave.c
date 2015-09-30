@@ -215,7 +215,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		if (router->mariadb10_compat && !slave->mariadb10_compat) {
 			slave->state = BLRS_ERRORED;
 			blr_send_custom_error(slave->dcb, 1, 0,
-				"MariaDB 10 Slave is required for Slave registration");
+				"MariaDB 10 Slave is required for Slave registration", "42000", 1064);
 
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
@@ -260,7 +260,8 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		break;
 	default:
 		blr_send_custom_error(slave->dcb, 1, 0,
-			"You have an error in your SQL syntax; Check the syntax the MaxScale binlog router accepts.");
+			"You have an error in your SQL syntax; Check the syntax the MaxScale binlog router accepts.",
+			"42000", 1064);
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
 			"Unexpected MySQL Command (%d) received from slave",

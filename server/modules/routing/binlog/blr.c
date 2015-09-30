@@ -1604,17 +1604,18 @@ GWBUF	*ret;
  * mysql_send_custom_error
  *
  * Send a MySQL protocol Generic ERR message, to the dcb
- * Note the errno and state are still fixed now
  *
- * @param dcb Owner_Dcb Control Block for the connection to which the OK is sent
+ * @param dcb Owner_Dcb Control Block for the connection to which the error message is sent
  * @param packet_number
  * @param in_affected_rows
- * @param msg
+ * @param msg		Message to send
+ * @param statemsg	MySQL State message
+ * @param errcode	MySQL Error code
  * @return 1 Non-zero if data was sent
  *
  */
 int
-blr_send_custom_error(DCB *dcb, int packet_number, int affected_rows, char *msg) 
+blr_send_custom_error(DCB *dcb, int packet_number, int affected_rows, char *msg, char *statemsg, unsigned int errcode) 
 {
 uint8_t		*outbuf = NULL;
 uint32_t	mysql_payload_size = 0;
@@ -1627,10 +1628,17 @@ unsigned int	mysql_errno = 0;
 const char	*mysql_error_msg = NULL;
 const char	*mysql_state = NULL;
 GWBUF		*errbuf = NULL;
-        
-        mysql_errno = 1064;
-        mysql_error_msg = "An errorr occurred ...";
-        mysql_state = "42000";
+       
+	if (errcode == 0) 
+		mysql_errno = 1064;
+	else
+		mysql_errno = errcode;
+
+	mysql_error_msg = "An errorr occurred ...";
+	if (statemsg == NULL)
+        	mysql_state = "42000";
+	else
+		mysql_state = statemsg;
         
         field_count = 0xff;
         gw_mysql_set_byte2(mysql_err, mysql_errno);
