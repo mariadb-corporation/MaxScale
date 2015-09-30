@@ -46,6 +46,7 @@
  *					If set those values are sent to slaves instead of
  *					saved master responses
  * 23/08/2015	Massimiliano Pinto	Added strerror_r
+ * 30/09/2015	Massimiliano Pinto	Addition of send_slave_heartbeat option
  *
  * @endverbatim
  */
@@ -287,6 +288,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 	inst->set_master_hostname = NULL;
 	inst->set_master_uuid = NULL;
 	inst->set_master_server_id = NULL;
+	inst->send_slave_heartbeat = 0;
 
 	inst->serverid = 0;
 
@@ -467,6 +469,10 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 					} else {
 						inst->heartbeat = h_val;
 					}
+				}
+				else if (strcmp(options[i], "send_slave_heartbeat") == 0)
+				{
+					inst->send_slave_heartbeat = atoi(value);
 				}
 				else if (strcmp(options[i], "binlogdir") == 0)
 				{

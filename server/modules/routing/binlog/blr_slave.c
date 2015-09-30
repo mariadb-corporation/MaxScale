@@ -237,8 +237,10 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
 		rc = blr_slave_binlog_dump(router, slave, queue);
 
-		if (rc) {
+		if (router->send_slave_heartbeat == 1 && rc && slave->heartbeat > 0) {
 			snprintf(task_name, BLRM_TASK_NAME_LEN, "%s slaves heartbeat send", router->service->name);
+
+			/* Add slave heartbeat check task: it runs with 1 second frequency */
 			hktask_add(task_name, blr_send_slave_heartbeat, router, 1);
 		}
 
@@ -1784,18 +1786,28 @@ uint32_t	chksum;
 		encode_value(ptr, chksum, 32);
 	}
 
-	slave->lastEventTimestamp = time(0);
+	/* Send Fake Rotate Event */
+	rval = slave->dcb->func.write(slave->dcb, resp);
+
+	/* set lastEventReceived */
 	slave->lastEventReceived = ROTATE_EVENT;
 
-	rval = slave->dcb->func.write(slave->dcb, resp);
+	/* set lastReply for slave heartbeat check */
+	if (router->send_slave_heartbeat)
+		slave->lastReply = time(0);
 
 	/* Send the FORMAT_DESCRIPTION_EVENT */
 	if (slave->binlog_pos != 4)
 		blr_slave_send_fde(router, slave);
 
+	/* set lastEventReceived */
+	slave->lastEventReceived = FORMAT_DESCRIPTION_EVENT;
+
 	slave->dcb->low_water  = router->low_water;
 	slave->dcb->high_water = router->high_water;
+
 	dcb_add_callback(slave->dcb, DCB_REASON_DRAINED, blr_slave_callback, slave);
+
 	slave->state = BLRS_DUMPING;
 
 	LOGIF(LM, (skygw_log_write(
@@ -2001,6 +2013,10 @@ uint8_t		*ptr;
 		rval = written;
 		slave->stats.n_events++;
 		burst_size -= hdr.event_size;
+
+		/* set lastReply for slave heartbeat check */
+		if (router->send_slave_heartbeat)
+			slave->lastReply = time(0);
 	}
 	if (record == NULL)
 		slave->stats.n_failed_read++;
@@ -2305,9 +2321,6 @@ uint32_t	chksum;
 	chksum = crc32(0L, NULL, 0);
 	chksum = crc32(chksum, GWBUF_DATA(record), hdr.event_size - 4);
 	encode_value(ptr, chksum, 32);
-
-	slave->lastEventTimestamp = time(0);
-	slave->lastEventReceived = FORMAT_DESCRIPTION_EVENT;
 
 	slave->dcb->func.write(slave->dcb, head);
 }
@@ -4323,19 +4336,18 @@ time_t		t_now = time(0);
 	{
 
 		/* skip servers with state = 0 */
-		if ( (sptr->state == BLRS_DUMPING) && (sptr->heartbeat > 0) && ((t_now + 1 - sptr->lastEventTimestamp) >= sptr->heartbeat) )
+		if ( (sptr->state == BLRS_DUMPING) && (sptr->heartbeat > 0) && ((t_now + 1 - sptr->lastReply) >= sptr->heartbeat) )
 		{
 			LOGIF(LM, (skygw_log_write(
 				LOGFILE_MESSAGE, "Sending Heartbeat to slave server-id %d in State %d, cstate %d. "
 				"Heartbeat interval is %d, last event time is %lu",
 				sptr->serverid, sptr->state, sptr->cstate, sptr->heartbeat,
-				(unsigned long)sptr->lastEventTimestamp)));
+				(unsigned long)sptr->lastReply)));
 
 			blr_slave_send_heartbeat(router, sptr);
 
-			sptr->lastEventTimestamp = t_now;
+			sptr->lastReply = t_now;
 
-			sptr->lastEventReceived = HEARTBEAT_EVENT;
 		}
 
 		sptr = sptr->next;

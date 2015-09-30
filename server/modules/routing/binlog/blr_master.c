@@ -1613,6 +1613,10 @@ int		action;
 				slave->lastEventTimestamp = hdr->timestamp;
 				slave->lastEventReceived = hdr->event_type;
 
+				/* set lastReply */
+				if (router->send_slave_heartbeat == 1)
+					slave->lastReply = time(0);
+
 				pkt = gwbuf_alloc(hdr->event_size + 5);
 				buf = GWBUF_DATA(pkt);
 				encode_value(buf, hdr->event_size + 1, 24);

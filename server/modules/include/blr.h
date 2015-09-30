@@ -318,6 +318,7 @@ typedef struct router_slave {
 	char		*warning_msg;	/*< Warning message */
 	int		heartbeat;	/*< Heartbeat in seconds */
 	uint8_t		lastEventReceived; /*< Last event received */
+	time_t		lastReply;	/*< Last event sent */
 #if defined(SS_DEBUG)
         skygw_chk_t     rses_chk_tail;
 #endif
@@ -436,6 +437,7 @@ typedef struct router_instance {
 	char		  *set_master_hostname; /*< Send custom Hostname to slaves */
 	char		  *set_master_uuid; /*< Send custom Master UUID to slaves */
 	char		  *set_master_server_id; /*< Send custom Master server_id to slaves */
+	int		  send_slave_heartbeat; /*< Enable sending heartbeat to slaves */
 	struct router_instance	*next;
 } ROUTER_INSTANCE;
 
@@ -545,7 +547,7 @@ extern int  blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *,uint8_t *);
 extern int  blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
 extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
-extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned int, REP_HEADER *);
+extern GWBUF *blr_read_binlog(ROUTER_INSTANCE *, BLFILE *, unsigned long, REP_HEADER *);
 extern void blr_close_binlog(ROUTER_INSTANCE *, BLFILE *);
 extern unsigned long blr_file_size(BLFILE *);
 extern int blr_statistics(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
