@@ -1831,8 +1831,8 @@ static int gw_error_client_event(
         }
         
 #if defined(SS_DEBUG)
-        LOGIF(LE, (skygw_log_write_flush(
-                LOGFILE_ERROR,
+        LOGIF(LD, (skygw_log_write_flush(
+                LOGFILE_DEBUG,
                 "Client error event handling.")));
 #endif
         dcb_close(dcb);

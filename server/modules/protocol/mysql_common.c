@@ -2261,7 +2261,7 @@ char *create_auth_fail_str(
 	}
 	else if(errcode == MYSQL_FAILED_AUTH_SSL)
 	{
-	    sprintf(errstr, ferrstr);
+	    sprintf(errstr, "%s", ferrstr);
 	}
 	else
 	{

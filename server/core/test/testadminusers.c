@@ -270,7 +270,7 @@ char	*home, buf[1024];
 
 	/* Unlink any existing password file before running this test */
 	
-	sprintf(buf, "%s/passwd", default_cachedir);
+	sprintf(buf, "%s/passwd", get_datadir());
     if(!is_valid_posix_path(buf))
         exit(1);
 	if (strcmp(buf, "/etc/passwd") != 0)
