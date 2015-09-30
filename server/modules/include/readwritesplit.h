@@ -242,19 +242,17 @@ typedef struct backend_ref_st {
 #endif
 } backend_ref_t;
 
-
-typedef struct rwsplit_config_st {
-        int               rw_max_slave_conn_percent;
-        int               rw_max_slave_conn_count;
-        select_criteria_t rw_slave_select_criteria;
-        int               rw_max_slave_replication_lag;
-	target_t          rw_use_sql_variables_in;
-        int               rw_max_sescmd_history_size;
-        bool disable_sescmd_hist;
-        bool disable_slave_recovery;
-        bool master_reads; /*< Use master for reads */
+typedef struct rwsplit_config_st
+{
+    int rw_max_slave_conn_percent;
+    int rw_max_slave_conn_count;
+    select_criteria_t rw_slave_select_criteria;
+    int rw_max_slave_replication_lag;
+    target_t rw_use_sql_variables_in;
+    int rw_max_sescmd_history_size;
+    bool rw_disable_sescmd_hist;
+    bool rw_master_reads; /*< Use master for reads */
 } rwsplit_config_t;
-     
 
 #if defined(PREP_STMT_CACHING)
 

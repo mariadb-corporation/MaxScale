@@ -73,9 +73,12 @@ When value all is used, queries reading session variables can be routed to any a
 
 In above-mentioned case the user-defined variable would only be updated in the master where query would be routed due to `INSERT` statement.
 
-**`max_sescmd_history`** sets a limit on how many session commands each session can execute before the connection is closed. The default is an unlimited number of session commands.
+**`max_sescmd_history`** sets a limit on how many session commands each session can execute before the session command history is disabled. The default is an unlimited number of session commands.
 
-	max_sescmd_history=1500
+```
+# Set a limit on the session command history
+max_sescmd_history=1500
+```
 
 When a limitation is set, it effectively creates a cap on the session's memory consumption. This might be useful if connection pooling is used and the sessions use large amounts of session commands.
 
@@ -84,13 +87,6 @@ When a limitation is set, it effectively creates a cap on the session's memory c
 ```
 # Disable the session command history
 disable_sescmd_history=true
-```
-
-**`disable_slave_recovery`** disables the recovery and replacement of slave servers. If this option is enabled and a connection to a slave server in use is lost, no replacement slave will be taken. This allows the safe use of session state modifying statements when the session command history is disabled. This is mostly intended to be used with the `disable_sescmd_history` option enabled.
-
-```
-# Disable the session command history
-disable_slave_recovery=true
 ```
 
 **`master_accept_reads`** allows the master server to be used for reads. This is a useful option to enable if you are using a small number of servers and wish to use the master for reads as well.

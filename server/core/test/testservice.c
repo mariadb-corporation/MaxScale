@@ -27,21 +27,19 @@
  * @endverbatim
  */
 
+// To ensure that ss_info_assert asserts also when builing in non-debug mode.
+#if !defined(SS_DEBUG)
+#define SS_DEBUG
+#endif
+#if defined(NDEBUG)
+#undef NDEBUG
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <maxscale_test.h>
 #include <test_utils.h>
 #include <service.h>
-
-
-static bool success = false;
-
-int hup(DCB* dcb)
-{
-    success = true;
-    return 1;
-}
 
 /**
  * test1	Allocate a service and do lots of other things
@@ -57,17 +55,6 @@ int	    result;
 int	    argc = 3;
 
 init_test_env(NULL);
-/* char*	    argv[] = */
-/* { */
-/*     "log_manager", */
-/*     "-j", */
-/*     TEST_LOG_DIR, */
-/*     NULL */
-/* }; */
-
-/* skygw_logmanager_init(argc,argv); */
-/* poll_init(); */
-/* hkinit(); */
 
         /* Service tests */
         ss_dfprintf(stderr,
@@ -91,9 +78,9 @@ init_test_env(NULL);
         result = serviceStart(service);
         skygw_log_sync_all();
         ss_info_dassert(0 != result, "Start should succeed");
-        result = serviceStop(service);
+        serviceStop(service);
         skygw_log_sync_all();
-        ss_info_dassert(0 != result, "Stop should succeed");
+        ss_info_dassert(service->state == SERVICE_STATE_STOPPED, "Stop should succeed");
         result = serviceStartAll();
         skygw_log_sync_all();
         ss_info_dassert(0 != result, "Start all should succeed");
@@ -104,35 +91,26 @@ init_test_env(NULL);
         result = serviceStart(service);
         skygw_log_sync_all();
         ss_info_dassert(0 != result, "Start should succeed");
-        result = serviceStop(service);
+        serviceStop(service);
         skygw_log_sync_all();
-        ss_info_dassert(0 != result, "Stop should succeed");
+        ss_info_dassert(service->state == SERVICE_STATE_STOPPED, "Stop should succeed");
 
-	if((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
-	    return 1;
+        if((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
+            return 1;
         ss_info_dassert(dcb != NULL, "DCB allocation failed");
         
         session = session_alloc(service,dcb);
         ss_info_dassert(session != NULL, "Session allocation failed");
-        session->client->state = DCB_STATE_POLLING;
-        session->client->func.hangup = hup;
+        dcb->state = DCB_STATE_POLLING;
         sleep(15);
         
-        ss_info_dassert(success, "Session timeout failed");
+        ss_info_dassert(dcb->state != DCB_STATE_POLLING, "Session timeout failed");
 
         ss_dfprintf(stderr, "\t..done\nStopping Service.");
-        ss_info_dassert(0 != serviceStop(service), "Stop should succeed");
+        serviceStop(service);
+        ss_info_dassert(service->state == SERVICE_STATE_STOPPED, "Stop should succeed");
         ss_dfprintf(stderr, "\t..done\n");
 
-	/** This is never used in MaxScale and will always fail due to service's
-	 * stats.n_current value never being decremented */
-/* 
-	
-        ss_dfprintf(stderr, "\t..done\nFreeing Service.");
-        ss_info_dassert(0 != service_free(service), "Free should succeed");
-        ss_dfprintf(stderr, "\t..done\n");
-		
-*/
 	return 0;
         
 }
