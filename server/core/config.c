@@ -2334,6 +2334,7 @@ static char *InternalRouters[] = {
     "cli",
     "maxinfo",
     "binlogrouter",
+    "testroute",
     NULL
 };
 
