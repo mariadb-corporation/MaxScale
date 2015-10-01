@@ -1329,6 +1329,25 @@ int			n_bufs = -1, pn_bufs = -1;
 									gwbuf_free(record);
 								}
 
+								/* Log whether no event has been sent */
+								if (pos == router->binlog_position) {
+									LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
+										"No events distributed to slaves for a pending transaction in %s at %lu."
+										" Last event from master at %lu",
+										router->binlog_name,
+										router->binlog_position,
+										router->current_pos)));
+								}
+								if (pos < router->current_pos) {
+									LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
+										"Some events were not distributed to slaves for a pending transaction "
+										"in %s at %lu. Last distributed even at %lu, last event from master at %lu",
+										router->binlog_name,
+										router->binlog_position,
+										pos,
+										router->current_pos)));
+								}
+
 								spinlock_acquire(&router->lock);
 
 								router->binlog_position = router->current_pos;

@@ -1917,6 +1917,9 @@ int		written, rval = 1, burst;
 int		rotating = 0;
 unsigned long	burst_size;
 uint8_t		*ptr;
+char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
+
+	read_errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
 
 	if (large)
 		burst = router->long_burst;
@@ -1937,6 +1940,9 @@ uint8_t		*ptr;
 		rotating = router->rotating;
 		if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 		{
+			char err_msg[BINLOG_ERROR_MSG_LEN+1];
+			err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
+
 			if (rotating)
 			{
 				spinlock_acquire(&slave->catch_lock);
@@ -1948,10 +1954,18 @@ uint8_t		*ptr;
 			}
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
-				"blr_slave_catchup failed to open binlog file %s",
-					slave->binlogfile)));
+				"Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup failed to open binlog file",
+				slave->dcb->remote, slave->port, slave->serverid,
+				slave->binlogfile)));
+
 			slave->cstate &= ~CS_BUSY;
 			slave->state = BLRS_ERRORED;
+
+			snprintf(err_msg, BINLOG_ERROR_MSG_LEN, "Failed to open binlog '%s'", slave->binlogfile);
+
+			/* Send error that stops slave replication */
+			blr_send_custom_error(slave->dcb, slave->seqno++, 0, err_msg, "HY000", 1236);
+
 			dcb_close(slave->dcb);
 			return 0;
 		}
@@ -1959,7 +1973,7 @@ uint8_t		*ptr;
 	slave->stats.n_bursts++;
 
 	while (burst-- && burst_size > 0 &&
-		(record = blr_read_binlog(router, slave->file, slave->binlog_pos, &hdr)) != NULL)
+		(record = blr_read_binlog(router, slave->file, slave->binlog_pos, &hdr, read_errmsg)) != NULL)
 	{
 		head = gwbuf_alloc(5);
 		ptr = GWBUF_DATA(head);
@@ -1983,6 +1997,8 @@ uint8_t		*ptr;
 			beat1 = hkheartbeat;
 			if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 			{
+				char err_msg[BINLOG_ERROR_MSG_LEN+1];
+				err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
 				if (rotating)
 				{
 					spinlock_acquire(&slave->catch_lock);
@@ -1994,9 +2010,19 @@ uint8_t		*ptr;
 				}
 				LOGIF(LE, (skygw_log_write(
 					LOGFILE_ERROR,
-					"blr_slave_catchup failed to open binlog file %s",
+					"Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup failed to open binlog file in rotate event",
+					slave->dcb->remote,
+					slave->port,
+					slave->serverid,
 					slave->binlogfile)));
+
 				slave->state = BLRS_ERRORED;
+
+				snprintf(err_msg, BINLOG_ERROR_MSG_LEN, "Failed to open binlog '%s' in rotate event", slave->binlogfile);
+
+				/* Send error that stops slave replication */
+				blr_send_custom_error(slave->dcb, (slave->seqno - 1), 0, err_msg, "HY000", 1236);
+
 				dcb_close(slave->dcb);
 				break;
 			}
@@ -2019,8 +2045,31 @@ uint8_t		*ptr;
 		if (router->send_slave_heartbeat)
 			slave->lastReply = time(0);
 	}
-	if (record == NULL)
+	if (record == NULL) {
 		slave->stats.n_failed_read++;
+
+                if (hdr.ok == 0xff) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
+				slave->dcb->remote,
+				slave->port,
+				slave->serverid,
+				slave->binlogfile,
+				read_errmsg)));
+
+                        spinlock_acquire(&slave->catch_lock);
+
+                        slave->state = BLRS_ERRORED;
+
+                        spinlock_release(&slave->catch_lock);
+
+                        blr_send_custom_error(slave->dcb, slave->seqno++, 0, read_errmsg, "HY000", 1236);
+
+                        dcb_close(slave->dcb);
+
+                        return 0;
+                }
+	}
 	spinlock_acquire(&slave->catch_lock);
 	slave->cstate &= ~CS_BUSY;
 	spinlock_release(&slave->catch_lock);
@@ -2289,13 +2338,24 @@ REP_HEADER	hdr;
 GWBUF		*record, *head;
 uint8_t		*ptr;
 uint32_t	chksum;
+char err_msg[BINLOG_ERROR_MSG_LEN+1];
+
+	err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
 
 	memset(&hdr, 0, BINLOG_EVENT_HDR_LEN);
 
 	if ((file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 		return;
-	if ((record = blr_read_binlog(router, file, 4, &hdr)) == NULL)
+	if ((record = blr_read_binlog(router, file, 4, &hdr, err_msg)) == NULL)
 	{
+		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+			"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
+			slave->dcb->remote,
+			slave->port,
+			slave->serverid,
+			slave->binlogfile,
+			err_msg)));
+
 		blr_close_binlog(router, file);
 		return;
 	}
