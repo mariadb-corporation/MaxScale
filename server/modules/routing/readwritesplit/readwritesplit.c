@@ -5309,7 +5309,7 @@ static int router_handle_state_switch(
          * because the "data" parameter will not contain meaningful data,
          * so we have no choice but to stop here.
          */
-        return;
+        return 0;
     }
         bref = (backend_ref_t *)data;
         CHK_BACKEND_REF(bref);

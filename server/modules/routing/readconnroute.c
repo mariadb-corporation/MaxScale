@@ -1017,7 +1017,7 @@ static int handle_state_switch(DCB* dcb,DCB_REASON reason, void * routersession)
          * We cannot handle a DCB that does not have a router session,
          * except in the case where error processing is invoked.
          */
-        return;
+        return 0;
     }
     switch(reason)
     {

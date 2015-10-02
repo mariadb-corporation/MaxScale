@@ -1614,7 +1614,7 @@ ROUTER_INSTANCE		*router = slave->router;
          * because the "data" parameter will not contain meaningful data,
          * so we have no choice but to stop here.
          */
-        return;
+        return 0;
     }
 	if (reason == DCB_REASON_DRAINED)
 	{
