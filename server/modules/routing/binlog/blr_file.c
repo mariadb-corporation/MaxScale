@@ -423,7 +423,7 @@ struct	stat	statb;
 
 	if (pos > filelen)
 	{
-		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Attempting to read off the end of the binlog file, size %lu, event at %lu", filelen, pos);
+		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is beyond end of the binlog file '%s', size %lu", pos, file->binlogname, filelen);
 		return NULL;
 	}
 
@@ -432,8 +432,8 @@ struct	stat	statb;
 	{
 		if (pos > router->binlog_position)
 		{
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Attempting to read off the binlog file pos %lu, event at %lu",
-				router->binlog_position, pos);
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is not available. Latest safe position %lu, end of binlog '%s' is %lu",
+				pos, router->binlog_position, file->binlogname, router->current_pos);
 		} else {
 			/* accessing last position is ok */
 			hdr->ok = 0x0;
@@ -449,8 +449,8 @@ struct	stat	statb;
 		{
 		case 0:
 			LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-				"Reached end of binlog file at %d.",
-				pos)));
+				"Reached end of binlog file '%s' at %d.",
+				file->binlogname, pos)));
 
 			/* set ok indicator */
 			hdr->ok = 0x0;
@@ -461,18 +461,18 @@ struct	stat	statb;
 			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
 			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to read binlog file; (%s), event at %lu",
-				err_msg, pos);
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to read binlog file '%s'; (%s), event at %lu",
+				file->binlogname, err_msg, pos);
 
 			if (errno == EBADF)
-				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bad file descriptor for binlog file, refcount %d, descriptor %d, event at %lu",
-					file->refcnt, file->fd, pos);
+				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bad file descriptor for binlog file '%s', refcount %d, descriptor %d, event at %lu",
+					file->binlogname, file->refcnt, file->fd, pos);
 			break;
 			}
 		default:
 			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bogus data in log event header; "
-				"expected %d bytes but read %d, position %lu",
-				 BINLOG_EVENT_HDR_LEN, n, pos);
+				"expected %d bytes but read %d, position %lu, binlog file '%s'",
+				 BINLOG_EVENT_HDR_LEN, n, pos, file->binlogname);
 			break;
 		}
 		return NULL;
@@ -487,19 +487,19 @@ struct	stat	statb;
 
 	/* event pos & size checks */
 	if (hdr->event_size == 0 || ((hdr->next_pos != (pos + hdr->event_size)) && (hdr->event_type != ROTATE_EVENT))) {
-		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Client requested master to start replication from invalid position %lu", pos);
+		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Client requested master to start replication from invalid position %lu in binlog file '%s'", pos, file->binlogname);
                 return NULL;
         }
 
 	/* event type checks */
 	if (router->mariadb10_compat) {
 		if (hdr->event_type > MAX_EVENT_TYPE_MARIADB10) {
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Invalid MariaDB 10 event type 0x%x at %lu", hdr->event_type, pos);
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Invalid MariaDB 10 event type 0x%x at %lu in binlog file '%s'", hdr->event_type, pos, file->binlogname);
 			return NULL;
 		}
 	} else {
 		if (hdr->event_type > MAX_EVENT_TYPE) {
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Invalid event type 0x%x at %lu", hdr->event_type, pos);
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Invalid event type 0x%x at %lu in binlog file '%s'", hdr->event_type, pos, file->binlogname);
 			return NULL;
 		} 
 	} 
@@ -531,19 +531,19 @@ struct	stat	statb;
 				char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
 				strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 
-				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to reread header in binlog file; (%s), event at %lu",
-					err_msg, pos);
+				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to reread header in binlog file '%s'; (%s), event at %lu",
+					file->binlogname, err_msg, pos);
 
 				if (errno == EBADF)
-					snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bad file descriptor rereading header for binlog file, "
+					snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bad file descriptor rereading header for binlog file '%s', "
 						"refcount %d, descriptor %d, event at %lu",
-						file->refcnt, file->fd, pos);
+						file->binlogname, file->refcnt, file->fd, pos);
 				break;
 				}
 			default:
 				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bogus data rereading log event header; "
-					"expected %d bytes but read %d, position %lu",
-					 BINLOG_EVENT_HDR_LEN, n, pos);
+					"expected %d bytes but read %d, position %lu in binlog file '%s'",
+					 BINLOG_EVENT_HDR_LEN, n, pos, file->binlogname);
 				break;
 			}
 			return NULL;
@@ -558,7 +558,8 @@ struct	stat	statb;
 
 		if (hdr->next_pos < pos && hdr->event_type != ROTATE_EVENT)
 		{
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Next event position still incorrect after rereading, event at %lu", pos);
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Next event position still incorrect after rereading, "
+				"event at %lu in binlog file '%s'", pos, file->binlogname);
 			return NULL;
 		}
 		else
@@ -570,8 +571,8 @@ struct	stat	statb;
 	}
 	if ((result = gwbuf_alloc(hdr->event_size)) == NULL)
 	{
-		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to allocate memory for binlog entry, size %d, event at %lu",
-			hdr->event_size, pos);
+		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to allocate memory for binlog entry, size %d, event at %lu in binlog file '%s'",
+			hdr->event_size, pos, file->binlogname);
 		return NULL;
 	}
 
@@ -587,21 +588,21 @@ struct	stat	statb;
 			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
 			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
 
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Error reading the binlog event at %lu;"
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Error reading the binlog event at %lu in binlog file '%s';"
 				"(%s), expected %d bytes.",
-				pos, err_msg, hdr->event_size - BINLOG_EVENT_HDR_LEN);	
+				pos, file->binlogname, err_msg, hdr->event_size - BINLOG_EVENT_HDR_LEN);	
 		}
 		else
 		{
 			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bogus data in log event entry; "
-				"expected %d bytes but got %d, position %lu",
-				 hdr->event_size - BINLOG_EVENT_HDR_LEN, n, pos);
+				"expected %d bytes but got %d, position %lu in binlog file '%s'",
+				 hdr->event_size - BINLOG_EVENT_HDR_LEN, n, pos, file->binlogname);
 
 			if (filelen != 0 && filelen - pos < hdr->event_size)
 			{
 				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Binlog event is close to the end of the binlog file; "
-					"current file size is %lu, event at %lu",
-					filelen, pos);
+					"current file size is %lu, event at %lu in binlog file '%s'",
+					filelen, pos, file->binlogname);
 			}
 			blr_log_header(LOGFILE_ERROR, "Possible malformed event header", hdbuf);
 		}

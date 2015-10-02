@@ -896,16 +896,29 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		/* decrease server registered slaves counter */
 		atomic_add(&router->stats.n_registered, -1);
 
-		LOGIF(LM, (skygw_log_write_flush(
-			LOGFILE_MESSAGE,
-			"%s: Slave %s, server id %d, disconnected after %ld seconds. "
-			"%d SQL commands, %d events sent (%lu bytes).",
-			router->service->name, slave->dcb->remote,
-			slave->serverid,
-			time(0) - slave->connect_time,
-			slave->stats.n_queries,
-			slave->stats.n_events,
-			slave->stats.n_bytes)));
+		if (slave->state > 0) {
+			LOGIF(LM, (skygw_log_write_flush(
+				LOGFILE_MESSAGE,
+				"%s: Slave %s, server id %d, disconnected after %ld seconds. "
+				"%d SQL commands, %d events sent (%lu bytes), binlog '%s', last position %lu",
+				router->service->name, slave->dcb->remote,
+				slave->serverid,
+				time(0) - slave->connect_time,
+				slave->stats.n_queries,
+				slave->stats.n_events,
+				slave->stats.n_bytes,
+				slave->binlogfile,
+				(unsigned long)slave->binlog_pos)));
+		} else {
+			LOGIF(LM, (skygw_log_write_flush(
+				LOGFILE_MESSAGE,
+				"%s: Slave %s, server id %d, disconnected after %ld seconds. "
+				"%d SQL commands",
+				router->service->name, slave->dcb->remote,
+				slave->serverid,
+				time(0) - slave->connect_time,
+				slave->stats.n_queries)));
+		}
 
 		/*
 		 * Mark the slave as unregistered to prevent the forwarding
