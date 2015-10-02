@@ -326,7 +326,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
     unsigned char* ptr;
     char* target = bref->bref_backend->backend_server->unique_name;
     GWBUF* buf;
-    bool error = false;
+    bool duplicate_found = false;
     showdb_response_t rval = SHOWDB_PARTIAL_RESPONSE;
 
     if (buffer == NULL || *buffer == NULL)
@@ -366,7 +366,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
         ptr += gw_mysql_get_byte3(ptr) + 4;
     }
 
-    while (ptr < (unsigned char*) buf->end && !PTR_IS_EOF(ptr))
+    while (!duplicate_found && ptr < (unsigned char*) buf->end && !PTR_IS_EOF(ptr))
     {
         int payloadlen = gw_mysql_get_byte3(ptr);
         int packetlen = payloadlen + 4;
@@ -388,7 +388,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
                        pcre_exec(rses->router->ignore_regex, NULL, data,
                                  strlen(data), 0, 0, ovector, ovec_count) >= 0)))
                 {
-                    error = true;
+                    duplicate_found = true;
                     skygw_log_write(LE, "Error: Database '%s' found on servers '%s' and '%s' for user %s@%s.",
                                     data, target, hashtable_fetch(rses->dbhash, data),
                                     rses->rses_client_dcb->user,
@@ -415,7 +415,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
 
     gwbuf_free(buf);
 
-    if (error)
+    if (duplicate_found)
         rval = SHOWDB_DUPLICATE_DATABASES;
     else if (bref->n_mapping_eof == 2)
         rval = SHOWDB_FULL_RESPONSE;
@@ -4621,7 +4621,7 @@ int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
 
                 if ((router_cli_ses->init & INIT_FAILED) == 0)
                 {
-                    if(rc == SHOWDB_DUPLICATE_DATABASES)
+                    if (rc == SHOWDB_DUPLICATE_DATABASES)
                     {
                         skygw_log_write(LE, "Error: Duplicate databases found, closing session.");
                     }
