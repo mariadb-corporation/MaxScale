@@ -46,6 +46,13 @@ typedef enum init_mask
   INIT_FAILED = 0x08
 } init_mask_t;
 
+typedef enum showdb_response
+{
+    SHOWDB_FULL_RESPONSE,
+    SHOWDB_PARTIAL_RESPONSE,
+    SHOWDB_DUPLICATE_DATABASES,
+    SHOWDB_FATAL_ERROR
+} showdb_response_t;
 /** 
  * The state of the backend server reference
  */
