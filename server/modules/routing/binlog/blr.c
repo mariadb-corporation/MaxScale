@@ -710,10 +710,17 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 			return (ROUTER *)inst;
 		}
 
-		LOGIF(LT, (skygw_log_write_flush(
-			LOGFILE_TRACE,
-			"Current binlog file is %s, current pos is %lu\n",
-			inst->binlog_name, inst->binlog_position)));
+		if (!inst->trx_safe) {
+			LOGIF(LT, (skygw_log_write_flush(
+				LOGFILE_TRACE,
+				"Current binlog file is %s, current pos is %lu\n",
+				inst->binlog_name, inst->binlog_position)));
+		} else {
+			LOGIF(LT, (skygw_log_write_flush(
+				LOGFILE_TRACE,
+				"Current binlog file is %s, safe pos %lu, current pos is %lu\n",
+				inst->binlog_name, inst->binlog_position, inst->current_pos)));
+		}
 
 		/* Start replication from master server */
 		blr_start_master(inst);
