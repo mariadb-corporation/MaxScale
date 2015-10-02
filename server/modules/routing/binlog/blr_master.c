@@ -100,6 +100,7 @@ static void blr_check_last_master_event(void *inst);
 extern int blr_check_heartbeat(ROUTER_INSTANCE *router);
 extern char * blr_last_event_description(ROUTER_INSTANCE *router);
 static void blr_log_identity(ROUTER_INSTANCE *router);
+static void blr_distribute_error_message(ROUTER_INSTANCE *router, char *message, char *state, unsigned int err_code);
 
 static int keepalive = 1;
 
@@ -1321,12 +1322,48 @@ int			n_bufs = -1, pn_bufs = -1;
 
 									/* distribute event */
 									blr_distribute_binlog_record(router, &new_hdr, raw_data);
+
 									spinlock_acquire(&router->binlog_lock);
 
 									pos = new_hdr.next_pos;
 
 									spinlock_release(&router->binlog_lock);
+
 									gwbuf_free(record);
+								}
+
+								/* Check whether binlog records has been read in previous loop */
+
+								if (pos < router->current_pos) {
+									char err_message[BINLOG_ERROR_MSG_LEN+1];
+
+									err_message[BINLOG_ERROR_MSG_LEN] = '\0';
+
+									/* No event has been sent */
+									if (pos == router->binlog_position) {
+										LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
+											"No events distributed to slaves for a pending transaction in %s at %lu."
+											" Last event from master at %lu",
+											router->binlog_name,
+											router->binlog_position,
+											router->current_pos)));
+
+										strncpy(err_message, "No transaction events sent", BINLOG_ERROR_MSG_LEN);
+									} else {
+										/* Some events have been sent */
+										LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
+											"Some events were not distributed to slaves for a pending transaction "
+											"in %s at %lu. Last distributed even at %lu, last event from master at %lu",
+											router->binlog_name,
+											router->binlog_position,
+											pos,
+											router->current_pos)));
+
+										strncpy(err_message, "Incomplete transaction events sent", BINLOG_ERROR_MSG_LEN);
+									}
+
+									/* distribute error message to registered slaves */
+									blr_distribute_error_message(router, err_message, "HY000", 1236);
 								}
 
 								spinlock_acquire(&router->lock);
@@ -2156,5 +2193,37 @@ static void blr_log_identity(ROUTER_INSTANCE *router) {
 			(master_hostname == NULL ? "not available" : master_hostname),
 			(master_version == NULL ? "not available" : master_version))));
 	}
+}
+
+/**
+ * Distribute an error message to all the registered slaves.
+ *
+ * @param	router		The router instance
+ * @param	message		The message to send
+ * @param	state		The MySQL State for message
+ * @param	err_code	The MySQL error code for message
+ */
+static void
+blr_distribute_error_message(ROUTER_INSTANCE *router, char *message, char *state, unsigned int err_code) {
+ROUTER_SLAVE    *slave;
+
+	spinlock_acquire(&router->lock);
+
+	slave = router->slaves;
+	while (slave)
+	{
+		if (slave->state != BLRS_DUMPING)
+		{
+			slave = slave->next;
+			continue;
+		}
+
+		/* send the error that stops slave replication */
+		blr_send_custom_error(slave->dcb, slave->seqno++, 0, message, state, err_code);
+
+		slave = slave->next;
+	}
+
+	spinlock_release(&router->lock);
 }
 

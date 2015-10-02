@@ -46,7 +46,7 @@ _RETVAL_STATUS_NOT_RUNNING=3
 # Source function library.
 . /etc/rc.d/init.d/functions
 
-# Source local configuration overrides
+# Source additional command line arguments.
 [ -f /etc/sysconfig/maxscale ] && . /etc/sysconfig/maxscale
 
 # we can rearrange this easily
