@@ -486,7 +486,7 @@ struct	stat	statb;
 	hdr->flags = EXTRACT16(&hdbuf[17]);
 
 	/* event pos & size checks */
-	if (hdr->next_pos < 0 || hdr->event_size <= 0 || ((hdr->next_pos != (pos + hdr->event_size)) && (hdr->event_type != ROTATE_EVENT))) {
+	if (hdr->event_size == 0 || ((hdr->next_pos != (pos + hdr->event_size)) && (hdr->event_type != ROTATE_EVENT))) {
 		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Client requested master to start replication from invalid position %lu", pos);
                 return NULL;
         }
