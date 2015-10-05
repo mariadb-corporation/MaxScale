@@ -366,7 +366,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
         ptr += gw_mysql_get_byte3(ptr) + 4;
     }
 
-    while (!duplicate_found && ptr < (unsigned char*) buf->end && !PTR_IS_EOF(ptr))
+    while (ptr < (unsigned char*) buf->end && !PTR_IS_EOF(ptr))
     {
         int payloadlen = gw_mysql_get_byte3(ptr);
         int packetlen = payloadlen + 4;
