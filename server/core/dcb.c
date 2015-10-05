@@ -560,7 +560,7 @@ dcb_process_victim_queue(DCB *listofdcb)
             }
             else {
                 /* Must be DCB_STATE_POLLING */
-                if (dcb_maybe_add_persistent(dcb))
+                if (0 == dcb->persistentstart && dcb_maybe_add_persistent(dcb))
                 {
                     /* Have taken DCB into persistent pool, no further killing */
                     dcb = dcb->memdata.next;
@@ -1787,7 +1787,7 @@ dcb_close(DCB *dcb)
     /*
      * If DCB is in persistent pool, mark it as an error and exit
      */
-    if (dcb->persistentstart)
+    if (dcb->persistentstart > 0)
     {
         dcb->dcb_errhandle_called = true;
         return;
@@ -1796,7 +1796,7 @@ dcb_close(DCB *dcb)
     spinlock_acquire(&zombiespin);
     if (!dcb->dcb_is_zombie)
     {
-        if (dcb->server && DCB_STATE_POLLING == dcb->state)
+        if (0 == dcb->persistentstart && dcb->server && DCB_STATE_POLLING == dcb->state)
         {
             /* May be a candidate for persistence, so save user name */
             char *user;
@@ -2838,7 +2838,7 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
         while (disposals)
         {
             nextdcb = disposals->nextpersistent;
-            disposals->persistentstart = 0;
+            disposals->persistentstart = -1;
             if (DCB_STATE_POLLING == dcb->state)
             {
                 poll_remove_dcb(dcb);
