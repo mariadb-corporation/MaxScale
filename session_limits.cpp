@@ -33,11 +33,15 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
     sleep(20);
     printf("Execute query to check session\n");
-    global_result += execute_query(Test->conn_rwsplit, "SELECT 1");
+    if (execute_query(Test->conn_rwsplit, "SELECT 1") != 0) {
+        global_result++;
+        printf("TEST_FAILED: Query failed\n");
+    }
+
     printf("Wait 35 seconds more and try quiry again expecting failure\n");
     sleep(35);
     if (execute_query(Test->conn_rwsplit, "SELECT 1") == 0) {
-        printf("Session was not closed after 40 seconds\n");
+        printf("TEST_FAILED: Session was not closed after 40 seconds\n");
         global_result++;
     }
     Test->close_maxscale_connections();
@@ -52,7 +56,7 @@ int main(int argc, char *argv[])
 
     printf("Execute one moe session command and expect failure\n");
     if (execute_query(Test->conn_rwsplit, "set @test=11") == 0) {
-        printf("Session was not closed after 10 session commands\n");
+        printf("TEST_FAILED: Session was not closed after 10 session commands\n");
         global_result++;
     }
     Test->close_maxscale_connections();
