@@ -453,7 +453,7 @@ add_test(bug648 bug648)
 set_tests_properties(bug648 PROPERTIES TIMEOUT 3600)
 add_test(sysbench_kill_slave sysbench_kill_slave)
 set_tests_properties(sysbench_kill_slave PROPERTIES TIMEOUT 3600)
-set_tests_properties(config_reload config_reload_stress reload_server reload_service PROPERTIES LABELS "CONFIG_RELOAD")
+#set_tests_properties(config_reload config_reload_stress reload_server reload_service PROPERTIES LABELS "CONFIG_RELOAD")
 
 add_test(setup_binlog_no_pos setup_binlog_no_pos)
 add_test(pers_01 pers_01)
