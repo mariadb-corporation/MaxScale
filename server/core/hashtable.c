@@ -379,7 +379,7 @@ hashtable_fetch(HASHTABLE *table, void *key)
 unsigned int		hashkey;
 HASHENTRIES	*entry;
 
-        if(table == NULL || key == NULL)
+        if(table == NULL || key == NULL || 0 == table->hashsize)
 	    return NULL;
 
 	hashkey = table->hashfn(key) % table->hashsize;

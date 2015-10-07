@@ -44,6 +44,7 @@
  * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
  * 10/11/2014	Massimiliano Pinto	Client charset is passed to backend
  * 19/06/2015   Martin Brampton		Persistent connection handling
+ * 07/10/2015   Martin Brampton         Remove calls to dcb_close - should be done by routers
  *
  */
 #include <modinfo.h>
@@ -408,7 +409,12 @@ static int gw_read_backend_event(DCB *dcb) {
                                 {
                                     gwbuf_free(errbuf);
                                     dcb->dcb_errhandle_called = true;
-				    dcb_close(dcb);
+                                    /*
+                                     * I'm pretty certain this is best removed and
+                                     * causes trouble if present, but have left it
+                                     * here just for now as a comment. Martin
+                                     */
+                                    /* dcb_close(dcb); */
 				    rc = 1;
 				    goto return_rc;
                                 }
@@ -1129,7 +1135,12 @@ gw_backend_hangup(DCB *dcb)
 			}
 		}
                 gwbuf_free(errbuf);
-                dcb_close(dcb);
+                /*
+                 * I'm pretty certain this is best removed and
+                 * causes trouble if present, but have left it
+                 * here just for now as a comment. Martin
+                 */
+                /* dcb_close(dcb); */
                 goto retblock;
         }
 #if defined(SS_DEBUG)
