@@ -55,9 +55,8 @@ int main(int argc, char *argv[])
     Test->read_env();
     Test->print_env();
 
-    Test->set_timeout(20);
-
     for (i = 0; i < 4; i++) {
+        Test->set_timeout(5);
         Test->repl->connect();
         if (Test->connect_maxscale() !=0 ) {
             printf("Error connecting to MaxScale\n");
@@ -71,12 +70,16 @@ int main(int argc, char *argv[])
         global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
         global_result += execute_query(Test->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
         global_result += execute_query(Test->conn_rwsplit, "CREATE DATABASE test1;");
+        Test->stop_timeout();
         sleep(5);
 
+        Test->set_timeout(1000);
         printf("Testing with database 'test1'\n");fflush(stdout);
         global_result += use_db(Test, (char *) "test1");
         global_result += insert_select(Test, N);
+        Test->stop_timeout();
 
+        Test->set_timeout(5);
         global_result += check_t1_table(Test, FALSE, (char *) "test");
         global_result += check_t1_table(Test, TRUE, (char *) "test1");
 
@@ -95,9 +98,11 @@ int main(int argc, char *argv[])
         // close connections
         Test->close_maxscale_connections();
         Test->repl->close_connections();
+        Test->stop_timeout();
 
     }
 
+    Test->set_timeout(5);
     global_result += check_maxscale_alive();
 
     if (global_result == 0) {printf("PASSED!!\n");} else {printf("FAILED!!\n");}

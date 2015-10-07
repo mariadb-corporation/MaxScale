@@ -678,7 +678,13 @@ int TestConnections::get_client_ip(char * ip)
 int TestConnections::set_timeout(int timeout_seconds)
 {
     timeout = timeout_seconds;
-    pthread_create(&timeout_thread_p, NULL, timeout_thread, this);
+    return(pthread_create(&timeout_thread_p, NULL, timeout_thread, this));
+}
+
+int TestConnections::stop_timeout()
+{
+
+    return(pthread_kill(timeout_thread_p, SIGTERM));
 }
 
 

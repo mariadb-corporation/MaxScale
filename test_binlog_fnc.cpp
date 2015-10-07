@@ -103,18 +103,26 @@ int test_binlog(TestConnections* Test)
     int global_result = 0;
     Test->repl->connect();
 
+    Test->set_timeout(100);
     create_t1(Test->repl->nodes[0]);
     global_result += insert_into_t1(Test->repl->nodes[0], 4);
+    Test->stop_timeout();
     printf("Sleeping to let replication happen\n"); fflush(stdout);
     sleep(30);
 
     for (i = 0; i < Test->repl->N; i++) {
         printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
+        Test->set_timeout(100);
         global_result += select_from_t1(Test->repl->nodes[i], 4);
+        Test->stop_timeout();
     }
 
+    Test->set_timeout(10);
     printf("First transaction test (with ROLLBACK)\n");
     start_transaction(Test);
+    Test->stop_timeout();
+
+    Test->set_timeout(10);
 
     printf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
     global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
@@ -128,8 +136,10 @@ int test_binlog(TestConnections* Test)
     global_result += execute_query(Test->repl->nodes[0], (char *) "ROLLBACK");
     printf("INSERT INTO t1 VALUES(112, 10)\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
+    Test->stop_timeout();
     sleep(20);
 
+    Test->set_timeout(10);
     printf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
     global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
 
@@ -154,12 +164,17 @@ int test_binlog(TestConnections* Test)
     printf("DELETE FROM t1 WHERE fl=10\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
 
+    Test->stop_timeout();
+
+    Test->set_timeout(20);
     global_result += check_sha1(Test);
     Test->repl->close_connections();
 
+    Test->stop_timeout();
 
     // test SLAVE STOP/START
     for (int j = 0; j < 3; j++) {
+        Test->set_timeout(100);
         Test->repl->connect();
 
         printf("Dropping and re-creating t1"); fflush(stdout);
@@ -192,6 +207,7 @@ int test_binlog(TestConnections* Test)
 
         global_result += check_sha1(Test);
         Test->repl->close_connections();
+        Test->stop_timeout();
     }
     return(global_result);
 }

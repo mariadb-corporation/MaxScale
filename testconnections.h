@@ -377,9 +377,15 @@ public:
     /**
      * @brief set_timeout startes timeout thread which terminates test application after timeout_seconds
      * @param timeout_seconds timeout time
-     * @return 0
+     * @return 0 if success
      */
     int set_timeout(int timeout_seconds);
+
+    /**
+     * @brief stop_timeout stops timeout thread
+     * @return 0
+     */
+    int stop_timeout();
 };
 
 /**
