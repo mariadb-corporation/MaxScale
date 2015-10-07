@@ -674,3 +674,22 @@ int TestConnections::get_client_ip(char * ip)
     mysql_close(conn);
     return(ret);
 }
+
+int TestConnections::set_timeout(int timeout_seconds)
+{
+    timeout = timeout_seconds;
+    pthread_create(&timeout_thread_p, NULL, timeout_thread, this);
+}
+
+
+void *timeout_thread( void *ptr )
+{
+
+    TestConnections * Test = (TestConnections *) ptr;
+    printf("Starting timeout thread\n"); fflush(stdout);
+    sleep(Test->timeout);
+    printf("Timeout!\n"); fflush(stdout);
+    Test->copy_all_logs();
+    exit(250);
+    return NULL;
+}

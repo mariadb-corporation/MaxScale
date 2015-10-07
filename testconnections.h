@@ -204,6 +204,17 @@ public:
     int ssl;
 
     /**
+     * @brief timeout seconds until test termination
+     */
+    int timeout;
+
+    /**
+     * @brief timeout_thread_p pointer to timeout thread
+     */
+    pthread_t timeout_thread_p;
+
+
+    /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
      * @return 0 in case of success
      */
@@ -362,6 +373,13 @@ public:
      * @return number of connections
      */
     int get_client_ip(char * ip);
+
+    /**
+     * @brief set_timeout startes timeout thread which terminates test application after timeout_seconds
+     * @param timeout_seconds timeout time
+     * @return 0
+     */
+    int set_timeout(int timeout_seconds);
 };
 
 /**
@@ -394,5 +412,12 @@ int find_connected_slave1(TestConnections* Test);
  * @return 0 in case if success
  */
 int check_maxscale_alive();
+
+/**
+ * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds
+ * @param ptr pointer to TestConnections object
+ * @return void
+ */
+void * timeout_thread(void *ptr );
 
 #endif // TESTCONNECTIONS_H

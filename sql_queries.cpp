@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
     Test->read_env();
     Test->print_env();
 
+    Test->set_timeout(20);
 
     for (i = 0; i < 4; i++) {
         Test->repl->connect();
