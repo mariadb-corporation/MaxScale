@@ -1,6 +1,7 @@
 
 #include "testconnections.h"
 #include <getopt.h>
+#include <time.h>
 
 TestConnections::TestConnections(int argc, char *argv[])
 {
@@ -97,6 +98,7 @@ TestConnections::TestConnections(int argc, char *argv[])
     }
     //repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
+    start_time = time(NULL);
 }
 
 TestConnections::TestConnections()
@@ -685,6 +687,17 @@ int TestConnections::stop_timeout()
 {
 
     return(pthread_kill(timeout_thread_p, SIGTERM));
+}
+
+int TestConnections::tprintf(const char *format, ...)
+{
+    time_t curr_time = time(NULL);
+    printf("%04f", difftime(curr_time, start_time));
+
+    va_list argp;
+    va_start(argp, format);
+    vprintf(format, argp);
+    va_end(argp);
 }
 
 

@@ -213,6 +213,11 @@ public:
      */
     pthread_t timeout_thread_p;
 
+    /**
+     * @brief start_time time when test was started (used by printf to print Timestamp)
+     */
+    time_t start_time;
+
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
@@ -386,6 +391,14 @@ public:
      * @return 0
      */
     int stop_timeout();
+
+    /**
+     * @brief printf adds timestam to printf
+     * @param __format
+     * @return
+     */
+
+    int tprintf(const char *format, ...);
 };
 
 /**

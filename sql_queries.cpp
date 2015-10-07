@@ -58,15 +58,17 @@ int main(int argc, char *argv[])
     for (i = 0; i < 4; i++) {
         Test->set_timeout(5);
         Test->repl->connect();
+        Test->stop_timeout();
         if (Test->connect_maxscale() !=0 ) {
-            printf("Error connecting to MaxScale\n");
+            Test->tprintf("Error connecting to MaxScale\n");
             Test->copy_all_logs();
             exit(1);
         }
 
+        Test->set_timeout(100);
         global_result += insert_select(Test, N);
 
-        printf("Creating database test1\n"); fflush(stdout);
+        Test->tprintf("Creating database test1\n"); fflush(stdout);
         global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
         global_result += execute_query(Test->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
         global_result += execute_query(Test->conn_rwsplit, "CREATE DATABASE test1;");
@@ -74,7 +76,7 @@ int main(int argc, char *argv[])
         sleep(5);
 
         Test->set_timeout(1000);
-        printf("Testing with database 'test1'\n");fflush(stdout);
+        Test->tprintf("Testing with database 'test1'\n");fflush(stdout);
         global_result += use_db(Test, (char *) "test1");
         global_result += insert_select(Test, N);
         Test->stop_timeout();
@@ -85,7 +87,7 @@ int main(int argc, char *argv[])
 
 
 
-        printf("Trying queries with syntax errors\n");fflush(stdout);
+        Test->tprintf("Trying queries with syntax errors\n");fflush(stdout);
         execute_query(Test->conn_rwsplit, "DROP DATABASE I EXISTS test1;");
         execute_query(Test->conn_rwsplit, "CREATE TABLE ");
 
@@ -105,6 +107,6 @@ int main(int argc, char *argv[])
     Test->set_timeout(5);
     global_result += check_maxscale_alive();
 
-    if (global_result == 0) {printf("PASSED!!\n");} else {printf("FAILED!!\n");}
+    if (global_result == 0) {Test->tprintf("PASSED!!\n");} else {Test->tprintf("FAILED!!\n");}
     Test->copy_all_logs(); return(global_result);
 }
