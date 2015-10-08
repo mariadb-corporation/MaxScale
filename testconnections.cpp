@@ -98,7 +98,7 @@ TestConnections::TestConnections(int argc, char *argv[])
     }
     //repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
-    timeout_lock = 0;
+    timeout = 99999;
     start_time = time(NULL);
 }
 
@@ -680,26 +680,14 @@ int TestConnections::get_client_ip(char * ip)
 
 int TestConnections::set_timeout(int timeout_seconds)
 {
-    if (timeout_lock == 0) {
-        timeout_lock = 1;
-        timeout = timeout_seconds;
-        return(pthread_create(&timeout_thread_p, NULL, timeout_thread, this));
-    } else {
-        tprintf("Timeout thread is already running. Can't start a new one\n");
-        return(1);
-    }
+    timeout = timeout_seconds;
+    return(0);
 }
 
 int TestConnections::stop_timeout()
 {
-    if (timeout_lock == 1) {
-        timeout_lock = 0;
-        tprintf("Killing timeout thread\n");
-        return(pthread_kill(timeout_thread_p, SIGTERM));
-    } else {
-        tprintf("Timeout thread is not running. Can't kill it!\n");
-        return(1);
-    }
+    timeout = 99999;
+    return(0);
 }
 
 int TestConnections::tprintf(const char *format, ...)
@@ -716,17 +704,13 @@ int TestConnections::tprintf(const char *format, ...)
 
 void *timeout_thread( void *ptr )
 {
-
     TestConnections * Test = (TestConnections *) ptr;
     struct timespec tim;
-    printf("Starting timeout thread\n"); fflush(stdout);
-    tim.tv_sec = Test->timeout;
-    tim.tv_nsec = 0;
-    nanosleep(&tim, NULL);
-    if (Test->timeout_lock == 1) {
-        printf("Timeout!\n"); fflush(stdout);
-        Test->copy_all_logs();
-        exit(250);
+    while (Test->timeout > 0) {
+        tim.tv_sec = 1;
+        tim.tv_nsec = 0;
+        nanosleep(&tim, NULL);
+        Test->timeout--;
     }
-    return NULL;
+    exit(250);
 }

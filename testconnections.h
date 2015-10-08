@@ -219,12 +219,6 @@ public:
     time_t start_time;
 
     /**
-     * @brief timeout_lock if 1 new timeout thread can't be created
-     */
-    int timeout_lock;
-
-
-    /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
      * @return 0 in case of success
      */
