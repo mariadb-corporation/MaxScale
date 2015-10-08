@@ -694,6 +694,7 @@ int TestConnections::stop_timeout()
 {
     if (timeout_lock == 1) {
         timeout_lock = 0;
+        tprintf("Killing timeout thread\n");
         return(pthread_kill(timeout_thread_p, SIGTERM));
     } else {
         tprintf("Timeout thread is not running. Can't kill it!\n");
