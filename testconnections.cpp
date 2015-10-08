@@ -98,6 +98,7 @@ TestConnections::TestConnections(int argc, char *argv[])
     }
     //repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
+    timeout_lock = 0;
     start_time = time(NULL);
 }
 
@@ -679,14 +680,23 @@ int TestConnections::get_client_ip(char * ip)
 
 int TestConnections::set_timeout(int timeout_seconds)
 {
-    timeout = timeout_seconds;
-    return(pthread_create(&timeout_thread_p, NULL, timeout_thread, this));
+    if (timeout_lock == 0) {
+        timeout = timeout_seconds;
+        return(pthread_create(&timeout_thread_p, NULL, timeout_thread, this));
+    } else {
+        tprintf("Timeout thread is already running. Can't start a new one\n");
+        return(1);
+    }
 }
 
 int TestConnections::stop_timeout()
 {
-
-    return(pthread_kill(timeout_thread_p, SIGTERM));
+    if (timeout_lock == 1) {
+        return(pthread_kill(timeout_thread_p, SIGTERM));
+    } else {
+        tprintf("Timeout thread is not running. Can't kill it!\n");
+        return(1);
+    }
 }
 
 int TestConnections::tprintf(const char *format, ...)

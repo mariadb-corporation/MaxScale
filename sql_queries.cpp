@@ -60,12 +60,13 @@ int main(int argc, char *argv[])
         Test->tprintf("Connection to backend\n");
         Test->set_timeout(5);
         Test->repl->connect();
-        Test->stop_timeout();
+        Test->tprintf("Connection to Maxscale\n");
         if (Test->connect_maxscale() !=0 ) {
             Test->tprintf("Error connecting to MaxScale\n");
             Test->copy_all_logs();
             exit(1);
         }
+        Test->stop_timeout();
 
         Test->tprintf("Filling t1 with data\n");
         Test->set_timeout(100);
