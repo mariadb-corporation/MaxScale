@@ -24,7 +24,7 @@ void *parall_traffic( void *ptr );
 int main(int argc, char *argv[])
 {
     Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
 
     pthread_t parall_traffic1[100];
     int check_iret[100];
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     fflush(stdout);
 
 
-    global_result += Test->connect_rwsplit();
+    Test->add_result(Test->connect_rwsplit(), "Error connecting to RWSplit\n");
 
     Test->repl->connect();
     for (int k = 0; k < Test->repl->N; k++) {
@@ -43,11 +43,10 @@ int main(int argc, char *argv[])
     }
     Test->repl->close_connections();
 
-    printf("Creating one more user\n");fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
+    Test->tprintf("Creating one more user\n");
+    Test->try_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
 
-
-    printf("Starting parallel thread which opens/closes session in the loop\n");fflush(stdout);
+    Test->tprintf("Starting parallel thread which opens/closes session in the loop\n");
 
     if (Test->conn_rwsplit != NULL) {
 
@@ -57,31 +56,24 @@ int main(int argc, char *argv[])
 
         printf("Doing change_user in the loop\n");fflush(stdout);
         for (int i = 0; i < 1000; i++) {
-            if  (mysql_change_user(Test->conn_rwsplit, "user", "pass2", (char *) "test") != 0) {
-                global_result++;
-                printf("change_user failed!\n"); fflush(stdout);
-            }
-            if (mysql_change_user(Test->conn_rwsplit, Test->maxscale_user, Test->maxscale_password, (char *) "test") != 0) {
-                global_result++;
-                printf("change_user failed!\n"); fflush(stdout);
-            }
-            if ((i / 100) * 100 == i) {printf("i=%d\n", i); fflush(stdout);}
+            Test->set_timeout(5);
+            Test->add_result(mysql_change_user(Test->conn_rwsplit, "user", "pass2", (char *) "test"), "change_user failed!\n");
+            Test->add_result(mysql_change_user(Test->conn_rwsplit, Test->maxscale_user, Test->maxscale_password, (char *) "test"), "change_user failed!\n"); fflush(stdout);
+            if ((i / 100) * 100 == i) {Test->tprintf("i=%d\n", i);}
         }
 
+        Test->set_timeout(10);
         exit_flag = 1; sleep(3);
         mysql_change_user(Test->conn_rwsplit, Test->maxscale_user, Test->maxscale_password, NULL);
 
-        global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
+        Test->try_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
         Test->close_rwsplit();
-
-        printf("Checking if Maxscale is alive\n");
-        global_result +=Test->check_maxscale_alive();
+        Test->check_maxscale_alive();
     } else {
-        printf("Error connection to RWSplit\n");
-        global_result++;
+        Test->add_result(Test->connect_rwsplit(), "Error connecting to RWSplit\n");
     }
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 
 void *parall_traffic( void *ptr )

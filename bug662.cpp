@@ -17,21 +17,16 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(20);
     int i;
 
-    Test->read_env();
-    Test->print_env();
+    Test->tprintf("Connecting to Maxscale %s\n", Test->maxscale_IP);
 
-    printf("Connecting to Maxscale %s\n", Test->maxscale_IP);
-
-    char sys1[4096];
-
-    printf("Connecting to Maxscale %s to check its behaviour in case of blocking all bacxkends\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to Maxscale %s to check its behaviour in case of blocking all bacxkends\n", Test->maxscale_IP);
     Test->connect_maxscale();
 
     for (i = 0; i < Test->repl->N; i++) {
-        printf("Setup firewall to block mysql on node %d\n", i); fflush(stdout);
+        Test->tprintf("Setup firewall to block mysql on node %d\n", i);
         Test->repl->block_node(i); fflush(stdout);
     }
 
@@ -39,44 +34,40 @@ int main(int argc, char *argv[])
     if (!pid) {
         Test->restart_maxscale(); fflush(stdout);
     } else {
-
-        printf("Waiting 60 seconds\n"); fflush(stdout);
+        Test->stop_timeout();
+        Test->tprintf("Waiting 60 seconds\n");
         sleep(60);
 
-        printf("Checking if MaxScale is alive by connecting to MaxAdmin\n"); fflush(stdout);
-        if (execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers") != 0) {
-            global_result++;
-            printf("TEST_FAILED!: Maxadmin execution failed.\n");
-        }
+        Test->set_timeout(20);
+        Test->tprintf("Checking if MaxScale is alive by connecting to MaxAdmin\n");
+        Test->add_result(execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers"), "Maxadmin execution failed.\n");
 
         for (i = 0; i < Test->repl->N; i++) {
-            printf("Setup firewall back to allow mysql on node %d\n", i); fflush(stdout);
+            Test->tprintf("Setup firewall back to allow mysql on node %d\n", i);
             Test->repl->unblock_node(i);fflush(stdout);
         }
 
-        printf("Sleeping 60 seconds\n"); fflush(stdout);
+        Test->stop_timeout();
+        Test->tprintf("Sleeping 60 seconds\n");
         sleep(60);
 
-        printf("Checking Maxscale is alive\n"); fflush(stdout);
+        Test->set_timeout(20);
 
-        if ( Test->check_maxscale_alive() !=0) {
-            printf("TEST_FAILED!: MaxScale is not alive\n");
-            global_result++;
-        } else {
-            printf("MaxScale is still alive\n");
-        }
+        Test->tprintf("Checking Maxscale is alive\n");
+
+        Test->check_maxscale_alive();
 
         Test->close_maxscale_connections(); fflush(stdout);
 
-        printf("Reconnecting and trying query to RWSplit\n"); fflush(stdout);
+        Test->tprintf("Reconnecting and trying query to RWSplit\n");
         Test->connect_maxscale();
-        global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist;");
-        printf("Trying query to ReadConn master\n"); fflush(stdout);
-        global_result += execute_query(Test->conn_master, (char *) "show processlist;");
-        printf("Trying query to ReadConn slave\n"); fflush(stdout);
-        global_result += execute_query(Test->conn_slave, (char *) "show processlist;");
+        Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");
+        Test->tprintf("Trying query to ReadConn master\n");
+        Test->try_query(Test->conn_master, (char *) "show processlist;");
+        Test->tprintf("Trying query to ReadConn slave\n");
+        Test->try_query(Test->conn_slave, (char *) "show processlist;");
         Test->close_maxscale_connections();
 
-        Test->copy_all_logs(); return(global_result);
+        Test->copy_all_logs(); return(Test->global_result);
     }
 }

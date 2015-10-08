@@ -88,7 +88,7 @@ int check_pers_conn(TestConnections* Test, int pers_conn_expected[], char * serv
             global_result++;
         }
     }
-    return(global_result);
+    return(Test->global_result);
 }
 
 int main(int argc, char *argv[])

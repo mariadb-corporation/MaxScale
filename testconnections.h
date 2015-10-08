@@ -44,6 +44,11 @@ public:
     TestConnections();
 
     /**
+     * @brief global_result Result of test, 0 if PASSED
+     */
+    int global_result;
+
+    /**
      * @brief test_name Neme of the test
      */
     char * test_name;
@@ -217,6 +222,13 @@ public:
      * @brief start_time time when test was started (used by printf to print Timestamp)
      */
     clock_t start_time;
+
+    /**
+     * @brief add_result adds result to global_result and prints error message if result is not 0
+     * @param result 0 if step PASSED
+     * @param format ... message to pring if result is not 0
+     */
+    void add_result(int result, const char *format, ...);
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
@@ -432,7 +444,7 @@ public:
      * @param expected TRUE if err_msg is expedted in the log, FALSE if err_msg should NOT be in the log
      * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected is FALSE)
      */
-    int check_log_err(char * err_msg, bool expected);
+    void check_log_err(char * err_msg, bool expected);
 
     /**
      * @brief FindConnectedSlave Finds slave node which has connections from MaxScale
@@ -456,6 +468,14 @@ public:
      * @return 0 in case if success
      */
     int check_maxscale_alive();
+
+    /**
+     * @brief try_query Executes SQL query and repors error
+     * @param conn MYSQL struct
+     * @param sql SQL string
+     * @return 0 if ok
+     */
+    int try_query(MYSQL *conn, const char *sql);
 };
 
 

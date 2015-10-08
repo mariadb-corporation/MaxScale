@@ -11,37 +11,37 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
     int i;
     char sql[256];
 
-    Test->read_env();
-    Test->print_env();
-
     Test->connect_maxscale();
 
-    printf("RWSplit: Executing set @test=i 10000 times\n");  fflush(stdout);
+    Test->tprintf("RWSplit: Executing set @test=i 10000 times\n");
     for (i = 0; i < 10000; i++) {
+        Test->set_timeout(5);
         sprintf(sql, "set @test=%d", i);
-        global_result += execute_query(Test->conn_rwsplit, sql);
+        Test->try_query(Test->conn_rwsplit, sql);
     }
-    printf("done!\n");
+    Test->tprintf("done!\n");
 
-    printf("ReadConn Master: Executing set @test=i 10000 times\n");  fflush(stdout);
+    printf("ReadConn Master: Executing set @test=i 10000 times\n");
     for (i = 0; i < 10000; i++) {
+        Test->set_timeout(5);
         sprintf(sql, "set @test=%d", i);
-        global_result += execute_query(Test->conn_master, sql);
+        Test->try_query(Test->conn_master, sql);
     }
-    printf("done!\n");
+    Test->tprintf("done!\n");
 
-    printf("ReadConn Slave: Executing set @test=i 10000 times\n");  fflush(stdout);
+    Test->tprintf("ReadConn Slave: Executing set @test=i 10000 times\n");
     for (i = 0; i < 10000; i++) {
+        Test->set_timeout(5);
         sprintf(sql, "set @test=%d", i);
-        global_result += execute_query(Test->conn_slave, sql);
+        Test->try_query(Test->conn_slave, sql);
     }
-    printf("done!\n");
+    Test->tprintf("done!\n");
 
     Test->close_maxscale_connections();
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

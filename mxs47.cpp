@@ -10,26 +10,25 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
+    Test->set_timeout(10);
     char str[1024];
-    int global_result = 0;
 
-    Test->read_env();
-    Test->print_env();
     //Test->repl->connect();
     Test->connect_maxscale();
 
     for (int i = 1; i < 50000; i++) {
+        Test->set_timeout(5);
         sprintf(str, "SELECT REPEAT('a',%d)", i);
-        global_result += execute_query(Test->conn_rwsplit, str);
-        global_result += execute_query(Test->conn_master, str);
-        global_result += execute_query(Test->conn_slave, str);
+        Test->try_query(Test->conn_rwsplit, str);
+        Test->try_query(Test->conn_master, str);
+        Test->try_query(Test->conn_slave, str);
         if ((i/100)*100 == i) {
-            printf("%d iterations done\n", i); fflush(stdout);
+            Test->tprintf("%d iterations done\n", i);
         }
     }
 
     Test->close_maxscale_connections();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 
 }

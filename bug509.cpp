@@ -21,11 +21,8 @@ const char * sel2 = "select last_insert_id(), @@wsrep_node_address;";
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    int i;
+    Test->set_timeout(60);
 
-    Test->read_env();
-    Test->print_env();
     Test->galera->connect();
     Test->connect_maxscale();
 
@@ -36,21 +33,21 @@ int main(int argc, char *argv[])
     }
 
     Test->tprintf("Creating table\n");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t2; CREATE TABLE t2 (id INT(10) NOT NULL AUTO_INCREMENT, x int,  PRIMARY KEY (id));");
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t2; CREATE TABLE t2 (id INT(10) NOT NULL AUTO_INCREMENT, x int,  PRIMARY KEY (id));");
     Test->tprintf("Doing INSERTs\n");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
+    Test->try_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
 
-    global_result += execute_query(Test->galera->nodes[0], (char *) "insert into t2 (x) values (2);");
-    global_result += execute_query(Test->galera->nodes[0], (char *) "insert into t2 (x) values (3);");
+    Test->try_query(Test->galera->nodes[0], (char *) "insert into t2 (x) values (2);");
+    Test->try_query(Test->galera->nodes[0], (char *) "insert into t2 (x) values (3);");
 
-    global_result += execute_query(Test->galera->nodes[1], (char *) "insert into t2 (x) values (4);");
-    global_result += execute_query(Test->galera->nodes[1], (char *) "insert into t2 (x) values (5);");
-    global_result += execute_query(Test->galera->nodes[1], (char *) "insert into t2 (x) values (6);");
+    Test->try_query(Test->galera->nodes[1], (char *) "insert into t2 (x) values (4);");
+    Test->try_query(Test->galera->nodes[1], (char *) "insert into t2 (x) values (5);");
+    Test->try_query(Test->galera->nodes[1], (char *) "insert into t2 (x) values (6);");
 
-    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (7);");
-    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (8);");
-    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (9);");
-    global_result += execute_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (10);");
+    Test->try_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (7);");
+    Test->try_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (8);");
+    Test->try_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (9);");
+    Test->try_query(Test->galera->nodes[2], (char *) "insert into t2 (x) values (10);");
 
     Test->tprintf("Sleeping to let replication happen\n");
     sleep(10);
@@ -74,19 +71,16 @@ int main(int argc, char *argv[])
     } else {
         Test->tprintf("'%s' gave last_insert_id() %s\n", sel1, last_insert_id1);
         Test->tprintf("'%s' gave last_insert_id() %s\n", sel2, last_insert_id2);
-        if (strcmp(last_insert_id1, last_insert_id2) !=0 ) {
-            global_result++;
-            Test->tprintf("last_insert_id() are different depending in which order terms are in SELECT\n");
-        }
+        Test->add_result(strcmp(last_insert_id1, last_insert_id2), "last_insert_id() are different depending in which order terms are in SELECT\n");
     }
-
 
     char id_str[1024];
     char str1[1024];
 
     for (int i = 100; i < 1100; i++) {
+        Test->set_timeout(50);
         sprintf(str1, "insert into t2 (x) values (%d);", i);
-        global_result += execute_query(Test->conn_rwsplit, str1);
+        Test->try_query(Test->conn_rwsplit, str1);
         sprintf(str1, "select * from t2 where x=%d;", i);
         find_field(
                     Test->conn_rwsplit, sel1,
@@ -102,16 +96,14 @@ int main(int argc, char *argv[])
                         Test->conn_rwsplit, str1,
                         "id", &id_str[0]);
             Test->tprintf("id after 5 seconds sleep is %s\n", id_str);
-            if (strcmp(last_insert_id1, id_str) !=0 ) {
-                global_result++;
-                Test->tprintf("last_insert_id is not equil to id even after waiting 5 seconds\n");}
+            Test->add_result(strcmp(last_insert_id1, id_str), "last_insert_id is not equil to id even after waiting 5 seconds\n");
         }
     }
 
     Test->close_maxscale_connections();
     Test->galera->close_connections();
 
-    global_result += Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

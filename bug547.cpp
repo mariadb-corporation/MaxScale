@@ -19,38 +19,25 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
 
-    Test->read_env();
-    Test->print_env();
+    Test->tprintf("Connecting to all MaxScale services\n");
+    Test->add_result(Test->connect_maxscale(), "Error connection to Maxscale\n");
 
-    printf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->connect_maxscale();
+    Test->tprintf("Creating table t1\n");
 
-    printf("Creating table t1\n"); fflush(stdout);
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP IF EXIST TABLE t1; CREATE TABLE t1  (x INT); INSERT INTO t1 (x) VALUES (1)");
 
-    if (execute_query(Test->conn_rwsplit, (char *) "DROP IF EXIST TABLE t1; CREATE TABLE t1  (x INT); INSERT INTO t1 (x) VALUES (1)") != 0) {
-        global_result++;
-        printf("Query failed!\n");
-    }
+    Test->tprintf("Select using RWSplit\n"); fflush(stdout);
+    Test->try_query(Test->conn_rwsplit, (char *) "select * from t1");
 
-    printf("Select using RWSplit\n"); fflush(stdout);
-    if (execute_query(Test->conn_rwsplit, (char *) "select * from t1") != 0) {
-        global_result++;
-        printf("Query failed!\n");
-    }
-    printf("Select using ReadConn master\n"); fflush(stdout);
-    if (execute_query(Test->conn_master, (char *) "select * from t1") != 0) {
-        global_result++;
-        printf("Query failed!\n");
-    }
-    printf("Select using ReadConn slave\n"); fflush(stdout);
-    if (execute_query(Test->conn_slave, (char *) "select * from t1") != 0) {
-        global_result++;
-        printf("Query failed!\n");
-    }
+    Test->tprintf("Select using ReadConn master\n"); fflush(stdout);
+    Test->try_query(Test->conn_master, (char *) "select * from t1");
+
+    Test->tprintf("Select using ReadConn slave\n"); fflush(stdout);
+    Test->try_query(Test->conn_slave, (char *) "select * from t1");
 
     Test->close_maxscale_connections();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

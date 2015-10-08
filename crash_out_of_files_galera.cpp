@@ -8,7 +8,7 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(20);
     int q;
     long int i1, i2;
 
@@ -26,13 +26,15 @@ int main(int argc, char *argv[])
     }
     Test->galera->close_connections();
 
-
-    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, true);
+    Test->set_timeout(1200);
+    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, true, false);
     sleep(10);
-    //load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 1000, Test, &i1, &i2, 0, true);
+    //load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 1000, Test, &i1, &i2, 0, true, false);
     //sleep(10);
-    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, true);
+    Test->set_timeout(1200);
+    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, true, false);
 
+    Test->set_timeout(20);
     Test->galera->connect();
     for (int i = 0; i < Test->galera->N; i++) {
         execute_query(Test->galera->nodes[i], (char *) "flush hosts;");
@@ -40,9 +42,9 @@ int main(int argc, char *argv[])
     }
     Test->galera->close_connections();
 
-   Test->check_log_err((char *) "refresh rate limit exceeded", FALSE);
+    Test->check_log_err((char *) "refresh rate limit exceeded", FALSE);
 
-    global_result +=Test->check_maxscale_alive();
-    Test->copy_all_logs(); return(global_result);
+    Test->check_maxscale_alive();
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

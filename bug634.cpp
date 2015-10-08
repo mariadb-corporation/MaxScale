@@ -11,26 +11,18 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    char master_ip[100];
+    Test->set_timeout(5);
 
-    Test->read_env();
-    Test->print_env();
+    char master_ip[100];
 
     Test->connect_maxscale();
 
     for (int i = 0; i < 100; i++) {
-        if (find_field(Test->conn_rwsplit, (char *) "SHOW SLAVE STATUS", (char *) "Master_Host", master_ip) != 0) {
-            printf("Master_host files is not found in the SHOW SLAVE STATUS reply, probably query went to master\n");
-            global_result++;
-        }
-        if (strcmp(master_ip, Test->repl->IP_private[0])) {
-            printf("Master IP is wrong\n");
-            global_result++;
-        }
+        Test->set_timeout(5);
+        Test->add_result(find_field(Test->conn_rwsplit, (char *) "SHOW SLAVE STATUS", (char *) "Master_Host", master_ip), "Master_host files is not found in the SHOW SLAVE STATUS reply, probably query went to master\n");
+        Test->add_result(strcmp(master_ip, Test->repl->IP_private[0]), "Master IP is wrong\n");
     }
 
     Test->close_maxscale_connections();
-
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

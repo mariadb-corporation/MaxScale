@@ -17,78 +17,58 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(20);
 
-    Test->read_env();
-    Test->print_env();
     Test->repl->connect();
     Test->connect_maxscale();
 
-    printf("Creating user 'user' \n");  fflush(stdout);
+    Test->tprintf("Creating user 'user' \n");
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1; CREATE TABLE t1 (x1 int, fl int)");
+    Test->try_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1; CREATE TABLE t1 (x1 int, fl int)");
 
-    printf("Changing user... \n");  fflush(stdout);
-    if (mysql_change_user(Test->conn_rwsplit, (char *) "user", (char *) "pass2", (char *) "test") != 0) {
-        global_result++;
-        printf("changing user failed \n");  fflush(stdout);
-    }
+    Test->tprintf("Changing user... \n");
+    Test->add_result(mysql_change_user(Test->conn_rwsplit, (char *) "user", (char *) "pass2", (char *) "test") , "changing user failed \n");
 
-    printf("Trying INSERT (expecting access denied)... \n");  fflush(stdout);
+    Test->tprintf("Trying INSERT (expecting access denied)... \n");
     if ( execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 VALUES (1, 1);") == 0) {
-        global_result++;
-        printf("INSERT query succedded to user which does not have INSERT PRIVILEGES\n"); fflush(stdout);
+        Test->add_result(1, "INSERT query succedded to user which does not have INSERT PRIVILEGES\n");
     }
 
-    printf("Changing user back... \n");  fflush(stdout);
-    if (mysql_change_user(Test->conn_rwsplit, Test->repl->user_name, Test->repl->password, (char *) "test") != 0) {
-        global_result++;
-        printf("changing user failed \n");  fflush(stdout);
-    }
+    Test->tprintf("Changing user back... \n");
+    Test->add_result(mysql_change_user(Test->conn_rwsplit, Test->repl->user_name, Test->repl->password, (char *) "test"), "changing user failed \n");
 
-    printf("Trying INSERT (expecting success)... \n");  fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 VALUES (1, 1);");
+    Test->tprintf("Trying INSERT (expecting success)... \n");
+    Test->try_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 VALUES (1, 1);");
 
-    printf("Changing user with wrong password... \n");  fflush(stdout);
+    Test->tprintf("Changing user with wrong password... \n");
     if (mysql_change_user(Test->conn_rwsplit, (char *) "user", (char *) "wrong_pass2", (char *) "test") == 0) {
-        global_result++;
-        printf("FAILED: changing user with wrong password successed! \n");  fflush(stdout);
+        Test->add_result(1, "changing user with wrong password successed! \n");
     }
-    printf("%s\n", mysql_error(Test->conn_rwsplit)); fflush(stdout);
+    Test->tprintf("%s\n", mysql_error(Test->conn_rwsplit));
     if ((strstr(mysql_error(Test->conn_rwsplit), "Access denied for user")) == NULL) {
-        global_result++;
-        printf("There is no proper error message\n");
-
+        Test->add_result(1, "There is no proper error message\n");
     }
 
-    printf("Trying INSERT again (expecting success - use change should fail)... \n");  fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 VALUES (1, 1);");
+    Test->tprintf("Trying INSERT again (expecting success - use change should fail)... \n");
+    Test->try_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 VALUES (1, 1);");
 
 
-    printf("Changing user with wrong password using ReadConn \n");  fflush(stdout);
+    Test->tprintf("Changing user with wrong password using ReadConn \n");
     if (mysql_change_user(Test->conn_slave, (char *) "user", (char *) "wrong_pass2", (char *) "test") == 0) {
-        global_result++;
-        printf("FAILED: changing user with wrong password successed! \n");  fflush(stdout);
+        Test->add_result(1, "FAILED: changing user with wrong password successed! \n");
     }
-    printf("%s\n", mysql_error(Test->conn_slave)); fflush(stdout);
+    Test->tprintf("%s\n", mysql_error(Test->conn_slave));
     if ((strstr(mysql_error(Test->conn_slave), "Access denied for user")) == NULL) {
-        global_result++;
-        printf("There is no proper error message\n");
+        Test->add_result(1, "There is no proper error message\n");
     }
 
-    printf("Changing user for ReadConn \n");  fflush(stdout);
-    if (mysql_change_user(Test->conn_slave, (char *) "user", (char *) "pass2", (char *) "test") != 0) {
-        global_result++;
-        printf("changing user failed \n");  fflush(stdout);
-    }
+    Test->tprintf("Changing user for ReadConn \n");
+    Test->add_result(mysql_change_user(Test->conn_slave, (char *) "user", (char *) "pass2", (char *) "test") , "changing user failed \n");
 
-
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
 
     Test->close_maxscale_connections();
-
-    Test->copy_all_logs(); return(global_result);
-
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

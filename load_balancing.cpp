@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 {
 
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(20);
     long int q;
 
     long int selects[256];
@@ -29,9 +29,6 @@ int main(int argc, char *argv[])
     long int new_inserts[256];
     long int i1, i2;
 
-    Test->read_env();
-    Test->print_env();
-
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 300;");
@@ -39,28 +36,27 @@ int main(int argc, char *argv[])
     }
     Test->repl->close_connections();
 
-    global_result += load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25, Test, &i1, &i2, 1, FALSE);
+    Test->set_timeout(1200);
+    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25, Test, &i1, &i2, 1, FALSE, TRUE);
 
     long int avr = (i1 + i2 ) / (Test->repl->N);
-    printf("average number of quries per node %ld\n", avr);
+    Test->tprintf("average number of quries per node %ld\n", avr);
     long int min_q = avr / 3;
     long int max_q = avr * 3;
-    printf("Acceplable value for every node from %ld until %ld\n", min_q, max_q);
+    Test->tprintf("Acceplable value for every node from %ld until %ld\n", min_q, max_q);
 
     for (int i = 1; i < Test->repl->N; i++) {
         q = new_selects[i] - selects[i];
         if ((q > max_q) || (q < min_q)) {
-            printf("FAILED: number of queries for node %d is %ld\n", i+1, q);
-            global_result++;
+            Test->add_result(1, "number of queries for node %d is %ld\n", i+1, q);
         }
     }
 
     if ((new_selects[0] - selects[0]) > avr / 3 ) {
-        printf("FAILED: number of queries for master greater then 30%% of averange number of queries per node\n");
-        global_result++;
+        Test->add_result(1, "number of queries for master greater then 30%% of averange number of queries per node\n");
     }
 
-    printf("Restoring nodes\n"); fflush(stdout);
+    Test->tprintf("Restoring nodes\n");
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "flush hosts;");
@@ -69,9 +65,9 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
 
 
-    global_result +=Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
     Test->repl->start_replication();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

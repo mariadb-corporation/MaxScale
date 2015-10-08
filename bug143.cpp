@@ -13,33 +13,32 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
 
     Test->read_env();
     Test->print_env();
+    Test->set_timeout(5);
     Test->repl->connect();
     Test->connect_maxscale();
 
-    printf("Creating user 'user' with 3 different passwords for different hosts\n");  fflush(stdout);
+    Test->tprintf("Creating user 'user' with 3 different passwords for different hosts\n");
     execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'non_existing_host1' identified by 'pass1';  FLUSH PRIVILEGES;");
     execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
     execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'non_existing_host2' identified by 'pass3';  FLUSH PRIVILEGES;");
 
     printf("sleeping 60 seconds to let replication happen\n");  fflush(stdout);
-
+    Test->set_timeout(100);
     sleep(60);
 
+    Test->set_timeout(5);
     MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass1", Test->ssl);
     if (conn != NULL) {
-        printf("MaxScale ignores host in authentification\n");
-        global_result++;
+        Test->add_result(1, "MaxScale ignores host in authentification\n");
         mysql_close(conn);
     }
 
     conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass2", Test->ssl);
     if (conn == NULL) {
-        printf("MaxScale can't connect\n");
-        global_result++;
+        Test->add_result(1, "MaxScale can't connect\n");
     }
     else {
         mysql_close(conn);
@@ -47,8 +46,7 @@ int main(int argc, char *argv[])
 
     conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass3", Test->ssl);
     if (conn != NULL) {
-        printf("MaxScale ignores host in authentification\n");
-        global_result++;
+        Test->add_result(1, "MaxScale ignores host in authentification\n");
         mysql_close(conn);
     }
 
@@ -57,6 +55,6 @@ int main(int argc, char *argv[])
     execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'non_existing_host2';");
     Test->close_maxscale_connections();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 
 }

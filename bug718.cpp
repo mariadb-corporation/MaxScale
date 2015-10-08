@@ -21,10 +21,8 @@ int db1_num = 0;
 int main(int argc, char *argv[])
 {
     Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(20);
     int i;
-
-    Test->print_env();
 
     execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server server1 master");
     execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server server2 slave");
@@ -36,32 +34,32 @@ int main(int argc, char *argv[])
     execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server g_server3 slave");
     execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server g_server4 slave");
 
-    printf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->connect_maxscale();
+    Test->tprintf("Connecting to all MaxScale services\n");
+    Test->add_result(Test->connect_maxscale(), "Error connection to Maxscale\n");
 
     //MYSQL * galera_rwsplit = open_conn(4016, Test->Maxscale_IP, Test->Maxscale_User, Test->Maxscale_Password);
 
-    printf("executing show status 1000 times\n"); fflush(stdout);
+    Test->tprintf("executing show status 1000 times\n");
 
     int ThreadsNum = 25;
     pthread_t thread_v1[ThreadsNum];
 
     int iret1[ThreadsNum];
-
     for (i = 0; i < ThreadsNum; i ++) { iret1[i] = pthread_create( &thread_v1[i], NULL, thread1, NULL); }
 
     create_t1(Test->conn_rwsplit);
     for (i = 0; i < 10000; i++) {
+        Test->set_timeout(5);
         insert_into_t1(Test->conn_rwsplit, 4);
         printf("i=%d\n", i);
     }
-
+    Test->set_timeout(10);
     for (i = 0; i < ThreadsNum; i ++) { pthread_join( thread_v1[i], NULL); }
 
     Test->close_maxscale_connections();
-   Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 
 void *thread1( void *ptr )

@@ -16,13 +16,13 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->connect_maxscale();
-    int global_result = 0;
-    printf("Trying SHOW GLOBAL STATUS against RWSplit\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "SHOW GLOBAL STATUS;");
-    printf("Trying SHOW GLOBAL STATUS against ReadConn master\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_master,  (char *) "SHOW GLOBAL STATUS;");
-    printf("Trying SHOW GLOBAL STATUS against ReadConn slave\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_slave,   (char *) "SHOW GLOBAL STATUS;");
-    global_result +=Test->check_maxscale_alive();
-    Test->copy_all_logs(); return(global_result);
+    Test->set_timeout(10);
+    Test->tprintf("Trying SHOW GLOBAL STATUS against RWSplit\n");
+    Test->try_query(Test->conn_rwsplit, (char *) "SHOW GLOBAL STATUS;");
+    Test->tprintf("Trying SHOW GLOBAL STATUS against ReadConn master\n");
+    Test->try_query(Test->conn_master,  (char *) "SHOW GLOBAL STATUS;");
+    Test->tprintf("Trying SHOW GLOBAL STATUS against ReadConn slave\n");
+    Test->try_query(Test->conn_slave,   (char *) "SHOW GLOBAL STATUS;");
+    Test->check_maxscale_alive();
+    Test->copy_all_logs(); return(Test->global_result);
 }

@@ -29,27 +29,20 @@ service=RW Split Router
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
 
-    Test->read_env();
-    Test->print_env();
-
-    printf("Trying to connect to all Maxscale services\n"); fflush(stdout);
+    Test->tprintf("Trying to connect to all Maxscale services\n"); fflush(stdout);
     Test->connect_maxscale();
-    printf("Trying to send query to ReadConn master\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_master, (char *) "show processlist");
-    printf("Trying to send query to ReadConn slave\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_slave, (char *) "show processlist");
-    printf("Trying to send query to RWSplit, expecting failure\n"); fflush(stdout);
+    Test->tprintf("Trying to send query to ReadConn master\n"); fflush(stdout);
+    Test->try_query(Test->conn_master, (char *) "show processlist");
+    Test->tprintf("Trying to send query to ReadConn slave\n"); fflush(stdout);
+    Test->try_query(Test->conn_slave, (char *) "show processlist");
+    Test->tprintf("Trying to send query to RWSplit, expecting failure\n"); fflush(stdout);
     if (execute_query(Test->conn_rwsplit, (char *) "show processlist") == 0) {
-        global_result++;
-        printf("FAIL: Query to broken service succeeded!\n");
+        Test->add_result(1, "FAIL: Query to broken service succeeded!\n");
     }
     Test->close_maxscale_connections();
+    Test->check_log_err((char *) "Error : RW Split Router: Recursive use of tee filter in service", TRUE);
 
-    global_result +=Test->check_log_err((char *) "Error : RW Split Router: Recursive use of tee filter in service", TRUE);
-
-    //global_result += CheckMaxscaleAlive();
-
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

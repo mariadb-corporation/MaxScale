@@ -29,14 +29,12 @@ int main(int argc, char **argv)
     argc_static = argc;
     argv_static = argv;
     TestConnections *Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(300);
+
     pthread_t parall_traffic1[NUM_THREADS];
     int check_iret[NUM_THREADS];
     int params[NUM_THREADS];
-    
-    Test->read_env();
-    Test->print_env();
-    
+
     Test->repl->connect();
     create_t1(Test->repl->nodes[0]);
     for (int k = 0; k < Test->repl->N; k++) {
@@ -52,24 +50,24 @@ int main(int argc, char **argv)
     }
 
     if(!Test->test_maxscale_connections(true, false, false))
-        global_result++;
+        Test->add_result(1, "failed");
 
     cout << "Changing configuration..." << endl;
     Test->reconfigure_maxscale((char*)"replication");
 
     if(!Test->test_maxscale_connections(true, true, true))
-        global_result++;
+        Test->add_result(1, "failed");
 
     cout << "Changing configuration..." << endl;
     Test->reconfigure_maxscale((char*)"config_reload");
 
     if(!Test->test_maxscale_connections(true, false, false))
-        global_result++;
+        Test->add_result(1, "failed");
 
     Test->close_maxscale_connections();
 
-    printf("Checking if Maxscale is alive\n");
-    global_result +=Test->check_maxscale_alive();
+    Test->tprintf("Checking if Maxscale is alive\n");
+    Test->check_maxscale_alive();
 
     exit_flag = 1;
 
@@ -77,7 +75,7 @@ int main(int argc, char **argv)
         pthread_join(parall_traffic1[j], NULL);
     }
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 
 void *parall_traffic( void *ptr )

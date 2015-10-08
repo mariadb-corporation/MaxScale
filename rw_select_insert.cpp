@@ -113,11 +113,10 @@ int main(int argc, char *argv[])
     int global_result = 0;
     int i;
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(20);
     Test->repl->connect();
 
-    printf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     Test->connect_rwsplit();
 
     execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "shutdown monitor \"MySQL Monitor\"");
@@ -126,43 +125,43 @@ int main(int argc, char *argv[])
 
     get_global_status_allnodes(&selects[0], &inserts[0], Test->repl, silent);
 
-    printf("Creating table t1\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1;");
-    global_result += execute_query(Test->conn_rwsplit, "create table t1 (x1 int);");
+    Test->tprintf("Creating table t1\n"); fflush(stdout);
+    Test->try_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1;");
+    Test->try_query(Test->conn_rwsplit, "create table t1 (x1 int);");
 
     printf("Sleeping 5 seconds to let replcation happens\n"); fflush(stdout);
     sleep(5);
 
     printf("Trying SELECT * FROM t1\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, "select * from t1;");
+    Test->try_query(Test->conn_rwsplit, "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    global_result += check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
+    Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_select result");
 
     printf("Trying INSERT INTO t1 VALUES(1);\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, "insert into t1 values(1);");
+    Test->try_query(Test->conn_rwsplit, "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    global_result += check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
+    Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_insert result");
 
     printf("Trying SELECT * FROM t1\n"); fflush(stdout);
     execute_query(Test->conn_rwsplit, "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    global_result += check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
+    Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_select result");
 
     printf("Trying INSERT INTO t1 VALUES(1);\n"); fflush(stdout);
     execute_query(Test->conn_rwsplit, "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    global_result += check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
+    Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_insert result");
 
     long int selects_before_100[255];
     long int inserts_before_100[255];
     silent = 1;
     get_global_status_allnodes(&selects_before_100[0], &inserts_before_100[0], Test->repl, silent);
-    printf("Doing 100 selects\n");
+    Test->tprintf("Doing 100 selects\n");
     tolerance=2*Test->repl->N + 1;
     for (i=0; i<100; i++) {
-        global_result += execute_query(Test->conn_rwsplit, "select * from t1;");
+        Test->try_query(Test->conn_rwsplit, "select * from t1;");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-        global_result += check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
+        Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_select result");
     }
     print_delta(&new_selects[0], &new_inserts[0], &selects_before_100[0], &inserts_before_100[0], Test->repl->N);
 
@@ -171,14 +170,15 @@ int main(int argc, char *argv[])
     tolerance=2*Test->repl->N + 1;
     printf("Tolerance is %d\n", tolerance);
     for (i=0; i<100; i++) {
-        global_result += execute_query(Test->conn_rwsplit, "insert into t1 values(1);");
+        Test->set_timeout(10);
+        Test->try_query(Test->conn_rwsplit, "insert into t1 values(1);");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-        global_result += check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl);
+        Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_insert result");
     }
     print_delta(&new_selects[0], &new_inserts[0], &selects_before_100[0], &inserts_before_100[0], Test->repl->N);
 
     Test->close_rwsplit();
 
     Test->galera->close_connections();
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

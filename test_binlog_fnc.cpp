@@ -80,7 +80,7 @@ int check_sha1(TestConnections* Test)
             global_result++;
         }
     }
-    return(global_result);
+    return(Test->global_result);
 }
 
 int start_transaction(TestConnections* Test)
@@ -93,7 +93,7 @@ int start_transaction(TestConnections* Test)
     printf("INSERT data\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
     sleep(20);
-    return(global_result);
+    return(Test->global_result);
 }
 
 int test_binlog(TestConnections* Test)
@@ -209,6 +209,6 @@ int test_binlog(TestConnections* Test)
         Test->repl->close_connections();
         Test->stop_timeout();
     }
-    return(global_result);
+    return(Test->global_result);
 }
 

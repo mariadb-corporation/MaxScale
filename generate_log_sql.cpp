@@ -25,4 +25,6 @@ int main(int argc, char *argv[])
     create_insert_string(sql, 65536, 3);
 
     printf("%s\n", sql);
+
+    exit(0);
 }

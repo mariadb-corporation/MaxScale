@@ -16,33 +16,31 @@
 
 using namespace std;
 
-int CreateDropBadUser(MYSQL * conn)
+void CreateDropBadUser(MYSQL * conn, TestConnections * Test)
 {
-    int global_result = 0;
-    global_result += execute_query(conn, (char *) "GRANT ALL PRIVILEGES ON *.* TO  'foo'@'*.foo.notexists' IDENTIFIED BY 'foo';");
-    global_result += execute_query(conn, (char *) "GRANT ALL PRIVILEGES ON *.* TO  'bar'@'127.0.0.*' IDENTIFIED BY 'bar'");
-    global_result += execute_query(conn, (char *) "DROP USER 'foo'@'*.foo.notexists'");
-    global_result += execute_query(conn, (char *) "DROP USER 'bar'@'127.0.0.*'");
+
+    Test->try_query(conn, (char *) "GRANT ALL PRIVILEGES ON *.* TO  'foo'@'*.foo.notexists' IDENTIFIED BY 'foo';");
+    Test->try_query(conn, (char *) "GRANT ALL PRIVILEGES ON *.* TO  'bar'@'127.0.0.*' IDENTIFIED BY 'bar'");
+    Test->try_query(conn, (char *) "DROP USER 'foo'@'*.foo.notexists'");
+    Test->try_query(conn, (char *) "DROP USER 'bar'@'127.0.0.*'");
 }
 
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
 
-    Test->read_env();
-    Test->print_env();
     Test->repl->connect();
     Test->connect_maxscale();
 
-    printf("Trying GRANT for with bad IP: RWSplit\n"); fflush(stdout);
-    global_result += CreateDropBadUser(Test->conn_rwsplit); fflush(stdout);
-    printf("Trying GRANT for with bad IP: ReadConn slave\n"); fflush(stdout);
-    global_result += CreateDropBadUser(Test->conn_slave);
-    printf("Trying GRANT for with bad IP: ReadConn master\n"); fflush(stdout);
-    global_result += CreateDropBadUser(Test->conn_master);
-    printf("Trying SELECT to check if Maxscale hangs\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select * from mysql.user");
+    Test->tprintf("Trying GRANT for with bad IP: RWSplit\n");
+    CreateDropBadUser(Test->conn_rwsplit, Test);
+    Test->tprintf("Trying GRANT for with bad IP: ReadConn slave\n");
+    CreateDropBadUser(Test->conn_slave, Test);
+    Test->tprintf("Trying GRANT for with bad IP: ReadConn master\n");
+    CreateDropBadUser(Test->conn_master, Test);
+    Test->tprintf("Trying SELECT to check if Maxscale hangs\n");
+    Test->try_query(Test->conn_rwsplit, (char *) "select * from mysql.user");
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

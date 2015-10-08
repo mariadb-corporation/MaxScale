@@ -55,28 +55,27 @@ port=4016
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(20);
 
     Test->connect_maxscale();
-    printf("Trying query to ReadConn master\n");
-    global_result += execute_query(Test->conn_master, (char *) "show processlist");
-    printf("Trying query to ReadConn slave\n");
-    global_result += execute_query(Test->conn_slave, (char *) "show processlist");
-    printf("Trying query to RWSplit, expecting failure\n");
-    execute_query(Test->conn_rwsplit, (char *) "show processlist");
+    Test->tprintf("Trying query to ReadConn master\n");
+    Test->try_query(Test->conn_master, (char *) "show processlist");
+    Test->tprintf("Trying query to ReadConn slave\n");
+    Test->try_query(Test->conn_slave, (char *) "show processlist");
+    Test->tprintf("Trying query to RWSplit, expecting failure\n");
+    if (execute_query(Test->conn_rwsplit, (char *) "show processlist") == 0) {
+        Test->add_result(1, "Query is ok, but failure is expected\n");
+    }
     Test->close_maxscale_connections();
 
-    printf("Checking logs\n");
+    Test->tprintf("Checking logs\n");
 
-    global_result +=Test->check_log_err((char *) "Error : Couldn't find suitable Master from 2 candidates", TRUE);
-    global_result +=Test->check_log_err((char *) "Error : Failed to create RW_Split session.", TRUE);
-    global_result +=Test->check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
-    global_result +=Test->check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
-    global_result +=Test->check_log_err((char *) "Error : Setting up filters failed. Terminating session RW_Router", TRUE);
+    Test->check_log_err((char *) "Error : Couldn't find suitable Master from 2 candidates", TRUE);
+    Test->check_log_err((char *) "Error : Failed to create RW_Split session.", TRUE);
+    Test->check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
+    Test->check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
+    Test->check_log_err((char *) "Error : Setting up filters failed. Terminating session RW_Router", TRUE);
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

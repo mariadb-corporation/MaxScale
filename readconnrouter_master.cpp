@@ -42,21 +42,18 @@ int check_connnections_only_to_master(TestConnections * Test, int master)
 
 int main(int argc, char *argv[])
 {
-    MYSQL * conn_read;
-    int res = 0;
-
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(100);
+
     Test->repl->connect();
 
-    printf("Connecting to ReadConnnRouter in 'master' mode\n");
+    Test->tprintf("Connecting to ReadConnnRouter in 'master' mode\n");
     Test->connect_readconn_master();
     printf("Sleeping 10 seconds\n");
     sleep(10);
-    res += check_connnections_only_to_master(Test, 0);
+    Test->add_result(check_connnections_only_to_master(Test, 0), "connections are not only to Master\n");
     Test->close_readconn_master();
-    printf("Changing master to node 1\n");
+    Test->tprintf("Changing master to node 1\n");
     Test->repl->change_master(1, 0);
     printf("Sleeping 10 seconds\n");
     sleep(10);
@@ -65,16 +62,15 @@ int main(int argc, char *argv[])
     Test->connect_readconn_master();
     printf("Sleeping 10 seconds\n");
     sleep(10);
-    res += check_connnections_only_to_master(Test, 1);
+    Test->add_result(check_connnections_only_to_master(Test, 1), "connections are not only to master");
     Test->close_readconn_master();
 
     printf("Changing master back to node 0\n");
     Test->repl->change_master(0, 1);
 
-    res +=Test->check_log_err((char *) "The service 'CLI' is missing a definition of the servers", FALSE);
+    Test->check_log_err((char *) "The service 'CLI' is missing a definition of the servers", FALSE);
 
     Test->copy_all_logs();
-    printf("Finishing test\n");
-    return(res);
+    return(Test->global_result);
 }
 

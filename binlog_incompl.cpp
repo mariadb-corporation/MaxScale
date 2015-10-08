@@ -17,6 +17,6 @@ int main(int argc, char *argv[])
     Test->print_env();
     global_result += execute_maxadmin_command_print(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show servers");
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     fflush(stdout);
     Test->copy_all_logs(); fflush(stdout);
     printf("Logs copied!\n"); fflush(stdout);
-    return(global_result);
+    return(Test->global_result);
 }
 
 

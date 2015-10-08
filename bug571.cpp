@@ -73,23 +73,15 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    int i;
 
-    Test->read_env();
-    Test->print_env();
+    Test->tprintf("Connecting to all MaxScale services\n");
+    Test->add_result(Test->connect_maxscale(), "Error connectiong to Maxscale\n");
 
-    printf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->connect_maxscale();
-
-    printf("executing fetch * from mysql.user \n"); fflush(stdout);
-
-    global_result += execute_query(Test->conn_rwsplit, (char *) "fetch * from mysql.user;");
-
-    global_result += execute_query(Test->conn_rwsplit, (char *) "fetch count(*) form mysql.user;");
-
+    Test->tprintf("executing fetch * from mysql.user \n");
+    Test->try_query(Test->conn_rwsplit, (char *) "fetch * from mysql.user;");
+    Test->try_query(Test->conn_rwsplit, (char *) "fetch count(*) form mysql.user;");
 
     Test->close_maxscale_connections();
-   Test->check_maxscale_alive();
-    Test->copy_all_logs(); return(global_result);
+    Test->check_maxscale_alive();
+    Test->copy_all_logs(); return(Test->global_result);
 }

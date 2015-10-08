@@ -48,7 +48,7 @@ int check_sha1(TestConnections* Test)
     system(sys);fflush(stdout);
 
 
-    return(global_result);
+    return(Test->global_result);
 }
 
 int start_transaction(TestConnections* Test)
@@ -61,7 +61,7 @@ int start_transaction(TestConnections* Test)
     printf("INSERT data\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
     sleep(20);
-    return(global_result);
+    return(Test->global_result);
 }
 
 int main(int argc, char *argv[])
@@ -135,5 +135,5 @@ int main(int argc, char *argv[])
     }
 
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

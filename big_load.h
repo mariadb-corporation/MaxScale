@@ -18,6 +18,6 @@ typedef struct  {
 void *query_thread1(void *ptr );
 void *query_thread2(void *ptr );
 
-int load(long *new_inserts, long *new_selects, long *selects, long *inserts, int threads_num, TestConnections *Test, long *i1, long *i2, int rwsplit_only, bool galera);
+void load(long *new_inserts, long *new_selects, long *selects, long *inserts, int threads_num, TestConnections *Test, long *i1, long *i2, int rwsplit_only, bool galera, bool report_errors);
 
 #endif // BIG_LOAD_H

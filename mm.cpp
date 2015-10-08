@@ -28,6 +28,7 @@
 int check_conf(TestConnections* Test, int blocked_node)
 {
     int global_result = 0;
+    Test->set_timeout(60);
 
     Test->repl->connect();
     Test->connect_rwsplit();
@@ -39,9 +40,8 @@ int check_conf(TestConnections* Test, int blocked_node)
 
     for (int i = 0; i < 2; i++) {
         if ( i != blocked_node) {
-            printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
+            Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
             global_result += select_from_t1(Test->repl->nodes[i], 4);
-            printf("l_result is %d\n", global_result);
         }
     }
 
@@ -52,108 +52,97 @@ int check_conf(TestConnections* Test, int blocked_node)
     Test->repl->close_connections();
     mysql_close(Test->conn_rwsplit);
 
+    Test->stop_timeout();
     return(global_result);
 }
 
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(120);
     char maxadmin_result[1024];
-
-    Test->read_env();
-    Test->print_env();
 
     Test->repl->set_repl_user();
 
     Test->start_mm(); // first node - slave, second - master
 
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
-    printf("node0 %s\n", maxadmin_result);
+    Test->tprintf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Slave, Running")  == NULL ) {
-        printf("Node0 is not slave, status is %s\n", maxadmin_result);
-        global_result++;
+        Test->add_result(1, "Node0 is not slave, status is %s\n", maxadmin_result);
     }
-    printf("global_result is %d\n", global_result);
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
-    printf("node1 %s\n", maxadmin_result);
+    Test->tprintf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Master, Running") == NULL ) {
-        printf("Node1 is not master, status is %s\n", maxadmin_result);
-        global_result++;
+        Test->add_result(1, "Node1 is not master, status is %s\n", maxadmin_result);
     }
-    printf("global_result is %d\n", global_result);
 
     printf("Put some data and check\n");
-    global_result += check_conf(Test, 2);
-    printf("global_result is %d\n", global_result);
+    Test->add_result(check_conf(Test, 2), "Configuration broken\n");
 
-    printf("Block slave\n");
+    Test->tprintf("Block slave\n");
     Test->repl->block_node(0);
     sleep(30);
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
     printf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Down")  == NULL ) {
-        printf("Node0 is not down, status is %s\n", maxadmin_result);
-        global_result++;
+        Test->add_result(1, "Node0 is not down, status is %s\n", maxadmin_result);
     }
 
-    printf("Put some data and check\n");
-    global_result += check_conf(Test, 0);
-    printf("global_result is %d\n", global_result);
+    Test->tprintf("Put some data and check\n");
+    Test->add_result(check_conf(Test, 0), "configuration broken\n");
 
-    printf("Unlock slave\n");
+    Test->set_timeout(60);
+    Test->tprintf("Unlock slave\n");
     Test->repl->unblock_node(0);
     sleep(30);
 
-    printf("Block master\n");
+    Test->set_timeout(60);
+    Test->tprintf("Block master\n");
     Test->repl->block_node(1);
     sleep(30);
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Down")  == NULL ) {
-        printf("Node1 is not down, status is %s\n", maxadmin_result);
-        global_result++;
+        Test->add_result(1, "Node1 is not down, status is %s\n", maxadmin_result);
     }
-    printf("Make node 1 master\n");
+    Test->tprintf("Make node 1 master\n");
 
+    Test->set_timeout(60);
     Test->repl->connect();
     execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=OFF");
     Test->repl->close_connections();
-    printf("global_result is %d\n", global_result);
 
     sleep(30);
-    printf("Put some data and check\n");
-    global_result += check_conf(Test, 1);
-    printf("global_result is %d\n", global_result);
+    Test->set_timeout(60);
+    Test->tprintf("Put some data and check\n");
+    Test->add_result(check_conf(Test, 1), "configuration broken\n");
 
     printf("Unlock slave\n");
     Test->repl->unblock_node(1);
     sleep(30);
 
+    Test->set_timeout(60);
     printf("Make node 2 slave\n");
     Test->repl->connect();
     execute_query(Test->repl->nodes[1], (char *) "SET GLOBAL READ_ONLY=ON");
     Test->repl->close_connections();
     sleep(30);
 
+    Test->set_timeout(60);
     printf("Put some data and check\n");
-    global_result += check_conf(Test, 2);
-    printf("global_result is %d\n", global_result);
+    Test->add_result(check_conf(Test, 2), "Configuration broken\n");
 
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Slave, Running")  == NULL ) {
-        printf("Node1 is not slave, status is %s\n", maxadmin_result);
-        global_result++;
+        Test->add_result(1, "Node1 is not slave, status is %s\n", maxadmin_result);
     }
-    printf("global_result is %d\n", global_result);
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
-    printf("node0 %s\n", maxadmin_result);
+    Test->tprintf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Master, Running")  == NULL ) {
-        printf("Node0 is not master, status is %s\n", maxadmin_result);
-        global_result++;
+        Test->add_result(1, "Node0 is not master, status is %s\n", maxadmin_result);
     }
-    printf("global_result is %d\n", global_result);
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

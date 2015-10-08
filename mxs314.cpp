@@ -21,7 +21,8 @@ int main(int argc, char *argv[])
     string query = "select 1";
 
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->print_env();
+    Test->set_timeout(50);
+
     Test->connect_maxscale();
 
     stmt = mysql_stmt_init(Test->conn_rwsplit);
@@ -29,22 +30,23 @@ int main(int argc, char *argv[])
     for(int i = 0;i<start;i++)
         query += ",1";
 
-    printf("Query: %s\n", query.c_str());
+    Test->tprintf("Query: %s\n", query.c_str());
 
     for(int i = start;i<1000;i++)
     {
+        Test->set_timeout(5);
         cout << i << " ";
         if(mysql_stmt_prepare(stmt,query.c_str(),query.length()))
         {
-            cout << "Error: " << mysql_error(Test->conn_rwsplit) << endl;
-            cout << "Failed at " << i << endl;
+            Test->add_result(1, "Error: %s\n", mysql_error(Test->conn_rwsplit));
+            Test->add_result(1, "Failed at %d\n", i);
             Test->copy_all_logs();
             return 1;
         }
         if(mysql_stmt_reset(stmt))
         {
-            cout << "Error: " << mysql_error(Test->conn_rwsplit) << endl;
-            cout << "Failed at " << i << endl;
+            Test->add_result(1, "Error: %s\n", mysql_error(Test->conn_rwsplit));
+            Test->add_result(1, "Failed at %d\n", i);
             Test->copy_all_logs();
             return 1;
         }

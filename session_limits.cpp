@@ -22,45 +22,36 @@ router_options=max_sescmd_history=10
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(200);
     int i;
     char sql[256];
 
-    Test->read_env();
-    Test->print_env();
-
-    printf("Open session and wait 20 seconds\n");
+    Test->tprintf("Open session and wait 20 seconds\n");
     Test->connect_maxscale();
     sleep(20);
-    printf("Execute query to check session\n");
-    if (execute_query(Test->conn_rwsplit, "SELECT 1") != 0) {
-        global_result++;
-        printf("TEST_FAILED: Query failed\n");
-    }
+    Test->tprintf("Execute query to check session\n");
+    Test->try_query(Test->conn_rwsplit, "SELECT 1");
 
-    printf("Wait 35 seconds more and try quiry again expecting failure\n");
+    Test->tprintf("Wait 35 seconds more and try quiry again expecting failure\n");
     sleep(35);
     if (execute_query(Test->conn_rwsplit, "SELECT 1") == 0) {
-        printf("TEST_FAILED: Session was not closed after 40 seconds\n");
-        global_result++;
+        Test->add_result(1, "Session was not closed after 40 seconds\n");
     }
     Test->close_maxscale_connections();
 
-    printf("Open session and execute 10 session commands\n");fflush(stdout);
+    Test->tprintf("Open session and execute 10 session commands\n");fflush(stdout);
     Test->connect_maxscale();
     for (i = 0; i < 10; i++) {
         sprintf(sql, "set @test=%d", i);
-        global_result += execute_query(Test->conn_rwsplit, sql);
+        Test->try_query(Test->conn_rwsplit, sql);
     }
-    printf("done!\n");
+    Test->tprintf("done!\n");
 
-    printf("Execute one moe session command and expect failure\n");
+    Test->tprintf("Execute one moe session command and expect failure\n");
     if (execute_query(Test->conn_rwsplit, "set @test=11") == 0) {
-        printf("TEST_FAILED: Session was not closed after 10 session commands\n");
-        global_result++;
+        Test->add_result(1, "Session was not closed after 10 session commands\n");
     }
     Test->close_maxscale_connections();
 
-
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

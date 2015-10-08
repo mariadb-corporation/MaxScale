@@ -66,5 +66,5 @@ int main(int argc, char *argv[])
 
     global_result +=Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

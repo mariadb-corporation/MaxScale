@@ -16,17 +16,15 @@ int main(int argc, char *argv[])
 {
 
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
 
-    Test->read_env();
-    Test->print_env();
     Test->connect_maxscale();
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select /* maxscale hintname prepare route to master */ @@server_id;");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select /* maxscale hintname begin */ @@server_id;");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select /* maxscale route to master*/ @@server_id;");
+    Test->try_query(Test->conn_rwsplit, (char *) "select /* maxscale hintname prepare route to master */ @@server_id;");
+    Test->try_query(Test->conn_rwsplit, (char *) "select /* maxscale hintname begin */ @@server_id;");
+    Test->try_query(Test->conn_rwsplit, (char *) "select /* maxscale route to master*/ @@server_id;");
 
-    global_result += Test->check_log_err((char *) "Error : Syntax error in hint", FALSE);
-    global_result += Test->check_maxscale_alive();
-    Test->copy_all_logs(); return(global_result);
+    Test->check_log_err((char *) "Error : Syntax error in hint", FALSE);
+    Test->check_maxscale_alive();
+    Test->copy_all_logs(); return(Test->global_result);
 }

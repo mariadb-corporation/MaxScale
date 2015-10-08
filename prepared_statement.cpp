@@ -21,12 +21,9 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    int i;
+    Test->set_timeout(20);
     int N=4;
 
-    Test->read_env();
-    Test->print_env();
     Test->repl->connect();
     if (Test->connect_maxscale() !=0 ) {
         printf("Error connecting to MaxScale\n");
@@ -37,14 +34,14 @@ int main(int argc, char *argv[])
     create_t1(Test->conn_rwsplit);
     insert_into_t1(Test->conn_rwsplit, N);
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "PREPARE stmt FROM 'SELECT * FROM t1 WHERE fl=@x;';");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "SET @x = 3;");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "EXECUTE stmt");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "SET @x = 4;");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "EXECUTE stmt");
+    Test->try_query(Test->conn_rwsplit, (char *) "PREPARE stmt FROM 'SELECT * FROM t1 WHERE fl=@x;';");
+    Test->try_query(Test->conn_rwsplit, (char *) "SET @x = 3;");
+    Test->try_query(Test->conn_rwsplit, (char *) "EXECUTE stmt");
+    Test->try_query(Test->conn_rwsplit, (char *) "SET @x = 4;");
+    Test->try_query(Test->conn_rwsplit, (char *) "EXECUTE stmt");
 
-    global_result +=Test->check_maxscale_alive();
-    Test->copy_all_logs(); return(global_result);
+    Test->check_maxscale_alive();
+    Test->copy_all_logs(); return(Test->global_result);
 }
 
 

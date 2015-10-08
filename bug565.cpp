@@ -17,12 +17,11 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(30);
     MYSQL * conn_found_rows;
     my_ulonglong rows;
 
-    Test->read_env();
-    Test->print_env();
+
     Test->repl->connect();
     Test->connect_maxscale();
 
@@ -33,19 +32,19 @@ int main(int argc, char *argv[])
     execute_query(Test->conn_rwsplit, "INSERT INTO t1 VALUES (1, 1, 'foo'), (2, 1, 'bar'), (3, 2, 'baz'), (4, 2, 'abc')");
 
     execute_query_affected_rows(Test->conn_rwsplit, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
-    printf("update #1: %ld (expeced value is 2)\n", (long) rows);
-    if (rows != 2) {global_result++;}
+    Test->tprintf("update #1: %ld (expeced value is 2)\n", (long) rows);
+    if (rows != 2) {Test->add_result(1, "Affected rows is not 2\n");}
 
     execute_query_affected_rows(Test->conn_rwsplit, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
-    printf("update #2: %ld  (expeced value is 0)\n", (long) rows);
-    if (rows != 0) {global_result++;}
+    Test->tprintf("update #2: %ld  (expeced value is 0)\n", (long) rows);
+    if (rows != 0) {Test->add_result(1, "Affected rows is not 0\n");}
 
     execute_query_affected_rows(conn_found_rows, "UPDATE t1 SET msg='xyz' WHERE val=2", &rows);
-    printf("update #3: %ld  (expeced value is 2)\n", (long) rows);
-    if (rows != 2) {global_result++;}
+    Test->tprintf("update #3: %ld  (expeced value is 2)\n", (long) rows);
+    if (rows != 2) {Test->add_result(1, "Affected rows is not 2\n");}
 
     Test->close_maxscale_connections();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 
 }

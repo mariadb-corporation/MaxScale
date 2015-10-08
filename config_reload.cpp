@@ -11,30 +11,30 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
+    Test->set_timeout(300);
     char str[1024];
-    int global_result = 0;
+
     int sleep_time = 10;
-    Test->read_env();
-    Test->print_env();
+
     Test->connect_maxscale();
 
     if(!Test->test_maxscale_connections(true, false, false))
-        global_result++;
+        Test->add_result(1, "failed");
 
     cout << "Changing configuration..." << endl;
     Test->reconfigure_maxscale((char *) "replication");
 
     if(!Test->test_maxscale_connections(true, true, true))
-        global_result++;
+        Test->add_result(1, "failed");
 
     cout << "Changing configuration..." << endl;
     Test->reconfigure_maxscale((char *) "config_reload");
 
     if(!Test->test_maxscale_connections(true, false, false))
-        global_result++;
+        Test->add_result(1, "failed");
 
     Test->close_maxscale_connections();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 
 }

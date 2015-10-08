@@ -14,11 +14,7 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-
-    Test->read_env();
-    Test->print_env();
-
+    Test->set_timeout(1000);
 
     Test->binlog_cmd_option = 1;
     Test->start_binlog();
@@ -26,18 +22,18 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     create_t1(Test->repl->nodes[0]);
-    global_result += insert_into_t1(Test->repl->nodes[0], 4);
-    printf("Sleeping to let replication happen\n"); fflush(stdout);
+    Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "error inserting data into t1\n");
+    Test->tprintf("Sleeping to let replication happen\n");
     sleep(30);
 
     for (int i = 0; i < Test->repl->N; i++) {
         printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
-        global_result += select_from_t1(Test->repl->nodes[i], 4);
+        Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "error SELECT for t1\n");
     }
 
     Test->repl->close_connections();
 
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

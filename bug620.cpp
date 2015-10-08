@@ -18,42 +18,37 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(30);
 
     Test->connect_maxscale();
 
-    printf("Creating 'root'@'%%'\n");
+    Test->tprintf("Creating 'root'@'%%'\n");
     //global_result += execute_query(Test->conn_rwsplit, (char *) "CREATE USER 'root'@'%'; SET PASSWORD FOR 'root'@'%' = PASSWORD('skysqlroot');");
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'skysqlroot';");
+    Test->try_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'skysqlroot';");
     sleep(10);
 
     MYSQL * conn;
 
-    printf("Connecting using 'root'@'%%'\n");
+    Test->tprintf("Connecting using 'root'@'%%'\n");
     conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "root", (char *)  "skysqlroot", Test->ssl);
     if (conn == NULL) {
-        printf("Connection using 'root' user failed\n");
-        global_result++;
+        Test->add_result(1, "Connection using 'root' user failed\n");
     } else {
-
-        printf("Simple query...\n");
-        global_result += execute_query(conn, (char *) "SELECT * from mysql.user");
+        Test->tprintf("Simple query...\n");
+        Test->try_query(conn, (char *) "SELECT * from mysql.user");
         mysql_close(conn);
     }
 
-    printf("Dropping 'root'@'%%'\n");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'root'@'%';");
+    Test->tprintf("Dropping 'root'@'%%'\n");
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP USER 'root'@'%';");
 
     Test->close_maxscale_connections();
 
-    global_result +=Test->check_log_err((char *) "Warning: Failed to add user skysql", FALSE);
-    global_result +=Test->check_log_err((char *) "Error : getaddrinfo failed", FALSE);
-    global_result +=Test->check_log_err((char *) "Error : Couldn't find suitable Master", FALSE);
+    Test->check_log_err((char *) "Warning: Failed to add user skysql", FALSE);
+    Test->check_log_err((char *) "Error : getaddrinfo failed", FALSE);
+    Test->check_log_err((char *) "Error : Couldn't find suitable Master", FALSE);
 
-    global_result +=Test->check_maxscale_alive();
-    Test->copy_all_logs(); return(global_result);
+    Test->check_maxscale_alive();
+    Test->copy_all_logs(); return(Test->global_result);
 }

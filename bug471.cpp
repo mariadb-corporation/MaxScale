@@ -16,12 +16,10 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
 
-    Test->read_env();
-    Test->print_env();
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->add_result(Test->connect_maxscale(), "Failed to connect to MaxScale\n");
 
     char server_id[256];
     char server_id_d[256];
@@ -31,7 +29,7 @@ int main(int argc, char *argv[])
     for (int i = 1; i < 25; i++) {
         for (int j = 0; j < Test->repl->N; j++) {
             if (j !=1 ) {
-
+                Test->set_timeout(5);
                 sprintf(hint_sql, "select @@server_id; -- maxscale route to server server%d", j+1);
 
                 find_field(Test->conn_rwsplit, hint_sql, (char *) "@@server_id", &server_id[0]);
@@ -40,22 +38,17 @@ int main(int argc, char *argv[])
                 Test->tprintf("server%d ID from Maxscale: \t%s\n", j+1, server_id);
                 Test->tprintf("server%d ID directly from node: \t%s\n", j+1, server_id_d);
 
-                if (strcmp(server_id, server_id_d) !=0 )  {
-                    global_result = 1;
-                    Test->tprintf("Hints does not work!\n");
-                }
+                Test->add_result(strcmp(server_id, server_id_d), "Hints does not work!\n");
             }
         }
     }
 
+    Test->set_timeout(10);
 
     Test->close_maxscale_connections();
     Test->repl->close_connections();
 
-    global_result += Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
-
-
-

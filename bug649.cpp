@@ -29,17 +29,13 @@ int main(int argc, char *argv[])
     int check_iret[100];
 
     Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(100);
 
-    Test->read_env();
-    Test->print_env();
-
-    printf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     Test->connect_rwsplit();
 
-    global_result += create_t1(Test->conn_rwsplit);
+    Test->add_result(create_t1(Test->conn_rwsplit), "t1 creation Failed\n");
     create_insert_string(sql, 65000, 1);
-
 
     for (int j = 0; j < 25; j++) {
         check_iret[j] = pthread_create( &parall_traffic1[j], NULL, parall_traffic, NULL);
@@ -47,37 +43,36 @@ int main(int argc, char *argv[])
 
     sleep(1);
 
-    printf("Setup firewall to block mysql on master\n"); fflush(stdout);
+    Test->tprintf("Setup firewall to block mysql on master\n");
     Test->repl->block_node(0); fflush(stdout);
 
     sleep(1);
 
-    printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
+    Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
     execute_query(Test->conn_rwsplit, (char *) "show processlist;");fflush(stdout);
 
     sleep(1);
 
-    printf("Setup firewall back to allow mysql\n"); fflush(stdout);
+    Test->tprintf("Setup firewall back to allow mysql\n");
     Test->repl->unblock_node(0); fflush(stdout);
     sleep(10);
     exit_flag = 1;
     sleep(10);
 
-    printf("Checking Maxscale is alive\n"); fflush(stdout);
-    global_result +=Test->check_maxscale_alive(); fflush(stdout);
+    Test->tprintf("Checking Maxscale is alive\n");
+    Test->check_maxscale_alive();
 
-    Test->close_rwsplit(); fflush(stdout);
+    Test->close_rwsplit();
 
-
-    printf("Reconnecting and trying query to RWSplit\n"); fflush(stdout);
+    Test->tprintf("Reconnecting and trying query to RWSplit\n"); fflush(stdout);
     Test->connect_rwsplit();
-    global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist;");
+    Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");
     Test->close_rwsplit();
 
     exit_flag = 1;
     sleep(10);
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 
 

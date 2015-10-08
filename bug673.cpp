@@ -13,31 +13,30 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    char result[1024];
 
-    Test->read_env();
-    Test->print_env();
+    char result[1024];
 
     sleep(150);
 
-    printf("Trying show dbusers \"RW Split Router\"\n"); fflush(stdout);
-    global_result += get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result);
-    printf("result %s\n", result); fflush(stdout);
+    Test->set_timeout(20);
 
-    printf("Trying show dbusers \"Read Connection Router Master\"\n"); fflush(stdout);
-    global_result += get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"Read Connection Router Master\"", (char *) "No. of entries:", result);
-    printf("result %s\n", result); fflush(stdout);
+    Test->tprintf("Trying show dbusers \"RW Split Router\"\n");
+    Test->add_result(get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
+    Test->tprintf("result %s\n", result);
 
-
-    printf("Trying show dbusers \"Read Connection Router Slave\"\n"); fflush(stdout);
-    global_result += get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"Read Connection Router Slave\"", (char *) "No. of entries:", result);
-    printf("result %s\n", result); fflush(stdout);
+    Test->tprintf("Trying show dbusers \"Read Connection Router Master\"\n");
+    Test->add_result(get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"Read Connection Router Master\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
+    Test->tprintf("result %s\n", result);
 
 
-    printf("Trying again show dbusers \"RW Split Router\" to check if MaxScale is alive\n"); fflush(stdout);
-    global_result += get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result);
-    printf("result %s\n", result);
+    Test->tprintf("Trying show dbusers \"Read Connection Router Slave\"\n");
+    Test->add_result(get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"Read Connection Router Slave\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
+    Test->tprintf("result %s\n", result);
+
+
+    Test->tprintf("Trying again show dbusers \"RW Split Router\" to check if MaxScale is alive\n");
+    Test->add_result(get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
+    Test->tprintf("result %s\n", result);
 
     /*int users_num = 1;
     sscanf(result, "%d", &users_num);
@@ -46,5 +45,5 @@ int main(int argc, char *argv[])
         global_result++;
     }*/
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

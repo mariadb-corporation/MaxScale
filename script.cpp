@@ -29,11 +29,10 @@
 #include <iostream>
 #include "testconnections.h"
 
-int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expected_filename)
+void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expected_filename)
 {
-    int global_result = 0;
     char str[1024];
-
+    Test->set_timeout(200);
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'rm %s/script_output'", Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
     system(str);
@@ -41,64 +40,59 @@ int test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * expe
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s touch %s/script_output; %s chown maxscale:maxscale %s/script_output'",
             Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo,
             Test->maxscale_access_homedir, Test->maxscale_access_sudo, Test->maxscale_access_homedir);
-    printf("%s\n", str);fflush(stdout);
+    Test->tprintf("%s\n", str);fflush(stdout);
     system(str);
 
     sleep(30);
 
-    printf("Block master node\n"); fflush(stdout);
+    Test->tprintf("Block master node\n");
     nodes->block_node(0);
 
-    printf("Sleeping\n"); fflush(stdout);
+    Test->tprintf("Sleeping\n");
     sleep(30);
 
-    printf("Unblock master node\n"); fflush(stdout);
+    Test->tprintf("Unblock master node\n");
     nodes->unblock_node(0);
 
-    printf("Sleeping\n"); fflush(stdout);
+    Test->tprintf("Sleeping\n");
     sleep(30);
 
-    printf("Block node1\n"); fflush(stdout);
+    Test->tprintf("Block node1\n");
     nodes->block_node(1);
 
-    printf("Sleeping\n"); fflush(stdout);
+    Test->tprintf("Sleeping\n");
     sleep(30);
 
-    printf("Unblock node1\n"); fflush(stdout);
+    Test->tprintf("Unblock node1\n");
     nodes->unblock_node(1);
 
-    printf("Sleeping\n"); fflush(stdout);
+    Test->tprintf("Sleeping\n");
     sleep(30);
 
-    printf("Printf results\n"); fflush(stdout);
+    Test->tprintf("Printf results\n");
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'cat %s/script_output'",
             Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
     system(str);
 
-    printf("Comparing results\n"); fflush(stdout);
+    Test->tprintf("Comparing results\n");
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s 'diff %s/script_output %s'",
             Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir, expected_filename);
-    printf("%s\n", str);
+    Test->tprintf("%s\n", str);
     if (system(str) != 0) {
-        printf("TEST_FAILED! Wrong script output!\n");
-        global_result++;
+        Test->add_result(1, "Wrong script output!\n");
     } else {
-        printf("Script output is OK!\n");
+        Test->tprintf("Script output is OK!\n");
     }
-    return(global_result);
 }
 
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(100);
     int i;
     char str[1024];
 
-    Test->read_env();
-    Test->print_env();
-
-    printf("Creating script on Maxscale machine\n"); fflush(stdout);
+    Test->tprintf("Creating script on Maxscale machine\n");
 
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \
@@ -108,7 +102,7 @@ int main(int argc, char *argv[])
             Test->maxscale_access_homedir, Test->maxscale_access_homedir,
             Test->maxscale_access_homedir, Test->maxscale_access_homedir, Test->maxscale_access_homedir, Test->maxscale_access_sudo,
             Test->maxscale_access_homedir);
-    printf("%s\n", str);fflush(stdout);
+    Test->tprintf("%s\n", str);
     system(str);
 
     Test->restart_maxscale();
@@ -155,17 +149,19 @@ int main(int argc, char *argv[])
             Test->galera->port[3]);
     fclose(f);
 
-    printf("Copying expected script output to Maxscale machine\n"); fflush(stdout);
+    Test->tprintf("Copying expected script output to Maxscale machine\n");
     sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no script_output_expected* %s@%s:%s/",
             Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
     system(str);
 
     sprintf(str, "%s/script_output_expected", Test->maxscale_access_homedir);
-    global_result += test_script_monitor(Test, Test->repl, str);
+    test_script_monitor(Test, Test->repl, str);
     sprintf(str, "%s/script_output_expected_galera", Test->maxscale_access_homedir);
-    global_result += test_script_monitor(Test, Test->galera, str);
+    test_script_monitor(Test, Test->galera, str);
 
-    printf("Making script non-executable\n"); fflush(stdout);
+    Test->set_timeout(200);
+
+    Test->tprintf("Making script non-executable\n");
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s chmod a-x %s/script/script.sh'",
             Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo,
             Test->maxscale_access_homedir);
@@ -173,23 +169,23 @@ int main(int argc, char *argv[])
 
     sleep(3);
 
-    printf("Block node1\n"); fflush(stdout);
+    Test->tprintf("Block node1\n");
     Test->repl->block_node(1);
 
-    printf("Sleeping\n"); fflush(stdout);
+    Test->tprintf("Sleeping\n");
     sleep(10);
 
-    printf("Unblock node1\n"); fflush(stdout);
+    Test->tprintf("Unblock node1\n");
     Test->repl->unblock_node(1);
 
     sleep(15);
 
-    printf("Cheching Maxscale logs\n"); fflush(stdout);
-    global_result +=Test->check_log_err((char *) "Error: Cannot execute file" , true);fflush(stdout);
-    //global_result +=Test->check_log_err((char *) "Missing execution permissions" , true);fflush(stdout);
+    Test->tprintf("Cheching Maxscale logs\n");
+    Test->check_log_err((char *) "Error: Cannot execute file" , true);
+    //Test->check_log_err((char *) "Missing execution permissions" , true);fflush(stdout);
 
-    printf("checking if Maxscale is alive\n"); fflush(stdout);
-    global_result +=Test->check_maxscale_alive();
+    Test->tprintf("checking if Maxscale is alive\n");
+    Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

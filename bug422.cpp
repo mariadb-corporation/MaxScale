@@ -15,31 +15,31 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
     int i;
 
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(10);
 
-    Test->tprintf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->connect_maxscale();
+    Test->tprintf("Connecting to all MaxScale services\n");
+    Test->add_result(Test->connect_maxscale(), "Can not connect to Maxscale\n");
 
-    printf("executing show status 1000 times\n"); fflush(stdout);
+    Test->tprintf("executing show status 1000 times\n");
 
 
     for (i = 0; i < 1000; i++)  {
-        global_result += execute_query(Test->conn_rwsplit, (char *) "show status");
+        Test->set_timeout(5);
+        Test->add_result(execute_query(Test->conn_rwsplit, (char *) "show status"), "Query %d agains RWSplit failed\n", i);
     }
     for (i = 0; i < 1000; i++)  {
-        global_result += execute_query(Test->conn_slave, (char *) "show status");
+        Test->set_timeout(5);
+        Test->add_result(execute_query(Test->conn_slave, (char *) "show status"), "Query %d agains ReadConn Slave failed\n", i);
     }
     for (i = 0; i < 1000; i++)  {
-        global_result += execute_query(Test->conn_master, (char *) "show status");
+        Test->set_timeout(5);
+        Test->add_result(execute_query(Test->conn_master, (char *) "show status"), "Query %d agains ReadConn Master failed\n", i);
     }
+    Test->set_timeout(10);
 
     Test->close_maxscale_connections();
-
     Test->check_maxscale_alive();
-
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

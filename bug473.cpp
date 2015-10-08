@@ -14,51 +14,38 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
 
-    Test->read_env();
-    Test->print_env();
-    Test->connect_maxscale();
+    Test->add_result(Test->connect_maxscale(), "Can not connect to Maxscale\n");
 
 
-    Test->tprintf("Trying queries that caused crashes before fix: bug473\n"); fflush(stdout);
+    Test->tprintf("Trying queries that caused crashes before fix: bug473\n");
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =(");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =)");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =:");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =a");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server = a");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server = кириллица åäö");
-
-    if (global_result == 0) {
-        Test->tprintf("bug473 ok\n");
-    }
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =(");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =)");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =:");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server =a");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server = a");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale route to server = кириллица åäö");
 
     // bug472
-    Test->tprintf("Trying queries that caused crashes before fix: bug472\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale s1 begin route to server server3");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale end");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale s1 begin");
-
-    if (global_result == 0) {
-        Test->tprintf("bug472 ok\n");
-    }
+    Test->tprintf("Trying queries that caused crashes before fix: bug472\n");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale s1 begin route to server server3");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale end");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale s1 begin");
 
     // bug470
     Test->tprintf("Trying queries that caused crashes before fix: bug470\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale named begin route to master");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id;");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale named begin route to master; select @@server_id;");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale named begin route to master");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id;");
+    Test->try_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale named begin route to master; select @@server_id;");
 
-    if (global_result == 0) {
-        Test->tprintf("bug470 ok\n");
-    }
 
     Test->close_maxscale_connections();
 
     Test->tprintf("Checking if Maxscale is alive\n"); fflush(stdout);
-    global_result += Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

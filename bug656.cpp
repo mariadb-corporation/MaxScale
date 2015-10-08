@@ -13,12 +13,9 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(30);
 
-    Test->read_env();
-    Test->print_env();
-
-    printf("Connecting to RWSplit %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     Test->connect_rwsplit();
 
     printf("Setup firewall to block mysql on master\n"); fflush(stdout);
@@ -28,16 +25,13 @@ int main(int argc, char *argv[])
     //execute_query(Test->conn_rwsplit, (char *) "show processlist;");
     execute_maxadmin_command_print(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show servers");
 
-    printf("Setup firewall back to allow mysql\n"); fflush(stdout);
+    Test->tprintf("Setup firewall back to allow mysql and wait\n"); fflush(stdout);
     Test->repl->unblock_node(0);
-
     sleep(10);
 
-    global_result +=Test->check_maxscale_alive();
-
+    Test->check_maxscale_alive();
     Test->close_rwsplit();
-
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 
 

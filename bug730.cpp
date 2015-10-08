@@ -22,23 +22,21 @@ replace=SET SQL_QUOTE_SHOW_CREATE
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-
-    Test->print_env();
+    Test->set_timeout(10);
 
     Test->connect_maxscale();
 
-    printf("RWSplit: \n"); fflush(stdout);
-    global_result = execute_query(Test->conn_rwsplit, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
-    printf("ReadConn master: \n"); fflush(stdout);
-    global_result = execute_query(Test->conn_master, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
-    printf("readConn slave: \n"); fflush(stdout);
-    global_result = execute_query(Test->conn_slave, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
+    Test->tprintf("RWSplit: \n"); fflush(stdout);
+    Test->try_query(Test->conn_rwsplit, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
+    Test->tprintf("ReadConn master: \n"); fflush(stdout);
+    Test->try_query(Test->conn_master, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
+    Test->tprintf("readConn slave: \n"); fflush(stdout);
+    Test->try_query(Test->conn_slave, (char *) "SET OPTION SQL_QUOTE_SHOW_CREATE = 1;");
 
     Test->close_maxscale_connections();
 
-    global_result +=Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

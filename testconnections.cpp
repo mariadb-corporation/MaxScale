@@ -16,6 +16,8 @@ TestConnections::TestConnections(int argc, char *argv[])
     readconn_slave_port = 4009;
     binlog_port = 5306;
 
+    global_result = 0;
+
     read_env();
 
     no_maxscale_stop = false;
@@ -108,13 +110,32 @@ TestConnections::TestConnections()
     galera = new Mariadb_nodes((char *)"galera");
     repl   = new Mariadb_nodes((char *)"repl");
 
+    global_result = 0;
+
     rwsplit_port = 4006;
     readconn_master_port = 4008;
     readconn_slave_port = 4009;
 
     read_env();
+
+    timeout = 99999;
+    start_time = clock();
 }
 
+void TestConnections::add_result(int result, const char *format, ...)
+{
+    clock_t curr_time = clock();
+    if (result != 0) {
+        global_result += result;
+
+        printf("%04f: TEST_FAILED", (double)(curr_time - start_time) / CLOCKS_PER_SEC);
+
+        va_list argp;
+        va_start(argp, format);
+        vprintf(format, argp);
+        va_end(argp);
+    }
+}
 
 int TestConnections::read_env()
 {
@@ -423,9 +444,9 @@ int TestConnections::start_mm()
     return(global_result);
 }
 
-int TestConnections::check_log_err(char * err_msg, bool expected)
+void TestConnections::check_log_err(char * err_msg, bool expected)
 {
-    int global_result = 0;
+
     char * err_log_content;
 
     tprintf("Getting logs\n");
@@ -439,20 +460,18 @@ int TestConnections::check_log_err(char * err_msg, bool expected)
     if ( read_log((char *) "error1.log", &err_log_content) != 0) {
         //tprintf("Reading error1.log\n");
         //read_log((char *) "skygw_err1.log", &err_log_content);
-        global_result++;
+        add_result(1, "Error reading log\n");
     } else {
 
         if (expected) {
             if (strstr(err_log_content, err_msg) == NULL) {
-                global_result++;
-                tprintf("TEST_FAILED!: There is NO \"%s\" error in the log\n", err_msg);
+                add_result(1, "There is NO \"%s\" error in the log\n", err_msg);
             } else {
                 tprintf("There is proper \"%s \" error in the log\n", err_msg);
             }}
         else {
             if (strstr(err_log_content, err_msg) != NULL) {
-                global_result++;
-                tprintf("TEST_FAILED!: There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
+                add_result(1, "There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
             } else {
                 tprintf("There are no unxpected errors \"%s \" error in the log\n", err_msg);
             }
@@ -460,8 +479,6 @@ int TestConnections::check_log_err(char * err_msg, bool expected)
 
     }
     if (err_log_content != NULL) {free(err_log_content);}
-
-    return global_result;
 }
 
 int TestConnections::find_connected_slave(int * global_result)
@@ -502,37 +519,20 @@ int TestConnections::find_connected_slave1()
 
 int TestConnections::check_maxscale_alive()
 {
-    int global_result;
-
-    global_result = 0;
-
+    int gr = global_result;
     tprintf("Connecting to Maxscale\n");
-    global_result += connect_maxscale();
+    add_result(connect_maxscale(), "Can not connect to Maxscale\n");
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit ");
-    if (execute_query(conn_rwsplit, (char *) "show databases;") == 0) {
-        tprintf("OK\n");
-    } else {
-        tprintf("FAILED\n");
-        global_result++;
-    }
+    try_query(conn_rwsplit, (char *) "show databases;");
     tprintf("ReadConn Master ");
-    if (execute_query(conn_master, (char *) "show databases;") == 0) {
-        tprintf("OK\n");
-    } else {
-        tprintf("FAILED\n");
-        global_result++;
-    }
+    try_query(conn_master, (char *) "show databases;");
     tprintf("ReadConn Slave ");
-    if (execute_query(conn_slave, (char *) "show databases;") == 0) {
-        tprintf("OK\n");
-    } else {
-        tprintf("FAILED\n");
-        global_result++;
-    }
+    try_query(conn_slave, (char *) "show databases;");
+    add_result(close_maxscale_connections(), "Error closing connections to Maxscale");
+    add_result(global_result-gr, "Maxscale is not alive");
 
-    close_maxscale_connections();
-    return(global_result);
+    return(global_result-gr);
 }
 
 bool TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bool rc_slave)
@@ -797,3 +797,9 @@ int TestConnections::check_t1_table(bool presence, char * db)
     return(global_result);
 }
 
+int TestConnections::try_query(MYSQL *conn, const char *sql)
+{
+    int res = execute_query(conn, sql);
+    add_result(res, "Query '%s' failed!\n", sql);
+    return(res);
+}

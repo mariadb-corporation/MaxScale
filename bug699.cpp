@@ -18,15 +18,11 @@ const char * sel4 = "select  @@server_id, @@wsrep_node_name";
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    int i;
-
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(20);
 
     Test->connect_maxscale();
 
-    printf("Trying \n");  fflush(stdout);
+    Test->tprintf("Trying \n");
 
     char serverid1[1024];
     char serverid2[1024];
@@ -40,16 +36,13 @@ int main(int argc, char *argv[])
                  Test->conn_rwsplit, sel4,
                  "@@server_id", &serverid2[0])
              != 0 )) {
-        printf("@@server_id field not found!!\n");
+        Test->add_result(1, "@@server_id field not found!!\n");
         Test->copy_all_logs();
         exit(1);
     } else {
-        printf("'%s' to RWSplit gave @@server_id %s\n", sel3, serverid1);
-        printf("'%s' directly to master gave @@server_id %s\n", sel4, serverid2);
-        if (strcmp(serverid1, serverid2) !=0 ) {
-            global_result++;
-            printf("server_id are different depending in which order terms are in SELECT\n");
-        }
+        Test->tprintf("'%s' to RWSplit gave @@server_id %s\n", sel3, serverid1);
+        Test->tprintf("'%s' directly to master gave @@server_id %s\n", sel4, serverid2);
+        Test->add_result(strcmp(serverid1, serverid2), "server_id are different depending in which order terms are in SELECT\n");
     }
 
     if ( (
@@ -61,21 +54,16 @@ int main(int argc, char *argv[])
                  Test->conn_rwsplit, sel2,
                  "@@hostname", &serverid2[0])
              != 0 )) {
-        printf("@@hostname field not found!!\n");
+        Test->add_result(1, "@@hostname field not found!!\n");
         Test->copy_all_logs();
         exit(1);
     } else {
-        printf("'%s' to RWSplit gave @@hostname %s\n", sel1, serverid1);
-        printf("'%s' to RWSplit gave @@hostname %s\n", sel2, serverid2);
-        if (strcmp(serverid1, serverid2) !=0 ) {
-            global_result++;
-            printf("hostname are different depending in which order terms are in SELECT\n");
-        }
+        Test->tprintf("'%s' to RWSplit gave @@hostname %s\n", sel1, serverid1);
+        Test->tprintf("'%s' to RWSplit gave @@hostname %s\n", sel2, serverid2);
+        Test->add_result(strcmp(serverid1, serverid2), "hostname are different depending in which order terms are in SELECT\n");
     }
 
     Test->close_maxscale_connections();
-
-    global_result +=Test->check_maxscale_alive();
-
-    Test->copy_all_logs(); return(global_result);
+    Test->check_maxscale_alive();
+    Test->copy_all_logs(); return(Test->global_result);
 }

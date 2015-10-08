@@ -163,33 +163,34 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
     int i;
 
-    Test->read_env();
-    Test->print_env();
+    Test->tprintf("Connecting to all MaxScale services\n");
+    Test->add_result(Test->connect_maxscale(), "Error connecting to Maxscale\n");
 
-    printf("Connecting to all MaxScale services\n"); fflush(stdout);
-    global_result += Test->connect_maxscale();
-
-    printf("executing sql 100 times (ReadConn Slave)\n"); fflush(stdout);
+    Test->tprintf("executing sql 100 times (ReadConn Slave)\n");
     for (i = 0; i < 100; i++)  {
-        execute_query(Test->conn_slave, bug670_sql);
+        Test->set_timeout(5);
+        Test->try_query(Test->conn_slave, bug670_sql);
     }
 
-    printf("executing sql 100 times (ReadConn Master)\n"); fflush(stdout);
+    Test->tprintf("executing sql 100 times (ReadConn Master)\n");
     for (i = 0; i < 100; i++)  {
-        execute_query(Test->conn_master, bug670_sql);
+        Test->set_timeout(5);
+        Test->try_query(Test->conn_master, bug670_sql);
     }
 
-    printf("executing sql 100 times (RWSplit)\n"); fflush(stdout);
+    Test->tprintf("executing sql 100 times (RWSplit)\n");
     for (i = 0; i < 100; i++)  {
-        execute_query(Test->conn_rwsplit, bug670_sql);
+        Test->set_timeout(5);
+        Test->try_query(Test->conn_rwsplit, bug670_sql);
     }
 
+    Test->set_timeout(10);
     Test->close_maxscale_connections();
 
-    global_result +=Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

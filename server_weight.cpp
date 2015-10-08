@@ -67,17 +67,15 @@ int main(int argc, char *argv[])
     MYSQL *conn_read[maxscale_conn_num];
     MYSQL *conn_rwsplit[maxscale_conn_num];
     TestConnections * Test = new TestConnections(argc, argv);
+    Test->set_timeout(30);
     int i;
-    int global_result = 0;
 
-    Test->read_env();
-    Test->print_env();
     Test->galera->connect();
 
-    printf("Connecting to ReadConnMaster on %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to ReadConnMaster on %s\n", Test->maxscale_IP);
     for (i=0; i<maxscale_conn_num; i++) {conn_read[i] = Test->open_readconn_master_connection();}
 
-    printf("Sleeping 5 seconds\n");  sleep(5);
+    Test->tprintf("Sleeping 5 seconds\n");  sleep(5);
 
     unsigned int conn_num;
     int Nc[4];
@@ -89,32 +87,29 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < 4; i++) {
         conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
-        printf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
+        Test->tprintf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
         if ((i<4) && (Nc[i] != conn_num)) {
-            global_result++;
-            printf("FAILED! Read: Expected number of connections to node %d is %d\n", i, Nc[i]);
+            Test->add_result(1, "Read: Expected number of connections to node %d is %d\n", i, Nc[i]);
         }
     }
 
     for (i = 0; i < maxscale_conn_num; i++) { mysql_close(conn_read[i]);}
 
-    printf("Connecting to RWSplit on %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to RWSplit on %s\n", Test->maxscale_IP);
     for (i = 0; i < maxscale_conn_num; i++) {conn_rwsplit[i] = Test->open_rwsplit_connection();}
 
-    printf("Sleeping 5 seconds\n");  sleep(5);
+    Test->tprintf("Sleeping 5 seconds\n");  sleep(5);
 
     int slave_found = 0;
     for (i = 1; i < Test->galera->N; i++) {
         conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
-        printf("connections to node %d: %u \n", i, conn_num);
+        Test->tprintf("connections to node %d: %u \n", i, conn_num);
         if ((conn_num != 0) && (conn_num != maxscale_conn_num)) {
-            global_result++;
-            printf("FAILED! one slave has wrong number of connections\n");
+            Test->add_result(1, "one slave has wrong number of connections\n");
         }
         if (conn_num == maxscale_conn_num) {
             if (slave_found != 0) {
-                global_result++;
-                printf("FAILED! more then one slave have connections\n");
+                Test->add_result(1, "more then one slave have connections\n");
             } else {
                 slave_found = i;
             }
@@ -124,7 +119,7 @@ int main(int argc, char *argv[])
     for (i=0; i<maxscale_conn_num; i++) {mysql_close(conn_rwsplit[i]);}
     Test->galera->close_connections();
 
-    global_result +=Test->check_log_err((char *) "Unexpected parameter 'weightby'", FALSE);
+    Test->check_log_err((char *) "Unexpected parameter 'weightby'", FALSE);
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

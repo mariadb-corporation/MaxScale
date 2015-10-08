@@ -80,30 +80,22 @@ port=4008
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(10);
 
     Test->connect_maxscale();
-    printf("trying query to RWSplit, expecting failure\n");
-    execute_query(Test->conn_rwsplit, (char *) "show processlist");  fflush(stdout);
-    printf("Trying query to ReadConn router master\n"); fflush(stdout);
-    if (execute_query(Test->conn_master, (char *) "show processlist") != 0) {
-        printf("FAILED to execute query via ReadConn master");
-        global_result++;
+    Test->tprintf("trying query to RWSplit, expecting failure\n");
+    if (execute_query(Test->conn_rwsplit, (char *) "show processlist") == 0) {
+        Test->add_result(1, "Query is ok, but failue is expected\n");
     }
-    printf("Trying query to ReadConn router slave\n");  fflush(stdout);
-    if (execute_query(Test->conn_slave, (char *) "show processlist") != 0) {
-        printf("FAILED to execute query via ReadConn slave");
-        global_result++;
-    }
+    Test->tprintf("Trying query to ReadConn router master\n");
+    Test->try_query(Test->conn_master, (char *) "show processlist");
+    Test->tprintf("Trying query to ReadConn router slave\n");
+    Test->try_query(Test->conn_slave, (char *) "show processlist");
 
-    Test->close_maxscale_connections();  fflush(stdout);
+    Test->close_maxscale_connections();
 
-    global_result +=Test->check_log_err((char *) "Couldn't find suitable Master from 2 candidates", TRUE);
-    global_result +=Test->check_log_err((char *) "Creating client session for Tee filter failed. Terminating session.", TRUE);
+    Test->check_log_err((char *) "Couldn't find suitable Master from 2 candidates", TRUE);
+    Test->check_log_err((char *) "Creating client session for Tee filter failed. Terminating session.", TRUE);
 
-
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

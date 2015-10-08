@@ -16,13 +16,9 @@ const char * sel1 = "select last_insert_id(), @@server_id";
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    int i;
+    Test->set_timeout(10);
 
-    Test->read_env();
-    Test->print_env();
     Test->repl->connect();
-
     Test->connect_maxscale();
 
     if (Test->repl->N < 3) {
@@ -32,15 +28,14 @@ int main(int argc, char *argv[])
     }
 
     Test->tprintf("Creating table\n");  fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t2; CREATE TABLE t2 (id INT(10) NOT NULL AUTO_INCREMENT, x int,  PRIMARY KEY (id));");
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t2; CREATE TABLE t2 (id INT(10) NOT NULL AUTO_INCREMENT, x int,  PRIMARY KEY (id));");
     Test->tprintf("Doing INSERTs\n");  fflush(stdout);
-    global_result += execute_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
+    Test->try_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
 
-    Test->tprintf("Sleeping to let replication happen\n");  fflush(stdout);
+    Test->tprintf("Sleeping to let replication happen\n");
     sleep(10);
 
-
-    Test->tprintf("Trying \n");  fflush(stdout);
+    Test->tprintf("Trying \n");
     char last_insert_id1[1024];
     char last_insert_id2[1024];
     if ( (
@@ -58,16 +53,13 @@ int main(int argc, char *argv[])
     } else {
         Test->tprintf("'%s' to RWSplit gave @@server_id %s\n", sel1, last_insert_id1);
         Test->tprintf("'%s' directly to master gave @@server_id %s\n", sel1, last_insert_id2);
-        if (strcmp(last_insert_id1, last_insert_id2) !=0 ) {
-            global_result++;
-            Test->tprintf("last_insert_id() are different depending in which order terms are in SELECT\n");
-        }
+        Test->add_result(strcmp(last_insert_id1, last_insert_id2), "last_insert_id() are different depending in which order terms are in SELECT\n");
     }
 
     Test->close_maxscale_connections();
     Test->repl->close_connections();
 
-    global_result += Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

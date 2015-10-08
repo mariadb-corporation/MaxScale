@@ -83,26 +83,21 @@ int main(int argc, char *argv[])
 {
 
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    //int i;
-    //char sys1[4096];
+    Test->set_timeout(20);
 
-    Test->read_env();
-    Test->print_env();
-    //CheckLogErr((char *) "Warning : Unsupported router option \"slave\"", TRUE);
     //global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
     Test->connect_maxscale();
 
-    printf("Trying query to ReadConn master\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_master, "show processlist;");
-    printf("Trying query to ReadConn slave\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_slave, "show processlist;");
+    Test->tprintf("Trying query to ReadConn master\n"); fflush(stdout);
+    Test->try_query(Test->conn_master, "show processlist;");
+    Test->tprintf("Trying query to ReadConn slave\n");
+    Test->try_query(Test->conn_slave, "show processlist;");
 
     Test->close_maxscale_connections();
 
-    global_result    +=Test->check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
-    global_result    +=Test->check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
+    Test->check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
+    Test->check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

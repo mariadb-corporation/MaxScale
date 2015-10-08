@@ -17,11 +17,11 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
+    Test->set_timeout(10);
     Test->connect_maxscale();
 
-    int global_result =Test->check_log_err((char *) "Multiple monitors are monitoring server", TRUE);
+    Test->check_log_err((char *) "Multiple monitors are monitoring server", TRUE);
 
-
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

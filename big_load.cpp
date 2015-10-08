@@ -1,8 +1,7 @@
 #include "big_load.h"
 
-int load(long int *new_inserts, long int *new_selects, long int *selects, long int *inserts, int threads_num, TestConnections * Test, long int *i1, long int *i2, int rwsplit_only, bool galera)
+void load(long int *new_inserts, long int *new_selects, long int *selects, long int *inserts, int threads_num, TestConnections * Test, long int *i1, long int *i2, int rwsplit_only, bool galera, bool report_errors)
 {
-    int global_result;
     char sql[1000000];
     thread_data data;
     Mariadb_nodes * nodes;
@@ -11,7 +10,6 @@ int load(long int *new_inserts, long int *new_selects, long int *selects, long i
     } else {
         nodes = Test->repl;
     }
-
 
     nodes->connect();
     Test->connect_rwsplit();
@@ -24,13 +22,16 @@ int load(long int *new_inserts, long int *new_selects, long int *selects, long i
     // connect to the MaxScale server (rwsplit)
 
     if (Test->conn_rwsplit == NULL ) {
-        printf("Can't connect to MaxScale\n");
+        if (report_errors) { Test->add_result(1, "Can't connect to MaxScale\n");}
+        Test->copy_all_logs();
         exit(1);
     } else {
         create_t1(Test->conn_rwsplit);
         create_insert_string(sql, 5000, 1);
         sleep(60);
-        global_result += execute_query(Test->conn_rwsplit, sql);
+        if ((execute_query(Test->conn_rwsplit, sql) != 0) && (report_errors)) {
+            Test->add_result(1, "Query %s failed\n", sql);
+        }
         // close connections
         Test->close_rwsplit();
 
@@ -41,7 +42,7 @@ int load(long int *new_inserts, long int *new_selects, long int *selects, long i
         int  iret1[threads_num];
         int  iret2[threads_num];
 
-        printf("COM_INSERT and COM_SELECT before executing test\n");
+        Test->tprintf("COM_INSERT and COM_SELECT before executing test\n");
         get_global_status_allnodes(&selects[0], &inserts[0], nodes, 0);
         data.exit_flag=0;
         /* Create independent threads each of them will execute function */
@@ -49,20 +50,19 @@ int load(long int *new_inserts, long int *new_selects, long int *selects, long i
             iret1[i] = pthread_create( &thread1[i], NULL, query_thread1, &data);
             iret2[i] = pthread_create( &thread2[i], NULL, query_thread2, &data);
         }
-        printf("Threads are running 100 seconds \n"); fflush(stdout);
+        Test->tprintf("Threads are running 100 seconds \n");
         sleep(100);
         data.exit_flag = 1;
         sleep(1);
 
-        printf("COM_INSERT and COM_SELECT after executing test\n");
+        Test->tprintf("COM_INSERT and COM_SELECT after executing test\n");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], nodes, 0);
         print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], nodes->N);
-        printf("First thread did %d queries, second - %d \n", data.i1, data.i2);
+        Test->tprintf("First thread did %d queries, second - %d \n", data.i1, data.i2);
     }
     nodes->close_connections();
     *i1 = data.i1;
     *i2 = data.i2;
-    return(global_result);
 }
 
 void *query_thread1( void *ptr )

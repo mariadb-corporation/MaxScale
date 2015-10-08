@@ -84,12 +84,10 @@ options=/tmp/QueryLog
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(20);
+
     int i;
     char sys1[4096];
-
-    Test->read_env();
-    Test->print_env();
 
     /*   DO NOT FORGET TO REMOVE root IF UNCOMMENT
     printf("Stopping MaxScale");
@@ -135,54 +133,56 @@ int main(int argc, char *argv[])
 
     MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
 
-    printf("Stopping %d\n", 0); fflush(stdout);
+    Test->tprintf("Stopping %d\n", 0);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s'", Test->galera->sshkey[0], Test->galera->access_user[0], Test->galera->IP[0], Test->galera->access_sudo[0], Test->galera->stop_db_command[0]);
-    printf("%s\n", sys1);  fflush(stdout);
+    Test->tprintf("%s\n", sys1);
     system(sys1); fflush(stdout);
 
+    Test->stop_timeout();
     sleep(60);
+    Test->set_timeout(20);
     mysql_close(conn);
 
     conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
 
     if (conn == 0) {
-        printf("Error connection to RW Split\n");
+        Test->add_result(1, "Error connection to RW Split\n");
         Test->copy_all_logs();
         exit(1);
     }
 
-    printf("selecting DB 'test' for rwsplit\n"); fflush(stdout);
-    global_result += execute_query(conn, "USE test");
+    Test->tprintf("selecting DB 'test' for rwsplit\n");
+    Test->try_query(conn, "USE test");
 
-    printf("Closing connection\n"); fflush(stdout);
+    Test->tprintf("Closing connection\n");
     mysql_close(conn);
 
     Test->connect_rwsplit();
-    global_result += execute_query(Test->conn_rwsplit, "show processlist;");
+    Test->try_query(Test->conn_rwsplit, "show processlist;");
     Test->close_maxscale_connections();
 
-    printf("Stopping all Galera nodes\n");  fflush(stdout);
+    Test->tprintf("Stopping all Galera nodes\n");
     for (i = 1; i < Test->galera->N; i++) {
-        printf("Stopping %d\n", i); fflush(stdout);
+        Test->tprintf("Stopping %d\n", i);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null  %s@%s '%s %s'", Test->galera->sshkey[i], Test->galera->access_user[i], Test->galera->IP[i], Test->galera->access_sudo[i], Test->galera->stop_db_command[i]);
-        printf("%s\n", sys1);  fflush(stdout);
+        Test->tprintf("%s\n", sys1);  fflush(stdout);
         system(sys1); fflush(stdout);
     }
 
-    printf("Restarting Galera cluster\n");
-    printf("Starting back all Galera nodes\n");  fflush(stdout);
-    printf("Starting node %d\n", Test->galera->N-2); fflush(stdout);
+    Test->tprintf("Restarting Galera cluster\n");
+    Test->tprintf("Starting back all Galera nodes\n");
+    Test->tprintf("Starting node %d\n", Test->galera->N-2);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --wsrep-cluster-address=gcomm://'", Test->galera->sshkey[0],  Test->galera->access_user[0], Test->galera->IP[0], Test->galera->access_sudo[0], Test->galera->start_db_command[0]);
-    printf("%s\n", sys1);  fflush(stdout);
+    Test->tprintf("%s\n", sys1);  fflush(stdout);
     system(sys1); fflush(stdout);
 
     for (i = 1; i < Test->galera->N; i++) {
-        printf("Starting node %d\n", i); fflush(stdout);
+        Test->tprintf("Starting node %d\n", i); fflush(stdout);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --wsrep-cluster-address=gcomm://%s'", Test->galera->sshkey[i],  Test->galera->access_user[i], Test->galera->IP[i], Test->galera->access_sudo[i], Test->galera->start_db_command[i], Test->galera->IP[0]);
-        printf("%s\n", sys1);  fflush(stdout);
+        Test->tprintf("%s\n", sys1);  fflush(stdout);
         system(sys1); fflush(stdout);
     }
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 

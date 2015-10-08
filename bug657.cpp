@@ -45,75 +45,37 @@ service=RW Split Router
 #include "testconnections.h"
 #include "sql_t1.h"
 
-//pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
-//int exit_flag = 0;
-
-TestConnections * Test ;
-
-//char sql[1000000];
-
-//void *parall_traffic( void *ptr );
-
 int main(int argc, char *argv[])
 {
-    //pthread_t parall_traffic1[100];
-    //int check_iret[100];
+    TestConnections *Test = new TestConnections(argc, argv);
+    Test->set_timeout(200);
 
-    Test = new TestConnections(argc, argv);
-    int global_result = 0;
-
-    Test->read_env();
-    Test->print_env();
-
-    printf("Connecting to ReadConn Master %s\n", Test->maxscale_IP);
+    Test->tprintf("Connecting to ReadConn Master %s\n", Test->maxscale_IP);
     Test->connect_readconn_master();
 
     sleep(1);
 
-    printf("Setup firewall to block mysql on master\n"); fflush(stdout);
+    Test->tprintf("Setup firewall to block mysql on master\n");
     Test->repl->block_node(0);
 
     sleep(10);
 
-    printf("Reconnecting to ReadConnMaster\n"); fflush(stdout);
+    Test->tprintf("Reconnecting to ReadConnMaster\n");
     Test->close_readconn_master();
     Test->connect_readconn_master();
 
-    //printf("Trying query to RWSplit, expecting failure, but not a crash\n"); fflush(stdout);
-    //execute_query(Test->conn_rwsplit, (char *) "show processlist;");fflush(stdout);
-
     sleep(10);
-
 
     Test->repl->unblock_node(0);
     sleep(30);
 
-    printf("Closing connection\n"); fflush(stdout);
+    Test->tprintf("Closing connection\n");
 
     Test->close_readconn_master(); fflush(stdout);
 
-    printf("Checking Maxscale is alive\n"); fflush(stdout);
+    Test->tprintf("Checking Maxscale is alive\n");
 
-    global_result +=Test->check_maxscale_alive(); fflush(stdout);
+    Test->check_maxscale_alive();
 
-
-    //exit_flag = 1;
-    //sleep(10);
-
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
-
-/*
-void *parall_traffic( void *ptr )
-{
-    MYSQL * conn;
-    while (exit_flag == 0) {
-        conn = Test->OpenRWSplitConn();
-        execute_query(conn, sql);
-        mysql_close(conn);
-        fflush(stdout);
-    }
-    return NULL;
-}
-
-*/

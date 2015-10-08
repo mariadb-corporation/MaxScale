@@ -14,21 +14,17 @@ int main(int argc, char *argv[])
 {
 
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(40);
     char result[1024];
 
-    Test->read_env();
-    Test->print_env();
-
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers RW Split Router", (char *) "Incorrect number of arguments:", result);
-    printf("result %s\n", result);
+    Test->tprintf("result %s\n", result);
 
     if (strstr(result, "show dbusers expects 1 argument") == NULL) {
-        printf("FAULT: there is NO \"show dbusers expects 1 argument\" message");
-        global_result++;
+        Test->add_result(1, "there is NO \"show dbusers expects 1 argument\" message");
     }
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"RW Split Router\"", (char *) "User names:", result);
-    printf("result %s\n", result);
+    Test->tprintf("result %s\n", result);
 
     execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "reload dbusers 0x232fed0");
     execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "reload dbusers Хрен");
@@ -58,8 +54,7 @@ int main(int argc, char *argv[])
     execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "restart monitor");
     execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "restart service");
 
-
-    int N=27;
+    int N=28;
     const char * cmd[N];
 
     int Ng=6;
@@ -90,25 +85,23 @@ int main(int argc, char *argv[])
     cmd[12] = "show service ";
     cmd[13] = "show session ";
 
+    cmd[14] = "show filters  ";
+    cmd[15] = "show modules  ";
+    cmd[16] = "show monitors  ";
+    cmd[17] = "show servers  ";
+    cmd[18] = "show services  ";
+    cmd[19] = "show sessions  ";
+    cmd[20] = "show tasks  ";
+    cmd[21] = "show threads  ";
+    cmd[22] = "show users  ";
 
-    cmd[13] = "show filters  ";
-    cmd[14] = "show modules  ";
-    cmd[15] = "show monitors  ";
-    cmd[16] = "show servers  ";
-    cmd[17] = "show services  ";
-    cmd[18] = "show sessions  ";
-    cmd[19] = "show tasks  ";
-    cmd[20] = "show threads  ";
-    cmd[21] = "show users  ";
+    cmd[23] = "shutdown monitor ";
+    cmd[24] = "shutdown service ";
 
+    cmd[25] = "shutdown maxscale ";
 
-    cmd[22] = "shutdown monitor ";
-    cmd[23] = "shutdown service ";
-
-    cmd[24] = "shutdown maxscale ";
-
-    cmd[25] = "enable root ";
-    cmd[26] = "disable root ";
+    cmd[26] = "enable root ";
+    cmd[27] = "disable root ";
 
     char str1[4096];
     int i1, i2;
@@ -116,17 +109,16 @@ int main(int argc, char *argv[])
     for (i1 = 0; i1 < N; i1++) {
         for (i2 = 0; i2 < Ng; i2++) {
             sprintf(str1, "%s %s", cmd[i1], garbage[i2]);
-            printf("Trying '%s'\n", str1); fflush(stdout);
+            Test->tprintf("Trying '%s'\n", str1);
             execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str1);
 
             sprintf(str1, "%s %s%s%s%s %s ", cmd[i1], garbage[i2], garbage[i2], garbage[i2], garbage[i2], garbage[i2]);
-            printf("Trying '%s'\n", str1); fflush(stdout);
+            Test->tprintf("Trying '%s'\n", str1);
             execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str1);
         }
     }
 
+    Test->check_maxscale_alive();
 
-    global_result +=Test->check_maxscale_alive();
-
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

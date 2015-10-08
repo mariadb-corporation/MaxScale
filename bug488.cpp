@@ -14,33 +14,33 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(10);
     int i;
 
-    Test->read_env();
-    Test->print_env();
     Test->repl->connect();
     Test->connect_maxscale();
 
     Test->tprintf("Trying SHOW VARIABLES to different Maxscale services\n");  fflush(stdout);
     Test->tprintf("RWSplit\n");
-    for (i = 0; i < 100; i++) {global_result += execute_query(Test->conn_rwsplit, (char *) "SHOW VARIABLES;");}
+    for (i = 0; i < 100; i++) {Test->set_timeout(5);Test->try_query(Test->conn_rwsplit, (char *) "SHOW VARIABLES;");}
     Test->tprintf("ReadConn master\n");
-    for (i = 0; i < 100; i++) {global_result += execute_query(Test->conn_master, (char *) "SHOW VARIABLES;");}
+    for (i = 0; i < 100; i++) {Test->set_timeout(5);Test->try_query(Test->conn_master, (char *) "SHOW VARIABLES;");}
     Test->tprintf("ReadConn slave\n");
-    for (i = 0; i < 100; i++) {global_result += execute_query(Test->conn_slave, (char *) "SHOW VARIABLES;");}
+    for (i = 0; i < 100; i++) {Test->set_timeout(5);Test->try_query(Test->conn_slave, (char *) "SHOW VARIABLES;");}
 
-    printf("All in one loop\n");  fflush(stdout);
+    Test->tprintf("All in one loop\n");
     for (i = 0; i < 100; i++) {
-        global_result += execute_query(Test->conn_rwsplit, (char *) "SHOW VARIABLES;");
-        global_result += execute_query(Test->conn_master, (char *) "SHOW VARIABLES;");
-        global_result += execute_query(Test->conn_slave, (char *) "SHOW VARIABLES;");
+        Test->set_timeout(5);
+        Test->try_query(Test->conn_rwsplit, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->conn_master, (char *) "SHOW VARIABLES;");
+        Test->try_query(Test->conn_slave, (char *) "SHOW VARIABLES;");
     }
 
+    Test->set_timeout(10);
     Test->close_maxscale_connections();
     Test->repl->close_connections();
 
-    global_result += Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

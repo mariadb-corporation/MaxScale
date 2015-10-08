@@ -8,38 +8,36 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-    int global_result = 0;
-
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(10);
+
     Test->repl->connect();
 
     printf("Connecting to RWsplit\n");
     Test->connect_rwsplit();
 
-    global_result += create_t1(Test->conn_rwsplit);
+    Test->add_result(create_t1(Test->conn_rwsplit), "Error creating 't1'\n");
 
-    global_result += execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
-    printf("Changing master to node 1\n");
+    Test->try_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
+    Test->tprintf("Changing master to node 1\n");
     Test->repl->change_master(1, 0);
-    printf("executing 3 INSERTs\n");
+    Test->tprintf("executing 3 INSERTs\n");
     execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(0, 2);");
     execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(1, 2);");
     execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(2, 2);");
-    printf("executing SELECT\n");
+    Test->tprintf("executing SELECT\n");
     execute_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
 
     Test->close_rwsplit();
     Test->connect_rwsplit();
-    printf("Reconnecting and executing SELECT again\n");
-    global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
+    Test->tprintf("Reconnecting and executing SELECT again\n");
+    Test->try_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
 
 
-    printf("Changing master back to node 0\n");
+    Test->tprintf("Changing master back to node 0\n");
     Test->repl->change_master(0, 1);
 
     Test->repl->close_connections();
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

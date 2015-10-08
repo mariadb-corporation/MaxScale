@@ -15,23 +15,17 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    int i;
-
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(20);
 
     printf("Connecting to backend %s\n", Test->repl->IP[0]);  fflush(stdout);
     Test->repl->connect();
 
-    printf("Sending SET GLOBAL sql_mode=\"ANSI\" to backend %s\n", Test->repl->IP[0]); fflush(stdout);
+    Test->tprintf("Sending SET GLOBAL sql_mode=\"ANSI\" to backend %s\n", Test->repl->IP[0]);
     execute_query(Test->repl->nodes[0], "SET GLOBAL sql_mode=\"ANSI\"");
 
     Test->repl->close_connections();
 
-    char sys1[4096];
-
-    printf("Restarting MaxScale\n");  fflush(stdout);
+    Test->tprintf("Restarting MaxScale\n");
 
     pid_t pid = fork();
     if (!pid) {
@@ -39,14 +33,13 @@ int main(int argc, char *argv[])
         fflush(stdout);
     } else {
 
-        printf("Waiting 20 seconds\n"); fflush(stdout);
+        Test->tprintf("Waiting 20 seconds\n");
         sleep(20);
 
-        global_result +=Test->check_log_err((char *) "Error : Loading database names", FALSE);
-        global_result +=Test->check_log_err((char *) "error: Unknown column", FALSE);
+        Test->check_log_err((char *) "Error : Loading database names", FALSE);
+        Test->check_log_err((char *) "error: Unknown column", FALSE);
 
-
-        Test->copy_all_logs(); return(global_result);
+        Test->copy_all_logs(); return(Test->global_result);
     }
 }
 

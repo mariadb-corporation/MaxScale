@@ -13,26 +13,22 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(20);
 
     Test->connect_maxscale();
 
     if (Test->conn_rwsplit != NULL) {
-        global_result++;
-        printf("FAILED: RWSplit services should fail, but it is started\n"); fflush(stdout);
+        Test->add_result(1, "RWSplit services should fail, but it is started\n");
     }
 
-    printf("Trying query to ReadConn master\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_master, "show processlist;");
-    printf("Trying query to ReadConn slave\n"); fflush(stdout);
-    global_result += execute_query(Test->conn_slave, "show processlist;");
+    Test->tprintf("Trying query to ReadConn master\n");
+    Test->try_query(Test->conn_master, "show processlist;");
+    Test->tprintf("Trying query to ReadConn slave\n");
+    Test->try_query(Test->conn_slave, "show processlist;");
 
     Test->close_maxscale_connections();
 
-    global_result    +=Test->check_log_err((char *) "Error : Unable to start RW Split Router service. There are too few backend servers configured in", TRUE);
+    Test->check_log_err((char *) "Error : Unable to start RW Split Router service. There are too few backend servers configured in", TRUE);
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }

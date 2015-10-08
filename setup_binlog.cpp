@@ -39,18 +39,15 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-
-    Test->read_env();
-    Test->print_env();
+    Test->set_timeout(3000);
 
     for (int option = 0; option < 3; option++) {
         Test->binlog_cmd_option = option;
         Test->start_binlog();
-        global_result += test_binlog(Test);
+        Test->add_result(test_binlog(Test), "Binlog failed \n");
     }
 
-    Test->copy_all_logs(); return(global_result);
+    Test->copy_all_logs(); return(Test->global_result);
 }
 
 
