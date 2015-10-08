@@ -692,7 +692,7 @@ int TestConnections::stop_timeout()
 int TestConnections::tprintf(const char *format, ...)
 {
     time_t curr_time = time(NULL);
-    printf("%04f", difftime(curr_time, start_time));
+    printf("%04f: ", difftime(curr_time, start_time));
 
     va_list argp;
     va_start(argp, format);
@@ -706,7 +706,7 @@ void *timeout_thread( void *ptr )
 
     TestConnections * Test = (TestConnections *) ptr;
     printf("Starting timeout thread\n"); fflush(stdout);
-    sleep(Test->timeout);
+    usleep(1000000*Test->timeout);
     printf("Timeout!\n"); fflush(stdout);
     Test->copy_all_logs();
     exit(250);
