@@ -681,6 +681,7 @@ int TestConnections::get_client_ip(char * ip)
 int TestConnections::set_timeout(int timeout_seconds)
 {
     if (timeout_lock == 0) {
+        timeout_lock = 1;
         timeout = timeout_seconds;
         return(pthread_create(&timeout_thread_p, NULL, timeout_thread, this));
     } else {
@@ -692,6 +693,7 @@ int TestConnections::set_timeout(int timeout_seconds)
 int TestConnections::stop_timeout()
 {
     if (timeout_lock == 1) {
+        timeout_lock = 0;
         return(pthread_kill(timeout_thread_p, SIGTERM));
     } else {
         tprintf("Timeout thread is not running. Can't kill it!\n");
