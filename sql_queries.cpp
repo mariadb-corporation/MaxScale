@@ -55,7 +55,9 @@ int main(int argc, char *argv[])
     Test->read_env();
     Test->print_env();
 
+    Test->tprintf("Starting test\n");
     for (i = 0; i < 4; i++) {
+        Test->tprintf("Connection to backend\n");
         Test->set_timeout(5);
         Test->repl->connect();
         Test->stop_timeout();
@@ -65,6 +67,7 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
+        Test->tprintf("Filling t1 with data\n");
         Test->set_timeout(100);
         global_result += insert_select(Test, N);
 
