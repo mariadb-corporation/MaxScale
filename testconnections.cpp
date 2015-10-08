@@ -722,8 +722,10 @@ void *timeout_thread( void *ptr )
     tim.tv_sec = Test->timeout;
     tim.tv_nsec = 0;
     nanosleep(&tim, NULL);
-    printf("Timeout!\n"); fflush(stdout);
-    Test->copy_all_logs();
-    exit(250);
+    if (Test->timeout_lock == 1) {
+        printf("Timeout!\n"); fflush(stdout);
+        Test->copy_all_logs();
+        exit(250);
+    }
     return NULL;
 }
