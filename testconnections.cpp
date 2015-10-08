@@ -705,8 +705,11 @@ void *timeout_thread( void *ptr )
 {
 
     TestConnections * Test = (TestConnections *) ptr;
+    struct timespec tim;
     printf("Starting timeout thread\n"); fflush(stdout);
-    usleep(1000000*Test->timeout);
+    tim.tv_sec = Test->timeout;
+    tim.tv_nsec = 0;
+    nanosleep(&tim, NULL);
     printf("Timeout!\n"); fflush(stdout);
     Test->copy_all_logs();
     exit(250);
