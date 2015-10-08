@@ -216,7 +216,7 @@ public:
     /**
      * @brief start_time time when test was started (used by printf to print Timestamp)
      */
-    time_t start_time;
+    clock_t start_time;
 
     /**
      * @brief ReadEnv Reads all Maxscale and Master/Slave and Galera setups info from environmental variables
@@ -398,38 +398,67 @@ public:
      */
 
     int tprintf(const char *format, ...);
+
+
+    /**
+     * @brief Creats t1 table, insert data into it and checks if data can be correctly read from all Maxscale services
+     * @param Test Pointer to TestConnections object that contains references to test setup
+     * @param N number of INSERTs; every next INSERT is longer 16 times in compare with previous one: for N=4 last INSERT is about 700kb long
+     * @return 0 in case of no error and all checks are ok
+     */
+    int insert_select(int N);
+
+    /**
+     * @brief Executes USE command for all Maxscale service and all Master/Slave backend nodes
+     * @param Test Pointer to TestConnections object that contains references to test setup
+     * @param db Name of DB in 'USE' command
+     * @return 0 in case of success
+     */
+    int use_db(char * db);
+
+    /**
+     * @brief Checks if table t1 exists in DB
+     * @param Test Pointer to TestConnections object that contains references to test setup
+     * @param presence expected result
+     * @param db DB name
+     * @return 0 if (t1 table exists AND presence=TRUE) OR (t1 table does not exist AND presence=FALSE)
+     */
+
+    int check_t1_table(bool presence, char * db);
+
+    /**
+     * @brief CheckLogErr Reads error log and tried to search for given string
+     * @param err_msg Error message to search in the log
+     * @param expected TRUE if err_msg is expedted in the log, FALSE if err_msg should NOT be in the log
+     * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected is FALSE)
+     */
+    int check_log_err(char * err_msg, bool expected);
+
+    /**
+     * @brief FindConnectedSlave Finds slave node which has connections from MaxScale
+     * @param Test TestConnections object which contains info about test setup
+     * @param global_result pointer to variable which is increased in case of error
+     * @return index of found slave node
+     */
+    int find_connected_slave(int * global_result);
+
+    /**
+     * @brief FindConnectedSlave1 same as FindConnectedSlave() but does not increase global_result
+     * @param Test  TestConnections object which contains info about test setup
+     * @return index of found slave node
+     */
+    int find_connected_slave1();
+
+    /**
+     * @brief CheckMaxscaleAlive Checks if MaxScale is alive
+     * Reads test setup info from enviromental variables and tries to connect to all Maxscale services to check if i is alive.
+     * Also 'show processlist' query is executed using all services
+     * @return 0 in case if success
+     */
+    int check_maxscale_alive();
 };
 
-/**
- * @brief CheckLogErr Reads error log and tried to search for given string
- * @param err_msg Error message to search in the log
- * @param expected TRUE if err_msg is expedted in the log, FALSE if err_msg should NOT be in the log
- * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected is FALSE)
- */
-int check_log_err(char * err_msg, bool expected);
 
-/**
- * @brief FindConnectedSlave Finds slave node which has connections from MaxScale
- * @param Test TestConnections object which contains info about test setup
- * @param global_result pointer to variable which is increased in case of error
- * @return index of found slave node
- */
-int find_connected_slave(TestConnections* Test, int * global_result);
-
-/**
- * @brief FindConnectedSlave1 same as FindConnectedSlave() but does not increase global_result
- * @param Test  TestConnections object which contains info about test setup
- * @return index of found slave node
- */
-int find_connected_slave1(TestConnections* Test);
-
-/**
- * @brief CheckMaxscaleAlive Checks if MaxScale is alive
- * Reads test setup info from enviromental variables and tries to connect to all Maxscale services to check if i is alive.
- * Also 'show processlist' query is executed using all services
- * @return 0 in case if success
- */
-int check_maxscale_alive();
 
 /**
  * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds

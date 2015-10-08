@@ -66,11 +66,10 @@ int main(int argc, char *argv[])
             Test->copy_all_logs();
             exit(1);
         }
-        Test->stop_timeout();
 
         Test->tprintf("Filling t1 with data\n");
         Test->set_timeout(100);
-        global_result += insert_select(Test, N);
+        global_result += Test->insert_select(N);
 
         Test->tprintf("Creating database test1\n"); fflush(stdout);
         global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
@@ -81,13 +80,13 @@ int main(int argc, char *argv[])
 
         Test->set_timeout(1000);
         Test->tprintf("Testing with database 'test1'\n");fflush(stdout);
-        global_result += use_db(Test, (char *) "test1");
-        global_result += insert_select(Test, N);
+        global_result += Test->use_db( (char *) "test1");
+        global_result += Test->insert_select(N);
         Test->stop_timeout();
 
         Test->set_timeout(5);
-        global_result += check_t1_table(Test, FALSE, (char *) "test");
-        global_result += check_t1_table(Test, TRUE, (char *) "test1");
+        global_result += Test->check_t1_table(FALSE, (char *) "test");
+        global_result += Test->check_t1_table(TRUE, (char *) "test1");
 
 
 
@@ -109,7 +108,7 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(5);
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
 
     if (global_result == 0) {Test->tprintf("PASSED!!\n");} else {Test->tprintf("FAILED!!\n");}
     Test->copy_all_logs(); return(global_result);

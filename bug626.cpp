@@ -42,9 +42,9 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP USER 'old'@'%'");
     Test->close_maxscale_connections();
 
-    global_result += check_log_err((char *) "MaxScale does not support these old passwords", TRUE);
+    global_result +=Test->check_log_err((char *) "MaxScale does not support these old passwords", TRUE);
 
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }

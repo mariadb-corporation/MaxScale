@@ -51,12 +51,12 @@ int main(int argc, char *argv[])
     }
     Test->repl->close_connections();
 
-    check_log_err((char *) "refresh rate limit exceeded", FALSE);
+   Test->check_log_err((char *) "refresh rate limit exceeded", FALSE);
 
     printf("Sleeping\n"); fflush(stdout);
     sleep(40);
 
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
     Test->repl->start_replication();
     Test->copy_all_logs(); return(global_result);
 }

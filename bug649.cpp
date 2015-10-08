@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     sleep(10);
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
-    global_result += check_maxscale_alive(); fflush(stdout);
+    global_result +=Test->check_maxscale_alive(); fflush(stdout);
 
     Test->close_rwsplit(); fflush(stdout);
 

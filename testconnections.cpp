@@ -1,5 +1,6 @@
 
 #include "testconnections.h"
+#include "sql_t1.h"
 #include <getopt.h>
 #include <time.h>
 
@@ -99,7 +100,7 @@ TestConnections::TestConnections(int argc, char *argv[])
     //repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
     timeout = 99999;
-    start_time = time(NULL);
+    start_time = clock();
 }
 
 TestConnections::TestConnections()
@@ -231,12 +232,12 @@ int TestConnections::copy_all_logs()
         //system(str);
     }
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
-    printf("Executing %s\n", str); fflush(stdout);
+    tprintf("Executing %s\n", str); fflush(stdout);
     if (system(str) !=0) {
-        printf("copy_logs.sh executing FAILED!\n"); fflush(stdout);
+        tprintf("copy_logs.sh executing FAILED!\n"); fflush(stdout);
         return(1);
     } else {
-        printf("copy_logs.sh OK!\n"); fflush(stdout);
+        tprintf("copy_logs.sh OK!\n"); fflush(stdout);
         return(0);
     }
 }
@@ -270,20 +271,20 @@ int TestConnections::start_binlog()
     find_field(repl->nodes[0], "SELECT @@VERSION", "@@version", version_str);
     repl->close_connections();
 
-    printf("Master server version %s\n", version_str);
+    tprintf("Master server version %s\n", version_str);
 
     if (strstr(version_str, "5.5") != NULL) {
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s sed -i \"s/,mariadb10-compatibility=1//\" %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_cnf);
-        printf("%s\n", sys1);  fflush(stdout);
+        tprintf("%s\n", sys1);  fflush(stdout);
         global_result +=  system(sys1);
     }
 
-    printf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
+    tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
 
-    printf("Stopping maxscale\n");fflush(stdout);
+    tprintf("Stopping maxscale\n");fflush(stdout);
     global_result += stop_maxscale();
 
-    printf("Stopping all backend nodes\n");fflush(stdout);
+    tprintf("Stopping all backend nodes\n");fflush(stdout);
     global_result += repl->stop_nodes();
 
     /*
@@ -294,14 +295,14 @@ int TestConnections::start_binlog()
     }
     */
 
-    printf("Removing all binlog data\n");
+    tprintf("Removing all binlog data\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf %s/*'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
-    printf("%s\n", sys1);  fflush(stdout);
+    tprintf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1);
 
-    printf("Set 'maxscale' as a owner of binlog dir\n");
+    tprintf("Set 'maxscale' as a owner of binlog dir\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s mkdir -p %s; %s chown maxscale:maxscale -R %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir, maxscale_access_sudo, maxscale_binlog_dir);
-    printf("%s\n", sys1);  fflush(stdout);
+    tprintf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1);
 
     printf("Starting back Master\n");  fflush(stdout);
@@ -310,61 +311,61 @@ int TestConnections::start_binlog()
     global_result += system(sys1); fflush(stdout);
 
     for (i = 1; i < repl->N; i++) {
-        printf("Starting node %d\n", i); fflush(stdout);
+        tprintf("Starting node %d\n", i); fflush(stdout);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[i], repl->access_user[i], repl->IP[i], repl->access_sudo[i], repl->start_db_command[i], cmd_opt);
-        printf("%s\n", sys1);  fflush(stdout);
+        tprintf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
     sleep(5);
 
-    printf("Connecting to all backend nodes\n");fflush(stdout);
+    tprintf("Connecting to all backend nodes\n");fflush(stdout);
     global_result += repl->connect();
-    printf("Dropping t1 table on all backend nodes\n");fflush(stdout);
+    tprintf("Dropping t1 table on all backend nodes\n");fflush(stdout);
     for (i = 0; i < repl->N; i++)
     {
         execute_query(repl->nodes[i], (char *) "DROP TABLE IF EXISTS t1;");
     }
-    printf("'reset master' query to node 0\n");fflush(stdout);
+    tprintf("'reset master' query to node 0\n");fflush(stdout);
     execute_query(repl->nodes[0], (char *) "reset master;");
 
-    printf("show master status\n");fflush(stdout);
+    tprintf("show master status\n");fflush(stdout);
     find_field(repl->nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
     find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
-    printf("Real master file: %s\n", log_file); fflush(stdout);
-    printf("Real master pos : %s\n", log_pos); fflush(stdout);
+    tprintf("Real master file: %s\n", log_file); fflush(stdout);
+    tprintf("Real master pos : %s\n", log_pos); fflush(stdout);
 
-    printf("Stopping first slave (node 1)\n");fflush(stdout);
+    tprintf("Stopping first slave (node 1)\n");fflush(stdout);
     global_result += execute_query(repl->nodes[1], (char *) "stop slave;");
     repl->no_set_pos = false;
-    printf("Configure first backend slave node to be slave of real master\n");fflush(stdout);
+    tprintf("Configure first backend slave node to be slave of real master\n");fflush(stdout);
     repl->set_slave(repl->nodes[1], repl->IP[0],  repl->port[0], log_file, log_pos);
 
-    printf("Starting back Maxscale\n");  fflush(stdout);
+    tprintf("Starting back Maxscale\n");  fflush(stdout);
     global_result += start_maxscale();
 
-    printf("Connecting to MaxScale binlog router (with any DB)\n");fflush(stdout);
+    tprintf("Connecting to MaxScale binlog router (with any DB)\n");fflush(stdout);
     MYSQL * binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
 
     if (mysql_errno(binlog) != 0) {
-        printf("Error connection to binlog router %s\n", mysql_error(binlog));
+        tprintf("Error connection to binlog router %s\n", mysql_error(binlog));
     }
 
     repl->no_set_pos = no_pos;
-    printf("configuring Maxscale binlog router\n");fflush(stdout);
+    tprintf("configuring Maxscale binlog router\n");fflush(stdout);
     repl->set_slave(binlog, repl->IP[0], repl->port[0], log_file, log_pos);
     //execute_query(binlog, "start slave");
 
     repl->no_set_pos = false;
 
     // get Master status from Maxscale binlog
-    printf("show master status\n");fflush(stdout);
+    tprintf("show master status\n");fflush(stdout);
     find_field(binlog, (char *) "show master status", (char *) "File", &log_file[0]);
     find_field(binlog, (char *) "show master status", (char *) "Position", &log_pos[0]);
 
-    printf("Maxscale binlog master file: %s\n", log_file); fflush(stdout);
-    printf("Maxscale binlog master pos : %s\n", log_pos); fflush(stdout);
+    tprintf("Maxscale binlog master file: %s\n", log_file); fflush(stdout);
+    tprintf("Maxscale binlog master pos : %s\n", log_pos); fflush(stdout);
 
-    printf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");fflush(stdout);
+    tprintf("Setup all backend nodes except first one to be slaves of binlog Maxscale node\n");fflush(stdout);
     for (i = 2; i < repl->N; i++) {
         global_result += execute_query(repl->nodes[i], (char *) "stop slave;");
         repl->set_slave(repl->nodes[i],  maxscale_IP, binlog_port, log_file, log_pos);
@@ -384,16 +385,16 @@ int TestConnections::start_mm()
     char log_pos2[256];
     char sys1[1024];
 
-    printf("Stopping maxscale\n");fflush(stdout);
+    tprintf("Stopping maxscale\n");fflush(stdout);
     int global_result = stop_maxscale();
 
-    printf("Stopping all backend nodes\n");fflush(stdout);
+    tprintf("Stopping all backend nodes\n");fflush(stdout);
     global_result += repl->stop_nodes();
 
     for (i = 0; i < 2; i++) {
-        printf("Starting back node %d\n", i);  fflush(stdout);
+        tprintf("Starting back node %d\n", i);  fflush(stdout);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s'", repl->sshkey[i], maxscale_access_user, repl->IP[i], maxscale_access_sudo, repl->start_db_command[i]);
-        printf("%s\n", sys1);  fflush(stdout);
+        tprintf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
 
@@ -416,30 +417,27 @@ int TestConnections::start_mm()
 
     repl->close_connections();
 
-    printf("Starting back Maxscale\n");  fflush(stdout);
+    tprintf("Starting back Maxscale\n");  fflush(stdout);
     global_result += start_maxscale();
 
     return(global_result);
 }
 
-int check_log_err(char * err_msg, bool expected)
+int TestConnections::check_log_err(char * err_msg, bool expected)
 {
-    TestConnections * Test = new TestConnections();
     int global_result = 0;
     char * err_log_content;
 
-    Test->read_env();
-
-    printf("Getting logs\n");
+    tprintf("Getting logs\n");
     char sys1[4096];
-    sprintf(&sys1[0], "rm *.log; %s %s", Test->get_logs_command, Test->maxscale_IP);
-    printf("Executing: %s\n", sys1);
+    sprintf(&sys1[0], "rm *.log; %s %s", get_logs_command, maxscale_IP);
+    tprintf("Executing: %s\n", sys1);
     fflush(stdout);
     system(sys1);
 
-    printf("Reading error1.log\n");
+    tprintf("Reading error1.log\n");
     if ( read_log((char *) "error1.log", &err_log_content) != 0) {
-        //printf("Reading error1.log\n");
+        //tprintf("Reading error1.log\n");
         //read_log((char *) "skygw_err1.log", &err_log_content);
         global_result++;
     } else {
@@ -447,16 +445,16 @@ int check_log_err(char * err_msg, bool expected)
         if (expected) {
             if (strstr(err_log_content, err_msg) == NULL) {
                 global_result++;
-                printf("TEST_FAILED!: There is NO \"%s\" error in the log\n", err_msg);
+                tprintf("TEST_FAILED!: There is NO \"%s\" error in the log\n", err_msg);
             } else {
-                printf("There is proper \"%s \" error in the log\n", err_msg);
+                tprintf("There is proper \"%s \" error in the log\n", err_msg);
             }}
         else {
             if (strstr(err_log_content, err_msg) != NULL) {
                 global_result++;
-                printf("TEST_FAILED!: There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
+                tprintf("TEST_FAILED!: There is UNEXPECTED error \"%s\" error in the log\n", err_msg);
             } else {
-                printf("There are no unxpected errors \"%s \" error in the log\n", err_msg);
+                tprintf("There are no unxpected errors \"%s \" error in the log\n", err_msg);
             }
         }
 
@@ -466,76 +464,74 @@ int check_log_err(char * err_msg, bool expected)
     return global_result;
 }
 
-int find_connected_slave(TestConnections* Test, int * global_result)
+int TestConnections::find_connected_slave(int * global_result)
 {
     int conn_num;
     int all_conn = 0;
     int current_slave = -1;
-    Test->repl->connect();
-    for (int i = 0; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
-        printf("connections to %d: %u\n", i, conn_num);
-        if ((i == 0) && (conn_num != 1)) {printf("There is no connection to master\n"); *global_result = 1;}
+    repl->connect();
+    for (int i = 0; i < repl->N; i++) {
+        conn_num = get_conn_num(repl->nodes[i], maxscale_IP, maxscale_hostname, (char *) "test");
+        tprintf("connections to %d: %u\n", i, conn_num);
+        if ((i == 0) && (conn_num != 1)) {tprintf("There is no connection to master\n"); *global_result = 1;}
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0)) {current_slave = i;}
     }
-    if (all_conn != 2) {printf("total number of connections is not 2, it is %d\n", all_conn); *global_result = 1;}
-    printf("Now connected slave node is %d (%s)\n", current_slave, Test->repl->IP[current_slave]);
-    Test->repl->close_connections();
+    if (all_conn != 2) {tprintf("total number of connections is not 2, it is %d\n", all_conn); *global_result = 1;}
+    tprintf("Now connected slave node is %d (%s)\n", current_slave, repl->IP[current_slave]);
+    repl->close_connections();
     return(current_slave);
 }
 
-int find_connected_slave1(TestConnections* Test)
+int TestConnections::find_connected_slave1()
 {
     int conn_num;
     int all_conn = 0;
     int current_slave = -1;
-    Test->repl->connect();
-    for (int i = 0; i < Test->repl->N; i++) {
-        conn_num = get_conn_num(Test->repl->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
-        printf("connections to %d: %u\n", i, conn_num); fflush(stdout);
+    repl->connect();
+    for (int i = 0; i < repl->N; i++) {
+        conn_num = get_conn_num(repl->nodes[i], maxscale_IP, maxscale_hostname, (char *) "test");
+        tprintf("connections to %d: %u\n", i, conn_num);
         all_conn += conn_num;
         if ((i != 0) && (conn_num != 0)) {current_slave = i;}
     }
-    printf("Now connected slave node is %d (%s)\n", current_slave, Test->repl->IP[current_slave]); fflush(stdout);
-    Test->repl->close_connections();
+    tprintf("Now connected slave node is %d (%s)\n", current_slave, repl->IP[current_slave]);
+    repl->close_connections();
     return(current_slave);
 }
 
-
-int check_maxscale_alive()
+int TestConnections::check_maxscale_alive()
 {
     int global_result;
-    TestConnections * Test = new TestConnections();
+
     global_result = 0;
 
-    //Test->ReadEnv();
-    printf("Connecting to Maxscale\n");
-    global_result += Test->connect_maxscale();
-    printf("Trying simple query against all sevices\n");
-    printf("RWSplit ");
-    if (execute_query(Test->conn_rwsplit, (char *) "show databases;") == 0) {
-        printf("OK\n"); fflush(stdout);
+    tprintf("Connecting to Maxscale\n");
+    global_result += connect_maxscale();
+    tprintf("Trying simple query against all sevices\n");
+    tprintf("RWSplit ");
+    if (execute_query(conn_rwsplit, (char *) "show databases;") == 0) {
+        tprintf("OK\n");
     } else {
-        printf("FAILED\n"); fflush(stdout);
+        tprintf("FAILED\n");
         global_result++;
     }
-    printf("ReadConn Master ");
-    if (execute_query(Test->conn_master, (char *) "show databases;") == 0) {
-        printf("OK\n"); fflush(stdout);
+    tprintf("ReadConn Master ");
+    if (execute_query(conn_master, (char *) "show databases;") == 0) {
+        tprintf("OK\n");
     } else {
-        printf("FAILED\n"); fflush(stdout);
+        tprintf("FAILED\n");
         global_result++;
     }
-    printf("ReadConn Slave ");
-    if (execute_query(Test->conn_slave, (char *) "show databases;") == 0) {
-        printf("OK\n"); fflush(stdout);
+    tprintf("ReadConn Slave ");
+    if (execute_query(conn_slave, (char *) "show databases;") == 0) {
+        tprintf("OK\n");
     } else {
-        printf("FAILED\n"); fflush(stdout);
+        tprintf("FAILED\n");
         global_result++;
     }
 
-    Test->close_maxscale_connections();
+    close_maxscale_connections();
     return(global_result);
 }
 
@@ -544,27 +540,27 @@ bool TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, b
     bool rval = true;
     int rc;
 
-    printf("Testing RWSplit, expecting %s\n", (rw_split ? "success" : "failure"));
+    tprintf("Testing RWSplit, expecting %s\n", (rw_split ? "success" : "failure"));
     rc = execute_query(conn_rwsplit, "select 1");
     if((rc == 0) != rw_split)
     {
-        printf("Error: Query %s\n", (rw_split ? "failed" : "succeeded"));
+        tprintf("Error: Query %s\n", (rw_split ? "failed" : "succeeded"));
         rval = false;
     }
 
-    printf("Testing ReadConnRoute Master, expecting %s\n", (rc_master ? "success" : "failure"));
+    tprintf("Testing ReadConnRoute Master, expecting %s\n", (rc_master ? "success" : "failure"));
     rc = execute_query(conn_master, "select 1");
     if((rc == 0) != rc_master)
     {
-        printf("Error: Query %s", (rc_master ? "failed" : "succeeded"));
+        tprintf("Error: Query %s", (rc_master ? "failed" : "succeeded"));
         rval = false;
     }
 
-    printf("Testing ReadConnRoute Slave, expecting %s", (rc_slave ? "success" : "failure"));
+    tprintf("Testing ReadConnRoute Slave, expecting %s", (rc_slave ? "success" : "failure"));
     rc = execute_query(conn_slave, "select 1");
     if((rc == 0) != rc_slave)
     {
-        printf("Error: Query %s", (rc_slave ? "failed" : "succeeded"));
+        tprintf("Error: Query %s", (rc_slave ? "failed" : "succeeded"));
         rval = false;
     }
     return rval;
@@ -596,11 +592,11 @@ int TestConnections::create_connections(int conn_N)
     MYSQL * galera_conn[conn_N];
 
 
-    printf("Opening %d connections to each backend\n", conn_N);
+    tprintf("Opening %d connections to each backend\n", conn_N);
     for (i = 0; i < conn_N; i++) {
         rwsplit_conn[i] = open_rwsplit_connection();
         if (mysql_errno(rwsplit_conn[i]) != 0) {
-            printf("%s\n", mysql_error(rwsplit_conn[i]));
+            tprintf("%s\n", mysql_error(rwsplit_conn[i]));
         }
         master_conn[i] = open_readconn_master_connection();
         slave_conn[i] = open_readconn_slave_connection();
@@ -608,7 +604,7 @@ int TestConnections::create_connections(int conn_N)
     }
     for (i = 0; i < conn_N; i++) {
         if (execute_query(rwsplit_conn[i], "select 1;") != 0) {
-            printf("Query failed!\n");
+            tprintf("Query failed!\n");
         }
         execute_query(master_conn[i], "select 1;");
         execute_query(slave_conn[i], "select 1;");
@@ -616,7 +612,7 @@ int TestConnections::create_connections(int conn_N)
     }
 
     //global_result += check_pers_conn(Test, pers_conn_expected);
-    printf("Closing all connections\n");
+    tprintf("Closing all connections\n");
     for (i=0; i<conn_N; i++) {
         mysql_close(rwsplit_conn[i]);
         mysql_close(master_conn[i]);
@@ -692,8 +688,8 @@ int TestConnections::stop_timeout()
 
 int TestConnections::tprintf(const char *format, ...)
 {
-    time_t curr_time = time(NULL);
-    printf("%04f: ", difftime(curr_time, start_time));
+    clock_t curr_time = clock();
+    printf("%04f: ", (double)(curr_time - start_time) / CLOCKS_PER_SEC);
 
     va_list argp;
     va_start(argp, format);
@@ -714,3 +710,90 @@ void *timeout_thread( void *ptr )
     }
     exit(250);
 }
+
+int TestConnections::insert_select(int N)
+{
+    int global_result = 0;
+    tprintf("Create t1\n");
+    create_t1(conn_rwsplit);
+    tprintf("Insert data into t1\n");
+    insert_into_t1(conn_rwsplit, N);
+
+    tprintf("SELECT: rwsplitter\n");
+    global_result += select_from_t1(conn_rwsplit, N);
+    tprintf("SELECT: master\n");
+    global_result += select_from_t1(conn_master, N);
+    tprintf("SELECT: slave\n");
+    global_result += select_from_t1(conn_slave, N);
+    tprintf("Sleeping to let replication happen\n");
+    sleep(180);
+    for (int i=0; i<repl->N; i++) {
+        tprintf("SELECT: directly from node %d\n", i);
+        global_result += select_from_t1(repl->nodes[i], N);
+    }
+    return(global_result);
+}
+
+int TestConnections::use_db(char * db)
+{
+    int global_result = 0;
+    char sql[100];
+
+    sprintf(sql, "USE %s;", db);
+
+    tprintf("selecting DB '%s' for rwsplit\n", db);
+    global_result += execute_query(conn_rwsplit, sql);
+    tprintf("selecting DB '%s' for readconn master\n", db);
+    global_result += execute_query(conn_slave, sql);
+    tprintf("selecting DB '%s' for readconn slave\n", db);
+    global_result += execute_query(conn_master, sql);
+    for (int i = 0; i < repl->N; i++) {
+        tprintf("selecting DB '%s' for direct connection to node %d\n", db, i);
+        global_result += execute_query(repl->nodes[i], sql);
+    }
+    return(global_result);
+}
+
+int TestConnections::check_t1_table(bool presence, char * db)
+{
+    char * expected;
+    char * actual;
+    int global_result = 0;
+    if (presence) {
+        expected = (char *) "";
+        actual   = (char *) "NOT";
+    } else {
+        expected = (char *) "NOT";
+        actual   = (char *) "";
+    }
+
+    global_result += use_db(db);
+
+    tprintf("Checking: table 't1' should %s be found in '%s' database\n", expected, db);
+    if ( ((check_if_t1_exists(conn_rwsplit) >  0) && (!presence) ) ||
+         ((check_if_t1_exists(conn_rwsplit) == 0) && (presence) ))
+    {global_result++; tprintf("Table t1 is %s found in '%s' database using RWSplit\n", actual, db); } else {
+        tprintf("RWSplit: ok\n");
+    }
+    if ( ((check_if_t1_exists(conn_master) >  0) && (!presence) ) ||
+         ((check_if_t1_exists(conn_master) == 0) && (presence) ))
+    {global_result++; tprintf("Table t1 is %s found in '%s' database using Readconnrouter with router option master\n", actual, db); } else {
+        tprintf("ReadConn master: ok\n");
+    }
+    if ( ((check_if_t1_exists(conn_slave) >  0) && (!presence) ) ||
+         ((check_if_t1_exists(conn_slave) == 0) && (presence) ))
+    {global_result++; tprintf("Table t1 is %s found in '%s' database using Readconnrouter with router option slave\n", actual, db); } else {
+        tprintf("ReadConn slave: ok\n");
+    }
+    tprintf("Sleeping to let replication happen\n");
+    sleep(60);
+    for (int i=0; i< repl->N; i++) {
+        if ( ((check_if_t1_exists(repl->nodes[i]) >  0) && (!presence) ) ||
+             ((check_if_t1_exists(repl->nodes[i]) == 0) && (presence) ))
+        {global_result++; tprintf("Table t1 is %s found in '%s' database using direct connect to node %d\n", actual, db, i); } else {
+            tprintf("Node %d: ok\n", i);
+        }
+    }
+    return(global_result);
+}
+

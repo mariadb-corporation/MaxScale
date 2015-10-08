@@ -90,6 +90,6 @@ int main(int argc, char *argv[])
 
 
     Test->close_maxscale_connections();
-    check_maxscale_alive();
+   Test->check_maxscale_alive();
     Test->copy_all_logs(); return(global_result);
 }

@@ -23,6 +23,6 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_master,  (char *) "SHOW GLOBAL STATUS;");
     printf("Trying SHOW GLOBAL STATUS against ReadConn slave\n"); fflush(stdout);
     global_result += execute_query(Test->conn_slave,   (char *) "SHOW GLOBAL STATUS;");
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
     Test->copy_all_logs(); return(global_result);
 }

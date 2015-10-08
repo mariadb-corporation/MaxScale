@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
 
 
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
 
     Test->repl->start_replication();
 

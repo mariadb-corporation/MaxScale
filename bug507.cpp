@@ -26,21 +26,21 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
 
     if (Test->repl->N < 3) {
-        printf("There is not enoght nodes for test\n");
+        Test->tprintf("There is not enoght nodes for test\n");
         Test->copy_all_logs();
         exit(1);
     }
 
-    printf("Creating table\n");  fflush(stdout);
+    Test->tprintf("Creating table\n");  fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t2; CREATE TABLE t2 (id INT(10) NOT NULL AUTO_INCREMENT, x int,  PRIMARY KEY (id));");
-    printf("Doing INSERTs\n");  fflush(stdout);
+    Test->tprintf("Doing INSERTs\n");  fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
 
-    printf("Sleeping to let replication happen\n");  fflush(stdout);
+    Test->tprintf("Sleeping to let replication happen\n");  fflush(stdout);
     sleep(10);
 
 
-    printf("Trying \n");  fflush(stdout);
+    Test->tprintf("Trying \n");  fflush(stdout);
     char last_insert_id1[1024];
     char last_insert_id2[1024];
     if ( (
@@ -52,22 +52,22 @@ int main(int argc, char *argv[])
                  Test->repl->nodes[0], sel1,
                  "@@server_id", &last_insert_id2[0])
              != 0 )) {
-        printf("@@server_id fied not found!!\n");
+        Test->tprintf("@@server_id fied not found!!\n");
         Test->copy_all_logs();
         exit(1);
     } else {
-        printf("'%s' to RWSplit gave @@server_id %s\n", sel1, last_insert_id1);
-        printf("'%s' directly to master gave @@server_id %s\n", sel1, last_insert_id2);
+        Test->tprintf("'%s' to RWSplit gave @@server_id %s\n", sel1, last_insert_id1);
+        Test->tprintf("'%s' directly to master gave @@server_id %s\n", sel1, last_insert_id2);
         if (strcmp(last_insert_id1, last_insert_id2) !=0 ) {
             global_result++;
-            printf("last_insert_id() are different depending in which order terms are in SELECT\n");
+            Test->tprintf("last_insert_id() are different depending in which order terms are in SELECT\n");
         }
     }
 
     Test->close_maxscale_connections();
     Test->repl->close_connections();
 
-    global_result += check_maxscale_alive();
+    global_result += Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }

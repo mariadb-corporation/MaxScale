@@ -21,29 +21,29 @@ int main(int argc, char *argv[])
     Test->print_env();
 
     if (Test->connect_rwsplit() == 0) {
-        printf("FAILED: filter config is broken, but service is started\n");
+        Test->tprintf("FAILED: filter config is broken, but service is started\n");
         global_result++;
     }
 
     sleep(5);
-    global_result += check_log_err((char *) "Error : Unable to find library for module: foobar", TRUE);
-    if ((check_log_err((char *) "Error : Failed to create filter 'testfilter' for service 'RW Split Router", TRUE) != 0) && (check_log_err((char *) "Error : Failed to load filter 'testfilter' for service 'RW Split Router", TRUE))) {
+    global_result += Test->check_log_err((char *) "Error : Unable to find library for module: foobar", TRUE);
+    if ((Test->check_log_err((char *) "Error : Failed to create filter 'testfilter' for service 'RW Split Router", TRUE) != 0) && (Test->check_log_err((char *) "Error : Failed to load filter 'testfilter' for service 'RW Split Router", TRUE))) {
         global_result++;
     }
 
-    //global_result += check_log_err((char *) "Error : Setting up filters failed. Terminating session RW Split Router", TRUE);
+    //global_result +=Test->check_log_err((char *) "Error : Setting up filters failed. Terminating session RW Split Router", TRUE);
 
-    //global_result += check_maxscale_alive();
+    //global_result +=Test->check_maxscale_alive();
 
-    printf("Trying ReaConn master\n");
+    Test->tprintf("Trying ReaConn master\n");
     if (Test->connect_readconn_master() != 0) {
         global_result++;
-        printf("Error connection to ReadConn master\n");
+        Test->tprintf("Error connection to ReadConn master\n");
     }
-    printf("Trying ReaConn slave\n");
+    Test->tprintf("Trying ReaConn slave\n");
     if (Test->connect_readconn_slave() != 0) {
         global_result++;
-        printf("Error connection to ReadConn slave\n");
+        Test->tprintf("Error connection to ReadConn slave\n");
     }
     Test->close_readconn_master();
     Test->close_readconn_slave();

@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         printf("PHP script FAILED!\n"); fflush(stdout);
     }
 
-    global_result += check_log_err((char *) "Error : Can't route MYSQL_COM_STMT_PREPARE", FALSE);
+    global_result +=Test->check_log_err((char *) "Error : Can't route MYSQL_COM_STMT_PREPARE", FALSE);
 
     Test->copy_all_logs(); return(global_result);
 }

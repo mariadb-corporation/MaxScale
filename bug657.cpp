@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
 
-    global_result += check_maxscale_alive(); fflush(stdout);
+    global_result +=Test->check_maxscale_alive(); fflush(stdout);
 
 
     //exit_flag = 1;

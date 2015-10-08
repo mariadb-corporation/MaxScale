@@ -100,8 +100,8 @@ int main(int argc, char *argv[])
 
     Test->close_maxscale_connections();
 
-    global_result    += check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
-    global_result    += check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
+    global_result    +=Test->check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
+    global_result    +=Test->check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
 
     Test->copy_all_logs(); return(global_result);
 }

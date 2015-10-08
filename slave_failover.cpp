@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     printf("Doing test again, but with firewall block instead of VM killing\n");*/
 
         printf("Checking current slave\n"); fflush(stdout);
-        old_slave = find_connected_slave(Test, &global_result);
+        old_slave = Test->find_connected_slave( &global_result);
 
         printf("Setup firewall to block mysql on old slave (oldslave is node %d)\n", old_slave); fflush(stdout);
         if ((old_slave < 0) || (old_slave >= Test->repl->N)) {
@@ -73,13 +73,13 @@ int main(int argc, char *argv[])
             printf("Sleeping 60 seconds to let MaxScale to find new slave\n"); fflush(stdout);
             sleep(60);
 
-            current_slave = find_connected_slave(Test, &global_result);
+            current_slave = Test->find_connected_slave(&global_result);
             if ((current_slave == old_slave) || (current_slave < 0)) {printf("FAILED: No failover happened\n"); global_result=1;}
 
             printf("Setup firewall back to allow mysql\n"); fflush(stdout);
             Test->repl->unblock_node(old_slave);
 
-            global_result += check_maxscale_alive();
+            global_result +=Test->check_maxscale_alive();
 
             Test->close_rwsplit();
         }

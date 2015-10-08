@@ -37,12 +37,12 @@ int main(int argc, char *argv[])
                 find_field(Test->conn_rwsplit, hint_sql, (char *) "@@server_id", &server_id[0]);
                 find_field(Test->repl->nodes[j], (char *) "select @@server_id;", (char *) "@@server_id", &server_id_d[0]);
 
-                printf("server%d ID from Maxscale: \t%s\n", j+1, server_id);
-                printf("server%d ID directly from node: \t%s\n", j+1, server_id_d);
+                Test->tprintf("server%d ID from Maxscale: \t%s\n", j+1, server_id);
+                Test->tprintf("server%d ID directly from node: \t%s\n", j+1, server_id_d);
 
                 if (strcmp(server_id, server_id_d) !=0 )  {
                     global_result = 1;
-                    printf("Hints does not work!\n");
+                    Test->tprintf("Hints does not work!\n");
                 }
             }
         }
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     Test->close_maxscale_connections();
     Test->repl->close_connections();
 
-    global_result += check_maxscale_alive();
+    global_result += Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }

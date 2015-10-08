@@ -22,12 +22,12 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     Test->connect_maxscale();
 
-    printf("Trying SHOW VARIABLES to different Maxscale services\n");  fflush(stdout);
-    printf("RWSplit\n");  fflush(stdout);
+    Test->tprintf("Trying SHOW VARIABLES to different Maxscale services\n");  fflush(stdout);
+    Test->tprintf("RWSplit\n");
     for (i = 0; i < 100; i++) {global_result += execute_query(Test->conn_rwsplit, (char *) "SHOW VARIABLES;");}
-    printf("ReadConn master\n");  fflush(stdout);
+    Test->tprintf("ReadConn master\n");
     for (i = 0; i < 100; i++) {global_result += execute_query(Test->conn_master, (char *) "SHOW VARIABLES;");}
-    printf("ReadConn slave\n");  fflush(stdout);
+    Test->tprintf("ReadConn slave\n");
     for (i = 0; i < 100; i++) {global_result += execute_query(Test->conn_slave, (char *) "SHOW VARIABLES;");}
 
     printf("All in one loop\n");  fflush(stdout);
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     Test->close_maxscale_connections();
     Test->repl->close_connections();
 
-    global_result += check_maxscale_alive();
+    global_result += Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }

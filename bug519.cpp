@@ -29,29 +29,29 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
     Test->repl->connect();
 
-    printf("Create t1\n"); fflush(stdout);
+    Test->tprintf("Create t1\n");
     create_t1(Test->conn_rwsplit);
-    printf("Insert data into t1\n"); fflush(stdout);
+    Test->tprintf("Insert data into t1\n");
     insert_into_t1(Test->conn_rwsplit, N);
-    printf("Sleeping to let replication happen\n");fflush(stdout);
+    Test->tprintf("Sleeping to let replication happen\n");
     sleep(30);
 
 
     sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s '%s rm /tmp/t*.csv; %s chmod 777 /tmp'", Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0], Test->repl->access_sudo[0], Test->repl->access_sudo[0]);
-    printf("%s\n", str);
+    Test->tprintf("%s\n", str);
     system(str);
 
-    printf("Copying data from t1 to file...\n");fflush(stdout);
-    printf("using RWSplit: SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;\n");fflush(stdout);
+    Test->tprintf("Copying data from t1 to file...\n");
+    Test->tprintf("using RWSplit: SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;\n");
     global_result += execute_query(Test->conn_rwsplit, (char *) "SELECT * INTO OUTFILE '/tmp/t1.csv' FROM t1;");
-    printf("using ReadsConn master: SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;\n");fflush(stdout);
+    Test->tprintf("using ReadsConn master: SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;\n");
     global_result += execute_query(Test->conn_master, (char *) "SELECT * INTO OUTFILE '/tmp/t2.csv' FROM t1;");
-    printf("using ReadsConn slave: SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;\n");fflush(stdout);
+    Test->tprintf("using ReadsConn slave: SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;\n");
     global_result += execute_query(Test->conn_slave, (char *) "SELECT * INTO OUTFILE '/tmp/t3.csv' FROM t1;");
 
-    printf("Copying t1.cvs from Maxscale machine:\n");fflush(stdout);
+    Test->tprintf("Copying t1.cvs from Maxscale machine:\n");
     sprintf(str, "scp -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s:/tmp/t1.csv ./", Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
-    printf("%s\n", str);
+    Test->tprintf("%s\n", str);
     system(str);
 
     MYSQL *srv[2];
@@ -59,24 +59,24 @@ int main(int argc, char *argv[])
     srv[0] = Test->conn_rwsplit;
     srv[1] = Test->conn_master;
     for (int i=0; i<2; i++) {
-        printf("Dropping t1 \n");fflush(stdout);
+        Test->tprintf("Dropping t1 \n");
         global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE t1;");
-        printf("Sleeping to let replication happen\n");fflush(stdout);
+        Test->tprintf("Sleeping to let replication happen\n");
         sleep(100);
-        printf("Create t1\n"); fflush(stdout);
+        Test->tprintf("Create t1\n");
         create_t1(Test->conn_rwsplit);
-        printf("Loading data to t1 from file\n");fflush(stdout);
+        Test->tprintf("Loading data to t1 from file\n");
         global_result += execute_query(srv[i], (char *) "LOAD DATA LOCAL INFILE 't1.csv' INTO TABLE t1;");
 
-        printf("Sleeping to let replication happen\n");fflush(stdout);
+        Test->tprintf("Sleeping to let replication happen\n");
         sleep(100);
-        printf("SELECT: rwsplitter\n");fflush(stdout);
+        Test->tprintf("SELECT: rwsplitter\n");
         global_result += select_from_t1(Test->conn_rwsplit, N);
-        printf("SELECT: master\n");fflush(stdout);
+        Test->tprintf("SELECT: master\n");
         global_result += select_from_t1(Test->conn_master, N);
-        printf("SELECT: slave\n");fflush(stdout);
+        Test->tprintf("SELECT: slave\n");
         global_result += select_from_t1(Test->conn_slave, N);
-        printf("Sleeping to let replication happen\n");fflush(stdout);
+        Test->tprintf("Sleeping to let replication happen\n");
         /*sleep(100);
         for (int i=0; i<Test->repl->N; i++) {
             printf("SELECT: directly from node %d\n", i);fflush(stdout);
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 
 
     Test->repl->close_connections();
-    global_result += check_maxscale_alive();
+    global_result += Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }

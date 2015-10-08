@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->connect_maxscale();
 
-    int global_result = check_log_err((char *) "Multiple monitors are monitoring server", TRUE);
+    int global_result =Test->check_log_err((char *) "Multiple monitors are monitoring server", TRUE);
 
 
     Test->copy_all_logs(); return(global_result);

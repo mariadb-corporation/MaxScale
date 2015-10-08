@@ -71,11 +71,11 @@ int main(int argc, char *argv[])
 
     printf("Checking logs\n");
 
-    global_result += check_log_err((char *) "Error : Couldn't find suitable Master from 2 candidates", TRUE);
-    global_result += check_log_err((char *) "Error : Failed to create RW_Split session.", TRUE);
-    global_result += check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
-    global_result += check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
-    global_result += check_log_err((char *) "Error : Setting up filters failed. Terminating session RW_Router", TRUE);
+    global_result +=Test->check_log_err((char *) "Error : Couldn't find suitable Master from 2 candidates", TRUE);
+    global_result +=Test->check_log_err((char *) "Error : Failed to create RW_Split session.", TRUE);
+    global_result +=Test->check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
+    global_result +=Test->check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
+    global_result +=Test->check_log_err((char *) "Error : Setting up filters failed. Terminating session RW_Router", TRUE);
 
     Test->copy_all_logs(); return(global_result);
 }

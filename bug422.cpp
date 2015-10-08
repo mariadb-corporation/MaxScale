@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     Test->read_env();
     Test->print_env();
 
-    printf("Connecting to all MaxScale services\n"); fflush(stdout);
+    Test->tprintf("Connecting to all MaxScale services\n"); fflush(stdout);
     global_result += Test->connect_maxscale();
 
     printf("executing show status 1000 times\n"); fflush(stdout);
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 
     Test->close_maxscale_connections();
 
-    check_maxscale_alive();
+    Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }

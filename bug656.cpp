@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
 
     sleep(10);
 
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
 
     Test->close_rwsplit();
 

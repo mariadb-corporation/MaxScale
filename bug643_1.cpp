@@ -89,8 +89,8 @@ int main(int argc, char *argv[])
     execute_query(Test->conn_slave, (char *) "show processlist");
     Test->close_maxscale_connections();
 
-    global_result += check_log_err((char *) "Unable to find filter 'tests' for service 'RW Split2'", TRUE);
-    //global_result += check_log_err((char *) "Error : Failed to start service 'RW Split2'", TRUE);
+    global_result +=Test->check_log_err((char *) "Unable to find filter 'tests' for service 'RW Split2'", TRUE);
+    //global_result +=Test->check_log_err((char *) "Error : Failed to start service 'RW Split2'", TRUE);
 
     Test->copy_all_logs(); return(global_result);
 }

@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     sleep(10);
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
-    global_result += check_maxscale_alive(); fflush(stdout);
+    global_result +=Test->check_maxscale_alive(); fflush(stdout);
     if (global_result !=0) {
         printf("MaxScale is not alive\n");fflush(stdout);
     } else {
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     sleep(60);
 
     printf("Checking Maxscale is alive\n"); fflush(stdout);
-    global_result += check_maxscale_alive(); fflush(stdout);
+    global_result +=Test->check_maxscale_alive(); fflush(stdout);
     if (global_result !=0) {
         printf("MaxScale is not alive\n");
     } else {

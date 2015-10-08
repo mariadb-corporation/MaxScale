@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_rwsplit, (char *) "select /* maxscale hintname begin */ @@server_id;");
     global_result += execute_query(Test->conn_rwsplit, (char *) "select /* maxscale route to master*/ @@server_id;");
 
-    global_result += check_log_err((char *) "Error : Syntax error in hint", FALSE);
-    global_result += check_maxscale_alive();
+    global_result += Test->check_log_err((char *) "Error : Syntax error in hint", FALSE);
+    global_result += Test->check_maxscale_alive();
     Test->copy_all_logs(); return(global_result);
 }

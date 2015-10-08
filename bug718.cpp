@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < ThreadsNum; i ++) { pthread_join( thread_v1[i], NULL); }
 
     Test->close_maxscale_connections();
-    check_maxscale_alive();
+   Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }

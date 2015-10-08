@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
     for (i=0; i<maxscale_conn_num; i++) {mysql_close(conn_rwsplit[i]);}
     Test->galera->close_connections();
 
-    global_result += check_log_err((char *) "Unexpected parameter 'weightby'", FALSE);
+    global_result +=Test->check_log_err((char *) "Unexpected parameter 'weightby'", FALSE);
 
     Test->copy_all_logs(); return(global_result);
 }

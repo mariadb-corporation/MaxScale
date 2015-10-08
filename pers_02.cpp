@@ -58,6 +58,6 @@ int main(int argc, char *argv[])
     Test->repl->start_replication();
     Test->create_connections(70);
 
-    global_result += check_log_err((char *) "fatal signal 11", false);
+    global_result +=Test->check_log_err((char *) "fatal signal 11", false);
     Test->copy_all_logs(); return(global_result);
 }

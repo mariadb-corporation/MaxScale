@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     Test->close_maxscale_connections();
 
     printf("Checxking if MaxScale is still alive!\n"); fflush(stdout);
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
 
     fflush(stdout);
     Test->copy_all_logs(); fflush(stdout);
@@ -107,7 +107,7 @@ void *kill_vm_thread( void *ptr )
     //int global_result = 0;
     sleep(20);
     printf("Checking current slave\n"); fflush(stdout);
-    old_slave = find_connected_slave1(Test);
+    old_slave = Test->find_connected_slave1();
 
     if ((old_slave >= 1) && (old_slave <= Test->repl->N)) {
         printf("Active slave is %d\n", old_slave); fflush(stdout);

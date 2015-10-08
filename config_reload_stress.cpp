@@ -69,7 +69,7 @@ int main(int argc, char **argv)
     Test->close_maxscale_connections();
 
     printf("Checking if Maxscale is alive\n");
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
 
     exit_flag = 1;
 

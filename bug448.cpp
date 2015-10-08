@@ -23,34 +23,34 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
 
     get_my_ip(Test->maxscale_IP, my_ip);
-    printf("Test machine IP (got via network request) %s\n", my_ip);
+    Test->tprintf("Test machine IP (got via network request) %s\n", my_ip);
 
     if (Test->get_client_ip(my_ip) != 0) {
-        printf("TEST_FAILED: Unable to get IP using connection to DB");
+        Test->tprintf("TEST_FAILED: Unable to get IP using connection to DB");
         global_result++;
     }
-    printf("Test machine IP (got via Show processlist) %s\n", my_ip);
+    Test->tprintf("Test machine IP (got via Show processlist) %s\n", my_ip);
 
     first_dot = strstr(my_ip, ".");
     strcpy(first_dot, ".%.%.%");
 
-    printf("Test machine IP with %% %s\n", my_ip);
+    Test->tprintf("Test machine IP with %% %s\n", my_ip);
 
 
-    printf("Creating user 'user1' for %s host\n", my_ip);  fflush(stdout);
+    Test->tprintf("Creating user 'user1' for %s host\n", my_ip);  fflush(stdout);
     sprintf(sql, "GRANT ALL PRIVILEGES ON *.* TO user1@'%s' identified by 'pass1';  FLUSH PRIVILEGES;", my_ip);
-    printf("Query: %s\n", sql); fflush(stdout);
+    Test->tprintf("Query: %s\n", sql); fflush(stdout);
     global_result += execute_query(Test->conn_rwsplit, sql);
 
-    printf("Trying to open connection using user1\n");
+    Test->tprintf("Trying to open connection using user1\n");
 
 
     MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user1", (char *) "pass1", Test->ssl);
     if (conn == NULL) {
-        printf("TEST_FAILED! Authentification failed!\n");
+        Test->tprintf("TEST_FAILED! Authentification failed!\n");
         global_result++;
     } else {
-        printf("Authentification for user@'%s' is ok", my_ip);
+        Test->tprintf("Authentification for user@'%s' is ok", my_ip);
         mysql_close(conn);
     }
 
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 
     Test->close_maxscale_connections();
 
-    check_maxscale_alive();
+    Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }

@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     printf("Changing master back to node 0\n");
     Test->repl->change_master(0, 1);
 
-    res += check_log_err((char *) "The service 'CLI' is missing a definition of the servers", FALSE);
+    res +=Test->check_log_err((char *) "The service 'CLI' is missing a definition of the servers", FALSE);
 
     Test->copy_all_logs();
     printf("Finishing test\n");

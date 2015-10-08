@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     global_result += execute_query(Test->conn_rwsplit, (char *) "show processlist");
     Test->close_maxscale_connections();
 
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(global_result);
 }

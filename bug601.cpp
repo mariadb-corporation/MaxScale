@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
         Test->close_rwsplit();
 
         printf("Checking if Maxscale is alive\n");
-        global_result += check_maxscale_alive();
+        global_result +=Test->check_maxscale_alive();
     } else {
         printf("Error connection to RWSplit\n");
         global_result++;

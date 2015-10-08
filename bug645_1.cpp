@@ -101,8 +101,8 @@ int main(int argc, char *argv[])
 
     Test->close_maxscale_connections();  fflush(stdout);
 
-    global_result += check_log_err((char *) "Couldn't find suitable Master from 2 candidates", TRUE);
-    global_result += check_log_err((char *) "Creating client session for Tee filter failed. Terminating session.", TRUE);
+    global_result +=Test->check_log_err((char *) "Couldn't find suitable Master from 2 candidates", TRUE);
+    global_result +=Test->check_log_err((char *) "Creating client session for Tee filter failed. Terminating session.", TRUE);
 
 
     Test->copy_all_logs(); return(global_result);

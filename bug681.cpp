@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 
     Test->close_maxscale_connections();
 
-    global_result    += check_log_err((char *) "Error : Unable to start RW Split Router service. There are too few backend servers configured in", TRUE);
+    global_result    +=Test->check_log_err((char *) "Error : Unable to start RW Split Router service. There are too few backend servers configured in", TRUE);
 
     Test->copy_all_logs(); return(global_result);
 }

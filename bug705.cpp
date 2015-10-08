@@ -42,8 +42,8 @@ int main(int argc, char *argv[])
         printf("Waiting 20 seconds\n"); fflush(stdout);
         sleep(20);
 
-        global_result += check_log_err((char *) "Error : Loading database names", FALSE);
-        global_result += check_log_err((char *) "error: Unknown column", FALSE);
+        global_result +=Test->check_log_err((char *) "Error : Loading database names", FALSE);
+        global_result +=Test->check_log_err((char *) "error: Unknown column", FALSE);
 
 
         Test->copy_all_logs(); return(global_result);

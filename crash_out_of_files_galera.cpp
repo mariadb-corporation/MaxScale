@@ -40,9 +40,9 @@ int main(int argc, char *argv[])
     }
     Test->galera->close_connections();
 
-    check_log_err((char *) "refresh rate limit exceeded", FALSE);
+   Test->check_log_err((char *) "refresh rate limit exceeded", FALSE);
 
-    global_result += check_maxscale_alive();
+    global_result +=Test->check_maxscale_alive();
     Test->copy_all_logs(); return(global_result);
 }
 
