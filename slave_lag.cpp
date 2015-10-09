@@ -26,10 +26,8 @@ int main(int argc, char *argv[])
 {
 
     Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(2000);
 
-    Test->read_env();
-    Test->print_env();
     Test->repl->connect();
     Test->connect_rwsplit();
 
@@ -44,8 +42,8 @@ int main(int argc, char *argv[])
         create_t1(Test->conn_rwsplit);
 
         create_insert_string(sql, 50000, 1);
-        printf("sql_len=%lu\n", strlen(sql));
-        global_result += execute_query(Test->conn_rwsplit, sql);
+        Test->tprintf("sql_len=%lu\n", strlen(sql));
+        Test->try_query(Test->conn_rwsplit, sql);
 
         pthread_t threads[1000];
         //pthread_t check_thread;
@@ -78,29 +76,25 @@ int main(int argc, char *argv[])
         do {
             get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Slave delay:", result);
             sscanf(result, "%d", &res_d);
-            printf("server2 lag: %d\n", res_d);
+            Test->tprintf("server2 lag: %d\n", res_d);
             find_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
             sscanf(server_id, "%d", &server_id_d);
-            printf("%d\n", server_id_d);
+            Test->tprintf("%d\n", server_id_d);
             if ((rounds < 10) and (server1_id_d == server_id_d)) {
-                printf("Connected to the master!\n");
-                global_result++;
+                Test->add_result(1, "Connected to the master!\n");
             } else {
-                printf("Connected to slave\n");
+                Test->tprintf("Connected to slave\n");
             }
-            fflush(stdout);
             rounds++;
         } while (res_d < 21);
 
         exit_flag = 1;
 
         if (server1_id_d != server_id_d) {
-            printf("Master id is %d\n", server1_id_d);
-            printf("Lag is big, but connection is done to server with id %d\n", server_id_d);
-            global_result++;
-            fflush(stdout);
+            Test->tprintf("Master id is %d\n", server1_id_d);
+            Test->add_result(1, "Lag is big, but connection is done to server with id %d\n", server_id_d);
         } else {
-            printf("Connected to master\n");
+            Test->tprintf("Connected to master\n");
         }
         // close connections
         Test->close_rwsplit();

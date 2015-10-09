@@ -39,6 +39,7 @@ filters=QLA
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
+    Test->set_timeout(30);
     int global_result = 0;
     int i, j;
     char str[256];
@@ -55,97 +56,88 @@ int main(int argc, char *argv[])
     for (i = 0; i < Test->repl->N; i++) { //nodes
         for (j = 0; j < Test->repl->N; j++) { //users
             //sprintf(str, "DELETE FROM  mysql.user WHERE User='user%d';", j);
+            Test->set_timeout(10);
             sprintf(str, "DROP USER'user%d';", j);
-            printf("%s\n", str);
+            Test->tprintf("%s\n", str);
             execute_query(Test->repl->nodes[i], str);
 
             sprintf(str, "CREATE USER 'user%d'@'%%' IDENTIFIED BY 'pass%d';", j, j);
-            printf("%s\n", str);
+            Test->tprintf("%s\n", str);
             execute_query(Test->repl->nodes[i], str);
 
             sprintf(str, "DROP DATABASE IF EXISTS shard_db");
-            printf("%s\n", str);
+            Test->tprintf("%s\n", str);
             execute_query(Test->repl->nodes[i], str);
         }
 
         sprintf(str, "DROP DATABASE IF EXISTS shard_db%d", i);
-        printf("%s\n", str);
+        Test->tprintf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
 
         sprintf(str, "CREATE DATABASE shard_db%d", i);
-        printf("%s\n", str);
+        Test->tprintf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
     }
+    Test->stop_timeout();
 
     sleep(10);
     for (i = 0; i < Test->repl->N; i++) { //nodes
-        printf("Node %d\t", i);
-        printf("Creating shard_db\t");
+        Test->set_timeout(10);
+        Test->tprintf("Node %d\t", i);
+        Test->tprintf("Creating shard_db\t");
         execute_query(Test->repl->nodes[i], "CREATE DATABASE shard_db");
         sprintf(str, "GRANT SELECT,USAGE,CREATE ON shard_db.* TO 'user%d'@'%%'", i);
-        printf("%s\n", str);
-        if (execute_query(Test->repl->nodes[i], str) != 0) {
-            printf("TEST_FAILED\n");
-            global_result++;
-        }
+        Test->tprintf("%s\n", str);
+        Test->try_query(Test->repl->nodes[i], str);
     }
 
     Test->repl->close_connections();
-
+    Test->stop_timeout();
     sleep(30);
     MYSQL * conn;
     for (i = 0; i < Test->repl->N; i++) {
+        Test->set_timeout(5);
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
-        printf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
+        Test->tprintf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
         conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "shard_db", user_str, pass_str, Test->ssl);
 
         sprintf(str, "CREATE TABLE table%d (x1 int, fl int);", i);
-        printf("%s\n", str);
-        if (execute_query(conn, str) != 0)  {
-            printf("TEST_FAILED\n");
-            global_result++;
-        }
+        Test->tprintf("%s\n", str);
+        Test->try_query(conn, str);
     }
 
     for (i = 0; i < Test->repl->N; i++) {
+        Test->set_timeout(5);
         sprintf(user_str, "user%d", i);
         sprintf(pass_str, "pass%d", i);
-        printf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
+        Test->tprintf("Open connection to Sharding router using %s %s\n", user_str, pass_str);
         conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP,  (char *) "shard_db", user_str, pass_str, Test->ssl);
 
         sprintf(str, "SHOW TABLES;");
-        printf("%s\n", str);
+        Test->tprintf("%s\n", str);
         sprintf(str1, "table%d", i);
-        printf("Table should be %s\n", str1);
-        if (execute_query_check_one(conn, str, str1) !=0 ) {
-                    printf("TEST_FAILED\n");
-                    global_result++;
-                }
+        Test->tprintf("Table should be %s\n", str1);
+        Test->add_result(execute_query_check_one(conn, str, str1), "check failed\n");
         mysql_close(conn);
     }
 
     Test->connect_rwsplit();
 
-    printf("Trying USE shard_db\n");
+    Test->tprintf("Trying USE shard_db\n");
     execute_query(Test->conn_rwsplit, "USE shard_db");
 
     for (i = 0; i < Test->repl->N; i++) {
         sprintf(str, "USE shard_db%d", i);
-        printf("%s\n", str);
-        if (execute_query(Test->conn_rwsplit, str) != 0) {
-            printf("TEST_FAILED\n");
-            global_result++;
-        }
+        Test->tprintf("%s\n", str);
+        Test->try_query(Test->conn_rwsplit, str);
     }
 
     mysql_close(Test->conn_rwsplit);
 
-    printf("Trying to connect with empty database name\n");
+    Test->tprintf("Trying to connect with empty database name\n");
     conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "", user_str, pass_str, Test->ssl);
     mysql_close(conn);
-
-
 
     Test->copy_all_logs(); return(Test->global_result);
 }

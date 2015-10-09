@@ -13,32 +13,30 @@ int check_sha1(TestConnections* Test)
     char sys[1024];
     char * x;
     FILE *ls;
-    int global_result = 0;
     int i;
 
     char buf[1024];
     char buf_max[1024];
 
-    printf("ls before FLUSH LOGS\n");
+    Test->tprintf("ls before FLUSH LOGS\n");
 
-    printf("Master");fflush(stdout);
+    Test->tprintf("Master");
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.0000*'", Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
     system(sys);
 
-    printf("FLUSH LOGS\n");fflush(stdout);
-    global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-    printf("Logs flushed\n");
+    Test->tprintf("FLUSH LOGS\n");
+    Test->try_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+    Test->tprintf("Logs flushed\n");
     sleep(20);
-    printf("ls after first FLUSH LOGS\n");
+    Test->tprintf("ls after first FLUSH LOGS\n");
 
-    printf("Master\n");fflush(stdout);
+    Test->tprintf("Master\n");
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'", Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
     system(sys);
 
-
-    printf("FLUSH LOGS\n");fflush(stdout);
-    global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
-    printf("Logs flushed\n"); fflush(stdout);
+    Test->tprintf("FLUSH LOGS\n");
+    Test->try_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+    Test->tprintf("Logs flushed\n"); fflush(stdout);
 
     sleep(19);
     printf("ls before FLUSH LOGS\n");
@@ -54,14 +52,14 @@ int check_sha1(TestConnections* Test)
 int start_transaction(TestConnections* Test)
 {
     int global_result = 0;
-    printf("Transaction test\n");
-    printf("Start transaction\n");
+    Test->tprintf("Transaction test\n");
+    Test->tprintf("Start transaction\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "START TRANSACTION");
     //global_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
-    printf("INSERT data\n");
+    Test->tprintf("INSERT data\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
     sleep(20);
-    return(Test->global_result);
+    return(global_result);
 }
 
 int main(int argc, char *argv[])
@@ -71,67 +69,63 @@ int main(int argc, char *argv[])
 
     int i;
 
-    Test->read_env();
-    Test->print_env();
-
     for (int option = 0; option < 3; option++) {
 
         Test->repl->connect();
 
         create_t1(Test->repl->nodes[0]);
-        global_result += insert_into_t1(Test->repl->nodes[0], 4);
-        printf("Sleeping to let replication happen\n"); fflush(stdout);
+        Test->add_result( insert_into_t1(Test->repl->nodes[0], 4), "INSER into t1 failed\n");
+        Test->tprintf("Sleeping to let replication happen\n");
         sleep(30);
 
         for (i = 0; i < Test->repl->N; i++) {
-            printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
-            global_result += select_from_t1(Test->repl->nodes[i], 4);
+            Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
+            Test->add_result( select_from_t1(Test->repl->nodes[i], 4), "select form t1 wrong\n");
         }
 
-        printf("First transaction test (with ROLLBACK)\n");
+        Test->tprintf("First transaction test (with ROLLBACK)\n");
         start_transaction(Test);
 
-        printf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
-        global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
+        Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
+        Test->add_result( execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111"), "failed\n");
 
         //printf("SELECT, checking inserted values from slave\n");
         //global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
 
-        global_result += check_sha1(Test);
+        Test->add_result( check_sha1(Test), "sha1 wrong\n");
 
-        printf("ROLLBACK\n");
-        global_result += execute_query(Test->repl->nodes[0], (char *) "ROLLBACK");
-        printf("INSERT INTO t1 VALUES(112, 10)\n");
-        global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
+        Test->tprintf("ROLLBACK\n");
+        Test->try_query(Test->repl->nodes[0], (char *) "ROLLBACK");
+        Test->tprintf("INSERT INTO t1 VALUES(112, 10)\n");
+        Test->try_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
         sleep(20);
 
-        printf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
-        global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
+        Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
+        Test->add_result( execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "112"), "failed\n");
 
-        printf("SELECT * FROM t1 WHERE fl=10, checking inserted values from slave\n");
-        global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
-        printf("DELETE FROM t1 WHERE fl=10\n");
-        global_result += execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
-        printf("Checking t1\n");
-        global_result += select_from_t1(Test->repl->nodes[0], 4);
+        Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values from slave\n");
+        Test->add_result( execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "112"), "failed\n");
+        Test->tprintf("DELETE FROM t1 WHERE fl=10\n");
+        Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
+        Test->tprintf("Checking t1\n");
+        Test->add_result( select_from_t1(Test->repl->nodes[0], 4), "failed\n");
 
-        printf("Second transaction test (with COMMIT)\n");
+        Test->tprintf("Second transaction test (with COMMIT)\n");
         start_transaction(Test);
 
-        printf("COMMIT\n");
-        global_result += execute_query(Test->repl->nodes[0], (char *) "COMMIT");
+        Test->tprintf("COMMIT\n");
+        Test->try_query(Test->repl->nodes[0], (char *) "COMMIT");
 
         printf("SELECT, checking inserted values\n");
-        global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
+        Test->add_result( execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111"), "failed\n");
 
-        printf("SELECT, checking inserted values from slave\n");
-        global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
-        printf("DELETE FROM t1 WHERE fl=10\n");
-        global_result += execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
+        Test->tprintf("SELECT, checking inserted values from slave\n");
+        Test->add_result( execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "111"), "failed\n");
+        Test->tprintf("DELETE FROM t1 WHERE fl=10\n");
+        Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
 
-        global_result += check_sha1(Test);
+        Test->add_result( check_sha1(Test), "sha1 wrong\n");
         Test->repl->close_connections();
-
     }
 
 

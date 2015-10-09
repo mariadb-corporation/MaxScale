@@ -18,14 +18,10 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
+    Test->set_timeout(20);
 
-    Test->read_env();
-    Test->print_env();
     Test->repl->connect();
-    fflush(stdout);
 
     MYSQL * conn;
     char sql[100];
@@ -36,35 +32,30 @@ int main(int argc, char *argv[])
     execute_query(conn, (char *) "USE test_non_existing_DB; USE test;");
     create_t1(conn);
     mysql_close(conn);
-    printf("Table t1 is created\n");
-    fflush(stdout);
+    Test->tprintf("Table t1 is created\n");
 
     for (int i = 0; i < 10000; i++) {
+        Test->set_timeout(5);
         conn = Test->open_rwsplit_connection();
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
-        printf("%s\n", sql);
+        Test->tprintf("%s\n", sql);
         execute_query(conn, sql);
-        fflush(stdout);
         mysql_close(conn);
     }
     fflush(stdout);
 
-    printf("Connecting to MaxScale\n");
-    fflush(stdout);
-    global_result += Test->connect_maxscale();
-    printf("Checking t1 table using RWSplit router\n");
-    fflush(stdout);
-    global_result += execute_select_query_and_check(Test->conn_rwsplit, (char *) "SELECT * FROM t1;", 10000);
-    printf("Checking t1 table using ReadConn router in master mode\n");
-    fflush(stdout);
-    global_result += execute_select_query_and_check(Test->conn_master, (char *) "SELECT * FROM t1;", 10000);
-    printf("Checking t1 table using ReadConn router in slave mode\n");
-    fflush(stdout);
-    global_result += execute_select_query_and_check(Test->conn_slave, (char *) "SELECT * FROM t1;", 10000);
-    fflush(stdout);
+    Test->set_timeout(10);
+    Test->tprintf("Connecting to MaxScale\n");
+    Test->add_result(Test->connect_maxscale(), "Error connecting to Maxscale\n");
+    Test->tprintf("Checking t1 table using RWSplit router\n");
+    Test->add_result( execute_select_query_and_check(Test->conn_rwsplit, (char *) "SELECT * FROM t1;", 10000), "t1 is wrong\n");
+    Test->tprintf("Checking t1 table using ReadConn router in master mode\n");
+    Test->add_result(  execute_select_query_and_check(Test->conn_master, (char *) "SELECT * FROM t1;", 10000), "t1 is wrong\n");
+    Test->tprintf("Checking t1 table using ReadConn router in slave mode\n");
+    Test->add_result(  execute_select_query_and_check(Test->conn_slave, (char *) "SELECT * FROM t1;", 10000), "t1 is wrong\n");
     Test->close_maxscale_connections();
 
-    global_result +=Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(Test->global_result);
 }

@@ -17,19 +17,15 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
-    char sys1[4096];
+    Test->set_timeout(20);
+    int res = 0;
 
     unsigned int current_slave;
     unsigned int old_slave;
 
-    Test->read_env();
-    Test->print_env();
-
     printf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     if (Test->connect_rwsplit() != 0) {
-        printf("Error connection to RWSplit! Exiting\n");
-        global_result++;
+        Test->add_result(1, "Error connection to RWSplit! Exiting\n");
     } else {
 
         // this is the same test, but with killing VM
@@ -60,26 +56,29 @@ int main(int argc, char *argv[])
 
     printf("Doing test again, but with firewall block instead of VM killing\n");*/
 
-        printf("Checking current slave\n"); fflush(stdout);
-        old_slave = Test->find_connected_slave( &global_result);
+        Test->tprintf("Checking current slave\n");
+        old_slave = Test->find_connected_slave( &res);
 
-        printf("Setup firewall to block mysql on old slave (oldslave is node %d)\n", old_slave); fflush(stdout);
+        Test->add_result(res, "no current slave\n");
+
+        Test->tprintf("Setup firewall to block mysql on old slave (oldslave is node %d)\n", old_slave);
         if ((old_slave < 0) || (old_slave >= Test->repl->N)) {
-            printf("Active slave is not found\n");
-            global_result++;
+            Test->add_result(1,"Active slave is not found\n");
         } else {
             Test->repl->block_node(old_slave);
 
-            printf("Sleeping 60 seconds to let MaxScale to find new slave\n"); fflush(stdout);
+            Test->tprintf("Sleeping 60 seconds to let MaxScale to find new slave\n");
+            Test->stop_timeout();
             sleep(60);
+            Test->set_timeout(20);
 
-            current_slave = Test->find_connected_slave(&global_result);
-            if ((current_slave == old_slave) || (current_slave < 0)) {printf("FAILED: No failover happened\n"); global_result=1;}
+            current_slave = Test->find_connected_slave(&res);
+            if ((current_slave == old_slave) || (current_slave < 0)) {Test->add_result(1, "No failover happened\n"); }
 
-            printf("Setup firewall back to allow mysql\n"); fflush(stdout);
+            Test->tprintf("Setup firewall back to allow mysql\n");
             Test->repl->unblock_node(old_slave);
 
-            global_result +=Test->check_maxscale_alive();
+            Test->check_maxscale_alive();
 
             Test->close_rwsplit();
         }

@@ -48,12 +48,8 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
     int i;
     int N=4;
-
-    Test->read_env();
-    Test->print_env();
 
     Test->tprintf("Starting test\n");
     for (i = 0; i < 4; i++) {
@@ -69,28 +65,26 @@ int main(int argc, char *argv[])
 
         Test->tprintf("Filling t1 with data\n");
         Test->set_timeout(100);
-        global_result += Test->insert_select(N);
+        Test->add_result(Test->insert_select(N), "insert-select check failed\n");
 
-        Test->tprintf("Creating database test1\n"); fflush(stdout);
-        global_result += execute_query(Test->conn_rwsplit, "DROP TABLE t1");
-        global_result += execute_query(Test->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
-        global_result += execute_query(Test->conn_rwsplit, "CREATE DATABASE test1;");
+        Test->tprintf("Creating database test1\n");
+        Test->try_query(Test->conn_rwsplit, "DROP TABLE t1");
+        Test->try_query(Test->conn_rwsplit, "DROP DATABASE IF EXISTS test1;");
+        Test->try_query(Test->conn_rwsplit, "CREATE DATABASE test1;");
         Test->stop_timeout();
         sleep(5);
 
         Test->set_timeout(1000);
-        Test->tprintf("Testing with database 'test1'\n");fflush(stdout);
-        global_result += Test->use_db( (char *) "test1");
-        global_result += Test->insert_select(N);
+        Test->tprintf("Testing with database 'test1'\n");
+        Test->add_result(Test->use_db( (char *) "test1"), "use_db failed\n");
+        Test->add_result(Test->insert_select(N), "insert-select check failed\n");
         Test->stop_timeout();
 
         Test->set_timeout(5);
-        global_result += Test->check_t1_table(FALSE, (char *) "test");
-        global_result += Test->check_t1_table(TRUE, (char *) "test1");
+        Test->add_result(Test->check_t1_table(FALSE, (char *) "test"), "t1 is found in 'test'\n");
+        Test->add_result(Test->check_t1_table(TRUE, (char *) "test1"), "t1 is not found in 'test1'\n");
 
-
-
-        Test->tprintf("Trying queries with syntax errors\n");fflush(stdout);
+        Test->tprintf("Trying queries with syntax errors\n");
         execute_query(Test->conn_rwsplit, "DROP DATABASE I EXISTS test1;");
         execute_query(Test->conn_rwsplit, "CREATE TABLE ");
 
@@ -108,8 +102,7 @@ int main(int argc, char *argv[])
     }
 
     Test->set_timeout(5);
-    global_result +=Test->check_maxscale_alive();
+    Test->check_maxscale_alive();
 
-    if (global_result == 0) {Test->tprintf("PASSED!!\n");} else {Test->tprintf("FAILED!!\n");}
     Test->copy_all_logs(); return(Test->global_result);
 }

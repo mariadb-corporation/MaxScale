@@ -65,39 +65,30 @@ server4:    0
 #include "testconnections.h"
 #include "maxadmin_operations.h"
 
-int check_pers_conn(TestConnections* Test, int pers_conn_expected[], char * server)
+void check_pers_conn(TestConnections* Test, int pers_conn_expected[], char * server)
 {
     char result[1024];
     char str[256];
     int pers_conn[4];
 
-    int global_result = 0;
-
-
-    int i;
-    for (i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
         sprintf(str, "show server %s%d", server, i+1);
         get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str, (char *) "Persistent measured pool size:", result);
-
-        printf("%s: %s\n", str, result);fflush(stdout);
-
+        Test->tprintf("%s: %s\n", str, result);
         sscanf(result, "%d", &pers_conn[i]);
-
         if (pers_conn[i] != pers_conn_expected[i]) {
-            printf("TEST_FAILED: %s%d has %d, but expected %d\n", server, i+1, pers_conn[i], pers_conn_expected[i]);fflush(stdout);
-            global_result++;
+            Test->add_result(1, "%s%d has %d, but expected %d\n", server, i+1, pers_conn[i], pers_conn_expected[i]);
         }
     }
-    return(Test->global_result);
 }
 
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
+    Test->set_timeout(30);
     int pers_conn_expected[4];
     int galera_pers_conn_expected[4];
-    int global_result = 0;
-    int i;
+
 
     pers_conn_expected[0] = 1;
     pers_conn_expected[1] = 5;
@@ -113,26 +104,26 @@ int main(int argc, char *argv[])
 
     Test->create_connections(70);
 
-    printf("Test 1:\n");
-    global_result += check_pers_conn(Test, pers_conn_expected, (char *) "server");
+    Test->tprintf("Test 1:\n");
+    check_pers_conn(Test, pers_conn_expected, (char *) "server");
 
-    printf("Galera: \n");
-    global_result += check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
+    Test->tprintf("Galera: \n");
+    check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
 
-    printf("Sleeping 10 seconds\n");
+    Test->tprintf("Sleeping 10 seconds\n");
     sleep(10);
 
-    printf("Test 2:\n");
-    global_result += check_pers_conn(Test, pers_conn_expected, (char *) "server");
+    Test->tprintf("Test 2:\n");
+    check_pers_conn(Test, pers_conn_expected, (char *) "server");
 
     printf("Galera: \n");
-    global_result += check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
+    check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
 
-
-
-    printf("Sleeping 30 seconds\n");
+    Test->tprintf("Sleeping 30 seconds\n");
+    Test->stop_timeout();
     sleep(30);
 
+    Test->set_timeout(20);
     printf("Test 3:\n");
 
     pers_conn_expected[0] = 1;
@@ -145,15 +136,17 @@ int main(int argc, char *argv[])
     galera_pers_conn_expected[2] = 0;
     galera_pers_conn_expected[3] = 0;
 
-    global_result += check_pers_conn(Test, pers_conn_expected, (char *) "server");
+    check_pers_conn(Test, pers_conn_expected, (char *) "server");
 
-    printf("Galera: \n");
-    global_result += check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
+    Test->tprintf("Galera: \n");
+    check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
 
-    printf("Sleeping 30 seconds\n");
+    Test->tprintf("Sleeping 30 seconds\n");
+    Test->stop_timeout();
     sleep(30);
+    Test->set_timeout(20);
 
-    printf("Test 4:\n");
+    Test->tprintf("Test 4:\n");
 
     pers_conn_expected[0] = 1;
     pers_conn_expected[1] = 0;
@@ -165,8 +158,9 @@ int main(int argc, char *argv[])
     galera_pers_conn_expected[2] = 0;
     galera_pers_conn_expected[3] = 0;
 
-    global_result += check_pers_conn(Test, pers_conn_expected, (char *) "server");
+    check_pers_conn(Test, pers_conn_expected, (char *) "server");
 
-    printf("Galera: \n");
-    global_result += check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
+    Test->tprintf("Galera: \n");
+    check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
+    Test->copy_all_logs(); return(Test->global_result);
 }

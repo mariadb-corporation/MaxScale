@@ -128,7 +128,7 @@ void TestConnections::add_result(int result, const char *format, ...)
     if (result != 0) {
         global_result += result;
 
-        printf("%04f: TEST_FAILED", (double)(curr_time - start_time) / CLOCKS_PER_SEC);
+        printf("%04f: TEST_FAILED! ", (double)(curr_time - start_time) / CLOCKS_PER_SEC);
 
         va_list argp;
         va_start(argp, format);
@@ -523,14 +523,14 @@ int TestConnections::check_maxscale_alive()
     tprintf("Connecting to Maxscale\n");
     add_result(connect_maxscale(), "Can not connect to Maxscale\n");
     tprintf("Trying simple query against all sevices\n");
-    tprintf("RWSplit ");
+    tprintf("RWSplit \n");
     try_query(conn_rwsplit, (char *) "show databases;");
-    tprintf("ReadConn Master ");
+    tprintf("ReadConn Master \n");
     try_query(conn_master, (char *) "show databases;");
-    tprintf("ReadConn Slave ");
+    tprintf("ReadConn Slave \n");
     try_query(conn_slave, (char *) "show databases;");
-    add_result(close_maxscale_connections(), "Error closing connections to Maxscale");
-    add_result(global_result-gr, "Maxscale is not alive");
+    //add_result(close_maxscale_connections(), "Error closing connections to Maxscale\n");
+    add_result(global_result-gr, "Maxscale is not alive\n");
 
     return(global_result-gr);
 }
