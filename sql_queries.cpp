@@ -64,7 +64,6 @@ int main(int argc, char *argv[])
         }
 
         Test->tprintf("Filling t1 with data\n");
-        Test->set_timeout(100);
         Test->add_result(Test->insert_select(N), "insert-select check failed\n");
 
         Test->tprintf("Creating database test1\n");
@@ -74,7 +73,6 @@ int main(int argc, char *argv[])
         Test->stop_timeout();
         sleep(5);
 
-        Test->set_timeout(1000);
         Test->tprintf("Testing with database 'test1'\n");
         Test->add_result(Test->use_db( (char *) "test1"), "use_db failed\n");
         Test->add_result(Test->insert_select(N), "insert-select check failed\n");

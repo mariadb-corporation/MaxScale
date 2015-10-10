@@ -529,7 +529,7 @@ int TestConnections::check_maxscale_alive()
     try_query(conn_master, (char *) "show databases;");
     tprintf("ReadConn Slave \n");
     try_query(conn_slave, (char *) "show databases;");
-    //add_result(close_maxscale_connections(), "Error closing connections to Maxscale\n");
+    close_maxscale_connections()    ;
     add_result(global_result-gr, "Maxscale is not alive\n");
 
     return(global_result-gr);
@@ -715,20 +715,27 @@ int TestConnections::insert_select(int N)
 {
     int global_result = 0;
     tprintf("Create t1\n");
+    set_timeout(30);
     create_t1(conn_rwsplit);
     tprintf("Insert data into t1\n");
+    set_timeout(30);
     insert_into_t1(conn_rwsplit, N);
 
     tprintf("SELECT: rwsplitter\n");
+    set_timeout(30);
     global_result += select_from_t1(conn_rwsplit, N);
     tprintf("SELECT: master\n");
+    set_timeout(30);
     global_result += select_from_t1(conn_master, N);
     tprintf("SELECT: slave\n");
+    set_timeout(30);
     global_result += select_from_t1(conn_slave, N);
     tprintf("Sleeping to let replication happen\n");
+    stop_timeout();
     sleep(180);
     for (int i=0; i<repl->N; i++) {
         tprintf("SELECT: directly from node %d\n", i);
+        set_timeout(30);
         global_result += select_from_t1(repl->nodes[i], N);
     }
     return(global_result);
@@ -740,7 +747,7 @@ int TestConnections::use_db(char * db)
     char sql[100];
 
     sprintf(sql, "USE %s;", db);
-
+    set_timeout(20);
     tprintf("selecting DB '%s' for rwsplit\n", db);
     global_result += execute_query(conn_rwsplit, sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
@@ -758,7 +765,8 @@ int TestConnections::check_t1_table(bool presence, char * db)
 {
     char * expected;
     char * actual;
-    int global_result = 0;
+    set_timeout(30);
+    int gr = global_result;
     if (presence) {
         expected = (char *) "";
         actual   = (char *) "NOT";
@@ -767,34 +775,36 @@ int TestConnections::check_t1_table(bool presence, char * db)
         actual   = (char *) "";
     }
 
-    global_result += use_db(db);
+    add_result(use_db(db), "use db failed\n");
 
     tprintf("Checking: table 't1' should %s be found in '%s' database\n", expected, db);
     if ( ((check_if_t1_exists(conn_rwsplit) >  0) && (!presence) ) ||
          ((check_if_t1_exists(conn_rwsplit) == 0) && (presence) ))
-    {global_result++; tprintf("Table t1 is %s found in '%s' database using RWSplit\n", actual, db); } else {
+    {add_result(1, "Table t1 is %s found in '%s' database using RWSplit\n", actual, db); } else {
         tprintf("RWSplit: ok\n");
     }
     if ( ((check_if_t1_exists(conn_master) >  0) && (!presence) ) ||
          ((check_if_t1_exists(conn_master) == 0) && (presence) ))
-    {global_result++; tprintf("Table t1 is %s found in '%s' database using Readconnrouter with router option master\n", actual, db); } else {
+    {add_result(1, "Table t1 is %s found in '%s' database using Readconnrouter with router option master\n", actual, db); } else {
         tprintf("ReadConn master: ok\n");
     }
     if ( ((check_if_t1_exists(conn_slave) >  0) && (!presence) ) ||
          ((check_if_t1_exists(conn_slave) == 0) && (presence) ))
-    {global_result++; tprintf("Table t1 is %s found in '%s' database using Readconnrouter with router option slave\n", actual, db); } else {
+    {add_result(1, "Table t1 is %s found in '%s' database using Readconnrouter with router option slave\n", actual, db); } else {
         tprintf("ReadConn slave: ok\n");
     }
     tprintf("Sleeping to let replication happen\n");
+    stop_timeout();
     sleep(60);
     for (int i=0; i< repl->N; i++) {
+        set_timeout(30);
         if ( ((check_if_t1_exists(repl->nodes[i]) >  0) && (!presence) ) ||
              ((check_if_t1_exists(repl->nodes[i]) == 0) && (presence) ))
-        {global_result++; tprintf("Table t1 is %s found in '%s' database using direct connect to node %d\n", actual, db, i); } else {
+        {add_result(1, "Table t1 is %s found in '%s' database using direct connect to node %d\n", actual, db, i); } else {
             tprintf("Node %d: ok\n", i);
         }
     }
-    return(global_result);
+    return(global_result-gr);
 }
 
 int TestConnections::try_query(MYSQL *conn, const char *sql)
