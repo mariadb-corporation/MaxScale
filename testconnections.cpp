@@ -710,6 +710,8 @@ void *timeout_thread( void *ptr )
         nanosleep(&tim, NULL);
         Test->timeout--;
     }
+    Test->tprintf("Timeout!\n");
+    Test->copy_all_logs();
     exit(250);
 }
 
