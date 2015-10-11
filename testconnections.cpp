@@ -102,6 +102,7 @@ TestConnections::TestConnections(int argc, char *argv[])
     //repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
     timeout = 99999;
+    pthread_create( &timeout_thread_p, NULL, timeout_thread, this);
     start_time = clock();
 }
 
@@ -119,6 +120,7 @@ TestConnections::TestConnections()
     read_env();
 
     timeout = 99999;
+    pthread_create( &timeout_thread_p, NULL, timeout_thread, this);
     start_time = clock();
 }
 
