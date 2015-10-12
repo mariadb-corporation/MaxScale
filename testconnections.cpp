@@ -253,11 +253,7 @@ int TestConnections::stop_maxscale()
 int TestConnections::copy_all_logs()
 {
     char str[4096];
-
-    if (!no_maxscale_stop) {
-        sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s service maxscale stop\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
-        //system(str);
-    }
+    set_timeout(300);
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
     tprintf("Executing %s\n", str); fflush(stdout);
     if (system(str) !=0) {

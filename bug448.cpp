@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
 
 
     Test->tprintf("Creating user 'user1' for %s host\n", my_ip);
+    Test->set_timeout(30);
     sprintf(sql, "GRANT ALL PRIVILEGES ON *.* TO user1@'%s' identified by 'pass1';  FLUSH PRIVILEGES;", my_ip);
     Test->tprintf("Query: %s\n", sql);
     Test->try_query(Test->conn_rwsplit, sql);
@@ -53,8 +54,6 @@ int main(int argc, char *argv[])
     Test->add_result(execute_query(Test->conn_rwsplit, sql), "Query Failed\n");
 
     Test->close_maxscale_connections();
-
     Test->check_maxscale_alive();
-
     Test->copy_all_logs(); return(Test->global_result);
 }

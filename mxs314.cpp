@@ -40,15 +40,15 @@ int main(int argc, char *argv[])
         {
             Test->add_result(1, "Error: %s\n", mysql_error(Test->conn_rwsplit));
             Test->add_result(1, "Failed at %d\n", i);
-            Test->copy_all_logs();
-            return 1;
+//            Test->copy_all_logs();
+//            return 1;
         }
         if(mysql_stmt_reset(stmt))
         {
             Test->add_result(1, "Error: %s\n", mysql_error(Test->conn_rwsplit));
             Test->add_result(1, "Failed at %d\n", i);
-            Test->copy_all_logs();
-            return 1;
+//            Test->copy_all_logs();
+//            return 1;
         }
         query += ",1";
         if(i - p > 20)
@@ -58,8 +58,9 @@ int main(int argc, char *argv[])
         }
     }
     cout << endl;
+    Test->set_timeout(20);
     mysql_stmt_close(stmt);
-    mysql_close(Test->conn_rwsplit);
+    Test->close_maxscale_connections();
     Test->copy_all_logs();
-    return 0;
+    return(Test->global_result);
 }
