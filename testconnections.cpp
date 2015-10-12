@@ -332,9 +332,9 @@ int TestConnections::start_binlog()
     tprintf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1);
 
-    printf("Starting back Master\n");  fflush(stdout);
+    tprintf("Starting back Master\n");  fflush(stdout);
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[0], repl->access_user[0], repl->IP[0], repl->access_sudo[0], repl->start_db_command[0], cmd_opt);
-    printf("%s\n", sys1);  fflush(stdout);
+    tprintf("%s\n", sys1);  fflush(stdout);
     global_result += system(sys1); fflush(stdout);
 
     for (i = 1; i < repl->N; i++) {

@@ -163,22 +163,25 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Stopping all Galera nodes\n");
     for (i = 1; i < Test->galera->N; i++) {
+        Test->set_timeout(30);
         Test->tprintf("Stopping %d\n", i);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null  %s@%s '%s %s'", Test->galera->sshkey[i], Test->galera->access_user[i], Test->galera->IP[i], Test->galera->access_sudo[i], Test->galera->stop_db_command[i]);
-        Test->tprintf("%s\n", sys1);  fflush(stdout);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s'", Test->galera->sshkey[i], Test->galera->access_user[i], Test->galera->IP[i], Test->galera->access_sudo[i], Test->galera->stop_db_command[i]);
+        Test->tprintf("%s\n", sys1);
         system(sys1); fflush(stdout);
     }
 
     Test->tprintf("Restarting Galera cluster\n");
     Test->tprintf("Starting back all Galera nodes\n");
     Test->tprintf("Starting node %d\n", Test->galera->N-2);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --wsrep-cluster-address=gcomm://'", Test->galera->sshkey[0],  Test->galera->access_user[0], Test->galera->IP[0], Test->galera->access_sudo[0], Test->galera->start_db_command[0]);
-    Test->tprintf("%s\n", sys1);  fflush(stdout);
+    Test->set_timeout(30);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s --wsrep-cluster-address=gcomm://'", Test->galera->sshkey[0],  Test->galera->access_user[0], Test->galera->IP[0], Test->galera->access_sudo[0], Test->galera->start_db_command[0]);
+    Test->tprintf("%s\n", sys1);
     system(sys1); fflush(stdout);
 
     for (i = 1; i < Test->galera->N; i++) {
+        Test->set_timeout(30);
         Test->tprintf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s --wsrep-cluster-address=gcomm://%s'", Test->galera->sshkey[i],  Test->galera->access_user[i], Test->galera->IP[i], Test->galera->access_sudo[i], Test->galera->start_db_command[i], Test->galera->IP[0]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s --wsrep-cluster-address=gcomm://%s'", Test->galera->sshkey[i],  Test->galera->access_user[i], Test->galera->IP[i], Test->galera->access_sudo[i], Test->galera->start_db_command[i], Test->galera->IP[0]);
         Test->tprintf("%s\n", sys1);  fflush(stdout);
         system(sys1); fflush(stdout);
     }

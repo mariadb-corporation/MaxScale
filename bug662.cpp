@@ -59,6 +59,7 @@ int main(int argc, char *argv[])
 
         Test->close_maxscale_connections(); fflush(stdout);
 
+        Test->set_timeout(20);
         Test->tprintf("Reconnecting and trying query to RWSplit\n");
         Test->connect_maxscale();
         Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");

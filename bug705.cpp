@@ -33,9 +33,11 @@ int main(int argc, char *argv[])
         fflush(stdout);
     } else {
 
+        Test->stop_maxscale();
         Test->tprintf("Waiting 20 seconds\n");
         sleep(20);
 
+        Test->set_timeout(20);
         Test->check_log_err((char *) "Error : Loading database names", FALSE);
         Test->check_log_err((char *) "error: Unknown column", FALSE);
 

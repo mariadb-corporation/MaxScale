@@ -33,8 +33,10 @@ int main(int argc, char *argv[])
     Test->try_query(Test->conn_rwsplit, (char *) "insert into t2 (x) values (1);");
 
     Test->tprintf("Sleeping to let replication happen\n");
+    Test->stop_timeout();
     sleep(10);
 
+    Test->set_timeout(20);
     Test->tprintf("Trying \n");
     char last_insert_id1[1024];
     char last_insert_id2[1024];
