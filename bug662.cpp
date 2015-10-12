@@ -30,45 +30,44 @@ int main(int argc, char *argv[])
         Test->repl->block_node(i); fflush(stdout);
     }
 
-    pid_t pid = fork();
-    if (!pid) {
-        Test->restart_maxscale(); fflush(stdout);
-    } else {
-        Test->stop_timeout();
-        Test->tprintf("Waiting 60 seconds\n");
-        sleep(60);
+    //pid_t pid = fork();
+    //if (!pid) {
+    Test->set_timeout(100);
+    Test->restart_maxscale();
+    //} else {
+    //Test->stop_timeout();
+    //Test->tprintf("Waiting 60 seconds\n");
+    //sleep(60);
 
-        Test->set_timeout(20);
-        Test->tprintf("Checking if MaxScale is alive by connecting to MaxAdmin\n");
-        Test->add_result(execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers"), "Maxadmin execution failed.\n");
+    Test->set_timeout(20);
+    Test->tprintf("Checking if MaxScale is alive by connecting to MaxAdmin\n");
+    Test->add_result(execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers"), "Maxadmin execution failed.\n");
 
-        for (i = 0; i < Test->repl->N; i++) {
-            Test->tprintf("Setup firewall back to allow mysql on node %d\n", i);
-            Test->repl->unblock_node(i);fflush(stdout);
-        }
-
-        Test->stop_timeout();
-        Test->tprintf("Sleeping 60 seconds\n");
-        sleep(60);
-
-        Test->set_timeout(20);
-
-        Test->tprintf("Checking Maxscale is alive\n");
-
-        Test->check_maxscale_alive();
-
-        Test->close_maxscale_connections(); fflush(stdout);
-
-        Test->set_timeout(20);
-        Test->tprintf("Reconnecting and trying query to RWSplit\n");
-        Test->connect_maxscale();
-        Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");
-        Test->tprintf("Trying query to ReadConn master\n");
-        Test->try_query(Test->conn_master, (char *) "show processlist;");
-        Test->tprintf("Trying query to ReadConn slave\n");
-        Test->try_query(Test->conn_slave, (char *) "show processlist;");
-        Test->close_maxscale_connections();
-
-        Test->copy_all_logs(); return(Test->global_result);
+    for (i = 0; i < Test->repl->N; i++) {
+        Test->tprintf("Setup firewall back to allow mysql on node %d\n", i);
+        Test->repl->unblock_node(i);fflush(stdout);
     }
+
+    Test->stop_timeout();
+    Test->tprintf("Sleeping 60 seconds\n");
+    sleep(60);
+
+    Test->set_timeout(20);
+
+    Test->tprintf("Checking Maxscale is alive\n");
+    //Test->close_maxscale_connections();
+    Test->check_maxscale_alive();
+
+    Test->set_timeout(20);
+    Test->tprintf("Reconnecting and trying query to RWSplit\n");
+    Test->connect_maxscale();
+    Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");
+    Test->tprintf("Trying query to ReadConn master\n");
+    Test->try_query(Test->conn_master, (char *) "show processlist;");
+    Test->tprintf("Trying query to ReadConn slave\n");
+    Test->try_query(Test->conn_slave, (char *) "show processlist;");
+    Test->close_maxscale_connections();
+
+    Test->copy_all_logs(); return(Test->global_result);
+    //}
 }

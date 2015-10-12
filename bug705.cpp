@@ -27,21 +27,21 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Restarting MaxScale\n");
 
-    pid_t pid = fork();
-    if (!pid) {
-        Test->restart_maxscale();
-        fflush(stdout);
-    } else {
+    //    pid_t pid = fork();
+    //   if (!pid) {
+    Test->set_timeout(100);
+    Test->restart_maxscale();
+    //    } else {
 
-        Test->stop_maxscale();
-        Test->tprintf("Waiting 20 seconds\n");
-        sleep(20);
+    Test->stop_maxscale();
+    Test->stop_timeout();
+    Test->tprintf("Waiting 20 seconds\n");
+    sleep(20);
 
-        Test->set_timeout(20);
-        Test->check_log_err((char *) "Error : Loading database names", FALSE);
-        Test->check_log_err((char *) "error: Unknown column", FALSE);
+    Test->set_timeout(60);
+    Test->check_log_err((char *) "Error : Loading database names", FALSE);
+    Test->check_log_err((char *) "error: Unknown column", FALSE);
 
-        Test->copy_all_logs(); return(Test->global_result);
-    }
+    Test->copy_all_logs(); return(Test->global_result);
+    //  }
 }
-
