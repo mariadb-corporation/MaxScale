@@ -103,7 +103,7 @@ TestConnections::TestConnections(int argc, char *argv[])
     if (!no_maxscale_start) {init_maxscale();}
     timeout = 99999;
     pthread_create( &timeout_thread_p, NULL, timeout_thread, this);
-    start_time = clock();
+    gettimeofday(&start_time, NULL);
 }
 
 TestConnections::TestConnections()
@@ -121,16 +121,20 @@ TestConnections::TestConnections()
 
     timeout = 99999;
     pthread_create( &timeout_thread_p, NULL, timeout_thread, this);
-    start_time = clock();
+    gettimeofday(&start_time, NULL);
 }
 
 void TestConnections::add_result(int result, const char *format, ...)
 {
-    clock_t curr_time = clock();
+    timeval t2;
+    gettimeofday(&t2, NULL);
+    double elapsedTime = (t2.tv_sec - start_time.tv_sec);
+    elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
+
     if (result != 0) {
         global_result += result;
 
-        printf("%04f: TEST_FAILED! ", (double)(curr_time - start_time) / CLOCKS_PER_SEC);
+        printf("%04f: TEST_FAILED! ", elapsedTime);
 
         va_list argp;
         va_start(argp, format);
@@ -694,8 +698,12 @@ int TestConnections::stop_timeout()
 
 int TestConnections::tprintf(const char *format, ...)
 {
-    clock_t curr_time = clock();
-    printf("%04f: ", (double)(curr_time - start_time) / CLOCKS_PER_SEC);
+    timeval t2;
+    gettimeofday(&t2, NULL);
+    double elapsedTime = (t2.tv_sec - start_time.tv_sec);
+    elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
+
+    printf("%04f: ", elapsedTime);
 
     va_list argp;
     va_start(argp, format);

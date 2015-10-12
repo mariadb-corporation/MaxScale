@@ -221,7 +221,7 @@ public:
     /**
      * @brief start_time time when test was started (used by printf to print Timestamp)
      */
-    clock_t start_time;
+    timeval start_time;
 
     /**
      * @brief add_result adds result to global_result and prints error message if result is not 0
