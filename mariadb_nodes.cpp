@@ -178,7 +178,7 @@ int Mariadb_nodes::stop_nodes()
         printf("Stopping slave %d\n", i); fflush(stdout);
         global_result += execute_query(nodes[i], (char *) "stop slave;");
         printf("Stopping %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s'", sshkey[i], access_user[i], IP[i], access_sudo[i], stop_db_command[i]);
+        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s'", sshkey[i], access_user[i], IP[i], access_sudo[i], stop_db_command[i]);
         printf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
@@ -297,7 +297,7 @@ int Mariadb_nodes::check_node(int node)
     printf("Checking node %d\n", node); fflush(stdout);
 
     sprintf(str, "ssh  -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s ls > /dev/null", sshkey[node], access_user[node], IP[node]);
-    printf("%s\n", str);
+    //printf("%s\n", str);
     if (system(str) != 0) {
         printf("Node %d is not available\n", node); fflush(stdout);
         res = 1;

@@ -91,6 +91,7 @@ int start_transaction(TestConnections* Test)
     global_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
     Test->tprintf("INSERT data\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
+    Test->stop_timeout();
     sleep(20);
     return(global_result);
 }
@@ -119,9 +120,8 @@ int test_binlog(TestConnections* Test)
     Test->set_timeout(10);
     Test->tprintf("First transaction test (with ROLLBACK)\n");
     start_transaction(Test);
-    Test->stop_timeout();
 
-    Test->set_timeout(10);
+    Test->set_timeout(50);
 
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
     global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
@@ -138,7 +138,7 @@ int test_binlog(TestConnections* Test)
     Test->stop_timeout();
     sleep(20);
 
-    Test->set_timeout(10);
+    Test->set_timeout(20);
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
     global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
 
@@ -165,7 +165,7 @@ int test_binlog(TestConnections* Test)
 
     Test->stop_timeout();
 
-    Test->set_timeout(20);
+    Test->set_timeout(50);
     global_result += check_sha1(Test);
     Test->repl->close_connections();
 
@@ -192,18 +192,20 @@ int test_binlog(TestConnections* Test)
         }
         global_result += insert_into_t1(Test->repl->nodes[0], 4);
 
-
         Test->tprintf("START SLAVE against Maxscale binlog"); fflush(stdout);
         execute_query(binlog, (char *) "START SLAVE");
 
         Test->tprintf("Sleeping to let replication happen\n"); fflush(stdout);
+        Test->stop_timeout();
         sleep(30);
 
         for (i = 0; i < Test->repl->N; i++) {
+            Test->set_timeout(50);
             Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
             global_result += select_from_t1(Test->repl->nodes[i], 4);
         }
 
+        Test->set_timeout(100);
         global_result += check_sha1(Test);
         Test->repl->close_connections();
         Test->stop_timeout();

@@ -82,7 +82,7 @@ ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_a
 
 ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo rm -rf $maxscale_access_homedir/certs"
 ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "mkdir $maxscale_access_homedir/certs"
-scp -i $maxscale_sshkey $opt_str $test_dir/ssl-cert/* $maxscale_access_user@$maxscale_IP:$maxscale_access_homedir/certs/
+scp -i $maxscale_sshkey $opt_str $test_dir/ssl-cert/* $maxscale_access_user@$maxscale_IP:$maxscale_access_homedir/certs/ > /dev/null 2> /dev/null
 
 cp $test_dir/ssl-cert/* .
 ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chown maxscale:maxscale -R $maxscale_access_homedir/certs"

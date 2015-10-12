@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 
     for(int i = start;i<1000;i++)
     {
-        Test->set_timeout(5);
+        Test->set_timeout(10);
         cout << i << " ";
         if(mysql_stmt_prepare(stmt,query.c_str(),query.length()))
         {
