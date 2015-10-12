@@ -223,7 +223,7 @@ int TestConnections::close_maxscale_connections()
 int TestConnections::restart_maxscale()
 {
     char sys[1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s service maxscale restart\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s service maxscale restart\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
     int res = system(sys);
     sleep(10);
     return(res);
@@ -232,7 +232,7 @@ int TestConnections::restart_maxscale()
 int TestConnections::start_maxscale()
 {
     char sys[1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s service maxscale start\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s service maxscale start\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
     int res = system(sys);
     sleep(10);
     return(res);
@@ -241,7 +241,7 @@ int TestConnections::start_maxscale()
 int TestConnections::stop_maxscale()
 {
     char sys[1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s service maxscale stop\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s service maxscale stop\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
     int res = system(sys);
     return(res);
 }
@@ -251,7 +251,7 @@ int TestConnections::copy_all_logs()
     char str[4096];
 
     if (!no_maxscale_stop) {
-        sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s service maxscale stop\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
+        sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s service maxscale stop\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
         //system(str);
     }
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
@@ -575,7 +575,7 @@ bool TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, b
 int TestConnections::execute_ssh_maxscale(char* ssh)
 {
     char *sys = (char*)new char[strlen(ssh) + 1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no %s@%s \"%s %s\"",
+    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s %s\"",
             maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, ssh);
     return system(sys);
 }
