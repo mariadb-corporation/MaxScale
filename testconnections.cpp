@@ -522,15 +522,19 @@ int TestConnections::find_connected_slave1()
 int TestConnections::check_maxscale_alive()
 {
     int gr = global_result;
+    set_timeout(5);
     tprintf("Connecting to Maxscale\n");
     add_result(connect_maxscale(), "Can not connect to Maxscale\n");
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
     try_query(conn_rwsplit, (char *) "show databases;");
     tprintf("ReadConn Master \n");
+    set_timeout(5);
     try_query(conn_master, (char *) "show databases;");
     tprintf("ReadConn Slave \n");
+    set_timeout(5);
     try_query(conn_slave, (char *) "show databases;");
+    set_timeout(5);
     close_maxscale_connections()    ;
     add_result(global_result-gr, "Maxscale is not alive\n");
 

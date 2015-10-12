@@ -54,9 +54,11 @@ int main(int argc, char *argv[])
     Test->set_timeout(20);
 
     Test->create_connections(75);
+    Test->set_timeout(20);
     Test->repl->start_replication();
+    Test->set_timeout(20);
     Test->create_connections(70);
-
+    Test->set_timeout(20);
     Test->check_log_err((char *) "fatal signal 11", false);
     Test->copy_all_logs(); return(Test->global_result);
 }
