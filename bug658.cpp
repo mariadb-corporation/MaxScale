@@ -75,10 +75,9 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(20);
 
+    Test->close_maxscale_connections();
     Test->tprintf("Checking Maxscale is alive\n");
     Test->check_maxscale_alive();
-
-    Test->close_maxscale_connections(); fflush(stdout);
 
     Test->tprintf("Reconnecting and trying query to RWSplit\n");
     Test->connect_maxscale();

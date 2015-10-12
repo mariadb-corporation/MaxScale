@@ -457,10 +457,11 @@ void TestConnections::check_log_err(char * err_msg, bool expected)
 
     tprintf("Getting logs\n");
     char sys1[4096];
+    set_timeout(100);
     sprintf(&sys1[0], "rm *.log; %s %s", get_logs_command, maxscale_IP);
     tprintf("Executing: %s\n", sys1);
-    fflush(stdout);
     system(sys1);
+    set_timeout(50);
 
     tprintf("Reading error1.log\n");
     if ( read_log((char *) "error1.log", &err_log_content) != 0) {
@@ -526,22 +527,23 @@ int TestConnections::find_connected_slave1()
 int TestConnections::check_maxscale_alive()
 {
     int gr = global_result;
-    set_timeout(5);
+    set_timeout(10);
     tprintf("Connecting to Maxscale\n");
     add_result(connect_maxscale(), "Can not connect to Maxscale\n");
     tprintf("Trying simple query against all sevices\n");
     tprintf("RWSplit \n");
+    set_timeout(10);
     try_query(conn_rwsplit, (char *) "show databases;");
     tprintf("ReadConn Master \n");
-    set_timeout(5);
+    set_timeout(10);
     try_query(conn_master, (char *) "show databases;");
     tprintf("ReadConn Slave \n");
-    set_timeout(5);
+    set_timeout(10);
     try_query(conn_slave, (char *) "show databases;");
-    set_timeout(5);
+    set_timeout(10);
     close_maxscale_connections()    ;
     add_result(global_result-gr, "Maxscale is not alive\n");
-
+    stop_timeout();
     return(global_result-gr);
 }
 
