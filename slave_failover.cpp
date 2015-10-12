@@ -79,10 +79,11 @@ int main(int argc, char *argv[])
             Test->repl->unblock_node(old_slave);
 
             Test->check_maxscale_alive();
+            Test->set_timeout(20);
 
             Test->close_rwsplit();
         }
-
+        Test->set_timeout(200);
         Test->repl->start_replication();
     }
 

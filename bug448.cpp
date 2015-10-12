@@ -15,14 +15,13 @@ int main(int argc, char *argv[])
     char sql[1024];
     char * first_dot;
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->set_timeout(10);
+    Test->set_timeout(20);
 
     Test->repl->connect();
     Test->connect_maxscale();
 
     get_my_ip(Test->maxscale_IP, my_ip);
     Test->tprintf("Test machine IP (got via network request) %s\n", my_ip);
-
 
     Test->add_result(Test->get_client_ip(my_ip), "Unable to get IP using connection to DB\n");
 

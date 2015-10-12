@@ -32,8 +32,6 @@ int main(int argc, char *argv[])
 
     Test->check_maxscale_alive();
 
-    Test->close_rwsplit();
-
     Test->tprintf("Reconnecting and trying query to RWSplit\n");
     Test->connect_rwsplit();
     Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");

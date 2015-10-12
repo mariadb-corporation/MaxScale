@@ -86,7 +86,7 @@ scp -i $maxscale_sshkey $opt_str $test_dir/ssl-cert/* $maxscale_access_user@$max
 
 cp $test_dir/ssl-cert/* .
 ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chown maxscale:maxscale -R $maxscale_access_homedir/certs"
-ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chmod 664 $maxscale_access_homedir/certs/*.pem; chmod a+x $maxscale_access_homedir"
+ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chmod 664 $maxscale_access_homedir/certs/*.pem; chmod a+x $maxscale_access_homedir" > /dev/null 
 #ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chmod a+r $maxscale_access_homedir"
 #ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo $maxdir_bin/maxkeys $max_dir/etc/.secrets"
 if [ -z "$maxscale_restart" ] ; then

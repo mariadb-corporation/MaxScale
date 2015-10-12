@@ -39,10 +39,12 @@ int main(int argc, char *argv[])
     Test->repl->unblock_node(0);
     sleep(10);
 
+    Test->close_maxscale_connections();
+
     Test->tprintf("Checking Maxscale is alive\n");
     Test->check_maxscale_alive();
 
-    Test->close_maxscale_connections(); fflush(stdout);
+    Test->set_timeout(20);
 
     Test->tprintf("Connecting to Maxscale %s to check its behaviour in case of blocking all bacxkends\n", Test->maxscale_IP);
     Test->connect_maxscale();
@@ -89,4 +91,3 @@ int main(int argc, char *argv[])
 
     Test->copy_all_logs(); return(Test->global_result);
 }
-
