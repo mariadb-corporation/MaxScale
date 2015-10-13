@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     for(int i = start;i<1000;i++)
     {
         Test->set_timeout(10);
-        cout << i << " ";
+        Test->tprintf("%d ", i);
         if(mysql_stmt_prepare(stmt,query.c_str(),query.length()))
         {
             Test->add_result(1, "Error: %s\n", mysql_error(Test->conn_rwsplit));
