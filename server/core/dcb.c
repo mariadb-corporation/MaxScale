@@ -106,7 +106,6 @@ static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf
 static inline int  dcb_isvalid_nolock(DCB *dcb);
 static inline DCB * dcb_find_in_list(DCB *dcb);
 static inline void dcb_process_victim_queue(DCB *listofdcb);
-static void dcb_close_finish(DCB *);
 static bool dcb_maybe_add_persistent(DCB *);
 static inline bool dcb_write_parameter_check(DCB *dcb, GWBUF *queue);
 #if defined(FAKE_CODE)
@@ -1900,45 +1899,6 @@ dcb_maybe_add_persistent(DCB *dcb)
     }
     return false;
 }
-
-/**
- * Final calls for DCB close
- *
- * @param dcb	The DCB to print
- *
- */
-static void
-dcb_close_finish(DCB *dcb)
-{
-    poll_remove_dcb(dcb);
-    /*
-     * Return will always be 0 or function will have crashed, so we
-     * threw away return value.
-     */
-    LOGIF(LD, (skygw_log_write(
-        LOGFILE_DEBUG,
-        "%lu [dcb_close] Removed dcb %p in state %s from poll set.",
-        pthread_self(),
-        dcb,
-        STRDCBSTATE(dcb->state))));
-    /**
-     * Do a consistency check, then adjust counter if not from persistent pool
-     */
-    if (dcb->server)
-    {
-        if (dcb->server->persistent) CHK_DCB(dcb->server->persistent);
-        if (0 == dcb->persistentstart) atomic_add(&dcb->server->stats.n_current, -1);
-    }
-    /**
-     * close protocol and router session
-     */
-    if (dcb->func.close != NULL)
-    {
-        dcb->func.close(dcb);
-    }
-    /** Call possible callback for this DCB in case of close */
-    dcb_call_callback(dcb, DCB_REASON_CLOSE);
- }
 
 /**
  * Diagnostic to print a DCB
