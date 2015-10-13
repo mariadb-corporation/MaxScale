@@ -1141,6 +1141,7 @@ int gw_read_client_event(
                         /* Temporarily suppressed: SESSION_ROUTE_QUERY(session, read_buffer); */
 						/* Replaced with freeing the read buffer. */
 				gwbuf_free(read_buffer);
+                read_buffer = NULL;
             /**
 			 * Close router session which causes closing of backends.
 			 */
@@ -1163,12 +1164,14 @@ int gw_read_client_event(
 			    {
 				/** add incomplete mysql packet to read queue */
 				dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                read_buffer = NULL;
 			    }
                         }
                         else
                         {
 			    /** Feed whole packet to router */
 			    rc = SESSION_ROUTE_QUERY(session, read_buffer);
+                read_buffer = NULL;
                         }
 
                         /** Routing succeed */
