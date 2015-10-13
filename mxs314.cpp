@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Query: %s\n", query.c_str());
 
-    for(int i = start;i<1000;i++)
+    for(int i = start;i<10000;i++)
     {
         Test->set_timeout(10);
         Test->tprintf("%d\t", i);
