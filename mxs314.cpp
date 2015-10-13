@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     for(int i = start;i<1000;i++)
     {
         Test->set_timeout(10);
-        Test->tprintf("%d ", i);
+        Test->tprintf("%d\t", i);
         if(mysql_stmt_prepare(stmt,query.c_str(),query.length()))
         {
             Test->add_result(1, "Error: %s\n", mysql_error(Test->conn_rwsplit));
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 //            return 1;
         }
         query += ",1";
-        if(i - p > 20)
+        if(i - p > 5)
         {
             p = i;
             cout << endl;
