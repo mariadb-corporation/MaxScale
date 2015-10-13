@@ -32,9 +32,9 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Query: %s\n", query.c_str());
 
-    for(int i = start;i<10000;i++)
+    for(int i = start;i<2000;i++)
     {
-        Test->set_timeout(10);
+        Test->set_timeout(30);
         Test->tprintf("%d\t", i);
         if(mysql_stmt_prepare(stmt,query.c_str(),query.length()))
         {
