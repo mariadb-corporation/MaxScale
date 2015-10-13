@@ -578,14 +578,18 @@ dcb_process_victim_queue(DCB *listofdcb)
                     nzombies++;
                     if (nzombies > maxzombies) maxzombies = nzombies;
                     spinlock_release(&zombiespin);
-                    if (dcb->server)
-                    {
-                        atomic_add(&dcb->server->stats.n_current, -1);
-                    }
                     dcb = nextdcb;
                     continue;
                 }
             }
+        }
+        /*
+         * Into the final close logic, so if DCB is for backend server, we 
+         * must decrement the number of current connections.
+         */
+        if (dcb->server)
+        {
+            atomic_add(&dcb->server->stats.n_current, -1);
         }
         /**
          * close protocol and router session
