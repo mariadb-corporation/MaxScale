@@ -3395,7 +3395,6 @@ blr_set_master_port(ROUTER_INSTANCE *router, char *port) {
  */
 static char *
 blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
-	int change_binlog = 0;
 	char *new_binlog_file = NULL;
 
 	if (filename) {
@@ -3460,7 +3459,6 @@ blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
 		/* Compare binlog file name with current one */
 		if (strcmp(router->binlog_name, file_ptr) == 0) {
 			/* No binlog name change, eventually new position will be checked later */
-			change_binlog = 0;
 		} else {
 			/*
 			 * This is a new binlog file request
@@ -3481,7 +3479,6 @@ blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
 			}
 
 			/* Binlog file name succesfully changed */
-			change_binlog = 1;
 		}
 
 		/* allocate new filename */

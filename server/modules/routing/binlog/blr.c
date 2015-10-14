@@ -113,6 +113,7 @@ extern char *create_hex_sha1_sha1_passwd(char *passwd);
 extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 char * blr_last_event_description(ROUTER_INSTANCE *router);
+extern int MaxScaleUptime();
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
@@ -199,7 +200,6 @@ int		i;
 unsigned char	*defuuid;
 char		path[PATH_MAX+1] = "";
 char		filename[PATH_MAX+1] = "";
-int		master_info = 0;
 int		rc = 0;
 char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
@@ -629,8 +629,6 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 	} else {
 		inst->master_state = BLRM_UNCONNECTED;
-
-		master_info = 1;
 
 		/* Try loading dbusers */
 		blr_load_dbusers(inst);

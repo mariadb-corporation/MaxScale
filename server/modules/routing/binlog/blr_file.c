@@ -76,6 +76,7 @@ void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern uint32_t extract_field(uint8_t *src, int bits);
 static void blr_format_event_size(double *event_size, char *label);
+extern int MaxScaleUptime();
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -719,8 +720,7 @@ int	fd;
 	strncat(path, "/cache", PATH_MAX);
 
 	if (access(path, R_OK) == -1) {
-		int mkdir_ret;
-		mkdir_ret = mkdir(path, 0700);
+		mkdir(path, 0700);
 	}
 
 	strncat(path, "/", PATH_MAX);
