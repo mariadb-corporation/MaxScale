@@ -286,7 +286,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         SESSION         *session = dcb->session;
                         int             receive_rc = 0;
 	
-			if (session == NULL)
+			if (SESSION_STATE_DUMMY == session->state)
 			{
 				rc = 0;
 				goto return_with_lock;
