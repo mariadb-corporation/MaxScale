@@ -16,13 +16,19 @@ The configuration consists of mandatory and optional parameters.
 
 ## Mandatory parameters
 
+### `type`
+
 **`type`** specifies the type of service. For **readwritesplit** module the type is `router`:
 
     type=router
 
+### `router`
+
 **`router`** specifies the router module to be used. For **readwritesplit** the value is `readwritesplit`:
 
     router=readwritesplit
+
+### `servers`
 
 **`servers`** provides a list of servers, which must include one master and available slaves:
 
@@ -30,7 +36,10 @@ The configuration consists of mandatory and optional parameters.
 
 **NOTE: Each server on the list must have its own section in the configuration file where it is defined.**
 
+### `user`
 **`user`** is the username the router session uses for accessing backends in order to load the content of the `mysql.user` table (and `mysql.db` and database names as well) and optionally for creating, and using `maxscale_schema.replication_heartbeat` table.
+
+### `passwd`
 
 **`passwd`** specifies corresponding password for the user. Syntax for user and passwd is:
 
@@ -41,10 +50,13 @@ passwd=<password>
 
 ## Optional parameters
 
+### `max_slave_connections`
+
 **`max_slave_connections`** sets the maximum number of slaves a router session uses at any moment. Default value is `1`.
 
 	max_slave_connections=<max. number, or % of available slaves>
 
+### `max_slave_replication_lag`
 **`max_slave_replication_lag`** specifies how many seconds a slave is allowed to be behind the master. If the lag is bigger than configured value a slave can't be used for routing.
 
 	max_slave_replication_lag=<allowed lag in seconds>
@@ -52,16 +64,8 @@ passwd=<password>
 This applies to Master/Slave replication with MySQL monitor and `detect_replication_lag=1` options set.
 Please note max_slave_replication_lag must be greater than monitor interval.
 
-**`router_options`** may include multiple **readwritesplit**-specific options. Values are either singular or parameter-value pairs. Currently available is a single option which specifies the criteria used in slave selection both in initialization of router session and per each query. Note that due to the current monitor implementation, the value specified here should be *<twice the monitor interval>* + 1.
 
-	options=slave_selection_criteria=<criteria>
-
-where *<criteria>* is one of the following:
-
-* `LEAST_GLOBAL_CONNECTIONS`, the slave with least connections in total
-* `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this router
-* `LEAST_BEHIND_MASTER`, the slave with smallest replication lag
-* `LEAST_CURRENT_OPERATIONS` (default), the slave with least active operations
+### `use_sql_variables_in`
 
 **`use_sql_variables_in`** specifies where should queries, which read session variable, be routed. The syntax for `use_sql_variable_in` is:
 
@@ -73,6 +77,35 @@ When value all is used, queries reading session variables can be routed to any a
 
 In above-mentioned case the user-defined variable would only be updated in the master where query would be routed due to `INSERT` statement.
 
+## Router options
+
+**`router_options`** may include multiple **readwritesplit**-specific options. All the options are parameter-value pairs. All parameters listed in this section must be configured as a value in `router_options`.
+
+Multiple options can be defined as a comma-separated list of parameter-value pairs.
+
+```
+router_options=<option>,<option>
+```
+
+### `slave_selection_criteria`
+
+This option controls how the readwritesplit router chooses the slaves it connects to and how the load balancing is done. The default behavior is to route read queries to the slave server with the lowest amount of ongoing queries.
+
+The option syntax:
+
+```
+router_options=slave_selection_criteria=<criteria>
+```
+
+Where `<criteria>` is one of the following values.
+
+* `LEAST_GLOBAL_CONNECTIONS`, the slave with least connections in total
+* `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this router
+* `LEAST_BEHIND_MASTER`, the slave with smallest replication lag
+* `LEAST_CURRENT_OPERATIONS` (default), the slave with least active operations
+
+### `max_sescmd_history`
+
 **`max_sescmd_history`** sets a limit on how many session commands each session can execute before the session command history is disabled. The default is an unlimited number of session commands.
 
 ```
@@ -82,12 +115,16 @@ max_sescmd_history=1500
 
 When a limitation is set, it effectively creates a cap on the session's memory consumption. This might be useful if connection pooling is used and the sessions use large amounts of session commands.
 
-**`disable_sescmd_history`** disables the session command history. This way nothing is stored and if a slave server fails and a new one is taken in its stead, the session on that server will be in an inconsistent state compared to the master server. Disabling session command history will allow connection pooling without causing a constant growth in the memory consumption.
+### `disable_sescmd_history`
+
+**`disable_sescmd_history`** disables the session command history. This way no history is stored and if a slave server fails, the router will not try to replace the failed slave. Disabling session command history will allow connection pooling without causing a constant growth in the memory consumption.
 
 ```
 # Disable the session command history
 disable_sescmd_history=true
 ```
+
+### `master_accept_reads`
 
 **`master_accept_reads`** allows the master server to be used for reads. This is a useful option to enable if you are using a small number of servers and wish to use the master for reads as well.
 
@@ -96,9 +133,9 @@ disable_sescmd_history=true
 master_accept_reads=true
 ```
 
-### Routing hints
+## Routing hints
 
-The readwritesplit router supports routing hints. For a detailed guide on hint syntax and functionality, please see [this](../Reference/Hint-Syntax.md) document.
+The readwritesplit router supports routing hints. For a detailed guide on hint syntax and functionality, please read [this](../Reference/Hint-Syntax.md) document.
 
 ## Limitations
 
