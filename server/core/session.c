@@ -715,11 +715,11 @@ int		i;
 		     ptr->client->user?ptr->client->user:"",
 		     ptr->client->user?"@":"",
 		     ptr->client->remote);
-	    dcb_printf(dcb, "\tConnected:		%s",
+	    dcb_printf(dcb, "\tConnected:		%s\n",
 		     asctime_r(localtime_r(&ptr->stats.connect, &result), buf));
 	    if(ptr->client->state == DCB_STATE_POLLING)
 	    {
-		dcb_printf(dcb, "\tIdle:		%.0f seconds",idle);
+		dcb_printf(dcb, "\tIdle:		%.0f seconds\n",idle);
 	    }
 
 	}
