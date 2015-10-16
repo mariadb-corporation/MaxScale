@@ -1579,6 +1579,53 @@ uint32_t ev = EPOLLOUT;
 	spinlock_release(&pollqlock);
 }
 
+/*
+ * Insert a fake hangup event for a DCB into the polling queue.
+ *
+ * This is used when a monitor detects that a server is not responding.
+ *
+ * @param dcb	DCB to emulate an EPOLLOUT event for
+ */
+void
+poll_fake_hangup_event(DCB *dcb)
+{
+uint32_t ev = EPOLLRDHUP;
+
+	spinlock_acquire(&pollqlock);
+	if (DCB_POLL_BUSY(dcb))
+	{
+		if (dcb->evq.pending_events == 0)
+			pollStats.evq_pending++;
+		dcb->evq.pending_events |= ev;
+	}
+	else
+	{
+		dcb->evq.pending_events = ev;
+		dcb->evq.inserted = hkheartbeat;
+		if (eventq)
+		{
+			dcb->evq.prev = eventq->evq.prev;
+			eventq->evq.prev->evq.next = dcb;
+			eventq->evq.prev = dcb;
+			dcb->evq.next = eventq;
+		}
+		else
+		{
+			eventq = dcb;
+			dcb->evq.prev = dcb;
+			dcb->evq.next = dcb;
+		}
+		pollStats.evq_length++;
+		pollStats.evq_pending++;
+		dcb->evq.inserted = hkheartbeat;
+		if (pollStats.evq_length > pollStats.evq_max)
+		{
+			pollStats.evq_max = pollStats.evq_length;
+		}
+	}
+	spinlock_release(&pollqlock);
+}
+
 /**
  * Print the event queue contents
  *

@@ -106,6 +106,7 @@ static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf
 static inline int  dcb_isvalid_nolock(DCB *dcb);
 static inline DCB * dcb_find_in_list(DCB *dcb);
 static inline void dcb_process_victim_queue(DCB *listofdcb);
+static void dcb_stop_polling_and_shutdown (DCB *dcb);
 static bool dcb_maybe_add_persistent(DCB *);
 static inline bool dcb_write_parameter_check(DCB *dcb, GWBUF *queue);
 #if defined(FAKE_CODE)
@@ -568,7 +569,7 @@ dcb_process_victim_queue(DCB *listofdcb)
                 else
                 {
                     DCB *nextdcb;
-                    poll_remove_dcb(dcb);
+                    dcb_stop_polling_and_shutdown(dcb);
                     spinlock_acquire(&zombiespin);
                     bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
                     nextdcb = dcb->memdata.next;
@@ -586,21 +587,11 @@ dcb_process_victim_queue(DCB *listofdcb)
          * Into the final close logic, so if DCB is for backend server, we 
          * must decrement the number of current connections.
          */
-        if (dcb->server)
+        if (dcb->server && 0 == dcb->persistentstart)
         {
             atomic_add(&dcb->server->stats.n_current, -1);
         }
-        /**
-         * close protocol and router session
-         */
-        if (dcb->func.close != NULL)
-        {
-            dcb->func.close(dcb);
-        }
-        /** Call possible callback for this DCB in case of close */
-        dcb_call_callback(dcb, DCB_REASON_CLOSE);
-           
- 
+
         if (dcb->fd > 0)
         {
             /*<
@@ -649,6 +640,26 @@ dcb_process_victim_queue(DCB *listofdcb)
     }
     /** Reset threads session data */
     LOGIF(LT, tls_log_info.li_sesid = 0);
+}
+
+/**
+ * Remove a DCB from the poll list and trigger shutdown mechanisms.
+ *
+ * @param	dcb	The DCB to be processed
+ */
+static void
+dcb_stop_polling_and_shutdown (DCB *dcb)
+{
+    poll_remove_dcb(dcb);
+    /**
+     * close protocol and router session
+     */
+    if (dcb->func.close != NULL)
+    {
+        dcb->func.close(dcb);
+    }
+    /** Call possible callback for this DCB in case of close */
+    dcb_call_callback(dcb, DCB_REASON_CLOSE);
 }
 
 /**
@@ -2697,6 +2708,36 @@ dcb_call_foreach(struct server* server, DCB_REASON reason)
         return;
 }
 
+/**
+ * Call all the callbacks on all DCB's that match the server and the reason given
+ *
+ * @param reason	The DCB_REASON that triggers the callback
+ */
+void
+dcb_hangup_foreach(struct server* server)
+{
+	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
+				"%lu [dcb_hangup_foreach]",
+				pthread_self())));                                
+	
+                        DCB *dcb;
+                        spinlock_acquire(&dcbspin);
+                        dcb = allDCBs;
+
+                        while (dcb != NULL)
+                        {
+                                spinlock_acquire(&dcb->dcb_initlock);
+                                if (dcb->state == DCB_STATE_POLLING && dcb->server &&
+                                    strcmp(dcb->server->unique_name,server->unique_name) == 0)
+                                {
+                                        poll_fake_hangup_event(dcb);
+                                }
+                                spinlock_release(&dcb->dcb_initlock);
+                                dcb = dcb->next;
+                        }
+                        spinlock_release(&dcbspin);
+}
+
 
 /**
  * Null protocol write routine used for cloned dcb's. It merely consumes
@@ -2770,11 +2811,11 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
             CHK_DCB(persistentdcb);
             nextdcb = persistentdcb->nextpersistent;
             if (cleanall 
-		|| persistentdcb-> dcb_errhandle_called 
-		|| count >= server->persistpoolmax 
-        || persistentdcb->server == NULL
-        || !(persistentdcb->server->status & SERVER_RUNNING)
-		|| (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime)
+                || persistentdcb-> dcb_errhandle_called 
+                || count >= server->persistpoolmax 
+                || persistentdcb->server == NULL
+                || !(persistentdcb->server->status & SERVER_RUNNING)
+                || (time(NULL) - persistentdcb->persistentstart) > server->persistmaxtime)
             {
                 /* Remove from persistent pool */
                 if (previousdcb) {
@@ -2803,9 +2844,9 @@ dcb_persistent_clean_count(DCB *dcb, bool cleanall)
         {
             nextdcb = disposals->nextpersistent;
             disposals->persistentstart = -1;
-            if (DCB_STATE_POLLING == dcb->state)
+            if (DCB_STATE_POLLING == disposals->state)
             {
-                poll_remove_dcb(dcb);
+                dcb_stop_polling_and_shutdown(disposals);
             }
             dcb_close(disposals);
             disposals = nextdcb;
