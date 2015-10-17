@@ -35,6 +35,7 @@
  * 20/04/15	Guillaume Lefranc	Added availableWhenDonor feature
  * 22/04/15     Martin Brampton         Addition of disableMasterRoleSetting
  * 08/05/15     Markus Makela           Addition of launchable scripts
+ * 17/10/15 Martin Brampton     Change DCB callback to hangup
  *
  * @endverbatim
  */
@@ -541,13 +542,13 @@ monitor_event_t evtype;
                         if (!(SERVER_IS_RUNNING(ptr->server)) || 
                             !(SERVER_IS_IN_CLUSTER(ptr->server)))
                         {
-					dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
+					dcb_hangup_foreach(ptr->server);
                         }
 
 			if (SERVER_IS_DOWN(ptr->server))
 			{
 				/** Increase this server'e error count */
-				dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
+				dcb_hangup_foreach(ptr->server);
 				ptr->mon_err_count += 1;
 
 			}

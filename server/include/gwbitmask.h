@@ -27,6 +27,7 @@
  *
  * Date		Who		        Description
  * 28/06/13	Mark Riddoch	Initial implementation
+ * 17/10/15 Martin Brampton Add bitmask_render_readable
  *
  * @endverbatim
  */
@@ -51,4 +52,6 @@ extern void bitmask_clear(GWBITMASK *, int);
 extern int  bitmask_isset(GWBITMASK *, int);
 extern int  bitmask_isallclear(GWBITMASK *);
 extern void bitmask_copy(GWBITMASK *, GWBITMASK *);
+extern char *bitmask_render_readable(GWBITMASK *bitmask);
+
 #endif

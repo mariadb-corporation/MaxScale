@@ -58,6 +58,7 @@
  * 04/09/2015   Martin Brampton         Changes to ensure DCB always has session pointer
  * 28/09/2015   Martin Brampton         Add counters, maxima for DCBs and zombies
  * 29/05/2015   Martin Brampton         Impose locking in dcb_call_foreach callbacks
+ * 17/10/2015   Martin Brampton         Add hangup for each and bitmask display MaxAdmin
  *
  * @endverbatim
  */
@@ -544,6 +545,7 @@ dcb_process_victim_queue(DCB *listofdcb)
         /*<
          * Stop dcb's listening and modify state accordingly.
          */
+        spinlock_acquire(&dcb->dcb_initlock);
         if (dcb->state == DCB_STATE_POLLING  || dcb->state == DCB_STATE_LISTENING)
         {
             if (dcb->state == DCB_STATE_LISTENING)
@@ -560,6 +562,7 @@ dcb_process_victim_queue(DCB *listofdcb)
             }
             else {
                 /* Must be DCB_STATE_POLLING */
+                spinlock_release(&dcb->dcb_initlock);
                 if (0 == dcb->persistentstart && dcb_maybe_add_persistent(dcb))
                 {
                     /* Have taken DCB into persistent pool, no further killing */
@@ -635,6 +638,7 @@ dcb_process_victim_queue(DCB *listofdcb)
 
         dcb->state = DCB_STATE_DISCONNECTED;
         nextdcb = dcb->memdata.next;
+        spinlock_release(&dcb->dcb_initlock);
         dcb_final_free(dcb);
         dcb = nextdcb;
     }
@@ -1831,7 +1835,10 @@ dcb_close(DCB *dcb)
         /*< Set bit for each maxscale thread. This should be done before
 		 * the state is changed, so as to protect the DCB from premature
 		 * destruction. */
-        bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
+        if (dcb->server)
+        {
+            bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
+        }
     }
     spinlock_release(&zombiespin);
 }
@@ -2036,6 +2043,15 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
                     dcb_printf(pdcb, "\tRole:                     %s\n", rolename);
                     free(rolename);
                 }
+        if (!bitmask_isallclear(&dcb->memdata.bitmask))
+        {
+            char *bitmasktext = bitmask_render_readable(&dcb->memdata.bitmask);
+            if (bitmasktext)
+            {
+                dcb_printf(pdcb, "\tBitMask:                %s\n", bitmasktext);
+                free(bitmasktext);
+            }
+        }
 		dcb_printf(pdcb, "\tStatistics:\n");
 		dcb_printf(pdcb, "\t\tNo. of Reads:           	%d\n", dcb->stats.n_reads);
 		dcb_printf(pdcb, "\t\tNo. of Writes:          	%d\n", dcb->stats.n_writes);
@@ -2245,7 +2261,7 @@ gw_dcb_state2string (int state)
 		case DCB_STATE_POLLING:
 			return "DCB in the polling loop";
 		case DCB_STATE_NOPOLLING:
-			return "DCB not in the polling loop";
+			return "DCB not in polling loop";
 		case DCB_STATE_LISTENING:
 			return "DCB for listening socket";
 		case DCB_STATE_DISCONNECTED:

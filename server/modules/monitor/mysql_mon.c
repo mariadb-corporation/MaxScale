@@ -47,6 +47,7 @@
  * 18/11/14	Massimiliano Pinto	One server only in configuration becomes master.
  *					servers=server1 must be present in mysql_mon and in router sections as well.
  * 08/05/15     Markus Makela           Added launchable scripts
+ * 17/10/15 Martin Brampton     Change DCB callback to hangup
  *
  * @endverbatim
  */
@@ -861,8 +862,7 @@ detect_stale_master = handle->detectStaleMaster;
 				if (!(SERVER_IS_RUNNING(ptr->server)) || 
 					!(SERVER_IS_IN_CLUSTER(ptr->server)))
 				{
-					dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
-
+					dcb_hangup_foreach(ptr->server);
 				}		
 
 
