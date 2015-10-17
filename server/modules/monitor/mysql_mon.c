@@ -54,6 +54,7 @@
 
 
 #include <mysqlmon.h>
+#include <dcb.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
