@@ -280,7 +280,7 @@ char *
 bitmask_render_readable(GWBITMASK *bitmask)
 {
     char *toobig = "Bitmask is too large to render readable";
-    char *empty = "No bits are set";t
+    char *empty = "No bits are set";
     char onebit[5];
     char *result;
     int count_set = 0;
