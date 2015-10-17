@@ -678,13 +678,14 @@ static struct {
  * Convert a string argument to a numeric, observing prefixes
  * for number bases, e.g. 0x for hex, 0 for octal
  *
+ * @param dcb       The client DCB
  * @param mode		The CLI mode
  * @param arg		The string representation of the argument
  * @param arg_type	The target type for the argument
  * @return The argument as a long integer
  */
 static unsigned long
-convert_arg(int mode, char *arg, int arg_type)
+convert_arg(DCB* dcb, int mode, char *arg, int arg_type)
 {
 unsigned long	rval;
 SERVICE		*service;
@@ -710,9 +711,18 @@ SERVICE		*service;
 		{
 			service = service_find(arg);
 			if (service)
+            {
+                if(service->users == NULL)
+                {
+                    dcb_printf(dcb, "The dbusers for service %s are not loaded. "
+                        "Reload the dbusers and try again.\n", service->name);
+                }
 				return (unsigned long)(service->users);
+            }
 			else
+            {
 				return 0;
+            }
 		}
 		return rval;
 	case ARG_TYPE_DCB:
@@ -927,7 +937,7 @@ int nskip = 0;
 								cmds[i].options[j].fn(dcb);
 								break;
 							case 1:
-								arg1 = convert_arg(cli->mode, args[2],cmds[i].options[j].arg_types[0]);
+								arg1 = convert_arg(dcb, cli->mode, args[2],cmds[i].options[j].arg_types[0]);
 
 								if (arg1)
 									cmds[i].options[j].fn(dcb, arg1);
@@ -936,8 +946,8 @@ int nskip = 0;
 										   args[2]);
 								break;
 							case 2:
-								arg1 = convert_arg(cli->mode, args[2],cmds[i].options[j].arg_types[0]);
-								arg2 = convert_arg(cli->mode, args[3],cmds[i].options[j].arg_types[1]);
+								arg1 = convert_arg(dcb, cli->mode, args[2],cmds[i].options[j].arg_types[0]);
+								arg2 = convert_arg(dcb, cli->mode, args[3],cmds[i].options[j].arg_types[1]);
 								if (arg1 && arg2)
 									cmds[i].options[j].fn(dcb, arg1, arg2);
 								else if (arg1 == 0)
@@ -948,9 +958,9 @@ int nskip = 0;
 										args[3]);
 								break;
 							case 3:
-								arg1 = convert_arg(cli->mode, args[2],cmds[i].options[j].arg_types[0]);
-								arg2 = convert_arg(cli->mode, args[3],cmds[i].options[j].arg_types[1]);
-								arg3 = convert_arg(cli->mode, args[4],cmds[i].options[j].arg_types[2]);
+								arg1 = convert_arg(dcb, cli->mode, args[2],cmds[i].options[j].arg_types[0]);
+								arg2 = convert_arg(dcb, cli->mode, args[3],cmds[i].options[j].arg_types[1]);
+								arg3 = convert_arg(dcb, cli->mode, args[4],cmds[i].options[j].arg_types[2]);
 								if (arg1 && arg2 && arg3)
 									cmds[i].options[j].fn(dcb, arg1, arg2, arg3);
 								else if (arg1 == 0)
