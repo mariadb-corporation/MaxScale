@@ -84,28 +84,6 @@ init_test_env(NULL);
         result = serviceStartAll();
         skygw_log_sync_all();
         ss_info_dassert(0 != result, "Start all should succeed");
-
-        ss_dfprintf(stderr, "\t..done\nTiming out a session.");
-
-        service->conn_timeout = 1;
-        result = serviceStart(service);
-        skygw_log_sync_all();
-        ss_info_dassert(0 != result, "Start should succeed");
-        serviceStop(service);
-        skygw_log_sync_all();
-        ss_info_dassert(service->state == SERVICE_STATE_STOPPED, "Stop should succeed");
-
-        if((dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)) == NULL)
-            return 1;
-        ss_info_dassert(dcb != NULL, "DCB allocation failed");
-        
-        session = session_alloc(service,dcb);
-        ss_info_dassert(session != NULL, "Session allocation failed");
-        dcb->state = DCB_STATE_POLLING;
-        sleep(15);
-        
-        ss_info_dassert(dcb->state != DCB_STATE_POLLING, "Session timeout failed");
-
         ss_dfprintf(stderr, "\t..done\nStopping Service.");
         serviceStop(service);
         ss_info_dassert(service->state == SERVICE_STATE_STOPPED, "Stop should succeed");
