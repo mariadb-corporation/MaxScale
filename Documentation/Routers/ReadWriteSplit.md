@@ -54,7 +54,7 @@ Please note max_slave_replication_lag must be greater than monitor interval.
 
 **`router_options`** may include multiple **readwritesplit**-specific options. Values are either singular or parameter-value pairs. Currently available is a single option which specifies the criteria used in slave selection both in initialization of router session and per each query. Note that due to the current monitor implementation, the value specified here should be *<twice the monitor interval>* + 1.
 
-	options=slave_selection_criteria=<criteria>
+	router_options=slave_selection_criteria=<criteria>
 
 where *<criteria>* is one of the following:
 
@@ -62,6 +62,10 @@ where *<criteria>* is one of the following:
 * `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this router
 * `LEAST_BEHIND_MASTER`, the slave with smallest replication lag
 * `LEAST_CURRENT_OPERATIONS` (default), the slave with least active operations
+
+Multiple options can be included on the same line
+
+    router_options=slave_selection_criteria=LEAST_CURRENT_OPERATIONS,master_accept_reads=true
 
 **`use_sql_variables_in`** specifies where should queries, which read session variable, be routed. The syntax for `use_sql_variable_in` is:
 
