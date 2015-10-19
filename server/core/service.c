@@ -64,6 +64,7 @@
 #include <resultset.h>
 #include <gw.h>
 #include <gwdirs.h>
+#include <math.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -99,6 +100,7 @@ static int find_type(typelib_t* tl, const char* needle, int maxlen);
 static void service_add_qualified_param(
         SERVICE*          svc,
         CONFIG_PARAMETER* param);
+void service_interal_restart(void *data);
 
 /**
  * Allocate a new service for the gateway to support
@@ -140,7 +142,8 @@ SERVICE 	*service;
 	service->routerModule = strdup(router);
 	service->users_from_all = false;
 	service->resources = NULL;
-        service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
+    service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
+    service->retry_start = true;
 	service->ssl_mode = SSL_DISABLED;
 	service->ssl_init_done = false;
 	service->ssl_ca_cert = NULL;
@@ -157,6 +160,7 @@ SERVICE 	*service;
 		return NULL;
 	}
 	service->stats.started = time(0);
+    service->stats.n_failed_starts = 0;
 	service->state = SERVICE_STATE_ALLOC;
 	spinlock_init(&service->spin);
 	spinlock_init(&service->users_table_spin);
@@ -260,6 +264,7 @@ GWPROTOCOL	*funcs;
 				{
 					hashtable_free(service->users->data);
 					free(service->users);
+                    service->users = NULL;
 					dcb_close(port->listener);
 					port->listener = NULL;
 					goto retblock;
@@ -404,6 +409,50 @@ retblock:
 }
 
 /**
+ * Start all ports for a service.
+ * serviceStartAllPorts will try to start all listeners associated with the service.
+ * If no listeners are started, the starting of ports will be retried after a period of time.
+ * @param service Service to start
+ * @return Number of started listeners. This is equal to the number of ports the service
+ * is listening to.
+ */
+int serviceStartAllPorts(SERVICE* service)
+{
+    SERV_PROTOCOL *port = service->ports;
+    int listeners = 0;
+    while (!service->svc_do_shutdown && port)
+    {
+        listeners += serviceStartPort(service, port);
+        port = port->next;
+    }
+
+    if (listeners)
+    {
+        service->state = SERVICE_STATE_STARTED;
+        service->stats.started = time(0);
+        /** Add the task that monitors session timeouts */
+        if (service->conn_timeout > 0)
+        {
+            hktask_add("connection_timeout", session_close_timeouts, NULL, 5);
+        }
+    }
+    else if(service->retry_start)
+    {
+        /** Service failed to start any ports. Try again later. */
+        service->stats.n_failed_starts++;
+        char taskname[strlen(service->name) + strlen("_start_retry_") + (int)ceil(log10(INT_MAX)) + 1];
+        int retry_after = MIN(service->stats.n_failed_starts * 10, SERVICE_MAX_RETRY_INTERVAL);
+        snprintf(taskname, sizeof (taskname), "%s_start_retry_%d",
+                 service->name, service->stats.n_failed_starts);
+        hktask_oneshot(taskname, service_interal_restart,
+                       (void*) service, retry_after);
+        skygw_log_write(LM, "Failed to start service %s, retrying in %d seconds.",
+                        service->name, retry_after);
+    }
+    return listeners;
+}
+
+/**
  * Start a service
  *
  * This function loads the protocol modules for each port on which the
@@ -417,59 +466,42 @@ retblock:
 int
 serviceStart(SERVICE *service)
 {
-SERV_PROTOCOL	*port;
-int		listeners = 0;
+    int listeners = 0;
 
 
-if(!check_service_permissions(service))
-{
-    skygw_log_write_flush(LE,
-			"%s: Error: Inadequate user permissions for service. Service not started.",
-                        service->name);
-    service->state = SERVICE_STATE_FAILED;
-    return 0;
-}
-
-if(service->ssl_mode != SSL_DISABLED)
-{
-    if(serviceInitSSL(service) != 0)
+    if (check_service_permissions(service))
     {
-	LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"%s: SSL initialization failed. Service not started.",
-				service->name)));
-		service->state = SERVICE_STATE_FAILED;
-		return 0;
+        if (service->ssl_mode == SSL_DISABLED || (service->ssl_mode != SSL_DISABLED && serviceInitSSL(service) != 0))
+        {
+            if ((service->router_instance = service->router->createInstance(
+                 service,service->routerOptions)))
+            {
+                listeners += serviceStartAllPorts(service);
+            }
+            else
+            {
+                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                                 "%s: Failed to create router instance for service. Service not started.",
+                                                 service->name)));
+                service->state = SERVICE_STATE_FAILED;
+            }
+        }
+        else
+        {
+            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                             "%s: SSL initialization failed. Service not started.",
+                                             service->name)));
+            service->state = SERVICE_STATE_FAILED;
+        }
     }
-}
-	if ((service->router_instance = service->router->createInstance(service,
-					service->routerOptions)) == NULL)
-	{
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"%s: Failed to create router instance for service. Service not started.",
-				service->name)));
-		service->state = SERVICE_STATE_FAILED;
-		return 0;
-	}
-
-	port = service->ports;
-	while (!service->svc_do_shutdown && port)
-	{
-		listeners += serviceStartPort(service, port);
-		port = port->next;
-	}
-	if (listeners)
-	{
-		service->state = SERVICE_STATE_STARTED;
-		service->stats.started = time(0);
-	}
-
-	/** Add the task that monitors session timeouts */
-	if(service->conn_timeout > 0)
-	{
-	    hktask_add("connection_timeout",session_close_timeouts,NULL,5);
-	}
-
-	return listeners;
+    else
+    {
+        skygw_log_write_flush(LE,
+                              "%s: Error: Inadequate user permissions for service. Service not started.",
+                              service->name);
+        service->state = SERVICE_STATE_FAILED;
+    }
+    return listeners;
 }
 
 /**
@@ -1022,6 +1054,18 @@ serviceSetTimeout(SERVICE *service, int val)
     return 1;
 }
 
+/**
+ * Enable or disable the restarting of the service on failure.
+ * @param service Service to configure
+ * @param value A string representation of a boolean value
+ */
+void serviceSetRetryOnFailure(SERVICE *service, char* value)
+{
+    if(value)
+    {
+        service->retry_start = config_truth_value(value);
+    }
+}
 
 /**
  * Trim whitespace from the from an rear of a string
@@ -2054,4 +2098,13 @@ int serviceInitSSL(SERVICE* service)
 	service->ssl_init_done = true;
     }
     return 0;
+}
+/**
+ * Function called by the housekeeper thread to retry starting of a service
+ * @param data Service to restart
+ */
+void service_interal_restart(void *data)
+{
+    SERVICE* service = (SERVICE*)data;
+    serviceStartAllPorts(service);
 }
