@@ -2348,13 +2348,15 @@ char err_msg[BINLOG_ERROR_MSG_LEN+1];
 		return;
 	if ((record = blr_read_binlog(router, file, 4, &hdr, err_msg)) == NULL)
 	{
-		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
-			slave->dcb->remote,
-			slave->port,
-			slave->serverid,
-			slave->binlogfile,
-			err_msg)));
+		if (hdr.ok == 0xff) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
+				slave->dcb->remote,
+				slave->port,
+				slave->serverid,
+				slave->binlogfile,
+				err_msg)));
+		}
 
 		blr_close_binlog(router, file);
 		return;
