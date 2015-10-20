@@ -483,7 +483,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading database names for service %s encountered "
-                        "error: %s.",
+                        "error when querying database privileges: %s.",
                         service->name,
                         mysql_error(con))));
 		return -1;
@@ -495,7 +495,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading database names for service %s encountered "
-                        "error: %s.",
+                        "error when storing result set of database privilege query: %s.",
                         service->name,
                         mysql_error(con))));
 		return -1;
@@ -527,7 +527,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading database names for service %s encountered "
-                        "error: %s.",
+                        "error when executing SHOW DATABASES query: %s.",
                         service->name,
                         mysql_error(con))));
 
@@ -540,7 +540,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading database names for service %s encountered "
-                        "error: %s.",
+                        "error when storing the result set: %s.",
                         service->name,
                         mysql_error(con))));
 
