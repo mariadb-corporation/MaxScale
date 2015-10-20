@@ -1463,6 +1463,10 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 	memcpy(&key.ipv4, client, sizeof(struct sockaddr_in));
 	key.netmask = 32;
 	key.resource = client_data->db;
+    if(strlen(dcb->remote) < MYSQL_HOST_MAXLEN)
+    {
+        strcpy(key.hostname, dcb->remote);
+    }
 
 	LOGIF(LD,
 		(skygw_log_write_flush(

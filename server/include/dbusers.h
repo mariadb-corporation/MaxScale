@@ -62,6 +62,7 @@ typedef struct mysql_user_host_key {
         struct sockaddr_in ipv4;
         int netmask;
 	char *resource;
+    char hostname[MYSQL_HOST_MAXLEN + 1];
 } MYSQL_USER_HOST;
 
 extern int load_mysql_users(SERVICE *service);
