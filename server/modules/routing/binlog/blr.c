@@ -247,11 +247,16 @@ char	*defuuid;
 	{
 		my_uuid(defuuid);
 		if ((inst->uuid = (char *)malloc(38)) != NULL)
-			sprintf(inst->uuid, "%02hhx%02hhx%02hhx%02hhx-%02hhx%02hhx-%02hhx%02hhx-%02hhx%02hhx-%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
-			defuuid[0], defuuid[1], defuuid[2], defuuid[3],
-			defuuid[4], defuuid[5], defuuid[6], defuuid[7],
-			defuuid[8], defuuid[9], defuuid[10], defuuid[11],
-			defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
+			sprintf(inst->uuid,
+			        "%02hhx%02hhx%02hhx%02hhx-"
+			        "%02hhx%02hhx-"
+			        "%02hhx%02hhx-"
+			        "%02hhx%02hhx-"
+			        "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+			        defuuid[0], defuuid[1], defuuid[2], defuuid[3],
+			        defuuid[4], defuuid[5], defuuid[6], defuuid[7],
+			        defuuid[8], defuuid[9], defuuid[10], defuuid[11],
+			        defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
 	}
 
 	/*
