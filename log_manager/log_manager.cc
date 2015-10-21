@@ -93,6 +93,13 @@ char* shmem_id_str     = NULL;
 char* syslog_id_str    = strdup("LOGFILE_ERROR");
 char* syslog_ident_str = NULL;
 
+/** Forward declarations
+ */
+typedef struct filewriter  filewriter_t;
+typedef struct logfile     logfile_t;
+typedef struct fnames_conf fnames_conf_t;
+typedef struct logmanager  logmanager_t;
+
 /**
  * Global log manager pointer and lock variable.
  * lmlock protects logmanager access.
@@ -114,7 +121,7 @@ static int log_augmentation = default_log_augmentation;
 static bool fatal_error = false;
 
 /** Writer thread structure */
-struct filewriter_st
+struct filewriter
 {
 #if defined(SS_DEBUG)
     skygw_chk_t        fwr_chk_top;
@@ -137,7 +144,7 @@ struct filewriter_st
  * Log client's string is copied to block-sized log buffer, which is passed
  * to file writer thread.
  */
-typedef struct blockbuf_st
+typedef struct blockbuf
 {
 #if defined(SS_DEBUG)
     skygw_chk_t    bb_chk_top;
@@ -160,7 +167,7 @@ typedef struct blockbuf_st
  * logfile object corresponds to physical file(s) where
  * certain log is written.
  */
-struct logfile_st
+struct logfile
 {
 #if defined(SS_DEBUG)
     skygw_chk_t      lf_chk_top;
@@ -196,7 +203,7 @@ struct logfile_st
 };
 
 
-struct fnames_conf_st
+struct fnames_conf
 {
 #if defined(SS_DEBUG)
     skygw_chk_t      fn_chk_top;
@@ -216,7 +223,7 @@ struct fnames_conf_st
 #endif
 };
 
-struct logmanager_st
+struct logmanager
 {
 #if defined(SS_DEBUG)
     skygw_chk_t      lm_chk_top;
@@ -241,13 +248,12 @@ struct logmanager_st
  * Type definition for string part. It is used in forming the log file name
  * from string parts provided by the client of log manager, as arguments.
  */
-typedef struct strpart_st strpart_t;
 
-struct strpart_st
+typedef struct strpart
 {
-    char*      sp_string;
-    strpart_t* sp_next;
-};
+    char*           sp_string;
+    struct strpart* sp_next;
+} strpart_t;
 
 
 /** Static function declarations */

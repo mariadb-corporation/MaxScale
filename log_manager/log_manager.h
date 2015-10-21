@@ -25,11 +25,6 @@
 #define STRERROR_BUFLEN 512
 #endif
 
-typedef struct filewriter_st  filewriter_t;
-typedef struct logfile_st     logfile_t;
-typedef struct fnames_conf_st fnames_conf_t;
-typedef struct logmanager_st  logmanager_t;
-
 typedef enum
 {
     BB_READY = 0x00,
