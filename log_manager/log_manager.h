@@ -31,9 +31,9 @@ typedef struct fnames_conf_st fnames_conf_t;
 typedef struct logmanager_st  logmanager_t;
 
 typedef enum {
-  BB_READY = 0x00,
-  BB_FULL,
-  BB_CLEARED
+    BB_READY = 0x00,
+    BB_FULL,
+    BB_CLEARED
 } blockbuf_state_t;
 
 typedef enum {
@@ -54,8 +54,8 @@ typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
 */
 typedef struct log_info_st
 {
-	size_t li_sesid;
-	int    li_enabled_logs;
+    size_t li_sesid;
+    int    li_enabled_logs;
 } log_info_t;
 
 #define LE LOGFILE_ERROR
@@ -67,36 +67,36 @@ typedef struct log_info_st
  * Check if specified log type is enabled in general or if it is enabled
  * for the current session.
  */
-#define LOG_IS_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) || 	\
-		(log_ses_count[id] > 0 && 				\
-		tls_log_info.li_enabled_logs & id)) ? true : false)
+#define LOG_IS_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||      \
+                             (log_ses_count[id] > 0 &&                  \
+                              tls_log_info.li_enabled_logs & id)) ? true : false)
 
 
-#define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||	\
-				log_ses_count[id] > 0) ? true : false)
+#define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||  \
+                                 log_ses_count[id] > 0) ? true : false)
 /**
  * Execute the given command if specified log is enabled in general or
  * if there is at least one session for whom the log is enabled.
  */
-#define LOGIF_MAYBE(id,cmd) if (LOG_MAY_BE_ENABLED(id))	\
-	{						\
-		cmd;					\
-	}
+#define LOGIF_MAYBE(id,cmd) if (LOG_MAY_BE_ENABLED(id)) \
+    {                                                   \
+        cmd;                                            \
+    }
 
 /**
  * Execute the given command if specified log is enabled in general or
  * if the log is enabled for the current session.
  */
-#define LOGIF(id,cmd) if (LOG_IS_ENABLED(id))	\
-	{					\
-		cmd;				\
-	}
+#define LOGIF(id,cmd) if (LOG_IS_ENABLED(id))   \
+    {                                           \
+        cmd;                                    \
+    }
 
 #if !defined(LOGIF)
 #define LOGIF(id,cmd) if (lm_enabled_logfiles_bitmask & id)     \
-	{                                                       \
-		cmd;                                            \
-	}
+    {                                                           \
+        cmd;                                                    \
+    }
 #endif
 
 /**
