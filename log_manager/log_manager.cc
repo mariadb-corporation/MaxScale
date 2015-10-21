@@ -114,7 +114,8 @@ static int log_augmentation = default_log_augmentation;
 static bool fatal_error = false;
 
 /** Writer thread structure */
-struct filewriter_st {
+struct filewriter_st
+{
 #if defined(SS_DEBUG)
     skygw_chk_t        fwr_chk_top;
 #endif
@@ -136,7 +137,8 @@ struct filewriter_st {
  * Log client's string is copied to block-sized log buffer, which is passed
  * to file writer thread.
  */
-typedef struct blockbuf_st {
+typedef struct blockbuf_st
+{
 #if defined(SS_DEBUG)
     skygw_chk_t    bb_chk_top;
 #endif
@@ -158,7 +160,8 @@ typedef struct blockbuf_st {
  * logfile object corresponds to physical file(s) where
  * certain log is written.
  */
-struct logfile_st {
+struct logfile_st
+{
 #if defined(SS_DEBUG)
     skygw_chk_t      lf_chk_top;
 #endif
@@ -193,7 +196,8 @@ struct logfile_st {
 };
 
 
-struct fnames_conf_st {
+struct fnames_conf_st
+{
 #if defined(SS_DEBUG)
     skygw_chk_t      fn_chk_top;
 #endif
@@ -212,7 +216,8 @@ struct fnames_conf_st {
 #endif
 };
 
-struct logmanager_st {
+struct logmanager_st
+{
 #if defined(SS_DEBUG)
     skygw_chk_t      lm_chk_top;
 #endif
@@ -238,7 +243,8 @@ struct logmanager_st {
  */
 typedef struct strpart_st strpart_t;
 
-struct strpart_st {
+struct strpart_st
+{
     char*      sp_string;
     strpart_t* sp_next;
 };
@@ -494,7 +500,8 @@ bool skygw_logmanager_init(
 
     acquire_lock(&lmlock);
 
-    if (lm != NULL) {
+    if (lm != NULL)
+    {
         succp = true;
         goto return_succp;
     }
@@ -521,7 +528,8 @@ static void logmanager_done_nomutex(void)
 
     fwr = &lm->lm_filewriter;
 
-    if (fwr->fwr_state == RUN) {
+    if (fwr->fwr_state == RUN)
+    {
         CHK_FILEWRITER(fwr);
         /** Inform filewriter thread and wait until it has stopped. */
         skygw_thread_set_exitflag(fwr->fwr_thread,
@@ -535,7 +543,8 @@ static void logmanager_done_nomutex(void)
     /** Free filewriter memory. */
     filewriter_done(fwr);
 
-    for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++) {
+    for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++)
+    {
         lf = logmanager_get_logfile(lm, (logfile_id_t)i);
         /** Release logfile memory */
         logfile_done(lf);
@@ -574,7 +583,8 @@ void skygw_logmanager_done(void)
 {
     acquire_lock(&lmlock);
 
-    if (lm == NULL) {
+    if (lm == NULL)
+    {
         release_lock(&lmlock);
         return;
     }
@@ -585,14 +595,16 @@ void skygw_logmanager_done(void)
     /** Wait until all users have left or someone shuts down
      * logmanager between lock release and acquire.
      */
-    while(lm != NULL && lm->lm_nlinks != 0) {
+    while(lm != NULL && lm->lm_nlinks != 0)
+    {
         release_lock(&lmlock);
         pthread_yield();
         acquire_lock(&lmlock);
     }
 
     /** Logmanager was already shut down. Return successfully. */
-    if (lm == NULL) {
+    if (lm == NULL)
+    {
         goto return_void;
     }
     ss_dassert(lm->lm_nlinks == 0);
@@ -611,7 +623,8 @@ static logfile_t* logmanager_get_logfile(
     ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
     lf = &lmgr->lm_logfile[id];
 
-    if (lf->lf_state == RUN) {
+    if (lf->lf_state == RUN)
+    {
         CHK_LOGFILE(lf);
     }
     return lf;
@@ -659,7 +672,8 @@ static int logmanager_write_log(
 
     CHK_LOGMANAGER(lm);
 
-    if (id < LOGFILE_FIRST || id > LOGFILE_LAST) {
+    if (id < LOGFILE_FIRST || id > LOGFILE_LAST)
+    {
         const char* errstr = "Invalid logfile id argument.";
         /**
          * invalid id, since we don't have logfile yet.
@@ -672,7 +686,8 @@ static int logmanager_write_log(
                                    strlen(errstr)+1,
                                    errstr,
                                    valist);
-        if (err != 0) {
+        if (err != 0)
+        {
             fprintf(stderr,
                     "Writing to logfile %s failed.\n",
                     STRLOGID(LOGFILE_ERROR));
@@ -719,9 +734,13 @@ static int logmanager_write_log(
             sesid_str_len = 0;
         }
         if(highprec)
+        {
             timestamp_len = get_timestamp_len_hp();
+        }
         else
+        {
             timestamp_len = get_timestamp_len();
+        }
         cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 
         /** Find out how much can be safely written with current block size */
@@ -776,7 +795,9 @@ static int logmanager_write_log(
         }
 
         if(wp == NULL)
+        {
             return -1;
+        }
 
 #if defined (SS_LOG_DEBUG)
         {
@@ -791,9 +812,13 @@ static int logmanager_write_log(
          * Returned timestamp_len doesn't include terminating null.
          */
         if(highprec)
+        {
             timestamp_len = snprint_timestamp_hp(wp, timestamp_len);
+        }
         else
+        {
             timestamp_len = snprint_timestamp(wp, timestamp_len);
+        }
         if (sesid_str_len != 0)
         {
             /**
@@ -809,12 +834,15 @@ static int logmanager_write_log(
          * Write next string to overwrite terminating null character
          * of the timestamp string.
          */
-        if (use_valist) {
+        if (use_valist)
+        {
             vsnprintf(wp+timestamp_len+sesid_str_len,
                       safe_str_len-timestamp_len-sesid_str_len,
                       str,
                       valist);
-        } else {
+        }
+        else
+        {
             snprintf(wp+timestamp_len+sesid_str_len,
                      safe_str_len-timestamp_len-sesid_str_len,
                      "%s",
@@ -824,7 +852,8 @@ static int logmanager_write_log(
         /** write to syslog */
         if (lf->lf_write_syslog)
         {
-            switch(id) {
+            switch(id)
+            {
             case LOGFILE_ERROR:
                 syslog(LOG_ERR, "%s", wp+timestamp_len);
                 break;
@@ -856,7 +885,8 @@ static int logmanager_write_log(
          * disable because cross-blockbuffer locking either causes deadlock
          * or run out of memory blocks.
          */
-        if (spread_down && false) {
+        if (spread_down && false)
+        {
             /**
              * Write to target log. If spread_down == true, then
              * write also to all logs with greater logfile id.
@@ -945,7 +975,8 @@ static void blockbuf_unregister(
     /**
      * if this is the last client in a full buffer, send write request.
      */
-    if (atomic_add(&bb->bb_refcount, -1) == 1 && bb->bb_state == BB_FULL) {
+    if (atomic_add(&bb->bb_refcount, -1) == 1 && bb->bb_state == BB_FULL)
+    {
         skygw_message_send(lf->lf_logmes);
     }
     ss_dassert(bb->bb_refcount >= 0);
@@ -993,14 +1024,16 @@ static char* blockbuf_get_writepos(
     simple_mutex_lock(&bb_list->mlist_mutex, true);
     CHK_MLIST(bb_list);
 
-    if (bb_list->mlist_nodecount > 0) {
+    if (bb_list->mlist_nodecount > 0)
+    {
         /**
          * At least block buffer exists on the list.
          */
         node = bb_list->mlist_first;
 
         /** Loop over blockbuf list to find write position */
-        while (true) {
+        while (true)
+        {
             CHK_MLIST_NODE(node);
 
             /** Unlock list */
@@ -1012,7 +1045,8 @@ static char* blockbuf_get_writepos(
             /** Lock buffer */
             simple_mutex_lock(&bb->bb_mutex, true);
 
-            if (bb->bb_state == BB_FULL || bb->bb_buf_left < str_len) {
+            if (bb->bb_state == BB_FULL || bb->bb_buf_left < str_len)
+            {
                 /**
                  * This block buffer is too full.
                  * Send flush request to file writer thread. This causes
@@ -1035,7 +1069,8 @@ static char* blockbuf_get_writepos(
                  * If next node exists move forward. Else check if there is
                  * space for a new block buffer on the list.
                  */
-                if (node != bb_list->mlist_last) {
+                if (node != bb_list->mlist_last)
+                {
                     node = node->mlnode_next;
                     continue;
                 }
@@ -1069,7 +1104,9 @@ static char* blockbuf_get_writepos(
                      */
                     bb_list->mlist_versno += 1;
                     ss_dassert(bb_list->mlist_versno%2 == 0);
-                } else {
+                }
+                else
+                {
                     /**
                      * List and buffers are full.
                      * Reset to the beginning of the list, and wait until
@@ -1082,7 +1119,9 @@ static char* blockbuf_get_writepos(
                     continue;
                 }
 
-            }else if(bb->bb_state == BB_CLEARED){
+            }
+            else if(bb->bb_state == BB_CLEARED)
+            {
 
                 /**
                  *Move the cleared buffer to the end of the list if it is the first one in the list
@@ -1115,29 +1154,38 @@ static char* blockbuf_get_writepos(
                 }
                 else
                 {
-                    if(node->mlnode_next){
+                    if(node->mlnode_next)
+                    {
                         node = node->mlnode_next;
-                    }else{
+                    }
+                    else
+                    {
                         node = bb_list->mlist_first;
                     }
                     continue;
                 }
 
-            }else if (bb->bb_state == BB_READY){
+            }
+            else if (bb->bb_state == BB_READY)
+            {
                 /**
                  * There is space for new log string.
                  */
                 break;
             }
         } /** while (true) */
-    } else {
+    }
+    else
+    {
 
         /**
          * Create the first block buffer to logfile's blockbuf list.
          */
 
         if((bb = blockbuf_init(id)) == NULL)
+        {
             return NULL;
+        }
 
         CHK_BLOCKBUF(bb);
 
@@ -1259,7 +1307,8 @@ int skygw_log_enable(
     }
     CHK_LOGMANAGER(lm);
 
-    if (logfile_set_enabled(id, true)) {
+    if (logfile_set_enabled(id, true))
+    {
         lm->lm_enabled_logfiles |= id;
         /**
          * Set global variable
@@ -1323,7 +1372,8 @@ static bool logfile_set_enabled(
 
     CHK_LOGMANAGER(lm);
 
-    if (id < LOGFILE_FIRST || id > LOGFILE_LAST) {
+    if (id < LOGFILE_FIRST || id > LOGFILE_LAST)
+    {
         const char* errstr = "Invalid logfile id argument.";
         /**
          * invalid id, since we don't have logfile yet.
@@ -1336,7 +1386,8 @@ static bool logfile_set_enabled(
                                    strlen(errstr)+1,
                                    errstr,
                                    notused);
-        if (err != 0) {
+        if (err != 0)
+        {
             fprintf(stderr,
                     "* Writing to logfile %s failed.\n",
                     STRLOGID(LOGFILE_ERROR));
@@ -1348,9 +1399,12 @@ static bool logfile_set_enabled(
     CHK_LOGFILE(lf);
     if(use_stdout == 0)
     {
-        if (val) {
+        if (val)
+        {
             logstr = strdup("---\tLogging to file is enabled\t--");
-        } else {
+        }
+        else
+        {
             logstr = strdup("---\tLogging to file is disabled\t--");
         }
 
@@ -1366,7 +1420,8 @@ static bool logfile_set_enabled(
                                    notused);
         free(logstr);
     }
-    if (err != 0) {
+    if (err != 0)
+    {
         lf->lf_enabled = oldval;
         fprintf(stderr,
                 "logfile_set_enabled failed. Writing notification to logfile %s "
@@ -1517,7 +1572,8 @@ int skygw_log_write_context_flush(
     int len = vsnprintf(NULL, 0, str, valist);
     va_end(valist);
 
-    if (len >= 0) {
+    if (len >= 0)
+    {
         char message[len + 1];
 
         va_start(valist, str);
@@ -1558,7 +1614,8 @@ int skygw_log_write_context(
     int len = vsnprintf(NULL, 0, str, valist);
     va_end(valist);
 
-    if (len >= 0) {
+    if (len >= 0)
+    {
         char message[len + 1];
 
         va_start(valist, str);
@@ -1570,7 +1627,8 @@ int skygw_log_write_context(
 
         err = log_write(id, file, line, function, len2, message, flush);
 
-        if (err != 0) {
+        if (err != 0)
+        {
             fprintf(stderr, "skygw_log_write failed.\n");
         }
     }
@@ -1585,7 +1643,8 @@ int skygw_log_flush(
     int err = 0;
     va_list valist; /**< Dummy, must be present but it is not processed */
 
-    if (!logmanager_register(false)) {
+    if (!logmanager_register(false))
+    {
         ss_dfprintf(stderr,
                     "Can't register to logmanager, nothing to flush\n");
         goto return_err;
@@ -1593,7 +1652,8 @@ int skygw_log_flush(
     CHK_LOGMANAGER(lm);
     err = logmanager_write_log(id, true, false, false, false, 0, NULL, valist);
 
-    if (err != 0) {
+    if (err != 0)
+    {
         fprintf(stderr, "skygw_log_flush failed.\n");
         goto return_unregister;
     }
@@ -1678,14 +1738,16 @@ static bool logmanager_register(
 
     acquire_lock(&lmlock);
 
-    if (lm == NULL || !lm->lm_enabled) {
+    if (lm == NULL || !lm->lm_enabled)
+    {
         /**
          * Flush succeeds if logmanager is shut or shutting down.
          * returning false so that flusher doesn't access logmanager
          * and its members which would probabaly lead to NULL pointer
          * reference.
          */
-        if (!writep || fatal_error) {
+        if (!writep || fatal_error)
+        {
             succp = false;
             goto return_succp;
         }
@@ -1697,18 +1759,21 @@ static bool logmanager_register(
          * logmanager is enabled if someone already restarted
          * it between latest lock release, and acquire.
          */
-        while (lm != NULL && !lm->lm_enabled) {
+        while (lm != NULL && !lm->lm_enabled)
+        {
             release_lock(&lmlock);
             pthread_yield();
             acquire_lock(&lmlock);
         }
 
-        if (lm == NULL) {
+        if (lm == NULL)
+        {
             succp = logmanager_init_nomutex(0, NULL);
         }
     }
     /** if logmanager existed or was succesfully restarted, increase link */
-    if (succp) {
+    if (succp)
+    {
         lm->lm_nlinks += 1;
     }
 
@@ -1800,7 +1865,8 @@ static bool fnames_conf_init(
     optind = 1; /**<! reset getopt index */
     while ((opt = getopt(argc, argv, "+a:b:c:d:e:f:g:h:i:j:l:m:s:o")) != -1)
     {
-        switch (opt) {
+        switch (opt)
+        {
         case 'o':
             use_stdout = 1;
             break;
@@ -1901,8 +1967,9 @@ static bool fnames_conf_init(
              syslog_ident_str);
     }
     /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
-       for (i=0; i<argc; i++) {
-       ss_dfprintf(stderr, "%s ", argv[i]);
+       for (i=0; i<argc; i++)
+       {
+           ss_dfprintf(stderr, "%s ", argv[i]);
        }
        ss_dfprintf(stderr, "\n");*/
 #if defined(NOT_USED)
@@ -1929,7 +1996,8 @@ static bool fnames_conf_init(
     CHK_FNAMES_CONF(fn);
 
 return_conf_init:
-    if (!succp) {
+    if (!succp)
+    {
         fnames_conf_done(fn);
     }
     ss_dassert(fn->fn_state == RUN || fn->fn_state == DONE);
@@ -1944,7 +2012,8 @@ static char* fname_conf_get_prefix(
     CHK_FNAMES_CONF(fn);
     ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
 
-    switch (id) {
+    switch (id)
+    {
     case LOGFILE_DEBUG:
         return strdup(fn->fn_debug_prefix);
         break;
@@ -1973,7 +2042,8 @@ static char* fname_conf_get_suffix(
     CHK_FNAMES_CONF(fn);
     ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
 
-    switch (id) {
+    switch (id)
+    {
     case LOGFILE_DEBUG:
         return strdup(fn->fn_debug_suffix);
         break;
@@ -2031,7 +2101,8 @@ static bool logfiles_init(
     /**
      * Initialize log files, pass softlink flag if necessary.
      */
-    while (lid<=LOGFILE_LAST && succp) {
+    while (lid<=LOGFILE_LAST && succp)
+    {
         /**
          * Check if the file is stored in shared memory. If so,
          * a symbolic link will be created to log directory.
@@ -2059,16 +2130,19 @@ static bool logfiles_init(
         {
             write_syslog = false;
         }
+
         succp = logfile_init(&lm->lm_logfile[lid],
                              (logfile_id_t)lid,
                              lm,
                              store_shmem,
                              write_syslog);
 
-        if (!succp) {
+        if (!succp)
+        {
             fprintf(stderr, "*\n* Error : Initializing log files failed.\n");
             break;
         }
+
         lid <<= 1;
         i += 1;
     }
@@ -2137,7 +2211,8 @@ static bool logfile_create(
 
     store_shmem = lf->lf_store_shmem;
 
-    do {
+    do
+    {
         namecreatefail = false;
         nameconflicts  = false;
 
@@ -2233,7 +2308,8 @@ static bool logfile_create(
                 lf->lf_full_link_name = NULL;
             }
         }
-    } while (namecreatefail || nameconflicts);
+    }
+    while (namecreatefail || nameconflicts);
 
     succp = true;
 
@@ -2318,8 +2394,10 @@ static bool logfile_open_file(
             succp = false;
             goto return_succp;
         }
+
         free(start_msg_str);
     }
+
     succp = true;
 
 return_succp:
@@ -2387,7 +2465,8 @@ static char* form_full_file_name(
         seqno = lf->lf_name_seqno;
     }
 
-    if (parts == NULL || parts->sp_string == NULL) {
+    if (parts == NULL || parts->sp_string == NULL)
+    {
         goto return_filename;
     }
     /**
@@ -2435,7 +2514,11 @@ static char* form_full_file_name(
     }
 
 return_filename:
-    if (seqnostr != NULL) free(seqnostr);
+    if (seqnostr != NULL)
+    {
+        free(seqnostr);
+    }
+
     return filename;
 }
 
@@ -2575,7 +2658,8 @@ static bool file_is_symlink(
     {
         rc = lstat(filename, &b);
 
-        if (rc != -1 && S_ISLNK(b.st_mode)) {
+        if (rc != -1 && S_ISLNK(b.st_mode))
+        {
             succp = true;
         }
     }
@@ -2734,7 +2818,8 @@ return_with_succp:
 static void logfile_done(
     logfile_t* lf)
 {
-    switch(lf->lf_state) {
+    switch(lf->lf_state)
+    {
     case RUN:
         CHK_LOGFILE(lf);
         ss_dassert(lf->lf_npending_writes == 0);
@@ -2801,7 +2886,8 @@ static bool filewriter_init(
     /** Message from clients to filewriter */
     fw->fwr_clientmes = clientmes;
 
-    if (fw->fwr_logmes == NULL || fw->fwr_clientmes == NULL) {
+    if (fw->fwr_logmes == NULL || fw->fwr_clientmes == NULL)
+    {
         goto return_succp;
     }
 
@@ -2824,7 +2910,8 @@ static bool filewriter_init(
     succp = true;
 
 return_succp:
-    if (!succp) {
+    if (!succp)
+    {
         filewriter_done(fw);
     }
     ss_dassert(fw->fwr_state == RUN || fw->fwr_state == DONE);
@@ -2837,7 +2924,8 @@ static void filewriter_done(
     int           i;
     logfile_id_t  id;
 
-    switch(fw->fwr_state) {
+    switch(fw->fwr_state)
+    {
     case RUN:
         CHK_FILEWRITER(fw);
     case INIT:
@@ -2932,13 +3020,15 @@ static void* thr_filewriter_fun(
     /** Inform log manager about the state. */
     skygw_message_send(fwr->fwr_clientmes);
 
-    while(!skygw_thread_must_exit(thr)) {
+    while(!skygw_thread_must_exit(thr))
+    {
         /**
          * Wait until new log arrival message appears.
          * Reset message to avoid redundant calls.
          */
         skygw_message_wait(fwr->fwr_logmes);
-        if(skygw_thread_must_exit(thr)){
+        if(skygw_thread_must_exit(thr))
+        {
             flushall_logfiles(true);
         }
 
@@ -2982,9 +3072,13 @@ static void* thr_filewriter_fun(
                 else if ((succp = logfile_open_file(fwr, lf)))
                 {
                     if(use_stdout)
+                    {
                         skygw_file_free (file);
+                    }
                     else
+                    {
                         skygw_file_close(file, false); /*< close old file */
+                    }
                 }
 
                 if (!succp)
@@ -3079,12 +3173,17 @@ static void* thr_filewriter_fun(
                 simple_mutex_unlock(&bb->bb_mutex);
 
                 /** Consistent lock-free read on the list */
-                do {
+                do
+                {
                     while ((vn1 = bb_list->mlist_versno)%2
-                           != 0);
+                           != 0)
+                    {
+                        continue;
+                    }
                     node = node->mlnode_next;
                     vn2 = bb_list->mlist_versno;
-                } while (vn1 != vn2 && node);
+                }
+                while (vn1 != vn2 && node);
 
             } /* while (node != NULL) */
 
@@ -3094,7 +3193,8 @@ static void* thr_filewriter_fun(
              * flushed.
              */
 
-            if(flushall_started_flag){
+            if(flushall_started_flag)
+            {
                 flushall_started_flag = false;
                 flushall_done_flag = true;
                 i = LOGFILE_FIRST;
@@ -3109,7 +3209,8 @@ static void* thr_filewriter_fun(
             }
         }/* for */
 
-        if(flushall_done_flag){
+        if(flushall_done_flag)
+        {
             flushall_done_flag = false;
             flushall_logfiles(false);
             skygw_message_send(fwr->fwr_clientmes);
@@ -3127,7 +3228,8 @@ static void* thr_filewriter_fun(
 static void fnames_conf_done(
     fnames_conf_t* fn)
 {
-    switch (fn->fn_state) {
+    switch (fn->fn_state)
+    {
     case RUN:
         CHK_FNAMES_CONF(fn);
     case INIT:
@@ -3221,7 +3323,8 @@ bool thr_flushall_check()
     bool rval = false;
     simple_mutex_lock(&lm->lm_mutex,true);
     rval = flushall_flag;
-    if(rval && !flushall_started_flag && !flushall_done_flag){
+    if(rval && !flushall_started_flag && !flushall_done_flag)
+    {
         flushall_started_flag = true;
     }
     simple_mutex_unlock(&lm->lm_mutex);
@@ -3240,7 +3343,10 @@ void flushall_logfiles(bool flush)
  */
 void skygw_log_sync_all(void)
 {
-    if(!use_stdout)skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
+    if(!use_stdout)
+    {
+        skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
+    }
 
     /** If initialization of the log manager has not been done, lm pointer can be
      * NULL. */

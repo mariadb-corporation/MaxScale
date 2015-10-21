@@ -30,13 +30,15 @@ typedef struct logfile_st     logfile_t;
 typedef struct fnames_conf_st fnames_conf_t;
 typedef struct logmanager_st  logmanager_t;
 
-typedef enum {
+typedef enum
+{
     BB_READY = 0x00,
     BB_FULL,
     BB_CLEARED
 } blockbuf_state_t;
 
-typedef enum {
+typedef enum
+{
     LOGFILE_ERROR = 1,
     LOGFILE_FIRST = LOGFILE_ERROR,
     LOGFILE_MESSAGE = 2,
@@ -46,13 +48,17 @@ typedef enum {
 } logfile_id_t;
 
 
-typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
-    filewriter_state_t;
+typedef enum
+{
+    FILEWRITER_INIT,
+    FILEWRITER_RUN,
+    FILEWRITER_DONE
+} filewriter_state_t;
 
 /**
 * Thread-specific logging information.
 */
-typedef struct log_info_st
+typedef struct log_info
 {
     size_t li_sesid;
     int    li_enabled_logs;
@@ -106,7 +112,13 @@ typedef struct log_info_st
  * RUN    Struct is valid for run-time checking.
  * DONE   means that possible memory allocations have been released.
  */
-typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t;
+typedef enum
+{
+    UNINIT = 0,
+    INIT,
+    RUN,
+    DONE
+} flat_obj_state_t;
 
 /**
  * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].
