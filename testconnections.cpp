@@ -3,6 +3,7 @@
 #include "sql_t1.h"
 #include <getopt.h>
 #include <time.h>
+#include <string>
 
 TestConnections::TestConnections(int argc, char *argv[])
 {
@@ -574,12 +575,23 @@ bool TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, b
     return rval;
 }
 
-int TestConnections::execute_ssh_maxscale(char* ssh)
+char* TestConnections::execute_ssh_maxscale(char* ssh)
 {
-    char *sys = (char*)new char[strlen(ssh) + 1024];
+    char sys[strlen(ssh) + 1024];
+
     sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s %s\"",
             maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, ssh);
-    return system(sys);
+
+    FILE *output = popen(sys, "r");
+    std::string result;
+    char buffer[1024];
+
+    while(fgets(buffer, sizeof(buffer), output))
+    {
+        result += buffer;
+    }
+
+    return result.size() > 0 ? strdup(result.c_str()) : NULL;
 }
 
 

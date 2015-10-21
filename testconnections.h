@@ -351,9 +351,9 @@ public:
     /**
      * @brief Execute a command via ssh on the MaxScale machine
      * @param ssh ssh command to execute on the MaxScale machine
-     * @return  0 in case of success
+     * @return Output of the command or NULL if the command failed to execute
      */
-    int execute_ssh_maxscale(char* ssh);
+    char* execute_ssh_maxscale(char* ssh);
 
     /**
      * @brief Test that connections to MaxScale are in the expected state
