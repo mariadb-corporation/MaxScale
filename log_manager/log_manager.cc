@@ -129,7 +129,7 @@ struct filewriter
     flat_obj_state_t   fwr_state;
     logmanager_t*      fwr_logmgr;
     /** Physical files */
-    skygw_file_t*      fwr_file[LOGFILE_LAST+1];
+    skygw_file_t*      fwr_file[LOGFILE_LAST + 1];
     /** fwr_logmes is for messages from log clients */
     skygw_message_t*   fwr_logmes;
     /** fwr_clientmes is for messages to log clients */
@@ -237,7 +237,7 @@ struct logmanager
     /** fwr_clientmes is for messages to log clients */
     skygw_message_t* lm_clientmes;
     fnames_conf_t    lm_fnames_conf;
-    logfile_t        lm_logfile[LOGFILE_LAST+1];
+    logfile_t        lm_logfile[LOGFILE_LAST + 1];
     filewriter_t     lm_filewriter;
 #if defined(SS_DEBUG)
     skygw_chk_t      lm_chk_tail;
@@ -540,7 +540,7 @@ static void logmanager_done_nomutex(void)
     /** Free filewriter memory. */
     filewriter_done(fwr);
 
-    for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++)
+    for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i++)
     {
         lf = logmanager_get_logfile(lm, (logfile_id_t)i);
         /** Release logfile memory */
@@ -679,7 +679,7 @@ static int logmanager_write_log(logfile_id_t id,
                                    false,
                                    false,
                                    false,
-                                   strlen(errstr)+1,
+                                   strlen(errstr) + 1,
                                    errstr,
                                    valist);
         if (err != 0)
@@ -723,7 +723,7 @@ static int logmanager_write_log(logfile_id_t id,
          */
         if (id == LOGFILE_TRACE && tls_log_info.li_sesid != 0)
         {
-            sesid_str_len = 5*sizeof(char)+get_decimal_len(tls_log_info.li_sesid);
+            sesid_str_len = 5 * sizeof(char) + get_decimal_len(tls_log_info.li_sesid);
         }
         else
         {
@@ -740,13 +740,13 @@ static int logmanager_write_log(logfile_id_t id,
         cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 
         /** Find out how much can be safely written with current block size */
-        if (timestamp_len-sizeof(char)+cmplen+str_len > lf->lf_buf_size)
+        if (timestamp_len - sizeof(char) + cmplen + str_len > lf->lf_buf_size)
         {
             safe_str_len = lf->lf_buf_size;
         }
         else
         {
-            safe_str_len = timestamp_len-sizeof(char)+cmplen+str_len;
+            safe_str_len = timestamp_len - sizeof(char) + cmplen + str_len;
         }
         /**
          * Seek write position and register to block buffer.
@@ -755,15 +755,15 @@ static int logmanager_write_log(logfile_id_t id,
 
 #if defined (SS_LOG_DEBUG)
         {
-            char *copy,*tok;
+            char *copy, *tok;
             int tokval;
 
-            simple_mutex_lock(&msg_mutex,true);
+            simple_mutex_lock(&msg_mutex, true);
             copy = strdup(str);
-            tok = strtok(copy,"|");
-            tok = strtok(NULL,"|");
+            tok = strtok(copy, "|");
+            tok = strtok(NULL, "|");
 
-            if (strstr(str,"message|") && tok)
+            if (strstr(str, "message|") && tok)
             {
                 tokval = atoi(tok);
 
@@ -787,7 +787,7 @@ static int logmanager_write_log(logfile_id_t id,
         }
         else
         {
-            wp = (char*)malloc(sizeof(char)*(timestamp_len-sizeof(char)+cmplen+str_len + 1));
+            wp = (char*)malloc(sizeof(char) * (timestamp_len - sizeof(char) + cmplen + str_len + 1));
         }
 
         if (wp == NULL)
@@ -797,7 +797,7 @@ static int logmanager_write_log(logfile_id_t id,
 
 #if defined (SS_LOG_DEBUG)
         {
-            sprintf(wp,"[msg:%d]",atomic_add(&write_index,1));
+            sprintf(wp, "[msg:%d]", atomic_add(&write_index, 1));
             safe_str_len -= strlen(wp);
             wp += strlen(wp);
         }
@@ -820,7 +820,7 @@ static int logmanager_write_log(logfile_id_t id,
             /**
              * Write session id
              */
-            snprintf(wp+timestamp_len,
+            snprintf(wp + timestamp_len,
                      sesid_str_len,
                      "[%lu]  ",
                      tls_log_info.li_sesid);
@@ -832,14 +832,14 @@ static int logmanager_write_log(logfile_id_t id,
          */
         if (use_valist)
         {
-            vsnprintf(wp+timestamp_len+sesid_str_len,
+            vsnprintf(wp + timestamp_len + sesid_str_len,
                       safe_str_len-timestamp_len-sesid_str_len,
                       str,
                       valist);
         }
         else
         {
-            snprintf(wp+timestamp_len+sesid_str_len,
+            snprintf(wp + timestamp_len + sesid_str_len,
                      safe_str_len-timestamp_len-sesid_str_len,
                      "%s",
                      str);
@@ -851,11 +851,11 @@ static int logmanager_write_log(logfile_id_t id,
             switch(id)
             {
             case LOGFILE_ERROR:
-                syslog(LOG_ERR, "%s", wp+timestamp_len);
+                syslog(LOG_ERR, "%s", wp + timestamp_len);
                 break;
 
             case LOGFILE_MESSAGE:
-                syslog(LOG_NOTICE, "%s", wp+timestamp_len);
+                syslog(LOG_NOTICE, "%s", wp + timestamp_len);
                 break;
 
             default:
@@ -863,11 +863,11 @@ static int logmanager_write_log(logfile_id_t id,
             }
         }
         /** remove double line feed */
-        if (wp[safe_str_len-2] == '\n')
+        if (wp[safe_str_len - 2] == '\n')
         {
-            wp[safe_str_len-2]=' ';
+            wp[safe_str_len - 2] = ' ';
         }
-        wp[safe_str_len-1] = '\n';
+        wp[safe_str_len - 1] = '\n';
 
         if (do_maxscalelog)
         {
@@ -895,7 +895,7 @@ static int logmanager_write_log(logfile_id_t id,
              * message, trace and debuglog. Messages will be
              * written in trace and debug log.
              */
-            for (i=(id<<1); i<=LOGFILE_LAST; i<<=1)
+            for (i = (id << 1); i <= LOGFILE_LAST; i <<= 1)
             {
                 /** pointer to write buffer of larger-id log */
                 char* wp_c;
@@ -913,20 +913,20 @@ static int logmanager_write_log(logfile_id_t id,
                 wp_c = blockbuf_get_writepos(
                     &bb_c,
                     (logfile_id_t)i,
-                    timestamp_len-1+str_len,
+                    timestamp_len - 1 + str_len,
                     flush);
                 /**
                  * Copy original string from block buffer to
                  * other logs' block buffers.
                  */
-                snprintf(wp_c, timestamp_len+str_len, "%s", wp);
+                snprintf(wp_c, timestamp_len + str_len, "%s", wp);
 
                 /** remove double line feed */
-                if (wp_c[timestamp_len-1+str_len-2] == '\n')
+                if (wp_c[timestamp_len - 1 + str_len - 2] == '\n')
                 {
-                    wp_c[timestamp_len-1+str_len-2]=' ';
+                    wp_c[timestamp_len - 1 + str_len - 2] = ' ';
                 }
-                wp_c[timestamp_len-1+str_len-1]='\n';
+                wp_c[timestamp_len - 1 + str_len - 1] = '\n';
 
                 /** lock-free unregistration, includes flush if
                  * bb_state == BB_FULL */
@@ -1088,7 +1088,7 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
                      * update.
                      */
                     bb_list->mlist_versno += 1;
-                    ss_dassert(bb_list->mlist_versno%2 == 1);
+                    ss_dassert(bb_list->mlist_versno % 2 == 1);
 
                     ss_debug(succp =)
                         mlist_add_data_nomutex(bb_list, bb);
@@ -1098,7 +1098,7 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
                      * Increase version to even to mark completion of update.
                      */
                     bb_list->mlist_versno += 1;
-                    ss_dassert(bb_list->mlist_versno%2 == 0);
+                    ss_dassert(bb_list->mlist_versno % 2 == 0);
                 }
                 else
                 {
@@ -1129,7 +1129,8 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
                 {
 
                     if (bb_list->mlist_nodecount > 1 &&
-                       node != bb_list->mlist_last){
+                       node != bb_list->mlist_last)
+                    {
                         bb_list->mlist_last->mlnode_next = bb_list->mlist_first;
                         bb_list->mlist_first = bb_list->mlist_first->mlnode_next;
                         bb_list->mlist_last->mlnode_next->mlnode_next = NULL;
@@ -1190,7 +1191,7 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
          * Increase version to odd to mark list update active update.
          */
         bb_list->mlist_versno += 1;
-        ss_dassert(bb_list->mlist_versno%2 == 1);
+        ss_dassert(bb_list->mlist_versno % 2 == 1);
 
         ss_debug(succp =)mlist_add_data_nomutex(bb_list, bb);
         ss_dassert(succp);
@@ -1199,7 +1200,7 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
          * Increase version to even to mark completion of update.
          */
         bb_list->mlist_versno += 1;
-        ss_dassert(bb_list->mlist_versno%2 == 0);
+        ss_dassert(bb_list->mlist_versno % 2 == 0);
 
         /** Unlock list */
         simple_mutex_unlock(&bb_list->mlist_mutex);
@@ -1374,7 +1375,7 @@ static bool logfile_set_enabled(
                                    false,
                                    false,
                                    false,
-                                   strlen(errstr)+1,
+                                   strlen(errstr) + 1,
                                    errstr,
                                    notused);
         if (err != 0)
@@ -1406,7 +1407,7 @@ static bool logfile_set_enabled(
                                    false,
                                    false,
                                    false,
-                                   strlen(logstr)+1,
+                                   strlen(logstr) + 1,
                                    logstr,
                                    notused);
         free(logstr);
@@ -1952,7 +1953,7 @@ static bool fnames_conf_init(fnames_conf_t* fn,
              syslog_ident_str);
     }
     /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
-       for (i=0; i<argc; i++)
+       for (i = 0; i < argc; i++)
        {
            ss_dfprintf(stderr, "%s ", argv[i]);
        }
@@ -2084,7 +2085,7 @@ static bool logfiles_init(
     /**
      * Initialize log files, pass softlink flag if necessary.
      */
-    while (lid<=LOGFILE_LAST && succp)
+    while (lid <= LOGFILE_LAST && succp)
     {
         /**
          * Check if the file is stored in shared memory. If so,
@@ -2210,7 +2211,7 @@ static bool logfile_create(logfile_t* lf)
             /**
              * Create name for link file
              */
-            lf->lf_full_link_name = form_full_file_name(spart,lf,2);
+            lf->lf_full_link_name = form_full_file_name(spart, lf, 2);
         }
         /**
          * At least one of the files couldn't be created. Increase
@@ -2430,7 +2431,7 @@ static char* form_full_file_name(strpart_t* parts,
 
         seqno = lf->lf_name_seqno;
         s = UINTLEN(seqno);
-        seqnostr = (char *)malloc((int)s+1);
+        seqnostr = (char *)malloc((int)s + 1);
     }
     else
     {
@@ -2474,10 +2475,10 @@ static char* form_full_file_name(strpart_t* parts,
 
     if (seqnostr != NULL)
     {
-        snprintf(seqnostr, s+1, "%d", seqno);
+        snprintf(seqnostr, s + 1, "%d", seqno);
     }
 
-    for (i=0, p=parts; p->sp_string != NULL; i++, p=p->sp_next)
+    for (i = 0, p = parts; p->sp_string != NULL; i++, p = p->sp_next)
     {
         if (seqnostr != NULL && i == seqnoidx)
         {
@@ -2523,8 +2524,8 @@ static char* add_slash(char* str)
     /** Add slash if missing */
     if (p[plen-1] != '/')
     {
-        str = (char *)malloc(plen+2);
-        snprintf(str, plen+2, "%s/", p);
+        str = (char *)malloc(plen + 2);
+        snprintf(str, plen + 2, "%s/", p);
         free(p);
     }
     return str;
@@ -2567,12 +2568,12 @@ static bool check_file_and_path(char* filename,
     }
     else
     {
-        if (access(filename,F_OK) == 0)
+        if (access(filename, F_OK) == 0)
         {
 
             exists = true;
 
-            if (access(filename,W_OK) == 0)
+            if (access(filename, W_OK) == 0)
             {
                 if (writable)
                 {
@@ -2677,7 +2678,7 @@ static bool logfile_init(logfile_t*    logfile,
     logfile->lf_name_seqno = 1;
     logfile->lf_lmgr = logmanager;
     logfile->lf_flushflag = false;
-    logfile->lf_rotateflag= false;
+    logfile->lf_rotateflag = false;
     logfile->lf_spinlock = 0;
     logfile->lf_store_shmem = store_shmem;
     logfile->lf_write_syslog = write_syslog;
@@ -2692,7 +2693,7 @@ static bool logfile_init(logfile_t*    logfile,
     {
         char* c;
         pid_t pid = getpid();
-        int   len = strlen(shm_pathname_prefix)+
+        int   len = strlen(shm_pathname_prefix)
             + strlen("maxscale.") +
             get_decimal_len((size_t)pid) + 1;
 
@@ -2863,7 +2864,7 @@ static bool filewriter_init(logmanager_t*    logmanager,
         goto return_succp;
     }
 
-    for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1)
+    for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
     {
         id = (logfile_id_t)i;
         lf = logmanager_get_logfile(logmanager, id);
@@ -2902,7 +2903,7 @@ static void filewriter_done(filewriter_t* fw)
     case INIT:
         fw->fwr_logmes = NULL;
         fw->fwr_clientmes = NULL;
-        for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i++)
+        for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i++)
         {
             id = (logfile_id_t)i;
             if (use_stdout)
@@ -3007,7 +3008,7 @@ static void* thr_filewriter_fun(void* data)
         }
 
         /** Process all logfiles which have buffered writes. */
-        for (i=LOGFILE_FIRST; i<=LOGFILE_LAST; i <<= 1)
+        for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
         {
         retry_flush_on_exit:
             /**
@@ -3137,7 +3138,7 @@ static void* thr_filewriter_fun(void* data)
                     memset(bb->bb_buf, 0, bb->bb_buf_size);
                     bb->bb_state = BB_CLEARED;
 #if defined(SS_LOG_DEBUG)
-                    sprintf(bb->bb_buf,"[block:%d]",atomic_add(&block_start_index,1));
+                    sprintf(bb->bb_buf,"[block:%d]", atomic_add(&block_start_index, 1));
                     bb->bb_buf_used += strlen(bb->bb_buf);
                     bb->bb_buf_left -= strlen(bb->bb_buf);
 #endif
@@ -3149,8 +3150,7 @@ static void* thr_filewriter_fun(void* data)
                 /** Consistent lock-free read on the list */
                 do
                 {
-                    while ((vn1 = bb_list->mlist_versno)%2
-                           != 0)
+                    while ((vn1 = bb_list->mlist_versno) % 2 != 0)
                     {
                         continue;
                     }
@@ -3259,9 +3259,9 @@ static int find_last_seqno(strpart_t* parts,
         int  i;
         char filename[NAME_MAX] = {0};
         /** Form name with next seqno */
-        snprintf(snstr, snstrlen, "%d", seqno+1);
+        snprintf(snstr, snstrlen, "%d", seqno + 1);
 
-        for (i=0, p=parts; p->sp_string != NULL; i++, p=p->sp_next)
+        for (i = 0, p = parts; p->sp_string != NULL; i++, p = p->sp_next)
         {
             if (snstr != NULL && i == seqnoidx)
             {
@@ -3292,7 +3292,7 @@ static int find_last_seqno(strpart_t* parts,
 bool thr_flushall_check()
 {
     bool rval = false;
-    simple_mutex_lock(&lm->lm_mutex,true);
+    simple_mutex_lock(&lm->lm_mutex, true);
     rval = flushall_flag;
     if (rval && !flushall_started_flag && !flushall_done_flag)
     {
@@ -3304,7 +3304,7 @@ bool thr_flushall_check()
 
 void flushall_logfiles(bool flush)
 {
-    simple_mutex_lock(&lm->lm_mutex,true);
+    simple_mutex_lock(&lm->lm_mutex, true);
     flushall_flag = flush;
     simple_mutex_unlock(&lm->lm_mutex);
 }
