@@ -37,6 +37,7 @@
  *					This is the current supported condition for detecting
  *					MariaDB 10 transaction start point.
  *					It's no longer using QUERY_EVENT with BEGIN
+ * 23/10/15     Markus Makela       Added current_safe_event
  *
  * @endverbatim
  */
@@ -199,7 +200,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	write(fd, magic, 4);
 	router->current_pos = 4;			/* Initial position after the magic number */
 	router->binlog_position = 4;			/* Initial position after the magic number */
-    router->current_safe_event = 4;
+	router->current_safe_event = 4;
 }
 
 
@@ -853,7 +854,7 @@ double average_bytes = 0;
 
 	router->current_pos = 4;
 	router->binlog_position = 4;
-    router->current_safe_event = 4;
+	router->current_safe_event = 4;
 
         while (1){
 
@@ -951,7 +952,7 @@ double average_bytes = 0;
                         	/* any error */
                         	if (n != 0) {
 					router->binlog_position = last_known_commit;
-                    router->current_safe_event = last_known_commit;
+					router->current_safe_event = last_known_commit;
 					router->current_pos = pos;
 
 					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -971,7 +972,7 @@ double average_bytes = 0;
 					return 1;
 				} else {
 					router->binlog_position = pos;
-                    router->current_safe_event = pos;
+					router->current_safe_event = pos;
 					router->current_pos = pos;
 
                                 	return 0;
@@ -1014,7 +1015,7 @@ double average_bytes = 0;
 		if (event_error) {
 
 			router->binlog_position = last_known_commit;
-            router->current_safe_event = last_known_commit;
+			router->current_safe_event = last_known_commit;
 			router->current_pos = pos;
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -1456,7 +1457,7 @@ double average_bytes = 0;
                         last_known_commit)));
 
 		router->binlog_position = last_known_commit;
-        router->current_safe_event = last_known_commit;
+		router->current_safe_event = last_known_commit;
 		router->current_pos = pos;
 		router->pending_transaction = 1;
 

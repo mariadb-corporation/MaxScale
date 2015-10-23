@@ -47,6 +47,7 @@
  *					saved master responses
  * 23/08/2015	Massimiliano Pinto	Added strerror_r
  * 30/09/2015	Massimiliano Pinto	Addition of send_slave_heartbeat option
+ * 23/10/2015   Markus Makela       Added current_safe_event
  *
  * @endverbatim
  */
@@ -509,7 +510,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 	inst->binlog_position = 0;
 	inst->current_pos = 0;
-    inst->current_safe_event = 0;
+	inst->current_safe_event = 0;
 
 	strcpy(inst->binlog_name, "");
 	strcpy(inst->prevbinlog, "");

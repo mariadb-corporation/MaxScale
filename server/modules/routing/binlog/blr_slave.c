@@ -58,6 +58,7 @@
  * 25/09/2015	Massimiliano Pinto	Addition of slave heartbeat:
  *					the period set during registration is checked
  *					and heartbeat event might be sent to the affected slave.
+ * 23/10/15 Markus Makela           Added current_safe_event
  *
  * @endverbatim
  */
@@ -2925,7 +2926,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 			router->master_state = BLRM_UNCONNECTED;
 			router->current_pos = 4;
 			router->binlog_position = 4;
-            router->current_safe_event = 4;
+			router->current_safe_event = 4;
 
 			spinlock_release(&router->lock);
 
@@ -3226,7 +3227,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			router->current_pos = 4;
 			router->binlog_position = 4;
-            router->current_safe_event = 4;
+			router->current_safe_event = 4;
 
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
 				router->service->name,
@@ -3284,7 +3285,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			if (router->master_state == BLRM_UNCONFIGURED) {
 				router->current_pos = 4;
 				router->binlog_position = 4;
-                router->current_safe_event = 4;
+				router->current_safe_event = 4;
 				memset(router->binlog_name, '\0', sizeof(router->binlog_name));
 				strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
 
@@ -3553,7 +3554,7 @@ blr_master_set_empty_config(ROUTER_INSTANCE *router) {
 
 	router->current_pos = 4;
 	router->binlog_position = 4;
-    router->current_safe_event = 4;
+	router->current_safe_event = 4;
 	strcpy(router->binlog_name, "");
 }
 
@@ -3569,7 +3570,7 @@ blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master)
 	server_update_port(router->service->dbref->server, prev_master->port);
 	router->current_pos = prev_master->pos;
 	router->binlog_position = prev_master->safe_pos;
-    router->current_safe_event = prev_master->safe_pos;
+	router->current_safe_event = prev_master->safe_pos;
 	strcpy(router->binlog_name, prev_master->logfile);
 	if (router->user) {
 		free(router->user);
