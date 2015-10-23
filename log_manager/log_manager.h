@@ -182,4 +182,28 @@ const char* get_err_prefix_default(void);
 const char* get_err_suffix_default(void);
 const char* get_logpath_default(void);
 
+/**
+ * Helper, not to be called directly.
+ */
+#define MAXSCALE_MESSAGE_FLUSH(id, format, ...)\
+    do { if (LOG_IS_ENABLED(id)) { skygw_log_write_flush(id, format, ##__VA_ARGS__); } } while (false)
+
+/**
+ * Helper, not to be called directly.
+ */
+#define MAXSCALE_MESSAGE(id, format, ...)\
+    do { if (LOG_IS_ENABLED(id)) { skygw_log_write(id, format, ##__VA_ARGS__); } } while (false)
+
+/**
+ * Log an error, warning, notice, info, or debug  message.
+ *
+ * @param format The printf format of the message.
+ * @param ...    Arguments, depending on the format.
+ */
+#define MAXSCALE_ERROR(format, ...)   MAXSCALE_MESSAGE_FLUSH(LOGFILE_ERROR, format, ##__VA_ARGS__)
+#define MAXSCALE_WARNING(format, ...) MAXSCALE_MESSAGE(LOGFILE_ERROR, format, ##__VA_ARGS__)
+#define MAXSCALE_NOTICE(format, ...)  MAXSCALE_MESSAGE(LOGFILE_MESSAGE, format, ##__VA_ARGS__)
+#define MAXSCALE_INFO(format, ...)    MAXSCALE_MESSAGE(LOGFILE_TRACE, format, ##__VA_ARGS__)
+#define MAXSCALE_DEBUG(format, ...)   MAXSCALE_MESSAGE(LOGFILE_DEBUG, format, ##__VA_ARGS__)
+
 #endif /** LOG_MANAGER_H */
