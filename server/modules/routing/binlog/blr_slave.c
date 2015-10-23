@@ -58,7 +58,7 @@
  * 25/09/2015	Massimiliano Pinto	Addition of slave heartbeat:
  *					the period set during registration is checked
  *					and heartbeat event might be sent to the affected slave.
- * 23/10/15 Markus Makela           Added current_safe_event
+ * 23/10/15	Markus Makela		Added current_safe_event
  *
  * @endverbatim
  */

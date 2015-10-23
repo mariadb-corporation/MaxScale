@@ -47,7 +47,7 @@
  *					saved master responses
  * 23/08/2015	Massimiliano Pinto	Added strerror_r
  * 30/09/2015	Massimiliano Pinto	Addition of send_slave_heartbeat option
- * 23/10/2015   Markus Makela       Added current_safe_event
+ * 23/10/2015	Markus Makela		Added current_safe_event
  *
  * @endverbatim
  */

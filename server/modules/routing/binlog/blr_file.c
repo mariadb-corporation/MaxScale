@@ -37,7 +37,7 @@
  *					This is the current supported condition for detecting
  *					MariaDB 10 transaction start point.
  *					It's no longer using QUERY_EVENT with BEGIN
- * 23/10/15     Markus Makela       Added current_safe_event
+ * 23/10/15	Markus Makela		Added current_safe_event
  *
  * @endverbatim
  */

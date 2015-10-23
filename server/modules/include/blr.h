@@ -34,7 +34,7 @@
  * 23/06/15	Massimiliano Pinto	Addition of MASTER_SERVER_CFG struct
  * 24/06/15	Massimiliano Pinto	Added BLRM_UNCONFIGURED state
  * 05/08/15	Massimiliano Pinto	Initial implementation of transaction safety
- * 23/10/15 Markus Makela       Added current_safe_event
+ * 23/10/15	Markus Makela		Added current_safe_event
  *
  * @endverbatim
  */
