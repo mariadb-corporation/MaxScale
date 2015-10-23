@@ -544,14 +544,13 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 		int mkdir_rval;
 		mkdir_rval = mkdir(inst->binlogdir, 0700);
 		if (mkdir_rval == -1) {
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+			char err_msg[STRERROR_BUFLEN];
 			skygw_log_write_flush(LOGFILE_ERROR,
 				"Error : Service %s, Failed to create binlog directory '%s': [%d] %s",
 				service->name,
 				inst->binlogdir,
 				errno,
-				err_msg);
+				strerror_r(errno, err_msg, sizeof(err_msg)));
 
 			free(inst);
 			return NULL;
@@ -1402,7 +1401,7 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error;
 socklen_t	len;
-char		msg[BLRM_STRERROR_R_MSG_SIZE + 1 + 5] = "";
+char		msg[STRERROR_BUFLEN + 1 + 5] = "";
 char 		*errmsg;
 unsigned long	mysql_errno;
 
@@ -1427,8 +1426,8 @@ unsigned long	mysql_errno;
 	len = sizeof(error);
 	if (router->master && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
 	{
-		strerror_r(error, msg, BLRM_STRERROR_R_MSG_SIZE);
-		strcat(msg, " ");
+		char errbuf[STRERROR_BUFLEN];
+                sprintf(msg, "%s ", strerror_r(error, errbuf, sizeof(errbuf)));
 	}
 	else
 		strcpy(msg, "");
@@ -1939,14 +1938,13 @@ int	mkdir_rval = 0;
 
 	if (mkdir_rval == -1)
 	{
-		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		char err_msg[STRERROR_BUFLEN];
 		skygw_log_write(LOGFILE_ERROR,
 			"Error : Service %s, Failed to create directory '%s': [%d] %s",
 			service->name,
 			path,
 			errno,
-			err_msg);
+			strerror_r(errno, err_msg, sizeof(err_msg)));
 
 		return -1;
 	}

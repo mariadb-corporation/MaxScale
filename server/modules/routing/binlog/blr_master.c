@@ -1946,13 +1946,12 @@ int		event_limit;
                         break;
                 case -1:
 			{
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+			char err_msg[STRERROR_BUFLEN];
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: failed to read binlog "
 				"file %s at position %d"
 				" (%s).", router->binlog_name,
-				pos, err_msg)));
+				pos, strerror_r(errno, err_msg, sizeof(err_msg)))));
 
 			if (errno == EBADF)
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
@@ -2010,13 +2009,12 @@ int		event_limit;
 	{
 		if (n == -1)
 		{
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+			char err_msg[STRERROR_BUFLEN];
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: the event at %ld in %s. "
 				"%s, expected %d bytes.",
 				pos, router->binlog_name,
-				err_msg, hdr->event_size - 19)));
+				strerror_r(errno, err_msg, sizeof(err_msg)), hdr->event_size - 19)));
 		} else {
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: short read when reading "

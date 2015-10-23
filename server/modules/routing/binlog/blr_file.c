@@ -125,13 +125,11 @@ struct dirent	*dp;
 	root_len = strlen(router->fileroot);
 	if ((dirp = opendir(path)) == NULL)
 	{
-		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1]="";
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-
+		char err_msg[BLRM_STRERROR_R_MSG_SIZE];
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Unable to read the binlog directory %s, %s.",
 			router->service->name, router->binlogdir,
-			err_msg)));
+			strerror_r(errno, err_msg, sizeof(err_msg)))));
 		return 0;
 	}
 	while ((dp = readdir(dirp)) != NULL)
@@ -227,12 +225,11 @@ int		fd;
 	}
 	else
 	{
-		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		char err_msg[STRERROR_BUFLEN];
 
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Failed to create binlog file %s, %s.",
-				router->service->name, path, err_msg)));
+				router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)))));
 		return 0;
 	}
 	fsync(fd);
@@ -306,14 +303,13 @@ int	n;
 	if ((n = pwrite(router->binlog_fd, buf, hdr->event_size,
 				hdr->next_pos - hdr->event_size)) != hdr->event_size)
 	{
-		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		char err_msg[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Failed to write binlog record at %d of %s, %s. "
 			"Truncating to previous record.",
 			router->service->name, hdr->next_pos - hdr->event_size,
 			router->binlog_name,
-			err_msg)));
+			strerror_r(errno, err_msg, sizeof(err_msg)))));
 		/* Remove any partual event that was written */
 		ftruncate(router->binlog_fd, hdr->next_pos - hdr->event_size);
 		return 0;
@@ -461,11 +457,9 @@ struct	stat	statb;
 			break;
 		case -1:
 			{
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-
+			char err_msg[STRERROR_BUFLEN];
 			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to read binlog file '%s'; (%s), event at %lu",
-				file->binlogname, err_msg, pos);
+				file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
 
 			if (errno == EBADF)
 				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bad file descriptor for binlog file '%s', refcount %d, descriptor %d, event at %lu",
@@ -531,11 +525,9 @@ struct	stat	statb;
 				break;
 			case -1:
 				{
-				char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-				strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-
+				char err_msg[STRERROR_BUFLEN];
 				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to reread header in binlog file '%s'; (%s), event at %lu",
-					file->binlogname, err_msg, pos);
+					file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
 
 				if (errno == EBADF)
 					snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bad file descriptor rereading header for binlog file '%s', "
@@ -588,12 +580,10 @@ struct	stat	statb;
 	{
 		if (n == -1)
 		{
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-
+			char err_msg[STRERROR_BUFLEN];
 			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Error reading the binlog event at %lu in binlog file '%s';"
 				"(%s), expected %d bytes.",
-				pos, file->binlogname, err_msg, hdr->event_size - BINLOG_EVENT_HDR_LEN);	
+				pos, file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), hdr->event_size - BINLOG_EVENT_HDR_LEN);	
 		}
 		else
 		{
@@ -1587,7 +1577,7 @@ int rc;
 char path[(PATH_MAX - 15) + 1] = "";
 char filename[(PATH_MAX - 4) + 1] = "";
 char tmp_file[PATH_MAX + 1] = "";
-char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+char err_msg[STRERROR_BUFLEN];
 
 	strncpy(path, router->binlogdir, (PATH_MAX - 15));
 
@@ -1600,14 +1590,12 @@ char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
 	/* open file for writing */
 	config_file = fopen(tmp_file,"wb");
 	if (config_file == NULL) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 		return 2;
 	}
 
 	if(chmod(tmp_file, S_IRUSR | S_IWUSR) < 0) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 		return 2;
 	}
 
@@ -1627,14 +1615,12 @@ char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
 	rc = rename(tmp_file, filename);
 
 	if (rc == -1) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 		return 3;
 	}
 
 	if(chmod(filename, S_IRUSR | S_IWUSR) < 0) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 		return 3;
 	}
 

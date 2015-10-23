@@ -760,9 +760,8 @@ extern  char *strcasestr();
 				removed_cfg = unlink(path);
 
 				if (removed_cfg == -1) {
-					char err_msg[BLRM_STRERROR_R_MSG_SIZE+1]="";
-					strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error removing %s, %s, errno %u", path, err_msg, errno);
+					char err_msg[STRERROR_BUFLEN];
+					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error removing %s, %s, errno %u", path, strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error_string)));
 				}
 
