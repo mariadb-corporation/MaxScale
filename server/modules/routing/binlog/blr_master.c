@@ -1064,6 +1064,7 @@ int			n_bufs = -1, pn_bufs = -1;
 					spinlock_acquire(&router->binlog_lock);
 
 					router->binlog_position = router->current_pos;
+                    router->current_safe_event = router->current_pos;
 
 					spinlock_release(&router->binlog_lock);
 				}
@@ -1283,6 +1284,7 @@ int			n_bufs = -1, pn_bufs = -1;
 							spinlock_acquire(&router->binlog_lock);
 
 							router->binlog_position = router->current_pos;
+                            router->current_safe_event = router->current_pos;
 
 							spinlock_release(&router->binlog_lock);
 
@@ -1324,6 +1326,13 @@ int			n_bufs = -1, pn_bufs = -1;
 									blr_distribute_binlog_record(router, &new_hdr, raw_data);
 
 									spinlock_acquire(&router->binlog_lock);
+
+                                    /** The current safe position is only updated
+                                     * if it points to the event we just distributed. */
+                                    if(router->current_safe_event == pos)
+                                    {
+                                        router->current_safe_event = new_hdr.next_pos;
+                                    }
 
 									pos = new_hdr.next_pos;
 
@@ -1596,6 +1605,10 @@ uint8_t		*buf;
 ROUTER_SLAVE	*slave, *nextslave;
 int		action;
 
+    spinlock_acquire(&router->binlog_lock);
+    uint64_t current_safe_event = router->current_safe_event;
+    spinlock_release(&router->binlog_lock);
+
 	spinlock_acquire(&router->lock);
 	slave = router->slaves;
 	while (slave)
@@ -1634,13 +1647,69 @@ int		action;
 		slave->stats.n_actions[action-1]++;
 		spinlock_release(&slave->catch_lock);
 
+        bool sendevent = false;
+        bool forcecatchup = false;
+        bool alreadysent = false;
+
 		if (action == 1)
 		{
-			if (slave->binlog_pos <= router->last_written &&
+            if(router->trx_safe && slave->binlog_pos == current_safe_event &&
+               (strcmp(slave->binlogfile, router->binlog_name) == 0 ||
+				(hdr->event_type == ROTATE_EVENT &&
+				strcmp(slave->binlogfile, router->prevbinlog))))
+            {
+                /**
+                 * Slave needs the current event being distributed
+                 */
+				sendevent = true;
+            }
+			else if (slave->binlog_pos == router->last_written &&
 				(strcmp(slave->binlogfile, router->binlog_name) == 0 ||
 				(hdr->event_type == ROTATE_EVENT &&
 				strcmp(slave->binlogfile, router->prevbinlog))))
 			{
+                /**
+                 * Transaction safety is off or there are no pending transactions
+                 */
+
+				sendevent = true;
+			}
+			else if (slave->binlog_pos == hdr->next_pos
+				&& strcmp(slave->binlogfile, router->binlog_name) == 0)
+			{
+				/*
+				 * Slave has already read record from file, no
+				 * need to distrbute this event
+				 */
+                alreadysent = true;
+			}
+			else if ((slave->binlog_pos > hdr->next_pos - hdr->event_size)
+				&& strcmp(slave->binlogfile, router->binlog_name) == 0)
+			{
+				/*
+				 * The slave is ahead of the master, this should never
+				 * happen. Force the slave to catchup mode in order to
+				 * try to resolve the issue.
+				 */
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+					"Slave %d is ahead of expected position %s@%d. "
+					"Expected position %d",
+						slave->serverid, slave->binlogfile,
+						(unsigned long)slave->binlog_pos,
+						hdr->next_pos - hdr->event_size)));
+                forcecatchup = true;
+			}
+			else
+			{
+				/*
+				 * The slave is not at the position it should be. Force it into
+				 * catchup mode rather than send this event.
+				 */
+                forcecatchup = true;
+			}
+
+            if(sendevent)
+            {
 				/*
 				 * The slave should be up to date, check that the binlog
 				 * position matches the event we have to distribute or
@@ -1685,49 +1754,20 @@ int		action;
 				}
 				spinlock_release(&slave->catch_lock);
 			}
-			else if (slave->binlog_pos == hdr->next_pos
-				&& strcmp(slave->binlogfile, router->binlog_name) == 0)
-			{
-				/*
-				 * Slave has already read record from file, no
-				 * need to distrbute this event
-				 */
-				spinlock_acquire(&slave->catch_lock);
+            else if (alreadysent)
+            {
+                spinlock_acquire(&slave->catch_lock);
 				slave->cstate &= ~CS_BUSY;
 				spinlock_release(&slave->catch_lock);
-			}
-			else if ((slave->binlog_pos > hdr->next_pos - hdr->event_size)
-				&& strcmp(slave->binlogfile, router->binlog_name) == 0)
-			{
-				/*
-				 * The slave is ahead of the master, this should never
-				 * happen. Force the slave to catchup mode in order to
-				 * try to resolve the issue.
-				 */
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-					"Slave %d is ahead of expected position %s@%d. "
-					"Expected position %d",
-						slave->serverid, slave->binlogfile,
-						(unsigned long)slave->binlog_pos,
-						hdr->next_pos - hdr->event_size)));
-				spinlock_acquire(&slave->catch_lock);
+            }
+            else if (forcecatchup)
+            {
+                spinlock_acquire(&slave->catch_lock);
 				slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
 				slave->cstate |= CS_EXPECTCB;
 				spinlock_release(&slave->catch_lock);
 				poll_fake_write_event(slave->dcb);
-			}
-			else
-			{
-				/*
-				 * The slave is not at the position it should be. Force it into
-				 * catchup mode rather than send this event.
-				 */
-				spinlock_acquire(&slave->catch_lock);
-				slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
-				slave->cstate |= CS_EXPECTCB;
-				spinlock_release(&slave->catch_lock);
-				poll_fake_write_event(slave->dcb);
-			}
+            }
 		}
 		else if (action == 3)
 		{

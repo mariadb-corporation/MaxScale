@@ -415,6 +415,8 @@ typedef struct router_instance {
 					 *  file being written
 					 */
 	uint64_t	  last_written;	/*< Position of last event written */
+    uint64_t	  current_safe_event;
+    /*< Position of the latest safe eventbeing sent to slaves */
 	char		  prevbinlog[BINLOG_FNAMELEN+1];
 	int		  rotating;	/*< Rotation in progress flag */
 	BLFILE		  *files;	/*< Files used by the slaves */
