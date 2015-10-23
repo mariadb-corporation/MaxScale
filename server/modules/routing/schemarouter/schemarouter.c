@@ -1331,6 +1331,20 @@ static void freeSession(
                         ptr->next = router_cli_ses->next;
                 }
         }
+ 	
+		/** clean up prepared statement mapping */
+		if(router_cli_ses->rses_prep_map)
+		{
+			for(i=1; i<=router_cli_ses->rses_next_stmtid; i++)
+			{
+				if(router_cli_ses->rses_prep_map[i])
+				{
+					free(router_cli_ses->rses_prep_map[i]);
+				}
+			}
+			free(router_cli_ses->rses_prep_map);
+		}
+        
         spinlock_release(&router->lock);
         
 	/** 
@@ -1442,8 +1456,6 @@ static route_target_t get_shard_route_target (
 	 * These queries are not affected by hints
 	 */
 	if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE) ||
 		/** enable or disable autocommit are always routed to all */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
@@ -2229,6 +2241,70 @@ static int routeQuery(
 		}	
 	}
 
+ 	/** prepared statment handling */
+ 	if(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
+ 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
+ 	{
+ 		if(route_target == TARGET_NAMED_SERVER)
+ 		{
+ 			router_cli_ses->rses_sent_prepare = TRUE;
+ 			router_cli_ses->rses_last_tname = tname;
+ 			skygw_log_write(LOGFILE_TRACE,"schemarouter: Setting saved tname to %s", tname);
+ 		}
+ 		else
+ 		{
+ 			skygw_log_write(LOGFILE_ERROR, "Error : Unable to select target for prepared statement");
+ 			ret = 0;
+ 			goto retblock;
+ 		}
+ 	}
+ 	else if(QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
+ 			packet_type == MYSQL_COM_STMT_CLOSE ||
+ 			packet_type == MYSQL_COM_STMT_SEND_LONG_DATA ||
+ 			packet_type == MYSQL_COM_STMT_RESET)
+ 	{
+ 		uint32_t					stmtid;
+ 		uint8_t*					packet;
+ 		packet = GWBUF_DATA(querybuf);
+ 		stmtid = *(uint32_t*)(packet+5);
+ 
+ 		router_cli_ses->rses_sent_prepare = FALSE;
+ 
+ 		// rewrite stmtid
+ 		if(router_cli_ses->rses_prep_map && stmtid < router_cli_ses->rses_max_stmtid)
+ 		{
+ 			PREP_MAP*		prepmap = router_cli_ses->rses_prep_map[stmtid];
+ 			if(prepmap && prepmap->tname)
+ 			{
+ 				tname = prepmap->tname;
+ 				*(uint32_t*)(packet+5) = prepmap->stmt_id;
+ 				route_target = TARGET_NAMED_SERVER;
+ 				skygw_log_write(LOGFILE_TRACE,"schemarouter: Routing %s of stmtid %d to %d on %s", STRPACKETTYPE(packet_type), stmtid, prepmap->stmt_id, tname);
+ 				if(packet_type == MYSQL_COM_STMT_CLOSE)
+ 				{
+ 					prepmap->tname = NULL;
+ 				}
+ 			}
+ 			else
+ 			{
+ 				skygw_log_write(LOGFILE_ERROR, "Error : Prepared statment target missing");
+ 				ret = 0;
+ 				goto retblock;
+ 			}
+ 		}
+ 		else
+ 		{
+ 			skygw_log_write(LOGFILE_ERROR, "Error : Invalid stmtid sent by client");
+ 			ret = 0;
+ 			goto retblock;
+ 		}
+ 	}
+ 	else if(router_cli_ses->rses_sent_prepare)
+ 	{
+ 		router_cli_ses->rses_sent_prepare = FALSE;
+ 		router_cli_ses->rses_last_tname = NULL;
+ 	}
+ 
 	if(TARGET_IS_UNDEFINED(route_target))
 	{
 		
@@ -2756,6 +2832,36 @@ static void clientReply(ROUTER* instance,
                         PTR_IS_ERR(cmd) ? "ERR" : PTR_IS_OK(cmd) ? "OK" : "RSET",
                         state & INIT_UNINT ? "UNINIT" : state & INIT_MAPPING ? "MAPPING" : "READY",
                         router_cli_ses->rses_client_dcb->session);
+
+		/** handle prepared statement */
+		if(router_cli_ses->rses_sent_prepare)
+		{
+			uint32_t	 				stmtid;
+			uint8_t*					packet;
+			packet = GWBUF_DATA(writebuf);
+			stmtid = *(uint32_t*)(packet+5);
+
+			skygw_log_write(LOGFILE_TRACE,"schemarouter: Return prepare id %d",stmtid);
+
+			// rewrite stmtid
+			uint32_t		newstmtid = ++(router_cli_ses->rses_next_stmtid);
+			PREP_MAP*		prepmap = (PREP_MAP*)malloc(sizeof(PREP_MAP));
+			if(prepmap)
+			{
+				prepmap->stmt_id = stmtid;
+				prepmap->tname = router_cli_ses->rses_last_tname;
+				if(router_cli_ses->rses_prep_map == NULL || newstmtid >= router_cli_ses->rses_max_stmtid)
+				{
+					router_cli_ses->rses_max_stmtid += 100;
+					router_cli_ses->rses_prep_map = realloc(router_cli_ses->rses_prep_map, router_cli_ses->rses_max_stmtid*sizeof(PREP_MAP*));
+				}
+				router_cli_ses->rses_prep_map[newstmtid] = prepmap;
+				skygw_log_write(LOGFILE_TRACE,"schemarouter: Add prepared statment %d refer to %d of %s",newstmtid, stmtid, router_cli_ses->rses_last_tname);
+			}
+			*(uint32_t*)(packet+5) = newstmtid;
+			router_cli_ses->rses_sent_prepare = 0;
+		}
+                        
         SESSION_ROUTE_REPLY(backend_dcb->session, writebuf);
     }
     /** Unlock router session */
@@ -4088,6 +4194,29 @@ static void handleError (
                                 *succp = false;
                                 return;
                         }
+
+ 						/*< clear out any prepared statements */
+ 						if(rses->rses_prep_map)
+ 						{
+ 							int i;
+ 							for(i=1; i<=rses->rses_next_stmtid; i++)
+ 							{
+ 								if(rses->rses_prep_map[i] && 
+ 										rses->rses_prep_map[i]->tname && 
+ 										backend_dcb && 
+ 										backend_dcb->server && 
+ 										strncasecmp(
+ 											rses->rses_prep_map[i]->tname,
+ 											backend_dcb->server->unique_name, 
+ 											PATH_MAX) == 0)
+ 								{
+ 									skygw_log_write(LOGFILE_TRACE,"schemarouter: purging prepared statment %d on %s", rses->rses_prep_map[i]->stmt_id, rses->rses_prep_map[i]->tname);
+ 									rses->rses_prep_map[i]->tname = NULL;
+ 									
+ 								}
+ 							}
+ 						}
+
 			/**
 			* This is called in hope of getting replacement for 
 			* failed slave(s).
