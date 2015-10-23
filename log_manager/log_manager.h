@@ -151,10 +151,10 @@ void logmanager_enable_syslog(int);
 void logmanager_enable_maxscalelog(int);
 
 #define skygw_log_write(id, format, ...)\
-    skygw_log_write_context(id, __FILE__, __LINE__, __FUNCTION__, format, ##__VA_ARGS__)
+    skygw_log_write_context(id, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 #define skygw_log_write_flush(id, format, ...)\
-    skygw_log_write_context_flush(id, __FILE__, __LINE__, __FUNCTION__, format, ##__VA_ARGS__)
+    skygw_log_write_context_flush(id, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 /**
  * What augmentation if any should a logged message be augmented with.
