@@ -3226,6 +3226,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			router->current_pos = 4;
 			router->binlog_position = 4;
 
+			/* close current file binlog file, next start slave will create the new one */
+			fsync(router->binlog_fd);
+			close(router->binlog_fd);
+
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
 				router->service->name,
 				router->binlog_name)));
