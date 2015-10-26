@@ -287,40 +287,6 @@ static void diagnostics(DCB *dcb, void *arg)
     }
     dcb_printf(dcb, "\n");
 }
-/**
- * Connect to a database
- * @param mon Monitor
- * @param database Monitored database
- * @return true if connection was successful, false if there was an error
- */
-static inline bool connect_to_db(MONITOR* mon,MONITOR_SERVERS *database)
-{
-    char		  *uname  = mon->user;
-    char              *passwd = mon->password;
-    char *dpwd = decryptPassword(passwd);
-    int  connect_timeout = mon->connect_timeout;
-    int  read_timeout = mon->read_timeout;
-    int  write_timeout = mon->write_timeout;
-
-    if(database->con)
-	mysql_close(database->con);
-    database->con = mysql_init(NULL);
-
-    mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
-    mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
-    mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
-
-    bool result = (mysql_real_connect(database->con,
-			       database->server->name,
-			       uname,
-			       dpwd,
-			       NULL,
-			       database->server->port,
-			       NULL,
-			       0) != NULL);
-	free(dpwd);
-	return result;
-}
 
 static inline void monitor_mysql100_db(MONITOR_SERVERS* database)
 {
@@ -641,7 +607,8 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 
     if (database->con == NULL || mysql_ping(database->con) != 0)
     {
-	if(connect_to_db(mon,database))
+	connect_result_t rval;
+	if ((rval = mon_connect_to_db(mon, database)) == MONITOR_CONN_OK)
 	{
 	    server_clear_status(database->server, SERVER_AUTH_ERROR);
 	    monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
@@ -675,15 +642,9 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 
 	    /* Log connect failure only once */
 	    if (mon_status_changed(database) && mon_print_fail_status(database))
-	    {
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-						 "Error : Monitor was unable to connect to "
-			"server %s:%d : \"%s\"",
-						 database->server->name,
-						 database->server->port,
-						 mysql_error(database->con))));
-	    }
+        {
+            mon_log_connect_error(database, rval);
+        }
 
 	    return;
 	}
