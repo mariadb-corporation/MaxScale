@@ -1609,14 +1609,18 @@ int skygw_log_write_context(logfile_id_t id,
 
     if (len >= 0)
     {
+        if(len > MAX_LOGSTRLEN)
+        {
+            len = MAX_LOGSTRLEN;
+        }
+
         char message[len + 1];
 
         va_start(valist, str);
-        int len2 = vsnprintf(message, sizeof(message), str, valist);
+        vsnprintf(message, sizeof(message), str, valist);
         va_end(valist);
-        assert(len2 == len);
 
-        err = log_write(id, file, line, function, len2, message, LOG_FLUSH_NO);
+        err = log_write(id, file, line, function, len, message, LOG_FLUSH_NO);
 
         if (err != 0)
         {
