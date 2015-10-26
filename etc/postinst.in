@@ -46,6 +46,13 @@ then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
     systemctl daemon-reload
 fi
+
+# If no maxscale.cnf file is found in /etc, copy the template file there
+if [ ! -f "@MAXSCALE_CONFDIR@/maxscale.cnf" ]
+then
+    cp -n @MAXSCALE_CONFDIR@/maxscale.cnf.template @MAXSCALE_CONFDIR@/maxscale.cnf
+fi
+
 /sbin/ldconfig
 
 cat <<EOF >& 2
