@@ -124,6 +124,16 @@ typedef enum
     LOG_AUGMENTATION_MASK     = (LOG_AUGMENT_WITH_FUNCTION)
 } log_augmentation_t;
 
+/**
+ * LOG_FLUSH_NO  Do not flush after writing.
+ * LOG_FLUSH_YES Flush after writing.
+ */
+enum log_flush
+{
+    LOG_FLUSH_NO  = 0,
+    LOG_FLUSH_YES = 1
+};
+
 EXTERN_C_BLOCK_BEGIN
 
 bool skygw_logmanager_init(int argc, char* argv[]);
@@ -135,14 +145,12 @@ void skygw_logmanager_exit(void);
  */
 void skygw_log_done(void);
 int  skygw_log_write_context(logfile_id_t id,
+                             enum log_flush flush,
                              const char* file, int line, const char* function,
                              const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
 void skygw_log_sync_all(void);
 int  skygw_log_rotate(logfile_id_t id);
-int  skygw_log_write_context_flush(logfile_id_t id,
-                                   const char* file, int line, const char* function,
-                                   const char* format, ...);
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
 void skygw_log_sync_all(void);
@@ -151,10 +159,10 @@ void logmanager_enable_syslog(int);
 void logmanager_enable_maxscalelog(int);
 
 #define skygw_log_write(id, format, ...)\
-    skygw_log_write_context(id, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+    skygw_log_write_context(id, LOG_FLUSH_NO, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 #define skygw_log_write_flush(id, format, ...)\
-    skygw_log_write_context_flush(id, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+    skygw_log_write_context(id, LOG_FLUSH_YES, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 /**
  * What augmentation if any should a logged message be augmented with.
