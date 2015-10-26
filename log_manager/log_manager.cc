@@ -756,10 +756,12 @@ static int logmanager_write_log(logfile_id_t         id,
         }
         cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 
+        bool overflow = false;
         /** Find out how much can be safely written with current block size */
         if (timestamp_len - sizeof(char) + cmplen + str_len > lf->lf_buf_size)
         {
             safe_str_len = lf->lf_buf_size;
+            overflow = true;
         }
         else
         {
@@ -856,6 +858,11 @@ static int logmanager_write_log(logfile_id_t         id,
                      str);
         }
 
+        /** Add an ellipsis to an overflowing message to signal truncation. */
+        if (overflow && safe_str_len > 4)
+        {
+            memset(wp + safe_str_len - 4, '.', 3);
+        }
         /** write to syslog */
         if (lf->lf_write_syslog)
         {
@@ -1609,7 +1616,7 @@ int skygw_log_write_context(logfile_id_t id,
 
     if (len >= 0)
     {
-        if(len > MAX_LOGSTRLEN)
+        if (len > MAX_LOGSTRLEN)
         {
             len = MAX_LOGSTRLEN;
         }
