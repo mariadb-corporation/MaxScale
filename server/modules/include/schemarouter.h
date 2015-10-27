@@ -28,11 +28,31 @@
  *
  * @endverbatim
  */
+#ifndef PCRE2_CODE_UNIT_WIDTH
+#define PCRE2_CODE_UNIT_WIDTH 8
+#endif
 
+#include <my_config.h>
+#include <strings.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <router.h>
 #include <dcb.h>
 #include <hashtable.h>
 #include <mysql_client_server_protocol.h>
-#include <pcre.h>
+#include <sharding_common.h>
+#include <secrets.h>
+#include <mysql.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+#include <query_classifier.h>
+#include <dcb.h>
+#include <spinlock.h>
+#include <modinfo.h>
+#include <modutil.h>
+#include <pcre2.h>
+
 /**
  * Bitmask values for the router session's initialization. These values are used
  * to prevent responses from internal commands being forwarded to the client.
@@ -330,9 +350,10 @@ typedef struct router_instance {
     HASHTABLE*              ignored_dbs; /*< List of databases to ignore when the
                                           * database mapping finds multiple servers
                                           * with the same database */
-    pcre*                   ignore_regex; /*< Databases matching this regex will
+    pcre2_code*                   ignore_regex; /*< Databases matching this regex will
                                            * not cause the session to be terminated
                                            * if they are found on more than one server. */
+    pcre2_match_data*             ignore_match_data;
 
 } ROUTER_INSTANCE;
 
