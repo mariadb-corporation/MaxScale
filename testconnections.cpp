@@ -3,7 +3,6 @@
 #include "sql_t1.h"
 #include <getopt.h>
 #include <time.h>
-#include <string>
 
 TestConnections::TestConnections(int argc, char *argv[])
 {
@@ -583,15 +582,17 @@ char* TestConnections::execute_ssh_maxscale(char* ssh)
             maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, ssh);
 
     FILE *output = popen(sys, "r");
-    std::string result;
     char buffer[1024];
+    size_t rsize = sizeof(buffer);
+    char* result = (char*)calloc(rsize, sizeof(char));
 
     while(fgets(buffer, sizeof(buffer), output))
     {
-        result += buffer;
+        result = (char*)realloc(result, sizeof(buffer) + rsize);
+        strcat(result, buffer);
     }
 
-    return result.size() > 0 ? strdup(result.c_str()) : NULL;
+    return result;
 }
 
 
