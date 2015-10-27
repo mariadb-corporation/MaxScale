@@ -62,6 +62,15 @@ static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_file_append(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
 static void blr_format_event_size(double *event_size, char *label);
+extern char *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
+
+typedef struct binlog_event_desc {
+	unsigned long long event_pos;
+	uint8_t	event_type;
+	time_t	event_time;
+} BINLOG_EVENT_DESC;
+
+static void blr_print_binlog_details(ROUTER_INSTANCE *router, BINLOG_EVENT_DESC first_event_time, BINLOG_EVENT_DESC last_event_time);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -780,6 +789,14 @@ unsigned long event_bytes = 0;
 unsigned long max_bytes = 0;
 double average_events = 0;
 double average_bytes = 0;
+BINLOG_EVENT_DESC first_event;
+BINLOG_EVENT_DESC last_event;
+BINLOG_EVENT_DESC fde_event;
+int fde_seen = 0;
+
+	memset(&first_event, '\0', sizeof(first_event));
+	memset(&last_event, '\0', sizeof(last_event));
+	memset(&fde_event, '\0', sizeof(fde_event));
 
 	if (router->binlog_fd == -1) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -810,6 +827,13 @@ double average_bytes = 0;
 					if (n_transactions)
 						average_bytes = (double)((double)total_bytes / (double)n_transactions) * (1.0);
 
+					/* Report Binlog First and Last event */
+					if (first_event.event_type == 0)
+						blr_print_binlog_details(router, fde_event, last_event);
+					else
+						blr_print_binlog_details(router, first_event, last_event);
+
+					/* Report Transaction Summary */
 					if (n_transactions != 0) {
 						char total_label[2]="";
 						char average_label[2]="";
@@ -1088,6 +1112,14 @@ double average_bytes = 0;
                         last_known_commit = pos;
                 }
 
+		/* get firts event timestamp, after FDE */
+		if (fde_seen) {
+                        first_event.event_time = (unsigned long)hdr.timestamp;
+			first_event.event_type = hdr.event_type;
+			first_event.event_pos = pos;
+			fde_seen = 0;
+		}
+
                 /* get event content */
                 ptr = data+19;
 
@@ -1098,11 +1130,25 @@ double average_bytes = 0;
                         int n_events;
                         int check_alg;
                         uint8_t *checksum;
+			char	buf_t[40];
+			struct	tm	tm_t;
+
+			fde_seen = 1;
+			fde_event.event_time = (unsigned long)hdr.timestamp;
+			fde_event.event_type = hdr.event_type;
+			fde_event.event_pos = pos;
+
+			localtime_r(&fde_event.event_time, &tm_t);
+			asctime_r(&tm_t, buf_t);
+
+			if (buf_t[strlen(buf_t)-1] == '\n') {
+				buf_t[strlen(buf_t)-1] = '\0';
+			}
 
                         if(debug)
                                 LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-                                        "- Format Description event FDE @ %llu, size %lu",
-                                        pos, (unsigned long)hdr.event_size)));
+                                        "- Format Description event FDE @ %llu, size %lu, time %lu (%s)",
+                                        pos, (unsigned long)hdr.event_size, fde_event.event_time, buf_t)));
 
                         event_header_length =  ptr[2 + 50 + 4];
                         event_header_ntypes = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
@@ -1149,6 +1195,12 @@ double average_bytes = 0;
                                 }
                         }
                 }
+
+		/* set last event time, pos and type */
+		last_event.event_time = (unsigned long)hdr.timestamp;
+		last_event.event_type = hdr.event_type;
+		last_event.event_pos = pos;
+
                 /* Decode ROTATE EVENT */
                 if(hdr.event_type == ROTATE_EVENT) {
                         int             len, slen;
@@ -1425,3 +1477,47 @@ blr_format_event_size(double *event_size, char *label)
 		label[0] = 'B';
 }
 
+/** Print Binlog Details
+ *
+ * @param router	The router instance
+ * @param first_event	First Event details
+ * @param last_event	First Event details
+ */
+
+static void
+blr_print_binlog_details(ROUTER_INSTANCE *router, BINLOG_EVENT_DESC first_event, BINLOG_EVENT_DESC last_event)
+{
+char    buf_t[40];
+struct  tm      tm_t;
+char    *event_desc;
+
+	/* First Event */
+	localtime_r(&first_event.event_time, &tm_t);
+	asctime_r(&tm_t, buf_t);
+
+	if (buf_t[strlen(buf_t)-1] == '\n') {
+		buf_t[strlen(buf_t)-1] = '\0';
+	}
+
+	event_desc = blr_get_event_description(router, first_event.event_type);
+
+	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+		"%lu @ %llu, %s, (%s), First EventTime",
+		first_event.event_time, first_event.event_pos,
+		event_desc != NULL ? event_desc : "unknown", buf_t)));
+
+	/* Last Event */
+	localtime_r(&last_event.event_time, &tm_t);
+	asctime_r(&tm_t, buf_t);
+
+	if (buf_t[strlen(buf_t)-1] == '\n') {
+		buf_t[strlen(buf_t)-1] = '\0';
+	}
+
+	event_desc = blr_get_event_description(router, last_event.event_type);
+
+	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+		"%lu @ %llu, %s, (%s), Last EventTime",
+		last_event.event_time, last_event.event_pos,
+	event_desc != NULL ? event_desc : "unknown", buf_t)));
+}

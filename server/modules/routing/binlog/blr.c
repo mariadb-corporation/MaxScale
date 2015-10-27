@@ -89,7 +89,7 @@ static  void    errorReply(
         error_action_t     action,
 	bool	*succp);
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
-
+char	*blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
@@ -1371,7 +1371,6 @@ GWBUF		*errbuf = NULL;
         return dcb->func.write(dcb, errbuf);
 }
 
-
 /**
  * Extract a numeric field from a packet of the specified number of bits
  *
@@ -1390,4 +1389,36 @@ uint32_t	rval = 0, shift = 0;
 		bits -= 8;
 	}
 	return rval;
+}
+
+/**
+ * Return the event description
+ *
+ * @param router	The router instance
+ * @param event		The current event
+ * @return		The event description or NULL
+ */
+char *
+blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event) {
+char *event_desc = NULL;
+
+	if (!router->mariadb10_compat) {
+		if (event >= 0 &&
+			event <= MAX_EVENT_TYPE) {
+			event_desc = event_names[event];
+		}
+	} else {
+		if (event >= 0 &&
+			event <= MAX_EVENT_TYPE) {
+			event_desc = event_names[event];
+		} else {
+			/* Check MariaDB 10 new events */
+			if (event >= MARIADB_NEW_EVENTS_BEGIN &&
+				event <= MAX_EVENT_TYPE_MARIADB10) {
+				event_desc = event_names_mariadb10[(event - MARIADB_NEW_EVENTS_BEGIN)];
+			}
+		}
+	}
+
+	return event_desc;
 }
