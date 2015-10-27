@@ -2258,6 +2258,21 @@ static int routeQuery(
  			goto retblock;
  		}
  	}
+ 	else if(packet_type == MYSQL_COM_CHANGE_USER)
+ 	{
+		/*< clear out any prepared statements */
+		if(router_cli_ses->rses_prep_map)
+		{
+			int i;
+			for(i=1; i<=router_cli_ses->rses_next_stmtid; i++)
+			{
+				if(router_cli_ses->rses_prep_map[i])
+				{
+					router_cli_ses->rses_prep_map[i]->tname = NULL;
+				}
+			}
+		}
+	}
  	else if(QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||
  			packet_type == MYSQL_COM_STMT_CLOSE ||
  			packet_type == MYSQL_COM_STMT_SEND_LONG_DATA ||
