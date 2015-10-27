@@ -34,6 +34,7 @@
 #include <buffer.h>
 #include <dcb.h>
 #include <string.h>
+#include <maxscale_pcre2.h>
 
 #define PTR_IS_RESULTSET(b) (b[0] == 0x01 && b[1] == 0x0 && b[2] == 0x0 && b[3] == 0x01)
 #define PTR_IS_EOF(b) (b[0] == 0x05 && b[1] == 0x0 && b[2] == 0x0 && b[4] == 0xfe)
@@ -68,4 +69,5 @@ GWBUF *modutil_create_mysql_err_msg(
 	const char	*msg);
 
 int modutil_count_signal_packets(GWBUF*,int,int,int*);
+mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string);
 #endif
