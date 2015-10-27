@@ -20,6 +20,8 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     int N=4;
+    int iterations = 2;
+    if (Test->smoke) {iterations = 1;}
     char str[1024];
     Test->set_timeout(10);
 
@@ -57,7 +59,7 @@ int main(int argc, char *argv[])
 
     srv[0] = Test->conn_rwsplit;
     srv[1] = Test->conn_master;
-    for (int i=0; i<2; i++) {
+    for (int i = 0; i < iterations; i++) {
         Test->set_timeout(100);
         Test->tprintf("Dropping t1 \n");
         Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE t1;");

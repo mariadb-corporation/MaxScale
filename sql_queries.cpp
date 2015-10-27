@@ -49,10 +49,13 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     int i;
-    int N=4;
+    int N = 4;
+    int iterations = 4;
+
+    if (Test->smoke) {iterations = 1; N=2;}
 
     Test->tprintf("Starting test\n");
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < iterations; i++) {
         Test->tprintf("Connection to backend\n");
         Test->set_timeout(5);
         Test->repl->connect();

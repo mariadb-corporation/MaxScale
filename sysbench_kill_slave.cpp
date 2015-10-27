@@ -35,7 +35,11 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     //Test->ConnectRWSplit();
-    sprintf(&sys1[0], sysbench_prepare, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP);
+    if (Test->smoke) {
+        sprintf(&sys1[0], sysbench_prepare1, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP);
+    } else {
+        sprintf(&sys1[0], sysbench_prepare, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP);
+    }
     //Test->CloseRWSplit();
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
     Test->set_timeout(1000);
@@ -54,7 +58,11 @@ int main(int argc, char *argv[])
         } else {
             readonly = ro_off;
         }
-        sprintf(&sys1[0], sysbench_command, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP, port[k], readonly);
+        if (Test->smoke) {
+            sprintf(&sys1[0], sysbench_command1, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP, port[k], readonly);
+        } else {
+            sprintf(&sys1[0], sysbench_command, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP, port[k], readonly);
+        }
         Test->tprintf("Executing sysbench tables\n%s\n", sys1);
         if (system(sys1) != 0) {
             Test->tprintf("Error executing sysbench test\n");
@@ -77,8 +85,10 @@ int main(int argc, char *argv[])
 
     Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
     Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest4");
+    if (!Test->smoke) {
+        Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
+        Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest4");
+    }
 
     //global_result += execute_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest");
 

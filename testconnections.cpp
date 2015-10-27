@@ -179,6 +179,8 @@ int TestConnections::read_env()
     } else {
         sprintf(maxscale_access_homedir, "/home/%s/", maxscale_access_user);
     }
+
+    env = getenv("smoke"); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {smoke = true;} else {smoke = false;}
 }
 
 int TestConnections::print_env()

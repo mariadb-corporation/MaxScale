@@ -199,6 +199,11 @@ public:
     bool verbose;
 
     /**
+     * @brief smoke if true all tests are executed in quick mode
+     */
+    bool smoke;
+
+    /**
      * @brief binlog_cmd_option index of mariadb start option
      */
     int binlog_cmd_option;

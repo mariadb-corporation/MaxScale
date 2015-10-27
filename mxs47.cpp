@@ -12,11 +12,13 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
     char str[1024];
+    int iterations = 50000;
+    if (Test->smoke) {iterations = 1000;}
 
     //Test->repl->connect();
     Test->connect_maxscale();
 
-    for (int i = 1; i < 50000; i++) {
+    for (int i = 1; i < iterations; i++) {
         Test->set_timeout(5);
         sprintf(str, "SELECT REPEAT('a',%d)", i);
         Test->try_query(Test->conn_rwsplit, str);

@@ -22,6 +22,7 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
     long int q;
+    int threads_num = 25;
 
     long int selects[256];
     long int inserts[256];
@@ -29,6 +30,7 @@ int main(int argc, char *argv[])
     long int new_inserts[256];
     long int i1, i2;
 
+    if (Test->smoke) {threads_num = 5;}
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 300;");
@@ -37,7 +39,7 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
 
     Test->set_timeout(1200);
-    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 25, Test, &i1, &i2, 1, FALSE, TRUE);
+    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], threads_num, Test, &i1, &i2, 1, FALSE, TRUE);
 
     long int avr = (i1 + i2 ) / (Test->repl->N);
     Test->tprintf("average number of quries per node %ld\n", avr);
