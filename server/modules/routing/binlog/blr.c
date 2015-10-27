@@ -38,6 +38,7 @@
  * 07/05/2015   Massimiliano Pinto      Addition of MariaDB 10 compatibility support
  * 12/06/2015   Massimiliano Pinto      Addition of MariaDB 10 events in diagnostics()
  * 09/09/2015   Martin Brampton         Modify error handler
+ * 27/10/2015   Martin Brampton         Amend getCapabilities to return RCAP_TYPE_NO_RSESSION
  *
  * @endverbatim
  */
@@ -1178,7 +1179,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE	* rses)
 
 static uint8_t getCapabilities(ROUTER *inst, void *router_session)
 {
-        return 0;
+        return RCAP_TYPE_NO_RSESSION;
 }
 
 /**

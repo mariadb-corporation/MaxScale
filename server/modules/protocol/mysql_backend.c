@@ -45,6 +45,7 @@
  * 10/11/2014	Massimiliano Pinto	Client charset is passed to backend
  * 19/06/2015   Martin Brampton		Persistent connection handling
  * 07/10/2015   Martin Brampton         Remove calls to dcb_close - should be done by routers
+ * 27/10/2015   Martin Brampton         Test for RCAP_TYPE_NO_RSESSION before calling clientReply
  *
  */
 #include <modinfo.h>
@@ -577,7 +578,7 @@ static int gw_read_backend_event(DCB *dcb) {
 		if (dcb->session->state == SESSION_STATE_ROUTER_READY &&
 			dcb->session->client != NULL && 
 			dcb->session->client->state == DCB_STATE_POLLING &&
-                        session->router_session)
+                        (session->router_session || router->getCapabilities(router_instance, NULL) & RCAP_TYPE_NO_RSESSION))
                 {
                         client_protocol = SESSION_PROTOCOL(dcb->session,
                                                            MySQLProtocol);
