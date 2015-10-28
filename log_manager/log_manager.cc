@@ -1468,42 +1468,6 @@ static int log_write(logfile_id_t   id,
     {
         CHK_LOGMANAGER(lm);
 
-        const char* format;
-
-        if (log_augmentation == LOG_AUGMENT_WITH_FUNCTION)
-        {
-            static const char function_format[] = "%s [%s]";
-
-            format = function_format;
-
-            len += sizeof(function_format); // A little bit more than needed, but won't hurt.
-            assert(function);
-            len += strlen(function);
-        }
-        else
-        {
-            static const char default_format[] = "%s";
-
-            format = default_format;
-
-            len += sizeof(default_format);  // A little bit more than needed, but won't hurt.
-        }
-
-        len += 1; // For the trailing NULL.
-
-        char message[len];
-
-        if (log_augmentation == LOG_AUGMENT_WITH_FUNCTION)
-        {
-            len = snprintf(message, sizeof(message), format, str, function);
-        }
-        else
-        {
-            len = snprintf(message, sizeof(message), format, str);
-        }
-
-        assert(len >= 0);
-
         int attempts = 0;
         int successes = 0;
 
@@ -1529,7 +1493,7 @@ static int log_write(logfile_id_t   id,
                                          LOG_USE_VALIST_NO,
                                          LOG_SPREAD_DOWN_YES,
                                          LOG_ROTATE_NO,
-                                         len, message, valist) == 0)
+                                         len, str, valist) == 0)
                 {
                     ++successes;
                 }
@@ -1567,23 +1531,63 @@ int skygw_log_write_context(logfile_id_t   id,
      * Find out the length of log string (to be formatted str).
      */
     va_start(valist, str);
-    int len = vsnprintf(NULL, 0, str, valist);
+    int message_len = vsnprintf(NULL, 0, str, valist);
     va_end(valist);
 
-    if (len >= 0)
+    if (message_len >= 0)
     {
-        if (len > MAX_LOGSTRLEN)
+        static const char FORMAT_FUNCTION[] = "(%s): ";
+
+        int augmentation_len = 0;
+
+        switch (log_augmentation)
         {
-            len = MAX_LOGSTRLEN;
+        case LOG_AUGMENT_WITH_FUNCTION:
+            augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
+            augmentation_len -= 2; // Remove the %s
+            augmentation_len += strlen(function);
+            break;
+
+        default:
+            break;
         }
 
-        char message[len + 1];
+        int buffer_len = augmentation_len + message_len + 1; // Trailing NULL
+
+        if (buffer_len > MAX_LOGSTRLEN)
+        {
+            message_len -= (buffer_len - MAX_LOGSTRLEN);
+            buffer_len = MAX_LOGSTRLEN;
+
+            assert(augmentation_len + message_len + 1 == buffer_len);
+        }
+
+        char buffer[buffer_len];
+        char *message = buffer + augmentation_len;
+
+        if (augmentation_len)
+        {
+            char *augmentation = buffer;
+            int len = 0;
+
+            switch (log_augmentation)
+            {
+            case LOG_AUGMENT_WITH_FUNCTION:
+                len = sprintf(augmentation, FORMAT_FUNCTION, function);
+                break;
+
+            default:
+                assert(!true);
+            }
+
+            assert(len == augmentation_len);
+        }
 
         va_start(valist, str);
-        vsnprintf(message, sizeof(message), str, valist);
+        vsnprintf(message, message_len + 1, str, valist);
         va_end(valist);
 
-        err = log_write(id, file, line, function, len, message, flush);
+        err = log_write(id, file, line, function, buffer_len - 1, buffer, flush);
 
         if (err != 0)
         {
