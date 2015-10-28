@@ -643,7 +643,7 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
  *                      larger id
  * @param rotate        if set, closes currently open log file and opens a
  *                      new one
- * @param str_len       length of formatted string
+ * @param str_len       length of formatted string (including terminating NULL).
  * @param str           string to be written to log
  *
  * @return 0 if succeed, -1 otherwise
@@ -1418,7 +1418,8 @@ int skygw_log_get_augmentation()
  * @param file       The name of the file where the logging was made.
  * @param int        The line where the logging was made.
  * @param function   The function where the logging was made.
- * @param str        String or printf format string.
+ * @param len        Length of str, including terminating NULL.
+ * @param str        String
  * @param flush      Whether the message should be flushed.
  *
  * @return 0 if the logging to at least one log succeeded.
@@ -1440,11 +1441,6 @@ static int log_write(logfile_id_t   id,
 
         int attempts = 0;
         int successes = 0;
-
-        /**
-         * Add one for line feed.
-         */
-        len += sizeof(char);
 
         for (int i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
         {
@@ -1554,7 +1550,7 @@ int skygw_log_write_context(logfile_id_t   id,
         vsnprintf(message, message_len + 1, str, valist);
         va_end(valist);
 
-        err = log_write(id, file, line, function, buffer_len - 1, buffer, flush);
+        err = log_write(id, file, line, function, buffer_len, buffer, flush);
 
         if (err != 0)
         {
