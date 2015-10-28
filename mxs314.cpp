@@ -18,9 +18,11 @@ int main(int argc, char *argv[])
 {
     MYSQL_STMT* stmt;
     int start = 300, p = 0;
+    int iterations = 2000;
     string query = "select 1";
 
     TestConnections * Test = new TestConnections(argc, argv);
+    if (Test->smoke) {iterations = 500;}
     Test->set_timeout(50);
 
     Test->connect_maxscale();
@@ -32,7 +34,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Query: %s\n", query.c_str());
 
-    for(int i = start;i<2000;i++)
+    for(int i = start; i < iterations; i++)
     {
         Test->set_timeout(30);
         Test->tprintf("%d\t", i);

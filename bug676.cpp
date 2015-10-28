@@ -70,7 +70,7 @@ options=/tmp/QueryLog
  @endverbatim
  * - connect to RWSplit
  * - stop node0
- * - sleep 60 seconds
+ * - sleep 30 seconds
  * - reconnect
  * - check if 'USE test ' is ok
  * - check MaxScale is alive
@@ -89,48 +89,6 @@ int main(int argc, char *argv[])
     int i;
     char sys1[4096];
 
-    /*   DO NOT FORGET TO REMOVE root IF UNCOMMENT
-    printf("Stopping MaxScale");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'service maxscale stop'", Test->Maxscale_sshkey, Test->Maxscale_IP);
-    printf("%s\n", sys1);  fflush(stdout);
-    system(sys1); fflush(stdout);
-
-
-    printf("Stopping all Galera nodes\n");  fflush(stdout);
-    for (i = 0; i < Test->galera->N; i++) {
-        printf("Stopping %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql stop'", Test->galera->sshkey[i], Test->galera->IP[i]);
-        printf("%s\n", sys1);  fflush(stdout);
-        system(sys1); fflush(stdout);
-
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'sed -i \"s/wsrep_sst_method=rsync/wsrep_sst_method=xtrabackup-v2/\" /etc/my.cnf.d/skysql-galera.cnf'", Test->galera->sshkey[i], Test->galera->IP[i]);
-        printf("%s\n", sys1);  fflush(stdout);
-        system(sys1); fflush(stdout);
-    }
-
-    printf("Starting back all Galera nodes\n");  fflush(stdout);
-    printf("Starting node %d\n", Test->galera->N-2); fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://'", Test->galera->sshkey[Test->galera->N-2], Test->galera->IP[Test->galera->N-2]);
-    printf("%s\n", sys1);  fflush(stdout);
-    system(sys1); fflush(stdout);
-
-    for (i = 0; i < Test->galera->N; i++) {
-        if ( i != Test->galera->N-2 ) {
-            printf("Starting node %d\n", i); fflush(stdout);
-            sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s '/etc/init.d/mysql start --wsrep-cluster-address=gcomm://%s'", Test->galera->sshkey[i], Test->galera->IP[i], Test->galera->IP[Test->galera->N-2]);
-            printf("%s\n", sys1);  fflush(stdout);
-            system(sys1); fflush(stdout);
-        }
-    }
-
-    printf("Starting MaxScale");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@%s 'service maxscale start'", Test->Maxscale_sshkey, Test->Maxscale_IP);
-    printf("%s\n", sys1);  fflush(stdout);
-    system(sys1); fflush(stdout);
-
-    sleep(10);
-*/
-
     MYSQL * conn = open_conn_no_db(Test->rwsplit_port, Test->maxscale_IP, Test->maxscale_user, Test->maxscale_password, Test->ssl);
 
     Test->tprintf("Stopping %d\n", 0);
@@ -139,7 +97,7 @@ int main(int argc, char *argv[])
     system(sys1); fflush(stdout);
 
     Test->stop_timeout();
-    sleep(60);
+    sleep(30);
     Test->set_timeout(20);
     mysql_close(conn);
 
@@ -182,7 +140,7 @@ int main(int argc, char *argv[])
         Test->set_timeout(30);
         Test->tprintf("Starting node %d\n", i); fflush(stdout);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s --wsrep-cluster-address=gcomm://%s'", Test->galera->sshkey[i],  Test->galera->access_user[i], Test->galera->IP[i], Test->galera->access_sudo[i], Test->galera->start_db_command[i], Test->galera->IP[0]);
-        Test->tprintf("%s\n", sys1);  fflush(stdout);
+        Test->tprintf("%s\n", sys1);
         system(sys1); fflush(stdout);
     }
 

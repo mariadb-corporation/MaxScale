@@ -27,11 +27,8 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Restarting MaxScale\n");
 
-    //    pid_t pid = fork();
-    //   if (!pid) {
     Test->set_timeout(100);
     Test->restart_maxscale();
-    //    } else {
 
     Test->stop_maxscale();
     Test->stop_timeout();

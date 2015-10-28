@@ -23,7 +23,9 @@ void *parall_traffic( void *ptr );
 
 int main(int argc, char *argv[])
 {
+    int iterations = 1000;
     Test = new TestConnections(argc, argv);
+    if (Test->smoke) {iterations = 100;}
     Test->set_timeout(10);
 
     pthread_t parall_traffic1[100];
@@ -55,7 +57,7 @@ int main(int argc, char *argv[])
         }
 
         printf("Doing change_user in the loop\n");fflush(stdout);
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < iterations; i++) {
             Test->set_timeout(5);
             Test->add_result(mysql_change_user(Test->conn_rwsplit, "user", "pass2", (char *) "test"), "change_user failed!\n");
             Test->add_result(mysql_change_user(Test->conn_rwsplit, Test->maxscale_user, Test->maxscale_password, (char *) "test"), "change_user failed!\n"); fflush(stdout);

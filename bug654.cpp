@@ -55,71 +55,72 @@ int main(int argc, char *argv[])
     Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "restart monitor");
     Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "restart service");
 
-    int N=28;
-    const char * cmd[N];
+    if (!Test->smoke) {
+        int N=28;
+        const char * cmd[N];
 
-    int Ng=6;
-    const char * garbage[Ng];
+        int Ng=6;
+        const char * garbage[Ng];
 
-    garbage[0] = "qwerty";
-    garbage[1] = "khren morzhovyj";
-    garbage[2] = "Хрен";
-    garbage[3] = "Хрен моржовый";
-    garbage[4] = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
-    garbage[5] = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx Хрен моржовый Хрен моржовый ";
+        garbage[0] = "qwerty";
+        garbage[1] = "khren morzhovyj";
+        garbage[2] = "Хрен";
+        garbage[3] = "Хрен моржовый";
+        garbage[4] = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+        garbage[5] = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx Хрен моржовый Хрен моржовый ";
 
-    cmd[0] = "enable disable heartbeat ";
-    cmd[1] = "disable heartbeat ";
-    cmd[2] = "reload dbusers ";
+        cmd[0] = "enable disable heartbeat ";
+        cmd[1] = "disable heartbeat ";
+        cmd[2] = "reload dbusers ";
 
-    cmd[3] = "set server server1 master  ";
+        cmd[3] = "set server server1 master  ";
 
-    cmd[4] = "set pollsleep  ";
-    cmd[5] = "set nbpolls  ";
+        cmd[4] = "set pollsleep  ";
+        cmd[5] = "set nbpolls  ";
 
-    cmd[6] = "show dcb ";
-    cmd[7] = "show eventq ";
-    cmd[8] = "show eventstats ";
-    cmd[9] = "show filter ";
-    cmd[10] = "show monitor ";
-    cmd[11] = "show server ";
-    cmd[12] = "show service ";
-    cmd[13] = "show session ";
+        cmd[6] = "show dcb ";
+        cmd[7] = "show eventq ";
+        cmd[8] = "show eventstats ";
+        cmd[9] = "show filter ";
+        cmd[10] = "show monitor ";
+        cmd[11] = "show server ";
+        cmd[12] = "show service ";
+        cmd[13] = "show session ";
 
-    cmd[14] = "show filters  ";
-    cmd[15] = "show modules  ";
-    cmd[16] = "show monitors  ";
-    cmd[17] = "show servers  ";
-    cmd[18] = "show services  ";
-    cmd[19] = "show sessions  ";
-    cmd[20] = "show tasks  ";
-    cmd[21] = "show threads  ";
-    cmd[22] = "show users  ";
+        cmd[14] = "show filters  ";
+        cmd[15] = "show modules  ";
+        cmd[16] = "show monitors  ";
+        cmd[17] = "show servers  ";
+        cmd[18] = "show services  ";
+        cmd[19] = "show sessions  ";
+        cmd[20] = "show tasks  ";
+        cmd[21] = "show threads  ";
+        cmd[22] = "show users  ";
 
-    cmd[23] = "shutdown monitor ";
-    cmd[24] = "shutdown service ";
+        cmd[23] = "shutdown monitor ";
+        cmd[24] = "shutdown service ";
 
-    cmd[25] = "shutdown maxscale ";
+        cmd[25] = "shutdown maxscale ";
 
-    cmd[26] = "enable root ";
-    cmd[27] = "disable root ";
+        cmd[26] = "enable root ";
+        cmd[27] = "disable root ";
 
-    char str1[4096];
-    int i1, i2;
+        char str1[4096];
+        int i1, i2;
 
-    for (i1 = 0; i1 < N; i1++) {
-        for (i2 = 0; i2 < Ng; i2++) {
-            Test->set_timeout(10);
-            sprintf(str1, "%s %s", cmd[i1], garbage[i2]);
-            Test->tprintf("Trying '%s'\n", str1);
-            execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str1);
+        for (i1 = 0; i1 < N; i1++) {
+            for (i2 = 0; i2 < Ng; i2++) {
+                Test->set_timeout(10);
+                sprintf(str1, "%s %s", cmd[i1], garbage[i2]);
+                Test->tprintf("Trying '%s'\n", str1);
+                execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str1);
 
-            sprintf(str1, "%s %s%s%s%s %s ", cmd[i1], garbage[i2], garbage[i2], garbage[i2], garbage[i2], garbage[i2]);
-            Test->tprintf("Trying '%s'\n", str1);
-            execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str1);
+                sprintf(str1, "%s %s%s%s%s %s ", cmd[i1], garbage[i2], garbage[i2], garbage[i2], garbage[i2], garbage[i2]);
+                Test->tprintf("Trying '%s'\n", str1);
+                execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str1);
+            }
         }
     }
-
     Test->check_maxscale_alive();
 
     Test->copy_all_logs(); return(Test->global_result);

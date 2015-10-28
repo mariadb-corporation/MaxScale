@@ -30,7 +30,7 @@ servers= server1, server2
 user=skysql
 passwd= skysql
 detect_stale_master=0
-monitor_interval=8000
+monitor_interval=1000
 
 # A series of service definition
 #

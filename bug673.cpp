@@ -12,11 +12,10 @@
 
 int main(int argc, char *argv[])
 {
+    char result[1024];
     TestConnections * Test = new TestConnections(argc, argv);
 
-    char result[1024];
-
-    sleep(150);
+    sleep(30);
 
     Test->set_timeout(20);
 
@@ -37,13 +36,6 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying again show dbusers \"RW Split Router\" to check if MaxScale is alive\n");
     Test->add_result(get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
     Test->tprintf("result %s\n", result);
-
-    /*int users_num = 1;
-    sscanf(result, "%d", &users_num);
-    if (users_num != 0) {
-        printf("FAULT: result is not 0\n");
-        global_result++;
-    }*/
 
     Test->copy_all_logs(); return(Test->global_result);
 }

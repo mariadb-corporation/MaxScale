@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
         Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE t1;");
         Test->tprintf("Sleeping to let replication happen\n");
         Test->stop_timeout();
-        sleep(100);
+        sleep(50);
         Test->set_timeout(100);
         Test->tprintf("Create t1\n");
         create_t1(Test->conn_rwsplit);
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 
         Test->tprintf("Sleeping to let replication happen\n");
         Test->stop_timeout();
-        sleep(100);
+        sleep(50);
         Test->set_timeout(100);
         Test->tprintf("SELECT: rwsplitter\n");
         Test->add_result(select_from_t1(Test->conn_rwsplit, N), "Wrong data in 't1'");
@@ -83,13 +83,6 @@ int main(int argc, char *argv[])
         Test->tprintf("SELECT: slave\n");
         Test->add_result(select_from_t1(Test->conn_slave, N), "Wrong data in 't1'");
         Test->tprintf("Sleeping to let replication happen\n");
-        /*Test->stop_timeout();
-          sleep(100);
-          Test->set_timeout(10);
-        for (int i=0; i<Test->repl->N; i++) {
-            Test->tprintf("SELECT: directly from node %d\n", i);fflush(stdout);
-            Test->add_result(select_from_t1(Test->repl->nodes[i], N), "Wrong data in 't1'");
-        }*/
     }
 
     Test->repl->close_connections();

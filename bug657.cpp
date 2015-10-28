@@ -64,10 +64,10 @@ int main(int argc, char *argv[])
     Test->close_readconn_master();
     Test->connect_readconn_master();
 
-    sleep(10);
+    sleep(5);
 
     Test->repl->unblock_node(0);
-    sleep(30);
+    sleep(10);
 
     Test->tprintf("Closing connection\n");
 

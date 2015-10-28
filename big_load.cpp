@@ -11,6 +11,13 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
         nodes = Test->repl;
     }
 
+    int sql_l = 5000;
+    int run_time=100;
+    if (Test->smoke) {
+        sql_l = 500;
+        run_time=10;
+    }
+
     nodes->connect();
     Test->connect_rwsplit();
 
@@ -27,18 +34,16 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
         exit(1);
     } else {
         create_t1(Test->conn_rwsplit);
-        create_insert_string(sql, 5000, 1);
-        sleep(60);
+        create_insert_string(sql, sql_l, 1);
+        sleep(30);
         if ((execute_query(Test->conn_rwsplit, sql) != 0) && (report_errors)) {
             Test->add_result(1, "Query %s failed\n", sql);
         }
         // close connections
         Test->close_rwsplit();
 
-        //int threads_num = 100;
         pthread_t thread1[threads_num];
         pthread_t thread2[threads_num];
-        //pthread_t check_thread;
         int  iret1[threads_num];
         int  iret2[threads_num];
 
@@ -50,8 +55,8 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
             iret1[i] = pthread_create( &thread1[i], NULL, query_thread1, &data);
             iret2[i] = pthread_create( &thread2[i], NULL, query_thread2, &data);
         }
-        Test->tprintf("Threads are running 100 seconds \n");
-        sleep(100);
+        Test->tprintf("Threads are running %d seconds \n", run_time);
+        sleep(run_time);
         data.exit_flag = 1;
         sleep(1);
 

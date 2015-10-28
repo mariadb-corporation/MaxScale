@@ -84,8 +84,8 @@ int main(int argc, char *argv[])
     printf("Dropping sysbanch tables!\n"); fflush(stdout);
 
     Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest1");
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
     if (!Test->smoke) {
+        Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest2");
         Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest3");
         Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE sbtest4");
     }

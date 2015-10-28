@@ -25,9 +25,9 @@ int main(int argc, char *argv[])
     execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
     execute_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO user@'non_existing_host2' identified by 'pass3';  FLUSH PRIVILEGES;");
 
-    printf("sleeping 60 seconds to let replication happen\n");  fflush(stdout);
-    Test->set_timeout(100);
-    sleep(60);
+    printf("sleeping 20 seconds to let replication happen\n");  fflush(stdout);
+    Test->set_timeout(50);
+    sleep(20);
 
     Test->set_timeout(5);
     MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass1", Test->ssl);

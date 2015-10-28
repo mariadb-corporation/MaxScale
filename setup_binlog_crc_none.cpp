@@ -15,22 +15,23 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
 
-    Test->binlog_cmd_option = 2;
-    Test->start_binlog();
+    if (!Test->smoke) {
+        Test->binlog_cmd_option = 2;
+        Test->start_binlog();
 
-    Test->repl->connect();
+        Test->repl->connect();
 
-    create_t1(Test->repl->nodes[0]);
-    Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "error inserting data into t1\n");
-    Test->tprintf("Sleeping to let replication happen\n");
-    sleep(30);
+        create_t1(Test->repl->nodes[0]);
+        Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "error inserting data into t1\n");
+        Test->tprintf("Sleeping to let replication happen\n");
+        sleep(30);
 
-    for (int i = 0; i < Test->repl->N; i++) {
-        printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
-        Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "error SELECT for t1\n");
+        for (int i = 0; i < Test->repl->N; i++) {
+            printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
+            Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "error SELECT for t1\n");
+        }
+
+        Test->repl->close_connections();
     }
-
-    Test->repl->close_connections();
-
     Test->copy_all_logs(); return(Test->global_result);
 }

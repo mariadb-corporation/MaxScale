@@ -761,7 +761,11 @@ int TestConnections::insert_select(int N)
     global_result += select_from_t1(conn_slave, N);
     tprintf("Sleeping to let replication happen\n");
     stop_timeout();
-    sleep(180);
+    if (smoke) {
+        sleep(30);
+    } else {
+        sleep(180);
+    }
     for (int i=0; i<repl->N; i++) {
         tprintf("SELECT: directly from node %d\n", i);
         set_timeout(30);

@@ -30,14 +30,8 @@ int main(int argc, char *argv[])
         Test->repl->block_node(i); fflush(stdout);
     }
 
-    //pid_t pid = fork();
-    //if (!pid) {
     Test->set_timeout(100);
     Test->restart_maxscale();
-    //} else {
-    //Test->stop_timeout();
-    //Test->tprintf("Waiting 60 seconds\n");
-    //sleep(60);
 
     Test->set_timeout(20);
     Test->tprintf("Checking if MaxScale is alive by connecting to MaxAdmin\n");
@@ -49,24 +43,13 @@ int main(int argc, char *argv[])
     }
 
     Test->stop_timeout();
-    Test->tprintf("Sleeping 60 seconds\n");
-    sleep(60);
+    Test->tprintf("Sleeping 30 seconds\n");
+    sleep(30);
 
     Test->set_timeout(20);
 
     Test->tprintf("Checking Maxscale is alive\n");
-    //Test->close_maxscale_connections();
     Test->check_maxscale_alive();
-
-    Test->set_timeout(20);
-    Test->tprintf("Reconnecting and trying query to RWSplit\n");
-    Test->connect_maxscale();
-    Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");
-    Test->tprintf("Trying query to ReadConn master\n");
-    Test->try_query(Test->conn_master, (char *) "show processlist;");
-    Test->tprintf("Trying query to ReadConn slave\n");
-    Test->try_query(Test->conn_slave, (char *) "show processlist;");
-    Test->close_maxscale_connections();
 
     Test->copy_all_logs(); return(Test->global_result);
     //}

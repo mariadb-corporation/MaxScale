@@ -76,8 +76,10 @@ int main(int argc, char *argv[])
 
     char id_str[1024];
     char str1[1024];
+    int iterations = 1100;
+    if (Test->smoke) {iterations = 200;}
 
-    for (int i = 100; i < 1100; i++) {
+    for (int i = 100; i < iterations; i++) {
         Test->set_timeout(50);
         sprintf(str1, "insert into t2 (x) values (%d);", i);
         Test->try_query(Test->conn_rwsplit, str1);
