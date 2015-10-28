@@ -288,24 +288,17 @@ static void logmanager_unregister(void);
 static bool logmanager_init_nomutex(int argc, char* argv[]);
 static void logmanager_done_nomutex(void);
 
-enum log_spread_down
-{
-    LOG_SPREAD_DOWN_NO = 0,
-    LOG_SPREAD_DOWN_YES = 1
-};
-
 enum log_rotate
 {
     LOG_ROTATE_NO = 0,
     LOG_ROTATE_YES = 1
 };
 
-static int logmanager_write_log(logfile_id_t         id,
-                                enum log_flush       flush,
-                                enum log_spread_down spread_down,
-                                enum log_rotate      rotate,
-                                size_t               len,
-                                const char*          str);
+static int logmanager_write_log(logfile_id_t    id,
+                                enum log_flush  flush,
+                                enum log_rotate rotate,
+                                size_t          len,
+                                const char*     str);
 
 static blockbuf_t* blockbuf_init(logfile_id_t id);
 static void blockbuf_node_done(void* bb_data);
@@ -639,8 +632,6 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
  * @param id            logfile object identifier
  * @param flush         indicates whether log string must be written to disk
  *                      immediately
- * @param spread_down   if true, log string is spread to all logs having
- *                      larger id
  * @param rotate        if set, closes currently open log file and opens a
  *                      new one
  * @param str_len       length of formatted string (including terminating NULL).
@@ -649,12 +640,11 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
  * @return 0 if succeed, -1 otherwise
  *
  */
-static int logmanager_write_log(logfile_id_t         id,
-                                enum log_flush       flush,
-                                enum log_spread_down spread_down,
-                                enum log_rotate      rotate,
-                                size_t               str_len,
-                                const char*          str)
+static int logmanager_write_log(logfile_id_t    id,
+                                enum log_flush  flush,
+                                enum log_rotate rotate,
+                                size_t          str_len,
+                                const char*     str)
 {
     logfile_t*   lf;
     char*        wp;
@@ -674,7 +664,6 @@ static int logmanager_write_log(logfile_id_t         id,
          */
         err = logmanager_write_log(LOGFILE_ERROR,
                                    LOG_FLUSH_YES,
-                                   LOG_SPREAD_DOWN_NO,
                                    LOG_ROTATE_NO,
                                    strlen(errstr) + 1,
                                    errstr);
@@ -864,61 +853,6 @@ static int logmanager_write_log(logfile_id_t         id,
         {
             free(wp);
         }
-        /**
-         * disabled because cross-blockbuffer locking either causes deadlock
-         * or run out of memory blocks.
-         */
-        if (spread_down && false)
-        {
-            /**
-             * Write to target log. If spread_down == true, then
-             * write also to all logs with greater logfile id.
-             * LOGFILE_ERROR   = 1,
-             * LOGFILE_MESSAGE = 2,
-             * LOGFILE_TRACE   = 4,
-             * LOGFILE_DEBUG   = 8
-             *
-             * So everything written to error log will appear in
-             * message, trace and debuglog. Messages will be
-             * written in trace and debug log.
-             */
-            for (i = (id << 1); i <= LOGFILE_LAST; i <<= 1)
-            {
-                /** pointer to write buffer of larger-id log */
-                char* wp_c;
-
-                /**< Check if particular log is enabled */
-                if (!(lm->lm_enabled_logfiles & i))
-                {
-                    continue;
-                }
-                /**
-                 * Seek write position and register to block
-                 * buffer. Then print formatted string to
-                 * write position.
-                 */
-                wp_c = blockbuf_get_writepos(&bb_c,
-                                             (logfile_id_t)i,
-                                             timestamp_len - 1 + str_len,
-                                             flush);
-                /**
-                 * Copy original string from block buffer to
-                 * other logs' block buffers.
-                 */
-                snprintf(wp_c, timestamp_len + str_len, "%s", wp);
-
-                /** remove double line feed */
-                if (wp_c[timestamp_len - 1 + str_len - 2] == '\n')
-                {
-                    wp_c[timestamp_len - 1 + str_len - 2] = ' ';
-                }
-                wp_c[timestamp_len - 1 + str_len - 1] = '\n';
-
-                /** lock-free unregistration, includes flush if
-                 * bb_state == BB_FULL */
-                blockbuf_unregister(bb_c);
-            }
-        } /* if (spread_down) */
     } /* if (str == NULL) */
 
 return_err:
@@ -1351,7 +1285,6 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
          */
         err = logmanager_write_log(LOGFILE_ERROR,
                                    LOG_FLUSH_YES,
-                                   LOG_SPREAD_DOWN_NO,
                                    LOG_ROTATE_NO,
                                    strlen(errstr) + 1,
                                    errstr);
@@ -1381,7 +1314,6 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
         lf->lf_enabled = val;
         err = logmanager_write_log(id,
                                    LOG_FLUSH_YES,
-                                   LOG_SPREAD_DOWN_NO,
                                    LOG_ROTATE_NO,
                                    strlen(logstr) + 1,
                                    logstr);
@@ -1454,7 +1386,6 @@ static int log_write(logfile_id_t   id,
 
                 if (logmanager_write_log((logfile_id_t)i,
                                          flush,
-                                         LOG_SPREAD_DOWN_YES,
                                          LOG_ROTATE_NO,
                                          len, str) == 0)
                 {
@@ -1575,7 +1506,6 @@ int skygw_log_flush(logfile_id_t id)
     CHK_LOGMANAGER(lm);
     err = logmanager_write_log(id,
                                LOG_FLUSH_YES,
-                               LOG_SPREAD_DOWN_NO,
                                LOG_ROTATE_NO,
                                0, NULL);
 
@@ -1614,7 +1544,6 @@ int skygw_log_rotate(logfile_id_t id)
 
     err = logmanager_write_log(id,
                                LOG_FLUSH_NO,
-                               LOG_SPREAD_DOWN_NO,
                                LOG_ROTATE_YES,
                                0, NULL);
 
