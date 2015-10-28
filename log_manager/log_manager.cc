@@ -288,12 +288,6 @@ static void logmanager_unregister(void);
 static bool logmanager_init_nomutex(int argc, char* argv[]);
 static void logmanager_done_nomutex(void);
 
-enum log_flush
-{
-    LOG_FLUSH_NO  = 0,
-    LOG_FLUSH_YES = 1
-};
-
 enum log_spread_down
 {
     LOG_SPREAD_DOWN_NO = 0,
@@ -756,10 +750,12 @@ static int logmanager_write_log(logfile_id_t         id,
         }
         cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 
+        bool overflow = false;
         /** Find out how much can be safely written with current block size */
         if (timestamp_len - sizeof(char) + cmplen + str_len > lf->lf_buf_size)
         {
             safe_str_len = lf->lf_buf_size;
+            overflow = true;
         }
         else
         {
@@ -856,6 +852,11 @@ static int logmanager_write_log(logfile_id_t         id,
                      str);
         }
 
+        /** Add an ellipsis to an overflowing message to signal truncation. */
+        if (overflow && safe_str_len > 4)
+        {
+            memset(wp + safe_str_len - 4, '.', 3);
+        }
         /** write to syslog */
         if (lf->lf_write_syslog)
         {
@@ -1551,50 +1552,12 @@ static int log_write(logfile_id_t   id,
     return rv;
 }
 
-int skygw_log_write_context_flush(logfile_id_t id,
-                                  const char*  file,
-                                  int          line,
-                                  const char*  function,
-                                  const char*  str,
-                                  ...)
-{
-    int     err = 0;
-    va_list valist;
-
-    /**
-     * Find out the length of log string (to be formatted str).
-     */
-    va_start(valist, str);
-    int len = vsnprintf(NULL, 0, str, valist);
-    va_end(valist);
-
-    if (len >= 0)
-    {
-        char message[len + 1];
-
-        va_start(valist, str);
-        int len2 = vsnprintf(message, sizeof(message), str, valist);
-        va_end(valist);
-        assert(len2 == len);
-
-        err = log_write(id, file, line, function, len2, message, LOG_FLUSH_YES);
-
-        if (err != 0)
-        {
-            fprintf(stderr, "skygw_log_write_flush failed.\n");
-        }
-    }
-
-    return err;
-}
-
-
-
-int skygw_log_write_context(logfile_id_t id,
-                            const char*  file,
-                            int          line,
-                            const char*  function,
-                            const char*  str,
+int skygw_log_write_context(logfile_id_t   id,
+                            enum log_flush flush,
+                            const char*    file,
+                            int            line,
+                            const char*    function,
+                            const char*    str,
                             ...)
 {
     int     err = 0;
@@ -1609,14 +1572,18 @@ int skygw_log_write_context(logfile_id_t id,
 
     if (len >= 0)
     {
+        if (len > MAX_LOGSTRLEN)
+        {
+            len = MAX_LOGSTRLEN;
+        }
+
         char message[len + 1];
 
         va_start(valist, str);
-        int len2 = vsnprintf(message, sizeof(message), str, valist);
+        vsnprintf(message, sizeof(message), str, valist);
         va_end(valist);
-        assert(len2 == len);
 
-        err = log_write(id, file, line, function, len2, message, LOG_FLUSH_NO);
+        err = log_write(id, file, line, function, len, message, flush);
 
         if (err != 0)
         {

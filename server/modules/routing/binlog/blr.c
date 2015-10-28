@@ -79,7 +79,7 @@ extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
-static char *version_str = "V1.2.2";
+static char *version_str = "V2.0.0";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -115,6 +115,8 @@ extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debu
 void blr_master_close(ROUTER_INSTANCE *);
 char * blr_last_event_description(ROUTER_INSTANCE *router);
 extern int MaxScaleUptime();
+static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+char	*blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
@@ -2059,7 +2061,38 @@ char *event_desc = NULL;
 				event_desc = event_names_mariadb10[(router->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
 			}
 		}
+	}
 
+	return event_desc;
+}
+
+/**
+ * Return the event description
+ *
+ * @param router	The router instance
+ * @param event		The current event
+ * @return		The event description or NULL
+ */
+char *
+blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event) {
+char *event_desc = NULL;
+
+	if (!router->mariadb10_compat) {
+		if (event >= 0 &&
+			event <= MAX_EVENT_TYPE) {
+			event_desc = event_names[event];
+		}
+	} else {
+		if (event >= 0 &&
+			event <= MAX_EVENT_TYPE) {
+			event_desc = event_names[event];
+		} else {
+			/* Check MariaDB 10 new events */
+			if (event >= MARIADB_NEW_EVENTS_BEGIN &&
+				event <= MAX_EVENT_TYPE_MARIADB10) {
+				event_desc = event_names_mariadb10[(event - MARIADB_NEW_EVENTS_BEGIN)];
+			}
+		}
 	}
 
 	return event_desc;
