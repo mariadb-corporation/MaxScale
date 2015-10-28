@@ -828,10 +828,12 @@ int fde_seen = 0;
 						average_bytes = (double)((double)total_bytes / (double)n_transactions) * (1.0);
 
 					/* Report Binlog First and Last event */
-					if (first_event.event_type == 0)
-						blr_print_binlog_details(router, fde_event, last_event);
-					else
-						blr_print_binlog_details(router, first_event, last_event);
+					if (pos > 4) {
+						if (first_event.event_type == 0)
+							blr_print_binlog_details(router, fde_event, last_event);
+						else
+							blr_print_binlog_details(router, first_event, last_event);
+					}
 
 					/* Report Transaction Summary */
 					if (n_transactions != 0) {
