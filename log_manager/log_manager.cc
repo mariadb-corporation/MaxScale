@@ -294,12 +294,6 @@ enum log_spread_down
     LOG_SPREAD_DOWN_YES = 1
 };
 
-enum log_use_valist
-{
-    LOG_USE_VALIST_NO = 0,
-    LOG_USE_VALIST_YES = 1
-};
-
 enum log_rotate
 {
     LOG_ROTATE_NO = 0,
@@ -308,12 +302,10 @@ enum log_rotate
 
 static int logmanager_write_log(logfile_id_t         id,
                                 enum log_flush       flush,
-                                enum log_use_valist  use_valist,
                                 enum log_spread_down spread_down,
                                 enum log_rotate      rotate,
                                 size_t               len,
-                                const char*          str,
-                                va_list              valist);
+                                const char*          str);
 
 static blockbuf_t* blockbuf_init(logfile_id_t id);
 static void blockbuf_node_done(void* bb_data);
@@ -647,27 +639,22 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
  * @param id            logfile object identifier
  * @param flush         indicates whether log string must be written to disk
  *                      immediately
- * @param use_valist    does write involve formatting of the string and use of
- *                      valist argument
  * @param spread_down   if true, log string is spread to all logs having
  *                      larger id
  * @param rotate        if set, closes currently open log file and opens a
  *                      new one
  * @param str_len       length of formatted string
  * @param str           string to be written to log
- * @param valist        variable-length argument list for formatting the string
  *
  * @return 0 if succeed, -1 otherwise
  *
  */
 static int logmanager_write_log(logfile_id_t         id,
                                 enum log_flush       flush,
-                                enum log_use_valist  use_valist,
                                 enum log_spread_down spread_down,
                                 enum log_rotate      rotate,
                                 size_t               str_len,
-                                const char*          str,
-                                va_list              valist)
+                                const char*          str)
 {
     logfile_t*   lf;
     char*        wp;
@@ -687,12 +674,10 @@ static int logmanager_write_log(logfile_id_t         id,
          */
         err = logmanager_write_log(LOGFILE_ERROR,
                                    LOG_FLUSH_YES,
-                                   LOG_USE_VALIST_NO,
                                    LOG_SPREAD_DOWN_NO,
                                    LOG_ROTATE_NO,
                                    strlen(errstr) + 1,
-                                   errstr,
-                                   valist);
+                                   errstr);
         if (err != 0)
         {
             fprintf(stderr,
@@ -837,20 +822,10 @@ static int logmanager_write_log(logfile_id_t         id,
          * Write next string to overwrite terminating null character
          * of the timestamp string.
          */
-        if (use_valist)
-        {
-            vsnprintf(wp + timestamp_len + sesid_str_len,
-                      safe_str_len - timestamp_len - sesid_str_len,
-                      str,
-                      valist);
-        }
-        else
-        {
-            snprintf(wp + timestamp_len + sesid_str_len,
-                     safe_str_len-timestamp_len-sesid_str_len,
-                     "%s",
-                     str);
-        }
+        snprintf(wp + timestamp_len + sesid_str_len,
+                 safe_str_len-timestamp_len-sesid_str_len,
+                 "%s",
+                 str);
 
         /** Add an ellipsis to an overflowing message to signal truncation. */
         if (overflow && safe_str_len > 4)
@@ -1361,7 +1336,6 @@ return_err:
 static bool logfile_set_enabled(logfile_id_t id, bool val)
 {
     char*        logstr;
-    va_list      notused;
     bool         oldval;
     bool         succp = false;
     int          err = 0;
@@ -1377,12 +1351,10 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
          */
         err = logmanager_write_log(LOGFILE_ERROR,
                                    LOG_FLUSH_YES,
-                                   LOG_USE_VALIST_NO,
                                    LOG_SPREAD_DOWN_NO,
                                    LOG_ROTATE_NO,
                                    strlen(errstr) + 1,
-                                   errstr,
-                                   notused);
+                                   errstr);
         if (err != 0)
         {
             fprintf(stderr,
@@ -1409,12 +1381,10 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
         lf->lf_enabled = val;
         err = logmanager_write_log(id,
                                    LOG_FLUSH_YES,
-                                   LOG_USE_VALIST_NO,
                                    LOG_SPREAD_DOWN_NO,
                                    LOG_ROTATE_NO,
                                    strlen(logstr) + 1,
-                                   logstr,
-                                   notused);
+                                   logstr);
         free(logstr);
     }
     if (err != 0)
@@ -1486,14 +1456,11 @@ static int log_write(logfile_id_t   id,
             {
                 ++attempts;
 
-                va_list valist; // Not used
-
                 if (logmanager_write_log((logfile_id_t)i,
                                          flush,
-                                         LOG_USE_VALIST_NO,
                                          LOG_SPREAD_DOWN_YES,
                                          LOG_ROTATE_NO,
-                                         len, str, valist) == 0)
+                                         len, str) == 0)
                 {
                     ++successes;
                 }
@@ -1602,7 +1569,6 @@ int skygw_log_write_context(logfile_id_t   id,
 int skygw_log_flush(logfile_id_t id)
 {
     int err = 0;
-    va_list valist; /**< Dummy, must be present but it is not processed */
 
     if (!logmanager_register(false))
     {
@@ -1613,10 +1579,9 @@ int skygw_log_flush(logfile_id_t id)
     CHK_LOGMANAGER(lm);
     err = logmanager_write_log(id,
                                LOG_FLUSH_YES,
-                               LOG_USE_VALIST_NO,
                                LOG_SPREAD_DOWN_NO,
                                LOG_ROTATE_NO,
-                               0, NULL, valist);
+                               0, NULL);
 
     if (err != 0)
     {
@@ -1638,7 +1603,6 @@ int skygw_log_rotate(logfile_id_t id)
 {
     int        err = 0;
     logfile_t* lf;
-    va_list    valist; /**< Dummy, must be present but it is not processed */
 
     if (!logmanager_register(false))
     {
@@ -1654,10 +1618,9 @@ int skygw_log_rotate(logfile_id_t id)
 
     err = logmanager_write_log(id,
                                LOG_FLUSH_NO,
-                               LOG_USE_VALIST_NO,
                                LOG_SPREAD_DOWN_NO,
                                LOG_ROTATE_YES,
-                               0, NULL, valist);
+                               0, NULL);
 
     if (err != 0)
     {
