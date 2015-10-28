@@ -2266,3 +2266,61 @@ int simple_str_hash(char* key)
 
   return hash;
 }
+
+/**
+ * Read from a FILE pointer until a newline character or the end of the file is found.
+ * The provided buffer will be reallocated if it is too small to store the whole
+ * line. The size after the reallocation will be stored in @c size. The read line
+ * will be stored in @c dest and it will always be null terminated. The newline
+ * character will not be copied into the buffer.
+ * @param dest Pointer to a buffer of at least @c size bytes
+ * @param size Size of the buffer
+ * @param file A valid file stream
+ * @return When a complete line was successfully read the function returns 1. If
+ * the end of the file was reached before any characters were read the return value
+ * will be 0. If the provided buffer could not be reallocated to store the complete
+ * line the original size will be retained, everything read up to this point
+ * will be stored in it as a null terminated string and -1 will be returned.
+ */
+int maxscale_getline(char** dest, int* size, FILE* file)
+{
+    char* destptr = *dest;
+    int offset = 0;
+
+    if (feof(file))
+    {
+        return 0;
+    }
+
+    while (true)
+    {
+        if (*size <= offset)
+        {
+            char* tmp = (char*) realloc(destptr, *size * 2);
+            if (tmp)
+            {
+                destptr = tmp;
+                *size *= 2;
+            }
+            else
+            {
+                skygw_log_write(LE, "Error: Failed to reallocate memory from %d"
+                                " bytes to %d bytes when reading from file.",
+                                *size, *size * 2);
+                destptr[offset - 1] = '\0';
+                *dest = destptr;
+                return -1;
+            }
+        }
+
+        if ((destptr[offset] = fgetc(file)) == '\n' || feof(file))
+        {
+            destptr[offset] = '\0';
+            break;
+        }
+        offset++;
+    }
+
+    *dest = destptr;
+    return 1;
+}

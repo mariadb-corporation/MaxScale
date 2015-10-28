@@ -75,6 +75,8 @@
 #include <sys/utsname.h>
 #include <pcre.h>
 #include <dbusers.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 /** According to the PCRE manual, this should be a multiple of 3 */
 #define MAXSCALE_PCRE_BUFSZ 24
@@ -101,6 +103,7 @@ int	config_get_ifaddr(unsigned char *output);
 int	config_get_release_string(char* release);
 FEEDBACK_CONF * config_get_feedback_data();
 void config_add_param(CONFIG_CONTEXT*,char*,char*);
+bool config_has_duplicate_sections(const char* config);
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
 static	FEEDBACK_CONF	feedback;
@@ -274,6 +277,10 @@ config_load(char *file)
 CONFIG_CONTEXT	config;
 int		rval, ini_rval;
 
+    if (config_has_duplicate_sections(file))
+    {
+        return 0;
+    }
 	MYSQL *conn;
 	conn = mysql_init(NULL);
 	if (conn) {
@@ -355,6 +362,11 @@ int		rval;
 
 	if (!config_file)
 		return 0;
+
+    if (config_has_duplicate_sections(config_file))
+    {
+        return 0;
+    }
 
 	if (gateway.version_string)
 		free(gateway.version_string);
@@ -2628,4 +2640,79 @@ void config_add_param(CONFIG_CONTEXT* obj, char* key,char* value)
 GATEWAY_CONF* config_get_global_options()
 {
     return &gateway;
+}
+
+/**
+ * Check if sections are defined multiple times in the configuration file.
+ * @param config Path to the configuration file
+ * @return True if duplicate sections were found or an error occurred
+ */
+bool config_has_duplicate_sections(const char* config)
+{
+    bool rval = false;
+    const int table_size = 10;
+    int errcode;
+    PCRE2_SIZE erroffset;
+    HASHTABLE *hash = hashtable_alloc(table_size, simple_str_hash, strcmp);
+    pcre2_code *re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED,
+                                   0, &errcode, &erroffset, NULL);
+    pcre2_match_data *mdata;
+    int size = 1024;
+    char *buffer = malloc(size * sizeof(char));
+
+    if (buffer && hash && re &&
+        (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
+    {
+        hashtable_memory_fns(hash, (HASHMEMORYFN) strdup, NULL,
+                             (HASHMEMORYFN) free, NULL);
+        FILE* file = fopen(config, "r");
+
+        if (file)
+        {
+            while (maxscale_getline(&buffer, &size, file) > 0)
+            {
+                if (pcre2_match(re, (PCRE2_SPTR) buffer,
+                                PCRE2_ZERO_TERMINATED, 0, 0,
+                                mdata, NULL) > 0)
+                {
+                    /**
+                     * Neither of the PCRE2 calls will fail since we know the pattern
+                     * beforehand and we allocate enough memory from the stack
+                     */
+                    PCRE2_SIZE len;
+                    pcre2_substring_length_bynumber(mdata, 1, &len);
+                    len += 1; /** one for the null terminator */
+                    PCRE2_UCHAR section[len];
+                    pcre2_substring_copy_bynumber(mdata, 1, section, &len);
+
+                    if (hashtable_add(hash, section, "") == 0)
+                    {
+                        skygw_log_write(LE, "Error: Duplicate section found: %s",
+                                        section);
+                        rval = true;
+                    }
+                }
+            }
+            fclose(file);
+        }
+        else
+        {
+            char errbuf[STRERROR_BUFLEN];
+            skygw_log_write(LE, "Error: Failed to open file '%s': %s", config,
+                            strerror_r(errno, errbuf, sizeof(errbuf)));
+            rval = true;
+        }
+    }
+    else
+    {
+        skygw_log_write(LE, "Error: Failed to allocate enough memory when checking"
+                        " for duplicate sections in configuration file.");
+        rval = true;
+    }
+
+    hashtable_free(hash);
+    pcre2_code_free(re);
+    pcre2_match_data_free(mdata);
+    free(buffer);
+    return rval;
 }
