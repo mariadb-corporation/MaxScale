@@ -32,27 +32,10 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #endif
 
-#include <my_config.h>
-#include <strings.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <router.h>
 #include <dcb.h>
 #include <hashtable.h>
 #include <mysql_client_server_protocol.h>
-#include <sharding_common.h>
-#include <secrets.h>
-#include <mysql.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-#include <query_classifier.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <modinfo.h>
-#include <modutil.h>
 #include <pcre2.h>
-
 /**
  * Bitmask values for the router session's initialization. These values are used
  * to prevent responses from internal commands being forwarded to the client.

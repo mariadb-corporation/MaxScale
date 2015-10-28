@@ -15,8 +15,26 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
-
+#include <my_config.h>
+#include <stdio.h>
+#include <strings.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <router.h>
 #include <schemarouter.h>
+#include <sharding_common.h>
+#include <secrets.h>
+#include <mysql.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+#include <query_classifier.h>
+#include <dcb.h>
+#include <spinlock.h>
+#include <modinfo.h>
+#include <modutil.h>
+#include <mysql_client_server_protocol.h>
+#include <pcre.h>
 
 #define DEFAULT_REFRESH_INTERVAL 30.0
 
