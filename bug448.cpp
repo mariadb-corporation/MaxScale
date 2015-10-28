@@ -12,6 +12,7 @@
 int main(int argc, char *argv[])
 {
     char my_ip[1024];
+    char my_ip_db[1024];
     char sql[1024];
     char * first_dot;
     TestConnections * Test = new TestConnections(argc, argv);
@@ -22,7 +23,7 @@ int main(int argc, char *argv[])
     get_my_ip(Test->maxscale_IP, my_ip);
     Test->tprintf("Test machine IP (got via network request) %s\n", my_ip);
 
-    Test->add_result(Test->get_client_ip(my_ip), "Unable to get IP using connection to DB\n");
+    Test->add_result(Test->get_client_ip(my_ip_db), "Unable to get IP using connection to DB\n");
 
     Test->tprintf("Test machine IP (got via Show processlist) %s\n", my_ip);
 
