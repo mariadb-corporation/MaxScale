@@ -18,42 +18,42 @@ int main(int argc, char *argv[])
     Test->set_timeout(20);
 
     Test->repl->connect();
-    Test->connect_maxscale();
+    Test->tprintf("Connecting to Maxscale\n");
+    Test->add_result(Test->connect_maxscale(), "Error connecting to Maxscale\n");
 
-    get_my_ip(Test->maxscale_IP, my_ip);
-    Test->tprintf("Test machine IP (got via network request) %s\n", my_ip);
+    if (Test->global_result == 0) {
+        get_my_ip(Test->maxscale_IP, my_ip);
+        Test->tprintf("Test machine IP (got via network request) %s\n", my_ip);
 
-    Test->add_result(Test->get_client_ip(my_ip), "Unable to get IP using connection to DB\n");
+        Test->add_result(Test->get_client_ip(my_ip), "Unable to get IP using connection to DB\n");
 
-    Test->tprintf("Test machine IP (got via Show processlist) %s\n", my_ip);
+        Test->tprintf("Test machine IP (got via Show processlist) %s\n", my_ip);
 
-    first_dot = strstr(my_ip, ".");
-    strcpy(first_dot, ".%.%.%");
+        first_dot = strstr(my_ip, ".");
+        strcpy(first_dot, ".%.%.%");
 
-    Test->tprintf("Test machine IP with %% %s\n", my_ip);
+        Test->tprintf("Test machine IP with %% %s\n", my_ip);
 
+        Test->tprintf("Creating user 'user1' for %s host\n", my_ip);
+        Test->set_timeout(30);
+        sprintf(sql, "GRANT ALL PRIVILEGES ON *.* TO user1@'%s' identified by 'pass1';  FLUSH PRIVILEGES;", my_ip);
+        Test->tprintf("Query: %s\n", sql);
+        Test->try_query(Test->conn_rwsplit, sql);
 
-    Test->tprintf("Creating user 'user1' for %s host\n", my_ip);
-    Test->set_timeout(30);
-    sprintf(sql, "GRANT ALL PRIVILEGES ON *.* TO user1@'%s' identified by 'pass1';  FLUSH PRIVILEGES;", my_ip);
-    Test->tprintf("Query: %s\n", sql);
-    Test->try_query(Test->conn_rwsplit, sql);
+        Test->tprintf("Trying to open connection using user1\n");
 
-    Test->tprintf("Trying to open connection using user1\n");
+        MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user1", (char *) "pass1", Test->ssl);
+        if (conn == NULL) {
+            Test->add_result(1, "TEST_FAILED! Authentification failed!\n");
+        } else {
+            Test->tprintf("Authentification for user@'%s' is ok", my_ip);
+            mysql_close(conn);
+        }
+        sprintf(sql, "DROP USER user1@'%s';  FLUSH PRIVILEGES;", my_ip);
+        Test->add_result(execute_query(Test->conn_rwsplit, sql), "Query Failed\n");
 
-
-    MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user1", (char *) "pass1", Test->ssl);
-    if (conn == NULL) {
-        Test->add_result(1, "TEST_FAILED! Authentification failed!\n");
-    } else {
-        Test->tprintf("Authentification for user@'%s' is ok", my_ip);
-        mysql_close(conn);
+        Test->close_maxscale_connections();
+        Test->check_maxscale_alive();
     }
-
-    sprintf(sql, "DROP USER user1@'%s';  FLUSH PRIVILEGES;", my_ip);
-    Test->add_result(execute_query(Test->conn_rwsplit, sql), "Query Failed\n");
-
-    Test->close_maxscale_connections();
-    Test->check_maxscale_alive();
     Test->copy_all_logs(); return(Test->global_result);
 }

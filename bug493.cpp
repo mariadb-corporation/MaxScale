@@ -1,7 +1,7 @@
 /**
  * @file bug493.cpp regression case for bug 493 ( Can have same section name multiple times without warning)
  *
- * - Maxscale.cnf in which 'server2' is difined twice and tets checks error log for proper error message.
+ * - Maxscale.cnf in which 'server2' is defined twice and tests checks error log for proper error message.
  * - check if Maxscale is alive
  */
 
