@@ -1698,7 +1698,7 @@ routeQuery(ROUTER* instance,
     
     if(packet_type == MYSQL_COM_INIT_DB)
     {
-        if(!(change_successful = change_current_db(router_cli_ses->rses_mysql_session,
+        if(!(change_successful = change_current_db(router_cli_ses->current_db,
 						   router_cli_ses->dbhash,
 						   querybuf)))
         {
@@ -2471,23 +2471,6 @@ execute_sescmd_in_backend(SUBSERVICE* subsvc)
         rc = SESSION_ROUTE_QUERY(subsvc->session,sescmd_cursor_clone_querybuf(scur));
         break;
 
-    case MYSQL_COM_INIT_DB:
-    {
-        /**
-         * Record database name and store to session.
-         */
-        GWBUF* tmpbuf;
-        MYSQL_session* data;
-        unsigned int qlen;
-
-        data = subsvc->session->data;
-        tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
-        qlen = MYSQL_GET_PACKET_LEN((unsigned char*) tmpbuf->start);
-        memset(data->db, 0, MYSQL_DATABASE_MAXLEN + 1);
-        strncpy(data->db, tmpbuf->start + 5, qlen - 1);
-        rc = SESSION_ROUTE_QUERY(subsvc->session,sescmd_cursor_clone_querybuf(scur));
-    }
-        /** Fallthrough */
     case MYSQL_COM_QUERY:
     default:
         /** 

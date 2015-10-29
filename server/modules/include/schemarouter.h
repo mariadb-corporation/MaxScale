@@ -323,6 +323,7 @@ struct router_client_session {
         struct router_client_session* next; /*< List of router sessions */
         shard_map_t*      shardmap; /*< Database hash containing names of the databases mapped to the servers that contain them */
         char            connect_db[MYSQL_DATABASE_MAXLEN+1]; /*< Database the user was trying to connect to */
+        char            current_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Current active database */
         init_mask_t    init; /*< Initialization state bitmask */
         GWBUF*          queue; /*< Query that was received before the session was ready */
         DCB*            dcb_route; /*< Internal DCB used to trigger re-routing of buffers */

@@ -583,9 +583,9 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
         
         if(tmp == NULL)
         {
-            rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
+            rval = (char*) hashtable_fetch(ht, client->current_db);
             skygw_log_write(LOGFILE_TRACE,"schemarouter: SHOW TABLES query, current database '%s' on server '%s'",
-                            client->rses_mysql_session->db,rval);
+                            client->current_db,rval);
         }
         else
         {
@@ -613,17 +613,17 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
         }
     }
     
-    if(rval == NULL && !has_dbs && client->rses_mysql_session->db[0] != '\0')
+    if(rval == NULL && !has_dbs && client->current_db[0] != '\0')
     {
         /**
          * If the target name has not been found and the session has an
          * active database, set is as the target
          */
 
-        rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
+        rval = (char*) hashtable_fetch(ht, client->current_db);
 	if(rval)
 	{
-	    skygw_log_write(LOGFILE_TRACE,"schemarouter: Using active database '%s'",client->rses_mysql_session->db);
+	    skygw_log_write(LOGFILE_TRACE,"schemarouter: Using active database '%s'",client->current_db);
 	}
     }
 
@@ -1585,7 +1585,7 @@ ROUTER* instance,
     rses_property_t*   rses_prop_tmp;
 
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    dbname = router_cli_ses->rses_mysql_session->db;
+    dbname = router_cli_ses->current_db;
 
     if (is_drop_table_query(querybuf))
     {
@@ -1643,7 +1643,7 @@ ROUTER* instance,
     rses_property_t*   rses_prop_tmp;
 
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    dbname = router_cli_ses->rses_mysql_session->db;
+    dbname = router_cli_ses->current_db;
 
     if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
 	QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
@@ -1722,7 +1722,7 @@ void check_create_tmp_table(
   HASHTABLE*	   h;
 
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  dbname = router_cli_ses->rses_mysql_session->db;
+  dbname = router_cli_ses->current_db;
 
 
   if (QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
@@ -2248,7 +2248,7 @@ static int routeQuery(
 	    op == QUERY_OP_CHANGE_DB)
 	{
             spinlock_acquire(&router_cli_ses->shardmap->lock);
-            change_successful = change_current_db(router_cli_ses->rses_mysql_session,
+            change_successful = change_current_db(router_cli_ses->current_db,
                                                   router_cli_ses->shardmap->hash,
                                                   querybuf);
             spinlock_release(&router_cli_ses->shardmap->lock);
@@ -2259,6 +2259,10 @@ static int routeQuery(
 		   difftime(now,router_cli_ses->rses_config.last_refresh) >
 		   router_cli_ses->rses_config.refresh_min_interval)
 		{
+            spinlock_acquire(&router_cli_ses->shardmap->lock);
+            router_cli_ses->shardmap->state = SHMAP_STALE;
+            spinlock_release(&router_cli_ses->shardmap->lock);
+
 		    rses_begin_locked_router_action(router_cli_ses);
 
 		    router_cli_ses->rses_config.last_refresh = now;
@@ -2319,13 +2323,13 @@ static int routeQuery(
 		route_target = TARGET_UNDEFINED;
 
         spinlock_acquire(&router_cli_ses->shardmap->lock);
-        tname = hashtable_fetch(router_cli_ses->shardmap->hash,router_cli_ses->rses_mysql_session->db);
+        tname = hashtable_fetch(router_cli_ses->shardmap->hash,router_cli_ses->current_db);
         spinlock_release(&router_cli_ses->shardmap->lock);
 
 		if(tname)
 		{
                     skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB for database '%s' on server '%s'",
-                                    router_cli_ses->rses_mysql_session->db,tname);
+                                    router_cli_ses->current_db,tname);
                     route_target = TARGET_NAMED_SERVER;
 		}
                 else
@@ -2361,9 +2365,9 @@ static int routeQuery(
 
 		if( (tname == NULL &&
              packet_type != MYSQL_COM_INIT_DB && 
-             router_cli_ses->rses_mysql_session->db[0] == '\0') || 
+             router_cli_ses->current_db[0] == '\0') || 
 		   packet_type == MYSQL_COM_FIELD_LIST || 
-		   (router_cli_ses->rses_mysql_session->db[0] != '\0'))
+		   (router_cli_ses->current_db[0] != '\0'))
 		{
 			/**
 			 * No current database and no databases in query or
@@ -2806,7 +2810,7 @@ static void clientReply(ROUTER* instance,
                         router_cli_ses->connect_db,
                         router_cli_ses->rses_client_dcb->session);
         router_cli_ses->init &= ~INIT_USE_DB;
-        strcpy(router_cli_ses->rses_mysql_session->db, router_cli_ses->connect_db);
+        strcpy(router_cli_ses->current_db, router_cli_ses->connect_db);
         ss_dassert(router_cli_ses->init == INIT_READY);
 
         if (router_cli_ses->queue)
@@ -3728,22 +3732,6 @@ static bool execute_sescmd_in_backend(
                                 sescmd_cursor_clone_querybuf(scur));
                         break;
 
-		case MYSQL_COM_INIT_DB:
-		{
-			/**
-			 * Record database name and store to session.
-			 */
-			GWBUF* tmpbuf;
-			MYSQL_session* data;
-			unsigned int qlen;
-
-			data = dcb->session->data;
-			tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
-			qlen = MYSQL_GET_PACKET_LEN((unsigned char*)tmpbuf->start);
-			memset(data->db,0,MYSQL_DATABASE_MAXLEN+1);
-			strncpy(data->db,tmpbuf->start+5,qlen - 1);			
-		}
-		/** Fallthrough */
 		case MYSQL_COM_QUERY:
                 default:
                         /** 
