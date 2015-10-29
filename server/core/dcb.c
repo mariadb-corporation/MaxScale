@@ -3006,7 +3006,7 @@ int dcb_connect_SSL(DCB* dcb)
 	else
 	{
 	    rval = -1;
-	    ERR_error_string_n(errnum,errbuf,sizeo(errbuf));
+	    ERR_error_string_n(errnum,errbuf,sizeof(errbuf));
 	    skygw_log_write_flush(LE,
 			     "Error: Fatal error in SSL_accept for %s@%s: (SSL error code: %d) %s",
 			     dcb->user,
