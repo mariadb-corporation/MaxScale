@@ -2865,7 +2865,8 @@ int dcb_create_SSL(DCB* dcb)
  */
 int dcb_accept_SSL(DCB* dcb)
 {
-    int rval = 0,ssl_rval,errnum = 0,fd,b = 0,pending;
+    int rval = 0,ssl_rval,ssl_errnum = 0,fd,b = 0,pending;
+    int err_errnum;
     char errbuf[140];
     fd = dcb->fd;
 
@@ -2874,22 +2875,20 @@ int dcb_accept_SSL(DCB* dcb)
 	ssl_rval = SSL_accept(dcb->ssl);
 
 	LOGIF(LD,(skygw_log_write_flush(LD,"[dcb_accept_SSL] SSL_accept %d, error %d",
-				 ssl_rval,errnum)));
+				 ssl_rval,ssl_errnum)));
 	switch(ssl_rval)
 	{
 	case 0:
-	    errnum = SSL_get_error(dcb->ssl,ssl_rval);
+	    ssl_errnum = SSL_get_error(dcb->ssl,ssl_rval);
 	    skygw_log_write(LE,"Error: SSL authentication failed (SSL error %d):",
-				     dcb,
-				     dcb->remote,
-				     errnum);
+				     ssl_errnum);
 
-	    if(errnum == SSL_ERROR_SSL ||
-	     errnum == SSL_ERROR_SYSCALL)
+	    if(ssl_errnum == SSL_ERROR_SSL ||
+	     ssl_errnum == SSL_ERROR_SYSCALL)
 	    {
-		while((errnum = ERR_get_error()) != 0)
+		while((err_errnum = ERR_get_error()) != 0)
 		{
-		    ERR_error_string_n(errnum,errbuf,140);
+		    ERR_error_string_n(err_errnum,errbuf,140);
 		    skygw_log_write(LE,"%s",errbuf);
 		}
 	    }
@@ -2903,9 +2902,9 @@ int dcb_accept_SSL(DCB* dcb)
 
 	case -1:
 
-	    errnum = SSL_get_error(dcb->ssl,ssl_rval);
+	    ssl_errnum = SSL_get_error(dcb->ssl,ssl_rval);
 
-	    if(errnum == SSL_ERROR_WANT_READ || errnum == SSL_ERROR_WANT_WRITE)
+	    if(ssl_errnum == SSL_ERROR_WANT_READ || ssl_errnum == SSL_ERROR_WANT_WRITE)
 	    {
 		/** Not all of the data has been read. Go back to the poll
 		 queue and wait for more.*/
@@ -2921,17 +2920,22 @@ int dcb_accept_SSL(DCB* dcb)
 			 "Error: Fatal error in SSL_accept for %s: (SSL version: %s SSL error code: %d)",
 			 dcb->remote,
 			 SSL_get_version(dcb->ssl),
-			 errnum);
-		if(errnum == SSL_ERROR_SSL ||
-		 errnum == SSL_ERROR_SYSCALL)
+			 ssl_errnum);
+		if(ssl_errnum == SSL_ERROR_SSL ||
+		 ssl_errnum == SSL_ERROR_SYSCALL)
 		{
-		    while((errnum = ERR_get_error()) != 0)
+		    while((err_errnum = ERR_get_error()) != 0)
 		    {
-			ERR_error_string_n(errnum,errbuf,140);
+			ERR_error_string_n(err_errnum,errbuf,140);
 			skygw_log_write(LE,
 				 "%s",
 				 errbuf);
 		    }
+            if(errno)
+            {
+                skygw_log_write(LE, "Error: SSL authentication failed due to system"
+                    " error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+            }
 		}
 	    }
 	    break;
