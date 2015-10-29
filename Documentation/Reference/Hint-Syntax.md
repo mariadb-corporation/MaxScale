@@ -14,7 +14,7 @@ router_options=master
 servers=server1
 user=maxuser
 passwd=maxpwd
-filter=Hint
+filters=Hint
 
 [Hint]
 type=filter
