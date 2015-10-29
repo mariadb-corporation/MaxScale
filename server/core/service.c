@@ -471,7 +471,8 @@ serviceStart(SERVICE *service)
 
     if (check_service_permissions(service))
     {
-        if (service->ssl_mode == SSL_DISABLED || (service->ssl_mode != SSL_DISABLED && serviceInitSSL(service) != 0))
+        if (service->ssl_mode == SSL_DISABLED ||
+            (service->ssl_mode != SSL_DISABLED && serviceInitSSL(service) == 0))
         {
             if ((service->router_instance = service->router->createInstance(
                  service,service->routerOptions)))
@@ -1999,11 +2000,11 @@ int		*data;
  }
 
  /**
-  * Initialize the servce's SSL context. This sets up the generated RSA
+  * Initialize the service's SSL context. This sets up the generated RSA
   * encryption keys, chooses the server encryption level and configures the server
   * certificate, private key and certificate authority file.
-  * @param service
-  * @return
+  * @param service Service to initialize
+  * @return 0 on success, -1 on error
   */
 int serviceInitSSL(SERVICE* service)
 {
@@ -2043,7 +2044,11 @@ int serviceInitSSL(SERVICE* service)
 	    break;
 	}
 
-	service->ctx = SSL_CTX_new(service->method);
+	if((service->ctx = SSL_CTX_new(service->method)) == NULL)
+    {
+        skygw_log_write(LE, "Error: SSL context initialization failed.");
+        return -1;
+    }
 
 	/** Enable all OpenSSL bug fixes */
 	SSL_CTX_set_options(service->ctx,SSL_OP_ALL);
@@ -2053,13 +2058,19 @@ int serviceInitSSL(SERVICE* service)
 	{
 	    rsa_512 = RSA_generate_key(512,RSA_F4,NULL,NULL);
 	    if (rsa_512 == NULL)
-		skygw_log_write(LE,"Error: 512-bit RSA key generation failed.");
+        {
+            skygw_log_write(LE,"Error: 512-bit RSA key generation failed.");
+            return -1;
+        }
 	}
 	if(rsa_1024 == NULL)
 	{
 	    rsa_1024 = RSA_generate_key(1024,RSA_F4,NULL,NULL);
 	    if (rsa_1024 == NULL)
+        {
      		skygw_log_write(LE,"Error: 1024-bit RSA key generation failed.");
+            return -1;
+        }
 	}
 
 	if(rsa_512 != NULL && rsa_1024 != NULL)
