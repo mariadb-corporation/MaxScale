@@ -235,9 +235,6 @@ target_link_libraries(bug705 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(setup_binlog setup_binlog.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp test_binlog_fnc.cpp)
 target_link_libraries(setup_binlog ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(setup_binlog_no_pos setup_binlog_no_pos.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp test_binlog_fnc.cpp)
-target_link_libraries(setup_binlog_no_pos ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
-
 add_executable(setup_binlog_crc_none setup_binlog_crc_none.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(setup_binlog_crc_none ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -320,7 +317,7 @@ install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572
 install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 bug699 bug705 bug519 setup_binlog setup_binlog_crc_none setup_binlog_crc_32 binlog_incompl bug729 bug718 bug730 bug711 bug656 DESTINATION system-test)
-install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 session_limits script config_reload config_reload_stress setup_binlog_no_pos mxs314 mxs321 DESTINATION system-test)
+install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 session_limits script config_reload config_reload_stress mxs314 mxs321 DESTINATION system-test)
 install(TARGETS pers_01 pers_02 DESTINATION system-test)
 
 install(FILES set_env.sh get_logs.sh run_ctrl_c.sh long_insert.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
@@ -328,7 +325,7 @@ install(FILES mariadb_tests_hartmut.sh configure_maxscale.sh DESTINATION system-
 install(FILES mariadb_tests_hartmut_galera.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES bug567.sh bug516.sh bug561.sh bug562.sh bug585 bug587_1 bug469.sh reload_server.sh reload_service.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES run_session_hang.sh bug564.sh crash_out_of_files_galera DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
-install(FILES bug648 ssl ssl_load setup_binlog1 mxs361 set_env.sh copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES bug648 ssl ssl_load mxs361 set_env.sh copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
 install(FILES templates DESTINATION system-test)
 install(FILES bug729.php DESTINATION system-test)
@@ -419,7 +416,6 @@ add_test(bug469 bug469.sh)
 add_test(run_session_hang run_session_hang.sh)
 set_tests_properties(run_session_hang PROPERTIES TIMEOUT 3600)
 add_test(bug564 bug564.sh)
-
 add_test(bug730 bug730)
 set_tests_properties(bug730 PROPERTIES TIMEOUT 3600)
 add_test(bug711 bug711)
@@ -458,13 +454,9 @@ set_tests_properties(bug648 PROPERTIES TIMEOUT 3600)
 add_test(sysbench_kill_slave sysbench_kill_slave)
 set_tests_properties(sysbench_kill_slave PROPERTIES TIMEOUT 3600)
 #set_tests_properties(config_reload config_reload_stress reload_server reload_service PROPERTIES LABELS "CONFIG_RELOAD")
-
-add_test(setup_binlog_no_pos setup_binlog_no_pos)
 add_test(pers_01 pers_01)
 add_test(pers_02 pers_02)
 add_test(mxs361 mxs361)
-
-#add_test(setup_binlog1 setup_binlog1)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)

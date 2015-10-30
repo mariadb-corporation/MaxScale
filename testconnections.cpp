@@ -306,10 +306,10 @@ int TestConnections::start_binlog()
 
     tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
 
-    tprintf("Stopping maxscale\n");fflush(stdout);
+    tprintf("Stopping maxscale\n");
     global_result += stop_maxscale();
 
-    tprintf("Stopping all backend nodes\n");fflush(stdout);
+    tprintf("Stopping all backend nodes\n");
     global_result += repl->stop_nodes();
 
     /*
@@ -322,30 +322,30 @@ int TestConnections::start_binlog()
 
     tprintf("Removing all binlog data\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf %s/*'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
-    tprintf("%s\n", sys1);  fflush(stdout);
+    tprintf("%s\n", sys1);
     global_result +=  system(sys1);
 
     tprintf("Set 'maxscale' as a owner of binlog dir\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s mkdir -p %s; %s chown maxscale:maxscale -R %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir, maxscale_access_sudo, maxscale_binlog_dir);
-    tprintf("%s\n", sys1);  fflush(stdout);
+    tprintf("%s\n", sys1);
     global_result +=  system(sys1);
 
-    tprintf("Starting back Master\n");  fflush(stdout);
+    tprintf("Starting back Master\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[0], repl->access_user[0], repl->IP[0], repl->access_sudo[0], repl->start_db_command[0], cmd_opt);
     tprintf("%s\n", sys1);  fflush(stdout);
     global_result += system(sys1); fflush(stdout);
 
     for (i = 1; i < repl->N; i++) {
-        tprintf("Starting node %d\n", i); fflush(stdout);
+        tprintf("Starting node %d\n", i);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s %s %s'", repl->sshkey[i], repl->access_user[i], repl->IP[i], repl->access_sudo[i], repl->start_db_command[i], cmd_opt);
         tprintf("%s\n", sys1);  fflush(stdout);
         global_result += system(sys1); fflush(stdout);
     }
     sleep(5);
 
-    tprintf("Connecting to all backend nodes\n");fflush(stdout);
+    tprintf("Connecting to all backend nodes\n");
     global_result += repl->connect();
-    tprintf("Dropping t1 table on all backend nodes\n");fflush(stdout);
+    tprintf("Dropping t1 table on all backend nodes\n");
     for (i = 0; i < repl->N; i++)
     {
         execute_query(repl->nodes[i], (char *) "DROP TABLE IF EXISTS t1;");
@@ -353,16 +353,16 @@ int TestConnections::start_binlog()
     tprintf("'reset master' query to node 0\n");fflush(stdout);
     execute_query(repl->nodes[0], (char *) "reset master;");
 
-    tprintf("show master status\n");fflush(stdout);
+    tprintf("show master status\n");
     find_field(repl->nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
     find_field(repl->nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
-    tprintf("Real master file: %s\n", log_file); fflush(stdout);
-    tprintf("Real master pos : %s\n", log_pos); fflush(stdout);
+    tprintf("Real master file: %s\n", log_file);
+    tprintf("Real master pos : %s\n", log_pos);
 
-    tprintf("Stopping first slave (node 1)\n");fflush(stdout);
+    tprintf("Stopping first slave (node 1)\n");
     global_result += execute_query(repl->nodes[1], (char *) "stop slave;");
-    repl->no_set_pos = false;
-    tprintf("Configure first backend slave node to be slave of real master\n");fflush(stdout);
+    repl->no_set_pos = true;
+    tprintf("Configure first backend slave node to be slave of real master\n");
     repl->set_slave(repl->nodes[1], repl->IP[0],  repl->port[0], log_file, log_pos);
 
     tprintf("Starting back Maxscale\n");  fflush(stdout);

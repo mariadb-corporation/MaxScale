@@ -17,7 +17,8 @@ const char * setup_slave_no_pos =
         "change master to MASTER_HOST='%s',\
          MASTER_USER='repl',\
          MASTER_PASSWORD='repl',\
-         MASTER_LOG_FILE='%s',\
+         MASTER_LOG_FILE='mar-bin.000001',\
+         MASTER_LOG_POS=4,\
          MASTER_PORT=%d;\
         start slave;";
 

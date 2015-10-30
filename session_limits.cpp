@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     }
     Test->tprintf("done!\n");
 
-    Test->tprintf("Execute one moe session command and expect failure\n");
+    Test->tprintf("Execute one more session command and expect failure\n");
     if (execute_query(Test->conn_rwsplit, "set @test=11") == 0) {
         Test->add_result(1, "Session was not closed after 10 session commands\n");
     }

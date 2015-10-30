@@ -39,8 +39,8 @@ int main(int argc, char *argv[])
     Test->set_timeout(60);
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
-        Test->tprintf("Trying to flusg node %d\n", i);
-        Test->add_result(execute_query(Test->repl->nodes[i], (char *) "flush hosts;"), "node %i flusgh failed\n", i);
+        Test->tprintf("Trying to flush node %d\n", i);
+        Test->add_result(execute_query(Test->repl->nodes[i], (char *) "flush hosts;"), "node %i flush failed\n", i);
         Test->tprintf("Trying to set max_connections for node %d\n", i);
         Test->add_result(execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 151;"), "set max_connections failed for node %d\n", i);
     }
