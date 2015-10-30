@@ -297,6 +297,7 @@ enum log_rotate
 static int logmanager_write_log(logfile_id_t    id,
                                 enum log_flush  flush,
                                 enum log_rotate rotate,
+                                size_t          prefix_len,
                                 size_t          len,
                                 const char*     str);
 
@@ -405,10 +406,7 @@ static bool logmanager_init_nomutex(int argc, char* argv[])
 
     lm->lm_enabled_logfiles |= LOGFILE_ERROR;
     lm->lm_enabled_logfiles |= LOGFILE_MESSAGE;
-#if defined(SS_DEBUG)
-    lm->lm_enabled_logfiles |= LOGFILE_TRACE;
-    lm->lm_enabled_logfiles |= LOGFILE_DEBUG;
-#endif
+
     fn = &lm->lm_fnames_conf;
     fw = &lm->lm_filewriter;
     fn->fn_state  = UNINIT;
@@ -634,6 +632,7 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
  *                      immediately
  * @param rotate        if set, closes currently open log file and opens a
  *                      new one
+ * @param prefix_len    length of prefix to be stripped away when syslogging
  * @param str_len       length of formatted string (including terminating NULL).
  * @param str           string to be written to log
  *
@@ -643,6 +642,7 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
 static int logmanager_write_log(logfile_id_t    id,
                                 enum log_flush  flush,
                                 enum log_rotate rotate,
+                                size_t          prefix_len,
                                 size_t          str_len,
                                 const char*     str)
 {
@@ -665,6 +665,7 @@ static int logmanager_write_log(logfile_id_t    id,
         err = logmanager_write_log(LOGFILE_ERROR,
                                    LOG_FLUSH_YES,
                                    LOG_ROTATE_NO,
+                                   0,
                                    strlen(errstr) + 1,
                                    errstr);
         if (err != 0)
@@ -677,7 +678,8 @@ static int logmanager_write_log(logfile_id_t    id,
         ss_dassert(false);
         goto return_err;
     }
-    lf = &lm->lm_logfile[id];
+    // All messages are now logged to the error log file.
+    lf = &lm->lm_logfile[LOGFILE_ERROR];
     CHK_LOGFILE(lf);
 
     /**
@@ -767,7 +769,8 @@ static int logmanager_write_log(logfile_id_t    id,
         /** Book space for log string from buffer */
         if (do_maxscalelog)
         {
-            wp = blockbuf_get_writepos(&bb, id, safe_str_len, flush);
+            // All messages are now logged to the error log file.
+            wp = blockbuf_get_writepos(&bb, LOGFILE_ERROR, safe_str_len, flush);
         }
         else
         {
@@ -824,14 +827,17 @@ static int logmanager_write_log(logfile_id_t    id,
         /** write to syslog */
         if (lf->lf_write_syslog)
         {
+            // Strip away the timestamp and the prefix (e.g. "[Error]: ").
+            const char *message = wp + timestamp_len + prefix_len;
+
             switch (id)
             {
             case LOGFILE_ERROR:
-                syslog(LOG_ERR, "%s", wp + timestamp_len);
+                syslog(LOG_ERR, "%s", message);
                 break;
 
             case LOGFILE_MESSAGE:
-                syslog(LOG_NOTICE, "%s", wp + timestamp_len);
+                syslog(LOG_NOTICE, "%s", message);
                 break;
 
             default:
@@ -1286,6 +1292,7 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
         err = logmanager_write_log(LOGFILE_ERROR,
                                    LOG_FLUSH_YES,
                                    LOG_ROTATE_NO,
+                                   0,
                                    strlen(errstr) + 1,
                                    errstr);
         if (err != 0)
@@ -1315,6 +1322,7 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
         err = logmanager_write_log(id,
                                    LOG_FLUSH_YES,
                                    LOG_ROTATE_NO,
+                                   0,
                                    strlen(logstr) + 1,
                                    logstr);
         free(logstr);
@@ -1350,6 +1358,7 @@ int skygw_log_get_augmentation()
  * @param file       The name of the file where the logging was made.
  * @param int        The line where the logging was made.
  * @param function   The function where the logging was made.
+ * @param prefix_len The length of the text to be stripped away when syslogging.
  * @param len        Length of str, including terminating NULL.
  * @param str        String
  * @param flush      Whether the message should be flushed.
@@ -1361,6 +1370,7 @@ static int log_write(logfile_id_t   id,
                      const char*    file,
                      int            line,
                      const char*    function,
+                     size_t         prefix_len,
                      size_t         len,
                      const char*    str,
                      enum log_flush flush)
@@ -1387,6 +1397,7 @@ static int log_write(logfile_id_t   id,
                 if (logmanager_write_log((logfile_id_t)i,
                                          flush,
                                          LOG_ROTATE_NO,
+                                         prefix_len,
                                          len, str) == 0)
                 {
                     ++successes;
@@ -1410,6 +1421,55 @@ static int log_write(logfile_id_t   id,
     return rv;
 }
 
+typedef struct log_prefix
+{
+    const char* text; // The prefix, e.g. "[Error]: "
+    int len;          // The length of the prefix without the trailing NULL.
+} log_prefix_t;
+
+const char PREFIX_ERROR[]  = "[Error] : ";
+const char PREFIX_NOTICE[] = "[Notice]: ";
+const char PREFIX_INFO[]   = "[Info]  : ";
+const char PREFIX_DEBUG[]  = "[Debug] : ";
+
+static log_prefix_t logfile_to_prefix(logfile_id_t id)
+{
+    log_prefix_t prefix;
+
+    // The id can be a bitmask, hence we choose the most "severe" one.
+    if (id & LOGFILE_ERROR)
+    {
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+    }
+    else if (id & LOGFILE_MESSAGE)
+    {
+        prefix.text = PREFIX_NOTICE;
+        prefix.len = sizeof(PREFIX_NOTICE);
+    }
+    else if (id & LOGFILE_TRACE)
+    {
+        prefix.text = PREFIX_INFO;
+        prefix.len = sizeof(PREFIX_INFO);
+    }
+    else if (id & LOGFILE_DEBUG)
+    {
+        prefix.text = PREFIX_DEBUG;
+        prefix.len = sizeof(PREFIX_DEBUG);
+    }
+    else
+    {
+        assert(!true);
+
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+    }
+
+    --prefix.len; // Remove trailing NULL.
+
+    return prefix;
+}
+
 int skygw_log_write_context(logfile_id_t   id,
                             enum log_flush flush,
                             const char*    file,
@@ -1430,6 +1490,8 @@ int skygw_log_write_context(logfile_id_t   id,
 
     if (message_len >= 0)
     {
+        log_prefix_t prefix = logfile_to_prefix(id);
+
         static const char FORMAT_FUNCTION[] = "(%s): ";
 
         int augmentation_len = 0;
@@ -1446,28 +1508,32 @@ int skygw_log_write_context(logfile_id_t   id,
             break;
         }
 
-        int buffer_len = augmentation_len + message_len + 1; // Trailing NULL
+        int buffer_len = prefix.len + augmentation_len + message_len + 1; // Trailing NULL
 
         if (buffer_len > MAX_LOGSTRLEN)
         {
             message_len -= (buffer_len - MAX_LOGSTRLEN);
             buffer_len = MAX_LOGSTRLEN;
 
-            assert(augmentation_len + message_len + 1 == buffer_len);
+            assert(prefix.len + augmentation_len + message_len + 1 == buffer_len);
         }
 
         char buffer[buffer_len];
-        char *message = buffer + augmentation_len;
+
+        char *prefix_text = buffer;
+        char *augmentation_text = buffer + prefix.len;
+        char *message_text = buffer + prefix.len + augmentation_len;
+
+        strcpy(prefix_text, prefix.text);
 
         if (augmentation_len)
         {
-            char *augmentation = buffer;
             int len = 0;
 
             switch (log_augmentation)
             {
             case LOG_AUGMENT_WITH_FUNCTION:
-                len = sprintf(augmentation, FORMAT_FUNCTION, function);
+                len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
                 break;
 
             default:
@@ -1478,10 +1544,10 @@ int skygw_log_write_context(logfile_id_t   id,
         }
 
         va_start(valist, str);
-        vsnprintf(message, message_len + 1, str, valist);
+        vsnprintf(message_text, message_len + 1, str, valist);
         va_end(valist);
 
-        err = log_write(id, file, line, function, buffer_len, buffer, flush);
+        err = log_write(id, file, line, function, prefix.len, buffer_len, buffer, flush);
 
         if (err != 0)
         {
@@ -1507,7 +1573,7 @@ int skygw_log_flush(logfile_id_t id)
     err = logmanager_write_log(id,
                                LOG_FLUSH_YES,
                                LOG_ROTATE_NO,
-                               0, NULL);
+                               0, 0, NULL);
 
     if (err != 0)
     {
@@ -1545,7 +1611,7 @@ int skygw_log_rotate(logfile_id_t id)
     err = logmanager_write_log(id,
                                LOG_FLUSH_NO,
                                LOG_ROTATE_YES,
-                               0, NULL);
+                               0, 0, NULL);
 
     if (err != 0)
     {
