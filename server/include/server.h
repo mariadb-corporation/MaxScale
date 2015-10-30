@@ -208,4 +208,5 @@ extern DCB      *server_get_persistent(SERVER *, char *, const char *);
 extern void	server_update_address(SERVER *, char *);
 extern void	server_update_port(SERVER *,  unsigned short);
 extern RESULTSET	*serverGetList();
+extern unsigned int server_map_status(char *str);
 #endif

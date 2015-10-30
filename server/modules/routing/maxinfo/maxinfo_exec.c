@@ -54,7 +54,10 @@ static void exec_select(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_show_variables(DCB *dcb, MAXINFO_TREE *filter);
 static void exec_show_status(DCB *dcb, MAXINFO_TREE *filter);
 static int maxinfo_pattern_match(char *pattern, char *str);
-
+static void exec_flush(DCB *dcb, MAXINFO_TREE *tree);
+static void exec_set(DCB *dcb, MAXINFO_TREE *tree);
+static void exec_clear(DCB *dcb, MAXINFO_TREE *tree);
+void maxinfo_send_ok(DCB *dcb);
 /**
  * Execute a parse tree and return the result set or runtime error
  *
@@ -72,6 +75,17 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 	case MAXOP_SELECT:
 		exec_select(dcb, tree);
 		break;
+
+        case MAXOP_FLUSH:
+            exec_flush(dcb, tree);
+            break;
+        case MAXOP_SET:
+            exec_set(dcb, tree);
+            break;
+        case MAXOP_CLEAR:
+            exec_clear(dcb, tree);
+            break;
+
 	case MAXOP_TABLE:
 	case MAXOP_COLUMNS:
 	case MAXOP_LITERAL:
@@ -272,6 +286,221 @@ char	errmsg[120];
 	sprintf(errmsg, "Unsupported show command '%s'", tree->value);
 	maxinfo_send_error(dcb, 0, errmsg);
 	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, errmsg)));
+}
+
+/**
+ * Flush all logs to disk and rotate them.
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+void exec_flush_logs(DCB *dcb, MAXINFO_TREE *tree)
+{
+    skygw_log_rotate(LE);
+    skygw_log_rotate(LM);
+    skygw_log_rotate(LT);
+    skygw_log_rotate(LD);
+    maxinfo_send_ok(dcb);
+}
+
+/**
+ * The table of flush commands that are supported
+ */
+static struct
+{
+    char *name;
+    void (*func)(DCB *, MAXINFO_TREE *);
+} flush_commands[] = {
+    { "logs", exec_flush_logs},
+    { NULL, NULL}
+};
+
+/**
+ * Execute a flush command parse tree and return the result set or runtime error
+ *
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+static void
+exec_flush(DCB *dcb, MAXINFO_TREE *tree)
+{
+    int i;
+    char errmsg[120];
+
+    for (i = 0; flush_commands[i].name; i++)
+    {
+        if (strcasecmp(flush_commands[i].name, tree->value) == 0)
+        {
+            (*flush_commands[i].func)(dcb, tree->right);
+            return;
+        }
+    }
+    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    {
+        tree->value[80] = 0;
+    }
+    sprintf(errmsg, "Unsupported flush command '%s'", tree->value);
+    maxinfo_send_error(dcb, 0, errmsg);
+    skygw_log_write(LE, errmsg);
+}
+
+/**
+ * Set the server status.
+ * @param dcb Client DCB
+ * @param tree Parse tree
+ */
+void exec_set_server(DCB *dcb, MAXINFO_TREE *tree)
+{
+    SERVER* server = server_find_by_unique_name(tree->value);
+    char errmsg[120];
+
+    if (server)
+    {
+        int status = server_map_status(tree->right->value);
+        if (status != 0)
+        {
+            server_set_status(server, status);
+            maxinfo_send_ok(dcb);
+        }
+        else
+        {
+            if (strlen(tree->right->value) > 80) // Prevent buffer overrun
+            {
+                tree->right->value[80] = 0;
+            }
+            sprintf(errmsg, "Invalid argument '%s'", tree->right->value);
+            maxinfo_send_error(dcb, 0, errmsg);
+        }
+    }
+    else
+    {
+        if (strlen(tree->value) > 80) // Prevent buffer overrun
+        {
+            tree->value[80] = 0;
+        }
+        sprintf(errmsg, "Invalid argument '%s'", tree->value);
+        maxinfo_send_error(dcb, 0, errmsg);
+    }
+}
+
+/**
+ * The table of set commands that are supported
+ */
+static struct
+{
+    char *name;
+    void (*func)(DCB *, MAXINFO_TREE *);
+} set_commands[] = {
+    { "server", exec_set_server},
+    { NULL, NULL}
+};
+
+/**
+ * Execute a set  command parse tree and return the result set or runtime error
+ *
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+static void
+exec_set(DCB *dcb, MAXINFO_TREE *tree)
+{
+    int i;
+    char errmsg[120];
+
+    for (i = 0; set_commands[i].name; i++)
+    {
+        if (strcasecmp(set_commands[i].name, tree->value) == 0)
+        {
+            (*set_commands[i].func)(dcb, tree->right);
+            return;
+        }
+    }
+    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    {
+        tree->value[80] = 0;
+    }
+    sprintf(errmsg, "Unsupported set command '%s'", tree->value);
+    maxinfo_send_error(dcb, 0, errmsg);
+    skygw_log_write(LE, errmsg);
+}
+
+/**
+ * Clear the server status.
+ * @param dcb Client DCB
+ * @param tree Parse tree
+ */
+void exec_clear_server(DCB *dcb, MAXINFO_TREE *tree)
+{
+    SERVER* server = server_find_by_unique_name(tree->value);
+    char errmsg[120];
+
+    if (server)
+    {
+        int status = server_map_status(tree->right->value);
+        if (status != 0)
+        {
+            server_clear_status(server, status);
+            maxinfo_send_ok(dcb);
+        }
+        else
+        {
+            if (strlen(tree->right->value) > 80) // Prevent buffer overrun
+            {
+                tree->right->value[80] = 0;
+            }
+            sprintf(errmsg, "Invalid argument '%s'", tree->right->value);
+            maxinfo_send_error(dcb, 0, errmsg);
+        }
+    }
+    else
+    {
+        if (strlen(tree->value) > 80) // Prevent buffer overrun
+        {
+            tree->value[80] = 0;
+        }
+        sprintf(errmsg, "Invalid argument '%s'", tree->value);
+        maxinfo_send_error(dcb, 0, errmsg);
+    }
+}
+
+/**
+ * The table of clear commands that are supported
+ */
+static struct
+{
+    char *name;
+    void (*func)(DCB *, MAXINFO_TREE *);
+} clear_commands[] = {
+    { "server", exec_clear_server},
+    { NULL, NULL}
+};
+
+/**
+ * Execute a clear command parse tree and return the result set or runtime error
+ *
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+static void
+exec_clear(DCB *dcb, MAXINFO_TREE *tree)
+{
+    int i;
+    char errmsg[120];
+
+    for (i = 0; clear_commands[i].name; i++)
+    {
+        if (strcasecmp(clear_commands[i].name, tree->value) == 0)
+        {
+            (*clear_commands[i].func)(dcb, tree->right);
+            return;
+        }
+    }
+    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    {
+        tree->value[80] = 0;
+    }
+    sprintf(errmsg, "Unsupported clear command '%s'", tree->value);
+    maxinfo_send_error(dcb, 0, errmsg);
+    skygw_log_write(LE, errmsg);
 }
 
 /**
@@ -763,4 +992,26 @@ extern	char *strcasestr();
 		free(portion);
 		return rval;
 	}
+}
+
+/**
+ * Send an OK packet to the client.
+ * @param dcb The DCB that connects to the client
+ */
+void maxinfo_send_ok(DCB *dcb)
+{
+    static const char ok_packet[] ={
+        0x07, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00,
+        0x00, 0x00,
+        0x00, 0x00
+    };
+
+    GWBUF* buffer = gwbuf_alloc(sizeof(ok_packet));
+
+    if (buffer)
+    {
+        memcpy(buffer->start, ok_packet, sizeof(ok_packet));
+        dcb->func.write(dcb, buffer);
+    }
 }

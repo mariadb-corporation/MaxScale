@@ -73,7 +73,10 @@ typedef enum
 	MAXOP_LITERAL,
 	MAXOP_PREDICATE,
 	MAXOP_LIKE,
-	MAXOP_EQUAL
+	MAXOP_EQUAL,
+    MAXOP_FLUSH,
+    MAXOP_SET,
+    MAXOP_CLEAR
 } MAXINFO_OPERATOR;
 
 /**
@@ -109,6 +112,9 @@ typedef struct maxinfo_tree {
 #define LT_FROM			7
 #define LT_STAR			8
 #define LT_VARIABLE		9
+#define LT_FLUSH        10
+#define LT_SET          11
+#define LT_CLEAR        12
 
 
 /**

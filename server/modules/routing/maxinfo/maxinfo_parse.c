@@ -50,7 +50,8 @@ static void free_tree(MAXINFO_TREE *);
 static char *fetch_token(char *, int *, char **);
 static MAXINFO_TREE *parse_column_list(char **sql);
 static MAXINFO_TREE *parse_table_name(char **sql);
-
+MAXINFO_TREE* maxinfo_parse_literals(MAXINFO_TREE *tree, int min_args, char *ptr,
+                                     PARSE_ERROR *parse_error);
 
 /**
  * Parse a SQL subset for the maxinfo plugin and return a parse tree
@@ -111,6 +112,23 @@ MAXINFO_TREE	*col, *table;
 			table = parse_table_name(&ptr);
 			return make_tree_node(MAXOP_SELECT, NULL, col, table);
 #endif
+            case LT_FLUSH:
+                free(text);	// not needed
+                ptr = fetch_token(ptr, &token, &text);
+                return make_tree_node(MAXOP_FLUSH, text, NULL, NULL);
+
+            case LT_SET:
+                free(text);	// not needed
+                ptr = fetch_token(ptr, &token, &text);
+                tree = make_tree_node(MAXOP_SET, text, NULL, NULL);
+                return maxinfo_parse_literals(tree, 2, ptr, parse_error);
+
+            case LT_CLEAR:
+                free(text);	// not needed
+                ptr = fetch_token(ptr, &token, &text);
+                tree = make_tree_node(MAXOP_CLEAR, text, NULL, NULL);
+                return maxinfo_parse_literals(tree, 2, ptr, parse_error);
+                break;
 		default:
 			*parse_error = PARSE_SYNTAX_ERROR;
 			return NULL;
@@ -242,6 +260,9 @@ static struct {
 	{ "=",		LT_EQUAL },
 	{ ",",		LT_COMMA },
 	{ "*",		LT_STAR },
+    { "flush",	LT_FLUSH },
+    { "set",	LT_SET },
+    { "clear",	LT_CLEAR },
 	{ NULL,		0 }
 };
 
@@ -321,4 +342,37 @@ int	i;
 	}
 	*token = LT_STRING;
 	return s2;
+}
+
+/**
+ * Parse the remaining arguments as literals.
+ * @param tree Previous head of the parse tree
+ * @param min_args Minimum required number of arguments
+ * @param ptr Pointer to client command
+ * @param parse_error Pointer to parsing error to fill
+ * @return Parsed tree or NULL if parsing failed
+ */
+MAXINFO_TREE* maxinfo_parse_literals(MAXINFO_TREE *tree, int min_args, char *ptr,
+                                      PARSE_ERROR *parse_error)
+{
+    int token;
+    MAXINFO_TREE* node = tree;
+    char *text;
+    for(int i = 0; i < min_args; i++)
+    {
+        if((ptr = fetch_token(ptr, &token, &text)) == NULL ||
+           (node->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL)) == NULL)
+        {
+            *parse_error = PARSE_SYNTAX_ERROR;
+            free_tree(tree);
+            if(ptr)
+            {
+                free(text);
+            }
+            return NULL;
+        }
+        node = node->right;
+    }
+
+    return tree;
 }

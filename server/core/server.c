@@ -907,3 +907,33 @@ server_update_port(SERVER *server, unsigned short port)
 	spinlock_release(&server_spin);
 }
 
+static struct {
+	char		*str;
+	unsigned int	bit;
+} ServerBits[] = {
+	{ "running", 		SERVER_RUNNING },
+	{ "master",		SERVER_MASTER },
+	{ "slave",		SERVER_SLAVE },
+	{ "synced",		SERVER_JOINED },
+	{ "ndb",		SERVER_NDB },
+	{ "maintenance",	SERVER_MAINT },
+	{ "maint",		SERVER_MAINT },
+	{ NULL,			0 }
+};
+
+/**
+ * Map the server status bit
+ *
+ * @param str	String representation
+ * @return bit value or 0 on error
+ */
+unsigned int
+server_map_status(char *str)
+{
+int i;
+
+	for (i = 0; ServerBits[i].str; i++)
+		if (!strcasecmp(str, ServerBits[i].str))
+			return ServerBits[i].bit;
+	return 0;
+}
