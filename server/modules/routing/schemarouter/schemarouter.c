@@ -261,7 +261,7 @@ void* keyfreefun(void* data)
  * Allocate a shard map and initialize it.
  * @return Pointer to new shard_map_t or NULL if memory allocation failed
  */
-shard_map_t* create_shard_map()
+shard_map_t* shard_map_alloc()
 {
     shard_map_t *rval;
 
@@ -271,7 +271,7 @@ shard_map_t* create_shard_map()
         {
             HASHMEMORYFN kcopy = (HASHMEMORYFN)strdup;
             HASHMEMORYFN kfree = (HASHMEMORYFN)keyfreefun;
-            hashtable_memory_fns(rval->hash, kcopy, NULL, kfree, NULL);
+            hashtable_memory_fns(rval->hash, kcopy, kcopy, kfree, kfree);
             spinlock_init(&rval->lock);
             rval->last_updated = 0;
             rval->state = SHMAP_UNINIT;
@@ -529,7 +529,6 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 
 	dbnms = skygw_get_database_names(buffer,&sz);
 
-    spinlock_acquire(&client->shardmap->lock);
     HASHTABLE* ht = client->shardmap->hash;
 
 	if(sz > 0){
@@ -591,13 +590,10 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
         {
             rval = tmp;
             has_dbs = true;
-            
-           
         }
-        spinlock_release(&client->shardmap->lock);
-        return rval;
     }
-
+    else
+    {
     if(buffer->hint && buffer->hint->type == HINT_ROUTE_TO_NAMED_SERVER)
     {
         for(i = 0; i < client->rses_nbackends; i++)
@@ -626,8 +622,8 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 	    skygw_log_write(LOGFILE_TRACE,"schemarouter: Using active database '%s'",client->current_db);
 	}
     }
+    }
 
-    spinlock_release(&client->shardmap->lock);
 	return rval;
 }
 
@@ -1034,6 +1030,25 @@ retblock:
 }
 
 /**
+ * Check if the shard map is out of date and update its state if necessary.
+ * @param router Router instance
+ * @param map Shard map to update
+ * @return Current state of the shard map
+ */
+enum shard_map_state shard_map_update_state(ROUTER_INSTANCE* router, shard_map_t *map)
+{
+    spinlock_acquire(&map->lock);
+    double tdiff = difftime(time(NULL), map->last_updated);
+    if (tdiff > router->schemarouter_config.refresh_min_interval)
+    {
+        map->state = SHMAP_STALE;
+    }
+    enum shard_map_state state = map->state;
+    spinlock_release(&map->lock);
+    return state;
+}
+
+/**
  * Associate a new session with this instance of the router.
  *
  * The session is used to store all the data required for a particular
@@ -1107,21 +1122,14 @@ static void* newSession(
 
     if (map)
     {
-        spinlock_acquire(&map->lock);
-        double tdiff = difftime(time(NULL), map->last_updated);
-        if (tdiff > router->schemarouter_config.refresh_min_interval)
-        {
-            map->state = SHMAP_STALE;
-        }
-        state = map->state;
-        spinlock_release(&map->lock);
+        state = shard_map_update_state(router, map);
     }
 
     spinlock_release(&router->lock);
 
     if (map == NULL || state != SHMAP_READY)
     {
-        if ((map = create_shard_map()) == NULL)
+        if ((map = shard_map_alloc()) == NULL)
         {
             skygw_log_write(LE, "Error: Failed to allocate enough memory to create"
                             "new shard mapping. Session will be closed.");
@@ -2047,8 +2055,9 @@ static int routeQuery(
         route_target_t     route_target = TARGET_UNDEFINED;
 	bool           	   succp          = false;
 	char* tname = NULL;
+	char*  targetserver = NULL;
 	GWBUF*  querybuf = qbuf;
-	char db[MYSQL_DATABASE_MAXLEN + 1];
+    char db[MYSQL_DATABASE_MAXLEN + 1];
 	char errbuf[26+MYSQL_DATABASE_MAXLEN];
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -2083,7 +2092,7 @@ static int routeQuery(
          * to store the query. Once the databases have been mapped and/or the
          * default database is taken into use we can send the query forward.
          */
-	    if(router_cli_ses->init & (INIT_MAPPING|INIT_USE_DB))
+	    if (router_cli_ses->init & (INIT_MAPPING | INIT_USE_DB))
 	    {
             int init_rval = 1;
 		char* querystr = modutil_get_SQL(querybuf);
@@ -2109,7 +2118,7 @@ static int routeQuery(
 
 		}
 
-        if(router_cli_ses->init  == (INIT_READY|INIT_USE_DB))
+        if (router_cli_ses->init  == (INIT_READY | INIT_USE_DB))
         {
             /**
              * This state is possible if a client connects with a default database
@@ -2269,7 +2278,7 @@ static int routeQuery(
 		    router_cli_ses->queue = querybuf;
             int rc_refresh = 1;
 
-		    if((router_cli_ses->shardmap = create_shard_map()))
+		    if((router_cli_ses->shardmap = shard_map_alloc()))
             {
                 gen_databaselist(inst,router_cli_ses);
             }
@@ -2324,27 +2333,37 @@ static int routeQuery(
 
         spinlock_acquire(&router_cli_ses->shardmap->lock);
         tname = hashtable_fetch(router_cli_ses->shardmap->hash,router_cli_ses->current_db);
-        spinlock_release(&router_cli_ses->shardmap->lock);
+
 
 		if(tname)
 		{
                     skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB for database '%s' on server '%s'",
                                     router_cli_ses->current_db,tname);
                     route_target = TARGET_NAMED_SERVER;
+                    targetserver = strdup(tname);
 		}
                 else
                 {
                     skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB with unknown database");
                 }
+        spinlock_release(&router_cli_ses->shardmap->lock);
 	}
-	else if(route_target != TARGET_ALL && 
-                (tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL)
+	else if (route_target != TARGET_ALL)
 	{
+        /** If no database is found in the query and there is no active database
+         * or hints in the query we need to route the query to the first available
+         * server. This isn't ideal for monitoring server status but works if
+         * we just want the server to send an error back. */
+
+        spinlock_acquire(&router_cli_ses->shardmap->lock);
+        if ((tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL)
+        {
 		bool shard_ok = check_shard_status(inst,tname);
 
 		if(shard_ok)
 		{
 			route_target = TARGET_NAMED_SERVER;
+            targetserver = strdup(tname);
 		}
 		else
 		{
@@ -2355,12 +2374,14 @@ static int routeQuery(
 			 * for an alternate backend with the database. If this is not found
 			 * the target is undefined and an error will be returned to the client.
 			 */
-		}	
+		}
+        }
+        spinlock_release(&router_cli_ses->shardmap->lock);
 	}
 
 	if(TARGET_IS_UNDEFINED(route_target))
 	{
-		
+		spinlock_acquire(&router_cli_ses->shardmap->lock);
 		tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
 
 		if( (tname == NULL &&
@@ -2379,7 +2400,11 @@ static int routeQuery(
 
 		}
 		else
-		{            
+		{
+            if (tname)
+            {
+                targetserver = strdup(tname);
+            }
             if(!change_successful)
             {
                 /**
@@ -2395,11 +2420,11 @@ static int routeQuery(
                 /** Something else went wrong, terminate connection */
                 ret = 0;
             }
-
+            spinlock_release(&router_cli_ses->shardmap->lock);
             goto retblock;
         
 		}
-		
+        spinlock_release(&router_cli_ses->shardmap->lock);
 	}
    
 	if (TARGET_IS_ALL(route_target))
@@ -2442,8 +2467,8 @@ static int routeQuery(
 		{
 			if(SERVER_IS_RUNNING(inst->servers[z]->backend_server))
 			{
-				tname = inst->servers[z]->backend_server->unique_name;
 				route_target = TARGET_NAMED_SERVER;
+				targetserver = strdup(inst->servers[z]->backend_server->unique_name);
 				break;
 			}
 		}
@@ -2466,14 +2491,14 @@ static int routeQuery(
 	/**
 	 * Query is routed to one of the backends
 	 */
-	if (TARGET_IS_NAMED_SERVER(route_target))
+	if (TARGET_IS_NAMED_SERVER(route_target) && targetserver != NULL)
 	{	
 		/**
 		 * Search backend server by name or replication lag. 
 		 * If it fails, then try to find valid slave or master.
 		 */ 
 
-		succp = get_shard_dcb(&target_dcb, router_cli_ses, tname);
+		succp = get_shard_dcb(&target_dcb, router_cli_ses, targetserver);
 
                 if (!succp)
                 {
@@ -2482,7 +2507,7 @@ static int routeQuery(
                                                "Was supposed to route to named server "
                             "%s but couldn't find the server in a "
                             "suitable state.",
-                                               tname)));
+                                               targetserver)));
                 }
 
 	}
@@ -2539,7 +2564,7 @@ static int routeQuery(
 	}
 	rses_end_locked_router_action(router_cli_ses);
 retblock:
-
+        free(targetserver);
         gwbuf_free(querybuf);
 		
         return ret;
@@ -4600,7 +4625,8 @@ int process_show_shards(ROUTER_CLIENT_SES* rses)
     {
         HASHITERATOR* iter = hashtable_iterator(rses->shardmap->hash);
         struct shard_list sl;
-
+        if (iter)
+        {
         sl.iter = iter;
         sl.rses = rses;
         if ((sl.rset = resultset_create(shard_list_cb, &sl)) == NULL)
@@ -4615,6 +4641,13 @@ int process_show_shards(ROUTER_CLIENT_SES* rses)
             resultset_stream_mysql(sl.rset, rses->rses_client_dcb);
             resultset_free(sl.rset);
             hashtable_iterator_free(iter);
+        }
+        }
+        else
+        {
+            skygw_log_write(LE, "Error: hashtable_iterator creation failed. "
+                "This is caused by a memory allocation failure.");
+            rval = -1;
         }
     }
     spinlock_release(&rses->shardmap->lock);
@@ -4852,7 +4885,7 @@ void replace_shard_map(shard_map_t **target, shard_map_t **source)
 /**
  * Synchronize the router client session shard map with the global shard map for
  * this user.
- * 
+ *
  * If the router doesn't have a shard map for this user then the current shard map
  * of the client session is added to the router. If the shard map in the router is
  * out of date, its contents are replaced with the contents of the current client

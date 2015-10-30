@@ -74,7 +74,7 @@ typedef struct shard_map
     SPINLOCK lock;
     time_t last_updated;
     enum shard_map_state state; /*< State of the shard map */
-}shard_map_t;
+} shard_map_t;
 
 /** 
  * The state of the backend server reference
