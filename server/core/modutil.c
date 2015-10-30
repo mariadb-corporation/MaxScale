@@ -859,7 +859,7 @@ int modutil_count_statements(GWBUF* buffer)
 /**
  * Initialize the PCRE2 patterns used when converting MySQL wildcards to PCRE syntax.
  */
-void init_pcre2_patterns()
+void prepare_pcre2_patterns()
 {
     spinlock_acquire(&re_lock);
     if (!pattern_init)
@@ -875,6 +875,7 @@ void init_pcre2_patterns()
             (re_escape = pcre2_compile(pattern_escape, PCRE2_ZERO_TERMINATED,
                                        0, &err, &erroff, NULL)))
         {
+            assert(!pattern_init);
             pattern_init = true;
         }
         else
@@ -910,10 +911,7 @@ void init_pcre2_patterns()
  */
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string)
 {
-    if (!pattern_init)
-    {
-        init_pcre2_patterns();
-    }
+    prepare_pcre2_patterns();
     mxs_pcre2_result_t rval = MXS_PCRE2_ERROR;
     bool err = false;
     PCRE2_SIZE matchsize = strlen(string) + 1;
@@ -943,7 +941,7 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
             rval = mxs_pcre2_simple_match(matchstr, string, PCRE2_CASELESS, &errcode);
             if (rval == MXS_PCRE2_ERROR)
             {
-                if(errcode != 0)
+                if (errcode != 0)
                 {
                     PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
                     pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));

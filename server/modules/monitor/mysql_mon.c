@@ -52,7 +52,6 @@
  */
 
 #include <mysqlmon.h>
-#include <pcre2.h>
 #include <modutil.h>
 
 /** Defined in log_manager.cc */
