@@ -1567,28 +1567,28 @@ int skygw_log_write_context(logfile_id_t   id,
 
 int skygw_log_flush(logfile_id_t id)
 {
-    int err = 0;
+    int err = -1;
 
-    if (!logmanager_register(false))
+    if (logmanager_register(false))
     {
-        ss_dfprintf(stderr,
-                    "Can't register to logmanager, nothing to flush\n");
-        goto return_err;
-    }
-    CHK_LOGMANAGER(lm);
-    err = logmanager_write_log(id,
-                               LOG_FLUSH_YES,
-                               0, 0, NULL);
+        CHK_LOGMANAGER(lm);
 
-    if (err != 0)
+        if (logmanager_is_valid_id(id))
+        {
+            logfile_t *lf = logmanager_get_logfile(lm, id);
+            CHK_LOGFILE(lf);
+
+            logfile_flush(lf);
+            err = 0;
+        }
+
+        logmanager_unregister();
+    }
+    else
     {
-        fprintf(stderr, "skygw_log_flush failed.\n");
-        goto return_unregister;
+        ss_dfprintf(stderr, "Can't register to logmanager, flushing failed.\n");
     }
 
-return_unregister:
-    logmanager_unregister();
-return_err:
     return err;
 }
 
