@@ -287,16 +287,10 @@ static bool logmanager_register(bool writep);
 static void logmanager_unregister(void);
 static bool logmanager_init_nomutex(int argc, char* argv[]);
 static void logmanager_done_nomutex(void);
-
-enum log_rotate
-{
-    LOG_ROTATE_NO = 0,
-    LOG_ROTATE_YES = 1
-};
+static bool logmanager_is_valid_id(logfile_id_t id);
 
 static int logmanager_write_log(logfile_id_t    id,
                                 enum log_flush  flush,
-                                enum log_rotate rotate,
                                 size_t          prefix_len,
                                 size_t          len,
                                 const char*     str);
@@ -623,6 +617,42 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
 
 
 /**
+ * Returns true if the id log file id is valid.
+ *
+ * NOTE: Log manager is assumed to exist.
+ *
+ * @param id The id of a log file.
+ *
+ */
+
+static bool logmanager_is_valid_id(logfile_id_t id)
+{
+    bool rval = false;
+
+    CHK_LOGMANAGER(lm);
+
+    if ((id >= LOGFILE_FIRST) && (id <= LOGFILE_LAST))
+    {
+        rval = true;
+    }
+    else
+    {
+        const char ERRSTR[] = "Invalid logfile id argument.";
+
+        int err = logmanager_write_log(LOGFILE_ERROR,
+                                       LOG_FLUSH_YES,
+                                       0, sizeof(ERRSTR), ERRSTR);
+
+        if (err != 0)
+        {
+            fprintf(stderr, "Writing to logfile %s failed.\n", STRLOGID(LOGFILE_ERROR));
+        }
+    }
+
+    return rval;
+}
+
+/**
  * Finds write position from block buffer for log string and writes there.
  *
  * Parameters:
@@ -641,7 +671,6 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
  */
 static int logmanager_write_log(logfile_id_t    id,
                                 enum log_flush  flush,
-                                enum log_rotate rotate,
                                 size_t          prefix_len,
                                 size_t          str_len,
                                 const char*     str)
@@ -656,24 +685,8 @@ static int logmanager_write_log(logfile_id_t    id,
 
     CHK_LOGMANAGER(lm);
 
-    if (id < LOGFILE_FIRST || id > LOGFILE_LAST)
+    if (!logmanager_is_valid_id(id))
     {
-        const char* errstr = "Invalid logfile id argument.";
-        /**
-         * invalid id, since we don't have logfile yet.
-         */
-        err = logmanager_write_log(LOGFILE_ERROR,
-                                   LOG_FLUSH_YES,
-                                   LOG_ROTATE_NO,
-                                   0,
-                                   strlen(errstr) + 1,
-                                   errstr);
-        if (err != 0)
-        {
-            fprintf(stderr,
-                    "Writing to logfile %s failed.\n",
-                    STRLOGID(LOGFILE_ERROR));
-        }
         err = -1;
         ss_dassert(false);
         goto return_err;
@@ -683,17 +696,13 @@ static int logmanager_write_log(logfile_id_t    id,
     CHK_LOGFILE(lf);
 
     /**
-     * When string pointer is NULL, operation is either flush or rotate.
+     * When string pointer is NULL, operation is flush.
      */
     if (str == NULL)
     {
         if (flush)
         {
             logfile_flush(lf); /*< wakes up file writer */
-        }
-        else if (rotate)
-        {
-            logfile_rotate(lf); /*< wakes up file writer */
         }
     }
     else
@@ -1291,7 +1300,6 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
          */
         err = logmanager_write_log(LOGFILE_ERROR,
                                    LOG_FLUSH_YES,
-                                   LOG_ROTATE_NO,
                                    0,
                                    strlen(errstr) + 1,
                                    errstr);
@@ -1321,7 +1329,6 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
         lf->lf_enabled = val;
         err = logmanager_write_log(id,
                                    LOG_FLUSH_YES,
-                                   LOG_ROTATE_NO,
                                    0,
                                    strlen(logstr) + 1,
                                    logstr);
@@ -1396,7 +1403,6 @@ static int log_write(logfile_id_t   id,
 
                 if (logmanager_write_log((logfile_id_t)i,
                                          flush,
-                                         LOG_ROTATE_NO,
                                          prefix_len,
                                          len, str) == 0)
                 {
@@ -1572,7 +1578,6 @@ int skygw_log_flush(logfile_id_t id)
     CHK_LOGMANAGER(lm);
     err = logmanager_write_log(id,
                                LOG_FLUSH_YES,
-                               LOG_ROTATE_NO,
                                0, 0, NULL);
 
     if (err != 0)
@@ -1593,44 +1598,29 @@ return_err:
  */
 int skygw_log_rotate(logfile_id_t id)
 {
-    int        err = 0;
-    logfile_t* lf;
+    int err = -1;
 
-    if (!logmanager_register(false))
+    if (logmanager_register(false))
     {
-        ss_dfprintf(stderr, "Can't register to logmanager, rotating failed\n");
-        goto return_err;
+        CHK_LOGMANAGER(lm);
+
+        if (logmanager_is_valid_id(id))
+        {
+            logfile_t *lf = logmanager_get_logfile(lm, id);
+            CHK_LOGFILE(lf);
+
+            MAXSCALE_NOTICE("Log rotation is called for %s.", lf->lf_full_file_name);
+
+            logfile_rotate(lf);
+            err = 0;
+        }
+
+        logmanager_unregister();
     }
-    CHK_LOGMANAGER(lm);
-    lf = &lm->lm_logfile[id];
-
-    LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-                               "Log rotation is called for %s.",
-                               lf->lf_full_file_name)));
-
-    err = logmanager_write_log(id,
-                               LOG_FLUSH_NO,
-                               LOG_ROTATE_YES,
-                               0, 0, NULL);
-
-    if (err != 0)
+    else
     {
-        LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-                                   "Log file rotation failed for file %s.",
-                                   lf->lf_full_file_name)));
-
-        fprintf(stderr, "skygw_log_rotate failed.\n");
-        goto return_unregister;
+        ss_dfprintf(stderr, "Can't register to logmanager, rotating failed.\n");
     }
-
-return_unregister:
-    LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-                                     "File %s use for log writing..",
-                                     lf->lf_full_file_name)));
-
-    logmanager_unregister();
-
-return_err:
 
     return err;
 }
