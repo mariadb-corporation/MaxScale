@@ -117,6 +117,50 @@ MAXINFO_TREE	*col, *table;
                 ptr = fetch_token(ptr, &token, &text);
                 return make_tree_node(MAXOP_FLUSH, text, NULL, NULL);
 
+            case LT_SHUTDOWN:
+                free(text);
+                ptr = fetch_token(ptr, &token, &text);
+                tree = make_tree_node(MAXOP_SHUTDOWN, text, NULL, NULL);
+
+                if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
+                {
+                    /** Possibly SHUTDOWN MAXSCALE */
+                    return tree;
+                }
+                tree->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL);
+
+                if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
+                {
+                    /** Unknown token after SHUTDOWN MONITOR|SERVICE */
+                    *parse_error = PARSE_SYNTAX_ERROR;
+                    free_tree(tree);
+                    return NULL;
+                }
+                return tree;
+
+            case LT_RESTART:
+                free(text);
+                ptr = fetch_token(ptr, &token, &text);
+                tree = make_tree_node(MAXOP_RESTART, text, NULL, NULL);
+
+                if ((ptr = fetch_token(ptr, &token, &text)) == NULL)
+                {
+                    /** Missing token for RESTART MONITOR|SERVICE */
+                    *parse_error = PARSE_SYNTAX_ERROR;
+                    free_tree(tree);
+                    return NULL;
+                }
+                tree->right = make_tree_node(MAXOP_LITERAL, text, NULL, NULL);
+
+                if ((ptr = fetch_token(ptr, &token, &text)) != NULL)
+                {
+                    /** Unknown token after RESTART MONITOR|SERVICE */
+                    *parse_error = PARSE_SYNTAX_ERROR;
+                    free_tree(tree);
+                    return NULL;
+                }
+                return tree;
+
             case LT_SET:
                 free(text);	// not needed
                 ptr = fetch_token(ptr, &token, &text);
@@ -249,21 +293,24 @@ free_tree(MAXINFO_TREE *tree)
 /**
  * The set of keywords known to the tokeniser
  */
-static struct {
-	char	*text;
-	int 	token;
+static struct
+{
+    char *text;
+    int token;
 } keywords[] = {
-	{ "show",	LT_SHOW },
-	{ "select",	LT_SELECT },
-	{ "from",	LT_FROM },
-	{ "like",	LT_LIKE },
-	{ "=",		LT_EQUAL },
-	{ ",",		LT_COMMA },
-	{ "*",		LT_STAR },
-    { "flush",	LT_FLUSH },
-    { "set",	LT_SET },
-    { "clear",	LT_CLEAR },
-	{ NULL,		0 }
+    { "show",       LT_SHOW},
+    { "select",     LT_SELECT},
+    { "from",       LT_FROM},
+    { "like",       LT_LIKE},
+    { "=",          LT_EQUAL},
+    { ",",          LT_COMMA},
+    { "*",          LT_STAR},
+    { "flush",      LT_FLUSH},
+    { "set",        LT_SET},
+    { "clear",      LT_CLEAR},
+    { "shutdown",   LT_SHUTDOWN},
+    { "restart",    LT_RESTART},
+    { NULL, 0}
 };
 
 /**

@@ -82,6 +82,7 @@ SERVER 	*server;
 	server->rlag = -2;
 	server->master_id = -1;
 	server->depth = -1;
+	spinlock_init(&server->lock);
         server->persistent = NULL;
         server->persistmax = 0;
         spinlock_init(&server->persistlock);
@@ -663,6 +664,7 @@ char	*status = NULL;
 void
 server_set_status(SERVER *server, int bit)
 {
+	spinlock_acquire(&server->lock);
 	server->status |= bit;
 	
 	/** clear error logged flag before the next failure */
@@ -670,6 +672,7 @@ server_set_status(SERVER *server, int bit)
 	{
 		server->master_err_is_logged = false;
 	}
+	spinlock_release(&server->lock);
 }
 
 /**
@@ -681,7 +684,9 @@ server_set_status(SERVER *server, int bit)
 void
 server_clear_status(SERVER *server, int bit)
 {
+	spinlock_acquire(&server->lock);
 	server->status &= ~bit;
+	spinlock_release(&server->lock);
 }
 
 /**

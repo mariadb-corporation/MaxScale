@@ -81,6 +81,7 @@ typedef struct server {
 #if defined(SS_DEBUG)
         skygw_chk_t     server_chk_top;
 #endif
+	SPINLOCK	lock;			/**< Common access lock */
 	char		*unique_name;	/**< Unique name for the server */
 	char		*name;		/**< Server name/IP address*/
 	unsigned short	port;		/**< Port to listen on */
