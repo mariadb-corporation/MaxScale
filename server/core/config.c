@@ -75,6 +75,7 @@
 #include <sys/utsname.h>
 #include <pcre.h>
 #include <dbusers.h>
+#include <gw.h>
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
@@ -1494,6 +1495,15 @@ CONFIG_PARAMETER	*p1, *p2;
 int
 config_threadcount()
 {
+	spinlock_acquire(&gateway.lock);
+	if(gateway.n_threads <= 0)
+	{
+		int nthr = get_processor_count();
+		skygw_log_write(LE, "Warning: Invalid value for 'threads': %d. Using default "
+			"number of %d threads.", gateway.n_threads, nthr);
+		gateway.n_threads = nthr;
+	}
+	spinlock_release(&gateway.lock);
 	return gateway.n_threads;
 }
 
@@ -1657,7 +1667,8 @@ global_defaults()
 {
 	uint8_t mac_addr[6]="";
 	struct utsname uname_data;
-	gateway.n_threads = 1;
+	spinlock_init(&gateway.lock);
+	gateway.n_threads = get_processor_count();
 	gateway.n_nbpoll = DEFAULT_NBPOLLS;
 	gateway.pollsleep = DEFAULT_POLLSLEEP;
     gateway.auth_conn_timeout = DEFAULT_AUTH_CONNECT_TIMEOUT;

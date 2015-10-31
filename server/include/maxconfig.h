@@ -20,6 +20,7 @@
 #include <skygw_utils.h>
 #include <stdint.h>
 #include <openssl/sha.h>
+#include <spinlock.h>
 /**
  * @file config.h The configuration handling elements
  *
@@ -96,6 +97,7 @@ typedef struct	config_context {
  * The gateway global configuration data
  */
 typedef struct {
+	SPINLOCK		lock; /*< Lock used when accessing the global configuration */
 	int			n_threads;				/**< Number of polling threads */
 	char			*version_string;			/**< The version string of embedded database library */
 	char			release_string[_SYSNAME_STR_LENGTH];	/**< The release name string of the system */

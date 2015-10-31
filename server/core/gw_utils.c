@@ -226,3 +226,17 @@ struct hostent		*hp;
 	addr->sin_port = htons(pnum);
 	return 1;
 }
+
+/**
+ * Return the number of processors available.
+ * @return Number of processors or 1 if the required definition of _SC_NPROCESSORS_CONF
+ * is not found
+ */
+long get_processor_count()
+{
+    long processors = 1;
+#ifdef _SC_NPROCESSORS_CONF
+    processors = sysconf(_SC_NPROCESSORS_CONF);
+#endif
+    return processors;
+}
