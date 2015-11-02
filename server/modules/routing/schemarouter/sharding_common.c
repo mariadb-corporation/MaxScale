@@ -139,7 +139,7 @@ bool change_current_db(char* dest,
 	}
 	else
 	{
-	    strncpy(dest,db,MYSQL_DATABASE_MAXLEN);
+	    strcpy(dest,db);
 	    skygw_log_write(LOGFILE_TRACE,"change_current_db: database is on server: '%s'.",target);
 	    succp = true;
 	    goto retblock;
