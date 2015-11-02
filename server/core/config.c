@@ -1562,8 +1562,8 @@ int i;
 		}
 		else
 		{
-			skygw_log_write(LE, "Warning: Invalid value for 'threads': %d. Using default "
-							"number of %d threads.", thrcount, gateway.n_threads);
+			skygw_log_write(LE, "Warning: Invalid value for 'threads': %s.", value);
+			return 0;
 		}
 	}
 	else if (strcmp(name, "non_blocking_polls") == 0)
