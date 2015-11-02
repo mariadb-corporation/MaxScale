@@ -268,6 +268,9 @@ target_link_libraries(mxs47 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl 
 add_executable(sharding sharding.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(sharding ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(mxs431 mxs431.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(mxs431 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 add_executable(fwf fwf.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(fwf ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -318,7 +321,7 @@ install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num tempor
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 bug699 bug705 bug519 setup_binlog setup_binlog_crc_none setup_binlog_crc_32 binlog_incompl bug729 bug718 bug730 bug711 bug656 DESTINATION system-test)
 install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 session_limits script config_reload config_reload_stress mxs314 mxs321 DESTINATION system-test)
-install(TARGETS pers_01 pers_02 DESTINATION system-test)
+install(TARGETS pers_01 pers_02 mxs431 DESTINATION system-test)
 
 install(FILES set_env.sh get_logs.sh run_ctrl_c.sh long_insert.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut.sh configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
@@ -457,6 +460,7 @@ set_tests_properties(sysbench_kill_slave PROPERTIES TIMEOUT 3600)
 add_test(pers_01 pers_01)
 add_test(pers_02 pers_02)
 add_test(mxs361 mxs361)
+add_test(mxs431 mxs431)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
