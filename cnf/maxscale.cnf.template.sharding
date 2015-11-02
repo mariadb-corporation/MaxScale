@@ -25,6 +25,7 @@ user=skysql
 passwd=skysql
 auth_all_servers=1
 filters=QLA
+ignore_databases=test
 
 [Debug Interface]
 type=service
