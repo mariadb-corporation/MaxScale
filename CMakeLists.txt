@@ -40,6 +40,10 @@ find_package(TCMalloc)
 find_package(Jemalloc)
 find_package(Git)
 find_package(CURL) 
+
+# Build PCRE2
+include(cmake/BuildPCRE2.cmake)
+
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
 

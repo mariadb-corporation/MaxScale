@@ -80,7 +80,7 @@ static struct option long_options[] = {
   {0, 0, 0, 0}
 };
 
-char *binlog_check_version = "1.0.0";
+char *binlog_check_version = "1.1.0";
 
 int
 MaxScaleUptime()

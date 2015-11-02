@@ -1623,6 +1623,27 @@ int main(int argc, char **argv)
 	SSL_load_error_strings();
 	OPENSSL_add_all_algorithms_noconf();
 
+	int numlocks = CRYPTO_num_locks();
+	if((ssl_locks = malloc(sizeof(SPINLOCK)*(numlocks + 1))) == NULL)
+	{
+	    char* logerr = "Memory allocation failed";
+	    print_log_n_stderr(true, true, logerr, logerr, eno);
+	    rc = MAXSCALE_INTERNALERROR;
+	    goto return_main;
+	}
+
+	for(i = 0;i<numlocks + 1;i++)
+	    spinlock_init(&ssl_locks[i]);
+	CRYPTO_set_locking_callback(ssl_locking_function);
+	CRYPTO_set_dynlock_create_callback(ssl_create_dynlock);
+	CRYPTO_set_dynlock_destroy_callback(ssl_free_dynlock);
+	CRYPTO_set_dynlock_lock_callback(ssl_lock_dynlock);
+#ifdef OPENSSL_1_0
+	CRYPTO_THREADID_set_callback(maxscale_ssl_id);
+#else
+	CRYPTO_set_id_callback(pthread_self);
+#endif
+
 	/* register exit function for embedded MySQL library */
         l = atexit(libmysqld_done);
 
@@ -1974,27 +1995,6 @@ int main(int argc, char **argv)
         LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                         "MaxScale started with %d server threads.",
                                    config_threadcount())));
-	int numlocks = CRYPTO_num_locks();
-	if((ssl_locks = malloc(sizeof(SPINLOCK)*(numlocks + 1))) == NULL)
-	{
-	    char* logerr = "Memory allocation failed";
-	    print_log_n_stderr(true, true, logerr, logerr, eno);
-	    rc = MAXSCALE_INTERNALERROR;
-	    goto return_main;
-	}
-
-	for(i = 0;i<numlocks + 1;i++)
-	    spinlock_init(&ssl_locks[i]);
-	CRYPTO_set_locking_callback(ssl_locking_function);
-	CRYPTO_set_dynlock_create_callback(ssl_create_dynlock);
-	CRYPTO_set_dynlock_destroy_callback(ssl_free_dynlock);
-	CRYPTO_set_dynlock_lock_callback(ssl_lock_dynlock);
-#ifdef OPENSSL_1_0
-	CRYPTO_THREADID_set_callback(maxscale_ssl_id);
-#else
-	CRYPTO_set_id_callback(pthread_self);
-#endif
-
         /**
          * Successful start, notify the parent process that it can exit.
          */

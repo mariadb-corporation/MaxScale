@@ -16,6 +16,9 @@
  * Copyright MariaDB Corporation Ab 2013-2014
  */
 
+#ifndef PCRE2_CODE_UNIT_WIDTH
+#define PCRE2_CODE_UNIT_WIDTH 8
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +33,7 @@
 #include <sys/time.h>
 #include "skygw_utils.h"
 #include <atomic.h>
+#include <pcre2.h>
 
 #if defined(MLIST)
 
@@ -2115,6 +2119,63 @@ char* replace_literal(
 	free(search_re);
 retblock:
         return newstr;
+}
+
+/**
+ * Replace everything inside single or double quotes with question marks.
+ * @param str String to modify
+ * @return Pointer to new modified string or NULL if memory allocation failed
+ */
+char* replace_quoted(const char* str)
+{
+    PCRE2_SIZE erroffset;
+    int errcore;
+    static const PCRE2_SPTR pattern = (PCRE2_SPTR) "(['\"])[^'\"]+(['\"])";
+    static const PCRE2_SPTR replace = (PCRE2_SPTR) "$1?$2";
+    pcre2_code* re;
+    pcre2_match_data* mdata;
+    int orig_len = strlen(str);
+    size_t len = strlen(str);
+    char* output;
+
+    if ((output = (char*) malloc(len * sizeof(char))))
+    {
+         /** TODO: Consider moving pattern compilation to some init function. */
+        if ((re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED,
+                                0, &errcore, &erroffset, NULL)))
+        {
+            if ((mdata = pcre2_match_data_create_from_pattern(re, NULL)))
+            {
+                while (pcre2_substitute(re, (PCRE2_SPTR) str, orig_len, 0,
+                                        PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
+                                        replace, PCRE2_ZERO_TERMINATED,
+                                        (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+                {
+                    char* tmp = (char*) realloc(output, len *= 2);
+                    if (tmp == NULL)
+                    {
+                        free(output);
+                        output = NULL;
+                        break;
+                    }
+                    output = tmp;
+                }
+                pcre2_match_data_free(mdata);
+            }
+            else
+            {
+                free(output);
+                output = NULL;
+            }
+            pcre2_code_free(re);
+        }
+        else
+        {
+            free(output);
+            output = NULL;
+        }
+    }
+    return output;
 }
 
 /** 

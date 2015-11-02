@@ -248,66 +248,35 @@ char		*sep;
 static void
 monitorDatabase(MONITOR_SERVERS	*database, char *defaultUser, char *defaultPasswd, MONITOR *mon)
 {
-    MYSQL_MONITOR* handle = mon->handle;
 MYSQL_ROW	row;
 MYSQL_RES	*result;
 int		isjoined = 0;
-char            *uname = defaultUser, *passwd = defaultPasswd;
 char 			*server_string;
 
-	if (database->server->monuser != NULL)
-	{
-		uname = database->server->monuser;
-		passwd = database->server->monpw;
-	}
-	if (uname == NULL)
-		return;
+    /* Don't even probe server flagged as in maintenance */
+    if (SERVER_IN_MAINT(database->server))
+        return;
 
-	/* Don't even probe server flagged as in maintenance */
-	if (SERVER_IN_MAINT(database->server))
-		return;
+    connect_result_t rval = mon_connect_to_db(mon, database);
+    if (rval != MONITOR_CONN_OK)
+    {
+        server_clear_status(database->server, SERVER_RUNNING);
 
-	if (database->con == NULL || mysql_ping(database->con) != 0)
-	{
-		char *dpwd = decryptPassword(passwd);
-                int connect_timeout = mon->connect_timeout;
-                int read_timeout = mon->read_timeout;
-                int write_timeout = mon->write_timeout;
+        if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+        {
+            server_set_status(database->server, SERVER_AUTH_ERROR);
+        }
 
-		if(database->con)
-		    mysql_close(database->con);
-                database->con = mysql_init(NULL);
+        database->server->node_id = -1;
 
-                mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *)&connect_timeout);
-                mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
-                mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *)&write_timeout);
+        if (mon_status_changed(database) && mon_print_fail_status(database))
+        {
+            mon_log_connect_error(database, rval);
+        }
+        return;
+    }
 
-		if (mysql_real_connect(database->con, database->server->name,
-			uname, dpwd, NULL, database->server->port, NULL, 0) == NULL)
-		{
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Monitor was unable to connect to "
-				"server %s:%d : \"%s\"",
-				database->server->name,
-				database->server->port,
-				mysql_error(database->con))));
-			server_clear_status(database->server, SERVER_RUNNING);
-			if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
-			{
-				server_set_status(database->server, SERVER_AUTH_ERROR);
-			}
-			database->server->node_id = -1;
-			free(dpwd);
-			return;
-		}
-		else
-		{
-			server_clear_status(database->server, SERVER_AUTH_ERROR);
-		}
-		free(dpwd);
-	}
-
+    server_clear_status(database->server, SERVER_AUTH_ERROR);
 	/* If we get this far then we have a working connection */
 	server_set_status(database->server, SERVER_RUNNING);
 

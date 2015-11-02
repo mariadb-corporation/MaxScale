@@ -485,6 +485,16 @@ process_config_context(CONFIG_CONTEXT *context)
 						     1,STRING_TYPE);
 				}
 
+                CONFIG_PARAMETER* param;
+                if((param = config_get_param(obj->parameters, "ignore_databases")))
+                {
+                    service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
+                }
+
+                if((param = config_get_param(obj->parameters, "ignore_databases_regex")))
+                {
+                    service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
+                }
 				/** flag for rwsplit-specific parameters */
 				if (strncmp(router, "readwritesplit", strlen("readwritesplit")+1) == 0)
 				{
@@ -612,7 +622,9 @@ process_config_context(CONFIG_CONTEXT *context)
 
 				}
 
-				if (enable_root_user)
+                serviceSetRetryOnFailure(obj->element, config_get_value(obj->parameters, "retry_on_failure"));
+
+                if (enable_root_user)
 					serviceEnableRootUser(
                                                 obj->element, 
                                                 config_truth_value(enable_root_user));
@@ -1746,6 +1758,18 @@ SERVER			*server;
 					version_string = config_get_value(obj->parameters, "version_string");
 					allow_localhost_match_wildcard_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
+                    CONFIG_PARAMETER* param;
+
+                    if((param = config_get_param(obj->parameters, "ignore_databases")))
+                    {
+                        service_set_param_value(service, param, param->value, 0, STRING_TYPE);
+                    }
+
+                    if((param = config_get_param(obj->parameters, "ignore_databases_regex")))
+                    {
+                        service_set_param_value(service, param, param->value, 0, STRING_TYPE);
+                    }
+
 					if (version_string) {
 						if (service->version_string) {
 							free(service->version_string);
@@ -2150,6 +2174,8 @@ static char *service_params[] =
 		"ssl_key",
 		"ssl_version",
 		"ssl_cert_verify_depth",
+        "ignore_databases",
+        "ignore_databases_regex",
                 NULL
         };
 

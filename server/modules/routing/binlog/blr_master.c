@@ -47,6 +47,7 @@
  *					MariaDB 10 transaction start point.
  *					It's no longer using QUERY_EVENT with BEGIN	
  * 25/09/2015	Massimiliano Pinto	Addition of lastEventReceived for slaves
+ * 23/10/15	Markus Makela		Added current_safe_event
  *
  * @endverbatim
  */
@@ -1061,11 +1062,12 @@ int			n_bufs = -1, pn_bufs = -1;
 				if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0)) {
 					/* no pending transaction: set current_pos to binlog_position */
 
-					spinlock_acquire(&router->binlog_lock);
+					spinlock_acquire(&router->lock);
 
 					router->binlog_position = router->current_pos;
+					router->current_safe_event = router->current_pos;
 
-					spinlock_release(&router->binlog_lock);
+					spinlock_release(&router->lock);
 				}
 
 				/**
@@ -1280,11 +1282,12 @@ int			n_bufs = -1, pn_bufs = -1;
 						 */
 
 						if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0)) {
-							spinlock_acquire(&router->binlog_lock);
+							spinlock_acquire(&router->lock);
 
 							router->binlog_position = router->current_pos;
+							router->current_safe_event = router->current_pos;
 
-							spinlock_release(&router->binlog_lock);
+							spinlock_release(&router->lock);
 
 							/* Now distribute events */
 							blr_distribute_binlog_record(router, &hdr, ptr);
@@ -1309,11 +1312,11 @@ int			n_bufs = -1, pn_bufs = -1;
 								REP_HEADER      new_hdr;
 								int i=0;
 
-								spinlock_acquire(&router->binlog_lock);
+								spinlock_acquire(&router->lock);
 
 								pos = router->binlog_position;
 
-								spinlock_release(&router->binlog_lock);
+								spinlock_release(&router->lock);
 								
 
 								while ((record = blr_read_events_from_pos(router, pos, &new_hdr)) != NULL) {
@@ -1323,11 +1326,18 @@ int			n_bufs = -1, pn_bufs = -1;
 									/* distribute event */
 									blr_distribute_binlog_record(router, &new_hdr, raw_data);
 
-									spinlock_acquire(&router->binlog_lock);
+									spinlock_acquire(&router->lock);
+
+									/** The current safe position is only updated
+									* if it points to the event we just distributed. */
+									if(router->current_safe_event == pos)
+									{
+										router->current_safe_event = new_hdr.next_pos;
+									}
 
 									pos = new_hdr.next_pos;
 
-									spinlock_release(&router->binlog_lock);
+									spinlock_release(&router->lock);
 
 									gwbuf_free(record);
 								}
@@ -1581,6 +1591,14 @@ MYSQL_session	*auth_info;
 	return auth_info;
 }
 
+/** Actions that can be taken when an event is being distributed to the slaves*/
+typedef enum
+{
+    SLAVE_SEND_EVENT, /*< Send the event to the slave */
+    SLAVE_FORCE_CATCHUP, /*< Force the slave into catchup mode */
+    SLAVE_EVENT_ALREADY_SENT /*< The slave already has the event, don't send it */
+} slave_event_action_t;
+
 /**
  * Distribute the binlog record we have just received to all the registered slaves.
  *
@@ -1636,54 +1654,28 @@ int		action;
 
 		if (action == 1)
 		{
-			if (slave->binlog_pos <= router->last_written &&
+			slave_event_action_t slave_action = SLAVE_FORCE_CATCHUP;
+
+			if(router->trx_safe && slave->binlog_pos == router->current_safe_event &&
+			   (strcmp(slave->binlogfile, router->binlog_name) == 0 ||
+				(hdr->event_type == ROTATE_EVENT &&
+				strcmp(slave->binlogfile, router->prevbinlog))))
+			{
+				/**
+				 * Slave needs the current event being distributed
+				 */
+				slave_action = SLAVE_SEND_EVENT;
+			}
+			else if (slave->binlog_pos == router->last_written &&
 				(strcmp(slave->binlogfile, router->binlog_name) == 0 ||
 				(hdr->event_type == ROTATE_EVENT &&
 				strcmp(slave->binlogfile, router->prevbinlog))))
 			{
-				/*
-				 * The slave should be up to date, check that the binlog
-				 * position matches the event we have to distribute or
-				 * this is a rotate event. Send the event directly from
-				 * memory to the slave.
+				/**
+				 * Transaction safety is off or there are no pending transactions
 				 */
-				slave->lastEventTimestamp = hdr->timestamp;
-				slave->lastEventReceived = hdr->event_type;
 
-				/* set lastReply */
-				if (router->send_slave_heartbeat)
-					slave->lastReply = time(0);
-
-				pkt = gwbuf_alloc(hdr->event_size + 5);
-				buf = GWBUF_DATA(pkt);
-				encode_value(buf, hdr->event_size + 1, 24);
-				buf += 3;
-				*buf++ = slave->seqno++;
-				*buf++ = 0;	// OK
-				memcpy(buf, ptr, hdr->event_size);
-				if (hdr->event_type == ROTATE_EVENT)
-				{
-					blr_slave_rotate(router, slave, ptr);
-				}
-				slave->stats.n_bytes += gwbuf_length(pkt);
-				slave->stats.n_events++;
-				slave->dcb->func.write(slave->dcb, pkt);
-				if (hdr->event_type != ROTATE_EVENT)
-				{
-					slave->binlog_pos = hdr->next_pos;
-				}
-				spinlock_acquire(&slave->catch_lock);
-				if (slave->overrun)
-				{
-					slave->stats.n_overrun++;
-					slave->overrun = 0;
-					poll_fake_write_event(slave->dcb);
-				}
-				else
-				{
-					slave->cstate &= ~CS_BUSY;
-				}
-				spinlock_release(&slave->catch_lock);
+				slave_action = SLAVE_SEND_EVENT;
 			}
 			else if (slave->binlog_pos == hdr->next_pos
 				&& strcmp(slave->binlogfile, router->binlog_name) == 0)
@@ -1692,9 +1684,7 @@ int		action;
 				 * Slave has already read record from file, no
 				 * need to distrbute this event
 				 */
-				spinlock_acquire(&slave->catch_lock);
-				slave->cstate &= ~CS_BUSY;
-				spinlock_release(&slave->catch_lock);
+				slave_action = SLAVE_EVENT_ALREADY_SENT;
 			}
 			else if ((slave->binlog_pos > hdr->next_pos - hdr->event_size)
 				&& strcmp(slave->binlogfile, router->binlog_name) == 0)
@@ -1710,23 +1700,75 @@ int		action;
 						slave->serverid, slave->binlogfile,
 						(unsigned long)slave->binlog_pos,
 						hdr->next_pos - hdr->event_size)));
-				spinlock_acquire(&slave->catch_lock);
-				slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
-				slave->cstate |= CS_EXPECTCB;
-				spinlock_release(&slave->catch_lock);
-				poll_fake_write_event(slave->dcb);
 			}
-			else
+
+			/*
+			 * If slave_action is SLAVE_FORCE_CATCHUP then
+			 * the slave is not at the position it should be. Force it into
+			 * catchup mode rather than send this event.
+			 */
+
+			switch(slave_action)
 			{
-				/*
-				 * The slave is not at the position it should be. Force it into
-				 * catchup mode rather than send this event.
-				 */
-				spinlock_acquire(&slave->catch_lock);
-				slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
-				slave->cstate |= CS_EXPECTCB;
-				spinlock_release(&slave->catch_lock);
-				poll_fake_write_event(slave->dcb);
+				case SLAVE_SEND_EVENT:
+					/*
+					 * The slave should be up to date, check that the binlog
+					 * position matches the event we have to distribute or
+					 * this is a rotate event. Send the event directly from
+					 * memory to the slave.
+					 */
+					slave->lastEventTimestamp = hdr->timestamp;
+					slave->lastEventReceived = hdr->event_type;
+
+					/* set lastReply */
+					if (router->send_slave_heartbeat)
+						slave->lastReply = time(0);
+
+					pkt = gwbuf_alloc(hdr->event_size + 5);
+					buf = GWBUF_DATA(pkt);
+					encode_value(buf, hdr->event_size + 1, 24);
+					buf += 3;
+					*buf++ = slave->seqno++;
+					*buf++ = 0;	// OK
+					memcpy(buf, ptr, hdr->event_size);
+					if (hdr->event_type == ROTATE_EVENT)
+					{
+						blr_slave_rotate(router, slave, ptr);
+					}
+					slave->stats.n_bytes += gwbuf_length(pkt);
+					slave->stats.n_events++;
+					slave->dcb->func.write(slave->dcb, pkt);
+					if (hdr->event_type != ROTATE_EVENT)
+					{
+						slave->binlog_pos = hdr->next_pos;
+					}
+					spinlock_acquire(&slave->catch_lock);
+					if (slave->overrun)
+					{
+						slave->stats.n_overrun++;
+						slave->overrun = 0;
+						poll_fake_write_event(slave->dcb);
+					}
+					else
+					{
+						slave->cstate &= ~CS_BUSY;
+					}
+					spinlock_release(&slave->catch_lock);
+					break;
+
+				case SLAVE_EVENT_ALREADY_SENT:
+					spinlock_acquire(&slave->catch_lock);
+					slave->cstate &= ~CS_BUSY;
+					spinlock_release(&slave->catch_lock);
+					break;
+
+				case SLAVE_FORCE_CATCHUP:
+					spinlock_acquire(&slave->catch_lock);
+					slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
+					slave->cstate |= CS_EXPECTCB;
+					spinlock_release(&slave->catch_lock);
+					poll_fake_write_event(slave->dcb);
+					break;
 			}
 		}
 		else if (action == 3)
@@ -1904,13 +1946,12 @@ int		event_limit;
                         break;
                 case -1:
 			{
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+			char err_msg[STRERROR_BUFLEN];
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: failed to read binlog "
 				"file %s at position %d"
 				" (%s).", router->binlog_name,
-				pos, err_msg)));
+				pos, strerror_r(errno, err_msg, sizeof(err_msg)))));
 
 			if (errno == EBADF)
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
@@ -1968,13 +2009,12 @@ int		event_limit;
 	{
 		if (n == -1)
 		{
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+			char err_msg[STRERROR_BUFLEN];
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: the event at %ld in %s. "
 				"%s, expected %d bytes.",
 				pos, router->binlog_name,
-				err_msg, hdr->event_size - 19)));
+				strerror_r(errno, err_msg, sizeof(err_msg)), hdr->event_size - 19)));
 		} else {
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: short read when reading "

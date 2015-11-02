@@ -79,6 +79,7 @@ typedef struct servprotocol {
  */
 typedef struct {
 	time_t		started;	/**< The time when the service was started */
+        int             n_failed_starts; /**< Number of times this service has failed to start */
 	int		n_sessions;	/**< Number of sessions created on service since start */
 	int		n_current;	/**< Current number of sessions */
 } SERVICE_STATS;
@@ -127,7 +128,7 @@ enum{
 };
 
 #define DEFAULT_SSL_CERT_VERIFY_DEPTH 100 /*< The default certificate verification depth */
-
+#define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */
 /**
  * Parameters that are automatically detected but can also be configured by the
  * user are initially set to this value.
@@ -190,6 +191,7 @@ typedef struct service {
         char* ssl_key; /*< SSL private key */
         char* ssl_ca_cert; /*< SSL CA certificate */
         bool ssl_init_done; /*< If SSL has already been initialized for this service */
+        bool retry_start; /*< If starting of the service should be retried later */
 
 } SERVICE;
 
@@ -225,6 +227,7 @@ extern  int     serviceSetSSLVerifyDepth(SERVICE* service, int depth);
 extern  void    serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert);
 extern	int	serviceEnableRootUser(SERVICE *, int );
 extern	int	serviceSetTimeout(SERVICE *, int );
+extern  void    serviceSetRetryOnFailure(SERVICE *service, char* value);
 extern	void	serviceWeightBy(SERVICE *, char *);
 extern	char	*serviceGetWeightingParameter(SERVICE *);
 extern	int	serviceEnableLocalhostMatchWildcardHost(SERVICE *, int);

@@ -37,6 +37,7 @@
  *					This is the current supported condition for detecting
  *					MariaDB 10 transaction start point.
  *					It's no longer using QUERY_EVENT with BEGIN
+ * 23/10/15	Markus Makela		Added current_safe_event
  *
  * @endverbatim
  */
@@ -76,6 +77,16 @@ void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern uint32_t extract_field(uint8_t *src, int bits);
 static void blr_format_event_size(double *event_size, char *label);
+extern int MaxScaleUptime();
+extern char *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
+
+typedef struct binlog_event_desc {
+	unsigned long long event_pos;
+	uint8_t	event_type;
+	time_t	event_time;
+} BINLOG_EVENT_DESC;
+
+static void blr_print_binlog_details(ROUTER_INSTANCE *router, BINLOG_EVENT_DESC first_event_time, BINLOG_EVENT_DESC last_event_time);
 
 /**
  * Initialise the binlog file for this instance. MaxScale will look
@@ -123,13 +134,11 @@ struct dirent	*dp;
 	root_len = strlen(router->fileroot);
 	if ((dirp = opendir(path)) == NULL)
 	{
-		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1]="";
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-
+		char err_msg[BLRM_STRERROR_R_MSG_SIZE];
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Unable to read the binlog directory %s, %s.",
 			router->service->name, router->binlogdir,
-			err_msg)));
+			strerror_r(errno, err_msg, sizeof(err_msg)))));
 		return 0;
 	}
 	while ((dp = readdir(dirp)) != NULL)
@@ -198,6 +207,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	write(fd, magic, 4);
 	router->current_pos = 4;			/* Initial position after the magic number */
 	router->binlog_position = 4;			/* Initial position after the magic number */
+	router->current_safe_event = 4;
 }
 
 
@@ -224,12 +234,11 @@ int		fd;
 	}
 	else
 	{
-		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		char err_msg[STRERROR_BUFLEN];
 
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Failed to create binlog file %s, %s.",
-				router->service->name, path, err_msg)));
+				router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)))));
 		return 0;
 	}
 	fsync(fd);
@@ -303,14 +312,13 @@ int	n;
 	if ((n = pwrite(router->binlog_fd, buf, hdr->event_size,
 				hdr->next_pos - hdr->event_size)) != hdr->event_size)
 	{
-		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		char err_msg[STRERROR_BUFLEN];
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"%s: Failed to write binlog record at %d of %s, %s. "
 			"Truncating to previous record.",
 			router->service->name, hdr->next_pos - hdr->event_size,
 			router->binlog_name,
-			err_msg)));
+			strerror_r(errno, err_msg, sizeof(err_msg)))));
 		/* Remove any partual event that was written */
 		ftruncate(router->binlog_fd, hdr->next_pos - hdr->event_size);
 		return 0;
@@ -458,11 +466,9 @@ struct	stat	statb;
 			break;
 		case -1:
 			{
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-
+			char err_msg[STRERROR_BUFLEN];
 			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to read binlog file '%s'; (%s), event at %lu",
-				file->binlogname, err_msg, pos);
+				file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
 
 			if (errno == EBADF)
 				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bad file descriptor for binlog file '%s', refcount %d, descriptor %d, event at %lu",
@@ -528,11 +534,9 @@ struct	stat	statb;
 				break;
 			case -1:
 				{
-				char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-				strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-
+				char err_msg[STRERROR_BUFLEN];
 				snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Failed to reread header in binlog file '%s'; (%s), event at %lu",
-					file->binlogname, err_msg, pos);
+					file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), pos);
 
 				if (errno == EBADF)
 					snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Bad file descriptor rereading header for binlog file '%s', "
@@ -585,12 +589,10 @@ struct	stat	statb;
 	{
 		if (n == -1)
 		{
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-
+			char err_msg[STRERROR_BUFLEN];
 			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Error reading the binlog event at %lu in binlog file '%s';"
 				"(%s), expected %d bytes.",
-				pos, file->binlogname, err_msg, hdr->event_size - BINLOG_EVENT_HDR_LEN);	
+				pos, file->binlogname, strerror_r(errno, err_msg, sizeof(err_msg)), hdr->event_size - BINLOG_EVENT_HDR_LEN);	
 		}
 		else
 		{
@@ -719,8 +721,7 @@ int	fd;
 	strncat(path, "/cache", PATH_MAX);
 
 	if (access(path, R_OK) == -1) {
-		int mkdir_ret;
-		mkdir_ret = mkdir(path, 0700);
+		mkdir(path, 0700);
 	}
 
 	strncat(path, "/", PATH_MAX);
@@ -839,6 +840,14 @@ unsigned long event_bytes = 0;
 unsigned long max_bytes = 0;
 double average_events = 0;
 double average_bytes = 0;
+BINLOG_EVENT_DESC first_event;
+BINLOG_EVENT_DESC last_event;
+BINLOG_EVENT_DESC fde_event;
+int fde_seen = 0;
+
+	memset(&first_event, '\0', sizeof(first_event));
+	memset(&last_event, '\0', sizeof(last_event));
+	memset(&fde_event, '\0', sizeof(fde_event));
 
 	if (router->binlog_fd == -1) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -852,6 +861,7 @@ double average_bytes = 0;
 
 	router->current_pos = 4;
 	router->binlog_position = 4;
+	router->current_safe_event = 4;
 
         while (1){
 
@@ -869,6 +879,15 @@ double average_bytes = 0;
 					if (n_transactions)
 						average_bytes = (double)((double)total_bytes / (double)n_transactions) * (1.0);
 
+					/* Report Binlog First and Last event */
+					if (pos > 4) {
+						if (first_event.event_type == 0)
+							blr_print_binlog_details(router, fde_event, last_event);
+						else
+							blr_print_binlog_details(router, first_event, last_event);
+					}
+
+					/* Report Transaction Summary */
 					if (n_transactions != 0) {
 						char total_label[2]="";
 						char average_label[2]="";
@@ -934,6 +953,7 @@ double average_bytes = 0;
 
                         if (pending_transaction) {
                                 router->binlog_position = last_known_commit;
+                                router->current_safe_event = last_known_commit;
 				router->current_pos = pos;
                                 router->pending_transaction = 1;
                                 pending_transaction = 0;
@@ -948,6 +968,7 @@ double average_bytes = 0;
                         	/* any error */
                         	if (n != 0) {
 					router->binlog_position = last_known_commit;
+					router->current_safe_event = last_known_commit;
 					router->current_pos = pos;
 
 					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -967,6 +988,7 @@ double average_bytes = 0;
 					return 1;
 				} else {
 					router->binlog_position = pos;
+					router->current_safe_event = pos;
 					router->current_pos = pos;
 
                                 	return 0;
@@ -1009,6 +1031,7 @@ double average_bytes = 0;
 		if (event_error) {
 
 			router->binlog_position = last_known_commit;
+			router->current_safe_event = last_known_commit;
 			router->current_pos = pos;
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -1039,6 +1062,7 @@ double average_bytes = 0;
                                 hdr.event_size, pos)));
 
                         router->binlog_position = last_known_commit;
+                        router->current_safe_event = last_known_commit;
                         router->current_pos = pos;
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -1067,6 +1091,7 @@ double average_bytes = 0;
                                 hdr.event_size, pos)));
 
                         router->binlog_position = last_known_commit;
+                        router->current_safe_event = last_known_commit;
                         router->current_pos = pos;
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -1123,6 +1148,7 @@ double average_bytes = 0;
                         gwbuf_free(result);
 
                         router->binlog_position = last_known_commit;
+                        router->current_safe_event = last_known_commit;
                         router->current_pos = pos;
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -1147,6 +1173,14 @@ double average_bytes = 0;
                         last_known_commit = pos;
                 }
 
+		/* get firts event timestamp, after FDE */
+		if (fde_seen) {
+                        first_event.event_time = (unsigned long)hdr.timestamp;
+			first_event.event_type = hdr.event_type;
+			first_event.event_pos = pos;
+			fde_seen = 0;
+		}
+
                 /* get event content */
                 ptr = data+BINLOG_EVENT_HDR_LEN;
 
@@ -1157,11 +1191,25 @@ double average_bytes = 0;
                         int n_events;
                         int check_alg;
                         uint8_t *checksum;
+			char	buf_t[40];
+			struct	tm	tm_t;
+
+			fde_seen = 1;
+			fde_event.event_time = (unsigned long)hdr.timestamp;
+			fde_event.event_type = hdr.event_type;
+			fde_event.event_pos = pos;
+
+			localtime_r(&fde_event.event_time, &tm_t);
+			asctime_r(&tm_t, buf_t);
+
+			if (buf_t[strlen(buf_t)-1] == '\n') {
+				buf_t[strlen(buf_t)-1] = '\0';
+			}
 
                         if(debug)
                                 LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-                                        "- Format Description event FDE @ %llu, size %lu",
-                                        pos, (unsigned long)hdr.event_size)));
+                                        "- Format Description event FDE @ %llu, size %lu, time %lu (%s)",
+                                        pos, (unsigned long)hdr.event_size, fde_event.event_time, buf_t)));
 
                         event_header_length =  ptr[2 + 50 + 4];
                         event_header_ntypes = hdr.event_size - event_header_length - (2 + 50 + 4 + 1);
@@ -1208,6 +1256,12 @@ double average_bytes = 0;
                                 }
                         }
                 }
+
+		/* set last event time, pos and type */
+		last_event.event_time = (unsigned long)hdr.timestamp;
+		last_event.event_type = hdr.event_type;
+		last_event.event_pos = pos;
+
                 /* Decode ROTATE EVENT */
                 if(hdr.event_type == ROTATE_EVENT) {
                         int             len, slen;
@@ -1367,6 +1421,7 @@ double average_bytes = 0;
                                 pos)));
 
                         router->binlog_position = last_known_commit;
+                        router->current_safe_event = last_known_commit;
                         router->current_pos = pos;
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -1396,6 +1451,7 @@ double average_bytes = 0;
                                 pos)));
 
                         router->binlog_position = last_known_commit;
+                        router->current_safe_event = last_known_commit;
                         router->current_pos = pos;
 
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
@@ -1445,6 +1501,7 @@ double average_bytes = 0;
                         last_known_commit)));
 
 		router->binlog_position = last_known_commit;
+		router->current_safe_event = last_known_commit;
 		router->current_pos = pos;
 		router->pending_transaction = 1;
 
@@ -1456,6 +1513,7 @@ double average_bytes = 0;
                 return 0;
         } else {
                 router->binlog_position = pos;
+                router->current_safe_event = pos;
                 router->current_pos = pos;
 
                 return 0;
@@ -1573,7 +1631,7 @@ int rc;
 char path[(PATH_MAX - 15) + 1] = "";
 char filename[(PATH_MAX - 4) + 1] = "";
 char tmp_file[PATH_MAX + 1] = "";
-char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
+char err_msg[STRERROR_BUFLEN];
 
 	strncpy(path, router->binlogdir, (PATH_MAX - 15));
 
@@ -1586,14 +1644,12 @@ char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
 	/* open file for writing */
 	config_file = fopen(tmp_file,"wb");
 	if (config_file == NULL) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 		return 2;
 	}
 
 	if(chmod(tmp_file, S_IRUSR | S_IWUSR) < 0) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 		return 2;
 	}
 
@@ -1613,17 +1669,60 @@ char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
 	rc = rename(tmp_file, filename);
 
 	if (rc == -1) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 		return 3;
 	}
 
 	if(chmod(filename, S_IRUSR | S_IWUSR) < 0) {
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", err_msg, errno);
+		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 		return 3;
 	}
 
 	return 0;
+}
+
+/** Print Binlog Details
+ *
+ * @param router	The router instance
+ * @param first_event	First Event details
+ * @param last_event	First Event details
+ */
+
+static void
+blr_print_binlog_details(ROUTER_INSTANCE *router, BINLOG_EVENT_DESC first_event, BINLOG_EVENT_DESC last_event)
+{
+char    buf_t[40];
+struct  tm      tm_t;
+char    *event_desc;
+
+	/* First Event */
+	localtime_r(&first_event.event_time, &tm_t);
+	asctime_r(&tm_t, buf_t);
+
+	if (buf_t[strlen(buf_t)-1] == '\n') {
+		buf_t[strlen(buf_t)-1] = '\0';
+	}
+
+	event_desc = blr_get_event_description(router, first_event.event_type);
+
+	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+		"%lu @ %llu, %s, (%s), First EventTime",
+		first_event.event_time, first_event.event_pos,
+		event_desc != NULL ? event_desc : "unknown", buf_t)));
+
+	/* Last Event */
+	localtime_r(&last_event.event_time, &tm_t);
+	asctime_r(&tm_t, buf_t);
+
+	if (buf_t[strlen(buf_t)-1] == '\n') {
+		buf_t[strlen(buf_t)-1] = '\0';
+	}
+
+	event_desc = blr_get_event_description(router, last_event.event_type);
+
+	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
+		"%lu @ %llu, %s, (%s), Last EventTime",
+		last_event.event_time, last_event.event_pos,
+	event_desc != NULL ? event_desc : "unknown", buf_t)));
 }
 

@@ -60,6 +60,12 @@ extern int blr_test_parse_change_master_command(char *input, char *error_string,
 extern char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error);
 extern int blr_test_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error);
 
+int
+MaxScaleUptime()
+{
+return 1;
+}
+
 static struct option long_options[] = {
   {"debug",     no_argument,            0,      'd'},
   {"verbose",   no_argument,            0,      'v'},

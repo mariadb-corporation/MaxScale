@@ -58,6 +58,7 @@
  * 25/09/2015	Massimiliano Pinto	Addition of slave heartbeat:
  *					the period set during registration is checked
  *					and heartbeat event might be sent to the affected slave.
+ * 23/10/15	Markus Makela		Added current_safe_event
  *
  * @endverbatim
  */
@@ -759,9 +760,8 @@ extern  char *strcasestr();
 				removed_cfg = unlink(path);
 
 				if (removed_cfg == -1) {
-					char err_msg[BLRM_STRERROR_R_MSG_SIZE+1]="";
-					strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
-					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error removing %s, %s, errno %u", path, err_msg, errno);
+					char err_msg[STRERROR_BUFLEN];
+					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error removing %s, %s, errno %u", path, strerror_r(errno, err_msg, sizeof(err_msg)), errno);
 					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error_string)));
 				}
 
@@ -2348,13 +2348,15 @@ char err_msg[BINLOG_ERROR_MSG_LEN+1];
 		return;
 	if ((record = blr_read_binlog(router, file, 4, &hdr, err_msg)) == NULL)
 	{
-		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
-			slave->dcb->remote,
-			slave->port,
-			slave->serverid,
-			slave->binlogfile,
-			err_msg)));
+		if (hdr.ok == 0xff) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
+				slave->dcb->remote,
+				slave->port,
+				slave->serverid,
+				slave->binlogfile,
+				err_msg)));
+		}
 
 		blr_close_binlog(router, file);
 		return;
@@ -2923,6 +2925,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 			router->master_state = BLRM_UNCONNECTED;
 			router->current_pos = 4;
 			router->binlog_position = 4;
+			router->current_safe_event = 4;
 
 			spinlock_release(&router->lock);
 
@@ -3223,6 +3226,12 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
 			router->current_pos = 4;
 			router->binlog_position = 4;
+			router->current_safe_event = 4;
+
+			/* close current file binlog file, next start slave will create the new one */
+			fsync(router->binlog_fd);
+			close(router->binlog_fd);
+			router->binlog_fd = -1;
 
 			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
 				router->service->name,
@@ -3280,6 +3289,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 			if (router->master_state == BLRM_UNCONFIGURED) {
 				router->current_pos = 4;
 				router->binlog_position = 4;
+				router->current_safe_event = 4;
 				memset(router->binlog_name, '\0', sizeof(router->binlog_name));
 				strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
 
@@ -3395,7 +3405,6 @@ blr_set_master_port(ROUTER_INSTANCE *router, char *port) {
  */
 static char *
 blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
-	int change_binlog = 0;
 	char *new_binlog_file = NULL;
 
 	if (filename) {
@@ -3460,7 +3469,6 @@ blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
 		/* Compare binlog file name with current one */
 		if (strcmp(router->binlog_name, file_ptr) == 0) {
 			/* No binlog name change, eventually new position will be checked later */
-			change_binlog = 0;
 		} else {
 			/*
 			 * This is a new binlog file request
@@ -3481,7 +3489,6 @@ blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
 			}
 
 			/* Binlog file name succesfully changed */
-			change_binlog = 1;
 		}
 
 		/* allocate new filename */
@@ -3551,6 +3558,7 @@ blr_master_set_empty_config(ROUTER_INSTANCE *router) {
 
 	router->current_pos = 4;
 	router->binlog_position = 4;
+	router->current_safe_event = 4;
 	strcpy(router->binlog_name, "");
 }
 
@@ -3566,6 +3574,7 @@ blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master)
 	server_update_port(router->service->dbref->server, prev_master->port);
 	router->current_pos = prev_master->pos;
 	router->binlog_position = prev_master->safe_pos;
+	router->current_safe_event = prev_master->safe_pos;
 	strcpy(router->binlog_name, prev_master->logfile);
 	if (router->user) {
 		free(router->user);

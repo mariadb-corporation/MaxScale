@@ -47,6 +47,7 @@
  *					saved master responses
  * 23/08/2015	Massimiliano Pinto	Added strerror_r
  * 30/09/2015	Massimiliano Pinto	Addition of send_slave_heartbeat option
+ * 23/10/2015	Markus Makela		Added current_safe_event
  *
  * @endverbatim
  */
@@ -78,7 +79,7 @@ extern int lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
-static char *version_str = "V1.2.2";
+static char *version_str = "V2.0.0";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -113,6 +114,9 @@ extern char *create_hex_sha1_sha1_passwd(char *passwd);
 extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 char * blr_last_event_description(ROUTER_INSTANCE *router);
+extern int MaxScaleUptime();
+static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+char	*blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
@@ -199,7 +203,6 @@ int		i;
 unsigned char	*defuuid;
 char		path[PATH_MAX+1] = "";
 char		filename[PATH_MAX+1] = "";
-int		master_info = 0;
 int		rc = 0;
 char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
@@ -297,11 +300,16 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 	{
 		my_uuid(defuuid);
 		if ((inst->uuid = (char *)malloc(38)) != NULL)
-			sprintf(inst->uuid, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-			defuuid[0], defuuid[1], defuuid[2], defuuid[3],
-			defuuid[4], defuuid[5], defuuid[6], defuuid[7],
-			defuuid[8], defuuid[9], defuuid[10], defuuid[11],
-			defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
+			sprintf(inst->uuid,
+			        "%02hhx%02hhx%02hhx%02hhx-"
+			        "%02hhx%02hhx-"
+			        "%02hhx%02hhx-"
+			        "%02hhx%02hhx-"
+			        "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+			        defuuid[0], defuuid[1], defuuid[2], defuuid[3],
+			        defuuid[4], defuuid[5], defuuid[6], defuuid[7],
+			        defuuid[8], defuuid[9], defuuid[10], defuuid[11],
+			        defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
 	}
 
 	/*
@@ -509,6 +517,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 	inst->binlog_position = 0;
 	inst->current_pos = 0;
+	inst->current_safe_event = 0;
 
 	strcpy(inst->binlog_name, "");
 	strcpy(inst->prevbinlog, "");
@@ -537,14 +546,13 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 		int mkdir_rval;
 		mkdir_rval = mkdir(inst->binlogdir, 0700);
 		if (mkdir_rval == -1) {
-			char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-			strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+			char err_msg[STRERROR_BUFLEN];
 			skygw_log_write_flush(LOGFILE_ERROR,
 				"Error : Service %s, Failed to create binlog directory '%s': [%d] %s",
 				service->name,
 				inst->binlogdir,
 				errno,
-				err_msg);
+				strerror_r(errno, err_msg, sizeof(err_msg)));
 
 			free(inst);
 			return NULL;
@@ -629,8 +637,6 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 	} else {
 		inst->master_state = BLRM_UNCONNECTED;
-
-		master_info = 1;
 
 		/* Try loading dbusers */
 		blr_load_dbusers(inst);
@@ -1397,7 +1403,7 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error;
 socklen_t	len;
-char		msg[BLRM_STRERROR_R_MSG_SIZE + 1 + 5] = "";
+char		msg[STRERROR_BUFLEN + 1 + 5] = "";
 char 		*errmsg;
 unsigned long	mysql_errno;
 
@@ -1422,8 +1428,8 @@ unsigned long	mysql_errno;
 	len = sizeof(error);
 	if (router->master && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
 	{
-		strerror_r(error, msg, BLRM_STRERROR_R_MSG_SIZE);
-		strcat(msg, " ");
+		char errbuf[STRERROR_BUFLEN];
+                sprintf(msg, "%s ", strerror_r(error, errbuf, sizeof(errbuf)));
 	}
 	else
 		strcpy(msg, "");
@@ -1934,14 +1940,13 @@ int	mkdir_rval = 0;
 
 	if (mkdir_rval == -1)
 	{
-		char err_msg[BLRM_STRERROR_R_MSG_SIZE+1] = "";
-		strerror_r(errno, err_msg, BLRM_STRERROR_R_MSG_SIZE);
+		char err_msg[STRERROR_BUFLEN];
 		skygw_log_write(LOGFILE_ERROR,
 			"Error : Service %s, Failed to create directory '%s': [%d] %s",
 			service->name,
 			path,
 			errno,
-			err_msg);
+			strerror_r(errno, err_msg, sizeof(err_msg)));
 
 		return -1;
 	}
@@ -2056,7 +2061,38 @@ char *event_desc = NULL;
 				event_desc = event_names_mariadb10[(router->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
 			}
 		}
+	}
 
+	return event_desc;
+}
+
+/**
+ * Return the event description
+ *
+ * @param router	The router instance
+ * @param event		The current event
+ * @return		The event description or NULL
+ */
+char *
+blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event) {
+char *event_desc = NULL;
+
+	if (!router->mariadb10_compat) {
+		if (event >= 0 &&
+			event <= MAX_EVENT_TYPE) {
+			event_desc = event_names[event];
+		}
+	} else {
+		if (event >= 0 &&
+			event <= MAX_EVENT_TYPE) {
+			event_desc = event_names[event];
+		} else {
+			/* Check MariaDB 10 new events */
+			if (event >= MARIADB_NEW_EVENTS_BEGIN &&
+				event <= MAX_EVENT_TYPE_MARIADB10) {
+				event_desc = event_names_mariadb10[(event - MARIADB_NEW_EVENTS_BEGIN)];
+			}
+		}
 	}
 
 	return event_desc;

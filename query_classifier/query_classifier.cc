@@ -1410,6 +1410,17 @@ char* skygw_get_canonical(
 			querystr = replace_literal(querystr, item->name, "?");
 		}
         } /*< for */
+
+    /** Check for SET ... options with no Item classes */
+    if (thd->free_list == NULL)
+    {
+        char *replaced = replace_quoted(querystr);
+        if (replaced)
+        {
+            free(querystr);
+            querystr = replaced;
+        }
+    }
 retblock:
         return querystr;
 }

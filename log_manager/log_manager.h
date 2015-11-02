@@ -25,18 +25,15 @@
 #define STRERROR_BUFLEN 512
 #endif
 
-typedef struct filewriter_st  filewriter_t;
-typedef struct logfile_st     logfile_t;
-typedef struct fnames_conf_st fnames_conf_t;
-typedef struct logmanager_st  logmanager_t;
-
-typedef enum {
-  BB_READY = 0x00,
-  BB_FULL,
-  BB_CLEARED
+typedef enum
+{
+    BB_READY = 0x00,
+    BB_FULL,
+    BB_CLEARED
 } blockbuf_state_t;
 
-typedef enum {
+typedef enum
+{
     LOGFILE_ERROR = 1,
     LOGFILE_FIRST = LOGFILE_ERROR,
     LOGFILE_MESSAGE = 2,
@@ -46,16 +43,20 @@ typedef enum {
 } logfile_id_t;
 
 
-typedef enum { FILEWRITER_INIT, FILEWRITER_RUN, FILEWRITER_DONE }
-    filewriter_state_t;
+typedef enum
+{
+    FILEWRITER_INIT,
+    FILEWRITER_RUN,
+    FILEWRITER_DONE
+} filewriter_state_t;
 
 /**
 * Thread-specific logging information.
 */
-typedef struct log_info_st
+typedef struct log_info
 {
-	size_t li_sesid;
-	int    li_enabled_logs;
+    size_t li_sesid;
+    int    li_enabled_logs;
 } log_info_t;
 
 #define LE LOGFILE_ERROR
@@ -67,36 +68,36 @@ typedef struct log_info_st
  * Check if specified log type is enabled in general or if it is enabled
  * for the current session.
  */
-#define LOG_IS_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) || 	\
-		(log_ses_count[id] > 0 && 				\
-		tls_log_info.li_enabled_logs & id)) ? true : false)
+#define LOG_IS_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||      \
+                             (log_ses_count[id] > 0 &&                  \
+                              tls_log_info.li_enabled_logs & id)) ? true : false)
 
 
-#define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||	\
-				log_ses_count[id] > 0) ? true : false)
+#define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||  \
+                                 log_ses_count[id] > 0) ? true : false)
 /**
  * Execute the given command if specified log is enabled in general or
  * if there is at least one session for whom the log is enabled.
  */
-#define LOGIF_MAYBE(id,cmd) if (LOG_MAY_BE_ENABLED(id))	\
-	{						\
-		cmd;					\
-	}
+#define LOGIF_MAYBE(id,cmd) if (LOG_MAY_BE_ENABLED(id)) \
+    {                                                   \
+        cmd;                                            \
+    }
 
 /**
  * Execute the given command if specified log is enabled in general or
  * if the log is enabled for the current session.
  */
-#define LOGIF(id,cmd) if (LOG_IS_ENABLED(id))	\
-	{					\
-		cmd;				\
-	}
+#define LOGIF(id,cmd) if (LOG_IS_ENABLED(id))   \
+    {                                           \
+        cmd;                                    \
+    }
 
 #if !defined(LOGIF)
 #define LOGIF(id,cmd) if (lm_enabled_logfiles_bitmask & id)     \
-	{                                                       \
-		cmd;                                            \
-	}
+    {                                                           \
+        cmd;                                                    \
+    }
 #endif
 
 /**
@@ -106,7 +107,13 @@ typedef struct log_info_st
  * RUN    Struct is valid for run-time checking.
  * DONE   means that possible memory allocations have been released.
  */
-typedef enum { UNINIT = 0, INIT, RUN, DONE } flat_obj_state_t;
+typedef enum
+{
+    UNINIT = 0,
+    INIT,
+    RUN,
+    DONE
+} flat_obj_state_t;
 
 /**
  * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].
@@ -116,6 +123,16 @@ typedef enum
     LOG_AUGMENT_WITH_FUNCTION = 1,
     LOG_AUGMENTATION_MASK     = (LOG_AUGMENT_WITH_FUNCTION)
 } log_augmentation_t;
+
+/**
+ * LOG_FLUSH_NO  Do not flush after writing.
+ * LOG_FLUSH_YES Flush after writing.
+ */
+enum log_flush
+{
+    LOG_FLUSH_NO  = 0,
+    LOG_FLUSH_YES = 1
+};
 
 EXTERN_C_BLOCK_BEGIN
 
@@ -128,14 +145,12 @@ void skygw_logmanager_exit(void);
  */
 void skygw_log_done(void);
 int  skygw_log_write_context(logfile_id_t id,
+                             enum log_flush flush,
                              const char* file, int line, const char* function,
                              const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
 void skygw_log_sync_all(void);
 int  skygw_log_rotate(logfile_id_t id);
-int  skygw_log_write_context_flush(logfile_id_t id,
-                                   const char* file, int line, const char* function,
-                                   const char* format, ...);
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
 void skygw_log_sync_all(void);
@@ -144,10 +159,10 @@ void logmanager_enable_syslog(int);
 void logmanager_enable_maxscalelog(int);
 
 #define skygw_log_write(id, format, ...)\
-    skygw_log_write_context(id, __FILE__, __LINE__, __FUNCTION__, format, ##__VA_ARGS__)
+    skygw_log_write_context(id, LOG_FLUSH_NO, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 #define skygw_log_write_flush(id, format, ...)\
-    skygw_log_write_context_flush(id, __FILE__, __LINE__, __FUNCTION__, format, ##__VA_ARGS__)
+    skygw_log_write_context(id, LOG_FLUSH_YES, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 /**
  * What augmentation if any should a logged message be augmented with.
@@ -166,5 +181,29 @@ const char* get_msg_suffix_default(void);
 const char* get_err_prefix_default(void);
 const char* get_err_suffix_default(void);
 const char* get_logpath_default(void);
+
+/**
+ * Helper, not to be called directly.
+ */
+#define MAXSCALE_MESSAGE_FLUSH(id, format, ...)\
+    do { if (LOG_IS_ENABLED(id)) { skygw_log_write_flush(id, format, ##__VA_ARGS__); } } while (false)
+
+/**
+ * Helper, not to be called directly.
+ */
+#define MAXSCALE_MESSAGE(id, format, ...)\
+    do { if (LOG_IS_ENABLED(id)) { skygw_log_write(id, format, ##__VA_ARGS__); } } while (false)
+
+/**
+ * Log an error, warning, notice, info, or debug  message.
+ *
+ * @param format The printf format of the message.
+ * @param ...    Arguments, depending on the format.
+ */
+#define MAXSCALE_ERROR(format, ...)   MAXSCALE_MESSAGE_FLUSH(LOGFILE_ERROR, format, ##__VA_ARGS__)
+#define MAXSCALE_WARNING(format, ...) MAXSCALE_MESSAGE(LOGFILE_ERROR, format, ##__VA_ARGS__)
+#define MAXSCALE_NOTICE(format, ...)  MAXSCALE_MESSAGE(LOGFILE_MESSAGE, format, ##__VA_ARGS__)
+#define MAXSCALE_INFO(format, ...)    MAXSCALE_MESSAGE(LOGFILE_TRACE, format, ##__VA_ARGS__)
+#define MAXSCALE_DEBUG(format, ...)   MAXSCALE_MESSAGE(LOGFILE_DEBUG, format, ##__VA_ARGS__)
 
 #endif /** LOG_MANAGER_H */
