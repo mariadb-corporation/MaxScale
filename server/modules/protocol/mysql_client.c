@@ -590,18 +590,11 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 					sizeof(protocol->scramble), 
 					username, 
 					stage1_hash);
-		}
-		else
-		{
-			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-				"%s: login attempt for user %s, user not "
-				"found.",
-				dcb->service->name, username)));
-		}
-	}
 
-	/* Do again the database check */
-	auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
+            /* Do again the database check */
+            auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
+		}
+    }
 
 	/* on succesful auth set user into dcb field */
 	if (auth_ret == 0) {
