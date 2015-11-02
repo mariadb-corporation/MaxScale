@@ -51,11 +51,11 @@ MariaDB [(none)]> grant SELECT on mysql.user to '*username*'@'*maxscalehost*';
 Additionally, GRANT SELECT on the mysql.db table and SHOW DATABASES privileges are required in order to load databases name and grants suitable for database name authorization.
 
 ```
-MariaDB [(none)]> GRANT SELECT ON mysql.db TO 'username'@'maxscalehost';
+MariaDB [(none)]> GRANT SELECT ON mysql.db TO '*username*'@'maxscalehost';
 
 **Query OK, 0 rows affected (0.00 sec)**
 
-MariaDB [(none)]> GRANT SHOW DATABASES ON *.* TO 'username'@'maxscalehost';
+MariaDB [(none)]> GRANT SHOW DATABASES ON *.* TO '*username*'@'maxscalehost';
 
 **Query OK, 0 rows affected (0.00 sec)**
 ```
@@ -76,7 +76,7 @@ If you wish to use two different usernames for the two different roles of monito
 
 ## Creating Your MaxScale Configuration
 
-MaxScale configuration is held in an ini file that is located in the file maxscale.cnf in the directory /etc. This is not created as part of the installation process and must be manually created. A template file does exist in the `/usr/share/maxscale` folder that can be use as a basis for your configuration.
+MaxScale reads its configuration from `/etc/maxscale.cnf`. This is not created as part of the installation process and must be manually created. A template file does exist in the `/usr/share/maxscale` folder that can be use as a basis for your configuration.
 
 A global, maxscale, section is included within every MaxScale configuration file; this is used to set the values of various MaxScale wide parameters, perhaps the most important of these is the number of threads that MaxScale will use to execute the code that forwards requests and handles responses for clients.
 
@@ -220,6 +220,7 @@ module=mysqlmon
 servers=dbserv1, dbserv2, dbserv3
 user=maxscale
 passwd=96F99AA1315BDC3604B006F427DD9484
+monitor_interval=10000
 ```
 
 As with the password definition in the server either plain text or encrypted passwords may be used.
@@ -255,7 +256,7 @@ or
 service maxscale start
 ```
 
-Check the error log in /var/log/lomaxscale/ to see if any errors are detected in the configuration file and to confirm MaxScale has been started. Also the maxadmin command may be used to confirm that MaxScale is running and the services, listeners etc have been correctly configured.
+Check the error log in /var/log/maxscale/ to see if any errors are detected in the configuration file and to confirm MaxScale has been started. Also the maxadmin command may be used to confirm that MaxScale is running and the services, listeners etc have been correctly configured.
 
 ```
 % maxadmin -pmariadb list services
