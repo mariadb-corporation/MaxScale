@@ -125,7 +125,7 @@ static  void             handleError(
         ROUTER           *instance,
         void             *router_session,
         GWBUF            *errbuf,
-        DCB              *backend_dcb,
+        DCB              *problem_dcb,
         error_action_t   action,
         bool             *succp);
 static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
@@ -837,12 +837,12 @@ clientReply(
 /**
  * Error Handler routine
  *
- * The routine will handle errors that occurred in backend writes.
+ * The routine will handle errors that occurred in writes.
  *
  * @param       instance        The router instance
  * @param       router_session  The router session
  * @param       message         The error message to reply
- * @param       backend_dcb     The backend DCB
+ * @param       problem_dcb     The DCB related to the error
  * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
  * @param	succp		Result of action: true if router can continue
  *
@@ -851,18 +851,18 @@ static void handleError(
     ROUTER           *instance,
     void             *router_session,
     GWBUF            *errbuf,
-    DCB              *backend_dcb,
+    DCB              *problem_dcb,
     error_action_t   action,
     bool             *succp)
 
 {
     DCB             *client_dcb;
-    SESSION         *session = backend_dcb->session;
+    SESSION         *session = problem_dcb->session;
     session_state_t sesstate;
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
 
     /** Don't handle same error twice on same DCB */
-    if (backend_dcb->dcb_errhandle_called)
+    if (problem_dcb->dcb_errhandle_called)
     {
         /** we optimistically assume that previous call succeed */
         *succp = true;
@@ -870,7 +870,7 @@ static void handleError(
     }
     else
     {
-        backend_dcb->dcb_errhandle_called = true;
+        problem_dcb->dcb_errhandle_called = true;
     }
     spinlock_acquire(&session->ses_lock);
     sesstate = session->state;
@@ -887,20 +887,15 @@ static void handleError(
         spinlock_release(&session->ses_lock);
     }
 
-    if (router_cli_ses && router_cli_ses->backend_dcb) {
-        if (backend_dcb != router_cli_ses->backend_dcb)
-        {
-            /* Linkages have gone badly wrong */
-            LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-                "Read Connection Router error in handleError: router client "
-                "session DCB %p is not null, but does not match backend DCB %p "
-                "either. \n",
-                router_cli_ses->backend_dcb,
-                backend_dcb)));
-        }
-        router_cli_ses->backend_dcb = NULL;
+    if (dcb_isclient(problem_dcb))
+    {
+        dcb_close(problem_dcb);
     }
-    dcb_close(backend_dcb);
+    else if (router_cli_ses && problem_dcb == router_cli_ses->backend_dcb)
+    {
+        router_cli_ses->backend_dcb = NULL;
+        dcb_close(problem_dcb);
+    }
 
     /** false because connection is not available anymore */
     *succp = false;
