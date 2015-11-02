@@ -1609,7 +1609,7 @@ int skygw_log_rotate(logfile_id_t id)
             logfile_t *lf = logmanager_get_logfile(lm, id);
             CHK_LOGFILE(lf);
 
-            MAXSCALE_NOTICE("Log rotation is called for %s.", lf->lf_full_file_name);
+            MXS_NOTICE("Log rotation is called for %s.", lf->lf_full_file_name);
 
             logfile_rotate(lf);
             err = 0;
