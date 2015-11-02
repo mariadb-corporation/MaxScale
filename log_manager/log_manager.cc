@@ -1284,68 +1284,63 @@ return_err:
 
 static bool logfile_set_enabled(logfile_id_t id, bool val)
 {
-    char*        logstr;
-    bool         oldval;
-    bool         succp = false;
-    int          err = 0;
-    logfile_t*   lf;
+    bool rval = false;
 
     CHK_LOGMANAGER(lm);
 
-    if (id < LOGFILE_FIRST || id > LOGFILE_LAST)
+    if (logmanager_is_valid_id(id))
     {
-        const char* errstr = "Invalid logfile id argument.";
-        /**
-         * invalid id, since we don't have logfile yet.
-         */
-        err = logmanager_write_log(LOGFILE_ERROR,
-                                   LOG_FLUSH_YES,
-                                   0,
-                                   strlen(errstr) + 1,
-                                   errstr);
-        if (err != 0)
+        if (use_stdout == 0)
         {
-            fprintf(stderr,
-                    "* Writing to logfile %s failed.\n",
-                    STRLOGID(LOGFILE_ERROR));
-        }
-        ss_dassert(false);
-        goto return_succp;
-    }
-    lf = &lm->lm_logfile[id];
-    CHK_LOGFILE(lf);
-    if (use_stdout == 0)
-    {
-        if (val)
-        {
-            logstr = strdup("---\tLogging to file is enabled\t--");
-        }
-        else
-        {
-            logstr = strdup("---\tLogging to file is disabled\t--");
+            logfile_t *lf = logmanager_get_logfile(lm, id);
+            lf->lf_enabled = val;
+
+            const char *name;
+
+            switch (id)
+            {
+            default:
+            case LOGFILE_ERROR:
+                name = "LOGFILE_ERROR";
+                break;
+
+            case LOGFILE_MESSAGE:
+                name = "LOGFILE_MESSAGE";
+                break;
+
+            case LOGFILE_TRACE:
+                name = "LOGFILE_TRACE";
+                break;
+
+            case LOGFILE_DEBUG:
+                name = "LOGFILE_DEBUG";
+                break;
+            }
+
+            const char FORMAT[] = "The logging of %s messages is %s.";
+            const char *action;
+
+            if (val)
+            {
+                action = "enabled";
+            }
+            else
+            {
+                action = "disabled";
+            }
+
+            MXS_NOTICE(FORMAT, name, action);
         }
 
-        oldval = lf->lf_enabled;
-        lf->lf_enabled = val;
-        err = logmanager_write_log(id,
-                                   LOG_FLUSH_YES,
-                                   0,
-                                   strlen(logstr) + 1,
-                                   logstr);
-        free(logstr);
+        rval = true;
     }
-    if (err != 0)
+    else
     {
-        lf->lf_enabled = oldval;
-        fprintf(stderr,
-                "logfile_set_enabled failed. Writing notification to logfile %s "
-                "failed.\n ",
-                STRLOGID(id));
-        goto return_succp;
+        MXS_ERROR("Invalid logfile id %d.", id);
+        ss_dassert(!true);
     }
-    succp = true;
-return_succp:
-    return succp;
+
+    return rval;
 }
 
 void skygw_log_set_augmentation(int bits)
