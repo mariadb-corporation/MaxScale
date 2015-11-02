@@ -608,11 +608,18 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 		dcb->user = strdup(client_data->user);
 	}
 	else
-	{
-	    skygw_log_write(LOGFILE_ERROR,
-		     "%s: login attempt for user '%s', authentication failed.",
-		     dcb->service->name, username);
-	}
+    {
+        skygw_log_write(LM, "%s: login attempt for user '%s', authentication failed.",
+                        dcb->service->name, username);
+        if (dcb->ipv4.sin_addr.s_addr == 0x0100007F &&
+            !dcb->service->localhost_match_wildcard_host)
+        {
+            skygw_log_write_flush(LM, "If you have a wildcard grant that covers"
+                                  " this address, try adding "
+                                  "'localhost_match_wildcard_host=true' for "
+                                  "service '%s'. ", dcb->service->name);
+        }
+    }
 
 	/* let's free the auth_token now */
 	if (auth_token) {

@@ -1489,16 +1489,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 				!dcb->service->localhost_match_wildcard_host) 
 			{
  			 	/* Skip the wildcard check and return 1 */
-				LOGIF(LE,
-					(skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Error : user %s@%s not found, try set "
-						"'localhost_match_wildcard_host=1' in "
-						"service definition of the configuration "
-						"file.",
-						key.user,
-						dcb->remote)));
-
 				break;
 			}
 
