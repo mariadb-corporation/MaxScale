@@ -1495,15 +1495,6 @@ CONFIG_PARAMETER	*p1, *p2;
 int
 config_threadcount()
 {
-	spinlock_acquire(&gateway.lock);
-	if(gateway.n_threads <= 0)
-	{
-		int nthr = get_processor_count();
-		skygw_log_write(LE, "Warning: Invalid value for 'threads': %d. Using default "
-			"number of %d threads.", gateway.n_threads, nthr);
-		gateway.n_threads = nthr;
-	}
-	spinlock_release(&gateway.lock);
 	return gateway.n_threads;
 }
 
@@ -1564,7 +1555,16 @@ handle_global_item(const char *name, const char *value)
 int i;
 	if (strcmp(name, "threads") == 0)
 	{
-		gateway.n_threads = atoi(value);
+		int thrcount = atoi(value);
+		if (thrcount > 0)
+		{
+			gateway.n_threads = thrcount;
+		}
+		else
+		{
+			skygw_log_write(LE, "Warning: Invalid value for 'threads': %d. Using default "
+							"number of %d threads.", thrcount, gateway.n_threads);
+		}
 	}
 	else if (strcmp(name, "non_blocking_polls") == 0)
 	{ 
@@ -1667,7 +1667,6 @@ global_defaults()
 {
 	uint8_t mac_addr[6]="";
 	struct utsname uname_data;
-	spinlock_init(&gateway.lock);
 	gateway.n_threads = get_processor_count();
 	gateway.n_nbpoll = DEFAULT_NBPOLLS;
 	gateway.pollsleep = DEFAULT_POLLSLEEP;

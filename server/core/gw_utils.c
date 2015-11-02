@@ -235,8 +235,14 @@ struct hostent		*hp;
 long get_processor_count()
 {
     long processors = 1;
-#ifdef _SC_NPROCESSORS_CONF
-    processors = sysconf(_SC_NPROCESSORS_CONF);
+#ifdef _SC_NPROCESSORS_ONLN
+    if ((processors = sysconf(_SC_NPROCESSORS_ONLN)) <= 0)
+    {
+        skygw_log_write(LE, "Unable to establish the number of available cores. Defaulting to 4.");
+        processors = 4;
+    }
+#else
+#error _SC_NPROCESSORS_ONLN not available.
 #endif
     return processors;
 }
