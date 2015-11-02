@@ -41,9 +41,6 @@
 /** Size of the hashtable used to store ignored databases */
 #define SCHEMAROUTER_HASHSIZE 100
 
-/** Size of the offset vector used for regex matching */
-#define SCHEMA_OVEC_SIZE 24
-
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
 	MODULE_BETA_RELEASE,
@@ -380,13 +377,11 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
             }
             else
             {
-                const int ovec_count = SCHEMA_OVEC_SIZE;
-                int ovector[ovec_count];
-
                 if (!(hashtable_fetch(rses->router->ignored_dbs, data) ||
                       (rses->router->ignore_regex &&
-                       pcre_exec(rses->router->ignore_regex, NULL, data,
-                                 strlen(data), 0, 0, ovector, ovec_count) >= 0)))
+                       pcre2_match(rses->router->ignore_regex, (PCRE2_SPTR)data,
+                                   PCRE2_ZERO_TERMINATED, 0, 0,
+                                   rses->router->ignore_match_data, NULL) >= 0)))
                 {
                     duplicate_found = true;
                     skygw_log_write(LE, "Error: Database '%s' found on servers '%s' and '%s' for user %s@%s.",
@@ -801,19 +796,36 @@ createInstance(SERVICE *service, char **options)
 
     if((param = config_get_param(conf,"ignore_databases_regex")))
 	{
-        const char* errptr;
-        int erroffset;
-        pcre* re = pcre_compile(param->value, 0, &errptr, &erroffset, NULL);
+        int errcode;
+        PCRE2_SIZE erroffset;
+        pcre2_code* re = pcre2_compile((PCRE2_SPTR)param->value, PCRE2_ZERO_TERMINATED, 0,
+                                       &errcode, &erroffset, NULL);
 
         if(re == NULL)
         {
+            PCRE2_UCHAR errbuf[512];
+            pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
             skygw_log_write(LE, "Error: Regex compilation failed at %d for regex '%s': %s",
-                            erroffset, param->value, errptr);
+                            erroffset, param->value, errbuf);
             hashtable_free(router->ignored_dbs);
             free(router);
             return NULL;
         }
+
+        pcre2_match_data* match_data = pcre2_match_data_create_from_pattern(re, NULL);
+
+        if (match_data == NULL)
+        {
+            skygw_log_write(LE, "Error: PCRE2 match data creation failed. This"
+                " is most likely caused by a lack of available memory.");
+            pcre2_code_free(re);
+            hashtable_free(router->ignored_dbs);
+            free(router);
+            return NULL;
+        }
+
         router->ignore_regex = re;
+        router->ignore_match_data = match_data;
 	}
 
     if((param = config_get_param(conf,"ignore_databases")))

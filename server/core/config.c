@@ -75,6 +75,9 @@
 #include <sys/utsname.h>
 #include <pcre.h>
 #include <dbusers.h>
+#include <gw.h>
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 /** According to the PCRE manual, this should be a multiple of 3 */
 #define MAXSCALE_PCRE_BUFSZ 24
@@ -95,12 +98,14 @@ static	int	handle_feedback_item(const char *, const char *);
 static	void	global_defaults();
 static	void	feedback_defaults();
 static	void	check_config_objects(CONFIG_CONTEXT *context);
+static int maxscale_getline(char** dest, int* size, FILE* file);
 int	config_truth_value(char *str);
 bool	isInternalService(char *router);
 int	config_get_ifaddr(unsigned char *output);
 int	config_get_release_string(char* release);
 FEEDBACK_CONF * config_get_feedback_data();
 void config_add_param(CONFIG_CONTEXT*,char*,char*);
+bool config_has_duplicate_sections(const char* config);
 static	char		*config_file = NULL;
 static	GATEWAY_CONF	gateway;
 static	FEEDBACK_CONF	feedback;
@@ -274,6 +279,10 @@ config_load(char *file)
 CONFIG_CONTEXT	config;
 int		rval, ini_rval;
 
+    if (config_has_duplicate_sections(file))
+    {
+        return 0;
+    }
 	MYSQL *conn;
 	conn = mysql_init(NULL);
 	if (conn) {
@@ -355,6 +364,11 @@ int		rval;
 
 	if (!config_file)
 		return 0;
+
+    if (config_has_duplicate_sections(config_file))
+    {
+        return 0;
+    }
 
 	if (gateway.version_string)
 		free(gateway.version_string);
@@ -1541,7 +1555,16 @@ handle_global_item(const char *name, const char *value)
 int i;
 	if (strcmp(name, "threads") == 0)
 	{
-		gateway.n_threads = atoi(value);
+		int thrcount = atoi(value);
+		if (thrcount > 0)
+		{
+			gateway.n_threads = thrcount;
+		}
+		else
+		{
+			skygw_log_write(LE, "Warning: Invalid value for 'threads': %s.", value);
+			return 0;
+		}
 	}
 	else if (strcmp(name, "non_blocking_polls") == 0)
 	{ 
@@ -1644,7 +1667,7 @@ global_defaults()
 {
 	uint8_t mac_addr[6]="";
 	struct utsname uname_data;
-	gateway.n_threads = 1;
+	gateway.n_threads = get_processor_count();
 	gateway.n_nbpoll = DEFAULT_NBPOLLS;
 	gateway.pollsleep = DEFAULT_POLLSLEEP;
     gateway.auth_conn_timeout = DEFAULT_AUTH_CONNECT_TIMEOUT;
@@ -2628,4 +2651,138 @@ void config_add_param(CONFIG_CONTEXT* obj, char* key,char* value)
 GATEWAY_CONF* config_get_global_options()
 {
     return &gateway;
+}
+
+/**
+ * Check if sections are defined multiple times in the configuration file.
+ * @param config Path to the configuration file
+ * @return True if duplicate sections were found or an error occurred
+ */
+bool config_has_duplicate_sections(const char* config)
+{
+    bool rval = false;
+    const int table_size = 10;
+    int errcode;
+    PCRE2_SIZE erroffset;
+    HASHTABLE *hash = hashtable_alloc(table_size, simple_str_hash, strcmp);
+    pcre2_code *re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED,
+                                   0, &errcode, &erroffset, NULL);
+    pcre2_match_data *mdata;
+    int size = 1024;
+    char *buffer = malloc(size * sizeof(char));
+
+    if (buffer && hash && re &&
+        (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
+    {
+        hashtable_memory_fns(hash, (HASHMEMORYFN) strdup, NULL,
+                             (HASHMEMORYFN) free, NULL);
+        FILE* file = fopen(config, "r");
+
+        if (file)
+        {
+            while (maxscale_getline(&buffer, &size, file) > 0)
+            {
+                if (pcre2_match(re, (PCRE2_SPTR) buffer,
+                                PCRE2_ZERO_TERMINATED, 0, 0,
+                                mdata, NULL) > 0)
+                {
+                    /**
+                     * Neither of the PCRE2 calls will fail since we know the pattern
+                     * beforehand and we allocate enough memory from the stack
+                     */
+                    PCRE2_SIZE len;
+                    pcre2_substring_length_bynumber(mdata, 1, &len);
+                    len += 1; /** one for the null terminator */
+                    PCRE2_UCHAR section[len];
+                    pcre2_substring_copy_bynumber(mdata, 1, section, &len);
+
+                    if (hashtable_add(hash, section, "") == 0)
+                    {
+                        skygw_log_write(LE, "Error: Duplicate section found: %s",
+                                        section);
+                        rval = true;
+                    }
+                }
+            }
+            fclose(file);
+        }
+        else
+        {
+            char errbuf[STRERROR_BUFLEN];
+            skygw_log_write(LE, "Error: Failed to open file '%s': %s", config,
+                            strerror_r(errno, errbuf, sizeof(errbuf)));
+            rval = true;
+        }
+    }
+    else
+    {
+        skygw_log_write(LE, "Error: Failed to allocate enough memory when checking"
+                        " for duplicate sections in configuration file.");
+        rval = true;
+    }
+
+    hashtable_free(hash);
+    pcre2_code_free(re);
+    pcre2_match_data_free(mdata);
+    free(buffer);
+    return rval;
+}
+
+
+/**
+ * Read from a FILE pointer until a newline character or the end of the file is found.
+ * The provided buffer will be reallocated if it is too small to store the whole
+ * line. The size after the reallocation will be stored in @c size. The read line
+ * will be stored in @c dest and it will always be null terminated. The newline
+ * character will not be copied into the buffer.
+ * @param dest Pointer to a buffer of at least @c size bytes
+ * @param size Size of the buffer
+ * @param file A valid file stream
+ * @return When a complete line was successfully read the function returns 1. If
+ * the end of the file was reached before any characters were read the return value
+ * will be 0. If the provided buffer could not be reallocated to store the complete
+ * line the original size will be retained, everything read up to this point
+ * will be stored in it as a null terminated string and -1 will be returned.
+ */
+int maxscale_getline(char** dest, int* size, FILE* file)
+{
+    char* destptr = *dest;
+    int offset = 0;
+
+    if (feof(file))
+    {
+        return 0;
+    }
+
+    while (true)
+    {
+        if (*size <= offset)
+        {
+            char* tmp = (char*) realloc(destptr, *size * 2);
+            if (tmp)
+            {
+                destptr = tmp;
+                *size *= 2;
+            }
+            else
+            {
+                skygw_log_write(LE, "Error: Failed to reallocate memory from %d"
+                                " bytes to %d bytes when reading from file.",
+                                *size, *size * 2);
+                destptr[offset - 1] = '\0';
+                *dest = destptr;
+                return -1;
+            }
+        }
+
+        if ((destptr[offset] = fgetc(file)) == '\n' || feof(file))
+        {
+            destptr[offset] = '\0';
+            break;
+        }
+        offset++;
+    }
+
+    *dest = destptr;
+    return 1;
 }

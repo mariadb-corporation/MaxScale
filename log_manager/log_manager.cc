@@ -287,33 +287,13 @@ static bool logmanager_register(bool writep);
 static void logmanager_unregister(void);
 static bool logmanager_init_nomutex(int argc, char* argv[]);
 static void logmanager_done_nomutex(void);
+static bool logmanager_is_valid_id(logfile_id_t id);
 
-enum log_spread_down
-{
-    LOG_SPREAD_DOWN_NO = 0,
-    LOG_SPREAD_DOWN_YES = 1
-};
-
-enum log_use_valist
-{
-    LOG_USE_VALIST_NO = 0,
-    LOG_USE_VALIST_YES = 1
-};
-
-enum log_rotate
-{
-    LOG_ROTATE_NO = 0,
-    LOG_ROTATE_YES = 1
-};
-
-static int logmanager_write_log(logfile_id_t         id,
-                                enum log_flush       flush,
-                                enum log_use_valist  use_valist,
-                                enum log_spread_down spread_down,
-                                enum log_rotate      rotate,
-                                size_t               len,
-                                const char*          str,
-                                va_list              valist);
+static int logmanager_write_log(logfile_id_t    id,
+                                enum log_flush  flush,
+                                size_t          prefix_len,
+                                size_t          len,
+                                const char*     str);
 
 static blockbuf_t* blockbuf_init(logfile_id_t id);
 static void blockbuf_node_done(void* bb_data);
@@ -420,10 +400,7 @@ static bool logmanager_init_nomutex(int argc, char* argv[])
 
     lm->lm_enabled_logfiles |= LOGFILE_ERROR;
     lm->lm_enabled_logfiles |= LOGFILE_MESSAGE;
-#if defined(SS_DEBUG)
-    lm->lm_enabled_logfiles |= LOGFILE_TRACE;
-    lm->lm_enabled_logfiles |= LOGFILE_DEBUG;
-#endif
+
     fn = &lm->lm_fnames_conf;
     fw = &lm->lm_filewriter;
     fn->fn_state  = UNINIT;
@@ -640,6 +617,42 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
 
 
 /**
+ * Returns true if the id log file id is valid.
+ *
+ * NOTE: Log manager is assumed to exist.
+ *
+ * @param id The id of a log file.
+ *
+ */
+
+static bool logmanager_is_valid_id(logfile_id_t id)
+{
+    bool rval = false;
+
+    CHK_LOGMANAGER(lm);
+
+    if ((id >= LOGFILE_FIRST) && (id <= LOGFILE_LAST))
+    {
+        rval = true;
+    }
+    else
+    {
+        const char ERRSTR[] = "Invalid logfile id argument.";
+
+        int err = logmanager_write_log(LOGFILE_ERROR,
+                                       LOG_FLUSH_YES,
+                                       0, sizeof(ERRSTR), ERRSTR);
+
+        if (err != 0)
+        {
+            fprintf(stderr, "Writing to logfile %s failed.\n", STRLOGID(LOGFILE_ERROR));
+        }
+    }
+
+    return rval;
+}
+
+/**
  * Finds write position from block buffer for log string and writes there.
  *
  * Parameters:
@@ -647,27 +660,20 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
  * @param id            logfile object identifier
  * @param flush         indicates whether log string must be written to disk
  *                      immediately
- * @param use_valist    does write involve formatting of the string and use of
- *                      valist argument
- * @param spread_down   if true, log string is spread to all logs having
- *                      larger id
  * @param rotate        if set, closes currently open log file and opens a
  *                      new one
- * @param str_len       length of formatted string
+ * @param prefix_len    length of prefix to be stripped away when syslogging
+ * @param str_len       length of formatted string (including terminating NULL).
  * @param str           string to be written to log
- * @param valist        variable-length argument list for formatting the string
  *
  * @return 0 if succeed, -1 otherwise
  *
  */
-static int logmanager_write_log(logfile_id_t         id,
-                                enum log_flush       flush,
-                                enum log_use_valist  use_valist,
-                                enum log_spread_down spread_down,
-                                enum log_rotate      rotate,
-                                size_t               str_len,
-                                const char*          str,
-                                va_list              valist)
+static int logmanager_write_log(logfile_id_t    id,
+                                enum log_flush  flush,
+                                size_t          prefix_len,
+                                size_t          str_len,
+                                const char*     str)
 {
     logfile_t*   lf;
     char*        wp;
@@ -679,45 +685,24 @@ static int logmanager_write_log(logfile_id_t         id,
 
     CHK_LOGMANAGER(lm);
 
-    if (id < LOGFILE_FIRST || id > LOGFILE_LAST)
+    if (!logmanager_is_valid_id(id))
     {
-        const char* errstr = "Invalid logfile id argument.";
-        /**
-         * invalid id, since we don't have logfile yet.
-         */
-        err = logmanager_write_log(LOGFILE_ERROR,
-                                   LOG_FLUSH_YES,
-                                   LOG_USE_VALIST_NO,
-                                   LOG_SPREAD_DOWN_NO,
-                                   LOG_ROTATE_NO,
-                                   strlen(errstr) + 1,
-                                   errstr,
-                                   valist);
-        if (err != 0)
-        {
-            fprintf(stderr,
-                    "Writing to logfile %s failed.\n",
-                    STRLOGID(LOGFILE_ERROR));
-        }
         err = -1;
         ss_dassert(false);
         goto return_err;
     }
-    lf = &lm->lm_logfile[id];
+    // All messages are now logged to the error log file.
+    lf = &lm->lm_logfile[LOGFILE_ERROR];
     CHK_LOGFILE(lf);
 
     /**
-     * When string pointer is NULL, operation is either flush or rotate.
+     * When string pointer is NULL, operation is flush.
      */
     if (str == NULL)
     {
         if (flush)
         {
             logfile_flush(lf); /*< wakes up file writer */
-        }
-        else if (rotate)
-        {
-            logfile_rotate(lf); /*< wakes up file writer */
         }
     }
     else
@@ -793,7 +778,8 @@ static int logmanager_write_log(logfile_id_t         id,
         /** Book space for log string from buffer */
         if (do_maxscalelog)
         {
-            wp = blockbuf_get_writepos(&bb, id, safe_str_len, flush);
+            // All messages are now logged to the error log file.
+            wp = blockbuf_get_writepos(&bb, LOGFILE_ERROR, safe_str_len, flush);
         }
         else
         {
@@ -837,20 +823,10 @@ static int logmanager_write_log(logfile_id_t         id,
          * Write next string to overwrite terminating null character
          * of the timestamp string.
          */
-        if (use_valist)
-        {
-            vsnprintf(wp + timestamp_len + sesid_str_len,
-                      safe_str_len - timestamp_len - sesid_str_len,
-                      str,
-                      valist);
-        }
-        else
-        {
-            snprintf(wp + timestamp_len + sesid_str_len,
-                     safe_str_len-timestamp_len-sesid_str_len,
-                     "%s",
-                     str);
-        }
+        snprintf(wp + timestamp_len + sesid_str_len,
+                 safe_str_len-timestamp_len-sesid_str_len,
+                 "%s",
+                 str);
 
         /** Add an ellipsis to an overflowing message to signal truncation. */
         if (overflow && safe_str_len > 4)
@@ -860,14 +836,17 @@ static int logmanager_write_log(logfile_id_t         id,
         /** write to syslog */
         if (lf->lf_write_syslog)
         {
+            // Strip away the timestamp and the prefix (e.g. "[Error]: ").
+            const char *message = wp + timestamp_len + prefix_len;
+
             switch (id)
             {
             case LOGFILE_ERROR:
-                syslog(LOG_ERR, "%s", wp + timestamp_len);
+                syslog(LOG_ERR, "%s", message);
                 break;
 
             case LOGFILE_MESSAGE:
-                syslog(LOG_NOTICE, "%s", wp + timestamp_len);
+                syslog(LOG_NOTICE, "%s", message);
                 break;
 
             default:
@@ -889,61 +868,6 @@ static int logmanager_write_log(logfile_id_t         id,
         {
             free(wp);
         }
-        /**
-         * disabled because cross-blockbuffer locking either causes deadlock
-         * or run out of memory blocks.
-         */
-        if (spread_down && false)
-        {
-            /**
-             * Write to target log. If spread_down == true, then
-             * write also to all logs with greater logfile id.
-             * LOGFILE_ERROR   = 1,
-             * LOGFILE_MESSAGE = 2,
-             * LOGFILE_TRACE   = 4,
-             * LOGFILE_DEBUG   = 8
-             *
-             * So everything written to error log will appear in
-             * message, trace and debuglog. Messages will be
-             * written in trace and debug log.
-             */
-            for (i = (id << 1); i <= LOGFILE_LAST; i <<= 1)
-            {
-                /** pointer to write buffer of larger-id log */
-                char* wp_c;
-
-                /**< Check if particular log is enabled */
-                if (!(lm->lm_enabled_logfiles & i))
-                {
-                    continue;
-                }
-                /**
-                 * Seek write position and register to block
-                 * buffer. Then print formatted string to
-                 * write position.
-                 */
-                wp_c = blockbuf_get_writepos(&bb_c,
-                                             (logfile_id_t)i,
-                                             timestamp_len - 1 + str_len,
-                                             flush);
-                /**
-                 * Copy original string from block buffer to
-                 * other logs' block buffers.
-                 */
-                snprintf(wp_c, timestamp_len + str_len, "%s", wp);
-
-                /** remove double line feed */
-                if (wp_c[timestamp_len - 1 + str_len - 2] == '\n')
-                {
-                    wp_c[timestamp_len - 1 + str_len - 2] = ' ';
-                }
-                wp_c[timestamp_len - 1 + str_len - 1] = '\n';
-
-                /** lock-free unregistration, includes flush if
-                 * bb_state == BB_FULL */
-                blockbuf_unregister(bb_c);
-            }
-        } /* if (spread_down) */
     } /* if (str == NULL) */
 
 return_err:
@@ -1360,75 +1284,63 @@ return_err:
 
 static bool logfile_set_enabled(logfile_id_t id, bool val)
 {
-    char*        logstr;
-    va_list      notused;
-    bool         oldval;
-    bool         succp = false;
-    int          err = 0;
-    logfile_t*   lf;
+    bool rval = false;
 
     CHK_LOGMANAGER(lm);
 
-    if (id < LOGFILE_FIRST || id > LOGFILE_LAST)
+    if (logmanager_is_valid_id(id))
     {
-        const char* errstr = "Invalid logfile id argument.";
-        /**
-         * invalid id, since we don't have logfile yet.
-         */
-        err = logmanager_write_log(LOGFILE_ERROR,
-                                   LOG_FLUSH_YES,
-                                   LOG_USE_VALIST_NO,
-                                   LOG_SPREAD_DOWN_NO,
-                                   LOG_ROTATE_NO,
-                                   strlen(errstr) + 1,
-                                   errstr,
-                                   notused);
-        if (err != 0)
+        if (use_stdout == 0)
         {
-            fprintf(stderr,
-                    "* Writing to logfile %s failed.\n",
-                    STRLOGID(LOGFILE_ERROR));
-        }
-        ss_dassert(false);
-        goto return_succp;
-    }
-    lf = &lm->lm_logfile[id];
-    CHK_LOGFILE(lf);
-    if (use_stdout == 0)
-    {
-        if (val)
-        {
-            logstr = strdup("---\tLogging to file is enabled\t--");
-        }
-        else
-        {
-            logstr = strdup("---\tLogging to file is disabled\t--");
+            logfile_t *lf = logmanager_get_logfile(lm, id);
+            lf->lf_enabled = val;
+
+            const char *name;
+
+            switch (id)
+            {
+            default:
+            case LOGFILE_ERROR:
+                name = "LOGFILE_ERROR";
+                break;
+
+            case LOGFILE_MESSAGE:
+                name = "LOGFILE_MESSAGE";
+                break;
+
+            case LOGFILE_TRACE:
+                name = "LOGFILE_TRACE";
+                break;
+
+            case LOGFILE_DEBUG:
+                name = "LOGFILE_DEBUG";
+                break;
+            }
+
+            const char FORMAT[] = "The logging of %s messages is %s.";
+            const char *action;
+
+            if (val)
+            {
+                action = "enabled";
+            }
+            else
+            {
+                action = "disabled";
+            }
+
+            MXS_NOTICE(FORMAT, name, action);
         }
 
-        oldval = lf->lf_enabled;
-        lf->lf_enabled = val;
-        err = logmanager_write_log(id,
-                                   LOG_FLUSH_YES,
-                                   LOG_USE_VALIST_NO,
-                                   LOG_SPREAD_DOWN_NO,
-                                   LOG_ROTATE_NO,
-                                   strlen(logstr) + 1,
-                                   logstr,
-                                   notused);
-        free(logstr);
+        rval = true;
     }
-    if (err != 0)
+    else
     {
-        lf->lf_enabled = oldval;
-        fprintf(stderr,
-                "logfile_set_enabled failed. Writing notification to logfile %s "
-                "failed.\n ",
-                STRLOGID(id));
-        goto return_succp;
+        MXS_ERROR("Invalid logfile id %d.", id);
+        ss_dassert(!true);
     }
-    succp = true;
-return_succp:
-    return succp;
+
+    return rval;
 }
 
 void skygw_log_set_augmentation(int bits)
@@ -1448,7 +1360,9 @@ int skygw_log_get_augmentation()
  * @param file       The name of the file where the logging was made.
  * @param int        The line where the logging was made.
  * @param function   The function where the logging was made.
- * @param str        String or printf format string.
+ * @param prefix_len The length of the text to be stripped away when syslogging.
+ * @param len        Length of str, including terminating NULL.
+ * @param str        String
  * @param flush      Whether the message should be flushed.
  *
  * @return 0 if the logging to at least one log succeeded.
@@ -1458,6 +1372,7 @@ static int log_write(logfile_id_t   id,
                      const char*    file,
                      int            line,
                      const char*    function,
+                     size_t         prefix_len,
                      size_t         len,
                      const char*    str,
                      enum log_flush flush)
@@ -1468,49 +1383,8 @@ static int log_write(logfile_id_t   id,
     {
         CHK_LOGMANAGER(lm);
 
-        const char* format;
-
-        if (log_augmentation == LOG_AUGMENT_WITH_FUNCTION)
-        {
-            static const char function_format[] = "%s [%s]";
-
-            format = function_format;
-
-            len += sizeof(function_format); // A little bit more than needed, but won't hurt.
-            assert(function);
-            len += strlen(function);
-        }
-        else
-        {
-            static const char default_format[] = "%s";
-
-            format = default_format;
-
-            len += sizeof(default_format);  // A little bit more than needed, but won't hurt.
-        }
-
-        len += 1; // For the trailing NULL.
-
-        char message[len];
-
-        if (log_augmentation == LOG_AUGMENT_WITH_FUNCTION)
-        {
-            len = snprintf(message, sizeof(message), format, str, function);
-        }
-        else
-        {
-            len = snprintf(message, sizeof(message), format, str);
-        }
-
-        assert(len >= 0);
-
         int attempts = 0;
         int successes = 0;
-
-        /**
-         * Add one for line feed.
-         */
-        len += sizeof(char);
 
         for (int i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
         {
@@ -1522,14 +1396,10 @@ static int log_write(logfile_id_t   id,
             {
                 ++attempts;
 
-                va_list valist; // Not used
-
                 if (logmanager_write_log((logfile_id_t)i,
                                          flush,
-                                         LOG_USE_VALIST_NO,
-                                         LOG_SPREAD_DOWN_YES,
-                                         LOG_ROTATE_NO,
-                                         len, message, valist) == 0)
+                                         prefix_len,
+                                         len, str) == 0)
                 {
                     ++successes;
                 }
@@ -1552,6 +1422,55 @@ static int log_write(logfile_id_t   id,
     return rv;
 }
 
+typedef struct log_prefix
+{
+    const char* text; // The prefix, e.g. "[Error]: "
+    int len;          // The length of the prefix without the trailing NULL.
+} log_prefix_t;
+
+const char PREFIX_ERROR[]  = "[Error] : ";
+const char PREFIX_NOTICE[] = "[Notice]: ";
+const char PREFIX_INFO[]   = "[Info]  : ";
+const char PREFIX_DEBUG[]  = "[Debug] : ";
+
+static log_prefix_t logfile_to_prefix(logfile_id_t id)
+{
+    log_prefix_t prefix;
+
+    // The id can be a bitmask, hence we choose the most "severe" one.
+    if (id & LOGFILE_ERROR)
+    {
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+    }
+    else if (id & LOGFILE_MESSAGE)
+    {
+        prefix.text = PREFIX_NOTICE;
+        prefix.len = sizeof(PREFIX_NOTICE);
+    }
+    else if (id & LOGFILE_TRACE)
+    {
+        prefix.text = PREFIX_INFO;
+        prefix.len = sizeof(PREFIX_INFO);
+    }
+    else if (id & LOGFILE_DEBUG)
+    {
+        prefix.text = PREFIX_DEBUG;
+        prefix.len = sizeof(PREFIX_DEBUG);
+    }
+    else
+    {
+        assert(!true);
+
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+    }
+
+    --prefix.len; // Remove trailing NULL.
+
+    return prefix;
+}
+
 int skygw_log_write_context(logfile_id_t   id,
                             enum log_flush flush,
                             const char*    file,
@@ -1567,23 +1486,69 @@ int skygw_log_write_context(logfile_id_t   id,
      * Find out the length of log string (to be formatted str).
      */
     va_start(valist, str);
-    int len = vsnprintf(NULL, 0, str, valist);
+    int message_len = vsnprintf(NULL, 0, str, valist);
     va_end(valist);
 
-    if (len >= 0)
+    if (message_len >= 0)
     {
-        if (len > MAX_LOGSTRLEN)
+        log_prefix_t prefix = logfile_to_prefix(id);
+
+        static const char FORMAT_FUNCTION[] = "(%s): ";
+
+        int augmentation_len = 0;
+
+        switch (log_augmentation)
         {
-            len = MAX_LOGSTRLEN;
+        case LOG_AUGMENT_WITH_FUNCTION:
+            augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
+            augmentation_len -= 2; // Remove the %s
+            augmentation_len += strlen(function);
+            break;
+
+        default:
+            break;
         }
 
-        char message[len + 1];
+        int buffer_len = prefix.len + augmentation_len + message_len + 1; // Trailing NULL
+
+        if (buffer_len > MAX_LOGSTRLEN)
+        {
+            message_len -= (buffer_len - MAX_LOGSTRLEN);
+            buffer_len = MAX_LOGSTRLEN;
+
+            assert(prefix.len + augmentation_len + message_len + 1 == buffer_len);
+        }
+
+        char buffer[buffer_len];
+
+        char *prefix_text = buffer;
+        char *augmentation_text = buffer + prefix.len;
+        char *message_text = buffer + prefix.len + augmentation_len;
+
+        strcpy(prefix_text, prefix.text);
+
+        if (augmentation_len)
+        {
+            int len = 0;
+
+            switch (log_augmentation)
+            {
+            case LOG_AUGMENT_WITH_FUNCTION:
+                len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
+                break;
+
+            default:
+                assert(!true);
+            }
+
+            assert(len == augmentation_len);
+        }
 
         va_start(valist, str);
-        vsnprintf(message, sizeof(message), str, valist);
+        vsnprintf(message_text, message_len + 1, str, valist);
         va_end(valist);
 
-        err = log_write(id, file, line, function, len, message, flush);
+        err = log_write(id, file, line, function, prefix.len, buffer_len, buffer, flush);
 
         if (err != 0)
         {
@@ -1597,32 +1562,28 @@ int skygw_log_write_context(logfile_id_t   id,
 
 int skygw_log_flush(logfile_id_t id)
 {
-    int err = 0;
-    va_list valist; /**< Dummy, must be present but it is not processed */
+    int err = -1;
 
-    if (!logmanager_register(false))
+    if (logmanager_register(false))
     {
-        ss_dfprintf(stderr,
-                    "Can't register to logmanager, nothing to flush\n");
-        goto return_err;
-    }
-    CHK_LOGMANAGER(lm);
-    err = logmanager_write_log(id,
-                               LOG_FLUSH_YES,
-                               LOG_USE_VALIST_NO,
-                               LOG_SPREAD_DOWN_NO,
-                               LOG_ROTATE_NO,
-                               0, NULL, valist);
+        CHK_LOGMANAGER(lm);
 
-    if (err != 0)
+        if (logmanager_is_valid_id(id))
+        {
+            logfile_t *lf = logmanager_get_logfile(lm, id);
+            CHK_LOGFILE(lf);
+
+            logfile_flush(lf);
+            err = 0;
+        }
+
+        logmanager_unregister();
+    }
+    else
     {
-        fprintf(stderr, "skygw_log_flush failed.\n");
-        goto return_unregister;
+        ss_dfprintf(stderr, "Can't register to logmanager, flushing failed.\n");
     }
 
-return_unregister:
-    logmanager_unregister();
-return_err:
     return err;
 }
 
@@ -1632,47 +1593,29 @@ return_err:
  */
 int skygw_log_rotate(logfile_id_t id)
 {
-    int        err = 0;
-    logfile_t* lf;
-    va_list    valist; /**< Dummy, must be present but it is not processed */
+    int err = -1;
 
-    if (!logmanager_register(false))
+    if (logmanager_register(false))
     {
-        ss_dfprintf(stderr, "Can't register to logmanager, rotating failed\n");
-        goto return_err;
+        CHK_LOGMANAGER(lm);
+
+        if (logmanager_is_valid_id(id))
+        {
+            logfile_t *lf = logmanager_get_logfile(lm, id);
+            CHK_LOGFILE(lf);
+
+            MXS_NOTICE("Log rotation is called for %s.", lf->lf_full_file_name);
+
+            logfile_rotate(lf);
+            err = 0;
+        }
+
+        logmanager_unregister();
     }
-    CHK_LOGMANAGER(lm);
-    lf = &lm->lm_logfile[id];
-
-    LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-                               "Log rotation is called for %s.",
-                               lf->lf_full_file_name)));
-
-    err = logmanager_write_log(id,
-                               LOG_FLUSH_NO,
-                               LOG_USE_VALIST_NO,
-                               LOG_SPREAD_DOWN_NO,
-                               LOG_ROTATE_YES,
-                               0, NULL, valist);
-
-    if (err != 0)
+    else
     {
-        LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-                                   "Log file rotation failed for file %s.",
-                                   lf->lf_full_file_name)));
-
-        fprintf(stderr, "skygw_log_rotate failed.\n");
-        goto return_unregister;
+        ss_dfprintf(stderr, "Can't register to logmanager, rotating failed.\n");
     }
-
-return_unregister:
-    LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-                                     "File %s use for log writing..",
-                                     lf->lf_full_file_name)));
-
-    logmanager_unregister();
-
-return_err:
 
     return err;
 }

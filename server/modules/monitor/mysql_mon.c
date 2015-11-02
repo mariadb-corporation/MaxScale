@@ -51,8 +51,8 @@
  * @endverbatim
  */
 
-
 #include <mysqlmon.h>
+#include <modutil.h>
 
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
@@ -81,7 +81,10 @@ static void set_master_heartbeat(MYSQL_MONITOR *, MONITOR_SERVERS *);
 static void set_slave_heartbeat(MONITOR *, MONITOR_SERVERS *);
 static int add_slave_to_master(long *, int, long);
 bool isMySQLEvent(monitor_event_t event);
+void check_maxscale_schema_replication(MONITOR *monitor);
 static bool report_version_err = true;
+static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
+
 static MONITOR_OBJECT MyObject = { 
 	startMonitor, 
 	stopMonitor, 
@@ -219,6 +222,7 @@ startMonitor(void *arg, void* opt)
     {
 	memset(handle->events,true,sizeof(handle->events));
     }
+
     handle->tid = (THREAD)thread_start(monitorMain, monitor);
     return handle;
 }
@@ -734,6 +738,7 @@ int num_servers=0;
 MONITOR_SERVERS *root_master = NULL;
 size_t nrounds = 0;
 int log_no_master = 1;
+bool heartbeat_checked = false;
 
 spinlock_acquire(&mon->lock);
 handle = (MYSQL_MONITOR *)mon->handle;
@@ -762,6 +767,13 @@ detect_stale_master = handle->detectStaleMaster;
 		}
 		/** Wait base interval */
 		thread_millisleep(MON_BASE_INTERVAL_MS);
+
+		if (handle->replicationHeartbeat && !heartbeat_checked)
+		{
+			check_maxscale_schema_replication(mon);
+			heartbeat_checked = true;
+		}
+
 		/** 
 		 * Calculate how far away the monitor interval is from its full 
 		 * cycle and if monitor interval time further than the base 
@@ -1464,4 +1476,224 @@ bool isMySQLEvent(monitor_event_t event)
 	    return true;
     }
     return false;
+}
+
+/**
+ * Check if replicate_ignore_table is defined and if maxscale_schema.replication_hearbeat
+ * table is in the list.
+ * @param database Server to check
+ * @return False if the table is not replicated or an error occurred when querying
+ * the server
+ */
+bool check_replicate_ignore_table(MONITOR_SERVERS* database)
+{
+    MYSQL_RES *result;
+    bool rval = true;
+
+    if (mysql_query(database->con,
+                    "show variables like 'replicate_ignore_table'") == 0 &&
+        (result = mysql_store_result(database->con)) &&
+        mysql_num_fields(result) > 1)
+    {
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (strlen(row[1]) > 0 &&
+                strcasestr(row[1], hb_table_name))
+            {
+                skygw_log_write(LE, "Warning: 'replicate_ignore_table' is "
+                                "defined on server '%s' and '%s' was found in it. ",
+                                database->server->unique_name, hb_table_name);
+                rval = false;
+            }
+        }
+
+        mysql_free_result(result);
+    }
+    else
+    {
+        skygw_log_write(LE, "Error: Failed to query server %s for "
+                        "'replicate_ignore_table': %s",
+                        database->server->unique_name,
+                        mysql_error(database->con));
+        rval = false;
+    }
+    return rval;
+}
+
+/**
+ * Check if replicate_do_table is defined and if maxscale_schema.replication_hearbeat
+ * table is not in the list.
+ * @param database Server to check
+ * @return False if the table is not replicated or an error occurred when querying
+ * the server
+ */
+bool check_replicate_do_table(MONITOR_SERVERS* database)
+{
+    MYSQL_RES *result;
+    bool rval = true;
+
+    if (mysql_query(database->con,
+                    "show variables like 'replicate_do_table'") == 0 &&
+        (result = mysql_store_result(database->con)) &&
+        mysql_num_fields(result) > 1)
+    {
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (strlen(row[1]) > 0 &&
+                strcasestr(row[1], hb_table_name) == NULL)
+            {
+                skygw_log_write(LE, "Warning: 'replicate_do_table' is "
+                                "defined on server '%s' and '%s' was not found in it. ",
+                                database->server->unique_name, hb_table_name);
+                rval = false;
+            }
+        }
+        mysql_free_result(result);
+    }
+    else
+    {
+        skygw_log_write(LE, "Error: Failed to query server %s for "
+                        "'replicate_do_table': %s",
+                        database->server->unique_name,
+                        mysql_error(database->con));
+        rval = false;
+    }
+    return rval;
+}
+
+/**
+ * Check if replicate_wild_do_table is defined and if it doesn't match
+ * maxscale_schema.replication_heartbeat.
+ * @param database Database server
+ * @return False if the table is not replicated or an error occurred when trying to
+ * query the server.
+ */
+bool check_replicate_wild_do_table(MONITOR_SERVERS* database)
+{
+    MYSQL_RES *result;
+    bool rval = true;
+
+    if (mysql_query(database->con,
+                    "show variables like 'replicate_wild_do_table'") == 0 &&
+        (result = mysql_store_result(database->con)) &&
+        mysql_num_fields(result) > 1)
+    {
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (strlen(row[1]) > 0)
+            {
+                mxs_pcre2_result_t rc = modutil_mysql_wildcard_match(row[1], hb_table_name);
+                if (rc == MXS_PCRE2_NOMATCH)
+                {
+                    skygw_log_write(LE, "Warning: 'replicate_wild_do_table' is "
+                                    "defined on server '%s' and '%s' does not match it. ",
+                                    database->server->unique_name,
+                                    hb_table_name);
+                    rval = false;
+                }
+            }
+        }
+        mysql_free_result(result);
+    }
+    else
+    {
+        skygw_log_write(LE, "Error: Failed to query server %s for "
+                        "'replicate_wild_do_table': %s",
+                        database->server->unique_name,
+                        mysql_error(database->con));
+        rval = false;
+    }
+    return rval;
+}
+
+
+/**
+ * Check if replicate_wild_ignore_table is defined and if it matches
+ * maxscale_schema.replication_heartbeat.
+ * @param database Database server
+ * @return False if the table is not replicated or an error occurred when trying to
+ * query the server.
+ */
+bool check_replicate_wild_ignore_table(MONITOR_SERVERS* database)
+{
+    MYSQL_RES *result;
+    bool rval = true;
+
+    if (mysql_query(database->con,
+                    "show variables like 'replicate_wild_ignore_table'") == 0 &&
+        (result = mysql_store_result(database->con)) &&
+        mysql_num_fields(result) > 1)
+    {
+        MYSQL_ROW row;
+
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (strlen(row[1]) > 0)
+            {
+                mxs_pcre2_result_t rc = modutil_mysql_wildcard_match(row[1], hb_table_name);
+                if (rc == MXS_PCRE2_MATCH)
+                {
+                    skygw_log_write(LE, "Warning: 'replicate_wild_ignore_table' is "
+                                    "defined on server '%s' and '%s' matches it. ",
+                                    database->server->unique_name,
+                                    hb_table_name);
+                    rval = false;
+                }
+            }
+        }
+        mysql_free_result(result);
+    }
+    else
+    {
+        skygw_log_write(LE, "Error: Failed to query server %s for "
+                        "'replicate_wild_do_table': %s",
+                        database->server->unique_name,
+                        mysql_error(database->con));
+        rval = false;
+    }
+    return rval;
+}
+
+/**
+ * Check if the maxscale_schema.replication_heartbeat table is replicated on all
+ * servers and log a warning if problems were found.
+ * @param monitor Monitor structure
+ */
+void check_maxscale_schema_replication(MONITOR *monitor)
+{
+    MONITOR_SERVERS* database = monitor->databases;
+    bool err = false;
+
+    while (database)
+    {
+        connect_result_t rval = mon_connect_to_db(monitor, database);
+        if (rval == MONITOR_CONN_OK)
+        {
+            if (!check_replicate_ignore_table(database) ||
+                !check_replicate_do_table(database) ||
+                !check_replicate_wild_do_table(database) ||
+                !check_replicate_wild_ignore_table(database))
+            {
+                err = true;
+            }
+        }
+        else
+        {
+            mon_log_connect_error(database, rval);
+        }
+        database = database->next;
+    }
+
+    if (err)
+    {
+        skygw_log_write(LE, "Warning: Problems were encountered when "
+                        "checking if '%s' is replicated. Make sure that the table is "
+                        "replicated to all slaves.", hb_table_name);
+    }
 }
