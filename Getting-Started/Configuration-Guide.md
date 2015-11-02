@@ -54,9 +54,7 @@ The global settings, in a section named `[MaxScale]`, allow various parameters t
 
 #### `threads`
 
-This parameter controls the number of threads that poll for network traffic. MaxScale will autodetect the number of processors of the system unless number of threads is manually configured. It is recommended that you let MaxScale detect how many cores the system has and leave this parameter undefined. The number of used cores will be logged into the message logs and if you are not satisfied with the autodetected value, you can manually configure it.
-
-If you want to fine-tune the number of threads, start with a single thread and add more as you find the performance is not satisfactory. MaxScale is implemented to be very thread efficient, so a small number of threads is usually adequate to support reasonably heavy workloads.  Adding more threads may not improve performance and can consume resources needlessly. Increasing the amount of worker threads beyond the number of processor cores is not recommended.
+This parameter controls the number of worker threads that are handling the events coming from the kernel. MaxScale will auto-detect the number of processors of the system unless number of threads is manually configured. It is recommended that you let MaxScale detect how many cores the system has and leave this parameter undefined. The number of used cores will be logged into the message logs and if you are not satisfied with the auto-detected value, you can manually configure it. Increasing the amount of worker threads beyond the number of processor cores does not improve performance and can consume resources needlessly.
 
 ```
 # Valid options are:
