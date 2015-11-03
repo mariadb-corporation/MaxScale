@@ -1377,46 +1377,15 @@ static int log_write(logfile_id_t   id,
                      const char*    str,
                      enum log_flush flush)
 {
-    int rv = 0;
+    int rv = -1;
 
     if (logmanager_register(true))
     {
         CHK_LOGMANAGER(lm);
 
-        int attempts = 0;
-        int successes = 0;
-
-        for (int i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
-        {
-            /**
-             * If a particular log is enabled in general and it is enabled for
-             * the current session, log the stuff.
-             */
-            if (LOG_IS_ENABLED(i) && ((i & id) != 0))
-            {
-                ++attempts;
-
-                if (logmanager_write_log((logfile_id_t)i,
-                                         flush,
-                                         prefix_len,
-                                         len, str) == 0)
-                {
-                    ++successes;
-                }
-            }
-        }
+        rv = logmanager_write_log(id, flush, prefix_len, len, str);
 
         logmanager_unregister();
-
-        // Only if logging was attempted and nothing succeeded, it is considered a failure.
-        if ((attempts != 0) && (successes == 0))
-        {
-            rv = -1;
-        }
-    }
-    else
-    {
-        rv = -1;
     }
 
     return rv;
@@ -1433,37 +1402,75 @@ const char PREFIX_NOTICE[] = "[Notice]: ";
 const char PREFIX_INFO[]   = "[Info]  : ";
 const char PREFIX_DEBUG[]  = "[Debug] : ";
 
-static log_prefix_t logfile_to_prefix(logfile_id_t id)
+/**
+ * Returns the most "severe" file id.
+ *
+ * @param ids A single id or a bitmask of ids.
+ * @return A single id
+ */
+static logfile_id_t logfile_ids_to_id(logfile_id_t ids)
 {
-    log_prefix_t prefix;
-
     // The id can be a bitmask, hence we choose the most "severe" one.
-    if (id & LOGFILE_ERROR)
+    if (ids & LOGFILE_ERROR)
     {
-        prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
+        return LOGFILE_ERROR;
     }
-    else if (id & LOGFILE_MESSAGE)
+    else if (ids & LOGFILE_MESSAGE)
     {
-        prefix.text = PREFIX_NOTICE;
-        prefix.len = sizeof(PREFIX_NOTICE);
+        return LOGFILE_MESSAGE;
     }
-    else if (id & LOGFILE_TRACE)
+    else if (ids & LOGFILE_TRACE)
     {
-        prefix.text = PREFIX_INFO;
-        prefix.len = sizeof(PREFIX_INFO);
+        return LOGFILE_TRACE;
     }
-    else if (id & LOGFILE_DEBUG)
+    else if (ids & LOGFILE_DEBUG)
     {
-        prefix.text = PREFIX_DEBUG;
-        prefix.len = sizeof(PREFIX_DEBUG);
+        return LOGFILE_DEBUG;
     }
     else
     {
         assert(!true);
+        return LOGFILE_ERROR;
+    }
+}
 
+/**
+ * Returns the prefix to be used for a specific logfile id.
+ *
+ * @param id A logfile id (not a mask)
+ * @return The corresponding prefix.
+ */
+static log_prefix_t logfile_id_to_prefix(logfile_id_t id)
+{
+    log_prefix_t prefix;
+
+    switch (id)
+    {
+    case LOGFILE_ERROR:
         prefix.text = PREFIX_ERROR;
         prefix.len = sizeof(PREFIX_ERROR);
+        break;
+
+    case LOGFILE_MESSAGE:
+        prefix.text = PREFIX_NOTICE;
+        prefix.len = sizeof(PREFIX_NOTICE);
+        break;
+
+    case LOGFILE_TRACE:
+        prefix.text = PREFIX_INFO;
+        prefix.len = sizeof(PREFIX_INFO);
+        break;
+
+    case LOGFILE_DEBUG:
+        prefix.text = PREFIX_DEBUG;
+        prefix.len = sizeof(PREFIX_DEBUG);
+        break;
+
+    default:
+        assert(!true);
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
     }
 
     --prefix.len; // Remove trailing NULL.
@@ -1479,80 +1486,86 @@ int skygw_log_write_context(logfile_id_t   id,
                             const char*    str,
                             ...)
 {
-    int     err = 0;
-    va_list valist;
+    int err = 0;
 
-    /**
-     * Find out the length of log string (to be formatted str).
-     */
-    va_start(valist, str);
-    int message_len = vsnprintf(NULL, 0, str, valist);
-    va_end(valist);
+    id = logfile_ids_to_id(id); // Pick the most severe one.
 
-    if (message_len >= 0)
+    if (LOG_IS_ENABLED(id))
     {
-        log_prefix_t prefix = logfile_to_prefix(id);
+        va_list valist;
 
-        static const char FORMAT_FUNCTION[] = "(%s): ";
+        /**
+         * Find out the length of log string (to be formatted str).
+         */
+        va_start(valist, str);
+        int message_len = vsnprintf(NULL, 0, str, valist);
+        va_end(valist);
 
-        int augmentation_len = 0;
-
-        switch (log_augmentation)
+        if (message_len >= 0)
         {
-        case LOG_AUGMENT_WITH_FUNCTION:
-            augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
-            augmentation_len -= 2; // Remove the %s
-            augmentation_len += strlen(function);
-            break;
+            log_prefix_t prefix = logfile_id_to_prefix(id);
 
-        default:
-            break;
-        }
+            static const char FORMAT_FUNCTION[] = "(%s): ";
 
-        int buffer_len = prefix.len + augmentation_len + message_len + 1; // Trailing NULL
-
-        if (buffer_len > MAX_LOGSTRLEN)
-        {
-            message_len -= (buffer_len - MAX_LOGSTRLEN);
-            buffer_len = MAX_LOGSTRLEN;
-
-            assert(prefix.len + augmentation_len + message_len + 1 == buffer_len);
-        }
-
-        char buffer[buffer_len];
-
-        char *prefix_text = buffer;
-        char *augmentation_text = buffer + prefix.len;
-        char *message_text = buffer + prefix.len + augmentation_len;
-
-        strcpy(prefix_text, prefix.text);
-
-        if (augmentation_len)
-        {
-            int len = 0;
+            int augmentation_len = 0;
 
             switch (log_augmentation)
             {
             case LOG_AUGMENT_WITH_FUNCTION:
-                len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
+                augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
+                augmentation_len -= 2; // Remove the %s
+                augmentation_len += strlen(function);
                 break;
 
             default:
-                assert(!true);
+                break;
             }
 
-            assert(len == augmentation_len);
-        }
+            int buffer_len = prefix.len + augmentation_len + message_len + 1; // Trailing NULL
 
-        va_start(valist, str);
-        vsnprintf(message_text, message_len + 1, str, valist);
-        va_end(valist);
+            if (buffer_len > MAX_LOGSTRLEN)
+            {
+                message_len -= (buffer_len - MAX_LOGSTRLEN);
+                buffer_len = MAX_LOGSTRLEN;
 
-        err = log_write(id, file, line, function, prefix.len, buffer_len, buffer, flush);
+                assert(prefix.len + augmentation_len + message_len + 1 == buffer_len);
+            }
 
-        if (err != 0)
-        {
-            fprintf(stderr, "skygw_log_write failed.\n");
+            char buffer[buffer_len];
+
+            char *prefix_text = buffer;
+            char *augmentation_text = buffer + prefix.len;
+            char *message_text = buffer + prefix.len + augmentation_len;
+
+            strcpy(prefix_text, prefix.text);
+
+            if (augmentation_len)
+            {
+                int len = 0;
+
+                switch (log_augmentation)
+                {
+                case LOG_AUGMENT_WITH_FUNCTION:
+                    len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
+                    break;
+
+                default:
+                    assert(!true);
+                }
+
+                assert(len == augmentation_len);
+            }
+
+            va_start(valist, str);
+            vsnprintf(message_text, message_len + 1, str, valist);
+            va_end(valist);
+
+            err = log_write(id, file, line, function, prefix.len, buffer_len, buffer, flush);
+
+            if (err != 0)
+            {
+                fprintf(stderr, "skygw_log_write failed.\n");
+            }
         }
     }
 
