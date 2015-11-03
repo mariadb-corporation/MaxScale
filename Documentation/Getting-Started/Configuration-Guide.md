@@ -22,6 +22,23 @@ connection failover| When a connection currently being used between MaxScale and
   backend database | A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.
             filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
 
+# Table of Contents
+
+* [Configuration](#configuration)
+  * [Global Settings](#global-settings)
+  * [Service](#service)
+    * [Service and SSL](#service-and-ssl)
+  * [Server](#server)
+  * [Listener](#listener)
+  * [Filter](#filter)
+  * [Monitor](#monitor)
+  * [Protocol](#protocol)
+* [Router Modules](#router-modules)
+* [Monitor Modules](#monitor-modules)
+* [Filter Modules](#filter-modules)
+* [Reloading Configuration](#reloading-configuration)
+* [Authentication](#authentication)
+* [Error Reporting](#error-reporting)
 
 ## Configuration
 
@@ -696,7 +713,7 @@ Default value is `1`. Read Timeout is the timeout in seconds for each attempt to
 
 Default value is `2`. Write Timeout is the timeout in seconds for each attempt to write to the server. There is a retry if necessary, so the total effective timeout value is two times the option value. That's for `mysql_real_connect` C API.
 
-## Protocol Modules
+## Protocol
 
 The protocols supported by MaxScale are implemented as external modules that are loaded dynamically into the MaxScale core. These modules reside in the directory `/usr/lib64/maxscale`. The location can be overridden with the `libdir=PATH` parameter under the `[maxscale]` section. It may also be set by passing the `-B PATH` or `--libdir=PATH` option on the MaxScale command line.
 
