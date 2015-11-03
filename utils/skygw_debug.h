@@ -408,9 +408,6 @@ typedef enum skygw_chk_t {
                               lf->lf_name_suffix != NULL &&             \
                               lf->lf_full_file_name != NULL,                \
                               "NULL in name variable\n");               \
-              ss_info_dassert(lf->lf_id >= LOGFILE_FIRST &&             \
-                              lf->lf_id <= LOGFILE_LAST,                \
-                              "Invalid logfile id\n");                  \
               ss_debug(                                                 \
               (lf->lf_chk_top != CHK_NUM_LOGFILE ||                     \
                lf->lf_chk_tail != CHK_NUM_LOGFILE ?                     \
