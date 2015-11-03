@@ -375,7 +375,7 @@ int TestConnections::start_binlog()
         tprintf("Error connection to binlog router %s\n", mysql_error(binlog));
     }
 
-    repl->no_set_pos = no_pos;
+    repl->no_set_pos = true;
     tprintf("configuring Maxscale binlog router\n");fflush(stdout);
     repl->set_slave(binlog, repl->IP[0], repl->port[0], log_file, log_pos);
     //execute_query(binlog, "start slave");
