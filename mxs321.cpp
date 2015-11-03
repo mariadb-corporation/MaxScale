@@ -67,15 +67,22 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
     execute_query(Test->conn_rwsplit, "SET GLOBAL max_connections=100");
     Test->close_maxscale_connections();
+    Test->stop_timeout();
 
     /** Create connections to readwritesplit */
+    Test->set_timeout(50);
     create_and_check_connections(Test, 1);
+    Test->stop_timeout();
 
     /** Create connections to readconnroute master */
+    Test->set_timeout(50);
     create_and_check_connections(Test, 2);
+    Test->stop_timeout();
 
     /** Create connections to readconnroute slave */
+    Test->set_timeout(50);
     create_and_check_connections(Test, 3);
+    Test->stop_timeout();
 
     Test->copy_all_logs();
     return(Test->global_result);
