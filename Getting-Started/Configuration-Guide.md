@@ -371,6 +371,12 @@ Enabling this feature will transform wildcard grants to individual database gran
 
 The retry_on_failure parameter controls whether MaxScale will try to restart failed services and accepts a boolean value. This functionality is enabled by default to prevent services being permanently disabled if the starting of the service failed due to a network outage. Disabling the restarting of the failed services will cause them to be permanently disabled if the services can't be started when MaxScale is started.
 
+#### `log_auth_warnings`
+
+Enable or disable the logging of authentication failures and warnings. This parameter takes a boolean value.
+
+MaxScale normally suppresses warning messages about failed authentication. Enabling this option will log those messages into the message log with details about who tried to connect to MaxScale and from where.
+
 #### `connection_timeout`
 
 The connection_timeout parameter is used to disconnect sessions to MaxScale that have been idle for too long. The session timeouts are disabled by default. To enable them, define the timeout in seconds in the service's configuration section.
