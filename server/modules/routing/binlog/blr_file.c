@@ -1637,7 +1637,7 @@ char err_msg[STRERROR_BUFLEN];
 
 	snprintf(filename,(PATH_MAX - 4), "%s/master.ini", path);
 
-	snprintf(tmp_file, (PATH_MAX -4), filename);
+	snprintf(tmp_file, (PATH_MAX - 4), "%s", filename);
 
 	strcat(tmp_file, ".tmp");
 
