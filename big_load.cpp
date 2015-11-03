@@ -11,7 +11,7 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
         nodes = Test->repl;
     }
 
-    int sql_l = 5000;
+    int sql_l = 20000;
     int run_time=100;
     if (Test->smoke) {
         sql_l = 500;
@@ -63,7 +63,7 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
         Test->tprintf("COM_INSERT and COM_SELECT after executing test\n");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], nodes, 0);
         print_delta(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], nodes->N);
-        Test->tprintf("First thread did %d queries, second - %d \n", data.i1, data.i2);
+        Test->tprintf("First group of threads did %d queries, second - %d \n", data.i1, data.i2);
     }
     nodes->close_connections();
     *i1 = data.i1;

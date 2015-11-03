@@ -24,6 +24,13 @@ TestConnections * Test;
 
 int main(int argc, char *argv[])
 {
+    char result[1024];
+    char server_id[1024];
+    char server1_id[1024];
+    int res_d;
+    int server1_id_d;
+    int server_id_d;
+    int rounds = 0;
 
     Test = new TestConnections(argc, argv);
     Test->set_timeout(2000);
@@ -53,23 +60,11 @@ int main(int argc, char *argv[])
         exit_flag=0;
         /* Create independent threads each of them will execute function */
         for (j=0; j<32; j++) {
-            iret[j] = pthread_create( &threads[j], NULL, query_thread, NULL);
+            iret[j] = pthread_create( &threads[j], NULL, query_thread, &sql);
         }
-        //check_iret = pthread_create( &check_thread, NULL, checks_thread, NULL);
 
-        /*for (j=0; j<16; j++) {
-            pthread_join( threads[j], NULL);
-        }*/
-        //pthread_join(check_thread, NULL);
         execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20");
 
-        char result[1024];
-        char server_id[1024];
-        char server1_id[1024];
-        int res_d;
-        int server1_id_d;
-        int server_id_d;
-        int rounds = 0;
         find_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
         sscanf(server1_id, "%d", &server1_id_d);
 
@@ -110,7 +105,8 @@ void *query_thread( void *ptr )
     MYSQL * conn;
     conn = open_conn(Test->repl->port[0], Test->repl->IP[0], Test->repl->user_name, Test->repl->password, Test->repl->ssl);
     while (exit_flag == 0) {
-        execute_query(conn, (char *) "INSERT into t1 VALUES(1, 1)");
+        //execute_query(conn, (char *) "INSERT into t1 VALUES(1, 1)");
+        execute_query(conn, (char *) ptr);
     }
     return NULL;
 }

@@ -8,6 +8,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+    char sql[1024];
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(10);
 
@@ -22,9 +23,11 @@ int main(int argc, char *argv[])
     Test->tprintf("Changing master to node 1\n");
     Test->repl->change_master(1, 0);
     Test->tprintf("executing 3 INSERTs\n");
-    execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(0, 2);");
-    execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(1, 2);");
-    execute_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(2, 2);");
+    for (int i = 0; i++; i < 3) {
+        sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 2);", i);
+        Test->tprintf("Trying: %d\n", i);
+        execute_query(Test->conn_rwsplit, sql);
+    }
     Test->tprintf("executing SELECT\n");
     execute_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
 
@@ -32,7 +35,6 @@ int main(int argc, char *argv[])
     Test->connect_rwsplit();
     Test->tprintf("Reconnecting and executing SELECT again\n");
     Test->try_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
-
 
     Test->tprintf("Changing master back to node 0\n");
     Test->repl->change_master(0, 1);

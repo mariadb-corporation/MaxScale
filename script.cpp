@@ -20,7 +20,7 @@
  @endverbatim
  * - make script non-executable
  * - block and unblocm node1
- * - check error log for 'Error: The file cannot be executed: /home/$maxscale_access_user/script.sh' error
+ * - check error log for 'The file cannot be executed: /home/$maxscale_access_user/script.sh' error
  * - check if Maxscale still alive
  */
 
@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
     sleep(15);
 
     Test->tprintf("Cheching Maxscale logs\n");
-    Test->check_log_err((char *) "Error: Cannot execute file" , true);
+    Test->check_log_err((char *) "Cannot execute file" , true);
     //Test->check_log_err((char *) "Missing execution permissions" , true);fflush(stdout);
 
     Test->tprintf("checking if Maxscale is alive\n");
