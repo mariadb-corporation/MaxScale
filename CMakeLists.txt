@@ -268,6 +268,9 @@ target_link_libraries(mxs47 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl 
 add_executable(sharding sharding.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(sharding ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(schemarouter_duplicate_db schemarouter_duplicate_db.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(schemarouter_duplicate_db ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 add_executable(mxs431 mxs431.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(mxs431 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -320,7 +323,7 @@ install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572
 install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 bug699 bug705 bug519 setup_binlog setup_binlog_crc_none setup_binlog_crc_32 binlog_incompl bug729 bug718 bug730 bug711 bug656 DESTINATION system-test)
-install(TARGETS mxs47 sharding fwf mm mxs118 mxs127 session_limits script config_reload config_reload_stress mxs314 mxs321 DESTINATION system-test)
+install(TARGETS mxs47 sharding schemarouter_duplicate_db fwf mm mxs118 mxs127 session_limits script config_reload config_reload_stress mxs314 mxs321 DESTINATION system-test)
 install(TARGETS pers_01 pers_02 mxs431 DESTINATION system-test)
 
 install(FILES set_env.sh get_logs.sh run_ctrl_c.sh long_insert.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
@@ -429,6 +432,7 @@ add_test(binlog_incompl binlog_incompl)
 add_test(mxs47 mxs47)
 set_tests_properties(mxs47 PROPERTIES TIMEOUT 3600)
 add_test(sharding sharding)
+add_test(schemarouter_duplicate_db schemarouter_duplicate_db)
 add_test(fwf fwf)
 add_test(mxs118 mxs118)
 add_test(mxs127 mxs127)
