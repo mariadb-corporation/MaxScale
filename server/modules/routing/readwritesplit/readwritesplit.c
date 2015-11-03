@@ -106,6 +106,7 @@ static DCB* rses_get_client_dcb(ROUTER_CLIENT_SES* rses);
 static route_target_t get_route_target (
 	skygw_query_type_t qtype,
 	bool               trx_active,
+	bool               load_active,
 	target_t           use_sql_variables_in,
 	HINT*              hint);
 
@@ -1370,6 +1371,7 @@ static backend_ref_t* check_candidate_bref(
 static route_target_t get_route_target (
         skygw_query_type_t qtype,
         bool               trx_active,
+        bool               load_active,
 	target_t           use_sql_variables_in,
         HINT*              hint)
 {
@@ -1377,7 +1379,7 @@ static route_target_t get_route_target (
 	/**
 	 * These queries are not affected by hints
 	 */
-	if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+	if (!load_active && (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 		/** Configured to allow writing variables to all nodes */
@@ -1385,7 +1387,7 @@ static route_target_t get_route_target (
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
 		/** enable or disable autocommit are always routed to all */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_ENABLE_AUTOCOMMIT) ||
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT))
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_DISABLE_AUTOCOMMIT)))
 	{
 		/** 
 		 * This is problematic query because it would be routed to all
@@ -1423,7 +1425,7 @@ static route_target_t get_route_target (
 	/**
 	 * Hints may affect on routing of the following queries
 	 */
-	else if (!trx_active && 
+	else if (!trx_active && !load_active &&
 		(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||	/*< any SELECT */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)||	/*< read user var */
@@ -2143,8 +2145,13 @@ static bool route_single_stmt(
 	
 	if(packet_len == 0)
 	{
+        /** Empty packet signals end of LOAD DATA LOCAL INFILE, send it to master*/
 	    route_target = TARGET_MASTER;
 	    packet_type = MYSQL_COM_UNDEFINED;
+        rses->rses_load_active = false;
+        route_target = TARGET_MASTER;
+        skygw_log_write_flush(LT, "> LOAD DATA LOCAL INFILE finished: "
+            "%lu bytes sent.", rses->rses_load_data_sent + gwbuf_length(querybuf));
 	}
 	else
 	{
@@ -2194,17 +2201,36 @@ static bool route_single_stmt(
 			break;
 	} /**< switch by packet type */
 	
-	/**
-	 * Check if the query has anything to do with temporary tables.
-	 */
 	if (!rses_begin_locked_router_action(rses))
 	{
 	    succp = false;
 	    goto retblock;
-	}
+        }
+    /**
+     * Check if the query has anything to do with temporary tables.
+     */
 	qtype = is_read_tmp_table(rses, querybuf, qtype);
 	check_create_tmp_table(rses, querybuf, qtype);
 	check_drop_tmp_table(rses, querybuf,qtype);
+
+    /**
+     * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
+     * to the master until the last, empty packet arrives.
+     */
+    if (!rses->rses_load_active)
+    {
+        skygw_query_op_t queryop = query_classifier_get_operation(querybuf);
+        if (queryop == QUERY_OP_LOAD)
+        {
+            rses->rses_load_active = true;
+            rses->rses_load_data_sent = 0;
+        }
+    }
+    else
+    {
+        rses->rses_load_data_sent += gwbuf_length(querybuf);
+    }
+
 	rses_end_locked_router_action(rses);
 	/**
 	 * If autocommit is disabled or transaction is explicitly started
@@ -2245,28 +2271,35 @@ static bool route_single_stmt(
 	
 	if (LOG_IS_ENABLED(LOGFILE_TRACE))
 	{
-		uint8_t*      packet = GWBUF_DATA(querybuf);
-		unsigned char ptype = packet[4];
-		size_t        len = MIN(GWBUF_LENGTH(querybuf), 
-					MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start)-1);
-		char*         data = (char*)&packet[5];
-		char*         contentstr = strndup(data, MIN(len, RWSPLIT_TRACE_MSG_LEN));
-		char*         qtypestr = skygw_get_qtype_str(qtype);
-		
-		skygw_log_write(
-			LOGFILE_TRACE,
-				"> Autocommit: %s, trx is %s, cmd: %s, type: %s, "
-				"stmt: %s%s %s",
-				(rses->rses_autocommit_enabled ? "[enabled]" : "[disabled]"),
-				(rses->rses_transaction_active ? "[open]" : "[not open]"),
-				STRPACKETTYPE(ptype),
-				(qtypestr==NULL ? "N/A" : qtypestr),
-				contentstr,
-				(querybuf->hint == NULL ? "" : ", Hint:"),
-				(querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));
-		
-		free(contentstr);
-		free(qtypestr);
+        if (!rses->rses_load_active)
+            {
+                uint8_t* packet = GWBUF_DATA(querybuf);
+                unsigned char ptype = packet[4];
+                size_t len = MIN(GWBUF_LENGTH(querybuf),
+                                 MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
+                char* data = (char*) &packet[5];
+                char* contentstr = strndup(data, MIN(len, RWSPLIT_TRACE_MSG_LEN));
+                char* qtypestr = skygw_get_qtype_str(qtype);
+
+                skygw_log_write(LOGFILE_TRACE,
+                                "> Autocommit: %s, trx is %s, cmd: %s, type: %s, "
+                                "stmt: %s%s %s",
+                                (rses->rses_autocommit_enabled ? "[enabled]" : "[disabled]"),
+                                (rses->rses_transaction_active ? "[open]" : "[not open]"),
+                                STRPACKETTYPE(ptype),
+                                (qtypestr == NULL ? "N/A" : qtypestr),
+                                contentstr,
+                                (querybuf->hint == NULL ? "" : ", Hint:"),
+                                (querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));
+
+                free(contentstr);
+                free(qtypestr);
+            }
+            else
+            {
+                skygw_log_write(LT, "> Processing LOAD DATA LOCAL INFILE: "
+                                "%lu bytes sent.", rses->rses_load_data_sent);
+            }
 	}
 	/** 
 	 * Find out where to route the query. Result may not be clear; it is 
@@ -2287,9 +2320,10 @@ static bool route_single_stmt(
 	 */
 	route_target = get_route_target(qtype, 
 					rses->rses_transaction_active,
+					rses->rses_load_active,
 					rses->rses_config.rw_use_sql_variables_in,
 					querybuf->hint);
-	
+
 	if (TARGET_IS_ALL(route_target))
 	{
 		/** Multiple, conflicting routing target. Return error */

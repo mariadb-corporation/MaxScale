@@ -1647,6 +1647,11 @@ retblock:
 
 skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
 {
+    if (!query_is_parsed(querybuf))
+    {
+        parse_query(querybuf);
+    }
+
 	LEX* lex = get_lex(querybuf);
 	skygw_query_op_t operation = QUERY_OP_UNDEFINED;
 	if(lex){
@@ -1687,6 +1692,9 @@ skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
                 case SQLCOM_CHANGE_DB:
                     operation = QUERY_OP_CHANGE_DB;
                     break;
+		case SQLCOM_LOAD:
+			operation = QUERY_OP_LOAD;
+		break;
 
 		default:
 	    operation = QUERY_OP_UNDEFINED;
