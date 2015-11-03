@@ -1224,61 +1224,55 @@ static blockbuf_t* blockbuf_init(logfile_id_t id)
 
 int skygw_log_enable(logfile_id_t id)
 {
-    bool err = 0;
+    bool rval = -1;
 
-    if (!logmanager_register(true))
+    if (logmanager_register(true))
     {
-        err = -1;
-        goto return_err;
-    }
-    CHK_LOGMANAGER(lm);
+        CHK_LOGMANAGER(lm);
 
-    if (logfile_set_enabled(id, true))
-    {
-        lm->lm_enabled_logfiles |= id;
-        /**
-         * Set global variable
-         */
-        lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
+        if (logfile_set_enabled(id, true))
+        {
+            lm->lm_enabled_logfiles |= id;
+            /**
+             * Set global variable
+             */
+            lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
+        }
+
+        logmanager_unregister();
+        rval = 0;
     }
 
-    logmanager_unregister();
-return_err:
-    return err;
+    return rval;
 }
 
 int skygw_log_disable(logfile_id_t id) /*< no locking */
 {
-    int rc;
-
-    rc = skygw_log_disable_raw(id, false);
-
-    return rc;
+    return skygw_log_disable_raw(id, false);
 }
 
 static int skygw_log_disable_raw(logfile_id_t id, bool emergency) /*< no locking */
 {
-    bool err = 0;
+    bool rval = -1;
 
-    if (!logmanager_register(true))
+    if (logmanager_register(true))
     {
-        err = -1;
-        goto return_err;
-    }
-    CHK_LOGMANAGER(lm);
+        CHK_LOGMANAGER(lm);
 
-    if (emergency || logfile_set_enabled(id, false))
-    {
-        lm->lm_enabled_logfiles &= ~id;
-        /**
-         * Set global variable
-         */
-        lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
+        if (emergency || logfile_set_enabled(id, false))
+        {
+            lm->lm_enabled_logfiles &= ~id;
+            /**
+             * Set global variable
+             */
+            lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
+        }
+
+        logmanager_unregister();
+        rval = 0;
     }
 
-    logmanager_unregister();
-return_err:
-    return err;
+    return rval;
 }
 
 
