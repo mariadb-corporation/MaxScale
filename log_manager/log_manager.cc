@@ -282,7 +282,7 @@ static void fnames_conf_free_memory(fnames_conf_t* fn);
 static char* fname_conf_get_prefix(fnames_conf_t* fn, logfile_id_t id);
 static char* fname_conf_get_suffix(fnames_conf_t* fn, logfile_id_t id);
 static void* thr_filewriter_fun(void* data);
-static logfile_t* logmanager_get_logfile(logmanager_t* lm, logfile_id_t id);
+static logfile_t* logmanager_get_logfile(logmanager_t* lm);
 static bool logmanager_register(bool writep);
 static void logmanager_unregister(void);
 static bool logmanager_init_nomutex(int argc, char* argv[]);
@@ -530,12 +530,9 @@ static void logmanager_done_nomutex(void)
     /** Free filewriter memory. */
     filewriter_done(fwr);
 
-    for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i++)
-    {
-        lf = logmanager_get_logfile(lm, (logfile_id_t)i);
-        /** Release logfile memory */
-        logfile_done(lf);
-    }
+    lf = logmanager_get_logfile(lm);
+    /** Release logfile memory */
+    logfile_done(lf);
 
     if (syslog_id_str)
     {
@@ -601,12 +598,11 @@ return_void:
     release_lock(&lmlock);
 }
 
-static logfile_t* logmanager_get_logfile(logmanager_t* lmgr, logfile_id_t  id)
+static logfile_t* logmanager_get_logfile(logmanager_t* lmgr)
 {
     logfile_t* lf;
     CHK_LOGMANAGER(lmgr);
-    ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
-    lf = &lmgr->lm_logfile[id];
+    lf = &lmgr->lm_logfile[LOGFILE_ERROR];
 
     if (lf->lf_state == RUN)
     {
@@ -1286,8 +1282,11 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
     {
         if (use_stdout == 0)
         {
-            logfile_t *lf = logmanager_get_logfile(lm, id);
-            lf->lf_enabled = val;
+            if (id == LOGFILE_ERROR)
+            {
+                logfile_t *lf = logmanager_get_logfile(lm);
+                lf->lf_enabled = val;
+            }
 
             const char *name;
 
@@ -1577,7 +1576,7 @@ int skygw_log_flush(logfile_id_t id)
         {
             CHK_LOGMANAGER(lm);
 
-            logfile_t *lf = logmanager_get_logfile(lm, id);
+            logfile_t *lf = logmanager_get_logfile(lm);
             CHK_LOGFILE(lf);
 
             logfile_flush(lf);
@@ -1613,7 +1612,7 @@ int skygw_log_rotate(logfile_id_t id)
         {
             CHK_LOGMANAGER(lm);
 
-            logfile_t *lf = logmanager_get_logfile(lm, id);
+            logfile_t *lf = logmanager_get_logfile(lm);
             CHK_LOGFILE(lf);
 
             MXS_NOTICE("Log rotation is called for %s.", lf->lf_full_file_name);
@@ -2000,8 +1999,6 @@ static char* fname_conf_get_suffix(fnames_conf_t* fn, logfile_id_t id)
 static bool logfiles_init(logmanager_t* lm)
 {
     bool  succp = true;
-    int   lid   = LOGFILE_FIRST;
-    int   i     = 0;
     bool  store_shmem;
     bool  write_syslog;
 
@@ -2011,51 +2008,46 @@ static bool logfiles_init(logmanager_t* lm)
         openlog(syslog_ident_str, LOG_PID | LOG_NDELAY, LOG_USER);
     }
     /**
-     * Initialize log files, pass softlink flag if necessary.
+     * Initialize log file, pass softlink flag if necessary.
      */
-    while (lid <= LOGFILE_LAST && succp)
+
+    /**
+     * Check if the file is stored in shared memory. If so,
+     * a symbolic link will be created to log directory.
+     */
+    if (shmem_id_str != NULL &&
+        strcasestr(shmem_id_str, STRLOGID(LOGFILE_ERROR)) != NULL)
     {
-        /**
-         * Check if the file is stored in shared memory. If so,
-         * a symbolic link will be created to log directory.
-         */
-        if (shmem_id_str != NULL &&
-            strcasestr(shmem_id_str, STRLOGID(logfile_id_t(lid))) != NULL)
-        {
-            store_shmem = true;
-        }
-        else
-        {
-            store_shmem = false;
-        }
-        /**
-         * Check if file is also written to syslog.
-         */
-        if (syslog_id_str != NULL &&
-            strcasestr(syslog_id_str, STRLOGID(logfile_id_t(lid))) != NULL)
-        {
-            write_syslog = true;
-        }
-        else
-        {
-            write_syslog = false;
-        }
-
-        succp = logfile_init(&lm->lm_logfile[lid],
-                             (logfile_id_t)lid,
-                             lm,
-                             store_shmem,
-                             write_syslog);
-
-        if (!succp)
-        {
-            fprintf(stderr, "*\n* Error : Initializing log files failed.\n");
-            break;
-        }
-
-        lid <<= 1;
-        i += 1;
+        store_shmem = true;
     }
+    else
+    {
+        store_shmem = false;
+    }
+    /**
+     * Check if file is also written to syslog.
+     */
+    if (syslog_id_str != NULL &&
+        strcasestr(syslog_id_str, STRLOGID(LOGFILE_ERROR)) != NULL)
+    {
+        write_syslog = true;
+    }
+    else
+    {
+        write_syslog = false;
+    }
+
+    succp = logfile_init(&lm->lm_logfile[LOGFILE_ERROR],
+                         LOGFILE_ERROR,
+                         lm,
+                         store_shmem,
+                         write_syslog);
+
+    if (!succp)
+    {
+        fprintf(stderr, "*\n* Error : Initializing log files failed.\n");
+    }
+
     return succp;
 }
 
@@ -2756,8 +2748,6 @@ static bool filewriter_init(logmanager_t*    logmanager,
 {
     bool         succp = false;
     logfile_t*   lf;
-    logfile_id_t id;
-    int          i;
 
     CHK_LOGMANAGER(logmanager);
 
@@ -2777,20 +2767,16 @@ static bool filewriter_init(logmanager_t*    logmanager,
         goto return_succp;
     }
 
-    for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
-    {
-        id = (logfile_id_t)i;
-        lf = logmanager_get_logfile(logmanager, id);
+    lf = logmanager_get_logfile(logmanager);
 
-        if (!(succp = logfile_open_file(fw, lf)))
-        {
-            fprintf(stderr,
-                    "Error : opening log file %s failed. Exiting "
-                    "MaxScale\n",
-                    lf->lf_full_file_name);
-            goto return_succp;
-        }
-    } /*< for */
+    if (!(succp = logfile_open_file(fw, lf)))
+    {
+        fprintf(stderr,
+                "Error : opening log file %s failed. Exiting "
+                "MaxScale\n",
+                lf->lf_full_file_name);
+        goto return_succp;
+    }
     fw->fwr_state = RUN;
     CHK_FILEWRITER(fw);
     succp = true;
@@ -2806,9 +2792,6 @@ return_succp:
 
 static void filewriter_done(filewriter_t* fw)
 {
-    int           i;
-    logfile_id_t  id;
-
     switch (fw->fwr_state)
     {
     case RUN:
@@ -2816,17 +2799,13 @@ static void filewriter_done(filewriter_t* fw)
     case INIT:
         fw->fwr_logmes = NULL;
         fw->fwr_clientmes = NULL;
-        for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i++)
+        if (use_stdout)
         {
-            id = (logfile_id_t)i;
-            if (use_stdout)
-            {
-                skygw_file_free(fw->fwr_file[id]);
-            }
-            else
-            {
-                skygw_file_close(fw->fwr_file[id], true);
-            }
+            skygw_file_free(fw->fwr_file[LOGFILE_ERROR]);
+        }
+        else
+        {
+            skygw_file_close(fw->fwr_file[LOGFILE_ERROR], true);
         }
         fw->fwr_state = DONE;
     case DONE:
@@ -3066,28 +3045,18 @@ static void* thr_filewriter_fun(void* data)
         }
 
         /** Process all logfiles which have buffered writes. */
-        int i = LOGFILE_FIRST;
+        bool done = false;
 
-        do
+        while (!done)
         {
-            bool done = thr_flush_file(lm, fwr, (logfile_id_t) i);
+            done = thr_flush_file(lm, fwr, LOGFILE_ERROR);
 
             if (!thr_flushall_check() && skygw_thread_must_exit(thr))
             {
                 flushall_logfiles(true);
                 done = false;
             }
-
-            if (done)
-            {
-                i <<= 1;
-            }
-            else
-            {
-                i = LOGFILE_FIRST;
-            }
         }
-        while (i <= LOGFILE_LAST);
 
         if (flushall_done_flag)
         {
