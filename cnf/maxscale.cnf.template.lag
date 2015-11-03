@@ -30,6 +30,10 @@ servers= server1, server2,server3  ,server4
 detect_replication_lag=1
 user=skysql
 passwd= skysql
+backend_connect_timeout=10
+backend_read_timeout=10
+backend_write_timeout=10
+
 
 # A series of service definition
 #

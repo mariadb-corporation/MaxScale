@@ -49,6 +49,11 @@ int main(int argc, char *argv[])
         exit(1);
     } else {
 
+        for ( i = 0; i < Test->repl->N; i++) {
+            Test->tprintf("set max_connections = 200 for node %d\n", i);
+            execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 200;");
+        }
+
         create_t1(Test->conn_rwsplit);
 
         create_insert_string(sql, 10000, 1);
@@ -62,7 +67,7 @@ int main(int argc, char *argv[])
         int j;
         exit_flag=0;
         /* Create independent threads each of them will execute function */
-        for (j=0; j<32; j++) {
+        for (j=0; j<100; j++) {
             iret[j] = pthread_create( &threads[j], NULL, query_thread, &sql);
         }
 
@@ -70,6 +75,7 @@ int main(int argc, char *argv[])
 
         find_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
         sscanf(server1_id, "%d", &server1_id_d);
+        Test->tprintf("Master server_id: %d\n", server1_id_d);
 
         do {
             min_lag = 0;
@@ -80,9 +86,10 @@ int main(int argc, char *argv[])
                 Test->tprintf("server%d lag: %d\n", i+1, res_d);
                 if (min_lag > res_d) {min_lag = res_d;}
             }
+            Test->tprintf("Min lag: %d", min_lag);
             find_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
             sscanf(server_id, "%d", &server_id_d);
-            Test->tprintf("%d\n", server_id_d);
+            Test->tprintf("Connected to the server with server_id %d\n", server_id_d);
             if ((rounds < 10) and (server1_id_d == server_id_d)) {
                 Test->add_result(1, "Connected to the master!\n");
             } else {
