@@ -1122,7 +1122,7 @@ static void* newSession(
 
     if (map)
     {
-        state = shard_map_update_state(router, map);
+        state = shard_map_update_state(map, router);
     }
 
     spinlock_release(&router->lock);
