@@ -1571,24 +1571,29 @@ int skygw_log_flush(logfile_id_t id)
 {
     int err = -1;
 
-    if (logmanager_register(false))
+    if (id == LOGFILE_ERROR)
     {
-        CHK_LOGMANAGER(lm);
-
-        if (logmanager_is_valid_id(id))
+        if (logmanager_register(false))
         {
+            CHK_LOGMANAGER(lm);
+
             logfile_t *lf = logmanager_get_logfile(lm, id);
             CHK_LOGFILE(lf);
 
             logfile_flush(lf);
             err = 0;
-        }
 
-        logmanager_unregister();
+            logmanager_unregister();
+        }
+        else
+        {
+            ss_dfprintf(stderr, "Can't register to logmanager, flushing failed.\n");
+        }
     }
     else
     {
-        ss_dfprintf(stderr, "Can't register to logmanager, flushing failed.\n");
+        // We'll pretend everything went ok.
+        err = 0;
     }
 
     return err;
@@ -1602,12 +1607,12 @@ int skygw_log_rotate(logfile_id_t id)
 {
     int err = -1;
 
-    if (logmanager_register(false))
+    if (id == LOGFILE_ERROR)
     {
-        CHK_LOGMANAGER(lm);
-
-        if (logmanager_is_valid_id(id))
+        if (logmanager_register(false))
         {
+            CHK_LOGMANAGER(lm);
+
             logfile_t *lf = logmanager_get_logfile(lm, id);
             CHK_LOGFILE(lf);
 
@@ -1615,13 +1620,18 @@ int skygw_log_rotate(logfile_id_t id)
 
             logfile_rotate(lf);
             err = 0;
-        }
 
-        logmanager_unregister();
+            logmanager_unregister();
+        }
+        else
+        {
+            ss_dfprintf(stderr, "Can't register to logmanager, rotating failed.\n");
+        }
     }
     else
     {
-        ss_dfprintf(stderr, "Can't register to logmanager, rotating failed.\n");
+        // We'll pretend everything went ok.
+        err = 0;
     }
 
     return err;
