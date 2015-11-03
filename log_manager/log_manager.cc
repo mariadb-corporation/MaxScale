@@ -2836,7 +2836,7 @@ static void filewriter_done(filewriter_t* fw)
     }
 }
 
-static bool thr_flush_file(skygw_thread_t* thr, logmanager_t *lm, filewriter_t *fwr, logfile_id_t id)
+static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr, logfile_id_t id)
 {
     /**
      * Get file pointer of current logfile.
@@ -2986,22 +2986,16 @@ static bool thr_flush_file(skygw_thread_t* thr, logmanager_t *lm, filewriter_t *
      * flushed.
      */
 
-    bool all_done = true;
+    bool done = true;
 
     if (flushall_started_flag)
     {
         flushall_started_flag = false;
         flushall_done_flag = true;
-        all_done = false;
+        done = false;
     }
 
-    if (!thr_flushall_check() && skygw_thread_must_exit(thr))
-    {
-        flushall_logfiles(true);
-        all_done = false;
-    }
-
-    return all_done;
+    return done;
 }
 
 /**
@@ -3076,7 +3070,15 @@ static void* thr_filewriter_fun(void* data)
 
         do
         {
-            if (thr_flush_file(thr, lm, fwr, (logfile_id_t) i))
+            bool done = thr_flush_file(lm, fwr, (logfile_id_t) i);
+
+            if (!thr_flushall_check() && skygw_thread_must_exit(thr))
+            {
+                flushall_logfiles(true);
+                done = false;
+            }
+
+            if (done)
             {
                 i <<= 1;
             }
