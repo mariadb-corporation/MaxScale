@@ -498,6 +498,13 @@ process_config_context(CONFIG_CONTEXT *context)
 						     subservices,
 						     1,STRING_TYPE);
 				}
+                char *log_auth_warnings = config_get_value(obj->parameters,
+                                                           "log_auth_warnings");
+                int truthval;
+                if (log_auth_warnings && (truthval = config_truth_value(log_auth_warnings)) != -1)
+                {
+                    ((SERVICE*) obj->element)->log_auth_warnings = (bool) truthval;
+                }
 
                 CONFIG_PARAMETER* param;
                 if((param = config_get_param(obj->parameters, "ignore_databases")))
@@ -1781,6 +1788,14 @@ SERVER			*server;
 					version_string = config_get_value(obj->parameters, "version_string");
 					allow_localhost_match_wildcard_host = config_get_value(obj->parameters, "localhost_match_wildcard_host");
 
+                    char *log_auth_warnings = config_get_value(obj->parameters,
+                                                               "log_auth_warnings");
+                    int truthval;
+                    if (log_auth_warnings && (truthval = config_truth_value(log_auth_warnings)) != -1)
+                    {
+                        service->log_auth_warnings = (bool)truthval;
+                    }
+
                     CONFIG_PARAMETER* param;
 
                     if((param = config_get_param(obj->parameters, "ignore_databases")))
@@ -2199,6 +2214,7 @@ static char *service_params[] =
 		"ssl_cert_verify_depth",
         "ignore_databases",
         "ignore_databases_regex",
+        "log_auth_warnings",
                 NULL
         };
 

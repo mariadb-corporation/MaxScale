@@ -599,8 +599,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 	/* on succesful auth set user into dcb field */
 	if (auth_ret == 0) {
 		dcb->user = strdup(client_data->user);
-	}
-	else
+    }
+    else if (dcb->service->log_auth_warnings)
     {
         skygw_log_write(LM, "%s: login attempt for user '%s', authentication failed.",
                         dcb->service->name, username);

@@ -149,6 +149,7 @@ SERVICE 	*service;
 	service->ssl_ca_cert = NULL;
 	service->ssl_cert = NULL;
 	service->ssl_key = NULL;
+	service->log_auth_warnings = true;
 	service->ssl_cert_verify_depth = DEFAULT_SSL_CERT_VERIFY_DEPTH;
 	/** Support the highest possible SSL/TLS methods available as the default */
 	service->ssl_method_type = SERVICE_SSL_TLS_MAX;
