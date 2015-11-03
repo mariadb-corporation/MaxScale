@@ -4544,7 +4544,7 @@ static bool route_session_write(
         if (router_cli_ses->rses_config.rw_max_sescmd_history_size > 0 &&
             router_cli_ses->rses_nsescmd >= router_cli_ses->rses_config.rw_max_sescmd_history_size)
     {
-        skygw_log_write(LE, "Warning: Router session exceeded session command history limit. "
+        skygw_log_write(LM, "Warning: Router session exceeded session command history limit. "
                         "Slave recovery is disabled and only slave servers with consistent session state are used "
                         "for the duration of the session.");
         router_cli_ses->rses_config.rw_disable_sescmd_hist = true;
