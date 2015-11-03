@@ -1035,16 +1035,16 @@ retblock:
  * @param map Shard map to update
  * @return Current state of the shard map
  */
-enum shard_map_state shard_map_update_state(ROUTER_INSTANCE* router, shard_map_t *map)
+enum shard_map_state shard_map_update_state(shard_map_t *self, ROUTER_INSTANCE* router)
 {
-    spinlock_acquire(&map->lock);
-    double tdiff = difftime(time(NULL), map->last_updated);
+    spinlock_acquire(&self->lock);
+    double tdiff = difftime(time(NULL), self->last_updated);
     if (tdiff > router->schemarouter_config.refresh_min_interval)
     {
-        map->state = SHMAP_STALE;
+        self->state = SHMAP_STALE;
     }
-    enum shard_map_state state = map->state;
-    spinlock_release(&map->lock);
+    enum shard_map_state state = self->state;
+    spinlock_release(&self->lock);
     return state;
 }
 
