@@ -2836,6 +2836,173 @@ static void filewriter_done(filewriter_t* fw)
     }
 }
 
+static bool thr_flush_file(skygw_thread_t* thr, logmanager_t *lm, filewriter_t *fwr, logfile_id_t id)
+{
+    /**
+     * Get file pointer of current logfile.
+     */
+    bool do_flushall = thr_flushall_check();
+    skygw_file_t *file = fwr->fwr_file[id];
+    logfile_t *lf = &lm->lm_logfile[id];
+
+    /**
+     * read and reset logfile's flush- and rotateflag
+     */
+    acquire_lock(&lf->lf_spinlock);
+    bool flush_logfile  = lf->lf_flushflag;
+    bool rotate_logfile = lf->lf_rotateflag;
+    lf->lf_flushflag  = false;
+    lf->lf_rotateflag = false;
+    release_lock(&lf->lf_spinlock);
+    /**
+     * Log rotation :
+     * Close current, and open a new file for the log.
+     */
+    if (rotate_logfile)
+    {
+        bool succp;
+
+        lf->lf_name_seqno += 1; /*< new sequence number */
+
+        if (!(succp = logfile_create(lf)))
+        {
+            lf->lf_name_seqno -= 1; /*< restore */
+        }
+        else if ((succp = logfile_open_file(fwr, lf)))
+        {
+            if (use_stdout)
+            {
+                skygw_file_free (file);
+            }
+            else
+            {
+                skygw_file_close(file, false); /*< close old file */
+            }
+        }
+
+        if (!succp)
+        {
+            LOGIF(LE, (skygw_log_write(
+                           LOGFILE_ERROR,
+                           "Error : Log rotation failed. "
+                           "Creating replacement file %s "
+                           "failed. Continuing "
+                           "logging to existing file.",
+                           lf->lf_full_file_name)));
+        }
+        return true;
+    }
+    /**
+     * get logfile's block buffer list
+     */
+    mlist_t *bb_list = &lf->lf_blockbuf_list;
+#if defined(SS_DEBUG)
+    simple_mutex_lock(&bb_list->mlist_mutex, true);
+    CHK_MLIST(bb_list);
+    simple_mutex_unlock(&bb_list->mlist_mutex);
+#endif
+    mlist_node_t *node = bb_list->mlist_first;
+
+    while (node != NULL)
+    {
+        int err = 0;
+
+        CHK_MLIST_NODE(node);
+        blockbuf_t *bb = (blockbuf_t *)node->mlnode_data;
+        CHK_BLOCKBUF(bb);
+
+        /** Lock block buffer */
+        simple_mutex_lock(&bb->bb_mutex, true);
+
+        blockbuf_state_t flush_blockbuf = bb->bb_state;
+
+        if (bb->bb_buf_used != 0 &&
+            ((flush_blockbuf == BB_FULL) || flush_logfile || do_flushall))
+        {
+            /**
+             * buffer is at least half-full
+             * -> write to disk
+             */
+            while (bb->bb_refcount > 0)
+            {
+                simple_mutex_unlock(&bb->bb_mutex);
+                simple_mutex_lock(&bb->bb_mutex, true);
+            }
+            err = skygw_file_write(file,
+                                   (void *)bb->bb_buf,
+                                   bb->bb_buf_used,
+                                   (flush_logfile || do_flushall));
+            if (err)
+            {
+                char errbuf[STRERROR_BUFLEN];
+                fprintf(stderr,
+                        "Error : Write to %s log "
+                        ": %s failed due to %d, "
+                        "%s. Disabling the log.",
+                        STRLOGNAME(id),
+                        lf->lf_full_file_name,
+                        err,
+                        strerror_r(err, errbuf, sizeof(errbuf)));
+                /** Force log off */
+                skygw_log_disable_raw(id, true);
+            }
+            /**
+             * Reset buffer's counters and mark
+             * not full.
+             */
+            bb->bb_buf_left = bb->bb_buf_size;
+            bb->bb_buf_used = 0;
+            memset(bb->bb_buf, 0, bb->bb_buf_size);
+            bb->bb_state = BB_CLEARED;
+#if defined(SS_LOG_DEBUG)
+            sprintf(bb->bb_buf,"[block:%d]", atomic_add(&block_start_index, 1));
+            bb->bb_buf_used += strlen(bb->bb_buf);
+            bb->bb_buf_left -= strlen(bb->bb_buf);
+#endif
+
+        }
+        /** Release lock to block buffer */
+        simple_mutex_unlock(&bb->bb_mutex);
+
+        size_t vn1;
+        size_t vn2;
+        /** Consistent lock-free read on the list */
+        do
+        {
+            while ((vn1 = bb_list->mlist_versno) % 2 != 0)
+            {
+                continue;
+            }
+            node = node->mlnode_next;
+            vn2 = bb_list->mlist_versno;
+        }
+        while (vn1 != vn2 && node);
+
+    } /* while (node != NULL) */
+
+    /**
+     * Writer's exit flag was set after checking it.
+     * Loop is restarted to ensure that all logfiles are
+     * flushed.
+     */
+
+    bool all_done = true;
+
+    if (flushall_started_flag)
+    {
+        flushall_started_flag = false;
+        flushall_done_flag = true;
+        all_done = false;
+    }
+
+    if (!thr_flushall_check() && skygw_thread_must_exit(thr))
+    {
+        flushall_logfiles(true);
+        all_done = false;
+    }
+
+    return all_done;
+}
 
 /**
  * @node Writes block buffers of logfiles to physical log files on disk.
@@ -2882,24 +3049,9 @@ static void filewriter_done(filewriter_t* fw)
  */
 static void* thr_filewriter_fun(void* data)
 {
-    skygw_thread_t* thr;
-    filewriter_t*   fwr;
-    skygw_file_t*   file;
-    logfile_t*      lf;
+    skygw_thread_t* thr = (skygw_thread_t *)data;
+    filewriter_t*   fwr = (filewriter_t *)skygw_thread_get_data(thr);
 
-    mlist_t*      bb_list;
-    blockbuf_t*   bb;
-    mlist_node_t* node;
-    int           i;
-    blockbuf_state_t flush_blockbuf;   /**< flush single block buffer. */
-    bool          flush_logfile;    /**< flush logfile */
-    bool          do_flushall = false;
-    bool          rotate_logfile;   /*< close current and open new file */
-    size_t        vn1;
-    size_t        vn2;
-
-    thr = (skygw_thread_t *)data;
-    fwr = (filewriter_t *)skygw_thread_get_data(thr);
     flushall_logfiles(false);
 
     CHK_FILEWRITER(fwr);
@@ -2907,7 +3059,6 @@ static void* thr_filewriter_fun(void* data)
 
     /** Inform log manager about the state. */
     skygw_message_send(fwr->fwr_clientmes);
-
     while (!skygw_thread_must_exit(thr))
     {
         /**
@@ -2921,171 +3072,20 @@ static void* thr_filewriter_fun(void* data)
         }
 
         /** Process all logfiles which have buffered writes. */
-        for (i = LOGFILE_FIRST; i <= LOGFILE_LAST; i <<= 1)
+        int i = LOGFILE_FIRST;
+
+        do
         {
-        retry_flush_on_exit:
-            /**
-             * Get file pointer of current logfile.
-             */
-
-            do_flushall = thr_flushall_check();
-            file = fwr->fwr_file[i];
-            lf = &lm->lm_logfile[(logfile_id_t)i];
-
-            /**
-             * read and reset logfile's flush- and rotateflag
-             */
-            acquire_lock(&lf->lf_spinlock);
-            flush_logfile     = lf->lf_flushflag;
-            rotate_logfile    = lf->lf_rotateflag;
-            lf->lf_flushflag  = false;
-            lf->lf_rotateflag = false;
-            release_lock(&lf->lf_spinlock);
-            /**
-             * Log rotation :
-             * Close current, and open a new file for the log.
-             */
-            if (rotate_logfile)
+            if (thr_flush_file(thr, lm, fwr, (logfile_id_t) i))
             {
-                bool succp;
-
-                lf->lf_name_seqno += 1; /*< new sequence number */
-
-                if (!(succp = logfile_create(lf)))
-                {
-                    lf->lf_name_seqno -= 1; /*< restore */
-                }
-                else if ((succp = logfile_open_file(fwr, lf)))
-                {
-                    if (use_stdout)
-                    {
-                        skygw_file_free (file);
-                    }
-                    else
-                    {
-                        skygw_file_close(file, false); /*< close old file */
-                    }
-                }
-
-                if (!succp)
-                {
-                    LOGIF(LE, (skygw_log_write(
-                                   LOGFILE_ERROR,
-                                   "Error : Log rotation failed. "
-                                   "Creating replacement file %s "
-                                   "failed. Continuing "
-                                   "logging to existing file.",
-                                   lf->lf_full_file_name)));
-                }
-                continue;
+                i <<= 1;
             }
-            /**
-             * get logfile's block buffer list
-             */
-            bb_list = &lf->lf_blockbuf_list;
-#if defined(SS_DEBUG)
-            simple_mutex_lock(&bb_list->mlist_mutex, true);
-            CHK_MLIST(bb_list);
-            simple_mutex_unlock(&bb_list->mlist_mutex);
-#endif
-            node = bb_list->mlist_first;
-
-            while (node != NULL)
+            else
             {
-                int err = 0;
-
-                CHK_MLIST_NODE(node);
-                bb = (blockbuf_t *)node->mlnode_data;
-                CHK_BLOCKBUF(bb);
-
-                /** Lock block buffer */
-                simple_mutex_lock(&bb->bb_mutex, true);
-
-                flush_blockbuf = bb->bb_state;
-
-                if (bb->bb_buf_used != 0 &&
-                    ((flush_blockbuf == BB_FULL) || flush_logfile || do_flushall))
-                {
-                    /**
-                     * buffer is at least half-full
-                     * -> write to disk
-                     */
-                    while (bb->bb_refcount > 0)
-                    {
-                        simple_mutex_unlock(&bb->bb_mutex);
-                        simple_mutex_lock(&bb->bb_mutex, true);
-                    }
-                    err = skygw_file_write(file,
-                                           (void *)bb->bb_buf,
-                                           bb->bb_buf_used,
-                                           (flush_logfile || do_flushall));
-                    if (err)
-                    {
-                        char errbuf[STRERROR_BUFLEN];
-                        fprintf(stderr,
-                                "Error : Write to %s log "
-                                ": %s failed due to %d, "
-                                "%s. Disabling the log.",
-                                STRLOGNAME((logfile_id_t)i),
-                                lf->lf_full_file_name,
-                                err,
-                                strerror_r(err, errbuf, sizeof(errbuf)));
-                        /** Force log off */
-                        skygw_log_disable_raw((logfile_id_t)i, true);
-                    }
-                    /**
-                     * Reset buffer's counters and mark
-                     * not full.
-                     */
-                    bb->bb_buf_left = bb->bb_buf_size;
-                    bb->bb_buf_used = 0;
-                    memset(bb->bb_buf, 0, bb->bb_buf_size);
-                    bb->bb_state = BB_CLEARED;
-#if defined(SS_LOG_DEBUG)
-                    sprintf(bb->bb_buf,"[block:%d]", atomic_add(&block_start_index, 1));
-                    bb->bb_buf_used += strlen(bb->bb_buf);
-                    bb->bb_buf_left -= strlen(bb->bb_buf);
-#endif
-
-                }
-                /** Release lock to block buffer */
-                simple_mutex_unlock(&bb->bb_mutex);
-
-                /** Consistent lock-free read on the list */
-                do
-                {
-                    while ((vn1 = bb_list->mlist_versno) % 2 != 0)
-                    {
-                        continue;
-                    }
-                    node = node->mlnode_next;
-                    vn2 = bb_list->mlist_versno;
-                }
-                while (vn1 != vn2 && node);
-
-            } /* while (node != NULL) */
-
-            /**
-             * Writer's exit flag was set after checking it.
-             * Loop is restarted to ensure that all logfiles are
-             * flushed.
-             */
-
-            if (flushall_started_flag)
-            {
-                flushall_started_flag = false;
-                flushall_done_flag = true;
                 i = LOGFILE_FIRST;
-                goto retry_flush_on_exit;
             }
-
-            if (!thr_flushall_check() && skygw_thread_must_exit(thr))
-            {
-                flushall_logfiles(true);
-                i = LOGFILE_FIRST;
-                goto retry_flush_on_exit;
-            }
-        }/* for */
+        }
+        while (i <= LOGFILE_LAST);
 
         if (flushall_done_flag)
         {
