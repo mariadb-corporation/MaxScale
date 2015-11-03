@@ -174,7 +174,6 @@ struct logfile
 #endif
     flat_obj_state_t lf_state;
     bool             lf_init_started;
-    bool             lf_enabled;
     bool             lf_store_shmem;
     bool             lf_write_syslog;
     logmanager_t*    lf_lmgr;
@@ -1282,12 +1281,6 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
     {
         if (use_stdout == 0)
         {
-            if (id == LOGFILE_ERROR)
-            {
-                logfile_t *lf = logmanager_get_logfile(lm);
-                lf->lf_enabled = val;
-            }
-
             const char *name;
 
             switch (id)
@@ -2229,9 +2222,7 @@ return_succp:
  */
 static bool logfile_open_file(filewriter_t* fw, logfile_t* lf)
 {
-    bool  succp;
-    char* start_msg_str;
-    int   err;
+    bool rv = true;
 
     if (use_stdout)
     {
@@ -2252,45 +2243,10 @@ static bool logfile_open_file(filewriter_t* fw, logfile_t* lf)
     if (fw->fwr_file[lf->lf_id] == NULL)
     {
         fprintf(stderr, "Error : opening logfile %s failed.\n", lf->lf_full_file_name);
-        succp = false;
-        goto return_succp;
+        rv = false;
     }
 
-    if (use_stdout == 0)
-    {
-        if (lf->lf_enabled)
-        {
-            start_msg_str = strdup("---\tLogging is enabled.\n");
-        }
-        else
-        {
-            start_msg_str = strdup("---\tLogging is disabled.\n");
-        }
-        err = skygw_file_write(fw->fwr_file[lf->lf_id],
-                               (void *)start_msg_str,
-                               strlen(start_msg_str),
-                               true);
-
-        if (err != 0)
-        {
-            char errbuf[STRERROR_BUFLEN];
-            fprintf(stderr,
-                    "Error : writing to file %s failed due to %d, %s. "
-                    "Exiting MaxScale.\n",
-                    lf->lf_full_file_name,
-                    err,
-                    strerror_r(err, errbuf, sizeof(errbuf)));
-            succp = false;
-            goto return_succp;
-        }
-
-        free(start_msg_str);
-    }
-
-    succp = true;
-
-return_succp:
-    return succp;
+    return rv;
 }
 
 
@@ -2588,7 +2544,6 @@ static bool logfile_init(logfile_t*    logfile,
     logfile->lf_store_shmem = store_shmem;
     logfile->lf_write_syslog = write_syslog;
     logfile->lf_buf_size = MAX_LOGSTRLEN;
-    logfile->lf_enabled = logmanager->lm_enabled_logfiles & logfile_id;
     /**
      * If file is stored in shared memory in /dev/shm, a link
      * pointing to shm file is created and located to the file
