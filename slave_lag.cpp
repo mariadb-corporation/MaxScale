@@ -27,10 +27,13 @@ int main(int argc, char *argv[])
     char result[1024];
     char server_id[1024];
     char server1_id[1024];
+    char ma_cmd[256];
     int res_d;
     int server1_id_d;
     int server_id_d;
     int rounds = 0;
+    int i;
+    int min_lag=0;
 
     Test = new TestConnections(argc, argv);
     Test->set_timeout(2000);
@@ -48,7 +51,7 @@ int main(int argc, char *argv[])
 
         create_t1(Test->conn_rwsplit);
 
-        create_insert_string(sql, 50000, 1);
+        create_insert_string(sql, 10000, 1);
         Test->tprintf("sql_len=%lu\n", strlen(sql));
         Test->try_query(Test->conn_rwsplit, sql);
 
@@ -69,9 +72,14 @@ int main(int argc, char *argv[])
         sscanf(server1_id, "%d", &server1_id_d);
 
         do {
-            get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Slave delay:", result);
-            sscanf(result, "%d", &res_d);
-            Test->tprintf("server2 lag: %d\n", res_d);
+            min_lag = 0;
+            for (i = 1; i < Test->repl->N; i++ ) {
+                sprintf(ma_cmd, "show server server%d", i+1);
+                get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, ma_cmd, (char *) "Slave delay:", result);
+                sscanf(result, "%d", &res_d);
+                Test->tprintf("server%d lag: %d\n", i+1, res_d);
+                if (min_lag > res_d) {min_lag = res_d;}
+            }
             find_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
             sscanf(server_id, "%d", &server_id_d);
             Test->tprintf("%d\n", server_id_d);
@@ -81,7 +89,7 @@ int main(int argc, char *argv[])
                 Test->tprintf("Connected to slave\n");
             }
             rounds++;
-        } while (res_d < 21);
+        } while (min_lag < 21);
 
         exit_flag = 1;
 
