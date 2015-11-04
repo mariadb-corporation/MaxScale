@@ -66,11 +66,6 @@
 #include <gwdirs.h>
 #include <math.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static RSA *rsa_512 = NULL;
 static RSA *rsa_1024 = NULL;
 

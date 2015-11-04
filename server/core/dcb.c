@@ -82,11 +82,6 @@
 
 #define SSL_ERRBUF_LEN 140
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static	DCB		*allDCBs = NULL;	/* Diagnostics need a list of DCBs */
 static	DCB		*zombies = NULL;
 static	SPINLOCK	dcbspin = SPINLOCK_INIT;

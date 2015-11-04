@@ -96,11 +96,6 @@ static unsigned char required_packets[] = {
 	MYSQL_COM_CONNECT,
 	0 };
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
 	MODULE_GA,

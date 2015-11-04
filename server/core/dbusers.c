@@ -105,10 +105,6 @@
 #define ERROR_NO_SHOW_DATABASES "%s: Unable to load database grant information, \
     MaxScale authentication will proceed without including database permissions. \
     To correct this GRANT SHOW DATABASES ON *.* privilege to the user %s."
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 
 static int getUsers(SERVICE *service, USERS *users);
 static int uh_cmpfun( void* v1, void* v2);

@@ -63,9 +63,6 @@
 #include <version.h>
 #include <gwdirs.h>
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 extern uint32_t extract_field(uint8_t *src, int bits);
 static void printVersion(const char *progname);

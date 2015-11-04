@@ -75,10 +75,6 @@
 #include <ini.h>
 #include <sys/stat.h>
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static char *version_str = "V2.0.0";
 
 /* The router entry points */

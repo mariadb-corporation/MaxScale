@@ -82,11 +82,6 @@
 /** According to the PCRE manual, this should be a multiple of 3 */
 #define MAXSCALE_PCRE_BUFSZ 24
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 extern int setipaddress(struct in_addr *, char *);
 static	int	process_config_context(CONFIG_CONTEXT	*);
 static	int	process_config_update(CONFIG_CONTEXT *);

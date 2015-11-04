@@ -56,11 +56,6 @@ MODULE_INFO info = {
 	"The client to MaxScale MySQL protocol implementation"
 };
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static char *version_str = "V1.0.0";
 
 static int gw_MySQLAccept(DCB *listener);

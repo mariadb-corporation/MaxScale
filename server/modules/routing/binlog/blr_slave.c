@@ -154,10 +154,6 @@ static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave
 
 void poll_fake_write_event(DCB *dcb);
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /**
  * Process a request packet from the slave server.
  *

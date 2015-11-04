@@ -33,11 +33,6 @@
 #include <mysql_client_server_protocol.h>
 #include <modutil.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /** These are used when converting MySQL wildcards to regular expressions */
 static SPINLOCK re_lock = SPINLOCK_INIT;
 static bool pattern_init = false;

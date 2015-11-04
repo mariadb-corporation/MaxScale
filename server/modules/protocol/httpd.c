@@ -50,11 +50,6 @@ MODULE_INFO info = {
 	"An experimental HTTPD implementation for use in admnistration"
 };
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
 static char *version_str = "V1.0.1";

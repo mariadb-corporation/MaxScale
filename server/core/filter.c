@@ -38,11 +38,6 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static SPINLOCK	filter_spin = SPINLOCK_INIT;	/**< Protects the list of all filters */
 static FILTER_DEF *allFilters = NULL;		/**< The list of all filters */
 

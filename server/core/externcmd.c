@@ -1,10 +1,5 @@
 #include <externcmd.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /**
  * Tokenize a string into arguments suitable for a execvp call.
  * @param args Argument string

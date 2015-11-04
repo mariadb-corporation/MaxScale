@@ -26,11 +26,6 @@
 #include <query_classifier.h>
 #include <regex.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /**
  * @file slavelag.c - a very simple filter designed to send queries to the 
  * master server after data modification has occurred. This is done to prevent

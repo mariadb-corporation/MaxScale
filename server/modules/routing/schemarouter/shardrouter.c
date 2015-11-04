@@ -46,10 +46,6 @@ MODULE_INFO info = {
 };
 
 
-/** Defined in log_manager.cc */
-extern int lm_enabled_logfiles_bitmask;
-extern size_t log_ses_count[];
-extern __thread log_info_t tls_log_info;
 /**
  * @file shardrouter.c	
  *

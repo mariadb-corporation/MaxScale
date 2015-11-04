@@ -51,9 +51,6 @@
 
 #include <version.h>
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 static void printVersion(const char *progname);
 static void printUsage(const char *progname);
 extern int blr_test_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config);
