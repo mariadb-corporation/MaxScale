@@ -428,11 +428,6 @@ struct	stat	statb;
 	}
 	if (fstat(file->fd, &statb) == 0)
 		filelen = statb.st_size;
-	else
-	{
-		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Invalid size of binlog file, pos %lu", pos);
-		return NULL;
-	}
 
 	if (pos > filelen)
 	{
