@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
                 get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, ma_cmd, (char *) "Slave delay:", result);
                 sscanf(result, "%d", &res_d);
                 Test->tprintf("server%d lag: %d\n", i+1, res_d);
-                if (i = 1) {min_lag = res_d;}
+                if (i == 1) {min_lag = res_d;}
                 if (min_lag > res_d) {min_lag = res_d;}
             }
             Test->tprintf("Minimum lag: %d\n", min_lag);
