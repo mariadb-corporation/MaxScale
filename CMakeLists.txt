@@ -307,7 +307,7 @@ target_link_libraries(config_reload_stress ${MYSQL_CLIENT} z crypt nsl m pthread
 add_executable(mxs314 mxs314.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(mxs314 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(mxs321 mxs321.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
+add_executable(mxs321 mxs321.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp maxadmin_operations.cpp)
 target_link_libraries(mxs321 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
 add_executable(pers_01 pers_01.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)

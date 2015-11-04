@@ -17,6 +17,7 @@ char sql[1000000];
 
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 int exit_flag = 0;
+int exited = 0;
 void *query_thread( void *ptr );
 void *checks_thread( void *ptr);
 
@@ -110,6 +111,10 @@ int main(int argc, char *argv[])
         // close connections
         Test->close_rwsplit();
     }
+    while (exited == 0) {
+        Test->tprintf("Waiting for load thread end\n");
+        sleep(5);
+    }
     Test->repl->close_connections();
     Test->repl->start_replication();
 
@@ -125,6 +130,7 @@ void *query_thread( void *ptr )
         //execute_query(conn, (char *) "INSERT into t1 VALUES(1, 1)");
         execute_query(conn, (char *) ptr);
     }
+    exited = 1;
     return NULL;
 }
 

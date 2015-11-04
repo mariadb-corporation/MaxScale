@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <string>
 #include "testconnections.h"
+#include "maxadmin_operations.h"
 
 using namespace std;
 
@@ -49,13 +50,13 @@ void create_and_check_connections(TestConnections* test, int target)
 
     sleep(10);
 
-    char* result = test->execute_ssh_maxscale((char*)"maxadmin list servers|grep 'server[0-9]'|cut -d '|' -f 4|tr -d ' '|uniq");
-    
-    if(strcmp(result, "0") != 0)
-    {
-        cout << "Test failed: Expected 0 connections:" << result << endl;
-        test->global_result++;
-    }
+    char result[1024]; // = test->execute_ssh_maxscale((char*)"maxadmin list servers|grep 'server[0-9]'|cut -d '|' -f 4|tr -d ' '|uniq");
+    int result_d;
+    get_maxadmin_param(test->maxscale_IP, (char*) "admin", test->maxadmin_password, (char*) "maxadmin list servers", (char*) "Current no. of conns:", result);
+    sscanf(result, "%d", &result_d);
+    test->tprintf("result %s\t result_d %d\n", result, result_d);
+
+    test->add_result(result_d, "Test failed: Expected 0 connections, but got %d", result_d);
 }
 
 int main(int argc, char *argv[])
