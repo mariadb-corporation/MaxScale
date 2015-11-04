@@ -415,7 +415,7 @@ struct	stat	statb;
 	memset(&hdbuf, '\0', BINLOG_EVENT_HDR_LEN);
 
 	/* set error indicator */
-	hdr->ok = 0xff;
+	hdr->ok = SLAVE_POS_READ_ERR;
 
 	if (!file)
 	{
@@ -424,6 +424,11 @@ struct	stat	statb;
 	}
 	if (fstat(file->fd, &statb) == 0)
 		filelen = statb.st_size;
+	else
+	{
+		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Invalid size of binlog file, pos %lu", pos);
+		return NULL;
+	}
 
 	if (pos > filelen)
 	{
@@ -436,11 +441,12 @@ struct	stat	statb;
 	{
 		if (pos > router->binlog_position)
 		{
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is not available. Latest safe position %lu, end of binlog '%s' is %lu",
-				pos, router->binlog_position, file->binlogname, router->current_pos);
+			/* Unsafe position, slave will be disconnected by the calling routine */
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested binlog position %lu. Position is unsafe so disconnecting. Latest safe position %lu, end of binlog file %lu", pos, router->binlog_position, router->current_pos);
+			hdr->ok = SLAVE_POS_READ_UNSAFE;
 		} else {
 			/* accessing last position is ok */
-			hdr->ok = 0x0;
+			hdr->ok = SLAVE_POS_READ_OK;
 		}
 
 		return NULL;
@@ -457,7 +463,7 @@ struct	stat	statb;
 				file->binlogname, pos)));
 
 			/* set ok indicator */
-			hdr->ok = 0x0;
+			hdr->ok = SLAVE_POS_READ_OK;
 
 			break;
 		case -1:
@@ -525,7 +531,7 @@ struct	stat	statb;
 					pos)));
 
 				/* set ok indicator */
-				hdr->ok = 0x0;
+				hdr->ok = SLAVE_POS_READ_OK;
 
 				break;
 			case -1:
@@ -611,7 +617,7 @@ struct	stat	statb;
 	}
 
 	/* set OK indicator */
-	hdr->ok = 0x0;
+	hdr->ok = SLAVE_POS_READ_OK;
 
 	return result;
 }

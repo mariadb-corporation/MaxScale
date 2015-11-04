@@ -2044,9 +2044,10 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 	if (record == NULL) {
 		slave->stats.n_failed_read++;
 
-                if (hdr.ok == 0xff) {
+                if (hdr.ok == SLAVE_POS_READ_ERR) {
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
+				"%s Slave %s:%i, server-id %d, binlog '%s', %s",
+				router->service->name,
 				slave->dcb->remote,
 				slave->port,
 				slave->serverid,
@@ -2059,12 +2060,37 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
                         spinlock_release(&slave->catch_lock);
 
+			/*
+			 * Send an error that will stop slave replication
+			 */
                         blr_send_custom_error(slave->dcb, slave->seqno++, 0, read_errmsg, "HY000", 1236);
 
                         dcb_close(slave->dcb);
 
                         return 0;
                 }
+
+		if (hdr.ok == SLAVE_POS_READ_UNSAFE) {
+
+			ROUTER_OBJECT *router_obj= router->service->router;
+
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"%s: Slave %s:%i, server-id %d, binlog '%s', %s",
+				router->service->name,
+				slave->dcb->remote,
+				slave->port,
+				slave->serverid,
+				slave->binlogfile,
+				read_errmsg)));
+
+			/*
+			 * Close the slave session and socket
+			 * The slave will try to reconnect
+			 */
+			router_obj->closeSession(router->service->router_instance, slave);
+
+			return 0;
+		}
 	}
 	spinlock_acquire(&slave->catch_lock);
 	slave->cstate &= ~CS_BUSY;
@@ -2116,17 +2142,21 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			if (slave->stats.n_caughtup == 1)
 			{
 				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-					"%s: Slave %s is up to date %s, %lu.",
+					"%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
+					slave->port,
+					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos)));
 			}
 			else if ((slave->stats.n_caughtup % 50) == 0)
 			{
 				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-					"%s: Slave %s is up to date %s, %lu.",
+					"%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
+					slave->port,
+					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos)));
 			}
 		}
@@ -2344,7 +2374,7 @@ char err_msg[BINLOG_ERROR_MSG_LEN+1];
 		return;
 	if ((record = blr_read_binlog(router, file, 4, &hdr, err_msg)) == NULL)
 	{
-		if (hdr.ok == 0xff) {
+		if (hdr.ok != SLAVE_POS_READ_OK) {
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
 				slave->dcb->remote,
