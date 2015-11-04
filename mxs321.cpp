@@ -49,14 +49,22 @@ void create_and_check_connections(TestConnections* test, int target)
     }
 
     sleep(10);
-
     char result[1024]; // = test->execute_ssh_maxscale((char*)"maxadmin list servers|grep 'server[0-9]'|cut -d '|' -f 4|tr -d ' '|uniq");
+    char cmd[1024];
     int result_d;
-    get_maxadmin_param(test->maxscale_IP, (char*) "admin", test->maxadmin_password, (char*) "maxadmin list servers", (char*) "Current no. of conns:", result);
-    sscanf(result, "%d", &result_d);
-    test->tprintf("result %s\t result_d %d\n", result, result_d);
 
-    test->add_result(result_d, "Test failed: Expected 0 connections, but got %d", result_d);
+    for (int j = 0; j < test->repl->N; j++)
+    {
+        sprintf(cmd, "show server%d", j+1);
+        get_maxadmin_param(test->maxscale_IP, (char*) "admin", test->maxadmin_password, cmd, (char*) "Current no. of conns:", result);
+        sscanf(result, "%d", &result_d);
+        if (strlen(result) == 0)
+        {
+            test->add_result(1, "Empty Current no. of conns \n");
+        }
+        test->tprintf("result %s\t result_d %d\n", result, result_d);
+        test->add_result(result_d, "Expected 0 connections, but got %d\n", result_d);
+    }
 }
 
 int main(int argc, char *argv[])
