@@ -343,6 +343,12 @@ int		rval, ini_rval;
 	rval = process_config_context(config.next);
 	free_config_context(config.next);
 
+    /** Start all monitors */
+    if(rval)
+    {
+        monitorStartAll();
+    }
+
 	return rval;
 }
 
@@ -1156,7 +1162,7 @@ process_config_context(CONFIG_CONTEXT *context)
 						gateway.id = getpid();
 					}
 
-					monitorStart(obj->element,obj->parameters);
+                    monitorAddParameters(obj->element, obj->parameters);
 
 					/* set monitor interval */
 					if (interval > 0)
@@ -1253,6 +1259,7 @@ process_config_context(CONFIG_CONTEXT *context)
 
 		obj = obj->next;
 	} /*< while */
+
 	/** TODO: consistency check function */
 
 	hashtable_free(monitorhash);
@@ -1461,6 +1468,22 @@ return_p2:
 }
 
 /**
+ * Free a configuration parameter
+ * @param p1 Parameter to free
+ */
+void free_config_parameter(CONFIG_PARAMETER* p1)
+{
+    while (p1)
+    {
+        free(p1->name);
+        free(p1->value);
+        CONFIG_PARAMETER* p2 = p1->next;
+        free(p1);
+        p1 = p2;
+    }
+}
+
+/**
  * Free a config tree
  *
  * @param context	The configuration data
@@ -1474,15 +1497,7 @@ CONFIG_PARAMETER	*p1, *p2;
 	while (context)
 	{
 		free(context->object);
-		p1 = context->parameters;
-		while (p1)
-		{
-			free(p1->name);
-			free(p1->value);
-			p2 = p1->next;
-			free(p1);
-			p1 = p2;
-		}
+		free_config_parameter(context->parameters);
 		obj = context->next;
 		free(context);
 		context = obj;

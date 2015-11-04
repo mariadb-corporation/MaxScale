@@ -118,6 +118,7 @@ MONITOR	*ptr;
 			ptr->next = mon->next;
 	}
 	spinlock_release(&monLock);
+	free_config_parameter(mon->parameters);
 	free(mon->name);
 	free(mon);
 }
@@ -135,6 +136,23 @@ monitorStart(MONITOR *monitor, void* params)
 	monitor->handle = (*monitor->module->startMonitor)(monitor,params);
 	monitor->state = MONITOR_STATE_RUNNING;
 	spinlock_release(&monitor->lock);
+}
+
+/**
+ * Start all monitors
+ */
+void monitorStartAll()
+{
+    MONITOR *ptr;
+
+    spinlock_acquire(&monLock);
+    ptr = allMonitors;
+    while (ptr)
+    {
+        monitorStart(ptr, ptr->parameters);
+        ptr = ptr->next;
+    }
+    spinlock_release(&monLock);
 }
 
 /**
@@ -521,4 +539,23 @@ bool check_monitor_permissions(MONITOR* monitor)
     mysql_close(mysql);
     free(dpasswd);
     return rval;
+}
+
+/**
+ * Add parameters to the monitor
+ * @param monitor Monitor
+ * @param params Config parameters
+ */
+void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params)
+{
+    while (params)
+    {
+        CONFIG_PARAMETER* clone = config_clone_param(params);
+        if (clone)
+        {
+            clone->next = monitor->parameters;
+            monitor->parameters = clone;
+        }
+        params = params->next;
+    }
 }
