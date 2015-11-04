@@ -51,14 +51,14 @@ persistmaxtime=30
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->set_timeout(40);
+    Test->set_timeout(60);
 
     Test->create_connections(75);
     Test->set_timeout(100);
     Test->repl->start_replication();
-    Test->set_timeout(40);
+    Test->set_timeout(60);
     Test->create_connections(70);
-    Test->set_timeout(20);
+    sleep(5);
     Test->check_log_err((char *) "fatal signal 11", false);
     Test->copy_all_logs(); return(Test->global_result);
 }
