@@ -20,6 +20,7 @@
 #include <skygw_utils.h>
 #include <stdint.h>
 #include <openssl/sha.h>
+#include <spinlock.h>
 /**
  * @file config.h The configuration handling elements
  *

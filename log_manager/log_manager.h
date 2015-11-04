@@ -185,13 +185,13 @@ const char* get_logpath_default(void);
 /**
  * Helper, not to be called directly.
  */
-#define MAXSCALE_MESSAGE_FLUSH(id, format, ...)\
+#define MXS_MESSAGE_FLUSH(id, format, ...)\
     do { if (LOG_IS_ENABLED(id)) { skygw_log_write_flush(id, format, ##__VA_ARGS__); } } while (false)
 
 /**
  * Helper, not to be called directly.
  */
-#define MAXSCALE_MESSAGE(id, format, ...)\
+#define MXS_MESSAGE(id, format, ...)\
     do { if (LOG_IS_ENABLED(id)) { skygw_log_write(id, format, ##__VA_ARGS__); } } while (false)
 
 /**
@@ -200,10 +200,10 @@ const char* get_logpath_default(void);
  * @param format The printf format of the message.
  * @param ...    Arguments, depending on the format.
  */
-#define MAXSCALE_ERROR(format, ...)   MAXSCALE_MESSAGE_FLUSH(LOGFILE_ERROR, format, ##__VA_ARGS__)
-#define MAXSCALE_WARNING(format, ...) MAXSCALE_MESSAGE(LOGFILE_ERROR, format, ##__VA_ARGS__)
-#define MAXSCALE_NOTICE(format, ...)  MAXSCALE_MESSAGE(LOGFILE_MESSAGE, format, ##__VA_ARGS__)
-#define MAXSCALE_INFO(format, ...)    MAXSCALE_MESSAGE(LOGFILE_TRACE, format, ##__VA_ARGS__)
-#define MAXSCALE_DEBUG(format, ...)   MAXSCALE_MESSAGE(LOGFILE_DEBUG, format, ##__VA_ARGS__)
+#define MXS_ERROR(format, ...)   MXS_MESSAGE_FLUSH(LOGFILE_ERROR, format, ##__VA_ARGS__)
+#define MXS_WARNING(format, ...) MXS_MESSAGE(LOGFILE_ERROR, format, ##__VA_ARGS__)
+#define MXS_NOTICE(format, ...)  MXS_MESSAGE(LOGFILE_MESSAGE, format, ##__VA_ARGS__)
+#define MXS_INFO(format, ...)    MXS_MESSAGE(LOGFILE_TRACE, format, ##__VA_ARGS__)
+#define MXS_DEBUG(format, ...)   MXS_MESSAGE(LOGFILE_DEBUG, format, ##__VA_ARGS__)
 
 #endif /** LOG_MANAGER_H */

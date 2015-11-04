@@ -590,29 +590,29 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 					sizeof(protocol->scramble), 
 					username, 
 					stage1_hash);
-		}
-		else
-		{
-			LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-				"%s: login attempt for user '%s', user not "
-				"found.",
-				dcb->service->name, username)));
-		}
-	}
 
-	/* Do again the database check */
-	auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
+            /* Do again the database check */
+            auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
+		}
+    }
 
 	/* on succesful auth set user into dcb field */
 	if (auth_ret == 0) {
 		dcb->user = strdup(client_data->user);
 	}
 	else
-	{
-	    skygw_log_write(LOGFILE_ERROR,
-		     "%s: login attempt for user '%s', authentication failed.",
-		     dcb->service->name, username);
-	}
+    {
+        skygw_log_write(LM, "%s: login attempt for user '%s', authentication failed.",
+                        dcb->service->name, username);
+        if (dcb->ipv4.sin_addr.s_addr == 0x0100007F &&
+            !dcb->service->localhost_match_wildcard_host)
+        {
+            skygw_log_write_flush(LM, "If you have a wildcard grant that covers"
+                                  " this address, try adding "
+                                  "'localhost_match_wildcard_host=true' for "
+                                  "service '%s'. ", dcb->service->name);
+        }
+    }
 
 	/* let's free the auth_token now */
 	if (auth_token) {
