@@ -43,6 +43,9 @@
 # define _GNU_SOURCE
 #endif
 
+static const char LOGFILE_NAME_PREFIX[] = "error";
+static const char LOGFILE_NAME_SUFFIX[] = ".log";
+
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
@@ -180,8 +183,8 @@ struct logfile
     skygw_message_t* lf_logmes;
     char*            lf_filepath; /**< path to file used for logging */
     char*            lf_linkpath; /**< path to symlink file.  */
-    char*            lf_name_prefix;
-    char*            lf_name_suffix;
+    const char*      lf_name_prefix;
+    const char*      lf_name_suffix;
     int              lf_name_seqno;
     char*            lf_full_file_name; /**< complete log file name */
     char*            lf_full_link_name; /**< complete symlink name */
@@ -206,8 +209,6 @@ struct fnames_conf
     skygw_chk_t      fn_chk_top;
 #endif
     flat_obj_state_t fn_state;
-    char*            fn_err_prefix;
-    char*            fn_err_suffix;
     char*            fn_logpath;
 #if defined(SS_DEBUG)
     skygw_chk_t      fn_chk_tail;
@@ -242,7 +243,7 @@ struct logmanager
 
 typedef struct strpart
 {
-    char*           sp_string;
+    const char*     sp_string;
     struct strpart* sp_next;
 } strpart_t;
 
@@ -269,8 +270,6 @@ static void filewriter_done(filewriter_t* filewriter);
 static bool fnames_conf_init(fnames_conf_t* fn, int argc, char* argv[]);
 static void fnames_conf_done(fnames_conf_t* fn);
 static void fnames_conf_free_memory(fnames_conf_t* fn);
-static char* fname_conf_get_prefix(fnames_conf_t* fn);
-static char* fname_conf_get_suffix(fnames_conf_t* fn);
 static void* thr_filewriter_fun(void* data);
 static logfile_t* logmanager_get_logfile(logmanager_t* lm);
 static bool logmanager_register(bool writep);
@@ -305,21 +304,6 @@ static int skygw_log_disable_raw(logfile_id_t id, bool emergency); /*< no lockin
 static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
 void flushall_logfiles(bool flush);
 bool thr_flushall_check();
-
-const char* get_suffix_default(void)
-{
-    return ".log";
-}
-
-const char* get_err_prefix_default(void)
-{
-    return "error";
-}
-
-const char* get_err_suffix_default(void)
-{
-    return get_suffix_default();
-}
 
 const char* get_logpath_default(void)
 {
@@ -1710,8 +1694,6 @@ static bool fnames_conf_init(fnames_conf_t* fn,
     bool           succp = false;
     const char*    argstr =
         "-h - help\n"
-        "-g <error prefix>   ............(\"skygw_err\")\n"
-        "-i <error suffix>   ............(\".log\")\n"
         "-j <log path>       ............(\"/tmp\")\n"
         "-l <syslog log file ids> .......(no default)\n"
         "-m <syslog ident>   ............(argv[0])\n"
@@ -1727,20 +1709,12 @@ static bool fnames_conf_init(fnames_conf_t* fn,
     fn->fn_chk_tail = CHK_NUM_FNAMES;
 #endif
     optind = 1; /**<! reset getopt index */
-    while ((opt = getopt(argc, argv, "+g:h:i:j:l:m:s:o")) != -1)
+    while ((opt = getopt(argc, argv, "+h:j:l:m:s:o")) != -1)
     {
         switch (opt)
         {
         case 'o':
             use_stdout = 1;
-            break;
-
-        case 'g':
-            fn->fn_err_prefix = strndup(optarg, MAX_PREFIXLEN);
-            break;
-
-        case 'i':
-            fn->fn_err_suffix = strndup(optarg, MAX_SUFFIXLEN);
             break;
 
         case 'j':
@@ -1778,12 +1752,7 @@ static bool fnames_conf_init(fnames_conf_t* fn,
         } /** switch (opt) */
     }
     /** If log file name is not specified in call arguments, use default. */
-    fn->fn_err_prefix   = (fn->fn_err_prefix == NULL) ?
-        strdup(get_err_prefix_default()) : fn->fn_err_prefix;
-    fn->fn_err_suffix   = (fn->fn_err_suffix == NULL) ?
-        strdup(get_err_suffix_default()) : fn->fn_err_suffix;
-    fn->fn_logpath      = (fn->fn_logpath == NULL) ?
-        strdup(get_logpath_default()) : fn->fn_logpath;
+    fn->fn_logpath = (fn->fn_logpath == NULL) ? strdup(get_logpath_default()) : fn->fn_logpath;
 
     /** Set identity string for syslog if it is not set in config.*/
     if (do_syslog)
@@ -1801,22 +1770,10 @@ static bool fnames_conf_init(fnames_conf_t* fn,
        ss_dfprintf(stderr, "\n");*/
 #if defined(NOT_USED)
     fprintf(stderr,
-            "Error log     :\t%s/%s1%s\n"
-            "Message log   :\t%s/%s1%s\n"
-            "Trace log     :\t%s/%s1%s\n"
-            "Debug log     :\t%s/%s1%s\n\n",
+            "Log :\t%s/%s1%s\n\n",
             fn->fn_logpath,
-            fn->fn_err_prefix,
-            fn->fn_err_suffix,
-            fn->fn_logpath,
-            fn->fn_msg_prefix,
-            fn->fn_msg_suffix,
-            fn->fn_logpath,
-            fn->fn_trace_prefix,
-            fn->fn_trace_suffix,
-            fn->fn_logpath,
-            fn->fn_debug_prefix,
-            fn->fn_debug_suffix);
+            LOGFILE_NAME_PREFIX,
+            LOGFILE_NAME_SUFFIX);
 #endif
     succp = true;
     fn->fn_state = RUN;
@@ -1829,19 +1786,6 @@ return_conf_init:
     }
     ss_dassert(fn->fn_state == RUN || fn->fn_state == DONE);
     return succp;
-}
-
-
-static char* fname_conf_get_prefix(fnames_conf_t* fn)
-{
-    CHK_FNAMES_CONF(fn);
-    return strdup(fn->fn_err_prefix);
-}
-
-static char* fname_conf_get_suffix(fnames_conf_t* fn)
-{
-    CHK_FNAMES_CONF(fn);
-    return strdup(fn->fn_err_suffix);
 }
 
 
@@ -2152,7 +2096,7 @@ static char* form_full_file_name(strpart_t* parts, logfile_t* lf, int seqnoidx)
     {
         int   file_sn;
         int   link_sn = 0;
-        char* tmp = parts[0].sp_string;
+        const char* tmp = parts[0].sp_string;
 
         file_sn = find_last_seqno(parts, lf->lf_name_seqno, seqnoidx);
 
@@ -2403,8 +2347,8 @@ static bool logfile_init(logfile_t*    logfile,
     logfile->lf_chk_tail = CHK_NUM_LOGFILE;
 #endif
     logfile->lf_logmes = logmanager->lm_logmes;
-    logfile->lf_name_prefix = fname_conf_get_prefix(fn);
-    logfile->lf_name_suffix = fname_conf_get_suffix(fn);
+    logfile->lf_name_prefix = LOGFILE_NAME_PREFIX;
+    logfile->lf_name_suffix = LOGFILE_NAME_SUFFIX;
     logfile->lf_npending_writes = 0;
     logfile->lf_name_seqno = 1;
     logfile->lf_lmgr = logmanager;
@@ -2544,13 +2488,10 @@ static void logfile_done(logfile_t* lf)
     }
 }
 
-static void logfile_free_memory(
-    logfile_t* lf)
+static void logfile_free_memory(logfile_t* lf)
 {
     if (lf->lf_filepath != NULL)       free(lf->lf_filepath);
     if (lf->lf_linkpath != NULL)       free(lf->lf_linkpath);
-    if (lf->lf_name_prefix != NULL)    free(lf->lf_name_prefix);
-    if (lf->lf_name_suffix != NULL)    free(lf->lf_name_suffix);
     if (lf->lf_full_link_name != NULL) free(lf->lf_full_link_name);
     if (lf->lf_full_file_name != NULL) free(lf->lf_full_file_name);
 }
@@ -2918,8 +2859,6 @@ static void fnames_conf_done(fnames_conf_t* fn)
 
 static void fnames_conf_free_memory(fnames_conf_t* fn)
 {
-    free(fn->fn_err_prefix);
-    free(fn->fn_err_suffix);
     free(fn->fn_logpath);
 }
 
