@@ -174,10 +174,6 @@ int skygw_log_get_augmentation();
 
 EXTERN_C_BLOCK_END
 
-const char* get_trace_prefix_default(void);
-const char* get_trace_suffix_default(void);
-const char* get_msg_prefix_default(void);
-const char* get_msg_suffix_default(void);
 const char* get_err_prefix_default(void);
 const char* get_err_suffix_default(void);
 const char* get_logpath_default(void);

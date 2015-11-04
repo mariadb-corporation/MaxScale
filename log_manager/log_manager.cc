@@ -206,12 +206,6 @@ struct fnames_conf
     skygw_chk_t      fn_chk_top;
 #endif
     flat_obj_state_t fn_state;
-    char*            fn_debug_prefix;
-    char*            fn_debug_suffix;
-    char*            fn_trace_prefix;
-    char*            fn_trace_suffix;
-    char*            fn_msg_prefix;
-    char*            fn_msg_suffix;
     char*            fn_err_prefix;
     char*            fn_err_suffix;
     char*            fn_logpath;
@@ -275,8 +269,8 @@ static void filewriter_done(filewriter_t* filewriter);
 static bool fnames_conf_init(fnames_conf_t* fn, int argc, char* argv[]);
 static void fnames_conf_done(fnames_conf_t* fn);
 static void fnames_conf_free_memory(fnames_conf_t* fn);
-static char* fname_conf_get_prefix(fnames_conf_t* fn, logfile_id_t id);
-static char* fname_conf_get_suffix(fnames_conf_t* fn, logfile_id_t id);
+static char* fname_conf_get_prefix(fnames_conf_t* fn);
+static char* fname_conf_get_suffix(fnames_conf_t* fn);
 static void* thr_filewriter_fun(void* data);
 static logfile_t* logmanager_get_logfile(logmanager_t* lm);
 static bool logmanager_register(bool writep);
@@ -315,36 +309,6 @@ bool thr_flushall_check();
 const char* get_suffix_default(void)
 {
     return ".log";
-}
-
-const char* get_debug_prefix_default(void)
-{
-    return "debug";
-}
-
-const char* get_debug_suffix_default(void)
-{
-    return get_suffix_default();
-}
-
-const char* get_trace_prefix_default(void)
-{
-    return "trace";
-}
-
-const char* get_trace_suffix_default(void)
-{
-    return get_suffix_default();
-}
-
-const char* get_msg_prefix_default(void)
-{
-    return "messages";
-}
-
-const char* get_msg_suffix_default(void)
-{
-    return get_suffix_default();
 }
 
 const char* get_err_prefix_default(void)
@@ -1746,12 +1710,6 @@ static bool fnames_conf_init(fnames_conf_t* fn,
     bool           succp = false;
     const char*    argstr =
         "-h - help\n"
-        "-a <debug prefix>   ............(\"skygw_debug\")\n"
-        "-b <debug suffix>   ............(\".log\")\n"
-        "-c <trace prefix>   ............(\"skygw_trace\")\n"
-        "-d <trace suffix>   ............(\".log\")\n"
-        "-e <message prefix> ............(\"skygw_msg\")\n"
-        "-f <message suffix> ............(\".log\")\n"
         "-g <error prefix>   ............(\"skygw_err\")\n"
         "-i <error suffix>   ............(\".log\")\n"
         "-j <log path>       ............(\"/tmp\")\n"
@@ -1775,28 +1733,6 @@ static bool fnames_conf_init(fnames_conf_t* fn,
         {
         case 'o':
             use_stdout = 1;
-            break;
-        case 'a':
-            fn->fn_debug_prefix = strndup(optarg, MAX_PREFIXLEN);
-            break;
-
-        case 'b':
-            fn->fn_debug_suffix = strndup(optarg, MAX_SUFFIXLEN);
-            break;
-        case 'c':
-            fn->fn_trace_prefix = strndup(optarg, MAX_PREFIXLEN);
-            break;
-
-        case 'd':
-            fn->fn_trace_suffix = strndup(optarg, MAX_SUFFIXLEN);
-            break;
-
-        case 'e':
-            fn->fn_msg_prefix = strndup(optarg, MAX_PREFIXLEN);
-            break;
-
-        case 'f':
-            fn->fn_msg_suffix = strndup(optarg, MAX_SUFFIXLEN);
             break;
 
         case 'g':
@@ -1842,18 +1778,6 @@ static bool fnames_conf_init(fnames_conf_t* fn,
         } /** switch (opt) */
     }
     /** If log file name is not specified in call arguments, use default. */
-    fn->fn_debug_prefix = (fn->fn_debug_prefix == NULL) ?
-        strdup(get_debug_prefix_default()) : fn->fn_debug_prefix;
-    fn->fn_debug_suffix = (fn->fn_debug_suffix == NULL) ?
-        strdup(get_debug_suffix_default()) : fn->fn_debug_suffix;
-    fn->fn_trace_prefix = (fn->fn_trace_prefix == NULL) ?
-        strdup(get_trace_prefix_default()) : fn->fn_trace_prefix;
-    fn->fn_trace_suffix = (fn->fn_trace_suffix == NULL) ?
-        strdup(get_trace_suffix_default()) : fn->fn_trace_suffix;
-    fn->fn_msg_prefix   = (fn->fn_msg_prefix == NULL) ?
-        strdup(get_msg_prefix_default()) : fn->fn_msg_prefix;
-    fn->fn_msg_suffix   = (fn->fn_msg_suffix == NULL) ?
-        strdup(get_msg_suffix_default()) : fn->fn_msg_suffix;
     fn->fn_err_prefix   = (fn->fn_err_prefix == NULL) ?
         strdup(get_err_prefix_default()) : fn->fn_err_prefix;
     fn->fn_err_suffix   = (fn->fn_err_suffix == NULL) ?
@@ -1908,60 +1832,16 @@ return_conf_init:
 }
 
 
-static char* fname_conf_get_prefix(fnames_conf_t* fn, logfile_id_t id)
+static char* fname_conf_get_prefix(fnames_conf_t* fn)
 {
     CHK_FNAMES_CONF(fn);
-    ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
-
-    switch (id)
-    {
-    case LOGFILE_DEBUG:
-        return strdup(fn->fn_debug_prefix);
-        break;
-
-    case LOGFILE_TRACE:
-        return strdup(fn->fn_trace_prefix);
-        break;
-
-    case LOGFILE_MESSAGE:
-        return strdup(fn->fn_msg_prefix);
-        break;
-
-    case LOGFILE_ERROR:
-        return strdup(fn->fn_err_prefix);
-        break;
-
-    default:
-        return NULL;
-    }
+    return strdup(fn->fn_err_prefix);
 }
 
-static char* fname_conf_get_suffix(fnames_conf_t* fn, logfile_id_t id)
+static char* fname_conf_get_suffix(fnames_conf_t* fn)
 {
     CHK_FNAMES_CONF(fn);
-    ss_dassert(id >= LOGFILE_FIRST && id <= LOGFILE_LAST);
-
-    switch (id)
-    {
-    case LOGFILE_DEBUG:
-        return strdup(fn->fn_debug_suffix);
-        break;
-
-    case LOGFILE_TRACE:
-        return strdup(fn->fn_trace_suffix);
-        break;
-
-    case LOGFILE_MESSAGE:
-        return strdup(fn->fn_msg_suffix);
-        break;
-
-    case LOGFILE_ERROR:
-        return strdup(fn->fn_err_suffix);
-        break;
-
-    default:
-        return NULL;
-    }
+    return strdup(fn->fn_err_suffix);
 }
 
 
@@ -2523,8 +2403,8 @@ static bool logfile_init(logfile_t*    logfile,
     logfile->lf_chk_tail = CHK_NUM_LOGFILE;
 #endif
     logfile->lf_logmes = logmanager->lm_logmes;
-    logfile->lf_name_prefix = fname_conf_get_prefix(fn, LOGFILE_ERROR);
-    logfile->lf_name_suffix = fname_conf_get_suffix(fn, LOGFILE_ERROR);
+    logfile->lf_name_prefix = fname_conf_get_prefix(fn);
+    logfile->lf_name_suffix = fname_conf_get_suffix(fn);
     logfile->lf_npending_writes = 0;
     logfile->lf_name_seqno = 1;
     logfile->lf_lmgr = logmanager;
@@ -3038,15 +2918,9 @@ static void fnames_conf_done(fnames_conf_t* fn)
 
 static void fnames_conf_free_memory(fnames_conf_t* fn)
 {
-    if (fn->fn_debug_prefix != NULL) free(fn->fn_debug_prefix);
-    if (fn->fn_debug_suffix!= NULL)  free(fn->fn_debug_suffix);
-    if (fn->fn_trace_prefix != NULL) free(fn->fn_trace_prefix);
-    if (fn->fn_trace_suffix!= NULL)  free(fn->fn_trace_suffix);
-    if (fn->fn_msg_prefix != NULL)   free(fn->fn_msg_prefix);
-    if (fn->fn_msg_suffix != NULL)   free(fn->fn_msg_suffix);
-    if (fn->fn_err_prefix != NULL)   free(fn->fn_err_prefix);
-    if (fn->fn_err_suffix != NULL)   free(fn->fn_err_suffix);
-    if (fn->fn_logpath != NULL)      free(fn->fn_logpath);
+    free(fn->fn_err_prefix);
+    free(fn->fn_err_suffix);
+    free(fn->fn_logpath);
 }
 
 /**
