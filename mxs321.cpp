@@ -55,8 +55,9 @@ void create_and_check_connections(TestConnections* test, int target)
 
     for (int j = 0; j < test->repl->N; j++)
     {
-        sprintf(cmd, "show server%d", j+1);
-        get_maxadmin_param(test->maxscale_IP, (char*) "admin", test->maxadmin_password, cmd, (char*) "Current no. of conns:", result);
+        sprintf(cmd, "show server server%d", j+1);
+        test->add_result(get_maxadmin_param(test->maxscale_IP, (char*) "admin", test->maxadmin_password, cmd, (char*) "Current no. of conns:", result), "maxadmin command %s failed\n", cmd);
+        result_d = 999;
         sscanf(result, "%d", &result_d);
         if (strlen(result) == 0)
         {
