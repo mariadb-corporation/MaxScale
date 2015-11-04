@@ -84,9 +84,10 @@ int main(int argc, char *argv[])
                 get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, ma_cmd, (char *) "Slave delay:", result);
                 sscanf(result, "%d", &res_d);
                 Test->tprintf("server%d lag: %d\n", i+1, res_d);
+                if (i = 1) {min_lag = res_d;}
                 if (min_lag > res_d) {min_lag = res_d;}
             }
-            Test->tprintf("Min lag: %d", min_lag);
+            Test->tprintf("Minimum lag: %d\n", min_lag);
             find_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
             sscanf(server_id, "%d", &server_id_d);
             Test->tprintf("Connected to the server with server_id %d\n", server_id_d);
