@@ -41,9 +41,9 @@ target_link_libraries(namedserverfilter maxscale-common)
 set_target_properties(namedserverfilter PROPERTIES VERSION "1.1.0")
 install(TARGETS namedserverfilter DESTINATION ${MAXSCALE_LIBDIR})
 
-add_library(luafilter SHARED luafilter.cc)
+add_library(luafilter SHARED luafilter.c)
 target_link_libraries(luafilter log_manager utils lua)
-install(TARGETS luafilter DESTINATION modules)
+install(TARGETS luafilter DESTINATION ${MAXSCALE_LIBDIR})
 
 
 if(BUILD_SLAVELAG)
