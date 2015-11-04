@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
         Test->close_rwsplit();
     }
     Test->repl->close_connections();
+    Test->repl->start_replication();
 
     Test->copy_all_logs(); return(Test->global_result);
 }
