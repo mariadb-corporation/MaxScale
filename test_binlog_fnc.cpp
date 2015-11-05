@@ -16,6 +16,7 @@ int check_sha1(TestConnections* Test)
 
     char buf[1024];
     char buf_max[1024];
+    char *s;
 
     Test->tprintf("ls before FLUSH LOGS\n");
     Test->tprintf("Maxscale");
@@ -62,18 +63,21 @@ int check_sha1(TestConnections* Test)
         sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s sha1sum %s/mar-bin.00000%d'",
                 Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_binlog_dir, i);
         ls = popen(sys, "r");
-        fgets(buf_max, sizeof(buf), ls);
+        s = fgets(buf_max, sizeof(buf), ls);
         pclose(ls);
-        x = strchr(buf_max, ' '); x[0] = 0;
-        Test->tprintf("Binlog checksum from Maxscale %s\n", buf_max);
-
+        if (s != NULL) {
+            x = strchr(buf_max, ' '); x[0] = 0;
+            Test->tprintf("Binlog checksum from Maxscale %s\n", buf_max);
+        }
         sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s sha1sum /var/lib/mysql/mar-bin.00000%d'",
                 Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0], Test->repl->access_sudo[0], i);
         ls = popen(sys, "r");
-        fgets(buf, sizeof(buf), ls);
+        s = fgets(buf, sizeof(buf), ls);
         pclose(ls);
-        x = strchr(buf, ' '); x[0] = 0;
-        Test->tprintf("Binlog checksum from master %s\n", buf);
+        if (s != NULL) {
+            x = strchr(buf, ' '); x[0] = 0;
+            Test->tprintf("Binlog checksum from master %s\n", buf);
+        }
         if (strcmp(buf_max, buf) != 0) {
             Test->tprintf("Binlog from master checksum is not eqiual to binlog checksum from Maxscale node\n");
             global_result++;
