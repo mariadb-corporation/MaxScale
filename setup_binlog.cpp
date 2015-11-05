@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     for (int option = 0; option < options_set; option++) {
         Test->binlog_cmd_option = option;
         Test->start_binlog();
-        Test->add_result(test_binlog(Test), "Binlog failed \n");
+        test_binlog(Test);
     }
 
     Test->copy_all_logs(); return(Test->global_result);

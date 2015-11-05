@@ -100,7 +100,7 @@ int start_transaction(TestConnections* Test)
     return(global_result);
 }
 
-int test_binlog(TestConnections* Test)
+void test_binlog(TestConnections* Test)
 {
     int i;
     MYSQL* binlog;
@@ -109,15 +109,15 @@ int test_binlog(TestConnections* Test)
 
     Test->set_timeout(100);
     create_t1(Test->repl->nodes[0]);
-    global_result += insert_into_t1(Test->repl->nodes[0], 4);
+    Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "Data inserting to t1 failed\n");
     Test->stop_timeout();
-    Test->tprintf("Sleeping to let replication happen\n"); fflush(stdout);
+    Test->tprintf("Sleeping to let replication happen\n");
     sleep(30);
 
     for (i = 0; i < Test->repl->N; i++) {
         Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
         Test->set_timeout(100);
-        global_result += select_from_t1(Test->repl->nodes[i], 4);
+        Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "Selecting from t1 failed\n");
         Test->stop_timeout();
     }
 
@@ -128,49 +128,46 @@ int test_binlog(TestConnections* Test)
     Test->set_timeout(50);
 
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
-    global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
+    Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111"), "SELECT check failed\n");
 
-    //printf("SELECT, checking inserted values from slave\n");
-    //global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
-
-    global_result += check_sha1(Test);
+    Test->add_result(check_sha1(Test), "sha1 check failed\n");
 
     Test->tprintf("ROLLBACK\n");
-    global_result += execute_query(Test->repl->nodes[0], (char *) "ROLLBACK");
+    Test->try_query(Test->repl->nodes[0], (char *) "ROLLBACK");
     Test->tprintf("INSERT INTO t1 VALUES(112, 10)\n");
-    global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
+    Test->try_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
     Test->stop_timeout();
     sleep(20);
 
     Test->set_timeout(20);
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
-    global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
+    Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "112"), "SELECT check failed\n");
 
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values from slave\n");
-    global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "112");
+    Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "112"), "SELECT check failed\n");
     Test->tprintf("DELETE FROM t1 WHERE fl=10\n");
-    global_result += execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
+    Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
     Test->tprintf("Checking t1\n");
-    global_result += select_from_t1(Test->repl->nodes[0], 4);
+    Test->add_result(select_from_t1(Test->repl->nodes[0], 4), "SELECT from t1 failed\n");
 
     Test->tprintf("Second transaction test (with COMMIT)\n");
     start_transaction(Test);
 
     Test->tprintf("COMMIT\n");
-    global_result += execute_query(Test->repl->nodes[0], (char *) "COMMIT");
+    Test->try_query(Test->repl->nodes[0], (char *) "COMMIT");
 
     Test->tprintf("SELECT, checking inserted values\n");
-    global_result += execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
+    Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111"), "SELECT check failed\n");
 
     Test->tprintf("SELECT, checking inserted values from slave\n");
-    global_result += execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "111");
+    Test->add_result(execute_query_check_one(Test->repl->nodes[2], (char *) "SELECT * FROM t1 WHERE fl=10", "111"), "SELECT check failed\n");
     Test->tprintf("DELETE FROM t1 WHERE fl=10\n");
-    global_result += execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
+    Test->try_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10");
 
     Test->stop_timeout();
 
     Test->set_timeout(50);
-    global_result += check_sha1(Test);
+    Test->add_result(check_sha1(Test), "sha1 check failed\n");
     Test->repl->close_connections();
 
     Test->stop_timeout();
@@ -181,7 +178,7 @@ int test_binlog(TestConnections* Test)
         Test->repl->connect();
 
         Test->tprintf("Dropping and re-creating t1");
-        execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1");
+        Test->try_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1");
         create_t1(Test->repl->nodes[0]);
 
         Test->tprintf("Connecting to MaxScale binlog router\n");
@@ -194,26 +191,25 @@ int test_binlog(TestConnections* Test)
             Test->tprintf("FLUSH LOGS on master");
             execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
         }
-        global_result += insert_into_t1(Test->repl->nodes[0], 4);
+        Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "INSERT into t1 failed\n");
 
-        Test->tprintf("START SLAVE against Maxscale binlog"); fflush(stdout);
-        execute_query(binlog, (char *) "START SLAVE");
+        Test->tprintf("START SLAVE against Maxscale binlog");
+        Test->try_query(binlog, (char *) "START SLAVE");
 
-        Test->tprintf("Sleeping to let replication happen\n"); fflush(stdout);
+        Test->tprintf("Sleeping to let replication happen\n");
         Test->stop_timeout();
         sleep(30);
 
         for (i = 0; i < Test->repl->N; i++) {
             Test->set_timeout(50);
             Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
-            global_result += select_from_t1(Test->repl->nodes[i], 4);
+            Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "SELECT from t1 failed\n");
         }
 
         Test->set_timeout(100);
-        global_result += check_sha1(Test);
+        Test->add_result(check_sha1(Test), "sha1 check failed\n");
         Test->repl->close_connections();
         Test->stop_timeout();
     }
-    return(global_result);
 }
 

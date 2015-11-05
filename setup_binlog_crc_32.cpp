@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
         sleep(30);
 
         for (int i = 0; i < Test->repl->N; i++) {
-            printf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
+            Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
             Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "error SELECT for t1\n");
         }
 
