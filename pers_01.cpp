@@ -112,9 +112,12 @@ int main(int argc, char *argv[])
     Test->tprintf("Galera: \n");
     check_pers_conn(Test, galera_pers_conn_expected, (char *) "gserver");
 
+    Test->stop_timeout();
+
     Test->tprintf("Sleeping 10 seconds\n");
     sleep(10);
 
+    Test->set_timeout(20);
     Test->tprintf("Test 2:\n");
     check_pers_conn(Test, pers_conn_expected, (char *) "server");
 

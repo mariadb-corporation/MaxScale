@@ -70,11 +70,11 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Checking logs\n");
 
-    Test->check_log_err((char *) "Error : Couldn't find suitable Master from 2 candidates", TRUE);
-    Test->check_log_err((char *) "Error : Failed to create RW_Split session.", TRUE);
-    Test->check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
-    Test->check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
-    Test->check_log_err((char *) "Error : Setting up filters failed. Terminating session RW_Router", TRUE);
+    Test->check_log_err((char *) "Couldn't find suitable Master from 2 candidates", TRUE);
+    Test->check_log_err((char *) "Failed to create RW_Split session", TRUE);
+    Test->check_log_err((char *) "Creating client session for Tee filter failed. Terminating session.", TRUE);
+    Test->check_log_err((char *) "Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
+    Test->check_log_err((char *) "Setting up filters failed. Terminating session RW_Router", TRUE);
 
     Test->copy_all_logs(); return(Test->global_result);
 }
