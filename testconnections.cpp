@@ -607,22 +607,22 @@ int TestConnections::create_connections(int conn_N)
 
     tprintf("Opening %d connections to each router\n", conn_N);
     for (i = 0; i < conn_N; i++) {
-        set_timeout(10);
+        set_timeout(20);
         tprintf("opening %d-connection: ", i+1);
 
         printf("RWSplit \t");
         rwsplit_conn[i] = open_rwsplit_connection();
-        if (!rwsplit_conn[i]) { add_result(1, "RWSplit connection failed%s\n");}
+        if (!rwsplit_conn[i]) { add_result(1, "RWSplit connection failed\n");}
 
         printf("ReadConn master \t");
         master_conn[i] = open_readconn_master_connection();
-        if (!master_conn[i]) { add_result(1, "ReadConn master connection failed%s\n");}
+        if (!master_conn[i]) { add_result(1, "ReadConn master connection failed\n");}
         printf("ReadConn slave \t");
         slave_conn[i] = open_readconn_slave_connection();
-        if (!slave_conn[i]) { add_result(1, "ReadConn slave connection failed%s\n");}
+        if (!slave_conn[i]) { add_result(1, "ReadConn slave connection failed\n");}
         printf("galera \n");
         galera_conn[i] = open_conn(4016, maxscale_IP, maxscale_user, maxscale_password, ssl);
-        if (!galera_conn[i]) { add_result(1, "Galera connection failed%s\n");}
+        if (!galera_conn[i]) { add_result(1, "Galera connection failed\n");}
     }
     for (i = 0; i < conn_N; i++) {
         set_timeout(10);
