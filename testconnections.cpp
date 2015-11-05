@@ -612,17 +612,17 @@ int TestConnections::create_connections(int conn_N)
 
         printf("RWSplit \t");
         rwsplit_conn[i] = open_rwsplit_connection();
-        add_result(mysql_errno(rwsplit_conn[i]), "%s\n", mysql_error(rwsplit_conn[i]));
+        if (!rwsplit_conn[i]) { add_result(1, "RWSplit connection failed%s\n");}
 
         printf("ReadConn master \t");
         master_conn[i] = open_readconn_master_connection();
-        add_result(mysql_errno(master_conn[i]), "%s\n", mysql_error(master_conn[i]));
+        if (!master_conn[i]) { add_result(1, "ReadConn master connection failed%s\n");}
         printf("ReadConn slave \t");
         slave_conn[i] = open_readconn_slave_connection();
-        add_result(mysql_errno(slave_conn[i]), "%s\n", mysql_error(slave_conn[i]));
+        if (!slave_conn[i]) { add_result(1, "ReadConn slave connection failed%s\n");}
         printf("galera \n");
         galera_conn[i] = open_conn(4016, maxscale_IP, maxscale_user, maxscale_password, ssl);
-        add_result(mysql_errno(galera_conn[i]), "%s\n", mysql_error(galera_conn[i]));
+        if (!galera_conn[i]) { add_result(1, "Galera connection failed%s\n");}
     }
     for (i = 0; i < conn_N; i++) {
         set_timeout(10);

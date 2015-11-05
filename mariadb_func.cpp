@@ -47,7 +47,7 @@ MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * P
                            flag
                            ))
     {
-        printf("Error: can't connect to database %s\n", mysql_error(conn));
+        printf("Error: can't connect to database %s:\n", mysql_error(conn));
         return(NULL);
     }
 
