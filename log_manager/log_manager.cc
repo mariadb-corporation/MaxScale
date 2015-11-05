@@ -2989,3 +2989,142 @@ void logmanager_enable_maxscalelog(int val)
 {
     do_maxscalelog = val;
 }
+
+
+/**
+ * Explicitly ensure that all pending log messages are flushed.
+ *
+ * @return 0 if the flushing was successfully initiated, otherwise -1.
+ *
+ * Note that the return value only indicates whether the flushing was
+ * successfully initiated, not whether the actual flushing has been
+ * performed.
+ */
+int mxs_log_flush()
+{
+    return skygw_log_flush(LOGFILE_ERROR);
+}
+
+/**
+ * Rotate the log-file. That is, close the current one and create a new one
+ * with a larger sequence number.
+ *
+ * @return 0 if the rotating was successfully initiated, otherwise -1.
+ *
+ * Note that the return value only indicates whether the rotating was
+ * successfully initiated, not whether the actual rotation has been
+ * performed.
+ */
+int mxs_log_rotate()
+{
+    return skygw_log_rotate(LOGFILE_ERROR);
+}
+
+static bool convert_priority_to_file(int priority, logfile_id_t* idp, const char** textp)
+{
+    bool converted = true;
+
+    *idp = (logfile_id_t) -1;
+    *textp = NULL;
+
+    switch (priority)
+    {
+    case LOG_DEBUG:
+        *idp = LOGFILE_DEBUG;
+        break;
+    case LOG_INFO:
+        *idp = LOGFILE_TRACE;
+        break;
+    case LOG_NOTICE:
+        *idp = LOGFILE_MESSAGE;
+        break;
+    case LOG_ERR:
+        *idp = LOGFILE_ERROR;
+        break;
+    case LOG_WARNING:
+        *textp = "LOG_WARNING";
+        break;
+    case LOG_CRIT:
+        *textp = "LOG_CRIT";
+        break;
+    case LOG_ALERT:
+        *textp = "LOG_ALERT";
+        break;
+    case LOG_EMERG:
+        *textp = "LOG_EMERG";
+        break;
+    default:
+        converted = false;
+    }
+
+    return converted;
+}
+
+/**
+ * Enable a particular syslog priority.
+ *
+ * @param priority One of the LOG_ERR etc. constants from sys/syslog.h.
+ * @return 0 if the priority was valid, -1 otherwise.
+ */
+int mxs_log_enable_priority(int priority)
+{
+    int rv = -1;
+    logfile_id_t id;
+    const char* text;
+
+    if (convert_priority_to_file(priority, &id, &text))
+    {
+        if (!text)
+        {
+            rv = skygw_log_enable(id);
+        }
+        else
+        {
+            // TODO: Change to warning when available.
+            MXS_DEBUG("Attempt to enable syslog priority %s, which is not available yet.", text);
+            rv = 0;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Attempt to enable unknown syslog priority: %d", priority);
+    }
+
+    return rv;
+}
+
+/**
+ * Disable a particular syslog priority.
+ *
+ * @param priority One of the LOG_ERR etc. constants from sys/syslog.h.
+ *
+ * Note that there is no hierarchy. That is, disabling a priority of
+ * high importance, such as LOG_ERR, does not automatically disable
+ * all lower prioritys.
+ */
+int mxs_log_disable_priority(int priority)
+{
+    int rv = -1;
+    logfile_id_t id;
+    const char* text;
+
+    if (convert_priority_to_file(priority, &id, &text))
+    {
+        if (!text)
+        {
+            rv = skygw_log_disable(id);
+        }
+        else
+        {
+            // TODO: Change to warning when available.
+            MXS_DEBUG("Attempt to enable syslog priority %s, which is not available.", text);
+            rv = 0;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Attempt to enable unknown syslog priority: %d", priority);
+    }
+
+    return rv;
+}

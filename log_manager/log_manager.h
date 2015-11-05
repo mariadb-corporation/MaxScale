@@ -140,6 +140,11 @@ extern int lm_enabled_logfiles_bitmask;
 extern ssize_t log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
+int mxs_log_flush();
+int mxs_log_rotate();
+int mxs_log_enable_priority(int priority);
+int mxs_log_disable_priority(int priority);
+
 bool skygw_logmanager_init(int argc, char* argv[]);
 void skygw_logmanager_done(void);
 void skygw_logmanager_exit(void);
