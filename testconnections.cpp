@@ -609,31 +609,32 @@ int TestConnections::create_connections(int conn_N)
     for (i = 0; i < conn_N; i++) {
         set_timeout(10);
         tprintf("opening %d-connection: ", i+1);
+
         printf("RWSplit \t");
         rwsplit_conn[i] = open_rwsplit_connection();
-        if (mysql_errno(rwsplit_conn[i]) != 0) {
-            tprintf("%s\n", mysql_error(rwsplit_conn[i]));
-        }
+        add_result(mysql_errno(rwsplit_conn[i]), "%s\n", mysql_error(rwsplit_conn[i]));
+
         printf("ReadConn master \t");
         master_conn[i] = open_readconn_master_connection();
+        add_result(mysql_errno(master_conn[i]), "%s\n", mysql_error(master_conn[i]));
         printf("ReadConn slave \t");
         slave_conn[i] = open_readconn_slave_connection();
+        add_result(mysql_errno(slave_conn[i]), "%s\n", mysql_error(slave_conn[i]));
         printf("galera \n");
         galera_conn[i] = open_conn(4016, maxscale_IP, maxscale_user, maxscale_password, ssl);
+        add_result(mysql_errno(galera_conn[i]), "%s\n", mysql_error(galera_conn[i]));
     }
     for (i = 0; i < conn_N; i++) {
         set_timeout(10);
         tprintf("Trying query against %d-connection: ", i+1);
         printf("RWSplit \t");
-        if (execute_query(rwsplit_conn[i], "select 1;") != 0) {
-            tprintf("Query failed!\n");
-        }
+        try_query(rwsplit_conn[i], "select 1;");
         printf("ReadConn master \t");
-        execute_query(master_conn[i], "select 1;");
+        try_query(master_conn[i], "select 1;");
         printf("ReadConn slave \t");
-        execute_query(slave_conn[i], "select 1;");
+        try_query(slave_conn[i], "select 1;");
         printf("galera \n");
-        execute_query(galera_conn[i], "select 1;");
+        try_query(galera_conn[i], "select 1;");
     }
 
     //global_result += check_pers_conn(Test, pers_conn_expected);
