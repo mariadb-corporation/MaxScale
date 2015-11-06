@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
         ROUTER_INSTANCE *inst;
         int ret;
 	int rc;
-	int arg_count = 4;
+	int arg_count = 1;
 	char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
 	CHANGE_MASTER_OPTIONS change_master;
 	char query[255+1]="";
@@ -100,11 +100,8 @@ int main(int argc, char **argv) {
 	}
 
 	arg_vector[0] = "logmanager";
-	arg_vector[1] = "-j";
-	arg_vector[2] = "/tmp/maxbinlogcheck";
-	arg_vector[3] = "-o";
-	arg_vector[4] = NULL;
-	skygw_logmanager_init(arg_count,arg_vector);
+	arg_vector[1] = NULL;
+	skygw_logmanager_init(NULL, arg_count,arg_vector);
 	free(arg_vector);
 
 	skygw_log_disable(LOGFILE_DEBUG);

@@ -35,7 +35,7 @@
 
 int main(int argc, char **argv)
 {
-    int arg_count = 4;
+    int arg_count = 1;
     char *home;
     char *keyfile;
     char** arg_vector;
@@ -59,11 +59,8 @@ int main(int argc, char **argv)
     }
 
     arg_vector[0] = "logmanager";
-    arg_vector[1] = "-j";
-    arg_vector[2] = "/var/log/maxscale/maxkeys";
-    arg_vector[3] = "-o";
-    arg_vector[4] = NULL;
-    skygw_logmanager_init(arg_count, arg_vector);
+    arg_vector[1] = NULL;
+    skygw_logmanager_init(NULL, arg_count, arg_vector);
     free(arg_vector);
 
     if (secrets_writeKeys(keyfile))

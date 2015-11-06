@@ -145,7 +145,7 @@ int mxs_log_rotate();
 int mxs_log_enable_priority(int priority);
 int mxs_log_disable_priority(int priority);
 
-bool skygw_logmanager_init(int argc, char* argv[]);
+bool skygw_logmanager_init(const char* logdir, int argc, char* argv[]);
 void skygw_logmanager_done(void);
 void skygw_logmanager_exit(void);
 

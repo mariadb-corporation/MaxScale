@@ -267,14 +267,14 @@ static bool filewriter_init(logmanager_t*    logmanager,
                             skygw_message_t* clientmes,
                             skygw_message_t* logmes);
 static void filewriter_done(filewriter_t* filewriter);
-static bool fnames_conf_init(fnames_conf_t* fn, int argc, char* argv[]);
+static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir, int argc, char* argv[]);
 static void fnames_conf_done(fnames_conf_t* fn);
 static void fnames_conf_free_memory(fnames_conf_t* fn);
 static void* thr_filewriter_fun(void* data);
 static logfile_t* logmanager_get_logfile(logmanager_t* lm);
 static bool logmanager_register(bool writep);
 static void logmanager_unregister(void);
-static bool logmanager_init_nomutex(int argc, char* argv[]);
+static bool logmanager_init_nomutex(const char* logdir, int argc, char* argv[]);
 static void logmanager_done_nomutex(void);
 static bool logmanager_is_valid_id(logfile_id_t id);
 
@@ -310,7 +310,7 @@ const char* get_logpath_default(void)
     return "/var/log/maxscale";
 }
 
-static bool logmanager_init_nomutex(int argc, char* argv[])
+static bool logmanager_init_nomutex(const char* logdir, int argc, char* argv[])
 {
     fnames_conf_t* fn;
     filewriter_t*  fw;
@@ -356,7 +356,7 @@ static bool logmanager_init_nomutex(int argc, char* argv[])
     }
 
     /** Initialize configuration including log file naming info */
-    if (!fnames_conf_init(fn, argc, argv))
+    if (!fnames_conf_init(fn, logdir, argc, argv))
     {
         err = 1;
         goto return_succp;
@@ -418,15 +418,14 @@ return_succp:
 /**
  * Initializes log managing routines in MariaDB Corporation MaxScale.
  *
- * Parameters:
+ * @param logdir The directory for the log file. If NULL logging will be made to stdout.
  * @param argc  number of arguments in argv array
- *
  * @param argv  arguments array
  *
  * @return true if succeed, otherwise false
  *
  */
-bool skygw_logmanager_init(int argc, char* argv[])
+bool skygw_logmanager_init(const char* logdir, int argc, char* argv[])
 {
     bool succp = false;
 
@@ -438,7 +437,7 @@ bool skygw_logmanager_init(int argc, char* argv[])
         goto return_succp;
     }
 
-    succp = logmanager_init_nomutex(argc, argv);
+    succp = logmanager_init_nomutex(logdir, argc, argv);
 
 return_succp:
     release_lock(&lmlock);
@@ -1623,7 +1622,8 @@ static bool logmanager_register(bool writep)
 
         if (lm == NULL)
         {
-            succp = logmanager_init_nomutex(0, NULL);
+            // TODO: This looks fishy.
+            succp = logmanager_init_nomutex(get_logpath_default(), 0, NULL);
         }
     }
     /** if logmanager existed or was succesfully restarted, increase link */
@@ -1670,23 +1670,18 @@ static void logmanager_unregister(void)
  * @node Initialize log file naming parameters from call arguments
  * or from default functions in cases where arguments are not provided.
  *
- * Parameters:
- * @param fn - <usage>
- *          <description>
+ * @param fn     The fnames_conf_t structure to initialize.
+ * @param logdir The directory for the log file. If NULL logging will be made to stdout.
+ * @param argc   number of arguments in argv array
+ * @param argv   arguments array
  *
- * @param argc - <usage>
- *          <description>
- *
- * @param argv - <usage>
- *          <description>
- *
- * @return pointer to object which is either in RUN or DONE state.
- *
+ * @return True if the initialization was performed, false otherwise.
  *
  * @details Note that input parameter lenghts are checked here.
  *
  */
 static bool fnames_conf_init(fnames_conf_t* fn,
+                             const char*    logdir,
                              int            argc,
                              char*          argv[])
 {
@@ -1694,11 +1689,9 @@ static bool fnames_conf_init(fnames_conf_t* fn,
     bool           succp = false;
     const char*    argstr =
         "-h - help\n"
-        "-j <log path>       ............(\"/tmp\")\n"
         "-l <syslog log file ids> .......(no default)\n"
         "-m <syslog ident>   ............(argv[0])\n"
-        "-s <shmem log file ids>  .......(no default)\n"
-        "-o                       .......(write logs to stdout)\n";
+        "-s <shmem log file ids>  .......(no default)\n";
 
     /**
      * When init_started is set, clean must be done for it.
@@ -1709,18 +1702,11 @@ static bool fnames_conf_init(fnames_conf_t* fn,
     fn->fn_chk_tail = CHK_NUM_FNAMES;
 #endif
     optind = 1; /**<! reset getopt index */
-    while ((opt = getopt(argc, argv, "+h:j:l:m:s:o")) != -1)
+
+    while ((opt = getopt(argc, argv, "+h:l:m:s:")) != -1)
     {
         switch (opt)
         {
-        case 'o':
-            use_stdout = 1;
-            break;
-
-        case 'j':
-            fn->fn_logpath = strndup(optarg, MAX_PATHLEN);
-            break;
-
         case 'l':
             /** record list of log file ids for syslogged */
             if (do_syslog)
@@ -1751,8 +1737,18 @@ static bool fnames_conf_init(fnames_conf_t* fn,
             goto return_conf_init;
         } /** switch (opt) */
     }
-    /** If log file name is not specified in call arguments, use default. */
-    fn->fn_logpath = (fn->fn_logpath == NULL) ? strdup(get_logpath_default()) : fn->fn_logpath;
+
+    if (logdir)
+    {
+        use_stdout = 0;
+        fn->fn_logpath = strdup(logdir);
+    }
+    else
+    {
+        use_stdout = 1;
+        // TODO: Re-arrange things so that fn->fn_logpath can be NULL.
+        fn->fn_logpath = strdup(get_logpath_default());
+    }
 
     /** Set identity string for syslog if it is not set in config.*/
     if (do_syslog)
@@ -1907,6 +1903,14 @@ static bool logfile_create(logfile_t* lf)
     bool succp;
     strpart_t spart[3]; /*< string parts of which the file is composed of */
 
+    if (use_stdout)
+    {
+        // TODO: Refactor so that lf_full_file_name can be NULL in this case.
+        lf->lf_full_file_name = strdup("stdout");
+        succp = true;
+        // TODO: Refactor to get rid of the gotos.
+        goto return_succp;
+    }
     /**
      * sparts is an array but next pointers are used to walk through
      * the list of string parts.

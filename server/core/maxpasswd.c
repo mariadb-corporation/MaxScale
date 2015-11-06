@@ -42,7 +42,7 @@ main(int argc, char **argv)
 {
     char  *enc;
     char  *pw;
-    int    arg_count = 6;
+    int    arg_count = 1;
     char  *home;
     char** arg_vector;
     int    rval = 0;
@@ -61,16 +61,9 @@ main(int argc, char **argv)
         return 1;
     }
 
-    arg_vector[0] = strdup("logmanager");
-    arg_vector[1] = strdup("-j");
-    arg_vector[2] = strdup("/var/log/maxscale");
-
-    arg_vector[3] = "-o";
-    arg_vector[4] = "-l";
-    arg_vector[5] = "LOGFILE_ERROR";
-    arg_vector[6] = NULL;
-    skygw_logmanager_init(arg_count, arg_vector);
-    free(arg_vector[2]);
+    arg_vector[0] = "logmanager";
+    arg_vector[1] = NULL;
+    skygw_logmanager_init(NULL, arg_count, arg_vector);
     free(arg_vector);
 
     pw = calloc(81, sizeof(char));

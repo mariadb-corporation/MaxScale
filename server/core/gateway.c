@@ -1716,8 +1716,6 @@ int main(int argc, char **argv)
         }
 
         argv[0] = "MaxScale";
-        argv[1] = "-j";
-        argv[2] = get_logdir();
 
         if (!(*syslog_enabled))
         {
@@ -1733,21 +1731,21 @@ int main(int argc, char **argv)
 
         if (logtofile)
         {
-            argv[3] = "-l"; /*< write to syslog */
+            argv[1] = "-l"; /*< write to syslog */
             /** Logs that should be syslogged */
-            argv[4] = "LOGFILE_MESSAGE,LOGFILE_ERROR"
+            argv[2] = "LOGFILE_MESSAGE,LOGFILE_ERROR"
                 "LOGFILE_DEBUG,LOGFILE_TRACE";
-            argv[5] = NULL;
-            succp = skygw_logmanager_init(5, argv);
+            argv[3] = NULL;
+            succp = skygw_logmanager_init(get_logdir(), 3, argv);
         }
         else
         {
-            argv[3] = "-s"; /*< store to shared memory */
-            argv[4] = "LOGFILE_DEBUG,LOGFILE_TRACE"; /*< to shm */
-            argv[5] = "-l"; /*< write to syslog */
-            argv[6] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< to syslog */
-            argv[7] = NULL;
-            succp = skygw_logmanager_init(7, argv);
+            argv[1] = "-s"; /*< store to shared memory */
+            argv[2] = "LOGFILE_DEBUG,LOGFILE_TRACE"; /*< to shm */
+            argv[3] = "-l"; /*< write to syslog */
+            argv[4] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< to syslog */
+            argv[5] = NULL;
+            succp = skygw_logmanager_init(get_logdir(), 5, argv);
         }
 
         if (!succp)

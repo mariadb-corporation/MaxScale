@@ -63,14 +63,12 @@ int main(int argc, char** argv)
 
   sprintf(tmp,"%s",cwd);
   optstr[0] = strdup("log_manager");
-  optstr[1] = strdup("-j");
-  optstr[2] = strdup(tmp);
-  optstr[3] = NULL;
+  optstr[1] = NULL;
 
   iterations = atoi(argv[1]);
   interval = atoi(argv[2]);
   
-  succp = skygw_logmanager_init( 3, optstr);
+  succp = skygw_logmanager_init(tmp, 1, optstr);
   if(!succp)
       fprintf(stderr,"Error, log manager initialization failed.\n");
   ss_dassert(succp);

@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
                 fprintf(stderr, "Couldn't register exit function.\n");
         }
         
-        succp = skygw_logmanager_init( log_argc, log_argv);
+        succp = skygw_logmanager_init("/tmp", log_argc, log_argv);
 	if(!succp)
 	    fprintf(stderr, "Log manager initialization failed.\n");
         ss_dassert(succp);
@@ -121,7 +121,7 @@ int main(int argc, char* argv[])
                                     tm.tm_min,
                                     tm.tm_sec);
         
-        skygw_logmanager_init( log_argc, log_argv);
+        skygw_logmanager_init("/tmp", log_argc, log_argv);
         logstr = ("First write with flush.");
         err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
 
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
         logstr = "Ph%dlip.";
         err = skygw_log_write(LOGFILE_TRACE, logstr, 1);
         
-        skygw_logmanager_init( log_argc, log_argv);
+        skygw_logmanager_init("/tmp", log_argc, log_argv);
         logstr = ("A terrible error has occurred!");
         err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
 
@@ -301,7 +301,7 @@ int main(int argc, char* argv[])
         err = skygw_log_write(LOGFILE_ERROR, logstr);
         ss_dassert(err == 0);
 
-        succp = skygw_logmanager_init(log_argc, log_argv);
+        succp = skygw_logmanager_init("/tmp", log_argc, log_argv);
         ss_dassert(succp);
 
         skygw_log_disable(LOGFILE_TRACE);
@@ -362,7 +362,7 @@ int main(int argc, char* argv[])
 #endif /* TEST 3 */
 
 #if defined(TEST4)
-        succp = skygw_logmanager_init(log_argc, log_argv);
+        succp = skygw_logmanager_init("/tmp", log_argc, log_argv);
         ss_dassert(succp);
 #if !defined(SS_DEBUG)
         skygw_log_enable(LOGFILE_TRACE);
@@ -397,7 +397,7 @@ int main(int argc, char* argv[])
         
         skygw_logmanager_done();
 
-        succp = skygw_logmanager_init(log_argc, log_argv);
+        succp = skygw_logmanager_init("/tmp", log_argc, log_argv);
         ss_dassert(succp);
 #if !defined(SS_DEBUG)
         skygw_log_enable(LOGFILE_TRACE);
@@ -473,7 +473,7 @@ static void* thr_run(
         char*     logstr;
         int       err;
 
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         skygw_logmanager_done();
         skygw_log_flush(LOGFILE_MESSAGE);
         logstr = ("Hi, how are you?");
@@ -489,14 +489,14 @@ static void* thr_run(
 	    fprintf(stderr,"Error, log write failed.\n");
 	ss_dassert(err == 0);
         err = skygw_log_write(LOGFILE_MESSAGE, logstr);
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         logstr = ("Testing. One, two, three\n");
         err = skygw_log_write(LOGFILE_ERROR, logstr);
 	if(err != 0)
 	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
-        skygw_logmanager_init( 0, NULL);
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         skygw_log_flush(LOGFILE_ERROR);
         logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 
@@ -506,13 +506,13 @@ static void* thr_run(
 	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);    
         skygw_logmanager_done();
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
         err = skygw_log_write(LOGFILE_ERROR, logstr);
 	if(err != 0)
 	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         skygw_logmanager_done();
         skygw_log_flush(LOGFILE_ERROR);
         skygw_logmanager_done();
@@ -522,8 +522,8 @@ static void* thr_run(
 	if(err != 0)
 	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
-        skygw_logmanager_init( 0, NULL);
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 #if !defined(SS_DEBUG)
         skygw_log_enable(LOGFILE_TRACE);
@@ -532,13 +532,13 @@ static void* thr_run(
 	if(err != 0)
 	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) immediately; the two forms are equivalent. Applying the operatos & to both parts of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the address of the i-th element beyond a.");
         err = skygw_log_write(LOGFILE_ERROR, logstr);
 	if(err != 0)
 	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         logstr = ("..... and you too?");
         err = skygw_log_write(LOGFILE_MESSAGE, logstr);
 	if(err != 0)
@@ -563,14 +563,14 @@ static void* thr_run(
 	if(err != 0)
 	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         logstr = ("Testing. One, two, three, .. where was I?\n");
         err = skygw_log_write(LOGFILE_ERROR, logstr);
 	if(err != 0)
 	    fprintf(stderr,"Error, log write failed.\n");
         ss_dassert(err == 0);
-        skygw_logmanager_init( 0, NULL);
-        skygw_logmanager_init( 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
+        skygw_logmanager_init("/tmp", 0, NULL);
         skygw_logmanager_done();
         simple_mutex_lock(td->mtx, true);
         *td->nactive -= 1;
