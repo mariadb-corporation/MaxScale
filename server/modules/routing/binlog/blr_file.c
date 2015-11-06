@@ -459,9 +459,10 @@ struct	stat	statb;
 		if (pos > router->binlog_position && !router->rotating)
 		{
 			/* Unsafe position, slave will be disconnected by the calling routine */
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is not available. "
-				"Latest safe position %lu, end of binlog '%s' is %lu",
-				pos, router->binlog_position, file->binlogname, router->current_pos);
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested binlog position %lu. Position is unsafe so disconnecting. "
+				"Latest safe position %lu, end of binlog file %lu",
+				pos, router->binlog_position, router->current_pos);
+
 			hdr->ok = SLAVE_POS_READ_UNSAFE;
 		} else {
 			/* accessing last position is ok */
