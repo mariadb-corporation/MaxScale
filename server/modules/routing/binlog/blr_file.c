@@ -208,6 +208,7 @@ unsigned char	magic[] = BINLOG_MAGIC;
 	router->current_pos = 4;			/* Initial position after the magic number */
 	router->binlog_position = 4;			/* Initial position after the magic number */
 	router->current_safe_event = 4;
+	router->last_written = 0;
 }
 
 
@@ -426,30 +427,54 @@ struct	stat	statb;
 		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Invalid file pointer for requested binlog at position %lu", pos);
 		return NULL;
 	}
+
+	spinlock_acquire(&file->lock);
 	if (fstat(file->fd, &statb) == 0)
 		filelen = statb.st_size;
+	else {
+		if (file->fd == -1) {
+			hdr->ok = SLAVE_POS_READ_OK;
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "blr_read_binlog called with invalid file->fd, pos %lu", pos);
+			spinlock_release(&file->lock);
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"Slave has failed fstat %s", errmsg)));
+			return NULL;
+		}
+	}
+        spinlock_release(&file->lock);
 
 	if (pos > filelen)
 	{
-		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is beyond end of the binlog file '%s', size %lu", pos, file->binlogname, filelen);
+		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is beyond end of the binlog file '%s', size %lu",
+			pos, file->binlogname, filelen);
 		return NULL;
 	}
+
+	spinlock_acquire(&router->binlog_lock);
+	spinlock_acquire(&file->lock);
 
 	if (strcmp(router->binlog_name, file->binlogname) == 0 &&
 			pos >= router->binlog_position)
 	{
-		if (pos > router->binlog_position)
+		if (pos > router->binlog_position && !router->rotating)
 		{
 			/* Unsafe position, slave will be disconnected by the calling routine */
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested binlog position %lu. Position is unsafe so disconnecting. Latest safe position %lu, end of binlog file %lu", pos, router->binlog_position, router->current_pos);
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is not available. "
+				"Latest safe position %lu, end of binlog '%s' is %lu",
+				pos, router->binlog_position, file->binlogname, router->current_pos);
 			hdr->ok = SLAVE_POS_READ_UNSAFE;
 		} else {
 			/* accessing last position is ok */
 			hdr->ok = SLAVE_POS_READ_OK;
 		}
 
+		spinlock_release(&file->lock);
+		spinlock_release(&router->binlog_lock);
+
 		return NULL;
 	}
+	spinlock_release(&file->lock);
+	spinlock_release(&router->binlog_lock);
 
 	/* Read the header information from the file */
 	if ((n = pread(file->fd, hdbuf, BINLOG_EVENT_HDR_LEN, pos)) != BINLOG_EVENT_HDR_LEN)
@@ -960,9 +985,8 @@ int fde_seen = 0;
                                 pending_transaction = 0;
 
 				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-					"Warning : pending transaction has been found. "
-					"Setting safe pos to %lu, current pos %lu",
-					router->binlog_position, router->current_pos)));
+					"Binlog '%s' ends at position %lu and has an incomplete transaction at %lu. ",
+					router->binlog_name, router->current_pos, router->binlog_position)));
 
 				return 0;
                         } else {

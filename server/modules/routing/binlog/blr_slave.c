@@ -1813,8 +1813,9 @@ uint32_t	chksum;
 
 	LOGIF(LM, (skygw_log_write(
 		LOGFILE_MESSAGE,
-			"%s: Slave %s, server id %d requested binlog file %s from position %lu",
+			"%s: Slave %s:%d, server id %d requested binlog file %s from position %lu",
 			router->service->name, slave->dcb->remote,
+			slave->port,
 			slave->serverid,
 			slave->binlogfile, (unsigned long)slave->binlog_pos)));
 
@@ -2050,8 +2051,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
                 if (hdr.ok == SLAVE_POS_READ_ERR) {
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"%s Slave %s:%i, server-id %d, binlog '%s', %s",
-				router->service->name,
+				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
 				slave->dcb->remote,
 				slave->port,
 				slave->serverid,
@@ -2076,7 +2076,13 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
 		if (hdr.ok == SLAVE_POS_READ_UNSAFE) {
 
-			ROUTER_OBJECT *router_obj= router->service->router;
+			ROUTER_OBJECT *router_obj;
+
+			spinlock_acquire(&router->lock);
+
+			router_obj = router->service->router;
+
+			spinlock_release(&router->lock);
 
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"%s: Slave %s:%i, server-id %d, binlog '%s', %s",
@@ -2146,7 +2152,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			if (slave->stats.n_caughtup == 1)
 			{
 				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-					"%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
+					"%s: Slave %s:%d, server-id %d is now up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
 					slave->port,
@@ -2232,6 +2238,34 @@ ROUTER_INSTANCE		*router = slave->router;
 	{
 		if (slave->state == BLRS_DUMPING)
 		{
+			int do_return;
+
+			spinlock_acquire(&router->binlog_lock);
+
+			do_return = 0;
+
+			/* check for a pending transaction and not rotating */
+			if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
+				(slave->binlog_pos > router->binlog_position) && !router->rotating) {
+				do_return = 1;
+			}
+
+			spinlock_release(&router->binlog_lock);
+
+			if (do_return) {
+				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+					"Slave %s:%d, server-id %d, binlog '%s', blr_slave_callback is not calling blr_slave_catchup, pos %lu",
+					slave->dcb->remote,
+					slave->port,
+					slave->serverid,
+					slave->binlogfile,
+					(unsigned long)slave->binlog_pos)));
+
+				slave->cstate |= CS_EXPECTCB;
+				poll_fake_write_event(slave->dcb);
+                                return 0;
+			}
+
 			spinlock_acquire(&slave->catch_lock);
 			slave->cstate &= ~(CS_UPTODATE|CS_EXPECTCB);
 			spinlock_release(&slave->catch_lock);
