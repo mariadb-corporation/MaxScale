@@ -148,6 +148,7 @@ hashtable_alloc_real(
 	rval->vfreefn = nullfn;
 	rval->n_readers = 0;
 	rval->writelock = 0;
+	rval->n_elements = 0;
 	spinlock_init(&rval->spin);
 	if ((rval->entries = (HASHENTRIES **)calloc(rval->hashsize, sizeof(HASHENTRIES *))) == NULL)
 	{
@@ -296,6 +297,7 @@ hashtable_add(HASHTABLE *table, void *key, void *value)
 		ptr->next = table->entries[hashkey % table->hashsize];
 		table->entries[hashkey % table->hashsize] = ptr;
 	}
+	table->n_elements++;
 	hashtable_write_unlock(table);
 
 	return 1;
@@ -362,6 +364,8 @@ HASHENTRIES	*entry, *ptr;
 		table->vfreefn(entry->value);
 		free(entry);
 	}
+	table->n_elements--;
+	assert(table->n_elements >= 0);
 	hashtable_write_unlock(table);
 	return 1;
 }
@@ -769,4 +773,18 @@ char		buf[40];
 
 	close(fd);
 	return rval;
+}
+
+/**
+ * Return the number of elements added to the hashtable
+ * @param table Hashtable to measure
+ * @return Number of inserted elements or 0 if table is NULL
+ */
+int hashtable_size(HASHTABLE *table)
+{
+    assert(table);
+    spinlock_acquire(&table->spin);
+    int rval = table->n_elements;
+    spinlock_release(&table->spin);
+    return rval;
 }
