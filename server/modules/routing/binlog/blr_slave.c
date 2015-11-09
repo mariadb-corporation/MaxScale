@@ -2261,9 +2261,12 @@ ROUTER_INSTANCE		*router = slave->router;
 					slave->binlogfile,
 					(unsigned long)slave->binlog_pos)));
 
+				spinlock_acquire(&slave->catch_lock);
 				slave->cstate |= CS_EXPECTCB;
+				spinlock_release(&slave->catch_lock);
 				poll_fake_write_event(slave->dcb);
-                                return 0;
+
+				return 0;
 			}
 
 			spinlock_acquire(&slave->catch_lock);
