@@ -2253,19 +2253,10 @@ ROUTER_INSTANCE		*router = slave->router;
 			spinlock_release(&router->binlog_lock);
 
 			if (do_return) {
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-					"Slave %s:%d, server-id %d, binlog '%s', blr_slave_callback is not calling blr_slave_catchup, pos %lu",
-					slave->dcb->remote,
-					slave->port,
-					slave->serverid,
-					slave->binlogfile,
-					(unsigned long)slave->binlog_pos)));
-
 				spinlock_acquire(&slave->catch_lock);
 				slave->cstate |= CS_EXPECTCB;
 				spinlock_release(&slave->catch_lock);
 				poll_fake_write_event(slave->dcb);
-
 				return 0;
 			}
 
