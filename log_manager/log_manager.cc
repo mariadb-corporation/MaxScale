@@ -305,11 +305,6 @@ static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
 void flushall_logfiles(bool flush);
 bool thr_flushall_check();
 
-const char* get_logpath_default(void)
-{
-    return "/var/log/maxscale";
-}
-
 static bool logmanager_init_nomutex(const char* logdir, int argc, char* argv[])
 {
     fnames_conf_t* fn;
@@ -1622,8 +1617,10 @@ static bool logmanager_register(bool writep)
 
         if (lm == NULL)
         {
-            // TODO: This looks fishy.
-            succp = logmanager_init_nomutex(get_logpath_default(), 0, NULL);
+            // If someone is logging before the log manager has been inited,
+            // or after the log manager has been finished, the messages are
+            // written to stdout.
+            succp = logmanager_init_nomutex(NULL, 0, NULL);
         }
     }
     /** if logmanager existed or was succesfully restarted, increase link */
@@ -1747,7 +1744,7 @@ static bool fnames_conf_init(fnames_conf_t* fn,
     {
         use_stdout = 1;
         // TODO: Re-arrange things so that fn->fn_logpath can be NULL.
-        fn->fn_logpath = strdup(get_logpath_default());
+        fn->fn_logpath = strdup("/tmp"); // Not used.
     }
 
     /** Set identity string for syslog if it is not set in config.*/

@@ -183,8 +183,6 @@ int skygw_log_get_augmentation();
 
 EXTERN_C_BLOCK_END
 
-const char* get_logpath_default(void);
-
 /**
  * Helper, not to be called directly.
  */
