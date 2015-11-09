@@ -20,7 +20,7 @@ void init_test_env(char *path)
             NULL
         };
 
-    skygw_logmanager_init(logdir, argc, argv);
+    skygw_logmanager_init(logdir, LOG_TARGET_DEFAULT, argc, argv);
     poll_init();
     hkinit();
 }

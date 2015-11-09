@@ -1077,7 +1077,7 @@ int main(int argc, char **argv)
     char*    tmp_path;
     char*    tmp_var;
     int      option_index;
-    int      logtofile = 0;               /* Use shared memory or file */
+    log_target_t log_target = LOG_TARGET_FS;
     int      *syslog_enabled = &config_get_global_options()->syslog; /** Log to syslog */
     int      *maxscalelog_enabled = &config_get_global_options()->maxlog; /** Log with MaxScale */
     ssize_t  log_flush_timeout_ms = 0;
@@ -1169,9 +1169,9 @@ int main(int argc, char **argv)
 
         case 'l':
             if (strncasecmp(optarg, "file", PATH_MAX) == 0)
-                logtofile = 1;
+                log_target = LOG_TARGET_FS;
             else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
-                logtofile = 0;
+                log_target = LOG_TARGET_SHMEM;
             else
             {
                 char* logerr = "Configuration file argument "
@@ -1703,8 +1703,6 @@ int main(int argc, char **argv)
      * argv[0]
      */
     {
-        char buf[1024];
-        char *argv[8];
         bool succp;
 
         if (mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
@@ -1729,24 +1727,10 @@ int main(int argc, char **argv)
         logmanager_enable_syslog(*syslog_enabled);
         logmanager_enable_maxscalelog(*maxscalelog_enabled);
 
-        if (logtofile)
-        {
-            argv[1] = "-l"; /*< write to syslog */
-            /** Logs that should be syslogged */
-            argv[2] = "LOGFILE_MESSAGE,LOGFILE_ERROR"
-                "LOGFILE_DEBUG,LOGFILE_TRACE";
-            argv[3] = NULL;
-            succp = skygw_logmanager_init(get_logdir(), 3, argv);
-        }
-        else
-        {
-            argv[1] = "-s"; /*< store to shared memory */
-            argv[2] = "LOGFILE_DEBUG,LOGFILE_TRACE"; /*< to shm */
-            argv[3] = "-l"; /*< write to syslog */
-            argv[4] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< to syslog */
-            argv[5] = NULL;
-            succp = skygw_logmanager_init(get_logdir(), 5, argv);
-        }
+        char* log_argv[] = { "MaxScale", "-l", "LOGFILE_MESSAGE,LOGFILE_ERROR", NULL };
+        int log_argc = sizeof(log_argv) / sizeof(log_argv[0]) - 1;
+
+        succp = skygw_logmanager_init(get_logdir(), log_target, log_argc, log_argv);
 
         if (!succp)
         {

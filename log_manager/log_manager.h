@@ -42,13 +42,19 @@ typedef enum
     LOGFILE_LAST = LOGFILE_DEBUG
 } logfile_id_t;
 
-
 typedef enum
 {
     FILEWRITER_INIT,
     FILEWRITER_RUN,
     FILEWRITER_DONE
 } filewriter_state_t;
+
+typedef enum
+{
+    LOG_TARGET_DEFAULT = 0,
+    LOG_TARGET_FS      = 1, // File system
+    LOG_TARGET_SHMEM   = 2, // Shared memory
+} log_target_t;
 
 /**
 * Thread-specific logging information.
@@ -145,7 +151,7 @@ int mxs_log_rotate();
 int mxs_log_enable_priority(int priority);
 int mxs_log_disable_priority(int priority);
 
-bool skygw_logmanager_init(const char* logdir, int argc, char* argv[]);
+bool skygw_logmanager_init(const char* logdir, log_target_t target, int argc, char* argv[]);
 void skygw_logmanager_done(void);
 void skygw_logmanager_exit(void);
 

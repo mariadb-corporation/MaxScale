@@ -63,7 +63,7 @@ main(int argc, char **argv)
 
     arg_vector[0] = "logmanager";
     arg_vector[1] = NULL;
-    skygw_logmanager_init(NULL, arg_count, arg_vector);
+    skygw_logmanager_init(NULL, LOG_TARGET_DEFAULT, arg_count, arg_vector);
     free(arg_vector);
 
     pw = calloc(81, sizeof(char));

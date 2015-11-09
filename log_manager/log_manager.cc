@@ -90,8 +90,6 @@ ssize_t log_ses_count[LOGFILE_LAST] = {0};
  */
 const char* shm_pathname_prefix = "/dev/shm/";
 
-/** Logfile ids from call argument '-s' */
-char* shmem_id_str     = NULL;
 /** Errors are written to syslog too by default */
 char* syslog_id_str    = strdup("LOGFILE_ERROR");
 char* syslog_ident_str = NULL;
@@ -231,6 +229,7 @@ struct logmanager
     fnames_conf_t    lm_fnames_conf;
     logfile_t        lm_logfile;
     filewriter_t     lm_filewriter;
+    log_target_t     lm_target;
 #if defined(SS_DEBUG)
     skygw_chk_t      lm_chk_tail;
 #endif
@@ -274,7 +273,7 @@ static void* thr_filewriter_fun(void* data);
 static logfile_t* logmanager_get_logfile(logmanager_t* lm);
 static bool logmanager_register(bool writep);
 static void logmanager_unregister(void);
-static bool logmanager_init_nomutex(const char* logdir, int argc, char* argv[]);
+static bool logmanager_init_nomutex(const char* logdir, log_target_t target, int argc, char* argv[]);
 static void logmanager_done_nomutex(void);
 static bool logmanager_is_valid_id(logfile_id_t id);
 
@@ -305,7 +304,7 @@ static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
 void flushall_logfiles(bool flush);
 bool thr_flushall_check();
 
-static bool logmanager_init_nomutex(const char* logdir, int argc, char* argv[])
+static bool logmanager_init_nomutex(const char* logdir, log_target_t target, int argc, char* argv[])
 {
     fnames_conf_t* fn;
     filewriter_t*  fw;
@@ -319,6 +318,8 @@ static bool logmanager_init_nomutex(const char* logdir, int argc, char* argv[])
         err = 1;
         goto return_succp;
     }
+
+    lm->lm_target = (target == LOG_TARGET_DEFAULT ? LOG_TARGET_FS : target);
 #if defined(SS_DEBUG)
     lm->lm_chk_top   = CHK_NUM_LOGMANAGER;
     lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
@@ -414,13 +415,15 @@ return_succp:
  * Initializes log managing routines in MariaDB Corporation MaxScale.
  *
  * @param logdir The directory for the log file. If NULL logging will be made to stdout.
- * @param argc  number of arguments in argv array
- * @param argv  arguments array
+ * @param target Whether the log should be written to filesystem or shared memory.
+ *               Meaningless if logdir is NULL.
+ * @param argc   Number of arguments in argv array.
+ * @param argv   Arguments array.
  *
  * @return true if succeed, otherwise false
  *
  */
-bool skygw_logmanager_init(const char* logdir, int argc, char* argv[])
+bool skygw_logmanager_init(const char* logdir, log_target_t target, int argc, char* argv[])
 {
     bool succp = false;
 
@@ -432,7 +435,7 @@ bool skygw_logmanager_init(const char* logdir, int argc, char* argv[])
         goto return_succp;
     }
 
-    succp = logmanager_init_nomutex(logdir, argc, argv);
+    succp = logmanager_init_nomutex(logdir, target, argc, argv);
 
 return_succp:
     release_lock(&lmlock);
@@ -1620,7 +1623,7 @@ static bool logmanager_register(bool writep)
             // If someone is logging before the log manager has been inited,
             // or after the log manager has been finished, the messages are
             // written to stdout.
-            succp = logmanager_init_nomutex(NULL, 0, NULL);
+            succp = logmanager_init_nomutex(NULL, LOG_TARGET_DEFAULT, 0, NULL);
         }
     }
     /** if logmanager existed or was succesfully restarted, increase link */
@@ -1687,8 +1690,7 @@ static bool fnames_conf_init(fnames_conf_t* fn,
     const char*    argstr =
         "-h - help\n"
         "-l <syslog log file ids> .......(no default)\n"
-        "-m <syslog ident>   ............(argv[0])\n"
-        "-s <shmem log file ids>  .......(no default)\n";
+        "-m <syslog ident>   ............(argv[0])\n";
 
     /**
      * When init_started is set, clean must be done for it.
@@ -1700,7 +1702,7 @@ static bool fnames_conf_init(fnames_conf_t* fn,
 #endif
     optind = 1; /**<! reset getopt index */
 
-    while ((opt = getopt(argc, argv, "+h:l:m:s:")) != -1)
+    while ((opt = getopt(argc, argv, "+h:l:m:")) != -1)
     {
         switch (opt)
         {
@@ -1724,10 +1726,6 @@ static bool fnames_conf_init(fnames_conf_t* fn,
             syslog_ident_str = optarg;
             break;
 
-        case 's':
-            /** record list of log file ids for later use */
-            shmem_id_str = optarg;
-            break;
         case 'h':
         default:
             fprintf(stderr, "\nSupported arguments are (default)\n%s\n", argstr);
@@ -1803,7 +1801,7 @@ return_conf_init:
 static bool logfiles_init(logmanager_t* lm)
 {
     bool  succp = true;
-    bool  store_shmem;
+    bool  store_shmem = (lm->lm_target == LOG_TARGET_SHMEM);
     bool  write_syslog;
 
     /** Open syslog immediately. Print pid of loggind process. */
@@ -1811,23 +1809,7 @@ static bool logfiles_init(logmanager_t* lm)
     {
         openlog(syslog_ident_str, LOG_PID | LOG_NDELAY, LOG_USER);
     }
-    /**
-     * Initialize log file, pass softlink flag if necessary.
-     */
 
-    /**
-     * Check if the file is stored in shared memory. If so,
-     * a symbolic link will be created to log directory.
-     */
-    if (shmem_id_str != NULL &&
-        strcasestr(shmem_id_str, STRLOGID(LOGFILE_ERROR)) != NULL)
-    {
-        store_shmem = true;
-    }
-    else
-    {
-        store_shmem = false;
-    }
     /**
      * Check if file is also written to syslog.
      */

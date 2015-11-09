@@ -18,7 +18,7 @@ int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 	char** optstr;
 
 	if(!(argc == 2 && strcmp(argv[1],"-h") == 0)){
-		skygw_logmanager_init(NULL,0,NULL);
+		skygw_logmanager_init(NULL,LOG_TARGET_DEFAULT,0,NULL);
 	}
  
 	if(!(instance.head = calloc(1,sizeof(FILTERCHAIN))))
@@ -55,7 +55,7 @@ int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 	optstr = (char**)malloc(sizeof(char*)*2);
 	optstr[0] = strdup("log_manager");
 	optstr[1] = NULL;
-	skygw_logmanager_init(tmp, 1, optstr);
+	skygw_logmanager_init(tmp, LOG_TARGET_DEFAULT, 1, optstr);
 	free(optstr);
 	
 	rval = process_opts(argc,argv);

@@ -71,7 +71,7 @@ int main(int argc, char** argv)
     iterations = atoi(argv[1]);
     interval = atoi(argv[2]);
 
-    succp = skygw_logmanager_init(tmp, 1, optstr);
+    succp = skygw_logmanager_init(tmp, LOG_TARGET_FS, 1, optstr);
 
     if (!succp)
     {
