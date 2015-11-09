@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 
@@ -52,6 +53,15 @@ static void* thr_run_morelog(void* data);
 #define TEST3
 #define TEST4
 
+const char USAGE[]=
+    "usage: %s [-t <#threads>]\n"
+    "\n"
+    "-t: Number of threads. Default is %d.\n";
+const int N_THR = 4;
+
+#define TEST_ERROR(msg)\
+    do { fprintf(stderr, "[%s:%d]: %s\n", basename(__FILE__), __LINE__, msg); } while (false)
+
 int main(int argc, char* argv[])
 {
     int              err = 0;
@@ -66,7 +76,7 @@ int main(int argc, char* argv[])
     time_t           t;
     struct tm        tm;
     char             c;
-    int              nthr = 0;
+    int              nthr = N_THR;
     int              log_argc = 0;
     char**           log_argv = NULL;
 
@@ -75,20 +85,26 @@ int main(int argc, char* argv[])
         switch (c) {
         case 't':
             nthr = atoi(optarg);
+            if (nthr <= 0)
+            {
+                err = 1;
+            }
             break;
 
         default:
+            err = 1;
             break;
         }
     }
 
-    if (nthr <= 0)
+    if (err != 0)
     {
-        fprintf(stderr, "Thread count argument is zero or "
-                "negative. Exiting.\n");
+        fprintf(stderr, USAGE, argv[0], N_THR);
         err = 1;
         goto return_err;
     }
+
+    printf("Using %d threads.\n", nthr);
 
     thr = (thread_t **)calloc(1, nthr*sizeof(thread_t*));
 
@@ -319,12 +335,12 @@ int main(int argc, char* argv[])
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
+    succp = skygw_logmanager_init("/tmp", log_argc, log_argv);
+    ss_dassert(succp);
+
     logstr = ("\tTEST 3 - test enabling and disabling logs.");
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     ss_dassert(err == 0);
-
-    succp = skygw_logmanager_init("/tmp", log_argc, log_argv);
-    ss_dassert(succp);
 
     skygw_log_disable(LOGFILE_TRACE);
 
@@ -332,7 +348,7 @@ int main(int argc, char* argv[])
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
     ss_dassert(err == 0);
     err = skygw_log_write(LOGFILE_TRACE, logstr);
-    ss_dassert(err != 0); /**< Must fail */
+    ss_dassert(err == 0);
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     ss_dassert(err == 0);
 
@@ -355,18 +371,18 @@ int main(int argc, char* argv[])
     err = skygw_log_write(LOGFILE_TRACE, logstr);
     ss_dassert(err == 0);
     err = skygw_log_write(LOGFILE_ERROR, logstr);
-    ss_dassert(err != 0); /**< Must fail */
+    ss_dassert(err == 0);
 
     skygw_log_disable(LOGFILE_MESSAGE);
     skygw_log_disable(LOGFILE_TRACE);
 
     logstr = ("4.\tWrite to none.");
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
-    ss_dassert(err != 0); /**< Must fail */
+    ss_dassert(err == 0);
     err = skygw_log_write(LOGFILE_TRACE, logstr);
-    ss_dassert(err != 0); /**< Must fail */
+    ss_dassert(err == 0);
     err = skygw_log_write(LOGFILE_ERROR, logstr);
-    ss_dassert(err != 0); /**< Must fail */
+    ss_dassert(err == 0);
 
     skygw_log_enable(LOGFILE_ERROR);
     skygw_log_enable(LOGFILE_MESSAGE);
@@ -375,7 +391,7 @@ int main(int argc, char* argv[])
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
     ss_dassert(err == 0);
     err = skygw_log_write(LOGFILE_TRACE, logstr);
-    ss_dassert(err != 0); /**< Must fail */
+    ss_dassert(err == 0);
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     ss_dassert(err == 0);
 
@@ -401,6 +417,7 @@ int main(int argc, char* argv[])
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
     ss_dassert(err == 0);
 
+    skygw_log_enable(LOGFILE_TRACE);
     logstr = ("3.\tWrite to TRACE log only.");
     err = skygw_log_write(LOGFILE_TRACE, logstr);
     ss_dassert(err == 0);
@@ -415,7 +432,7 @@ int main(int argc, char* argv[])
     logstr = ("5.\tThis should not appear anywhere since MESSAGE "
               "is disabled.");
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
-    ss_dassert(err != 0);
+    ss_dassert(err == 0);
 
     skygw_logmanager_done();
 
@@ -447,7 +464,7 @@ int main(int argc, char* argv[])
     logstr = ("10.\tThis should not appear anywhere since MESSAGE is "
               "disabled.");
     err = skygw_log_write_flush(LOGFILE_MESSAGE, logstr);
-    ss_dassert(err != 0);
+    ss_dassert(err == 0);
 
     skygw_log_enable(LOGFILE_MESSAGE);
 
@@ -493,14 +510,13 @@ static void* thr_run(void* data)
     int       err;
 
     skygw_logmanager_init("/tmp", 0, NULL);
-    skygw_logmanager_done();
     skygw_log_flush(LOGFILE_MESSAGE);
     logstr = ("Hi, how are you?");
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
 
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
     skygw_logmanager_done();
@@ -513,7 +529,7 @@ static void* thr_run(void* data)
               "cat, you know.");
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
@@ -522,7 +538,7 @@ static void* thr_run(void* data)
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
     skygw_logmanager_init("/tmp", 0, NULL);
@@ -530,11 +546,13 @@ static void* thr_run(void* data)
     skygw_log_flush(LOGFILE_ERROR);
     logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 
+#if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
+#endif
     err = skygw_log_write(LOGFILE_TRACE, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
     skygw_logmanager_done();
@@ -547,22 +565,22 @@ static void* thr_run(void* data)
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
     skygw_logmanager_init("/tmp", 0, NULL);
     skygw_logmanager_done();
     skygw_log_flush(LOGFILE_ERROR);
     skygw_logmanager_done();
-    skygw_logmanager_done();
+    skygw_logmanager_init("/tmp", 0, NULL);
     logstr = ("..and you?");
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_init("/tmp", 0, NULL);
+    skygw_logmanager_done();
     skygw_logmanager_init("/tmp", 0, NULL);
     logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 #if !defined(SS_DEBUG)
@@ -571,7 +589,7 @@ static void* thr_run(void* data)
     err = skygw_log_write(LOGFILE_TRACE, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
     skygw_logmanager_init("/tmp", 0, NULL);
@@ -583,7 +601,7 @@ static void* thr_run(void* data)
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
     skygw_logmanager_init("/tmp", 0, NULL);
@@ -591,10 +609,11 @@ static void* thr_run(void* data)
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
     skygw_logmanager_done();
+    skygw_logmanager_init("/tmp", 0, NULL);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
@@ -606,26 +625,28 @@ static void* thr_run(void* data)
     err = skygw_log_write(LOGFILE_TRACE, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
     skygw_logmanager_done();
+    skygw_logmanager_init("/tmp", 0, NULL);
     logstr = ("Testing. One, two, three, four\n");
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
+    skygw_logmanager_done();
     skygw_logmanager_init("/tmp", 0, NULL);
     logstr = ("Testing. One, two, three, .. where was I?\n");
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     if (err != 0)
     {
-        fprintf(stderr,"Error, log write failed.\n");
+        TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_init("/tmp", 0, NULL);
+    skygw_logmanager_done();
     skygw_logmanager_init("/tmp", 0, NULL);
     skygw_logmanager_done();
     simple_mutex_lock(td->mtx, true);
