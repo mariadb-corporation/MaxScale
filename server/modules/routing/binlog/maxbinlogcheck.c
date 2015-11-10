@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
 
 	arg_vector[0] = "logmanager";
 	arg_vector[1] = NULL;
-	skygw_logmanager_init(NULL, LOG_TARGET_DEFAULT, arg_count, arg_vector);
+	skygw_logmanager_init(NULL, NULL, LOG_TARGET_DEFAULT, arg_count, arg_vector);
 
 	skygw_log_set_augmentation(0);
 

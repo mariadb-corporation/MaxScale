@@ -91,8 +91,7 @@ ssize_t log_ses_count[LOGFILE_LAST] = {0};
 const char* shm_pathname_prefix = "/dev/shm/";
 
 /** Errors are written to syslog too by default */
-char* syslog_id_str    = strdup("LOGFILE_ERROR");
-char* syslog_ident_str = NULL;
+char* syslog_id_str = strdup("LOGFILE_ERROR");
 
 /** Forward declarations
  */
@@ -273,7 +272,10 @@ static void* thr_filewriter_fun(void* data);
 static logfile_t* logmanager_get_logfile(logmanager_t* lm);
 static bool logmanager_register(bool writep);
 static void logmanager_unregister(void);
-static bool logmanager_init_nomutex(const char* logdir, log_target_t target, int argc, char* argv[]);
+static bool logmanager_init_nomutex(const char* ident,
+                                    const char* logdir,
+                                    log_target_t target,
+                                    int argc, char* argv[]);
 static void logmanager_done_nomutex(void);
 static bool logmanager_is_valid_id(logfile_id_t id);
 
@@ -304,7 +306,10 @@ static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
 void flushall_logfiles(bool flush);
 bool thr_flushall_check();
 
-static bool logmanager_init_nomutex(const char* logdir, log_target_t target, int argc, char* argv[])
+static bool logmanager_init_nomutex(const char* ident,
+                                    const char* logdir,
+                                    log_target_t target,
+                                    int argc, char* argv[])
 {
     fnames_conf_t* fn;
     filewriter_t*  fw;
@@ -345,11 +350,9 @@ static bool logmanager_init_nomutex(const char* logdir, log_target_t target, int
     fn->fn_state  = UNINIT;
     fw->fwr_state = UNINIT;
 
-    if (!do_syslog)
-    {
-        free(syslog_id_str);
-        syslog_id_str = NULL;
-    }
+    // The openlog call is always made, but a connection to the system logger will
+    // not be made until a call to syslog is made.
+    openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
 
     /** Initialize configuration including log file naming info */
     if (!fnames_conf_init(fn, logdir, argc, argv))
@@ -414,6 +417,7 @@ return_succp:
 /**
  * Initializes log managing routines in MariaDB Corporation MaxScale.
  *
+ * @param ident  The syslog ident. If NULL, then the program name is used.
  * @param logdir The directory for the log file. If NULL logging will be made to stdout.
  * @param target Whether the log should be written to filesystem or shared memory.
  *               Meaningless if logdir is NULL.
@@ -423,7 +427,10 @@ return_succp:
  * @return true if succeed, otherwise false
  *
  */
-bool skygw_logmanager_init(const char* logdir, log_target_t target, int argc, char* argv[])
+bool skygw_logmanager_init(const char* ident,
+                           const char* logdir,
+                           log_target_t target,
+                           int argc, char* argv[])
 {
     bool succp = false;
 
@@ -435,7 +442,7 @@ bool skygw_logmanager_init(const char* logdir, log_target_t target, int argc, ch
         goto return_succp;
     }
 
-    succp = logmanager_init_nomutex(logdir, target, argc, argv);
+    succp = logmanager_init_nomutex(ident, logdir, target, argc, argv);
 
 return_succp:
     release_lock(&lmlock);
@@ -474,10 +481,8 @@ static void logmanager_done_nomutex(void)
     /** Release logfile memory */
     logfile_done(lf);
 
-    if (syslog_id_str)
-    {
-        closelog();
-    }
+    closelog();
+
     /** Release messages and finally logmanager memory */
     fnames_conf_done(&lm->lm_fnames_conf);
     skygw_message_done(lm->lm_clientmes);
@@ -1623,7 +1628,7 @@ static bool logmanager_register(bool writep)
             // If someone is logging before the log manager has been inited,
             // or after the log manager has been finished, the messages are
             // written to stdout.
-            succp = logmanager_init_nomutex(NULL, LOG_TARGET_DEFAULT, 0, NULL);
+            succp = logmanager_init_nomutex(NULL, NULL, LOG_TARGET_DEFAULT, 0, NULL);
         }
     }
     /** if logmanager existed or was succesfully restarted, increase link */
@@ -1689,8 +1694,7 @@ static bool fnames_conf_init(fnames_conf_t* fn,
     bool           succp = false;
     const char*    argstr =
         "-h - help\n"
-        "-l <syslog log file ids> .......(no default)\n"
-        "-m <syslog ident>   ............(argv[0])\n";
+        "-l <syslog log file ids> .......(no default)\n";
 
     /**
      * When init_started is set, clean must be done for it.
@@ -1702,7 +1706,7 @@ static bool fnames_conf_init(fnames_conf_t* fn,
 #endif
     optind = 1; /**<! reset getopt index */
 
-    while ((opt = getopt(argc, argv, "+h:l:m:")) != -1)
+    while ((opt = getopt(argc, argv, "+h:l:")) != -1)
     {
         switch (opt)
         {
@@ -1716,14 +1720,6 @@ static bool fnames_conf_init(fnames_conf_t* fn,
                 }
                 syslog_id_str = optarg;
             }
-            break;
-
-        case 'm':
-            /**
-             * Identity string for syslog printing, needs '-l'
-             * to be effective.
-             */
-            syslog_ident_str = optarg;
             break;
 
         case 'h':
@@ -1745,20 +1741,6 @@ static bool fnames_conf_init(fnames_conf_t* fn,
         fn->fn_logpath = strdup("/tmp"); // Not used.
     }
 
-    /** Set identity string for syslog if it is not set in config.*/
-    if (do_syslog)
-    {
-        syslog_ident_str =
-            (syslog_ident_str == NULL ?
-             (argv == NULL ? strdup(program_invocation_short_name) : strdup(*argv)) :
-             syslog_ident_str);
-    }
-    /* ss_dfprintf(stderr, "\n\n\tCommand line : ");
-       for (i = 0; i < argc; i++)
-       {
-           ss_dfprintf(stderr, "%s ", argv[i]);
-       }
-       ss_dfprintf(stderr, "\n");*/
 #if defined(NOT_USED)
     fprintf(stderr,
             "Log :\t%s/%s1%s\n\n",
@@ -1803,12 +1785,6 @@ static bool logfiles_init(logmanager_t* lm)
     bool  succp = true;
     bool  store_shmem = (lm->lm_target == LOG_TARGET_SHMEM);
     bool  write_syslog;
-
-    /** Open syslog immediately. Print pid of loggind process. */
-    if (syslog_id_str != NULL)
-    {
-        openlog(syslog_ident_str, LOG_PID | LOG_NDELAY, LOG_USER);
-    }
 
     /**
      * Check if file is also written to syslog.

@@ -1730,7 +1730,7 @@ int main(int argc, char **argv)
         char* log_argv[] = { "MaxScale", "-l", "LOGFILE_MESSAGE,LOGFILE_ERROR", NULL };
         int log_argc = sizeof(log_argv) / sizeof(log_argv[0]) - 1;
 
-        succp = skygw_logmanager_init(get_logdir(), log_target, log_argc, log_argv);
+        succp = skygw_logmanager_init(NULL, get_logdir(), log_target, log_argc, log_argv);
 
         if (!succp)
         {
