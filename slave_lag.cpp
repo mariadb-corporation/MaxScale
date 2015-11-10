@@ -130,7 +130,7 @@ void *query_thread( void *ptr )
         //execute_query(conn, (char *) "INSERT into t1 VALUES(1, 1)");
         if (execute_query_silent(conn, (char *) ptr) != 0)
         {
-            printf("Query failed!\n");
+            //printf("Query failed!\n");
         }
     }
     exited = 1;
