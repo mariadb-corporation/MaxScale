@@ -57,10 +57,10 @@ static simple_mutex_t msg_mutex;
 #endif
 static struct
 {
-    int highprec;
-    int do_syslog;
-    int do_maxscalelog;
-    int use_stdout;
+    int highprec;       // Can change during the lifetime of log_manager.
+    int do_syslog;      // Can change during the lifetime of log_manager.
+    int do_maxscalelog; // Can change during the lifetime of log_manager.
+    int use_stdout;     // Can NOT changed during the lifetime of log_manager.
 } log_config =
 {
     0, // highprec
@@ -627,6 +627,13 @@ static int logmanager_write_log(logfile_id_t    id,
     size_t       timestamp_len;
     int          i;
 
+    // The config parameters are copied to local variables, because the values in
+    // log_config may change during the course of the function, with would have
+    // unpleasant side-effects.
+    int highprec = log_config.highprec;
+    int do_maxscalelog = log_config.do_maxscalelog;
+    int do_syslog = log_config.do_syslog;
+
     assert(str);
     assert(logmanager_is_valid_id(id));
     CHK_LOGMANAGER(lm);
@@ -653,7 +660,7 @@ static int logmanager_write_log(logfile_id_t    id,
     {
         sesid_str_len = 0;
     }
-    if (log_config.highprec)
+    if (highprec)
     {
         timestamp_len = get_timestamp_len_hp();
     }
@@ -704,7 +711,7 @@ static int logmanager_write_log(logfile_id_t    id,
     }
 #endif
     /** Book space for log string from buffer */
-    if (log_config.do_maxscalelog)
+    if (do_maxscalelog)
     {
         // All messages are now logged to the error log file.
         wp = blockbuf_get_writepos(&bb, safe_str_len, flush);
@@ -731,7 +738,7 @@ static int logmanager_write_log(logfile_id_t    id,
      * to wp.
      * Returned timestamp_len doesn't include terminating null.
      */
-    if (log_config.highprec)
+    if (highprec)
     {
         timestamp_len = snprint_timestamp_hp(wp, timestamp_len);
     }
@@ -762,7 +769,7 @@ static int logmanager_write_log(logfile_id_t    id,
         memset(wp + safe_str_len - 4, '.', 3);
     }
     /** write to syslog */
-    if (log_config.do_syslog)
+    if (do_syslog)
     {
         // Strip away the timestamp and the prefix (e.g. "[Error]: ").
         const char *message = wp + timestamp_len + prefix_len;
@@ -788,7 +795,7 @@ static int logmanager_write_log(logfile_id_t    id,
     }
     wp[safe_str_len - 1] = '\n';
 
-    if (log_config.do_maxscalelog)
+    if (do_maxscalelog)
     {
         blockbuf_unregister(bb);
     }
@@ -2850,7 +2857,7 @@ void skygw_log_sync_all(void)
  */
 void skygw_set_highp(int val)
 {
-    log_config.highprec = val;
+    log_config.highprec = !!val;
 }
 
 
@@ -2860,7 +2867,7 @@ void skygw_set_highp(int val)
  */
 void logmanager_enable_syslog(int val)
 {
-    log_config.do_syslog = val;
+    log_config.do_syslog = !!val;
 }
 
 /**
@@ -2869,7 +2876,7 @@ void logmanager_enable_syslog(int val)
  */
 void logmanager_enable_maxscalelog(int val)
 {
-    log_config.do_maxscalelog = val;
+    log_config.do_maxscalelog = !!val;
 }
 
 
