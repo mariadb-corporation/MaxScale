@@ -12,15 +12,7 @@ void init_test_env(char *path)
 
     const char* logdir = path ? path : TEST_LOG_DIR;
 
-    char* argv[] =
-        {
-            "log_manager",
-            "-l",
-            "LOGFILE_ERROR",
-            NULL
-        };
-
-    skygw_logmanager_init(NULL, logdir, LOG_TARGET_DEFAULT, argc, argv);
+    skygw_logmanager_init(NULL, logdir, LOG_TARGET_DEFAULT);
     poll_init();
     hkinit();
 }

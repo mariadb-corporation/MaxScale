@@ -153,8 +153,7 @@ int mxs_log_disable_priority(int priority);
 
 bool skygw_logmanager_init(const char* ident,
                            const char* logdir,
-                           log_target_t target,
-                           int argc, char* argv[]);
+                           log_target_t target);
 void skygw_logmanager_done(void);
 void skygw_logmanager_exit(void);
 

@@ -1089,7 +1089,7 @@ int main(int argc, char **argv)
                                    write_footer,
                                    NULL};
 
-    *syslog_enabled = 0;
+    *syslog_enabled = 1;
     *maxscalelog_enabled = 1;
 
     sigemptyset(&sigpipe_mask);
@@ -1698,9 +1698,6 @@ int main(int argc, char **argv)
 
     /**
      * Init Log Manager for MaxScale.
-     * The skygw_logmanager_init expects to take arguments as passed to main
-     * and proesses them with getopt, therefore we need to give it a dummy
-     * argv[0]
      */
     {
         bool succp;
@@ -1712,8 +1709,6 @@ int main(int argc, char **argv)
                     default_logdir);
             goto return_main;
         }
-
-        argv[0] = "MaxScale";
 
         if (!(*syslog_enabled))
         {
@@ -1727,10 +1722,7 @@ int main(int argc, char **argv)
         logmanager_enable_syslog(*syslog_enabled);
         logmanager_enable_maxscalelog(*maxscalelog_enabled);
 
-        char* log_argv[] = { "MaxScale", "-l", "LOGFILE_MESSAGE,LOGFILE_ERROR", NULL };
-        int log_argc = sizeof(log_argv) / sizeof(log_argv[0]) - 1;
-
-        succp = skygw_logmanager_init(NULL, get_logdir(), log_target, log_argc, log_argv);
+        succp = skygw_logmanager_init(NULL, get_logdir(), log_target);
 
         if (!succp)
         {

@@ -86,8 +86,6 @@ return 1;
 }
 
 int main(int argc, char **argv) {
-	char** arg_vector;
-	int arg_count = 1;
 	ROUTER_INSTANCE *inst;
 	int fd;
 	int ret;
@@ -126,21 +124,9 @@ int main(int argc, char **argv) {
 
 	num_args = optind;
 
-	arg_vector = malloc(sizeof(char*)*(arg_count + 1));
-
-	if(arg_vector == NULL)
-	{
-		fprintf(stderr,"Error: Memory allocation failed for log manager arg_vector.\n");
-		return 1;
-	}
-
-	arg_vector[0] = "logmanager";
-	arg_vector[1] = NULL;
-	skygw_logmanager_init(NULL, NULL, LOG_TARGET_DEFAULT, arg_count, arg_vector);
+	skygw_logmanager_init(NULL, NULL, LOG_TARGET_DEFAULT);
 
 	skygw_log_set_augmentation(0);
-
-	free(arg_vector);
 
 	if (!debug_out)
 		skygw_log_disable(LOGFILE_DEBUG);
