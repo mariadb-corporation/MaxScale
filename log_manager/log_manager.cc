@@ -55,10 +55,20 @@ static int block_start_index;
 static int prevval;
 static simple_mutex_t msg_mutex;
 #endif
-static int highprec = 0;
-static int do_syslog = 1;
-static int do_maxscalelog = 1;
-static int use_stdout = 0;
+static struct
+{
+    int highprec;
+    int do_syslog;
+    int do_maxscalelog;
+    int use_stdout;
+} log_config =
+{
+    0, // highprec
+    1, // do_syslog
+    1, // do_maxscalelog
+    0  // use_stdout
+};
+
 /**
  * Variable holding the enabled logfiles information.
  * Used from log users to check enabled logs prior calling
@@ -666,7 +676,7 @@ static int logmanager_write_log(logfile_id_t    id,
         {
             sesid_str_len = 0;
         }
-        if (highprec)
+        if (log_config.highprec)
         {
             timestamp_len = get_timestamp_len_hp();
         }
@@ -717,7 +727,7 @@ static int logmanager_write_log(logfile_id_t    id,
         }
 #endif
         /** Book space for log string from buffer */
-        if (do_maxscalelog)
+        if (log_config.do_maxscalelog)
         {
             // All messages are now logged to the error log file.
             wp = blockbuf_get_writepos(&bb, safe_str_len, flush);
@@ -744,7 +754,7 @@ static int logmanager_write_log(logfile_id_t    id,
          * to wp.
          * Returned timestamp_len doesn't include terminating null.
          */
-        if (highprec)
+        if (log_config.highprec)
         {
             timestamp_len = snprint_timestamp_hp(wp, timestamp_len);
         }
@@ -801,7 +811,7 @@ static int logmanager_write_log(logfile_id_t    id,
         }
         wp[safe_str_len - 1] = '\n';
 
-        if (do_maxscalelog)
+        if (log_config.do_maxscalelog)
         {
             blockbuf_unregister(bb);
         }
@@ -1223,7 +1233,7 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
 
     if (logmanager_is_valid_id(id))
     {
-        if (use_stdout == 0)
+        if (log_config.use_stdout == 0)
         {
             const char *name;
 
@@ -1712,7 +1722,7 @@ static bool fnames_conf_init(fnames_conf_t* fn,
         {
         case 'l':
             /** record list of log file ids for syslogged */
-            if (do_syslog)
+            if (log_config.do_syslog)
             {
                 if (syslog_id_str != NULL)
                 {
@@ -1731,12 +1741,12 @@ static bool fnames_conf_init(fnames_conf_t* fn,
 
     if (logdir)
     {
-        use_stdout = 0;
+        log_config.use_stdout = 0;
         fn->fn_logpath = strdup(logdir);
     }
     else
     {
-        use_stdout = 1;
+        log_config.use_stdout = 1;
         // TODO: Re-arrange things so that fn->fn_logpath can be NULL.
         fn->fn_logpath = strdup("/tmp"); // Not used.
     }
@@ -1858,7 +1868,7 @@ static bool logfile_create(logfile_t* lf)
     bool succp;
     strpart_t spart[3]; /*< string parts of which the file is composed of */
 
-    if (use_stdout)
+    if (log_config.use_stdout)
     {
         // TODO: Refactor so that lf_full_file_name can be NULL in this case.
         lf->lf_full_file_name = strdup("stdout");
@@ -2000,7 +2010,7 @@ static bool logfile_open_file(filewriter_t* fw, logfile_t* lf)
 {
     bool rv = true;
 
-    if (use_stdout)
+    if (log_config.use_stdout)
     {
         fw->fwr_file = skygw_file_alloc(lf->lf_full_file_name);
         fw->fwr_file->sf_file = stdout;
@@ -2377,14 +2387,14 @@ static bool logfile_init(logfile_t*    logfile,
     }
 
 #if defined(SS_DEBUG)
-    if (store_shmem && !use_stdout)
+    if (store_shmem && !log_config.use_stdout)
     {
         fprintf(stderr, "%s\t: %s->%s\n",
                 STRLOGNAME(LOGFILE_ERROR),
                 logfile->lf_full_link_name,
                 logfile->lf_full_file_name);
     }
-    else if (!use_stdout)
+    else if (!log_config.use_stdout)
     {
         fprintf(stderr, "%s\t: %s\n",
                 STRLOGNAME(LOGFILE_ERROR),
@@ -2524,7 +2534,7 @@ static void filewriter_done(filewriter_t* fw)
     case INIT:
         fw->fwr_logmes = NULL;
         fw->fwr_clientmes = NULL;
-        if (use_stdout)
+        if (log_config.use_stdout)
         {
             skygw_file_free(fw->fwr_file);
         }
@@ -2574,9 +2584,9 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
         }
         else if ((succp = logfile_open_file(fwr, lf)))
         {
-            if (use_stdout)
+            if (log_config.use_stdout)
             {
-                skygw_file_free (file);
+                skygw_file_free(file);
             }
             else
             {
@@ -2906,7 +2916,7 @@ void flushall_logfiles(bool flush)
  */
 void skygw_log_sync_all(void)
 {
-    if (!use_stdout)
+    if (!log_config.use_stdout)
     {
         skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
     }
@@ -2927,7 +2937,7 @@ void skygw_log_sync_all(void)
  */
 void skygw_set_highp(int val)
 {
-    highprec = val;
+    log_config.highprec = val;
 }
 
 
@@ -2937,7 +2947,7 @@ void skygw_set_highp(int val)
  */
 void logmanager_enable_syslog(int val)
 {
-    do_syslog = val;
+    log_config.do_syslog = val;
 }
 
 /**
@@ -2946,7 +2956,7 @@ void logmanager_enable_syslog(int val)
  */
 void logmanager_enable_maxscalelog(int val)
 {
-    do_maxscalelog = val;
+    log_config.do_maxscalelog = val;
 }
 
 
