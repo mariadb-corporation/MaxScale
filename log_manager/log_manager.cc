@@ -268,10 +268,8 @@ static bool logfile_create(logfile_t* lf);
 static bool logfile_open_file(filewriter_t* fw, logfile_t* lf);
 static char* form_full_file_name(strpart_t* parts, logfile_t* lf, int seqnoidx);
 
-static bool filewriter_init(logmanager_t*    logmanager,
-                            filewriter_t*    fw,
-                            skygw_message_t* clientmes,
-                            skygw_message_t* logmes);
+static bool filewriter_init(logmanager_t* logmanager,
+                            filewriter_t* fw);
 static void filewriter_done(filewriter_t* filewriter);
 static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir);
 static void fnames_conf_done(fnames_conf_t* fn);
@@ -383,7 +381,7 @@ static bool logmanager_init_nomutex(const char* ident,
      * Initialize filewriter data and open the log file
      * for each log file type.
      */
-    if (!filewriter_init(lm, fw, lm->lm_clientmes, lm->lm_logmes))
+    if (!filewriter_init(lm, fw))
     {
         err = 1;
         goto return_succ;
@@ -437,17 +435,17 @@ bool skygw_logmanager_init(const char* ident, const char* logdir, log_target_t t
 
     acquire_lock(&lmlock);
 
-    if (lm != NULL)
+    if (!lm)
+    {
+        succ = logmanager_init_nomutex(ident, logdir, target);
+    }
+    else
     {
         // TODO: This is not ok. If the parameters are different then
         // TODO: we pretend something is what it is not.
         succ = true;
-        goto return_succ;
     }
 
-    succ = logmanager_init_nomutex(ident, logdir, target);
-
-return_succ:
     release_lock(&lmlock);
 
     return succ;
@@ -515,34 +513,30 @@ void skygw_logmanager_done(void)
 {
     acquire_lock(&lmlock);
 
-    if (lm == NULL)
+    if (lm)
     {
-        release_lock(&lmlock);
-        return;
-    }
-    CHK_LOGMANAGER(lm);
-    /** Mark logmanager unavailable */
-    lm->lm_enabled = false;
+        CHK_LOGMANAGER(lm);
+        /** Mark logmanager unavailable */
+        lm->lm_enabled = false;
 
-    /** Wait until all users have left or someone shuts down
-     * logmanager between lock release and acquire.
-     */
-    while (lm != NULL && lm->lm_nlinks != 0)
-    {
-        release_lock(&lmlock);
-        pthread_yield();
-        acquire_lock(&lmlock);
+        /** Wait until all users have left or someone shuts down
+         * logmanager between lock release and acquire.
+         */
+        while (lm != NULL && lm->lm_nlinks != 0)
+        {
+            release_lock(&lmlock);
+            pthread_yield();
+            acquire_lock(&lmlock);
+        }
+
+        /** Shut down if not already shutted down. */
+        if (lm)
+        {
+            ss_dassert(lm->lm_nlinks == 0);
+            logmanager_done_nomutex();
+        }
     }
 
-    /** Logmanager was already shut down. Return successfully. */
-    if (lm == NULL)
-    {
-        goto return_void;
-    }
-    ss_dassert(lm->lm_nlinks == 0);
-    logmanager_done_nomutex();
-
-return_void:
     release_lock(&lmlock);
 }
 
@@ -2388,23 +2382,19 @@ static void logfile_free_memory(logfile_t* lf)
 /**
  * @node Initialize filewriter data and open the log file for each log file type.
  *
- * @param logmanager    Log manager struct
- * @param fw            File writer struct
- * @param clientmes     Messaging from file writer to log manager
- * @param logmes        Messaging from loggers to file writer thread
+ * @param logmanager Log manager struct
+ * @param fw         File writer struct
  *
  * @return true if succeed, false if failed
  *
  */
-static bool filewriter_init(logmanager_t*    logmanager,
-                            filewriter_t*    fw,
-                            skygw_message_t* clientmes,
-                            skygw_message_t* logmes)
+static bool filewriter_init(logmanager_t* logmanager, filewriter_t* fw)
 {
-    bool         succ = false;
-    logfile_t*   lf;
+    bool succ = false;
 
     CHK_LOGMANAGER(logmanager);
+    assert(logmanager->lm_clientmes);
+    assert(logmanager->lm_logmes);
 
     fw->fwr_state = INIT;
 #if defined(SS_DEBUG)
@@ -2413,34 +2403,27 @@ static bool filewriter_init(logmanager_t*    logmanager,
 #endif
     fw->fwr_logmgr = logmanager;
     /** Message from filewriter to clients */
-    fw->fwr_logmes = logmes;
+    fw->fwr_logmes = logmanager->lm_logmes;
     /** Message from clients to filewriter */
-    fw->fwr_clientmes = clientmes;
+    fw->fwr_clientmes = logmanager->lm_clientmes;
 
-    if (fw->fwr_logmes == NULL || fw->fwr_clientmes == NULL)
+    logfile_t* lf = logmanager_get_logfile(logmanager);
+
+    if (logfile_open_file(fw, lf))
     {
-        goto return_succ;
+        fw->fwr_state = RUN;
+        CHK_FILEWRITER(fw);
+        succ = true;
     }
-
-    lf = logmanager_get_logfile(logmanager);
-
-    if (!(succ = logfile_open_file(fw, lf)))
+    else
     {
         fprintf(stderr,
                 "Error : opening log file %s failed. Exiting "
                 "MaxScale\n",
                 lf->lf_full_file_name);
-        goto return_succ;
-    }
-    fw->fwr_state = RUN;
-    CHK_FILEWRITER(fw);
-    succ = true;
-
-return_succ:
-    if (!succ)
-    {
         filewriter_done(fw);
     }
+
     ss_dassert(fw->fwr_state == RUN || fw->fwr_state == DONE);
     return succ;
 }
