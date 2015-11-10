@@ -320,14 +320,14 @@ static bool logmanager_init_nomutex(const char* ident,
     fnames_conf_t* fn;
     filewriter_t*  fw;
     int            err;
-    bool           succp = false;
+    bool           succ = false;
 
     lm = (logmanager_t *)calloc(1, sizeof(logmanager_t));
 
     if (lm == NULL)
     {
         err = 1;
-        goto return_succp;
+        goto return_succ;
     }
 
     lm->lm_target = (target == LOG_TARGET_DEFAULT ? LOG_TARGET_FS : target);
@@ -345,7 +345,7 @@ static bool logmanager_init_nomutex(const char* ident,
     if (lm->lm_clientmes == NULL || lm->lm_logmes == NULL)
     {
         err = 1;
-        goto return_succp;
+        goto return_succ;
     }
 
     lm->lm_enabled_logfiles |= LOGFILE_ERROR;
@@ -364,14 +364,14 @@ static bool logmanager_init_nomutex(const char* ident,
     if (!fnames_conf_init(fn, logdir))
     {
         err = 1;
-        goto return_succp;
+        goto return_succ;
     }
 
     /** Initialize logfiles */
     if (!logfiles_init(lm))
     {
         err = 1;
-        goto return_succp;
+        goto return_succ;
     }
 
     /**
@@ -386,7 +386,7 @@ static bool logmanager_init_nomutex(const char* ident,
     if (!filewriter_init(lm, fw, lm->lm_clientmes, lm->lm_logmes))
     {
         err = 1;
-        goto return_succp;
+        goto return_succ;
     }
 
     /** Initialize and start filewriter thread */
@@ -395,27 +395,27 @@ static bool logmanager_init_nomutex(const char* ident,
     if (fw->fwr_thread == NULL)
     {
         err = 1;
-        goto return_succp;
+        goto return_succ;
     }
 
     if ((err = skygw_thread_start(fw->fwr_thread)) != 0)
     {
-        goto return_succp;
+        goto return_succ;
     }
     /** Wait message from filewriter_thr */
     skygw_message_wait(fw->fwr_clientmes);
 
-    succp = true;
+    succ = true;
     lm->lm_enabled = true;
 
-return_succp:
+return_succ:
     if (err != 0)
     {
         /** This releases memory of all created objects */
         logmanager_done_nomutex();
         fprintf(stderr, "*\n* Error : Initializing log manager failed.\n*\n");
     }
-    return succp;
+    return succ;
 }
 
 
@@ -433,7 +433,7 @@ return_succp:
  */
 bool skygw_logmanager_init(const char* ident, const char* logdir, log_target_t target)
 {
-    bool succp = false;
+    bool succ = false;
 
     acquire_lock(&lmlock);
 
@@ -441,16 +441,16 @@ bool skygw_logmanager_init(const char* ident, const char* logdir, log_target_t t
     {
         // TODO: This is not ok. If the parameters are different then
         // TODO: we pretend something is what it is not.
-        succp = true;
-        goto return_succp;
+        succ = true;
+        goto return_succ;
     }
 
-    succp = logmanager_init_nomutex(ident, logdir, target);
+    succ = logmanager_init_nomutex(ident, logdir, target);
 
-return_succp:
+return_succ:
     release_lock(&lmlock);
 
-    return succp;
+    return succ;
 }
 
 /**
@@ -874,7 +874,7 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
     mlist_node_t*  node;
     blockbuf_t*    bb;
 #if defined(SS_DEBUG)
-    bool           succp;
+    bool           succ;
 #endif
 
     CHK_LOGMANAGER(lm);
@@ -958,8 +958,8 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
                     bb_list->mlist_versno += 1;
                     ss_dassert(bb_list->mlist_versno % 2 == 1);
 
-                    ss_debug(succp =) mlist_add_data_nomutex(bb_list, bb);
-                    ss_dassert(succp);
+                    ss_debug(succ =) mlist_add_data_nomutex(bb_list, bb);
+                    ss_dassert(succ);
 
                     /**
                      * Increase version to even to mark completion of update.
@@ -1059,8 +1059,8 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
         bb_list->mlist_versno += 1;
         ss_dassert(bb_list->mlist_versno % 2 == 1);
 
-        ss_debug(succp =) mlist_add_data_nomutex(bb_list, bb);
-        ss_dassert(succp);
+        ss_debug(succ =) mlist_add_data_nomutex(bb_list, bb);
+        ss_dassert(succ);
 
         /**
          * Increase version to even to mark completion of update.
@@ -1583,7 +1583,7 @@ int skygw_log_rotate(logfile_id_t id)
  */
 static bool logmanager_register(bool writep)
 {
-    bool succp = true;
+    bool succ = true;
 
     acquire_lock(&lmlock);
 
@@ -1597,8 +1597,8 @@ static bool logmanager_register(bool writep)
          */
         if (!writep || fatal_error)
         {
-            succp = false;
-            goto return_succp;
+            succ = false;
+            goto return_succ;
         }
 
         ss_dassert(lm == NULL || (lm != NULL && !lm->lm_enabled));
@@ -1620,23 +1620,23 @@ static bool logmanager_register(bool writep)
             // If someone is logging before the log manager has been inited,
             // or after the log manager has been finished, the messages are
             // written to stdout.
-            succp = logmanager_init_nomutex(NULL, NULL, LOG_TARGET_DEFAULT);
+            succ = logmanager_init_nomutex(NULL, NULL, LOG_TARGET_DEFAULT);
         }
     }
     /** if logmanager existed or was succesfully restarted, increase link */
-    if (succp)
+    if (succ)
     {
         lm->lm_nlinks += 1;
     }
 
-return_succp:
+return_succ:
 
-    if (!succp)
+    if (!succ)
     {
         fatal_error = true;
     }
     release_lock(&lmlock);
-    return succp;
+    return succ;
 }
 
 /**
@@ -1677,7 +1677,7 @@ static void logmanager_unregister(void)
  */
 static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir)
 {
-    bool succp = false;
+    bool succ = false;
 
     /**
      * When init_started is set, clean must be done for it.
@@ -1704,12 +1704,12 @@ static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir)
 
     if (fn->fn_logpath)
     {
-        succp = true;
+        succ = true;
         fn->fn_state = RUN;
         CHK_FNAMES_CONF(fn);
     }
 
-    return succp;
+    return succ;
 }
 
 
@@ -1720,7 +1720,7 @@ static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir)
  * Parameters:
  * @param lm            Log manager pointer
  *
- * @return succp        true if succeed, otherwise false.
+ * @return true if succeed, otherwise false.
  *
  *
  * @details If logfile is supposed to be located to shared memory
@@ -1735,14 +1735,14 @@ static bool logfiles_init(logmanager_t* lm)
 {
     bool store_shmem = (lm->lm_target == LOG_TARGET_SHMEM);
 
-    bool succp = logfile_init(&lm->lm_logfile, lm, store_shmem);
+    bool succ = logfile_init(&lm->lm_logfile, lm, store_shmem);
 
-    if (!succp)
+    if (!succ)
     {
         fprintf(stderr, "*\n* Error : Initializing log files failed.\n");
     }
 
-    return succp;
+    return succ;
 }
 
 static void logfile_flush(logfile_t* lf)
@@ -1788,16 +1788,16 @@ static bool logfile_create(logfile_t* lf)
     bool nameconflicts;
     bool store_shmem;
     bool writable;
-    bool succp;
+    bool succ;
     strpart_t spart[3]; /*< string parts of which the file is composed of */
 
     if (log_config.use_stdout)
     {
         // TODO: Refactor so that lf_full_file_name can be NULL in this case.
         lf->lf_full_file_name = strdup("stdout");
-        succp = true;
+        succ = true;
         // TODO: Refactor to get rid of the gotos.
-        goto return_succp;
+        goto return_succ;
     }
     /**
      * sparts is an array but next pointers are used to walk through
@@ -1864,8 +1864,8 @@ static bool logfile_create(logfile_t* lf)
              */
             if (!writable)
             {
-                succp = false;
-                goto return_succp;
+                succ = false;
+                goto return_succ;
             }
         }
 
@@ -1887,8 +1887,8 @@ static bool logfile_create(logfile_t* lf)
                  */
                 if (!writable)
                 {
-                    succp = false;
-                    goto return_succp;
+                    succ = false;
+                    goto return_succ;
                 }
             }
         }
@@ -1911,10 +1911,10 @@ static bool logfile_create(logfile_t* lf)
     }
     while (namecreatefail || nameconflicts);
 
-    succp = true;
+    succ = true;
 
-return_succp:
-    return succp;
+return_succ:
+    return succ;
 }
 
 /**
@@ -2197,7 +2197,7 @@ static bool check_file_and_path(char* filename, bool* writable, bool do_log)
 static bool file_is_symlink(char* filename)
 {
     int  rc;
-    bool succp = false;
+    bool succ = false;
     struct stat b;
 
     if (filename != NULL)
@@ -2206,10 +2206,10 @@ static bool file_is_symlink(char* filename)
 
         if (rc != -1 && S_ISLNK(b.st_mode))
         {
-            succp = true;
+            succ = true;
         }
     }
-    return succp;
+    return succ;
 }
 
 
@@ -2229,7 +2229,7 @@ static bool logfile_init(logfile_t*    logfile,
                          logmanager_t* logmanager,
                          bool          store_shmem)
 {
-    bool           succp = false;
+    bool           succ = false;
     fnames_conf_t* fn = &logmanager->lm_fnames_conf;
     logfile->lf_state = INIT;
 #if defined(SS_DEBUG)
@@ -2264,8 +2264,8 @@ static bool logfile_init(logfile_t*    logfile,
 
         if (c == NULL)
         {
-            succp = false;
-            goto return_with_succp;
+            succ = false;
+            goto return_with_succ;
         }
         sprintf(c, "%smaxscale.%d", shm_pathname_prefix, pid);
         logfile->lf_filepath = c;
@@ -2273,8 +2273,8 @@ static bool logfile_init(logfile_t*    logfile,
         if (mkdir(c, S_IRWXU | S_IRWXG) != 0 &&
             errno != EEXIST)
         {
-            succp = false;
-            goto return_with_succp;
+            succ = false;
+            goto return_with_succ;
         }
         logfile->lf_linkpath = strdup(fn->fn_logpath);
         logfile->lf_linkpath = add_slash(logfile->lf_linkpath);
@@ -2285,9 +2285,9 @@ static bool logfile_init(logfile_t*    logfile,
     }
     logfile->lf_filepath = add_slash(logfile->lf_filepath);
 
-    if (!(succp = logfile_create(logfile)))
+    if (!(succ = logfile_create(logfile)))
     {
-        goto return_with_succp;
+        goto return_with_succ;
     }
     /**
      * Create a block buffer list for log file. Clients' writes go to buffers
@@ -2303,7 +2303,7 @@ static bool logfile_init(logfile_t*    logfile,
                     "*\n* Error : Initializing buffers for log files "
                     "failed.");
         logfile_free_memory(logfile);
-        goto return_with_succp;
+        goto return_with_succ;
     }
 
 #if defined(SS_DEBUG)
@@ -2321,17 +2321,17 @@ static bool logfile_init(logfile_t*    logfile,
                 logfile->lf_full_file_name);
     }
 #endif
-    succp = true;
+    succ = true;
     logfile->lf_state = RUN;
     CHK_LOGFILE(logfile);
 
-return_with_succp:
-    if (!succp)
+return_with_succ:
+    if (!succ)
     {
         logfile_done(logfile);
     }
     ss_dassert(logfile->lf_state == RUN || logfile->lf_state == DONE);
-    return succp;
+    return succ;
 }
 
 /**
@@ -2401,7 +2401,7 @@ static bool filewriter_init(logmanager_t*    logmanager,
                             skygw_message_t* clientmes,
                             skygw_message_t* logmes)
 {
-    bool         succp = false;
+    bool         succ = false;
     logfile_t*   lf;
 
     CHK_LOGMANAGER(logmanager);
@@ -2419,30 +2419,30 @@ static bool filewriter_init(logmanager_t*    logmanager,
 
     if (fw->fwr_logmes == NULL || fw->fwr_clientmes == NULL)
     {
-        goto return_succp;
+        goto return_succ;
     }
 
     lf = logmanager_get_logfile(logmanager);
 
-    if (!(succp = logfile_open_file(fw, lf)))
+    if (!(succ = logfile_open_file(fw, lf)))
     {
         fprintf(stderr,
                 "Error : opening log file %s failed. Exiting "
                 "MaxScale\n",
                 lf->lf_full_file_name);
-        goto return_succp;
+        goto return_succ;
     }
     fw->fwr_state = RUN;
     CHK_FILEWRITER(fw);
-    succp = true;
+    succ = true;
 
-return_succp:
-    if (!succp)
+return_succ:
+    if (!succ)
     {
         filewriter_done(fw);
     }
     ss_dassert(fw->fwr_state == RUN || fw->fwr_state == DONE);
-    return succp;
+    return succ;
 }
 
 static void filewriter_done(filewriter_t* fw)
@@ -2494,15 +2494,15 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
      */
     if (rotate_logfile)
     {
-        bool succp;
+        bool succ;
 
         lf->lf_name_seqno += 1; /*< new sequence number */
 
-        if (!(succp = logfile_create(lf)))
+        if (!(succ = logfile_create(lf)))
         {
             lf->lf_name_seqno -= 1; /*< restore */
         }
-        else if ((succp = logfile_open_file(fwr, lf)))
+        else if ((succ = logfile_open_file(fwr, lf)))
         {
             if (log_config.use_stdout)
             {
@@ -2514,7 +2514,7 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             }
         }
 
-        if (!succp)
+        if (!succ)
         {
             LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
