@@ -627,194 +627,176 @@ static int logmanager_write_log(logfile_id_t    id,
     size_t       timestamp_len;
     int          i;
 
+    assert(str);
+    assert(logmanager_is_valid_id(id));
     CHK_LOGMANAGER(lm);
 
-    if (!logmanager_is_valid_id(id))
-    {
-        err = -1;
-        ss_dassert(false);
-        goto return_err;
-    }
     // All messages are now logged to the error log file.
     lf = &lm->lm_logfile;
     CHK_LOGFILE(lf);
 
+    /** Length of string that will be written, limited by bufsize */
+    size_t safe_str_len;
+    /** Length of session id */
+    size_t sesid_str_len;
+    size_t cmplen = 0;
     /**
-     * When string pointer is NULL, operation is flush.
+     * 2 braces, 2 spaces and terminating char
+     * If session id is stored to tls_log_info structure, allocate
+     * room for session id too.
      */
-    if (str == NULL)
+    if (id == LOGFILE_TRACE && tls_log_info.li_sesid != 0)
     {
-        if (flush)
-        {
-            logfile_flush(lf); /*< wakes up file writer */
-        }
+        sesid_str_len = 5 * sizeof(char) + get_decimal_len(tls_log_info.li_sesid);
     }
     else
     {
-        /** Length of string that will be written, limited by bufsize */
-        size_t safe_str_len;
-        /** Length of session id */
-        size_t sesid_str_len;
-        size_t cmplen = 0;
-        /**
-         * 2 braces, 2 spaces and terminating char
-         * If session id is stored to tls_log_info structure, allocate
-         * room for session id too.
-         */
-        if (id == LOGFILE_TRACE && tls_log_info.li_sesid != 0)
-        {
-            sesid_str_len = 5 * sizeof(char) + get_decimal_len(tls_log_info.li_sesid);
-        }
-        else
-        {
-            sesid_str_len = 0;
-        }
-        if (log_config.highprec)
-        {
-            timestamp_len = get_timestamp_len_hp();
-        }
-        else
-        {
-            timestamp_len = get_timestamp_len();
-        }
-        cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
+        sesid_str_len = 0;
+    }
+    if (log_config.highprec)
+    {
+        timestamp_len = get_timestamp_len_hp();
+    }
+    else
+    {
+        timestamp_len = get_timestamp_len();
+    }
+    cmplen = sesid_str_len > 0 ? sesid_str_len - sizeof(char) : 0;
 
-        bool overflow = false;
-        /** Find out how much can be safely written with current block size */
-        if (timestamp_len - sizeof(char) + cmplen + str_len > lf->lf_buf_size)
-        {
-            safe_str_len = lf->lf_buf_size;
-            overflow = true;
-        }
-        else
-        {
-            safe_str_len = timestamp_len - sizeof(char) + cmplen + str_len;
-        }
-        /**
-         * Seek write position and register to block buffer.
-         * Then print formatted string to write position.
-         */
+    bool overflow = false;
+    /** Find out how much can be safely written with current block size */
+    if (timestamp_len - sizeof(char) + cmplen + str_len > lf->lf_buf_size)
+    {
+        safe_str_len = lf->lf_buf_size;
+        overflow = true;
+    }
+    else
+    {
+        safe_str_len = timestamp_len - sizeof(char) + cmplen + str_len;
+    }
+    /**
+     * Seek write position and register to block buffer.
+     * Then print formatted string to write position.
+     */
 
 #if defined (SS_LOG_DEBUG)
+    {
+        char *copy, *tok;
+        int tokval;
+
+        simple_mutex_lock(&msg_mutex, true);
+        copy = strdup(str);
+        tok = strtok(copy, "|");
+        tok = strtok(NULL, "|");
+
+        if (strstr(str, "message|") && tok)
         {
-            char *copy, *tok;
-            int tokval;
+            tokval = atoi(tok);
 
-            simple_mutex_lock(&msg_mutex, true);
-            copy = strdup(str);
-            tok = strtok(copy, "|");
-            tok = strtok(NULL, "|");
-
-            if (strstr(str, "message|") && tok)
+            if (prevval > 0)
             {
-                tokval = atoi(tok);
-
-                if (prevval > 0)
-                {
-                    ss_dassert(tokval == (prevval + 1));
-                }
-                prevval = tokval;
+                ss_dassert(tokval == (prevval + 1));
             }
-            free(copy);
-            simple_mutex_unlock(&msg_mutex);
+            prevval = tokval;
         }
+        free(copy);
+        simple_mutex_unlock(&msg_mutex);
+    }
 #endif
-        /** Book space for log string from buffer */
-        if (log_config.do_maxscalelog)
-        {
-            // All messages are now logged to the error log file.
-            wp = blockbuf_get_writepos(&bb, safe_str_len, flush);
-        }
-        else
-        {
-            wp = (char*)malloc(sizeof(char) * (timestamp_len - sizeof(char) + cmplen + str_len + 1));
-        }
+    /** Book space for log string from buffer */
+    if (log_config.do_maxscalelog)
+    {
+        // All messages are now logged to the error log file.
+        wp = blockbuf_get_writepos(&bb, safe_str_len, flush);
+    }
+    else
+    {
+        wp = (char*)malloc(sizeof(char) * (timestamp_len - sizeof(char) + cmplen + str_len + 1));
+    }
 
-        if (wp == NULL)
-        {
-            return -1;
-        }
+    if (wp == NULL)
+    {
+        return -1;
+    }
 
 #if defined (SS_LOG_DEBUG)
-        {
-            sprintf(wp, "[msg:%d]", atomic_add(&write_index, 1));
-            safe_str_len -= strlen(wp);
-            wp += strlen(wp);
-        }
+    {
+        sprintf(wp, "[msg:%d]", atomic_add(&write_index, 1));
+        safe_str_len -= strlen(wp);
+        wp += strlen(wp);
+    }
 #endif
+    /**
+     * Write timestamp with at most <timestamp_len> characters
+     * to wp.
+     * Returned timestamp_len doesn't include terminating null.
+     */
+    if (log_config.highprec)
+    {
+        timestamp_len = snprint_timestamp_hp(wp, timestamp_len);
+    }
+    else
+    {
+        timestamp_len = snprint_timestamp(wp, timestamp_len);
+    }
+    if (sesid_str_len != 0)
+    {
         /**
-         * Write timestamp with at most <timestamp_len> characters
-         * to wp.
-         * Returned timestamp_len doesn't include terminating null.
+         * Write session id
          */
-        if (log_config.highprec)
-        {
-            timestamp_len = snprint_timestamp_hp(wp, timestamp_len);
-        }
-        else
-        {
-            timestamp_len = snprint_timestamp(wp, timestamp_len);
-        }
-        if (sesid_str_len != 0)
-        {
-            /**
-             * Write session id
-             */
-            snprintf(wp + timestamp_len, sesid_str_len, "[%lu]  ", tls_log_info.li_sesid);
-            sesid_str_len -= 1; /*< don't calculate terminating char anymore */
-        }
-        /**
-         * Write next string to overwrite terminating null character
-         * of the timestamp string.
-         */
-        snprintf(wp + timestamp_len + sesid_str_len,
-                 safe_str_len-timestamp_len-sesid_str_len,
-                 "%s",
-                 str);
+        snprintf(wp + timestamp_len, sesid_str_len, "[%lu]  ", tls_log_info.li_sesid);
+        sesid_str_len -= 1; /*< don't calculate terminating char anymore */
+    }
+    /**
+     * Write next string to overwrite terminating null character
+     * of the timestamp string.
+     */
+    snprintf(wp + timestamp_len + sesid_str_len,
+             safe_str_len-timestamp_len-sesid_str_len,
+             "%s",
+             str);
 
-        /** Add an ellipsis to an overflowing message to signal truncation. */
-        if (overflow && safe_str_len > 4)
-        {
-            memset(wp + safe_str_len - 4, '.', 3);
-        }
-        /** write to syslog */
-        if (log_config.do_syslog)
-        {
-            // Strip away the timestamp and the prefix (e.g. "[Error]: ").
-            const char *message = wp + timestamp_len + prefix_len;
+    /** Add an ellipsis to an overflowing message to signal truncation. */
+    if (overflow && safe_str_len > 4)
+    {
+        memset(wp + safe_str_len - 4, '.', 3);
+    }
+    /** write to syslog */
+    if (log_config.do_syslog)
+    {
+        // Strip away the timestamp and the prefix (e.g. "[Error]: ").
+        const char *message = wp + timestamp_len + prefix_len;
 
-            switch (id)
-            {
-            case LOGFILE_ERROR:
-                syslog(LOG_ERR, "%s", message);
-                break;
-
-            case LOGFILE_MESSAGE:
-                syslog(LOG_NOTICE, "%s", message);
-                break;
-
-            default:
-                break;
-            }
-        }
-        /** remove double line feed */
-        if (wp[safe_str_len - 2] == '\n')
+        switch (id)
         {
-            wp[safe_str_len - 2] = ' ';
-        }
-        wp[safe_str_len - 1] = '\n';
+        case LOGFILE_ERROR:
+            syslog(LOG_ERR, "%s", message);
+            break;
 
-        if (log_config.do_maxscalelog)
-        {
-            blockbuf_unregister(bb);
-        }
-        else
-        {
-            free(wp);
-        }
-    } /* if (str == NULL) */
+        case LOGFILE_MESSAGE:
+            syslog(LOG_NOTICE, "%s", message);
+            break;
 
-return_err:
+        default:
+            break;
+        }
+    }
+    /** remove double line feed */
+    if (wp[safe_str_len - 2] == '\n')
+    {
+        wp[safe_str_len - 2] = ' ';
+    }
+    wp[safe_str_len - 1] = '\n';
+
+    if (log_config.do_maxscalelog)
+    {
+        blockbuf_unregister(bb);
+    }
+    else
+    {
+        free(wp);
+    }
+
     return err;
 }
 
