@@ -18,4 +18,5 @@ typedef struct extern_cmd_t{
 EXTERNCMD* externcmd_allocate(char* argstr);
 void externcmd_free(EXTERNCMD* cmd);
 int externcmd_execute(EXTERNCMD* cmd);
+bool externcmd_can_execute(char* argstr);
 #endif

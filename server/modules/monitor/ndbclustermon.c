@@ -127,29 +127,15 @@ startMonitor(void *arg,void* opt)
     {
 	if(!strcmp(params->name,"script"))
 	{
-	    if(handle->script)
-		free(handle->script);
-	    if(access(params->value,X_OK) == 0)
-	    {
-		handle->script = strdup(params->value);
-	    }
-	    else
-	    {
-		script_error = true;
-		if(access(params->value,F_OK) == 0)
-		{
-		skygw_log_write(LE,
-			 "Error: The file cannot be executed: %s",
-			 params->value);
-		}
-		else
-		{
-		skygw_log_write(LE,
-			 "Error: The file cannot be found: %s",
-			 params->value);
-		}
-		handle->script = NULL;
-	    }
+	    if (externcmd_can_execute(params->value))
+        {
+            free(handle->script);
+            handle->script = strdup(params->value);
+        }
+        else
+        {
+            script_error = true;
+        }
 	}
 	else if(!strcmp(params->name,"events"))
 	{

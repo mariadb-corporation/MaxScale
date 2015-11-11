@@ -93,11 +93,11 @@ EXTERNCMD* externcmd_allocate(char* argstr)
             {
                 if (access(cmd->argv[0], F_OK) != 0)
                 {
-                    skygw_log_write(LE, "Error: Cannot find file: %s", cmd->argv[0]);
+                    skygw_log_write(LE, "Cannot find file: %s", cmd->argv[0]);
                 }
                 else
                 {
-                    skygw_log_write(LE, "Error: Cannot execute file '%s'. Missing "
+                    skygw_log_write(LE, "Cannot execute file '%s'. Missing "
                                     "execution permissions.", cmd->argv[0]);
                 }
                 externcmd_free(cmd);
@@ -145,23 +145,88 @@ int externcmd_execute(EXTERNCMD* cmd)
     if(pid < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        skygw_log_write(LOGFILE_ERROR,"Error: Failed to execute command '%s', fork failed: [%d] %s",
-                        cmd->argv[0],errno,strerror_r(errno, errbuf, sizeof(errbuf)));
+        skygw_log_write(LOGFILE_ERROR, "Failed to execute command '%s', fork failed: [%d] %s",
+                        cmd->argv[0], errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         rval = -1;
     }
     else if(pid == 0)
     {
         /** Child process, execute command */
         execvp(cmd->argv[0],cmd->argv);
-	_exit(1);
+        _exit(1);
     }
     else
     {
-	cmd->child = pid;
-	cmd->n_exec++;
-	LOGIF(LD,skygw_log_write(LD,"[monitor_exec_cmd] Forked child process %d : %s.",pid,cmd));
+        cmd->child = pid;
+        cmd->n_exec++;
+        LOGIF(LD, skygw_log_write(LD, "[monitor_exec_cmd] Forked child process %d : %s.", pid, cmd));
+    }
+    return rval;
+}
+
+/**
+ * Get the name of the command being executed.
+ *
+ * This copies the command being executed into a new string.
+ * @param str Command string, optionally with arguments
+ * @return Command part of the string if arguments were defined
+ */
+char* get_command(const char* str)
+{
+    char* rval = NULL;
+    const char* start = str;
+
+    while (*start && isspace(*start))
+    {
+        start++;
+    }
+
+    const char* end = start;
+
+    while (*end && !isspace(*end))
+    {
+        end++;
+    }
+
+    size_t len = end - start;
+
+    if (len > 0 && (rval = malloc(len + 1)))
+    {
+        memcpy(rval, start, len);
+        rval[len] = '\0';
     }
 
     return rval;
 }
 
+/**
+ * Check if a command can be executed.
+ *
+ * Checks if the file being executed exists and if the current user has execution
+ * permissions on the file.
+ * @param argstr Command to check. Can contain arguments for the command.
+ * @return True if the file was found and the use has execution permissions to it.
+ */
+bool externcmd_can_execute(const char* argstr)
+{
+    bool rval = false;
+    char *command = get_command(argstr);
+
+    if (command)
+    {
+        if (access(command, X_OK) == 0)
+        {
+            rval = true;
+        }
+        else if (access(command, F_OK) == 0)
+        {
+            skygw_log_write(LE, "The executable cannot be executed: %s", command);
+        }
+        else
+        {
+            skygw_log_write(LE, "The executable cannot be found: %s", command);
+        }
+        free(command);
+    }
+    return rval;
+}
