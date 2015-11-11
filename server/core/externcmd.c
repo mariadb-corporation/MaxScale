@@ -82,36 +82,33 @@ int tokenize_arguments(char* argstr, char** argv)
  */
 EXTERNCMD* externcmd_allocate(char* argstr)
 {
-    EXTERNCMD* cmd;
+    EXTERNCMD* cmd = NULL;
 
-    if(argstr == NULL)
-	return NULL;
-
-    if((cmd = (EXTERNCMD*)malloc(sizeof(EXTERNCMD))) != NULL)
+    if (argstr && (cmd = (EXTERNCMD*) malloc(sizeof(EXTERNCMD))) &&
+        (cmd->argv = malloc(sizeof(char*) * MAXSCALE_EXTCMD_ARG_MAX)))
     {
-	if(tokenize_arguments(argstr,cmd->parameters) == -1)
-	{
-	    free(cmd);
-	    return NULL;
-	}
-	if(access(cmd->parameters[0],F_OK) != 0)
-	{
-	    skygw_log_write(LE,
-		     "Error: Cannot find file: %s",
-		     cmd->parameters[0]);
-	    externcmd_free(cmd);
-	    return NULL;
-	}
-
-	if(access(cmd->parameters[0],X_OK) != 0)
-	{
-	    skygw_log_write(LE,
-		     "Error: Cannot execute file '%s'. Missing execution permissions.",
-		     cmd->parameters[0]);
-	    externcmd_free(cmd);
-	    return NULL;
-	}
-    skygw_log_write(LT, "Executing script %s.", cmd->parameters[0]);
+        if (tokenize_arguments(argstr, cmd->argv) == 0)
+        {
+            if (access(cmd->argv[0], X_OK) != 0)
+            {
+                if (access(cmd->argv[0], F_OK) != 0)
+                {
+                    skygw_log_write(LE, "Error: Cannot find file: %s", cmd->argv[0]);
+                }
+                else
+                {
+                    skygw_log_write(LE, "Error: Cannot execute file '%s'. Missing "
+                                    "execution permissions.", cmd->argv[0]);
+                }
+                externcmd_free(cmd);
+                cmd = NULL;
+            }
+        }
+        else
+        {
+            externcmd_free(cmd);
+            cmd = NULL;
+        }
     }
     return cmd;
 }
@@ -122,13 +119,15 @@ EXTERNCMD* externcmd_allocate(char* argstr)
  */
 void externcmd_free(EXTERNCMD* cmd)
 {
-    int i;
-
-    for(i = 0;cmd->parameters[i] != NULL;i++)
+    if (cmd)
     {
-	free(cmd->parameters[i]);
+        for (int i = 0; cmd->argv[i]; i++)
+        {
+            free(cmd->argv[i]);
+        }
+        free(cmd->argv);
+        free(cmd);
     }
-    free(cmd);
 }
 
 /**
@@ -147,13 +146,13 @@ int externcmd_execute(EXTERNCMD* cmd)
     {
         char errbuf[STRERROR_BUFLEN];
         skygw_log_write(LOGFILE_ERROR,"Error: Failed to execute command '%s', fork failed: [%d] %s",
-                        cmd->parameters[0],errno,strerror_r(errno, errbuf, sizeof(errbuf)));
+                        cmd->argv[0],errno,strerror_r(errno, errbuf, sizeof(errbuf)));
         rval = -1;
     }
     else if(pid == 0)
     {
         /** Child process, execute command */
-        execvp(cmd->parameters[0],cmd->parameters);
+        execvp(cmd->argv[0],cmd->argv);
 	_exit(1);
     }
     else
