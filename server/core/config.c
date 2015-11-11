@@ -73,14 +73,10 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/utsname.h>
-#include <pcre.h>
 #include <dbusers.h>
 #include <gw.h>
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
-
-/** According to the PCRE manual, this should be a multiple of 3 */
-#define MAXSCALE_PCRE_BUFSZ 24
 
 extern int setipaddress(struct in_addr *, char *);
 static int process_config_context(CONFIG_CONTEXT   *);
@@ -141,50 +137,63 @@ trim(char *str)
  */
 char* config_clean_string_list(char* str)
 {
-    char *tmp;
-
-    if ((tmp = malloc(sizeof(char) * (strlen(str) + 1))) != NULL)
+    char *dest;
+    size_t destsize = strlen(str) + 1;
+    if ((dest = malloc(destsize)) != NULL)
     {
-        char *ptr;
-        int match[MAXSCALE_PCRE_BUFSZ];
-        pcre* re;
-        const char *re_err;
-        int err_offset, rval;
+        pcre2_code* re;
+        pcre2_match_data* data;
+        int re_err;
+        size_t err_offset;
 
-        tmp[0] = '\0';
-
-        if ((re = pcre_compile("\\s*+([^,]*[^,\\s])", 0, &re_err, &err_offset, NULL)) == NULL)
+        if ((re = pcre2_compile((PCRE2_SPTR) "[[:space:],]*([^,]+)\\b[[:space:],]*", PCRE2_ZERO_TERMINATED, 0,
+                                &re_err, &err_offset, NULL)) == NULL ||
+            (data = pcre2_match_data_create_from_pattern(re, NULL)) == NULL)
         {
+            PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+            pcre2_get_error_message(re_err, errbuf, sizeof(errbuf));
             skygw_log_write(LE, "[%s] Error: Regular expression compilation failed at %d: %s",
-                            __FUNCTION__, err_offset, re_err);
-            free(tmp);
+                            __FUNCTION__, err_offset, errbuf);
+            pcre2_code_free(re);
+            free(dest);
             return NULL;
         }
 
-        ptr = str;
-
-        while ((rval = pcre_exec(re, NULL, ptr, strlen(ptr), 0, 0, (int*)&match, MAXSCALE_PCRE_BUFSZ)) > 1)
+        const char *replace = "$1,";
+        int rval = 0;
+        while ((rval = pcre2_substitute(re, (PCRE2_SPTR) str, PCRE2_ZERO_TERMINATED, 0,
+                                        PCRE2_SUBSTITUTE_GLOBAL, data, NULL,
+                                        (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
+                                        (PCRE2_UCHAR*) dest, &destsize)) == PCRE2_ERROR_NOMEMORY)
         {
-            const char* substr;
-
-            pcre_get_substring(ptr, (int*)&match, rval, 1, &substr);
-            if (strlen(tmp) > 0)
+            char* tmp = realloc(dest, destsize * 2);
+            if (tmp == NULL)
             {
-                strcat(tmp, ",");
+                free(dest);
+                dest = NULL;
+                break;
             }
-            strcat(tmp, substr);
-            pcre_free_substring(substr);
-            ptr = &ptr[match[1]];
+            dest = tmp;
+            destsize *= 2;
         }
-        pcre_free(re);
+
+        /** Remove the trailing comma */
+        if (dest && dest[strlen(dest) - 1] == ',')
+        {
+            dest[strlen(dest) - 1] = '\0';
+        }
+
+        pcre2_code_free(re);
+        pcre2_match_data_free(data);
     }
     else
     {
         skygw_log_write(LE, "[%s] Error: Memory allocation failed.", __FUNCTION__);
     }
 
-    return tmp;
+    return dest;
 }
+
 /**
  * Config item handler for the ini file reader
  *
