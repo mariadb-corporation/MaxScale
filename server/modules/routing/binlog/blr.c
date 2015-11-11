@@ -99,7 +99,7 @@ static  void    errorReply(
         error_action_t     action,
 	bool	*succp);
 
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static  int getCapabilities ();
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
 static int blr_set_service_mysql_user(SERVICE *service);
@@ -113,7 +113,6 @@ extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debu
 void blr_master_close(ROUTER_INSTANCE *);
 char * blr_last_event_description(ROUTER_INSTANCE *router);
 extern int MaxScaleUptime();
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 char	*blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 /** The module object definition */
@@ -1517,7 +1516,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE	* rses)
 }
 
 
-static uint8_t getCapabilities(ROUTER *inst, void *router_session)
+static int getCapabilities()
 {
         return RCAP_TYPE_NO_RSESSION;
 }

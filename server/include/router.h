@@ -86,7 +86,7 @@ typedef struct router_object {
                         DCB*           backend_dcb, 
                         error_action_t action, 
                         bool*          succp);
-        uint8_t (*getCapabilities)(ROUTER *instance, void* router_session);
+        int (*getCapabilities)();
 } ROUTER_OBJECT;
 
 /**

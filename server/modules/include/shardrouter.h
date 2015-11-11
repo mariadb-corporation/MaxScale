@@ -192,7 +192,6 @@ struct router_client_session {
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
 
         shard_config_t rses_config;    /*< copied config info from router instance */
-        int              rses_capabilities; /*< input type, for example */
         bool             rses_autocommit_enabled;
         bool             rses_transaction_active;
 	struct router_instance	 *router;	/*< The router instance */

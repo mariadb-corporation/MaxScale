@@ -130,7 +130,7 @@ static bool route_single_stmt(
 	GWBUF*             querybuf);
 
 
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static  int getCapabilities();
 
 #if defined(NOT_USED)
 static bool router_option_configured(
@@ -912,7 +912,6 @@ static void* newSession(
         client_rses->rses_master_ref   = master_ref;
 	/* assert with master_host */
 	ss_dassert(master_ref && (master_ref->bref_backend->backend_server && SERVER_MASTER));
-        client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
 
@@ -4447,27 +4446,11 @@ static void tracelog_routed_query(
 
 
 /**
- * Return rc, rc < 0 if router session is closed. rc == 0 if there are no 
- * capabilities specified, rc > 0 when there are capabilities.
+ * Return RCAP_TYPE_STMT_INPUT.
  */ 
-static uint8_t getCapabilities (
-        ROUTER* inst,
-        void*   router_session)
+static int getCapabilities ()
 {
-        ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *)router_session;
-        uint8_t            rc;
-        
-        if (!rses_begin_locked_router_action(rses))
-        {
-                rc = 0xff;
-                goto return_rc;
-        }
-        rc = rses->rses_capabilities;
-        
-        rses_end_locked_router_action(rses);
-        
-return_rc:
-        return rc;
+        return RCAP_TYPE_STMT_INPUT;
 }
 
 /**

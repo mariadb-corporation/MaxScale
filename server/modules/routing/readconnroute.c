@@ -124,7 +124,7 @@ static  void             handleError(
         DCB              *problem_dcb,
         error_action_t   action,
         bool             *succp);
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static  int getCapabilities ();
 
 
 /** The module object definition */
@@ -957,11 +957,9 @@ static void rses_end_locked_router_action(
 }
 
 
-static uint8_t getCapabilities(
-        ROUTER*  inst,
-        void*    router_session)
+static int getCapabilities()
 {
-        return 0;
+        return RCAP_TYPE_PACKET_INPUT;
 }
 
 /********************************

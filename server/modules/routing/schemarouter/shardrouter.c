@@ -116,7 +116,7 @@ static route_target_t get_shard_route_target(
                                              bool trx_active,
                                              HINT* hint);
 
-static uint8_t getCapabilities(ROUTER* inst, void* router_session);
+static int getCapabilities();
 
 void subsvc_clear_state(SUBSERVICE* svc,subsvc_state_t state);
 void subsvc_set_state(SUBSERVICE* svc,subsvc_state_t state);
@@ -1158,9 +1158,6 @@ newSession(
         free(dummy_upstream);
     }
 
-
-    /** Copy backend pointers to router session. */
-    client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
     router->stats.n_sessions += 1;
 
     /**
@@ -2571,27 +2568,12 @@ mysql_sescmd_get_property(
 }
 
 /**
- * Return rc, rc < 0 if router session is closed. rc == 0 if there are no 
- * capabilities specified, rc > 0 when there are capabilities.
+ * Return RCAP_TYPE_STMT_INPUT
  */
-static uint8_t
-getCapabilities(ROUTER* inst,
-                void* router_session)
+static int
+getCapabilities()
 {
-    ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *) router_session;
-    uint8_t rc;
-
-    if(!rses_begin_locked_router_action(rses))
-    {
-        rc = 0xff;
-        goto return_rc;
-    }
-    rc = rses->rses_capabilities;
-
-    rses_end_locked_router_action(rses);
-
-return_rc:
-    return rc;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 /**
