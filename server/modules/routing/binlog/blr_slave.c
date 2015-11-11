@@ -688,8 +688,19 @@ extern  char *strcasestr();
 		}
 		else if (strcasecmp(word, "@slave_uuid") == 0)
 		{
-			if ((word = strtok_r(NULL, sep, &brkb)) != NULL)
-				slave->uuid = strdup(word);
+			if ((word = strtok_r(NULL, sep, &brkb)) != NULL) {
+				int len = strlen(word);
+				char *word_ptr = word;
+				if (len) {
+					if (word[len-1] == '\'')
+						word[len-1] = '\0';
+					if (word[0] == '\'') {
+						word[0] = '\0';
+						word_ptr++;
+					}
+				}
+				slave->uuid = strdup(word_ptr);
+			}
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.setslaveuuid);
 		}
