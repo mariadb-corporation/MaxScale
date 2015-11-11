@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab 2014
+ * Copyright MariaDB Corporation Ab 2014-2015
  */
 
 /**
@@ -37,7 +37,18 @@
  * 18/02/2015	Massimiliano Pinto	Addition of dcb_close in closeSession
  * 07/05/2015   Massimiliano Pinto      Addition of MariaDB 10 compatibility support
  * 12/06/2015   Massimiliano Pinto      Addition of MariaDB 10 events in diagnostics()
+ * 29/06/2015	Massimiliano Pinto	Addition of master.ini for easy startup configuration
+ *					If not found router goes into BLRM_UNCONFIGURED state.
+ *					Cache dir is 'cache' under router->binlogdir.
+ * 07/08/2015	Massimiliano Pinto	Addition of binlog check at startup if trx_safe is on
+ * 21/08/2015	Massimiliano Pinto	Added support for new config options:
+ *					master_uuid, master_hostname, master_version
+ *					If set those values are sent to slaves instead of
+ *					saved master responses
+ * 23/08/2015	Massimiliano Pinto	Added strerror_r
  * 09/09/2015   Martin Brampton         Modify error handler
+ * 30/09/2015	Massimiliano Pinto	Addition of send_slave_heartbeat option
+ * 23/10/2015	Markus Makela		Added current_safe_event
  * 27/10/2015   Martin Brampton         Amend getCapabilities to return RCAP_TYPE_NO_RSESSION
  *
  * @endverbatim
@@ -63,12 +74,10 @@
 #include <log_manager.h>
 
 #include <mysql_client_server_protocol.h>
+#include <ini.h>
+#include <sys/stat.h>
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
-static char *version_str = "V1.0.6";
+static char *version_str = "V2.0.0";
 
 /* The router entry points */
 static	ROUTER	*createInstance(SERVICE *service, char **options);
@@ -89,8 +98,23 @@ static  void    errorReply(
         DCB     *backend_dcb,
         error_action_t     action,
 	bool	*succp);
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 
+static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
+static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
+static int blr_set_service_mysql_user(SERVICE *service);
+int blr_load_dbusers(ROUTER_INSTANCE *router);
+int blr_save_dbusers(ROUTER_INSTANCE *router);
+static int blr_check_binlog(ROUTER_INSTANCE *router);
+extern void blr_cache_read_master_data(ROUTER_INSTANCE *router);
+extern char *decryptPassword(char *crypt);
+extern char *create_hex_sha1_sha1_passwd(char *passwd);
+extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
+void blr_master_close(ROUTER_INSTANCE *);
+char * blr_last_event_description(ROUTER_INSTANCE *router);
+extern int MaxScaleUptime();
+static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+char	*blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject = {
@@ -110,7 +134,7 @@ static void	stats_func(void *);
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
 void my_uuid_init(ulong seed1, ulong seed2);
-void my_uuid(char *guid);
+void my_uuid(unsigned char *guid);
 GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
 
 static SPINLOCK	instlock;
@@ -172,9 +196,13 @@ static	ROUTER	*
 createInstance(SERVICE *service, char **options)
 {
 ROUTER_INSTANCE	*inst;
-char		*value, *name;
+char		*value;
 int		i;
-char	*defuuid;
+unsigned char	*defuuid;
+char		path[PATH_MAX+1] = "";
+char		filename[PATH_MAX+1] = "";
+int		rc = 0;
+char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 	if(service->credentials.name == NULL ||
 	   service->credentials.authdata == NULL)
@@ -197,24 +225,27 @@ char	*defuuid;
 	 * We only support one server behind this router, since the server is
 	 * the master from which we replicate binlog records. Therefore check
 	 * that only one server has been defined.
-	 *
-	 * A later improvement will be to define multiple servers and have the
-	 * router use the information that is supplied by the monitor to find
-	 * which of these servers is currently the master and replicate from
-	 * that server.
 	 */
-	if (service->dbref == NULL || service->dbref->next != NULL)
+	if (service->dbref != NULL)
 	{
-		skygw_log_write(LE,
-			"%s: Error : Exactly one database server may be "
-			"for use with the binlog router.",
-			service->name);
-		return NULL;
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Warning: backend database server is provided by master.ini file "
+			"for use with the binlog router."
+			" Server section is no longer required.",
+			service->name)));
+
+		server_free(service->dbref->server);
+		free(service->dbref);
+		service->dbref = NULL;
 	}
 
 	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
-                return NULL;
-        }
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"%s: Error: failed to allocate memory for router instance.",
+			service->name)));
+
+		return NULL;
+	}
 
 	memset(&inst->stats, 0, sizeof(ROUTER_STATS));
 	memset(&inst->saved_master, 0, sizeof(MASTER_RESPONSES));
@@ -229,6 +260,10 @@ char	*defuuid;
 	inst->master_chksum = true;
 	inst->master_uuid = NULL;
 
+	inst->master_state = BLRM_UNCONFIGURED;
+	inst->master = NULL;
+	inst->client = NULL;
+
 	inst->low_water = DEF_LOW_WATER;
 	inst->high_water = DEF_HIGH_WATER;
 	inst->initbinlog = 0;
@@ -237,27 +272,47 @@ char	*defuuid;
 	inst->burst_size = DEF_BURST_SIZE;
 	inst->retry_backoff = 1;
 	inst->binlogdir = NULL;
-	inst->heartbeat = 300;	// Default is every 5 minutes
+	inst->heartbeat = BLR_HEARTBEAT_DEFAULT_INTERVAL;
 	inst->mariadb10_compat = false;
 
 	inst->user = strdup(service->credentials.name);
 	inst->password = strdup(service->credentials.authdata);
 
+	inst->m_errno = 0;
+	inst->m_errmsg = NULL;
+
+	inst->trx_safe = 1;
+	inst->pending_transaction = 0;
+	inst->last_safe_pos = 0;
+
+	inst->set_master_version = NULL;
+	inst->set_master_hostname = NULL;
+	inst->set_master_uuid = NULL;
+	inst->set_master_server_id = NULL;
+	inst->send_slave_heartbeat = 0;
+
+	inst->serverid = 0;
+
 	my_uuid_init((ulong)rand()*12345,12345);
-	if ((defuuid = (char *)malloc(20)) != NULL)
+	if ((defuuid = (unsigned char *)malloc(20)) != NULL)
 	{
 		my_uuid(defuuid);
 		if ((inst->uuid = (char *)malloc(38)) != NULL)
-			sprintf(inst->uuid, "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x",
-			defuuid[0], defuuid[1], defuuid[2], defuuid[3],
-			defuuid[4], defuuid[5], defuuid[6], defuuid[7],
-			defuuid[8], defuuid[9], defuuid[10], defuuid[11],
-			defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
+			sprintf(inst->uuid,
+			        "%02hhx%02hhx%02hhx%02hhx-"
+			        "%02hhx%02hhx-"
+			        "%02hhx%02hhx-"
+			        "%02hhx%02hhx-"
+			        "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+			        defuuid[0], defuuid[1], defuuid[2], defuuid[3],
+			        defuuid[4], defuuid[5], defuuid[6], defuuid[7],
+			        defuuid[8], defuuid[9], defuuid[10], defuuid[11],
+			        defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
 	}
 
 	/*
 	 * Process the options.
-	 * We have an array of attrbute values passed to us that we must
+	 * We have an array of attribute values passed to us that we must
 	 * examine. Supported attributes are:
 	 *	uuid=
 	 *	server-id=
@@ -287,9 +342,28 @@ char	*defuuid;
 				{
 					inst->uuid = strdup(value);
 				}
-				else if (strcmp(options[i], "server-id") == 0)
+				else if ( (strcmp(options[i], "server_id") == 0) || (strcmp(options[i], "server-id") == 0) )
 				{
 					inst->serverid = atoi(value);
+					if (strcmp(options[i], "server-id") == 0) {
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"WARNING: Configuration setting '%s' in router_options is deprecated"
+							" and will be removed in a later version of MaxScale. "
+							"Please use the new setting '%s' instead.",
+							"server-id", "server_id")));
+					}
+
+					if (inst->serverid <= 0) {
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"Error : Service %s, invalid server-id '%s'. "
+							"Please configure it with a unique positive integer value (1..2^32-1)",
+							service->name, value)));
+
+						free(inst);
+						return NULL;
+					}
 				}
 				else if (strcmp(options[i], "user") == 0)
 				{
@@ -303,9 +377,34 @@ char	*defuuid;
 				{
 					inst->password = strdup(value);
 				}
-				else if (strcmp(options[i], "master-id") == 0)
+				else if ( (strcmp(options[i], "master_id") == 0) || (strcmp(options[i], "master-id") == 0) )
 				{
-					inst->masterid = atoi(value);
+					int master_id = atoi(value);
+					if (master_id > 0) {
+						inst->masterid = master_id;
+						inst->set_master_server_id = strdup(value);
+					}
+					if (strcmp(options[i], "master-id") == 0) {
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"WARNING: Configuration setting '%s' in router_options is deprecated"
+							" and will be removed in a later version of MaxScale. "
+							"Please use the new setting '%s' instead.",
+							"master-id", "master_id")));
+					}
+				}
+				else if (strcmp(options[i], "master_uuid") == 0)
+				{
+					inst->set_master_uuid = strdup(value);
+					inst->master_uuid = inst->set_master_uuid;
+				}
+				else if (strcmp(options[i], "master_version") == 0)
+				{
+					inst->set_master_version = strdup(value);
+				}
+				else if (strcmp(options[i], "master_hostname") == 0)
+				{
+					inst->set_master_hostname = strdup(value);
 				}
 				else if (strcmp(options[i], "mariadb10-compatibility") == 0)
 				{
@@ -315,13 +414,13 @@ char	*defuuid;
 				{
 					inst->fileroot = strdup(value);
 				}
-				else if (strcmp(options[i], "initialfile") == 0)
-				{
-					inst->initbinlog = atoi(value);
-				}
 				else if (strcmp(options[i], "file") == 0)
 				{
 					inst->initbinlog = atoi(value);
+				}
+				else if (strcmp(options[i], "transaction_safety") == 0)
+				{
+					inst->trx_safe = config_truth_value(value);
 				}
 				else if (strcmp(options[i], "lowwater") == 0)
 				{
@@ -365,7 +464,21 @@ char	*defuuid;
 				}
 				else if (strcmp(options[i], "heartbeat") == 0)
 				{
-					inst->heartbeat = atoi(value);
+					int h_val = (int)strtol(value, NULL, 10);
+
+					if (h_val <= 0 || (errno == ERANGE)) {
+						LOGIF(LE, (skygw_log_write_flush(
+							LOGFILE_ERROR,
+							"Warning : invalid heartbeat period %s."
+							" Setting it to default value %d.",
+							value, inst->heartbeat )));
+					} else {
+						inst->heartbeat = h_val;
+					}
+				}
+				else if (strcmp(options[i], "send_slave_heartbeat") == 0)
+				{
+					inst->send_slave_heartbeat = config_truth_value(value);
 				}
 				else if (strcmp(options[i], "binlogdir") == 0)
 				{
@@ -400,44 +513,165 @@ char	*defuuid;
 	inst->next = NULL;
 	inst->lastEventTimestamp = 0;
 
-	/*
-	 * Read any cached response messages
-	 */
-	inst->saved_master.server_id = blr_cache_read_response(inst, "serverid");
-	inst->saved_master.heartbeat = blr_cache_read_response(inst, "heartbeat");
-	inst->saved_master.chksum1 = blr_cache_read_response(inst, "chksum1");
-	inst->saved_master.chksum2 = blr_cache_read_response(inst, "chksum2");
-	inst->saved_master.gtid_mode = blr_cache_read_response(inst, "gtidmode");
-	inst->saved_master.uuid = blr_cache_read_response(inst, "uuid");
-	inst->saved_master.setslaveuuid = blr_cache_read_response(inst, "ssuuid");
-	inst->saved_master.setnames = blr_cache_read_response(inst, "setnames");
-	inst->saved_master.utf8 = blr_cache_read_response(inst, "utf8");
-	inst->saved_master.select1 = blr_cache_read_response(inst, "select1");
-	inst->saved_master.selectver = blr_cache_read_response(inst, "selectver");
-	inst->saved_master.selectvercom = blr_cache_read_response(inst, "selectvercom");
-	inst->saved_master.selecthostname = blr_cache_read_response(inst, "selecthostname");
-	inst->saved_master.map = blr_cache_read_response(inst, "map");
-	inst->saved_master.mariadb10 = blr_cache_read_response(inst, "mariadb10");
+	inst->binlog_position = 0;
+	inst->current_pos = 0;
+	inst->current_safe_event = 0;
 
-	/*
-	 * Initialise the binlog file and position
-	 */
-	if (blr_file_init(inst) == 0)
-	{
-		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR,
-			"%s: Service not started due to lack of binlog directory.",
-				service->name)));
+	strcpy(inst->binlog_name, "");
+	strcpy(inst->prevbinlog, "");
+
+	if ((inst->binlogdir == NULL) || (inst->binlogdir != NULL && !strlen(inst->binlogdir))) {
+		skygw_log_write_flush(LOGFILE_ERROR,
+			"Error : Service %s, binlog directory is not specified",
+			service->name);
 		free(inst);
 		return NULL;
 	}
-	LOGIF(LT, (skygw_log_write(
-			LOGFILE_TRACE,
-			"Binlog router: current binlog file is: %s, current position %u\n",
-						inst->binlog_name, inst->binlog_position)));
 
+	if (inst->serverid <= 0) {
+		skygw_log_write_flush(LOGFILE_ERROR,
+			"Error : Service %s, server-id is not configured. Please configure it with a unique positive integer value (1..2^32-1)",
+			service->name, inst->serverid);
+		free(inst);
+		return NULL;
+	}
+
+	/**
+	 * If binlogdir is not found create it
+	 * On failure don't start the instance
+	 */
+	if (access(inst->binlogdir, R_OK) == -1) {
+		int mkdir_rval;
+		mkdir_rval = mkdir(inst->binlogdir, 0700);
+		if (mkdir_rval == -1) {
+			char err_msg[STRERROR_BUFLEN];
+			skygw_log_write_flush(LOGFILE_ERROR,
+				"Error : Service %s, Failed to create binlog directory '%s': [%d] %s",
+				service->name,
+				inst->binlogdir,
+				errno,
+				strerror_r(errno, err_msg, sizeof(err_msg)));
+
+			free(inst);
+			return NULL;
+		}
+	}
+
+	/* Allocate dbusers for this router here instead of serviceStartPort() */
+	if (service->users == NULL) {
+		service->users = (void *)mysql_users_alloc();
+		if (service->users == NULL) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"%s: Error allocating dbusers in createInstance",
+				inst->service->name)));
+
+			free(inst);
+			return NULL;
+		}
+	}
+
+	/* Dynamically allocate master_host server struct, not written in anyfile */
+	if (service->dbref == NULL) {
+		SERVICE *service = inst->service;
+		SERVER *server;
+		server = server_alloc("_none_", "MySQLBackend", (int)3306);
+		if (server == NULL) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"%s: Error for server_alloc in createInstance",
+				inst->service->name)));
+			if (service->users) {
+				users_free(service->users);
+			}
+
+			free(inst);
+			return NULL;
+		}
+		server_set_unique_name(server, "binlog_router_master_host");
+		serviceAddBackend(service, server);
+	}
 
 	/*
+	 * Check for master.ini file with master connection details
+	 * If not found a CHANGE MASTER TO is required via mysqsl client.
+	 * Use START SLAVE for replication startup.
+	 *
+	 * If existent master.ini will be used for
+	 * automatic master replication start phase
+	 */
+
+	strncpy(path, inst->binlogdir, PATH_MAX);
+	snprintf(filename,PATH_MAX, "%s/master.ini", path);
+
+	rc = ini_parse(filename, blr_handler_config, inst);
+
+	LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
+		"%s: %s parse result is %d",
+		inst->service->name,
+		filename,
+		rc)));
+
+	/*
+	 * retcode:
+	 * -1 file not found, 0 parsing ok, > 0 error parsing the content
+	 */
+
+	if (rc != 0) {
+		if (rc == -1) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"%s: master.ini file not found in %s."
+				" Master registration cannot be started."
+				" Configure with CHANGE MASTER TO ...",
+				inst->service->name, inst->binlogdir)));
+		} else {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+				"%s: master.ini file with errors in %s."
+				" Master registration cannot be started."
+				" Fix errors in it or configure with CHANGE MASTER TO ...",
+				inst->service->name, inst->binlogdir)));
+		}
+	
+		/* Set service user or load db users */
+		blr_set_service_mysql_user(inst->service);
+
+	} else {
+		inst->master_state = BLRM_UNCONNECTED;
+
+		/* Try loading dbusers */
+		blr_load_dbusers(inst);
+	}
+
+	/**
+	 * Initialise the binlog router 
+	 */
+	if (inst->master_state == BLRM_UNCONNECTED) {
+
+	 	/* Read any cached response messages */
+		blr_cache_read_master_data(inst);
+
+		/* Find latest binlog file or create a new one (000001) */
+		if (blr_file_init(inst) == 0)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"%s: Service not started due to lack of binlog directory %s",
+				service->name,
+				inst->binlogdir)));
+
+			if (service->users) {
+				users_free(service->users);
+			}
+
+			if (service->dbref && service->dbref->server) {
+				server_free(service->dbref->server);
+				free(service->dbref);
+			}
+
+			free(inst);
+			return NULL;
+		}
+	}
+
+	/**
 	 * We have completed the creation of the instance data, so now
 	 * insert this router instance into the linked list of routers
 	 * that have been created with this module.
@@ -452,17 +686,50 @@ char	*defuuid;
 	 */
 	blr_init_cache(inst);
 
-	if ((name = (char *)malloc(80)) != NULL)
-	{
-		sprintf(name, "%s stats", service->name);
-		hktask_add(name, stats_func, inst, BLR_STATS_FREQ);
+	/*
+	 * Add tasks for statistic computation
+	 */
+	snprintf(task_name, BLRM_TASK_NAME_LEN, "%s stats", service->name);
+	hktask_add(task_name, stats_func, inst, BLR_STATS_FREQ);
+
+	/* Log whether the transaction safety option value is on*/
+	if (inst->trx_safe) {
+		LOGIF(LT, (skygw_log_write_flush(
+			LOGFILE_TRACE,
+			"%s: Service has transaction safety option set to ON",
+			service->name)));
 	}
 
-	/*
-	 * Now start the replication from the master to MaxScale
+	/**
+	 * Check whether replication can be started
 	 */
-	blr_start_master(inst);
-	free(name);
+	if (inst->master_state == BLRM_UNCONNECTED) {
+		/* Check current binlog */
+		LOGIF(LM, (skygw_log_write_flush(
+			LOGFILE_MESSAGE, "Validating binlog file '%s' ...",
+			inst->binlog_name)));
+
+		if (inst->trx_safe && !blr_check_binlog(inst)) {
+			/* Don't start replication, just return */
+			return (ROUTER *)inst;
+		}
+
+		if (!inst->trx_safe) {
+			LOGIF(LT, (skygw_log_write_flush(
+				LOGFILE_TRACE,
+				"Current binlog file is %s, current pos is %lu\n",
+				inst->binlog_name, inst->binlog_position)));
+		} else {
+			LOGIF(LT, (skygw_log_write_flush(
+				LOGFILE_TRACE,
+				"Current binlog file is %s, safe pos %lu, current pos is %lu\n",
+				inst->binlog_name, inst->binlog_position, inst->current_pos)));
+		}
+
+		/* Start replication from master server */
+		blr_start_master(inst);
+	}
+
 	return (ROUTER *)inst;
 }
 
@@ -494,7 +761,7 @@ ROUTER_SLAVE		*slave;
 
 	if ((slave = (ROUTER_SLAVE *)calloc(1, sizeof(ROUTER_SLAVE))) == NULL)
 	{
-		LOGIF(LD, (skygw_log_write_flush(
+		LOGIF(LE, (skygw_log_write_flush(
 			LOGFILE_ERROR,
 			"Insufficient memory to create new slave session for binlog router")));
                 return NULL;
@@ -521,6 +788,8 @@ ROUTER_SLAVE		*slave;
 	slave->connect_time = time(0);
 	slave->lastEventTimestamp = 0;
 	slave->mariadb10_compat = false;
+	slave->heartbeat = 0;
+	slave->lastEventReceived = 0;
 
 	/**
          * Add this session to the list of active sessions.
@@ -638,16 +907,29 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		/* decrease server registered slaves counter */
 		atomic_add(&router->stats.n_registered, -1);
 
-		LOGIF(LM, (skygw_log_write_flush(
-			LOGFILE_MESSAGE,
-			"%s: Slave %s, server id %d, disconnected after %ld seconds. "
-			"%d SQL commands, %d events sent (%lu bytes).",
-			router->service->name, slave->dcb->remote,
-			slave->serverid,
-			time(0) - slave->connect_time,
-			slave->stats.n_queries,
-			slave->stats.n_events,
-			slave->stats.n_bytes)));
+		if (slave->state > 0) {
+			LOGIF(LM, (skygw_log_write_flush(
+				LOGFILE_MESSAGE,
+				"%s: Slave %s, server id %d, disconnected after %ld seconds. "
+				"%d SQL commands, %d events sent (%lu bytes), binlog '%s', last position %lu",
+				router->service->name, slave->dcb->remote,
+				slave->serverid,
+				time(0) - slave->connect_time,
+				slave->stats.n_queries,
+				slave->stats.n_events,
+				slave->stats.n_bytes,
+				slave->binlogfile,
+				(unsigned long)slave->binlog_pos)));
+		} else {
+			LOGIF(LM, (skygw_log_write_flush(
+				LOGFILE_MESSAGE,
+				"%s: Slave %s, server id %d, disconnected after %ld seconds. "
+				"%d SQL commands",
+				router->service->name, slave->dcb->remote,
+				slave->serverid,
+				time(0) - slave->connect_time,
+				slave->stats.n_queries)));
+		}
 
 		/*
 		 * Mark the slave as unregistered to prevent the forwarding
@@ -777,9 +1059,12 @@ struct tm	tm;
 	min10 /= 10.0;
 	min5 /= 5.0;
 	
-
-	dcb_printf(dcb, "\tMaster connection DCB:  			%p\n",
+	if (router_inst->master)
+		dcb_printf(dcb, "\tMaster connection DCB:  			%p\n",
 			router_inst->master);
+	else
+		dcb_printf(dcb, "\tMaster connection DCB: 			0x0\n");
+
 	dcb_printf(dcb, "\tMaster connection state:			%s\n",
 			blrm_states[router_inst->master_state]);
 
@@ -788,14 +1073,22 @@ struct tm	tm;
 	
 	dcb_printf(dcb, "\tBinlog directory:				%s\n",
 		   router_inst->binlogdir);
+	dcb_printf(dcb, "\tHeartbeat period (seconds):			%lu\n",
+		   router_inst->heartbeat);
 	dcb_printf(dcb, "\tNumber of master connects:	  		%d\n",
                    router_inst->stats.n_masterstarts);
 	dcb_printf(dcb, "\tNumber of delayed reconnects:      		%d\n",
                    router_inst->stats.n_delayedreconnects);
 	dcb_printf(dcb, "\tCurrent binlog file:		  		%s\n",
                    router_inst->binlog_name);
-	dcb_printf(dcb, "\tCurrent binlog position:	  		%u\n",
-                   router_inst->binlog_position);
+	dcb_printf(dcb, "\tCurrent binlog position:	  		%lu\n",
+                   router_inst->current_pos);
+	if (router_inst->trx_safe) {
+		if (router_inst->pending_transaction) {	
+			dcb_printf(dcb, "\tCurrent open transaction pos:	  		%lu\n",
+	                   router_inst->binlog_position);
+		}
+	}
 	dcb_printf(dcb, "\tNumber of slave servers:	   		%u\n",
                    router_inst->stats.n_slaves);
 	dcb_printf(dcb, "\tNo. of binlog events received this session:	%u\n",
@@ -825,42 +1118,53 @@ struct tm	tm;
 		   router_inst->stats.n_reads);
 	dcb_printf(dcb, "\tNumber of residual data packets:		%u\n",
 		   router_inst->stats.n_residuals);
-	dcb_printf(dcb, "\tAverage events per packet			%.1f\n",
-		   (double)router_inst->stats.n_binlogs / router_inst->stats.n_reads);
-	dcb_printf(dcb, "\tLast event from master at:  			%s",
-				buf);
-	dcb_printf(dcb, "\t					(%d seconds ago)\n",
-			time(0) - router_inst->stats.lastReply);
+	dcb_printf(dcb, "\tAverage events per packet:			%.1f\n",
+		   router_inst->stats.n_reads != 0 ? ((double)router_inst->stats.n_binlogs / router_inst->stats.n_reads) : 0);
 
-	if (!router_inst->mariadb10_compat) {
-		dcb_printf(dcb, "\tLast event from master:  			0x%x, %s",
-			router_inst->lastEventReceived,
-			(router_inst->lastEventReceived >= 0 && 
-			router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
-			event_names[router_inst->lastEventReceived] : "unknown");
-	} else {
-		char *ptr = NULL;
-		if (router_inst->lastEventReceived >= 0 && router_inst->lastEventReceived <= MAX_EVENT_TYPE) {
-			ptr = event_names[router_inst->lastEventReceived];
+	spinlock_acquire(&router_inst->lock);
+	if (router_inst->stats.lastReply) {
+		if (buf[strlen(buf)-1] == '\n') {
+			buf[strlen(buf)-1] = '\0';
+		}
+		dcb_printf(dcb, "\tLast event from master at:  			%s (%d seconds ago)\n",
+			buf, time(0) - router_inst->stats.lastReply);
+
+		if (!router_inst->mariadb10_compat) {
+			dcb_printf(dcb, "\tLast event from master:  			0x%x, %s\n",
+				router_inst->lastEventReceived,
+				(router_inst->lastEventReceived >= 0 && 
+				router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
+				event_names[router_inst->lastEventReceived] : "unknown");
 		} else {
-			/* Check MariaDB 10 new events */
-			if (router_inst->lastEventReceived >= MARIADB_NEW_EVENTS_BEGIN && router_inst->lastEventReceived <= MAX_EVENT_TYPE_MARIADB10) {
-				ptr = event_names_mariadb10[(router_inst->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
+			char *ptr = NULL;
+			if (router_inst->lastEventReceived >= 0 && router_inst->lastEventReceived <= MAX_EVENT_TYPE) {
+				ptr = event_names[router_inst->lastEventReceived];
+			} else {
+				/* Check MariaDB 10 new events */
+				if (router_inst->lastEventReceived >= MARIADB_NEW_EVENTS_BEGIN && router_inst->lastEventReceived <= MAX_EVENT_TYPE_MARIADB10) {
+					ptr = event_names_mariadb10[(router_inst->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
+				}
 			}
+
+			dcb_printf(dcb, "\tLast event from master:  			0x%x, %s\n",
+				router_inst->lastEventReceived, (ptr != NULL) ? ptr : "unknown");
 		}
 
-		dcb_printf(dcb, "\tLast event from master:  			0x%x, %s",
-			router_inst->lastEventReceived, (ptr != NULL) ? ptr : "unknown");
-	}
-
-	if (router_inst->lastEventTimestamp)
-	{
-		time_t	last_event = (time_t)router_inst->lastEventTimestamp;
-		localtime_r(&last_event, &tm);
-		asctime_r(&tm, buf);
-		dcb_printf(dcb, "\tLast binlog event timestamp:  			%ld (%s)\n",
+		if (router_inst->lastEventTimestamp) {
+			time_t	last_event = (time_t)router_inst->lastEventTimestamp;
+			localtime_r(&last_event, &tm);
+			asctime_r(&tm, buf);
+			if (buf[strlen(buf)-1] == '\n') {
+				buf[strlen(buf)-1] = '\0';
+			}
+			dcb_printf(dcb, "\tLast binlog event timestamp:  			%ld (%s)\n",
 				router_inst->lastEventTimestamp, buf);
+		}
+	} else {
+		dcb_printf(dcb, "\tNo events received from master yet\n");
 	}
+	spinlock_release(&router_inst->lock);
+
 	if (router_inst->active_logs)
 		dcb_printf(dcb, "\tRouter processing binlog records\n");
 	if (router_inst->reconnect_pending)
@@ -962,6 +1266,10 @@ struct tm	tm;
 			dcb_printf(dcb,
 					"\t\tNo. transitions to follow mode:			%u\n",
 						session->stats.n_bursts);
+			if (router_inst->send_slave_heartbeat)
+				dcb_printf(dcb, "\t\tHeartbeat period (seconds):			%lu\n",
+					session->heartbeat);
+
 			minno = session->stats.minno - 1;
 			if (minno == -1)
 				minno = 30;
@@ -982,13 +1290,20 @@ struct tm	tm;
 			dcb_printf(dcb, "\t\tNo. of distribute action 3			%u\n", session->stats.n_actions[2]);
 #endif
 			if (session->lastEventTimestamp
-					&& router_inst->lastEventTimestamp)
+					&& router_inst->lastEventTimestamp && session->lastEventReceived != HEARTBEAT_EVENT)
 			{
+				unsigned long seconds_behind;
 				time_t	session_last_event = (time_t)session->lastEventTimestamp;
+
+				if (router_inst->lastEventTimestamp > session->lastEventTimestamp)
+					seconds_behind  = router_inst->lastEventTimestamp - session->lastEventTimestamp;
+				else
+					seconds_behind = 0;
+
 				localtime_r(&session_last_event, &tm);
 				asctime_r(&tm, buf);
 				dcb_printf(dcb, "\t\tLast binlog event timestamp			%u, %s", session->lastEventTimestamp, buf);
-				dcb_printf(dcb, "\t\tSeconds behind master				%u\n", router_inst->lastEventTimestamp - session->lastEventTimestamp);
+				dcb_printf(dcb, "\t\tSeconds behind master				%lu\n", seconds_behind);
 			}
 
 			if (session->state == 0)
@@ -1085,8 +1400,10 @@ errorReply(ROUTER *instance, void *router_session, GWBUF *message, DCB *backend_
 {
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 int		error;
-socklen_t len;
-char		msg[STRERROR_BUFLEN + 1], *errmsg;
+socklen_t	len;
+char		msg[STRERROR_BUFLEN + 1 + 5] = "";
+char 		*errmsg;
+unsigned long	mysql_errno;
 
 	/** Don't handle same error twice on same DCB */
         if (backend_dcb->dcb_errhandle_called)
@@ -1103,18 +1420,41 @@ char		msg[STRERROR_BUFLEN + 1], *errmsg;
 	len = sizeof(error);
 	if (router->master && getsockopt(router->master->fd, SOL_SOCKET, SO_ERROR, &error, &len) == 0 && error != 0)
 	{
-                char errbuf[STRERROR_BUFLEN];
+		char errbuf[STRERROR_BUFLEN];
                 sprintf(msg, "%s ", strerror_r(error, errbuf, sizeof(errbuf)));
 	}
 	else
 		strcpy(msg, "");
 
+	mysql_errno = (unsigned long) extract_field((uint8_t *)(GWBUF_DATA(message) + 5), 16);
 	errmsg = extract_message(message);
-       	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR, "%s: Master connection error '%s' in state '%s', "
-		"%sattempting reconnect to master",
-			router->service->name, errmsg,
-			blrm_states[router->master_state], msg)));
+
+	if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED) {
+		/* set mysql_errno */
+		router->m_errno = mysql_errno;
+
+		/* set io error message */
+		if (router->m_errmsg)
+			free(router->m_errmsg);
+		router->m_errmsg = strdup(errmsg);
+
+	       	LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR, "%s: Master connection error %lu '%s' in state '%s', "
+				"%sattempting reconnect to master %s:%d",
+				router->service->name, mysql_errno, errmsg,
+				blrm_states[router->master_state], msg,
+				router->service->dbref->server->name,
+				router->service->dbref->server->port)));
+	} else {
+       		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR, "%s: Master connection error %lu '%s' in state '%s', "
+				"%sattempting reconnect to master %s:%d",
+				router->service->name, router->m_errno, router->m_errmsg,
+				blrm_states[router->master_state], msg,
+				router->service->dbref->server->name,
+				router->service->dbref->server->port)));
+	}
+
 	if (errmsg)
 		free(errmsg);
 	*succp = true;
@@ -1227,11 +1567,12 @@ ROUTER_SLAVE	*slave;
 int
 blr_statistics(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
-char	result[1000], *ptr;
+char	result[BLRM_COM_STATISTICS_SIZE + 1] = "";
+char	*ptr;
 GWBUF	*ret;
-int	len;
+unsigned long	len;
 
-	snprintf(result, 1000,
+	snprintf(result, BLRM_COM_STATISTICS_SIZE,
 		"Uptime: %u  Threads: %u  Events: %u  Slaves: %u  Master State: %s",
 			(unsigned int)(time(0) - router->connect_time),
 			(unsigned int)config_threadcount(),
@@ -1263,7 +1604,6 @@ blr_ping(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
 char	*ptr;
 GWBUF	*ret;
-int	len;
 
 	if ((ret = gwbuf_alloc(5)) == NULL)
 		return 0;
@@ -1283,17 +1623,18 @@ int	len;
  * mysql_send_custom_error
  *
  * Send a MySQL protocol Generic ERR message, to the dcb
- * Note the errno and state are still fixed now
  *
- * @param dcb Owner_Dcb Control Block for the connection to which the OK is sent
+ * @param dcb Owner_Dcb Control Block for the connection to which the error message is sent
  * @param packet_number
  * @param in_affected_rows
- * @param msg
+ * @param msg		Message to send
+ * @param statemsg	MySQL State message
+ * @param errcode	MySQL Error code
  * @return 1 Non-zero if data was sent
  *
  */
 int
-blr_send_custom_error(DCB *dcb, int packet_number, int affected_rows, char *msg) 
+blr_send_custom_error(DCB *dcb, int packet_number, int affected_rows, char *msg, char *statemsg, unsigned int errcode) 
 {
 uint8_t		*outbuf = NULL;
 uint32_t	mysql_payload_size = 0;
@@ -1306,10 +1647,17 @@ unsigned int	mysql_errno = 0;
 const char	*mysql_error_msg = NULL;
 const char	*mysql_state = NULL;
 GWBUF		*errbuf = NULL;
-        
-        mysql_errno = 2003;
-        mysql_error_msg = "An errorr occurred ...";
-        mysql_state = "HY000";
+       
+	if (errcode == 0) 
+		mysql_errno = 1064;
+	else
+		mysql_errno = errcode;
+
+	mysql_error_msg = "An errorr occurred ...";
+	if (statemsg == NULL)
+        	mysql_state = "42000";
+	else
+		mysql_state = statemsg;
         
         field_count = 0xff;
         gw_mysql_set_byte2(mysql_err, mysql_errno);
@@ -1362,6 +1710,245 @@ GWBUF		*errbuf = NULL;
         return dcb->func.write(dcb, errbuf);
 }
 
+/**
+ * Config item handler for the ini file reader
+ *
+ * @param userdata      The config context element
+ * @param section       The config file section
+ * @param name          The Parameter name
+ * @param value         The Parameter value
+ * @return zero on error
+ */
+
+static int
+blr_handler_config(void *userdata, const char *section, const char *name, const char *value)
+{
+ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) userdata;
+SERVICE         *service;
+
+	service = inst->service;
+
+	if (strcasecmp(section, "binlog_configuration") == 0)
+	{
+		return blr_handle_config_item(name, value, inst);
+	} else  {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"Error : master.ini has an invalid section [%s], it should be [binlog_configuration]. Service %s",
+			section,	
+			service->name)));
+
+		return 0;
+	}
+}
+
+/**
+ * Configuration handler for items in the [binlog_configuration] section
+ *
+ * @param name	The item name
+ * @param value	The item value
+ * @param inst	The current router instance
+ * @return 0 on error
+ */
+static  int
+blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst)
+{
+SERVICE         *service;
+
+        service = inst->service;
+
+        if (strcmp(name, "master_host") == 0) {
+                 server_update_address(service->dbref->server, (char *)value);
+        } else if (strcmp(name, "master_port") == 0) {
+                server_update_port(service->dbref->server, (short)atoi(value));
+        } else if (strcmp(name, "filestem") == 0) {
+                        free(inst->fileroot);
+                inst->fileroot = strdup(value);
+        }  else if (strcmp(name, "master_user") == 0) {
+                if (inst->user)
+                        free(inst->user);
+                inst->user = strdup(value);
+        } else if (strcmp(name, "master_password") == 0) {
+                if (inst->password)
+                        free(inst->password);
+                inst->password = strdup(value);
+        } else {
+                return 0;
+        }
+
+        return 1;
+}
+
+/**
+ * Add the service user to mysql dbusers (service->users)
+ * via mysql_users_alloc and add_mysql_users_with_host_ipv4
+ * User is added for '%' and 'localhost' hosts
+ *
+ * @param service	The current service
+ * @return		0 on success, 1 on failure
+ */
+static int
+blr_set_service_mysql_user(SERVICE *service) {
+char	*dpwd = NULL;
+char	*newpasswd = NULL;
+char	*service_user = NULL;
+char	*service_passwd = NULL;
+
+	if (serviceGetUser(service, &service_user, &service_passwd) == 0) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"failed to get service user details for service %s",
+			service->name)));
+
+		return 1;
+	}
+
+	dpwd = decryptPassword(service->credentials.authdata);
+
+	if (!dpwd) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"decrypt password failed for service user %s, service %s",
+			service_user,
+			service->name)));
+
+		return 1;
+        }
+
+	newpasswd = create_hex_sha1_sha1_passwd(dpwd);
+
+	if (!newpasswd) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+			"create hex_sha1_sha1_password failed for service user %s",
+			service_user)));
+
+		free(dpwd);
+		return 1;
+	}
+
+	/* add service user for % and localhost */
+	(void)add_mysql_users_with_host_ipv4(service->users, service->credentials.name, "%", newpasswd, "Y", "");
+	(void)add_mysql_users_with_host_ipv4(service->users, service->credentials.name, "localhost", newpasswd, "Y", "");
+
+	free(newpasswd);
+	free(dpwd);
+
+	return 0;
+}
+
+/**
+ * Load mysql dbusers into (service->users)
+ *
+ * @param router	The router instance
+ * @return              -1 on failure, 0 for no users found, > 0 for found users
+ */
+int
+blr_load_dbusers(ROUTER_INSTANCE *router)
+{
+int loaded = -1;
+char	path[PATH_MAX+1] = "";
+SERVICE *service;
+	service = router->service;
+
+	/* File path for router cached authentication data */
+	strncpy(path, router->binlogdir, PATH_MAX);
+	strncat(path, "/cache", PATH_MAX);
+	strncat(path, "/dbusers", PATH_MAX);
+
+	/* Try loading dbusers from configured backends */
+	loaded = load_mysql_users(service);
+
+	if (loaded < 0)
+	{
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error : Unable to load users for service %s",
+			service->name)));
+
+		/* Try loading authentication data from file cache */
+
+		loaded = dbusers_load(router->service->users, path);
+
+		if (loaded != -1)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Service %s, Using cached credential information file %s.",
+				service->name,
+				path)));
+		} else {
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error: Service %s, Unable to read cache credential information from %s."
+				" No database user added to service users table.",
+				service->name,
+				path)));
+		}
+	} else {
+		/* don't update cache if no user was loaded */
+		if (loaded == 0)
+		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Service %s: failed to load any user "
+				"information. Authentication will "
+				"probably fail as a result.",
+				service->name)));
+		} else {
+			/* update cached data */
+			blr_save_dbusers(router);
+		}
+	}
+
+	/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
+	 * This way MaxScale could try reloading users' just after startup
+	 */
+	service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
+	service->rate_limit.nloads=1;
+
+	return loaded;
+}
+
+/**
+ * Save dbusers to cache file
+ *
+ * @param router	The router instance
+ * @return              -1 on failure, >= 0 on success
+ */
+int
+blr_save_dbusers(ROUTER_INSTANCE *router)
+{
+SERVICE *service;
+char	path[PATH_MAX+1] = "";
+int	mkdir_rval = 0;
+
+        service = router->service;
+
+        /* File path for router cached authentication data */
+        strncpy(path, router->binlogdir, PATH_MAX);
+        strncat(path, "/cache", PATH_MAX);
+
+	/* check and create dir */
+	if (access(path, R_OK) == -1)
+	{
+		mkdir_rval = mkdir(path, 0700);
+	}
+
+	if (mkdir_rval == -1)
+	{
+		char err_msg[STRERROR_BUFLEN];
+		skygw_log_write(LOGFILE_ERROR,
+			"Error : Service %s, Failed to create directory '%s': [%d] %s",
+			service->name,
+			path,
+			errno,
+			strerror_r(errno, err_msg, sizeof(err_msg)));
+
+		return -1;
+	}
+
+	/* set cache file name */
+	strncat(path, "/dbusers", PATH_MAX);
+
+	return dbusers_save(service->users, path);
+}
 
 /**
  * Extract a numeric field from a packet of the specified number of bits
@@ -1382,3 +1969,125 @@ uint32_t	rval = 0, shift = 0;
 	}
 	return rval;
 }
+
+/**
+ * Check whether current binlog is valid.
+ * In case of errors BLR_SLAVE_STOPPED state is set
+ * If a partial transaction is found
+ * inst->binlog_position is set the pos where it started
+ *
+ * @param router	The router instance
+ * @return		1 on success, 0 on failure
+ */
+/** 1 is succes, 0 is faulure */
+static int blr_check_binlog(ROUTER_INSTANCE *router) {
+	int n;
+
+	/** blr_read_events_all() may set master_state
+	 * to BLR_SLAVE_STOPPED state in case of found errors.
+	 * In such conditions binlog file is NOT truncated and
+	 * router state is set to BLR_SLAVE_STOPPED
+	 * Last commited pos is set for both router->binlog_position
+	 * and router->current_pos.
+	 *
+	 * If an open transaction is detected at pos XYZ
+	 * inst->binlog_position will be set to XYZ while
+	 * router->current_pos is the last event found.
+	 */
+
+	n = blr_read_events_all_events(router, 0, 0);
+
+	LOGIF(LD, (skygw_log_write_flush(
+		LOGFILE_DEBUG,
+		"blr_read_events_all_events() ret = %i\n", n)));
+
+	if (n != 0) {
+		char msg_err[BINLOG_ERROR_MSG_LEN + 1] = "";
+		router->master_state = BLRM_SLAVE_STOPPED;
+
+		snprintf(msg_err, BINLOG_ERROR_MSG_LEN, "Error found in binlog %s. Safe pos is %lu", router->binlog_name, router->binlog_position);
+		/* set mysql_errno */
+		router->m_errno = 2032;
+
+		/* set io error message */
+		router->m_errmsg = strdup(msg_err);
+
+		/* set last_safe_pos */
+		router->last_safe_pos = router->binlog_position;
+
+		LOGIF(LE, (skygw_log_write_flush(
+			LOGFILE_ERROR,
+			"Error found in binlog file %s. Safe starting pos is %lu",
+			router->binlog_name,
+			router->binlog_position)));
+
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
+
+/**
+ * Return last event description
+ *
+ * @param router	The router instance
+ * @return		The event description or NULL
+ */
+char *
+blr_last_event_description(ROUTER_INSTANCE *router) {
+char *event_desc = NULL;
+
+	if (!router->mariadb10_compat) {
+		if (router->lastEventReceived >= 0 &&
+			router->lastEventReceived <= MAX_EVENT_TYPE) {
+			event_desc = event_names[router->lastEventReceived];
+		}
+	} else {
+		if (router->lastEventReceived >= 0 &&
+			router->lastEventReceived <= MAX_EVENT_TYPE) {
+			event_desc = event_names[router->lastEventReceived];
+		} else {
+			/* Check MariaDB 10 new events */
+			if (router->lastEventReceived >= MARIADB_NEW_EVENTS_BEGIN &&
+				router->lastEventReceived <= MAX_EVENT_TYPE_MARIADB10) {
+				event_desc = event_names_mariadb10[(router->lastEventReceived - MARIADB_NEW_EVENTS_BEGIN)];
+			}
+		}
+	}
+
+	return event_desc;
+}
+
+/**
+ * Return the event description
+ *
+ * @param router	The router instance
+ * @param event		The current event
+ * @return		The event description or NULL
+ */
+char *
+blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event) {
+char *event_desc = NULL;
+
+	if (!router->mariadb10_compat) {
+		if (event >= 0 &&
+			event <= MAX_EVENT_TYPE) {
+			event_desc = event_names[event];
+		}
+	} else {
+		if (event >= 0 &&
+			event <= MAX_EVENT_TYPE) {
+			event_desc = event_names[event];
+		} else {
+			/* Check MariaDB 10 new events */
+			if (event >= MARIADB_NEW_EVENTS_BEGIN &&
+				event <= MAX_EVENT_TYPE_MARIADB10) {
+				event_desc = event_names_mariadb10[(event - MARIADB_NEW_EVENTS_BEGIN)];
+			}
+		}
+	}
+
+	return event_desc;
+}
+

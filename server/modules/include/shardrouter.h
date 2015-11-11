@@ -204,6 +204,7 @@ struct router_client_session {
         SESSION*        session;
         GWBUF* queue;
         char            connect_db[MYSQL_DATABASE_MAXLEN+1]; /*< Database the user was trying to connect to */
+        char            current_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Current active database */
         shard_init_mask_t    init; /*< Initialization state bitmask */
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;

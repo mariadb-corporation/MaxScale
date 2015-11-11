@@ -277,10 +277,10 @@ size_t get_decimal_len(size_t s);
 char* replace_literal(char* haystack, 
                       const char* needle, 
                       const char* replacement);
+char* replace_quoted(const char* str);
 bool is_valid_posix_path(char* path);
 bool strip_escape_chars(char*);
 int simple_str_hash(char* key);
-
 
 EXTERN_C_BLOCK_END
 

@@ -47,8 +47,6 @@
 
 #include <mysql_client_server_protocol.h>
 
-extern int lm_enabled_logfiles_bitmask;
-
 static char *version_str = "V1.0.0";
 
 /* The router entry points */

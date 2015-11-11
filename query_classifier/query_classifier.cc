@@ -61,10 +61,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
 
 static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
@@ -1410,6 +1406,17 @@ char* skygw_get_canonical(
 			querystr = replace_literal(querystr, item->name, "?");
 		}
         } /*< for */
+
+    /** Check for SET ... options with no Item classes */
+    if (thd->free_list == NULL)
+    {
+        char *replaced = replace_quoted(querystr);
+        if (replaced)
+        {
+            free(querystr);
+            querystr = replaced;
+        }
+    }
 retblock:
         return querystr;
 }
@@ -1636,6 +1643,11 @@ retblock:
 
 skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
 {
+    if (!query_is_parsed(querybuf))
+    {
+        parse_query(querybuf);
+    }
+
 	LEX* lex = get_lex(querybuf);
 	skygw_query_op_t operation = QUERY_OP_UNDEFINED;
 	if(lex){
@@ -1676,6 +1688,9 @@ skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
                 case SQLCOM_CHANGE_DB:
                     operation = QUERY_OP_CHANGE_DB;
                     break;
+		case SQLCOM_LOAD:
+			operation = QUERY_OP_LOAD;
+		break;
 
 		default:
 	    operation = QUERY_OP_UNDEFINED;

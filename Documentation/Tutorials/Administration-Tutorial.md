@@ -48,6 +48,12 @@ Switch|Long Option|Description
 `-V`|`--version-full`|print version info and the commit ID the binary was built from
 `-?`|`--help`|show this help
 
+Additional command line arguments can be passed to MaxScale with a configuration file placed at `/etc/sysconfig/maxscale` on RPM installations and `/etc/default/maxscale` file on DEB installations. Set the arguments in a variable called `MAXSCALE_OPTIONS` and remember to surround the arguments with quotes. The file should only contain environment variable declarations.
+
+```
+MAXSCALE_OPTIONS="--logdir=/home/maxscale/logs --piddir=/tmp --syslog=no"
+```
+
 <a name="stopping"></a> 
 ### Stopping MaxScale
 

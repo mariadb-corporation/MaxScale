@@ -49,10 +49,6 @@
 #include <resultset.h>
 #include <maxconfig.h>
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static void exec_show(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_select(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_show_variables(DCB *dcb, MAXINFO_TREE *filter);

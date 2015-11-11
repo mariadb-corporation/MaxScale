@@ -68,9 +68,7 @@ int     buflen;
         ss_info_dassert(0 == GWBUF_EMPTY(buffer), "Buffer should not be empty");
         ss_info_dassert(GWBUF_IS_TYPE_UNDEFINED(buffer), "Buffer type should be undefined");
         ss_dfprintf(stderr, "\t..done\nSet a hint for the buffer");
-		char* name = strdup("name");
-        hint = hint_create_parameter(NULL, name, "value");
-		free(name);
+        hint = hint_create_parameter(NULL, "name", "value");
         gwbuf_add_hint(buffer, hint);
         ss_info_dassert(hint == buffer->hint, "Buffer should point to first and only hint");
         ss_dfprintf(stderr, "\t..done\nSet a property for the buffer");
@@ -157,7 +155,24 @@ int     buflen;
         ss_info_dassert(100000 == buflen, "Incorrect buffer size");
         ss_info_dassert(buffer == extra, "The buffer pointer should now point to the extra buffer");
         ss_dfprintf(stderr, "\t..done\n");
-		
+
+        /** gwbuf_clone_all test  */
+        size_t headsize = 10;
+        GWBUF* head = gwbuf_alloc(headsize);
+        size_t tailsize = 20;
+        GWBUF* tail = gwbuf_alloc(tailsize);
+
+        ss_info_dassert(head && tail, "Head and tail buffers should both be non-NULL");
+        GWBUF* append = gwbuf_append(head, tail);
+        ss_info_dassert(append == head, "gwbuf_append should return head");
+        ss_info_dassert(append->next == tail, "After append tail should be in the next pointer of head");
+        ss_info_dassert(append->tail == tail, "After append tail should be in the tail pointer of head");
+        GWBUF* all_clones = gwbuf_clone_all(head);
+        ss_info_dassert(all_clones && all_clones->next, "Cloning all should work");
+        ss_info_dassert(GWBUF_LENGTH(all_clones) == headsize, "First buffer should be 10 bytes");
+        ss_info_dassert(GWBUF_LENGTH(all_clones->next) == tailsize, "Second buffer should be 20 bytes");
+        ss_info_dassert(gwbuf_length(all_clones) == headsize + tailsize, "Total buffer length should be 30 bytes");
+
 	return 0;
 }
 

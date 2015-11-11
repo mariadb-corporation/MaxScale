@@ -20,6 +20,7 @@
 #include <skygw_utils.h>
 #include <stdint.h>
 #include <openssl/sha.h>
+#include <spinlock.h>
 /**
  * @file config.h The configuration handling elements
  *
@@ -150,4 +151,5 @@ void config_disable_feedback_task(void);
 unsigned long  config_get_gateway_id(void);
 GATEWAY_CONF* config_get_global_options();
 bool isInternalService(char *router);
+char* config_clean_string_list(char* str);
 #endif

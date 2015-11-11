@@ -48,11 +48,6 @@
 
 SPINLOCK tmplock = SPINLOCK_INIT;
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /*
  * Set IP address in socket structure in_addr
  *
@@ -225,4 +220,24 @@ struct hostent		*hp;
 	addr->sin_family = AF_INET;
 	addr->sin_port = htons(pnum);
 	return 1;
+}
+
+/**
+ * Return the number of processors available.
+ * @return Number of processors or 1 if the required definition of _SC_NPROCESSORS_CONF
+ * is not found
+ */
+long get_processor_count()
+{
+    long processors = 1;
+#ifdef _SC_NPROCESSORS_ONLN
+    if ((processors = sysconf(_SC_NPROCESSORS_ONLN)) <= 0)
+    {
+        skygw_log_write(LE, "Unable to establish the number of available cores. Defaulting to 4.");
+        processors = 4;
+    }
+#else
+#error _SC_NPROCESSORS_ONLN not available.
+#endif
+    return processors;
 }

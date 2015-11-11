@@ -7,7 +7,7 @@ if(BUILD_RABBITMQ)
 endif()
 
 add_library(regexfilter SHARED regexfilter.c)
-target_link_libraries(regexfilter log_manager)
+target_link_libraries(regexfilter log_manager ${PCRE2_LIBRARIES})
 install(TARGETS regexfilter DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(testfilter SHARED testfilter.c)

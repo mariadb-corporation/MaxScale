@@ -40,12 +40,16 @@ _RETVAL_STATUS_NOT_RUNNING=3
 # Sanity checks.
 [ -x @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale ] || exit $_RETVAL_NOT_INSTALLED
 
+# Source additional command line arguments.
+[ -f /etc/default/maxscale ] &&  . /etc/default/maxscale
+
 #################################
 # stop/start/status related vars
 #################################
 NAME=maxscale
 DAEMON=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale
-DAEMON_OPTS='--user=maxscale'
+DAEMON_OPTS='--user=maxscale $MAXSCALE_OPTIONS'
+
 # Source function library.
 . /lib/lsb/init-functions
 

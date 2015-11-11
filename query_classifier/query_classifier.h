@@ -75,7 +75,8 @@ typedef enum {
 	QUERY_OP_CREATE_INDEX		= (1 << 8),
 	QUERY_OP_DROP_TABLE			= (1 << 9),
 	QUERY_OP_DROP_INDEX			= (1 << 10),
-        QUERY_OP_CHANGE_DB              = (1 << 11)
+        QUERY_OP_CHANGE_DB              = (1 << 11),
+        QUERY_OP_LOAD              = (1 << 12)
 }skygw_query_op_t;
 
 typedef struct parsing_info_st {

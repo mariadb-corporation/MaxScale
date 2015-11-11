@@ -50,11 +50,6 @@
 /* The following can be compared using memcmp to detect a null password */
 uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN]="";
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 extern int gw_read_backend_event(DCB* dcb);
 extern int gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
@@ -1463,6 +1458,10 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 	memcpy(&key.ipv4, client, sizeof(struct sockaddr_in));
 	key.netmask = 32;
 	key.resource = client_data->db;
+    if(strlen(dcb->remote) < MYSQL_HOST_MAXLEN)
+    {
+        strcpy(key.hostname, dcb->remote);
+    }
 
 	LOGIF(LD,
 		(skygw_log_write_flush(
@@ -1489,16 +1488,6 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
 				!dcb->service->localhost_match_wildcard_host) 
 			{
  			 	/* Skip the wildcard check and return 1 */
-				LOGIF(LE,
-					(skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Error : user %s@%s not found, try set "
-						"'localhost_match_wildcard_host=1' in "
-						"service definition of the configuration "
-						"file.",
-						key.user,
-						dcb->remote)));
-
 				break;
 			}
 

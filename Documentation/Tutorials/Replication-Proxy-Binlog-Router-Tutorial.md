@@ -47,88 +47,100 @@ passwd=Mhu87p2D
 ```
 The user and passwd entries in the above example are used in order for MaxScale to populate the credential information that is required to allow the slaves to connect to MaxScale. This user should be configured in exactly the same way a for any other MaxScale service, i.e. the user needs access to the mysql.user table and the mysql.db table as well as having the ability to perform a SHOW DATABASES command.
 
+The master server details are provided by a master.ini file located in binlog directory and could be changed via CHANGE MASTER TO command issued via MySQL connection to MaxScale, check Master setup section below for further details.
+
+In the current implementation of the router only a single server can be used.
+
 The final configuration requirement is the router specific options. The binlog router requires a set of parameters to be passed, these are passed in the router_options parameter of the service definition as a comma separated list of name value pairs.
+
+### binlogdir
+
+This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory /var/cache/maxscale/<Service Name>.
+In the binlog dir there is also the 'cache' directory that contains data retrieved from the master dureing registration phase and the master.ini file wich contains the configuration of current configured master.
 
 ### uuid
 
-This is used to set the unique uuid that the router uses when it connects to the master server. It is a requirement of replication that each slave have a unique UUID value. The MaxScale router will identify itself to the slaves using the uuid of the real master and not this uuid. If no explicit value is given for the uuid in the configuration file then a uuid will be generated.
+This is used to set the unique uuid that the binlog router uses when it connects to the master server.
+If no explicit value is given for the uuid in the configuration file then a uuid will be generated.
 
 ### server-id
 
 As with uuid, MaxScale must have a unique server-id for the connection it makes to the master, this parameter provides the value of server-id that MaxScale will use when connecting to the master.
+
+### master-id
+
+The server-id value that MaxScale should use to report to the slaves that connect to MaxScale.
+This may either be the same as the server-id of the real master or can be chosen to be different if the slaves need to be aware of the proxy layer.
+The real master server-id will be used if the option is not set.
+
+### master_uuid
+
+It is a requirement of replication that each slave have a unique UUID value. The MaxScale router will identify itself to the slaves using the uuid of the real master if this option is not set.
+
+### master_version
+
+The MaxScale router will identify itself to the slaves using the server version of the real master if this option is not set.
+
+### master_hostname
+
+The MaxScale router will identify itself to the slaves using the server hostname of the real master if this option is not set.
 
 ### user
 
 This is the user name that MaxScale uses when it connects to the master. This user name must have the rights required for replication as with any other user that a slave uses for replication purposes. If the user parameter is not given in the router options then the same user as is used to retrieve the credential information will be used for the replication connection, i.e. the user in the service entry.
 
 The user that is used for replication, either defined using the user= option in the router options or using the username and password defined of the service must be granted replication privileges on the database server.
+
 ```
-MariaDB> CREATE USER 'repl'@'maxscalehost' IDENTIFIED by 'password';
-MariaDB> GRANT REPLICATION SLAVE ON *.* TO 'repl'@'maxscalehost';
+    MariaDB> CREATE USER 'repl'@'maxscalehost' IDENTIFIED by 'password';
+    MariaDB> GRANT REPLICATION SLAVE ON *.* TO 'repl'@'maxscalehost';
 ```
+
 ### password
 
 The password of the above user. If the password is not explicitly given then the password in the service entry will be used. For compatibility with other username and password definitions within the MaxScale configuration file it is also possible to use the parameter passwd=.
 
-### master-id
-
-The server-id value that MaxScale should use to report to the slaves that connect to MaxScale. This may either be the same as the server-id of the real master or can be chosen to be different if the slaves need to be aware of the proxy layer.
-
-### filestem
-
-This parameter is used to provide the stem of the file names that are used to store the binlog events. If this parameter is not given then the events are stored in the default name of mysql-bin followed by a sequence number.
-
-### initialfile
-
-This optional parameter allows for the administrator to define the number of the first binlog file to download. If MaxScale has previously received binlogs it will use those existing binlog files to determine what to request from the master. If no files have been downloaded MaxScale will then ask for the binlog file with the index number defined in the initialfile parameter. If this parameter is not set then MaxScale will ask the master for binlog events from file 1.
-
-### binlogdir
-
-This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory /var/cache/maxscale/<Service Name>.
-
 ### heartbeat
 
-This defines the value of the heartbeat interval in seconds for the connection to the master. MaxScale requests the master to ensure that a binlog event is sent at least every heartbeat period. If there are no real binlog events to send the master will sent a special heartbeat event. The default value for the heartbeat period is every 5 minutes.
+This defines the value of the heartbeat interval in seconds for the connection to the master. MaxScale requests the master to ensure that a binlog event is sent at least every heartbeat period. If there are no real binlog events to send the master will sent a special heartbeat event. The default value for the heartbeat period is every 5 minutes. The current interval value is reported in the diagnostic output.
 
 ### burstsize
 
 This parameter is used to define the maximum amount of data that will be sent to a slave by MaxScale when that slave is lagging behind the master. In this situation the slave is said to be in "catchup mode", this parameter is designed to both prevent flooding of that slave and also to prevent threads within MaxScale spending disproportionate amounts of time with slaves that are lagging behind the master. The burst size can be defined in Kb, Mb or Gb by adding the qualifier K, M or G to the number given. The default value of burstsize is 1Mb and will be used if burstsize is not given in the router options.
 
+### transaction_safety
+
+This parameter is used to enable/disable incomplete transactions detection in binlog router.
+When MaxScale starts an error message may appear if current binlog file is corrupted or an incomplete transaction is found.
+During normal operations binlog events are not distributed to the slaves until a COMMIT is seen.
+The default value is on, set transaction_safety=off to completly disable the incomplete transactions detection.
+
 A complete example of a service entry for a binlog router service would be as follows.
 ```
-[Replication]
-type=service
-router=binlogrouter
-servers=masterdb
-version_string=5.6.17-log
-router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,filestem=mybin,heartbeat=30,binlogdir=/var/binlogs
-user=maxscale
-passwd=Mhu87p2D
+    [Replication]
+    type=service
+    router=binlogrouter
+    servers=masterdb
+    version_string=5.6.17-log
+    user=maxscale
+    passwd=Mhu87p2D
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,filestem=mybin,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1
 ```
-The minimum set of router options that must be given in the configuration are are server-id and aster-id, default values may be used for all other options.
+
+The minimum set of router options that must be given in the configuration are are server-id and master-id, default values may be used for all other options.
 
 ## Listener Section
 
-As per any service in MaxScale a listener section is required to define the address, port and protocol that is used to listen for incoming connections. In this case those incoming connections will originate from the slave servers.
-```
-[Replication Listener]
-type=listener
-service=Replication
-protocol=MySQLClient
-port=5308
-```
+As per any service in MaxScale a listener section is required to define the address, port and protocol that is used to listen for incoming connections. Those incoming connections will originate from the slave servers or from a MySQL client in order to administer/configure the master server configuration via SQL commands such as STOP/START SLAVE and CHANGE MASTER TO ...
+
+    [Replication Listener]
+    type=listener
+    service=Replication
+    protocol=MySQLClient
+    port=5308
+
 The protocol used by slaves for connection to MaxScale is the same MySQLClient protocol that is  used for client applications to connect to databases, therefore the same MaxScale protocol module can be used.
 
-## Master Server Section
-
-The master server is defined in a section within the MaxScale configuration file in the same way as any other server. The protocol that is used is the same backend protocol as is used in other configurations.
-```
-[masterdb]
-type=server
-address=178.62.50.70
-port=3306
-protocol=MySQLBackend
-```
 #  MaxScale replication diagnostics
 
 The binlog router module of MaxScale produces diagnostic output that can be viewed via the `maxadmin` client application. Running the maxadmin command and issuing a show service command will produce a considerable amount of output that will show both the master connection status and statistics and also a block for each of the slaves currently connected.
@@ -140,7 +152,8 @@ The binlog router module of MaxScale produces diagnostic output that can be view
     	State: 					Started
     	Master connection DCB:  					0x15693c0
     	Master connection state:					Binlog Dump
-    	Binlog directory:						    /home/mriddoch/binlogs
+    	Binlog directory:						    /var/maxscale/binlogs
+        Heartbeat period (seconds):					200
     	Number of master connects:		  			1
     	Number of delayed reconnects:	      		0
     	Current binlog file:		  				mybin.000061
@@ -160,8 +173,7 @@ The binlog router module of MaxScale produces diagnostic output that can be view
     	Number of packets received:				599
     	Number of residual data packets:		379
     	Average events per packet			    3347.9
-    	Last event from master at:  			Thu Jan 29 16:41:53 2015
-    						(1 seconds ago)
+    	Last event from master at:  			Thu Jan 29 16:41:53 2015 (10 seconds ago)
     	Last event from master:  				0x1b (Heartbeat Event)
     	Events received:
     		Invalid                              	 0
@@ -212,7 +224,7 @@ The binlog router module of MaxScale produces diagnostic output that can be view
 
 # Binlog router compatibility
 
-Binlog Router Plugin is compatible with MySQL 5.6, MariaDB 5.5, the current default.
+Binlog Router Plugin is compatible with MySQL 5.6 and MariaDB 5.5, the current default.
 
 In order to use it with MySQL 5.6, the GTID_MODE setting must be OFF and connecting slaves mustn't use MASTER_AUTO_POSITION = 1 option.
 
@@ -220,7 +232,108 @@ It’s also works with a MariaDB 10.0 setup (master and slaves) but slave connec
 
 Binlog Router currently does not work for MySQL 5.5 due to missing @@global.binlog_checksum var.
 
-# Slave servers setup
+# Master server setup/change
+
+In MaxScale ini file the server section for master is no longer required, same for servers=master_server in the service section. The mastet server setup is currently managed via CHANGE MASTER TO command issued in MySQL client connection to MaxScale or by providing a proper master.ini file in the binlogdir.
+
+If MaxScale starts without master.ini there is no replication configured to any master and slaves cannot register to the router: the binlog router could be later configured via CHANGE MASTER TO and the master.ini file will be written.
+
+master.ini file example:
+
+	[binlog_configuration]
+	master_host=127.0.0.1
+	master_port=3308
+	master_user=repl
+	master_password=somepass
+	filestem=repl-bin
+
+Enabling replication from a master server requires:
+
+CHANGE MASTER TO MASTER_HOST=‘$master_server’, MASTER_PORT=$master_port, MASTER_USER='repl', MASTER_PASSWORD=‘somepasswd’, MASTER_LOG_FILE=‘repl-bin.000159', MASTER_LOG_POS=4
+
+It's possible to specify the desired MASTER_LOG_FILE but position must be 4
+
+The initfile option is nolonger available, filestem option also not available as the stem is automatically set by parsing MASTER_LOG_FILE
+
+### Stop/start the replication
+
+When router is configured and it's properly working it could be possible to stop/start replication:
+
+	MariaDB> STOP SLAVE;
+	...
+	MariaDB> SHOW SLAVE STATUS;
+	...
+	MariaDB> START SLAVE;
+
+Connected or new slave connections are not affected: this STOP/START only controls the the connection to the master and the binlog events receiving.
+
+### Change the Master server configuration
+
+When router is configured and it's properly working it could be possible to change the master parameters.  
+First step is stop the replication from the master.
+
+	MariaDB> STOP SLAVE;
+
+Next step is the master configuration
+
+	MariaDB> CHANGE MASTER TO ...
+
+A succesfull configuration change results in master.ini being updated.
+
+Any error is reported in the MySQL and in log files
+
+The upported options are:
+
+	MASTER_HOST
+	MASTER_PORT
+	MASTER_USER
+	MASTER_PASSWORD
+	MASTER_LOG_FILE
+	MASTER_LOG_POS
+
+There are some constraints related to MASTER_LOG_FILE and MASTER_LOG_POS:
+
+MASTER_LOG_FILE could be changed to next binlog in sequence with MASTER_LOG_POS=4 or to current one at current position.
+
+Examples:
+
+1) Current binlog file is ‘mysql-bin.000003', position 88888
+
+	MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000003',MASTER_LOG_POS=8888
+
+This could be applied to current master_host/port or a new one.  
+If there is a master server maintenance and a slave is beeing promoted as master it should be checked that binlog file and position are valid: in case of any error replication stops and errors are reported via SHOW SLAVE STATUS and in error logs.
+
+2) Current binlog file is ‘mysql-bin.000099', position 1234
+
+	MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000100',MASTER_LOG_POS=4
+
+This could be applied with current master_host/port or a new one
+If transaction safety option is on and the current binlog file contains an incomplete transaction it will be truncated to the position where transaction started.  
+In such situation a proper message is reported in MySQL connection and with next START SLAVE binlog file truncation will occurr and MaxScale will request events from the master using the next binlog file at position 4.
+
+The above scenario might refer to a master crash/failure:
+ the new server that has just been promoted as master doesn't have last transaction events but it should have the new binlog file (the next in sequence).  
+Truncating the previous MaxScale binlog is safe as that incomplete transaction is lost.
+It should be checked that current master or new one has the new bnlog file, in case of any error replication stops and errors are reported via SHOW SLAVE STATUS and in error logs.
+
+	MariaDB> START SLAVE;
+
+Check for any error in log files and with
+
+	MariaDB> SHOW SLAVE STATUS;
+
+In some situations replication state could be STOPPED and proper messages are displyed in error logs and in SHOW SLAVE STATUS
+
+In order to resolve any mistake done with CHANGE MASTER TO MASTER_LOG_FILE / MASTER_LOG_POS, another administrative command would be helpful.
+
+	MariaDB> RESET SLAVE;
+
+This command removes master.ini file, blanks all master configuration in memory and sets binlog router in unconfigured state: a CHANHE MASTER TO command should be issued for the new configuration.
+
+Note: existing binlog files are not touched by this command.
+
+### Slave servers setup
 
 Examples of CHANGE MASTER TO command issued on a slave server that wants to gets replication events from MaxScale binlog router:
 ```

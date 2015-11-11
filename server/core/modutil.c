@@ -33,10 +33,18 @@
 #include <mysql_client_server_protocol.h>
 #include <modutil.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
+/** These are used when converting MySQL wildcards to regular expressions */
+static SPINLOCK re_lock = SPINLOCK_INIT;
+static bool pattern_init = false;
+static pcre2_code *re_percent = NULL;
+static pcre2_code *re_single = NULL;
+static pcre2_code *re_escape = NULL;
+static const PCRE2_SPTR pattern_percent = (PCRE2_SPTR) "%";
+static const PCRE2_SPTR pattern_single = (PCRE2_SPTR) "([^\\\\]|^)_";
+static const PCRE2_SPTR pattern_escape = (PCRE2_SPTR) "[.]";
+static const char* sub_percent = ".*";
+static const char* sub_single = "$1.";
+static const char* sub_escape = "\\.";
 
 static void modutil_reply_routing_error(
 	DCB*  	 backend_dcb,
@@ -841,4 +849,118 @@ int modutil_count_statements(GWBUF* buffer)
     }
 
     return num;
+}
+
+/**
+ * Initialize the PCRE2 patterns used when converting MySQL wildcards to PCRE syntax.
+ */
+void prepare_pcre2_patterns()
+{
+    spinlock_acquire(&re_lock);
+    if (!pattern_init)
+    {
+        int err;
+        size_t erroff;
+        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+
+        if ((re_percent = pcre2_compile(pattern_percent, PCRE2_ZERO_TERMINATED,
+                                        0, &err, &erroff, NULL)) &&
+            (re_single = pcre2_compile(pattern_single, PCRE2_ZERO_TERMINATED,
+                                       0, &err, &erroff, NULL)) &&
+            (re_escape = pcre2_compile(pattern_escape, PCRE2_ZERO_TERMINATED,
+                                       0, &err, &erroff, NULL)))
+        {
+            assert(!pattern_init);
+            pattern_init = true;
+        }
+        else
+        {
+            pcre2_get_error_message(err, errbuf, sizeof(errbuf));
+            skygw_log_write(LE, "Error: Failed to compile PCRE2 pattern: %s",
+                            errbuf);
+        }
+
+        if (!pattern_init)
+        {
+            pcre2_code_free(re_percent);
+            pcre2_code_free(re_single);
+            pcre2_code_free(re_escape);
+            re_percent = NULL;
+            re_single = NULL;
+            re_escape = NULL;
+        }
+    }
+    spinlock_release(&re_lock);
+}
+
+/**
+ * Check if @c string matches @c pattern according to the MySQL wildcard rules.
+ * The wildcard character @c '%%' is replaced with @c '.*' and @c '_' is replaced
+ * with @c '.'. All Regular expression special characters are escaped before
+ * matching is made.
+ * @param pattern Wildcard pattern
+ * @param string String to match
+ * @return MXS_PCRE2_MATCH if the pattern matches, MXS_PCRE2_NOMATCH if it does
+ * not match and MXS_PCRE2_ERROR if an error occurred
+ * @see maxscale_pcre2.h
+ */
+mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string)
+{
+    prepare_pcre2_patterns();
+    mxs_pcre2_result_t rval = MXS_PCRE2_ERROR;
+    bool err = false;
+    PCRE2_SIZE matchsize = strlen(string) + 1;
+    PCRE2_SIZE tempsize = matchsize;
+    char* matchstr = (char*) malloc(matchsize);
+    char* tempstr = (char*) malloc(tempsize);
+
+    pcre2_match_data *mdata_percent = pcre2_match_data_create_from_pattern(re_percent, NULL);
+    pcre2_match_data *mdata_single = pcre2_match_data_create_from_pattern(re_single, NULL);
+    pcre2_match_data *mdata_escape = pcre2_match_data_create_from_pattern(re_escape, NULL);
+
+    if (matchstr && tempstr && mdata_percent && mdata_single && mdata_escape)
+    {
+        if (mxs_pcre2_substitute(re_escape, pattern, sub_escape,
+                                 &matchstr, &matchsize) == MXS_PCRE2_ERROR ||
+            mxs_pcre2_substitute(re_single, matchstr, sub_single,
+                                 &tempstr, &tempsize) == MXS_PCRE2_ERROR ||
+            mxs_pcre2_substitute(re_percent, tempstr, sub_percent,
+                                 &matchstr, &matchsize) == MXS_PCRE2_ERROR)
+        {
+            err = true;
+        }
+
+        if (!err)
+        {
+            int errcode;
+            rval = mxs_pcre2_simple_match(matchstr, string, PCRE2_CASELESS, &errcode);
+            if (rval == MXS_PCRE2_ERROR)
+            {
+                if (errcode != 0)
+                {
+                    PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+                    pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
+                    skygw_log_write(LE, "Error: Failed to match pattern: %s",
+                                    errbuf);
+                }
+                err = true;
+            }
+        }
+    }
+    else
+    {
+        err = true;
+    }
+
+    if (err)
+    {
+        skygw_log_write(LE, "Error: Fatal error when matching wildcard patterns.");
+    }
+
+    pcre2_match_data_free(mdata_percent);
+    pcre2_match_data_free(mdata_single);
+    pcre2_match_data_free(mdata_escape);
+    free(matchstr);
+    free(tempstr);
+    return rval;
 }

@@ -22,6 +22,23 @@ connection failover| When a connection currently being used between MaxScale and
   backend database | A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.
             filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
 
+# Table of Contents
+
+* [Configuration](#configuration)
+  * [Global Settings](#global-settings)
+  * [Service](#service)
+    * [Service and SSL](#service-and-ssl)
+  * [Server](#server)
+  * [Listener](#listener)
+  * [Filter](#filter)
+  * [Monitor](#monitor)
+  * [Protocol](#protocol)
+* [Router Modules](#router-modules)
+* [Monitor Modules](#monitor-modules)
+* [Filter Modules](#filter-modules)
+* [Reloading Configuration](#reloading-configuration)
+* [Authentication](#authentication)
+* [Error Reporting](#error-reporting)
 
 ## Configuration
 
@@ -50,11 +67,11 @@ Please see the section about [Protocol Modules](#protocol-modules) for more deta
 
 ### Global Settings
 
-The global settings, in a section named `[MaxScale]`, allow various parameters that affect MaxScale as a whole to be tuned. Currently the only setting that is supported is the number of threads to use to handle the network traffic. MaxScale will also accept the section name of `[gateway]` for global settings. This is for backward compatibility with versions prior to the naming of MaxScale.
+The global settings, in a section named `[MaxScale]`, allow various parameters that affect MaxScale as a whole to be tuned.
 
 #### `threads`
 
-To control the number of threads that poll for network traffic set the parameter threads to a number. It is recommended that you start with a single thread and add more as you find the performance is not satisfactory. MaxScale is implemented to be very thread efficient, so a small number of threads is usually adequate to support reasonably heavy workloads.  Adding more threads may not improve performance and can consume resources needlessly.
+This parameter controls the number of worker threads that are handling the events coming from the kernel. MaxScale will auto-detect the number of processors of the system unless number of threads is manually configured. It is recommended that you let MaxScale detect how many cores the system has and leave this parameter undefined. The number of used cores will be logged into the message logs and if you are not satisfied with the auto-detected value, you can manually configure it. Increasing the amount of worker threads beyond the number of processor cores does not improve performance and can consume resources needlessly.
 
 ```
 # Valid options are:
@@ -349,6 +366,16 @@ This parameter takes a boolean value and when enabled, will strip all `\` charac
 #### `optimize_wildcard`
 
 Enabling this feature will transform wildcard grants to individual database grants. This will consume more memory but authentication in MaxScale will be done faster. The parameter takes a boolean value.
+
+#### `retry_on_failure`
+
+The retry_on_failure parameter controls whether MaxScale will try to restart failed services and accepts a boolean value. This functionality is enabled by default to prevent services being permanently disabled if the starting of the service failed due to a network outage. Disabling the restarting of the failed services will cause them to be permanently disabled if the services can't be started when MaxScale is started.
+
+#### `log_auth_warnings`
+
+Enable or disable the logging of authentication failures and warnings. This parameter takes a boolean value.
+
+MaxScale normally suppresses warning messages about failed authentication. Enabling this option will log those messages into the message log with details about who tried to connect to MaxScale and from where.
 
 #### `connection_timeout`
 
@@ -692,7 +719,7 @@ Default value is `1`. Read Timeout is the timeout in seconds for each attempt to
 
 Default value is `2`. Write Timeout is the timeout in seconds for each attempt to write to the server. There is a retry if necessary, so the total effective timeout value is two times the option value. That's for `mysql_real_connect` C API.
 
-## Protocol Modules
+## Protocol
 
 The protocols supported by MaxScale are implemented as external modules that are loaded dynamically into the MaxScale core. These modules reside in the directory `/usr/lib64/maxscale`. The location can be overridden with the `libdir=PATH` parameter under the `[maxscale]` section. It may also be set by passing the `-B PATH` or `--libdir=PATH` option on the MaxScale command line.
 

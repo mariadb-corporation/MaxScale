@@ -25,11 +25,6 @@
 #include <modutil.h>
 #include <mysqlhint.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /**
  * hintparser.c - Find any comment in the SQL packet and look for MAXSCALE
  * hints in that comment.

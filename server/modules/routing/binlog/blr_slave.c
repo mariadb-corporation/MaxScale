@@ -1,6 +1,4 @@
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
  * GNU General Public License as published by the Free Software Foundation,
  * version 2.
  *
@@ -13,7 +11,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab 2014
+ * Copyright MariaDB Corporation Ab 2014-2015
  */
 
 /**
@@ -38,13 +36,37 @@
  * 19/03/2015	Massimiliano Pinto	Addition of basic MariaDB 10 compatibility support
  * 07/05/2015   Massimiliano Pinto	Added MariaDB 10 Compatibility
  * 11/05/2015   Massimiliano Pinto	Only MariaDB 10 Slaves can register to binlog router with a MariaDB 10 Master
+ * 25/05/2015	Massimiliano Pinto	Addition of BLRM_SLAVE_STOPPED state and blr_start/stop_slave.
+ *					New commands STOP SLAVE, START SLAVE added.	
+ * 29/05/2015	Massimiliano Pinto	Addition of CHANGE MASTER TO ...
+ * 05/06/2015	Massimiliano Pinto	router->service->dbref->sever->name instead of master->remote
+ *					in blr_slave_send_slave_status()
+ * 08/06/2015	Massimiliano Pinto	blr_slave_send_slave_status() shows mysql_errno and error_msg
+ * 15/06/2015	Massimiliano Pinto	Added constraints to CHANGE MASTER TO MASTER_LOG_FILE/POS
+ * 23/06/2015	Massimiliano Pinto	Added utility routines for blr_handle_change_master
+ *					Call create/use binlog in blr_start_slave() (START SLAVE)
+ * 29/06/2015	Massimiliano Pinto	Successfully CHANGE MASTER results in updating master.ini
+ *					in blr_handle_change_master()
+ * 20/08/2015	Massimiliano Pinto	Added parsing and validation for CHANGE MASTER TO
+ * 21/08/2015	Massimiliano Pinto	Added support for new config options:
+ *					master_uuid, master_hostname, master_version
+ *					If set those values are sent to slaves instead of
+ *					saved master responses
+ * 03/09/2015	Massimiliano Pinto	Added support for SHOW [GLOBAL] VARIABLES LIKE
+ * 04/09/2015	Massimiliano Pinto	Added support for SHOW WARNINGS
+ * 15/09/2015	Massimiliano Pinto	Added support for SHOW [GLOBAL] STATUS LIKE 'Uptime'
+ * 25/09/2015	Massimiliano Pinto	Addition of slave heartbeat:
+ *					the period set during registration is checked
+ *					and heartbeat event might be sent to the affected slave.
  * 25/09/2015   Martin Brampton         Block callback processing when no router session in the DCB
+ * 23/10/15	Markus Makela		Added current_safe_event
  *
  * @endverbatim
  */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <string.h>
 #include <service.h>
 #include <server.h>
@@ -55,12 +77,22 @@
 #include <dcb.h>
 #include <spinlock.h>
 #include <housekeeper.h>
-
+#include <sys/stat.h>
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <version.h>
+#include <zlib.h>
 
+extern int load_mysql_users(SERVICE *service);
+extern int blr_save_dbusers(ROUTER_INSTANCE *router);
+extern void blr_master_close(ROUTER_INSTANCE* router);
+extern void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
+extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
+extern int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
+extern char *blr_extract_column(GWBUF *buf, int col);
+extern uint32_t extract_field(uint8_t *src, int bits);
+int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 static void encode_value(unsigned char *data, unsigned int value, int len);
 static int blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue);
 static int blr_slave_replay(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *master);
@@ -86,10 +118,42 @@ static int blr_slave_send_disconnected_server(ROUTER_INSTANCE *router, ROUTER_SL
 static int blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 static int blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int server_id);
 static int blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
+static int blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
+static int blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
+static void blr_slave_send_error_packet(ROUTER_SLAVE *slave, char *msg, unsigned int err_num, char *status);
+static int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error);
+static int blr_set_master_hostname(ROUTER_INSTANCE *router, char *hostname);
+static int blr_set_master_port(ROUTER_INSTANCE *router, char *command);
+static char *blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error);
+static void blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *current_master);
+static void blr_master_free_config(MASTER_SERVER_CFG *current_master);
+static void blr_master_restore_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *current_master);
+static void blr_master_set_empty_config(ROUTER_INSTANCE *router);
+static void blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master);
+static int blr_slave_send_ok_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message);
+static char *blr_get_parsed_command_value(char *input);
+static char **blr_validate_change_master_option(char *option, CHANGE_MASTER_OPTIONS *config);
+static int blr_set_master_user(ROUTER_INSTANCE *router, char *user);
+static int blr_set_master_password(ROUTER_INSTANCE *router, char *password);
+static int blr_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config);
+static int blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *config);
+static void blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options);
+static int blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
+static int blr_slave_send_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
+static int blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
+int blr_test_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config);
+char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error);
+static int blr_slave_handle_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt);
+static int blr_slave_send_warning_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message);
+static int blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
+extern int MaxScaleUptime();
+static int blr_slave_send_status_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
+static int blr_slave_handle_status_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt);
+static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
+static void blr_send_slave_heartbeat(void *inst);
+static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+
 void poll_fake_write_event(DCB *dcb);
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 
 /**
  * Process a request packet from the slave server.
@@ -127,6 +191,20 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		return blr_slave_query(router, slave, queue);
 		break;
 	case COM_REGISTER_SLAVE:
+		if (router->master_state == BLRM_UNCONFIGURED) {
+			slave->state = BLRS_ERRORED;
+			blr_slave_send_error_packet(slave,
+				"Binlog router is not yet configured for replication", (unsigned int) 1597, NULL);
+
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+				"%s: Slave %s: Binlog router is not yet configured for replication",
+				router->service->name,
+				slave->dcb->remote)));
+			dcb_close(slave->dcb);
+			return 1;
+		}
+
 		/*
 		 * If Master is MariaDB10 don't allow registration from
 		 * MariaDB/Mysql 5 Slaves
@@ -135,7 +213,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		if (router->mariadb10_compat && !slave->mariadb10_compat) {
 			slave->state = BLRS_ERRORED;
 			blr_send_custom_error(slave->dcb, 1, 0,
-				"MariaDB 10 Slave is required for Slave registration");
+				"MariaDB 10 Slave is required for Slave registration", "42000", 1064);
 
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
@@ -151,8 +229,22 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		}
 		break;
 	case COM_BINLOG_DUMP:
-		return blr_slave_binlog_dump(router, slave, queue);
+		{
+		char task_name[BLRM_TASK_NAME_LEN+1]="";
+		int rc = 0;
+
+		rc = blr_slave_binlog_dump(router, slave, queue);
+
+		if (router->send_slave_heartbeat && rc && slave->heartbeat > 0) {
+			snprintf(task_name, BLRM_TASK_NAME_LEN, "%s slaves heartbeat send", router->service->name);
+
+			/* Add slave heartbeat check task: it runs with 1 second frequency */
+			hktask_add(task_name, blr_send_slave_heartbeat, router, 1);
+		}
+
+		return rc;
 		break;
+		}
 	case COM_STATISTICS:
 		return blr_statistics(router, slave, queue);
 		break;
@@ -166,7 +258,8 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 		break;
 	default:
 		blr_send_custom_error(slave->dcb, 1, 0,
-			"MySQL command not supported by the binlog router.");
+			"You have an error in your SQL syntax; Check the syntax the MaxScale binlog router accepts.",
+			"42000", 1064);
         	LOGIF(LE, (skygw_log_write(
                            LOGFILE_ERROR,
 			"Unexpected MySQL Command (%d) received from slave",
@@ -187,7 +280,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  * order to support some commands that are useful for monitoring the binlog
  * router.
  *
- * Eight select statements are currently supported:
+ * Twelve select statements are currently supported:
  *	SELECT UNIX_TIMESTAMP();
  *	SELECT @master_binlog_checksum
  *	SELECT @@GLOBAL.GTID_MODE
@@ -197,21 +290,33 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *	SELECT @@hostname
  *	SELECT @@max_allowed_packet
  *	SELECT @@maxscale_version
- *	SELECT @@server_id
+ *	SELECT @@[GLOBAL.]server_id
+ *	SELECT @@version
+ *	SELECT @@[GLOBAL.]server_uuid
  *
- * Five show commands are supported:
- *	SHOW VARIABLES LIKE 'SERVER_ID'
- *	SHOW VARIABLES LIKE 'SERVER_UUID'
- *	SHOW VARIABLES LIKE 'MAXSCALE%
+ * Eight show commands are supported:
+ *	SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
+ *	SHOW [GLOBAL] VARIABLES LIKE 'SERVER_UUID'
+ *	SHOW [GLOBAL] VARIABLES LIKE 'MAXSCALE%'
+ *	SHOW SLAVE STATUS
  *	SHOW MASTER STATUS
  *	SHOW SLAVE HOSTS
+ *	SHOW WARNINGS
+ *	SHOW [GLOBAL] STATUS LIKE 'Uptime'
  *
- * Five set commands are supported:
+ * Six set commands are supported:
  *	SET @master_binlog_checksum = @@global.binlog_checksum
  *	SET @master_heartbeat_period=...
  *	SET @slave_slave_uuid=...
  *	SET NAMES latin1
  *	SET NAMES utf8
+ *	SET mariadb_slave_capability=...
+ *
+ * Four administrative commands are supported:
+ *	STOP SLAVE
+ *	START SLAVE
+ *	CHANGE MASTER TO
+ *	RESET SLAVE
  *
  * @param router        The router instance this defines the master for this replication chain
  * @param slave         The slave specific data
@@ -225,14 +330,40 @@ char	*qtext, *query_text;
 char	*sep = " 	,=";
 char	*word, *brkb;
 int	query_len;
+char    *ptr;
+extern  char *strcasestr();
 
 	qtext = GWBUF_DATA(queue);
 	query_len = extract_field((uint8_t *)qtext, 24) - 1;
 	qtext += 5;		// Skip header and first byte of the payload
 	query_text = strndup(qtext, query_len);
 
-	LOGIF(LT, (skygw_log_write(
-		LOGFILE_TRACE, "Execute statement from the slave '%s'", query_text)));
+	/* Don't log the full statement containg 'password', just trucate it */
+	ptr = strcasestr(query_text, "password");
+	if (ptr != NULL) {
+		char *new_text = strdup(query_text);
+		int trucate_at  = (ptr - query_text);
+		if (trucate_at > 0) {
+			if ( (trucate_at + 3) <= strlen(new_text)) {
+				int i;
+				for (i = 0; i < 3; i++) {
+					new_text[trucate_at + i] = '.';
+				}
+				new_text[trucate_at+3] = '\0';
+			} else {
+				new_text[trucate_at] = '\0';
+			}
+		}
+
+		LOGIF(LT, (skygw_log_write(
+			LOGFILE_TRACE, "Execute statement (truncated, it contains password)"
+			" from the slave '%s'", new_text)));
+		free(new_text);
+	} else {
+		LOGIF(LT, (skygw_log_write(
+			LOGFILE_TRACE, "Execute statement from the slave '%s'", query_text)));
+	}
+
 	/*
 	 * Implement a very rudimental "parsing" of the query text by extarcting the
 	 * words from the statement and matchng them against the subset of queries we
@@ -277,17 +408,55 @@ int	query_len;
 		else if (strcasecmp(word, "VERSION()") == 0)
 		{
 			free(query_text);
-			return blr_slave_replay(router, slave, router->saved_master.selectver);
+			if (router->set_master_version)
+				return blr_slave_send_var_value(router, slave, "VERSION()", router->set_master_version, BLR_TYPE_STRING);
+			else
+				return blr_slave_replay(router, slave, router->saved_master.selectver);
+		}
+		else if (strcasecmp(word, "@@version") == 0)
+		{
+			free(query_text);
+			if (router->set_master_version)
+				return blr_slave_send_var_value(router, slave, "@@version", router->set_master_version, BLR_TYPE_STRING);
+			else {
+				char *version = blr_extract_column(router->saved_master.selectver, 1);
+				
+				blr_slave_send_var_value(router, slave, "@@version", version == NULL ? "" : version, BLR_TYPE_STRING);
+				free(version);
+				return 1;
+			}
 		}
 		else if (strcasecmp(word, "@@version_comment") == 0)
 		{
 			free(query_text);
-			return blr_slave_replay(router, slave, router->saved_master.selectvercom);
+			if (!router->saved_master.selectvercom)
+				/* This will allow mysql client to get in when @@version_comment is not available */
+				return blr_slave_send_ok(router, slave);
+			else
+				return blr_slave_replay(router, slave, router->saved_master.selectvercom);
 		}
 		else if (strcasecmp(word, "@@hostname") == 0)
 		{
 			free(query_text);
-			return blr_slave_replay(router, slave, router->saved_master.selecthostname);
+			if (router->set_master_hostname)
+				return blr_slave_send_var_value(router, slave, "@@hostname", router->set_master_hostname, BLR_TYPE_STRING);
+			else
+				return blr_slave_replay(router, slave, router->saved_master.selecthostname);
+		}
+		else if ((strcasecmp(word, "@@server_uuid") == 0) || (strcasecmp(word, "@@global.server_uuid") == 0))
+		{
+			char	heading[40]; /* to ensure we match the case in query and response */
+			strcpy(heading, word);
+
+			free(query_text);
+			if (router->set_master_uuid)
+				return blr_slave_send_var_value(router, slave, heading, router->master_uuid, BLR_TYPE_STRING);
+			else {
+				char *master_uuid = blr_extract_column(router->saved_master.uuid, 2);
+				blr_slave_send_var_value(router, slave, heading, master_uuid == NULL ? "" : master_uuid, BLR_TYPE_STRING);
+				free(master_uuid);
+				return 1;
+			}
 		}
 		else if (strcasecmp(word, "@@max_allowed_packet") == 0)
 		{
@@ -299,10 +468,17 @@ int	query_len;
 			free(query_text);
 			return blr_slave_send_maxscale_version(router, slave);
 		}
-		else if (strcasecmp(word, "@@server_id") == 0)
+		else if ((strcasecmp(word, "@@server_id") == 0) || (strcasecmp(word, "@@global.server_id") == 0))
 		{
+			char    server_id[40];
+			char	heading[40]; /* to ensure we match the case in query and response */
+
+			sprintf(server_id, "%d", router->masterid);
+			strcpy(heading, word);
+
 			free(query_text);
-			return blr_slave_send_server_id(router, slave);
+
+			return blr_slave_send_var_value(router, slave, heading, server_id, BLR_TYPE_INT);
 		}
 	}
 	else if (strcasecmp(word, "SHOW") == 0)
@@ -312,38 +488,81 @@ int	query_len;
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete show query.",
 					router->service->name)));
 		}
-		else if (strcasecmp(word, "VARIABLES") == 0)
+		else if (strcasecmp(word, "WARNINGS") == 0)
 		{
+			free(query_text);
+			return blr_slave_show_warnings(router, slave);
+		}
+		else if (strcasecmp(word, "GLOBAL") == 0)
+		{
+			if (router->master_state == BLRM_UNCONFIGURED) {
+				free(query_text);
+				return blr_slave_send_ok(router, slave);
+			}
+
 			if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
 			{
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+					"%s: Expected VARIABLES in SHOW GLOBAL",
+					router->service->name)));
+			}
+			else if (strcasecmp(word, "VARIABLES") == 0)
+			{
+				int rc = blr_slave_handle_variables(router, slave, brkb);
+
+				/* if no var found, send empty result set */
+				if (rc == 0)
+					blr_slave_send_ok(router, slave);
+
+				if (rc >= 0) {
+					free(query_text);
+
+					return 1;
+				} else
+					LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+						"%s: Expected LIKE clause in SHOW GLOBAL VARIABLES.",
+						router->service->name)));
+			}
+			else if (strcasecmp(word, "STATUS") == 0)
+			{
+				int rc = blr_slave_handle_status_variables(router, slave, brkb);
+
+				/* if no var found, send empty result set */
+				if (rc == 0)
+					blr_slave_send_ok(router, slave);
+
+				if (rc >= 0) {
+					free(query_text);
+
+					return 1;
+				} else
+					LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+						"%s: Expected LIKE clause in SHOW GLOBAL STATUS.",
+						router->service->name)));
+			}
+		}
+		else if (strcasecmp(word, "VARIABLES") == 0)
+		{
+			int rc;
+			if (router->master_state == BLRM_UNCONFIGURED) {
+				free(query_text);
+				return blr_slave_send_ok(router, slave);
+			}
+
+			rc = blr_slave_handle_variables(router, slave, brkb);
+
+			/* if no var found, send empty result set */
+			if (rc == 0)
+				blr_slave_send_ok(router, slave);
+
+			if (rc >= 0) {
+				free(query_text);
+
+				return 1;
+			} else
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 					"%s: Expected LIKE clause in SHOW VARIABLES.",
 					router->service->name)));
-			}
-			else if (strcasecmp(word, "LIKE") == 0)
-			{
-				if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
-				{
-					LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-					"%s: Missing LIKE clause in SHOW VARIABLES.",
-					router->service->name)));
-				}
-				else if (strcasecmp(word, "'SERVER_ID'") == 0)
-				{
-					free(query_text);
-					return blr_slave_replay(router, slave, router->saved_master.server_id);
-				}
-				else if (strcasecmp(word, "'SERVER_UUID'") == 0)
-				{
-					free(query_text);
-					return blr_slave_replay(router, slave, router->saved_master.uuid);
-				}
-				else if (strcasecmp(word, "'MAXSCALE%'") == 0)
-				{
-					free(query_text);
-					return blr_slave_send_maxscale_variables(router, slave);
-				}
-			}
 		}
 		else if (strcasecmp(word, "MASTER") == 0)
 		{
@@ -356,7 +575,13 @@ int	query_len;
 			else if (strcasecmp(word, "STATUS") == 0)
 			{
 				free(query_text);
-				return blr_slave_send_master_status(router, slave);
+
+				/* if state is BLRM_UNCONFIGURED return empty result */
+
+				if (router->master_state > BLRM_UNCONFIGURED)
+					return blr_slave_send_master_status(router, slave);
+				else
+					return blr_slave_send_ok(router, slave);	
 			}
 		}
 		else if (strcasecmp(word, "SLAVE") == 0)
@@ -364,19 +589,44 @@ int	query_len;
 			if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
 			{
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-					"%s: Expected SHOW MASTER STATUS command",
+					"%s: Expected SHOW SLAVE STATUS command",
 						router->service->name)));
 			}
 			else if (strcasecmp(word, "STATUS") == 0)
 			{
 				free(query_text);
-				return blr_slave_send_slave_status(router, slave);
+				/* if state is BLRM_UNCONFIGURED return empty result */
+				if (router->master_state > BLRM_UNCONFIGURED)
+					return blr_slave_send_slave_status(router, slave);
+				else
+					return blr_slave_send_ok(router, slave);	
 			}
 			else if (strcasecmp(word, "HOSTS") == 0)
 			{
 				free(query_text);
-				return blr_slave_send_slave_hosts(router, slave);
+				/* if state is BLRM_UNCONFIGURED return empty result */
+				if (router->master_state > BLRM_UNCONFIGURED)
+					return blr_slave_send_slave_hosts(router, slave);
+				else
+					return blr_slave_send_ok(router, slave);	
 			}
+		}
+		else if (strcasecmp(word, "STATUS") == 0)
+		{
+			int rc = blr_slave_handle_status_variables(router, slave, brkb);
+
+			/* if no var found, send empty result set */
+			if (rc == 0)
+				blr_slave_send_ok(router, slave);
+
+			if (rc >= 0) {
+				free(query_text);
+
+				return 1;
+			} else
+				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+					"%s: Expected LIKE clause in SHOW STATUS.",
+					router->service->name)));
 		}
 	}
 	else if (strcasecmp(query_text, "SET") == 0)
@@ -388,6 +638,22 @@ int	query_len;
 		}
 		else if (strcasecmp(word, "@master_heartbeat_period") == 0)
 		{
+			int slave_heartbeat;
+			int v_len = 0;
+			word = strtok_r(NULL, sep, &brkb);
+			if (word) {
+				char *new_val;
+				v_len = strlen(word);
+				if (v_len > 6) {
+					new_val = strndup(word, v_len - 6);	
+					slave->heartbeat = atoi(new_val) / 1000;
+				} else {
+					new_val = strndup(word, v_len);
+					slave->heartbeat = atoi(new_val) / 1000000;
+				}
+
+				free(new_val);
+			}
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.heartbeat);
 		}
@@ -442,6 +708,216 @@ int	query_len;
 				return blr_slave_replay(router, slave, router->saved_master.utf8);
 			}
 		}
+	} /* RESET current configured master */
+        else if (strcasecmp(query_text, "RESET") == 0)
+	{
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete RESET command.",
+					router->service->name)));
+		}
+		else if (strcasecmp(word, "SLAVE") == 0)
+		{
+			free(query_text);
+
+			if (router->master_state == BLRM_SLAVE_STOPPED) {
+				char path[PATH_MAX + 1] = "";
+				char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
+				MASTER_SERVER_CFG *current_master = NULL;
+				int removed_cfg = 0;
+
+				/* save current replication parameters */
+				current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
+
+				if (!current_master) {
+					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "error allocating memory for blr_master_get_config");
+					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error_string)));
+					blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
+
+					return 1;
+				}
+
+				/* get current data */
+				blr_master_get_config(router, current_master);
+
+				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: 'RESET SLAVE executed'. Previous state MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'",
+					router->service->name,
+					current_master->host,
+					current_master->port,
+					current_master->logfile,
+					current_master->pos,
+					current_master->user)));
+
+				/* remove master.ini */
+				strncpy(path, router->binlogdir, PATH_MAX);
+
+				strncat(path,"/master.ini", PATH_MAX);
+
+				/* remove master.ini */
+				removed_cfg = unlink(path);
+
+				if (removed_cfg == -1) {
+					char err_msg[STRERROR_BUFLEN];
+					snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error removing %s, %s, errno %u", path, strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error_string)));
+				}
+
+				spinlock_acquire(&router->lock);
+
+				router->master_state = BLRM_UNCONFIGURED;
+				blr_master_set_empty_config(router);
+				blr_master_free_config(current_master);
+
+				spinlock_release(&router->lock);
+
+				if (removed_cfg == -1) {
+					blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
+					return 1;
+				} else {
+					return blr_slave_send_ok(router, slave);
+				}
+			} else {
+				if (router->master_state == BLRM_UNCONFIGURED)
+					blr_slave_send_ok(router, slave);
+				else
+					blr_slave_send_error_packet(slave, "This operation cannot be performed with a running slave; run STOP SLAVE first", (unsigned int)1198, NULL);
+				return 1;
+			}
+		}
+	}
+	/* start replication from the current configured master */
+	else if (strcasecmp(query_text, "START") == 0)
+	{
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete START command.",
+					router->service->name)));
+		}
+		else if (strcasecmp(word, "SLAVE") == 0)
+		{
+			free(query_text);
+			return blr_start_slave(router, slave);
+		}
+	}
+	/* stop replication from the current master*/
+	else if (strcasecmp(query_text, "STOP") == 0)
+	{
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete STOP command.",
+					router->service->name)));
+		}
+		else if (strcasecmp(word, "SLAVE") == 0)
+		{
+			free(query_text);
+			return blr_stop_slave(router, slave);
+		}
+	}
+	/* Change the server to replicate from */
+	else if (strcasecmp(query_text, "CHANGE") == 0)
+	{
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL)
+		{
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete CHANGE command.",
+				router->service->name)));
+		}
+		else if (strcasecmp(word, "MASTER") == 0)
+		{
+			if (router->master_state != BLRM_SLAVE_STOPPED && router->master_state != BLRM_UNCONFIGURED)
+			{
+				free(query_text);
+				blr_slave_send_error_packet(slave, "Cannot change master with a running slave; run STOP SLAVE first", (unsigned int)1198, NULL);
+				return 1;
+			}
+			else
+			{
+				int rc;
+				char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
+				MASTER_SERVER_CFG *current_master = NULL;
+
+				current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
+
+				if (!current_master) {
+					free(query_text);
+					strcpy(error_string, "Error allocating memory for blr_master_get_config");
+					LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error_string)));
+
+					blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
+
+					return 1;
+				}
+
+				blr_master_get_config(router, current_master);
+
+				rc = blr_handle_change_master(router, brkb, error_string);
+
+				free(query_text);
+
+				if (rc < 0) {
+					/* CHANGE MASTER TO has failed */
+					blr_slave_send_error_packet(slave, error_string, (unsigned int)1234, "42000");
+					blr_master_free_config(current_master);
+
+					return 1;
+				} else {
+					int ret;
+					char error[BINLOG_ERROR_MSG_LEN + 1];
+
+					/* Write/Update master config into master.ini file */
+					ret = blr_file_write_master_config(router, error);
+
+                                        if (ret) {
+						/* file operation failure: restore config */
+						spinlock_acquire(&router->lock);
+
+						blr_master_apply_config(router, current_master);
+						blr_master_free_config(current_master);
+
+						spinlock_release(&router->lock);
+
+						snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Error writing into %s/master.ini: %s", router->binlogdir, error);
+						LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: %s",
+							router->service->name, error_string)));
+
+						blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
+
+						return 1;
+					}
+
+					/**
+					 * check if router is BLRM_UNCONFIGURED
+					 * and change state to BLRM_SLAVE_STOPPED
+					 */
+					if (rc == 1 || router->master_state == BLRM_UNCONFIGURED) {
+						spinlock_acquire(&router->lock);
+
+						router->master_state = BLRM_SLAVE_STOPPED;
+
+						spinlock_release(&router->lock);
+					}
+
+					if (!router->trx_safe)
+						blr_master_free_config(current_master);
+
+					if (router->trx_safe && router->pending_transaction) {
+						if (strcmp(router->binlog_name, router->prevbinlog) != 0)
+						{
+							char message[BINLOG_ERROR_MSG_LEN+1] = "";
+							snprintf(message, BINLOG_ERROR_MSG_LEN, "1105:Partial transaction in file %s starting at pos %lu, ending at pos %lu will be lost with next START SLAVE command", current_master->logfile, current_master->safe_pos, current_master->pos);
+							blr_master_free_config(current_master);
+
+							return blr_slave_send_warning_message(router, slave, message);
+						} else {
+							blr_master_free_config(current_master);
+							return blr_slave_send_ok(router, slave);
+						}
+
+					} else {
+						return blr_slave_send_ok(router, slave);
+					}
+				}
+			}
+		}
 	}
 	else if (strcasecmp(query_text, "DISCONNECT") == 0)
 	{
@@ -449,7 +925,6 @@ int	query_len;
 		{
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR, "%s: Incomplete DISCONNECT command.",
 					router->service->name)));
-
 		}
 		else if (strcasecmp(word, "ALL") == 0)
 		{
@@ -475,9 +950,9 @@ int	query_len;
 
 	query_text = strndup(qtext, query_len);
 	LOGIF(LE, (skygw_log_write(
-		LOGFILE_ERROR, "Unexpected query from slave %s: %s", slave->dcb->remote, query_text)));
+		LOGFILE_ERROR, "Unexpected query from '%s'@'%s': %s", slave->dcb->user, slave->dcb->remote, query_text)));
 	free(query_text);
-	blr_slave_send_error(router, slave, "Unexpected SQL query received from slave.");
+	blr_slave_send_error(router, slave, "You have an error in your SQL syntax; Check the syntax the MaxScale binlog router accepts.");
 	return 1;
 }
 
@@ -497,8 +972,12 @@ blr_slave_replay(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *master)
 {
 GWBUF	*clone;
 
+	if (router->master_state == BLRM_UNCONFIGURED)
+		return blr_slave_send_ok(router, slave);
+
 	if (!master)
 		return 0;
+
 	if ((clone = gwbuf_clone(master)) != NULL)
 	{
 		return slave->dcb->func.write(slave->dcb, clone);
@@ -533,9 +1012,8 @@ int             len;
         data[3] = 1;				// Sequence id
 						// Payload
         data[4] = 0xff;				// Error indicator
-	data[5] = 0;				// Error Code
-	data[6] = 0;				// Error Code
-	strncpy((char *)&data[7], "#00000", 6);
+	encode_value(&data[5], 1064, 16);// Error Code
+	strncpy((char *)&data[7], "#42000", 6);
         memcpy(&data[13], msg, strlen(msg));	// Error Message
 	slave->dcb->func.write(slave->dcb, pkt);
 }
@@ -603,14 +1081,14 @@ static int
 blr_slave_send_maxscale_version(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
 GWBUF	*pkt;
-char	version[40];
+char	version[80] = "";
 uint8_t *ptr;
 int	len, vers_len;
 
 	sprintf(version, "%s", MAXSCALE_VERSION);
 	vers_len = strlen(version);
 	blr_slave_send_fieldcount(router, slave, 1);
-	blr_slave_send_columndef(router, slave, "MAXSCALE_VERSION", 0xf, vers_len, 2);
+	blr_slave_send_columndef(router, slave, "MAXSCALE_VERSION", BLR_TYPE_STRING, vers_len, 2);
 	blr_slave_send_eof(router, slave, 3);
 
 	len = 5 + vers_len;
@@ -645,7 +1123,7 @@ int	len, id_len;
 	sprintf(server_id, "%d", router->masterid);
 	id_len = strlen(server_id);
 	blr_slave_send_fieldcount(router, slave, 1);
-	blr_slave_send_columndef(router, slave, "SERVER_ID", 0xf, id_len, 2);
+	blr_slave_send_columndef(router, slave, "SERVER_ID", BLR_TYPE_INT, id_len, 2);
 	blr_slave_send_eof(router, slave, 3);
 
 	len = 5 + id_len;
@@ -675,13 +1153,13 @@ blr_slave_send_maxscale_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
 GWBUF	*pkt;
 char	name[40];
-char	version[40];
+char	version[80];
 uint8_t *ptr;
 int	len, vers_len, seqno = 2;
 
 	blr_slave_send_fieldcount(router, slave, 2);
-	blr_slave_send_columndef(router, slave, "Variable_name", 0xf, 40, seqno++);
-	blr_slave_send_columndef(router, slave, "value", 0xf, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "Variable_name", BLR_TYPE_STRING, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "Value", BLR_TYPE_STRING, 40, seqno++);
 	blr_slave_send_eof(router, slave, seqno++);
 
 	sprintf(version, "%s", MAXSCALE_VERSION);
@@ -723,16 +1201,18 @@ uint8_t *ptr;
 int	len, file_len;
 
 	blr_slave_send_fieldcount(router, slave, 5);
-	blr_slave_send_columndef(router, slave, "File", 0xf, 40, 2);
-	blr_slave_send_columndef(router, slave, "Position", 0xf, 40, 3);
-	blr_slave_send_columndef(router, slave, "Binlog_Do_DB", 0xf, 40, 4);
-	blr_slave_send_columndef(router, slave, "Binlog_Ignore_DB", 0xf, 40, 5);
-	blr_slave_send_columndef(router, slave, "Execute_Gtid_Set", 0xf, 40, 6);
+	blr_slave_send_columndef(router, slave, "File", BLR_TYPE_STRING, 40, 2);
+	blr_slave_send_columndef(router, slave, "Position", BLR_TYPE_STRING, 40, 3);
+	blr_slave_send_columndef(router, slave, "Binlog_Do_DB", BLR_TYPE_STRING, 40, 4);
+	blr_slave_send_columndef(router, slave, "Binlog_Ignore_DB", BLR_TYPE_STRING, 40, 5);
+	blr_slave_send_columndef(router, slave, "Execute_Gtid_Set", BLR_TYPE_STRING, 40, 6);
 	blr_slave_send_eof(router, slave, 7);
 
 	sprintf(file, "%s", router->binlog_name);
 	file_len = strlen(file);
-	sprintf(position, "%ld", router->binlog_position);
+
+	sprintf(position, "%lu", router->binlog_position);
+
 	len = 5 + file_len + strlen(position) + 1 + 3;
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
@@ -788,6 +1268,7 @@ GWBUF	*pkt;
 char	column[42];
 uint8_t *ptr;
 int	len, actual_len, col_len, seqno, ncols, i;
+char    *dyn_column=NULL;
 
 	/* Count the columns */
 	for (ncols = 0; slave_status_columns[ncols]; ncols++);
@@ -795,10 +1276,11 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	blr_slave_send_fieldcount(router, slave, ncols);
 	seqno = 2;
 	for (i = 0; slave_status_columns[i]; i++)
-		blr_slave_send_columndef(router, slave, slave_status_columns[i], 0xf, 40, seqno++);
+		blr_slave_send_columndef(router, slave, slave_status_columns[i], BLR_TYPE_STRING, 40, seqno++);
 	blr_slave_send_eof(router, slave, seqno++);
 
-	len = 5 + (ncols * 41);				// Max length
+	len = 5 + (ncols * 41) + 250;	// Max length + 250 bytes error message
+
 	if ((pkt = gwbuf_alloc(len)) == NULL)
 		return 0;
 	ptr = GWBUF_DATA(pkt);
@@ -842,7 +1324,12 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	sprintf(column, "%ld", router->binlog_position);
+	/* if router->trx_safe report current_pos*/
+	if (router->trx_safe)
+		sprintf(column, "%lu", router->current_pos);
+	else
+		sprintf(column, "%lu", router->binlog_position);
+
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
@@ -868,13 +1355,23 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	strcpy(column, "Yes");
+	if (router->master_state != BLRM_SLAVE_STOPPED) {
+		if (router->master_state < BLRM_BINLOGDUMP)
+			strcpy(column, "Connecting");
+		else
+			strcpy(column, "Yes");
+	} else {
+		strcpy(column, "No");
+	}
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	strcpy(column, "Yes");
+	if (router->master_state != BLRM_SLAVE_STOPPED)
+		strcpy(column, "Yes");
+	else
+		strcpy(column, "No");
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
@@ -888,13 +1385,24 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	*ptr++ = 0;
 
 	/* Last error information */
-	sprintf(column, "%d", 0);
+	sprintf(column, "%lu", router->m_errno);
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
 	ptr += col_len;
 
-	*ptr++ = 0;
+	/* Last error message */
+	if (router->m_errmsg == NULL) {
+		*ptr++ = 0;
+	} else {
+		dyn_column = (char*)router->m_errmsg;
+		col_len = strlen(dyn_column);
+		if (col_len > 250)
+			col_len = 250;
+		*ptr++ = col_len;                                       // Length of result string
+		strncpy((char *)ptr, dyn_column, col_len);              // Result string
+		ptr += col_len;
+	}
 
 	/* Skip_Counter */
 	sprintf(column, "%d", 0);
@@ -1002,7 +1510,16 @@ int	len, actual_len, col_len, seqno, ncols, i;
 	*ptr++ = 0xfb;				// NULL value
 
 	/* Slave_Running_State */
-	strcpy(column, "Slave running");
+	if (router->master_state == BLRM_SLAVE_STOPPED)
+		strcpy(column, "Slave stopped");
+	else if (!router->m_errno)
+		strcpy(column, "Slave running");
+	else {
+		if (router->master_state < BLRM_BINLOGDUMP)
+			strcpy(column, "Registering");
+		else
+			strcpy(column, "Error");
+	}
 	col_len = strlen(column);
 	*ptr++ = col_len;					// Length of result string
 	strncpy((char *)ptr, column, col_len);		// Result string
@@ -1058,11 +1575,11 @@ int		len, seqno;
 ROUTER_SLAVE	*sptr;
 
 	blr_slave_send_fieldcount(router, slave, 5);
-	blr_slave_send_columndef(router, slave, "Server_id", 0xf, 40, 2);
-	blr_slave_send_columndef(router, slave, "Host", 0xf, 40, 3);
-	blr_slave_send_columndef(router, slave, "Port", 0xf, 40, 4);
-	blr_slave_send_columndef(router, slave, "Master_id", 0xf, 40, 5);
-	blr_slave_send_columndef(router, slave, "Slave_UUID", 0xf, 40, 6);
+	blr_slave_send_columndef(router, slave, "Server_id", BLR_TYPE_STRING, 40, 2);
+	blr_slave_send_columndef(router, slave, "Host", BLR_TYPE_STRING, 40, 3);
+	blr_slave_send_columndef(router, slave, "Port", BLR_TYPE_STRING, 40, 4);
+	blr_slave_send_columndef(router, slave, "Master_id", BLR_TYPE_STRING, 40, 5);
+	blr_slave_send_columndef(router, slave, "Slave_UUID", BLR_TYPE_STRING, 40, 6);
 	blr_slave_send_eof(router, slave, 7);
 
 	seqno = 8;
@@ -1112,7 +1629,7 @@ ROUTER_SLAVE	*sptr;
  * Process a slave replication registration message.
  *
  * We store the various bits of information the slave gives us and generate
- * a reply message.
+ * a reply message: OK packet.
  *
  * @param	router		The router instance
  * @param	slave		The slave server
@@ -1231,9 +1748,9 @@ uint32_t	chksum;
 
 
 	if (slave->nocrc)
-		len = 19 + 8 + binlognamelen;
+		len = BINLOG_EVENT_HDR_LEN + 8 + binlognamelen;
 	else
-		len = 19 + 8 + 4 + binlognamelen;
+		len = BINLOG_EVENT_HDR_LEN + 8 + 4 + binlognamelen;
 
 	// Build a fake rotate event
 	resp = gwbuf_alloc(len + 5);
@@ -1267,23 +1784,36 @@ uint32_t	chksum;
 		encode_value(ptr, chksum, 32);
 	}
 
+	/* Send Fake Rotate Event */
 	rval = slave->dcb->func.write(slave->dcb, resp);
+
+	/* set lastEventReceived */
+	slave->lastEventReceived = ROTATE_EVENT;
+
+	/* set lastReply for slave heartbeat check */
+	if (router->send_slave_heartbeat)
+		slave->lastReply = time(0);
 
 	/* Send the FORMAT_DESCRIPTION_EVENT */
 	if (slave->binlog_pos != 4)
 		blr_slave_send_fde(router, slave);
 
+	/* set lastEventReceived */
+	slave->lastEventReceived = FORMAT_DESCRIPTION_EVENT;
+
 	slave->dcb->low_water  = router->low_water;
 	slave->dcb->high_water = router->high_water;
+
 	dcb_add_callback(slave->dcb, DCB_REASON_DRAINED, blr_slave_callback, slave);
+
 	slave->state = BLRS_DUMPING;
 
 	LOGIF(LM, (skygw_log_write(
 		LOGFILE_MESSAGE,
-			"%s: New slave %s, server id %d,  requested binlog file %s from position %lu",
-				router->service->name, slave->dcb->remote,
-					slave->serverid,
-					slave->binlogfile, (unsigned long)slave->binlog_pos)));
+			"%s: Slave %s, server id %d requested binlog file %s from position %lu",
+			router->service->name, slave->dcb->remote,
+			slave->serverid,
+			slave->binlogfile, (unsigned long)slave->binlog_pos)));
 
 	if (slave->binlog_pos != router->binlog_position ||
 			strcmp(slave->binlogfile, router->binlog_name) != 0)
@@ -1384,6 +1914,9 @@ int		written, rval = 1, burst;
 int		rotating = 0;
 unsigned long	burst_size;
 uint8_t		*ptr;
+char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
+
+	read_errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
 
 	if (large)
 		burst = router->long_burst;
@@ -1404,6 +1937,9 @@ uint8_t		*ptr;
 		rotating = router->rotating;
 		if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 		{
+			char err_msg[BINLOG_ERROR_MSG_LEN+1];
+			err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
+
 			if (rotating)
 			{
 				spinlock_acquire(&slave->catch_lock);
@@ -1415,17 +1951,26 @@ uint8_t		*ptr;
 			}
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
-				"blr_slave_catchup failed to open binlog file %s",
-					slave->binlogfile)));
+				"Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup failed to open binlog file",
+				slave->dcb->remote, slave->port, slave->serverid,
+				slave->binlogfile)));
+
 			slave->cstate &= ~CS_BUSY;
 			slave->state = BLRS_ERRORED;
+
+			snprintf(err_msg, BINLOG_ERROR_MSG_LEN, "Failed to open binlog '%s'", slave->binlogfile);
+
+			/* Send error that stops slave replication */
+			blr_send_custom_error(slave->dcb, slave->seqno++, 0, err_msg, "HY000", 1236);
+
 			dcb_close(slave->dcb);
 			return 0;
 		}
 	}
 	slave->stats.n_bursts++;
+
 	while (burst-- && burst_size > 0 &&
-		(record = blr_read_binlog(router, slave->file, slave->binlog_pos, &hdr)) != NULL)
+		(record = blr_read_binlog(router, slave->file, slave->binlog_pos, &hdr, read_errmsg)) != NULL)
 	{
 		head = gwbuf_alloc(5);
 		ptr = GWBUF_DATA(head);
@@ -1435,17 +1980,22 @@ uint8_t		*ptr;
 		*ptr++ = 0;		// OK
 		head = gwbuf_append(head, record);
 		slave->lastEventTimestamp = hdr.timestamp;
+		slave->lastEventReceived = hdr.event_type;
+
 		if (hdr.event_type == ROTATE_EVENT)
 		{
-unsigned long beat1 = hkheartbeat;
+			unsigned long beat1 = hkheartbeat;
 			blr_close_binlog(router, slave->file);
-if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
-                                        LOGFILE_ERROR, "blr_close_binlog took %d beats",
-				hkheartbeat - beat1)));
+			if (hkheartbeat - beat1 > 1)
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR, "blr_close_binlog took %d maxscale beats",
+					hkheartbeat - beat1)));
 			blr_slave_rotate(router, slave, GWBUF_DATA(record));
-beat1 = hkheartbeat;
+			beat1 = hkheartbeat;
 			if ((slave->file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 			{
+				char err_msg[BINLOG_ERROR_MSG_LEN+1];
+				err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
 				if (rotating)
 				{
 					spinlock_acquire(&slave->catch_lock);
@@ -1457,15 +2007,26 @@ beat1 = hkheartbeat;
 				}
 				LOGIF(LE, (skygw_log_write(
 					LOGFILE_ERROR,
-					"blr_slave_catchup failed to open binlog file %s",
+					"Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup failed to open binlog file in rotate event",
+					slave->dcb->remote,
+					slave->port,
+					slave->serverid,
 					slave->binlogfile)));
+
 				slave->state = BLRS_ERRORED;
+
+				snprintf(err_msg, BINLOG_ERROR_MSG_LEN, "Failed to open binlog '%s' in rotate event", slave->binlogfile);
+
+				/* Send error that stops slave replication */
+				blr_send_custom_error(slave->dcb, (slave->seqno - 1), 0, err_msg, "HY000", 1236);
+
 				dcb_close(slave->dcb);
 				break;
 			}
-if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
-                                        LOGFILE_ERROR, "blr_open_binlog took %d beats",
-				hkheartbeat - beat1)));
+			if (hkheartbeat - beat1 > 1)
+				LOGIF(LE, (skygw_log_write(
+					LOGFILE_ERROR, "blr_open_binlog took %d beats",
+					hkheartbeat - beat1)));
 		}
 		slave->stats.n_bytes += gwbuf_length(head);
 		written = slave->dcb->func.write(slave->dcb, head);
@@ -1476,9 +2037,62 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 		rval = written;
 		slave->stats.n_events++;
 		burst_size -= hdr.event_size;
+
+		/* set lastReply for slave heartbeat check */
+		if (router->send_slave_heartbeat)
+			slave->lastReply = time(0);
 	}
-	if (record == NULL)
+	if (record == NULL) {
 		slave->stats.n_failed_read++;
+
+                if (hdr.ok == SLAVE_POS_READ_ERR) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"%s Slave %s:%i, server-id %d, binlog '%s', %s",
+				router->service->name,
+				slave->dcb->remote,
+				slave->port,
+				slave->serverid,
+				slave->binlogfile,
+				read_errmsg)));
+
+                        spinlock_acquire(&slave->catch_lock);
+
+                        slave->state = BLRS_ERRORED;
+
+                        spinlock_release(&slave->catch_lock);
+
+			/*
+			 * Send an error that will stop slave replication
+			 */
+                        blr_send_custom_error(slave->dcb, slave->seqno++, 0, read_errmsg, "HY000", 1236);
+
+                        dcb_close(slave->dcb);
+
+                        return 0;
+                }
+
+		if (hdr.ok == SLAVE_POS_READ_UNSAFE) {
+
+			ROUTER_OBJECT *router_obj= router->service->router;
+
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"%s: Slave %s:%i, server-id %d, binlog '%s', %s",
+				router->service->name,
+				slave->dcb->remote,
+				slave->port,
+				slave->serverid,
+				slave->binlogfile,
+				read_errmsg)));
+
+			/*
+			 * Close the slave session and socket
+			 * The slave will try to reconnect
+			 */
+			router_obj->closeSession(router->service->router_instance, slave);
+
+			return 0;
+		}
+	}
 	spinlock_acquire(&slave->catch_lock);
 	slave->cstate &= ~CS_BUSY;
 	spinlock_release(&slave->catch_lock);
@@ -1529,17 +2143,21 @@ if (hkheartbeat - beat1 > 1) LOGIF(LE, (skygw_log_write(
 			if (slave->stats.n_caughtup == 1)
 			{
 				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-					"%s: Slave %s is up to date %s, %lu.",
+					"%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
+					slave->port,
+					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos)));
 			}
 			else if ((slave->stats.n_caughtup % 50) == 0)
 			{
 				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-					"%s: Slave %s is up to date %s, %lu.",
+					"%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
+					slave->port,
+					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos)));
 			}
 		}
@@ -1660,12 +2278,12 @@ blr_slave_rotate(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, uint8_t *ptr)
 {
 int	len = EXTRACT24(ptr + 9);	// Extract the event length
 
-	len = len - (19 + 8);		// Remove length of header and position
+	len = len - (BINLOG_EVENT_HDR_LEN + 8);		// Remove length of header and position
 	if (router->master_chksum)
 		len -= 4;
 	if (len > BINLOG_FNAMELEN)
 		len = BINLOG_FNAMELEN;
-	ptr += 19;	// Skip header
+	ptr += BINLOG_EVENT_HDR_LEN;	// Skip header
 	slave->binlog_pos = extract_field(ptr, 32);
 	slave->binlog_pos += (((uint64_t)extract_field(ptr+4, 32)) << 32);
 	memcpy(slave->binlogfile, ptr + 8, len);
@@ -1701,7 +2319,7 @@ uint32_t	chksum;
 		return 0;
 
 	binlognamelen = strlen(slave->binlogfile);
-	len = 19 + 8 + 4 + binlognamelen;
+	len = BINLOG_EVENT_HDR_LEN + 8 + 4 + binlognamelen;
 	/* no slave crc, remove 4 bytes */
 	if (slave->nocrc)
 		len -= 4;
@@ -1723,6 +2341,7 @@ uint32_t	chksum;
 	memcpy(ptr, slave->binlogfile, binlognamelen);
 	ptr += binlognamelen;
 
+	/* if slave has crc add the chksum */
 	if (!slave->nocrc) {
 		/*
 		 * Now add the CRC to the fake binlog rotate event.
@@ -1755,11 +2374,26 @@ REP_HEADER	hdr;
 GWBUF		*record, *head;
 uint8_t		*ptr;
 uint32_t	chksum;
+char err_msg[BINLOG_ERROR_MSG_LEN+1];
+
+	err_msg[BINLOG_ERROR_MSG_LEN] = '\0';
+
+	memset(&hdr, 0, BINLOG_EVENT_HDR_LEN);
 
 	if ((file = blr_open_binlog(router, slave->binlogfile)) == NULL)
 		return;
-	if ((record = blr_read_binlog(router, file, 4, &hdr)) == NULL)
+	if ((record = blr_read_binlog(router, file, 4, &hdr, err_msg)) == NULL)
 	{
+		if (hdr.ok != SLAVE_POS_READ_OK) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
+				slave->dcb->remote,
+				slave->port,
+				slave->serverid,
+				slave->binlogfile,
+				err_msg)));
+		}
+
 		blr_close_binlog(router, file);
 		return;
 	}
@@ -1786,6 +2420,7 @@ uint32_t	chksum;
 	chksum = crc32(0L, NULL, 0);
 	chksum = crc32(chksum, GWBUF_DATA(record), hdr.event_size - 4);
 	encode_value(ptr, chksum, 32);
+
 	slave->dcb->func.write(slave->dcb, head);
 }
 
@@ -1924,8 +2559,8 @@ int	len, id_len, seqno = 2;
 		return 0;
 
 	blr_slave_send_fieldcount(router, slave, 2);
-	blr_slave_send_columndef(router, slave, "server_id", 0x03, 40, seqno++);
-	blr_slave_send_columndef(router, slave, "state", 0xf, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "server_id", BLR_TYPE_INT, 40, seqno++);
+	blr_slave_send_columndef(router, slave, "state", BLR_TYPE_STRING, 40, seqno++);
 	blr_slave_send_eof(router, slave, seqno++);
 
 	ptr = GWBUF_DATA(pkt);
@@ -2036,8 +2671,8 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
        /* preparing output result */
 	blr_slave_send_fieldcount(router, slave, 2);
-	blr_slave_send_columndef(router, slave, "server_id", 0x03, 40, 2);
-	blr_slave_send_columndef(router, slave, "state", 0xf, 40, 3);
+	blr_slave_send_columndef(router, slave, "server_id", BLR_TYPE_INT, 40, 2);
+	blr_slave_send_columndef(router, slave, "state", BLR_TYPE_STRING, 40, 3);
 	blr_slave_send_eof(router, slave, 4);
 	seqno = 5;
 
@@ -2098,7 +2733,7 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 	return 1;
 }
 
- /**
+/**
  * Send a MySQL OK packet to the slave backend
  *
  * @param	router		The binlog router instance
@@ -2112,7 +2747,7 @@ blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
 GWBUF   *pkt;
 uint8_t *ptr;
-uint8_t ok_packet[] = {7, 0, 0, // Payload length
+uint8_t	ok_packet[] = {7, 0, 0, // Payload length
 			1, // Seqno,
 			0, // OK,
 			0, 0, 2, 0, 0, 0};
@@ -2123,5 +2758,1784 @@ uint8_t ok_packet[] = {7, 0, 0, // Payload length
 	memcpy(GWBUF_DATA(pkt), ok_packet, sizeof(ok_packet));
 
 	return slave->dcb->func.write(slave->dcb, pkt);
+}
+
+/**
+ * Send a MySQL OK packet with a message to the slave backend
+ *
+ * @param       router          The binlog router instance
+ * @param	message		The message to send
+ * @param       slave           The slave server to which we are sending the response
+ *
+ * @return result of a write call, non-zero if write was successful
+ */
+
+static int
+blr_slave_send_ok_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+
+        if ((pkt = gwbuf_alloc(11+strlen(message)+1)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        *ptr++ = 7 + strlen(message) +1;     // Payload length
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 1;     // Seqno
+        *ptr++ = 0;     // ok
+        *ptr++ = 0;
+        *ptr++ = 0;
+
+        *ptr++ = 2;
+        *ptr++ = 0;
+
+	if(strlen(message) == 0) {
+                *ptr++ = 0;
+                *ptr++ = 0;
+	} else {
+        	*ptr++ = 1;
+        	*ptr++ = 0;
+        	*ptr++ = strlen(message);
+		strcpy((char *)ptr, message);
+	}
+
+        return slave->dcb->func.write(slave->dcb, pkt);
+}
+
+/**
+ * Stop current replication from master
+ *
+ * @param router	The binlog router instance
+ * @param slave		The slave server to which we are sending the response* 
+ * @return		Always 1 for error, for send_ok the bytes sent
+ *
+ */
+
+static int
+blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+{
+        /* if unconfigured return an error */
+	if (router->master_state == BLRM_UNCONFIGURED) {
+		blr_slave_send_warning_message(router, slave, "1255:Slave already has been stopped");
+
+		return 1;
+	}
+
+        /* if already stopped return an error */
+	if (router->master_state == BLRM_SLAVE_STOPPED) {
+		blr_slave_send_warning_message(router, slave, "1255:Slave already has been stopped");
+
+		return 1;
+	}
+
+	if (router->master) {
+		if (router->master->fd != -1 && router->master->state == DCB_STATE_POLLING) {
+			blr_master_close(router);
+		}
+	}
+
+	spinlock_acquire(&router->lock);
+
+	router->master_state = BLRM_SLAVE_STOPPED;
+
+	/* set last_safe_pos */
+	router->last_safe_pos = router->binlog_position;
+
+	/**
+	 * Set router->prevbinlog to router->binlog_name
+	 * The FDE event with current filename may arrive after STOP SLAVE is received
+	 */
+
+	if (strcmp(router->binlog_name, router->prevbinlog) != 0)
+		strncpy(router->prevbinlog, router->binlog_name, BINLOG_FNAMELEN);
+
+	if (router->client) {
+		if (router->client->fd != -1 && router->client->state == DCB_STATE_POLLING) {
+			dcb_close(router->client);
+			router->client = NULL;
+		}
+	}
+
+	/* Discard the queued residual data */
+	while (router->residual)
+	{
+		router->residual = gwbuf_consume(router->residual, GWBUF_LENGTH(router->residual));
+	}
+	router->residual = NULL;
+
+	/* Now it is safe to unleash other threads on this router instance */
+	router->reconnect_pending = 0;
+	router->active_logs = 0;
+
+	spinlock_release(&router->lock);
+
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+		"%s: STOP SLAVE executed by %s@%s. Disconnecting from master %s:%d, read up to log %s, pos %lu, transaction safe pos %lu",
+		router->service->name,
+		slave->dcb->user,
+		slave->dcb->remote,
+		router->service->dbref->server->name,
+		router->service->dbref->server->port,
+		router->binlog_name, router->current_pos, router->binlog_position)));
+
+	if (router->trx_safe && router->pending_transaction) {
+		char message[BINLOG_ERROR_MSG_LEN+1] = "";
+		snprintf(message, BINLOG_ERROR_MSG_LEN, "1105:Stopped slave mid-transaction in binlog file %s, pos %lu, incomplete transaction starts at pos %lu", router->binlog_name, router->current_pos, router->binlog_position);
+
+		return blr_slave_send_warning_message(router, slave, message);
+	} else {
+		return blr_slave_send_ok(router, slave);
+	}
+}
+
+/**
+ * Start replication from current configured master
+ *
+ * @param router	The binlog router instance
+ * @param slave		The slave server to which we are sending the response
+ * @return		Always 1 for error, for send_ok the bytes sent
+ * 
+ */
+
+static int
+blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+{
+	char path[PATH_MAX+1]="";
+	int loaded;
+
+	/* if unconfigured return an error */
+	if (router->master_state == BLRM_UNCONFIGURED) {
+		blr_slave_send_error_packet(slave, "The server is not configured as slave; fix in config file or with CHANGE MASTER TO", (unsigned int)1200, NULL);
+
+		return 1;
+	}
+
+	/* if running return an error */
+	if (router->master_state != BLRM_UNCONNECTED && router->master_state != BLRM_SLAVE_STOPPED) {
+		blr_slave_send_warning_message(router, slave, "1254:Slave is already running");
+
+		return 1;
+	}
+
+	spinlock_acquire(&router->lock);
+	router->master_state = BLRM_UNCONNECTED;
+	spinlock_release(&router->lock);
+
+	/* create a new binlog or just use current one */
+	if (strlen(router->prevbinlog) && strcmp(router->prevbinlog, router->binlog_name)) {
+		if (router->trx_safe && router->pending_transaction) {
+			char msg[BINLOG_ERROR_MSG_LEN+1] = "";
+			char file[PATH_MAX+1] = "";
+			struct stat statb;
+			unsigned long filelen = 0;
+
+			snprintf(file, PATH_MAX, "%s/%s", router->binlogdir, router->prevbinlog);
+
+			/* Get file size */
+			if (stat(file, &statb) == 0)
+				filelen = statb.st_size;
+
+			/* Prepare warning message */
+			snprintf(msg, BINLOG_ERROR_MSG_LEN, "1105:Truncated partial transaction in file %s, starting at pos %lu, ending at pos %lu. File %s now has length %lu.", router->prevbinlog, router->last_safe_pos, filelen, router->prevbinlog, router->last_safe_pos);
+			/* Truncate previous binlog file to last_safe pos */
+			truncate(file, router->last_safe_pos);
+
+			/* Log it */
+			LOGIF(LE, (skygw_log_write(
+				LOGFILE_ERROR,
+					"Warning: a transaction is still opened at pos %lu"
+					" File %s will be truncated. "
+					"Next binlog file is %s at pos %lu, "
+					"START SLAVE is required again.",
+					router->last_safe_pos,
+					router->prevbinlog,
+					router->binlog_name,
+					4)));
+
+			spinlock_acquire(&router->lock);
+
+			router->pending_transaction = 0;
+			router->last_safe_pos = 0;
+			router->master_state = BLRM_UNCONNECTED;
+			router->current_pos = 4;
+			router->binlog_position = 4;
+			router->current_safe_event = 4;
+
+			spinlock_release(&router->lock);
+
+			/* Send warning message to mysql command */
+			blr_slave_send_warning_message(router, slave, msg);
+		}
+
+		/* create new one */
+		blr_file_new_binlog(router, router->binlog_name);
+	} else {
+		if (router->binlog_fd == -1) {
+			/* create new one */
+			blr_file_new_binlog(router, router->binlog_name);
+		} else {
+			/* use existing one */
+			blr_file_use_binlog(router, router->binlog_name);
+		}
+	}
+
+	blr_start_master(router);
+	
+	LOGIF(LM, (skygw_log_write(
+		LOGFILE_MESSAGE,
+		"%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, binlog %s, pos %lu, transaction safe pos %lu",
+		router->service->name,
+		slave->dcb->user,
+		slave->dcb->remote,
+		router->service->dbref->server->name,
+		router->service->dbref->server->port,
+		router->binlog_name,
+		router->current_pos, router->binlog_position)));
+
+        /* File path for router cached authentication data */
+        strcpy(path, router->binlogdir);
+        strncat(path, "/cache", PATH_MAX);
+
+        strncat(path, "/dbusers", PATH_MAX);
+
+        /* Try loading dbusers from configured backends */
+        loaded = load_mysql_users(router->service);
+
+        if (loaded < 0)
+        {
+                LOGIF(LE, (skygw_log_write_flush(
+                        LOGFILE_ERROR,
+                        "Error : Unable to load users for service %s",
+                        router->service->name)));
+	} else {
+		/* update cached data */
+		if (loaded > 0)
+			blr_save_dbusers(router);
+	}
+
+	return blr_slave_send_ok(router, slave);
+}
+
+/**
+ * Construct an error packet reply with specified code and status
+ *
+ * @param slave		The slave server instance
+ * @param msg		The error message to send
+ * @param err_num	The error number to send
+ * @param status	The error status
+ */
+
+static void
+blr_slave_send_error_packet(ROUTER_SLAVE *slave, char *msg, unsigned int err_num, char *status)
+{
+GWBUF		*pkt;
+unsigned char   *data;
+int             len;
+unsigned int	mysql_errno = 0;
+char		*mysql_state;
+uint8_t		mysql_err[2];
+
+	if ((pkt = gwbuf_alloc(strlen(msg) + 13)) == NULL)
+		return;
+
+	if (status != NULL)
+		mysql_state = status;
+	else
+		mysql_state = "HY000";
+
+	if (err_num > 0)
+		mysql_errno = err_num;
+	else
+		mysql_errno = (unsigned int)2003;
+
+	data = GWBUF_DATA(pkt);
+	len = strlen(msg) + 9;
+
+	encode_value(&data[0], len, 24);	// Payload length
+
+	data[3] = 1;				// Sequence id
+
+	data[4] = 0xff;				// Error indicator
+
+	encode_value(&data[5], mysql_errno, 16);// Error Code
+
+	data[7] = '#';				// Status message first char
+	strncpy((char *)&data[8], mysql_state, 5); // Status message
+
+	memcpy(&data[13], msg, strlen(msg));	// Error Message
+
+	slave->dcb->func.write(slave->dcb, pkt);
+}
+
+/**
+ * handle a 'change master' operation
+ *
+ * @param router	The router instance
+ * @param command	The change master SQL command
+ * @param error		The error message, preallocated BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @return		0 on success, 1 on success with new binlog, -1 on failure
+ */
+static
+int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error) {
+	char *master_logfile = NULL;
+	char *master_log_pos = NULL;
+	int change_binlog = 0;
+	long long pos = 0;
+	MASTER_SERVER_CFG *current_master = NULL;
+	CHANGE_MASTER_OPTIONS change_master;
+	int parse_ret;
+	char *cmd_ptr;
+	char *cmd_string;
+	
+	if ((cmd_ptr = strcasestr(command, "TO")) == NULL) {
+		strncpy(error, "statement doesn't have the CHANGE MASTER TO syntax", BINLOG_ERROR_MSG_LEN);
+		return -1;
+	}
+
+	if ((cmd_string = strdup(cmd_ptr + 2)) == NULL) {
+		strncpy(error, "error allocating memory for statement parsing", BINLOG_ERROR_MSG_LEN);
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+		return -1;
+	}
+
+	/* Parse SQL command and populate with found options the change_master struct */
+	memset(&change_master, 0, sizeof(change_master));
+
+	parse_ret = blr_parse_change_master_command(cmd_string, error, &change_master);
+
+	free(cmd_string);
+
+	if (parse_ret) {
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s CHANGE MASTER TO parse error: %s", router->service->name, error)));
+
+		blr_master_free_parsed_options(&change_master);
+
+		return -1;
+	}
+
+	/* allocate struct for current replication parameters */
+	current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
+
+	if (!current_master) {
+		strncpy(error, "error allocating memory for blr_master_get_config", BINLOG_ERROR_MSG_LEN);
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+		blr_master_free_parsed_options(&change_master);
+
+		return -1;
+	}
+
+	/* save data */
+	blr_master_get_config(router, current_master);
+
+	spinlock_acquire(&router->lock);
+
+	/*
+	 * Change values in the router->service->dbref->server structure
+	 * Change filename and position in the router structure
+	 */
+
+	/* Set new binlog position from parsed SQL command */
+	master_log_pos = change_master.binlog_pos;
+        if (master_log_pos == NULL) {
+                pos = 0;
+        } else {
+                pos = atoll(master_log_pos);
+        }
+
+	/* Change the replication user */
+	blr_set_master_user(router, change_master.user);
+
+	/* Change the replication password */
+	blr_set_master_password(router, change_master.password);
+
+	/* Change the master name/address */
+	blr_set_master_hostname(router, change_master.host);
+
+	/* Change the master port */
+	blr_set_master_port(router, change_master.port);
+
+	/**
+	 * Change the binlog filename to request from master
+	 * New binlog file could be the next one or current one
+	 */
+	master_logfile = blr_set_master_logfile(router, change_master.binlog_file, error);
+
+	if (master_logfile == NULL && router->master_state == BLRM_UNCONFIGURED) {
+		/* if there is another error message keep it */
+		if (!strlen(error)) {
+			strcpy(error, "Router is not configured for master connection, MASTER_LOG_FILE is required");
+		}
+
+		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+		/* restore previous master_host and master_port */
+		blr_master_restore_config(router, current_master);
+
+		blr_master_free_parsed_options(&change_master);
+
+		spinlock_release(&router->lock);
+
+		return -1;
+	}
+
+	/**
+	 * If MASTER_LOG_FILE is not set
+	 * and master connection is configured
+	 * set master_logfile to current binlog_name
+	 */
+	if (master_logfile == NULL) {
+		/* if errors returned */
+		if (strlen(error)) {
+
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+			/* restore previous master_host and master_port */
+			blr_master_restore_config(router, current_master);
+
+			blr_master_free_parsed_options(&change_master);
+
+			spinlock_release(&router->lock);
+
+			return -1;
+		} else {
+			/* If not set by CHANGE MASTER, use current binlog if configured */
+			if (router->master_state != BLRM_UNCONFIGURED) {
+				master_logfile = strdup(router->binlog_name);
+			} 
+		}
+	}
+
+	/**
+	 * If master connection is configured check new binlog name:
+	 * If binlog name has changed to next one only position 4 is allowed
+	 */
+
+	if (strcmp(master_logfile, router->binlog_name) && router->master_state != BLRM_UNCONFIGURED) {
+		int return_error = 0;
+		if (master_log_pos == NULL) {
+			snprintf(error, BINLOG_ERROR_MSG_LEN, "Please provide an explicit MASTER_LOG_POS for new MASTER_LOG_FILE %s: "
+				"Permitted binlog pos is %d. Current master_log_file=%s, master_log_pos=%lu",
+				master_logfile,
+				4,
+				router->binlog_name,
+				router->current_pos);
+
+			return_error = 1;
+		} else {
+			if (pos != 4) {
+				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s for MASTER_LOG_FILE %s: "
+					"Permitted binlog pos is %d. Current master_log_file=%s, master_log_pos=%lu",
+					master_log_pos,
+					master_logfile,
+					4,
+					router->binlog_name,
+					router->current_pos);
+
+				return_error = 1;
+			}
+		}
+
+		/* return an error or set new binlog name at pos 4 */
+		if (return_error) {
+
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+			/* restore previous master_host and master_port */
+			blr_master_restore_config(router, current_master);
+
+			blr_master_free_parsed_options(&change_master);
+
+			free(master_logfile);
+
+			spinlock_release(&router->lock);
+
+			return -1;
+
+		} else {
+			/* set new filename at pos 4 */
+			memset(router->binlog_name, '\0', sizeof(router->binlog_name));
+			strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
+
+			router->current_pos = 4;
+			router->binlog_position = 4;
+			router->current_safe_event = 4;
+
+			/* close current file binlog file, next start slave will create the new one */
+			fsync(router->binlog_fd);
+			close(router->binlog_fd);
+			router->binlog_fd = -1;
+
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
+				router->service->name,
+				router->binlog_name)));
+		}
+	} else {
+		/**
+		 * Same binlog or master connection not configured
+		 * Position cannot be different from current pos or 4 (if BLRM_UNCONFIGURED)
+		 */
+		int return_error = 0;
+
+		if (router->master_state == BLRM_UNCONFIGURED) {
+			if (master_log_pos != NULL && pos != 4) {
+				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
+					"Permitted binlog pos is 4. Specified master_log_file=%s",
+					master_log_pos,
+					master_logfile);
+			
+				return_error = 1;
+			}
+
+		} else {
+			if (master_log_pos != NULL && pos != router->current_pos) {
+				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_POS to %s: "
+					"Permitted binlog pos is %lu. Current master_log_file=%s, master_log_pos=%lu",
+					master_log_pos,
+					router->current_pos,
+					router->binlog_name,
+					router->current_pos);
+
+				return_error = 1;
+			}
+		}
+
+		/* log error and return */
+		if (return_error) {
+			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR, "%s: %s", router->service->name, error)));
+
+			/* restore previous master_host and master_port */
+			blr_master_restore_config(router, current_master);
+
+			blr_master_free_parsed_options(&change_master);
+
+			free(master_logfile);
+
+			spinlock_release(&router->lock);
+
+			return -1;
+		} else {
+			/**
+			 * no pos change, set it to 4 if BLRM_UNCONFIGURED
+			 * Also set binlog name if UNCOFIGURED
+			 */
+			if (router->master_state == BLRM_UNCONFIGURED) {
+				router->current_pos = 4;
+				router->binlog_position = 4;
+				router->current_safe_event = 4;
+				memset(router->binlog_name, '\0', sizeof(router->binlog_name));
+				strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
+
+				LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_FILE is [%s]",
+					router->service->name,
+					router->binlog_name)));
+			}
+
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
+				router->service->name,
+				router->current_pos)));
+		}
+	}
+
+	/* Log config changes (without passwords) */
+
+	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, "%s: 'CHANGE MASTER TO executed'. Previous state MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'. New state is MASTER_HOST='%s', MASTER_PORT=%i, MASTER_LOG_FILE='%s', MASTER_LOG_POS=%lu, MASTER_USER='%s'",
+		router->service->name,
+		current_master->host,current_master->port, current_master->logfile, current_master->pos, current_master->user,
+		router->service->dbref->server->name,
+		router->service->dbref->server->port,
+		router->binlog_name,
+		router->current_pos,
+		router->user)));
+
+	blr_master_free_config(current_master);
+
+	blr_master_free_parsed_options(&change_master);
+
+	free(master_logfile);
+
+	if (router->master_state == BLRM_UNCONFIGURED)
+		change_binlog = 1;	
+
+	spinlock_release(&router->lock);
+
+	return change_binlog;
+}
+
+/*
+ * Set new master hostname
+ *
+ * @param router	Current router instance
+ * @param hostname	The hostname to set
+ * @return		1 for applied change, 0 otherwise
+ */
+static int
+blr_set_master_hostname(ROUTER_INSTANCE *router, char *hostname) {
+
+	if (hostname) {
+		char *ptr;
+		char *end;
+		ptr = strchr(hostname, '\'');
+		if (ptr)
+			ptr++;
+		else
+			ptr = hostname;
+		end = strchr(ptr, '\'');
+		if (end)
+			*end ='\0';
+
+		server_update_address(router->service->dbref->server, ptr);
+
+		LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_HOST is [%s]",
+			router->service->name,
+			router->service->dbref->server->name)));
+
+		return 1;
+	}
+
+	return 0;
+}
+
+/**
+ * Set new master port
+ *
+ * @param router	Current router instance
+ * @param port		The server TCP port
+ * @return		1 for applied change, 0 otherwise
+ */
+
+static int
+blr_set_master_port(ROUTER_INSTANCE *router, char *port) {
+	unsigned short new_port;
+
+	if (port != NULL) {
+
+		new_port = atoi(port);
+
+		if (new_port) {
+			server_update_port(router->service->dbref->server, new_port);
+
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_PORT is [%i]",
+				router->service->name,
+				router->service->dbref->server->port)));
+
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * Set new master binlog file
+ *
+ * The routing must be called holding router->lock 
+ *
+ * @param router	Current router instance
+ * @param filename	Binlog file name
+ * @param error		The error msg for command, pre-allocated BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @return		New binlog file or NULL on error
+ */
+static char *
+blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
+	char *new_binlog_file = NULL;
+
+	if (filename) {
+		long next_binlog_seqname;
+		char *file_ptr;
+		char *end;
+
+		file_ptr = strchr(filename, '\'');
+		if (file_ptr)
+			file_ptr++;
+		else
+			file_ptr = filename;
+
+		end = strchr(file_ptr, '\'');	
+                if (end)
+                        *end ='\0';
+
+		/* check binlog filename format */
+		end = strchr(file_ptr, '.');
+
+		if (!end) {
+
+			snprintf(error, BINLOG_ERROR_MSG_LEN, "%s: selected binlog [%s] is not in the format"
+				" '%s.yyyyyy'",
+				router->service->name,
+				file_ptr,
+				router->fileroot);
+
+			return NULL;
+		}
+
+		end++;
+
+		if (router->master_state == BLRM_UNCONFIGURED) {
+			char *stem_end;
+			stem_end = strrchr(file_ptr, '.');
+			/* set filestem */
+			if (stem_end) {
+				if (router->fileroot)
+					free(router->fileroot);
+				router->fileroot = strndup(file_ptr, stem_end-file_ptr);
+			}
+
+			/* return new filename */
+			new_binlog_file = strdup(file_ptr);
+
+			return new_binlog_file;
+		}
+	
+		/* get next binlog file name, assuming filestem is the same */
+		next_binlog_seqname = blr_file_get_next_binlogname(router);
+
+		if (!next_binlog_seqname) {
+
+			snprintf(error, BINLOG_ERROR_MSG_LEN, "%s: cannot get the next MASTER_LOG_FILE name from current binlog [%s]",
+				router->service->name,
+				router->binlog_name);
+
+			return NULL;
+		}
+
+		/* Compare binlog file name with current one */
+		if (strcmp(router->binlog_name, file_ptr) == 0) {
+			/* No binlog name change, eventually new position will be checked later */
+		} else {
+			/*
+			 * This is a new binlog file request
+			 * If file is not the next one return an error
+			 */
+			if (atoi(end) != next_binlog_seqname) {
+
+				snprintf(error, BINLOG_ERROR_MSG_LEN, "Can not set MASTER_LOG_FILE to %s: Permitted binlog file names are "
+					"%s or %s.%06li. Current master_log_file=%s, master_log_pos=%lu",
+					file_ptr,
+					router->binlog_name,
+					router->fileroot,
+					next_binlog_seqname,
+					router->binlog_name,
+					router->current_pos);
+
+				return NULL;
+			}
+
+			/* Binlog file name succesfully changed */
+		}
+
+		/* allocate new filename */
+		new_binlog_file = strdup(file_ptr);
+
+	}
+
+	return new_binlog_file;
+}
+
+/**
+ * Get master configuration store it
+ *
+ * @param router	Current router instance
+ * @param curr_master	Preallocated struct to fill
+ */
+static void
+blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master) {
+	curr_master->port = router->service->dbref->server->port;
+	curr_master->host = strdup(router->service->dbref->server->name);
+	curr_master->pos = router->current_pos;
+	curr_master->safe_pos = router->binlog_position;
+	strncpy(curr_master->logfile, router->binlog_name, BINLOG_FNAMELEN);
+	curr_master->user = strdup(router->user);
+	curr_master->password = strdup(router->password);
+	curr_master->filestem = strdup(router->fileroot);
+}
+
+/**
+ *  Free a master configuration struct
+ *
+ * @param master_cfg	Saved master configuration to free
+ */
+static void
+blr_master_free_config(MASTER_SERVER_CFG *master_cfg) {
+	free(master_cfg->host);
+	free(master_cfg->user);
+	free(master_cfg->password);
+	free(master_cfg->filestem);
+
+	free(master_cfg);
+}
+
+/**
+ * Restore master configuration values for host and port
+ *
+ * @param router	Current router instance
+ * @param prev_master	Previous saved master configuration
+ */
+static void
+blr_master_restore_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master) {
+	server_update_address(router->service->dbref->server, prev_master->host);
+	server_update_port(router->service->dbref->server, prev_master->port);
+
+	blr_master_free_config(prev_master);
+}
+
+/**
+ * Set all the master configuration fields to empty values
+ *
+ * @param router	Current router instance
+ */
+static void
+blr_master_set_empty_config(ROUTER_INSTANCE *router) {
+	server_update_address(router->service->dbref->server, "none");
+	server_update_port(router->service->dbref->server, (unsigned short)3306);
+
+	router->current_pos = 4;
+	router->binlog_position = 4;
+	router->current_safe_event = 4;
+	strcpy(router->binlog_name, "");
+}
+
+/**
+ * Restore all master configuration values
+ *
+ * @param router	Current router instance
+ * @param prev_master	Previous saved master configuration
+ */
+static void
+blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master) {
+	server_update_address(router->service->dbref->server, prev_master->host);
+	server_update_port(router->service->dbref->server, prev_master->port);
+	router->current_pos = prev_master->pos;
+	router->binlog_position = prev_master->safe_pos;
+	router->current_safe_event = prev_master->safe_pos;
+	strcpy(router->binlog_name, prev_master->logfile);
+	if (router->user) {
+		free(router->user);
+		router->user = strdup(prev_master->user);
+	}
+	if (router->password) {
+		free(router->password);
+		router->password = strdup(prev_master->password);
+	}
+	if (router->fileroot) {
+		free(router->fileroot);
+		router->fileroot = strdup(prev_master->filestem);
+	}
+}
+
+/**
+ * Change the replication user
+ *
+ * @param router	Current router instance
+ * @param user		The userto set
+ * @return		1 for applied change, 0 otherwise
+ */
+static int
+blr_set_master_user(ROUTER_INSTANCE *router, char *user) {
+
+        if (user != NULL) {
+                char *ptr;
+                char *end;
+                ptr = strchr(user, '\'');
+                if (ptr)
+                        ptr++;
+		else
+			ptr = user;
+
+                end = strchr(ptr, '\'');
+                if (end)
+                        *end ='\0';
+
+                if (router->user) {
+                        free(router->user);
+                }
+                router->user = strdup(ptr);
+
+                LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_USER is [%s]",
+                        router->service->name,
+                        router->user)));
+
+		return 1;
+        }
+
+	return 0;
+}
+
+/**
+ * Change the replication password
+ *
+ * @param router	Current router instance
+ * @param password	The password to set
+ * @return		1 for applied change, 0 otherwise
+ */
+static int
+blr_set_master_password(ROUTER_INSTANCE *router, char *password) {
+        if (password != NULL) {
+                char *ptr;
+                char *end;
+                ptr = strchr(password, '\'');
+                if (ptr)
+                        ptr++;
+		else
+			ptr = password;
+
+                end = strchr(ptr, '\'');
+                if (end)
+                        *end ='\0';
+
+                if (router->password) {
+                        free(router->password);
+                }
+                router->password = strdup(ptr);
+
+		/* don't log new password */
+
+		return 1;
+        }
+
+	return 0;
+}
+
+/**
+ * Parse a CHANGE MASTER TO SQL command
+ *
+ * @param input		The command to be parsed
+ * @param error_string	Pre-allocated string for error message, BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @param config	master option struct to fill
+ * @return		0 on success, 1 on failure
+ */
+static int
+blr_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config) {
+char    *sep = ",";
+char    *word, *brkb;
+
+	if ((word = strtok_r(input, sep, &brkb)) == NULL) {
+		sprintf(error_string, "Unable to parse query [%s]", input);
+		return 1;
+        } else {
+		/* parse options key=val */
+		if (blr_handle_change_master_token(word, error_string, config))
+			return 1;
+	}  
+
+	while ((word = strtok_r(NULL, sep, &brkb)) != NULL) {
+		/* parse options key=val */
+		if (blr_handle_change_master_token(word, error_string, config))
+			return 1;
+	}
+
+	return 0;
+}
+
+/**
+ * Validate option and set the value for a change master option
+ *
+ * @param input		Current option with value
+ * @param error		pre-allocted string for error message, BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @param config	master option struct to fill
+ * @return		0 on success, 1 on error
+ */
+static int
+blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *config) {
+/* space+TAB+= */
+char    *sep = " 	=";
+char    *word, *brkb;
+char	*value = NULL;
+char	**option_field = NULL;
+
+	if ((word = strtok_r(input, sep, &brkb)) == NULL) {
+		sprintf(error, "error parsing %s", brkb);
+		return 1;
+	} else {
+		if ((option_field = blr_validate_change_master_option(word, config)) == NULL) {
+			sprintf(error, "option '%s' is not supported", word);
+
+			return 1;
+		}
+
+		/* value must be freed after usage */
+		if ((value = blr_get_parsed_command_value(brkb)) == NULL) {
+			sprintf(error, "missing value for '%s'", word);
+			return 1;
+		} else {
+			*option_field = value;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * Get value of a change master option
+ *
+ * @param input		Current option with value
+ * @return		The new allocated option value or NULL
+ */
+static char *
+blr_get_parsed_command_value(char *input) {
+/* space+TAB+= */
+char    *sep = "	 =";
+char	*ret = NULL;
+char 	*word;
+char	*value = NULL;
+
+	if (strlen(input))
+		value = strdup(input);
+	else
+		return ret;
+
+	if ((word = strtok_r(NULL, sep, &input)) != NULL) {
+		char *ptr;
+
+		/* remove trailing spaces */
+		ptr = value + strlen(value) - 1;
+		while (ptr > value && isspace(*ptr))
+			*ptr-- = 0;
+
+		ret = strdup(strstr(value, word));
+
+		free(value);
+	}
+
+	return ret;
+}
+
+/**
+ * Validate a change master option
+ *
+ * @param option	The option to check
+ * @param config	The option structure
+ * @return		A pointer to the field in the option strucure or NULL
+ */
+static char
+**blr_validate_change_master_option(char *option, CHANGE_MASTER_OPTIONS *config) {
+	if (strcasecmp(option, "master_host") == 0) {
+		return &config->host;
+	} else if (strcasecmp(option, "master_port") == 0) {
+		return &config->port;
+	} else if (strcasecmp(option, "master_log_file") == 0) {
+		return &config->binlog_file;
+	} else if (strcasecmp(option, "master_log_pos") == 0) {
+		return &config->binlog_pos;
+	} else if (strcasecmp(option, "master_user") == 0) {
+		return &config->user;
+	} else if (strcasecmp(option, "master_password") == 0) {
+		return &config->password;
+	} else {
+		return NULL;
+	}
+}
+
+/**
+ *  Free parsed master options struct pointers
+ *
+ * @param options    Parsed option struct
+ */
+static void
+blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options) {
+        free(options->host);
+	options->host = NULL;
+
+        free(options->port);
+	options->port = NULL;
+
+        free(options->user);
+	options->user = NULL;
+
+        free(options->password);
+	options->password = NULL;
+
+        free(options->binlog_file);
+	options->binlog_file = NULL;
+
+        free(options->binlog_pos);
+	options->binlog_pos = NULL;
+}
+
+/**
+ * Send a MySQL protocol response for selected variable
+ *
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ * @param	variable	The variable name
+ * @param	value		The variable value
+ * @param       column_type     The variable value type (string or int)
+ * @return	Non-zero if data was sent
+ */
+static int
+blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type)
+{
+GWBUF	*pkt;
+uint8_t *ptr;
+int	len, vers_len;
+
+	if (value == NULL)
+		return blr_slave_send_ok(router, slave);
+
+	vers_len = strlen(value);
+	blr_slave_send_fieldcount(router, slave, 1);
+	blr_slave_send_columndef(router, slave, variable, column_type, vers_len, 2);
+	blr_slave_send_eof(router, slave, 3);
+
+	len = 5 + vers_len;
+	if ((pkt = gwbuf_alloc(len)) == NULL)
+		return 0;
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, vers_len + 1, 24);		// Add length of data packet
+	ptr += 3;
+	*ptr++ = 0x04;					// Sequence number in response
+	*ptr++ = vers_len;				// Length of result string
+	strncpy((char *)ptr, value, vers_len);		// Result string
+	ptr += vers_len;
+	slave->dcb->func.write(slave->dcb, pkt);
+
+	return blr_slave_send_eof(router, slave, 5);
+}
+
+/**
+ * Send the response to the SQL command "SHOW VARIABLES LIKE 'xxx'
+ *
+ * @param       router          The binlog router instance
+ * @param       slave           The slave server to which we are sending the response
+ * @param       variable        The variable name
+ * @param       value        	The variable value
+ * @param       column_type     The variable value type (string or int)
+ * @return      Non-zero if data was sent
+ */
+static int
+blr_slave_send_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+int     len, vers_len, seqno = 2;
+char	*p = strdup(variable);
+int	var_len;
+char	*old_ptr = p;
+
+	if (value == NULL)
+		return 0;	
+
+	/* Remove heading and trailing "'" */
+	if(*p == '\'')
+		p++;
+	if (p[strlen(p)-1] == '\'')
+		p[strlen(p)-1] = '\0';
+
+	var_len  = strlen(p);
+
+	/* force lowercase */
+	for(int i = 0; i< var_len; i++) {
+		p[i] = tolower(p[i]);
+	}
+
+        blr_slave_send_fieldcount(router, slave, 2);
+
+	blr_slave_send_columndef_with_info_schema(router, slave, "Variable_name", BLR_TYPE_STRING, 40, seqno++);
+	blr_slave_send_columndef_with_info_schema(router, slave, "Value", column_type, 40, seqno++);
+
+        blr_slave_send_eof(router, slave, seqno++);
+
+        vers_len = strlen(value);
+        len = 5 + vers_len + var_len + 1;
+        if ((pkt = gwbuf_alloc(len)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        encode_value(ptr, vers_len + 2 + var_len, 24);	// Add length of data packet
+        ptr += 3;
+        *ptr++ = seqno++;				// Sequence number in response
+        *ptr++ = var_len;				// Length of result string
+        strncpy((char *)ptr, p, var_len);		// Result string with var name
+        ptr += var_len;
+        *ptr++ = vers_len;				// Length of result string
+        strncpy((char *)ptr, value, vers_len);		// Result string with var value
+        ptr += vers_len;
+        slave->dcb->func.write(slave->dcb, pkt);
+
+	free(old_ptr);
+
+        return blr_slave_send_eof(router, slave, seqno++);
+}
+
+/**
+ * Send the column definition packet for a variable in a response packet sequence.
+ *
+ * It adds information_schema and variables and variable_name
+ *
+ * @param router	The router
+ * @param slave		The slave connection
+ * @param name		Name of the column
+ * @param type		Column type
+ * @param len		Column length
+ * @param seqno		Packet sequence number
+ * @return		Non-zero on success
+ */
+static int
+blr_slave_send_columndef_with_info_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno)
+{
+GWBUF	*pkt;
+uint8_t *ptr;
+int	info_len = strlen("information_schema");
+int	virtual_table_name_len = strlen("VARIABLES");
+int	table_name_len = strlen("VARIABLES");
+int	column_name_len = strlen(name);
+int	orig_column_name_len = strlen("VARIABLE_NAME");
+int	packet_data_len = 22 + strlen(name) + info_len + virtual_table_name_len + table_name_len + orig_column_name_len;
+
+	if ((pkt = gwbuf_alloc(4 + packet_data_len)) == NULL)
+		return 0;
+
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, packet_data_len, 24);		// Add length of data packet
+	ptr += 3;
+	*ptr++ = seqno;					// Sequence number in response
+	*ptr++ = 3;					// Catalog is always def
+	*ptr++ = 'd';
+	*ptr++ = 'e';
+	*ptr++ = 'f';
+	*ptr++ = info_len;				// Schema name length
+	strcpy((char *)ptr,"information_schema");
+	ptr += info_len;
+	*ptr++ = virtual_table_name_len;		// virtual table name length
+	strcpy((char *)ptr, "VARIABLES");
+	ptr += virtual_table_name_len;
+	*ptr++ = table_name_len;			// Table name length
+	strcpy((char *)ptr, "VARIABLES");
+	ptr += table_name_len;
+	*ptr++ = column_name_len;			// Column name length;
+	while (*name)
+		*ptr++ = *name++;			// Copy the column name
+	*ptr++ = orig_column_name_len;			// Orginal column name
+	strcpy((char *)ptr, "VARIABLE_NAME");
+	ptr += orig_column_name_len;
+	*ptr++ = 0x0c;					// Length of next fields always 12
+	*ptr++ = 0x3f;					// Character set
+	*ptr++ = 0;
+	encode_value(ptr, len, 32);			// Add length of column
+	ptr += 4;
+	*ptr++ = type;
+	*ptr++ = 0x81;					// Two bytes of flags
+	if (type == 0xfd)
+		*ptr++ = 0x1f;
+	else
+		*ptr++ = 0x00;
+	*ptr++= 0;
+	*ptr++= 0;
+	*ptr++= 0;
+
+	return slave->dcb->func.write(slave->dcb, pkt);
+}
+
+/**
+ * Interface for testing blr_parse_change_master_command()
+ *
+ * @param input		The command to be parsed
+ * @param error_string	Pre-allocated string for error message, BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @param config	master option struct to fill
+ * @return		0 on success, 1 on failure
+ */
+int
+blr_test_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_OPTIONS *config) {
+	return blr_parse_change_master_command(input, error_string, config);
+}
+
+/*
+ * Interface for testing set new master binlog file
+ *
+ *
+ * @param router	Current router instance
+ * @param filename	Binlog file name
+ * @param error		The error msg for command, pre-allocated BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @return		New binlog file or NULL on error
+ */
+char *
+blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error) {
+	return blr_set_master_logfile(router, filename, error);
+}
+
+/**
+ * Interface for testing a 'change master' operation
+ *
+ * @param router	The router instance
+ * @param command	The change master SQL command
+ * @param error		The error message, preallocated BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @return		0 on success, 1 on success with new binlog, -1 on failure
+ */
+int
+blr_test_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error) {
+	return blr_handle_change_master(router, command, error);
+}
+
+
+/**
+ * Handle the response to the SQL command "SHOW GLOBAL VARIABLES LIKE or SHOW VARIABLES LIKE
+ *
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ * @param	stmt		The SQL statement
+ * @return	Non-zero if the variable is handled, 0 if variable is unknown, -1 for syntax error
+ */
+static int
+blr_slave_handle_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt) {
+char *brkb;
+char *word;
+/* SPACE,TAB,= */
+char	*sep = " 	,=";
+
+	if ((word = strtok_r(stmt, sep, &brkb)) == NULL) {
+		return -1;
+	} else if (strcasecmp(word, "LIKE") == 0) {
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"%s: Missing LIKE clause in SHOW [GLOBAL] VARIABLES.",
+				router->service->name)));
+			return -1;
+		} else if (strcasecmp(word, "'SERVER_ID'") == 0) {
+			if (router->set_master_server_id) {
+				char    server_id[40];
+				sprintf(server_id, "%d", router->masterid);
+				return blr_slave_send_variable(router, slave, "'SERVER_ID'", server_id, BLR_TYPE_INT);
+			} else
+				return blr_slave_replay(router, slave, router->saved_master.server_id);
+		} else if (strcasecmp(word, "'SERVER_UUID'") == 0) {
+			if (router->set_master_uuid) {
+				return blr_slave_send_variable(router, slave, "'SERVER_UUID'", router->master_uuid, BLR_TYPE_STRING);
+			}
+			else
+				return blr_slave_replay(router, slave, router->saved_master.uuid);
+		} else if (strcasecmp(word, "'MAXSCALE%'") == 0) {
+			return blr_slave_send_maxscale_variables(router, slave);
+		} else
+			return 0;
+	} else
+		return -1;
+}
+
+/**
+ * Send a MySQL OK packet with a warning flag to the slave backend
+ * and set the warning message in slave structure
+ * The message should be retrieved by SHOW WARNINGS command
+ *
+ * @param       router          The binlog router instance
+ * @param       message         The message to send
+ * @param       slave           The slave server to which we are sending the response
+ *
+ * @return result of a write call, non-zero if write was successful
+ */
+
+static int
+blr_slave_send_warning_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+
+        if ((pkt = gwbuf_alloc(11)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        *ptr++ = 7;     // Payload length
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 1;     // Seqno
+        *ptr++ = 0;     // ok
+        *ptr++ = 0;
+        *ptr++ = 0;
+
+        *ptr++ = 2;
+        *ptr++ = 0;
+
+        if(strlen(message) == 0) {
+                *ptr++ = 0;
+                *ptr++ = 0;
+        } else {
+                *ptr++ = 1; /* warning byte set to 1 */
+                *ptr++ = 0;
+        }
+
+	/* set the new warning in this slave connection */
+	if (slave->warning_msg)
+		free(slave->warning_msg);
+	slave->warning_msg = strdup(message);
+
+	return slave->dcb->func.write(slave->dcb, pkt);
+}
+
+/**
+ * Send a MySQL SHOW WARNINGS packet with a message that has been stored in slave struct
+ *
+ * If there is no wanring message an OK packet is sent
+ *
+ * @param       router          The binlog router instance
+ * @param       message         The message to send
+ * @param       slave           The slave server to which we are sending the response
+ *
+ * @return result of a write call, non-zero if write was successful
+ */
+
+static int
+blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+int     len;
+int msg_len = 0;
+int code_len = 0;
+int level_len = 0;
+
+	/* check whether a warning message is available */
+	if (slave->warning_msg) {
+		char	*level="Warning";
+		char *msg_ptr;
+		char err_code[16+1]="";
+		msg_ptr = strchr(slave->warning_msg, ':');
+		if (msg_ptr) {
+			strncpy(err_code, slave->warning_msg,
+				(msg_ptr-slave->warning_msg > 16) ? 16 : (msg_ptr-slave->warning_msg));
+			code_len = strlen(err_code);
+
+			msg_ptr++;
+		} else {
+			msg_ptr = slave->warning_msg;
+		}
+
+		msg_len = strlen(msg_ptr);
+		level_len = strlen(level);
+
+		blr_slave_send_fieldcount(router, slave, 3);	// 3 columns
+
+		blr_slave_send_columndef(router, slave, "Level", BLR_TYPE_STRING, 40, 2);
+		blr_slave_send_columndef(router, slave, "Code", BLR_TYPE_STRING, 40, 3);
+		blr_slave_send_columndef(router, slave, "Message", BLR_TYPE_STRING, 80, 4);
+
+		blr_slave_send_eof(router, slave, 5);
+
+		len = 4 + (1 + level_len) + (1 + code_len) + (1 + msg_len);
+
+		if ((pkt = gwbuf_alloc(len)) == NULL)
+			return blr_slave_send_ok(router, slave);
+
+		ptr = GWBUF_DATA(pkt);
+
+		encode_value(ptr, len - 4, 24); // Add length of data packet
+		ptr += 3;
+
+		*ptr++ = 0x06;                  // Sequence number in response
+
+		*ptr++ = level_len;	        // Length of result string
+		strncpy((char *)ptr, level, level_len); // Result string
+		ptr += level_len;
+
+		*ptr++ = code_len;		// Length of result string
+		if (code_len) {
+			strncpy((char *)ptr, err_code, code_len); // Result string
+			ptr += code_len;
+		}
+
+		*ptr++ = msg_len;		// Length of result string
+		if (msg_len) {
+			strncpy((char *)ptr, msg_ptr, msg_len); // Result string
+			ptr += msg_len;
+		}
+
+		slave->dcb->func.write(slave->dcb, pkt);
+
+		return blr_slave_send_eof(router, slave, 7);
+	} else {
+		return blr_slave_send_ok(router, slave);
+	}
+}
+
+/**
+ * Handle the response to the SQL command "SHOW [GLOBAL] STATUS LIKE or SHOW STATUS LIKE
+ *
+ * @param	router		The binlog router instance
+ * @param	slave		The slave server to which we are sending the response
+ * @param	stmt		The SQL statement
+ * @return	Non-zero if the variable is handled, 0 if variable is unknown, -1 for syntax error
+ */
+static int
+blr_slave_handle_status_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt) {
+char *brkb = NULL;
+char *word = NULL;
+/* SPACE,TAB,= */
+char	*sep = " 	,=";
+
+	if ((word = strtok_r(stmt, sep, &brkb)) == NULL) {
+		return -1;
+	} else if (strcasecmp(word, "LIKE") == 0) {
+		if ((word = strtok_r(NULL, sep, &brkb)) == NULL) {
+			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
+				"%s: Missing LIKE clause in SHOW [GLOBAL] STATUS.",
+				router->service->name)));
+			return -1;
+		} else if (strcasecmp(word, "'Uptime'") == 0) {
+			char uptime[41]="";
+			snprintf(uptime, 40, "%d", MaxScaleUptime());
+			return blr_slave_send_status_variable(router, slave, "Uptime", uptime, BLR_TYPE_INT);
+		} else
+			return 0;
+	} else
+		return -1;
+}
+
+/**
+ * Send the response to the SQL command "SHOW [GLOBAL] STATUS LIKE 'xxx'
+ *
+ * @param       router          The binlog router instance
+ * @param       slave           The slave server to which we are sending the response
+ * @param       variable        The variable name
+ * @param       value        	The variable value
+ * @param       column_type     The variable value type (string or int)
+ * @return      Non-zero if data was sent
+ */
+static int
+blr_slave_send_status_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type)
+{
+GWBUF   *pkt;
+uint8_t *ptr;
+int     len, vers_len, seqno = 2;
+char	*p = strdup(variable);
+int	var_len;
+char	*old_ptr = p;
+
+	/* Remove heading and trailing "'" */
+	if(*p == '\'')
+		p++;
+	if (p[strlen(p)-1] == '\'')
+		p[strlen(p)-1] = '\0';
+
+	var_len  = strlen(p);
+
+	/* force lowercase */
+	for(int i = 0; i< var_len; i++) {
+		p[i] = tolower(p[i]);
+	}
+
+	/* First char is uppercase */
+	p[0]=toupper(p[0]);
+
+        blr_slave_send_fieldcount(router, slave, 2);
+
+	blr_slave_send_columndef_with_status_schema(router, slave, "Variable_name", BLR_TYPE_STRING, 40, seqno++);
+	blr_slave_send_columndef_with_status_schema(router, slave, "Value", column_type, 40, seqno++);
+
+        blr_slave_send_eof(router, slave, seqno++);
+
+        vers_len = strlen(value);
+        len = 5 + vers_len + var_len + 1;
+        if ((pkt = gwbuf_alloc(len)) == NULL)
+                return 0;
+        ptr = GWBUF_DATA(pkt);
+        encode_value(ptr, vers_len + 2 + var_len, 24);	// Add length of data packet
+        ptr += 3;
+        *ptr++ = seqno++;				// Sequence number in response
+        *ptr++ = var_len;				// Length of result string
+        strncpy((char *)ptr, p, var_len);		// Result string with var name
+        ptr += var_len;
+        *ptr++ = vers_len;				// Length of result string
+        strncpy((char *)ptr, value, vers_len);		// Result string with var value
+        ptr += vers_len;
+        slave->dcb->func.write(slave->dcb, pkt);
+
+	free(old_ptr);
+
+        return blr_slave_send_eof(router, slave, seqno++);
+}
+
+/**
+ * Send the column definition packet for a STATUS variable in a response packet sequence.
+ *
+ * It adds information_schema.STATUS and variables and variable_name
+ *
+ * @param router	The router
+ * @param slave		The slave connection
+ * @param name		Name of the column
+ * @param type		Column type
+ * @param len		Column length
+ * @param seqno		Packet sequence number
+ * @return		Non-zero on success
+ */
+static int
+blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno)
+{
+GWBUF	*pkt;
+uint8_t *ptr;
+int	info_len = strlen("information_schema");
+int	virtual_table_name_len = strlen("STATUS");
+int	table_name_len = strlen("STATUS");
+int	column_name_len = strlen(name);
+int	orig_column_name_len = strlen("VARIABLE_NAME");
+int	packet_data_len = 0;
+char 	*ptr_name_start = name;
+
+	if (strcasecmp(ptr_name_start, "value") == 0)
+		orig_column_name_len = strlen("VARIABLE_VALUE");
+
+	packet_data_len = 22 + strlen(name) + info_len + virtual_table_name_len + table_name_len + orig_column_name_len;
+
+	if ((pkt = gwbuf_alloc(4 + packet_data_len)) == NULL)
+		return 0;
+
+	ptr = GWBUF_DATA(pkt);
+	encode_value(ptr, packet_data_len, 24);		// Add length of data packet
+	ptr += 3;
+	*ptr++ = seqno;					// Sequence number in response
+	*ptr++ = 3;					// Catalog is always def
+	*ptr++ = 'd';
+	*ptr++ = 'e';
+	*ptr++ = 'f';
+	*ptr++ = info_len;				// Schema name length
+	strcpy((char *)ptr,"information_schema");
+	ptr += info_len;
+	*ptr++ = virtual_table_name_len;		// virtual table name length
+	strcpy((char *)ptr, "STATUS");
+	ptr += virtual_table_name_len;
+	*ptr++ = table_name_len;			// Table name length
+	strcpy((char *)ptr, "STATUS");
+	ptr += table_name_len;
+	*ptr++ = column_name_len;			// Column name length;
+	while (*name)
+		*ptr++ = *name++;			// Copy the column name
+	*ptr++ = orig_column_name_len;			// Orginal column name
+
+	if (strcasecmp(ptr_name_start, "value") == 0)
+		strcpy((char *)ptr, "VARIABLE_VALUE");
+	else
+		strcpy((char *)ptr, "VARIABLE_NAME");
+	ptr += orig_column_name_len;
+	*ptr++ = 0x0c;					// Length of next fields always 12
+	*ptr++ = 0x3f;					// Character set
+	*ptr++ = 0;
+	encode_value(ptr, len, 32);			// Add length of column
+	ptr += 4;
+	*ptr++ = type;
+	*ptr++ = 0x81;					// Two bytes of flags
+	if (type == 0xfd)
+		*ptr++ = 0x1f;
+	else
+		*ptr++ = 0x00;
+	*ptr++= 0;
+	*ptr++= 0;
+	*ptr++= 0;
+
+	return slave->dcb->func.write(slave->dcb, pkt);
+}
+
+/**
+ * The heartbeat check function called from the housekeeper for registered slaves.
+ *
+ * @param router        Current router instance
+ */
+
+static void
+blr_send_slave_heartbeat(void *inst) {
+ROUTER_SLAVE    *sptr = NULL;
+ROUTER_INSTANCE *router = (ROUTER_INSTANCE *) inst;
+time_t		t_now = time(0);
+
+	spinlock_acquire(&router->lock);
+
+	sptr = router->slaves;
+
+	while (sptr)
+	{
+
+		/* skip servers with state = 0 */
+		if ( (sptr->state == BLRS_DUMPING) && (sptr->heartbeat > 0) && ((t_now + 1 - sptr->lastReply) >= sptr->heartbeat) )
+		{
+			LOGIF(LM, (skygw_log_write(
+				LOGFILE_MESSAGE, "Sending Heartbeat to slave server-id %d in State %d, cstate %d. "
+				"Heartbeat interval is %d, last event time is %lu",
+				sptr->serverid, sptr->state, sptr->cstate, sptr->heartbeat,
+				(unsigned long)sptr->lastReply)));
+
+			blr_slave_send_heartbeat(router, sptr);
+
+			sptr->lastReply = t_now;
+
+		}
+
+		sptr = sptr->next;
+	}
+
+	spinlock_release(&router->lock);
+}
+
+/**
+ * Create and send an hearbeat packet to be sent to a registered slave server
+ */
+static int
+blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
+{
+REP_HEADER	hdr;
+GWBUF		*resp;
+uint8_t		*ptr;
+int len = BINLOG_EVENT_HDR_LEN;
+uint32_t	chksum;
+
+	/* Add CRC32 4 bytes */
+	if (!slave->nocrc)
+		len +=4;
+
+	/* add binlogname to data content len */
+	len += strlen(slave->binlogfile);
+
+	/**
+	 * Alloc buffer for network binlog stream:
+	 *
+	 * 4 bytes header (3 for pkt len + 1 seq.no)
+	 * 1 byte for Ok / ERR
+	 * n bytes data content
+	 *
+	 * Total = 5 bytes + len
+	 */
+	resp = gwbuf_alloc(5 + len);
+
+	/* The OK/Err byte is part of payload */
+        hdr.payload_len = len + 1;
+
+	/* Add sequence no */	
+	hdr.seqno = slave->seqno++;
+
+	/* Add OK */
+	hdr.ok = 0;
+
+	/* Add timestamp: 0 */
+	hdr.timestamp = 0L;
+
+	/* Set Event Type */
+	hdr.event_type = HEARTBEAT_EVENT;
+
+	/* Add master server id */
+	hdr.serverid = router->masterid;
+
+	/* Add event size */
+	hdr.event_size = len;
+
+	/* Add Next Pos */
+	hdr.next_pos = slave->binlog_pos;
+
+	/* Add flags */
+	hdr.flags = 0x20;
+
+	/* point just after the header */
+	ptr = blr_build_header(resp, &hdr);
+
+	/* Copy binlog name */
+	memcpy(ptr, slave->binlogfile, BINLOG_FNAMELEN);
+
+	ptr += strlen(slave->binlogfile);
+
+	/* Add the CRC32 */
+	if (!slave->nocrc)
+	{
+		chksum = crc32(0L, NULL, 0);
+		chksum = crc32(chksum, GWBUF_DATA(resp) + 5, hdr.event_size - 4);
+		encode_value(ptr, chksum, 32);
+	}
+
+	/* Write the packet */
+	return slave->dcb->func.write(slave->dcb, resp);
 }
 

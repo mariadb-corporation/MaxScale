@@ -25,10 +25,6 @@
 #include <gwdirs.h>
 #include <random_jkiss.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 /**
  * Generate a random printable character
  *

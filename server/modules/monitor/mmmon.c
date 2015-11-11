@@ -33,11 +33,6 @@
 #include <mmmon.h>
 #include <dcb.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static	void	monitorMain(void *);
 
 static char *version_str = "V1.1.1";
@@ -261,95 +256,54 @@ char		*sep;
 static void
 monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
 {
-    MM_MONITOR *handle = mon->handle;
 MYSQL_ROW	  row;
 MYSQL_RES	  *result;
 int               isslave = 0;
 int               ismaster = 0;
-char		  *uname  = mon->user;
-char              *passwd = mon->password;
 unsigned long int server_version = 0;
 char 		  *server_string;
 
-        if (database->server->monuser != NULL)
-	{
-		uname = database->server->monuser;
-		passwd = database->server->monpw;
-	}
-	
-	if (uname == NULL)
-		return;
-        
-	/* Don't probe servers in maintenance mode */
-	if (SERVER_IN_MAINT(database->server))
-		return;
+    /* Don't probe servers in maintenance mode */
+    if (SERVER_IN_MAINT(database->server))
+        return;
 
-        /** Store previous status */
-        database->mon_prev_status = database->server->status;
-        
-	if (database->con == NULL || mysql_ping(database->con) != 0)
-	{
-		char *dpwd = decryptPassword(passwd);
-                int  read_timeout = 1;
-		if(database->con)
-		    mysql_close(database->con);
-                database->con = mysql_init(NULL);
+    /** Store previous status */
+    database->mon_prev_status = database->server->status;
+    connect_result_t rval = mon_connect_to_db(mon, database);
 
-                mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *)&read_timeout);
-                
-		if (mysql_real_connect(database->con,
-                                       database->server->name,
-                                       uname,
-                                       dpwd,
-                                       NULL,
-                                       database->server->port,
-                                       NULL,
-                                       0) == NULL)
-		{
-                        free(dpwd);
-                        
-                        if (mon_print_fail_status(database))
-                        {
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Monitor was unable to connect to "
-                                        "server %s:%d : \"%s\"",
-                                        database->server->name,
-                                        database->server->port,
-                                        mysql_error(database->con))));
-                        }
+    if (rval != MONITOR_CONN_OK)
+    {
+        if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
+        {
+            server_set_status(database->server, SERVER_AUTH_ERROR);
+            monitor_set_pending_status(database, SERVER_AUTH_ERROR);
+        }
+        server_clear_status(database->server, SERVER_RUNNING);
+        monitor_clear_pending_status(database, SERVER_RUNNING);
 
-			/* The current server is not running
-			 *
-			 * Store server NOT running in server and monitor server pending struct
-			 *
-			 */
-			if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
-			{
-				server_set_status(database->server, SERVER_AUTH_ERROR);
-				monitor_set_pending_status(database, SERVER_AUTH_ERROR);
-			}
-			server_clear_status(database->server, SERVER_RUNNING);
-			monitor_clear_pending_status(database, SERVER_RUNNING);
+        /* Also clear M/S state in both server and monitor server pending struct */
+        server_clear_status(database->server, SERVER_SLAVE);
+        server_clear_status(database->server, SERVER_MASTER);
+        monitor_clear_pending_status(database, SERVER_SLAVE);
+        monitor_clear_pending_status(database, SERVER_MASTER);
 
-			/* Also clear M/S state in both server and monitor server pending struct */
-			server_clear_status(database->server, SERVER_SLAVE);
-			server_clear_status(database->server, SERVER_MASTER);
-			monitor_clear_pending_status(database, SERVER_SLAVE);
-			monitor_clear_pending_status(database, SERVER_MASTER);
+        /* Clean addition status too */
+        server_clear_status(database->server, SERVER_STALE_STATUS);
+        monitor_clear_pending_status(database, SERVER_STALE_STATUS);
 
-			/* Clean addition status too */
-			server_clear_status(database->server, SERVER_STALE_STATUS);
-			monitor_clear_pending_status(database, SERVER_STALE_STATUS);
+        if (mon_status_changed(database) && mon_print_fail_status(database))
+        {
+            mon_log_connect_error(database, rval);
+        }
+        return;
+    }
+    else
+    {
+        server_clear_status(database->server, SERVER_AUTH_ERROR);
+        monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
+    }
 
-			return;
-		}  else {
-                        server_clear_status(database->server, SERVER_AUTH_ERROR);
-                        monitor_clear_pending_status(database, SERVER_AUTH_ERROR);
-                }
-		free(dpwd);
-	}
-        /* Store current status in both server and monitor server pending struct */
+    /* Store current status in both server and monitor server pending struct */
 	server_set_status(database->server, SERVER_RUNNING);
 	monitor_set_pending_status(database, SERVER_RUNNING);
 

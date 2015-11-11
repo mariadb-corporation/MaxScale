@@ -18,11 +18,6 @@
 
 #include <sharding_common.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /**
  * Extract the database name from a COM_INIT_DB or literal USE ... query.
  * @param buf Buffer with the database change query
@@ -100,17 +95,17 @@ void create_error_reply(char* fail_str,DCB* dcb)
 }
 
 /**
- * Read new database name from MYSQL_COM_INIT_DB packet or a literal USE ... COM_QUERY packet, check that it exists
- * in the hashtable and copy its name to MYSQL_session.
+ * Read new database name from MYSQL_COM_INIT_DB packet or a literal USE ... COM_QUERY
+ * packet, check that it exists in the hashtable and copy its name to MYSQL_session.
  *
- * @param mysql_session The MySQL session structure
+ * @param dest Destination where the database name will be written
  * @param dbhash Hashtable containing valid databases
  * @param buf	Buffer containing the database change query
  *
  * @return true if new database is set, false if non-existent database was tried
  * to be set
  */
-bool change_current_db(MYSQL_session* mysql_session,
+bool change_current_db(char* dest,
 			      HASHTABLE* dbhash,
 			      GWBUF* buf)
 {
@@ -139,7 +134,7 @@ bool change_current_db(MYSQL_session* mysql_session,
 	}
 	else
 	{
-	    strncpy(mysql_session->db,db,MYSQL_DATABASE_MAXLEN);
+	    strcpy(dest,db);
 	    skygw_log_write(LOGFILE_TRACE,"change_current_db: database is on server: '%s'.",target);
 	    succp = true;
 	    goto retblock;

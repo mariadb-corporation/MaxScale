@@ -23,3 +23,7 @@ add_executable(maxbinlogcheck maxbinlogcheck.c blr_file.c blr_cache.c blr_master
 target_link_libraries(maxbinlogcheck utils ssl pthread ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} aio rt crypt dl crypto inih z m stdc++ ${CURL_LIBRARIES})
 
 install(TARGETS maxbinlogcheck DESTINATION bin)
+
+if(BUILD_TESTS)
+  add_subdirectory(test)
+endif()

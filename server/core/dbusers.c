@@ -105,10 +105,6 @@
 #define ERROR_NO_SHOW_DATABASES "%s: Unable to load database grant information, \
     MaxScale authentication will proceed without including database permissions. \
     To correct this GRANT SHOW DATABASES ON *.* privilege to the user %s."
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 
 static int getUsers(SERVICE *service, USERS *users);
 static int uh_cmpfun( void* v1, void* v2);
@@ -136,6 +132,27 @@ int add_wildcard_users(USERS *users,
 		       HASHTABLE* hash);
 
 static int gw_mysql_set_timeouts(MYSQL* handle);
+
+/**
+ * Check if the IP address of the user matches the one in the grant. This assumes
+ * that the grant has one or more single-character wildcards in it.
+ * @param userhost User host address
+ * @param wildcardhost Host address in the grant
+ * @return True if the host address matches
+ */
+bool host_matches_singlechar_wildcard(const char* user, const char* wild)
+{
+    while (*user != '\0' && *wild != '\0')
+    {
+        if (*user != *wild && *wild != '_')
+        {
+            return false;
+        }
+        user++;
+        wild++;
+    }
+    return true;
+}
 
 /**
  * Load the user/passwd form mysql.user table into the service users' hashtable
@@ -252,6 +269,53 @@ HASHTABLE	*oldresources;
 	return i;
 }
 
+/**
+ * Check if the IP address is a valid MySQL IP address. The IP address can contain
+ * single or multi-character wildcards as used by MySQL.
+ * @param host IP address to check
+ * @return True if the address is a valid, MySQL type IP address
+ */
+bool is_ipaddress(const char* host)
+{
+    while (*host != '\0')
+    {
+        if (!isdigit(*host) && *host != '.' && *host != '_' && *host != '%')
+        {
+            return false;
+        }
+        host++;
+    }
+    return true;
+}
+
+/**
+ * Check if an IP address has single-character wildcards. A single-character
+ * wildcard is represented by an underscore in the MySQL hostnames.
+ * @param host Hostname to check
+ * @return True if the hostname is a valid IP address with a single character wildcard
+ */
+bool host_has_singlechar_wildcard(const char *host)
+{
+    const char* chrptr = host;
+    bool retval = false;
+
+    while (*chrptr != '\0')
+    {
+        if (!isdigit(*chrptr) && *chrptr != '.')
+        {
+            if (*chrptr == '_')
+            {
+                retval = true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        chrptr++;
+    }
+    return retval;
+}
 
 /**
  * Add a new MySQL user with host, password and netmask into the service users table
@@ -307,6 +371,12 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *p
 	/* ANY */
 	if (strcmp(host, "%") == 0) {
 		strcpy(ret_ip, "0.0.0.0");
+		key.netmask = 0;
+    } else if (strnlen(host, MYSQL_HOST_MAXLEN + 1) <= MYSQL_HOST_MAXLEN &&
+               is_ipaddress(host) &&
+               host_has_singlechar_wildcard(host)) {
+        strcpy(key.hostname, host);
+        strcpy(ret_ip, "0.0.0.0");
 		key.netmask = 0;
 	} else {
 		/* hostname without % wildcards has netmask = 32 */
@@ -483,7 +553,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading database names for service %s encountered "
-                        "error: %s.",
+                        "error when querying database privileges: %s.",
                         service->name,
                         mysql_error(con))));
 		return -1;
@@ -495,7 +565,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading database names for service %s encountered "
-                        "error: %s.",
+                        "error when storing result set of database privilege query: %s.",
                         service->name,
                         mysql_error(con))));
 		return -1;
@@ -527,7 +597,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading database names for service %s encountered "
-                        "error: %s.",
+                        "error when executing SHOW DATABASES query: %s.",
                         service->name,
                         mysql_error(con))));
 
@@ -540,7 +610,7 @@ getDatabases(SERVICE *service, MYSQL *con)
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Loading database names for service %s encountered "
-                        "error: %s.",
+                        "error when storing the result set: %s.",
                         service->name,
                         mysql_error(con))));
 
@@ -1048,19 +1118,21 @@ getAllUsers(SERVICE *service, USERS *users)
 
 		} else if(rc == -1) {
 		    /** Duplicate user*/
-		    LOGIF(LT,(skygw_log_write(LT,
-					     "Duplicate MySQL user found for service [%s]: %s@%s%s%s",
-					     service->name,
-					     row[0],row[1],havedb?" for database: ":"",
-					     havedb ?dbnm:"")));
+                if (service->log_auth_warnings)
+                {
+                    skygw_log_write(LM, "Duplicate MySQL user found for service"
+                                    " [%s]: %s@%s%s%s", service->name, row[0],
+                                    row[1], havedb ? " for database: " : "",
+                                    havedb ? dbnm : "");
+                }
 		} else {
-                    LOGIF(LE, (skygw_log_write_flush(
-                            LOGFILE_ERROR|LOGFILE_TRACE,
-                                                     "Warning: Failed to add user %s@%s for service [%s]. "
-                            "This user will be unavailable via MaxScale.",
-                                                     row[0],
-                                                     row[1],
-                                                     service->name)));
+                if (service->log_auth_warnings)
+                {
+                    skygw_log_write_flush(LM, "Warning: Failed to add user %s@%s"
+                                          " for service [%s]. This user will be "
+                                          "unavailable via MaxScale.", row[0],
+                                          row[1], service->name);
+                }
 		}
             }
             
@@ -1229,6 +1301,16 @@ getUsers(SERVICE *service, USERS *users)
 					NULL,
 					0) == NULL))
 		{
+			LOGIF(LE, (skygw_log_write_flush(
+				LOGFILE_ERROR,
+				"Error : failure loading users data from backend "
+				"[%s:%i] for service [%s]. MySQL error %i, %s",
+				server->server->name,
+				server->server->port,
+				service->name,
+				mysql_errno(con),
+				mysql_error(con))));
+
 			server = server->next;
 		}
 		
@@ -1573,19 +1655,20 @@ getUsers(SERVICE *service, USERS *users)
 
 		} else if(rc == -1) {
 		    /** Duplicate user*/
-		    LOGIF(LE,(skygw_log_write(LT|LE,
-					     "Warning: Duplicate MySQL user found for service [%s]: %s@%s%s%s",
-					     service->name,
-					     row[0],row[1],db_grants?" for database: ":"",
-					     db_grants ?row[5]:"")));
+            if (service->log_auth_warnings)
+            {
+                skygw_log_write(LM, "Warning: Duplicate MySQL user found for "
+                                "service [%s]: %s@%s%s%s", service->name, row[0],
+                                row[1], db_grants ? " for database: " : "",
+                                db_grants ? row[5] : "");
+            }
 		} else {
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR|LOGFILE_TRACE,
-				"Warning: Failed to add user %s@%s for service [%s]. "
-				"This user will be unavailable via MaxScale.",
-				row[0],
-				row[1],
-				service->name)));
+            if (service->log_auth_warnings)
+            {
+                skygw_log_write_flush(LM, "Warning: Failed to add user %s@%s for"
+                                      " service [%s]. This user will be unavailable"
+                                      " via MaxScale.", row[0], row[1], service->name);
+            }
 		}
 	}
 
@@ -1709,7 +1792,17 @@ static int uh_cmpfun( void* v1, void* v2) {
 	if (hu1->user == NULL || hu2->user == NULL)
 		return 0;
 
-	if (strcmp(hu1->user, hu2->user) == 0 && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr) && (hu1->netmask >= hu2->netmask)) {
+    /** If the stored user has the unmodified address stored, that means we were not able
+     * to resolve it at the time we loaded the users. We need to check if the
+     * address contains wildcards and if the user's address matches that. */
+
+    const bool wildcard_host = strlen(hu2->hostname) > 0 && strlen(hu1->hostname) > 0;
+
+	if ((strcmp(hu1->user, hu2->user) == 0) &&
+     /** Check for wildcard hostnames */
+     ((wildcard_host && host_matches_singlechar_wildcard(hu1->hostname, hu2->hostname)) ||
+      /** If no wildcard hostname is stored, check for network address. */
+      (!wildcard_host && (hu1->ipv4.sin_addr.s_addr == hu2->ipv4.sin_addr.s_addr) && (hu1->netmask >= hu2->netmask)))) {
 
 		/* if no database name was passed, auth is ok */
 		if (hu1->resource == NULL || (hu1->resource && !strlen(hu1->resource))) {
@@ -1795,6 +1888,10 @@ static void *uh_keydup(void* key) {
 		free(rval);
 		return NULL;
 	}
+
+    ss_dassert(strnlen(rval->hostname, MYSQL_HOST_MAXLEN + 1) <= MYSQL_HOST_MAXLEN);
+    strncpy(rval->hostname, current_key->hostname, MYSQL_HOST_MAXLEN);
+    rval->hostname[MYSQL_HOST_MAXLEN] = '\0';
 
 	memcpy(&rval->ipv4, &current_key->ipv4, sizeof(struct sockaddr_in));
 	memcpy(&rval->netmask, &current_key->netmask, sizeof(int));

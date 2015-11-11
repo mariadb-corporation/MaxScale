@@ -34,6 +34,7 @@
  * 30/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS description
  * 01/06/15	Massimiliano Pinto	Addition of server_update_address/port
  * 19/06/15 Martin Brampton		Extra code for persistent connections
+ *
  * @endverbatim
  */
 #include <stdio.h>
@@ -46,11 +47,6 @@
 #include <poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
-
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 
 static SPINLOCK	server_spin = SPINLOCK_INIT;
 static SERVER	*allServers = NULL;

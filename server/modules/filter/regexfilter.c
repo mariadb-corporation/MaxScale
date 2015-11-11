@@ -15,6 +15,7 @@
  *
  * Copyright MariaDB Corporation Ab 2014
  */
+#define PCRE2_CODE_UNIT_WIDTH 8
 #include <stdio.h>
 #include <filter.h>
 #include <modinfo.h>
@@ -22,14 +23,9 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <string.h>
-#include <regex.h>
+#include <pcre2.h>
 #include <atomic.h>
 #include "maxconfig.h"
-
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 
 /**
  * @file regexfilter.c - a very simple regular expression rewrite filter.
@@ -65,7 +61,7 @@ static	void	setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstre
 static	int	routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static	void	diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 
-static char	*regex_replace(char *sql, regex_t *re, char *replace);
+static char	*regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *study, const char *replace);
 
 static FILTER_OBJECT MyObject = {
     createInstance,
@@ -82,25 +78,28 @@ static FILTER_OBJECT MyObject = {
 /**
  * Instance structure
  */
-typedef struct {
-	char	*source;	/* Source address to restrict matches */
-	char	*user;		/* User name to restrict matches */
-	char	*match;		/* Regular expression to match */
-	char	*replace;	/* Replacement text */
-	regex_t	re;		/* Compiled regex text */
-	FILE* logfile;
-	bool log_trace;
+typedef struct
+{
+    char *source; /*< Source address to restrict matches */
+    char *user; /*< User name to restrict matches */
+    char *match; /*< Regular expression to match */
+    char *replace; /*< Replacement text */
+    pcre2_code *re; /*< Compiled regex text */
+    pcre2_match_data *match_data; /*< Matching data used by the compiled regex */
+    FILE* logfile; /*< Log file */
+    bool log_trace; /*< Whether messages should be printed to tracelog */
 } REGEX_INSTANCE;
 
 /**
  * The session structure for this regex filter
  */
-typedef struct {
-	DOWNSTREAM	down;		/* The downstream filter */
-	SPINLOCK        lock;
-	int		no_change;	/* No. of unchanged requests */
-	int		replacements;	/* No. of changed requests */
-	int		active;		/* Is filter active */
+typedef struct
+{
+    DOWNSTREAM down; /* The downstream filter */
+    SPINLOCK lock;
+    int no_change; /* No. of unchanged requests */
+    int replacements; /* No. of changed requests */
+    int active; /* Is filter active */
 } REGEX_SESSION;
 
 void log_match(REGEX_INSTANCE* inst,char* re, char* old, char* new);
@@ -141,6 +140,32 @@ GetModuleObject()
 }
 
 /**
+ * Free a regexfilter instance.
+ * @param instance instance to free
+ */
+void free_instance(REGEX_INSTANCE *instance)
+{
+    if (instance)
+    {
+        if (instance->re)
+        {
+            pcre2_code_free(instance->re);
+        }
+
+        if (instance->match_data)
+        {
+            pcre2_match_data_free(instance->match_data);
+        }
+
+        free(instance->match);
+        free(instance->replace);
+        free(instance->source);
+        free(instance->user);
+        free(instance);
+    }
+}
+
+/**
  * Create an instance of the filter for a particular service
  * within MaxScale.
  * 
@@ -152,9 +177,12 @@ GetModuleObject()
 static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
-REGEX_INSTANCE	*my_instance;
-int		i, cflags = REG_ICASE;
-char		*logfile = NULL;
+    REGEX_INSTANCE *my_instance;
+    int i, errnumber, cflags = PCRE2_CASELESS;
+    PCRE2_SIZE erroffset;
+    char *logfile = NULL;
+    const char *errmsg;
+
 	if ((my_instance = calloc(1, sizeof(REGEX_INSTANCE))) != NULL)
 	{
 		my_instance->match = NULL;
@@ -193,11 +221,11 @@ char		*logfile = NULL;
 			{
 				if (!strcasecmp(options[i], "ignorecase"))
 				{
-					cflags |= REG_ICASE;
+					cflags |= PCRE2_CASELESS;
 				}
 				else if (!strcasecmp(options[i], "case"))
 				{
-					cflags &= ~REG_ICASE;
+					cflags &= ~PCRE2_CASELESS;
 				}
 				else
 				{
@@ -207,45 +235,56 @@ char		*logfile = NULL;
 						options[i])));
 				}
 			}
-		}
+        }
+
+        if (logfile != NULL)
+        {
+            if ((my_instance->logfile = fopen(logfile, "a")) == NULL)
+            {
+                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                                 "regexfilter: Failed to open file '%s'.\n",
+                                                 logfile)));
+                free_instance(my_instance);
+                free(logfile);
+                return NULL;
+            }
+
+            fprintf(my_instance->logfile, "\nOpened regex filter log\n");
+            fflush(my_instance->logfile);
+        }
+        free(logfile);
 
 		if (my_instance->match == NULL || my_instance->replace == NULL)
 		{
-			free(my_instance);
-			free(logfile);
+			free_instance(my_instance);
 			return NULL;
 		}
 
-		if (regcomp(&my_instance->re, my_instance->match, REG_ICASE))
+		if ((my_instance->re = pcre2_compile((PCRE2_SPTR)my_instance->match,
+                                             PCRE2_ZERO_TERMINATED,
+                                             cflags,
+                                             &errnumber,
+                                             &erroffset,
+                                             NULL)) == NULL)
 		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"regexfilter: Invalid regular expression '%s'.\n",
-					my_instance->match)));
-			free(my_instance->match);
-			free(my_instance->replace);
-			free(my_instance);
-			free(logfile);
-			return NULL;
-		}
+            char errbuffer[1024];
+            pcre2_get_error_message(errnumber, (PCRE2_UCHAR*) & errbuffer, sizeof(errbuffer));
+            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                        "Error: regexfilter: Compiling regular expression '%s' failed at %d: %s\n",
+                        my_instance->match, erroffset, errbuffer)));
+            free_instance(my_instance);
+            return NULL;
+        }
 
-		if(logfile != NULL)
-		{
-		    if((my_instance->logfile = fopen(logfile,"a")) == NULL)
-		    {
+        if((my_instance->match_data = pcre2_match_data_create_from_pattern(
+            my_instance->re, NULL)) == NULL)
+        {
 			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"regexfilter: Failed to open file '%s'.\n",
-					logfile)));
-			free(my_instance->match);
-			free(my_instance->replace);
-			free(my_instance);
-			free(logfile);
-			return NULL;
-		    }
-
-		    fprintf(my_instance->logfile,"\nOpened regex filter log\n");
-		    fflush(my_instance->logfile);
-		}
-		free(logfile);
+				"Error: regexfilter: Failure to create PCRE2 matching data. "
+                "This is most likely caused by a lack of available memory.")));
+            free_instance(my_instance);
+            return NULL;
+        }
 	}
 	return (FILTER *)my_instance;
 }
@@ -351,8 +390,10 @@ char		*sql, *newsql;
 		}
 		if ((sql = modutil_get_SQL(queue)) != NULL)
 		{
-			newsql = regex_replace(sql, &my_instance->re,
-						my_instance->replace);
+			newsql = regex_replace(sql,
+                                         my_instance->re,
+                                         my_instance->match_data,
+                                         my_instance->replace);
 			if (newsql)
 			{
 				queue = modutil_replace_SQL(queue, newsql);
@@ -415,76 +456,42 @@ REGEX_SESSION	*my_session = (REGEX_SESSION *)fsession;
 }
 
 /**
- * Perform a regular expression match and subsititution on the SQL
+ * Perform a regular expression match and substitution on the SQL
  *
  * @param	sql	The original SQL text
  * @param	re	The compiled regular expression
+ * @param   match_data The PCRE2 matching data buffer
  * @param	replace	The replacement text
  * @return	The replaced text or NULL if no replacement was done.
  */
 static char *
-regex_replace(char *sql, regex_t *re, char *replace)
+regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, const char *replace)
 {
-char		*orig, *result, *ptr;
-int		i, res_size, res_length, rep_length;
-int		last_match, length;
-regmatch_t	match[10];
+    char *result = NULL;
+    size_t result_size;
 
-	if (regexec(re, sql, 10, match, 0))
-	{
-		return NULL;
-	}
-	length = strlen(sql);
-	
-	res_size = 2 * length;
-	result = (char *)malloc(res_size);
-	res_length = 0;
-	rep_length = strlen(replace);
-	last_match = 0;
-	
-	for (i = 0; i < 10; i++)
-	{
-		if (match[i].rm_so != -1)
-		{
-			ptr = &result[res_length];
-			if (last_match < match[i].rm_so)
-			{
-				int to_copy = match[i].rm_so - last_match;
-				if (last_match + to_copy > res_size)
-				{
-					res_size = last_match + to_copy + length;
-					result = (char *)realloc(result, res_size);
-				}
-				memcpy(ptr, &sql[last_match], to_copy);
-				res_length += to_copy;
-			}
-			last_match = match[i].rm_eo;
-			if (res_length + rep_length > res_size)
-			{
-				res_size += rep_length;
-				result = (char *)realloc(result, res_size);
-			}
-			ptr = &result[res_length];
-			memcpy(ptr, replace, rep_length);
-			res_length += rep_length;
-		}
-	}
+    /** This should never fail with rc == 0 because we used pcre2_match_data_create_from_pattern() */
+    if (pcre2_match(re, (PCRE2_SPTR)sql, PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL))
+    {
+        result_size = strlen(sql) + strlen(replace);
+        result = malloc(result_size);
 
-	if (last_match < length)
-	{
-		int to_copy = length - last_match;
-		if (last_match + to_copy > res_size)
-		{
-			res_size = last_match + to_copy + 1;
-			result = (char *)realloc(result, res_size);
-		}
-		ptr = &result[res_length];
-		memcpy(ptr, &sql[last_match], to_copy);
-		res_length += to_copy;
-	}
-	result[res_length] = 0;
-
-	return result;
+        while (result &&
+               pcre2_substitute(re, (PCRE2_SPTR)sql, PCRE2_ZERO_TERMINATED, 0,
+                                PCRE2_SUBSTITUTE_GLOBAL, match_data, NULL,
+                                (PCRE2_SPTR)replace, PCRE2_ZERO_TERMINATED,
+                                (PCRE2_UCHAR*)result, (PCRE2_SIZE*)&result_size) == PCRE2_ERROR_NOMEMORY)
+        {
+            char *tmp;
+            if ((tmp = realloc(result, (result_size *= 1.5))) == NULL)
+            {
+                free(result);
+                result = NULL;
+            }
+            result = tmp;
+        }
+    }
+    return result;
 }
 
 /**
