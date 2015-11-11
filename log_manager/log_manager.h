@@ -18,6 +18,8 @@
 #if !defined(LOG_MANAGER_H)
 # define LOG_MANAGER_H
 
+#include <syslog.h>
+
 /*
  * We need a common.h file that is included by every component.
  */
@@ -130,16 +132,6 @@ typedef enum
     LOG_AUGMENTATION_MASK     = (LOG_AUGMENT_WITH_FUNCTION)
 } log_augmentation_t;
 
-/**
- * LOG_FLUSH_NO  Do not flush after writing.
- * LOG_FLUSH_YES Flush after writing.
- */
-enum log_flush
-{
-    LOG_FLUSH_NO  = 0,
-    LOG_FLUSH_YES = 1
-};
-
 EXTERN_C_BLOCK_BEGIN
 
 extern int lm_enabled_logfiles_bitmask;
@@ -151,6 +143,10 @@ int mxs_log_rotate();
 int mxs_log_enable_priority(int priority);
 int mxs_log_disable_priority(int priority);
 
+int mxs_log_message(int priority,
+                    const char* file, int line, const char* function,
+                    const char* format, ...);
+
 bool skygw_logmanager_init(const char* ident,
                            const char* logdir,
                            log_target_t target);
@@ -161,10 +157,6 @@ void skygw_logmanager_exit(void);
  * free private write buffer list
  */
 void skygw_log_done(void);
-int  skygw_log_write_context(logfile_id_t id,
-                             enum log_flush flush,
-                             const char* file, int line, const char* function,
-                             const char* format, ...);
 int  skygw_log_flush(logfile_id_t id);
 void skygw_log_sync_all(void);
 int  skygw_log_rotate(logfile_id_t id);
@@ -175,11 +167,19 @@ void skygw_set_highp(int);
 void logmanager_enable_syslog(int);
 void logmanager_enable_maxscalelog(int);
 
-#define skygw_log_write(id, format, ...)\
-    skygw_log_write_context(id, LOG_FLUSH_NO, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+inline int mxs_log_id_to_priority(logfile_id_t id)
+{
+    if (id & LOGFILE_ERROR) return LOG_ERR;
+    if (id & LOGFILE_MESSAGE) return LOG_NOTICE;
+    if (id & LOGFILE_TRACE) return LOG_INFO;
+    if (id & LOGFILE_DEBUG) return LOG_DEBUG;
+    return LOG_ERR;
+}
 
-#define skygw_log_write_flush(id, format, ...)\
-    skygw_log_write_context(id, LOG_FLUSH_YES, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+#define skygw_log_write(id, format, ...)\
+    mxs_log_message(mxs_log_id_to_priority(id), __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+
+#define skygw_log_write_flush(id, format, ...) skygw_log_write(id, format, ##__VA_ARGS__)
 
 /**
  * What augmentation if any should a logged message be augmented with.
@@ -194,14 +194,8 @@ EXTERN_C_BLOCK_END
 /**
  * Helper, not to be called directly.
  */
-#define MXS_MESSAGE_FLUSH(id, format, ...)\
-    do { if (LOG_IS_ENABLED(id)) { skygw_log_write_flush(id, format, ##__VA_ARGS__); } } while (false)
-
-/**
- * Helper, not to be called directly.
- */
-#define MXS_MESSAGE(id, format, ...)\
-    do { if (LOG_IS_ENABLED(id)) { skygw_log_write(id, format, ##__VA_ARGS__); } } while (false)
+#define MXS_LOG_MESSAGE(priority, format, ...)\
+    mxs_log_message(priority, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 /**
  * Log an error, warning, notice, info, or debug  message.
@@ -209,10 +203,10 @@ EXTERN_C_BLOCK_END
  * @param format The printf format of the message.
  * @param ...    Arguments, depending on the format.
  */
-#define MXS_ERROR(format, ...)   MXS_MESSAGE_FLUSH(LOGFILE_ERROR, format, ##__VA_ARGS__)
-#define MXS_WARNING(format, ...) MXS_MESSAGE(LOGFILE_ERROR, format, ##__VA_ARGS__)
-#define MXS_NOTICE(format, ...)  MXS_MESSAGE(LOGFILE_MESSAGE, format, ##__VA_ARGS__)
-#define MXS_INFO(format, ...)    MXS_MESSAGE(LOGFILE_TRACE, format, ##__VA_ARGS__)
-#define MXS_DEBUG(format, ...)   MXS_MESSAGE(LOGFILE_DEBUG, format, ##__VA_ARGS__)
+#define MXS_ERROR(format, ...)   MXS_LOG_MESSAGE(LOG_ERR,     format, ##__VA_ARGS__)
+#define MXS_WARNING(format, ...) MXS_LOG_MESSAGE(LOG_WARNING, format, ##__VA_ARGS__)
+#define MXS_NOTICE(format, ...)  MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
+#define MXS_INFO(format, ...)    MXS_LOG_MESSAGE(LOG_INFO,    format, ##__VA_ARGS__)
+#define MXS_DEBUG(format, ...)   MXS_LOG_MESSAGE(LOG_DEBUG,   format, ##__VA_ARGS__)
 
 #endif /** LOG_MANAGER_H */

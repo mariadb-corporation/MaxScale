@@ -49,6 +49,16 @@ static const char LOGFILE_NAME_SUFFIX[] = ".log";
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
+/**
+ * LOG_FLUSH_NO  Do not flush after writing.
+ * LOG_FLUSH_YES Flush after writing.
+ */
+enum log_flush
+{
+    LOG_FLUSH_NO  = 0,
+    LOG_FLUSH_YES = 1
+};
+
 #if defined(SS_DEBUG)
 static int write_index;
 static int block_start_index;
@@ -284,11 +294,11 @@ static bool logmanager_init_nomutex(const char* ident,
 static void logmanager_done_nomutex(void);
 static bool logmanager_is_valid_id(logfile_id_t id);
 
-static int logmanager_write_log(logfile_id_t    id,
-                                enum log_flush  flush,
-                                size_t          prefix_len,
-                                size_t          len,
-                                const char*     str);
+static int logmanager_write_log(int            priority,
+                                enum log_flush flush,
+                                size_t         prefix_len,
+                                size_t         len,
+                                const char*    str);
 
 static blockbuf_t* blockbuf_init();
 static void blockbuf_node_done(void* bb_data);
@@ -577,7 +587,7 @@ static bool logmanager_is_valid_id(logfile_id_t id)
     {
         const char ERRSTR[] = "Invalid logfile id argument.";
 
-        int err = logmanager_write_log(LOGFILE_ERROR,
+        int err = logmanager_write_log(LOG_ERR,
                                        LOG_FLUSH_YES,
                                        0, sizeof(ERRSTR), ERRSTR);
 
@@ -595,7 +605,7 @@ static bool logmanager_is_valid_id(logfile_id_t id)
  *
  * Parameters:
  *
- * @param id            logfile object identifier
+ * @param priority      Syslog priority
  * @param flush         indicates whether log string must be written to disk
  *                      immediately
  * @param rotate        if set, closes currently open log file and opens a
@@ -607,11 +617,11 @@ static bool logmanager_is_valid_id(logfile_id_t id)
  * @return 0 if succeed, -1 otherwise
  *
  */
-static int logmanager_write_log(logfile_id_t    id,
-                                enum log_flush  flush,
-                                size_t          prefix_len,
-                                size_t          str_len,
-                                const char*     str)
+static int logmanager_write_log(int            priority,
+                                enum log_flush flush,
+                                size_t         prefix_len,
+                                size_t         str_len,
+                                const char*    str)
 {
     logfile_t*   lf;
     char*        wp;
@@ -629,7 +639,7 @@ static int logmanager_write_log(logfile_id_t    id,
     int do_syslog = log_config.do_syslog;
 
     assert(str);
-    assert(logmanager_is_valid_id(id));
+    assert((priority & ~LOG_PRIMASK) == 0);
     CHK_LOGMANAGER(lm);
 
     // All messages are now logged to the error log file.
@@ -646,7 +656,7 @@ static int logmanager_write_log(logfile_id_t    id,
      * If session id is stored to tls_log_info structure, allocate
      * room for session id too.
      */
-    if (id == LOGFILE_TRACE && tls_log_info.li_sesid != 0)
+    if ((priority == LOG_INFO) && (tls_log_info.li_sesid != 0))
     {
         sesid_str_len = 5 * sizeof(char) + get_decimal_len(tls_log_info.li_sesid);
     }
@@ -765,16 +775,16 @@ static int logmanager_write_log(logfile_id_t    id,
     /** write to syslog */
     if (do_syslog)
     {
-        // Strip away the timestamp and the prefix (e.g. "[Error]: ").
+        // Strip away the timestamp and the prefix (e.g. "error : ").
         const char *message = wp + timestamp_len + prefix_len;
 
-        switch (id)
+        switch (priority)
         {
-        case LOGFILE_ERROR:
+        case LOG_ERR:
             syslog(LOG_ERR, "%s", message);
             break;
 
-        case LOGFILE_MESSAGE:
+        case LOG_NOTICE:
             syslog(LOG_NOTICE, "%s", message);
             break;
 
@@ -1272,7 +1282,7 @@ int skygw_log_get_augmentation()
 /**
  * Helper for skygw_log_write and friends.
  *
- * @param id         The id of the log file.
+ * @param int        The syslog priority.
  * @param file       The name of the file where the logging was made.
  * @param int        The line where the logging was made.
  * @param function   The function where the logging was made.
@@ -1284,7 +1294,7 @@ int skygw_log_get_augmentation()
  * @return 0 if the logging to at least one log succeeded.
  */
 
-static int log_write(logfile_id_t   id,
+static int log_write(int            priority,
                      const char*    file,
                      int            line,
                      const char*    function,
@@ -1299,195 +1309,13 @@ static int log_write(logfile_id_t   id,
     {
         CHK_LOGMANAGER(lm);
 
-        rv = logmanager_write_log(id, flush, prefix_len, len, str);
+        rv = logmanager_write_log(priority, flush, prefix_len, len, str);
 
         logmanager_unregister();
     }
 
     return rv;
 }
-
-typedef struct log_prefix
-{
-    const char* text; // The prefix, e.g. "[Error]: "
-    int len;          // The length of the prefix without the trailing NULL.
-} log_prefix_t;
-
-const char PREFIX_ERROR[]  = "[Error] : ";
-const char PREFIX_NOTICE[] = "[Notice]: ";
-const char PREFIX_INFO[]   = "[Info]  : ";
-const char PREFIX_DEBUG[]  = "[Debug] : ";
-
-/**
- * Returns the most "severe" file id.
- *
- * @param ids A single id or a bitmask of ids.
- * @return A single id
- */
-static logfile_id_t logfile_ids_to_id(logfile_id_t ids)
-{
-    // The id can be a bitmask, hence we choose the most "severe" one.
-    if (ids & LOGFILE_ERROR)
-    {
-        return LOGFILE_ERROR;
-    }
-    else if (ids & LOGFILE_MESSAGE)
-    {
-        return LOGFILE_MESSAGE;
-    }
-    else if (ids & LOGFILE_TRACE)
-    {
-        return LOGFILE_TRACE;
-    }
-    else if (ids & LOGFILE_DEBUG)
-    {
-        return LOGFILE_DEBUG;
-    }
-    else
-    {
-        assert(!true);
-        return LOGFILE_ERROR;
-    }
-}
-
-/**
- * Returns the prefix to be used for a specific logfile id.
- *
- * @param id A logfile id (not a mask)
- * @return The corresponding prefix.
- */
-static log_prefix_t logfile_id_to_prefix(logfile_id_t id)
-{
-    log_prefix_t prefix;
-
-    switch (id)
-    {
-    case LOGFILE_ERROR:
-        prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
-        break;
-
-    case LOGFILE_MESSAGE:
-        prefix.text = PREFIX_NOTICE;
-        prefix.len = sizeof(PREFIX_NOTICE);
-        break;
-
-    case LOGFILE_TRACE:
-        prefix.text = PREFIX_INFO;
-        prefix.len = sizeof(PREFIX_INFO);
-        break;
-
-    case LOGFILE_DEBUG:
-        prefix.text = PREFIX_DEBUG;
-        prefix.len = sizeof(PREFIX_DEBUG);
-        break;
-
-    default:
-        assert(!true);
-        prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
-        break;
-    }
-
-    --prefix.len; // Remove trailing NULL.
-
-    return prefix;
-}
-
-int skygw_log_write_context(logfile_id_t   id,
-                            enum log_flush flush,
-                            const char*    file,
-                            int            line,
-                            const char*    function,
-                            const char*    str,
-                            ...)
-{
-    int err = 0;
-
-    id = logfile_ids_to_id(id); // Pick the most severe one.
-
-    if (LOG_IS_ENABLED(id))
-    {
-        va_list valist;
-
-        /**
-         * Find out the length of log string (to be formatted str).
-         */
-        va_start(valist, str);
-        int message_len = vsnprintf(NULL, 0, str, valist);
-        va_end(valist);
-
-        if (message_len >= 0)
-        {
-            log_prefix_t prefix = logfile_id_to_prefix(id);
-
-            static const char FORMAT_FUNCTION[] = "(%s): ";
-
-            int augmentation_len = 0;
-
-            switch (log_augmentation)
-            {
-            case LOG_AUGMENT_WITH_FUNCTION:
-                augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
-                augmentation_len -= 2; // Remove the %s
-                augmentation_len += strlen(function);
-                break;
-
-            default:
-                break;
-            }
-
-            int buffer_len = prefix.len + augmentation_len + message_len + 1; // Trailing NULL
-
-            if (buffer_len > MAX_LOGSTRLEN)
-            {
-                message_len -= (buffer_len - MAX_LOGSTRLEN);
-                buffer_len = MAX_LOGSTRLEN;
-
-                assert(prefix.len + augmentation_len + message_len + 1 == buffer_len);
-            }
-
-            char buffer[buffer_len];
-
-            char *prefix_text = buffer;
-            char *augmentation_text = buffer + prefix.len;
-            char *message_text = buffer + prefix.len + augmentation_len;
-
-            strcpy(prefix_text, prefix.text);
-
-            if (augmentation_len)
-            {
-                int len = 0;
-
-                switch (log_augmentation)
-                {
-                case LOG_AUGMENT_WITH_FUNCTION:
-                    len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
-                    break;
-
-                default:
-                    assert(!true);
-                }
-
-                assert(len == augmentation_len);
-            }
-
-            va_start(valist, str);
-            vsnprintf(message_text, message_len + 1, str, valist);
-            va_end(valist);
-
-            err = log_write(id, file, line, function, prefix.len, buffer_len, buffer, flush);
-
-            if (err != 0)
-            {
-                fprintf(stderr, "skygw_log_write failed.\n");
-            }
-        }
-    }
-
-    return err;
-}
-
 
 int skygw_log_flush(logfile_id_t id)
 {
@@ -2999,4 +2827,236 @@ int mxs_log_disable_priority(int priority)
     }
 
     return rv;
+}
+
+typedef struct log_prefix
+{
+    const char* text; // The prefix, e.g. "error: "
+    int len;          // The length of the prefix without the trailing NULL.
+} log_prefix_t;
+
+static const char PREFIX_EMERG[]   = "emerg  : ";
+static const char PREFIX_ALERT[]   = "alert  : ";
+static const char PREFIX_CRIT[]    = "crit   : ";
+static const char PREFIX_ERROR[]   = "error  : ";
+static const char PREFIX_WARNING[] = "warning: ";
+static const char PREFIX_NOTICE[]  = "notice : ";
+static const char PREFIX_INFO[]    = "info   : ";
+static const char PREFIX_DEBUG[]   = "debug  : ";
+
+static logfile_id_t priority_to_id(int priority)
+{
+    assert((priority & ~LOG_PRIMASK) == 0);
+
+    switch (priority)
+    {
+    case LOG_EMERG:
+    case LOG_ALERT:
+    case LOG_CRIT:
+    case LOG_ERR:
+    case LOG_WARNING:
+        return LOGFILE_ERROR;
+
+    case LOG_NOTICE:
+        return LOGFILE_MESSAGE;
+
+    case LOG_INFO:
+        return LOGFILE_TRACE;
+
+    case LOG_DEBUG:
+        return LOGFILE_DEBUG;
+
+    default:
+        // Can't happen!
+        assert(!true);
+        return LOGFILE_ERROR;
+    }
+}
+
+static log_prefix_t priority_to_prefix(int priority)
+{
+    assert((priority & ~LOG_PRIMASK) == 0);
+
+    log_prefix_t prefix;
+
+    switch (priority)
+    {
+    case LOG_EMERG:
+        prefix.text = PREFIX_EMERG;
+        prefix.len = sizeof(PREFIX_EMERG);
+        break;
+
+    case LOG_ALERT:
+        prefix.text = PREFIX_ALERT;
+        prefix.len = sizeof(PREFIX_ALERT);
+        break;
+
+    case LOG_CRIT:
+        prefix.text = PREFIX_CRIT;
+        prefix.len = sizeof(PREFIX_CRIT);
+        break;
+
+    case LOG_ERR:
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
+
+    case LOG_WARNING:
+        prefix.text = PREFIX_WARNING;
+        prefix.len = sizeof(PREFIX_WARNING);
+        break;
+
+    case LOG_NOTICE:
+        prefix.text = PREFIX_NOTICE;
+        prefix.len = sizeof(PREFIX_NOTICE);
+        break;
+
+    case LOG_INFO:
+        prefix.text = PREFIX_INFO;
+        prefix.len = sizeof(PREFIX_INFO);
+        break;
+
+    case LOG_DEBUG:
+        prefix.text = PREFIX_DEBUG;
+        prefix.len = sizeof(PREFIX_DEBUG);
+        break;
+
+    default:
+        assert(!true);
+        prefix.text = PREFIX_ERROR;
+        prefix.len = sizeof(PREFIX_ERROR);
+        break;
+    }
+
+    --prefix.len; // Remove trailing NULL.
+
+    return prefix;
+}
+
+static enum log_flush priority_to_flush(int priority)
+{
+    assert((priority & ~LOG_PRIMASK) == 0);
+
+    switch (priority)
+    {
+    case LOG_EMERG:
+    case LOG_ALERT:
+    case LOG_CRIT:
+    case LOG_ERR:
+        return LOG_FLUSH_YES;
+
+    default:
+        assert(!true);
+    case LOG_WARNING:
+    case LOG_NOTICE:
+    case LOG_INFO:
+    case LOG_DEBUG:
+        return LOG_FLUSH_NO;
+    }
+}
+
+/**
+ * Log a message of a particular priority.
+ *
+ * @param priority One of the syslog constants: LOG_ERR, LOG_WARNING, ...
+ * @param file     The name of the file where the message was logged.
+ * @param line     The line where the message was logged.
+ * @param function The function where the message was logged.
+ * @param format   The printf format of the following arguments.
+ * @param ...      Optional arguments according to the format.
+ */
+int mxs_log_message(int priority,
+                    const char* file, int line, const char* function,
+                    const char* format, ...)
+{
+    int err = 0;
+
+    assert((priority & ~LOG_PRIMASK) == 0);
+
+    if ((priority & ~LOG_PRIMASK) == 0) // Check that the priority is ok,
+    {
+        logfile_id_t id = priority_to_id(priority);
+
+        if (LOG_IS_ENABLED(id))
+        {
+            va_list valist;
+
+            /**
+             * Find out the length of log string (to be formatted str).
+             */
+            va_start(valist, format);
+            int message_len = vsnprintf(NULL, 0, format, valist);
+            va_end(valist);
+
+            if (message_len >= 0)
+            {
+                log_prefix_t prefix = priority_to_prefix(priority);
+
+                static const char FORMAT_FUNCTION[] = "(%s): ";
+
+                int augmentation_len = 0;
+
+                switch (log_augmentation)
+                {
+                case LOG_AUGMENT_WITH_FUNCTION:
+                    augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
+                    augmentation_len -= 2; // Remove the %s
+                    augmentation_len += strlen(function);
+                    break;
+
+                default:
+                    break;
+                }
+
+                int buffer_len = prefix.len + augmentation_len + message_len + 1; // Trailing NULL
+
+                if (buffer_len > MAX_LOGSTRLEN)
+                {
+                    message_len -= (buffer_len - MAX_LOGSTRLEN);
+                    buffer_len = MAX_LOGSTRLEN;
+
+                    assert(prefix.len + augmentation_len + message_len + 1 == buffer_len);
+                }
+
+                char buffer[buffer_len];
+
+                char *prefix_text = buffer;
+                char *augmentation_text = buffer + prefix.len;
+                char *message_text = buffer + prefix.len + augmentation_len;
+
+                strcpy(prefix_text, prefix.text);
+
+                if (augmentation_len)
+                {
+                    int len = 0;
+
+                    switch (log_augmentation)
+                    {
+                    case LOG_AUGMENT_WITH_FUNCTION:
+                        len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
+                        break;
+
+                    default:
+                        assert(!true);
+                    }
+
+                    assert(len == augmentation_len);
+                }
+
+                va_start(valist, format);
+                vsnprintf(message_text, message_len + 1, format, valist);
+                va_end(valist);
+
+                enum log_flush flush = priority_to_flush(priority);
+
+                err = log_write(priority, file, line, function, prefix.len, buffer_len, buffer, flush);
+            }
+        }
+    }
+    else
+    {
+        MXS_WARNING("Invalid syslog priority: %d", priority);
+    }
+
+    return err;
 }
