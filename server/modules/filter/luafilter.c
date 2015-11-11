@@ -20,12 +20,26 @@
  * @file luafilter.c
  * Lua Filter
  *
- * A filter that calls a set of Lua script functions.
+ *   * A filter that calls a set of functions in a Lua script.
  *
- * This filter calls the createInstance, newSession, closeSession, routeQuery and clientReply functions in the Lua script.
- * Out of these functions the newSession, closeSession, routeQuery and clientReply functions are 
- * In addition to being called with the service-specific global Lua state created during createInstance, the following functions
- * are called with a Lua state bound to the client session: newSession, closeSession, routeQuery and clientReply
+ * The entry points for the Lua script expect the following signatures:
+ *  * nil createInstance() - global script only
+ *  * nil newSession()
+ *  * nil closeSession()
+ *  * (nil | bool | string) routeQuery(string)
+ *  * nil clientReply()
+ *  * string diagnostic() - global script only
+ *
+ * These functions, if found in the script, will be called whenever a call to the
+ * matching entry point is made.
+ *
+ * The details for each entry point are documented in the functions.
+ * @see createInstance, newSession, closeSession, routeQuery, clientReply, diagnostic
+ *
+ * The filter has two scripts, a global and a session script. If the global script
+ * is defined and valid, the matching entry point function in Lua will be called.
+ * The same holds true for session script apart from no calls to createInstance
+ * or diagnostic being made for the session script.
  */
 
 #include <skygw_types.h>
@@ -42,7 +56,7 @@
 
 MODULE_INFO info = {
     MODULE_API_FILTER,
-    MODULE_ALPHA_RELEASE,
+    MODULE_EXPERIMENTAL,
     FILTER_VERSION,
     "Lua Filter"
 };
@@ -123,7 +137,7 @@ typedef struct
 } LUA_INSTANCE;
 
 /**
- * The session structure for Firewall filter.
+ * The session structure for Lua filter.
  */
 typedef struct
 {
@@ -142,11 +156,12 @@ void
 ModuleInit(){ }
 
 /**
- * Create an instance of the filter for a particular service
- * within MaxScale.
- * 
- * @param options	The options for this filter
+ * Create a new instance of the Lua filter.
  *
+ * The global script will be loaded in this function and executed once on a global
+ * level before calling the createInstance function in the Lua script.
+ * @param options The options for this filter
+ * @param params  Filter parameters
  * @return The instance data for this new instance
  */
 static FILTER *
@@ -215,10 +230,15 @@ createInstance(char **options, FILTER_PARAMETER **params)
  * Create a new session
  *
  * This function is called for each new client session and it is used to initialize
- * data used for the duration of the session. The main function of this function
- * for the luafilter is to load the session script and allow it to do its initialization.
- * 
- * Once the script is loaded and executed globally, 
+ * data used for the duration of the session.
+ *
+ * This function first loads the session script and executes in on a global level.
+ * After this, the newSession function in the Lua scripts is called.
+ *
+ * There is a single C function exported as a global variable for the session
+ * script named id_gen. The id_gen function returns an int which is unique for
+ * each the sessions for this service. This function is only accessible to the
+ * session level scripts.
  * @param instance	The filter instance data
  * @param session	The session itself
  * @return Session specific data for this session
@@ -283,6 +303,7 @@ newSession(FILTER *instance, SESSION *session)
  * Close a session with the filter, this is the mechanism
  * by which a filter may cleanup data structure etc.
  *
+ * The closeSession function in the Lua scripts will be called.
  * @param instance	The filter instance data
  * @param session	The session being closed
  */
@@ -338,7 +359,7 @@ freeSession(FILTER *instance, void *session)
  * passed from this filter.
  *
  * @param instance	The filter instance data
- * @param session	The filter session 
+ * @param session	The filter session
  * @param downstream	The downstream filter or router.
  */
 static void
@@ -355,6 +376,15 @@ setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
     my_session->up = *upstream;
 }
 
+/**
+ * The client reply entry point.
+ *
+ * This function calls the clientReply function of the Lua scripts.
+ * @param instance Filter instance
+ * @param session Filter session
+ * @param queue Server response
+ * @return 1 on success
+ */
 static int
 clientReply(FILTER *instance, void *session, GWBUF *queue)
 {
@@ -401,11 +431,13 @@ clientReply(FILTER *instance, void *session, GWBUF *queue)
  * query is passed to the downstream component
  * (filter or router) in the filter chain.
  *
- * The Luafilter calls the session specific and global Lua state object's routeQuery functions.
- * The query is passed as a string parameter to the routeQuery Lua function and the return values of the session specific function,
- * if any were returned, are interpreted. If the first value is a boolean, it is interpreted as a decision whether to pass the query onwards or
- * to send an error packet to the client. If it is a string, the current query is replaced with the return value. If no value is returned
- * or nil is returned, the query is passed on normally downstream to the next filter or router in the chain.
+ * The Luafilter calls the routeQuery functions of both the session and the global script.
+ * The query is passed as a string parameter to the routeQuery Lua function and
+ * the return values of the session specific function, if any were returned,
+ * are interpreted. If the first value is bool, it is interpreted as a decision
+ * whether to route the query or to send an error packet to the client.
+ * If it is a string, the current query is replaced with the return value and
+ * the query will be routed. If nil is returned, the query is routed normally.
  *
  * @param instance	The filter instance data
  * @param session	The filter session
@@ -418,7 +450,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
     DCB* dcb = my_session->session->client;
     char *fullquery = NULL, *ptr;
-    int qlen;
     bool route = true;
     GWBUF* forward = queue;
     int rc = 0;
@@ -443,6 +474,10 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
             {
                 if (lua_isstring(my_session->state, -1))
                 {
+                    if (forward)
+                    {
+                        gwbuf_free(forward);
+                    }
                     forward = modutil_create_query((char*) lua_tostring(my_session->state, -1));
                 }
                 else if (lua_isboolean(my_session->state, -1))
@@ -463,6 +498,22 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 skygw_log_write(LOGFILE_ERROR, "luafilter: Global scope call"
                                 " to 'routeQuery' failed: '%s'.",
                                 lua_tostring(my_session->state, -1));
+            }
+            if (lua_gettop(my_instance->global_state))
+            {
+                if (lua_isstring(my_instance->global_state, -1))
+                {
+                    if (forward)
+                    {
+                        gwbuf_free(forward);
+                    }
+                    forward = modutil_create_query((char*)
+                                                   lua_tostring(my_instance->global_state, -1));
+                }
+                else if (lua_isboolean(my_instance->global_state, -1))
+                {
+                    route = lua_toboolean(my_instance->global_state, -1);
+                }
             }
             spinlock_release(&my_instance->lock);
         }
@@ -486,9 +537,10 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 }
 
 /**
- * Diagnostics routine
- *,
-                           lua_tostring(my_instance->global_state, -1)
+ * Diagnostics routine.
+ *
+ * This will call the matching diagnostics entry point in the Lua script. If the
+ * Lua function returns a string, it will be printed to the client DCB.
  * @param	instance	The filter instance
  * @param	fsession	Filter session, may be NULL
  * @param	dcb		The DCB for diagnostic output
