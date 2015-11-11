@@ -43,6 +43,7 @@
  * 03/10/2014   Martin Brampton         Pointer arithmetic standard conformity
  *                                      Add more buffer handling macros
  *                                      Add gwbuf_rtrim (handle chains)
+ * 09/11/2014   Martin Brampton         Add dprintAllBuffers (conditional compilation)
  *
  * @endverbatim
  */
@@ -51,7 +52,6 @@
 #include <hint.h>
 #include <spinlock.h>
 #include <stdint.h>
-
 
 EXTERN_C_BLOCK_BEGIN
 
@@ -202,6 +202,9 @@ void                    gwbuf_add_buffer_object(GWBUF* buf,
                                                 void*  data,
                                                 void (*donefun_fp)(void *));
 void*                   gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id);
+#if defined(BUFFER_TRACE)
+extern void             dprintAllBuffers(void *pdcb);
+#endif
 EXTERN_C_BLOCK_END
 
 
