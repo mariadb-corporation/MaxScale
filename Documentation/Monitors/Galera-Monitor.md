@@ -81,22 +81,6 @@ This disables the assignment of master and slave roles to the Galera cluster nod
 ```
 disable_master_role_setting=true
 ```
- 
-### `script`
-
-This script will be executed when a server changes its state. The parameter should be an absolute path to the script or it should be in the executable path. The user which is used to run MaxScale should have execution rights to the file itself and the directory it resides in.
-
-```
-script=/home/user/script.sh
-```
-
-### `events`
-
-A list of event names which cause the script to be executed. If this option is not defined, all events cause the script to be executed. The list must contain a comma separated list of event names.
-
-```
-events=master_down,slave_down
-```
 
 ### `use_priority`
 
@@ -105,6 +89,10 @@ Enable interaction with server priorities. This will allow the monitor to determ
 ```
 use_priority=true
 ```
+
+### Common Monitor Parameters
+
+For a list of optional parameters that all monitors support, read the [Monitor Common](Monitor-Common.md) document.
 
 ## Interaction with Server Priorities
 
@@ -135,24 +123,3 @@ priority=2
 In this example `node-1` is always used as the master if available. If `node-1` is not available, then the next node with the highest priority rank is used. In this case it would be `node-3`. If both `node-1` and `node-3` were down, then `node-2` would be used. Nodes without priority are considered as having the lowest priority rank and will be used only if all nodes with priority ranks are not available.
 
 With priority ranks you can control the order in which MaxScale chooses the master node. This will allow for a controlled failure and replacement of nodes.
-
-## Script events
-
-Here is a table of all possible event types and their descriptions.
-
-Event Name|Description
-----------|----------
-master_down|A Master server has gone down
-master_up|A Master server has come up
-slave_down|A Slave server has gone down
-slave_up|A Slave server has come up
-server_down|A server with no assigned role has gone down
-server_up|A server with no assigned role has come up
-synced_down|A synced Galera node has come up
-synced_up|A synced Galera node has gone down
-lost_master|A server lost Master status
-lost_slave|A server lost Slave status
-lost_synced|A Galera node lost synced status
-new_master|A new Master was detected
-new_slave|A new Slave was detected
-new_synced|A new synced Galera node was detected

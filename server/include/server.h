@@ -49,6 +49,8 @@
  * @endverbatim
  */
 
+#define MAX_SERVER_NAME_LEN 1024
+
 /**
  * The server parameters used for weighting routing decissions
  *

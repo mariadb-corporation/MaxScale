@@ -139,26 +139,74 @@ int externcmd_execute(EXTERNCMD* cmd)
 {
     int rval = 0;
     pid_t pid;
-    
+
     pid = fork();
 
-    if(pid < 0)
+    if (pid < 0)
     {
         char errbuf[STRERROR_BUFLEN];
         skygw_log_write(LOGFILE_ERROR, "Failed to execute command '%s', fork failed: [%d] %s",
                         cmd->argv[0], errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         rval = -1;
     }
-    else if(pid == 0)
+    else if (pid == 0)
     {
         /** Child process, execute command */
-        execvp(cmd->argv[0],cmd->argv);
+        execvp(cmd->argv[0], cmd->argv);
         _exit(1);
     }
     else
     {
         cmd->child = pid;
         cmd->n_exec++;
+        LOGIF(LD, skygw_log_write(LD, "[monitor_exec_cmd] Forked child process %d : %s.", pid, cmd));
+    }
+
+    return rval;
+}
+
+/**
+ * Substitute all occurrences of @c match with @c replace in the arguments for @c cmd.
+ * @param cmd External command
+ * @param match Match string
+ * @param replace Replacement string
+ * @return true if replacement was successful, false on error
+ */
+bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* replace)
+{
+    int err;
+    bool rval = true;
+    size_t errpos;
+    pcre2_code *re = pcre2_compile((PCRE2_SPTR) match, PCRE2_ZERO_TERMINATED, 0, &err, &errpos, NULL);
+    if (re)
+    {
+        for (int i = 0; cmd->argv[i] && rval; i++)
+        {
+            size_t size = strlen(cmd->argv[i]);
+            char* dest = malloc(size);
+            if (dest)
+            {
+                mxs_pcre2_result_t rc = mxs_pcre2_substitute(re, cmd->argv[i], replace, &dest, &size);
+                switch (rc)
+                {
+                    case MXS_PCRE2_ERROR:
+                        free(dest);
+                        rval = false;
+                        break;
+                    case MXS_PCRE2_MATCH:
+                        free(cmd->argv[i]);
+                        cmd->argv[i] = dest;
+                        break;
+                    case MXS_PCRE2_NOMATCH:
+                        free(dest);
+                        break;
+                }
+            }
+        }
+    }
+    else
+    {
+        rval = false;
         LOGIF(LD, skygw_log_write(LD, "[monitor_exec_cmd] Forked child process %d : %s.", pid, cmd));
     }
     return rval;

@@ -74,7 +74,7 @@ SERVER 	*server;
         server->server_chk_top = CHK_NUM_SERVER;
         server->server_chk_tail = CHK_NUM_SERVER;
 #endif
-	server->name = strdup(servname);
+	server->name = strndup(servname, MAX_SERVER_NAME_LEN);
 	server->protocol = strdup(protocol);
 	server->port = port;
 	server->status = SERVER_RUNNING;
