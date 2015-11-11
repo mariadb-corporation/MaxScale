@@ -67,41 +67,7 @@ This is a situation which can happen if all slave servers are unreachable or the
 ```
 detect_stale_master=true
 ```
- 
-### `script`
 
-This script will be executed when a server changes its state. The parameter should be an absolute path to the script or it should be in the executable path. The user which is used to run MaxScale should have execution rights to the file itself and the directory it resides in.
+### Common Monitor Parameters
 
-```
-script=/home/user/script.sh
-```
-
-This script will be called with the following command line arguments.
-
-```
-<name of the script> --event=<event type> --initiator=<server whose state changed> --nodelist=<list of all servers>
-```
-### `events`
-
-A list of event names which cause the script to be executed. If this option is not defined, all events cause the script to be executed. The list must contain a comma separated list of event names.
-
-```
-events=master_down,slave_down
-```
-
-## Script events
-
-Here is a table of all possible event types and their descriptions.
-
-Event Name|Description
-----------|----------
-master_down|A Master server has gone down
-master_up|A Master server has come up
-slave_down|A Slave server has gone down
-slave_up|A Slave server has come up
-server_down|A server with no assigned role has gone down
-server_up|A server with no assigned role has come up
-lost_master|A server lost Master status
-lost_slave|A server lost Slave status
-new_master|A new Master was detected
-new_slave|A new Slave was detected
+For a list of optional parameters that all monitors support, read the [Monitor Common](Monitor-Common.md) document.
