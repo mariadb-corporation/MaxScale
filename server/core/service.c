@@ -348,6 +348,7 @@ GWPROTOCOL	*funcs;
 	{
 		users_free(service->users);
 		dcb_close(port->listener);
+        service->users = NULL;
 		port->listener = NULL;
 		LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
@@ -382,8 +383,9 @@ GWPROTOCOL	*funcs;
 				service->name)));
 			
 			users_free(service->users);
-                        dcb_close(port->listener);
+            dcb_close(port->listener);
 			port->listener = NULL;
+            service->users = NULL;
 			goto retblock;
                 }
         } 
@@ -396,6 +398,7 @@ GWPROTOCOL	*funcs;
                         port->protocol,
                         service->name)));
 		users_free(service->users);
+        service->users = NULL;
 		dcb_close(port->listener);
 		port->listener = NULL;
         }

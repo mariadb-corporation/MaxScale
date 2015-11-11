@@ -786,7 +786,7 @@ maxinfo_add_mysql_user(SERVICE *service) {
 			"maxinfo: create hex_sha1_sha1_password failed for service user %s",
 			service_user)));
 		users_free(service->users);
-
+        service->users = NULL;
 		return 1;
 	}
 
