@@ -688,8 +688,19 @@ extern  char *strcasestr();
 		}
 		else if (strcasecmp(word, "@slave_uuid") == 0)
 		{
-			if ((word = strtok_r(NULL, sep, &brkb)) != NULL)
-				slave->uuid = strdup(word);
+			if ((word = strtok_r(NULL, sep, &brkb)) != NULL) {
+				int len = strlen(word);
+				char *word_ptr = word;
+				if (len) {
+					if (word[len-1] == '\'')
+						word[len-1] = '\0';
+					if (word[0] == '\'') {
+						word[0] = '\0';
+						word_ptr++;
+					}
+				}
+				slave->uuid = strdup(word_ptr);
+			}
 			free(query_text);
 			return blr_slave_replay(router, slave, router->saved_master.setslaveuuid);
 		}
@@ -1815,7 +1826,7 @@ uint32_t	chksum;
 		LOGFILE_MESSAGE,
 			"%s: Slave %s:%d, server id %d requested binlog file %s from position %lu",
 			router->service->name, slave->dcb->remote,
-			slave->port,
+			ntohs((slave->dcb->ipv4).sin_port),
 			slave->serverid,
 			slave->binlogfile, (unsigned long)slave->binlog_pos)));
 
@@ -1956,7 +1967,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			LOGIF(LE, (skygw_log_write(
 				LOGFILE_ERROR,
 				"Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup failed to open binlog file",
-				slave->dcb->remote, slave->port, slave->serverid,
+				slave->dcb->remote, ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
 				slave->binlogfile)));
 
 			slave->cstate &= ~CS_BUSY;
@@ -2013,7 +2024,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 					LOGFILE_ERROR,
 					"Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup failed to open binlog file in rotate event",
 					slave->dcb->remote,
-					slave->port,
+					ntohs((slave->dcb->ipv4).sin_port),
 					slave->serverid,
 					slave->binlogfile)));
 
@@ -2053,7 +2064,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
 				slave->dcb->remote,
-				slave->port,
+				ntohs((slave->dcb->ipv4).sin_port),
 				slave->serverid,
 				slave->binlogfile,
 				read_errmsg)));
@@ -2088,7 +2099,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 				"%s: Slave %s:%i, server-id %d, binlog '%s', %s",
 				router->service->name,
 				slave->dcb->remote,
-				slave->port,
+				ntohs((slave->dcb->ipv4).sin_port),
 				slave->serverid,
 				slave->binlogfile,
 				read_errmsg)));
@@ -2155,7 +2166,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 					"%s: Slave %s:%d, server-id %d is now up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
-					slave->port,
+					ntohs((slave->dcb->ipv4).sin_port),
 					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos)));
 			}
@@ -2165,7 +2176,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 					"%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
-					slave->port,
+					ntohs((slave->dcb->ipv4).sin_port),
 					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos)));
 			}
@@ -2257,6 +2268,7 @@ ROUTER_INSTANCE		*router = slave->router;
 				slave->cstate |= CS_EXPECTCB;
 				spinlock_release(&slave->catch_lock);
 				poll_fake_write_event(slave->dcb);
+
 				return 0;
 			}
 
@@ -2410,7 +2422,7 @@ char err_msg[BINLOG_ERROR_MSG_LEN+1];
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
 				slave->dcb->remote,
-				slave->port,
+				ntohs((slave->dcb->ipv4).sin_port),
 				slave->serverid,
 				slave->binlogfile,
 				err_msg)));
