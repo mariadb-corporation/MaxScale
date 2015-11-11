@@ -82,11 +82,12 @@ int tokenize_arguments(char* argstr, char** argv)
  */
 EXTERNCMD* externcmd_allocate(char* argstr)
 {
-    EXTERNCMD* cmd = NULL;
+    EXTERNCMD* cmd = (EXTERNCMD*) malloc(sizeof(EXTERNCMD));
+    char** argv = (char**) malloc(sizeof(char*) * MAXSCALE_EXTCMD_ARG_MAX);
 
-    if (argstr && (cmd = (EXTERNCMD*) malloc(sizeof(EXTERNCMD))) &&
-        (cmd->argv = malloc(sizeof(char*) * MAXSCALE_EXTCMD_ARG_MAX)))
+    if (argstr && cmd && argv)
     {
+        cmd->argv = argv;
         if (tokenize_arguments(argstr, cmd->argv) == 0)
         {
             if (access(cmd->argv[0], X_OK) != 0)
@@ -109,6 +110,12 @@ EXTERNCMD* externcmd_allocate(char* argstr)
             externcmd_free(cmd);
             cmd = NULL;
         }
+    }
+    else
+    {
+        free(cmd);
+        free(argv);
+        cmd = NULL;
     }
     return cmd;
 }
