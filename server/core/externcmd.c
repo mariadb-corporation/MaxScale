@@ -214,7 +214,6 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
     else
     {
         rval = false;
-        LOGIF(LD, skygw_log_write(LD, "[monitor_exec_cmd] Forked child process %d : %s.", pid, cmd));
     }
     return rval;
 }
