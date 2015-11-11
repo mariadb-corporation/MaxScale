@@ -70,6 +70,7 @@
  * 11/06/2015   Martin Brampton         Remove decrement n_current (moved to dcb.c)
  * 09/09/2015   Martin Brampton         Modify error handler
  * 25/09/2015   Martin Brampton         Block callback processing when no router session in the DCB
+ * 09/11/2015   Martin Brampton         Modified routeQuery - must free "queue" regardless of outcome
  *
  * @endverbatim
  */
@@ -731,6 +732,7 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
                         "server.%s",
                         mysql_command,rses_is_closed ? " Session is closed." : "")));
 		rc = 0;
+        while((queue = GWBUF_CONSUME_ALL(queue)) != NULL);
                 goto return_rc;
 
         }
