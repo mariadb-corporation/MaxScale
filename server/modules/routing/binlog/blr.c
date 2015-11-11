@@ -914,7 +914,7 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 				LOGFILE_MESSAGE,
 				"%s: Slave %s:%d, server id %d, disconnected after %ld seconds. "
 				"%d SQL commands, %d events sent (%lu bytes), binlog '%s', last position %lu",
-				router->service->name, slave->dcb->remote, slave->port,
+				router->service->name, slave->dcb->remote, ntohs((slave->dcb->ipv4).sin_port),
 				slave->serverid,
 				time(0) - slave->connect_time,
 				slave->stats.n_queries,
