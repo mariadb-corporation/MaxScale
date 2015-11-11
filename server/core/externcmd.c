@@ -6,15 +6,17 @@
  * @param argv Array of char pointers to be filled with tokenized arguments
  * @return 0 on success, -1 on error
  */
-int tokenize_arguments(char* args, char** argv)
+int tokenize_arguments(char* argstr, char** argv)
 {
     int i = 0;
     bool quoted = false;
     bool read = false;
     bool escaped = false;
     char *ptr,*start;
+    char args[strlen(argstr)];
     char qc;
 
+    strcpy(args, argstr);
     start = args;
     ptr = start;
 
