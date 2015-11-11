@@ -754,86 +754,31 @@ int gw_read_client_event(
 		router_instance = session->service->router_instance;
 		rsession = session->router_session;
 
-		if (router_instance != NULL && rsession != NULL)
-                {
-
-	                /** Ask what type of input the router expects */
-			cap = router->getCapabilities(router_instance, rsession);
-                       
-			if (cap == 0 || (cap == RCAP_TYPE_PACKET_INPUT))
-			{
-				stmt_input = false;
-			}
-			else if (cap == RCAP_TYPE_STMT_INPUT)
-			{
-				stmt_input = true;
-				/** Mark buffer to as MySQL type */
-				gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
-			}
-
-			/** 
-			 * If router doesn't implement getCapabilities correctly we end 
-			 * up here.
-			 */
-			else
-			{
-				GWBUF* errbuf;
-				bool   succp;
-			
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [gw_read_client_event] Reading router "
-					"capabilities failed.",
-					pthread_self())));
-
-				errbuf = mysql_create_custom_error(
-					1, 
-					0, 
-					"Read invalid router capabilities. Routing failed. "
-					"Session will be closed.");
-			
-				router->handleError(
-					router_instance,
-					rsession, 
-					errbuf, 
-					dcb,
-					ERRACT_REPLY_CLIENT,
-					&succp);
-				gwbuf_free(errbuf);
-				/** 
-				 * If there are not enough backends close 
-				 * session 
-				 */
-				if (!succp)
-				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Error : Routing the query failed. "
-						"Session will be closed.")));
-				}
-                        	rc = 1;
-                                while (read_buffer)
-                                {
-                                    read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
-                                }
-                        	goto return_rc;
-                	}
-		}
-                else
-                {
-                    /** Send ERR 1045 to client */
-			mysql_send_auth_error(
+        if (NULL == router_instance || NULL == rsession)
+        {
+            /** Send ERR 1045 to client */
+            mysql_send_auth_error(
 				dcb,
 				2,
 				0,
 				"failed to create new session");
-                    while (read_buffer)
-                    {
-                        read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
-                    }
-                    return 0;
-                }
+            while (read_buffer)
+            {
+                read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
+            }
+            return 0;
         }
+
+        /** Ask what type of input the router expects */
+        cap = router->getCapabilities(router_instance, rsession);
+        
+        if (cap & RCAP_TYPE_STMT_INPUT)
+        {
+            stmt_input = true;
+            /** Mark buffer to as MySQL type */
+            gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
+        }
+    }
 
 	if (stmt_input) {
                 
@@ -1162,11 +1107,15 @@ int gw_read_client_event(
                 read_buffer = NULL;
 			    }
                         }
-                        else
+                        else if (NULL != session->router_session || cap & RCAP_TYPE_NO_RSESSION)
                         {
 			    /** Feed whole packet to router */
 			    rc = SESSION_ROUTE_QUERY(session, read_buffer);
                 read_buffer = NULL;
+                        }
+                        else
+                        {
+                            rc = 0;
                         }
 
                         /** Routing succeed */
