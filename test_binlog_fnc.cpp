@@ -19,11 +19,11 @@ int check_sha1(TestConnections* Test)
     char *s;
 
     Test->tprintf("ls before FLUSH LOGS\n");
-    Test->tprintf("Maxscale");
+    Test->tprintf("Maxscale\n");
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la %s/mar-bin.0000*'",
             Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_binlog_dir);
     system(sys);
-    Test->tprintf("Master");fflush(stdout);
+    Test->tprintf("Master\n");fflush(stdout);
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.0000*'",
             Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
     system(sys);
@@ -49,11 +49,11 @@ int check_sha1(TestConnections* Test)
 
     sleep(19);
     Test->tprintf("ls before FLUSH LOGS\n");
-    Test->tprintf("Maxscale");
+    Test->tprintf("Maxscale\n");
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la %s/mar-bin.0000*'",
             Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_binlog_dir);
     system(sys);
-    Test->tprintf("Master");
+    Test->tprintf("Master\n");
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'",
             Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
     system(sys);fflush(stdout);
@@ -115,7 +115,7 @@ void test_binlog(TestConnections* Test)
     sleep(30);
 
     for (i = 0; i < Test->repl->N; i++) {
-        Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
+        Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
         Test->set_timeout(100);
         Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "Selecting from t1 failed\n");
         Test->stop_timeout();
@@ -177,23 +177,23 @@ void test_binlog(TestConnections* Test)
         Test->set_timeout(100);
         Test->repl->connect();
 
-        Test->tprintf("Dropping and re-creating t1");
+        Test->tprintf("Dropping and re-creating t1\n");
         Test->try_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1");
         create_t1(Test->repl->nodes[0]);
 
         Test->tprintf("Connecting to MaxScale binlog router\n");
         binlog = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password, Test->ssl);
 
-        Test->tprintf("STOP SLAVE against Maxscale binlog");
+        Test->tprintf("STOP SLAVE against Maxscale binlog\n");
         execute_query(binlog, (char *) "STOP SLAVE");
 
         if (j == 1) {
-            Test->tprintf("FLUSH LOGS on master");
+            Test->tprintf("FLUSH LOGS on master\n");
             execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
         }
         Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "INSERT into t1 failed\n");
 
-        Test->tprintf("START SLAVE against Maxscale binlog");
+        Test->tprintf("START SLAVE against Maxscale binlog\n");
         Test->try_query(binlog, (char *) "START SLAVE");
 
         Test->tprintf("Sleeping to let replication happen\n");
@@ -202,7 +202,7 @@ void test_binlog(TestConnections* Test)
 
         for (i = 0; i < Test->repl->N; i++) {
             Test->set_timeout(50);
-            Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]); fflush(stdout);
+            Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
             Test->add_result(select_from_t1(Test->repl->nodes[i], 4), "SELECT from t1 failed\n");
         }
 
