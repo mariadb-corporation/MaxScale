@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
 
 	mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
 
-	skygw_log_set_augmentation(0);
+	mxs_log_set_augmentation(0);
 
 	if (!debug_out)
 		skygw_log_disable(LOGFILE_DEBUG);

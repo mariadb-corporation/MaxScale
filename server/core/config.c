@@ -1629,7 +1629,7 @@ handle_global_item(const char *name, const char *value)
     }
     else if (strcmp(name, "ms_timestamp") == 0)
     {
-        skygw_set_highp(config_truth_value((char*)value));
+        mxs_log_set_highprecision_enabled(config_truth_value((char*)value));
     }
     else if (strcmp(name, "auth_connect_timeout") == 0)
     {

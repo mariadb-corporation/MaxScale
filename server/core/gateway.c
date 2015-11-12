@@ -1713,8 +1713,9 @@ int main(int argc, char **argv)
         {
             printf("MaxScale logging is disabled.\n");
         }
-        logmanager_enable_syslog(*syslog_enabled);
-        logmanager_enable_maxscalelog(*maxscalelog_enabled);
+
+        mxs_log_set_syslog_enabled(*syslog_enabled);
+        mxs_log_set_maxscalelog_enabled(*maxscalelog_enabled);
 
         succp = mxs_log_init(NULL, get_logdir(), log_target);
 
@@ -2342,7 +2343,7 @@ void set_log_augmentation(const char* value)
 
     if (!augmentation_set)
     {
-        skygw_log_set_augmentation(atoi(value));
+        mxs_log_set_augmentation(atoi(value));
 
         augmentation_set = true;
     }

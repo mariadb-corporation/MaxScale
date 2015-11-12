@@ -145,8 +145,11 @@ int mxs_log_flush();
 int mxs_log_flush_sync();
 int mxs_log_rotate();
 
-int mxs_log_enable_priority(int priority);
-int mxs_log_disable_priority(int priority);
+int  mxs_log_set_priority_enabled(int priority, bool enabled);
+void mxs_log_set_syslog_enabled(bool enabled);
+void mxs_log_set_maxscalelog_enabled(bool enabled);
+void mxs_log_set_highprecision_enabled(bool enabled);
+void mxs_log_set_augmentation(int bits);
 
 int mxs_log_message(int priority,
                     const char* file, int line, const char* function,
@@ -154,9 +157,6 @@ int mxs_log_message(int priority,
 
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
-void skygw_set_highp(int);
-void logmanager_enable_syslog(int);
-void logmanager_enable_maxscalelog(int);
 
 inline int mxs_log_id_to_priority(logfile_id_t id)
 {
@@ -171,14 +171,6 @@ inline int mxs_log_id_to_priority(logfile_id_t id)
     mxs_log_message(mxs_log_id_to_priority(id), __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 #define skygw_log_write_flush(id, format, ...) skygw_log_write(id, format, ##__VA_ARGS__)
-
-/**
- * What augmentation if any should a logged message be augmented with.
- *
- * Currently this is a global setting and affects all loggers.
- */
-void skygw_log_set_augmentation(int bits);
-int skygw_log_get_augmentation();
 
 EXTERN_C_BLOCK_END
 

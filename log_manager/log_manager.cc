@@ -65,18 +65,26 @@ static int block_start_index;
 static int prevval;
 static simple_mutex_t msg_mutex;
 #endif
+
+/**
+ * Default augmentation.
+ */
+static int DEFAULT_LOG_AUGMENTATION = 0;
+
 static struct
 {
-    int highprec;       // Can change during the lifetime of log_manager.
-    int do_syslog;      // Can change during the lifetime of log_manager.
-    int do_maxscalelog; // Can change during the lifetime of log_manager.
-    int use_stdout;     // Can NOT changed during the lifetime of log_manager.
+    int  augmentation;     // Can change during the lifetime of log_manager.
+    bool do_highprecision; // Can change during the lifetime of log_manager.
+    bool do_syslog;        // Can change during the lifetime of log_manager.
+    bool do_maxscalelog;   // Can change during the lifetime of log_manager.
+    bool use_stdout;       // Can NOT changed during the lifetime of log_manager.
 } log_config =
 {
-    0, // highprec
-    1, // do_syslog
-    1, // do_maxscalelog
-    0  // use_stdout
+    DEFAULT_LOG_AUGMENTATION, // augmentation
+    false,                    // do_highprecision
+    true,                     // do_syslog
+    true,                     // do_maxscalelog
+    false                     // use_stdout
 };
 
 /**
@@ -129,12 +137,6 @@ static logmanager_t* lm;
 static bool flushall_flag;
 static bool flushall_started_flag;
 static bool flushall_done_flag;
-
-/**
- * Default augmentation.
- */
-static int default_log_augmentation = 0;
-static int log_augmentation = default_log_augmentation;
 
 /** This is used to detect if the initialization of the log manager has failed
  * and that it isn't initialized again after a failure has occurred. */
@@ -625,7 +627,7 @@ static int logmanager_write_log(int            priority,
     // The config parameters are copied to local variables, because the values in
     // log_config may change during the course of the function, with would have
     // unpleasant side-effects.
-    int highprec = log_config.highprec;
+    int do_highprecision = log_config.do_highprecision;
     int do_maxscalelog = log_config.do_maxscalelog;
     int do_syslog = log_config.do_syslog;
 
@@ -655,7 +657,7 @@ static int logmanager_write_log(int            priority,
     {
         sesid_str_len = 0;
     }
-    if (highprec)
+    if (do_highprecision)
     {
         timestamp_len = get_timestamp_len_hp();
     }
@@ -733,7 +735,7 @@ static int logmanager_write_log(int            priority,
      * to wp.
      * Returned timestamp_len doesn't include terminating null.
      */
-    if (highprec)
+    if (do_highprecision)
     {
         timestamp_len = snprint_timestamp_hp(wp, timestamp_len);
     }
@@ -1210,7 +1212,7 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
 
     if (logmanager_is_valid_id(id))
     {
-        if (log_config.use_stdout == 0)
+        if (!log_config.use_stdout)
         {
             const char *name;
 
@@ -1260,14 +1262,14 @@ static bool logfile_set_enabled(logfile_id_t id, bool val)
     return rval;
 }
 
-void skygw_log_set_augmentation(int bits)
+/**
+ * Set log augmentation.
+ *
+ * @param bits One of the log_augmentation_t constants.
+ */
+void mxs_log_set_augmentation(int bits)
 {
-    log_augmentation = bits & LOG_AUGMENTATION_MASK;
-}
-
-int skygw_log_get_augmentation()
-{
-    return log_augmentation;
+    log_config.augmentation = bits & LOG_AUGMENTATION_MASK;
 }
 
 /**
@@ -1430,12 +1432,12 @@ static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir)
     const char* dir;
     if (logdir)
     {
-        log_config.use_stdout = 0;
+        log_config.use_stdout = false;
         dir = logdir;
     }
     else
     {
-        log_config.use_stdout = 1;
+        log_config.use_stdout = true;
         // TODO: Re-arrange things so that fn->fn_logpath can be NULL.
         dir = "/tmp";
     }
@@ -2561,31 +2563,33 @@ void flushall_logfiles(bool flush)
 }
 
 /**
- * Toggle high precision logging
- * @param val 0 for disabled, 1 for enabled
+ * Enable/disable syslog logging.
+ *
+ * @param enabled True, if high precision logging should be enabled, false if it should be disabled.
  */
-void skygw_set_highp(int val)
+void mxs_log_set_highprecision_enabled(bool enabled)
 {
-    log_config.highprec = !!val;
-}
-
-
-/**
- * Toggle syslog logging
- * @param val 0 for disabled, 1 for enabled
- */
-void logmanager_enable_syslog(int val)
-{
-    log_config.do_syslog = !!val;
+    log_config.do_highprecision = enabled;
 }
 
 /**
- * Toggle syslog logging
- * @param val 0 for disabled, 1 for enabled
+ * Enable/disable syslog logging.
+ *
+ * @param enabled True, if syslog logging should be enabled, false if it should be disabled.
  */
-void logmanager_enable_maxscalelog(int val)
+void mxs_log_set_syslog_enabled(bool enabled)
 {
-    log_config.do_maxscalelog = !!val;
+    log_config.do_syslog = enabled;
+}
+
+/**
+ * Enable/disable maxscale log logging.
+ *
+ * @param enabled True, if syslog logging should be enabled, false if it should be disabled.
+ */
+void mxs_log_set_maxscalelog_enabled(bool enabled)
+{
+    log_config.do_maxscalelog = enabled;
 }
 
 
@@ -2736,12 +2740,14 @@ static bool convert_priority_to_file(int priority, logfile_id_t* idp, const char
 }
 
 /**
- * Enable a particular syslog priority.
+ * Enable/disable a particular syslog priority.
  *
  * @param priority One of the LOG_ERR etc. constants from sys/syslog.h.
+ * @param enabled  True if the priority should be enabled, false if it to be disabled.
+ *
  * @return 0 if the priority was valid, -1 otherwise.
  */
-int mxs_log_enable_priority(int priority)
+int mxs_log_set_priority_enabled(int priority, bool enabled)
 {
     int rv = -1;
     logfile_id_t id;
@@ -2751,48 +2757,18 @@ int mxs_log_enable_priority(int priority)
     {
         if (!text)
         {
-            rv = skygw_log_enable(id);
+            if (enabled)
+            {
+                rv = skygw_log_enable(id);
+            }
+            else
+            {
+                rv = skygw_log_disable(id);
+            }
         }
         else
         {
-            // TODO: Change to warning when available.
-            MXS_DEBUG("Attempt to enable syslog priority %s, which is not available yet.", text);
-            rv = 0;
-        }
-    }
-    else
-    {
-        MXS_ERROR("Attempt to enable unknown syslog priority: %d", priority);
-    }
-
-    return rv;
-}
-
-/**
- * Disable a particular syslog priority.
- *
- * @param priority One of the LOG_ERR etc. constants from sys/syslog.h.
- *
- * Note that there is no hierarchy. That is, disabling a priority of
- * high importance, such as LOG_ERR, does not automatically disable
- * all lower prioritys.
- */
-int mxs_log_disable_priority(int priority)
-{
-    int rv = -1;
-    logfile_id_t id;
-    const char* text;
-
-    if (convert_priority_to_file(priority, &id, &text))
-    {
-        if (!text)
-        {
-            rv = skygw_log_disable(id);
-        }
-        else
-        {
-            // TODO: Change to warning when available.
-            MXS_DEBUG("Attempt to enable syslog priority %s, which is not available.", text);
+            MXS_WARNING("Attempt to enable syslog priority %s, which is not available yet.", text);
             rv = 0;
         }
     }
@@ -2969,9 +2945,10 @@ int mxs_log_message(int priority,
 
                 static const char FORMAT_FUNCTION[] = "(%s): ";
 
+                int augmentation = log_config.augmentation; // Other thread might change log_config.augmentation.
                 int augmentation_len = 0;
 
-                switch (log_augmentation)
+                switch (augmentation)
                 {
                 case LOG_AUGMENT_WITH_FUNCTION:
                     augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
@@ -3005,7 +2982,7 @@ int mxs_log_message(int priority,
                 {
                     int len = 0;
 
-                    switch (log_augmentation)
+                    switch (augmentation)
                     {
                     case LOG_AUGMENT_WITH_FUNCTION:
                         len = sprintf(augmentation_text, FORMAT_FUNCTION, function);

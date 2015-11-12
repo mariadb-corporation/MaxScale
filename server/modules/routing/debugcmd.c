@@ -1577,7 +1577,7 @@ static void enable_log_priority(DCB *dcb, char *arg1)
 
     if (priority != -1)
     {
-        mxs_log_enable_priority(priority);
+        mxs_log_set_priority_enabled(priority, true);
     }
     else
     {
@@ -1595,7 +1595,7 @@ static void disable_log_priority(DCB *dcb, char *arg1)
 
     if (priority != -1)
     {
-        mxs_log_enable_priority(priority);
+        mxs_log_set_priority_enabled(priority, false);
     }
     else
     {
