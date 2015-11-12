@@ -113,14 +113,14 @@ int main(int argc, char* argv[])
         err = 1;
         goto return_err;
     }
-    i = atexit(skygw_logmanager_exit);
+    i = atexit(mxs_log_finish);
 
     if (i != 0)
     {
         fprintf(stderr, "Couldn't register exit function.\n");
     }
 
-    succp = skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
 
     if (!succp)
     {
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
                                 tm.tm_min,
                                 tm.tm_sec);
 
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("First write with flush.");
     err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
 
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
 #endif
     logstr = "My name is Stacey %s";
     err = skygw_log_write_flush(LOGFILE_TRACE, logstr, "           ");
-    skygw_logmanager_done();
+    mxs_log_finish();
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
@@ -187,7 +187,7 @@ int main(int argc, char* argv[])
     logstr = "Ph%dlip.";
     err = skygw_log_write(LOGFILE_TRACE, logstr, 1);
 
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("A terrible error has occurred!");
     err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
 
@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
               "with us. Just me and my mom - and you, of course. Then, if you wish, we could "
               "listen to the radio and keep company for our little Steven, my mom's cat, you know.");
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
-    skygw_logmanager_done();
+    mxs_log_finish();
 
 #if defined(TEST1)
     mes = skygw_message_init();
@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
         pthread_join(thr[i]->tid, NULL);
     }
     /** This is to release memory */
-    skygw_logmanager_done();
+    mxs_log_finish();
 
     simple_mutex_unlock(mtx);
 
@@ -309,7 +309,7 @@ int main(int argc, char* argv[])
         pthread_join(thr[i]->tid, NULL);
     }
     /** This is to release memory */
-    skygw_logmanager_done();
+    mxs_log_finish();
 
     simple_mutex_unlock(mtx);
 
@@ -333,7 +333,7 @@ int main(int argc, char* argv[])
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
-    succp = skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     ss_dassert(succp);
 
     logstr = ("\tTEST 3 - test enabling and disabling logs.");
@@ -393,12 +393,12 @@ int main(int argc, char* argv[])
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     ss_dassert(err == 0);
 
-    skygw_logmanager_done();
+    mxs_log_finish();
 
 #endif /* TEST 3 */
 
 #if defined(TEST4)
-    succp = skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     ss_dassert(succp);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
@@ -432,9 +432,9 @@ int main(int argc, char* argv[])
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
     ss_dassert(err == 0);
 
-    skygw_logmanager_done();
+    mxs_log_finish();
 
-    succp = skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     ss_dassert(succp);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
@@ -488,7 +488,7 @@ int main(int argc, char* argv[])
 
     ss_dassert(err == 0);
 
-    skygw_logmanager_done();
+    mxs_log_finish();
 
 #endif /* TEST 4 */
     fprintf(stderr, ".. done.\n");
@@ -507,7 +507,7 @@ static void* thr_run(void* data)
     char*     logstr;
     int       err;
 
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     skygw_log_flush(LOGFILE_MESSAGE);
     logstr = ("Hi, how are you?");
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
@@ -517,7 +517,7 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_done();
+    mxs_log_finish();
     skygw_log_flush(LOGFILE_TRACE);
     skygw_log_flush(LOGFILE_MESSAGE);
     logstr = ("I was wondering, you know, it has been such a lovely weather whole morning and "
@@ -531,7 +531,7 @@ static void* thr_run(void* data)
     }
     ss_dassert(err == 0);
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("Testing. One, two, three\n");
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     if (err != 0)
@@ -539,8 +539,8 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     skygw_log_flush(LOGFILE_ERROR);
     logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 
@@ -553,8 +553,8 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_done();
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_finish();
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("Rather more surprising, at least at first sight, is the fact that a reference "
               "to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) "
               "immediately; the two forms are equivalent. Applying the operatos & to both parts "
@@ -566,11 +566,11 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
-    skygw_logmanager_done();
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_finish();
     skygw_log_flush(LOGFILE_ERROR);
-    skygw_logmanager_done();
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_finish();
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("..and you?");
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
     if (err != 0)
@@ -578,8 +578,8 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_done();
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_finish();
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
@@ -590,7 +590,7 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to "
               "a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) "
               "immediately; the two forms are equivalent. Applying the operatos & to both parts "
@@ -602,7 +602,7 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("..... and you too?");
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
     if (err != 0)
@@ -610,8 +610,8 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_done();
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_finish();
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
@@ -626,8 +626,8 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_done();
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_finish();
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("Testing. One, two, three, four\n");
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     if (err != 0)
@@ -635,8 +635,8 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_done();
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_finish();
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("Testing. One, two, three, .. where was I?\n");
     err = skygw_log_write(LOGFILE_ERROR, logstr);
     if (err != 0)
@@ -644,9 +644,9 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    skygw_logmanager_done();
-    skygw_logmanager_init(NULL, "/tmp", LOG_TARGET_FS);
-    skygw_logmanager_done();
+    mxs_log_finish();
+    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_finish();
     simple_mutex_lock(td->mtx, true);
     *td->nactive -= 1;
     simple_mutex_unlock(td->mtx);

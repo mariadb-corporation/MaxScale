@@ -439,7 +439,7 @@ return_succ:
  * @return true if succeed, otherwise false
  *
  */
-bool skygw_logmanager_init(const char* ident, const char* logdir, log_target_t target)
+bool mxs_log_init(const char* ident, const char* logdir, log_target_t target)
 {
     bool succ = false;
 
@@ -504,22 +504,13 @@ static void logmanager_done_nomutex(void)
     lm = NULL;
 }
 
-
-/**
- * This function is provided for atexit() system function.
- */
-void skygw_logmanager_exit(void)
-{
-    skygw_logmanager_done();
-}
-
 /**
  * End execution of log manager
  *
  * Stops file writing thread, releases filewriter, and logfiles.
  *
  */
-void skygw_logmanager_done(void)
+void mxs_log_finish(void)
 {
     acquire_lock(&lmlock);
 

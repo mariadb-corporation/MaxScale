@@ -1081,10 +1081,7 @@ int main(int argc, char **argv)
     sigset_t sigset;
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
-    void   (*exitfunp[4])(void) = {skygw_logmanager_exit,
-                                   datadir_cleanup,
-                                   write_footer,
-                                   NULL};
+    void   (*exitfunp[4])(void) = { mxs_log_finish, datadir_cleanup, write_footer, NULL };
 
     *syslog_enabled = 1;
     *maxscalelog_enabled = 1;
@@ -1719,7 +1716,7 @@ int main(int argc, char **argv)
         logmanager_enable_syslog(*syslog_enabled);
         logmanager_enable_maxscalelog(*maxscalelog_enabled);
 
-        succp = skygw_logmanager_init(NULL, get_logdir(), log_target);
+        succp = mxs_log_init(NULL, get_logdir(), log_target);
 
         if (!succp)
         {

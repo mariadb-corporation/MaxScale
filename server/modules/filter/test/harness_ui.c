@@ -11,8 +11,7 @@ int main(int argc, char** argv){
 	if(harness_init(argc,argv,&hinstance)){
 		printf("Error: Initialization failed.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: Initialization failed.\n");
-		skygw_logmanager_done();
-		skygw_logmanager_exit();
+		mxs_log_finish();
 		return 1;
 	}
 
@@ -230,8 +229,7 @@ int main(int argc, char** argv){
 
   free_buffers();
   free_filters();
-  skygw_logmanager_done();
-  skygw_logmanager_exit();
+  mxs_log_finish();
   free(instance.head);
 
   return 0;

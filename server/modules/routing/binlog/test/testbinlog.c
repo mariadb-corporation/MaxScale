@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
 
 	roptions = strdup("server-id=3,heartbeat=200,binlogdir=/not_exists/my_dir,transaction_safety=1,master_version=5.6.99-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-fff,master-id=999");
 
-	skygw_logmanager_init(NULL, NULL, LOG_TARGET_DEFAULT);
+	mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
 
 	skygw_log_disable(LOGFILE_DEBUG);
 	skygw_log_disable(LOGFILE_TRACE);
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
 			"Error: Memory allocation FAILED for ROUTER_INSTANCE")));
 
 		skygw_log_sync_all();
-		skygw_logmanager_done();
+		mxs_log_finish();
 
 		return 1;
 	}
@@ -579,7 +579,7 @@ int main(int argc, char **argv) {
 	}
 
 	skygw_log_sync_all();
-	skygw_logmanager_done();
+	mxs_log_finish();
 
 	free(inst);
 

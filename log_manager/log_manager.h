@@ -138,6 +138,9 @@ extern int lm_enabled_logfiles_bitmask;
 extern ssize_t log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
+bool mxs_log_init(const char* ident, const char* logdir, log_target_t target);
+void mxs_log_finish(void);
+
 int mxs_log_flush();
 int mxs_log_rotate();
 int mxs_log_enable_priority(int priority);
@@ -147,16 +150,9 @@ int mxs_log_message(int priority,
                     const char* file, int line, const char* function,
                     const char* format, ...);
 
-bool skygw_logmanager_init(const char* ident,
-                           const char* logdir,
-                           log_target_t target);
-void skygw_logmanager_done(void);
-void skygw_logmanager_exit(void);
-
 /**
  * free private write buffer list
  */
-void skygw_log_done(void);
 int  skygw_log_flush(logfile_id_t id);
 void skygw_log_sync_all(void);
 int  skygw_log_enable(logfile_id_t id);

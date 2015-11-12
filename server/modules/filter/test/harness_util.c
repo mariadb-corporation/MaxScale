@@ -35,8 +35,7 @@ int main(int argc,char** argv)
 	if(harness_init(argc,argv,&inst) || inst->error){
 		printf("Error: Initialization failed.\n");
 		skygw_log_write(LOGFILE_ERROR,"Error: Initialization failed.\n");
-		skygw_logmanager_done();
-		skygw_logmanager_exit();
+		mxs_log_finish();
 		return 1;
 	}
 

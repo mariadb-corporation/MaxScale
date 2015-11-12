@@ -2213,7 +2213,7 @@ int main(int argc, char** argv)
             NULL
         };
 
-    skygw_logmanager_init(argc_,argv_);
+    mxs_log_init(argc_,argv_);
 
 
     init_test_env(home);

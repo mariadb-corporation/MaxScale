@@ -12,7 +12,7 @@ void init_test_env(char *path)
 
     const char* logdir = path ? path : TEST_LOG_DIR;
 
-    skygw_logmanager_init(NULL, logdir, LOG_TARGET_DEFAULT);
+    mxs_log_init(NULL, logdir, LOG_TARGET_DEFAULT);
     poll_init();
     hkinit();
 }

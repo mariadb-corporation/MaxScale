@@ -67,7 +67,7 @@ int main(int argc, char** argv)
     iterations = atoi(argv[1]);
     interval = atoi(argv[2]);
 
-    succp = skygw_logmanager_init(NULL, tmp, LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, tmp, LOG_TARGET_FS);
 
     if (!succp)
     {
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
     }
 
     skygw_log_flush(LOGFILE_ERROR);
-    skygw_logmanager_done();
+    mxs_log_finish();
     free(message);
     return 0;
 }

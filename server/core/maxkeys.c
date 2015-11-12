@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         keyfile = argv[1];
     }
 
-    skygw_logmanager_init(NULL, NULL, LOG_TARGET_DEFAULT);
+    mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
 
     if (secrets_writeKeys(keyfile))
     {
@@ -57,7 +57,7 @@ int main(int argc, char **argv)
     }
 
     skygw_log_sync_all();
-    skygw_logmanager_done();
+    mxs_log_finish();
 
     return rval;
 }

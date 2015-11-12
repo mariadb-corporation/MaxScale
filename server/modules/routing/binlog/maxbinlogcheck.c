@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
 
 	num_args = optind;
 
-	skygw_logmanager_init(NULL, NULL, LOG_TARGET_DEFAULT);
+	mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
 
 	skygw_log_set_augmentation(0);
 
@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
 			"Error: Memory allocation failed for ROUTER_INSTANCE")));
 
 		skygw_log_sync_all();
-      		skygw_logmanager_done();
+      		mxs_log_finish();
 
 		return 1;
 	}
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
 			path, strerror(errno))));
         
 		skygw_log_sync_all();
-		skygw_logmanager_done();
+		mxs_log_finish();
 
 		free(inst);
 
@@ -200,7 +200,7 @@ int main(int argc, char **argv) {
 		"Check retcode: %i, Binlog Pos = %llu", ret, inst->binlog_position)));
 
 	skygw_log_sync_all();
-	skygw_logmanager_done();
+	mxs_log_finish();
 
 	free(inst);
 
