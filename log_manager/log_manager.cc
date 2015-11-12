@@ -1350,47 +1350,6 @@ int skygw_log_flush(logfile_id_t id)
 }
 
 /**
- * Replace current logfile with new file with increased sequence number on
- * its name.
- */
-int skygw_log_rotate(logfile_id_t id)
-{
-    int err = -1;
-
-    if (id == LOGFILE_ERROR)
-    {
-        if (logmanager_register(false))
-        {
-            CHK_LOGMANAGER(lm);
-
-            logfile_t *lf = logmanager_get_logfile(lm);
-            CHK_LOGFILE(lf);
-
-            MXS_NOTICE("Log rotation is called for %s.", lf->lf_full_file_name);
-
-            logfile_rotate(lf);
-            err = 0;
-
-            logmanager_unregister();
-        }
-        else
-        {
-            ss_dfprintf(stderr, "Can't register to logmanager, rotating failed.\n");
-        }
-    }
-    else
-    {
-        // We'll pretend everything went ok.
-        err = 0;
-    }
-
-    return err;
-}
-
-
-
-
-/**
  * @node Register as a logging client to logmanager.
  *
  * Parameters:
@@ -2717,7 +2676,28 @@ int mxs_log_flush()
  */
 int mxs_log_rotate()
 {
-    return skygw_log_rotate(LOGFILE_ERROR);
+    int err = -1;
+
+    if (logmanager_register(false))
+    {
+        CHK_LOGMANAGER(lm);
+
+        logfile_t *lf = logmanager_get_logfile(lm);
+        CHK_LOGFILE(lf);
+
+        MXS_NOTICE("Log rotation is called for %s.", lf->lf_full_file_name);
+
+        logfile_rotate(lf);
+        err = 0;
+
+        logmanager_unregister();
+    }
+    else
+    {
+        ss_dfprintf(stderr, "Can't register to logmanager, rotating failed.\n");
+    }
+
+    return err;
 }
 
 static bool convert_priority_to_file(int priority, logfile_id_t* idp, const char** textp)

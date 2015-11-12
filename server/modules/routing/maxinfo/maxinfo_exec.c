@@ -303,10 +303,7 @@ char	errmsg[120];
  */
 void exec_flush_logs(DCB *dcb, MAXINFO_TREE *tree)
 {
-    skygw_log_rotate(LE);
-    skygw_log_rotate(LM);
-    skygw_log_rotate(LT);
-    skygw_log_rotate(LD);
+    mxs_log_rotate();
     maxinfo_send_ok(dcb);
 }
 

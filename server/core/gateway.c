@@ -307,10 +307,7 @@ static void sigusr1_handler (int i)
     LOGIF(LM, (skygw_log_write(
                    LOGFILE_MESSAGE,
                    "Log file flush following reception of SIGUSR1\n")));
-    skygw_log_rotate(LOGFILE_ERROR);
-    skygw_log_rotate(LOGFILE_MESSAGE);
-    skygw_log_rotate(LOGFILE_TRACE);
-    skygw_log_rotate(LOGFILE_DEBUG);
+    mxs_log_rotate();
 }
 
 static void sigterm_handler (int i) {

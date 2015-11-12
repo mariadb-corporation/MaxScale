@@ -613,29 +613,48 @@ struct subcommand removeoptions[] = {
 static void
 flushlog(DCB *pdcb, char *logname)
 {
-    if (logname == NULL)
+    bool unrecognized = false;
+    bool deprecated = false;
+
+    if (!strcasecmp(logname, "error"))
     {
-    }
-    else if (!strcasecmp(logname, "error"))
-    {
-        skygw_log_rotate(LOGFILE_ERROR);
+        deprecated = true;
     }
     else if (!strcasecmp(logname, "message"))
     {
-        skygw_log_rotate(LOGFILE_MESSAGE);
+        deprecated = true;
     }
     else if (!strcasecmp(logname, "trace"))
     {
-        skygw_log_rotate(LOGFILE_TRACE);
+        deprecated = true;
     }
     else if (!strcasecmp(logname, "debug"))
     {
-        skygw_log_rotate(LOGFILE_DEBUG);
+        deprecated = true;
+    }
+    else if (!strcasecmp(logname, "maxscale"))
+    {
+        ; // nop
     }
     else
     {
-        dcb_printf(pdcb, "Unexpected logfile name, expected "
-                   "error, message, trace or debug.\n");
+        unrecognized = true;
+    }
+
+    if (unrecognized)
+    {
+        dcb_printf(pdcb, "Unexpected logfile name '%s', expected: 'maxscale'.\n", logname);
+    }
+    else
+    {
+        mxs_log_rotate();
+
+        if (deprecated)
+        {
+            dcb_printf(pdcb,
+                       "'%s' is deprecated, currently there is only one log 'maxscale', "
+                       "which was rotated.\n", logname);
+        }
     }
 }
 
@@ -647,10 +666,7 @@ flushlog(DCB *pdcb, char *logname)
 static void
 flushlogs(DCB *pdcb)
 {
-    skygw_log_rotate(LOGFILE_ERROR);
-    skygw_log_rotate(LOGFILE_MESSAGE);
-    skygw_log_rotate(LOGFILE_TRACE);
-    skygw_log_rotate(LOGFILE_DEBUG);
+    mxs_log_rotate();
 }
 
 
@@ -670,8 +686,8 @@ struct subcommand flushoptions[] = {
         "logs",
         0,
         flushlogs,
-        "Flush the content of all log files, close that logs, rename them and open a new log files",
-        "Flush the content of all log files, close that logs, rename them and open a new log files",
+        "Flush the content of all log files, close those logs, rename them and open a new log files",
+        "Flush the content of all log files, close those logs, rename them and open a new log files",
         {0, 0, 0}
     },
     {
