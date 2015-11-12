@@ -353,7 +353,8 @@ int TestConnections::start_binlog()
 
     tprintf("Stopping first slave (node 1)\n");
     try_query(repl->nodes[1], (char *) "stop slave;");
-    repl->no_set_pos = true;
+    //repl->no_set_pos = true;
+    repl->no_set_pos = false;
     tprintf("Configure first backend slave node to be slave of real master\n");
     repl->set_slave(repl->nodes[1], repl->IP[0],  repl->port[0], log_file, log_pos);
 
