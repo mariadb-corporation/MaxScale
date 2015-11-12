@@ -74,7 +74,7 @@ main(int argc, char **argv)
     }
 
     free(pw);
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
     mxs_log_finish();
     return rval;
 }

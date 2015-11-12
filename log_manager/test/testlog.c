@@ -152,14 +152,14 @@ int main(int argc, char* argv[])
     logstr = ("Fourth write, no flush. Next flush only.");
     err = skygw_log_write(LOGFILE_ERROR, logstr);
 
-    err = skygw_log_flush(LOGFILE_ERROR);
+    err = mxs_log_flush();
 
     logstr = "My name is %s %d years and %d months.";
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
     err = skygw_log_write(LOGFILE_TRACE, logstr, "TraceyTracey", 3, 7);
-    skygw_log_flush(LOGFILE_TRACE);
+    mxs_log_flush();
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
@@ -508,7 +508,7 @@ static void* thr_run(void* data)
     int       err;
 
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
-    skygw_log_flush(LOGFILE_MESSAGE);
+    mxs_log_flush();
     logstr = ("Hi, how are you?");
     err = skygw_log_write(LOGFILE_MESSAGE, logstr);
 
@@ -518,8 +518,7 @@ static void* thr_run(void* data)
     }
     ss_dassert(err == 0);
     mxs_log_finish();
-    skygw_log_flush(LOGFILE_TRACE);
-    skygw_log_flush(LOGFILE_MESSAGE);
+    mxs_log_flush();
     logstr = ("I was wondering, you know, it has been such a lovely weather whole morning and "
               "I thought that would you like to come to my place and have a little piece of "
               "cheese with us. Just me and my mom - and you, of course. Then, if you wish, "
@@ -541,7 +540,7 @@ static void* thr_run(void* data)
     ss_dassert(err == 0);
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
-    skygw_log_flush(LOGFILE_ERROR);
+    mxs_log_flush();
     logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 
 #if !defined(SS_DEBUG)
@@ -568,7 +567,7 @@ static void* thr_run(void* data)
     ss_dassert(err == 0);
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     mxs_log_finish();
-    skygw_log_flush(LOGFILE_ERROR);
+    mxs_log_flush();
     mxs_log_finish();
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("..and you?");
@@ -615,7 +614,7 @@ static void* thr_run(void* data)
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
-    skygw_log_flush(LOGFILE_TRACE);
+    mxs_log_flush();
     logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);

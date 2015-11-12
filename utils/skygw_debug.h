@@ -55,11 +55,11 @@
 # define ss_dassert(exp) if(!(exp)){(skygw_log_write(LE,\
                 "debug assert %s:%d\n", \
                 (char*)__FILE__, \
-                __LINE__));skygw_log_sync_all();assert(exp);}
+                __LINE__));mxs_log_flush_sync();assert(exp);}
 #define ss_info_dassert(exp,info) if(!(exp)){(skygw_log_write(LE,\
                 "debug assert %s:%d %s\n", \
                 (char*)__FILE__, \
-                __LINE__,info));skygw_log_sync_all();assert(exp);}
+                __LINE__,info));mxs_log_flush_sync();assert(exp);}
 # define ss_debug(exp) exp
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush

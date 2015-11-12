@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 			"Error: Memory allocation FAILED for ROUTER_INSTANCE")));
 
-		skygw_log_sync_all();
+		mxs_log_flush_sync();
 		mxs_log_finish();
 
 		return 1;
@@ -578,7 +578,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	skygw_log_sync_all();
+	mxs_log_flush_sync();
 	mxs_log_finish();
 
 	free(inst);

@@ -56,7 +56,7 @@ int main(int argc, char **argv)
         rval = 1;
     }
 
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
     mxs_log_finish();
 
     return rval;

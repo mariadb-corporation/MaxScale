@@ -44,7 +44,7 @@
  * test1	Allocate table of users and mess around with it
  *
   */
-void skygw_log_sync_all(void);
+int mxs_log_flush_sync(void);
 static int
 test1()
 {
@@ -56,13 +56,13 @@ HINT    *hint;
 		char* name = strdup("name");
         hint = hint_create_parameter(NULL, name, "value");
 		free(name);
-        skygw_log_sync_all();
+        mxs_log_flush_sync();
         ss_info_dassert(NULL != hint, "New hint list should not be null");
         ss_info_dassert(0 == strcmp("value", hint->value), "Hint value should be correct");
         ss_info_dassert(0 != hint_exists(&hint, HINT_PARAMETER), "Hint of parameter type should exist");
         ss_dfprintf(stderr, "\t..done\nFree hints.");
         if (NULL != hint) hint_free(hint);
-        skygw_log_sync_all();
+        mxs_log_flush_sync();
         ss_dfprintf(stderr, "\t..done\n");
 		
 	return 0;

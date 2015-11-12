@@ -142,7 +142,9 @@ bool mxs_log_init(const char* ident, const char* logdir, log_target_t target);
 void mxs_log_finish(void);
 
 int mxs_log_flush();
+int mxs_log_flush_sync();
 int mxs_log_rotate();
+
 int mxs_log_enable_priority(int priority);
 int mxs_log_disable_priority(int priority);
 
@@ -150,14 +152,8 @@ int mxs_log_message(int priority,
                     const char* file, int line, const char* function,
                     const char* format, ...);
 
-/**
- * free private write buffer list
- */
-int  skygw_log_flush(logfile_id_t id);
-void skygw_log_sync_all(void);
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
-void skygw_log_sync_all(void);
 void skygw_set_highp(int);
 void logmanager_enable_syslog(int);
 void logmanager_enable_maxscalelog(int);

@@ -316,7 +316,7 @@ static void sigterm_handler (int i) {
     skygw_log_write_flush(
         LOGFILE_ERROR,
         "MaxScale received signal SIGTERM. Exiting.");
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
     shutdown_server();
 }
 
@@ -328,7 +328,7 @@ sigint_handler (int i)
     skygw_log_write_flush(
         LOGFILE_ERROR,
         "MaxScale received signal SIGINT. Shutting down.");
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
     shutdown_server();
     fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
@@ -409,7 +409,7 @@ sigfatal_handler(int i)
         }
     }
 
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
 
     /* re-raise signal to enforce core dump */
     fprintf(stderr, "\n\nWriting core dump\n");
@@ -822,7 +822,7 @@ static bool file_is_readable(
             absolute_pathname,
             eno,
             strerror_r(eno, errbuf, sizeof(errbuf)));
-        skygw_log_sync_all();
+        mxs_log_flush_sync();
         succp = false;
     }
     return succp;
@@ -2054,10 +2054,7 @@ static void log_flush_cb(
     LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                                "Started MaxScale log flusher.")));
     while (!do_exit) {
-        skygw_log_flush(LOGFILE_ERROR);
-        skygw_log_flush(LOGFILE_MESSAGE);
-        skygw_log_flush(LOGFILE_TRACE);
-        skygw_log_flush(LOGFILE_DEBUG);
+        mxs_log_flush();
         nanosleep(&ts1, NULL);
     }
     LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,

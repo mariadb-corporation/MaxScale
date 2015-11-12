@@ -107,7 +107,7 @@ int main(int argc, char** argv)
         nanosleep(&ts1, NULL);
     }
 
-    skygw_log_flush(LOGFILE_ERROR);
+    mxs_log_flush();
     mxs_log_finish();
     free(message);
     return 0;

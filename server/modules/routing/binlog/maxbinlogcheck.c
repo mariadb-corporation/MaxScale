@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 			"Error: Memory allocation failed for ROUTER_INSTANCE")));
 
-		skygw_log_sync_all();
+		mxs_log_flush_sync();
       		mxs_log_finish();
 
 		return 1;
@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
 			"Failed to open binlog file %s: %s",
 			path, strerror(errno))));
         
-		skygw_log_sync_all();
+		mxs_log_flush_sync();
 		mxs_log_finish();
 
 		free(inst);
@@ -194,12 +194,12 @@ int main(int argc, char **argv) {
 
 	close(inst->binlog_fd);
 
-	skygw_log_sync_all();
+	mxs_log_flush_sync();
 
 	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
 		"Check retcode: %i, Binlog Pos = %llu", ret, inst->binlog_position)));
 
-	skygw_log_sync_all();
+	mxs_log_flush_sync();
 	mxs_log_finish();
 
 	free(inst);

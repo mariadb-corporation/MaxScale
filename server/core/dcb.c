@@ -980,7 +980,7 @@ int dcb_read_SSL(DCB *dcb,
 
             if (GWBUF_LENGTH(buffer) != n)
             {
-                skygw_log_sync_all();
+                mxs_log_flush_sync();
             }
 
             ss_info_dassert((buffer->start <= buffer->end), "Buffer start has passed end.");

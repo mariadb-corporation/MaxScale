@@ -1308,38 +1308,6 @@ static int log_write(int            priority,
     return rv;
 }
 
-int skygw_log_flush(logfile_id_t id)
-{
-    int err = -1;
-
-    if (id == LOGFILE_ERROR)
-    {
-        if (logmanager_register(false))
-        {
-            CHK_LOGMANAGER(lm);
-
-            logfile_t *lf = logmanager_get_logfile(lm);
-            CHK_LOGFILE(lf);
-
-            logfile_flush(lf);
-            err = 0;
-
-            logmanager_unregister();
-        }
-        else
-        {
-            ss_dfprintf(stderr, "Can't register to logmanager, flushing failed.\n");
-        }
-    }
-    else
-    {
-        // We'll pretend everything went ok.
-        err = 0;
-    }
-
-    return err;
-}
-
 /**
  * @node Register as a logging client to logmanager.
  *
@@ -2593,26 +2561,6 @@ void flushall_logfiles(bool flush)
 }
 
 /**
- * Flush all log files synchronously
- */
-void skygw_log_sync_all(void)
-{
-    if (!log_config.use_stdout)
-    {
-        skygw_log_write(LOGFILE_TRACE,"Starting log flushing to disk.");
-    }
-
-    /** If initialization of the log manager has not been done, lm pointer can be
-     * NULL. */
-    if (lm)
-    {
-        flushall_logfiles(true);
-        skygw_message_send(lm->lm_logmes);
-        skygw_message_wait(lm->lm_clientmes);
-    }
-}
-
-/**
  * Toggle high precision logging
  * @param val 0 for disabled, 1 for enabled
  */
@@ -2652,7 +2600,63 @@ void logmanager_enable_maxscalelog(int val)
  */
 int mxs_log_flush()
 {
-    return skygw_log_flush(LOGFILE_ERROR);
+    int err = -1;
+
+    if (logmanager_register(false))
+    {
+        CHK_LOGMANAGER(lm);
+
+        logfile_t *lf = logmanager_get_logfile(lm);
+        CHK_LOGFILE(lf);
+
+        logfile_flush(lf);
+        err = 0;
+
+        logmanager_unregister();
+    }
+    else
+    {
+        ss_dfprintf(stderr, "Can't register to logmanager, flushing failed.\n");
+    }
+
+    return err;
+}
+
+/**
+ * Explicitly ensure that all pending log messages are flushed.
+ *
+ * @return 0 if the flushing was successfully performed, otherwise -1.
+ *
+ * When the function returns 0, the flushing has been initiated and the
+ * flushing thread has indicated that the operation has been performed.
+ * However, 0 will be returned also in the case that the flushing thread
+ * for, whatever reason, failed to actually flush the log.
+ */
+int mxs_log_flush_sync(void)
+{
+    int err = 0;
+
+    if (!log_config.use_stdout)
+    {
+        MXS_INFO("Starting log flushing to disk.");
+    }
+
+    /** If initialization of the log manager has not been done, lm pointer can be
+     * NULL. */
+    // TODO: Why is logmanager_register() not called here?
+    if (lm)
+    {
+        flushall_logfiles(true);
+        err = skygw_message_send(lm->lm_logmes);
+
+        if (!err)
+        {
+            // TODO: Add error handling to skygw_message_wait. Now void.
+            skygw_message_wait(lm->lm_clientmes);
+        }
+    }
+
+    return err;
 }
 
 /**
