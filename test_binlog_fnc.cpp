@@ -91,6 +91,7 @@ int start_transaction(TestConnections* Test)
     int global_result = 0;
     Test->tprintf("Transaction test\n");
     Test->tprintf("Start transaction\n");
+    execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10;");
     global_result += execute_query(Test->repl->nodes[0], (char *) "START TRANSACTION");
     global_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
     Test->tprintf("INSERT data\n");
