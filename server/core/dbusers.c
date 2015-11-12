@@ -90,10 +90,26 @@
     ON user.user=db.user AND user.host=db.host \
     WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
 
+#define LOAD_MYSQL57_USERS_WITH_DB_QUERY "SELECT \
+    user.user AS user, \
+    user.host AS host, \
+    user.authentication_string AS password, \
+    concat(user.user,user.host,user.authentication_string,user.Select_priv,IFNULL(db,'')) AS userdata, \
+    user.Select_priv AS anydb, \
+    db.db AS db \
+    FROM mysql.user LEFT JOIN mysql.db \
+    ON user.user=db.user AND user.host=db.host \
+    WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
+
 #define MYSQL_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS tbl_count"
+#define MYSQL57_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM (" LOAD_MYSQL57_USERS_WITH_DB_QUERY ") AS tbl_count"
 
 #define LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * \
     FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS t1 \
+    WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
+
+#define LOAD_MYSQL57_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * \
+    FROM (" LOAD_MYSQL57_USERS_WITH_DB_QUERY ") AS t1 \
     WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
 
 #define LOAD_MYSQL_DATABASE_NAMES "SELECT * \
@@ -132,6 +148,39 @@ int add_wildcard_users(USERS *users,
 		       HASHTABLE* hash);
 
 static int gw_mysql_set_timeouts(MYSQL* handle);
+
+/**
+ * Get the user data query.
+ * @param server_version Server version string
+ * @param include_root Include root user
+ * @return Users query
+ */
+const char* get_mysql_users_query(char* server_version, bool include_root)
+{
+    const char* rval;
+    if (strstr(server_version, "5.7."))
+    {
+        rval = include_root ? LOAD_MYSQL57_USERS_WITH_DB_QUERY :
+            LOAD_MYSQL57_USERS_WITH_DB_QUERY_NO_ROOT;
+    }
+    else
+    {
+        rval = include_root ? LOAD_MYSQL_USERS_WITH_DB_QUERY :
+            LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
+    }
+    return rval;
+}
+
+/**
+ * Get the user count query.
+ * @param server_version Server version string
+ * @return User vount query
+ * */
+const char* get_mysq_users_db_count_query(char* server_version)
+{
+    return strstr(server_version, "5.7.") ?
+        MYSQL57_USERS_WITH_DB_COUNT : MYSQL_USERS_WITH_DB_COUNT;
+}
 
 /**
  * Check if the IP address of the user matches the one in the grant. This assumes
@@ -651,7 +700,8 @@ getAllUsers(SERVICE *service, USERS *users)
 	char		*dpwd = NULL;
 	int		total_users = 0;
 	SERVER_REF	*server;
-	char		*users_query, *tmp;
+	const char		*users_query;
+    char *tmp;
 	unsigned char	hash[SHA_DIGEST_LENGTH]="";
 	char		*users_data = NULL;
         char            *final_data = NULL;
@@ -825,9 +875,19 @@ getAllUsers(SERVICE *service, USERS *users)
 		mysql_close(con);
 		goto cleanup;
             }
-            
+
+            if (server->server->server_string == NULL)
+            {
+                const char *server_string = mysql_get_server_info(con);
+                if (!server_set_version_string(server->server, server_string))
+                {
+                    mysql_close(con);
+                    goto cleanup;
+                }
+            }
             /** Count users. Start with users and db grants for users */
-            if (mysql_query(con, MYSQL_USERS_WITH_DB_COUNT)) {
+            const char *user_with_db_count = get_mysq_users_db_count_query(server->server->server_string);
+            if (mysql_query(con, user_with_db_count)) {
 		if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR) {
                     /* This is an error we cannot handle, return */
                     LOGIF(LE, (skygw_log_write_flush(
@@ -883,13 +943,10 @@ getAllUsers(SERVICE *service, USERS *users)
 		mysql_close(con);
 		goto cleanup;
             }
-            
-            if(service->enable_root) {
-		/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
-		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY;
-            } else {
-		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
-            }
+
+            users_query = get_mysql_users_query(server->server->server_string,
+                                                service->enable_root);
+
             
             /* send first the query that fetches users and db grants */
             if (mysql_query(con, users_query)) {
@@ -1197,7 +1254,7 @@ getUsers(SERVICE *service, USERS *users)
 	char		*dpwd;
 	int		total_users = 0;
 	SERVER_REF	*server;
-	char		*users_query;
+	const char		*users_query;
 	unsigned char	hash[SHA_DIGEST_LENGTH]="";
 	char		*users_data = NULL;
 	int 		nusers = 0;
@@ -1343,10 +1400,21 @@ getUsers(SERVICE *service, USERS *users)
 			service->name)));
 		mysql_close(con);
 		return -1;
-	}
+    }
 
+    if (server->server->server_string == NULL)
+    {
+        const char *server_string = mysql_get_server_info(con);
+        if (!server_set_version_string(server->server, server_string))
+        {
+            mysql_close(con);
+            return -1;
+        }
+    }
+
+    const char *user_with_db_count = get_mysq_users_db_count_query(server->server->server_string);
 	/** Count users. Start with users and db grants for users */
-	if (mysql_query(con, MYSQL_USERS_WITH_DB_COUNT)) {
+	if (mysql_query(con, user_with_db_count)) {
 		if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR) {
                         /* This is an error we cannot handle, return */
 			LOGIF(LE, (skygw_log_write_flush(
@@ -1403,13 +1471,8 @@ getUsers(SERVICE *service, USERS *users)
 		return -1;
 	}
 
-	if(service->enable_root) {
-		/* enable_root for MySQL protocol module means load the root user credentials from backend databases */
-		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY;
-	} else {
-		users_query = LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
-	}
-
+    users_query = get_mysql_users_query(server->server->server_string,
+                                        service->enable_root);
 	/* send first the query that fetches users and db grants */
 	if (mysql_query(con, users_query)) {
 		/*

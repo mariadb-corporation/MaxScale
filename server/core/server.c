@@ -942,3 +942,24 @@ int i;
 			return ServerBits[i].bit;
 	return 0;
 }
+
+/**
+ * Set the version string of the server.
+ * @param server Server to update
+ * @param string Version string
+ * @return True if the assignment of the version string was successful, false if
+ * memory allocation failed.
+ */
+bool server_set_version_string(SERVER* server, const char* string)
+{
+    bool rval = true;
+    spinlock_acquire(&server->lock);
+    free(server->server_string);
+    if ((server->server_string = strdup(string)) == NULL)
+    {
+        MXS_ERROR("Memory allocation failed.");
+        rval = false;
+    }
+    spinlock_release(&server->lock);
+    return rval;
+}

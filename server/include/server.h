@@ -212,4 +212,5 @@ extern void	server_update_address(SERVER *, char *);
 extern void	server_update_port(SERVER *,  unsigned short);
 extern RESULTSET	*serverGetList();
 extern unsigned int server_map_status(char *str);
+extern bool server_set_version_string(SERVER* server, const char* string);
 #endif

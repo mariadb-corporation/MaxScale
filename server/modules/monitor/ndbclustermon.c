@@ -263,11 +263,10 @@ char 			*server_string;
 
 	/* get server version string */
 	server_string = (char *)mysql_get_server_info(database->con);
-	if (server_string) {
-		database->server->server_string = realloc(database->server->server_string, strlen(server_string)+1);
-		if (database->server->server_string)
-			strcpy(database->server->server_string, server_string);
-	}	
+    if (server_string)
+    {
+        server_set_version_string(database->server, server_string);
+    }
 
 	/* Check if the the SQL node is able to contact one or more data nodes */
 	if (mysql_query(database->con, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'") == 0
