@@ -580,6 +580,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 				inst->service->name)));
 			if (service->users) {
 				users_free(service->users);
+                service->users = NULL;
 			}
 
 			free(inst);
@@ -658,6 +659,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 			if (service->users) {
 				users_free(service->users);
+                service->users = NULL;
 			}
 
 			if (service->dbref && service->dbref->server) {

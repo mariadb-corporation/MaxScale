@@ -2213,7 +2213,7 @@ int main(int argc, char** argv)
             NULL
         };
 
-    skygw_logmanager_init(argc_,argv_);
+    mxs_log_init(argc_,argv_);
 
 
     init_test_env(home);
@@ -2231,7 +2231,7 @@ int main(int argc, char** argv)
 	printf("Failed to parse rule. Read the error log for the reason of the failure.\n");
     }
 
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
 
     return 0;
 }

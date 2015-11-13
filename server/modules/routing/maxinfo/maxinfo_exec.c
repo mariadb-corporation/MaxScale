@@ -54,7 +54,12 @@ static void exec_select(DCB *dcb, MAXINFO_TREE *tree);
 static void exec_show_variables(DCB *dcb, MAXINFO_TREE *filter);
 static void exec_show_status(DCB *dcb, MAXINFO_TREE *filter);
 static int maxinfo_pattern_match(char *pattern, char *str);
-
+static void exec_flush(DCB *dcb, MAXINFO_TREE *tree);
+static void exec_set(DCB *dcb, MAXINFO_TREE *tree);
+static void exec_clear(DCB *dcb, MAXINFO_TREE *tree);
+static void exec_shutdown(DCB *dcb, MAXINFO_TREE *tree);
+static void exec_restart(DCB *dcb, MAXINFO_TREE *tree);
+void maxinfo_send_ok(DCB *dcb);
 /**
  * Execute a parse tree and return the result set or runtime error
  *
@@ -72,6 +77,23 @@ maxinfo_execute(DCB *dcb, MAXINFO_TREE *tree)
 	case MAXOP_SELECT:
 		exec_select(dcb, tree);
 		break;
+
+        case MAXOP_FLUSH:
+            exec_flush(dcb, tree);
+            break;
+        case MAXOP_SET:
+            exec_set(dcb, tree);
+            break;
+        case MAXOP_CLEAR:
+            exec_clear(dcb, tree);
+            break;
+        case MAXOP_SHUTDOWN:
+            exec_shutdown(dcb, tree);
+            break;
+        case MAXOP_RESTART:
+            exec_restart(dcb, tree);
+            break;
+
 	case MAXOP_TABLE:
 	case MAXOP_COLUMNS:
 	case MAXOP_LITERAL:
@@ -272,6 +294,448 @@ char	errmsg[120];
 	sprintf(errmsg, "Unsupported show command '%s'", tree->value);
 	maxinfo_send_error(dcb, 0, errmsg);
 	LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE, errmsg)));
+}
+
+/**
+ * Flush all logs to disk and rotate them.
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+void exec_flush_logs(DCB *dcb, MAXINFO_TREE *tree)
+{
+    mxs_log_rotate();
+    maxinfo_send_ok(dcb);
+}
+
+/**
+ * The table of flush commands that are supported
+ */
+static struct
+{
+    char *name;
+    void (*func)(DCB *, MAXINFO_TREE *);
+} flush_commands[] = {
+    { "logs", exec_flush_logs},
+    { NULL, NULL}
+};
+
+/**
+ * Execute a flush command parse tree and return the result set or runtime error
+ *
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+static void
+exec_flush(DCB *dcb, MAXINFO_TREE *tree)
+{
+    int i;
+    char errmsg[120];
+
+    for (i = 0; flush_commands[i].name; i++)
+    {
+        if (strcasecmp(flush_commands[i].name, tree->value) == 0)
+        {
+            (*flush_commands[i].func)(dcb, tree->right);
+            return;
+        }
+    }
+    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    {
+        tree->value[80] = 0;
+    }
+    sprintf(errmsg, "Unsupported flush command '%s'", tree->value);
+    maxinfo_send_error(dcb, 0, errmsg);
+    skygw_log_write(LE, errmsg);
+}
+
+/**
+ * Set the server status.
+ * @param dcb Client DCB
+ * @param tree Parse tree
+ */
+void exec_set_server(DCB *dcb, MAXINFO_TREE *tree)
+{
+    SERVER* server = server_find_by_unique_name(tree->value);
+    char errmsg[120];
+
+    if (server)
+    {
+        int status = server_map_status(tree->right->value);
+        if (status != 0)
+        {
+            server_set_status(server, status);
+            maxinfo_send_ok(dcb);
+        }
+        else
+        {
+            if (strlen(tree->right->value) > 80) // Prevent buffer overrun
+            {
+                tree->right->value[80] = 0;
+            }
+            sprintf(errmsg, "Invalid argument '%s'", tree->right->value);
+            maxinfo_send_error(dcb, 0, errmsg);
+        }
+    }
+    else
+    {
+        if (strlen(tree->value) > 80) // Prevent buffer overrun
+        {
+            tree->value[80] = 0;
+        }
+        sprintf(errmsg, "Invalid argument '%s'", tree->value);
+        maxinfo_send_error(dcb, 0, errmsg);
+    }
+}
+
+/**
+ * The table of set commands that are supported
+ */
+static struct
+{
+    char *name;
+    void (*func)(DCB *, MAXINFO_TREE *);
+} set_commands[] = {
+    { "server", exec_set_server},
+    { NULL, NULL}
+};
+
+/**
+ * Execute a set  command parse tree and return the result set or runtime error
+ *
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+static void
+exec_set(DCB *dcb, MAXINFO_TREE *tree)
+{
+    int i;
+    char errmsg[120];
+
+    for (i = 0; set_commands[i].name; i++)
+    {
+        if (strcasecmp(set_commands[i].name, tree->value) == 0)
+        {
+            (*set_commands[i].func)(dcb, tree->right);
+            return;
+        }
+    }
+    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    {
+        tree->value[80] = 0;
+    }
+    sprintf(errmsg, "Unsupported set command '%s'", tree->value);
+    maxinfo_send_error(dcb, 0, errmsg);
+    skygw_log_write(LE, errmsg);
+}
+
+/**
+ * Clear the server status.
+ * @param dcb Client DCB
+ * @param tree Parse tree
+ */
+void exec_clear_server(DCB *dcb, MAXINFO_TREE *tree)
+{
+    SERVER* server = server_find_by_unique_name(tree->value);
+    char errmsg[120];
+
+    if (server)
+    {
+        int status = server_map_status(tree->right->value);
+        if (status != 0)
+        {
+            server_clear_status(server, status);
+            maxinfo_send_ok(dcb);
+        }
+        else
+        {
+            if (strlen(tree->right->value) > 80) // Prevent buffer overrun
+            {
+                tree->right->value[80] = 0;
+            }
+            sprintf(errmsg, "Invalid argument '%s'", tree->right->value);
+            maxinfo_send_error(dcb, 0, errmsg);
+        }
+    }
+    else
+    {
+        if (strlen(tree->value) > 80) // Prevent buffer overrun
+        {
+            tree->value[80] = 0;
+        }
+        sprintf(errmsg, "Invalid argument '%s'", tree->value);
+        maxinfo_send_error(dcb, 0, errmsg);
+    }
+}
+
+/**
+ * The table of clear commands that are supported
+ */
+static struct
+{
+    char *name;
+    void (*func)(DCB *, MAXINFO_TREE *);
+} clear_commands[] = {
+    { "server", exec_clear_server},
+    { NULL, NULL}
+};
+
+/**
+ * Execute a clear command parse tree and return the result set or runtime error
+ *
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+static void
+exec_clear(DCB *dcb, MAXINFO_TREE *tree)
+{
+    int i;
+    char errmsg[120];
+
+    for (i = 0; clear_commands[i].name; i++)
+    {
+        if (strcasecmp(clear_commands[i].name, tree->value) == 0)
+        {
+            (*clear_commands[i].func)(dcb, tree->right);
+            return;
+        }
+    }
+    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    {
+        tree->value[80] = 0;
+    }
+    sprintf(errmsg, "Unsupported clear command '%s'", tree->value);
+    maxinfo_send_error(dcb, 0, errmsg);
+    skygw_log_write(LE, errmsg);
+}
+
+extern void shutdown_server();
+
+/**
+ * MaxScale shutdown
+ * @param dcb Client DCB
+ * @param tree Parse tree
+ */
+void exec_shutdown_maxscale(DCB *dcb, MAXINFO_TREE *tree)
+{
+    shutdown_server();
+    maxinfo_send_ok(dcb);
+}
+
+/**
+ * Stop a monitor
+ * @param dcb Client DCB
+ * @param tree Parse tree
+ */
+void exec_shutdown_monitor(DCB *dcb, MAXINFO_TREE *tree)
+{
+    char errmsg[120];
+    if (tree && tree->value)
+    {
+        MONITOR* monitor = monitor_find(tree->value);
+        if (monitor)
+        {
+            monitorStop(monitor);
+            maxinfo_send_ok(dcb);
+        }
+        else
+        {
+            if (strlen(tree->value) > 80) // Prevent buffer overrun
+            {
+                tree->value[80] = 0;
+            }
+            sprintf(errmsg, "Invalid argument '%s'", tree->value);
+            maxinfo_send_error(dcb, 0, errmsg);
+        }
+    }
+    else
+    {
+        sprintf(errmsg, "Missing argument for 'SHUTDOWN MONITOR'");
+        maxinfo_send_error(dcb, 0, errmsg);
+    }
+}
+
+/**
+ * Stop a service
+ * @param dcb Client DCB
+ * @param tree Parse tree
+ */
+void exec_shutdown_service(DCB *dcb, MAXINFO_TREE *tree)
+{
+    char errmsg[120];
+    if (tree && tree->value)
+    {
+        SERVICE* service = service_find(tree->value);
+        if (service)
+        {
+            serviceStop(service);
+            maxinfo_send_ok(dcb);
+        }
+        else
+        {
+            if (strlen(tree->value) > 80) // Prevent buffer overrun
+            {
+                tree->value[80] = 0;
+            }
+            sprintf(errmsg, "Invalid argument '%s'", tree->value);
+            maxinfo_send_error(dcb, 0, errmsg);
+        }
+    }
+    else
+    {
+        sprintf(errmsg, "Missing argument for 'SHUTDOWN SERVICE'");
+        maxinfo_send_error(dcb, 0, errmsg);
+    }
+}
+
+/**
+ * The table of shutdown commands that are supported
+ */
+static struct
+{
+    char *name;
+    void (*func)(DCB *, MAXINFO_TREE *);
+} shutdown_commands[] = {
+    { "maxscale", exec_shutdown_maxscale},
+    { "monitor", exec_shutdown_monitor},
+    { "service", exec_shutdown_service},
+    { NULL, NULL}
+};
+
+/**
+ * Execute a shutdown command parse tree and return OK or runtime error
+ *
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+static void
+exec_shutdown(DCB *dcb, MAXINFO_TREE *tree)
+{
+    int i;
+    char errmsg[120];
+
+    for (i = 0; shutdown_commands[i].name; i++)
+    {
+        if (strcasecmp(shutdown_commands[i].name, tree->value) == 0)
+        {
+            (*shutdown_commands[i].func)(dcb, tree->right);
+            return;
+        }
+    }
+    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    {
+        tree->value[80] = 0;
+    }
+    sprintf(errmsg, "Unsupported shutdown command '%s'", tree->value);
+    maxinfo_send_error(dcb, 0, errmsg);
+    skygw_log_write(LE, errmsg);
+}
+
+/**
+ * Restart a monitor
+ * @param dcb Client DCB
+ * @param tree Parse tree
+ */
+void exec_restart_monitor(DCB *dcb, MAXINFO_TREE *tree)
+{
+    char errmsg[120];
+    if (tree && tree->value)
+    {
+        MONITOR* monitor = monitor_find(tree->value);
+        if (monitor)
+        {
+            monitorStart(monitor, NULL);
+            maxinfo_send_ok(dcb);
+        }
+        else
+        {
+            if (strlen(tree->value) > 80) // Prevent buffer overrun
+            {
+                tree->value[80] = 0;
+            }
+            sprintf(errmsg, "Invalid argument '%s'", tree->value);
+            maxinfo_send_error(dcb, 0, errmsg);
+        }
+    }
+    else
+    {
+        sprintf(errmsg, "Missing argument for 'RESTART MONITOR'");
+        maxinfo_send_error(dcb, 0, errmsg);
+    }
+}
+
+/**
+ * Restart a service
+ * @param dcb Client DCB
+ * @param tree Parse tree
+ */
+void exec_restart_service(DCB *dcb, MAXINFO_TREE *tree)
+{
+    char errmsg[120];
+    if (tree && tree->value)
+    {
+        SERVICE* service = service_find(tree->value);
+        if (service)
+        {
+            serviceRestart(service);
+            maxinfo_send_ok(dcb);
+        }
+        else
+        {
+            if (strlen(tree->value) > 80) // Prevent buffer overrun
+            {
+                tree->value[80] = 0;
+            }
+            sprintf(errmsg, "Invalid argument '%s'", tree->value);
+            maxinfo_send_error(dcb, 0, errmsg);
+        }
+    }
+    else
+    {
+        sprintf(errmsg, "Missing argument for 'RESTART SERVICE'");
+        maxinfo_send_error(dcb, 0, errmsg);
+    }
+}
+
+/**
+ * The table of restart commands that are supported
+ */
+static struct
+{
+    char *name;
+    void (*func)(DCB *, MAXINFO_TREE *);
+} restart_commands[] = {
+    { "monitor", exec_restart_monitor},
+    { "service", exec_restart_service},
+    { NULL, NULL}
+};
+
+/**
+ * Execute a restart command parse tree and return OK or runtime error
+ *
+ * @param dcb	The DCB that connects to the client
+ * @param tree	The parse tree for the query
+ */
+static void
+exec_restart(DCB *dcb, MAXINFO_TREE *tree)
+{
+    int i;
+    char errmsg[120];
+
+    for (i = 0; restart_commands[i].name; i++)
+    {
+        if (strcasecmp(restart_commands[i].name, tree->value) == 0)
+        {
+            (*restart_commands[i].func)(dcb, tree->right);
+            return;
+        }
+    }
+    if (strlen(tree->value) > 80) // Prevent buffer overrun
+    {
+        tree->value[80] = 0;
+    }
+    sprintf(errmsg, "Unsupported restart command '%s'", tree->value);
+    maxinfo_send_error(dcb, 0, errmsg);
+    skygw_log_write(LE, errmsg);
 }
 
 /**
@@ -763,4 +1227,26 @@ extern	char *strcasestr();
 		free(portion);
 		return rval;
 	}
+}
+
+/**
+ * Send an OK packet to the client.
+ * @param dcb The DCB that connects to the client
+ */
+void maxinfo_send_ok(DCB *dcb)
+{
+    static const char ok_packet[] ={
+        0x07, 0x00, 0x00, 0x01,
+        0x00, 0x00, 0x00,
+        0x00, 0x00,
+        0x00, 0x00
+    };
+
+    GWBUF* buffer = gwbuf_alloc(sizeof(ok_packet));
+
+    if (buffer)
+    {
+        memcpy(buffer->start, ok_packet, sizeof(ok_packet));
+        dcb->func.write(dcb, buffer);
+    }
 }

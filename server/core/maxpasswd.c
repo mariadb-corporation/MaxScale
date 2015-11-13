@@ -42,9 +42,7 @@ main(int argc, char **argv)
 {
     char  *enc;
     char  *pw;
-    int    arg_count = 1;
     char  *home;
-    char** arg_vector;
     int    rval = 0;
 
     if (argc != 3)
@@ -53,18 +51,7 @@ main(int argc, char **argv)
         return 1;
     }
 
-    arg_vector = malloc(sizeof(char*) * (arg_count + 1));
-
-    if (arg_vector == NULL)
-    {
-        fprintf(stderr,"Error: Memory allocation failed.\n");
-        return 1;
-    }
-
-    arg_vector[0] = "logmanager";
-    arg_vector[1] = NULL;
-    skygw_logmanager_init(NULL, arg_count, arg_vector);
-    free(arg_vector);
+    mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
 
     pw = calloc(81, sizeof(char));
 
@@ -87,7 +74,7 @@ main(int argc, char **argv)
     }
 
     free(pw);
-    skygw_log_sync_all();
-    skygw_logmanager_done();
+    mxs_log_flush_sync();
+    mxs_log_finish();
     return rval;
 }

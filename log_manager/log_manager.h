@@ -18,6 +18,8 @@
 #if !defined(LOG_MANAGER_H)
 # define LOG_MANAGER_H
 
+#include <syslog.h>
+
 /*
  * We need a common.h file that is included by every component.
  */
@@ -42,13 +44,19 @@ typedef enum
     LOGFILE_LAST = LOGFILE_DEBUG
 } logfile_id_t;
 
-
 typedef enum
 {
     FILEWRITER_INIT,
     FILEWRITER_RUN,
     FILEWRITER_DONE
 } filewriter_state_t;
+
+typedef enum
+{
+    LOG_TARGET_DEFAULT = 0,
+    LOG_TARGET_FS      = 1, // File system
+    LOG_TARGET_SHMEM   = 2, // Shared memory
+} log_target_t;
 
 /**
 * Thread-specific logging information.
@@ -124,78 +132,53 @@ typedef enum
     LOG_AUGMENTATION_MASK     = (LOG_AUGMENT_WITH_FUNCTION)
 } log_augmentation_t;
 
-/**
- * LOG_FLUSH_NO  Do not flush after writing.
- * LOG_FLUSH_YES Flush after writing.
- */
-enum log_flush
-{
-    LOG_FLUSH_NO  = 0,
-    LOG_FLUSH_YES = 1
-};
-
 EXTERN_C_BLOCK_BEGIN
 
 extern int lm_enabled_logfiles_bitmask;
 extern ssize_t log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
+bool mxs_log_init(const char* ident, const char* logdir, log_target_t target);
+void mxs_log_finish(void);
+
 int mxs_log_flush();
+int mxs_log_flush_sync();
 int mxs_log_rotate();
-int mxs_log_enable_priority(int priority);
-int mxs_log_disable_priority(int priority);
 
-bool skygw_logmanager_init(const char* logdir, int argc, char* argv[]);
-void skygw_logmanager_done(void);
-void skygw_logmanager_exit(void);
+int  mxs_log_set_priority_enabled(int priority, bool enabled);
+void mxs_log_set_syslog_enabled(bool enabled);
+void mxs_log_set_maxscalelog_enabled(bool enabled);
+void mxs_log_set_highprecision_enabled(bool enabled);
+void mxs_log_set_augmentation(int bits);
 
-/**
- * free private write buffer list
- */
-void skygw_log_done(void);
-int  skygw_log_write_context(logfile_id_t id,
-                             enum log_flush flush,
-                             const char* file, int line, const char* function,
-                             const char* format, ...);
-int  skygw_log_flush(logfile_id_t id);
-void skygw_log_sync_all(void);
-int  skygw_log_rotate(logfile_id_t id);
+int mxs_log_message(int priority,
+                    const char* file, int line, const char* function,
+                    const char* format, ...);
+
 int  skygw_log_enable(logfile_id_t id);
 int  skygw_log_disable(logfile_id_t id);
-void skygw_log_sync_all(void);
-void skygw_set_highp(int);
-void logmanager_enable_syslog(int);
-void logmanager_enable_maxscalelog(int);
+
+inline int mxs_log_id_to_priority(logfile_id_t id)
+{
+    if (id & LOGFILE_ERROR) return LOG_ERR;
+    if (id & LOGFILE_MESSAGE) return LOG_NOTICE;
+    if (id & LOGFILE_TRACE) return LOG_INFO;
+    if (id & LOGFILE_DEBUG) return LOG_DEBUG;
+    return LOG_ERR;
+}
 
 #define skygw_log_write(id, format, ...)\
-    skygw_log_write_context(id, LOG_FLUSH_NO, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+    mxs_log_message(mxs_log_id_to_priority(id), __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
-#define skygw_log_write_flush(id, format, ...)\
-    skygw_log_write_context(id, LOG_FLUSH_YES, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
-
-/**
- * What augmentation if any should a logged message be augmented with.
- *
- * Currently this is a global setting and affects all loggers.
- */
-void skygw_log_set_augmentation(int bits);
-int skygw_log_get_augmentation();
+#define skygw_log_write_flush(id, format, ...) skygw_log_write(id, format, ##__VA_ARGS__)
 
 EXTERN_C_BLOCK_END
 
-const char* get_logpath_default(void);
-
 /**
  * Helper, not to be called directly.
  */
-#define MXS_MESSAGE_FLUSH(id, format, ...)\
-    do { if (LOG_IS_ENABLED(id)) { skygw_log_write_flush(id, format, ##__VA_ARGS__); } } while (false)
-
-/**
- * Helper, not to be called directly.
- */
-#define MXS_MESSAGE(id, format, ...)\
-    do { if (LOG_IS_ENABLED(id)) { skygw_log_write(id, format, ##__VA_ARGS__); } } while (false)
+#define MXS_LOG_MESSAGE(priority, format, ...)\
+    mxs_log_message(priority, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 /**
  * Log an error, warning, notice, info, or debug  message.
@@ -203,10 +186,10 @@ const char* get_logpath_default(void);
  * @param format The printf format of the message.
  * @param ...    Arguments, depending on the format.
  */
-#define MXS_ERROR(format, ...)   MXS_MESSAGE_FLUSH(LOGFILE_ERROR, format, ##__VA_ARGS__)
-#define MXS_WARNING(format, ...) MXS_MESSAGE(LOGFILE_ERROR, format, ##__VA_ARGS__)
-#define MXS_NOTICE(format, ...)  MXS_MESSAGE(LOGFILE_MESSAGE, format, ##__VA_ARGS__)
-#define MXS_INFO(format, ...)    MXS_MESSAGE(LOGFILE_TRACE, format, ##__VA_ARGS__)
-#define MXS_DEBUG(format, ...)   MXS_MESSAGE(LOGFILE_DEBUG, format, ##__VA_ARGS__)
+#define MXS_ERROR(format, ...)   MXS_LOG_MESSAGE(LOG_ERR,     format, ##__VA_ARGS__)
+#define MXS_WARNING(format, ...) MXS_LOG_MESSAGE(LOG_WARNING, format, ##__VA_ARGS__)
+#define MXS_NOTICE(format, ...)  MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
+#define MXS_INFO(format, ...)    MXS_LOG_MESSAGE(LOG_INFO,    format, ##__VA_ARGS__)
+#define MXS_DEBUG(format, ...)   MXS_LOG_MESSAGE(LOG_DEBUG,   format, ##__VA_ARGS__)
 
 #endif /** LOG_MANAGER_H */

@@ -86,8 +86,6 @@ return 1;
 }
 
 int main(int argc, char **argv) {
-	char** arg_vector;
-	int arg_count = 1;
 	ROUTER_INSTANCE *inst;
 	int fd;
 	int ret;
@@ -126,21 +124,9 @@ int main(int argc, char **argv) {
 
 	num_args = optind;
 
-	arg_vector = malloc(sizeof(char*)*(arg_count + 1));
+	mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
 
-	if(arg_vector == NULL)
-	{
-		fprintf(stderr,"Error: Memory allocation failed for log manager arg_vector.\n");
-		return 1;
-	}
-
-	arg_vector[0] = "logmanager";
-	arg_vector[1] = NULL;
-	skygw_logmanager_init(NULL, arg_count, arg_vector);
-
-	skygw_log_set_augmentation(0);
-
-	free(arg_vector);
+	mxs_log_set_augmentation(0);
 
 	if (!debug_out)
 		skygw_log_disable(LOGFILE_DEBUG);
@@ -151,8 +137,8 @@ int main(int argc, char **argv) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 			"Error: Memory allocation failed for ROUTER_INSTANCE")));
 
-		skygw_log_sync_all();
-      		skygw_logmanager_done();
+		mxs_log_flush_sync();
+      		mxs_log_finish();
 
 		return 1;
 	}
@@ -175,8 +161,8 @@ int main(int argc, char **argv) {
 			"Failed to open binlog file %s: %s",
 			path, strerror(errno))));
         
-		skygw_log_sync_all();
-		skygw_logmanager_done();
+		mxs_log_flush_sync();
+		mxs_log_finish();
 
 		free(inst);
 
@@ -208,13 +194,13 @@ int main(int argc, char **argv) {
 
 	close(inst->binlog_fd);
 
-	skygw_log_sync_all();
+	mxs_log_flush_sync();
 
 	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
 		"Check retcode: %i, Binlog Pos = %llu", ret, inst->binlog_position)));
 
-	skygw_log_sync_all();
-	skygw_logmanager_done();
+	mxs_log_flush_sync();
+	mxs_log_finish();
 
 	free(inst);
 

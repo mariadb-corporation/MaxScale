@@ -24,8 +24,8 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 23/06/2013	Massimiliano Pinto	Initial implementation
+ * Date         Who                     Description
+ * 23/06/2013   Massimiliano Pinto      Initial implementation
  *
  * @endverbatim
  */
@@ -40,18 +40,19 @@
 
 #include <openssl/aes.h>
 
-#define	MAXSCALE_KEYLEN		32
-#define	MAXSCALE_IV_LEN		16
+#define MAXSCALE_KEYLEN 32
+#define MAXSCALE_IV_LEN 16
 
 /**
  * The key structure held in the secrets file
  */
-typedef	struct maxkeys {
-	unsigned char	enckey[MAXSCALE_KEYLEN];
-	unsigned char	initvector[MAXSCALE_IV_LEN];
+typedef struct maxkeys
+{
+    unsigned char enckey[MAXSCALE_KEYLEN];
+    unsigned char initvector[MAXSCALE_IV_LEN];
 } MAXKEYS;
 
-extern int	secrets_writeKeys(char *filename);
-extern char	*decryptPassword(char *);
-extern char	*encryptPassword(char*,char *);
+extern int  secrets_writeKeys(const char *filename);
+extern char *decryptPassword(const char *);
+extern char *encryptPassword(const char*, const char *);
 #endif

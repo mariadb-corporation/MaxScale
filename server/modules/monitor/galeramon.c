@@ -154,32 +154,15 @@ startMonitor(void *arg,void* opt)
 	    handle->use_priority = config_truth_value(params->value);
 	else if(!strcmp(params->name,"script"))
 	{
-	    if(handle->script)
-	    {
-		free(handle->script);
-		handle->script = NULL;
-	    }
-
-	    if(access(params->value,X_OK) == 0)
-	    {
-		handle->script = strdup(params->value);
-	    }
-	    else
-	    {
-		script_error = true;
-		if(access(params->value,F_OK) == 0)
-		{
-		skygw_log_write(LE,
-			 "Error: The file cannot be executed: %s",
-			 params->value);
-		}
-		else
-		{
-		skygw_log_write(LE,
-			 "Error: The file cannot be found: %s",
-			 params->value);
-		}
-	    }
+        if (externcmd_can_execute(params->value))
+        {
+            free(handle->script);
+            handle->script = strdup(params->value);
+        }
+        else
+        {
+            script_error = true;
+        }
 	}
 	else if(!strcmp(params->name,"events"))
 	{
@@ -327,11 +310,10 @@ char 			*server_string;
 
 	/* get server version string */
 	server_string = (char *)mysql_get_server_info(database->con);
-	if (server_string) {
-		database->server->server_string = realloc(database->server->server_string, strlen(server_string)+1);
-		if (database->server->server_string)
-			strcpy(database->server->server_string, server_string);
-	}	
+    if (server_string)
+    {
+        server_set_version_string(database->server, server_string);
+    }
 
 	/* Check if the the Galera FSM shows this node is joined to the cluster */
 	if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_state'") == 0

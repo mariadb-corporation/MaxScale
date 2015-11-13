@@ -17,6 +17,7 @@
  */
 
 #include <monitor_common.h>
+#include <maxscale_pcre2.h>
 
 monitor_event_t mon_name_to_event(char* tok);
 
@@ -225,23 +226,32 @@ case NEW_DONOR_EVENT:
     
 }
 
-void mon_append_node_names(MONITOR_SERVERS* start,char* str, int len)
+/**
+ * Create a list of running servers
+ * @param start Monitored servers
+ * @param dest Destination where the string is formed
+ * @param len Length of @c dest
+ */
+void mon_append_node_names(MONITOR_SERVERS* start, char* dest, int len)
 {
     MONITOR_SERVERS* ptr = start;
     bool first = true;
-    int slen = strlen(str);
-    char arr[256];
-    while(ptr && slen < len)
+    int slen = strlen(dest);
+    char arr[MAX_SERVER_NAME_LEN + 32]; // Some extra space for port
+    while (ptr && slen < len)
     {
-	if(!first)
-	{
-	    strncat(str,",",len);
-	}
-	first = false;
-	sprintf(arr,"%s:%d",ptr->server->name,ptr->server->port);
-	strncat(str,arr,len);
-	ptr = ptr->next;
-	slen = strlen(str);
+        if(SERVER_IS_RUNNING(ptr->server))
+        {
+            if (!first)
+            {
+                strncat(dest, ",", len);
+            }
+            first = false;
+            snprintf(arr, sizeof(arr), "%s:%d", ptr->server->name, ptr->server->port);
+            strncat(dest, arr, len);
+            slen = strlen(dest);
+        }
+        ptr = ptr->next;
     }
 }
 
@@ -302,22 +312,25 @@ bool mon_print_fail_status(
  */
 void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 {
-    char argstr[PATH_MAX + MON_ARG_MAX + 1];
-    EXTERNCMD* cmd;
+    char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
+    char event[strlen(mon_get_event_name(ptr))];
+    char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
 
-    snprintf(argstr, PATH_MAX + MON_ARG_MAX,
-             "%s --event=%s --initiator=%s:%d --nodelist=",
-             script,
-             mon_get_event_name(ptr),
-             ptr->server->name,
-             ptr->server->port);
+    snprintf(initiator, sizeof(initiator), "%s:%d", ptr->server->name, ptr->server->port);
+    snprintf(event, sizeof(event), "%s", mon_get_event_name(ptr));
+    mon_append_node_names(mon->databases, nodelist, PATH_MAX + MON_ARG_MAX);
 
-    mon_append_node_names(mon->databases, argstr, PATH_MAX + MON_ARG_MAX);
-    if ((cmd = externcmd_allocate(argstr)) == NULL)
+    EXTERNCMD* cmd = externcmd_allocate(script);
+
+    if (cmd == NULL)
     {
         skygw_log_write(LE, "Failed to initialize script: %s", script);
         return;
     }
+
+    externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
+    externcmd_substitute_arg(cmd, "[$]EVENT", event);
+    externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
 
     if (externcmd_execute(cmd))
     {

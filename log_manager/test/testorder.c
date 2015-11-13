@@ -31,7 +31,6 @@ int main(int argc, char** argv)
     char cwd[1024];
     char tmp[2048];
     char *message;
-    char** optstr;
     long msg_index = 1;
     struct timespec ts1;
     ts1.tv_sec = 0;
@@ -55,7 +54,6 @@ int main(int argc, char** argv)
     }
 
     if (getcwd(cwd, sizeof(cwd)) == NULL ||
-        (optstr = (char**)malloc(sizeof(char*) * 4)) == NULL ||
         (message = (char*)malloc(sizeof(char) * block_size)) == NULL)
     {
         fprintf(stderr,"Fatal Error, exiting...");
@@ -65,13 +63,11 @@ int main(int argc, char** argv)
     memset(tmp, 0, 1024);
 
     sprintf(tmp, "%s", cwd);
-    optstr[0] = strdup("log_manager");
-    optstr[1] = NULL;
 
     iterations = atoi(argv[1]);
     interval = atoi(argv[2]);
 
-    succp = skygw_logmanager_init(tmp, 1, optstr);
+    succp = mxs_log_init(NULL, tmp, LOG_TARGET_FS);
 
     if (!succp)
     {
@@ -111,13 +107,8 @@ int main(int argc, char** argv)
         nanosleep(&ts1, NULL);
     }
 
-    skygw_log_flush(LOGFILE_ERROR);
-    skygw_logmanager_done();
+    mxs_log_flush();
+    mxs_log_finish();
     free(message);
-    free(optstr[0]);
-    free(optstr[1]);
-    free(optstr[2]);
-    free(optstr[3]);
-    free(optstr);
     return 0;
 }

@@ -307,10 +307,7 @@ static void sigusr1_handler (int i)
     LOGIF(LM, (skygw_log_write(
                    LOGFILE_MESSAGE,
                    "Log file flush following reception of SIGUSR1\n")));
-    skygw_log_rotate(LOGFILE_ERROR);
-    skygw_log_rotate(LOGFILE_MESSAGE);
-    skygw_log_rotate(LOGFILE_TRACE);
-    skygw_log_rotate(LOGFILE_DEBUG);
+    mxs_log_rotate();
 }
 
 static void sigterm_handler (int i) {
@@ -319,7 +316,7 @@ static void sigterm_handler (int i) {
     skygw_log_write_flush(
         LOGFILE_ERROR,
         "MaxScale received signal SIGTERM. Exiting.");
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
     shutdown_server();
 }
 
@@ -331,7 +328,7 @@ sigint_handler (int i)
     skygw_log_write_flush(
         LOGFILE_ERROR,
         "MaxScale received signal SIGINT. Shutting down.");
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
     shutdown_server();
     fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
@@ -412,7 +409,7 @@ sigfatal_handler(int i)
         }
     }
 
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
 
     /* re-raise signal to enforce core dump */
     fprintf(stderr, "\n\nWriting core dump\n");
@@ -825,7 +822,7 @@ static bool file_is_readable(
             absolute_pathname,
             eno,
             strerror_r(eno, errbuf, sizeof(errbuf)));
-        skygw_log_sync_all();
+        mxs_log_flush_sync();
         succp = false;
     }
     return succp;
@@ -1077,19 +1074,16 @@ int main(int argc, char **argv)
     char*    tmp_path;
     char*    tmp_var;
     int      option_index;
-    int      logtofile = 0;               /* Use shared memory or file */
+    log_target_t log_target = LOG_TARGET_FS;
     int      *syslog_enabled = &config_get_global_options()->syslog; /** Log to syslog */
     int      *maxscalelog_enabled = &config_get_global_options()->maxlog; /** Log with MaxScale */
     ssize_t  log_flush_timeout_ms = 0;
     sigset_t sigset;
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
-    void   (*exitfunp[4])(void) = {skygw_logmanager_exit,
-                                   datadir_cleanup,
-                                   write_footer,
-                                   NULL};
+    void   (*exitfunp[4])(void) = { mxs_log_finish, datadir_cleanup, write_footer, NULL };
 
-    *syslog_enabled = 0;
+    *syslog_enabled = 1;
     *maxscalelog_enabled = 1;
 
     sigemptyset(&sigpipe_mask);
@@ -1169,9 +1163,9 @@ int main(int argc, char **argv)
 
         case 'l':
             if (strncasecmp(optarg, "file", PATH_MAX) == 0)
-                logtofile = 1;
+                log_target = LOG_TARGET_FS;
             else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
-                logtofile = 0;
+                log_target = LOG_TARGET_SHMEM;
             else
             {
                 char* logerr = "Configuration file argument "
@@ -1698,13 +1692,8 @@ int main(int argc, char **argv)
 
     /**
      * Init Log Manager for MaxScale.
-     * The skygw_logmanager_init expects to take arguments as passed to main
-     * and proesses them with getopt, therefore we need to give it a dummy
-     * argv[0]
      */
     {
-        char buf[1024];
-        char *argv[8];
         bool succp;
 
         if (mkdir(get_logdir(), 0777) != 0 && errno != EEXIST)
@@ -1715,8 +1704,6 @@ int main(int argc, char **argv)
             goto return_main;
         }
 
-        argv[0] = "MaxScale";
-
         if (!(*syslog_enabled))
         {
             printf("Syslog logging is disabled.\n");
@@ -1726,27 +1713,11 @@ int main(int argc, char **argv)
         {
             printf("MaxScale logging is disabled.\n");
         }
-        logmanager_enable_syslog(*syslog_enabled);
-        logmanager_enable_maxscalelog(*maxscalelog_enabled);
 
-        if (logtofile)
-        {
-            argv[1] = "-l"; /*< write to syslog */
-            /** Logs that should be syslogged */
-            argv[2] = "LOGFILE_MESSAGE,LOGFILE_ERROR"
-                "LOGFILE_DEBUG,LOGFILE_TRACE";
-            argv[3] = NULL;
-            succp = skygw_logmanager_init(get_logdir(), 3, argv);
-        }
-        else
-        {
-            argv[1] = "-s"; /*< store to shared memory */
-            argv[2] = "LOGFILE_DEBUG,LOGFILE_TRACE"; /*< to shm */
-            argv[3] = "-l"; /*< write to syslog */
-            argv[4] = "LOGFILE_MESSAGE,LOGFILE_ERROR"; /*< to syslog */
-            argv[5] = NULL;
-            succp = skygw_logmanager_init(get_logdir(), 5, argv);
-        }
+        mxs_log_set_syslog_enabled(*syslog_enabled);
+        mxs_log_set_maxscalelog_enabled(*maxscalelog_enabled);
+
+        succp = mxs_log_init(NULL, get_logdir(), log_target);
 
         if (!succp)
         {
@@ -2084,10 +2055,7 @@ static void log_flush_cb(
     LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
                                "Started MaxScale log flusher.")));
     while (!do_exit) {
-        skygw_log_flush(LOGFILE_ERROR);
-        skygw_log_flush(LOGFILE_MESSAGE);
-        skygw_log_flush(LOGFILE_TRACE);
-        skygw_log_flush(LOGFILE_DEBUG);
+        mxs_log_flush();
         nanosleep(&ts1, NULL);
     }
     LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
@@ -2375,7 +2343,7 @@ void set_log_augmentation(const char* value)
 
     if (!augmentation_set)
     {
-        skygw_log_set_augmentation(atoi(value));
+        mxs_log_set_augmentation(atoi(value));
 
         augmentation_set = true;
     }

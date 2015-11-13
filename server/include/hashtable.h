@@ -85,6 +85,7 @@ typedef struct hashtable {
 	int		n_readers;			/**< Number of clients reading the table */
 	int		writelock;			/**< The table is locked by a writer */
 	bool            ht_isflat;			/**< Indicates whether hashtable is in stack or heap */
+	int n_elements; /*< Number of added elements */
 #if defined(SS_DEBUG)
         skygw_chk_t     ht_chk_tail;
 #endif
@@ -130,4 +131,5 @@ extern HASHITERATOR	*hashtable_iterator(HASHTABLE *);
 extern void		*hashtable_next(HASHITERATOR *);
 				/**< Return the key of the hash table iterator */
 extern void		hashtable_iterator_free(HASHITERATOR *);
+extern int		hashtable_size(HASHTABLE *table);
 #endif
