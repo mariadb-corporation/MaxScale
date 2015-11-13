@@ -17,6 +17,7 @@
  */
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <gwbitmask.h>
 
 /**
@@ -47,9 +48,13 @@
  * Date		Who		        Description
  * 28/06/13	Mark Riddoch	Initial implementation
  * 20/08/15 Martin Brampton	Added caveats about limitations (above)
+ * 17/10/15 Martin Brampton Added display of bitmask
  *
  * @endverbatim
  */
+
+static int bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit);
+static int bitmask_count_bits_set(GWBITMASK *bitmask);
 
 /**
  * Initialise a bitmask
@@ -151,19 +156,42 @@ unsigned	char mask;
  * Return a non-zero value if the bit at the specified bit
  * position in the bitmask is set.
  * The bitmask will automatically be extended if the bit is 
- * beyond the current bitmask length. This could be optimised
- * by assuming that a bit beyond the length is unset.
+ * beyond the current bitmask length. The work is done in the function
+ * bitmask_isset_without_spinlock, which can be called when a spinlock
+ * has already been acquired.
  *
  * @param bitmask	Pointer the bitmask
- * @param bit		Bit to clear
+ * @param bit		Bit to test
  */
 int
 bitmask_isset(GWBITMASK *bitmask, int bit)
 {
+int result;
+
+	spinlock_acquire(&bitmask->lock);
+	result = bitmask_isset_without_spinlock(bitmask, bit);
+	spinlock_release(&bitmask->lock);
+	return result;
+}
+
+/**
+ * Return a non-zero value if the bit at the specified bit
+ * position in the bitmask is set.  Should be called while holding a
+ * lock on the bitmask.
+ * 
+ * The bitmask will automatically be extended if the bit is 
+ * beyond the current bitmask length. This could be optimised
+ * by assuming that a bit beyond the length is unset.
+ *
+ * @param bitmask	Pointer the bitmask
+ * @param bit		Bit to test
+ */
+static int
+bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit)
+{
 unsigned	char *ptr;
 unsigned	char mask;
 
-	spinlock_acquire(&bitmask->lock);
 	if (bit >= bitmask->length)
 	{
 		bitmask->bits = realloc(bitmask->bits,
@@ -174,7 +202,6 @@ unsigned	char mask;
 	}
 	ptr = bitmask->bits + (bit / 8);
 	mask = 1 << (bit % 8);
-	spinlock_release(&bitmask->lock);
 	return *ptr & mask;
 }
 
@@ -239,3 +266,90 @@ bitmask_copy(GWBITMASK *dest, GWBITMASK *src)
 	spinlock_release(&src->lock);
 }
 
+/**
+ * Return a comma separated list of the numbers of the bits that are set in
+ * a bitmask, numbering starting at zero. Constrained to reject requests that
+ * could require more than three digit numbers.  The returned string must be
+ * freed by the caller (unless it is null on account of memory allocation
+ * failure).
+ *
+ * @param bitmask	Bitmap to make readable
+ * @return pointer to the newly allocated string, or null if no memory
+ */
+char *
+bitmask_render_readable(GWBITMASK *bitmask)
+{
+    char *toobig = "Bitmask is too large to render readable";
+    char *empty = "No bits are set";
+    char onebit[5];
+    char *result;
+    int count_set = 0;
+    
+ 	spinlock_acquire(&bitmask->lock);
+    if (999 < bitmask->length)
+    {
+        result = malloc(strlen(toobig));
+        if (result)
+        {
+            strcpy(result, toobig);
+        }
+    }
+    else
+    {
+        count_set = bitmask_count_bits_set(bitmask);
+        if (count_set)
+        {
+            result = malloc(1 + (4 * count_set));
+            if (result)
+            {
+                result[0] = 0;
+                for (int i = 0; i<bitmask->length; i++)
+                {
+                    if (bitmask_isset_without_spinlock(bitmask, i))
+                    {
+                        sprintf(onebit, "%d,", i);
+                        strcat(result, onebit);
+                    }
+                }
+                result[strlen(result)-1] = 0;
+            }
+        }
+        else
+        {
+            result = malloc(strlen(empty));
+            if (result)
+            {
+                strcpy(result, empty);
+            }
+        }
+    }
+ 	spinlock_release(&bitmask->lock);
+    return result;
+}
+
+/**
+ * Return a count of the number of bits set in a bitmask.  Helpful for setting
+ * the size of string needed to show the set bits in readable form.
+ *
+ * @param bitmask	Bitmap whose bits are to be counted
+ * @return int      Number of set bits
+ */
+static int
+bitmask_count_bits_set(GWBITMASK *bitmask)
+{
+    const unsigned char oneBits[] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
+    unsigned char partresults;
+    int result = 0;
+    unsigned char *ptr, *eptr;
+
+	ptr = bitmask->bits;
+	eptr = ptr + (bitmask->length / 8);
+	while (ptr < eptr)
+    {
+        partresults = oneBits[*ptr&0x0f];
+        partresults += oneBits[*ptr>>4];
+        result += partresults;
+        ptr++;
+    }
+    return result;
+}

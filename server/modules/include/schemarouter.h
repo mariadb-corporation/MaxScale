@@ -316,7 +316,6 @@ struct router_client_session {
         backend_ref_t*   rses_backend_ref; /*< Pointer to backend reference array */
         schemarouter_config_t rses_config;    /*< Copied config info from router instance */
         int              rses_nbackends; /*< Number of backends */
-        int              rses_capabilities; /*< Input type, for example */
         bool             rses_autocommit_enabled; /*< Is autocommit enabled */
         bool             rses_transaction_active; /*< Is a transaction active */
 	struct router_instance	 *router;	/*< The router instance */

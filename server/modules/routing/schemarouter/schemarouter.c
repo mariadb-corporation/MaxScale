@@ -61,6 +61,8 @@ MODULE_INFO 	info = {
  *
  *  Date	Who                             Description
  *  01/12/2014	Vilho Raatikka/Markus Mäkelä	Initial implementation
+ *  09/09/2015  Martin Brampton         Modify error handler
+ *  25/09/2015  Martin Brampton         Block callback processing when no router session in the DCB
  *
  * @endverbatim
  */
@@ -97,7 +99,7 @@ static route_target_t get_shard_route_target (
 	bool               trx_active,
 	HINT*              hint);
 
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static  int getCapabilities ();
 
 static bool connect_backend_servers(
         backend_ref_t*     backend_ref,
@@ -1239,7 +1241,6 @@ static void* newSession(
                 goto return_rses;                
         }
         /** Copy backend pointers to router session. */
-        client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
         
@@ -3932,27 +3933,11 @@ static void tracelog_routed_query(
 
 
 /**
- * Return rc, rc < 0 if router session is closed. rc == 0 if there are no 
- * capabilities specified, rc > 0 when there are capabilities.
+ * Return RCAP_TYPE_STMT_INPUT.
  */
-static uint8_t getCapabilities (
-        ROUTER* inst,
-        void*   router_session)
+static int getCapabilities ()
 {
-        ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *)router_session;
-        uint8_t            rc;
-        
-        if (!rses_begin_locked_router_action(rses))
-        {
-                rc = 0xff;
-                goto return_rc;
-        }
-        rc = rses->rses_capabilities;
-        
-        rses_end_locked_router_action(rses);
-        
-return_rc:
-        return rc;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 /**
@@ -4197,47 +4182,45 @@ return_succp:
  * @param       router_session  The router session
  * @param       errmsgbuf       The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action          The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
- * @param       succp           Result of action. 
+ * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param	succp		Result of action: true iff router can continue
  * 
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
  */
 static void handleError (
-        ROUTER*        instance,
-        void*          router_session,
-        GWBUF*         errmsgbuf,
-        DCB*           backend_dcb,
-        error_action_t action,
-        bool*          succp)
+    ROUTER*        instance,
+    void*          router_session,
+    GWBUF*         errmsgbuf,
+    DCB*           backend_dcb,
+    error_action_t action,
+    bool*          succp)
 {
-        SESSION*           session;
-        ROUTER_INSTANCE*   inst    = (ROUTER_INSTANCE *)instance;
-        ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
+    SESSION*           session;
+    ROUTER_INSTANCE*   inst    = (ROUTER_INSTANCE *)instance;
+    ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
 
-        CHK_DCB(backend_dcb);
-        if(succp == NULL || action == ERRACT_RESET)
-        {
-            return;
-        }
-	/** Don't handle same error twice on same DCB */
-	if (backend_dcb->dcb_errhandle_called)
-	{
-		/** we optimistically assume that previous call succeed */
-		*succp = true;
-		return;
-	}
-	else
-	{
-		backend_dcb->dcb_errhandle_called = true;
-	}
-        session = backend_dcb->session;
+    CHK_DCB(backend_dcb);
         
-        if (session == NULL || rses == NULL)
-	{
-                *succp = false;
-		return;
-	}
+    /** Don't handle same error twice on same DCB */
+    if (backend_dcb->dcb_errhandle_called)
+    {
+        /** we optimistically assume that previous call succeed */
+        *succp = true;
+        return;
+    }
+    else
+    {
+        backend_dcb->dcb_errhandle_called = true;
+    }
+    session = backend_dcb->session;
+        
+    if (session == NULL || rses == NULL)
+    {
+        *succp = false;
+    }
+    else
+    {
 	CHK_SESSION(session);
 	CHK_CLIENT_RSES(rses);
         
@@ -4247,7 +4230,7 @@ static void handleError (
                         if (!rses_begin_locked_router_action(rses))
                         {
                                 *succp = false;
-                                return;
+                                break;
                         }
 			/**
 			* This is called in hope of getting replacement for 
@@ -4275,6 +4258,8 @@ static void handleError (
                         *succp = false;
                         break;
         }
+    }
+    dcb_close(backend_dcb);
 }
 
 
@@ -4502,6 +4487,15 @@ router_handle_state_switch(
     SERVER* srv;
     
     CHK_DCB(dcb);
+    if (NULL == dcb->session->router_session)
+    {
+        /*
+         * The following processing will fail if there is no router session,
+         * because the "data" parameter will not contain meaningful data,
+         * so we have no choice but to stop here.
+         */
+        return 0;
+    }
     bref = (backend_ref_t *) data;
     CHK_BACKEND_REF(bref);
 

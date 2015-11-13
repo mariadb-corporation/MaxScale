@@ -69,8 +69,7 @@ int	max_poll_sleep;
  *				thread utilisation and fairer scheduling of the event
  *				processing.
  * 07/07/15     Martin Brampton Simplified add and remove DCB, improve error handling.
- * 23/08/15     Martin Brampton Provisionally added test so only DCB with a 
- *              session link can be added to the poll list
+ * 23/08/15     Martin Brampton Added test so only DCB with a session link can be added to the poll list
  *
  * @endverbatim
  */
@@ -91,7 +90,7 @@ static  simple_mutex_t  epoll_wait_mutex; /*< serializes calls to epoll_wait */
 static	int		n_waiting = 0;	  /*< No. of threads in epoll_wait */
 static	int		process_pollq(int thread_id);
 static	void		poll_add_event_to_dcb(DCB* dcb, GWBUF* buf, __uint32_t ev);
-
+static bool             poll_dcb_session_check(DCB *dcb, const char *);
 
 DCB			*eventq = NULL;
 SPINLOCK	pollqlock = SPINLOCK_INIT;
@@ -294,23 +293,6 @@ poll_add_dcb(DCB *dcb)
             STRDCBSTATE(dcb->state))));
         raise(SIGABRT);
     }
-    /*
-     * This test could be wrong. On the face of it, we don't want to add a
-     * DCB to the poll list if it is not linked to a session because the code
-     * that handles events will expect to find a session.  Test added by
-     * Martin as an experiment on 23 August 2015
-     */
-    if (false && NULL == dcb->session)
-    {
-        LOGIF(LE, (skygw_log_write_flush(
-            LOGFILE_ERROR,
-            "%lu [%s] Error : Attempt to add dcb %p "
-            "to poll list but it is not linked to a session, crashing.",
-            __func__,
-            pthread_self(),
-            dcb)));
-        raise(SIGABRT);
-    }
     if (DCB_STATE_POLLING == dcb->state
         || DCB_STATE_LISTENING == dcb->state)
     {
@@ -380,10 +362,6 @@ poll_remove_dcb(DCB *dcb)
                 dcb,
                 STRDCBSTATE(dcb->state))));
         }
-        /*< Set bit for each maxscale thread. This should be done before
-		 * the state is changed, so as to protect the DCB from premature
-		 * destruction. */
-        bitmask_copy(&dcb->memdata.bitmask, poll_bitmask());
         /*<
          * Set state to NOPOLLING and remove dcb from poll set.
          */
@@ -877,8 +855,12 @@ unsigned long	qtime;
 #endif /* FAKE_CODE */
 	ss_debug(spinlock_acquire(&dcb->dcb_initlock);)
 	ss_dassert(dcb->state != DCB_STATE_ALLOC);
-	ss_dassert(dcb->state != DCB_STATE_DISCONNECTED);
-	ss_dassert(dcb->state != DCB_STATE_FREED);
+        /* It isn't obvious that this is impossible */
+	/* ss_dassert(dcb->state != DCB_STATE_DISCONNECTED); */
+        if (DCB_STATE_DISCONNECTED == dcb->state)
+        {
+            return 0;
+        }
 	ss_debug(spinlock_release(&dcb->dcb_initlock);)
 
 	LOGIF(LD, (skygw_log_write(
@@ -902,7 +884,10 @@ unsigned long	qtime;
 						dcb, 
 						&tls_log_info.li_sesid, 
 						&tls_log_info.li_enabled_logs)));
-			dcb->func.write_ready(dcb);
+                        if (poll_dcb_session_check(dcb, "write_ready"))
+                        {
+                            dcb->func.write_ready(dcb);
+                        }
 		} else {
                         char errbuf[STRERROR_BUFLEN];
 			LOGIF(LD, (skygw_log_write(
@@ -933,7 +918,10 @@ unsigned long	qtime;
 				dcb, 
 				&tls_log_info.li_sesid, 
 				&tls_log_info.li_enabled_logs)));
-			dcb->func.accept(dcb);
+                        if (poll_dcb_session_check(dcb, "accept"))
+                        {
+                            dcb->func.accept(dcb);
+                        }
 		}
 		else
 		{
@@ -950,7 +938,10 @@ unsigned long	qtime;
 				dcb, 
 				&tls_log_info.li_sesid, 
 				&tls_log_info.li_enabled_logs)));
-			dcb->func.read(dcb);
+                        if (poll_dcb_session_check(dcb, "read"))
+                        {
+                            dcb->func.read(dcb);
+                        }
 		}
 	}
 	if (ev & EPOLLERR)
@@ -987,7 +978,10 @@ unsigned long	qtime;
 			dcb, 
 			&tls_log_info.li_sesid, 
 			&tls_log_info.li_enabled_logs)));
-		dcb->func.error(dcb);
+                        if (poll_dcb_session_check(dcb, "error"))
+                        {
+                            dcb->func.error(dcb);
+                        }
 	}
 
 	if (ev & EPOLLHUP)
@@ -1016,7 +1010,10 @@ unsigned long	qtime;
 				dcb, 
 				&tls_log_info.li_sesid, 
 				&tls_log_info.li_enabled_logs)));
-			dcb->func.hangup(dcb);
+                        if (poll_dcb_session_check(dcb, "hangup EPOLLHUP"))
+                        {
+                            dcb->func.hangup(dcb);
+                        }
 		}
 		else
 			spinlock_release(&dcb->dcb_initlock);
@@ -1049,7 +1046,10 @@ unsigned long	qtime;
 				dcb, 
 				&tls_log_info.li_sesid, 
 				&tls_log_info.li_enabled_logs)));
-			dcb->func.hangup(dcb);
+                        if (poll_dcb_session_check(dcb, "hangup EPOLLRDHUP"))
+                        {
+                            dcb->func.hangup(dcb);
+                        }
 		}
 		else
 			spinlock_release(&dcb->dcb_initlock);
@@ -1118,6 +1118,37 @@ unsigned long	qtime;
 }
 
 /**
+ * 
+ * Check that the DCB has a session link before processing.
+ * If not, log an error.  Processing will be bypassed
+ * 
+ * @param   dcb         The DCB to check
+ * @param   function    The name of the function about to be called
+ * @return  bool        Does the DCB have a non-null session link
+ */
+static bool
+poll_dcb_session_check(DCB *dcb, const char *function)
+{
+    if (dcb->session)
+    {
+        return true;
+    }
+    else
+    {
+        LOGIF(LE, (skygw_log_write_flush(
+            LOGFILE_ERROR,
+            "%lu [%s] The dcb %p that was about to be processed by %s does not "
+            "have a non-null session pointer ",
+            pthread_self(),
+            __func__,
+            dcb,
+            function)));
+        return false;
+    }
+}
+    
+/**
+ * 
  * Shutdown the polling loop
  */
 void
@@ -1509,6 +1540,53 @@ uint32_t ev = EPOLLOUT;
 		pollStats.evq_length--;
 	}
 
+	if (DCB_POLL_BUSY(dcb))
+	{
+		if (dcb->evq.pending_events == 0)
+			pollStats.evq_pending++;
+		dcb->evq.pending_events |= ev;
+	}
+	else
+	{
+		dcb->evq.pending_events = ev;
+		dcb->evq.inserted = hkheartbeat;
+		if (eventq)
+		{
+			dcb->evq.prev = eventq->evq.prev;
+			eventq->evq.prev->evq.next = dcb;
+			eventq->evq.prev = dcb;
+			dcb->evq.next = eventq;
+		}
+		else
+		{
+			eventq = dcb;
+			dcb->evq.prev = dcb;
+			dcb->evq.next = dcb;
+		}
+		pollStats.evq_length++;
+		pollStats.evq_pending++;
+		dcb->evq.inserted = hkheartbeat;
+		if (pollStats.evq_length > pollStats.evq_max)
+		{
+			pollStats.evq_max = pollStats.evq_length;
+		}
+	}
+	spinlock_release(&pollqlock);
+}
+
+/*
+ * Insert a fake hangup event for a DCB into the polling queue.
+ *
+ * This is used when a monitor detects that a server is not responding.
+ *
+ * @param dcb	DCB to emulate an EPOLLOUT event for
+ */
+void
+poll_fake_hangup_event(DCB *dcb)
+{
+uint32_t ev = EPOLLRDHUP;
+
+	spinlock_acquire(&pollqlock);
 	if (DCB_POLL_BUSY(dcb))
 	{
 		if (dcb->evq.pending_events == 0)

@@ -44,6 +44,7 @@
  * 16/10/14     Mark Riddoch            Add show eventq
  * 05/03/15     Massimiliano Pinto      Added enable/disable feedback
  * 27/05/15     Martin Brampton         Add show persistent [server]
+ * 06/11/15     Martin Brampton         Add show buffers (conditional compilation)
  *
  * @endverbatim
  */
@@ -60,6 +61,7 @@
 #include <atomic.h>
 #include <server.h>
 #include <spinlock.h>
+#include <buffer.h>
 #include <dcb.h>
 #include <poll.h>
 #include <users.h>
@@ -108,6 +110,12 @@ static  void    telnetdShowUsers(DCB *);
  * The subcommands of the show command
  */
 struct subcommand showoptions[] = {
+#if defined(BUFFER_TRACE)
+    { "buffers",	0, dprintAllBuffers,
+	  "Show all buffers with backtrace",
+      "Show all buffers with backtrace",
+      {0, 0, 0} },
+#endif
     { "dcbs", 0, dprintAllDCBs,
       "Show all descriptor control blocks (network connections)",
       "Show all descriptor control blocks (network connections)",

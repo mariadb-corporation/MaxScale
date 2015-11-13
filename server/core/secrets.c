@@ -23,6 +23,7 @@
 #include <ctype.h>
 #include <mysql_client_server_protocol.h>
 #include <gwdirs.h>
+#include <random_jkiss.h>
 
 /**
  * Generate a random printable character
@@ -32,16 +33,13 @@
 static unsigned char
 secrets_randomchar()
 {
-    return (char)((rand() % ('~' - ' ')) + ' ');
+    return(char) ((random_jkiss() % ('~' - ' ')) + ' ');
 }
 
 static int
 secrets_random_str(unsigned char *output, int len)
 {
-    int i;
-    srand((unsigned long )time(0L) ^ (unsigned long )output);
-
-    for (i = 0; i < len; ++i)
+    for (int i = 0; i < len; ++i)
     {
         output[i] = secrets_randomchar();
     }
@@ -53,12 +51,12 @@ secrets_random_str(unsigned char *output, int len)
  * and the AES Init Vector.
  * If the path parameter is not null the custom path is interpreted as a folder
  * containing the .secrets file. Otherwise the default location is used.
- * @return      The keys structure or NULL on error
+ * @return  The keys structure or NULL on error
  */
 static MAXKEYS *
 secrets_readKeys(const char* path)
 {
-    char            secret_file[PATH_MAX+1];
+    char            secret_file[PATH_MAX + 1];
     char            *home;
     MAXKEYS         *keys;
     struct stat     secret_stats;
@@ -74,7 +72,6 @@ secrets_readKeys(const char* path)
     {
         snprintf(secret_file, PATH_MAX, "%s/.secrets", get_datadir());
     }
-
     /* Try to access secrets file */
     if (access(secret_file, R_OK) == -1)
     {
@@ -85,25 +82,23 @@ secrets_readKeys(const char* path)
             if (!reported)
             {
                 char errbuf[STRERROR_BUFLEN];
-                LOGIF(LM, (skygw_log_write(
-                               LOGFILE_MESSAGE,
-                               "Encrypted password file %s can't be accessed "
-                               "(%s). Password encryption is not used.",
-                               secret_file,
-                               strerror_r(eno, errbuf, sizeof(errbuf)))));
+                LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
+                                           "Encrypted password file %s can't be accessed "
+                                           "(%s). Password encryption is not used.",
+                                           secret_file,
+                                           strerror_r(eno, errbuf, sizeof(errbuf)))));
                 reported = 1;
             }
         }
         else
         {
             char errbuf[STRERROR_BUFLEN];
-            LOGIF(LE, (skygw_log_write_flush(
-                           LOGFILE_ERROR,
-                           "Error : access for secrets file "
-                           "[%s] failed. Error %d, %s.",
-                           secret_file,
-                           eno,
-                           strerror_r(eno, errbuf, sizeof(errbuf)))));
+            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                             "Error : access for secrets file "
+                                             "[%s] failed. Error %d, %s.",
+                                             secret_file,
+                                             eno,
+                                             strerror_r(eno, errbuf, sizeof(errbuf)))));
         }
         return NULL;
     }
@@ -114,30 +109,29 @@ secrets_readKeys(const char* path)
         int eno = errno;
         errno = 0;
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : Failed opening secret "
-                       "file [%s]. Error %d, %s.",
-                       secret_file,
-                       eno,
-                       strerror_r(eno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : Failed opening secret "
+                                         "file [%s]. Error %d, %s.",
+                                         secret_file,
+                                         eno,
+                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
         return NULL;
 
     }
 
     /* accessing file details */
-    if (fstat(fd, &secret_stats) < 0) {
+    if (fstat(fd, &secret_stats) < 0)
+    {
         int eno = errno;
         errno = 0;
         close(fd);
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : fstat for secret file %s "
-                       "failed. Error %d, %s.",
-                       secret_file,
-                       eno,
-                       strerror_r(eno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : fstat for secret file %s "
+                                         "failed. Error %d, %s.",
+                                         secret_file,
+                                         eno,
+                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
         return NULL;
     }
 
@@ -147,34 +141,30 @@ secrets_readKeys(const char* path)
         errno = 0;
         close(fd);
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : Secrets file %s has "
-                       "incorrect size. Error %d, %s.",
-                       secret_file,
-                       eno,
-                       strerror_r(eno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : Secrets file %s has "
+                                         "incorrect size. Error %d, %s.",
+                                         secret_file,
+                                         eno,
+                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
+        return NULL;
+    }
+    if (secret_stats.st_mode != (S_IRUSR | S_IFREG))
+    {
+        close(fd);
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : Ignoring secrets file "
+                                         "%s, invalid permissions.",
+                                         secret_file)));
         return NULL;
     }
 
-    if (secret_stats.st_mode != (S_IRUSR|S_IFREG))
+    if ((keys = (MAXKEYS *) malloc(sizeof(MAXKEYS))) == NULL)
     {
         close(fd);
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : Ignoring secrets file "
-                       "%s, invalid permissions.",
-                       secret_file)));
-        return NULL;
-    }
-
-    if ((keys = (MAXKEYS *)malloc(sizeof(MAXKEYS))) == NULL)
-    {
-        close(fd);
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : Memory allocation failed "
-                       "for key structure.")));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : Memory allocation failed "
+                                         "for key structure.")));
         return NULL;
     }
 
@@ -191,31 +181,30 @@ secrets_readKeys(const char* path)
         close(fd);
         free(keys);
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : Read from secrets file "
-                       "%s failed. Read %d, expected %d bytes. Error %d, %s.",
-                       secret_file,
-                       len,
-                       sizeof(MAXKEYS),
-                       eno,
-                       strerror_r(eno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : Read from secrets file "
+                                         "%s failed. Read %d, expected %d bytes. Error %d, %s.",
+                                         secret_file,
+                                         len,
+                                         sizeof(MAXKEYS),
+                                         eno,
+                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
         return NULL;
     }
 
     /* Close the file */
-    if (close(fd) < 0) {
+    if (close(fd) < 0)
+    {
         int eno = errno;
         errno = 0;
         free(keys);
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : Failed closing the "
-                       "secrets file %s. Error %d, %s.",
-                       secret_file,
-                       eno,
-                       strerror_r(eno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : Failed closing the "
+                                         "secrets file %s. Error %d, %s.",
+                                         secret_file,
+                                         eno,
+                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
         return NULL;
     }
     ss_dassert(keys != NULL);
@@ -233,31 +222,30 @@ secrets_readKeys(const char* path)
  */
 int secrets_writeKeys(const char *path)
 {
-    int          fd,randfd;
-    unsigned int randval;
-    MAXKEYS      key;
-    char         secret_file[PATH_MAX + 10];
+    int             fd, randfd;
+    unsigned int    randval;
+    MAXKEYS         key;
+    char            secret_file[PATH_MAX + 10];
 
     if (strlen(path) > PATH_MAX)
     {
-        skygw_log_write(LOGFILE_ERROR,"Error: Pathname too long.");
+        skygw_log_write(LOGFILE_ERROR, "Error: Pathname too long.");
         return 1;
     }
 
-    snprintf(secret_file,PATH_MAX + 9,"%s/.secrets",path);
+    snprintf(secret_file, PATH_MAX + 9, "%s/.secrets", path);
     secret_file[PATH_MAX + 9] = '\0';
 
     /* Open for writing | Create | Truncate the file for writing */
     if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : failed opening secret "
-                       "file [%s]. Error %d, %s.",
-                       secret_file,
-                       errno,
-                       strerror_r(errno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : failed opening secret "
+                                         "file [%s]. Error %d, %s.",
+                                         secret_file,
+                                         errno,
+                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
         return 1;
     }
 
@@ -265,27 +253,24 @@ int secrets_writeKeys(const char *path)
     if ((randfd = open("/dev/random", O_RDONLY)) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : failed opening /dev/random. Error %d, %s.",
-                       errno,
-                       strerror_r(errno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : failed opening /dev/random. Error %d, %s.",
+                                         errno,
+                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
         close(fd);
         return 1;
     }
 
-    if (read(randfd,(void*)&randval,sizeof(unsigned int)) < 1)
+    if (read(randfd, (void*) &randval, sizeof(unsigned int)) < 1)
     {
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : failed to read /dev/random.")));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : failed to read /dev/random.")));
         close(fd);
         close(randfd);
         return 1;
     }
 
     close(randfd);
-    srand(randval);
     secrets_random_str(key.enckey, MAXSCALE_KEYLEN);
     secrets_random_str(key.initvector, MAXSCALE_IV_LEN);
 
@@ -293,13 +278,12 @@ int secrets_writeKeys(const char *path)
     if (write(fd, &key, sizeof(key)) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : failed writing into "
-                       "secret file [%s]. Error %d, %s.",
-                       secret_file,
-                       errno,
-                       strerror_r(errno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : failed writing into "
+                                         "secret file [%s]. Error %d, %s.",
+                                         secret_file,
+                                         errno,
+                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
         close(fd);
         return 1;
     }
@@ -308,25 +292,23 @@ int secrets_writeKeys(const char *path)
     if (close(fd) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : failed closing the "
-                       "secret file [%s]. Error %d, %s.",
-                       secret_file,
-                       errno,
-                       strerror_r(errno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : failed closing the "
+                                         "secret file [%s]. Error %d, %s.",
+                                         secret_file,
+                                         errno,
+                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
     }
 
     if (chmod(secret_file, S_IRUSR) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : failed to change the permissions of the"
-                       "secret file [%s]. Error %d, %s.",
-                       secret_file,
-                       errno,
-                       strerror_r(errno, errbuf, sizeof(errbuf)))));
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Error : failed to change the permissions of the"
+                                         "secret file [%s]. Error %d, %s.",
+                                         secret_file,
+                                         errno,
+                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
     }
 
     return 0;
@@ -341,17 +323,17 @@ int secrets_writeKeys(const char *path)
  * Note the return is always a malloc'd string that the caller must free
  *
  * @param crypt The encrypted password
- * @return      The decrypted password
+ * @return  The decrypted password
  */
 char *
 decryptPassword(const char *crypt)
 {
-    MAXKEYS       *keys;
-    AES_KEY       aeskey;
-    unsigned char *plain;
-    const char    *ptr;
-    unsigned char encrypted[80];
-    int           enlen;
+    MAXKEYS         *keys;
+    AES_KEY         aeskey;
+    unsigned char   *plain;
+    const char      *ptr;
+    unsigned char   encrypted[80];
+    int             enlen;
 
     keys = secrets_readKeys(NULL);
     if (!keys)
@@ -359,9 +341,9 @@ decryptPassword(const char *crypt)
         return strdup(crypt);
     }
     /*
-    ** If the input is not a HEX string return the input 
-    ** it probably was not encrypted
-    */
+     ** If the input is not a HEX string return the input 
+     ** it probably was not encrypted
+     */
     for (ptr = crypt; *ptr; ptr++)
     {
         if (!isxdigit(*ptr))
@@ -374,7 +356,7 @@ decryptPassword(const char *crypt)
     enlen = strlen(crypt) / 2;
     gw_hex2bin(encrypted, crypt, strlen(crypt));
 
-    if ((plain = (unsigned char *)malloc(80)) == NULL)
+    if ((plain = (unsigned char *) malloc(80)) == NULL)
     {
         free(keys);
         return NULL;
@@ -385,26 +367,26 @@ decryptPassword(const char *crypt)
     AES_cbc_encrypt(encrypted, plain, enlen, &aeskey, keys->initvector, AES_DECRYPT);
     free(keys);
 
-    return (char *)plain;
+    return(char *) plain;
 }
 
 /**
  * Encrypt a password that can be stored in the MaxScale configuration file.
  *
  * Note the return is always a malloc'd string that the caller must free
- * @param path          Path the the .secrets file
- * @param password      The password to encrypt
- * @return      The encrypted password
+ * @param path      Path the the .secrets file
+ * @param password  The password to encrypt
+ * @return  The encrypted password
  */
 char *
 encryptPassword(const char* path, const char *password)
 {
-    MAXKEYS       *keys;
-    AES_KEY       aeskey;
-    int           padded_len;
-    char          *hex_output;
-    unsigned char padded_passwd[80];
-    unsigned char encrypted[80];
+    MAXKEYS         *keys;
+    AES_KEY         aeskey;
+    int             padded_len;
+    char            *hex_output;
+    unsigned char   padded_passwd[80];
+    unsigned char   encrypted[80];
 
     if ((keys = secrets_readKeys(path)) == NULL)
     {
@@ -412,13 +394,13 @@ encryptPassword(const char* path, const char *password)
     }
 
     memset(padded_passwd, 0, 80);
-    strncpy((char *)padded_passwd, password, 79);
+    strncpy((char *) padded_passwd, password, 79);
     padded_len = ((strlen(password) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
     AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
     AES_cbc_encrypt(padded_passwd, encrypted, padded_len, &aeskey, keys->initvector, AES_ENCRYPT);
-    hex_output = (char *)malloc(padded_len * 2);
+    hex_output = (char *) malloc(padded_len * 2);
     gw_bin2hex(hex_output, encrypted, padded_len);
     free(keys);
 

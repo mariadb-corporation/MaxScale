@@ -35,7 +35,7 @@ static	void 	freeSession(ROUTER *instance, void *session);
 static	int	routeQuery(ROUTER *instance, void *session, GWBUF *queue);
 static  void	clientReply(ROUTER *instance, void *session, GWBUF *queue,DCB*);
 static	void	diagnostic(ROUTER *instance, DCB *dcb);
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static  int getCapabilities ();
 static void handleError(
 	ROUTER           *instance,
 	void             *router_session,
@@ -166,9 +166,7 @@ diagnostic(ROUTER *instance, DCB *dcb)
 {
 }
 
-static uint8_t getCapabilities(
-        ROUTER*  inst,
-        void*    router_session)
+static int getCapabilities()
 {
         return 0;
 }

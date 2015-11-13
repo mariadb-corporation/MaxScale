@@ -65,6 +65,9 @@ MODULE_INFO 	info = {
  * 18/07/2013	Massimiliano Pinto	routeQuery now handles COM_QUIT
  *					as QUERY_TYPE_SESSION_WRITE
  * 17/07/2014	Massimiliano Pinto	Server connection counter is updated in closeSession
+ * 
+ * 09/09/2015   Martin Brampton         Modify error handler
+ * 25/09/2015   Martin Brampton         Block callback processing when no router session in the DCB
  *
  * @endverbatim
  */
@@ -127,7 +130,7 @@ static bool route_single_stmt(
 	GWBUF*             querybuf);
 
 
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static  int getCapabilities();
 
 #if defined(NOT_USED)
 static bool router_option_configured(
@@ -909,7 +912,6 @@ static void* newSession(
         client_rses->rses_master_ref   = master_ref;
 	/* assert with master_host */
 	ss_dassert(master_ref && (master_ref->bref_backend->backend_server && SERVER_MASTER));
-        client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
 
@@ -987,7 +989,7 @@ static void closeSession(
 		int i;
                 /** 
                  * This sets router closed. Nobody is allowed to use router
-                 * whithout checking this first.
+                 * without checking this first.
                  */
                 router_cli_ses->rses_closed = true;
 
@@ -1427,6 +1429,8 @@ static route_target_t get_route_target (
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)||	/*< read user var */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||	/*< read sys var */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT) ||   /*< prepared stmt exec */
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
+		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))) /*< read global sys var */
 	{
 		/** First set expected targets before evaluating hints */
@@ -1444,6 +1448,8 @@ static route_target_t get_route_target (
 
                 if (QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_EXEC_STMT)	||
+		    QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
+		    QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 			/** Configured not to allow reading variables from slaves */
 			(use_sql_variables_in == TYPE_MASTER && 
 			(QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)	||
@@ -3686,10 +3692,10 @@ static bool select_connect_backend_servers(
                                 ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
                                 
                                 /** disconnect opened connections */
-                                dcb_close(backend_ref[i].bref_dcb);
                                 bref_clear_state(&backend_ref[i], BREF_IN_USE);
                                 /** Decrease backend's connection counter. */
                                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
+                                dcb_close(backend_ref[i].bref_dcb);
                         }
                 }
         }
@@ -4440,27 +4446,11 @@ static void tracelog_routed_query(
 
 
 /**
- * Return rc, rc < 0 if router session is closed. rc == 0 if there are no 
- * capabilities specified, rc > 0 when there are capabilities.
+ * Return RCAP_TYPE_STMT_INPUT.
  */ 
-static uint8_t getCapabilities (
-        ROUTER* inst,
-        void*   router_session)
+static int getCapabilities ()
 {
-        ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *)router_session;
-        uint8_t            rc;
-        
-        if (!rses_begin_locked_router_action(rses))
-        {
-                rc = 0xff;
-                goto return_rc;
-        }
-        rc = rses->rses_capabilities;
-        
-        rses_end_locked_router_action(rses);
-        
-return_rc:
-        return rc;
+        return RCAP_TYPE_STMT_INPUT;
 }
 
 /**
@@ -4829,9 +4819,8 @@ static void rwsplit_process_router_options(
  * @param       router_session  The router session
  * @param       errmsgbuf       The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action          The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
- * @param       succp           Result of action. True if there is at least master 
- * and enough slaves to continue session. Otherwise false.
+ * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param	succp		Result of action: true iff router can continue
  * 
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
@@ -4850,17 +4839,14 @@ static void handleError (
 
         CHK_DCB(backend_dcb);
 
-	/** Reset error handle flag from a given DCB */
-	if (action == ERRACT_RESET)
-	{
-		backend_dcb->dcb_errhandle_called = false;
-		return;
-	}
-	
 	/** Don't handle same error twice on same DCB */
 	if (backend_dcb->dcb_errhandle_called)
 	{
-		/** we optimistically assume that previous call succeed */
+            /** we optimistically assume that previous call succeed */
+            /*
+             * The return of true is potentially misleading, but appears to
+             * be safe with the code as it stands on 9 Sept 2015 - MNB
+             */
 		*succp = true;
 		return;
 	}
@@ -4873,12 +4859,13 @@ static void handleError (
         if (session == NULL || rses == NULL)
 	{
                 *succp = false;
-		return;
 	}
-	CHK_SESSION(session);
-	CHK_CLIENT_RSES(rses);
+        else
+        {
+            CHK_SESSION(session);
+            CHK_CLIENT_RSES(rses);
         
-        switch (action) {
+            switch (action) {
                 case ERRACT_NEW_CONNECTION:
                 {
 			SERVER* srv;
@@ -4886,7 +4873,7 @@ static void handleError (
 			if (!rses_begin_locked_router_action(rses))
 			{
 				*succp = false;
-				return;
+				break;
 			}
 			srv = rses->rses_master_ref->bref_backend->backend_server;
 			/**
@@ -4896,6 +4883,25 @@ static void handleError (
                         if (rses->rses_master_ref->bref_dcb == backend_dcb &&
 				!SERVER_IS_MASTER(srv))
 			{
+                        	backend_ref_t*  bref;
+                            bref = get_bref_from_dcb(rses, backend_dcb);
+                        	if (bref != NULL)
+                            {
+                                    CHK_BACKEND_REF(bref);
+                                    bref_clear_state(bref, BREF_IN_USE);
+                                    bref_set_state(bref, BREF_CLOSED);
+                            }
+                            else
+                            {
+                                LOGIF(LE, (skygw_log_write_flush(
+                                    LOGFILE_ERROR,
+                                    "Error : server %s:%d lost the "
+                                    "master status but could not locate the "
+                                    "corresponding backend ref.",
+                                    srv->name,
+                                    srv->port)));
+                                dcb_close(backend_dcb);
+                            }
 				if (!srv->master_err_is_logged)
 				{
 					LOGIF(LE, (skygw_log_write_flush(
@@ -4939,7 +4945,9 @@ static void handleError (
 		default:                        
                         *succp = false;
                         break;
+            }
         }
+        dcb_close(backend_dcb);
 }
 
 
@@ -4995,7 +5003,7 @@ static bool handle_error_new_connection(
 	DCB*               backend_dcb,
 	GWBUF*             errmsg)
 {
-        ROUTER_CLIENT_SES*  myrses;
+    ROUTER_CLIENT_SES*  myrses;
 	SESSION*       ses;
 	int            router_nservers;
 	int            max_nslaves;
@@ -5003,7 +5011,7 @@ static bool handle_error_new_connection(
 	backend_ref_t* bref;
 	bool           succp;
 	
-        myrses = *rses;
+    myrses = *rses;
 	ss_dassert(SPINLOCK_IS_LOCKED(&myrses->rses_lock));
 	
 	ses = backend_dcb->session;
@@ -5053,7 +5061,6 @@ static bool handle_error_new_connection(
 			DCB_REASON_NOT_RESPONDING, 
 			&router_handle_state_switch, 
 			(void *)bref);
-	
 	router_nservers = router_get_servercount(inst);
 	max_nslaves     = rses_get_max_slavecount(myrses, router_nservers);
 	max_slave_rlag  = rses_get_max_replication_lag(myrses);
@@ -5311,9 +5318,16 @@ static int router_handle_state_switch(
         backend_ref_t*     bref;
         int                rc = 1;
         SERVER*            srv;
-	ROUTER_CLIENT_SES* rses;
-        SESSION*           ses;
         CHK_DCB(dcb);
+    if (NULL == dcb->session->router_session)
+    {
+        /*
+         * The following processing will fail if there is no router session,
+         * because the "data" parameter will not contain meaningful data,
+         * so we have no choice but to stop here.
+         */
+        return 0;
+    }
         bref = (backend_ref_t *)data;
         CHK_BACKEND_REF(bref);
        
@@ -5332,7 +5346,10 @@ static int router_handle_state_switch(
 			srv->port,
 				STRSRVSTATUS(srv))));
         CHK_SESSION(((SESSION*)dcb->session));
-        CHK_CLIENT_RSES(((ROUTER_CLIENT_SES *)dcb->session->router_session));
+        if (dcb->session->router_session)
+        {
+            CHK_CLIENT_RSES(((ROUTER_CLIENT_SES *)dcb->session->router_session));
+        }
 
         switch (reason) {
                 case DCB_REASON_NOT_RESPONDING:

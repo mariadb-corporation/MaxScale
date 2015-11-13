@@ -258,8 +258,7 @@ GWPROTOCOL	*funcs;
 				}
 				if (loaded == -1)
 				{
-					hashtable_free(service->users->data);
-					free(service->users);
+                    users_free(service->users);
                     service->users = NULL;
 					dcb_close(port->listener);
 					port->listener = NULL;
@@ -347,6 +346,7 @@ GWPROTOCOL	*funcs;
 		== NULL)
 	{
 		users_free(service->users);
+        service->users = NULL;
 		dcb_close(port->listener);
         service->users = NULL;
 		port->listener = NULL;
@@ -359,7 +359,6 @@ GWPROTOCOL	*funcs;
 		goto retblock;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
-	port->listener->session = NULL;
 	
 	if (port->address)
 		sprintf(config_bind, "%s:%d", port->address, port->port);
@@ -383,6 +382,7 @@ GWPROTOCOL	*funcs;
 				service->name)));
 			
 			users_free(service->users);
+            service->users = NULL;
             dcb_close(port->listener);
 			port->listener = NULL;
             service->users = NULL;

@@ -39,6 +39,8 @@
  * 10/11/2014	Massimiliano Pinto	Added: client charset added to protocol struct
  * 29/05/2015   Markus Makela           Added SSL support
  * 11/06/2015   Martin Brampton		COM_QUIT suppressed for persistent connections
+ * 04/09/2015   Martin Brampton         Introduce DUMMY session to fulfill guarantee DCB always has session
+ * 09/09/2015   Martin Brampton         Modify error handler calls 
  */
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -745,76 +747,38 @@ int gw_read_client_event(
 
 	session = dcb->session;
 
-	if (protocol->protocol_auth_state == MYSQL_IDLE && session != NULL)
+	if (protocol->protocol_auth_state == MYSQL_IDLE && session != NULL && SESSION_STATE_DUMMY != session->state)
 	{
 		CHK_SESSION(session);
 		router = session->service->router;
 		router_instance = session->service->router_instance;
 		rsession = session->router_session;
-		ss_dassert(rsession != NULL);
 
-		if (router_instance != NULL && rsession != NULL) {
+        if (NULL == router_instance || NULL == rsession)
+        {
+            /** Send ERR 1045 to client */
+            mysql_send_auth_error(
+				dcb,
+				2,
+				0,
+				"failed to create new session");
+            while (read_buffer)
+            {
+                read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
+            }
+            return 0;
+        }
 
-	                /** Ask what type of input the router expects */
-			cap = router->getCapabilities(router_instance, rsession);
-                       
-			if (cap == 0 || (cap == RCAP_TYPE_PACKET_INPUT))
-			{
-				stmt_input = false;
-			}
-			else if (cap == RCAP_TYPE_STMT_INPUT)
-			{
-				stmt_input = true;
-				/** Mark buffer to as MySQL type */
-				gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
-			}
-
-			/** 
-			 * If router doesn't implement getCapabilities correctly we end 
-			 * up here.
-			 */
-			else
-			{
-				GWBUF* errbuf;
-				bool   succp;
-			
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [gw_read_client_event] Reading router "
-					"capabilities failed.",
-					pthread_self())));
-
-				errbuf = mysql_create_custom_error(
-					1, 
-					0, 
-					"Read invalid router capabilities. Routing failed. "
-					"Session will be closed.");
-			
-				router->handleError(
-					router_instance,
-					rsession, 
-					errbuf, 
-					dcb,
-					ERRACT_REPLY_CLIENT,
-					&succp);
-				gwbuf_free(errbuf);
-				/** 
-				 * If there are not enough backends close 
-				 * session 
-				 */
-				if (!succp)
-				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Error : Routing the query failed. "
-						"Session will be closed.")));
-					dcb_close(dcb);
-				}
-                        	rc = 1;
-                        	goto return_rc;
-                	}
-		}
-	}
+        /** Ask what type of input the router expects */
+        cap = router->getCapabilities(router_instance, rsession);
+        
+        if (cap & RCAP_TYPE_STMT_INPUT)
+        {
+            stmt_input = true;
+            /** Mark buffer to as MySQL type */
+            gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
+        }
+    }
 
 	if (stmt_input) {
                 
@@ -907,7 +871,7 @@ int gw_read_client_event(
 			if (session != NULL) 
 			{
 				CHK_SESSION(session);
-				ss_dassert(session->state != SESSION_STATE_ALLOC);
+				ss_dassert(session->state != SESSION_STATE_ALLOC && session->state != SESSION_STATE_DUMMY);
 				
 				protocol->protocol_auth_state = MYSQL_IDLE;
 				/** 
@@ -1007,7 +971,7 @@ int gw_read_client_event(
 		if (session != NULL)
 		{
 		    CHK_SESSION(session);
-		    ss_dassert(session->state != SESSION_STATE_ALLOC);
+		    ss_dassert(session->state != SESSION_STATE_ALLOC && session->state != SESSION_STATE_DUMMY);
 
 		    protocol->protocol_auth_state = MYSQL_IDLE;
 		    /**
@@ -1091,7 +1055,7 @@ int gw_read_client_event(
 		session_state_t ses_state;
 
                 session = dcb->session;
-                ss_dassert(session!= NULL);
+                ss_dassert(session!= NULL && SESSION_STATE_DUMMY != session->state);
                 
                 if (session != NULL) 
                 {
@@ -1117,6 +1081,7 @@ int gw_read_client_event(
                         /* Temporarily suppressed: SESSION_ROUTE_QUERY(session, read_buffer); */
 						/* Replaced with freeing the read buffer. */
 				gwbuf_free(read_buffer);
+                read_buffer = NULL;
             /**
 			 * Close router session which causes closing of backends.
 			 */
@@ -1125,7 +1090,7 @@ int gw_read_client_event(
 		    else
 		    {
 			/** Reset error handler when routing of the new query begins */
-			router->handleError(NULL, NULL, NULL, dcb, ERRACT_RESET, NULL);
+			dcb->dcb_errhandle_called = false;
 			
                         if (stmt_input)                                
                         {
@@ -1139,12 +1104,18 @@ int gw_read_client_event(
 			    {
 				/** add incomplete mysql packet to read queue */
 				dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                read_buffer = NULL;
 			    }
                         }
-                        else
+                        else if (NULL != session->router_session || cap & RCAP_TYPE_NO_RSESSION)
                         {
 			    /** Feed whole packet to router */
 			    rc = SESSION_ROUTE_QUERY(session, read_buffer);
+                read_buffer = NULL;
+                        }
+                        else
+                        {
+                            rc = 0;
                         }
 
                         /** Routing succeed */
@@ -1187,8 +1158,11 @@ int gw_read_client_event(
 								 "Error : Routing the query failed. "
 					"Session will be closed.")));
 				
-				dcb_close(dcb);
 			    }
+                            while (read_buffer)
+                            {
+                                read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
+                            }
                         }
 		    }
 		}
@@ -1678,6 +1652,7 @@ int gw_MySQLAccept(DCB *listener)
 		}
 
                 client_dcb->service = listener->session->service;
+                client_dcb->session = session_set_dummy(client_dcb);
                 client_dcb->fd = c_sock;
 
 		// get client address
@@ -1837,7 +1812,7 @@ gw_client_close(DCB *dcb)
          * session may be NULL if session_alloc failed.
          * In that case, router session wasn't created.
          */
-        if (session != NULL)
+        if (session != NULL && SESSION_STATE_DUMMY != session->state)
         {
                 CHK_SESSION(session);
                 spinlock_acquire(&session->ses_lock);
@@ -1892,9 +1867,11 @@ gw_client_hangup_event(DCB *dcb)
                 goto retblock;
         }
 #if defined(SS_DEBUG)
-        LOGIF(LD, (skygw_log_write_flush(
-                LOGFILE_DEBUG,
-                "Client hangup error handling.")));
+        LOGIF(LE, (skygw_log_write_flush(
+            LOGFILE_ERROR,
+            "Client hangup error handling, session state %s, dcb state %s.",
+            session_state(session->state),
+            STRDCBSTATE(dcb->state))));
 #endif
         dcb_close(dcb);
  

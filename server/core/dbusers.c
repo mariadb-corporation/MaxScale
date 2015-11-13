@@ -1961,6 +1961,7 @@ static void *uh_keydup(void* key) {
 
 	if (current_key->resource)
 		rval->resource = strdup(current_key->resource);
+        else rval->resource = NULL;
 
 	return (void *) rval;
 }

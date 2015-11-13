@@ -25,12 +25,13 @@
  * Date		Who			Description
  * 08/09/14	Massimiliano Pinto	Initial implementation
  * 08/05/15     Markus Makela           Addition of launchable scripts
+ * 17/10/15 Martin Brampton     Change DCB callback to hangup
  *
  * @endverbatim
  */
 
-
 #include <mmmon.h>
+#include <dcb.h>
 
 static	void	monitorMain(void *);
 
@@ -562,7 +563,7 @@ detect_stale_master = handle->detectStaleMaster;
 
                         if (mon_status_changed(ptr))
                         {
-                                dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
+                                dcb_hangup_foreach(ptr->server);
                         }
                         
                         if (mon_status_changed(ptr) || 

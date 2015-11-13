@@ -35,7 +35,9 @@
  * 15/07/2014	Mark Riddoch		Addition of properties
  * 28/08/2014	Mark Riddoch		Adition of tail pointer to speed
  *					the gwbuf_append process
- *
+ * 09/11/2015   Martin Brampton         Add buffer tracing (conditional compilation),
+ *                                      accessed by "show buffers" maxadmin command
+ * 
  * @endverbatim
  */
 #include <stdlib.h>
@@ -47,10 +49,23 @@
 #include <log_manager.h>
 #include <errno.h>
 
+#if defined(BUFFER_TRACE)
+#include <hashtable.h>
+#include <execinfo.h>
+
+static HASHTABLE *buffer_hashtable = NULL;
+#endif
+
 static buffer_object_t* gwbuf_remove_buffer_object(
         GWBUF*           buf,
         buffer_object_t* bufobj);
 
+#if defined(BUFFER_TRACE)
+static void gwbuf_add_to_hashtable(GWBUF *buf);
+static int bhashfn (void *key);
+static int bcmpfn (void *key1, void *key2);
+static void gwbuf_remove_from_hashtable(GWBUF *buf);
+#endif
 
 /**
  * Allocate a new gateway buffer structure of size bytes.
@@ -114,8 +129,110 @@ retblock:
 			"Error : Memory allocation failed due to %s.", 
 			strerror_r(errno, errbuf, sizeof(errbuf)))));
 	}
+#if defined(BUFFER_TRACE)
+        else 
+        {
+            gwbuf_add_to_hashtable(rval);
+        }
+#endif
 	return rval;
 }
+
+#if defined(BUFFER_TRACE)
+/**
+ * Store a trace of buffer creation
+ *
+ * @param buf The buffer to record
+ */
+static void
+gwbuf_add_to_hashtable(GWBUF *buf)
+{
+    void *array[16];
+    size_t size, i, total;
+    char **strings;
+    char *tracetext;
+
+    size = backtrace (array, 16);
+    strings = backtrace_symbols (array, size);
+    total = (2 * size) + 1;
+    for (i = 0; i < size; i++)
+    {
+        total += strlen(strings[i]);
+    }
+    tracetext = (char *)malloc(total);
+    if (tracetext)
+    {
+        char *ptr = tracetext;
+        for (i = 0; i < size; i++)
+        {
+            sprintf(ptr, "\t%s\n", strings[i]);
+            ptr += (strlen(strings[i]) + 2);
+        }
+        free (strings);
+
+        if (NULL == buffer_hashtable)
+        {
+            buffer_hashtable = hashtable_alloc(10000, bhashfn, bcmpfn);
+            hashtable_memory_fns(buffer_hashtable,NULL,NULL,NULL,(HASHMEMORYFN)free);
+        }
+        hashtable_add(buffer_hashtable, buf, (void *)tracetext);
+    }
+}
+
+/**
+ * Hash a buffer (address) to an integer
+ *
+ * @param key The pointer to the buffer
+ */
+static int
+bhashfn(void *key)
+{
+    return (int)((uintptr_t) key % INT_MAX);
+}
+
+/**
+ * Compare two buffer keys (pointers)
+ *
+ * @param key1 The pointer to the first buffer
+ * @param key2 The pointer to the second buffer
+ */
+static int
+bcmpfn(void *key1, void *key2)
+{
+    return key1 == key2 ? 0 : 1;
+}
+
+/**
+ * Remove a buffer from the store of buffer traces
+ *
+ * @param buf The buffer to be removed
+ */
+static void
+gwbuf_remove_from_hashtable(GWBUF *buf)
+{
+    hashtable_delete(buffer_hashtable, buf);
+}
+
+/**
+ * Print all buffer traces via a given print DCB
+ *
+ * @param pdcb  Print DCB for output
+ */
+void
+dprintAllBuffers(void *pdcb)
+{
+    void *buf;
+    char *backtrace;
+    HASHITERATOR *buffers = hashtable_iterator(buffer_hashtable);
+    while (NULL != (buf = hashtable_next(buffers)))
+    {
+        dcb_printf((DCB *)pdcb, "Buffer: %p\n", (void *)buf);
+        backtrace = hashtable_fetch(buffer_hashtable, buf);
+        dcb_printf((DCB *)pdcb, "%s", backtrace);
+    }
+    hashtable_iterator_free(buffers);
+}
+#endif
 
 /**
  * Free a gateway buffer
@@ -157,6 +274,9 @@ BUF_PROPERTY	*prop;
                 buf->hint = buf->hint->next;
                 hint_free(h);
         }
+#if defined(BUFFER_TRACE)
+        gwbuf_remove_from_hashtable(buf);
+#endif
 	free(buf);
 }
 
@@ -196,6 +316,9 @@ GWBUF	*rval;
 	rval->tail = rval;
 	rval->next = NULL;
         CHK_GWBUF(rval);
+#if defined(BUFFER_TRACE)
+        gwbuf_add_to_hashtable(rval);
+#endif
 	return rval;
 }
 
@@ -263,6 +386,9 @@ GWBUF *gwbuf_clone_portion(
         clonebuf->next = NULL;
         clonebuf->tail = clonebuf;
         CHK_GWBUF(clonebuf);
+#if defined(BUFFER_TRACE)
+        gwbuf_add_to_hashtable(clonebuf);
+#endif
         return clonebuf;
         
 }

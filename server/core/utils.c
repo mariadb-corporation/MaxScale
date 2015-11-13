@@ -43,6 +43,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
+#include <random_jkiss.h>
 
 /* used in the hex2bin function */
 #define char_val(X) (X >= '0' && X <= '9' ? X-'0' :\
@@ -97,7 +98,7 @@ char *gw_strend(register const char *s) {
 * generate a random char 
 *****************************************/
 static char gw_randomchar() {
-   return (char)((rand() % 78) + 30);
+   return (char)((random_jkiss() % 78) + 30);
 }
 
 /*****************************************
@@ -107,7 +108,6 @@ static char gw_randomchar() {
 int gw_generate_random_str(char *output, int len) {
 
 	int i;
-	srand(time(0L));
 
 	for ( i = 0; i < len; ++i ) {
 		output[i] = gw_randomchar();

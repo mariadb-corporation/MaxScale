@@ -44,6 +44,8 @@
  * 24/10/2014	Massimiliano Pinto	Added Mysql user@host @db authentication support
  * 10/11/2014	Massimiliano Pinto	Client charset is passed to backend
  * 19/06/2015   Martin Brampton		Persistent connection handling
+ * 07/10/2015   Martin Brampton         Remove calls to dcb_close - should be done by routers
+ * 27/10/2015   Martin Brampton         Test for RCAP_TYPE_NO_RSESSION before calling clientReply
  *
  */
 #include <modinfo.h>
@@ -135,7 +137,7 @@ static MYSQL_session* gw_get_shared_session_auth_info(
 
         spinlock_acquire(&dcb->session->ses_lock);
 
-        if (dcb->session->state != SESSION_STATE_ALLOC) { 
+        if (dcb->session->state != SESSION_STATE_ALLOC && dcb->session->state != SESSION_STATE_DUMMY) { 
                 auth_info = dcb->session->data;
         } else {
                 LOGIF(LE, (skygw_log_write_flush(
@@ -162,7 +164,7 @@ static int gw_read_backend_event(DCB *dcb) {
         int            rc = 0;
 
         CHK_DCB(dcb);        
-        if (!dcb->session && dcb->persistentstart)
+        if (dcb->persistentstart)
         {
             dcb->dcb_errhandle_called = true;
             goto return_rc;
@@ -280,7 +282,7 @@ static int gw_read_backend_event(DCB *dcb) {
                         SESSION         *session = dcb->session;
                         int             receive_rc = 0;
 	
-			if (session == NULL)
+			if (SESSION_STATE_DUMMY == session->state)
 			{
 				rc = 0;
 				goto return_with_lock;
@@ -390,27 +392,34 @@ static int gw_read_backend_event(DCB *dcb) {
 					"Authentication with backend failed. "
 					"Session will be closed.");
 
-				router->handleError(router_instance,
+                                if (rsession)
+                                {
+                                    router->handleError(router_instance,
 						rsession, 
 						errbuf, 
 						dcb,
 						ERRACT_REPLY_CLIENT,
 						&succp);
+                                }
+                                else
+                                {
+                                    gwbuf_free(errbuf);
+                                    dcb->dcb_errhandle_called = true;
+                                    /*
+                                     * I'm pretty certain this is best removed and
+                                     * causes trouble if present, but have left it
+                                     * here just for now as a comment. Martin
+                                     */
+                                    /* dcb_close(dcb); */
+				    rc = 1;
+				    goto return_rc;
+                                }
 				gwbuf_free(errbuf);
-				LOGIF(LD, (skygw_log_write(
-					LOGFILE_DEBUG,
-					"%lu [gw_read_backend_event] "
-					"after calling handleError. Backend "
-					"DCB %p, session %p",
-					pthread_self(),
-					dcb,
-					dcb->session)));
 				
 				spinlock_acquire(&session->ses_lock);
 				session->state = SESSION_STATE_STOPPING;
 				spinlock_release(&session->ses_lock);
 				ss_dassert(dcb->dcb_errhandle_called);
-				dcb_close(dcb);
                                 rc = 1;
                                 goto return_rc;
                         }
@@ -483,8 +492,6 @@ static int gw_read_backend_event(DCB *dcb) {
                                 session->state = SESSION_STATE_STOPPING;
                                 spinlock_release(&session->ses_lock);
                         }
-                        ss_dassert(dcb->dcb_errhandle_called);
-                        dcb_close(dcb);
                         rc = 0;
                         goto return_rc;
                 }
@@ -565,7 +572,8 @@ static int gw_read_backend_event(DCB *dcb) {
                  */
 		if (dcb->session->state == SESSION_STATE_ROUTER_READY &&
 			dcb->session->client != NULL && 
-			dcb->session->client->state == DCB_STATE_POLLING)
+			dcb->session->client->state == DCB_STATE_POLLING &&
+                        (session->router_session || router->getCapabilities() & RCAP_TYPE_NO_RSESSION))
                 {
                         client_protocol = SESSION_PROTOCOL(dcb->session,
                                                            MySQLProtocol);
@@ -825,6 +833,11 @@ static int gw_error_backend_event(DCB *dcb)
 	CHK_DCB(dcb);
 	session = dcb->session;
 	CHK_SESSION(session);
+    if (SESSION_STATE_DUMMY == session->state)
+    {
+        dcb_close(dcb);
+        return 1;
+    }
         rsession = session->router_session;
         router = session->service->router;
         router_instance = session->service->router_instance;
@@ -920,8 +933,6 @@ static int gw_error_backend_event(DCB *dcb)
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
         }
-        ss_dassert(dcb->dcb_errhandle_called);
-        dcb_close(dcb);
         
 retblock:
         return 1;        
@@ -1062,7 +1073,7 @@ gw_backend_hangup(DCB *dcb)
         session_state_t ses_state;
         
         CHK_DCB(dcb);
-        if (!dcb->session && dcb->persistentstart)
+        if (dcb->persistentstart)
         {
             dcb->dcb_errhandle_called = true;
             goto retblock;
@@ -1120,6 +1131,12 @@ gw_backend_hangup(DCB *dcb)
 			}
 		}
                 gwbuf_free(errbuf);
+                /*
+                 * I'm pretty certain this is best removed and
+                 * causes trouble if present, but have left it
+                 * here just for now as a comment. Martin
+                 */
+                /* dcb_close(dcb); */
                 goto retblock;
         }
 #if defined(SS_DEBUG)
@@ -1151,8 +1168,6 @@ gw_backend_hangup(DCB *dcb)
                 session->state = SESSION_STATE_STOPPING;
                 spinlock_release(&session->ses_lock);
         }
-        ss_dassert(dcb->dcb_errhandle_called);
-        dcb_close(dcb);
         
 retblock:
         return 1;
@@ -1204,10 +1219,13 @@ gw_backend_close(DCB *dcb)
             {		
                 if (session->client->state == DCB_STATE_POLLING)
                 {
+                    DCB *temp;
 			spinlock_release(&session->ses_lock);
 			
                         /** Close client DCB */
-                        dcb_close(session->client);
+                        temp = session->client;
+                        session->client = NULL;
+                        dcb_close(temp);
                 }
                 else 
 		{
@@ -1332,8 +1350,6 @@ static int backend_write_delayqueue(DCB *dcb)
                                 spinlock_acquire(&session->ses_lock);
                                 session->state = SESSION_STATE_STOPPING;
                                 spinlock_release(&session->ses_lock);
-				ss_dassert(dcb->dcb_errhandle_called);
-				dcb_close(dcb);
 			}                
 		}
 	}

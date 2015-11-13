@@ -58,6 +58,7 @@
  * 25/09/2015	Massimiliano Pinto	Addition of slave heartbeat:
  *					the period set during registration is checked
  *					and heartbeat event might be sent to the affected slave.
+ * 25/09/2015   Martin Brampton         Block callback processing when no router session in the DCB
  * 23/10/15	Markus Makela		Added current_safe_event
  *
  * @endverbatim
@@ -2224,6 +2225,15 @@ blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data)
 ROUTER_SLAVE		*slave = (ROUTER_SLAVE *)data;
 ROUTER_INSTANCE		*router = slave->router;
 
+    if (NULL == dcb->session->router_session)
+    {
+        /*
+         * The following processing will fail if there is no router session,
+         * because the "data" parameter will not contain meaningful data,
+         * so we have no choice but to stop here.
+         */
+        return 0;
+    }
 	if (reason == DCB_REASON_DRAINED)
 	{
 		if (slave->state == BLRS_DUMPING)

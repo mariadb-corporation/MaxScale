@@ -59,6 +59,7 @@ MODULE_INFO info = {
  *
  * Date		Who			Description
  * 20/01/2015	Markus Mäkelä/Vilho Raatikka		Initial implementation
+ * 09/09/2015   Martin Brampton         Modify error handler
  *
  * @endverbatim
  */
@@ -115,7 +116,7 @@ static route_target_t get_shard_route_target(
                                              bool trx_active,
                                              HINT* hint);
 
-static uint8_t getCapabilities(ROUTER* inst, void* router_session);
+static int getCapabilities();
 
 void subsvc_clear_state(SUBSERVICE* svc,subsvc_state_t state);
 void subsvc_set_state(SUBSERVICE* svc,subsvc_state_t state);
@@ -1157,9 +1158,6 @@ newSession(
         free(dummy_upstream);
     }
 
-
-    /** Copy backend pointers to router session. */
-    client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
     router->stats.n_sessions += 1;
 
     /**
@@ -2570,27 +2568,12 @@ mysql_sescmd_get_property(
 }
 
 /**
- * Return rc, rc < 0 if router session is closed. rc == 0 if there are no 
- * capabilities specified, rc > 0 when there are capabilities.
+ * Return RCAP_TYPE_STMT_INPUT
  */
-static uint8_t
-getCapabilities(ROUTER* inst,
-                void* router_session)
+static int
+getCapabilities()
 {
-    ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *) router_session;
-    uint8_t rc;
-
-    if(!rses_begin_locked_router_action(rses))
-    {
-        rc = 0xff;
-        goto return_rc;
-    }
-    rc = rses->rses_capabilities;
-
-    rses_end_locked_router_action(rses);
-
-return_rc:
-    return rc;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 /**
@@ -2772,8 +2755,8 @@ return_succp:
  * @param       router_session  The router session
  * @param       errmsgbuf       The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action          The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
- * @param       succp           Result of action. 
+ * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param	succp		Result of action: true if router can continue
  * 
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
@@ -2790,10 +2773,8 @@ handleError(
     SESSION* session;
     ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *) router_session;
 
-    if(action == ERRACT_RESET)
-        return;
-    
     CHK_DCB(backend_dcb);
+    
     /** Don't handle same error twice on same DCB */
     if(backend_dcb->dcb_errhandle_called)
     {
@@ -2809,38 +2790,39 @@ handleError(
 
     if(session == NULL || rses == NULL)
     {
-        if(succp)
-            *succp = false;
-        return;
-    }
-    CHK_SESSION(session);
-    CHK_CLIENT_RSES(rses);
-
-    switch(action)
-    {
-    case ERRACT_NEW_CONNECTION:
-    {
-        if(!rses_begin_locked_router_action(rses))
-        {
-            *succp = false;
-            return;
-        }
-
-        rses_end_locked_router_action(rses);
-        break;
-    }
-
-    case ERRACT_REPLY_CLIENT:
-    {
-
-        *succp = false; /*< no new backend servers were made available */
-        break;
-    }
-
-    default:
         *succp = false;
-        break;
     }
+    else
+    {
+        CHK_SESSION(session);
+        CHK_CLIENT_RSES(rses);
+
+        switch(action)
+        {
+            case ERRACT_NEW_CONNECTION:
+            {
+                if(!rses_begin_locked_router_action(rses))
+                {
+                    *succp = false;
+                    break;
+                }
+
+                rses_end_locked_router_action(rses);
+                break;
+            }
+
+            case ERRACT_REPLY_CLIENT:
+            {
+                *succp = false; /*< no new backend servers were made available */
+                break;
+            }
+
+            default:
+                *succp = false;
+                break;
+        }
+    }
+    dcb_close(backend_dcb);
 }
 
 
