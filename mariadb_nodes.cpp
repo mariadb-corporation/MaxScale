@@ -22,9 +22,12 @@ Mariadb_nodes::Mariadb_nodes(char * pref)
 
 int Mariadb_nodes::connect()
 {
+    int res = 0;
     for (int i = 0; i < N; i++) {
         nodes[i] = open_conn(port[i], IP[i], user_name, password, ssl);
+        if (mysql_errno != 0) {res++;}
     }
+    return(res);
 }
 
 int Mariadb_nodes::close_connections()
@@ -32,6 +35,7 @@ int Mariadb_nodes::close_connections()
     for (int i = 0; i < N; i++) {
         if (nodes[i] != NULL) {mysql_close(nodes[i]);}
     }
+    return(0);
 }
 
 int Mariadb_nodes::read_env()

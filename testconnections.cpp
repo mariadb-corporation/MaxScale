@@ -300,7 +300,7 @@ int TestConnections::start_binlog()
 
     if (strstr(version_str, "5.5") != NULL) {
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s sed -i \"s/,mariadb10-compatibility=1//\" %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_cnf);
-        tprintf("%s\n", sys1);  fflush(stdout);
+        tprintf("%s\n", sys1);
         add_result(system(sys1), "Error editing maxscale.cnf");
     }
 
