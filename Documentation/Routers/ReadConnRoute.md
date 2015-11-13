@@ -1,6 +1,6 @@
 # Readconnroute
 
-This document provides anoverview of the **readconnroute** router module and its intended use case scenarios. It also displays all router configuration parameters with their descriptions.
+This document provides an overview of the **readconnroute** router module and its intended use case scenarios. It also displays all router configuration parameters with their descriptions.
 
 ## Overview
 
@@ -63,7 +63,7 @@ servers=server1,server2
 weightby=serv_weight
 ```
 
-With this configuration and a heavy query load, the server *server1* will get most of the connections and about a third of the remaining queries are routed to the second server. With server weights, you can assing secondary servers that are only used when the primary server is under heavy load.
+With this configuration and a heavy query load, the server *server1* will get most of the connections and about a third of the remaining queries are routed to the second server. With server weights, you can assign secondary servers that are only used when the primary server is under heavy load.
 
 Without the weightby parameter, each connection counts as a single connection. With a weighting parameter, a single connection received its weight from the server's own weighting parameter divided by the sum of all weighting parameters in all the configured servers.
 

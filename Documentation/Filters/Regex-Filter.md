@@ -68,7 +68,7 @@ user=john
 
 ### `log_file`
 
-The optional log_file parameter defines a log file in which the filter writes all queries that are not mached and maching queries with their replacement queries. All sessions will log to this file so this should only be used for diagnostic purposes.
+The optional log_file parameter defines a log file in which the filter writes all queries that are not matched and matching queries with their replacement queries. All sessions will log to this file so this should only be used for diagnostic purposes.
 
 ```
 log_file=/tmp/regexfilter.log

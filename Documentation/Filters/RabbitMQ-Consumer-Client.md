@@ -14,7 +14,7 @@ The **RabbitMQ Consumer Client** only has one command line argument.
 
 ## Installation
 
-To install the RabbitMQ Consumer Client you ca either use the provided packages or you can compile it from source code. The source code is included as a part of the MaxScale source code and can be found in the `rabbtmq_consumer` folder. Please refer to the [README](../../rabbitmq_consumer/README) in the folder for more detailed instructions about installation and configuration.
+To install the RabbitMQ Consumer Client you ca either use the provided packages or you can compile it from source code. The source code is included as a part of the MaxScale source code and can be found in the `rabbitmq_consumer` folder. Please refer to the [README](../../rabbitmq_consumer/README) in the folder for more detailed instructions about installation and configuration.
 
 ## Configuration
 

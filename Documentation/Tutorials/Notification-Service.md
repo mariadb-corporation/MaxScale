@@ -53,7 +53,7 @@ MaxScale generates the feedback report containing following information:
  - MaxScale Version
  - An identifier of the MaxScale installation, i.e. the HEX encoding of SHA1 digest of the first network interface MAC address
  - Operating System (i.e Linux)
- - Operating Suystem Distribution (i.e. CentOS release 6.5 (Final))
+ - Operating System Distribution (i.e. CentOS release 6.5 (Final))
  - All the modules in use in MaxScale and their API and version
  - MaxScale server UNIX_TIME at generation time
 
