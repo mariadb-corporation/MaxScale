@@ -331,7 +331,7 @@ decryptPassword(const char *crypt)
     MAXKEYS         *keys;
     AES_KEY         aeskey;
     unsigned char   *plain;
-    char            *ptr;
+    const char      *ptr;
     unsigned char   encrypted[80];
     int             enlen;
 
