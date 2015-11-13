@@ -27,6 +27,21 @@
 #define STRERROR_BUFLEN 512
 #endif
 
+enum mxs_log_priorities
+{
+    MXS_LOG_EMERG   = (1 << LOG_EMERG),
+    MXS_LOG_ALERT   = (1 << LOG_ALERT),
+    MXS_LOG_CRIT    = (1 << LOG_CRIT),
+    MXS_LOG_ERR     = (1 << LOG_ERR),
+    MXS_LOG_WARNING = (1 << LOG_WARNING),
+    MXS_LOG_NOTICE  = (1 << LOG_NOTICE),
+    MXS_LOG_INFO    = (1 << LOG_INFO),
+    MXS_LOG_DEBUG   = (1 << LOG_DEBUG),
+
+    MXS_LOG_MASK    = (MXS_LOG_EMERG | MXS_LOG_ALERT | MXS_LOG_CRIT | MXS_LOG_ERR |
+                       MXS_LOG_WARNING | MXS_LOG_NOTICE | MXS_LOG_INFO | MXS_LOG_DEBUG),
+};
+
 typedef enum
 {
     BB_READY = 0x00,
@@ -80,7 +95,6 @@ typedef struct log_info
                              (log_ses_count[id] > 0 &&                  \
                               tls_log_info.li_enabled_logs & id)) ? true : false)
 
-
 #define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||  \
                                  log_ses_count[id] > 0) ? true : false)
 
@@ -119,6 +133,7 @@ typedef enum
 
 EXTERN_C_BLOCK_BEGIN
 
+extern int lm_enabled_priorities_bitmask;
 extern int lm_enabled_logfiles_bitmask;
 extern ssize_t log_ses_count[];
 extern __thread log_info_t tls_log_info;
@@ -139,9 +154,6 @@ void mxs_log_set_augmentation(int bits);
 int mxs_log_message(int priority,
                     const char* file, int line, const char* function,
                     const char* format, ...);
-
-int  skygw_log_enable(logfile_id_t id);
-int  skygw_log_disable(logfile_id_t id);
 
 inline int mxs_log_id_to_priority(logfile_id_t id)
 {

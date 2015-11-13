@@ -91,10 +91,10 @@ int main(int argc, char **argv) {
 
 	mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
 
-	skygw_log_disable(LOGFILE_DEBUG);
-	skygw_log_disable(LOGFILE_TRACE);
-	skygw_log_disable(LOGFILE_ERROR);
-	skygw_log_disable(LOGFILE_MESSAGE);
+	mxs_log_set_priority_enabled(LOG_DEBUG, false);
+	mxs_log_set_priority_enabled(LOG_INFO, false);
+	mxs_log_set_priority_enabled(LOG_NOTICE, false);
+	mxs_log_set_priority_enabled(LOG_ERR, false);
 
 	service = service_alloc("test_service", "binlogrouter");
 	service->credentials.name = strdup("foo");

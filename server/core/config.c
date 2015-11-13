@@ -1596,12 +1596,16 @@ config_get_feedback_data()
 
 static struct
 {
-    char         *logname;
-    logfile_id_t  logfile;
+    char* name;
+    int   priority;
+    char* replacement;
 } lognames[] = {
-    { "log_messages", LOGFILE_MESSAGE },
-    { "log_trace", LOGFILE_TRACE },
-    { "log_debug", LOGFILE_DEBUG },
+    { "log_messages", LOG_NOTICE,  "log_notice" }, // Deprecated
+    { "log_trace",    LOG_INFO,    "log_info" },   // Deprecated
+    { "log_debug",    LOG_DEBUG,   NULL },
+    { "log_warning",  LOG_WARNING, NULL },
+    { "log_notice",   LOG_NOTICE,  NULL },
+    { "log_info",     LOG_INFO,    NULL },
     { NULL, 0 }
 };
 /**
@@ -1681,18 +1685,18 @@ handle_global_item(const char *name, const char *value)
     }
     else
     {
-        for (i = 0; lognames[i].logname; i++)
+        for (i = 0; lognames[i].name; i++)
         {
-            if (strcasecmp(name, lognames[i].logname) == 0)
+            if (strcasecmp(name, lognames[i].name) == 0)
             {
-                if (config_truth_value((char*)value))
+                if (lognames[i].replacement)
                 {
-                    skygw_log_enable(lognames[i].logfile);
+                    MXS_WARNING("In the configuration file the use of '%s' is deprecated, "
+                                "use '%s' instead.",
+                                lognames[i].name, lognames[i].replacement);
                 }
-                else
-                {
-                    skygw_log_disable(lognames[i].logfile);
-                }
+
+                mxs_log_set_priority_enabled(lognames[i].priority, config_truth_value((char*)value));
             }
         }
     }

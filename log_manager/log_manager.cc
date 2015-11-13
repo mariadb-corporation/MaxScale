@@ -95,6 +95,12 @@ static struct
 int lm_enabled_logfiles_bitmask = 0;
 
 /**
+ * Variable holding the enabled priorities information.
+ * Used from logging macros.
+ */
+int lm_enabled_priorities_bitmask = 0;
+
+/**
  * Thread-specific struct variable for storing current session id and currently
  * enabled log files for the session.
  */
@@ -310,7 +316,6 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
 
 static void blockbuf_register(blockbuf_t* bb);
 static void blockbuf_unregister(blockbuf_t* bb);
-static bool logfile_set_enabled(logfile_id_t id, bool val);
 static char* add_slash(char* str);
 
 static bool check_file_and_path(char* filename,
@@ -318,7 +323,6 @@ static bool check_file_and_path(char* filename,
                                 bool  do_log);
 
 static bool file_is_symlink(char* filename);
-static int skygw_log_disable_raw(logfile_id_t id, bool emergency); /*< no locking */
 static int find_last_seqno(strpart_t* parts, int seqno, int seqnoidx);
 void flushall_logfiles(bool flush);
 bool thr_flushall_check();
@@ -1150,7 +1154,7 @@ static blockbuf_t* blockbuf_init()
 }
 
 
-int skygw_log_enable(logfile_id_t id)
+static int skygw_log_enable(logfile_id_t id)
 {
     bool rval = -1;
 
@@ -1158,14 +1162,11 @@ int skygw_log_enable(logfile_id_t id)
     {
         CHK_LOGMANAGER(lm);
 
-        if (logfile_set_enabled(id, true))
-        {
-            lm->lm_enabled_logfiles |= id;
-            /**
-             * Set global variable
-             */
-            lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
-        }
+        lm->lm_enabled_logfiles |= id;
+        /**
+         * Set global variable
+         */
+        lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
 
         logmanager_unregister();
         rval = 0;
@@ -1174,12 +1175,7 @@ int skygw_log_enable(logfile_id_t id)
     return rval;
 }
 
-int skygw_log_disable(logfile_id_t id) /*< no locking */
-{
-    return skygw_log_disable_raw(id, false);
-}
-
-static int skygw_log_disable_raw(logfile_id_t id, bool emergency) /*< no locking */
+static int skygw_log_disable(logfile_id_t id)
 {
     bool rval = -1;
 
@@ -1187,14 +1183,11 @@ static int skygw_log_disable_raw(logfile_id_t id, bool emergency) /*< no locking
     {
         CHK_LOGMANAGER(lm);
 
-        if (emergency || logfile_set_enabled(id, false))
-        {
-            lm->lm_enabled_logfiles &= ~id;
-            /**
-             * Set global variable
-             */
-            lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
-        }
+        lm->lm_enabled_logfiles &= ~id;
+        /**
+         * Set global variable
+         */
+        lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
 
         logmanager_unregister();
         rval = 0;
@@ -1203,64 +1196,6 @@ static int skygw_log_disable_raw(logfile_id_t id, bool emergency) /*< no locking
     return rval;
 }
 
-
-static bool logfile_set_enabled(logfile_id_t id, bool val)
-{
-    bool rval = false;
-
-    CHK_LOGMANAGER(lm);
-
-    if (logmanager_is_valid_id(id))
-    {
-        if (!log_config.use_stdout)
-        {
-            const char *name;
-
-            switch (id)
-            {
-            default:
-            case LOGFILE_ERROR:
-                name = "LOGFILE_ERROR";
-                break;
-
-            case LOGFILE_MESSAGE:
-                name = "LOGFILE_MESSAGE";
-                break;
-
-            case LOGFILE_TRACE:
-                name = "LOGFILE_TRACE";
-                break;
-
-            case LOGFILE_DEBUG:
-                name = "LOGFILE_DEBUG";
-                break;
-            }
-
-            const char FORMAT[] = "The logging of %s messages is %s.";
-            const char *action;
-
-            if (val)
-            {
-                action = "enabled";
-            }
-            else
-            {
-                action = "disabled";
-            }
-
-            MXS_NOTICE(FORMAT, name, action);
-        }
-
-        rval = true;
-    }
-    else
-    {
-        MXS_ERROR("Invalid logfile id %d.", id);
-        ss_dassert(!true);
-    }
-
-    return rval;
-}
 
 /**
  * Set log augmentation.
@@ -2309,7 +2244,7 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
                         err,
                         strerror_r(err, errbuf, sizeof(errbuf)));
                 /** Force log off */
-                skygw_log_disable_raw(LOGFILE_ERROR, true);
+                skygw_log_disable(LOGFILE_ERROR);
             }
             /**
              * Reset buffer's counters and mark
@@ -2702,44 +2637,50 @@ int mxs_log_rotate()
     return err;
 }
 
-static bool convert_priority_to_file(int priority, logfile_id_t* idp, const char** textp)
+static logfile_id_t priority_to_file_id(int priority)
 {
-    bool converted = true;
-
-    *idp = (logfile_id_t) -1;
-    *textp = NULL;
-
     switch (priority)
     {
     case LOG_DEBUG:
-        *idp = LOGFILE_DEBUG;
-        break;
+        return LOGFILE_DEBUG;
     case LOG_INFO:
-        *idp = LOGFILE_TRACE;
-        break;
+        return LOGFILE_TRACE;
     case LOG_NOTICE:
-        *idp = LOGFILE_MESSAGE;
-        break;
+        return LOGFILE_MESSAGE;
     case LOG_ERR:
-        *idp = LOGFILE_ERROR;
-        break;
     case LOG_WARNING:
-        *textp = "LOG_WARNING";
-        break;
     case LOG_CRIT:
-        *textp = "LOG_CRIT";
-        break;
     case LOG_ALERT:
-        *textp = "LOG_ALERT";
-        break;
     case LOG_EMERG:
-        *textp = "LOG_EMERG";
-        break;
     default:
-        converted = false;
+        return LOGFILE_ERROR;
     }
+}
 
-    return converted;
+static const char* priority_name(int priority)
+{
+    switch (priority)
+    {
+    case LOG_EMERG:
+        return "emercency";
+    case LOG_ALERT:
+        return "alert";
+    case LOG_CRIT:
+        return "critical";
+    case LOG_ERR:
+        return "error";
+    case LOG_WARNING:
+        return "warning";
+    case LOG_NOTICE:
+        return "notice";
+    case LOG_INFO:
+        return "informational";
+    case LOG_DEBUG:
+        return "debug";
+    default:
+        assert(!true);
+        return "unknown";
+    }
 }
 
 /**
@@ -2750,34 +2691,33 @@ static bool convert_priority_to_file(int priority, logfile_id_t* idp, const char
  *
  * @return 0 if the priority was valid, -1 otherwise.
  */
-int mxs_log_set_priority_enabled(int priority, bool enabled)
+int mxs_log_set_priority_enabled(int priority, bool enable)
 {
     int rv = -1;
-    logfile_id_t id;
-    const char* text;
+    const char* text = (enable ? "enable" : "disable");
 
-    if (convert_priority_to_file(priority, &id, &text))
+    if ((priority & ~LOG_PRIMASK) == 0)
     {
-        if (!text)
+        logfile_id_t id = priority_to_file_id(priority);
+        int bit = (1 << priority);
+
+        if (enable)
         {
-            if (enabled)
-            {
-                rv = skygw_log_enable(id);
-            }
-            else
-            {
-                rv = skygw_log_disable(id);
-            }
+            // TODO: Put behind spinlock.
+            lm_enabled_priorities_bitmask |= bit;
+            skygw_log_enable(id);
         }
         else
         {
-            MXS_WARNING("Attempt to enable syslog priority %s, which is not available yet.", text);
-            rv = 0;
+            lm_enabled_priorities_bitmask &= ~bit;
+            skygw_log_disable(id);
         }
+
+        MXS_NOTICE("The logging of %s messages has been %sd.", priority_name(priority), text);
     }
     else
     {
-        MXS_ERROR("Attempt to enable unknown syslog priority: %d", priority);
+        MXS_ERROR("Attempt to %s unknown syslog priority %d.", text, priority);
     }
 
     return rv;

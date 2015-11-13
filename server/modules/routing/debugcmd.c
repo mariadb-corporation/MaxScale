@@ -410,22 +410,20 @@ struct subcommand enableoptions[] = {
         "log",
         1,
         enable_log_action,
-        "Enable Log options for MaxScale, options trace | error | "
-        "message E.g. enable log message.",
-        "Enable Log options for MaxScale, options trace | error | "
-        "message E.g. enable log message.",
+        "[deprecated] Enable Log options for MaxScale, options 'trace' | 'error' | 'message'."
+        "E.g. 'enable log message'.",
+        "[deprecated] Enable Log options for MaxScale, options 'trace' | 'error' | 'message'."
+        "E.g. 'enable log message'.",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
         "log-priority",
         1,
         enable_log_priority,
-        "Enable log priority for MaxScale; options LOG_ERR | "
-        "LOG_WARNING | LOG_NOTICE | LOG_INFO | LOG_DEBUG. "
-        "E.g.: enable log-priority LOG_INFO.",
-        "Enable log priority for MaxScale; options LOG_ERR | "
-        "LOG_WARNING | LOG_NOTICE | LOG_INFO | LOG_DEBUG. "
-        "E.g.: enable log-priority LOG_INFO.",
+        "Enable a logging priority; options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
+        "E.g.: 'enable log-priority info'.",
+        "Enable a logging priority; options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
+        "E.g.: 'enable log-priority info'.",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
@@ -482,22 +480,20 @@ struct subcommand disableoptions[] = {
         "log",
         1,
         disable_log_action,
-        "Disable Log for MaxScale, Options: debug | trace | error | message "
-        "E.g. disable log debug",
-        "Disable Log for MaxScale, Options: debug | trace | error | message "
-        "E.g. disable log debug",
+        "[deprecated] Disable Log for MaxScale, Options: 'debug' | 'trace' | 'error' | 'message'."
+        "E.g. 'disable log debug'.",
+        "[deprecated] Disable Log for MaxScale, Options: 'debug' | 'trace' | 'error' | 'message'."
+        "E.g. 'disable log debug'.",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
         "log-priority",
         1,
         disable_log_priority,
-        "Disable log priority for MaxScale; options LOG_ERR | "
-        "LOG_WARNING | LOG_NOTICE | LOG_INFO | LOG_DEBUG. "
-        "E.g.: enable log-priority LOG_INFO.",
-        "Disable log priority for MaxScale; options LOG_ERR | "
-        "LOG_WARNING | LOG_NOTICE | LOG_INFO | LOG_DEBUG. "
-        "E.g.: enable log-priority LOG_INFO.",
+        "Disable a logging priority; options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
+        "E.g.: 'disable log-priority info'.",
+        "Disable a logging priority; options 'err' | 'warning' | 'notice' | 'info' | 'debug'. "
+        "E.g.: 'disable log-priority info'.",
         {ARG_TYPE_STRING, 0, 0}
     },
     {
@@ -962,7 +958,7 @@ execute_cmd(CLI_SESSION *cli)
                     dcb_printf(dcb, "Available options to the %s command:\n", args[1]);
                     for (j = 0; cmds[i].options[j].arg1; j++)
                     {
-                        dcb_printf(dcb, "    %-10s %s\n", cmds[i].options[j].arg1,
+                        dcb_printf(dcb, "    %-12s %s\n", cmds[i].options[j].arg1,
                                    cmds[i].options[j].help);
                     }
                 }
@@ -1449,98 +1445,87 @@ static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
     dcb_printf(dcb, "Session not found: %s\n", arg2);
 }
 
+struct log_action_entry
+{
+    const char* name;
+    int priority;
+    const char* replacement;
+};
+
+static bool get_log_action(const char* name, struct log_action_entry* entryp)
+{
+    static const struct log_action_entry entries[] =
+        {
+            { "debug",   LOG_DEBUG,  "debug" },
+            { "trace",   LOG_INFO,   "info" },
+            { "message", LOG_NOTICE, "notice" },
+            { "error",   LOG_ERR,    "err" }
+        };
+    const int n_entries = sizeof(entries) / sizeof(entries[0]);
+
+    bool found = false;
+    int i = 0;
+
+    while (!found && (i < n_entries))
+    {
+        if (strcmp(name, entries[i].name) == 0)
+        {
+            *entryp = entries[i];
+            found = true;
+        }
+
+        ++i;
+    }
+
+    return found;
+}
+
 /**
  * The log enable action
  */
-
 static void enable_log_action(DCB *dcb, char *arg1)
 {
-    logfile_id_t type = -1;
-    int max_len = strlen("message");
-    const char* priority;
+    struct log_action_entry entry;
 
-    if (strncmp(arg1, "debug", max_len) == 0)
+    if (get_log_action(arg1, &entry))
     {
-        type = LOGFILE_DEBUG;
-        priority = "LOG_DEBUG";
-    }
-    else if (strncmp(arg1, "trace", max_len) == 0)
-    {
-        type = LOGFILE_TRACE;
-        priority = "LOG_INFO";
-    }
-    else if (strncmp(arg1, "error", max_len) == 0)
-    {
-        type = LOGFILE_ERROR;
-        priority = "LOG_ERR";
-    }
-    else if (strncmp(arg1, "message", max_len) == 0)
-    {
-        type = LOGFILE_MESSAGE;
-        priority = "LOG_NOTICE";
-    }
+        mxs_log_set_priority_enabled(entry.priority, true);
 
-    if (type != -1)
-    {
-        skygw_log_enable(type);
         dcb_printf(dcb,
                    "'enable log %s' is accepted but deprecated, use 'enable log-priority %s' instead.\n",
-                   arg1, priority);
+                   arg1, entry.replacement);
     }
     else
     {
-        dcb_printf(dcb, "%s is not supported for enable log\n", arg1);
+        dcb_printf(dcb, "'%s' is not supported for enable log\n", arg1);
     }
 }
 
 /**
  * The log disable action
  */
-
 static void disable_log_action(DCB *dcb, char *arg1)
 {
-    logfile_id_t type = -1;
-    int max_len = strlen("message");
-    const char* priority;
+    struct log_action_entry entry;
 
-    if (strncmp(arg1, "debug", max_len) == 0)
+    if (get_log_action(arg1, &entry))
     {
-        type = LOGFILE_DEBUG;
-        priority = "LOG_DEBUG";
-    }
-    else if (strncmp(arg1, "trace", max_len) == 0)
-    {
-        type = LOGFILE_TRACE;
-        priority = "LOG_INFO";
-    }
-    else if (strncmp(arg1, "error", max_len) == 0)
-    {
-        type = LOGFILE_ERROR;
-        priority = "LOG_ERR";
-    }
-    else if (strncmp(arg1, "message", max_len) == 0)
-    {
-        type = LOGFILE_MESSAGE;
-        priority = "LOG_NOTICE";
-    }
+        mxs_log_set_priority_enabled(entry.priority, false);
 
-    if (type != -1)
-    {
-        skygw_log_disable(type);
         dcb_printf(dcb,
-                   "'disable log %s' is accepted but deprecated, use 'disable log-priority %s' instead.\n",
-                   arg1, priority);
+                   "'disable log %s' is accepted but deprecated, use 'enable log-priority %s' instead.\n",
+                   arg1, entry.replacement);
     }
     else
     {
-        dcb_printf(dcb, "%s is not supported for disable log\n", arg1);
+        dcb_printf(dcb, "'%s' is not supported for 'disable log'\n", arg1);
     }
 }
 
 struct log_priority_entry
 {
-    int priority;
     const char* name;
+    int priority;
 };
 
 static int compare_log_priority_entries(const void* l, const void* r)
@@ -1556,16 +1541,16 @@ static int string_to_priority(const char* name)
     static const struct log_priority_entry LOG_PRIORITY_ENTRIES[] =
         {
             // NOTE: If you make changes to this array, ensure that it remains alphabetically ordered.
-            { LOG_DEBUG,   "LOG_DEBUG" },
-            { LOG_ERR,     "LOG_ERR" },
-            { LOG_INFO,    "LOG_INFO" },
-            { LOG_NOTICE,  "LOG_NOTICE" },
-            { LOG_WARNING, "LOG_WARNING" },
+            { "debug",   LOG_DEBUG },
+            { "err",     LOG_ERR },
+            { "info",    LOG_INFO },
+            { "notice",  LOG_NOTICE },
+            { "warning", LOG_WARNING },
         };
 
     const size_t N_LOG_PRIORITY_ENTRIES = sizeof(LOG_PRIORITY_ENTRIES) / sizeof(LOG_PRIORITY_ENTRIES[0]);
 
-    struct log_priority_entry key = { -1, name };
+    struct log_priority_entry key = { name, -1 };
     struct log_priority_entry* result = bsearch(&key,
                                                 LOG_PRIORITY_ENTRIES,
                                                 N_LOG_PRIORITY_ENTRIES,
@@ -1589,7 +1574,7 @@ static void enable_log_priority(DCB *dcb, char *arg1)
     }
     else
     {
-        dcb_printf(dcb, "%s is not a supported log priority\n", arg1);
+        dcb_printf(dcb, "'%s' is not a supported log priority\n", arg1);
     }
 }
 
@@ -1607,7 +1592,7 @@ static void disable_log_priority(DCB *dcb, char *arg1)
     }
     else
     {
-        dcb_printf(dcb, "%s is not a supported log priority\n", arg1);
+        dcb_printf(dcb, "'%s' is not a supported log priority\n", arg1);
     }
 }
 

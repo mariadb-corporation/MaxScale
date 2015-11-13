@@ -125,13 +125,8 @@ int main(int argc, char **argv) {
 	num_args = optind;
 
 	mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
-
 	mxs_log_set_augmentation(0);
-
-	if (!debug_out)
-		skygw_log_disable(LOGFILE_DEBUG);
-	else
-		skygw_log_enable(LOGFILE_DEBUG);
+	mxs_log_set_priority_enabled(LOG_DEBUG, debug_out);
 
 	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
 		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
