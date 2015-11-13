@@ -105,7 +105,6 @@ void test_binlog(TestConnections* Test)
 {
     int i;
     MYSQL* binlog;
-    int global_result = 0;
     Test->repl->connect();
 
     Test->set_timeout(100);
@@ -131,7 +130,7 @@ void test_binlog(TestConnections* Test)
     Test->tprintf("SELECT * FROM t1 WHERE fl=10, checking inserted values\n");
     Test->add_result(execute_query_check_one(Test->repl->nodes[0], (char *) "SELECT * FROM t1 WHERE fl=10", "111"), "SELECT check failed\n");
 
-    Test->add_result(check_sha1(Test), "sha1 check failed\n");
+    //Test->add_result(check_sha1(Test), "sha1 check failed\n");
 
     Test->tprintf("ROLLBACK\n");
     Test->try_query(Test->repl->nodes[0], (char *) "ROLLBACK");
