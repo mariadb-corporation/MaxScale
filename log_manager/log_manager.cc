@@ -2651,12 +2651,15 @@ int mxs_log_flush_sync(void)
     if (lm)
     {
         flushall_logfiles(true);
-        err = skygw_message_send(lm->lm_logmes);
 
-        if (!err)
+        if (skygw_message_send(lm->lm_logmes) == MES_RC_SUCCESS)
         {
             // TODO: Add error handling to skygw_message_wait. Now void.
             skygw_message_wait(lm->lm_clientmes);
+        }
+        else
+        {
+            err = -1;
         }
     }
 
