@@ -25,7 +25,7 @@ int Mariadb_nodes::connect()
     int res = 0;
     for (int i = 0; i < N; i++) {
         nodes[i] = open_conn(port[i], IP[i], user_name, password, ssl);
-        if (mysql_errno != 0) {res++;}
+        if (mysql_errno(nodes[i]) != 0) {res++;}
     }
     return(res);
 }
