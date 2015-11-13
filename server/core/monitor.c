@@ -84,6 +84,7 @@ MONITOR	*mon;
 	mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
 	mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
 	mon->interval = MONITOR_INTERVAL;
+	mon->parameters = NULL;
 	spinlock_init(&mon->lock);
 	spinlock_acquire(&monLock);
 	mon->next = allMonitors;
