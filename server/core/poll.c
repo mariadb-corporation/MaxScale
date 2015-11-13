@@ -917,7 +917,6 @@ unsigned long	qtime;
 				dcb->fd)));
 			atomic_add(
 				&pollStats.n_accept, 1);
-
 			if (LOG_MAY_BE_ENABLED(LOGFILE_TRACE))
 			{
 			    dcb_get_ses_log_info(dcb,
