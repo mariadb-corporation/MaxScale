@@ -690,6 +690,7 @@ SERV_PROTOCOL	*proto;
 	{
 		return 0;
 	}
+	proto->listener = NULL;
 	proto->protocol = strdup(protocol);
 	if (address)
 		proto->address = strdup(address);
