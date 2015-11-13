@@ -83,14 +83,6 @@ typedef struct log_info
 
 #define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||  \
                                  log_ses_count[id] > 0) ? true : false)
-/**
- * Execute the given command if specified log is enabled in general or
- * if there is at least one session for whom the log is enabled.
- */
-#define LOGIF_MAYBE(id,cmd) if (LOG_MAY_BE_ENABLED(id)) \
-    {                                                   \
-        cmd;                                            \
-    }
 
 /**
  * Execute the given command if specified log is enabled in general or
@@ -100,13 +92,6 @@ typedef struct log_info
     {                                           \
         cmd;                                    \
     }
-
-#if !defined(LOGIF)
-#define LOGIF(id,cmd) if (lm_enabled_logfiles_bitmask & id)     \
-    {                                                           \
-        cmd;                                                    \
-    }
-#endif
 
 /**
  * UNINIT means zeroed memory buffer allocated for the struct.

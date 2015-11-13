@@ -880,10 +880,13 @@ unsigned long	qtime;
 		if (eno == 0)  {
 			atomic_add(&pollStats.n_write, 1);
 			/** Read session id to thread's local storage */
-			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
-						dcb, 
-						&tls_log_info.li_sesid, 
-						&tls_log_info.li_enabled_logs)));
+			if (LOG_MAY_BE_ENABLED(LOGFILE_TRACE))
+			{
+			    dcb_get_ses_log_info(dcb,
+			                         &tls_log_info.li_sesid,
+			                         &tls_log_info.li_enabled_logs);
+			}
+
                         if (poll_dcb_session_check(dcb, "write_ready"))
                         {
                             dcb->func.write_ready(dcb);
@@ -914,10 +917,14 @@ unsigned long	qtime;
 				dcb->fd)));
 			atomic_add(
 				&pollStats.n_accept, 1);
-			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
-				dcb, 
-				&tls_log_info.li_sesid, 
-				&tls_log_info.li_enabled_logs)));
+
+			if (LOG_MAY_BE_ENABLED(LOGFILE_TRACE))
+			{
+			    dcb_get_ses_log_info(dcb,
+			                         &tls_log_info.li_sesid,
+			                         &tls_log_info.li_enabled_logs);
+			}
+
                         if (poll_dcb_session_check(dcb, "accept"))
                         {
                             dcb->func.accept(dcb);
@@ -934,10 +941,13 @@ unsigned long	qtime;
 				dcb->fd)));
 			atomic_add(&pollStats.n_read, 1);
 			/** Read session id to thread's local storage */
-			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
-				dcb, 
-				&tls_log_info.li_sesid, 
-				&tls_log_info.li_enabled_logs)));
+			if (LOG_MAY_BE_ENABLED(LOGFILE_TRACE))
+			{
+			    dcb_get_ses_log_info(dcb,
+			                         &tls_log_info.li_sesid,
+			                         &tls_log_info.li_enabled_logs);
+			}
+
                         if (poll_dcb_session_check(dcb, "read"))
                         {
                             dcb->func.read(dcb);
@@ -974,10 +984,12 @@ unsigned long	qtime;
 		}
 		atomic_add(&pollStats.n_error, 1);
 		/** Read session id to thread's local storage */
-		LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
-			dcb, 
-			&tls_log_info.li_sesid, 
-			&tls_log_info.li_enabled_logs)));
+		if (LOG_MAY_BE_ENABLED(LOGFILE_TRACE))
+		{
+		    dcb_get_ses_log_info(dcb,
+		                         &tls_log_info.li_sesid,
+		                         &tls_log_info.li_enabled_logs);
+		}
                         if (poll_dcb_session_check(dcb, "error"))
                         {
                             dcb->func.error(dcb);
@@ -1006,10 +1018,12 @@ unsigned long	qtime;
 			dcb->flags |= DCBF_HUNG;
 			spinlock_release(&dcb->dcb_initlock);
 			/** Read session id to thread's local storage */
-			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
-				dcb, 
-				&tls_log_info.li_sesid, 
-				&tls_log_info.li_enabled_logs)));
+			if (LOG_MAY_BE_ENABLED(LOGFILE_TRACE))
+			{
+			    dcb_get_ses_log_info(dcb,
+			                         &tls_log_info.li_sesid,
+			                         &tls_log_info.li_enabled_logs);
+			}
                         if (poll_dcb_session_check(dcb, "hangup EPOLLHUP"))
                         {
                             dcb->func.hangup(dcb);
@@ -1042,10 +1056,12 @@ unsigned long	qtime;
 			dcb->flags |= DCBF_HUNG;
 			spinlock_release(&dcb->dcb_initlock);
 			/** Read session id to thread's local storage */
-			LOGIF_MAYBE(LT, (dcb_get_ses_log_info(
-				dcb, 
-				&tls_log_info.li_sesid, 
-				&tls_log_info.li_enabled_logs)));
+			if (LOG_MAY_BE_ENABLED(LOGFILE_TRACE))
+			{
+			    dcb_get_ses_log_info(dcb,
+			                         &tls_log_info.li_sesid,
+			                         &tls_log_info.li_enabled_logs);
+			}
                         if (poll_dcb_session_check(dcb, "hangup EPOLLRDHUP"))
                         {
                             dcb->func.hangup(dcb);
