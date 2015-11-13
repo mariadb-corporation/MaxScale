@@ -978,7 +978,7 @@ filters=qla|fetch|from
 
 In addition to this, readwritesplit needs configuration for a listener, for all servers listed, and for each filter. Listener, server - and filter configurations are described in their own sections in this document.
 
-An important parameter is the `max_slave_connections=50%` parameter. This sets the number of slaves each client connection will use. With the default values, client connections will only use a single slave for reads. For example, setting the parameter value to 100% will use all available slaves and read queries will be balanced evenly across all slaves. Changing the `max_slave_conections` parameter and `slave_selection_criteria` router option allows you to change the way MaxScale will balance reads. For more information about the `slave_selection_criteria` router option, please read the ReadWriteSplit documentation.
+An important parameter is the `max_slave_connections=50%` parameter. This sets the number of slaves each client connection will use. With the default values, client connections will only use a single slave for reads. For example, setting the parameter value to 100% will use all available slaves and read queries will be balanced evenly across all slaves. Changing the `max_slave_connections` parameter and `slave_selection_criteria` router option allows you to change the way MaxScale will balance reads. For more information about the `slave_selection_criteria` router option, please read the ReadWriteSplit documentation.
 
 Below is a listener example for the "RWSplit Service" defined above:
 

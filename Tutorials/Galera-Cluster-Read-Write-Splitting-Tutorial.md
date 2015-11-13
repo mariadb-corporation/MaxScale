@@ -154,7 +154,7 @@ This monitor module will assign one node within the Galera Cluster as the curren
 [Galera Monitor]
 type=monitor
 module=galeramon
-diable_master_failback=1
+disable_master_failback=1
 servers=dbserv1, dbserv2, dbserv3
 user=maxscale
 passwd=96F99AA1315BDC3604B006F427DD9484

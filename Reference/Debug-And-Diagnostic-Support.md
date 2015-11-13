@@ -1837,7 +1837,7 @@ MariaDB Corporation MaxScale	/home/jdoe/bin/develop/log/skygw_msg1.log Tue Dec  
 
 ### Trace log
 
-Trace log includes information about available servers and their states, client sessions, queries being executed, routing decisions and other routing related data. Trace log can be found from the same directory with other logs but it is physically stored elsewhere, to OSs shared memory to reduce the latency caused by logging. The location of physical file is : /dev/shm/<pid>/skygw_traceX.log where ‘X’ is the same sequence number as in the file name in the /var/log/maxscale directory.
+Trace log includes information about available servers and their states, client sessions, queries being executed, routing decisions and other routing related data. Trace log can be found from the same directory with other logs but it is physically stored elsewhere, to OS's shared memory to reduce the latency caused by logging. The location of physical file is : /dev/shm/<pid>/skygw_traceX.log where ‘X’ is the same sequence number as in the file name in the /var/log/maxscale directory.
 
 Individual trace log entry looks similar to those in other logs but there is some difference too. Some log entries include a number within square brackets to specify which client session they belong to. For example:
 
