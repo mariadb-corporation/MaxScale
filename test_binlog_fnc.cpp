@@ -136,6 +136,7 @@ void test_binlog(TestConnections* Test)
     Test->try_query(Test->repl->nodes[0], (char *) "ROLLBACK");
     Test->tprintf("INSERT INTO t1 VALUES(112, 10)\n");
     Test->try_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(112, 10)");
+    Test->try_query(Test->repl->nodes[0], (char *) "COMMIT");
     Test->stop_timeout();
     sleep(20);
 
