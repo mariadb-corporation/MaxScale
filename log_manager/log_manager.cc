@@ -49,6 +49,35 @@ static const char LOGFILE_NAME_SUFFIX[] = ".log";
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
+typedef enum
+{
+    BB_READY = 0x00,
+    BB_FULL,
+    BB_CLEARED
+} blockbuf_state_t;
+
+typedef enum
+{
+    FILEWRITER_INIT,
+    FILEWRITER_RUN,
+    FILEWRITER_DONE
+} filewriter_state_t;
+
+/**
+ * UNINIT means zeroed memory buffer allocated for the struct.
+ * INIT   means that struct members may have values, and memory may
+ *        have been allocated. Done function must check and free it.
+ * RUN    Struct is valid for run-time checking.
+ * DONE   means that possible memory allocations have been released.
+ */
+typedef enum
+{
+    UNINIT = 0,
+    INIT,
+    RUN,
+    DONE
+} flat_obj_state_t;
+
 /**
  * LOG_FLUSH_NO  Do not flush after writing.
  * LOG_FLUSH_YES Flush after writing.
@@ -123,9 +152,6 @@ ssize_t log_ses_count[LOGFILE_LAST] = {0};
  * by the OS.
  */
 const char* shm_pathname_prefix = "/dev/shm/";
-
-/** Errors are written to syslog too by default */
-char* syslog_id_str = strdup("LOGFILE_ERROR");
 
 /** Forward declarations
  */

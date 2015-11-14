@@ -16,9 +16,13 @@
  * Copyright MariaDB Corporation Ab 2013-2014
  */
 #if !defined(LOG_MANAGER_H)
-# define LOG_MANAGER_H
+#define LOG_MANAGER_H
 
 #include <syslog.h>
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 /*
  * We need a common.h file that is included by every component.
@@ -44,13 +48,6 @@ enum mxs_log_priorities
 
 typedef enum
 {
-    BB_READY = 0x00,
-    BB_FULL,
-    BB_CLEARED
-} blockbuf_state_t;
-
-typedef enum
-{
     LOGFILE_ERROR = 1,
     LOGFILE_FIRST = LOGFILE_ERROR,
     LOGFILE_MESSAGE = 2,
@@ -58,13 +55,6 @@ typedef enum
     LOGFILE_DEBUG = 8,
     LOGFILE_LAST = LOGFILE_DEBUG
 } logfile_id_t;
-
-typedef enum
-{
-    FILEWRITER_INIT,
-    FILEWRITER_RUN,
-    FILEWRITER_DONE
-} filewriter_state_t;
 
 typedef enum
 {
@@ -87,6 +77,11 @@ typedef struct log_info
 #define LT LOGFILE_TRACE
 #define LD LOGFILE_DEBUG
 
+extern int lm_enabled_priorities_bitmask;
+extern int lm_enabled_logfiles_bitmask;
+extern ssize_t log_ses_count[];
+extern __thread log_info_t tls_log_info;
+
 /**
  * Check if specified log type is enabled in general or if it is enabled
  * for the current session.
@@ -108,21 +103,6 @@ typedef struct log_info
     }
 
 /**
- * UNINIT means zeroed memory buffer allocated for the struct.
- * INIT   means that struct members may have values, and memory may
- *        have been allocated. Done function must check and free it.
- * RUN    Struct is valid for run-time checking.
- * DONE   means that possible memory allocations have been released.
- */
-typedef enum
-{
-    UNINIT = 0,
-    INIT,
-    RUN,
-    DONE
-} flat_obj_state_t;
-
-/**
  * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].
  */
 typedef enum
@@ -130,13 +110,6 @@ typedef enum
     LOG_AUGMENT_WITH_FUNCTION = 1,
     LOG_AUGMENTATION_MASK     = (LOG_AUGMENT_WITH_FUNCTION)
 } log_augmentation_t;
-
-EXTERN_C_BLOCK_BEGIN
-
-extern int lm_enabled_priorities_bitmask;
-extern int lm_enabled_logfiles_bitmask;
-extern ssize_t log_ses_count[];
-extern __thread log_info_t tls_log_info;
 
 bool mxs_log_init(const char* ident, const char* logdir, log_target_t target);
 void mxs_log_finish(void);
@@ -169,8 +142,6 @@ inline int mxs_log_id_to_priority(logfile_id_t id)
 
 #define skygw_log_write_flush(id, format, ...) skygw_log_write(id, format, ##__VA_ARGS__)
 
-EXTERN_C_BLOCK_END
-
 /**
  * Helper, not to be called directly.
  */
@@ -188,5 +159,9 @@ EXTERN_C_BLOCK_END
 #define MXS_NOTICE(format, ...)  MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
 #define MXS_INFO(format, ...)    MXS_LOG_MESSAGE(LOG_INFO,    format, ##__VA_ARGS__)
 #define MXS_DEBUG(format, ...)   MXS_LOG_MESSAGE(LOG_DEBUG,   format, ##__VA_ARGS__)
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /** LOG_MANAGER_H */
