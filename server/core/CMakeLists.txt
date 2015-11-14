@@ -6,6 +6,7 @@ if(BUILD_TESTS OR BUILD_TOOLS)
     target_link_libraries(fullcore ${TCMALLOC_LIBRARIES})
   endif()
   target_link_libraries(fullcore ${CURL_LIBRARIES} utils log_manager pthread ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ssl aio rt crypt dl crypto inih z m stdc++)
+  add_dependencies(fullcore pcre2)
 endif()
 
 add_executable(maxscale atomic.c buffer.c spinlock.c gateway.c
@@ -13,6 +14,7 @@ add_executable(maxscale atomic.c buffer.c spinlock.c gateway.c
 	poll.c config.c users.c hashtable.c dbusers.c thread.c gwbitmask.c 
 	monitor.c adminusers.c secrets.c filter.c modutil.c hint.c
 	housekeeper.c memlog.c resultset.c  gwdirs.c externcmd.c random_jkiss.c maxscale_pcre2.c)
+add_dependencies(maxscale pcre2)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale ${JEMALLOC_LIBRARIES})
