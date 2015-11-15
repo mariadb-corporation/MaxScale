@@ -118,19 +118,17 @@ SERVICE 	*service;
                 char* home = get_libdir();
                 char* ldpath = getenv("LD_LIBRARY_PATH");
                 
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unable to load %s module \"%s\".\n\t\t\t"
-                        "      Ensure that lib%s.so exists in one of the "
-                        "following directories :\n\t\t\t      "
-                        "- %s\n%s%s",
-                        MODULE_ROUTER,
-                        router,
-                        router,
-                        home,
-			ldpath?"\t\t\t      - ":"",
-                        ldpath?ldpath:"")));
-		free(service);
+                MXS_ERROR("Unable to load %s module \"%s\".\n\t\t\t"
+                          "      Ensure that lib%s.so exists in one of the "
+                          "following directories :\n\t\t\t      "
+                          "- %s\n%s%s",
+                          MODULE_ROUTER,
+                          router,
+                          router,
+                          home,
+                          ldpath?"\t\t\t      - ":"",
+                          ldpath?ldpath:"");
+                free(service);
 		return NULL;
 	}
 	service->name = strdup(servname);
@@ -214,11 +212,8 @@ GWPROTOCOL	*funcs;
 
         if (port->listener == NULL)
 	{
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Failed to create listener for service %s.",
-			service->name)));
-		goto retblock;
+            MXS_ERROR("Failed to create listener for service %s.", service->name);
+            goto retblock;
 	}
 	
 	if (strcmp(port->protocol, "MySQLClient") == 0) {
@@ -233,13 +228,11 @@ GWPROTOCOL	*funcs;
 	
 			if ((loaded = load_mysql_users(service)) < 0)
 			{
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : Unable to load users for "
-					"service %s listening at %s:%d.",
-                                        service->name,
-					(port->address == NULL ? "0.0.0.0" : port->address),
-					port->port)));
+                            MXS_ERROR("Unable to load users for "
+                                      "service %s listening at %s:%d.",
+                                      service->name,
+                                      (port->address == NULL ? "0.0.0.0" : port->address),
+                                      port->port);
 				
 				{
 					/* Try loading authentication data from file cache */
@@ -251,9 +244,7 @@ GWPROTOCOL	*funcs;
 					loaded = dbusers_load(service->users, path);
 					if (loaded != -1)
 					{
-						LOGIF(LE, (skygw_log_write_flush(
-							LOGFILE_ERROR,
-							"Using cached credential information.")));
+                                            MXS_ERROR("Using cached credential information.");
 					}
 				}
 				if (loaded == -1)
@@ -283,10 +274,10 @@ GWPROTOCOL	*funcs;
 				    if(errno != EEXIST)
 				    {
                                         char errbuf[STRERROR_BUFLEN];
-					skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
-						 path,
-						 errno,
-                                                        strerror_r(errno, errbuf, sizeof(errbuf)));
+					MXS_ERROR("Failed to create directory '%s': [%d] %s",
+                                                  path,
+                                                  errno,
+                                                  strerror_r(errno, errbuf, sizeof(errbuf)));
 				    }
                                     mkdir_rval = 0;
                                 }
@@ -302,10 +293,10 @@ GWPROTOCOL	*funcs;
 				    if(errno != EEXIST)
 				    {
                                         char errbuf[STRERROR_BUFLEN];
-					skygw_log_write(LOGFILE_ERROR,"Error : Failed to create directory '%s': [%d] %s",
-						 path,
-						 errno,
-                                                        strerror_r(errno, errbuf, sizeof(errbuf)));
+					MXS_ERROR("Failed to create directory '%s': [%d] %s",
+                                                  path,
+                                                  errno,
+                                                  strerror_r(errno, errbuf, sizeof(errbuf)));
 				    }
                                     mkdir_rval = 0;
                                 }
@@ -314,12 +305,10 @@ GWPROTOCOL	*funcs;
 			}
 			if (loaded == 0)
 			{
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Service %s: failed to load any user "
-					"information. Authentication will "
-					"probably fail as a result.",
-					service->name)));
+                            MXS_ERROR("Service %s: failed to load any user "
+                                      "information. Authentication will "
+                                      "probably fail as a result.",
+                                      service->name);
 			}
 
 			/* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
@@ -328,10 +317,8 @@ GWPROTOCOL	*funcs;
 			service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
 			service->rate_limit.nloads=1;
 
-			LOGIF(LM, (skygw_log_write(
-				LOGFILE_MESSAGE,
-				"Loaded %d MySQL Users for service [%s].",
-				loaded, service->name)));
+			MXS_NOTICE("Loaded %d MySQL Users for service [%s].",
+                                   loaded, service->name);
 		}
 	}
 	else 
@@ -350,12 +337,10 @@ GWPROTOCOL	*funcs;
 		dcb_close(port->listener);
         service->users = NULL;
 		port->listener = NULL;
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-			"Error : Unable to load protocol module %s. Listener "
-                        "for service %s not started.",
-			port->protocol,
-                        service->name)));
+		MXS_ERROR("Unable to load protocol module %s. Listener "
+                          "for service %s not started.",
+                          port->protocol,
+                          service->name);
 		goto retblock;
 	}
 	memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
@@ -376,10 +361,8 @@ GWPROTOCOL	*funcs;
                 } 
                 else 
 		{
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Failed to create session to service %s.",
-				service->name)));
+                    MXS_ERROR("Failed to create session to service %s.",
+                              service->name);
 			
 			users_free(service->users);
             service->users = NULL;
@@ -391,12 +374,10 @@ GWPROTOCOL	*funcs;
         } 
         else 
 	{       
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-			"Error : Unable to start to listen port %d for %s %s.",
-			port->port,
-                        port->protocol,
-                        service->name)));
+            MXS_ERROR("Unable to start to listen port %d for %s %s.",
+                      port->port,
+                      port->protocol,
+                      service->name);
 		users_free(service->users);
         service->users = NULL;
 		dcb_close(port->listener);
@@ -445,8 +426,8 @@ int serviceStartAllPorts(SERVICE* service)
                  service->name, service->stats.n_failed_starts);
         hktask_oneshot(taskname, service_interal_restart,
                        (void*) service, retry_after);
-        skygw_log_write(LM, "Failed to start service %s, retrying in %d seconds.",
-                        service->name, retry_after);
+        MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
+                   service->name, retry_after);
     }
     return listeners;
 }
@@ -480,25 +461,21 @@ serviceStart(SERVICE *service)
             }
             else
             {
-                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                 "%s: Failed to create router instance for service. Service not started.",
-                                                 service->name)));
+                MXS_ERROR("%s: Failed to create router instance for service. Service not started.",
+                          service->name);
                 service->state = SERVICE_STATE_FAILED;
             }
         }
         else
         {
-            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                             "%s: SSL initialization failed. Service not started.",
-                                             service->name)));
+            MXS_ERROR("%s: SSL initialization failed. Service not started.", service->name);
             service->state = SERVICE_STATE_FAILED;
         }
     }
     else
     {
-        skygw_log_write_flush(LE,
-                              "%s: Error: Inadequate user permissions for service. Service not started.",
-                              service->name);
+        MXS_ERROR("%s: Inadequate user permissions for service. Service not started.",
+                  service->name);
         service->state = SERVICE_STATE_FAILED;
     }
     return listeners;
@@ -546,10 +523,7 @@ int	n = 0,i;
 
 		if(i == 0)
 		{
-			LOGIF(LE, (skygw_log_write(
-				LOGFILE_ERROR,
-				"Error : Failed to start service '%s'.",
-				ptr->name)));
+                    MXS_ERROR("Failed to start service '%s'.", ptr->name);
 		}
 
 		ptr = ptr->next;
@@ -922,7 +896,7 @@ serviceOptimizeWildcard(SERVICE *service, int action)
 	service->optimize_wildcard = action;
 	if(action)
 	{
-	    LOGIF(LM,(skygw_log_write(LOGFILE_MESSAGE,"[%s] Optimizing wildcard database grants.",service->name)));
+	    MXS_NOTICE("[%s] Optimizing wildcard database grants.",service->name);
 	}
 	return 1;
 }
@@ -1105,9 +1079,8 @@ int		n = 0;
 
 	if ((flist = (FILTER_DEF **)malloc(sizeof(FILTER_DEF *))) == NULL)
 	{
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Error : Out of memory adding filters to service.\n")));
-		return;
+            MXS_ERROR("Out of memory adding filters to service.\n");
+            return;
 	}
 	ptr = strtok_r(filters, "|", &brkt);
 	while (ptr)
@@ -1116,18 +1089,14 @@ int		n = 0;
 		if ((flist = (FILTER_DEF **)realloc(flist,
 				(n + 1) * sizeof(FILTER_DEF *))) == NULL)
 		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"Error : Out of memory adding filters to service.\n")));
-			return;
+                    MXS_ERROR("Out of memory adding filters to service.");
+                    return;
 		}
 		if ((flist[n-1] = filter_find(trim(ptr))) == NULL)
 		{
-			LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-				"Warning : Unable to find filter '%s' for service '%s'\n",
-					trim(ptr), service->name
-					)));
-			n--;
+                    MXS_WARNING("Unable to find filter '%s' for service '%s'\n",
+                                trim(ptr), service->name);
+                    n--;
 		}
 		flist[n] = NULL;
 		ptr = strtok_r(NULL, "|", &brkt);
@@ -1405,34 +1374,27 @@ void	*router_obj;
 	{
 		if ((router_obj = load_module(router, MODULE_ROUTER)) == NULL)
 		{
-			LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Failed to update router "
-                                "for service %s to %s.",
-				service->name,
-                                router)));
+                    MXS_ERROR("Failed to update router "
+                              "for service %s to %s.",
+                              service->name,
+                              router);
 		}
 		else
 		{
-			LOGIF(LM, (skygw_log_write(
-                                LOGFILE_MESSAGE,
-                                "Update router for service %s to %s.",
-				service->name,
-                                router)));
-			free(service->routerModule);
-			service->routerModule = strdup(router);
-			service->router = router_obj;
+                    MXS_NOTICE("Update router for service %s to %s.",
+                               service->name,
+                               router);
+                    free(service->routerModule);
+                    service->routerModule = strdup(router);
+                    service->router = router_obj;
 		}
 	}
 	if (user &&
             (strcmp(service->credentials.name, user) != 0 ||
              strcmp(service->credentials.authdata, auth) != 0))
 	{
-		LOGIF(LM, (skygw_log_write(
-                        LOGFILE_MESSAGE,
-                        "Update credentials for service %s.",
-                        service->name)));
-		serviceSetUser(service, user, auth);
+            MXS_NOTICE("Update credentials for service %s.", service->name);
+            serviceSetUser(service, user, auth);
 	}
 }
 
@@ -1448,22 +1410,19 @@ int service_refresh_users(SERVICE *service) {
 	int ret = 1;
 	/* check for another running getUsers request */
 	if (! spinlock_acquire_nowait(&service->users_table_spin)) {
-		LOGIF(LD, (skygw_log_write_flush(
-			LOGFILE_DEBUG,
-			"%s: [service_refresh_users] failed to get get lock for loading new users' table: another thread is loading users",
-			service->name)));
+            MXS_DEBUG("%s: [service_refresh_users] failed to get get lock for "
+                      "loading new users' table: another thread is loading users",
+                      service->name);
 
-		return 1;
+            return 1;
 	}
 
 	
 	/* check if refresh rate limit has exceeded */
 	if ( (time(NULL) < (service->rate_limit.last + USERS_REFRESH_TIME)) || (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)) { 
 		spinlock_release(&service->users_table_spin);
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"%s: Refresh rate limit exceeded for load of users' table.",
-			service->name)));
+		MXS_ERROR("%s: Refresh rate limit exceeded for load of users' table.",
+                          service->name);
 
  		return 1;
 	}
@@ -2046,7 +2005,7 @@ int serviceInitSSL(SERVICE* service)
 
 	if((service->ctx = SSL_CTX_new(service->method)) == NULL)
     {
-        skygw_log_write(LE, "Error: SSL context initialization failed.");
+        MXS_ERROR("SSL context initialization failed.");
         return -1;
     }
 
@@ -2059,7 +2018,7 @@ int serviceInitSSL(SERVICE* service)
 	    rsa_512 = RSA_generate_key(512,RSA_F4,NULL,NULL);
 	    if (rsa_512 == NULL)
         {
-            skygw_log_write(LE,"Error: 512-bit RSA key generation failed.");
+            MXS_ERROR("512-bit RSA key generation failed.");
             return -1;
         }
 	}
@@ -2068,7 +2027,7 @@ int serviceInitSSL(SERVICE* service)
 	    rsa_1024 = RSA_generate_key(1024,RSA_F4,NULL,NULL);
 	    if (rsa_1024 == NULL)
         {
-     		skygw_log_write(LE,"Error: 1024-bit RSA key generation failed.");
+            MXS_ERROR("1024-bit RSA key generation failed.");
             return -1;
         }
 	}
@@ -2078,26 +2037,26 @@ int serviceInitSSL(SERVICE* service)
 
 	/** Load the server sertificate */
 	if (SSL_CTX_use_certificate_file(service->ctx, service->ssl_cert, SSL_FILETYPE_PEM) <= 0) {
-	    skygw_log_write(LE,"Error: Failed to set server SSL certificate.");
+	    MXS_ERROR("Failed to set server SSL certificate.");
 	    return -1;
 	}
 
 	/* Load the private-key corresponding to the server certificate */
 	if (SSL_CTX_use_PrivateKey_file(service->ctx, service->ssl_key, SSL_FILETYPE_PEM) <= 0) {
-	    skygw_log_write(LE,"Error: Failed to set server SSL key.");
+	    MXS_ERROR("Failed to set server SSL key.");
 	    return -1;
 	}
 
 	/* Check if the server certificate and private-key matches */
 	if (!SSL_CTX_check_private_key(service->ctx)) {
-	    skygw_log_write(LE,"Error: Server SSL certificate and key do not match.");
+	    MXS_ERROR("Server SSL certificate and key do not match.");
 	    return -1;
 	}
 
 
 	/* Load the RSA CA certificate into the SSL_CTX structure */
 	if (!SSL_CTX_load_verify_locations(service->ctx, service->ssl_ca_cert, NULL)) {
-	    skygw_log_write(LE,"Error: Failed to set Certificate Authority file.");
+	    MXS_ERROR("Failed to set Certificate Authority file.");
 	    return -1;
 	}
 

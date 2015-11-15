@@ -82,23 +82,21 @@ secrets_readKeys(const char* path)
             if (!reported)
             {
                 char errbuf[STRERROR_BUFLEN];
-                LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-                                           "Encrypted password file %s can't be accessed "
-                                           "(%s). Password encryption is not used.",
-                                           secret_file,
-                                           strerror_r(eno, errbuf, sizeof(errbuf)))));
+                MXS_NOTICE("Encrypted password file %s can't be accessed "
+                           "(%s). Password encryption is not used.",
+                           secret_file,
+                           strerror_r(eno, errbuf, sizeof(errbuf)));
                 reported = 1;
             }
         }
         else
         {
             char errbuf[STRERROR_BUFLEN];
-            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                             "Error : access for secrets file "
-                                             "[%s] failed. Error %d, %s.",
-                                             secret_file,
-                                             eno,
-                                             strerror_r(eno, errbuf, sizeof(errbuf)))));
+            MXS_ERROR("Access for secrets file "
+                      "[%s] failed. Error %d, %s.",
+                      secret_file,
+                      eno,
+                      strerror_r(eno, errbuf, sizeof(errbuf)));
         }
         return NULL;
     }
@@ -109,12 +107,11 @@ secrets_readKeys(const char* path)
         int eno = errno;
         errno = 0;
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : Failed opening secret "
-                                         "file [%s]. Error %d, %s.",
-                                         secret_file,
-                                         eno,
-                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("Failed opening secret "
+                  "file [%s]. Error %d, %s.",
+                  secret_file,
+                  eno,
+                  strerror_r(eno, errbuf, sizeof(errbuf)));
         return NULL;
 
     }
@@ -126,12 +123,11 @@ secrets_readKeys(const char* path)
         errno = 0;
         close(fd);
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : fstat for secret file %s "
-                                         "failed. Error %d, %s.",
-                                         secret_file,
-                                         eno,
-                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("fstat for secret file %s "
+                  "failed. Error %d, %s.",
+                  secret_file,
+                  eno,
+                  strerror_r(eno, errbuf, sizeof(errbuf)));
         return NULL;
     }
 
@@ -141,30 +137,26 @@ secrets_readKeys(const char* path)
         errno = 0;
         close(fd);
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : Secrets file %s has "
-                                         "incorrect size. Error %d, %s.",
-                                         secret_file,
-                                         eno,
-                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("Secrets file %s has "
+                  "incorrect size. Error %d, %s.",
+                  secret_file,
+                  eno,
+                  strerror_r(eno, errbuf, sizeof(errbuf)));
         return NULL;
     }
     if (secret_stats.st_mode != (S_IRUSR | S_IFREG))
     {
         close(fd);
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : Ignoring secrets file "
-                                         "%s, invalid permissions.",
-                                         secret_file)));
+        MXS_ERROR("Ignoring secrets file "
+                  "%s, invalid permissions.",
+                  secret_file);
         return NULL;
     }
 
     if ((keys = (MAXKEYS *) malloc(sizeof(MAXKEYS))) == NULL)
     {
         close(fd);
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : Memory allocation failed "
-                                         "for key structure.")));
+        MXS_ERROR("Memory allocation failed for key structure.");
         return NULL;
     }
 
@@ -181,14 +173,13 @@ secrets_readKeys(const char* path)
         close(fd);
         free(keys);
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : Read from secrets file "
-                                         "%s failed. Read %d, expected %d bytes. Error %d, %s.",
-                                         secret_file,
-                                         len,
-                                         sizeof(MAXKEYS),
-                                         eno,
-                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("Read from secrets file "
+                  "%s failed. Read %d, expected %d bytes. Error %d, %s.",
+                  secret_file,
+                  len,
+                  sizeof(MAXKEYS),
+                  eno,
+                  strerror_r(eno, errbuf, sizeof(errbuf)));
         return NULL;
     }
 
@@ -199,12 +190,11 @@ secrets_readKeys(const char* path)
         errno = 0;
         free(keys);
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : Failed closing the "
-                                         "secrets file %s. Error %d, %s.",
-                                         secret_file,
-                                         eno,
-                                         strerror_r(eno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("Failed closing the "
+                  "secrets file %s. Error %d, %s.",
+                  secret_file,
+                  eno,
+                  strerror_r(eno, errbuf, sizeof(errbuf)));
         return NULL;
     }
     ss_dassert(keys != NULL);
@@ -229,7 +219,7 @@ int secrets_writeKeys(const char *path)
 
     if (strlen(path) > PATH_MAX)
     {
-        skygw_log_write(LOGFILE_ERROR, "Error: Pathname too long.");
+        MXS_ERROR("Pathname too long.");
         return 1;
     }
 
@@ -240,12 +230,11 @@ int secrets_writeKeys(const char *path)
     if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : failed opening secret "
-                                         "file [%s]. Error %d, %s.",
-                                         secret_file,
-                                         errno,
-                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("failed opening secret "
+                  "file [%s]. Error %d, %s.",
+                  secret_file,
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
         return 1;
     }
 
@@ -253,18 +242,16 @@ int secrets_writeKeys(const char *path)
     if ((randfd = open("/dev/random", O_RDONLY)) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : failed opening /dev/random. Error %d, %s.",
-                                         errno,
-                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("failed opening /dev/random. Error %d, %s.",
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
         close(fd);
         return 1;
     }
 
     if (read(randfd, (void*) &randval, sizeof(unsigned int)) < 1)
     {
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : failed to read /dev/random.")));
+        MXS_ERROR("failed to read /dev/random.");
         close(fd);
         close(randfd);
         return 1;
@@ -278,12 +265,11 @@ int secrets_writeKeys(const char *path)
     if (write(fd, &key, sizeof(key)) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : failed writing into "
-                                         "secret file [%s]. Error %d, %s.",
-                                         secret_file,
-                                         errno,
-                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("failed writing into "
+                  "secret file [%s]. Error %d, %s.",
+                  secret_file,
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
         close(fd);
         return 1;
     }
@@ -292,23 +278,21 @@ int secrets_writeKeys(const char *path)
     if (close(fd) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : failed closing the "
-                                         "secret file [%s]. Error %d, %s.",
-                                         secret_file,
-                                         errno,
-                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("failed closing the "
+                  "secret file [%s]. Error %d, %s.",
+                  secret_file,
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
     }
 
     if (chmod(secret_file, S_IRUSR) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : failed to change the permissions of the"
-                                         "secret file [%s]. Error %d, %s.",
-                                         secret_file,
-                                         errno,
-                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("failed to change the permissions of the"
+                  "secret file [%s]. Error %d, %s.",
+                  secret_file,
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
     }
 
     return 0;

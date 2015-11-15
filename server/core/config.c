@@ -152,8 +152,8 @@ char* config_clean_string_list(char* str)
         {
             PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
             pcre2_get_error_message(re_err, errbuf, sizeof(errbuf));
-            skygw_log_write(LE, "[%s] Error: Regular expression compilation failed at %d: %s",
-                            __FUNCTION__, err_offset, errbuf);
+            MXS_ERROR("[%s] Regular expression compilation failed at %d: %s",
+                      __FUNCTION__, err_offset, errbuf);
             pcre2_code_free(re);
             free(dest);
             return NULL;
@@ -188,7 +188,7 @@ char* config_clean_string_list(char* str)
     }
     else
     {
-        skygw_log_write(LE, "[%s] Error: Memory allocation failed.", __FUNCTION__);
+        MXS_ERROR("[%s] Memory allocation failed.", __FUNCTION__);
     }
 
     return dest;
@@ -254,7 +254,7 @@ handler(void *userdata, const char *section, const char *name, const char *value
 
             if ((tmp = realloc(p1->value, sizeof(char) * (paramlen))) == NULL)
             {
-                skygw_log_write(LE, "[%s] Error: Memory allocation failed.", __FUNCTION__);
+                MXS_ERROR("[%s] Memory allocation failed.", __FUNCTION__);
                 return 0;
             }
             strcat(tmp, ",");
@@ -262,7 +262,7 @@ handler(void *userdata, const char *section, const char *name, const char *value
             if ((p1->value = config_clean_string_list(tmp)) == NULL)
             {
                 p1->value = tmp;
-                skygw_log_write(LE, "[%s] Error: Cleaning configuration parameter failed.", __FUNCTION__);
+                MXS_ERROR("[%s] Cleaning configuration parameter failed.", __FUNCTION__);
                 return 0;
             }
             free(tmp);
@@ -366,7 +366,7 @@ config_load(char *file)
                      "Error: Failed to parse configuration file. Memory allocation failed.");
         }
 
-        skygw_log_write(LE, errorbuffer);
+        MXS_ERROR("%s", errorbuffer);
         return 0;
     }
 
@@ -443,7 +443,7 @@ process_config_context(CONFIG_CONTEXT *context)
 
     if ((monitorhash = hashtable_alloc(5, simple_str_hash, strcmp)) == NULL)
     {
-        skygw_log_write(LOGFILE_ERROR, "Error: Failed to allocate, monitor configuration check hashtable.");
+        MXS_ERROR("Failed to allocate, monitor configuration check hashtable.");
         return 0;
     }
     hashtable_memory_fns(monitorhash, (HASHMEMORYFN)strdup, NULL, (HASHMEMORYFN)free, NULL);
@@ -458,10 +458,7 @@ process_config_context(CONFIG_CONTEXT *context)
         char *type = config_get_value(obj->parameters, "type");
         if (type == NULL)
         {
-            LOGIF(LE, (skygw_log_write_flush(
-                           LOGFILE_ERROR,
-                           "Error : Configuration object '%s' has no type.",
-                           obj->object)));
+            MXS_ERROR("Configuration object '%s' has no type.", obj->object);
             error_count++;
         }
         else if (!strcmp(type, "service"))
@@ -543,13 +540,11 @@ process_config_context(CONFIG_CONTEXT *context)
 
                 if (obj->element == NULL) /*< if module load failed */
                 {
-                    LOGIF(LE, (skygw_log_write_flush(
-                                   LOGFILE_ERROR,
-                                   "Error : Reading configuration "
-                                   "for router service '%s' failed. "
-                                   "Router %s is not loaded.",
-                                   obj->object,
-                                   obj->object)));
+                    MXS_ERROR("Reading configuration "
+                              "for router service '%s' failed. "
+                              "Router %s is not loaded.",
+                              obj->object,
+                              obj->object);
                     obj = obj->next;
                     continue; /*< process next obj */
                 }
@@ -584,50 +579,50 @@ process_config_context(CONFIG_CONTEXT *context)
                     if (ssl_cert == NULL)
                     {
                         error_count++;
-                        skygw_log_write(LE, "Error: Server certificate missing for service '%s'."
-                                        "Please provide the path to the server certificate by adding "
-                                        "the ssl_cert=<path> parameter", obj->object);
+                        MXS_ERROR("Server certificate missing for service '%s'."
+                                  "Please provide the path to the server certificate by adding "
+                                  "the ssl_cert=<path> parameter", obj->object);
                     }
 
                     if (ssl_ca_cert == NULL)
                     {
                         error_count++;
-                        skygw_log_write(LE, "Error: CA Certificate missing for service '%s'."
-                                        "Please provide the path to the certificate authority "
-                                        "certificate by adding the ssl_ca_cert=<path> parameter",
-                                        obj->object);
+                        MXS_ERROR("CA Certificate missing for service '%s'."
+                                  "Please provide the path to the certificate authority "
+                                  "certificate by adding the ssl_ca_cert=<path> parameter",
+                                  obj->object);
                     }
 
                     if (ssl_key == NULL)
                     {
                         error_count++;
-                        skygw_log_write(LE, "Error: Server private key missing for service '%s'. "
-                                        "Please provide the path to the server certificate key by "
-                                        "adding the ssl_key=<path> parameter",
-                                        obj->object);
+                        MXS_ERROR("Server private key missing for service '%s'. "
+                                  "Please provide the path to the server certificate key by "
+                                  "adding the ssl_key=<path> parameter",
+                                  obj->object);
                     }
 
                     if (access(ssl_ca_cert, F_OK) != 0)
                     {
-                        skygw_log_write(LE, "Error: Certificate authority file for service '%s' "
-                                        "not found: %s",
-                                        obj->object, ssl_ca_cert);
+                        MXS_ERROR("Certificate authority file for service '%s' "
+                                  "not found: %s",
+                                  obj->object, ssl_ca_cert);
                         error_count++;
                     }
 
                     if (access(ssl_cert, F_OK) != 0)
                     {
-                        skygw_log_write(LE, "Error: Server certificate file for service '%s' not found: %s",
-                                        obj->object,
-                                        ssl_cert);
+                        MXS_ERROR("Server certificate file for service '%s' not found: %s",
+                                  obj->object,
+                                  ssl_cert);
                         error_count++;
                     }
 
                     if (access(ssl_key, F_OK) != 0)
                     {
-                        skygw_log_write(LE, "Error: Server private key file for service '%s' not found: %s",
-                                        obj->object,
-                                        ssl_key);
+                        MXS_ERROR("Server private key file for service '%s' not found: %s",
+                                  obj->object,
+                                  ssl_key);
                         error_count++;
                     }
 
@@ -635,8 +630,8 @@ process_config_context(CONFIG_CONTEXT *context)
                     {
                         if (serviceSetSSL(obj->element, ssl) != 0)
                         {
-                            skygw_log_write(LE, "Error: Unknown parameter for service '%s': %s",
-                                            obj->object, ssl);
+                            MXS_ERROR("Unknown parameter for service '%s': %s",
+                                      obj->object, ssl);
                             error_count++;
                         }
                         else
@@ -646,9 +641,9 @@ process_config_context(CONFIG_CONTEXT *context)
                             {
                                 if (serviceSetSSLVersion(obj->element, ssl_version) != 0)
                                 {
-                                    skygw_log_write(LE, "Error: Unknown parameter value for "
-                                                    "'ssl_version' for service '%s': %s",
-                                                    obj->object, ssl_version);
+                                    MXS_ERROR("Unknown parameter value for "
+                                              "'ssl_version' for service '%s': %s",
+                                              obj->object, ssl_version);
                                     error_count++;
                                 }
                             }
@@ -656,9 +651,9 @@ process_config_context(CONFIG_CONTEXT *context)
                             {
                                 if (serviceSetSSLVerifyDepth(obj->element, atoi(ssl_cert_verify_depth)) != 0)
                                 {
-                                    skygw_log_write(LE, "Error: Invalid parameter value for "
-                                                    "'ssl_cert_verify_depth' for service '%s': %s",
-                                                    obj->object, ssl_cert_verify_depth);
+                                    MXS_ERROR("Invalid parameter value for "
+                                              "'ssl_cert_verify_depth' for service '%s': %s",
+                                              obj->object, ssl_cert_verify_depth);
                                     error_count++;
                                 }
                             }
@@ -716,12 +711,10 @@ process_config_context(CONFIG_CONTEXT *context)
                 }
                 else if (user && auth == NULL)
                 {
-                    LOGIF(LE, (skygw_log_write_flush(
-                                   LOGFILE_ERROR,
-                                   "Error : Service '%s' has a "
-                                   "user defined but no "
-                                   "corresponding password.",
-                                   obj->object)));
+                    MXS_ERROR("Service '%s' has a "
+                              "user defined but no "
+                              "corresponding password.",
+                              obj->object);
                 }
                 /** Read, validate and set max_slave_connections */
                 if (max_slave_conn_str != NULL)
@@ -747,17 +740,15 @@ process_config_context(CONFIG_CONTEXT *context)
 
                     if (!succp)
                     {
-                        LOGIF(LM, (skygw_log_write(
-                                       LOGFILE_MESSAGE,
-                                       "* Warning : invalid value type "
-                                       "for parameter \'%s.%s = %s\'\n\tExpected "
-                                       "type is either <int> for slave connection "
-                                       "count or\n\t<int>%% for specifying the "
-                                       "maximum percentage of available the "
-                                       "slaves that will be connected.",
-                                       ((SERVICE*)obj->element)->name,
-                                       param->name,
-                                       param->value)));
+                        MXS_WARNING("Invalid value type "
+                                    "for parameter \'%s.%s = %s\'\n\tExpected "
+                                    "type is either <int> for slave connection "
+                                    "count or\n\t<int>%% for specifying the "
+                                    "maximum percentage of available the "
+                                    "slaves that will be connected.",
+                                    ((SERVICE*)obj->element)->name,
+                                    param->name,
+                                    param->value);
                     }
                 }
                 /** Read, validate and set max_slave_replication_lag */
@@ -786,15 +777,13 @@ process_config_context(CONFIG_CONTEXT *context)
 
                     if (!succp)
                     {
-                        LOGIF(LM, (skygw_log_write(
-                                       LOGFILE_MESSAGE,
-                                       "* Warning : invalid value type "
-                                       "for parameter \'%s.%s = %s\'\n\tExpected "
-                                       "type is <int> for maximum "
-                                       "slave replication lag.",
-                                       ((SERVICE*)obj->element)->name,
-                                       param->name,
-                                       param->value)));
+                        MXS_WARNING("Invalid value type "
+                                    "for parameter \'%s.%s = %s\'\n\tExpected "
+                                    "type is <int> for maximum "
+                                    "slave replication lag.",
+                                    ((SERVICE*)obj->element)->name,
+                                    param->name,
+                                    param->value);
                     }
                 }
                 /** Parameters for rwsplit router only */
@@ -829,21 +818,17 @@ process_config_context(CONFIG_CONTEXT *context)
                         {
                             if(param)
                             {
-                                LOGIF(LM, (skygw_log_write(
-                                               LOGFILE_MESSAGE,
-                                               "* Warning : invalid value type "
-                                               "for parameter \'%s.%s = %s\'\n\tExpected "
-                                               "type is [master|all] for "
-                                               "use sql variables in.",
-                                               ((SERVICE*)obj->element)->name,
-                                               param->name,
-                                               param->value)));
+                                MXS_WARNING("Invalid value type "
+                                            "for parameter \'%s.%s = %s\'\n\tExpected "
+                                            "type is [master|all] for "
+                                            "use sql variables in.",
+                                            ((SERVICE*)obj->element)->name,
+                                            param->name,
+                                            param->value);
                             }
                             else
                             {
-                                LOGIF(LE, (skygw_log_write(
-                                               LOGFILE_ERROR,
-                                               "Error : parameter was NULL")));
+                                MXS_ERROR("Parameter was NULL");
                             }
                         }
                     }
@@ -852,11 +837,7 @@ process_config_context(CONFIG_CONTEXT *context)
             else
             {
                 obj->element = NULL;
-                LOGIF(LE, (skygw_log_write_flush(
-                               LOGFILE_ERROR,
-                               "Error : No router defined for service "
-                               "'%s'\n",
-                               obj->object)));
+                MXS_ERROR("No router defined for service '%s'.", obj->object);
                 error_count++;
             }
         }
@@ -884,14 +865,12 @@ process_config_context(CONFIG_CONTEXT *context)
             else
             {
                 obj->element = NULL;
-                LOGIF(LE, (skygw_log_write_flush(
-                               LOGFILE_ERROR,
-                               "Error : Server '%s' is missing a "
-                               "required configuration parameter. A "
-                               "server must "
-                               "have address, port and protocol "
-                               "defined.",
-                               obj->object)));
+                MXS_ERROR("Server '%s' is missing a "
+                          "required configuration parameter. A "
+                          "server must "
+                          "have address, port and protocol "
+                          "defined.",
+                          obj->object);
                 error_count++;
             }
 
@@ -901,11 +880,9 @@ process_config_context(CONFIG_CONTEXT *context)
             }
             else if (monuser && monpw == NULL)
             {
-                LOGIF(LE, (skygw_log_write_flush(
-                               LOGFILE_ERROR,
-                               "Error : Server '%s' has a monitoruser"
-                               "defined but no corresponding password.",
-                               obj->object)));
+                MXS_ERROR("Server '%s' has a monitoruser"
+                          "defined but no corresponding password.",
+                          obj->object);
             }
 
             if (obj->element)
@@ -945,11 +922,9 @@ process_config_context(CONFIG_CONTEXT *context)
             }
             else
             {
-                LOGIF(LE, (skygw_log_write_flush(
-                               LOGFILE_ERROR,
-                               "Error: Filter '%s' has no module "
-                               "defined defined to load.",
-                               obj->object)));
+                MXS_ERROR("Filter '%s' has no module "
+                          "defined defined to load.",
+                          obj->object);
                 error_count++;
             }
 
@@ -1023,25 +998,21 @@ process_config_context(CONFIG_CONTEXT *context)
 
                     if (!found)
                     {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                       LOGFILE_ERROR,
-                                       "Error: Unable to find "
-                                       "server '%s' that is "
-                                       "configured as part of "
-                                       "service '%s'.",
-                                       s, obj->object)));
+                        MXS_ERROR("Unable to find "
+                                  "server '%s' that is "
+                                  "configured as part of "
+                                  "service '%s'.",
+                                  s, obj->object);
                     }
                     s = strtok_r(NULL, ",", &lasts);
                 }
             }
             else if (servers == NULL && !isInternalService(router))
             {
-                LOGIF(LE, (skygw_log_write_flush(
-                               LOGFILE_ERROR,
-                               "Warning: The service '%s' is missing a "
-                               "definition of the servers that provide "
-                               "the service.",
-                               obj->object)));
+                MXS_WARNING("The service '%s' is missing a "
+                            "definition of the servers that provide "
+                            "the service.",
+                            obj->object);
             }
 
             if (roptions && obj->element)
@@ -1099,12 +1070,10 @@ process_config_context(CONFIG_CONTEXT *context)
                     }
                     else
                     {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                       LOGFILE_ERROR,
-                                       "Error : Listener '%s', "
-                                       "service '%s' not found. "
-                                       "Listener will not execute for socket %s.",
-                                       obj->object, service, socket)));
+                        MXS_ERROR("Listener '%s', "
+                                  "service '%s' not found. "
+                                  "Listener will not execute for socket %s.",
+                                  obj->object, service, socket);
                         error_count++;
                     }
                 }
@@ -1123,25 +1092,21 @@ process_config_context(CONFIG_CONTEXT *context)
                     }
                     else
                     {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                       LOGFILE_ERROR,
-                                       "Error : Listener '%s', "
-                                       "service '%s' not found. "
-                                       "Listener will not execute.",
-                                       obj->object, service)));
+                        MXS_ERROR("Listener '%s', "
+                                  "service '%s' not found. "
+                                  "Listener will not execute.",
+                                  obj->object, service);
                         error_count++;
                     }
                 }
             }
             else
             {
-                LOGIF(LE, (skygw_log_write_flush(
-                               LOGFILE_ERROR,
-                               "Error : Listener '%s' is missing a "
-                               "required "
-                               "parameter. A Listener must have a "
-                               "service, port and protocol defined.",
-                               obj->object)));
+                MXS_ERROR("Listener '%s' is missing a "
+                          "required "
+                          "parameter. A Listener must have a "
+                          "service, port and protocol defined.",
+                          obj->object);
                 error_count++;
             }
         }
@@ -1200,9 +1165,9 @@ process_config_context(CONFIG_CONTEXT *context)
                     }
                     else
                     {
-                        skygw_log_write(LOGFILE_ERROR, "Warning: Monitor '%s' "
-                                        "missing monitor_interval parameter, "
-                                        "default value of 10000 miliseconds.", obj->object);
+                        MXS_WARNING("Monitor '%s' "
+                                    "missing monitor_interval parameter, "
+                                    "default value of 10000 miliseconds.", obj->object);
                     }
 
                     /* set timeouts */
@@ -1232,10 +1197,9 @@ process_config_context(CONFIG_CONTEXT *context)
                                 found = 1;
                                 if (hashtable_add(monitorhash, obj1->object, "") == 0)
                                 {
-                                    skygw_log_write(LOGFILE_ERROR,
-                                                    "Warning: Multiple monitors are monitoring server [%s]. "
-                                                    "This will cause undefined behavior.",
-                                                    obj1->object);
+                                    MXS_WARNING("Multiple monitors are monitoring server [%s]. "
+                                                "This will cause undefined behavior.",
+                                                obj1->object);
                                 }
                                 monitorAddServer(obj->element, obj1->element);
                             }
@@ -1243,14 +1207,11 @@ process_config_context(CONFIG_CONTEXT *context)
                         }
                         if (!found)
                         {
-                            LOGIF(LE,
-                                  (skygw_log_write_flush(
-                                      LOGFILE_ERROR,
-                                      "Error: Unable to find "
+                            MXS_ERROR("Unable to find "
                                       "server '%s' that is "
                                       "configured in the "
                                       "monitor '%s'.",
-                                      s, obj->object)));
+                                      s, obj->object);
                         }
 
                         s = strtok_r(NULL, ",", &lasts);
@@ -1264,32 +1225,26 @@ process_config_context(CONFIG_CONTEXT *context)
                 }
                 else if (obj->element && user)
                 {
-                    LOGIF(LE, (skygw_log_write_flush(
-                                   LOGFILE_ERROR, "Error: "
-                                   "Monitor '%s' defines a "
-                                   "username with no password.",
-                                   obj->object)));
+                    MXS_ERROR("Monitor '%s' defines a "
+                              "username with no password.",
+                              obj->object);
                     error_count++;
                 }
             }
             else
             {
                 obj->element = NULL;
-                LOGIF(LE, (skygw_log_write_flush(
-                               LOGFILE_ERROR,
-                               "Error : Monitor '%s' is missing a "
-                               "require module parameter.",
-                               obj->object)));
+                MXS_ERROR("Monitor '%s' is missing a "
+                          "require module parameter.",
+                          obj->object);
                 error_count++;
             }
         }
         else if (strcmp(type, "server") != 0 && strcmp(type, "filter") != 0)
         {
-            LOGIF(LE, (skygw_log_write_flush(
-                           LOGFILE_ERROR,
-                           "Error : Configuration object '%s' has an "
-                           "invalid type specified.",
-                           obj->object)));
+            MXS_ERROR("Configuration object '%s' has an "
+                      "invalid type specified.",
+                      obj->object);
             error_count++;
         }
 
@@ -1305,12 +1260,10 @@ process_config_context(CONFIG_CONTEXT *context)
 
     if (error_count)
     {
-        LOGIF(LE, (skygw_log_write_flush(
-                       LOGFILE_ERROR,
-                       "Error : %d errors where encountered processing the "
-                       "configuration file '%s'.",
-                       error_count,
-                       config_file)));
+        MXS_ERROR("%d errors where encountered processing the "
+                  "configuration file '%s'.",
+                  error_count,
+                  config_file);
         return 0;
     }
 
@@ -1628,7 +1581,7 @@ handle_global_item(const char *name, const char *value)
         }
         else
         {
-            skygw_log_write(LE, "Warning: Invalid value for 'threads': %s.", value);
+            MXS_WARNING("Invalid value for 'threads': %s.", value);
             return 0;
         }
     }
@@ -1654,7 +1607,7 @@ handle_global_item(const char *name, const char *value)
         }
         else
         {
-            skygw_log_write(LE, "Invalid timeout value for 'auth_connect_timeout': %s", value);
+            MXS_WARNING("Invalid timeout value for 'auth_connect_timeout': %s", value);
         }
     }
     else if (strcmp(name, "auth_read_timeout") == 0)
@@ -1667,7 +1620,7 @@ handle_global_item(const char *name, const char *value)
         }
         else
         {
-            skygw_log_write(LE, "Invalid timeout value for 'auth_read_timeout': %s", value);
+            MXS_ERROR("Invalid timeout value for 'auth_read_timeout': %s", value);
         }
     }
     else if (strcmp(name, "auth_write_timeout") == 0)
@@ -1680,7 +1633,7 @@ handle_global_item(const char *name, const char *value)
         }
         else
         {
-            skygw_log_write(LE, "Invalid timeout value for 'auth_write_timeout': %s", value);
+            MXS_ERROR("Invalid timeout value for 'auth_write_timeout': %s", value);
         }
     }
     else
@@ -1834,11 +1787,7 @@ process_config_update(CONFIG_CONTEXT *context)
         char *type = config_get_value(obj->parameters, "type");
         if (type == NULL)
         {
-            LOGIF(LE,
-                  (skygw_log_write_flush(
-                      LOGFILE_ERROR,
-                      "Error : Configuration object %s has no type.",
-                      obj->object)));
+            MXS_ERROR("Configuration object %s has no type.", obj->object);
         }
         else if (!strcmp(type, "service"))
         {
@@ -1963,17 +1912,15 @@ process_config_update(CONFIG_CONTEXT *context)
 
                             if (!succp && param != NULL)
                             {
-                                LOGIF(LM, (skygw_log_write(
-                                               LOGFILE_MESSAGE,
-                                               "* Warning : invalid value type "
-                                               "for parameter \'%s.%s = %s\'\n\tExpected "
-                                               "type is either <int> for slave connection "
-                                               "count or\n\t<int>%% for specifying the "
-                                               "maximum percentage of available the "
-                                               "slaves that will be connected.",
-                                               ((SERVICE*)obj->element)->name,
-                                               param->name,
-                                               param->value)));
+                                MXS_WARNING("Invalid value type "
+                                            "for parameter \'%s.%s = %s\'\n\tExpected "
+                                            "type is either <int> for slave connection "
+                                            "count or\n\t<int>%% for specifying the "
+                                            "maximum percentage of available the "
+                                            "slaves that will be connected.",
+                                            ((SERVICE*)obj->element)->name,
+                                            param->name,
+                                            param->value);
                             }
                         }
                         /** Read, validate and set max_slave_replication_lag */
@@ -2003,22 +1950,19 @@ process_config_update(CONFIG_CONTEXT *context)
 
                             if (!succp)
                             {
-                                if(param){
-                                    LOGIF(LM, (skygw_log_write(
-                                                   LOGFILE_MESSAGE,
-                                                   "* Warning : invalid value type "
-                                                   "for parameter \'%s.%s = %s\'\n\tExpected "
-                                                   "type is <int> for maximum "
-                                                   "slave replication lag.",
-                                                   ((SERVICE*)obj->element)->name,
-                                                   param->name,
-                                                   param->value)));
+                                if (param)
+                                {
+                                    MXS_WARNING("Invalid value type "
+                                                "for parameter \'%s.%s = %s\'\n\tExpected "
+                                                "type is <int> for maximum "
+                                                "slave replication lag.",
+                                                ((SERVICE*)obj->element)->name,
+                                                param->name,
+                                                param->value);
                                 }
                                 else
                                 {
-                                    LOGIF(LE, (skygw_log_write(
-                                                   LOGFILE_ERROR,
-                                                   "Error : parameter was NULL")));
+                                    MXS_ERROR("Parameter was NULL");
                                 }
                             }
                         }
@@ -2074,11 +2018,7 @@ process_config_update(CONFIG_CONTEXT *context)
             else
             {
                 obj->element = NULL;
-                LOGIF(LE, (skygw_log_write_flush(
-                               LOGFILE_ERROR,
-                               "Error : No router defined for service "
-                               "'%s'.",
-                               obj->object)));
+                MXS_ERROR("No router defined for service '%s'.", obj->object);
             }
         }
         else if (!strcmp(type, "server"))
@@ -2123,14 +2063,12 @@ process_config_update(CONFIG_CONTEXT *context)
             }
             else
             {
-                LOGIF(LE, (skygw_log_write_flush(
-                               LOGFILE_ERROR,
-                               "Error : Server '%s' is missing a "
-                               "required "
-                               "configuration parameter. A server must "
-                               "have address, port and protocol "
-                               "defined.",
-                               obj->object)));
+                MXS_ERROR("Server '%s' is missing a "
+                          "required "
+                          "configuration parameter. A server must "
+                          "have address, port and protocol "
+                          "defined.",
+                          obj->object);
             }
         }
         obj = obj->next;
@@ -2181,13 +2119,11 @@ process_config_update(CONFIG_CONTEXT *context)
                     }
                     if (!found)
                     {
-                        LOGIF(LE, (skygw_log_write_flush(
-                                       LOGFILE_ERROR,
-                                       "Error: Unable to find "
-                                       "server '%s' that is "
-                                       "configured as part of "
-                                       "service '%s'.",
-                                       s, obj->object)));
+                        MXS_ERROR("Unable to find "
+                                  "server '%s' that is "
+                                  "configured as part of "
+                                  "service '%s'.",
+                                  s, obj->object);
                     }
                     s = strtok_r(NULL, ",", &lasts);
                 }
@@ -2261,11 +2197,7 @@ process_config_update(CONFIG_CONTEXT *context)
                  strcmp(type, "monitor") != 0 &&
                  strcmp(type, "filter") != 0)
         {
-            LOGIF(LE, (skygw_log_write_flush(
-                           LOGFILE_ERROR,
-                           "Error : Configuration object %s has an invalid "
-                           "type specified.",
-                           obj->object)));
+            MXS_ERROR("Configuration object %s has an invalid type specified.", obj->object);
         }
         obj = obj->next;
     }
@@ -2389,14 +2321,12 @@ check_config_objects(CONFIG_CONTEXT *context)
 
                 if (found == 0)
                 {
-                    LOGIF(LE, (skygw_log_write_flush(
-                                   LOGFILE_ERROR,
-                                   "Error : Unexpected parameter "
-                                   "'%s' for object '%s' of type "
-                                   "'%s'.",
-                                   params->name,
-                                   obj->object,
-                                   type)));
+                    MXS_ERROR("Unexpected parameter "
+                              "'%s' for object '%s' of type "
+                              "'%s'.",
+                              params->name,
+                              obj->object,
+                              type);
                 }
                 params = params->next;
             }
@@ -2472,7 +2402,7 @@ config_truth_value(char *str)
     {
         return 0;
     }
-    skygw_log_write(LOGFILE_ERROR, "Error: Not a boolean value: %s", str);
+    MXS_ERROR("Not a boolean value: %s", str);
     return -1;
 }
 
@@ -2745,32 +2675,26 @@ config_enable_feedback_task(void)
         /* Add the task to the tasl list */
         if (hktask_add("send_feedback", module_feedback_send, cfg, cfg->feedback_frequency))
         {
-            LOGIF(LM, (skygw_log_write_flush(
-                           LOGFILE_MESSAGE,
-                           "Notification service feedback task started: URL=%s, User-Info=%s, "
-                           "Frequency %u seconds",
-                           cfg->feedback_url,
-                           cfg->feedback_user_info,
-                           cfg->feedback_frequency)));
+            MXS_NOTICE("Notification service feedback task started: URL=%s, User-Info=%s, "
+                       "Frequency %u seconds",
+                       cfg->feedback_url,
+                       cfg->feedback_user_info,
+                       cfg->feedback_frequency);
         }
     }
     else
     {
         if (enable_set)
         {
-            LOGIF(LE, (skygw_log_write_flush(
-                           LOGFILE_ERROR,
-                           "Error: Notification service feedback cannot start: feedback_enable=1 but"
-                           " some required parameters are not set: %s%s%s",
-                           url_set == 0 ? "feedback_url is not set" : "",
-                           (user_info_set == 0 && url_set == 0) ? ", " : "",
-                           user_info_set == 0 ? "feedback_user_info is not set" : "")));
+            MXS_ERROR("Notification service feedback cannot start: feedback_enable=1 but"
+                      " some required parameters are not set: %s%s%s",
+                      url_set == 0 ? "feedback_url is not set" : "",
+                      (user_info_set == 0 && url_set == 0) ? ", " : "",
+                      user_info_set == 0 ? "feedback_user_info is not set" : "");
         }
         else
         {
-            LOGIF(LT, (skygw_log_write_flush(
-                           LOGFILE_TRACE,
-                           "Notification service feedback is not enabled")));
+            MXS_INFO("Notification service feedback is not enabled.");
         }
     }
 }
@@ -2795,7 +2719,7 @@ void config_add_param(CONFIG_CONTEXT* obj, char* key, char* value)
 
     if (nptr == NULL)
     {
-        skygw_log_write(LOGFILE_ERROR, "Memory allocation failed when adding configuration parameters");
+        MXS_ERROR("Memory allocation failed when adding configuration parameters.");
         return;
     }
 
@@ -2858,8 +2782,7 @@ bool config_has_duplicate_sections(const char* config)
 
                     if (hashtable_add(hash, section, "") == 0)
                     {
-                        skygw_log_write(LE, "Error: Duplicate section found: %s",
-                                        section);
+                        MXS_ERROR("Duplicate section found: %s", section);
                         rval = true;
                     }
                 }
@@ -2869,15 +2792,15 @@ bool config_has_duplicate_sections(const char* config)
         else
         {
             char errbuf[STRERROR_BUFLEN];
-            skygw_log_write(LE, "Error: Failed to open file '%s': %s", config,
-                            strerror_r(errno, errbuf, sizeof(errbuf)));
+            MXS_ERROR("Failed to open file '%s': %s", config,
+                      strerror_r(errno, errbuf, sizeof(errbuf)));
             rval = true;
         }
     }
     else
     {
-        skygw_log_write(LE, "Error: Failed to allocate enough memory when checking"
-                        " for duplicate sections in configuration file.");
+        MXS_ERROR("Failed to allocate enough memory when checking"
+                  " for duplicate sections in configuration file.");
         rval = true;
     }
 
@@ -2926,9 +2849,9 @@ int maxscale_getline(char** dest, int* size, FILE* file)
             }
             else
             {
-                skygw_log_write(LE, "Error: Failed to reallocate memory from %d"
-                                " bytes to %d bytes when reading from file.",
-                                *size, *size * 2);
+                MXS_ERROR("Failed to reallocate memory from %d"
+                          " bytes to %d bytes when reading from file.",
+                          *size, *size * 2);
                 destptr[offset - 1] = '\0';
                 *dest = destptr;
                 return -1;

@@ -159,19 +159,13 @@ char	fname[1024], *home, *cpasswd;
     fname[1023] = '\0';
 	if (users == NULL)
 	{
-                LOGIF(LM,
-                      (skygw_log_write(LOGFILE_MESSAGE,
-                                       "Create initial password file.")));
+            MXS_NOTICE("Create initial password file.");
                 
 		if ((users = users_alloc()) == NULL)
 			return ADMIN_ERR_NOMEM;
 		if ((fp = fopen(fname, "w")) == NULL)
 		{
-                    LOGIF(LE,
-                          (skygw_log_write_flush(
-                                  LOGFILE_ERROR,
-                                  "Error : Unable to create password file %s.",
-                                  fname)));
+                    MXS_ERROR("Unable to create password file %s.", fname);
                     return ADMIN_ERR_PWDFILEOPEN;
 		}
 		fclose(fp);
@@ -184,10 +178,7 @@ char	fname[1024], *home, *cpasswd;
 	users_add(users, uname, cpasswd);
 	if ((fp = fopen(fname, "a")) == NULL)
 	{
-            LOGIF(LE,
-                  (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error : Unable to append to password file %s.",
-                                         fname)));
+            MXS_ERROR("Unable to append to password file %s.", fname);
             return ADMIN_ERR_FILEAPPEND;
 	}
 	fprintf(fp, "%s:%s\n", uname, cpasswd);
@@ -219,19 +210,14 @@ char* admin_remove_user(
         int    n_deleted;
         
 	if (!admin_search_user(uname)) {
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Couldn't find user %s. Removing user failed",
-                        uname)));
-                return ADMIN_ERR_USERNOTFOUND;
+            MXS_ERROR("Couldn't find user %s. Removing user failed.", uname);
+            return ADMIN_ERR_USERNOTFOUND;
         }
         
         if (admin_verify(uname, passwd) == 0) {
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Authentication failed, wrong user/password "
-                        "combination. Removing user failed.")));
-                return ADMIN_ERR_AUTHENTICATION;
+            MXS_ERROR("Authentication failed, wrong user/password "
+                      "combination. Removing user failed.");
+            return ADMIN_ERR_AUTHENTICATION;
         }
 
 
@@ -239,11 +225,9 @@ char* admin_remove_user(
         n_deleted = users_delete(users, uname);
 
         if (n_deleted == 0) {
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Deleting the only user is forbidden. Add new "
-                        "user before deleting the one.")));
-                return ADMIN_ERR_DELLASTUSER;
+            MXS_ERROR("Deleting the only user is forbidden. Add new "
+                      "user before deleting the one.");
+            return ADMIN_ERR_DELLASTUSER;
         }
         /**
          * Open passwd file and remove user from the file.
@@ -258,13 +242,11 @@ char* admin_remove_user(
         if ((fp = fopen(fname, "r")) == NULL)
         {
                 int err = errno;
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unable to open password file %s : errno %d.\n"
-                        "Removing user from file failed; it must be done "
-                        "manually.",
-                        fname,
-                        err)));
+                MXS_ERROR("Unable to open password file %s : errno %d.\n"
+                          "Removing user from file failed; it must be done "
+                          "manually.",
+                          fname,
+                          err);
                 return ADMIN_ERR_PWDFILEOPEN;
         }
         /**
@@ -273,13 +255,11 @@ char* admin_remove_user(
         if ((fp_tmp = fopen(fname_tmp, "w")) == NULL)
         {
                 int err = errno;
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unable to open tmp file %s : errno %d.\n"
-                        "Removing user from passwd file failed; it must be done "
-                        "manually.",
-                        fname_tmp,
-                        err)));
+                MXS_ERROR("Unable to open tmp file %s : errno %d.\n"
+                          "Removing user from passwd file failed; it must be done "
+                          "manually.",
+                          fname_tmp,
+                          err);
                 fclose(fp);
                 return ADMIN_ERR_TMPFILEOPEN;
         }
@@ -289,13 +269,11 @@ char* admin_remove_user(
          */
         if (fgetpos(fp, &rpos) != 0) {
 		int err = errno;
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unable to process passwd file %s : errno %d.\n"
-                        "Removing user from file failed, and must be done "
-                        "manually.",
-                        fname,
-                        err)));
+		MXS_ERROR("Unable to process passwd file %s : errno %d.\n"
+                          "Removing user from file failed, and must be done "
+                          "manually.",
+                          fname,
+                          err);
                 fclose(fp);
                 fclose(fp_tmp);
 		unlink(fname_tmp);
@@ -309,26 +287,21 @@ char* admin_remove_user(
                  * Unmatching lines are copied to tmp file.
                  */
                 if (strncmp(uname, fusr, strlen(uname)+1) != 0) {
-					if(fsetpos(fp, &rpos) != 0){ /** one step back */ 
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Unable to set stream position. ")));
-
-					}
-                        fgets(line, LINELEN, fp);
-                        fputs(line, fp_tmp);
+                    if(fsetpos(fp, &rpos) != 0){ /** one step back */ 
+                        MXS_ERROR("Unable to set stream position. ");
+                    }
+                    fgets(line, LINELEN, fp);
+                    fputs(line, fp_tmp);
                 }
             
                 if (fgetpos(fp, &rpos) != 0) {
                         int err = errno;
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "Error : Unable to process passwd file %s : "
-                                "errno %d.\n"
-                                "Removing user from file failed, and must be "
-                                "done manually.",
-                                fname,
-                                err)));
+                        MXS_ERROR("Unable to process passwd file %s : "
+                                  "errno %d.\n"
+                                  "Removing user from file failed, and must be "
+                                  "done manually.",
+                                  fname,
+                                  err);
                         fclose(fp);
                 	fclose(fp_tmp);
                         unlink(fname_tmp);
@@ -341,14 +314,12 @@ char* admin_remove_user(
          */
         if (rename(fname_tmp, fname)) {
 		int err = errno;
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Unable to rename new passwd file %s : errno "
-                        "%d.\n"
-                        "Rename it to %s manually.",
-                        fname_tmp,
-                        err,
-                        fname)));
+		MXS_ERROR("Unable to rename new passwd file %s : errno "
+                          "%d.\n"
+                          "Rename it to %s manually.",
+                          fname_tmp,
+                          err,
+                          fname);
 		unlink(fname_tmp);
                 fclose(fp_tmp);
 		return ADMIN_ERR_PWDFILEACCESS;

@@ -94,12 +94,12 @@ EXTERNCMD* externcmd_allocate(char* argstr)
             {
                 if (access(cmd->argv[0], F_OK) != 0)
                 {
-                    skygw_log_write(LE, "Cannot find file: %s", cmd->argv[0]);
+                    MXS_ERROR("Cannot find file: %s", cmd->argv[0]);
                 }
                 else
                 {
-                    skygw_log_write(LE, "Cannot execute file '%s'. Missing "
-                                    "execution permissions.", cmd->argv[0]);
+                    MXS_ERROR("Cannot execute file '%s'. Missing "
+                              "execution permissions.", cmd->argv[0]);
                 }
                 externcmd_free(cmd);
                 cmd = NULL;
@@ -152,8 +152,8 @@ int externcmd_execute(EXTERNCMD* cmd)
     if (pid < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        skygw_log_write(LOGFILE_ERROR, "Failed to execute command '%s', fork failed: [%d] %s",
-                        cmd->argv[0], errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Failed to execute command '%s', fork failed: [%d] %s",
+                  cmd->argv[0], errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         rval = -1;
     }
     else if (pid == 0)
@@ -166,7 +166,7 @@ int externcmd_execute(EXTERNCMD* cmd)
     {
         cmd->child = pid;
         cmd->n_exec++;
-        LOGIF(LD, skygw_log_write(LD, "[monitor_exec_cmd] Forked child process %d : %s.", pid, cmd));
+        MXS_DEBUG("[monitor_exec_cmd] Forked child process %d : %s.", pid, cmd);
     }
 
     return rval;
@@ -274,11 +274,11 @@ bool externcmd_can_execute(const char* argstr)
         }
         else if (access(command, F_OK) == 0)
         {
-            skygw_log_write(LE, "The executable cannot be executed: %s", command);
+            MXS_ERROR("The executable cannot be executed: %s", command);
         }
         else
         {
-            skygw_log_write(LE, "The executable cannot be found: %s", command);
+            MXS_ERROR("The executable cannot be found: %s", command);
         }
         free(command);
     }

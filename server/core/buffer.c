@@ -124,10 +124,8 @@ retblock:
 	if (rval == NULL)
 	{
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Memory allocation failed due to %s.", 
-			strerror_r(errno, errbuf, sizeof(errbuf)))));
+		MXS_ERROR("Memory allocation failed due to %s.", 
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
 	}
 #if defined(BUFFER_TRACE)
         else 
@@ -299,10 +297,8 @@ GWBUF	*rval;
 	{
 		ss_dassert(rval != NULL);
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Memory allocation failed due to %s.", 
-			strerror_r(errno, errbuf, sizeof(errbuf)))));
+		MXS_ERROR("Memory allocation failed due to %s.",
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
 		return NULL;
 	}
 
@@ -367,10 +363,8 @@ GWBUF *gwbuf_clone_portion(
         {
 		ss_dassert(clonebuf != NULL);
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Memory allocation failed due to %s.", 
-			strerror_r(errno, errbuf, sizeof(errbuf)))));
+		MXS_ERROR("Memory allocation failed due to %s.",
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
                 return NULL;
         }
         atomic_add(&buf->sbuf->refcount, 1);
@@ -625,10 +619,8 @@ void gwbuf_add_buffer_object(
 	if (newb == NULL)
 	{
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Memory allocation failed due to %s.", 
-			strerror_r(errno, errbuf, sizeof(errbuf)))));
+		MXS_ERROR("Memory allocation failed due to %s.", 
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
 		return;
 	}
         newb->bo_id = id;
@@ -716,10 +708,8 @@ BUF_PROPERTY	*prop;
 	{
 		ss_dassert(prop != NULL);
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Memory allocation failed due to %s.", 
-			strerror_r(errno, errbuf, sizeof(errbuf)))));
+		MXS_ERROR("Memory allocation failed due to %s.", 
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
 		return 0;
 	}
 	prop->name = strdup(name);

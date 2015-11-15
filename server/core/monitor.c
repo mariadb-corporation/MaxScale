@@ -66,12 +66,9 @@ MONITOR	*mon;
 
 	if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
 	{
-		LOGIF(LE, (skygw_log_write_flush(
-                                   LOGFILE_ERROR,
-                                   "Error : Unable to load monitor module '%s'.",
-                                   name)));
-		free(mon);
-		return NULL;
+            MXS_ERROR("Unable to load monitor module '%s'.", name);
+            free(mon);
+            return NULL;
 	}
 	mon->state = MONITOR_STATE_ALLOC;
 	mon->name = strdup(name);
@@ -364,10 +361,8 @@ monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
 	    memcpy(&mon->connect_timeout, &value, sizeof(int));
 	} else {
 	    memcpy(&mon->connect_timeout, &new_timeout, sizeof(int));
-	    LOGIF(LE, (skygw_log_write_flush(
-		    LOGFILE_ERROR,
-					     "warning : Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
-		    ", lowering to %i seconds", value, max_timeout, new_timeout)));
+	    MXS_WARNING("Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
+                        ", lowering to %i seconds", value, max_timeout, new_timeout);
 	}
 	break;
 
@@ -376,10 +371,8 @@ monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
 	    memcpy(&mon->read_timeout, &value, sizeof(int));
 	} else {
 	    memcpy(&mon->read_timeout, &new_timeout, sizeof(int));
-	    LOGIF(LE, (skygw_log_write_flush(
-		    LOGFILE_ERROR,
-					     "warning : Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
-		    ", lowering to %i seconds", value, max_timeout, new_timeout)));
+	    MXS_WARNING("Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
+                        ", lowering to %i seconds", value, max_timeout, new_timeout);
 	}
 	break;
 
@@ -388,17 +381,13 @@ monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
 	    memcpy(&mon->write_timeout, &value, sizeof(int));
 	} else {
 	    memcpy(&mon->write_timeout, &new_timeout, sizeof(int));
-	    LOGIF(LE, (skygw_log_write_flush(
-		    LOGFILE_ERROR,
-					     "warning : Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
-		    ", lowering to %i seconds", value, max_timeout, new_timeout)));
+	    MXS_WARNING("Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
+                        ", lowering to %i seconds", value, max_timeout, new_timeout);
 	}
 	break;
     default:
-	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR,
-					 "Error : Monitor setNetworkTimeout received an unsupported action type %i", type)));
-	break;
+        MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
+        break;
     }
 }
 
@@ -486,7 +475,7 @@ bool check_monitor_permissions(MONITOR* monitor)
 
     if((mysql = mysql_init(NULL)) == NULL)
     {
-	skygw_log_write(LE,"[%s] Error: MySQL connection initialization failed.",__FUNCTION__);
+	MXS_ERROR("[%s] Error: MySQL connection initialization failed.", __FUNCTION__);
 	free(dpasswd);
 	return false;
     }
@@ -499,12 +488,12 @@ bool check_monitor_permissions(MONITOR* monitor)
      * user permissions. */
     if(mysql_real_connect(mysql,server->name,user,dpasswd,NULL,server->port,NULL,0) == NULL)
     {
-	skygw_log_write(LE,"%s: Error: Failed to connect to server %s(%s:%d) when"
-		" checking monitor user credentials and permissions.",
-		 monitor->name,
-		 server->unique_name,
-		 server->name,
-		 server->port);
+	MXS_ERROR("%s: Failed to connect to server %s(%s:%d) when"
+                  " checking monitor user credentials and permissions.",
+                  monitor->name,
+                  server->unique_name,
+                  server->name,
+                  server->port);
 	mysql_close(mysql);
 	free(dpasswd);
 	return false;
@@ -514,13 +503,13 @@ bool check_monitor_permissions(MONITOR* monitor)
     {
         if(mysql_errno(mysql) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
         {
-            skygw_log_write(LE,"%s: Error: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
-                            monitor->name,user,mysql_error(mysql));
+            MXS_ERROR("%s: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
+                      monitor->name,user,mysql_error(mysql));
         }
         else
         {
-            skygw_log_write(LE,"%s: Error: Monitor failed to query for slave status. MySQL error message: %s",
-                            monitor->name,mysql_error(mysql));
+            MXS_ERROR("%s: Monitor failed to query for slave status. MySQL error message: %s",
+                      monitor->name,mysql_error(mysql));
         }
         rval = false;
     }
@@ -528,8 +517,8 @@ bool check_monitor_permissions(MONITOR* monitor)
     {
         if((res = mysql_use_result(mysql)) == NULL)
         {
-            skygw_log_write(LE,"%s: Error: Result retrieval failed when checking for REPLICATION CLIENT permissions: %s",
-                            monitor->name,mysql_error(mysql));
+            MXS_ERROR("%s: Result retrieval failed when checking for REPLICATION CLIENT permissions: %s",
+                      monitor->name,mysql_error(mysql));
             rval = false;
         }
         else

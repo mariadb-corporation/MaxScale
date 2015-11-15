@@ -49,13 +49,13 @@ USERS 	*rval;
 
         if ((rval = calloc(1, sizeof(USERS))) == NULL)
 	{
-	    skygw_log_write(LE,"[%s:%d] Error: Memory allocation failed.",__FUNCTION__,__LINE__);
+	    MXS_ERROR("[%s:%d]: Memory allocation failed.", __FUNCTION__, __LINE__);
 	    return NULL;
 	}
 
 	if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE, simple_str_hash, strcmp)) == NULL)
 	{
-	    skygw_log_write(LE,"[%s:%d] Error: Memory allocation failed.",__FUNCTION__,__LINE__);
+	    MXS_ERROR("[%s:%d]: Memory allocation failed.", __FUNCTION__, __LINE__);
 	    free(rval);
 	    return NULL;
 	}
@@ -75,7 +75,7 @@ users_free(USERS *users)
 {
     if(users == NULL)
     {
-	skygw_log_write(LE,"[%s:%d] Error: NULL parameter.",__FUNCTION__,__LINE__);
+	MXS_ERROR("[%s:%d]: NULL parameter.", __FUNCTION__, __LINE__);
 	return;
     }
 

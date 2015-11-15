@@ -79,12 +79,10 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     if (session == NULL) 
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(
-            LOGFILE_ERROR,
-            "Error : Failed to allocate memory for "
-            "session object due error %d, %s.",
-            errno,
-            strerror_r(errno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("Failed to allocate memory for "
+                  "session object due error %d, %s.",
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
         /* Does this possibly need a lock? */
         /* 
          * This is really not the right way to do this.  The data in a DCB is
@@ -149,13 +147,11 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         {
             session->state = SESSION_STATE_TO_BE_FREED;
             
-            LOGIF(LE, (skygw_log_write_flush(
-                LOGFILE_ERROR,
-                "%lu [%s] Error : Failed to create %s session because router"
-                "could not establish a new router session, see earlier error.",
-                pthread_self(),
-                __func__,
-                service->name)));
+            MXS_ERROR("%lu [%s] Error : Failed to create %s session because router"
+                      "could not establish a new router session, see earlier error.",
+                      pthread_self(),
+                      __func__,
+                      service->name);
                         
         }
         /*
@@ -181,11 +177,9 @@ session_alloc(SERVICE *service, DCB *client_dcb)
             && !session_setup_filters(session))
         {
                 session->state = SESSION_STATE_TO_BE_FREED;
-                LOGIF(LE, (skygw_log_write(
-                    LOGFILE_ERROR,
-                    "Error : Setting up filters failed. "
-                    "Terminating session %s.",
-                    service->name)));
+                MXS_ERROR("Setting up filters failed. "
+                          "Terminating session %s.",
+                          service->name);
         }
     }
 
@@ -195,33 +189,27 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         
         if (session->client->user == NULL)
         {
-            LOGIF(LT, (skygw_log_write(
-                LOGFILE_TRACE,
-                "Started session [%lu] for %s service ",
-                session->ses_id,
-                service->name)));
+            MXS_INFO("Started session [%lu] for %s service ",
+                     session->ses_id,
+                     service->name);
         }
         else
         {
-            LOGIF(LT, (skygw_log_write(
-                LOGFILE_TRACE,
-                "Started %s client session [%lu] for '%s' from %s",
-                service->name,
-                session->ses_id,
-                session->client->user,
-                session->client->remote)));			
+            MXS_INFO("Started %s client session [%lu] for '%s' from %s",
+                     service->name,
+                     session->ses_id,
+                     session->client->user,
+                     session->client->remote);
         }
     }
     else
     {
-        LOGIF(LT, (skygw_log_write(
-            LOGFILE_TRACE,
-            "Start %s client session [%lu] for '%s' from %s failed, will be "
-            "closed as soon as all related DCBs have been closed.",
-            service->name,
-            session->ses_id,
-            session->client->user,
-            session->client->remote)));			
+        MXS_INFO("Start %s client session [%lu] for '%s' from %s failed, will be "
+                 "closed as soon as all related DCBs have been closed.",
+                 service->name,
+                 session->ses_id,
+                 session->client->user,
+                 session->client->remote);
     }
     spinlock_acquire(&session_spin);
     /** Assign a session id and increase, insert session into list */
@@ -480,11 +468,9 @@ session_free(SESSION *session)
 		free(session->filters);
 	}
 	
-	LOGIF(LT, (skygw_log_write(
-		LOGFILE_TRACE,
-		"Stopped %s client session [%lu]",
-		session->service->name,
-		session->ses_id)));
+	MXS_INFO("Stopped %s client session [%lu]",
+                 session->service->name,
+                 session->ses_id);
 	
 	/** Disable trace and decrease trace logger counter */
 	session_disable_log(session, LT);
@@ -845,33 +831,26 @@ int		i;
 	if ((session->filters = calloc(service->n_filters,
 				sizeof(SESSION_FILTER))) == NULL)
 	{
-                LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Insufficient memory to allocate session filter "
-			"tracking.\n")));
-			return 0;
+            MXS_ERROR("Insufficient memory to allocate session filter "
+                      "tracking.\n");
+            return 0;
 	}
 	session->n_filters = service->n_filters;
 	for (i = service->n_filters - 1; i >= 0; i--)
 	{
 		if (service->filters[i] == NULL)
 		{
-                	LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Service '%s' contians an unresolved filter.\n",
-					service->name)));
-			return 0;
+                    MXS_ERROR("Service '%s' contians an unresolved filter.", service->name);
+                    return 0;
 		}
 		if ((head = filterApply(service->filters[i], session,
 						&session->head)) == NULL)
 		{
-                	LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Failed to create filter '%s' for "
-				"service '%s'.\n",
-				service->filters[i]->name,
-				service->name)));
-			return 0;
+                    MXS_ERROR("Failed to create filter '%s' for "
+                              "service '%s'.\n",
+                              service->filters[i]->name,
+                              service->name);
+                    return 0;
 		}
 		session->filters[i].filter = service->filters[i];
 		session->filters[i].session = head->session;
@@ -886,12 +865,10 @@ int		i;
 				session->filters[i].session,
 						&session->tail)) == NULL)
 		{
-                	LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Failed to create filter '%s' for service '%s'.\n",
-					service->filters[i]->name,
-					service->name)));
-			return 0;
+                    MXS_ERROR("Failed to create filter '%s' for service '%s'.",
+                              service->filters[i]->name,
+                              service->name);
+                    return 0;
 		}
 
 		/*

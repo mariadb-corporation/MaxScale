@@ -182,19 +182,17 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
             }
             else
             {
-                LOGIF(LD, (skygw_log_write_flush(
-                    LOGFILE_DEBUG,
-                    "%lu [server_get_persistent] Rejected dcb "
-                    "%p from pool, user %s looking for %s, protocol %s "
-                    "looking for %s, hung flag %s, error handle called %s.",
-                    pthread_self(),
-                    dcb,
-                    dcb->user ? dcb->user : "NULL",
-                    user,
-                    dcb->protoname ? dcb->protoname : "NULL",
-                    protocol,
-                    (dcb->flags & DCBF_HUNG) ? "true" : "false",
-                    dcb-> dcb_errhandle_called ? "true" : "false"))); 
+                MXS_DEBUG("%lu [server_get_persistent] Rejected dcb "
+                          "%p from pool, user %s looking for %s, protocol %s "
+                          "looking for %s, hung flag %s, error handle called %s.",
+                          pthread_self(),
+                          dcb,
+                          dcb->user ? dcb->user : "NULL",
+                          user,
+                          dcb->protoname ? dcb->protoname : "NULL",
+                          protocol,
+                          (dcb->flags & DCBF_HUNG) ? "true" : "false",
+                          dcb-> dcb_errhandle_called ? "true" : "false");
             }
             previous = dcb;
             dcb = dcb->nextpersistent;
@@ -725,26 +723,22 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
 {
 	if (!strcmp(server->protocol, protocol))
 	{
-                LOGIF(LM, (skygw_log_write(
-                        LOGFILE_MESSAGE,
-                        "Update server protocol for server %s to protocol %s.",
-                        server->name,
-                        protocol)));
-		free(server->protocol);
-		server->protocol = strdup(protocol);
+            MXS_NOTICE("Update server protocol for server %s to protocol %s.",
+                       server->name,
+                       protocol);
+            free(server->protocol);
+            server->protocol = strdup(protocol);
 	}
 
         if (user != NULL && passwd != NULL) {
                 if (strcmp(server->monuser, user) == 0 ||
                     strcmp(server->monpw, passwd) == 0)
                 {
-                        LOGIF(LM, (skygw_log_write(
-                                LOGFILE_MESSAGE,
-                                "Update server monitor credentials for server %s",
-				server->name)));
-                        free(server->monuser);
-                        free(server->monpw);
-                        serverAddMonUser(server, user, passwd);
+                    MXS_NOTICE("Update server monitor credentials for server %s",
+                               server->name);
+                    free(server->monuser);
+                    free(server->monpw);
+                    serverAddMonUser(server, user, passwd);
                 }
 	}
 }

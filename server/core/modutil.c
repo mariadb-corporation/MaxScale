@@ -588,8 +588,7 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
     /** The next packet is a partial, split into complete and partial packets */
     if((buff = gwbuf_clone_portion(packet,0,total)) == NULL)
     {
-	skygw_log_write(LOGFILE_ERROR,
-		 "Error: Failed to partially clone buffer.");
+	MXS_ERROR("Failed to partially clone buffer.");
 	return NULL;
     }
     gwbuf_consume(packet,total);
@@ -735,10 +734,8 @@ static void modutil_reply_routing_error(
 	
 	if (buf == NULL)
 	{
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Creating routing error message failed."))); 
-		return;
+            MXS_ERROR("Creating routing error message failed.");
+            return;
 	}
 	/** Set flags that help router to process reply correctly */
 	gwbuf_set_type(buf, flags);
@@ -876,8 +873,7 @@ void prepare_pcre2_patterns()
         else
         {
             pcre2_get_error_message(err, errbuf, sizeof(errbuf));
-            skygw_log_write(LE, "Error: Failed to compile PCRE2 pattern: %s",
-                            errbuf);
+            MXS_ERROR("Failed to compile PCRE2 pattern: %s", errbuf);
         }
 
         if (!pattern_init)
@@ -940,8 +936,7 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
                 {
                     PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
                     pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-                    skygw_log_write(LE, "Error: Failed to match pattern: %s",
-                                    errbuf);
+                    MXS_ERROR("Failed to match pattern: %s", errbuf);
                 }
                 err = true;
             }
@@ -954,7 +949,7 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
 
     if (err)
     {
-        skygw_log_write(LE, "Error: Fatal error when matching wildcard patterns.");
+        MXS_ERROR("Fatal error when matching wildcard patterns.");
     }
 
     pcre2_match_data_free(mdata_percent);
