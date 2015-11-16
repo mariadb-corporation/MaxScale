@@ -1092,12 +1092,19 @@ int		n = 0;
                     MXS_ERROR("Out of memory adding filters to service.");
                     return;
 		}
-		if ((flist[n-1] = filter_find(trim(ptr))) == NULL)
+		char *filter_name = trim(ptr);
+		if ((flist[n-1] = filter_find(filter_name)) == NULL)
 		{
                     MXS_WARNING("Unable to find filter '%s' for service '%s'\n",
-                                trim(ptr), service->name);
+                                filter_name, service->name);
                     n--;
 		}
+		else if (!filter_load(flist[n - 1]))
+		{
+			MXS_ERROR("Failed to load filter '%s' for service '%s'.",
+					  filter_name, service->name);
+		}
+
 		flist[n] = NULL;
 		ptr = strtok_r(NULL, "|", &brkt);
 	}
