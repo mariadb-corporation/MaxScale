@@ -46,23 +46,23 @@
  * @endverbatim
  */
 
-
 /**
- * The handle for an instance of a MySQL Monitor module
+ * The handle for an instance of a Galera Monitor module
  */
-typedef struct {
-	SPINLOCK  lock;			/**< The monitor spinlock */
-	pthread_t tid;			/**< id of monitor thread */ 
-	int    	  shutdown;		/**< Flag to shutdown the monitor thread */
-	int       status;		/**< Monitor status */
-	unsigned long         id;	/**< Monitor ID */
-	int	disableMasterFailback;	/**< Monitor flag for Galera Cluster Master failback */
-	int	availableWhenDonor;	/**< Monitor flag for Galera Cluster Donor availability */
-        int     disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
-	MONITOR_SERVERS *master;	/**< Master server for MySQL Master/Slave replication */
-        char* script;
-        bool use_priority; /*< Use server priorities */
-        bool events[MAX_MONITOR_EVENT]; /*< enabled events */
+typedef struct
+{
+    SPINLOCK lock; /**< The monitor spinlock */
+    pthread_t tid; /**< id of monitor thread */
+    int shutdown; /**< Flag to shutdown the monitor thread */
+    int status; /**< Monitor status */
+    unsigned long id; /**< Monitor ID */
+    int disableMasterFailback; /**< Monitor flag for Galera Cluster Master failback */
+    int availableWhenDonor; /**< Monitor flag for Galera Cluster Donor availability */
+    int disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
+    MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
+    char* script;
+    bool use_priority; /*< Use server priorities */
+    bool events[MAX_MONITOR_EVENT]; /*< enabled events */
 } GALERA_MONITOR;
 
 #endif
