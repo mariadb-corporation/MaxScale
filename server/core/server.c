@@ -665,7 +665,6 @@ char	*status = NULL;
 void
 server_set_status(SERVER *server, int bit)
 {
-	spinlock_acquire(&server->lock);
 	server->status |= bit;
 	
 	/** clear error logged flag before the next failure */
@@ -673,7 +672,6 @@ server_set_status(SERVER *server, int bit)
 	{
 		server->master_err_is_logged = false;
 	}
-	spinlock_release(&server->lock);
 }
 
 /**
@@ -685,9 +683,7 @@ server_set_status(SERVER *server, int bit)
 void
 server_clear_status(SERVER *server, int bit)
 {
-	spinlock_acquire(&server->lock);
 	server->status &= ~bit;
-	spinlock_release(&server->lock);
 }
 
 /**
