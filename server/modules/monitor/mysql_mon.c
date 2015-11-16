@@ -108,9 +108,7 @@ version()
 void
 ModuleInit()
 {
-    LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-                               "Initialise the MySQL Monitor module %s.",
-                               version_str)));
+    MXS_NOTICE("Initialise the MySQL Monitor module %s.", version_str);
 }
 
 /**
@@ -196,8 +194,8 @@ startMonitor(void *arg, void* opt)
     }
     if (script_error)
     {
-        skygw_log_write(LE, "Error: Errors were found in the script configuration parameters "
-                        "for the monitor '%s'. The script will not be used.", monitor->name);
+        MXS_ERROR("Errors were found in the script configuration parameters "
+                  "for the monitor '%s'. The script will not be used.", monitor->name);
         free(handle->script);
         handle->script = NULL;
     }
@@ -291,9 +289,9 @@ static inline void monitor_mysql100_db(MONITOR_SERVERS* database)
         if (mysql_field_count(database->con) < 42)
         {
             mysql_free_result(result);
-            skygw_log_write(LE, "Error: \"SHOW ALL SLAVES STATUS\" "
-                            "returned less than the expected amount of columns. Expected 42 columns."
-                            " MySQL Version: %s", version_str);
+            MXS_ERROR("\"SHOW ALL SLAVES STATUS\" "
+                      "returned less than the expected amount of columns. Expected 42 columns."
+                      " MySQL Version: %s", version_str);
             return;
         }
 
@@ -373,9 +371,9 @@ static inline void monitor_mysql55_db(MONITOR_SERVERS* database)
         if (mysql_field_count(database->con) < 40)
         {
             mysql_free_result(result);
-            skygw_log_write(LE, "Error: \"SHOW SLAVE STATUS\" "
-                            "returned less than the expected amount of columns. Expected 40 columns."
-                            " MySQL Version: %s", version_str);
+            MXS_ERROR("\"SHOW SLAVE STATUS\" "
+                      "returned less than the expected amount of columns. Expected 40 columns."
+                      " MySQL Version: %s", version_str);
             return;
         }
 
@@ -443,9 +441,9 @@ static inline void monitor_mysql51_db(MONITOR_SERVERS* database)
         {
             mysql_free_result(result);
 
-            skygw_log_write(LE, "Error: \"SHOW SLAVE STATUS\" "
-                            "returned less than the expected amount of columns. Expected 38 columns."
-                            " MySQL Version: %s", version_str);
+            MXS_ERROR("\"SHOW SLAVE STATUS\" "
+                      "returned less than the expected amount of columns. Expected 38 columns."
+                      " MySQL Version: %s", version_str);
             return;
         }
 
@@ -511,9 +509,10 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
                 if (mysql_field_count(database->con) < 4)
                 {
                     mysql_free_result(result);
-                    skygw_log_write_flush(LE, "Error: \"SHOW SLAVE HOSTS\" "
-                                          "returned less than the expected amount of columns. Expected 4 columns."
-                                          " MySQL Version: %s", version_str);
+                    MXS_ERROR("\"SHOW SLAVE HOSTS\" "
+                              "returned less than the expected amount of columns. "
+                              "Expected 4 columns."
+                              " MySQL Version: %s", version_str);
                     return NULL;
                 }
 
@@ -525,7 +524,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
                         /* get Slave_IO_Running and Slave_SQL_Running values*/
                         database->server->slaves[nslaves] = atol(row[0]);
                         nslaves++;
-                        LOGIF(LD, (skygw_log_write_flush(LD, "Found slave at %s:%s", row[1], row[2])));
+                        MXS_DEBUG("Found slave at %s:%s", row[1], row[2]);
                     }
                     database->server->slaves[nslaves] = 0;
                 }
@@ -537,10 +536,10 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
             /* Set the Slave Role */
             if (ismaster)
             {
-                LOGIF(LD, (skygw_log_write(LD, "Master server found at %s:%d with %d slaves",
-                                           database->server->name,
-                                           database->server->port,
-                                           nslaves)));
+                MXS_DEBUG("Master server found at %s:%d with %d slaves",
+                          database->server->name,
+                          database->server->port,
+                          nslaves);
                 monitor_set_pending_status(database, SERVER_MASTER);
                 if (rval == NULL || rval->server->node_id > database->server->node_id)
                     rval = database;
@@ -676,8 +675,8 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         if (mysql_field_count(database->con) != 1)
         {
             mysql_free_result(result);
-            skygw_log_write(LE, "Error: Unexpected result for 'SELECT @@server_id'. Expected 1 column."
-                            " MySQL Version: %s", version_str);
+            MXS_ERROR("Unexpected result for 'SELECT @@server_id'. Expected 1 column."
+                      " MySQL Version: %s", version_str);
             return;
         }
 
@@ -712,9 +711,11 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         else if (report_version_err)
         {
             report_version_err = false;
-            skygw_log_write(LE, "Error: MySQL version is lower than 5.5 and 'mysql51_replication' option is not enabled,"
-                            " replication tree cannot be resolved. To enable MySQL 5.1 replication detection, "
-                            "add 'mysql51_replication=true' to the monitor section.");
+            MXS_ERROR("MySQL version is lower than 5.5 and 'mysql51_replication' option is "
+                      "not enabled,"
+                      " replication tree cannot be resolved. To enable MySQL 5.1 replication "
+                      "detection, "
+                      "add 'mysql51_replication=true' to the monitor section.");
         }
     }
 
@@ -747,9 +748,7 @@ monitorMain(void *arg)
 
     if (mysql_thread_init())
     {
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Fatal : mysql_thread_init failed in monitor "
-                                         "module. Exiting.\n")));
+        MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
     handle->status = MONITOR_RUNNING;
@@ -817,10 +816,9 @@ monitorMain(void *arg)
                 if (SRV_MASTER_STATUS(ptr->mon_prev_status))
                 {
                     /** Master failed, can't recover */
-                    LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-                                               "Server %s:%d lost the master status.",
-                                               ptr->server->name,
-                                               ptr->server->port)));
+                    MXS_NOTICE("Server %s:%d lost the master status.",
+                               ptr->server->name,
+                               ptr->server->port);
                 }
                 /**
                  * Here we say: If the server's state changed
@@ -843,17 +841,15 @@ monitorMain(void *arg)
             if (mon_status_changed(ptr))
             {
 #if defined(SS_DEBUG)
-                LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
-                                                 "Backend server %s:%d state : %s",
-                                                 ptr->server->name,
-                                                 ptr->server->port,
-                                                 STRSRVSTATUS(ptr->server))));
+                MXS_INFO("Backend server %s:%d state : %s",
+                         ptr->server->name,
+                         ptr->server->port,
+                         STRSRVSTATUS(ptr->server));
 #else
-                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-                                                 "Backend server %s:%d state : %s",
-                                                 ptr->server->name,
-                                                 ptr->server->port,
-                                                 STRSRVSTATUS(ptr->server))));
+                MXS_DEBUG("Backend server %s:%d state : %s",
+                          ptr->server->name,
+                          ptr->server->port,
+                          STRSRVSTATUS(ptr->server));
 #endif
             }
 
@@ -923,14 +919,13 @@ monitorMain(void *arg)
                     /* log it once */
                     if (mon_status_changed(ptr))
                     {
-                        LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-                                                         "[mysql_mon]: root server "
-                                                         "[%s:%i] is no longer Master,"
-                                                         " let's use it again even "
-                                                         " if it could be a stale master,"
-                                                         " you have been warned!",
-                                                         ptr->server->name,
-                                                         ptr->server->port)));
+                        MXS_NOTICE("[mysql_mon]: root server "
+                                   "[%s:%i] is no longer Master,"
+                                   " let's use it again even "
+                                   " if it could be a stale master,"
+                                   " you have been warned!",
+                                   ptr->server->name,
+                                   ptr->server->port);
                     }
                 }
                 else
@@ -951,10 +946,10 @@ monitorMain(void *arg)
                 evtype = mon_get_event_type(ptr);
                 if (isMySQLEvent(evtype))
                 {
-                    skygw_log_write(LOGFILE_TRACE, "Server changed state: %s[%s:%u]: %s",
-                                    ptr->server->unique_name,
-                                    ptr->server->name, ptr->server->port,
-                                    mon_get_event_name(ptr));
+                    MXS_INFO("Server changed state: %s[%s:%u]: %s",
+                             ptr->server->unique_name,
+                             ptr->server->name, ptr->server->port,
+                             mon_get_event_name(ptr));
                     if (handle->script && handle->events[evtype])
                     {
                         monitor_launch_script(mon, ptr, handle->script);
@@ -974,18 +969,16 @@ monitorMain(void *arg)
                 if (!(root_master->mon_prev_status & SERVER_STALE_STATUS) &&
                     !(root_master->server->status & SERVER_MAINT))
                 {
-                    LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-                                               "Info : A Master Server is now available: %s:%i",
-                                               root_master->server->name,
-                                               root_master->server->port)));
+                    MXS_NOTICE("A Master Server is now available: %s:%i",
+                               root_master->server->name,
+                               root_master->server->port);
                 }
             }
             else
             {
-                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                 "Error : No Master can be determined. Last known was %s:%i",
-                                                 root_master->server->name,
-                                                 root_master->server->port)));
+                MXS_ERROR("No Master can be determined. Last known was %s:%i",
+                          root_master->server->name,
+                          root_master->server->port);
             }
             log_no_master = 1;
         }
@@ -993,8 +986,7 @@ monitorMain(void *arg)
         {
             if (!root_master && log_no_master)
             {
-                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                 "Error : No Master can be determined")));
+                MXS_ERROR("No Master can be determined");
                 log_no_master = 0;
             }
         }
@@ -1130,17 +1122,15 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 
     if (handle->master == NULL)
     {
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "[mysql_mon]: set_master_heartbeat called without an available Master server")));
+        MXS_ERROR("[mysql_mon]: set_master_heartbeat called without an available Master server");
         return;
     }
 
     /* create the maxscale_schema database */
     if (mysql_query(database->con, "CREATE DATABASE IF NOT EXISTS maxscale_schema"))
     {
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "[mysql_mon]: Error creating maxscale_schema database in Master server"
-                                         ": %s", mysql_error(database->con))));
+        MXS_ERROR("[mysql_mon]: Error creating maxscale_schema database in Master server"
+                  ": %s", mysql_error(database->con));
 
         database->server->rlag = -1;
     }
@@ -1154,9 +1144,8 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
                     "PRIMARY KEY ( master_server_id, maxscale_id ) ) "
                     "ENGINE=MYISAM DEFAULT CHARSET=latin1"))
     {
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "[mysql_mon]: Error creating maxscale_schema.replication_heartbeat table in Master server"
-                                         ": %s", mysql_error(database->con))));
+        MXS_ERROR("[mysql_mon]: Error creating maxscale_schema.replication_heartbeat "
+                  "table in Master server: %s", mysql_error(database->con));
 
         database->server->rlag = -1;
     }
@@ -1168,10 +1157,10 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 
     if (mysql_query(database->con, heartbeat_purge_query))
     {
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "[mysql_mon]: Error deleting from maxscale_schema.replication_heartbeat table: [%s], %s",
-                                         heartbeat_purge_query,
-                                         mysql_error(database->con))));
+        MXS_ERROR("[mysql_mon]: Error deleting from maxscale_schema.replication_heartbeat "
+                  "table: [%s], %s",
+                  heartbeat_purge_query,
+                  mysql_error(database->con));
     }
 
     heartbeat = time(0);
@@ -1187,10 +1176,9 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 
         database->server->rlag = -1;
 
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "[mysql_mon]: Error updating maxscale_schema.replication_heartbeat table: [%s], %s",
-                                         heartbeat_insert_query,
-                                         mysql_error(database->con))));
+        MXS_ERROR("[mysql_mon]: Error updating maxscale_schema.replication_heartbeat table: [%s], %s",
+                  heartbeat_insert_query,
+                  mysql_error(database->con));
     }
     else
     {
@@ -1204,18 +1192,18 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
 
                 database->server->rlag = -1;
 
-                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                 "[mysql_mon]: Error inserting into maxscale_schema.replication_heartbeat table: [%s], %s",
-                                                 heartbeat_insert_query,
-                                                 mysql_error(database->con))));
+                MXS_ERROR("[mysql_mon]: Error inserting into "
+                          "maxscale_schema.replication_heartbeat table: [%s], %s",
+                          heartbeat_insert_query,
+                          mysql_error(database->con));
             }
             else
             {
                 /* Set replication lag to 0 for the master */
                 database->server->rlag = 0;
 
-                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-                                                 "[mysql_mon]: heartbeat table inserted data for %s:%i", database->server->name, database->server->port)));
+                MXS_DEBUG("[mysql_mon]: heartbeat table inserted data for %s:%i",
+                          database->server->name, database->server->port);
             }
         }
         else
@@ -1223,8 +1211,8 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
             /* Set replication lag as 0 for the master */
             database->server->rlag = 0;
 
-            LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-                                             "[mysql_mon]: heartbeat table updated for Master %s:%i", database->server->name, database->server->port)));
+            MXS_DEBUG("[mysql_mon]: heartbeat table updated for Master %s:%i",
+                      database->server->name, database->server->port);
         }
     }
 }
@@ -1248,8 +1236,7 @@ static void set_slave_heartbeat(MONITOR* mon, MONITOR_SERVERS *database)
 
     if (handle->master == NULL)
     {
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "[mysql_mon]: set_slave_heartbeat called without an available Master server")));
+        MXS_ERROR("[mysql_mon]: set_slave_heartbeat called without an available Master server");
         return;
     }
 
@@ -1300,12 +1287,10 @@ static void set_slave_heartbeat(MONITOR* mon, MONITOR_SERVERS *database)
                 database->server->rlag = -1;
             }
 
-            LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-                                             "[mysql_mon]: replication heartbeat: "
-                                             "Slave %s:%i has %i seconds lag",
-                                             database->server->name,
-                                             database->server->port,
-                                             database->server->rlag)));
+            MXS_DEBUG("Slave %s:%i has %i seconds lag",
+                      database->server->name,
+                      database->server->port,
+                      database->server->rlag);
         }
         if (!rows_found)
         {
@@ -1322,21 +1307,19 @@ static void set_slave_heartbeat(MONITOR* mon, MONITOR_SERVERS *database)
 
         if (handle->master->server->node_id < 0)
         {
-            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                             "[mysql_mon]: error: replication heartbeat: "
-                                             "master_server_id NOT available for %s:%i",
-                                             database->server->name,
-                                             database->server->port)));
+            MXS_ERROR("[mysql_mon]: error: replication heartbeat: "
+                      "master_server_id NOT available for %s:%i",
+                      database->server->name,
+                      database->server->port);
         }
         else
         {
-            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                             "[mysql_mon]: error: replication heartbeat: "
-                                             "failed selecting from hearthbeat table of %s:%i : [%s], %s",
-                                             database->server->name,
-                                             database->server->port,
-                                             select_heartbeat_query,
-                                             mysql_error(database->con))));
+            MXS_ERROR("[mysql_mon]: error: replication heartbeat: "
+                      "failed selecting from hearthbeat table of %s:%i : [%s], %s",
+                      database->server->name,
+                      database->server->port,
+                      select_heartbeat_query,
+                      mysql_error(database->con));
         }
     }
 }
@@ -1558,9 +1541,9 @@ bool check_replicate_ignore_table(MONITOR_SERVERS* database)
             if (strlen(row[1]) > 0 &&
                 strcasestr(row[1], hb_table_name))
             {
-                skygw_log_write(LE, "Warning: 'replicate_ignore_table' is "
-                                "defined on server '%s' and '%s' was found in it. ",
-                                database->server->unique_name, hb_table_name);
+                MXS_WARNING("'replicate_ignore_table' is "
+                            "defined on server '%s' and '%s' was found in it. ",
+                            database->server->unique_name, hb_table_name);
                 rval = false;
             }
         }
@@ -1569,10 +1552,10 @@ bool check_replicate_ignore_table(MONITOR_SERVERS* database)
     }
     else
     {
-        skygw_log_write(LE, "Error: Failed to query server %s for "
-                        "'replicate_ignore_table': %s",
-                        database->server->unique_name,
-                        mysql_error(database->con));
+        MXS_ERROR("Failed to query server %s for "
+                  "'replicate_ignore_table': %s",
+                  database->server->unique_name,
+                  mysql_error(database->con));
         rval = false;
     }
     return rval;
@@ -1602,9 +1585,9 @@ bool check_replicate_do_table(MONITOR_SERVERS* database)
             if (strlen(row[1]) > 0 &&
                 strcasestr(row[1], hb_table_name) == NULL)
             {
-                skygw_log_write(LE, "Warning: 'replicate_do_table' is "
-                                "defined on server '%s' and '%s' was not found in it. ",
-                                database->server->unique_name, hb_table_name);
+                MXS_WARNING("'replicate_do_table' is "
+                            "defined on server '%s' and '%s' was not found in it. ",
+                            database->server->unique_name, hb_table_name);
                 rval = false;
             }
         }
@@ -1612,10 +1595,10 @@ bool check_replicate_do_table(MONITOR_SERVERS* database)
     }
     else
     {
-        skygw_log_write(LE, "Error: Failed to query server %s for "
-                        "'replicate_do_table': %s",
-                        database->server->unique_name,
-                        mysql_error(database->con));
+        MXS_ERROR("Failed to query server %s for "
+                  "'replicate_do_table': %s",
+                  database->server->unique_name,
+                  mysql_error(database->con));
         rval = false;
     }
     return rval;
@@ -1647,10 +1630,10 @@ bool check_replicate_wild_do_table(MONITOR_SERVERS* database)
                 mxs_pcre2_result_t rc = modutil_mysql_wildcard_match(row[1], hb_table_name);
                 if (rc == MXS_PCRE2_NOMATCH)
                 {
-                    skygw_log_write(LE, "Warning: 'replicate_wild_do_table' is "
-                                    "defined on server '%s' and '%s' does not match it. ",
-                                    database->server->unique_name,
-                                    hb_table_name);
+                    MXS_WARNING("'replicate_wild_do_table' is "
+                                "defined on server '%s' and '%s' does not match it. ",
+                                database->server->unique_name,
+                                hb_table_name);
                     rval = false;
                 }
             }
@@ -1659,10 +1642,10 @@ bool check_replicate_wild_do_table(MONITOR_SERVERS* database)
     }
     else
     {
-        skygw_log_write(LE, "Error: Failed to query server %s for "
-                        "'replicate_wild_do_table': %s",
-                        database->server->unique_name,
-                        mysql_error(database->con));
+        MXS_ERROR("Failed to query server %s for "
+                  "'replicate_wild_do_table': %s",
+                  database->server->unique_name,
+                  mysql_error(database->con));
         rval = false;
     }
     return rval;
@@ -1694,10 +1677,10 @@ bool check_replicate_wild_ignore_table(MONITOR_SERVERS* database)
                 mxs_pcre2_result_t rc = modutil_mysql_wildcard_match(row[1], hb_table_name);
                 if (rc == MXS_PCRE2_MATCH)
                 {
-                    skygw_log_write(LE, "Warning: 'replicate_wild_ignore_table' is "
-                                    "defined on server '%s' and '%s' matches it. ",
-                                    database->server->unique_name,
-                                    hb_table_name);
+                    MXS_WARNING("'replicate_wild_ignore_table' is "
+                                "defined on server '%s' and '%s' matches it. ",
+                                database->server->unique_name,
+                                hb_table_name);
                     rval = false;
                 }
             }
@@ -1706,10 +1689,10 @@ bool check_replicate_wild_ignore_table(MONITOR_SERVERS* database)
     }
     else
     {
-        skygw_log_write(LE, "Error: Failed to query server %s for "
-                        "'replicate_wild_do_table': %s",
-                        database->server->unique_name,
-                        mysql_error(database->con));
+        MXS_ERROR("Failed to query server %s for "
+                  "'replicate_wild_do_table': %s",
+                  database->server->unique_name,
+                  mysql_error(database->con));
         rval = false;
     }
     return rval;
@@ -1747,8 +1730,8 @@ void check_maxscale_schema_replication(MONITOR *monitor)
 
     if (err)
     {
-        skygw_log_write(LE, "Warning: Problems were encountered when "
-                        "checking if '%s' is replicated. Make sure that the table is "
-                        "replicated to all slaves.", hb_table_name);
+        MXS_WARNING("Problems were encountered when "
+                    "checking if '%s' is replicated. Make sure that the table is "
+                    "replicated to all slaves.", hb_table_name);
     }
 }
