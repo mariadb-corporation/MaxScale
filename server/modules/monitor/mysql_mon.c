@@ -60,7 +60,8 @@ static void monitorMain(void *);
 
 static char *version_str = "V1.4.0";
 
-MODULE_INFO info = {
+MODULE_INFO info =
+{
     MODULE_API_MONITOR,
     MODULE_GA,
     MONITOR_VERSION,
@@ -82,7 +83,8 @@ void check_maxscale_schema_replication(MONITOR *monitor);
 static bool report_version_err = true;
 static const char* hb_table_name = "maxscale_schema.replication_heartbeat";
 
-static MONITOR_OBJECT MyObject = {
+static MONITOR_OBJECT MyObject =
+{
     startMonitor,
     stopMonitor,
     diagnostics
@@ -1501,7 +1503,8 @@ static int add_slave_to_master(long *slaves_list, int list_size, long node_id)
     return 0;
 }
 
-static monitor_event_t mysql_events[] = {
+static monitor_event_t mysql_events[] =
+{
     MASTER_DOWN_EVENT,
     MASTER_UP_EVENT,
     SLAVE_DOWN_EVENT,

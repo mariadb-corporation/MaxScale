@@ -48,7 +48,8 @@ static void monitorMain(void *);
 
 static char *version_str = "V2.0.0";
 
-MODULE_INFO info = {
+MODULE_INFO info =
+{
     MODULE_API_MONITOR,
     MODULE_GA,
     MONITOR_VERSION,
@@ -63,7 +64,8 @@ static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *,
 static void disableMasterFailback(void *, int);
 bool isGaleraEvent(monitor_event_t event);
 
-static MONITOR_OBJECT MyObject = {
+static MONITOR_OBJECT MyObject =
+{
     startMonitor,
     stopMonitor,
     diagnostics
@@ -758,7 +760,8 @@ availableWhenDonor(void *arg, int disable)
     memcpy(&handle->availableWhenDonor, &disable, sizeof(int));
 }
 
-static monitor_event_t galera_events[] = {
+static monitor_event_t galera_events[] =
+{
     MASTER_DOWN_EVENT,
     MASTER_UP_EVENT,
     SLAVE_DOWN_EVENT,

@@ -749,7 +749,8 @@ static MONITOR_SERVERS *get_current_master(MONITOR *mon)
 }
 
 
-static monitor_event_t mysql_events[] = {
+static monitor_event_t mysql_events[] =
+{
     MASTER_DOWN_EVENT,
     MASTER_UP_EVENT,
     SLAVE_DOWN_EVENT,

@@ -37,7 +37,8 @@ static void monitorMain(void *);
 
 static char *version_str = "V2.1.0";
 
-MODULE_INFO info = {
+MODULE_INFO info =
+{
     MODULE_API_MONITOR,
     MODULE_BETA_RELEASE,
     MONITOR_VERSION,
@@ -49,7 +50,8 @@ static void stopMonitor(void *);
 static void diagnostics(DCB *, void *);
 bool isNdbEvent(monitor_event_t event);
 
-static MONITOR_OBJECT MyObject = {
+static MONITOR_OBJECT MyObject =
+{
     startMonitor,
     stopMonitor,
     diagnostics
@@ -436,7 +438,8 @@ monitorMain(void *arg)
 }
 
 
-static monitor_event_t ndb_events[] = {
+static monitor_event_t ndb_events[] =
+{
     MASTER_DOWN_EVENT,
     MASTER_UP_EVENT,
     SLAVE_DOWN_EVENT,
@@ -465,7 +468,9 @@ bool isNdbEvent(monitor_event_t event)
     for (i = 0; ndb_events[i] != MAX_MONITOR_EVENT; i++)
     {
         if (event == ndb_events[i])
+        {
             return true;
+        }
     }
     return false;
 }
