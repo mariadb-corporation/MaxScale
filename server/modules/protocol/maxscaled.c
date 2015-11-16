@@ -104,9 +104,7 @@ version()
 void
 ModuleInit()
 {
-	LOGIF(LT, (skygw_log_write(
-                           LOGFILE_TRACE,
-                           "Initialise MaxScaled Protocol module.\n")));
+    MXS_INFO("Initialise MaxScaled Protocol module.");;
 }
 
 /**
@@ -352,10 +350,7 @@ int                     rc;
         // socket options
 	if (setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one)))
 	{
-	    LOGIF(LE, (skygw_log_write(
-                           LOGFILE_ERROR,
-				"Unable to set SO_REUSEADDR on maxscale listener."
-			)));
+	    MXS_ERROR("Unable to set SO_REUSEADDR on maxscale listener.");
 	}
         // set NONBLOCKING mode
         setnonblocking(listener->fd);
@@ -368,20 +363,14 @@ int                     rc;
         rc = listen(listener->fd, SOMAXCONN);
         
         if (rc == 0) {
-		LOGIF(LM, (skygw_log_write(
-                           LOGFILE_MESSAGE,
-                    	"Listening maxscale connections at %s\n",
-                    	config)));
+            MXS_NOTICE("Listening maxscale connections at %s", config);
         } else {
             int eno = errno;
             errno = 0;
             char errbuf[STRERROR_BUFLEN];
-	    LOGIF(LE, (skygw_log_write(
-                           LOGFILE_ERROR,
-                    "Failed to start listening for maxscale admin connections "
-		    "due error %d, %s\n\n",
-                    eno,
-                           strerror_r(eno, errbuf, sizeof(errbuf)))));
+	    MXS_ERROR("Failed to start listening for maxscale admin connections "
+                      "due error %d, %s",
+                      eno, strerror_r(eno, errbuf, sizeof(errbuf)));
             return 0;
         }
 
