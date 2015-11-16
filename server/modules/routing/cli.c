@@ -100,10 +100,7 @@ version()
 void
 ModuleInit()
 {
-	LOGIF(LM, (skygw_log_write(
-                           LOGFILE_MESSAGE,
-                           "Initialise CLI router module %s.\n",
-                           version_str)));
+	MXS_NOTICE("Initialise CLI router module %s.", version_str);
 	spinlock_init(&instlock);
 	instances = NULL;
 }
@@ -149,12 +146,7 @@ int		i;
 	{
 		for (i = 0; options[i]; i++)
 		{
-			{
-				LOGIF(LE, (skygw_log_write(
-					LOGFILE_ERROR,
-					"Unknown option for CLI '%s'\n",
-					options[i])));
-			}
+                    MXS_ERROR("Unknown option for CLI '%s'", options[i]);
 		}
 	}
 
