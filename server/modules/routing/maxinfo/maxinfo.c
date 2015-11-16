@@ -620,7 +620,7 @@ MAXINFO_TREE	*tree;
 PARSE_ERROR	err;
 
 	LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
-			"maxinfo: SQL statement: '%s' for 0x%x.",
+			"maxinfo: SQL statement: '%s' for 0x%p.",
 				sql, session->dcb)));
 	if (strcmp(sql, "select @@version_comment limit 1") == 0)
 	{

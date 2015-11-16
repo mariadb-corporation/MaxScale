@@ -270,7 +270,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             char errbuffer[1024];
             pcre2_get_error_message(errnumber, (PCRE2_UCHAR*) & errbuffer, sizeof(errbuffer));
             LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                        "Error: regexfilter: Compiling regular expression '%s' failed at %d: %s\n",
+                        "Error: regexfilter: Compiling regular expression '%s' failed at %lu: %s\n",
                         my_instance->match, erroffset, errbuffer)));
             free_instance(my_instance);
             return NULL;

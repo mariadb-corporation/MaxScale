@@ -281,7 +281,7 @@ static THD* get_or_create_thd_for_parsing(
                 LOGIF(LE, (skygw_log_write_flush(
                         LOGFILE_ERROR,
                         "Error : Invalid status %d in embedded server. "
-                        "Exiting.")));
+                        "Exiting.", mysql->status)));
                 goto return_err_with_thd;
         }
         /** Clear result variables */

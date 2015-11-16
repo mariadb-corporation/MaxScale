@@ -153,7 +153,7 @@ char* config_clean_string_list(char* str)
             PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
             pcre2_get_error_message(re_err, errbuf, sizeof(errbuf));
             MXS_ERROR("[%s] Regular expression compilation failed at %d: %s",
-                      __FUNCTION__, err_offset, errbuf);
+                      __FUNCTION__, (int)err_offset, errbuf);
             pcre2_code_free(re);
             free(dest);
             return NULL;

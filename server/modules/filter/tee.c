@@ -986,7 +986,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 #ifdef SS_DEBUG
 	else
 	{
-	    skygw_log_write_flush(LOGFILE_DEBUG,"tee.c: [%d] Waiting for a result set from %s session.",
+	    skygw_log_write_flush(LOGFILE_DEBUG,"tee.c: [%ld] Waiting for a result set from %s session.",
 			     my_session->d_id,
 			     branch == PARENT?"parent":"child");
 	}
@@ -1002,7 +1002,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	if(my_session->eof[branch] >= min_eof)
 	{
 #ifdef SS_DEBUG
-	    skygw_log_write_flush(LOGFILE_DEBUG,"tee.c [%d] %s received last EOF packet",
+	    skygw_log_write_flush(LOGFILE_DEBUG,"tee.c [%ld] %s received last EOF packet",
 			     my_session->d_id,
 			     branch == PARENT?"parent":"child");
 #endif
@@ -1051,7 +1051,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	    {
 		route = true;
 #ifdef SS_DEBUG
-		skygw_log_write_flush(LOGFILE_DEBUG,"tee.c:[%d] Routing final packet of response set.",my_session->d_id);
+		skygw_log_write_flush(LOGFILE_DEBUG,"tee.c:[%ld] Routing final packet of response set.",my_session->d_id);
 #endif
 	    }
 	}
@@ -1059,7 +1059,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	 !my_session->waiting[CHILD])
 	{
 #ifdef SS_DEBUG
-	    skygw_log_write_flush(LOGFILE_DEBUG,"tee.c:[%d] Routing single packet response.",my_session->d_id);
+	    skygw_log_write_flush(LOGFILE_DEBUG,"tee.c:[%ld] Routing single packet response.",my_session->d_id);
 #endif
 	    route = true;
 	}
@@ -1068,7 +1068,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
     if(route)
     {
 #ifdef SS_DEBUG
-	skygw_log_write_flush(LOGFILE_DEBUG, "tee.c:[%d] Routing buffer '%p' parent(waiting [%s] replies [%d] eof[%d])"
+	skygw_log_write_flush(LOGFILE_DEBUG, "tee.c:[%ld] Routing buffer '%p' parent(waiting [%s] replies [%d] eof[%d])"
 		" child(waiting [%s] replies[%d] eof [%d])",
 			 my_session->d_id,
 			 my_session->tee_replybuf,

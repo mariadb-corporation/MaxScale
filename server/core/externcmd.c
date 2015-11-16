@@ -166,7 +166,7 @@ int externcmd_execute(EXTERNCMD* cmd)
     {
         cmd->child = pid;
         cmd->n_exec++;
-        MXS_DEBUG("[monitor_exec_cmd] Forked child process %d : %s.", pid, cmd);
+        MXS_DEBUG("[monitor_exec_cmd] Forked child process %d : %s.", pid, cmd->argv[0]);
     }
 
     return rval;

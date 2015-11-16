@@ -1394,7 +1394,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
 	if(file_empty)
 	{
-	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: File is empty: %s");
+	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: File is empty: %s", filename);
 	    free(filename);
 	    err = true;
 	    goto retblock;

@@ -808,7 +808,7 @@ do_http_post(GWBUF *buffer, void *cfg) {
             goto cleanup;
 	}
 
-	MXS_INFO("do_http_post() ret_code [%d], HTTP code [%d]",
+	MXS_INFO("do_http_post() ret_code [%d], HTTP code [%ld]",
                  ret_code, http_code);
 	cleanup:
 

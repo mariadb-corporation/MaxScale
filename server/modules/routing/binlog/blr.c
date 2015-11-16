@@ -469,8 +469,8 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 						LOGIF(LE, (skygw_log_write_flush(
 							LOGFILE_ERROR,
 							"Warning : invalid heartbeat period %s."
-							" Setting it to default value %d.",
-							value, inst->heartbeat )));
+							" Setting it to default value %ld.",
+							value, inst->heartbeat)));
 					} else {
 						inst->heartbeat = h_val;
 					}
@@ -529,8 +529,9 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 	if (inst->serverid <= 0) {
 		skygw_log_write_flush(LOGFILE_ERROR,
-			"Error : Service %s, server-id is not configured. Please configure it with a unique positive integer value (1..2^32-1)",
-			service->name, inst->serverid);
+                                      "Error : Service %s, server-id is not configured. "
+                                      "Please configure it with a unique positive integer value (1..2^32-1)",
+                                      service->name);
 		free(inst);
 		return NULL;
 	}
@@ -888,7 +889,7 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		LOGIF(LM, (skygw_log_write_flush(
 			LOGFILE_MESSAGE,
 			"%s: Master %s disconnected after %ld seconds. "
-			"%d events read,",
+			"%lu events read,",
 			router->service->name, router->service->dbref->server->name,
 			time(0) - router->connect_time, router->stats.n_binlogs_ses)));
         	LOGIF(LE, (skygw_log_write_flush(
@@ -1463,7 +1464,7 @@ unsigned long	mysql_errno;
 	LOGIF(LM, (skygw_log_write_flush(
 		LOGFILE_MESSAGE,
 		"%s: Master %s disconnected after %ld seconds. "
-		"%d events read.",
+		"%lu events read.",
 		router->service->name, router->service->dbref->server->name,
 		time(0) - router->connect_time, router->stats.n_binlogs_ses)));
 	blr_master_reconnect(router);

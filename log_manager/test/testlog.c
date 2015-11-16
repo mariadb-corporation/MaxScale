@@ -173,16 +173,16 @@ int main(int argc, char* argv[])
 
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("First write with flush.");
-    err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
+    err = skygw_log_write_flush(LOGFILE_ERROR, "%s", logstr);
 
     logstr = ("Second write with flush.");
-    err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
+    err = skygw_log_write_flush(LOGFILE_ERROR, "%s", logstr);
 
     logstr = ("Third write, no flush.");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
 
     logstr = ("Fourth write, no flush. Next flush only.");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
 
     err = mxs_log_flush();
 
@@ -196,7 +196,7 @@ int main(int argc, char* argv[])
     skygw_log_enable(LOGFILE_TRACE);
 #endif
     logstr = "My name is Tracey Tracey 47 years and 7 months.";
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
@@ -207,12 +207,12 @@ int main(int argc, char* argv[])
     skygw_log_enable(LOGFILE_TRACE);
 #endif
     logstr = "My name is Philip";
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
     logstr = "Philip.";
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
@@ -221,26 +221,26 @@ int main(int argc, char* argv[])
 
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("A terrible error has occurred!");
-    err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
+    err = skygw_log_write_flush(LOGFILE_ERROR, "%s", logstr);
 
     logstr = ("Hi, how are you?");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
 
     logstr = ("I'm doing fine!");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
 
     logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to "
               "a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) "
               "immediately; the two forms are equivalent. Applying the operators & to both parts "
               "of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the "
               "address of the i-th element beyond a.");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
 
     logstr = ("I was wondering, you know, it has been such a lovely weather whole morning and I "
               "thought that would you like to come to my place and have a little piece of cheese "
               "with us. Just me and my mom - and you, of course. Then, if you wish, we could "
               "listen to the radio and keep company for our little Steven, my mom's cat, you know.");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     mxs_log_finish();
 
 #if defined(TEST1)
@@ -366,63 +366,63 @@ int main(int argc, char* argv[])
     skygw_log_enable(LOGFILE_TRACE);
 #endif
     succp = mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
-    ss_dassert(succp);
+    ss_dassert(succp); 
 
     logstr = ("\tTEST 3 - test enabling and disabling logs.");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     skygw_log_disable(LOGFILE_TRACE);
 
     logstr = ("1.\tWrite once to ERROR and twice to MESSAGE log.");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     skygw_log_enable(LOGFILE_TRACE);
 
     logstr = ("2.\tWrite to once to ERROR, twice to MESSAGE and "
               "three times to TRACE log.");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     skygw_log_disable(LOGFILE_ERROR);
 
     logstr = ("3.\tWrite to once to MESSAGE and twice to TRACE log.");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     skygw_log_disable(LOGFILE_MESSAGE);
     skygw_log_disable(LOGFILE_TRACE);
 
     logstr = ("4.\tWrite to none.");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     skygw_log_enable(LOGFILE_ERROR);
     skygw_log_enable(LOGFILE_MESSAGE);
 
     logstr = ("4.\tWrite once to ERROR and twice to MESSAGE log.");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     mxs_log_finish();
@@ -436,32 +436,32 @@ int main(int argc, char* argv[])
     skygw_log_enable(LOGFILE_TRACE);
 #endif
     logstr = ("\tTEST 4 - test spreading logs down to other logs.");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     logstr = ("1.\tWrite to ERROR and thus also to MESSAGE and TRACE logs.");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     logstr = ("2.\tWrite to MESSAGE and thus to TRACE logs.");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     ss_dassert(err == 0);
 
     skygw_log_enable(LOGFILE_TRACE);
     logstr = ("3.\tWrite to TRACE log only.");
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
     ss_dassert(err == 0);
 
     skygw_log_disable(LOGFILE_MESSAGE);
 
     logstr = ("4.\tWrite to ERROR and thus also to TRACE log. "
               "MESSAGE is disabled.");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     logstr = ("5.\tThis should not appear anywhere since MESSAGE "
               "is disabled.");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     ss_dassert(err == 0);
 
     mxs_log_finish();
@@ -472,28 +472,28 @@ int main(int argc, char* argv[])
     skygw_log_enable(LOGFILE_TRACE);
 #endif
     logstr = ("6.\tWrite to ERROR and thus also to MESSAGE and TRACE logs.");
-    err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
+    err = skygw_log_write_flush(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     logstr = ("7.\tWrite to MESSAGE and thus to TRACE logs.");
-    err = skygw_log_write_flush(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write_flush(LOGFILE_MESSAGE, "%s", logstr);
     ss_dassert(err == 0);
 
     logstr = ("8.\tWrite to TRACE log only.");
     skygw_log_enable(LOGFILE_TRACE);
-    err = skygw_log_write_flush(LOGFILE_TRACE, logstr);
+    err = skygw_log_write_flush(LOGFILE_TRACE, "%s", logstr);
     ss_dassert(err == 0);
 
     skygw_log_disable(LOGFILE_MESSAGE);
 
     logstr = ("9.\tWrite to ERROR and thus also to TRACE log. "
               "MESSAGE is disabled");
-    err = skygw_log_write_flush(LOGFILE_ERROR, logstr);
+    err = skygw_log_write_flush(LOGFILE_ERROR, "%s", logstr);
     ss_dassert(err == 0);
 
     logstr = ("10.\tThis should not appear anywhere since MESSAGE is "
               "disabled.");
-    err = skygw_log_write_flush(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write_flush(LOGFILE_MESSAGE, "%s", logstr);
     ss_dassert(err == 0);
 
     skygw_log_enable(LOGFILE_MESSAGE);
@@ -542,7 +542,7 @@ static void* thr_run(void* data)
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     mxs_log_flush();
     logstr = ("Hi, how are you?");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
 
     if (err != 0)
     {
@@ -561,10 +561,10 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("Testing. One, two, three\n");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");
@@ -578,7 +578,7 @@ static void* thr_run(void* data)
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");
@@ -591,7 +591,7 @@ static void* thr_run(void* data)
               "immediately; the two forms are equivalent. Applying the operatos & to both parts "
               "of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the "
               "address of the i-th element beyond a.");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");
@@ -603,7 +603,7 @@ static void* thr_run(void* data)
     mxs_log_finish();
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("..and you?");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");
@@ -615,7 +615,7 @@ static void* thr_run(void* data)
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");
@@ -627,7 +627,7 @@ static void* thr_run(void* data)
               "immediately; the two forms are equivalent. Applying the operatos & to both parts "
               "of this equivalence, it follows that &a[i] and a+i are also identical: a+i is the "
               "address of the i-th element beyond a.");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");
@@ -635,7 +635,7 @@ static void* thr_run(void* data)
     ss_dassert(err == 0);
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("..... and you too?");
-    err = skygw_log_write(LOGFILE_MESSAGE, logstr);
+    err = skygw_log_write(LOGFILE_MESSAGE, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");
@@ -651,7 +651,7 @@ static void* thr_run(void* data)
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOGFILE_TRACE);
 #endif
-    err = skygw_log_write(LOGFILE_TRACE, logstr);
+    err = skygw_log_write(LOGFILE_TRACE, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");
@@ -660,7 +660,7 @@ static void* thr_run(void* data)
     mxs_log_finish();
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("Testing. One, two, three, four\n");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");
@@ -669,7 +669,7 @@ static void* thr_run(void* data)
     mxs_log_finish();
     mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
     logstr = ("Testing. One, two, three, .. where was I?\n");
-    err = skygw_log_write(LOGFILE_ERROR, logstr);
+    err = skygw_log_write(LOGFILE_ERROR, "%s", logstr);
     if (err != 0)
     {
         TEST_ERROR("Error, log write failed.");

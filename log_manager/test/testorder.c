@@ -124,11 +124,11 @@ int main(int argc, char** argv)
         memset(message + block_size - 1, '\0', 1);
         if (interval > 0 && i % interval == 0)
         {
-            err = skygw_log_write_flush(LOGFILE_ERROR, message);
+            err = skygw_log_write_flush(LOGFILE_ERROR, "%s", message);
         }
         else
         {
-            err = skygw_log_write(LOGFILE_ERROR, message);
+            err = skygw_log_write(LOGFILE_ERROR, "%s", message);
         }
         if (err)
         {

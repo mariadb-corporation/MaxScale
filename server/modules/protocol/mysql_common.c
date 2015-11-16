@@ -192,8 +192,8 @@ int gw_read_backend_handshake(
                                         "%lu [gw_read_backend_handshake] after "
                                         "dcb_read, fd %d, "
                                         "state = MYSQL_HANDSHAKE_FAILED.",
-                                        dcb->fd,
-                                        pthread_self())));
+                                        pthread_self(),
+                                        dcb->fd)));
                                 
 				return 1;
 			}
@@ -210,7 +210,7 @@ int gw_read_backend_handshake(
                                         LOGFILE_DEBUG,
                                         "%lu [gw_receive_backend_auth] Invalid "
                                         "authentication message from backend dcb %p "
-                                        "fd %d, ptr[4] = %p, error code %d, msg %s.",
+                                        "fd %d, ptr[4] = %d, error code %d, msg %s.",
                                         pthread_self(),
                                         dcb,
                                         dcb->fd,
@@ -261,8 +261,7 @@ int gw_read_backend_handshake(
                                         "gw_mysql_get_byte3, fd %d, "
                                         "state = MYSQL_HANDSHAKE_FAILED.",
                                         pthread_self(),
-                                        dcb->fd,
-                                        pthread_self())));
+                                        dcb->fd)));
                                 
 				return 1;
 			}
@@ -286,8 +285,7 @@ int gw_read_backend_handshake(
                                         "gw_decode_mysql_server_handshake, fd %d, "
                                         "state = MYSQL_HANDSHAKE_FAILED.",
                                         pthread_self(),
-                                        conn->owner_dcb->fd,
-                                        pthread_self())));
+                                        conn->owner_dcb->fd)));
                                 while((head = gwbuf_consume(head, GWBUF_LENGTH(head))));
 				return 1;
 			}
@@ -451,7 +449,7 @@ int gw_receive_backend_auth(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_receive_backend_auth] Invalid "
                                 "authentication message from backend dcb %p "
-                                "fd %d, ptr[4] = %p, error %s, msg %s.",
+                                "fd %d, ptr[4] = %d, error %s, msg %s.",
                                 pthread_self(),
                                 dcb,
                                 dcb->fd,
@@ -476,7 +474,7 @@ int gw_receive_backend_auth(
                                 LOGFILE_DEBUG,
                                 "%lu [gw_receive_backend_auth] Invalid "
                                 "authentication message from backend dcb %p "
-                                "fd %d, ptr[4] = %p",
+                                "fd %d, ptr[4] = %d",
                                 pthread_self(),
                                 dcb,
                                 dcb->fd,
@@ -485,7 +483,7 @@ int gw_receive_backend_auth(
                         LOGIF(LE, (skygw_log_write_flush(
                                 LOGFILE_ERROR,
                                 "Error : Invalid authentication message "
-                                "from backend. Packet type : %p",
+                                "from backend. Packet type : %d",
                                 ptr[4])));
                 }
                 /*<
@@ -503,7 +501,7 @@ int gw_receive_backend_auth(
                 LOGIF(LD, (skygw_log_write(
                         LOGFILE_DEBUG,
                         "%lu [gw_receive_backend_auth] Read zero bytes from "
-                        "backend dcb %p fd %d in state %s. n %d, head %p, len %d",
+                        "backend dcb %p fd %d in state %s. n %d, head %p, len %ld",
                         pthread_self(),
                         dcb,
                         dcb->fd,
@@ -519,7 +517,7 @@ int gw_receive_backend_auth(
                 LOGIF(LD, (skygw_log_write_flush(
                         LOGFILE_DEBUG,
                         "%lu [gw_receive_backend_auth] Reading from backend dcb %p "
-                        "fd %d in state %s failed. n %d, head %p, len %d",
+                        "fd %d in state %s failed. n %d, head %p, len %ld",
                         pthread_self(),
                         dcb,
                         dcb->fd,

@@ -932,8 +932,8 @@ int gw_read_client_event(
 				"%lu [gw_read_client_event] after "
 				"gw_mysql_do_authentication, fd %d, "
 				"state = MYSQL_AUTH_FAILED.",
-				protocol->owner_dcb->fd,
-				pthread_self())));
+				pthread_self(),
+				protocol->owner_dcb->fd)));
 			/**
 			 * Release MYSQL_session since it is not used anymore.
 			 */
@@ -1029,11 +1029,11 @@ int gw_read_client_event(
 
 		LOGIF(LD, (skygw_log_write(
 			LOGFILE_DEBUG,
-					 "%lu [gw_read_client_event] after "
+                        "%lu [gw_read_client_event] after "
 			"gw_mysql_do_authentication, fd %d, "
 			"state = MYSQL_AUTH_FAILED.",
-					 protocol->owner_dcb->fd,
-					 pthread_self())));
+                        pthread_self(),
+                        protocol->owner_dcb->fd)));
 		/**
 		 * Release MYSQL_session since it is not used anymore.
 		 */

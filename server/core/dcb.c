@@ -1014,7 +1014,7 @@ int dcb_read_SSL(DCB *dcb,
         if (buffer)
         {
 #ifdef SS_DEBUG
-            MXS_DEBUG("%lu SSL: Truncated buffer from %d to %d bytes. "
+            MXS_DEBUG("%lu SSL: Truncated buffer from %d to %ld bytes. "
                       "Read %d bytes, %d bytes waiting.\n", pthread_self(),
                       bufsize, GWBUF_LENGTH(buffer), n, b);
 
@@ -1204,10 +1204,8 @@ dcb_write_parameter_check(DCB *dcb, GWBUF *queue)
             MXS_DEBUG("%lu [dcb_write] Write aborted to dcb %p because "
                       "it is in state %s",
                       pthread_self(),
-                      dcb->stats.n_buffered,
                       dcb,
-                      STRDCBSTATE(dcb->state),
-                      dcb->fd);
+                      STRDCBSTATE(dcb->state));
             gwbuf_free(queue);
             return false;
         }
@@ -1640,12 +1638,7 @@ dcb_drain_writeq_SSL(DCB *dcb)
 		{
 		    break;
 		}
-		MXS_ERROR("Write to dcb failed due to "
-                          "SSL error %d:",
-                          dcb,
-                          STRDCBSTATE(dcb->state),
-                          dcb->fd,
-                          ssl_errno);
+		MXS_ERROR("Write to dcb failed due to SSL error %d:", ssl_errno);
 		switch(ssl_errno)
 		{
 		case SSL_ERROR_SSL:
@@ -1833,7 +1826,7 @@ dcb_maybe_add_persistent(DCB *dcb)
     else
     {
         MXS_DEBUG("%lu [dcb_maybe_add_persistent] Not adding DCB %p to persistent pool, "
-                  "user %s, max for pool %d, error handle called %s, hung flag %s, "
+                  "user %s, max for pool %ld, error handle called %s, hung flag %s, "
                   "server status %d, pool count %d.\n",
                   pthread_self(),
                   dcb,

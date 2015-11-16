@@ -146,7 +146,8 @@ bool change_current_db(char* dest,
 	skygw_log_write_flush(LOGFILE_ERROR,
 			 "change_current_db: failed to change database: Query buffer too large");
 	skygw_log_write_flush(LOGFILE_TRACE,
-			 "change_current_db: failed to change database: Query buffer too large [%d bytes]",GWBUF_LENGTH(buf));
+                              "change_current_db: failed to change database: "
+                              "Query buffer too large [%ld bytes]", GWBUF_LENGTH(buf));
 	succp = false;
 	goto retblock;
     }

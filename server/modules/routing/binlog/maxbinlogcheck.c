@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
 	mxs_log_flush_sync();
 
 	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-		"Check retcode: %i, Binlog Pos = %llu", ret, inst->binlog_position)));
+		"Check retcode: %i, Binlog Pos = %lu", ret, inst->binlog_position)));
 
 	mxs_log_flush_sync();
 	mxs_log_finish();

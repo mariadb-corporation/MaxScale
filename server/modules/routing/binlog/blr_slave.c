@@ -1988,7 +1988,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			blr_close_binlog(router, slave->file);
 			if (hkheartbeat - beat1 > 1)
 				LOGIF(LE, (skygw_log_write(
-					LOGFILE_ERROR, "blr_close_binlog took %d maxscale beats",
+					LOGFILE_ERROR, "blr_close_binlog took %lu maxscale beats",
 					hkheartbeat - beat1)));
 			blr_slave_rotate(router, slave, GWBUF_DATA(record));
 			beat1 = hkheartbeat;
@@ -2025,7 +2025,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			}
 			if (hkheartbeat - beat1 > 1)
 				LOGIF(LE, (skygw_log_write(
-					LOGFILE_ERROR, "blr_open_binlog took %d beats",
+					LOGFILE_ERROR, "blr_open_binlog took %lu beats",
 					hkheartbeat - beat1)));
 		}
 		slave->stats.n_bytes += gwbuf_length(head);
@@ -2947,7 +2947,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 				LOGFILE_ERROR,
 					"Warning: a transaction is still opened at pos %lu"
 					" File %s will be truncated. "
-					"Next binlog file is %s at pos %lu, "
+					"Next binlog file is %s at pos %d, "
 					"START SLAVE is required again.",
 					router->last_safe_pos,
 					router->prevbinlog,
@@ -3334,7 +3334,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 					router->binlog_name)));
 			}
 
-			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%lu]",
 				router->service->name,
 				router->current_pos)));
 		}

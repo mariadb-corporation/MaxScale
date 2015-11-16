@@ -420,7 +420,8 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
                 {
                     duplicate_found = true;
                     skygw_log_write(LE, "Error: Database '%s' found on servers '%s' and '%s' for user %s@%s.",
-                                    data, target, hashtable_fetch(rses->shardmap->hash, data),
+                                    data, target,
+                                    (char*)hashtable_fetch(rses->shardmap->hash, data),
                                     rses->rses_client_dcb->user,
                                     rses->rses_client_dcb->remote);
                 }
@@ -854,7 +855,7 @@ createInstance(SERVICE *service, char **options)
             PCRE2_UCHAR errbuf[512];
             pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
             skygw_log_write(LE, "Error: Regex compilation failed at %d for regex '%s': %s",
-                            erroffset, param->value, errbuf);
+                            (int)erroffset, param->value, errbuf);
             hashtable_free(router->ignored_dbs);
             free(router);
             return NULL;
@@ -2865,10 +2866,21 @@ static void clientReply(ROUTER* instance,
         }
         else
         {
-            LOGIF(LE, (skygw_log_write_flush(
-                                             LOGFILE_ERROR,
-                                             "Error : Routing query \"%s\" failed.",
-                                             bref->bref_pending_cmd)));
+            char* sql = modutil_get_SQL(bref->bref_pending_cmd);
+
+            if (sql)
+            {
+                LOGIF(LE, (skygw_log_write_flush(
+                               LOGFILE_ERROR,
+                               "Routing query \"%s\" failed.", sql)));
+                free(sql);
+            }
+            else
+            {
+                LOGIF(LE, (skygw_log_write_flush(
+                               LOGFILE_ERROR,
+                               "Routing query failed.")));
+            }
         }
         gwbuf_free(bref->bref_pending_cmd);
         bref->bref_pending_cmd = NULL;
@@ -2963,9 +2975,9 @@ static void bref_clear_state(
 			if(prev2 <= 0)
 			{
 			    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
-				     __FUNCTION__,
-				     &bref->bref_backend->backend_server->name,
-				     &bref->bref_backend->backend_server->port);
+                                            __FUNCTION__,
+                                            bref->bref_backend->backend_server->name,
+                                            bref->bref_backend->backend_server->port);
 			}
                 }
         }
@@ -2994,10 +3006,11 @@ static void bref_set_state(
                 ss_dassert(prev1 >= 0);
                 if(prev1 < 0)
 		{
-		    skygw_log_write(LE,"[%s] Error: negative number of connections waiting for results in backend %s:%u",
-			     __FUNCTION__,
-			     &bref->bref_backend->backend_server->name,
-			     &bref->bref_backend->backend_server->port);
+		    skygw_log_write(LE,"[%s] Error: negative number of connections waiting "
+                                    "for results in backend %s:%u",
+                                    __FUNCTION__,
+                                    bref->bref_backend->backend_server->name,
+                                    bref->bref_backend->backend_server->port);
 		}
                 /** Increase global operation count */
                 prev2 = atomic_add(
@@ -3006,9 +3019,9 @@ static void bref_set_state(
 		if(prev2 < 0)
 		{
 		    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
-			     __FUNCTION__,
-			     &bref->bref_backend->backend_server->name,
-			     &bref->bref_backend->backend_server->port);
+                                    __FUNCTION__,
+                                    bref->bref_backend->backend_server->name,
+                                    bref->bref_backend->backend_server->port);
 		}
         }
 }
@@ -3785,7 +3798,7 @@ static void tracelog_routed_query(
                                 "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                                 pthread_self(),
                                 funcname,
-                                buflen,
+                                (int)buflen,
                                 querystr,
                                 b->backend_server->name,
                                 b->backend_server->port, 
@@ -3807,7 +3820,7 @@ static void tracelog_routed_query(
                                 "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                                 pthread_self(),
                                 funcname,
-                                buflen,
+                                (int)buflen,
                                 querystr,
                                 b->backend_server->name,
                                 b->backend_server->port, 

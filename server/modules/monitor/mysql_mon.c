@@ -509,7 +509,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
 			/* get Slave_IO_Running and Slave_SQL_Running values*/
 			database->server->slaves[nslaves] = atol(row[0]);
 			nslaves++;
-			LOGIF(LD,(skygw_log_write_flush(LD,"Found slave at %s:%d",row[1],row[2])));
+			LOGIF(LD,(skygw_log_write_flush(LD,"Found slave at %s:%s",row[1],row[2])));
 		    }
 		    database->server->slaves[nslaves] = 0;
 		}

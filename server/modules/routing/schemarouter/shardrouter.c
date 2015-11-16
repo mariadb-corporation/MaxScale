@@ -968,8 +968,8 @@ createInstance(SERVICE *service, char **options)
             {
                 skygw_log_write(LOGFILE_ERROR, "Error : Memory reallocation failed.");
                 LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG, "shardrouter.c: realloc returned NULL. "
-                                "service count[%d] buffer size [%u] tried to allocate [%u]",
-                                sz, sizeof(SERVICE*)*(sz), sizeof(SERVICE*)*(sz * 2))));
+                                          "service count[%d] buffer size [%lu] tried to allocate [%lu]",
+                                          sz, sizeof(SERVICE*) * (sz), sizeof(SERVICE*) * (sz * 2))));
                 free(res_svc);
                 free(router);
                 return NULL;

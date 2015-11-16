@@ -3024,10 +3024,21 @@ static void clientReply (
 		}
 		else
 		{
+                    char* sql = modutil_get_SQL(bref->bref_pending_cmd);
+
+                    if (sql)
+                    {
 			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Routing query \"%s\" failed.",
-				bref->bref_pending_cmd)));
+                                       LOGFILE_ERROR,
+                                       "Routing query \"%s\" failed.", sql)));
+                        free(sql);
+                    }
+                    else
+                    {
+			LOGIF(LE, (skygw_log_write_flush(
+                                       LOGFILE_ERROR,
+                                       "Failed to route query.")));
+                    }
 		}
 		gwbuf_free(bref->bref_pending_cmd);
 		bref->bref_pending_cmd = NULL;
@@ -3123,9 +3134,9 @@ static void bref_clear_state(
 			if(prev2 <= 0)
 			{
 			    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
-				     __FUNCTION__,
-				     &bref->bref_backend->backend_server->name,
-				     &bref->bref_backend->backend_server->port);
+                                            __FUNCTION__,
+                                            bref->bref_backend->backend_server->name,
+                                            bref->bref_backend->backend_server->port);
 			}
                 }       
         }
@@ -3154,10 +3165,11 @@ static void bref_set_state(
                 ss_dassert(prev1 >= 0);
                 if(prev1 < 0)
 		{
-		    skygw_log_write(LE,"[%s] Error: negative number of connections waiting for results in backend %s:%u",
-			     __FUNCTION__,
-			     &bref->bref_backend->backend_server->name,
-			     &bref->bref_backend->backend_server->port);
+		    skygw_log_write(LE,"[%s] Error: negative number of connections waiting for "
+                                    "results in backend %s:%u",
+                                    __FUNCTION__,
+                                    bref->bref_backend->backend_server->name,
+                                    bref->bref_backend->backend_server->port);
 		}
                 /** Increase global operation count */
                 prev2 = atomic_add(
@@ -3166,9 +3178,9 @@ static void bref_set_state(
 		if(prev2 < 0)
 		{
 		    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
-			     __FUNCTION__,
-			     &bref->bref_backend->backend_server->name,
-			     &bref->bref_backend->backend_server->port);
+                                    __FUNCTION__,
+                                    bref->bref_backend->backend_server->name,
+                                    bref->bref_backend->backend_server->port);
 		}
         }
 }
@@ -4410,7 +4422,7 @@ static void tracelog_routed_query(
                                 "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                                 pthread_self(),
                                 funcname,
-                                buflen,
+                                (int)buflen,
                                 querystr,
                                 b->backend_server->name,
                                 b->backend_server->port, 
@@ -4432,7 +4444,7 @@ static void tracelog_routed_query(
                                 "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                                 pthread_self(),
                                 funcname,
-                                buflen,
+                                (int)buflen,
                                 querystr,
                                 b->backend_server->name,
                                 b->backend_server->port, 

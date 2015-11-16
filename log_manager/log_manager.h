@@ -126,7 +126,7 @@ void mxs_log_set_augmentation(int bits);
 
 int mxs_log_message(int priority,
                     const char* file, int line, const char* function,
-                    const char* format, ...);
+                    const char* format, ...) __attribute__((format(printf, 5, 6)));
 
 inline int mxs_log_id_to_priority(logfile_id_t id)
 {

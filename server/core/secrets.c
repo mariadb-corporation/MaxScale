@@ -177,7 +177,7 @@ secrets_readKeys(const char* path)
                   "%s failed. Read %d, expected %d bytes. Error %d, %s.",
                   secret_file,
                   len,
-                  sizeof(MAXKEYS),
+                  (int)sizeof(MAXKEYS),
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
         return NULL;
