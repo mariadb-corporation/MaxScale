@@ -208,10 +208,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
 			}
 			else if (!filter_standard_parameter(params[i]->name))
 			{
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"regexfilter: Unexpected parameter '%s'.\n",
-					params[i]->name)));
+                            MXS_ERROR("regexfilter: Unexpected parameter '%s'.",
+                                      params[i]->name);
 			}
 		}
 
@@ -229,10 +227,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
 				}
 				else
 				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"regexfilter: unsupported option '%s'.\n",
-						options[i])));
+                                    MXS_ERROR("regexfilter: unsupported option '%s'.",
+                                              options[i]);
 				}
 			}
         }
@@ -241,9 +237,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
         {
             if ((my_instance->logfile = fopen(logfile, "a")) == NULL)
             {
-                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                 "regexfilter: Failed to open file '%s'.\n",
-                                                 logfile)));
+                MXS_ERROR("regexfilter: Failed to open file '%s'.", logfile);
                 free_instance(my_instance);
                 free(logfile);
                 return NULL;
@@ -269,9 +263,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
 		{
             char errbuffer[1024];
             pcre2_get_error_message(errnumber, (PCRE2_UCHAR*) & errbuffer, sizeof(errbuffer));
-            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                        "Error: regexfilter: Compiling regular expression '%s' failed at %lu: %s\n",
-                        my_instance->match, erroffset, errbuffer)));
+            MXS_ERROR("regexfilter: Compiling regular expression '%s' failed at %lu: %s",
+                      my_instance->match, erroffset, errbuffer);
             free_instance(my_instance);
             return NULL;
         }
@@ -279,9 +272,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
         if((my_instance->match_data = pcre2_match_data_create_from_pattern(
             my_instance->re, NULL)) == NULL)
         {
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"Error: regexfilter: Failure to create PCRE2 matching data. "
-                "This is most likely caused by a lack of available memory.")));
+            MXS_ERROR("regexfilter: Failure to create PCRE2 matching data. "
+                      "This is most likely caused by a lack of available memory.");
             free_instance(my_instance);
             return NULL;
         }
@@ -511,7 +503,7 @@ void log_match(REGEX_INSTANCE* inst, char* re, char* old, char* new)
     }
     if(inst->log_trace)
     {
-	LOGIF(LT,(skygw_log_write(LT,"Match %s: [%s] -> [%s]",re,old,new)));
+	MXS_INFO("Match %s: [%s] -> [%s]",re,old,new);
     }
 }
 
@@ -530,6 +522,6 @@ void log_nomatch(REGEX_INSTANCE* inst, char* re, char* old)
     }
     if(inst->log_trace)
     {
-	LOGIF(LT,(skygw_log_write(LT,"No match %s: [%s]",re,old)));
+	MXS_INFO("No match %s: [%s]",re,old);
     }
 }

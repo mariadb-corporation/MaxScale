@@ -205,10 +205,8 @@ int		i;
 				}
 				else if (!filter_standard_parameter(params[i]->name))
 				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"qlafilter: Unexpected parameter '%s'.\n",
-						params[i]->name)));
+                                    MXS_ERROR("qlafilter: Unexpected parameter '%s'.",
+                                              params[i]->name);
 				}
 			}
 		}
@@ -216,26 +214,24 @@ int		i;
 		if (my_instance->match &&
 			regcomp(&my_instance->re, my_instance->match, REG_ICASE))
 		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"qlafilter: Invalid regular expression '%s'"
-				" for the match parameter.\n",
-					my_instance->match)));
-			free(my_instance->match);
-			free(my_instance->source);
-			if(my_instance->filebase){
-				free(my_instance->filebase);
-			}
-			free(my_instance);
-			return NULL;
+                    MXS_ERROR("qlafilter: Invalid regular expression '%s'"
+                              " for the match parameter.\n",
+                              my_instance->match);
+                    free(my_instance->match);
+                    free(my_instance->source);
+                    if(my_instance->filebase){
+                        free(my_instance->filebase);
+                    }
+                    free(my_instance);
+                    return NULL;
 		}
 		if (my_instance->nomatch &&
 			regcomp(&my_instance->nore, my_instance->nomatch,
 								REG_ICASE))
 		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"qlafilter: Invalid regular expression '%s'"
-				" for the nomatch paramter.\n",
-					my_instance->match)));
+            MXS_ERROR("qlafilter: Invalid regular expression '%s'"
+                      " for the nomatch paramter.",
+                      my_instance->match);
 			if (my_instance->match)
 				regfree(&my_instance->re);
 			free(my_instance->match);
@@ -273,14 +269,12 @@ char		*remote, *userName;
 						== NULL)
 		{
                         char errbuf[STRERROR_BUFLEN];
-			LOGIF(LE, (skygw_log_write(
-				LOGFILE_ERROR,
-			      "Error : Memory allocation for qla filter "
-			      "file name failed due to %d, %s.",
-			      errno,
-                                strerror_r(errno, errbuf, sizeof(errbuf)))));
-			free(my_session);
-			return NULL;
+                        MXS_ERROR("Memory allocation for qla filter "
+                                  "file name failed due to %d, %s.",
+                                  errno,
+                                  strerror_r(errno, errbuf, sizeof(errbuf)));
+                        free(my_session);
+                        return NULL;
 		}
 		my_session->active = 1;
 		
@@ -312,27 +306,23 @@ char		*remote, *userName;
 			if (my_session->fp == NULL)
 			{
                                 char errbuf[STRERROR_BUFLEN];
-				LOGIF(LE, (skygw_log_write(
-					LOGFILE_ERROR,
-					"Error : Opening output file for qla "
-					"fileter failed due to %d, %s",
-					errno,
-					strerror_r(errno, errbuf, sizeof(errbuf)))));
-				free(my_session->filename);
-				free(my_session);
-				my_session = NULL;
+                                MXS_ERROR("Opening output file for qla "
+                                          "fileter failed due to %d, %s",
+                                          errno,
+                                          strerror_r(errno, errbuf, sizeof(errbuf)));
+                                free(my_session->filename);
+                                free(my_session);
+                                my_session = NULL;
 			}
 		}
 	}
 	else
 	{
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR,
-			"Error : Memory allocation for qla filter failed due to "
-			"%d, %s.",
-			errno,
-			strerror_r(errno, errbuf, sizeof(errbuf)))));
+                MXS_ERROR("Memory allocation for qla filter failed due to "
+                          "%d, %s.",
+                          errno,
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
 	}
 	return my_session;
 }

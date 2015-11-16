@@ -161,10 +161,8 @@ int		i, cflags = REG_ICASE;
 				my_instance->user = strdup(params[i]->value);
 			else if (!filter_standard_parameter(params[i]->name))
 			{
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"namedserverfilter: Unexpected parameter '%s'.\n",
-					params[i]->name)));
+                            MXS_ERROR("namedserverfilter: Unexpected parameter '%s'.",
+                                      params[i]->name);
 			}
 		}
 
@@ -182,10 +180,8 @@ int		i, cflags = REG_ICASE;
 				}
 				else
 				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"namedserverfilter: unsupported option '%s'.\n",
-						options[i])));
+                                    MXS_ERROR("namedserverfilter: unsupported option '%s'.",
+                                              options[i]);
 				}
 			}
 		}
@@ -193,25 +189,22 @@ int		i, cflags = REG_ICASE;
 
 		if (my_instance->match == NULL || my_instance->server == NULL)
 		{
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"namedserverfilter: Missing required configured"
-				" option. You must specify a match and server "
-				"option as a minimum.")));
-			free(my_instance);
-			return NULL;
+                    MXS_ERROR("namedserverfilter: Missing required configured"
+                              " option. You must specify a match and server "
+                              "option as a minimum.");
+                    free(my_instance);
+                    return NULL;
 		}
 
 		if (regcomp(&my_instance->re, my_instance->match,
 					my_instance->cflags))
 		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"namedserverfilter: Invalid regular expression '%s'.\n",
-					my_instance->match)));
-			free(my_instance->match);
-			free(my_instance->server);
-			free(my_instance);
-			return NULL;
+                    MXS_ERROR("namedserverfilter: Invalid regular expression '%s'.\n",
+                              my_instance->match);
+                    free(my_instance->match);
+                    free(my_instance->server);
+                    free(my_instance);
+                    return NULL;
 		}
 	}
 	return (FILTER *)my_instance;

@@ -274,9 +274,9 @@ orphan_free(void* data)
 
 #ifdef SS_DEBUG
     if(o_stopping + o_ready > 0)
-        skygw_log_write(LOGFILE_DEBUG, "tee.c: %d orphans in "
-                        "SESSION_STATE_STOPPING, %d orphans in "
-                        "SESSION_STATE_ROUTER_READY. ", o_stopping, o_ready);
+        MXS_DEBUG("tee.c: %d orphans in "
+                  "SESSION_STATE_STOPPING, %d orphans in "
+                  "SESSION_STATE_ROUTER_READY. ", o_stopping, o_ready);
 #endif
 
     while(finished)
@@ -297,7 +297,7 @@ orphan_free(void* data)
     }
 
 #ifdef SS_DEBUG
-    skygw_log_write(LOGFILE_DEBUG, "tee.c: %d orphans freed.", o_freed);
+    MXS_DEBUG("tee.c: %d orphans freed.", o_freed);
 #endif
 }
 
@@ -358,9 +358,8 @@ int		i;
 	{
 		if (options)
 		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"tee: The tee filter has been passed an option, "
-				"this filter does not support any options.\n")));
+                    MXS_ERROR("tee: The tee filter has been passed an option, "
+                              "this filter does not support any options.");
 		}
 		my_instance->service = NULL;
 		my_instance->source = NULL;
@@ -375,11 +374,8 @@ int		i;
 				{
 					if ((my_instance->service = service_find(params[i]->value)) == NULL)
 					{
-						LOGIF(LE, (skygw_log_write_flush(
-							LOGFILE_ERROR,
-							"tee: service '%s' "
-							"not found.\n",
-							params[i]->value)));
+                                            MXS_ERROR("tee: service '%s' not found.\n",
+                                                      params[i]->value);
 					}
 				}
 				else if (!strcmp(params[i]->name, "match"))
@@ -396,10 +392,8 @@ int		i;
 					my_instance->userName = strdup(params[i]->value);
 				else if (!filter_standard_parameter(params[i]->name))
 				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"tee: Unexpected parameter '%s'.\n",
-						params[i]->name)));
+                                    MXS_ERROR("tee: Unexpected parameter '%s'.",
+                                              params[i]->name);
 				}
 			}
 		}
@@ -414,29 +408,27 @@ int		i;
 		if (my_instance->match &&
 			regcomp(&my_instance->re, my_instance->match, REG_ICASE))
 		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"tee: Invalid regular expression '%s'"
-				" for the match parameter.\n",
-					my_instance->match)));
-			free(my_instance->match);
-			free(my_instance->source);
-			free(my_instance);
-			return NULL;
+                    MXS_ERROR("tee: Invalid regular expression '%s'"
+                              " for the match parameter.",
+                              my_instance->match);
+                    free(my_instance->match);
+                    free(my_instance->source);
+                    free(my_instance);
+                    return NULL;
 		}
 		if (my_instance->nomatch &&
 			regcomp(&my_instance->nore, my_instance->nomatch,
 								REG_ICASE))
 		{
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"tee: Invalid regular expression '%s'"
-				" for the nomatch paramter.\n",
-					my_instance->match)));
-			if (my_instance->match)
-				regfree(&my_instance->re);
-			free(my_instance->match);
-			free(my_instance->source);
-			free(my_instance);
-			return NULL;
+                    MXS_ERROR("tee: Invalid regular expression '%s'"
+                              " for the nomatch paramter.\n",
+                              my_instance->match);
+                    if (my_instance->match)
+                        regfree(&my_instance->re);
+                    free(my_instance->match);
+                    free(my_instance->source);
+                    free(my_instance);
+                    return NULL;
 		}
 	}
 	return (FILTER *)my_instance;
@@ -460,11 +452,10 @@ char		*remote, *userName;
 
 	if (strcmp(my_instance->service->name, session->service->name) == 0)
 	{
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Error : %s: Recursive use of tee filter in service.",
-			session->service->name)));
-		my_session = NULL;
-		goto retblock;
+            MXS_ERROR("%s: Recursive use of tee filter in service.",
+                      session->service->name);
+            my_session = NULL;
+            goto retblock;
 	}
     
 	HASHTABLE* ht = hashtable_alloc(100,simple_str_hash,strcmp);
@@ -473,11 +464,10 @@ char		*remote, *userName;
 	
 	if(is_loop)
 	{
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"Error : %s: Recursive use of tee filter in service.",
-				session->service->name)));
-		my_session = NULL;
-		goto retblock;
+            MXS_ERROR("%s: Recursive use of tee filter in service.",
+                      session->service->name);
+            my_session = NULL;
+            goto retblock;
 	}
     
 	if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
@@ -497,9 +487,7 @@ char		*remote, *userName;
 			{
 				my_session->active = 0;
 				
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Warning : Tee filter is not active.")));
+				MXS_WARNING("Tee filter is not active.");
 			}
 		}
 		userName = session_getUser(session);
@@ -510,9 +498,7 @@ char		*remote, *userName;
 		{
 			my_session->active = 0;
 			
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Warning : Tee filter is not active.")));
+			MXS_WARNING("Tee filter is not active.");
 		}
 		
 		if (my_session->active)
@@ -527,10 +513,8 @@ char		*remote, *userName;
 				freeSession(instance, (void *)my_session);
 				my_session = NULL;
 				
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : Creating client DCB for Tee "
-					"filter failed. Terminating session.")));
+				MXS_ERROR("Creating client DCB for Tee "
+                                          "filter failed. Terminating session.");
 				
 				goto retblock;
 			}
@@ -540,11 +524,9 @@ char		*remote, *userName;
                             dcb_close(dcb);
                             freeSession(instance, (void *)my_session);
                             my_session = NULL;
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error :  tee: Allocating memory for "
-                                        "dummy filter definition failed."
-                                        " Terminating session.")));
+                            MXS_ERROR("tee: Allocating memory for "
+                                      "dummy filter definition failed."
+                                      " Terminating session.");
 				
 				goto retblock;
                         }
@@ -557,10 +539,8 @@ char		*remote, *userName;
 				dcb_close(dcb);
 				freeSession(instance, (void *)my_session);
 				my_session = NULL;
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error : Creating client session for Tee "
-					"filter failed. Terminating session.")));
+				MXS_ERROR("Creating client session for Tee "
+                                          "filter failed. Terminating session.");
 				
 				goto retblock;
 			}
@@ -580,11 +560,9 @@ char		*remote, *userName;
                             closeSession(instance,(void*)my_session);
                             dcb_close(dcb);
                             free(my_session);
-                            LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : tee: Allocating memory for"
-                                        "dummy upstream failed."
-                                        " Terminating session.")));
+                            MXS_ERROR("tee: Allocating memory for"
+                                      "dummy upstream failed."
+                                      " Terminating session.");
 
                             return NULL;
                         }
@@ -616,7 +594,7 @@ ROUTER_OBJECT	*router;
 void		*router_instance, *rsession;
 SESSION		*bsession;
 #ifdef SS_DEBUG
-skygw_log_write(LOGFILE_TRACE,"Tee close: %d", atomic_add(&debug_seq,1));
+MXS_INFO("Tee close: %d", atomic_add(&debug_seq,1));
 #endif
 	if (my_session->active)
 	{
@@ -649,7 +627,7 @@ skygw_log_write(LOGFILE_TRACE,"Tee close: %d", atomic_add(&debug_seq,1));
 		     my_session->client_dcb &&
 		     my_session->client_dcb->state == DCB_STATE_POLLING)
 		    {
-			skygw_log_write(LOGFILE_TRACE,"Tee session closed mid-query.");
+			MXS_INFO("Tee session closed mid-query.");
 			GWBUF* errbuf = modutil_create_mysql_err_msg(1,0,1,"00000","Session closed.");
 			my_session->client_dcb->func.write(my_session->client_dcb,errbuf);
 		    }
@@ -673,7 +651,7 @@ TEE_SESSION	*my_session = (TEE_SESSION *)session;
 SESSION*	ses = my_session->branch_session;
 session_state_t state;
 #ifdef SS_DEBUG
-skygw_log_write(LOGFILE_TRACE,"Tee free: %d", atomic_add(&debug_seq,1));
+MXS_INFO("Tee free: %d", atomic_add(&debug_seq,1));
 #endif
 	if (ses != NULL)
 	{
@@ -772,9 +750,10 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	*((unsigned char*)queue->start + 4) : 1;
 
 #ifdef SS_DEBUG
-    skygw_log_write(LOGFILE_TRACE,"Tee routeQuery: %d : %s",
-		    atomic_add(&debug_seq,1),
-		    ((char*)queue->start + 5));
+    int prev_debug_seq = atomic_add(&debug_seq,1);
+    MXS_INFO("Tee routeQuery: %d : %s",
+             prev_debug_seq,
+             ((char*)queue->start + 5));
 #endif
 
 
@@ -782,7 +761,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if(!my_session->active)
     {
-	skygw_log_write(LOGFILE_TRACE, "Tee: Received a reply when the session was closed.");
+	MXS_INFO("Tee: Received a reply when the session was closed.");
 	gwbuf_free(queue);
 	spinlock_release(&my_session->tee_lock);
 	return 0;
@@ -909,19 +888,20 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
     int min_eof = my_session->command != 0x04 ? 2 : 1;
     int more_results = 0;
 #ifdef SS_DEBUG
+    int prev_debug_seq = atomic_add(&debug_seq,1);
     ptr = (unsigned char*) reply->start;
-    skygw_log_write(LOGFILE_TRACE,"Tee clientReply [%s] [%s] [%s]: %d",
-		    instance ? "parent":"child",
-		    my_session->active ? "open" : "closed",
-		    PTR_IS_ERR(ptr) ? "ERR" : PTR_IS_OK(ptr) ? "OK" : "RSET",
-		    atomic_add(&debug_seq,1));
+    MXS_INFO("Tee clientReply [%s] [%s] [%s]: %d",
+             instance ? "parent":"child",
+             my_session->active ? "open" : "closed",
+             PTR_IS_ERR(ptr) ? "ERR" : PTR_IS_OK(ptr) ? "OK" : "RSET",
+             prev_debug_seq);
 #endif
 
     spinlock_acquire(&my_session->tee_lock);
 
     if(!my_session->active)
     {
-	skygw_log_write(LOGFILE_TRACE,"Tee: Failed to return reply, session is closed");
+	MXS_INFO("Tee: Failed to return reply, session is closed");
 	gwbuf_free(reply);
 	rc = 0;
 	if(my_session->waiting[PARENT])
@@ -944,8 +924,8 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
     if(complete == NULL)
     {
 	/** Incomplete packet */
-	skygw_log_write(LOGFILE_DEBUG,"tee.c: Incomplete packet, "
-		"waiting for a complete packet before forwarding.");
+	MXS_DEBUG("tee.c: Incomplete packet, "
+                  "waiting for a complete packet before forwarding.");
 	rc = 1;
 	goto retblock;
     }
@@ -963,7 +943,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
     
     if(my_session->replies[branch] == 0)
     {
-	skygw_log_write(LOGFILE_TRACE,"Tee: First reply to a query for [%s].",branch == PARENT ? "PARENT":"CHILD");
+	MXS_INFO("Tee: First reply to a query for [%s].",branch == PARENT ? "PARENT":"CHILD");
 	/* Reply is in a single packet if it is an OK, ERR or LOCAL_INFILE packet.
 	 * Otherwise the reply is a result set and the amount of packets is unknown.
 	 */
@@ -978,17 +958,16 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 		more_results = (flags & 0x08) && my_session->client_multistatement;
 		if(more_results)
 		{
-		    skygw_log_write(LOGFILE_TRACE,
-			     "Tee: [%s] waiting for more results.",branch == PARENT ? "PARENT":"CHILD");
+		    MXS_INFO("Tee: [%s] waiting for more results.",branch == PARENT ? "PARENT":"CHILD");
 		}
 	    }
 	}
 #ifdef SS_DEBUG
 	else
 	{
-	    skygw_log_write_flush(LOGFILE_DEBUG,"tee.c: [%ld] Waiting for a result set from %s session.",
-			     my_session->d_id,
-			     branch == PARENT?"parent":"child");
+	    MXS_DEBUG("tee.c: [%ld] Waiting for a result set from %s session.",
+                      my_session->d_id,
+                      branch == PARENT?"parent":"child");
 	}
 #endif
     }
@@ -1002,9 +981,9 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	if(my_session->eof[branch] >= min_eof)
 	{
 #ifdef SS_DEBUG
-	    skygw_log_write_flush(LOGFILE_DEBUG,"tee.c [%ld] %s received last EOF packet",
-			     my_session->d_id,
-			     branch == PARENT?"parent":"child");
+	    MXS_DEBUG("tee.c [%ld] %s received last EOF packet",
+                      my_session->d_id,
+                      branch == PARENT?"parent":"child");
 #endif
 	    my_session->waiting[branch] = more_results;
 	    if(more_results)
@@ -1035,7 +1014,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	    rc = 0;
 	    gwbuf_free(my_session->tee_replybuf);
 	    my_session->tee_replybuf = NULL;
-	    skygw_log_write_flush(LOGFILE_ERROR,"Error : Tee child session was closed.");
+	    MXS_ERROR("Tee child session was closed.");
 	}
 
 	if(mpkt)
@@ -1051,7 +1030,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	    {
 		route = true;
 #ifdef SS_DEBUG
-		skygw_log_write_flush(LOGFILE_DEBUG,"tee.c:[%ld] Routing final packet of response set.",my_session->d_id);
+		MXS_DEBUG("tee.c:[%ld] Routing final packet of response set.",my_session->d_id);
 #endif
 	    }
 	}
@@ -1059,7 +1038,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	 !my_session->waiting[CHILD])
 	{
 #ifdef SS_DEBUG
-	    skygw_log_write_flush(LOGFILE_DEBUG,"tee.c:[%ld] Routing single packet response.",my_session->d_id);
+	    MXS_DEBUG("tee.c:[%ld] Routing single packet response.",my_session->d_id);
 #endif
 	    route = true;
 	}
@@ -1068,8 +1047,8 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
     if(route)
     {
 #ifdef SS_DEBUG
-	skygw_log_write_flush(LOGFILE_DEBUG, "tee.c:[%ld] Routing buffer '%p' parent(waiting [%s] replies [%d] eof[%d])"
-		" child(waiting [%s] replies[%d] eof [%d])",
+	MXS_DEBUG("tee.c:[%ld] Routing buffer '%p' parent(waiting [%s] replies [%d] eof[%d])"
+                  " child(waiting [%s] replies[%d] eof [%d])",
 			 my_session->d_id,
 			 my_session->tee_replybuf,
 			 my_session->waiting[PARENT] ? "true":"false",
@@ -1094,7 +1073,7 @@ clientReply (FILTER* instance, void *session, GWBUF *reply)
 	GWBUF* clone = clone_query(my_session->instance,my_session,buffer);
 	reset_session_state(my_session,buffer);
 	route_single_query(my_session->instance,my_session,buffer,clone);
-	LOGIF(LT,(skygw_log_write(LT,"tee: routing queued query")));
+	MXS_INFO("tee: routing queued query");
 
     }
 
@@ -1314,9 +1293,7 @@ int route_single_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF
 	    /** Close tee session */
 	    my_session->active = 0;
 	    rval = 0;
-	    LOGIF(LT, (skygw_log_write(
-		    LOGFILE_TRACE,
-				     "Closed tee filter session: Child session in invalid state.")));
+	    MXS_INFO("Closed tee filter session: Child session in invalid state.");
 	    gwbuf_free(clone);
 	}
     }
@@ -1324,9 +1301,7 @@ int route_single_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF
     {
 	if (my_session->active)
 	{
-	    LOGIF(LT, (skygw_log_write(
-		    LOGFILE_TRACE,
-				     "Closed tee filter session: Child session is NULL.")));
+	    MXS_INFO("Closed tee filter session: Child session is NULL.");
 	    my_session->active = 0;
 	    rval = 0;
 	}
@@ -1352,8 +1327,8 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
         {
 	case 0x1b:
 	    my_session->client_multistatement = *((unsigned char*) buffer->start + 5);
-	    LOGIF(LT,(skygw_log_write(LT,"Tee: client %s multistatements",
-			my_session->client_multistatement ? "enabled":"disabled")));
+	    MXS_INFO("tee: client %s multistatements",
+                     my_session->client_multistatement ? "enabled":"disabled");
         case 0x03:
         case 0x16:
         case 0x17:
@@ -1380,9 +1355,9 @@ void create_orphan(SESSION* ses)
     orphan_session_t* orphan;
     if((orphan = malloc(sizeof(orphan_session_t))) == NULL)
     {
-        skygw_log_write(LOGFILE_ERROR,"Error : Failed to "
-                "allocate memory for orphan session struct, "
-                "child session might leak memory.");
+        MXS_ERROR("Failed to "
+                  "allocate memory for orphan session struct, "
+                  "child session might leak memory.");
     }else{
         orphan->session = ses;
         spinlock_acquire(&orphanLock);
