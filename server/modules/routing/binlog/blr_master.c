@@ -2079,14 +2079,10 @@ blr_stop_start_master(ROUTER_INSTANCE *router) {
         }
         router->residual = NULL;
 
-        /* Now it is safe to unleash other threads on this router instance */
-        router->reconnect_pending = 0;
-        router->active_logs = 0;
-
         router->master_state = BLRM_UNCONNECTED;
         spinlock_release(&router->lock);
 
-        blr_start_master(router);
+        blr_master_reconnect(router);
 }
 
 /**
