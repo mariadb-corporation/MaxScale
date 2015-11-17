@@ -1103,6 +1103,7 @@ int		n = 0;
 		{
 			MXS_ERROR("Failed to load filter '%s' for service '%s'.",
 					  filter_name, service->name);
+			n--;
 		}
 
 		flist[n] = NULL;
