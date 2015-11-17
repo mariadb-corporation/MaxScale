@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     fclose(f);
 
     f = fopen("script_output_expected_galera", "w");
-    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n",
+    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d\n",
             Test->galera->IP_private[0], Test->galera->port[0], Test->galera->IP_private[1],
             Test->galera->port[1], Test->galera->IP_private[2], Test->galera->port[2],
             Test->galera->IP_private[3], Test->galera->port[3]);
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
             Test->galera->port[0], Test->galera->IP_private[1], Test->galera->port[1],
             Test->galera->IP_private[2], Test->galera->port[2], Test->galera->IP_private[3],
             Test->galera->port[3]);
-    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d,%s:%d\n",
+    fprintf(f, "--event=synced_down --initiator=%s:%d --nodelist=%s:%d,%s:%d,%s:%d\n",
             Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[0],
             Test->galera->IP_private[1], Test->galera->port[1], Test->galera->IP_private[2],
             Test->galera->port[2], Test->galera->IP_private[3], Test->galera->port[3]);
