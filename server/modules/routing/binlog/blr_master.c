@@ -1225,6 +1225,8 @@ int			n_bufs = -1, pn_bufs = -1;
 
 						router->stats.n_heartbeats++;
 
+						if (router->pending_transaction)
+							router->stats.lastReply = time(0);
 					}
 					else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
 					{
