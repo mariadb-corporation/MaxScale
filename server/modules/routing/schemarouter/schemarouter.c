@@ -1841,9 +1841,8 @@ RESULT_ROW *result_set_cb(struct resultset * rset, void *data)
 {
     RESULT_ROW *row = NULL;
     struct string_array *strarray = (struct string_array*) data;
-    ss_dassert(strarray->position < strarray->size);
 
-    if ((row = resultset_make_row(rset)))
+    if (strarray->position < strarray->size && (row = resultset_make_row(rset)))
     {
         if (resultset_row_set(row, 0, strarray->array[strarray->position++]) == 0)
         {
