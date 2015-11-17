@@ -104,6 +104,12 @@ The password of the above user. If the password is not explicitly given then the
 
 This defines the value of the heartbeat interval in seconds for the connection to the master. MaxScale requests the master to ensure that a binlog event is sent at least every heartbeat period. If there are no real binlog events to send the master will sent a special heartbeat event. The default value for the heartbeat period is every 5 minutes. The current interval value is reported in the diagnostic output.
 
+### send_slave_heartbeat
+
+This defines whether (on | off) MaxSclale sends to the slave the heartbeat packet when there are no real binlog events to send. The default value if 'off', no heartbeat event is sent to slave server. If value is 'on' the interval value (requested by the slave during registration) is reported in the diagnostic output and the packect is send after the time interval without any event to send.
+
+### send_slave_heartbeat
+
 ### burstsize
 
 This parameter is used to define the maximum amount of data that will be sent to a slave by MaxScale when that slave is lagging behind the master. In this situation the slave is said to be in "catchup mode", this parameter is designed to both prevent flooding of that slave and also to prevent threads within MaxScale spending disproportionate amounts of time with slaves that are lagging behind the master. The burst size can be defined in Kb, Mb or Gb by adding the qualifier K, M or G to the number given. The default value of burstsize is 1Mb and will be used if burstsize is not given in the router options.
