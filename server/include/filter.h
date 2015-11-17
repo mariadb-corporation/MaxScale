@@ -107,6 +107,7 @@ typedef struct filter_def {
 
 FILTER_DEF	*filter_alloc(char *, char *);
 void		filter_free(FILTER_DEF *);
+bool        filter_load(FILTER_DEF* filter);
 FILTER_DEF	*filter_find(char *);
 void		filterAddOption(FILTER_DEF *, char *);
 void		filterAddParameter(FILTER_DEF *, char *, char *);

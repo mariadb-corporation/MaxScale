@@ -50,11 +50,6 @@ MODULE_INFO info = {
 	"An experimental HTTPD implementation for use in admnistration"
 };
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
 static char *version_str = "V1.0.1";
@@ -350,9 +345,6 @@ int	n_connect = 0;
 				client->remote = strdup(inet_ntoa(addr.sin_addr));
 				memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
 
-				/* we don't need the session */
-				client->session = NULL;
-
 				/* create the session data for HTTPD */
 				client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
 				client->data = client_data;
@@ -360,9 +352,10 @@ int	n_connect = 0;
 				client->session =
                                 	session_alloc(dcb->session->service, client);
 
-				if (poll_add_dcb(client) == -1)
+				if (NULL == client->session || poll_add_dcb(client) == -1)
 					{
 						close(so);
+                                                dcb_close(client);
 						return n_connect;
 					}
 				n_connect++;
@@ -418,9 +411,8 @@ int			syseno = 0;
 
 	if(syseno != 0){
                 char errbuf[STRERROR_BUFLEN];
-		skygw_log_write_flush(LOGFILE_ERROR,
-                                      "Error: Failed to set socket options. Error %d: %s",
-                                      errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+		MXS_ERROR("Failed to set socket options. Error %d: %s",
+                          errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 		return 0;
 	}
         /* set NONBLOCKING mode */
@@ -435,7 +427,7 @@ int			syseno = 0;
         rc = listen(listener->fd, SOMAXCONN);
         
         if (rc == 0) {
-            LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,"Listening httpd connections at %s", config)));
+            MXS_NOTICE("Listening httpd connections at %s", config);
         } else {
             int eno = errno;
             errno = 0;

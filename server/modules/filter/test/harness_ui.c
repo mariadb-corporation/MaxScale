@@ -10,9 +10,8 @@ int main(int argc, char** argv){
 
 	if(harness_init(argc,argv,&hinstance)){
 		printf("Error: Initialization failed.\n");
-		skygw_log_write(LOGFILE_ERROR,"Error: Initialization failed.\n");
-		skygw_logmanager_done();
-		skygw_logmanager_exit();
+		MXS_ERROR("Initialization failed.\n");
+		mxs_log_finish();
 		return 1;
 	}
 
@@ -49,7 +48,7 @@ int main(int argc, char** argv){
 	tmp_chn = load_filter_module(tk);
 	if(!tmp_chn || !load_filter(tmp_chn,instance.conf)){
 	  printf("Error creating filter instance.\n");	  
-	  skygw_log_write(LOGFILE_ERROR,"Error: Error creating filter instance.\n");
+	  MXS_ERROR("Error creating filter instance.\n");
 	}else{
 	  instance.head =  tmp_chn;
 	}
@@ -181,7 +180,7 @@ int main(int argc, char** argv){
 
 	if(!(t_thr_pool = realloc(instance.thrpool,instance.thrcount * sizeof(pthread_t)))){
 	  printf("Error: Out of memory\n");
-	  skygw_log_write(LOGFILE_ERROR,"Error: Out of memory\n");
+	  MXS_ERROR("Out of memory\n");
 	  instance.running = 0;
 	  break;
 	}
@@ -230,8 +229,7 @@ int main(int argc, char** argv){
 
   free_buffers();
   free_filters();
-  skygw_logmanager_done();
-  skygw_logmanager_exit();
+  mxs_log_finish();
   free(instance.head);
 
   return 0;
@@ -350,7 +348,7 @@ void manual_query()
   qlen = strnlen(query, 1024);
   if((tmpbuf = malloc(sizeof(GWBUF*)))== NULL){
     printf("Error: cannot allocate enough memory.\n");
-    skygw_log_write(LOGFILE_ERROR,"Error: cannot allocate enough memory.\n");
+    MXS_ERROR("Cannot allocate enough memory.\n");
     return;
   }
   instance.buffer = tmpbuf;

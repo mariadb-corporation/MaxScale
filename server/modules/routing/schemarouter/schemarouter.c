@@ -41,6 +41,9 @@
 /** Size of the hashtable used to store ignored databases */
 #define SCHEMAROUTER_HASHSIZE 100
 
+/** Hashtable size for the per user shard maps */
+#define SCHEMAROUTER_USERHASH_SIZE 10
+
 MODULE_INFO 	info = {
 	MODULE_API_ROUTER,
 	MODULE_BETA_RELEASE,
@@ -49,10 +52,6 @@ MODULE_INFO 	info = {
 };
 
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 /**
  * @file schemarouter.c	The entry points for the simple sharding
  * router module.
@@ -62,6 +61,8 @@ extern __thread log_info_t tls_log_info;
  *
  *  Date	Who                             Description
  *  01/12/2014	Vilho Raatikka/Markus Mäkelä	Initial implementation
+ *  09/09/2015  Martin Brampton         Modify error handler
+ *  25/09/2015  Martin Brampton         Block callback processing when no router session in the DCB
  *
  * @endverbatim
  */
@@ -98,7 +99,7 @@ static route_target_t get_shard_route_target (
 	bool               trx_active,
 	HINT*              hint);
 
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static  int getCapabilities ();
 
 static bool connect_backend_servers(
         backend_ref_t*     backend_ref,
@@ -223,6 +224,7 @@ int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
                                    GWBUF** wbuf);
 bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses);
 void route_queued_query(ROUTER_CLIENT_SES *router_cli_ses);
+void synchronize_shard_map(ROUTER_CLIENT_SES *client);
 static int hashkeyfun(void* key)
 {
   if(key == NULL){
@@ -247,7 +249,39 @@ static int hashcmpfun(
   return strcmp(i1,i2);
 }
 
+void* keyfreefun(void* data)
+{
+    free(data);
+    return NULL;
+}
 
+/**
+ * Allocate a shard map and initialize it.
+ * @return Pointer to new shard_map_t or NULL if memory allocation failed
+ */
+shard_map_t* shard_map_alloc()
+{
+    shard_map_t *rval;
+
+    if ((rval = (shard_map_t*) malloc(sizeof(shard_map_t))))
+    {
+        if ((rval->hash = hashtable_alloc(SCHEMAROUTER_HASHSIZE, hashkeyfun, hashcmpfun)))
+        {
+            HASHMEMORYFN kcopy = (HASHMEMORYFN)strdup;
+            HASHMEMORYFN kfree = (HASHMEMORYFN)keyfreefun;
+            hashtable_memory_fns(rval->hash, kcopy, kcopy, kfree, kfree);
+            spinlock_init(&rval->lock);
+            rval->last_updated = 0;
+            rval->state = SHMAP_UNINIT;
+        }
+        else
+        {
+            free(rval);
+            rval = NULL;
+        }
+    }
+    return rval;
+}
 
 /**
  * Convert a length encoded string into a C string.
@@ -363,6 +397,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
         ptr += gw_mysql_get_byte3(ptr) + 4;
     }
 
+    spinlock_acquire(&rses->shardmap->lock);
     while (ptr < (unsigned char*) buf->end && !PTR_IS_EOF(ptr))
     {
         int payloadlen = gw_mysql_get_byte3(ptr);
@@ -371,7 +406,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
 
         if (data)
         {
-            if (hashtable_add(rses->dbhash, data, target))
+            if (hashtable_add(rses->shardmap->hash, data, target))
             {
                 skygw_log_write(LOGFILE_TRACE, "schemarouter: <%s, %s>", target, data);
             }
@@ -385,7 +420,8 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
                 {
                     duplicate_found = true;
                     skygw_log_write(LE, "Error: Database '%s' found on servers '%s' and '%s' for user %s@%s.",
-                                    data, target, hashtable_fetch(rses->dbhash, data),
+                                    data, target,
+                                    (char*)hashtable_fetch(rses->shardmap->hash, data),
                                     rses->rses_client_dcb->user,
                                     rses->rses_client_dcb->remote);
                 }
@@ -394,6 +430,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
         }
         ptr += packetlen;
     }
+    spinlock_release(&rses->shardmap->lock);
 
     if (ptr < (unsigned char*) buf->end && PTR_IS_EOF(ptr) &&
         bref->n_mapping_eof == 1)
@@ -478,8 +515,8 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
  * @param buffer Query to inspect
  * @return Name of the backend or NULL if the query contains no known databases.
  */
-char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer,skygw_query_type_t qtype){
-	HASHTABLE* ht = client->dbhash;
+char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer,skygw_query_type_t qtype)
+{
 	int sz = 0,i,j;
 	char** dbnms = NULL;
 	char* rval = NULL,*query, *tmp = NULL;
@@ -490,6 +527,8 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 	}
 
 	dbnms = skygw_get_database_names(buffer,&sz);
+
+    HASHTABLE* ht = client->shardmap->hash;
 
 	if(sz > 0){
 		for(i = 0; i < sz; i++){
@@ -542,20 +581,18 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
         
         if(tmp == NULL)
         {
-            rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
+            rval = (char*) hashtable_fetch(ht, client->current_db);
             skygw_log_write(LOGFILE_TRACE,"schemarouter: SHOW TABLES query, current database '%s' on server '%s'",
-                            client->rses_mysql_session->db,rval);
+                            client->current_db,rval);
         }
         else
         {
             rval = tmp;
             has_dbs = true;
-            
-           
         }
-        return rval;
     }
-
+    else
+    {
     if(buffer->hint && buffer->hint->type == HINT_ROUTE_TO_NAMED_SERVER)
     {
         for(i = 0; i < client->rses_nbackends; i++)
@@ -571,20 +608,21 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
         }
     }
     
-    if(rval == NULL && !has_dbs && client->rses_mysql_session->db[0] != '\0')
+    if(rval == NULL && !has_dbs && client->current_db[0] != '\0')
     {
         /**
          * If the target name has not been found and the session has an
          * active database, set is as the target
          */
 
-        rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
+        rval = (char*) hashtable_fetch(ht, client->current_db);
 	if(rval)
 	{
-	    skygw_log_write(LOGFILE_TRACE,"schemarouter: Using active database '%s'",client->rses_mysql_session->db);
+	    skygw_log_write(LOGFILE_TRACE,"schemarouter: Using active database '%s'",client->current_db);
 	}
     }
-   
+    }
+
 	return rval;
 }
 
@@ -765,6 +803,17 @@ createInstance(SERVICE *service, char **options)
                              (HASHMEMORYFN)free,
                              NULL);
 
+    if ((router->shard_maps = hashtable_alloc(SCHEMAROUTER_USERHASH_SIZE, hashkeyfun, hashcmpfun)) == NULL)
+    {
+        skygw_log_write(LE, "Error: Memory allocation failed when allocating schemarouter database ignore list.");
+        hashtable_free(router->ignored_dbs);
+        free(router);
+        return NULL;
+    }
+
+         hashtable_memory_fns(router->shard_maps,(HASHMEMORYFN)strdup,
+                              NULL, (HASHMEMORYFN)keyfreefun, NULL);
+
         /** Add default system databases to ignore */
         hashtable_add(router->ignored_dbs,"mysql","");
         hashtable_add(router->ignored_dbs,"information_schema","");
@@ -806,7 +855,7 @@ createInstance(SERVICE *service, char **options)
             PCRE2_UCHAR errbuf[512];
             pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
             skygw_log_write(LE, "Error: Regex compilation failed at %d for regex '%s': %s",
-                            erroffset, param->value, errbuf);
+                            (int)erroffset, param->value, errbuf);
             hashtable_free(router->ignored_dbs);
             free(router);
             return NULL;
@@ -980,6 +1029,25 @@ retblock:
 }
 
 /**
+ * Check if the shard map is out of date and update its state if necessary.
+ * @param router Router instance
+ * @param map Shard map to update
+ * @return Current state of the shard map
+ */
+enum shard_map_state shard_map_update_state(shard_map_t *self, ROUTER_INSTANCE* router)
+{
+    spinlock_acquire(&self->lock);
+    double tdiff = difftime(time(NULL), self->last_updated);
+    if (tdiff > router->schemarouter_config.refresh_min_interval)
+    {
+        self->state = SHMAP_STALE;
+    }
+    enum shard_map_state state = self->state;
+    spinlock_release(&self->lock);
+    return state;
+}
+
+/**
  * Associate a new session with this instance of the router.
  *
  * The session is used to store all the data required for a particular
@@ -1007,7 +1075,7 @@ static void* newSession(
 
         memset(db,0,MYSQL_DATABASE_MAXLEN+1);
         
-        spinlock_acquire(&protocol->protocol_lock);
+        spinlock_acquire(&session->ses_lock);
         
         /* To enable connecting directly to a sharded database we first need
          * to disable it for the client DCB's protocol so that we can connect to them*/
@@ -1028,7 +1096,7 @@ static void* newSession(
 	   LOGIF(LT,(skygw_log_write(LT,"schemarouter: Client'%s' connecting with empty database.",data->user)));
 	}
 
-        spinlock_release(&protocol->protocol_lock);
+        spinlock_release(&session->ses_lock);
         
         client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
         
@@ -1045,7 +1113,37 @@ static void* newSession(
 	client_rses->router = router;
 	client_rses->rses_mysql_session = (MYSQL_session*)session->data;
 	client_rses->rses_client_dcb = (DCB*)session->client;
-       
+
+    spinlock_acquire(&router->lock);
+
+    shard_map_t *map = hashtable_fetch(router->shard_maps, session->client->user);
+    enum shard_map_state state;
+
+    if (map)
+    {
+        state = shard_map_update_state(map, router);
+    }
+
+    spinlock_release(&router->lock);
+
+    if (map == NULL || state != SHMAP_READY)
+    {
+        if ((map = shard_map_alloc()) == NULL)
+        {
+            skygw_log_write(LE, "Error: Failed to allocate enough memory to create"
+                            "new shard mapping. Session will be closed.");
+            free(client_rses);
+            return NULL;
+        }
+        client_rses->init = INIT_UNINT;
+    }
+    else
+    {
+        client_rses->init = INIT_READY;
+        atomic_add(&router->stats.shmap_cache_hit, 1);
+    }
+
+    client_rses->shardmap = map;
     client_rses->dcb_reply = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
     client_rses->dcb_reply->func.read = internalReply;
     client_rses->dcb_reply->state = DCB_STATE_POLLING;
@@ -1057,7 +1155,7 @@ static void* newSession(
     client_rses->dcb_route->state = DCB_STATE_POLLING;
     client_rses->dcb_route->session = session;
     client_rses->rses_config.last_refresh = time(NULL);
-    client_rses->init = INIT_UNINT;
+
     if(using_db)
         client_rses->init |= INIT_USE_DB;
         /** 
@@ -1131,12 +1229,6 @@ static void* newSession(
 					router_nservers,
 					session,
 					router);
-        
-        client_rses->dbhash = hashtable_alloc(SCHEMAROUTER_HASHSIZE, hashkeyfun, hashcmpfun);
-        hashtable_memory_fns(client_rses->dbhash,(HASHMEMORYFN)strdup,
-                                 (HASHMEMORYFN)strdup,
-                                 (HASHMEMORYFN)free,
-                                 (HASHMEMORYFN)free);
 
         rses_end_locked_router_action(client_rses);
         
@@ -1150,7 +1242,6 @@ static void* newSession(
                 goto return_rses;                
         }
         /** Copy backend pointers to router session. */
-        client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
         client_rses->rses_backend_ref  = backend_ref;
         client_rses->rses_nbackends    = router_nservers; /*< # of backend servers */
         
@@ -1366,7 +1457,6 @@ static void freeSession(
          * all the memory and other resources associated
          * to the client session.
          */
-        hashtable_free(router_cli_ses->dbhash);
         free(router_cli_ses->rses_backend_ref);
 	free(router_cli_ses);
         return;
@@ -1501,7 +1591,7 @@ ROUTER* instance,
     rses_property_t*   rses_prop_tmp;
 
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    dbname = router_cli_ses->rses_mysql_session->db;
+    dbname = router_cli_ses->current_db;
 
     if (is_drop_table_query(querybuf))
     {
@@ -1559,7 +1649,7 @@ ROUTER* instance,
     rses_property_t*   rses_prop_tmp;
 
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-    dbname = router_cli_ses->rses_mysql_session->db;
+    dbname = router_cli_ses->current_db;
 
     if (QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||
 	QUERY_IS_TYPE(qtype, QUERY_TYPE_LOCAL_READ) ||
@@ -1638,7 +1728,7 @@ void check_create_tmp_table(
   HASHTABLE*	   h;
 
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  dbname = router_cli_ses->rses_mysql_session->db;
+  dbname = router_cli_ses->current_db;
 
 
   if (QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
@@ -1729,7 +1819,39 @@ void check_create_tmp_table(
 
 int cmpfn(const void* a, const void *b)
 {
-    return strcmp(*(char**)a,*(char**)b);
+    return strcmp(*(char* const *)a,*(char* const *)b);
+}
+
+/** Internal structure used to stream the list of databases */
+struct string_array
+{
+    char** array;
+    int position;
+    int size;
+};
+
+/**
+ * Callback for the database list streaming.
+ * @param rset Result set which is being processed
+ * @param data Pointer to struct string_array containing the database names
+ * @return New resultset row or NULL if no more data is available. If memory allocation
+ * failed, NULL is returned.
+ */
+RESULT_ROW *result_set_cb(struct resultset * rset, void *data)
+{
+    RESULT_ROW *row = NULL;
+    struct string_array *strarray = (struct string_array*) data;
+
+    if (strarray->position < strarray->size && (row = resultset_make_row(rset)))
+    {
+        if (resultset_row_set(row, 0, strarray->array[strarray->position++]) == 0)
+        {
+            resultset_free_row(row);
+            row = NULL;
+        }
+    }
+
+    return row;
 }
 
 /**
@@ -1738,184 +1860,48 @@ int cmpfn(const void* a, const void *b)
  * in it.
  * @param router Router instance
  * @param client Router client session
- * @return Pointer to new GWBUF containing the custom result set
+ * @return True if the sending of the database list was successful, otherwise false
  */
-GWBUF*
-gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
+bool send_database_list(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 {
-    GWBUF* rval = NULL;
-    HASHTABLE* ht = client->dbhash;
-    HASHITERATOR* iter = hashtable_iterator(ht);
-    backend_ref_t *bref = client->rses_backend_ref;
-    BACKEND** backends = router->servers;
-    unsigned int coldef_len = 0;
-    int i;
-    char dbname[MYSQL_DATABASE_MAXLEN + 1];
-    char *value;
-    unsigned char* ptr;
-    char catalog[4] = {0x03, 'd', 'e', 'f'};
-    const char* schema = "information_schema";
-    const char* table = "SCHEMATA";
-    const char* org_table = "SCHEMATA";
-    const char* name = "Database";
-    const char* org_name = "SCHEMA_NAME";
-    char next_length = 0x0c;
-    char charset[2] = {0x21, 0x00};
-    char column_length[4] = {MYSQL_DATABASE_MAXLEN,
-        MYSQL_DATABASE_MAXLEN >> 8,
-        MYSQL_DATABASE_MAXLEN >> 16,
-        MYSQL_DATABASE_MAXLEN >> 24};
-    char column_type = 0xfd;
-
-    char eof[9] = {0x05, 0x00, 0x00,
-        0x03, 0xfe, 0x00,
-        0x00, 0x22, 0x00};
-#if defined(NOT_USED)
-    char ok_packet[11] = {0x07, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00,
-        0x00, 0x00,
-        0x00, 0x00};
-#endif
-
-    coldef_len = sizeof(catalog) + strlen(schema) + 1 +
-            strlen(table) + 1 +
-            strlen(org_table) + 1 +
-            strlen(name) + 1 +
-            strlen(org_name) + 1 +
-            1 + 2 + 4 + 1 + 2 + 1 + 2;
-
-
-    rval = gwbuf_alloc(5 + 4 + coldef_len + sizeof(eof));
-
-    ptr = rval->start;
-
-    /**First packet*/
-
-    *ptr++ = 0x01;
-    *ptr++ = 0x00;
-    *ptr++ = 0x00;
-    *ptr++ = 0x01;
-    *ptr++ = 0x01;
-
-    /**Second packet containing the column definitions*/
-
-    *ptr++ = coldef_len;
-    *ptr++ = coldef_len >> 8;
-    *ptr++ = coldef_len >> 16;
-    *ptr++ = 0x02;
-
-    memcpy((void*) ptr, catalog, 4);
-    ptr += 4;
-
-    *ptr++ = strlen(schema);
-    memcpy((void*) ptr, schema, strlen(schema));
-    ptr += strlen(schema);
-
-    *ptr++ = strlen(table);
-    memcpy((void*) ptr, table, strlen(table));
-    ptr += strlen(table);
-
-    *ptr++ = strlen(org_table);
-    memcpy((void*) ptr, org_table, strlen(org_table));
-    ptr += strlen(org_table);
-
-    *ptr++ = strlen(name);
-    memcpy((void*) ptr, name, strlen(name));
-    ptr += strlen(name);
-
-    *ptr++ = strlen(org_name);
-    memcpy((void*) ptr, org_name, strlen(org_name));
-    ptr += strlen(org_name);
-
-    *ptr++ = next_length;
-    *ptr++ = charset[0];
-    *ptr++ = charset[1];
-    *ptr++ = column_length[0];
-    *ptr++ = column_length[1];
-    *ptr++ = column_length[2];
-    *ptr++ = column_length[3];
-    *ptr++ = column_type;
-    *ptr++ = 0x01;
-    memset(ptr, 0, 4);
-    ptr += 4;
-
-    memcpy(ptr, eof, sizeof(eof));
-
-    unsigned int packet_num = 4;
-    int j = 0,ndbs = 0, bufsz = 10;
-    char** dbs;
-
-    if((dbs = malloc(sizeof(char*)*bufsz)) == NULL)
+    bool rval = false;
+    spinlock_acquire(&client->shardmap->lock);
+    if (client->shardmap->state == SHMAP_READY)
     {
-	gwbuf_free(rval);
-	hashtable_iterator_free(iter);
-	return NULL;
-    }
+        struct string_array strarray;
+        const int size = hashtable_size(client->shardmap->hash);
+        strarray.array = malloc(size * sizeof(char*));
+        strarray.position = 0;
+        HASHITERATOR *iter = hashtable_iterator(client->shardmap->hash);
+        RESULTSET* resultset = resultset_create(result_set_cb, &strarray);
 
-    while((value = (char*) hashtable_next(iter)))
-    {
-        char* bend = hashtable_fetch(ht, value);
-
-        for(i = 0; backends[i]; i++)
+        if (strarray.array && iter && resultset)
         {
-            if(strcmp(bref[i].bref_backend->backend_server->unique_name, bend) == 0 &&
-               BREF_IS_IN_USE(&bref[i]) && !BREF_IS_CLOSED(&bref[i]))
+            char *key;
+            int i = 0;
+            while ((key = hashtable_next(iter)))
             {
-		ndbs++;
-
-		if(ndbs >= bufsz)
-		{
-		    bufsz += bufsz / 2;
-		    char** tmp = realloc(dbs,sizeof(char*)*bufsz);
-		    if(tmp == NULL)
-		    {
-			gwbuf_free(rval);
-			hashtable_iterator_free(iter);
-			for(i=0;i<ndbs-1;i++)free(dbs[i]);
-			free(dbs);
-			return NULL;
-		    }
-		    dbs = tmp;
-		}
-
-		dbs[j++] = strdup(value);
+                char *value = hashtable_fetch(client->shardmap->hash, key);
+                SERVER * server = server_find_by_unique_name(value);
+                if (SERVER_IS_RUNNING(server))
+                {
+                    strarray.array[i++] = key;
+                }
+            }
+            strarray.size = i;
+            qsort(strarray.array, strarray.size, sizeof(char*), cmpfn);
+            if (resultset_add_column(resultset, "Database", MYSQL_DATABASE_MAXLEN,
+                                     COL_TYPE_VARCHAR))
+            {
+                resultset_stream_mysql(resultset, client->rses_client_dcb);
+                rval = true;
             }
         }
+        resultset_free(resultset);
+        hashtable_iterator_free(iter);
+        free(strarray.array);
     }
-
-    qsort(&dbs[0],(size_t)ndbs,sizeof(char*),cmpfn);
-
-    for(j = 0;j<ndbs;j++)
-    {
-
-	GWBUF* temp;
-	int plen = strlen(dbs[j]) + 1;
-
-	sprintf(dbname, "%s", dbs[j]);
-	temp = gwbuf_alloc(plen + 4);
-
-	ptr = temp->start;
-	*ptr++ = plen;
-	*ptr++ = plen >> 8;
-	*ptr++ = plen >> 16;
-	*ptr++ = packet_num++;
-	*ptr++ = plen - 1;
-	memcpy(ptr, dbname, plen - 1);
-
-	/** Append the row*/
-	rval = gwbuf_append(rval, temp);
-	free(dbs[j]);
-    }
-
-    eof[3] = packet_num;
-
-    GWBUF* last_packet = gwbuf_alloc(sizeof(eof));
-    memcpy(last_packet->start, eof, sizeof(eof));
-    rval = gwbuf_append(rval, last_packet);
-
-    rval = gwbuf_make_contiguous(rval);
-    hashtable_iterator_free(iter);
-    free(dbs);
+    spinlock_release(&client->shardmap->lock);
     return rval;
 }
 
@@ -1957,8 +1943,9 @@ static int routeQuery(
         route_target_t     route_target = TARGET_UNDEFINED;
 	bool           	   succp          = false;
 	char* tname = NULL;
+	char*  targetserver = NULL;
 	GWBUF*  querybuf = qbuf;
-	char db[MYSQL_DATABASE_MAXLEN + 1];
+    char db[MYSQL_DATABASE_MAXLEN + 1];
 	char errbuf[26+MYSQL_DATABASE_MAXLEN];
         CHK_CLIENT_RSES(router_cli_ses);
 
@@ -1987,9 +1974,15 @@ static int routeQuery(
 
 	    }
 
-	    if(router_cli_ses->init & INIT_MAPPING)
+        /**
+         * If the databases are still being mapped or if the client connected
+         * with a default database but no database mapping was performed we need
+         * to store the query. Once the databases have been mapped and/or the
+         * default database is taken into use we can send the query forward.
+         */
+	    if (router_cli_ses->init & (INIT_MAPPING | INIT_USE_DB))
 	    {
-
+            int init_rval = 1;
 		char* querystr = modutil_get_SQL(querybuf);
 		skygw_log_write(LOGFILE_DEBUG|LOGFILE_TRACE,"schemarouter: Storing query for session %p: %s",
 			 router_cli_ses->rses_client_dcb->session,
@@ -2012,14 +2005,26 @@ static int routeQuery(
 		    ptr->next = querybuf;
 
 		}
+
+        if (router_cli_ses->init  == (INIT_READY | INIT_USE_DB))
+        {
+            /**
+             * This state is possible if a client connects with a default database
+             * and the shard map was found from the router cache
+             */
+            if (!handle_default_db(router_cli_ses))
+            {
+                init_rval = 0;
+            }
+        }
 		rses_end_locked_router_action(router_cli_ses);
-		return 1;
+		return init_rval;
 	    }
 
         }
 
 	rses_end_locked_router_action(router_cli_ses);
-	
+
         packet = GWBUF_DATA(querybuf);
         packet_type = packet[4];
 
@@ -2139,32 +2144,38 @@ static int routeQuery(
         if (packet_type == MYSQL_COM_INIT_DB ||
 	    op == QUERY_OP_CHANGE_DB)
 	{
-	    if (!(change_successful = change_current_db(router_cli_ses->rses_mysql_session,
-						     router_cli_ses->dbhash,
-						     querybuf)))
+            spinlock_acquire(&router_cli_ses->shardmap->lock);
+            change_successful = change_current_db(router_cli_ses->current_db,
+                                                  router_cli_ses->shardmap->hash,
+                                                  querybuf);
+            spinlock_release(&router_cli_ses->shardmap->lock);
+	    if (!change_successful)
 	    {
 		time_t now = time(NULL);
 		if(router_cli_ses->rses_config.refresh_databases &&
 		   difftime(now,router_cli_ses->rses_config.last_refresh) >
 		   router_cli_ses->rses_config.refresh_min_interval)
 		{
+            spinlock_acquire(&router_cli_ses->shardmap->lock);
+            router_cli_ses->shardmap->state = SHMAP_STALE;
+            spinlock_release(&router_cli_ses->shardmap->lock);
+
 		    rses_begin_locked_router_action(router_cli_ses);
+
 		    router_cli_ses->rses_config.last_refresh = now;
 		    router_cli_ses->queue = querybuf;
-		    hashtable_free(router_cli_ses->dbhash);
-		    if((router_cli_ses->dbhash = hashtable_alloc(SCHEMAROUTER_HASHSIZE, hashkeyfun, hashcmpfun)) == NULL)
-		    {
-			skygw_log_write(LE,"Error: Hashtable allocation failed.");
-			rses_end_locked_router_action(router_cli_ses);
-			return 1;
-		    }
-		    hashtable_memory_fns(router_cli_ses->dbhash,(HASHMEMORYFN)strdup,
-				     (HASHMEMORYFN)strdup,
-				     (HASHMEMORYFN)free,
-				     (HASHMEMORYFN)free);
-		    gen_databaselist(inst,router_cli_ses);
+            int rc_refresh = 1;
+
+		    if((router_cli_ses->shardmap = shard_map_alloc()))
+            {
+                gen_databaselist(inst,router_cli_ses);
+            }
+            else
+            {
+                rc_refresh = 0;
+            }
 		    rses_end_locked_router_action(router_cli_ses);
-		    return 1;
+		    return rc_refresh;
 		}
 		extract_database(querybuf,db);
 		snprintf(errbuf,25+MYSQL_DATABASE_MAXLEN,"Unknown database: %s",db);
@@ -2186,18 +2197,15 @@ static int routeQuery(
 	    }
 	}
 
-	if(QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_DATABASES))
-	{
-		/**
-		 * Generate custom response that contains all the databases 
-		 */
-                
-                GWBUF* fake = gen_show_dbs_response(inst,router_cli_ses);
-                poll_add_epollin_event_to_dcb(router_cli_ses->dcb_reply,fake);
-                ret = 1;
-		
-		goto retblock;
-	}
+    /** Create the response to the SHOW DATABASES from the mapped databases */
+    if (QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_DATABASES))
+    {
+        if (send_database_list(inst, router_cli_ses))
+        {
+            ret = 1;
+        }
+        goto retblock;
+    }
 
         route_target = get_shard_route_target(qtype, 
 					router_cli_ses->rses_transaction_active,
@@ -2207,27 +2215,40 @@ static int routeQuery(
 	    op == QUERY_OP_CHANGE_DB)
 	{
 		route_target = TARGET_UNDEFINED;
-                tname = hashtable_fetch(router_cli_ses->dbhash,router_cli_ses->rses_mysql_session->db);
-                
+
+        spinlock_acquire(&router_cli_ses->shardmap->lock);
+        tname = hashtable_fetch(router_cli_ses->shardmap->hash,router_cli_ses->current_db);
+
+
 		if(tname)
 		{
                     skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB for database '%s' on server '%s'",
-                                    router_cli_ses->rses_mysql_session->db,tname);
+                                    router_cli_ses->current_db,tname);
                     route_target = TARGET_NAMED_SERVER;
+                    targetserver = strdup(tname);
 		}
                 else
                 {
                     skygw_log_write(LOGFILE_TRACE,"schemarouter: INIT_DB with unknown database");
                 }
+        spinlock_release(&router_cli_ses->shardmap->lock);
 	}
-	else if(route_target != TARGET_ALL && 
-                (tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL)
+	else if (route_target != TARGET_ALL)
 	{
+        /** If no database is found in the query and there is no active database
+         * or hints in the query we need to route the query to the first available
+         * server. This isn't ideal for monitoring server status but works if
+         * we just want the server to send an error back. */
+
+        spinlock_acquire(&router_cli_ses->shardmap->lock);
+        if ((tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype)) != NULL)
+        {
 		bool shard_ok = check_shard_status(inst,tname);
 
 		if(shard_ok)
 		{
 			route_target = TARGET_NAMED_SERVER;
+            targetserver = strdup(tname);
 		}
 		else
 		{
@@ -2238,19 +2259,21 @@ static int routeQuery(
 			 * for an alternate backend with the database. If this is not found
 			 * the target is undefined and an error will be returned to the client.
 			 */
-		}	
+		}
+        }
+        spinlock_release(&router_cli_ses->shardmap->lock);
 	}
 
 	if(TARGET_IS_UNDEFINED(route_target))
 	{
-		
+		spinlock_acquire(&router_cli_ses->shardmap->lock);
 		tname = get_shard_target_name(inst,router_cli_ses,querybuf,qtype);
 
 		if( (tname == NULL &&
              packet_type != MYSQL_COM_INIT_DB && 
-             router_cli_ses->rses_mysql_session->db[0] == '\0') || 
+             router_cli_ses->current_db[0] == '\0') || 
 		   packet_type == MYSQL_COM_FIELD_LIST || 
-		   (router_cli_ses->rses_mysql_session->db[0] != '\0'))
+		   (router_cli_ses->current_db[0] != '\0'))
 		{
 			/**
 			 * No current database and no databases in query or
@@ -2262,7 +2285,11 @@ static int routeQuery(
 
 		}
 		else
-		{            
+		{
+            if (tname)
+            {
+                targetserver = strdup(tname);
+            }
             if(!change_successful)
             {
                 /**
@@ -2278,11 +2305,11 @@ static int routeQuery(
                 /** Something else went wrong, terminate connection */
                 ret = 0;
             }
-
+            spinlock_release(&router_cli_ses->shardmap->lock);
             goto retblock;
         
 		}
-		
+        spinlock_release(&router_cli_ses->shardmap->lock);
 	}
    
 	if (TARGET_IS_ALL(route_target))
@@ -2325,8 +2352,8 @@ static int routeQuery(
 		{
 			if(SERVER_IS_RUNNING(inst->servers[z]->backend_server))
 			{
-				tname = inst->servers[z]->backend_server->unique_name;
 				route_target = TARGET_NAMED_SERVER;
+				targetserver = strdup(inst->servers[z]->backend_server->unique_name);
 				break;
 			}
 		}
@@ -2349,14 +2376,14 @@ static int routeQuery(
 	/**
 	 * Query is routed to one of the backends
 	 */
-	if (TARGET_IS_NAMED_SERVER(route_target))
+	if (TARGET_IS_NAMED_SERVER(route_target) && targetserver != NULL)
 	{	
 		/**
 		 * Search backend server by name or replication lag. 
 		 * If it fails, then try to find valid slave or master.
 		 */ 
 
-		succp = get_shard_dcb(&target_dcb, router_cli_ses, tname);
+		succp = get_shard_dcb(&target_dcb, router_cli_ses, targetserver);
 
                 if (!succp)
                 {
@@ -2365,7 +2392,7 @@ static int routeQuery(
                                                "Was supposed to route to named server "
                             "%s but couldn't find the server in a "
                             "suitable state.",
-                                               tname)));
+                                               targetserver)));
                 }
 
 	}
@@ -2422,7 +2449,7 @@ static int routeQuery(
 	}
 	rses_end_locked_router_action(router_cli_ses);
 retblock:
-
+        free(targetserver);
         gwbuf_free(querybuf);
 		
         return ret;
@@ -2556,6 +2583,8 @@ diagnostic(ROUTER *instance, DCB *dcb)
 	dcb_printf(dcb,"Shortest session: %.2lf seconds\n",router->stats.ses_shortest);
 	dcb_printf(dcb,"Average session length: %.2lf seconds\n",router->stats.ses_average);
     }
+    dcb_printf(dcb,"Shard map cache hits: %d\n",router->stats.shmap_cache_hit);
+    dcb_printf(dcb,"Shard map cache misses: %d\n",router->stats.shmap_cache_miss);
     dcb_printf(dcb,"\n");
 }
 
@@ -2633,6 +2662,21 @@ static void clientReply(ROUTER* instance,
 
         if (rc == 1)
         {
+            spinlock_acquire(&router_cli_ses->shardmap->lock);
+
+            router_cli_ses->shardmap->state = SHMAP_READY;
+            router_cli_ses->shardmap->last_updated = time(NULL);
+            spinlock_release(&router_cli_ses->shardmap->lock);
+
+            rses_end_locked_router_action(router_cli_ses);
+
+            synchronize_shard_map(router_cli_ses);
+
+            if (!rses_begin_locked_router_action(router_cli_ses))
+            {
+                return;
+            }
+
             /*
              * Check if the session is reconnecting with a database name
              * that is not in the hashtable. If the database is not found
@@ -2653,6 +2697,7 @@ static void clientReply(ROUTER* instance,
 
             if (router_cli_ses->queue)
             {
+                ss_dassert(router_cli_ses->init == INIT_READY);
                 route_queued_query(router_cli_ses);
             }
             skygw_log_write_flush(LOGFILE_DEBUG,
@@ -2669,24 +2714,33 @@ static void clientReply(ROUTER* instance,
         return;
     }
 
-    if (router_cli_ses->queue)
-    {
-        route_queued_query(router_cli_ses);
-    }
-
     if (router_cli_ses->init & INIT_USE_DB)
     {
         skygw_log_write(LOGFILE_DEBUG, "schemarouter: Reply to USE '%s' received for session %p",
                         router_cli_ses->connect_db,
                         router_cli_ses->rses_client_dcb->session);
         router_cli_ses->init &= ~INIT_USE_DB;
-        strcpy(router_cli_ses->rses_mysql_session->db, router_cli_ses->connect_db);
+        strcpy(router_cli_ses->current_db, router_cli_ses->connect_db);
         ss_dassert(router_cli_ses->init == INIT_READY);
+
+        if (router_cli_ses->queue)
+        {
+            route_queued_query(router_cli_ses);
+        }
+
         rses_end_locked_router_action(router_cli_ses);
         if (writebuf)
         {
             while ((writebuf = gwbuf_consume(writebuf, gwbuf_length(writebuf))));
         }
+        return;
+    }
+
+    if (router_cli_ses->queue)
+    {
+        ss_dassert(router_cli_ses->init == INIT_READY);
+        route_queued_query(router_cli_ses);
+        rses_end_locked_router_action(router_cli_ses);
         return;
     }
 
@@ -2811,10 +2865,21 @@ static void clientReply(ROUTER* instance,
         }
         else
         {
-            LOGIF(LE, (skygw_log_write_flush(
-                                             LOGFILE_ERROR,
-                                             "Error : Routing query \"%s\" failed.",
-                                             bref->bref_pending_cmd)));
+            char* sql = modutil_get_SQL(bref->bref_pending_cmd);
+
+            if (sql)
+            {
+                LOGIF(LE, (skygw_log_write_flush(
+                               LOGFILE_ERROR,
+                               "Routing query \"%s\" failed.", sql)));
+                free(sql);
+            }
+            else
+            {
+                LOGIF(LE, (skygw_log_write_flush(
+                               LOGFILE_ERROR,
+                               "Routing query failed.")));
+            }
         }
         gwbuf_free(bref->bref_pending_cmd);
         bref->bref_pending_cmd = NULL;
@@ -2909,9 +2974,9 @@ static void bref_clear_state(
 			if(prev2 <= 0)
 			{
 			    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
-				     __FUNCTION__,
-				     &bref->bref_backend->backend_server->name,
-				     &bref->bref_backend->backend_server->port);
+                                            __FUNCTION__,
+                                            bref->bref_backend->backend_server->name,
+                                            bref->bref_backend->backend_server->port);
 			}
                 }
         }
@@ -2940,10 +3005,11 @@ static void bref_set_state(
                 ss_dassert(prev1 >= 0);
                 if(prev1 < 0)
 		{
-		    skygw_log_write(LE,"[%s] Error: negative number of connections waiting for results in backend %s:%u",
-			     __FUNCTION__,
-			     &bref->bref_backend->backend_server->name,
-			     &bref->bref_backend->backend_server->port);
+		    skygw_log_write(LE,"[%s] Error: negative number of connections waiting "
+                                    "for results in backend %s:%u",
+                                    __FUNCTION__,
+                                    bref->bref_backend->backend_server->name,
+                                    bref->bref_backend->backend_server->port);
 		}
                 /** Increase global operation count */
                 prev2 = atomic_add(
@@ -2952,9 +3018,9 @@ static void bref_set_state(
 		if(prev2 < 0)
 		{
 		    skygw_log_write(LE,"[%s] Error: negative current operation count in backend %s:%u",
-			     __FUNCTION__,
-			     &bref->bref_backend->backend_server->name,
-			     &bref->bref_backend->backend_server->port);
+                                    __FUNCTION__,
+                                    bref->bref_backend->backend_server->name,
+                                    bref->bref_backend->backend_server->port);
 		}
         }
 }
@@ -3588,22 +3654,6 @@ static bool execute_sescmd_in_backend(
                                 sescmd_cursor_clone_querybuf(scur));
                         break;
 
-		case MYSQL_COM_INIT_DB:
-		{
-			/**
-			 * Record database name and store to session.
-			 */
-			GWBUF* tmpbuf;
-			MYSQL_session* data;
-			unsigned int qlen;
-
-			data = dcb->session->data;
-			tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
-			qlen = MYSQL_GET_PACKET_LEN((unsigned char*)tmpbuf->start);
-			memset(data->db,0,MYSQL_DATABASE_MAXLEN+1);
-			strncpy(data->db,tmpbuf->start+5,qlen - 1);			
-		}
-		/** Fallthrough */
 		case MYSQL_COM_QUERY:
                 default:
                         /** 
@@ -3747,7 +3797,7 @@ static void tracelog_routed_query(
                                 "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                                 pthread_self(),
                                 funcname,
-                                buflen,
+                                (int)buflen,
                                 querystr,
                                 b->backend_server->name,
                                 b->backend_server->port, 
@@ -3769,7 +3819,7 @@ static void tracelog_routed_query(
                                 "%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                                 pthread_self(),
                                 funcname,
-                                buflen,
+                                (int)buflen,
                                 querystr,
                                 b->backend_server->name,
                                 b->backend_server->port, 
@@ -3783,27 +3833,11 @@ static void tracelog_routed_query(
 
 
 /**
- * Return rc, rc < 0 if router session is closed. rc == 0 if there are no 
- * capabilities specified, rc > 0 when there are capabilities.
+ * Return RCAP_TYPE_STMT_INPUT.
  */
-static uint8_t getCapabilities (
-        ROUTER* inst,
-        void*   router_session)
+static int getCapabilities ()
 {
-        ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *)router_session;
-        uint8_t            rc;
-        
-        if (!rses_begin_locked_router_action(rses))
-        {
-                rc = 0xff;
-                goto return_rc;
-        }
-        rc = rses->rses_capabilities;
-        
-        rses_end_locked_router_action(rses);
-        
-return_rc:
-        return rc;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 /**
@@ -4048,47 +4082,45 @@ return_succp:
  * @param       router_session  The router session
  * @param       errmsgbuf       The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action          The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
- * @param       succp           Result of action. 
+ * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param	succp		Result of action: true iff router can continue
  * 
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
  */
 static void handleError (
-        ROUTER*        instance,
-        void*          router_session,
-        GWBUF*         errmsgbuf,
-        DCB*           backend_dcb,
-        error_action_t action,
-        bool*          succp)
+    ROUTER*        instance,
+    void*          router_session,
+    GWBUF*         errmsgbuf,
+    DCB*           backend_dcb,
+    error_action_t action,
+    bool*          succp)
 {
-        SESSION*           session;
-        ROUTER_INSTANCE*   inst    = (ROUTER_INSTANCE *)instance;
-        ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
+    SESSION*           session;
+    ROUTER_INSTANCE*   inst    = (ROUTER_INSTANCE *)instance;
+    ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
 
-        CHK_DCB(backend_dcb);
-        if(succp == NULL || action == ERRACT_RESET)
-        {
-            return;
-        }
-	/** Don't handle same error twice on same DCB */
-	if (backend_dcb->dcb_errhandle_called)
-	{
-		/** we optimistically assume that previous call succeed */
-		*succp = true;
-		return;
-	}
-	else
-	{
-		backend_dcb->dcb_errhandle_called = true;
-	}
-        session = backend_dcb->session;
+    CHK_DCB(backend_dcb);
         
-        if (session == NULL || rses == NULL)
-	{
-                *succp = false;
-		return;
-	}
+    /** Don't handle same error twice on same DCB */
+    if (backend_dcb->dcb_errhandle_called)
+    {
+        /** we optimistically assume that previous call succeed */
+        *succp = true;
+        return;
+    }
+    else
+    {
+        backend_dcb->dcb_errhandle_called = true;
+    }
+    session = backend_dcb->session;
+        
+    if (session == NULL || rses == NULL)
+    {
+        *succp = false;
+    }
+    else
+    {
 	CHK_SESSION(session);
 	CHK_CLIENT_RSES(rses);
         
@@ -4098,7 +4130,7 @@ static void handleError (
                         if (!rses_begin_locked_router_action(rses))
                         {
                                 *succp = false;
-                                return;
+                                break;
                         }
 			/**
 			* This is called in hope of getting replacement for 
@@ -4126,6 +4158,8 @@ static void handleError (
                         *succp = false;
                         break;
         }
+    }
+    dcb_close(backend_dcb);
 }
 
 
@@ -4353,6 +4387,15 @@ router_handle_state_switch(
     SERVER* srv;
     
     CHK_DCB(dcb);
+    if (NULL == dcb->session->router_session)
+    {
+        /*
+         * The following processing will fail if there is no router session,
+         * because the "data" parameter will not contain meaningful data,
+         * so we have no choice but to stop here.
+         */
+        return 0;
+    }
     bref = (backend_ref_t *) data;
     CHK_BACKEND_REF(bref);
 
@@ -4447,7 +4490,7 @@ RESULT_ROW* shard_list_cb(struct resultset* rset, void* data)
     RESULT_ROW* rval = NULL;
 
     if((key = hashtable_next(sl->iter)) &&
-       (value = hashtable_fetch(sl->rses->dbhash,key)))
+       (value = hashtable_fetch(sl->rses->shardmap->hash,key)))
     {
 	if((rval = resultset_make_row(sl->rset)))
 	{
@@ -4465,23 +4508,40 @@ RESULT_ROW* shard_list_cb(struct resultset* rset, void* data)
  */
 int process_show_shards(ROUTER_CLIENT_SES* rses)
 {
-    HASHITERATOR* iter = hashtable_iterator(rses->dbhash);
-    struct shard_list sl;
+    int rval = 0;
 
-    sl.iter = iter;
-    sl.rses = rses;
-    if((sl.rset = resultset_create(shard_list_cb,&sl)) == NULL)
+    spinlock_acquire(&rses->shardmap->lock);
+    if(rses->shardmap->state == SHMAP_READY)
     {
-	skygw_log_write(LE,"[%s] Error: Failed to create resultset.",__FUNCTION__);
-	return -1;
+        HASHITERATOR* iter = hashtable_iterator(rses->shardmap->hash);
+        struct shard_list sl;
+        if (iter)
+        {
+        sl.iter = iter;
+        sl.rses = rses;
+        if ((sl.rset = resultset_create(shard_list_cb, &sl)) == NULL)
+        {
+            skygw_log_write(LE, "[%s] Error: Failed to create resultset.", __FUNCTION__);
+            rval = -1;
+        }
+        else
+        {
+            resultset_add_column(sl.rset, "Database", MYSQL_DATABASE_MAXLEN, COL_TYPE_VARCHAR);
+            resultset_add_column(sl.rset, "Server", MYSQL_DATABASE_MAXLEN, COL_TYPE_VARCHAR);
+            resultset_stream_mysql(sl.rset, rses->rses_client_dcb);
+            resultset_free(sl.rset);
+            hashtable_iterator_free(iter);
+        }
+        }
+        else
+        {
+            skygw_log_write(LE, "Error: hashtable_iterator creation failed. "
+                "This is caused by a memory allocation failure.");
+            rval = -1;
+        }
     }
-
-    resultset_add_column(sl.rset,"Database",MYSQL_DATABASE_MAXLEN,COL_TYPE_VARCHAR);
-    resultset_add_column(sl.rset,"Server",MYSQL_DATABASE_MAXLEN,COL_TYPE_VARCHAR);
-    resultset_stream_mysql(sl.rset,rses->rses_client_dcb);
-    resultset_free(sl.rset);
-    hashtable_iterator_free(iter);
-    return 0;
+    spinlock_release(&rses->shardmap->lock);
+    return rval;
 }
 
 /**
@@ -4514,10 +4574,53 @@ void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const c
  */
 bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses)
 {
-    char* target;
+    bool rval = false;
+    char* target = NULL;
 
-    if ((target = hashtable_fetch(router_cli_ses->dbhash,
-                                  router_cli_ses->connect_db)) == NULL)
+    spinlock_acquire(&router_cli_ses->shardmap->lock);
+    if(router_cli_ses->shardmap->state == SHMAP_READY)
+    {
+        target = hashtable_fetch(router_cli_ses->shardmap->hash, router_cli_ses->connect_db);
+    }
+    spinlock_release(&router_cli_ses->shardmap->lock);
+
+    if (target)
+    {
+        /* Send a COM_INIT_DB packet to the server with the right database
+         * and set it as the client's active database */
+
+        unsigned int qlen = strlen(router_cli_ses->connect_db);
+        GWBUF* buffer = gwbuf_alloc(qlen + 5);
+
+        if (buffer)
+        {
+            gw_mysql_set_byte3((unsigned char*) buffer->start, qlen + 1);
+            gwbuf_set_type(buffer, GWBUF_TYPE_MYSQL);
+            *((unsigned char*) buffer->start + 3) = 0x0;
+            *((unsigned char*) buffer->start + 4) = 0x2;
+            memcpy(buffer->start + 5, router_cli_ses->connect_db, qlen);
+            DCB* dcb = NULL;
+
+            if (get_shard_dcb(&dcb, router_cli_ses, target))
+            {
+                dcb->func.write(dcb, buffer);
+                skygw_log_write(LOGFILE_DEBUG, "schemarouter: USE '%s' sent to %s for session %p",
+                                router_cli_ses->connect_db,
+                                target,
+                                router_cli_ses->rses_client_dcb->session);
+                rval = true;
+            }
+            else
+            {
+                skygw_log_write_flush(LOGFILE_TRACE, "schemarouter: Couldn't find target DCB for '%s'.", target);
+            }
+        }
+        else
+        {
+            skygw_log_write_flush(LOGFILE_ERROR, "Error : Buffer allocation failed.");
+        }
+    }
+    else
     {
         /** Unknown database, hang up on the client*/
         skygw_log_write_flush(LOGFILE_TRACE, "schemarouter: Connecting to a non-existent database '%s'",
@@ -4526,50 +4629,16 @@ bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses)
         sprintf(errmsg, "Unknown database '%s'", router_cli_ses->connect_db);
         if (router_cli_ses->rses_config.debug)
         {
-            sprintf(errmsg + strlen(errmsg), " ([%lu]: DB not found on connect)", router_cli_ses->rses_client_dcb->session->ses_id);
+            sprintf(errmsg + strlen(errmsg), " ([%lu]: DB not found on connect)",
+                    router_cli_ses->rses_client_dcb->session->ses_id);
         }
         write_error_to_client(router_cli_ses->rses_client_dcb,
                               SCHEMA_ERR_DBNOTFOUND,
                               SCHEMA_ERRSTR_DBNOTFOUND,
                               errmsg);
-        return false;
     }
 
-    /* Send a COM_INIT_DB packet to the server with the right database
-     * and set it as the client's active database */
-
-    unsigned int qlen;
-    GWBUF* buffer;
-
-    qlen = strlen(router_cli_ses->connect_db);
-    buffer = gwbuf_alloc(qlen + 5);
-    if (buffer == NULL)
-    {
-        skygw_log_write_flush(LOGFILE_ERROR, "Error : Buffer allocation failed.");
-        return false;
-    }
-
-    gw_mysql_set_byte3((unsigned char*) buffer->start, qlen + 1);
-    gwbuf_set_type(buffer, GWBUF_TYPE_MYSQL);
-    *((unsigned char*) buffer->start + 3) = 0x0;
-    *((unsigned char*) buffer->start + 4) = 0x2;
-    memcpy(buffer->start + 5, router_cli_ses->connect_db, qlen);
-    DCB* dcb = NULL;
-
-    if (get_shard_dcb(&dcb, router_cli_ses, target))
-    {
-        dcb->func.write(dcb, buffer);
-        skygw_log_write(LOGFILE_DEBUG, "schemarouter: USE '%s' sent to %s for session %p",
-                        router_cli_ses->connect_db,
-                        target,
-                        router_cli_ses->rses_client_dcb->session);
-    }
-    else
-    {
-        skygw_log_write_flush(LOGFILE_TRACE, "schemarouter: Couldn't find target DCB for '%s'.", target);
-        return false;
-    }
-    return true;
+    return rval;
 }
 
 void route_queued_query(ROUTER_CLIENT_SES *router_cli_ses)
@@ -4683,4 +4752,76 @@ int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
     }
     *wbuf = writebuf;
     return mapped ? 1 : 0;
+}
+
+/**
+ * Replace a shard map with another one. This function copies the contents of
+ * the source shard map to the target and frees the source memory.
+ * @param target Target shard map to replace
+ * @param source Source shard map to use
+ */
+void replace_shard_map(shard_map_t **target, shard_map_t **source)
+{
+    shard_map_t *tgt = *target;
+    shard_map_t *src = *source;
+    tgt->last_updated = src->last_updated;
+    tgt->state = src->state;
+    hashtable_free(tgt->hash);
+    tgt->hash = src->hash;
+    free(src);
+    *source = NULL;
+}
+
+/**
+ * Synchronize the router client session shard map with the global shard map for
+ * this user.
+ *
+ * If the router doesn't have a shard map for this user then the current shard map
+ * of the client session is added to the router. If the shard map in the router is
+ * out of date, its contents are replaced with the contents of the current client
+ * session. If the router has a usable shard map, the current shard map of the client
+ * is discarded and the router's shard map is used.
+ * @param client Router session
+ */
+void synchronize_shard_map(ROUTER_CLIENT_SES *client)
+{
+    spinlock_acquire(&client->router->lock);
+
+    client->router->stats.shmap_cache_miss++;
+
+    shard_map_t *map = hashtable_fetch(client->router->shard_maps,
+                                       client->rses_client_dcb->user);
+    if (map)
+    {
+        spinlock_acquire(&map->lock);
+        if (map->state == SHMAP_STALE)
+        {
+            replace_shard_map(&map, &client->shardmap);
+        }
+        else if (map->state != SHMAP_READY)
+        {
+            skygw_log_write(LE, "Warning: Shard map state is not ready but"
+                            "it is in use. Replacing it with a newer one.");
+            replace_shard_map(&map, &client->shardmap);
+        }
+        else
+        {
+            /**
+             * Another thread has already updated the shard map for this user
+             */
+            hashtable_free(client->shardmap->hash);
+            free(client->shardmap);
+        }
+        spinlock_release(&map->lock);
+        client->shardmap = map;
+    }
+    else
+    {
+        hashtable_add(client->router->shard_maps,
+                      client->rses_client_dcb->user,
+                      client->shardmap);
+        ss_dassert(hashtable_fetch(client->router->shard_maps,
+                                   client->rses_client_dcb->user) == client->shardmap);
+    }
+    spinlock_release(&client->router->lock);
 }

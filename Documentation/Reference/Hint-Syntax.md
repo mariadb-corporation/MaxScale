@@ -29,7 +29,7 @@ The client connection will need to have comments enabled. For example the `mysql
 For comment types, use either `-- ` (notice the whitespace) or `#` after the semicolon or `/* .. */` before the semicolon. All comment types work with routing hints.
 
 The MySQL manual doesn`t specify if comment blocks, i.e. `/* .. */`, should contain a w
-hitespace character before or after the tags, so adding whitespace at both the start and the end is advised.
+whitespace character before or after the tags, so adding whitespace at both the start and the end is advised.
 
 ## Hint body
 

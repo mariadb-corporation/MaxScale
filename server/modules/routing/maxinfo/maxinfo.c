@@ -26,6 +26,7 @@
  * Date		Who			Description
  * 16/02/15	Mark Riddoch		Initial implementation
  * 27/02/15	Massimiliano Pinto	Added maxinfo_add_mysql_user
+ * 09/09/2015   Martin Brampton         Modify error handler
  *
  * @endverbatim
  */
@@ -63,11 +64,6 @@ MODULE_INFO 	info = {
 	"The MaxScale Information Schema"
 };
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 extern char *create_hex_sha1_sha1_passwd(char *passwd);
 
 static char *version_str = "V1.0.0";
@@ -86,7 +82,7 @@ static	void 	closeSession(ROUTER *instance, void *router_session);
 static	void 	freeSession(ROUTER *instance, void *router_session);
 static	int	execute(ROUTER *instance, void *router_session, GWBUF *queue);
 static	void	diagnostics(ROUTER *instance, DCB *dcb);
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static  int getCapabilities ();
 static  void             handleError(
         ROUTER           *instance,
         void             *router_session,
@@ -291,7 +287,8 @@ static void freeSession(
  * @param       router_session  The router session
  * @param       message         The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action     	The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
+ * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param	succp		Result of action: true iff router can continue
  *
  */
 static void handleError(
@@ -307,13 +304,6 @@ static void handleError(
 	SESSION         *session = backend_dcb->session;
 	session_state_t sesstate;
 
-	/** Reset error handle flag from a given DCB */
-	if (action == ERRACT_RESET)
-	{
-		backend_dcb->dcb_errhandle_called = false;
-		return;
-	}
-	
 	/** Don't handle same error twice on same DCB */
 	if (backend_dcb->dcb_errhandle_called)
 	{
@@ -341,6 +331,7 @@ static void handleError(
 	}
 	
 	/** false because connection is not available anymore */
+        dcb_close(backend_dcb);
 	*succp = false;
 }
 
@@ -424,10 +415,8 @@ diagnostics(ROUTER *instance, DCB *dcb)
  *
  * Not used for the maxinfo router
  */
-static uint8_t
-getCapabilities(
-        ROUTER*  inst,
-        void*    router_session)
+static int
+getCapabilities()
 {
         return 0;
 }
@@ -631,7 +620,7 @@ MAXINFO_TREE	*tree;
 PARSE_ERROR	err;
 
 	LOGIF(LT, (skygw_log_write(LOGFILE_TRACE,
-			"maxinfo: SQL statement: '%s' for 0x%x.",
+			"maxinfo: SQL statement: '%s' for 0x%p.",
 				sql, session->dcb)));
 	if (strcmp(sql, "select @@version_comment limit 1") == 0)
 	{
@@ -791,7 +780,7 @@ maxinfo_add_mysql_user(SERVICE *service) {
 			"maxinfo: create hex_sha1_sha1_password failed for service user %s",
 			service_user)));
 		users_free(service->users);
-
+        service->users = NULL;
 		return 1;
 	}
 

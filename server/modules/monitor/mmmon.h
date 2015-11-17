@@ -17,6 +17,7 @@
  *
  * Copyright MariaDB Corporation Ab 2015
  */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,16 +36,21 @@
 #include <externcmd.h>
 
 /**
+ * @file mmmon.h - The Multi-Master monitor
+ */
+
+/**
  * The handle for an instance of a Multi-Master Monitor module
  */
-typedef struct {
-	SPINLOCK  lock;			/**< The monitor spinlock */
-	pthread_t tid;			/**< id of monitor thread */ 
-	int    	  shutdown;		/**< Flag to shutdown the monitor thread */
-	int       status;		/**< Monitor status */
-	unsigned long         id;	/**< Monitor ID */
-	int	detectStaleMaster;	/**< Monitor flag for Stale Master detection */
-	MONITOR_SERVERS *master;	/**< Master server for Master/Slave replication */
+typedef struct
+{
+    SPINLOCK lock; /**< The monitor spinlock */
+    pthread_t tid; /**< id of monitor thread */
+    int shutdown; /**< Flag to shutdown the monitor thread */
+    int status; /**< Monitor status */
+    unsigned long id; /**< Monitor ID */
+    int detectStaleMaster; /**< Monitor flag for Stale Master detection */
+    MONITOR_SERVERS *master; /**< Master server for Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
     bool events[MAX_MONITOR_EVENT]; /*< enabled events */
 } MM_MONITOR;

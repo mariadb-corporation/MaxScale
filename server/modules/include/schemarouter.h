@@ -56,6 +56,26 @@ typedef enum showdb_response
     SHOWDB_DUPLICATE_DATABASES,
     SHOWDB_FATAL_ERROR
 } showdb_response_t;
+
+enum shard_map_state
+{
+    SHMAP_UNINIT, /*< No databases have been added to this shard map */
+    SHMAP_READY, /*< All available databases have been added */
+    SHMAP_STALE /*< The shard map has old data or has not been updated recently */
+};
+
+/**
+ * A map of the shards tied to a single user.
+ */
+typedef struct shard_map
+{
+    HASHTABLE *hash; /*< A hashtable of database names and the servers which
+                       * have these databases. */
+    SPINLOCK lock;
+    time_t last_updated;
+    enum shard_map_state state; /*< State of the shard map */
+} shard_map_t;
+
 /** 
  * The state of the backend server reference
  */
@@ -274,6 +294,8 @@ typedef struct {
         double          ses_longest;      /*< Longest session */
         double          ses_shortest; /*< Shortest session */
         double          ses_average; /*< Average session length */
+        int             shmap_cache_hit; /*< Shard map was found from the cache */
+        int             shmap_cache_miss;/*< No shard map found from the cache */
 } ROUTER_STATS;
 
 /**
@@ -294,13 +316,13 @@ struct router_client_session {
         backend_ref_t*   rses_backend_ref; /*< Pointer to backend reference array */
         schemarouter_config_t rses_config;    /*< Copied config info from router instance */
         int              rses_nbackends; /*< Number of backends */
-        int              rses_capabilities; /*< Input type, for example */
         bool             rses_autocommit_enabled; /*< Is autocommit enabled */
         bool             rses_transaction_active; /*< Is a transaction active */
 	struct router_instance	 *router;	/*< The router instance */
         struct router_client_session* next; /*< List of router sessions */
-        HASHTABLE*      dbhash; /*< Database hash containing names of the databases mapped to the servers that contain them */
+        shard_map_t*      shardmap; /*< Database hash containing names of the databases mapped to the servers that contain them */
         char            connect_db[MYSQL_DATABASE_MAXLEN+1]; /*< Database the user was trying to connect to */
+        char            current_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Current active database */
         init_mask_t    init; /*< Initialization state bitmask */
         GWBUF*          queue; /*< Query that was received before the session was ready */
         DCB*            dcb_route; /*< Internal DCB used to trigger re-routing of buffers */
@@ -318,6 +340,7 @@ struct router_client_session {
  * The per instance data for the router.
  */
 typedef struct router_instance {
+	HASHTABLE*              shard_maps;  /*< Shard maps hashed by user name */
 	SERVICE*                service;     /*< Pointer to service                 */
 	ROUTER_CLIENT_SES*      connections; /*< List of client connections         */
 	SPINLOCK                lock;	     /*< Lock for the instance data         */

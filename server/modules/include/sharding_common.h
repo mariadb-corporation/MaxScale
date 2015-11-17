@@ -12,8 +12,6 @@
 
 bool extract_database(GWBUF* buf, char* str);
 void create_error_reply(char* fail_str,DCB* dcb);
-bool change_current_db(MYSQL_session* mysql_session,
-			      HASHTABLE* dbhash,
-			      GWBUF* buf);
+bool change_current_db(char* dest, HASHTABLE* dbhash, GWBUF* buf);
 
 #endif

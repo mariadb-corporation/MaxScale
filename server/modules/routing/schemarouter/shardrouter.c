@@ -46,10 +46,6 @@ MODULE_INFO info = {
 };
 
 
-/** Defined in log_manager.cc */
-extern int lm_enabled_logfiles_bitmask;
-extern size_t log_ses_count[];
-extern __thread log_info_t tls_log_info;
 /**
  * @file shardrouter.c	
  *
@@ -63,6 +59,7 @@ extern __thread log_info_t tls_log_info;
  *
  * Date		Who			Description
  * 20/01/2015	Markus Mäkelä/Vilho Raatikka		Initial implementation
+ * 09/09/2015   Martin Brampton         Modify error handler
  *
  * @endverbatim
  */
@@ -119,7 +116,7 @@ static route_target_t get_shard_route_target(
                                              bool trx_active,
                                              HINT* hint);
 
-static uint8_t getCapabilities(ROUTER* inst, void* router_session);
+static int getCapabilities();
 
 void subsvc_clear_state(SUBSERVICE* svc,subsvc_state_t state);
 void subsvc_set_state(SUBSERVICE* svc,subsvc_state_t state);
@@ -971,8 +968,8 @@ createInstance(SERVICE *service, char **options)
             {
                 skygw_log_write(LOGFILE_ERROR, "Error : Memory reallocation failed.");
                 LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG, "shardrouter.c: realloc returned NULL. "
-                                "service count[%d] buffer size [%u] tried to allocate [%u]",
-                                sz, sizeof(SERVICE*)*(sz), sizeof(SERVICE*)*(sz * 2))));
+                                          "service count[%d] buffer size [%lu] tried to allocate [%lu]",
+                                          sz, sizeof(SERVICE*) * (sz), sizeof(SERVICE*) * (sz * 2))));
                 free(res_svc);
                 free(router);
                 return NULL;
@@ -1161,9 +1158,6 @@ newSession(
         free(dummy_upstream);
     }
 
-
-    /** Copy backend pointers to router session. */
-    client_rses->rses_capabilities = RCAP_TYPE_STMT_INPUT;
     router->stats.n_sessions += 1;
 
     /**
@@ -1698,7 +1692,7 @@ routeQuery(ROUTER* instance,
     
     if(packet_type == MYSQL_COM_INIT_DB)
     {
-        if(!(change_successful = change_current_db(router_cli_ses->rses_mysql_session,
+        if(!(change_successful = change_current_db(router_cli_ses->current_db,
 						   router_cli_ses->dbhash,
 						   querybuf)))
         {
@@ -2471,23 +2465,6 @@ execute_sescmd_in_backend(SUBSERVICE* subsvc)
         rc = SESSION_ROUTE_QUERY(subsvc->session,sescmd_cursor_clone_querybuf(scur));
         break;
 
-    case MYSQL_COM_INIT_DB:
-    {
-        /**
-         * Record database name and store to session.
-         */
-        GWBUF* tmpbuf;
-        MYSQL_session* data;
-        unsigned int qlen;
-
-        data = subsvc->session->data;
-        tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
-        qlen = MYSQL_GET_PACKET_LEN((unsigned char*) tmpbuf->start);
-        memset(data->db, 0, MYSQL_DATABASE_MAXLEN + 1);
-        strncpy(data->db, tmpbuf->start + 5, qlen - 1);
-        rc = SESSION_ROUTE_QUERY(subsvc->session,sescmd_cursor_clone_querybuf(scur));
-    }
-        /** Fallthrough */
     case MYSQL_COM_QUERY:
     default:
         /** 
@@ -2591,27 +2568,12 @@ mysql_sescmd_get_property(
 }
 
 /**
- * Return rc, rc < 0 if router session is closed. rc == 0 if there are no 
- * capabilities specified, rc > 0 when there are capabilities.
+ * Return RCAP_TYPE_STMT_INPUT
  */
-static uint8_t
-getCapabilities(ROUTER* inst,
-                void* router_session)
+static int
+getCapabilities()
 {
-    ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *) router_session;
-    uint8_t rc;
-
-    if(!rses_begin_locked_router_action(rses))
-    {
-        rc = 0xff;
-        goto return_rc;
-    }
-    rc = rses->rses_capabilities;
-
-    rses_end_locked_router_action(rses);
-
-return_rc:
-    return rc;
+    return RCAP_TYPE_STMT_INPUT;
 }
 
 /**
@@ -2793,8 +2755,8 @@ return_succp:
  * @param       router_session  The router session
  * @param       errmsgbuf       The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action          The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
- * @param       succp           Result of action. 
+ * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param	succp		Result of action: true if router can continue
  * 
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
@@ -2811,10 +2773,8 @@ handleError(
     SESSION* session;
     ROUTER_CLIENT_SES* rses = (ROUTER_CLIENT_SES *) router_session;
 
-    if(action == ERRACT_RESET)
-        return;
-    
     CHK_DCB(backend_dcb);
+    
     /** Don't handle same error twice on same DCB */
     if(backend_dcb->dcb_errhandle_called)
     {
@@ -2830,38 +2790,39 @@ handleError(
 
     if(session == NULL || rses == NULL)
     {
-        if(succp)
-            *succp = false;
-        return;
-    }
-    CHK_SESSION(session);
-    CHK_CLIENT_RSES(rses);
-
-    switch(action)
-    {
-    case ERRACT_NEW_CONNECTION:
-    {
-        if(!rses_begin_locked_router_action(rses))
-        {
-            *succp = false;
-            return;
-        }
-
-        rses_end_locked_router_action(rses);
-        break;
-    }
-
-    case ERRACT_REPLY_CLIENT:
-    {
-
-        *succp = false; /*< no new backend servers were made available */
-        break;
-    }
-
-    default:
         *succp = false;
-        break;
     }
+    else
+    {
+        CHK_SESSION(session);
+        CHK_CLIENT_RSES(rses);
+
+        switch(action)
+        {
+            case ERRACT_NEW_CONNECTION:
+            {
+                if(!rses_begin_locked_router_action(rses))
+                {
+                    *succp = false;
+                    break;
+                }
+
+                rses_end_locked_router_action(rses);
+                break;
+            }
+
+            case ERRACT_REPLY_CLIENT:
+            {
+                *succp = false; /*< no new backend servers were made available */
+                break;
+            }
+
+            default:
+                *succp = false;
+                break;
+        }
+    }
+    dcb_close(backend_dcb);
 }
 
 

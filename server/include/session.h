@@ -64,7 +64,8 @@ typedef enum {
     SESSION_STATE_LISTENER,         /*< for listener session */
     SESSION_STATE_LISTENER_STOPPED, /*< for listener session */
     SESSION_STATE_TO_BE_FREED,	    /*< ready to be freed as soon as there are no references */
-    SESSION_STATE_FREE              /*< for all sessions */
+    SESSION_STATE_FREE,             /*< for all sessions */
+    SESSION_STATE_DUMMY             /*< dummy session for consistency */
 } session_state_t;
 
 /**
@@ -162,6 +163,7 @@ typedef struct session {
 
 SESSION *get_all_sessions();
 SESSION	*session_alloc(struct service *, struct dcb *);
+SESSION	*session_set_dummy(struct dcb *);
 bool    session_free(SESSION *);
 int	session_isvalid(SESSION *);
 int	session_reply(void *inst, void *session, GWBUF *data);

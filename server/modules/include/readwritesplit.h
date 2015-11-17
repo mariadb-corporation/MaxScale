@@ -290,9 +290,11 @@ struct router_client_session {
         rwsplit_config_t rses_config;    /*< copied config info from router instance */
         int              rses_nbackends;
         int              rses_nsescmd;  /*< Number of executed session commands */
-        int              rses_capabilities; /*< input type, for example */
         bool             rses_autocommit_enabled;
         bool             rses_transaction_active;
+        bool             rses_load_active; /*< If LOAD DATA LOCAL INFILE is
+                                            * being currently executed */
+        uint64_t         rses_load_data_sent; /*< How much data has been sent */
         DCB* client_dcb;
         int             pos_generator;
 #if defined(PREP_STMT_CACHING)

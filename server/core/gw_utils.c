@@ -48,11 +48,6 @@
 
 SPINLOCK tmplock = SPINLOCK_INIT;
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /*
  * Set IP address in socket structure in_addr
  *
@@ -79,26 +74,22 @@ setipaddress(struct in_addr *a, char *p) {
 		hint.ai_flags = AI_PASSIVE;
 		hint.ai_family = AF_UNSPEC;
 		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-					"Error: Failed to obtain address for host %s, %s",
-					p,
-					gai_strerror(rc))));
+                    MXS_ERROR("Failed to obtain address for host %s, %s",
+                              p,
+                              gai_strerror(rc));
 
-			return 0;
+                    return 0;
 		}
 	} else {
 		hint.ai_flags = AI_CANONNAME;
 		hint.ai_family = AF_INET;
 
 		if ((rc = getaddrinfo(p, NULL, &hint, &ai)) != 0) {
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-					"Error: Failed to obtain address for host %s, %s",
-					p,
-					gai_strerror(rc))));
+                    MXS_ERROR("Failed to obtain address for host %s, %s",
+                              p,
+                              gai_strerror(rc));
 
-			return 0;
+                    return 0;
 		}
 	}
 
@@ -120,12 +111,9 @@ setipaddress(struct in_addr *a, char *p) {
         
 	if (h == NULL) {
 		if ((a->s_addr = inet_addr(p)) == -1) {
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-					"Error : gethostbyname failed for [%s]",
-					p)));
+                    MXS_ERROR("gethostbyname failed for [%s]", p);
 
-			return 0;
+                    return 0;
 		}
 	} else {
         	/* take the first one */
@@ -213,11 +201,8 @@ struct hostent		*hp;
 			}
 			else
 			{
-                		LOGIF(LE, (skygw_log_write_flush(
-		                        LOGFILE_ERROR,
-                       			 "Error : Failed to lookup host '%s'. ",
-		                        buf)));
-				return 0;
+                            MXS_ERROR("Failed to lookup host '%s'.", buf);
+                            return 0;
 			}
 		}
 	}
@@ -238,7 +223,7 @@ long get_processor_count()
 #ifdef _SC_NPROCESSORS_ONLN
     if ((processors = sysconf(_SC_NPROCESSORS_ONLN)) <= 0)
     {
-        skygw_log_write(LE, "Unable to establish the number of available cores. Defaulting to 4.");
+        MXS_WARNING("Unable to establish the number of available cores. Defaulting to 4.");
         processors = 4;
     }
 #else

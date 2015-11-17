@@ -21,6 +21,7 @@
 #include <server.h>
 #include <dcb.h>
 #include <resultset.h>
+#include <maxconfig.h>
 
 /**
  * @file monitor.h	The interface to the monitor module
@@ -140,6 +141,7 @@ typedef struct monitor {
         char* user; /*< Monitor username */
         char* password; /*< Monitor password */
         SPINLOCK lock;
+        CONFIG_PARAMETER* parameters; /*< configuration parameters */
         MONITOR_SERVERS* databases; /*< List of databases the monitor monitors */
 	monitor_state_t state;		/**< The state of the monitor */
         int	connect_timeout;	/**< Connect timeout in seconds for mysql_real_connect */
@@ -160,9 +162,11 @@ extern void	monitor_free(MONITOR *);
 extern MONITOR	*monitor_find(char *);
 extern void	monitorAddServer(MONITOR *, SERVER *);
 extern void	monitorAddUser(MONITOR *, char *, char *);
+extern void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params);
 extern void	monitorStop(MONITOR *);
 extern void	monitorStart(MONITOR *, void*);
 extern void	monitorStopAll();
+extern void monitorStartAll();
 extern void	monitorShowAll(DCB *);
 extern void	monitorShow(DCB *, MONITOR *);
 extern void	monitorList(DCB *);
@@ -170,4 +174,5 @@ extern void     monitorSetInterval (MONITOR *, unsigned long);
 extern void     monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
 bool check_monitor_permissions(MONITOR* monitor);
+
 #endif

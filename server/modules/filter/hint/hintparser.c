@@ -25,11 +25,6 @@
 #include <modutil.h>
 #include <mysqlhint.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /**
  * hintparser.c - Find any comment in the SQL packet and look for MAXSCALE
  * hints in that comment.
@@ -271,18 +266,10 @@ HINT_MODE	mode = HM_EXECUTE;
 				break;
 			default:
 				/* Error: expected hint, name or STOP */
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Error : Syntax error in hint. Expected "
-                                        "'route', 'stop' or hint name instead of "
-                                        "'%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Syntax error in hint. Expected "
-                                        "'route', 'stop' or hint name instead of "
-                                        "'%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
+                                MXS_ERROR("Syntax error in hint. Expected "
+                                          "'route', 'stop' or hint name instead of "
+                                          "'%s'. Hint ignored.",
+                                          token_get_keyword(tok));
                                 token_free(tok);
                                 goto retblock;
 			}
@@ -291,16 +278,9 @@ HINT_MODE	mode = HM_EXECUTE;
 			if (tok->token != TOK_TO)
                         {
                                 /* Error, expect TO */;
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Error : Syntax error in hint. Expected "
+                                MXS_ERROR("Syntax error in hint. Expected "
                                         "'to' instead of '%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Syntax error in hint. Expected "
-                                        "'to' instead of '%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
+                                        token_get_keyword(tok));
                                 token_free(tok);
                                 goto retblock;                                
                         }
@@ -322,18 +302,10 @@ HINT_MODE	mode = HM_EXECUTE;
 				break;
 			default:
                                 /* Error expected MASTER, SLAVE or SERVER */
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Error : Syntax error in hint. Expected "
+                                MXS_ERROR("Syntax error in hint. Expected "
                                         "'master', 'slave', or 'server' instead "
                                         "of '%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Syntax error in hint. Expected "
-                                        "'master', 'slave', or 'server' instead "
-                                        "of '%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
+                                        token_get_keyword(tok));
                                 
                                 token_free(tok);
                                 goto retblock;
@@ -348,18 +320,10 @@ HINT_MODE	mode = HM_EXECUTE;
 			else
 			{
                                 /* Error: Expected server name */
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Error : Syntax error in hint. Expected "
+                            MXS_ERROR("Syntax error in hint. Expected "
                                         "server name instead of '%s'. Hint "
                                         "ignored.",
-                                        token_get_keyword(tok))));
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Syntax error in hint. Expected "
-                                        "server name instead of '%s'. Hint "
-                                        "ignored.",
-                                        token_get_keyword(tok))));
+                                        token_get_keyword(tok));
                                 token_free(tok);
                                 goto retblock;
 			}
@@ -383,18 +347,10 @@ HINT_MODE	mode = HM_EXECUTE;
 				break;
 			default:
 				/* Error, token tok->value not expected */
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Error : Syntax error in hint. Expected "
-                                        "'=', 'prepare', or 'start' instead of "
-                                        "'%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Syntax error in hint. Expected "
-                                        "'=', 'prepare', or 'start' instead of "
-                                        "'%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
+                            MXS_ERROR("Syntax error in hint. Expected "
+                                      "'=', 'prepare', or 'start' instead of "
+                                      "'%s'. Hint ignored.",
+                                      token_get_keyword(tok));
                                 token_free(tok);
 				goto retblock;
 			}
@@ -418,18 +374,10 @@ HINT_MODE	mode = HM_EXECUTE;
 				break;
 			default:
 				/* Error, token tok->value not expected */
-                                LOGIF(LT, (skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Error : Syntax error in hint. Expected "
+                               MXS_ERROR("Syntax error in hint. Expected "
                                         "'route' or hint name instead of "
                                         "'%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Syntax error in hint. Expected "
-                                        "'route' or hint name instead of "
-                                        "'%s'. Hint ignored.",
-                                        token_get_keyword(tok))));
+                                        token_get_keyword(tok));
                                 token_free(tok);
                                 goto retblock;
 			}

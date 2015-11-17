@@ -29,7 +29,7 @@ While MaxScale resources and status can be monitored via CLI using maxadmin comm
 ![Nagios and MaxScale interaction](images/HowMaxScaleWorksWithNagios.png)
 
 
-There are three nagios plugin scripts that MaxScale provides.
+There are three Nagios plugin scripts that MaxScale provides.
 
 1. check_maxscale_threads.pl: This command provides you the status of current running threads and events in the queue on MaxScale Server.  The Performance data associated with this command current and historic wait time for threads and events
 
@@ -38,7 +38,7 @@ Current resources are: modules, services, listeners, servers, sessions, filters.
 
 3. check_maxscale_monitor.pl: This command provides you status of the configured monitor modules on MaxScale server. 
 
-In order to use these scripts on your Nagios Server, you need to copy them from the MaxScale binary package or download them from source tree on github.
+In order to use these scripts on your Nagios Server, you need to copy them from the MaxScale binary package or download them from source tree on GitHub.
 
 # MaxScale Nagios Plugin Requirements
 

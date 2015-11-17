@@ -30,6 +30,7 @@
  * 15/07/2013	Massimiliano Pinto	Added clientReply entry point
  * 16/07/2013	Massimiliano Pinto	Added router commands values
  * 22/10/2013	Massimiliano Pinto	Added router errorReply entry point
+ * 27/10/2015   Martin Brampton         Add RCAP_TYPE_NO_RSESSION
  *
  */
 #include <service.h>
@@ -45,8 +46,7 @@ typedef void *ROUTER;
 
 typedef enum error_action {
 	ERRACT_NEW_CONNECTION = 0x001,
-	ERRACT_REPLY_CLIENT   = 0x002,
-	ERRACT_RESET	      = 0x004
+	ERRACT_REPLY_CLIENT   = 0x002
 } error_action_t;
 
 /**
@@ -86,7 +86,7 @@ typedef struct router_object {
                         DCB*           backend_dcb, 
                         error_action_t action, 
                         bool*          succp);
-        uint8_t (*getCapabilities)(ROUTER *instance, void* router_session);
+        int (*getCapabilities)();
 } ROUTER_OBJECT;
 
 /**
@@ -101,8 +101,9 @@ typedef struct router_object {
  */
 typedef enum router_capability_t {
         RCAP_TYPE_UNDEFINED    = 0x00,
-        RCAP_TYPE_STMT_INPUT   = 0x01, /*< statement per buffer */
-        RCAP_TYPE_PACKET_INPUT = 0x02  /*< data as it was read from DCB */
+        RCAP_TYPE_STMT_INPUT   = 0x01,  /*< statement per buffer */
+        RCAP_TYPE_PACKET_INPUT = 0x02,  /*< data as it was read from DCB */
+        RCAP_TYPE_NO_RSESSION  = 0x04   /*< router does not use router sessions */
 } router_capability_t;
 
         

@@ -96,61 +96,45 @@ fi
 #
 # Test enable|disable log debug|trace|message|error
 #
-maxadmin -pmariadb enable log debug >& /dev/null
-if [ $? -eq "1" ]; then
-	echo "Enable debug log:			Failed"
-	failure=`expr $failure + 1`
-else
-	passed=`expr $passed + 1`
-	echo "Enable debug log:			Passed"
-fi
 
-maxadmin -pmariadb enable log trace >& /dev/null
-if [ $? -eq "1" ]; then
-	echo "Enable trace log:			Failed"
-	failure=`expr $failure + 1`
-else
-	passed=`expr $passed + 1`
-	echo "Enable trace log:			Passed"
-fi
+for action in enable disable
+do
+    maxadmin -pmariadb $action log debug >& /dev/null
+    if [ $? -eq "1" ]; then
+	    echo "$action debug log:			Failed"
+	    failure=`expr $failure + 1`
+    else
+	    passed=`expr $passed + 1`
+	    echo "$action debug log:			Passed"
+    fi
 
-maxadmin -pmariadb enable log message >& /dev/null
-if [ $? -eq "1" ]; then
-        echo "Enable message log:                 Failed"
+    maxadmin -pmariadb $action log trace >& /dev/null
+    if [ $? -eq "1" ]; then
+	    echo "$action trace log:			Failed"
+	    failure=`expr $failure + 1`
+    else
+	    passed=`expr $passed + 1`
+	    echo "$action trace log:			Passed"
+    fi
+
+    maxadmin -pmariadb $action log message >& /dev/null
+    if [ $? -eq "1" ]; then
+        echo "$action message log:                 Failed"
         failure=`expr $failure + 1`
-else
+    else
         passed=`expr $passed + 1`
-        echo "Enable message log:                 Passed"
-fi
+        echo "$action message log:                 Passed"
+    fi
 
-maxadmin -pmariadb enable log error >& /dev/null
-if [ $? -eq "1" ]; then
-        echo "Enable error log:                 Failed"
+    maxadmin -pmariadb $action log error >& /dev/null
+    if [ $? -eq "1" ]; then
+        echo "$action error log:                 Failed"
         failure=`expr $failure + 1`
-else
+    else
         passed=`expr $passed + 1`
-        echo "Enable error log:                 Passed"
-fi
-
-
-
-maxadmin -pmariadb disable log debug >& /dev/null
-if [ $? -eq "1" ]; then
-	echo "Disable debug log:			Failed"
-	failure=`expr $failure + 1`
-else
-	passed=`expr $passed + 1`
-	echo "Disable debug log:			Passed"
-fi
-
-maxadmin -pmariadb disable log trace >& /dev/null
-if [ $? -eq "1" ]; then
-	echo "Disable trace log:			Failed"
-	failure=`expr $failure + 1`
-else
-	passed=`expr $passed + 1`
-	echo "Disable trace log:			Passed"
-fi
+        echo "$action error log:                 Passed"
+    fi
+done
 
 #
 # Test restart monitor|service without, with invalid and with long invalid argument
@@ -186,7 +170,7 @@ do
 done
 
 #
-# Test set server qwerty master withaout, with invalid and with long invalid arg
+# Test set server qwerty master without, with invalid and with long invalid arg
 #
 maxadmin -pmariadb set server qwerty >& /dev/null
 if [ $? -eq "1" ]; then

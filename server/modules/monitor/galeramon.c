@@ -35,41 +35,40 @@
  * 20/04/15	Guillaume Lefranc	Added availableWhenDonor feature
  * 22/04/15     Martin Brampton         Addition of disableMasterRoleSetting
  * 08/05/15     Markus Makela           Addition of launchable scripts
+ * 17/10/15 Martin Brampton     Change DCB callback to hangup
  *
  * @endverbatim
  */
 
 
 #include <galeramon.h>
+#include <dcb.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
-static	void	monitorMain(void *);
+static void monitorMain(void *);
 
 static char *version_str = "V2.0.0";
 
-MODULE_INFO	info = {
-	MODULE_API_MONITOR,
-	MODULE_GA,
-	MONITOR_VERSION,
-	"A Galera cluster monitor"
+MODULE_INFO info =
+{
+    MODULE_API_MONITOR,
+    MODULE_GA,
+    MONITOR_VERSION,
+    "A Galera cluster monitor"
 };
 
-static	void 	*startMonitor(void *,void*);
-static	void	stopMonitor(void *);
-static	void	diagnostics(DCB *, void *);
-static	MONITOR_SERVERS *get_candidate_master(MONITOR*);
-static	MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
-static	void	disableMasterFailback(void *, int);
+static void *startMonitor(void *, void*);
+static void stopMonitor(void *);
+static void diagnostics(DCB *, void *);
+static MONITOR_SERVERS *get_candidate_master(MONITOR*);
+static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
+static void disableMasterFailback(void *, int);
 bool isGaleraEvent(monitor_event_t event);
 
-static MONITOR_OBJECT MyObject = { 
-	startMonitor, 
-	stopMonitor,
-	diagnostics
+static MONITOR_OBJECT MyObject =
+{
+    startMonitor,
+    stopMonitor,
+    diagnostics
 };
 
 /**
@@ -80,7 +79,7 @@ static MONITOR_OBJECT MyObject = {
 char *
 version()
 {
-	return version_str;
+    return version_str;
 }
 
 /**
@@ -90,10 +89,9 @@ version()
 void
 ModuleInit()
 {
-	LOGIF(LM, (skygw_log_write(
-                           LOGFILE_MESSAGE,
-                           "Initialise the MySQL Galera Monitor module %s.\n",
-                           version_str)));
+    LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
+                               "Initialise the MySQL Galera Monitor module %s.\n",
+                               version_str)));
 }
 
 /**
@@ -107,7 +105,7 @@ ModuleInit()
 MONITOR_OBJECT *
 GetModuleObject()
 {
-	return &MyObject;
+    return &MyObject;
 }
 
 /**
@@ -117,96 +115,94 @@ GetModuleObject()
  *
  * @return A handle to use when interacting with the monitor
  */
-static	void 	*
-startMonitor(void *arg,void* opt)
+static void *
+startMonitor(void *arg, void* opt)
 {
     MONITOR* mon = arg;
     GALERA_MONITOR *handle = mon->handle;
-    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*)opt;
-    bool have_events = false,script_error = false;
+    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*) opt;
+    bool have_events = false, script_error = false;
     if (handle != NULL)
     {
-	handle->shutdown = 0;
+        handle->shutdown = 0;
     }
     else
     {
-	if ((handle = (GALERA_MONITOR *)malloc(sizeof(GALERA_MONITOR))) == NULL)
-	    return NULL;
-	handle->shutdown = 0;
-	handle->id = MONITOR_DEFAULT_ID;
-	handle->disableMasterFailback = 0;
-	handle->availableWhenDonor = 0;
-	handle->disableMasterRoleSetting = 0;
-	handle->master = NULL;
-	handle->script = NULL;
-	handle->use_priority = false;
-	memset(handle->events,false,sizeof(handle->events));
-	spinlock_init(&handle->lock);
+        if ((handle = (GALERA_MONITOR *) malloc(sizeof(GALERA_MONITOR))) == NULL)
+        {
+            return NULL;
+        }
+        handle->shutdown = 0;
+        handle->id = MONITOR_DEFAULT_ID;
+        handle->disableMasterFailback = 0;
+        handle->availableWhenDonor = 0;
+        handle->disableMasterRoleSetting = 0;
+        handle->master = NULL;
+        handle->script = NULL;
+        handle->use_priority = false;
+        memset(handle->events, false, sizeof(handle->events));
+        spinlock_init(&handle->lock);
     }
 
 
-    while(params)
+    while (params)
     {
-	if(!strcmp(params->name,"disable_master_failback"))
-	    handle->disableMasterFailback = config_truth_value(params->value);
-	else if(!strcmp(params->name,"available_when_donor"))
-	    handle->availableWhenDonor = config_truth_value(params->value);
-	else if(!strcmp(params->name,"disable_master_role_setting"))
-	    handle->disableMasterRoleSetting = config_truth_value(params->value);
-	else if(!strcmp(params->name,"use_priority"))
-	    handle->use_priority = config_truth_value(params->value);
-	else if(!strcmp(params->name,"script"))
-	{
-	    if(handle->script)
-	    {
-		free(handle->script);
-		handle->script = NULL;
-	    }
-
-	    if(access(params->value,X_OK) == 0)
-	    {
-		handle->script = strdup(params->value);
-	    }
-	    else
-	    {
-		script_error = true;
-		if(access(params->value,F_OK) == 0)
-		{
-		skygw_log_write(LE,
-			 "Error: The file cannot be executed: %s",
-			 params->value);
-		}
-		else
-		{
-		skygw_log_write(LE,
-			 "Error: The file cannot be found: %s",
-			 params->value);
-		}
-	    }
-	}
-	else if(!strcmp(params->name,"events"))
-	{
-	    if(mon_parse_event_string((bool*)&handle->events,sizeof(handle->events),params->value) != 0)
-		script_error = true;
-	    else
-		have_events = true;
-	}
-	params = params->next;
+        if (!strcmp(params->name, "disable_master_failback"))
+        {
+            handle->disableMasterFailback = config_truth_value(params->value);
+        }
+        else if (!strcmp(params->name, "available_when_donor"))
+        {
+            handle->availableWhenDonor = config_truth_value(params->value);
+        }
+        else if (!strcmp(params->name, "disable_master_role_setting"))
+        {
+            handle->disableMasterRoleSetting = config_truth_value(params->value);
+        }
+        else if (!strcmp(params->name, "use_priority"))
+        {
+            handle->use_priority = config_truth_value(params->value);
+        }
+        else if (!strcmp(params->name, "script"))
+        {
+            if (externcmd_can_execute(params->value))
+            {
+                free(handle->script);
+                handle->script = strdup(params->value);
+            }
+            else
+            {
+                script_error = true;
+            }
+        }
+        else if (!strcmp(params->name, "events"))
+        {
+            if (mon_parse_event_string((bool*) & handle->events,
+                                       sizeof(handle->events), params->value) != 0)
+            {
+                script_error = true;
+            }
+            else
+            {
+                have_events = true;
+            }
+        }
+        params = params->next;
     }
-    if(script_error)
+    if (script_error)
     {
-	skygw_log_write(LE,"Error: Errors were found in the script configuration parameters "
-		"for the monitor '%s'. The script will not be used.",mon->name);
-	free(handle->script);
-	handle->script = NULL;
+        skygw_log_write(LE, "Error: Errors were found in the script configuration parameters "
+                        "for the monitor '%s'. The script will not be used.", mon->name);
+        free(handle->script);
+        handle->script = NULL;
     }
     /** If no specific events are given, enable them all */
-    if(!have_events)
+    if (!have_events)
     {
-	memset(handle->events,true,sizeof(handle->events));
+        memset(handle->events, true, sizeof(handle->events));
     }
 
-    handle->tid = (THREAD)thread_start(monitorMain, mon);
+    handle->tid = (THREAD) thread_start(monitorMain, mon);
     return handle;
 }
 
@@ -215,14 +211,14 @@ startMonitor(void *arg,void* opt)
  *
  * @param arg	Handle on thr running monior
  */
-static	void	
+static void
 stopMonitor(void *arg)
 {
-    MONITOR* mon = (MONITOR*)arg;
-GALERA_MONITOR	*handle = (GALERA_MONITOR *)mon->handle;
+    MONITOR* mon = (MONITOR*) arg;
+    GALERA_MONITOR *handle = (GALERA_MONITOR *) mon->handle;
 
-        handle->shutdown = 1;
-        thread_wait((void *)handle->tid);
+    handle->shutdown = 1;
+    thread_wait((void *) handle->tid);
 }
 
 /**
@@ -234,42 +230,42 @@ GALERA_MONITOR	*handle = (GALERA_MONITOR *)mon->handle;
 static void
 diagnostics(DCB *dcb, void *arg)
 {
-    MONITOR* mon = (MONITOR*)arg;
-GALERA_MONITOR	*handle = (GALERA_MONITOR *)mon->handle;
-MONITOR_SERVERS	*db;
-char		*sep;
+    MONITOR* mon = (MONITOR*) arg;
+    GALERA_MONITOR *handle = (GALERA_MONITOR *) mon->handle;
+    MONITOR_SERVERS *db;
+    char *sep;
 
-	switch (handle->status)
-	{
-	case MONITOR_RUNNING:
-		dcb_printf(dcb, "\tMonitor running\n");
-		break;
-	case MONITOR_STOPPING:
-		dcb_printf(dcb, "\tMonitor stopping\n");
-		break;
-	case MONITOR_STOPPED:
-		dcb_printf(dcb, "\tMonitor stopped\n");
-		break;
-	}
+    switch (handle->status)
+    {
+        case MONITOR_RUNNING:
+            dcb_printf(dcb, "\tMonitor running\n");
+            break;
+        case MONITOR_STOPPING:
+            dcb_printf(dcb, "\tMonitor stopping\n");
+            break;
+        case MONITOR_STOPPED:
+            dcb_printf(dcb, "\tMonitor stopped\n");
+            break;
+    }
 
-	dcb_printf(dcb,"\tSampling interval:\t%lu milliseconds\n", mon->interval);
-	dcb_printf(dcb,"\tMaster Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
-	dcb_printf(dcb,"\tAvailable when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
-	dcb_printf(dcb,"\tMaster Role Setting Disabled:\t%s\n", (handle->disableMasterRoleSetting == 1) ? "on" : "off");
-	dcb_printf(dcb,"\tConnect Timeout:\t%i seconds\n", mon->connect_timeout);
-	dcb_printf(dcb,"\tRead Timeout:\t\t%i seconds\n", mon->read_timeout);
-	dcb_printf(dcb,"\tWrite Timeout:\t\t%i seconds\n", mon->write_timeout);
-	dcb_printf(dcb, "\tMonitored servers:	");
+    dcb_printf(dcb, "\tSampling interval:\t%lu milliseconds\n", mon->interval);
+    dcb_printf(dcb, "\tMaster Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
+    dcb_printf(dcb, "\tAvailable when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
+    dcb_printf(dcb, "\tMaster Role Setting Disabled:\t%s\n", (handle->disableMasterRoleSetting == 1) ? "on" : "off");
+    dcb_printf(dcb, "\tConnect Timeout:\t%i seconds\n", mon->connect_timeout);
+    dcb_printf(dcb, "\tRead Timeout:\t\t%i seconds\n", mon->read_timeout);
+    dcb_printf(dcb, "\tWrite Timeout:\t\t%i seconds\n", mon->write_timeout);
+    dcb_printf(dcb, "\tMonitored servers:	");
 
-	db = mon->databases;
-	sep = "";
-	while (db)
-	{
-		dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
-		sep = ", ";
-		db = db->next;
-	}
-	dcb_printf(dcb, "\n");
+    db = mon->databases;
+    sep = "";
+    while (db)
+    {
+        dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
+        sep = ", ";
+        db = db->next;
+    }
+    dcb_printf(dcb, "\n");
 }
 
 /**
@@ -281,19 +277,19 @@ char		*sep;
 static void
 monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 {
-    GALERA_MONITOR* handle = (GALERA_MONITOR*)mon->handle;
-MYSQL_ROW	row;
-MYSQL_RES	*result,*result2;
-int		isjoined = 0;
-unsigned long int	server_version = 0;
-char 			*server_string;
+    GALERA_MONITOR* handle = (GALERA_MONITOR*) mon->handle;
+    MYSQL_ROW row;
+    MYSQL_RES *result, *result2;
+    int isjoined = 0;
+    unsigned long int server_version = 0;
+    char *server_string;
 
-	/* Don't even probe server flagged as in maintenance */
-	if (SERVER_IN_MAINT(database->server))
-		return;
+    /* Don't even probe server flagged as in maintenance */
+    if (SERVER_IN_MAINT(database->server))
+        return;
 
-	/** Store previous status */
-	database->mon_prev_status = database->server->status;
+    /** Store previous status */
+    database->mon_prev_status = database->server->status;
 
     server_clear_status(database->server, SERVER_RUNNING);
 
@@ -325,90 +321,94 @@ char 			*server_string;
         return;
     }
 
-	/* If we get this far then we have a working connection */
-	server_set_status(database->server, SERVER_RUNNING);
+    /* If we get this far then we have a working connection */
+    server_set_status(database->server, SERVER_RUNNING);
 
-	/* get server version string */
-	server_string = (char *)mysql_get_server_info(database->con);
-	if (server_string) {
-		database->server->server_string = realloc(database->server->server_string, strlen(server_string)+1);
-		if (database->server->server_string)
-			strcpy(database->server->server_string, server_string);
-	}	
+    /* get server version string */
+    server_string = (char *) mysql_get_server_info(database->con);
+    if (server_string)
+    {
+        server_set_version_string(database->server, server_string);
+    }
 
-	/* Check if the the Galera FSM shows this node is joined to the cluster */
-	if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_state'") == 0
-		&& (result = mysql_store_result(database->con)) != NULL)
-	{
-		if(mysql_field_count(database->con) < 2)
-		{
-		    mysql_free_result(result);
-		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_state'\". Expected 2 columns."
-				    " MySQL Version: %s",version_str);
-		    return;
-		}
+    /* Check if the the Galera FSM shows this node is joined to the cluster */
+    if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_state'") == 0
+        && (result = mysql_store_result(database->con)) != NULL)
+    {
+        if (mysql_field_count(database->con) < 2)
+        {
+            mysql_free_result(result);
+            skygw_log_write(LE, "Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_state'\". Expected 2 columns."
+                            " MySQL Version: %s", version_str);
+            return;
+        }
 
-		while ((row = mysql_fetch_row(result)))
-		{
-			if (strcmp(row[1], "4") == 0) 
-				isjoined = 1;
-	
-			/* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
-			else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1) {
-				if (mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
-					&& (result2 = mysql_store_result(database->con)) != NULL)
-				{
-				    		if(mysql_field_count(database->con) < 2)
-						{
-						    mysql_free_result(result);
-						    mysql_free_result(result2);
-						    skygw_log_write(LE,"Error: Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_sst_method'\". Expected 2 columns."
-							    " MySQL Version: %s",version_str);
-						    return;
-						}
-					while ((row = mysql_fetch_row(result2)))
-					{
-						if (strncmp(row[1], "xtrabackup", 10) == 0)
-							isjoined = 1;
-					}
-					mysql_free_result(result2);
-				}
-			}
-		}
-		mysql_free_result(result);
-	}
+        while ((row = mysql_fetch_row(result)))
+        {
+            if (strcmp(row[1], "4") == 0)
+                isjoined = 1;
 
-	/* Check the the Galera node index in the cluster */
-	if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_index'") == 0
-		&& (result = mysql_store_result(database->con)) != NULL)
-	{
-		long local_index = -1;
+                /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
+            else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1)
+            {
+                if (mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
+                    && (result2 = mysql_store_result(database->con)) != NULL)
+                {
+                    if (mysql_field_count(database->con) < 2)
+                    {
+                        mysql_free_result(result);
+                        mysql_free_result(result2);
+                        skygw_log_write(LE, "Error: Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_sst_method'\". Expected 2 columns."
+                                        " MySQL Version: %s", version_str);
+                        return;
+                    }
+                    while ((row = mysql_fetch_row(result2)))
+                    {
+                        if (strncmp(row[1], "xtrabackup", 10) == 0)
+                            isjoined = 1;
+                    }
+                    mysql_free_result(result2);
+                }
+            }
+        }
+        mysql_free_result(result);
+    }
 
-		if(mysql_field_count(database->con) < 2)
-		{
-		    mysql_free_result(result);
-		    skygw_log_write(LE,"Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_index'\". Expected 2 columns."
-							    " MySQL Version: %s",version_str);
-		    return;
-		}
+    /* Check the the Galera node index in the cluster */
+    if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_index'") == 0
+        && (result = mysql_store_result(database->con)) != NULL)
+    {
+        long local_index = -1;
 
-		while ((row = mysql_fetch_row(result)))
-		{
-			local_index = strtol(row[1], NULL, 10);
-			if ((errno == ERANGE && (local_index == LONG_MAX
-				|| local_index == LONG_MIN)) || (errno != 0 && local_index == 0))
-			{
-				local_index = -1;
-			}
-			database->server->node_id = local_index;
-		}
-		mysql_free_result(result);
-	}
+        if (mysql_field_count(database->con) < 2)
+        {
+            mysql_free_result(result);
+            skygw_log_write(LE, "Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_index'\". Expected 2 columns."
+                            " MySQL Version: %s", version_str);
+            return;
+        }
 
-	if (isjoined)
-		server_set_status(database->server, SERVER_JOINED);
-	else
-		server_clear_status(database->server, SERVER_JOINED);
+        while ((row = mysql_fetch_row(result)))
+        {
+            local_index = strtol(row[1], NULL, 10);
+            if ((errno == ERANGE && (local_index == LONG_MAX
+                                     || local_index == LONG_MIN)) || (errno != 0 && local_index == 0))
+            {
+                local_index = -1;
+            }
+            database->server->node_id = local_index;
+        }
+        mysql_free_result(result);
+    }
+
+    if (isjoined)
+    {
+        server_set_status(database->server, SERVER_JOINED);
+    }
+    else
+    {
+        server_clear_status(database->server, SERVER_JOINED);
+    }
 }
 
 /**
@@ -419,205 +419,217 @@ char 			*server_string;
 static void
 monitorMain(void *arg)
 {
-    MONITOR* mon = (MONITOR*)arg;
-GALERA_MONITOR		*handle;
-MONITOR_SERVERS		*ptr;
-size_t			nrounds = 0;
-MONITOR_SERVERS		*candidate_master = NULL;
-int			master_stickiness;
-int			is_cluster=0;
-int			log_no_members = 1;
-monitor_event_t evtype;
+    MONITOR* mon = (MONITOR*) arg;
+    GALERA_MONITOR *handle;
+    MONITOR_SERVERS *ptr;
+    size_t nrounds = 0;
+    MONITOR_SERVERS *candidate_master = NULL;
+    int master_stickiness;
+    int is_cluster = 0;
+    int log_no_members = 1;
+    monitor_event_t evtype;
 
     spinlock_acquire(&mon->lock);
-    handle = (GALERA_MONITOR *)mon->handle;
+    handle = (GALERA_MONITOR *) mon->handle;
     spinlock_release(&mon->lock);
     master_stickiness = handle->disableMasterFailback;
-	if (mysql_thread_init())
-	{
-                LOGIF(LE, (skygw_log_write_flush(
-                                   LOGFILE_ERROR,
-                                   "Fatal : mysql_thread_init failed in monitor "
-                                   "module. Exiting.\n")));
-                return;
-	}                         
-	handle->status = MONITOR_RUNNING;
-	
-	while (1)
-	{
-		if (handle->shutdown)
-		{
-			handle->status = MONITOR_STOPPING;
-			mysql_thread_end();
-			handle->status = MONITOR_STOPPED;
-			return;
-		}
-		/** Wait base interval */
-		thread_millisleep(MON_BASE_INTERVAL_MS);
-		/** 
-		 * Calculate how far away the monitor interval is from its full 
-		 * cycle and if monitor interval time further than the base 
-		 * interval, then skip monitoring checks. Excluding the first
-		 * round.
-		 */ 
+    if (mysql_thread_init())
+    {
+        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                         "Fatal : mysql_thread_init failed in monitor "
+                                         "module. Exiting.\n")));
+        return;
+    }
+    handle->status = MONITOR_RUNNING;
 
-		if (nrounds != 0 && ((nrounds*MON_BASE_INTERVAL_MS)%mon->interval) >= MON_BASE_INTERVAL_MS)
-		{
-			nrounds += 1;
-			continue;
-		}
+    while (1)
+    {
+        if (handle->shutdown)
+        {
+            handle->status = MONITOR_STOPPING;
+            mysql_thread_end();
+            handle->status = MONITOR_STOPPED;
+            return;
+        }
+        /** Wait base interval */
+        thread_millisleep(MON_BASE_INTERVAL_MS);
+        /** 
+         * Calculate how far away the monitor interval is from its full 
+         * cycle and if monitor interval time further than the base 
+         * interval, then skip monitoring checks. Excluding the first
+         * round.
+         */
 
-		nrounds += 1;
+        if (nrounds != 0 && ((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >= MON_BASE_INTERVAL_MS)
+        {
+            nrounds += 1;
+            continue;
+        }
 
-		/* reset cluster members counter */
-		is_cluster=0;
+        nrounds += 1;
 
-		ptr = mon->databases;
+        /* reset cluster members counter */
+        is_cluster = 0;
 
-		while (ptr)
-		{
-			ptr->mon_prev_status = ptr->server->status;
+        ptr = mon->databases;
 
-			monitorDatabase(mon, ptr);
+        while (ptr)
+        {
+            ptr->mon_prev_status = ptr->server->status;
 
-			/* clear bits for non member nodes */
-			if ( ! SERVER_IN_MAINT(ptr->server) && (! SERVER_IS_JOINED(ptr->server))) {
-				ptr->server->depth = -1;
+            monitorDatabase(mon, ptr);
 
-				/* clear M/S status */
-				server_clear_status(ptr->server, SERVER_SLAVE);
-                		server_clear_status(ptr->server, SERVER_MASTER);
-				
-				/* clear master sticky status */
-				server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
-			}
+            /* clear bits for non member nodes */
+            if (!SERVER_IN_MAINT(ptr->server) && (!SERVER_IS_JOINED(ptr->server)))
+            {
+                ptr->server->depth = -1;
 
-			/* Log server status change */
-			if (mon_status_changed(ptr))
-			{
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"Backend server %s:%d state : %s",
-					ptr->server->name,
-					ptr->server->port,
-					STRSRVSTATUS(ptr->server))));
-			}
-                        
-                        if (!(SERVER_IS_RUNNING(ptr->server)) || 
-                            !(SERVER_IS_IN_CLUSTER(ptr->server)))
-                        {
-					dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
-                        }
+                /* clear M/S status */
+                server_clear_status(ptr->server, SERVER_SLAVE);
+                server_clear_status(ptr->server, SERVER_MASTER);
 
-			if (SERVER_IS_DOWN(ptr->server))
-			{
-				/** Increase this server'e error count */
-				dcb_call_foreach(ptr->server,DCB_REASON_NOT_RESPONDING);
-				ptr->mon_err_count += 1;
+                /* clear master sticky status */
+                server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
+            }
 
-			}
-			else
-			{
-				/** Reset this server's error count */
-				ptr->mon_err_count = 0;
-			}
+            /* Log server status change */
+            if (mon_status_changed(ptr))
+            {
+                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
+                                                 "Backend server %s:%d state : %s",
+                                                 ptr->server->name,
+                                                 ptr->server->port,
+                                                 STRSRVSTATUS(ptr->server))));
+            }
 
-			ptr = ptr->next;
-		}
+            if (!(SERVER_IS_RUNNING(ptr->server)) ||
+                !(SERVER_IS_IN_CLUSTER(ptr->server)))
+            {
+                dcb_hangup_foreach(ptr->server);
+            }
 
-		/*
-		 * Let's select a master server:
-		 * it could be the candidate master following MIN(node_id) rule or
-		 * the server that was master in the previous monitor polling cycle
-		 * Decision depends on master_stickiness value set in configuration
-		 */
+            if (SERVER_IS_DOWN(ptr->server))
+            {
+                /** Increase this server'e error count */
+                dcb_hangup_foreach(ptr->server);
+                ptr->mon_err_count += 1;
 
-		/* get the candidate master, following MIN(node_id) rule */
-		candidate_master = get_candidate_master(mon);
+            }
+            else
+            {
+                /** Reset this server's error count */
+                ptr->mon_err_count = 0;
+            }
 
-		/* Select the master, based on master_stickiness */
-                if (1 == handle->disableMasterRoleSetting) {
-                    handle->master = NULL;
+            ptr = ptr->next;
+        }
+
+        /*
+         * Let's select a master server:
+         * it could be the candidate master following MIN(node_id) rule or
+         * the server that was master in the previous monitor polling cycle
+         * Decision depends on master_stickiness value set in configuration
+         */
+
+        /* get the candidate master, following MIN(node_id) rule */
+        candidate_master = get_candidate_master(mon);
+
+        /* Select the master, based on master_stickiness */
+        if (1 == handle->disableMasterRoleSetting)
+        {
+            handle->master = NULL;
+        }
+        else
+        {
+            handle->master = set_cluster_master(handle->master, candidate_master, master_stickiness);
+        }
+
+        ptr = mon->databases;
+
+        while (ptr)
+        {
+            if (!SERVER_IS_JOINED(ptr->server) || SERVER_IN_MAINT(ptr->server))
+            {
+                ptr = ptr->next;
+                continue;
+            }
+
+            if (handle->master)
+            {
+                if (ptr != handle->master)
+                {
+                    /* set the Slave role */
+                    server_set_status(ptr->server, SERVER_SLAVE);
+                    server_clear_status(ptr->server, SERVER_MASTER);
+
+                    /* clear master stickiness */
+                    server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
                 }
-                else {
-                    handle->master = set_cluster_master(handle->master, candidate_master, master_stickiness);
+                else
+                {
+                    /* set the Master role */
+                    server_set_status(handle->master->server, SERVER_MASTER);
+                    server_clear_status(handle->master->server, SERVER_SLAVE);
+
+                    if (candidate_master && handle->master->server->node_id != candidate_master->server->node_id)
+                    {
+                        /* set master stickiness */
+                        server_set_status(handle->master->server, SERVER_MASTER_STICKINESS);
+                    }
+                    else
+                    {
+                        /* clear master stickiness */
+                        server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
+                    }
                 }
+            }
 
-		ptr = mon->databases;
+            is_cluster++;
 
-		while (ptr) {
-			if (!SERVER_IS_JOINED(ptr->server) || SERVER_IN_MAINT(ptr->server)) {
-				ptr = ptr->next;
-				continue;
-			}
+            ptr = ptr->next;
+        }
 
-                        if (handle->master) {
-                            if (ptr != handle->master) {
-				/* set the Slave role */
-				server_set_status(ptr->server, SERVER_SLAVE);
-				server_clear_status(ptr->server, SERVER_MASTER);
-
-				/* clear master stickiness */
-				server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
-                            } else {
-				/* set the Master role */
-				server_set_status(handle->master->server, SERVER_MASTER);
-				server_clear_status(handle->master->server, SERVER_SLAVE);
-
-				if (candidate_master && handle->master->server->node_id != candidate_master->server->node_id) {
-					/* set master stickiness */
-					server_set_status(handle->master->server, SERVER_MASTER_STICKINESS);
-				} else {
-					/* clear master stickiness */
-					server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
-				}			
-                            }
-                        }
-
-			is_cluster++;
-
-			ptr = ptr->next;
-		}
-
-		if (is_cluster == 0 && log_no_members) {
-			LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Error: there are no cluster members")));
-			log_no_members = 0;
-		} else {
-			if (is_cluster > 0 && log_no_members == 0) {
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-					"Info: found cluster members")));
-				log_no_members = 1;
-			}
-		}
+        if (is_cluster == 0 && log_no_members)
+        {
+            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                             "Error: there are no cluster members")));
+            log_no_members = 0;
+        }
+        else
+        {
+            if (is_cluster > 0 && log_no_members == 0)
+            {
+                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
+                                                 "Info: found cluster members")));
+                log_no_members = 1;
+            }
+        }
 
 
-		ptr = mon->databases;
+        ptr = mon->databases;
 
-		while(ptr)
-		{
+        while (ptr)
+        {
 
-		    /** Execute monitor script if a server state has changed */
-		    if(mon_status_changed(ptr))
-		    {
-			evtype = mon_get_event_type(ptr);
-			if(isGaleraEvent(evtype))
-			{
-			    skygw_log_write(LOGFILE_TRACE,"Server changed state: %s[%s:%u]: %s",
-				     ptr->server->unique_name,
-				     ptr->server->name,ptr->server->port,
-				     mon_get_event_name(ptr));
-			    if(handle->script && handle->events[evtype])
-			    {
-				monitor_launch_script(mon,ptr,handle->script);
-			    }
-			}
-		    }
-		    ptr = ptr->next;
-		}
-	}
+            /** Execute monitor script if a server state has changed */
+            if (mon_status_changed(ptr))
+            {
+                evtype = mon_get_event_type(ptr);
+                if (isGaleraEvent(evtype))
+                {
+                    skygw_log_write(LOGFILE_TRACE, "Server changed state: %s[%s:%u]: %s",
+                                    ptr->server->unique_name,
+                                    ptr->server->name, ptr->server->port,
+                                    mon_get_event_name(ptr));
+                    if (handle->script && handle->events[evtype])
+                    {
+                        monitor_launch_script(mon, ptr, handle->script);
+                    }
+                }
+            }
+            ptr = ptr->next;
+        }
+    }
 }
 
 /**
@@ -629,45 +641,50 @@ monitor_event_t evtype;
  * @param	servers The monitored servers list
  * @return	The candidate master on success, NULL on failure
  */
-static MONITOR_SERVERS *get_candidate_master(MONITOR* mon) {
-	MONITOR_SERVERS *moitor_servers = mon->databases;
-	MONITOR_SERVERS *candidate_master = NULL;
-	GALERA_MONITOR* handle = mon->handle;
-	long min_id = -1;
-	int minval = INT_MAX;
-	int currval;
-	char* value;
-	/* set min_id to the lowest value of moitor_servers->server->node_id */
-	while(moitor_servers) {
-		if (!SERVER_IN_MAINT(moitor_servers->server) && SERVER_IS_JOINED(moitor_servers->server)) {
+static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
+{
+    MONITOR_SERVERS *moitor_servers = mon->databases;
+    MONITOR_SERVERS *candidate_master = NULL;
+    GALERA_MONITOR* handle = mon->handle;
+    long min_id = -1;
+    int minval = INT_MAX;
+    int currval;
+    char* value;
+    /* set min_id to the lowest value of moitor_servers->server->node_id */
+    while (moitor_servers)
+    {
+        if (!SERVER_IN_MAINT(moitor_servers->server) && SERVER_IS_JOINED(moitor_servers->server))
+        {
 
-			moitor_servers->server->depth = 0;
+            moitor_servers->server->depth = 0;
 
-			if(handle->use_priority && (value = serverGetParameter(moitor_servers->server,"priority")) != NULL)
-			{
-			    currval = atoi(value);
-			    if(currval < minval && currval > 0)
-			    {
-				minval = currval;
-				candidate_master = moitor_servers;
-			    }
-			}
-			else if(moitor_servers->server->node_id >= 0 &&
-			 (!handle->use_priority || /** Server priority disabled*/
-			  candidate_master == NULL || /** No candidate chosen */
-			  serverGetParameter(candidate_master->server,"priority") == NULL)) /** Candidate has no priority */
-			{
-			    if (min_id < 0 || moitor_servers->server->node_id < min_id) {
-				min_id = moitor_servers->server->node_id;
-				candidate_master = moitor_servers;
-			    }
-			}
-		}
-		moitor_servers = moitor_servers->next;
-	}
+            if (handle->use_priority && (value = serverGetParameter(moitor_servers->server, "priority")) != NULL)
+            {
+                currval = atoi(value);
+                if (currval < minval && currval > 0)
+                {
+                    minval = currval;
+                    candidate_master = moitor_servers;
+                }
+            }
+            else if (moitor_servers->server->node_id >= 0 &&
+                     (!handle->use_priority || /** Server priority disabled*/
+                      candidate_master == NULL || /** No candidate chosen */
+                      serverGetParameter(candidate_master->server, "priority") == NULL)) /** Candidate has no priority */
+            {
+                if (min_id < 0 || moitor_servers->server->node_id < min_id)
+                {
+                    min_id = moitor_servers->server->node_id;
+                    candidate_master = moitor_servers;
+                }
+            }
+        }
+        moitor_servers = moitor_servers->next;
+    }
 
-	return candidate_master;
+    return candidate_master;
 }
+
 /**
  * set the master server in the cluster
  *
@@ -682,23 +699,31 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR* mon) {
  * @param	candidate_master The candidate master server accordingly to the selection rule
  * @return	The  master node pointer (could be NULL)
  */
-static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONITOR_SERVERS *candidate_master, int master_stickiness) {
-	/*
-	 * if current master is not set or master_stickiness is not enable
-	 * just return candidate_master.
-	 */
-	if (current_master == NULL || master_stickiness == 0) {
-		return candidate_master;
-	} else {
-		/*
-		 * if current_master is still a cluster member use it
-		 *
-		 */
-		if (SERVER_IS_JOINED(current_master->server) && (! SERVER_IN_MAINT(current_master->server))) {
-			return current_master;
-		} else
-			return candidate_master;
-	}
+static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONITOR_SERVERS *candidate_master, int master_stickiness)
+{
+    /*
+     * if current master is not set or master_stickiness is not enable
+     * just return candidate_master.
+     */
+    if (current_master == NULL || master_stickiness == 0)
+    {
+        return candidate_master;
+    }
+    else
+    {
+        /*
+         * if current_master is still a cluster member use it
+         *
+         */
+        if (SERVER_IS_JOINED(current_master->server) && (!SERVER_IN_MAINT(current_master->server)))
+        {
+            return current_master;
+        }
+        else
+        {
+            return candidate_master;
+        }
+    }
 }
 
 /**
@@ -715,8 +740,8 @@ static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONI
 static void
 disableMasterFailback(void *arg, int disable)
 {
-GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
-        memcpy(&handle->disableMasterFailback, &disable, sizeof(int));
+    GALERA_MONITOR *handle = (GALERA_MONITOR *) arg;
+    memcpy(&handle->disableMasterFailback, &disable, sizeof(int));
 }
 
 /**
@@ -731,11 +756,12 @@ GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
 static void
 availableWhenDonor(void *arg, int disable)
 {
-GALERA_MONITOR   *handle = (GALERA_MONITOR *)arg;
-        memcpy(&handle->availableWhenDonor, &disable, sizeof(int));
+    GALERA_MONITOR *handle = (GALERA_MONITOR *) arg;
+    memcpy(&handle->availableWhenDonor, &disable, sizeof(int));
 }
 
-static monitor_event_t galera_events[] = {
+static monitor_event_t galera_events[] =
+{
     MASTER_DOWN_EVENT,
     MASTER_UP_EVENT,
     SLAVE_DOWN_EVENT,
@@ -756,6 +782,7 @@ static monitor_event_t galera_events[] = {
     NEW_DONOR_EVENT,
     MAX_MONITOR_EVENT
 };
+
 /**
  * Check if the Galera monitor is monitoring this event type.
  * @param event Event to check
@@ -764,10 +791,12 @@ static monitor_event_t galera_events[] = {
 bool isGaleraEvent(monitor_event_t event)
 {
     int i;
-    for(i = 0;galera_events[i] != MAX_MONITOR_EVENT;i++)
+    for (i = 0; galera_events[i] != MAX_MONITOR_EVENT; i++)
     {
-	if(event == galera_events[i])
-	    return true;
+        if (event == galera_events[i])
+        {
+            return true;
+        }
     }
     return false;
 }

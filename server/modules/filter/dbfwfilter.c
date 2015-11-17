@@ -514,7 +514,7 @@ static TIMERANGE* parse_time(const char* str)
             }
             else
             {
-                skygw_log_write(LOGFILE_ERROR, "dbfwfilter: malloc returned NULL.");
+                MXS_ERROR("dbfwfilter: malloc returned NULL.");
             }
         }
     }
@@ -596,7 +596,7 @@ RULE* find_rule(char* tok, FW_INSTANCE* instance)
 		}
 		rlist = rlist->next;
 	}
-	skygw_log_write(LOGFILE_ERROR, "Error : Rule not found: %s",tok);	
+	MXS_ERROR("Rule not found: %s",tok);
 	return NULL;
 }
 
@@ -611,7 +611,7 @@ void add_users(char* rule, FW_INSTANCE* instance)
 
 	STRLINK* link = calloc(1,sizeof(STRLINK));
         if(link == NULL){
-            skygw_log_write(LOGFILE_ERROR,"Error : Memory allocation failed");
+            MXS_ERROR("Memory allocation failed");
             return;
         }
 	link->next = instance->userstrings;
@@ -644,9 +644,9 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 
 	if((userptr == NULL || ruleptr == NULL || modeptr == NULL)||
 	   (userptr > modeptr || userptr > ruleptr || modeptr > ruleptr)) {
-		skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, right keywords not found in the correct order: %s",orig);
-		rval = false;
-		goto parse_err;
+            MXS_ERROR("dbfwfilter: Rule syntax incorrect, right keywords not found in the correct order: %s",orig);
+            rval = false;
+            goto parse_err;
 	}
 		
 	*modeptr++ = '\0';
@@ -656,7 +656,7 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 
 	if(tok == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, right keywords not found in the correct order: %s",orig);
+	    MXS_ERROR("dbfwfilter: Rule syntax incorrect, right keywords not found in the correct order: %s",orig);
 	    rval = false;
 	    goto parse_err;
 	}
@@ -665,7 +665,7 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 		tok = strtok_r(NULL," ",&saveptr);
 		if(tok == NULL)
 		{
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, missing keyword after 'match': %s",orig);
+		    MXS_ERROR("dbfwfilter: Rule syntax incorrect, missing keyword after 'match': %s",orig);
 		    rval = false;
 		    goto parse_err;
 		}
@@ -677,14 +677,14 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 			match_any = false;
 			strict = true;
 		}else{
-			skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, 'match' was not followed by correct keyword: %s",orig);
-			rval = false;
-			goto parse_err;
+                    MXS_ERROR("dbfwfilter: Rule syntax incorrect, 'match' was not followed by correct keyword: %s",orig);
+                    rval = false;
+                    goto parse_err;
 		}
 	}
 	else
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, bad token: %s",tok);
+	    MXS_ERROR("dbfwfilter: Rule syntax incorrect, bad token: %s",tok);
 	    rval = false;
 	    goto parse_err;
 	}
@@ -693,7 +693,7 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 
 	if(tok != NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, extra token found after 'match' keyword: %s",orig);
+	    MXS_ERROR("dbfwfilter: Rule syntax incorrect, extra token found after 'match' keyword: %s",orig);
 	    rval = false;
 	    goto parse_err;
 	}
@@ -702,7 +702,7 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 
 	if(tok == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no rules given: %s",orig);
+	    MXS_ERROR("dbfwfilter: Rule syntax incorrect, no rules given: %s",orig);
 	    rval = false;
 	    goto parse_err;
 	}
@@ -711,7 +711,7 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 
 	if(tok == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no rules given: %s",orig);
+	    MXS_ERROR("dbfwfilter: Rule syntax incorrect, no rules given: %s",orig);
 	    rval = false;
 	    goto parse_err;
 	}
@@ -730,7 +730,7 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 	    }
 	    else
 	    {
-		skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, could not find rule '%s'.",tok);
+		MXS_ERROR("dbfwfilter: Rule syntax incorrect, could not find rule '%s'.",tok);
 		rval = false;
 		goto parse_err;
 	    }
@@ -747,14 +747,14 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 
 	if(userptr == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no users given: %s",orig);
+	    MXS_ERROR("dbfwfilter: Rule syntax incorrect, no users given: %s",orig);
 	    rval = false;
 	    goto parse_err;
 	}
 
 	if(rulelist == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule syntax incorrect, no rules found: %s",orig);
+            MXS_ERROR("dbfwfilter: Rule syntax incorrect, no rules found: %s",orig);
 	    rval = false;
 	    goto parse_err;
 	}
@@ -770,7 +770,7 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
             user = (USER*)calloc(1,sizeof(USER));
 
             if(user == NULL){
-		skygw_log_write(LOGFILE_ERROR,"Error: dbfwfilter: failed to allocate memory when parsing rules.");
+		MXS_ERROR("dbfwfilter: failed to allocate memory when parsing rules.");
 		rval = false;
 		goto parse_err;
             }
@@ -858,7 +858,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
     if(tok == NULL)
     {
-	skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, no rule: %s",rule);
+	MXS_ERROR("dbfwfilter: Rule parsing failed, no rule: %s",rule);
 	rval = false;
 	goto retblock;
     }
@@ -872,7 +872,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
 	if(tok == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, incomplete rule: %s",rule);
+	    MXS_ERROR("dbfwfilter: Rule parsing failed, incomplete rule: %s",rule);
 	    rval = false;
 	    goto retblock;
 	}
@@ -883,7 +883,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
 	if(ruledef == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR,"Error: Memory allocation failed.");
+	    MXS_ERROR("Memory allocation failed.");
 	    rval = false;
 	    goto retblock;
 	}
@@ -893,7 +893,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 	if(rlist == NULL)
 	{
 	    free(ruledef);
-	    skygw_log_write(LOGFILE_ERROR,"Error: Memory allocation failed.");
+	    MXS_ERROR("Memory allocation failed.");
 	    rval = false;
 	    goto retblock;
 	}
@@ -914,7 +914,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
     }
     else
     {
-	skygw_log_write(LOGFILE_ERROR,"Error : Unknown token in rule '%s': %s",rule,tok);
+	MXS_ERROR("Unknown token in rule '%s': %s",rule,tok);
 	rval = false;
 	goto retblock;
     }
@@ -923,7 +923,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
     if(tok == NULL)
     {
-	skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, no allow or deny: %s",rule);
+	MXS_ERROR("dbfwfilter: Rule parsing failed, no allow or deny: %s",rule);
 	rval = false;
 	goto retblock;
     }
@@ -948,7 +948,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		{
 		    if(req_defined)
 		    {
-			skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, Multiple non-optional rules: %s",rule);
+			MXS_ERROR("dbfwfilter: Rule parsing failed, Multiple non-optional rules: %s",rule);
 			rval = false;
 			goto retblock;
 		    }
@@ -985,7 +985,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
             {
 		if(at_def)
 		{
-		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, multiple 'at_times' tokens: %s",rule);
+		    MXS_ERROR("dbfwfilter: Rule parsing failed, multiple 'at_times' tokens: %s",rule);
 		    rval = false;
 		    goto retblock;
 		}
@@ -997,7 +997,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 			break;
 		    if(!check_time(tok))
 		    {
-			skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, malformed time definition: %s",tok);
+			MXS_ERROR("dbfwfilter: Rule parsing failed, malformed time definition: %s",tok);
 			rval = false;
 			goto retblock;
 		    }
@@ -1006,7 +1006,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
 		    if(tmp == NULL)
 		    {
-			skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, unexpected characters after time definition.");
+			MXS_ERROR("dbfwfilter: Rule parsing failed, unexpected characters after time definition.");
 			rval = false;
 			tr_free(tr);
 			goto retblock;
@@ -1038,14 +1038,14 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
 		if(tok == NULL)
 		{
-		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, No regex string.");
+		    MXS_ERROR("dbfwfilter: Rule parsing failed, No regex string.");
 		    rval = false;
 		    goto retblock;
 		}
 
 		if(*tok != '\'' && *tok != '\"')
 		{
-		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, regex string not quoted.");
+		    MXS_ERROR("dbfwfilter: Rule parsing failed, regex string not quoted.");
 		    rval = false;
 		    goto retblock;
 		}
@@ -1079,7 +1079,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
 		if(n_char >= 2048)
 		{
-		    skygw_log_write_flush(LOGFILE_ERROR, "dbfwfilter: Failed to parse rule, regular expression length is over 2048 characters.");
+		    MXS_ERROR("dbfwfilter: Failed to parse rule, regular expression length is over 2048 characters.");
 		    rval = false;
                     goto retblock;
 		}
@@ -1087,14 +1087,14 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                 str = calloc(((tok - start) + 1),sizeof(char));
                 if(str == NULL)
                 {
-                    skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");
+                    MXS_ERROR("Fatal Error: malloc returned NULL.");
 		    rval = false;
                     goto retblock;
                 }
                 re = (regex_t*)malloc(sizeof(regex_t));
 
                 if(re == NULL){
-                    skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: malloc returned NULL.");
+                    MXS_ERROR("Fatal Error: malloc returned NULL.");
 		    rval = false;
                     free(str);
                     goto retblock;
@@ -1103,7 +1103,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                 memcpy(str, start, (tok-start));
 
                 if(regcomp(re, str,REG_NOSUB|instance->regflags)){
-                    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Invalid regular expression '%s'.", str);
+                    MXS_ERROR("dbfwfilter: Invalid regular expression '%s'.", str);
 		    rval = false;
                     free(re);
 		    goto retblock;
@@ -1130,7 +1130,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                 if(tok == NULL){
                     free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+		    MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
                     goto retblock;
                 }
 
@@ -1140,14 +1140,14 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		{
 		    free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+		    MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
                     goto retblock;
 		}
 
 		if(qs->limit < 1){
                     free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Bad query amount: %s", tok);
+		    MXS_ERROR("dbfwfilter: Bad query amount: %s", tok);
                     goto retblock;
                 }
 
@@ -1157,7 +1157,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                 if(tok == NULL){
                     free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+		    MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
                     goto retblock;
                 }
 
@@ -1167,14 +1167,14 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		{
 		    free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+		    MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
                     goto retblock;
 		}
 
 		if(qs->period < 1){
                     free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Bad time period: %s", tok);
+		    MXS_ERROR("dbfwfilter: Bad time period: %s", tok);
                     goto retblock;
                 }
 
@@ -1184,7 +1184,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
                 if(tok == NULL){
                     free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+		    MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
                     goto retblock;
                 }
                 qs->cooldown = strtod(tok,&errptr);
@@ -1193,14 +1193,14 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 		{
 		    free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+		    MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
                     goto retblock;
 		}
 
 		if(qs->cooldown < 1){
                     free(qs);
 		    rval = false;
-		    skygw_log_write(LOGFILE_ERROR, "dbfwfilter: Bad blocking period: %s", tok);
+		    MXS_ERROR("dbfwfilter: Bad blocking period: %s", tok);
                     goto retblock;
                 }
 
@@ -1216,7 +1216,7 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
             {
 		if(oq_def)
 		{
-		    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Rule parsing failed, multiple 'on_queries' tokens: %s",rule);
+		    MXS_ERROR("dbfwfilter: Rule parsing failed, multiple 'on_queries' tokens: %s",rule);
 		    rval = false;
 		    goto retblock;
 		}
@@ -1225,28 +1225,22 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
 
 		if(tok == NULL)
 		{
-		     skygw_log_write(LOGFILE_ERROR,
-                                    "dbfwfilter: Missing parameter for 'on_queries'.");
+                    MXS_ERROR("dbfwfilter: Missing parameter for 'on_queries'.");
 		    rval = false;
 		    goto retblock;
 		}
 
                 if(!parse_querytypes(tok,ruledef)){
-                    skygw_log_write(LOGFILE_ERROR,
-                                    "dbfwfilter: Invalid query type"
-			    "requirements: %s."
-			    ,tok);
+                    MXS_ERROR("dbfwfilter: Invalid query type requirements: %s.", tok);
 		    rval = false;
 		    goto retblock;
                 }	
             }
 	    else
 	    {
-		 skygw_log_write(LOGFILE_ERROR,
-                                    "dbfwfilter: Unknown rule type: %s"
-			    ,tok);
-		    rval = false;
-		    goto retblock;
+                MXS_ERROR("dbfwfilter: Unknown rule type: %s", tok);
+                rval = false;
+                goto retblock;
 	    }
 	    tok = strtok_r(NULL," ,",&saveptr);
 	}
@@ -1298,16 +1292,16 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
 	if ((my_instance = calloc(1, sizeof(FW_INSTANCE))) == NULL ||
 		(my_instance->lock = (SPINLOCK*)malloc(sizeof(SPINLOCK))) == NULL){
-            skygw_log_write(LOGFILE_ERROR, "Memory allocation for firewall filter failed.");
-		return NULL;
+            MXS_ERROR("Memory allocation for firewall filter failed.");
+            return NULL;
 	}
 	
 	spinlock_init(my_instance->lock);
 
 	if((ht = hashtable_alloc(100, hashkeyfun, hashcmpfun)) == NULL){
-		skygw_log_write(LOGFILE_ERROR, "Unable to allocate hashtable.");
-		free(my_instance);
-		return NULL;
+            MXS_ERROR("Unable to allocate hashtable.");
+            free(my_instance);
+            return NULL;
 	}
 
 	hashtable_memory_fns(ht,(HASHMEMORYFN)strdup,NULL,(HASHMEMORYFN)free,huserfree);
@@ -1338,15 +1332,15 @@ createInstance(char **options, FILTER_PARAMETER **params)
         
         if(filename == NULL)
         {
-            skygw_log_write(LOGFILE_ERROR, "Unable to find rule file for firewall filter. Please provide the path with"
-                    " rules=<path to file>");
+            MXS_ERROR("Unable to find rule file for firewall filter. Please provide the path with"
+                      " rules=<path to file>");
             hashtable_free(my_instance->htable);
             free(my_instance);
             return NULL;
         }
         
 	if((file = fopen(filename,"rb")) == NULL ){
-            skygw_log_write(LOGFILE_ERROR, "Error while opening rule file for firewall filter.");
+            MXS_ERROR("Error while opening rule file for firewall filter.");
             hashtable_free(my_instance->htable);
             free(my_instance);
             free(filename);
@@ -1361,7 +1355,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         if(fgets(buffer,2048,file) == NULL){
             if(ferror(file)){
-                skygw_log_write(LOGFILE_ERROR, "Error while reading rule file for firewall filter.");
+                MXS_ERROR("Error while reading rule file for firewall filter.");
                 fclose(file);
                 hashtable_free(my_instance->htable);
                 free(my_instance);
@@ -1394,7 +1388,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
 	if(file_empty)
 	{
-	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: File is empty: %s");
+	    MXS_ERROR("dbfwfilter: File is empty: %s", filename);
 	    free(filename);
 	    err = true;
 	    goto retblock;
@@ -1408,7 +1402,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
 	if(ptr == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR,"dbfwfilter: No 'users' line found.");
+	    MXS_ERROR("dbfwfilter: No 'users' line found.");
 	    err = true;
 	    goto retblock;
 	}
@@ -1417,7 +1411,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
 	    if(!link_rules(ptr->value,my_instance))
 	    {
-		skygw_log_write(LOGFILE_ERROR,"dbfwfilter: Failed to parse rule: %s",ptr->value);
+		MXS_ERROR("dbfwfilter: Failed to parse rule: %s",ptr->value);
 		err = true;
 	    }
 	    tmp = ptr;
@@ -1525,7 +1519,7 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
            session->session->data == NULL ||
            session->session->client == NULL)
         {
-            skygw_log_write_flush(LOGFILE_ERROR, "Error : Firewall filter session missing data.");
+            MXS_ERROR("Firewall filter session missing data.");
             return NULL;
         }
 	
@@ -1535,8 +1529,8 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
 	errmsg = (char*)malloc((512 + errlen)*sizeof(char));
 	
 	if(errmsg == NULL){
-		skygw_log_write_flush(LOGFILE_ERROR, "Fatal Error: Memory allocation failed.");	
-		return NULL;
+            MXS_ERROR("Memory allocation failed.");
+            return NULL;
 	}
 
 
@@ -1673,7 +1667,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
         switch(rulelist->rule->type){
 			
         case RT_UNDEFINED:
-            skygw_log_write_flush(LOGFILE_ERROR, "Error: Undefined rule type found.");	
+            MXS_ERROR("Undefined rule type found.");
             break;
 			
         case RT_REGEX:
@@ -1684,7 +1678,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 				
                 if(!rulelist->rule->allow){
                     msg = strdup("Permission denied, query matched regular expression.");
-                    skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': regex matched on query",rulelist->rule->name);
+                    MXS_INFO("dbfwfilter: rule '%s': regex matched on query",rulelist->rule->name);
                     goto queryresolved;
                 }else{
                     break;
@@ -1697,7 +1691,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
             if(!rulelist->rule->allow){
                 matches = true;
                 msg = strdup("Permission denied at this time.");
-                skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': query denied at: %s",rulelist->rule->name,asctime(tm_now));
+                MXS_INFO("dbfwfilter: rule '%s': query denied at: %s",rulelist->rule->name,asctime(tm_now));
                 goto queryresolved;
             }else{
                 break;
@@ -1724,7 +1718,8 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 				if(!rulelist->rule->allow)
 				{
 				    sprintf(emsg,"Permission denied to column '%s'.",strln->value);
-				    skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': query targets forbidden column: %s",rulelist->rule->name,strln->value);
+				    MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
+                                             rulelist->rule->name,strln->value);
 				    msg = strdup(emsg);
 				    goto queryresolved;
 				}
@@ -1755,7 +1750,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 
 			matches = true;
 			msg = strdup("Usage of wildcard denied.");
-			skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': query contains a wildcard.",rulelist->rule->name);
+			MXS_INFO("dbfwfilter: rule '%s': query contains a wildcard.",rulelist->rule->name);
 			goto queryresolved;
 		    }
 		    free(where);
@@ -1808,7 +1803,7 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 		    double blocked_for = queryspeed->cooldown - difftime(time_now,queryspeed->triggered);
 		    
 		    sprintf(emsg,"Queries denied for %f seconds",blocked_for);
-		    skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': user denied for %f seconds",rulelist->rule->name,blocked_for);
+		    MXS_INFO("dbfwfilter: rule '%s': user denied for %f seconds",rulelist->rule->name,blocked_for);
 		    msg = strdup(emsg);
 		    
 		    matches = true;				
@@ -1828,8 +1823,8 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
 		    matches = true;
 		    queryspeed->active = true;
 		    
-		    skygw_log_write(LOGFILE_TRACE, 
-			     "dbfwfilter: rule '%s': query limit triggered (%d queries in %f seconds), denying queries from user for %f seconds.",
+		    MXS_INFO("dbfwfilter: rule '%s': query limit triggered (%d queries in %f seconds), "
+                             "denying queries from user for %f seconds.",
 			     rulelist->rule->name,
 			     queryspeed->limit,
 			     queryspeed->period,
@@ -1859,8 +1854,8 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
             {
                 matches = true;
                 msg = strdup("Required WHERE/HAVING clause is missing.");
-                skygw_log_write(LOGFILE_TRACE, "dbfwfilter: rule '%s': query has no where/having clause, query is denied.",
-                                rulelist->rule->name);
+                MXS_INFO("dbfwfilter: rule '%s': query has no where/having clause, query is denied.",
+                         rulelist->rule->name);
             }
             break;
 	
@@ -2213,7 +2208,7 @@ int main(int argc, char** argv)
             NULL
         };
 
-    skygw_logmanager_init(argc_,argv_);
+    mxs_log_init(argc_,argv_);
 
 
     init_test_env(home);
@@ -2231,7 +2226,7 @@ int main(int argc, char** argv)
 	printf("Failed to parse rule. Read the error log for the reason of the failure.\n");
     }
 
-    skygw_log_sync_all();
+    mxs_log_flush_sync();
 
     return 0;
 }
