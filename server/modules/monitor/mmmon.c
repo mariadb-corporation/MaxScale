@@ -545,7 +545,7 @@ monitorMain(void *arg)
     if (mysql_thread_init())
     {
         MXS_ERROR("Fatal : mysql_thread_init failed in monitor "
-                  "module. Exiting.")));
+                  "module. Exiting.");
         return;
     }
 
