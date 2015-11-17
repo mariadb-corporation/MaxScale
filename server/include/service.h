@@ -219,7 +219,7 @@ extern	int	serviceStop(SERVICE *);
 extern	int	serviceRestart(SERVICE *);
 extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
-extern	void	serviceSetFilters(SERVICE *, char *);
+extern	bool	serviceSetFilters(SERVICE *, char *);
 extern  int     serviceSetSSL(SERVICE *service, char* action);
 extern  int     serviceInitSSL(SERVICE* service);
 extern  int     serviceSetSSLVersion(SERVICE *service, char* version);

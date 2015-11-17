@@ -93,6 +93,9 @@ extern __thread log_info_t tls_log_info;
 #define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||  \
                                  log_ses_count[id] > 0) ? true : false)
 
+// TODO: Add this at a later stage.
+#define MXS_LOG_PRIORITY_IS_ENABLED(priority) false
+
 /**
  * Execute the given command if specified log is enabled in general or
  * if the log is enabled for the current session.

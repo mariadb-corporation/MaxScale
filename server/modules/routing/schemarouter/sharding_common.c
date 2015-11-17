@@ -41,7 +41,7 @@ bool extract_database(GWBUF* buf, char* str)
 	tok = strtok_r(query," ;",&saved);
 	if(tok == NULL || strcasecmp(tok,"use") != 0)
 	{
-	    skygw_log_write(LOGFILE_ERROR,"extract_database: Malformed chage database packet.");
+	    MXS_ERROR("extract_database: Malformed chage database packet.");
 	    succp = false;
 	    goto retblock;
 	}
@@ -49,7 +49,7 @@ bool extract_database(GWBUF* buf, char* str)
 	tok = strtok_r(NULL," ;",&saved);
 	if(tok == NULL)
 	{
-	    skygw_log_write(LOGFILE_ERROR,"extract_database: Malformed chage database packet.");
+	    MXS_ERROR("extract_database: Malformed chage database packet.");
 	    succp = false;
 	    goto retblock;
 	}
@@ -73,16 +73,12 @@ bool extract_database(GWBUF* buf, char* str)
  */
 void create_error_reply(char* fail_str,DCB* dcb)
 {
-    skygw_log_write_flush(
-	    LOGFILE_TRACE,
-	    "change_current_db: failed to change database: %s", fail_str);
+    MXS_INFO("change_current_db: failed to change database: %s", fail_str);
     GWBUF* errbuf = modutil_create_mysql_err_msg(1, 0, 1049, "42000", fail_str);
 
     if (errbuf == NULL)
     {
-	LOGIF(LE, (skygw_log_write_flush(
-		LOGFILE_ERROR,
-		"Error : Creating buffer for error message failed.")));
+	MXS_ERROR("Creating buffer for error message failed.");
 	return;
     }
     /** Set flags that help router to identify session commands reply */
@@ -120,8 +116,7 @@ bool change_current_db(char* dest,
 	    succp = false;
 	    goto retblock;
 	}
-	skygw_log_write(LOGFILE_TRACE,"change_current_db: INIT_DB with database '%s'",
-		 db);
+	MXS_INFO("change_current_db: INIT_DB with database '%s'", db);
 	/**
 	 * Update the session's active database only if it's in the hashtable.
 	 * If it isn't found, send a custom error packet to the client.
@@ -135,7 +130,7 @@ bool change_current_db(char* dest,
 	else
 	{
 	    strcpy(dest,db);
-	    skygw_log_write(LOGFILE_TRACE,"change_current_db: database is on server: '%s'.",target);
+	    MXS_INFO("change_current_db: database is on server: '%s'.",target);
 	    succp = true;
 	    goto retblock;
 	}
@@ -143,11 +138,9 @@ bool change_current_db(char* dest,
     else
     {
 	/** Create error message */
-	skygw_log_write_flush(LOGFILE_ERROR,
-			 "change_current_db: failed to change database: Query buffer too large");
-	skygw_log_write_flush(LOGFILE_TRACE,
-                              "change_current_db: failed to change database: "
-                              "Query buffer too large [%ld bytes]", GWBUF_LENGTH(buf));
+	MXS_ERROR("change_current_db: failed to change database: Query buffer too large");
+	MXS_INFO("change_current_db: failed to change database: "
+                 "Query buffer too large [%ld bytes]", GWBUF_LENGTH(buf));
 	succp = false;
 	goto retblock;
     }

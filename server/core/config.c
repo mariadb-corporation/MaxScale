@@ -1028,7 +1028,10 @@ process_config_context(CONFIG_CONTEXT *context)
 
             if (filters && obj->element)
             {
-                serviceSetFilters(obj->element, filters);
+                if (!serviceSetFilters(obj->element, filters))
+                {
+                    error_count++;
+                }
             }
         }
         else if (!strcmp(type, "listener"))
@@ -2141,7 +2144,11 @@ process_config_update(CONFIG_CONTEXT *context)
             }
             if (filters && obj->element)
             {
-                serviceSetFilters(obj->element, filters);
+                if (!serviceSetFilters(obj->element, filters))
+                {
+                    MXS_ERROR("Failed to set service filters for '%s'. This "
+                              "service will not use filters.", obj->object);
+                }
             }
         }
         else if (!strcmp(type, "listener"))

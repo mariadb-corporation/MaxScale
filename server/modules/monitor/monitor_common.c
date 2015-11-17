@@ -325,7 +325,7 @@ void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 
     if (cmd == NULL)
     {
-        skygw_log_write(LE, "Failed to initialize script: %s", script);
+        MXS_ERROR("Failed to initialize script: %s", script);
         return;
     }
 
@@ -335,10 +335,9 @@ void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 
     if (externcmd_execute(cmd))
     {
-        skygw_log_write(LOGFILE_ERROR,
-                        "Error: Failed to execute script "
-                        "'%s' on server state change event %s.",
-                        script, mon_get_event_name(ptr));
+        MXS_ERROR("Failed to execute script "
+                  "'%s' on server state change event %s.",
+                  script, mon_get_event_name(ptr));
     }
     externcmd_free(cmd);
 }
@@ -368,7 +367,7 @@ int mon_parse_event_string(bool* events, size_t count, char* string)
         event = mon_name_to_event(tok);
         if (event == UNDEFINED_MONITOR_EVENT)
         {
-            skygw_log_write(LE, "Error: Invalid event name %s", tok);
+            MXS_ERROR("Invalid event name %s", tok);
             return -1;
         }
         events[event] = true;
@@ -544,20 +543,18 @@ void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
 {
     if (rval == MONITOR_CONN_TIMEOUT)
     {
-        skygw_log_write_flush(LOGFILE_ERROR,
-                              "Error : Monitor timed out when connecting to "
-                              "server %s:%d : \"%s\"",
-                              database->server->name,
-                              database->server->port,
-                              mysql_error(database->con));
+        MXS_ERROR("Monitor timed out when connecting to "
+                  "server %s:%d : \"%s\"",
+                  database->server->name,
+                  database->server->port,
+                  mysql_error(database->con));
     }
     else
     {
-        skygw_log_write_flush(LOGFILE_ERROR,
-                              "Error : Monitor was unable to connect to "
-                              "server %s:%d : \"%s\"",
-                              database->server->name,
-                              database->server->port,
-                              mysql_error(database->con));
+        MXS_ERROR("Monitor was unable to connect to "
+                  "server %s:%d : \"%s\"",
+                  database->server->name,
+                  database->server->port,
+                  mysql_error(database->con));
     }
 }

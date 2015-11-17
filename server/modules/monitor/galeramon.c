@@ -89,9 +89,7 @@ version()
 void
 ModuleInit()
 {
-    LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-                               "Initialise the MySQL Galera Monitor module %s.\n",
-                               version_str)));
+    MXS_NOTICE("Initialise the MySQL Galera Monitor module %s.", version_str);
 }
 
 /**
@@ -191,8 +189,8 @@ startMonitor(void *arg, void* opt)
     }
     if (script_error)
     {
-        skygw_log_write(LE, "Error: Errors were found in the script configuration parameters "
-                        "for the monitor '%s'. The script will not be used.", mon->name);
+        MXS_ERROR("Errors were found in the script configuration parameters "
+                  "for the monitor '%s'. The script will not be used.", mon->name);
         free(handle->script);
         handle->script = NULL;
     }
@@ -338,8 +336,9 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         if (mysql_field_count(database->con) < 2)
         {
             mysql_free_result(result);
-            skygw_log_write(LE, "Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_state'\". Expected 2 columns."
-                            " MySQL Version: %s", version_str);
+            MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_state'\". "
+                      "Expected 2 columns."
+                      " MySQL Version: %s", version_str);
             return;
         }
 
@@ -358,8 +357,9 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
                     {
                         mysql_free_result(result);
                         mysql_free_result(result2);
-                        skygw_log_write(LE, "Error: Unexpected result for \"SHOW VARIABLES LIKE 'wsrep_sst_method'\". Expected 2 columns."
-                                        " MySQL Version: %s", version_str);
+                        MXS_ERROR("Unexpected result for \"SHOW VARIABLES LIKE "
+                                  "'wsrep_sst_method'\". Expected 2 columns."
+                                  " MySQL Version: %s", version_str);
                         return;
                     }
                     while ((row = mysql_fetch_row(result2)))
@@ -383,8 +383,9 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         if (mysql_field_count(database->con) < 2)
         {
             mysql_free_result(result);
-            skygw_log_write(LE, "Error: Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_index'\". Expected 2 columns."
-                            " MySQL Version: %s", version_str);
+            MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_index'\". "
+                      "Expected 2 columns."
+                      " MySQL Version: %s", version_str);
             return;
         }
 
@@ -435,9 +436,7 @@ monitorMain(void *arg)
     master_stickiness = handle->disableMasterFailback;
     if (mysql_thread_init())
     {
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Fatal : mysql_thread_init failed in monitor "
-                                         "module. Exiting.\n")));
+        MXS_ERROR("mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
     handle->status = MONITOR_RUNNING;
@@ -495,11 +494,10 @@ monitorMain(void *arg)
             /* Log server status change */
             if (mon_status_changed(ptr))
             {
-                LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-                                                 "Backend server %s:%d state : %s",
-                                                 ptr->server->name,
-                                                 ptr->server->port,
-                                                 STRSRVSTATUS(ptr->server))));
+                MXS_DEBUG("Backend server %s:%d state : %s",
+                          ptr->server->name,
+                          ptr->server->port,
+                          STRSRVSTATUS(ptr->server));
             }
 
             if (!(SERVER_IS_RUNNING(ptr->server)) ||
@@ -591,16 +589,14 @@ monitorMain(void *arg)
 
         if (is_cluster == 0 && log_no_members)
         {
-            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                             "Error: there are no cluster members")));
+            MXS_ERROR("There are no cluster members");
             log_no_members = 0;
         }
         else
         {
             if (is_cluster > 0 && log_no_members == 0)
             {
-                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                                 "Info: found cluster members")));
+                MXS_NOTICE("Found cluster members");
                 log_no_members = 1;
             }
         }
@@ -617,10 +613,10 @@ monitorMain(void *arg)
                 evtype = mon_get_event_type(ptr);
                 if (isGaleraEvent(evtype))
                 {
-                    skygw_log_write(LOGFILE_TRACE, "Server changed state: %s[%s:%u]: %s",
-                                    ptr->server->unique_name,
-                                    ptr->server->name, ptr->server->port,
-                                    mon_get_event_name(ptr));
+                    MXS_INFO("Server changed state: %s[%s:%u]: %s",
+                             ptr->server->unique_name,
+                             ptr->server->name, ptr->server->port,
+                             mon_get_event_name(ptr));
                     if (handle->script && handle->events[evtype])
                     {
                         monitor_launch_script(mon, ptr, handle->script);

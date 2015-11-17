@@ -1069,49 +1069,71 @@ char	*ptr;
  *
  * @param service	The service itself
  * @param filters	ASCII string of filters to use
+ * @return True if loading and creating all filters was successful. False if a
+ * filter module was not found or the instance creation failed.
  */
-void
+bool
 serviceSetFilters(SERVICE *service, char *filters)
 {
-FILTER_DEF	**flist;
-char		*ptr, *brkt;
-int		n = 0;
+    FILTER_DEF **flist;
+    char *ptr, *brkt;
+    int n = 0;
+    bool rval = true;
 
-	if ((flist = (FILTER_DEF **)malloc(sizeof(FILTER_DEF *))) == NULL)
-	{
-            MXS_ERROR("Out of memory adding filters to service.\n");
-            return;
-	}
-	ptr = strtok_r(filters, "|", &brkt);
-	while (ptr)
-	{
-		n++;
-		if ((flist = (FILTER_DEF **)realloc(flist,
-				(n + 1) * sizeof(FILTER_DEF *))) == NULL)
-		{
-                    MXS_ERROR("Out of memory adding filters to service.");
-                    return;
-		}
-		char *filter_name = trim(ptr);
-		if ((flist[n-1] = filter_find(filter_name)) == NULL)
-		{
-                    MXS_WARNING("Unable to find filter '%s' for service '%s'\n",
-                                filter_name, service->name);
-                    n--;
-		}
-		else if (!filter_load(flist[n - 1]))
-		{
-			MXS_ERROR("Failed to load filter '%s' for service '%s'.",
-					  filter_name, service->name);
-			n--;
-		}
+    if ((flist = (FILTER_DEF **) malloc(sizeof(FILTER_DEF *))) == NULL)
+    {
+        MXS_ERROR("Out of memory adding filters to service.\n");
+        return false;
+    }
+    ptr = strtok_r(filters, "|", &brkt);
+    while (ptr)
+    {
+        n++;
+        FILTER_DEF **tmp;
+        if ((tmp = (FILTER_DEF **) realloc(flist,
+                                           (n + 1) * sizeof(FILTER_DEF *))) == NULL)
+        {
+            MXS_ERROR("Out of memory adding filters to service.");
+            rval = false;
+            break;
+        }
 
-		flist[n] = NULL;
-		ptr = strtok_r(NULL, "|", &brkt);
-	}
+        flist = tmp;
+        char *filter_name = trim(ptr);
 
-	service->filters = flist;
-	service->n_filters = n;
+        if ((flist[n - 1] = filter_find(filter_name)))
+        {
+            if (!filter_load(flist[n - 1]))
+            {
+                MXS_ERROR("Failed to load filter '%s' for service '%s'.",
+                          filter_name, service->name);
+                rval = false;
+                break;
+            }
+        }
+        else
+        {
+            MXS_WARNING("Unable to find filter '%s' for service '%s'\n",
+                        filter_name, service->name);
+            rval = false;
+            break;
+        }
+
+        flist[n] = NULL;
+        ptr = strtok_r(NULL, "|", &brkt);
+    }
+
+    if (rval)
+    {
+        service->filters = flist;
+        service->n_filters = n;
+    }
+    else
+    {
+        free(flist);
+    }
+
+    return rval;
 }
 
 /**

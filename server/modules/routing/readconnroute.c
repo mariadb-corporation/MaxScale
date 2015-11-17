@@ -171,11 +171,9 @@ version()
 void
 ModuleInit()
 {
-        LOGIF(LM, (skygw_log_write(
-                           LOGFILE_MESSAGE,
-                           "Initialise readconnroute router module %s.\n", version_str)));
-        spinlock_init(&instlock);
-	instances = NULL;
+    MXS_NOTICE("Initialise readconnroute router module %s.", version_str);
+    spinlock_init(&instlock);
+    instances = NULL;
 }
 
 /**
@@ -261,11 +259,10 @@ char		*weightby;
 		}
 		if (total == 0)
 		{
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"WARNING: Weighting Parameter for service '%s' "
+                    MXS_WARNING("Weighting Parameter for service '%s' "
 				"will be ignored as no servers have values "
 				"for the parameter '%s'.\n",
-				service->name, weightby)));
+				service->name, weightby);
 		}
 		else
 		{
@@ -280,14 +277,12 @@ char		*weightby;
 				backend->weight = perc;
 				if (perc == 0)
 				{
-					LOGIF(LE, (skygw_log_write(
-							LOGFILE_ERROR,
-						"Server '%s' has no value "
-						"for weighting parameter '%s', "
-						"no queries will be routed to "
-						"this server.\n",
-						inst->servers[n]->server->unique_name,
-						weightby)));
+                                    MXS_ERROR("Server '%s' has no value "
+                                              "for weighting parameter '%s', "
+                                              "no queries will be routed to "
+                                              "this server.\n",
+                                              inst->servers[n]->server->unique_name,
+                                              weightby);
 				}
 		
 			}
@@ -330,13 +325,11 @@ char		*weightby;
 			}
 			else
 			{
-                            LOGIF(LM, (skygw_log_write(
-                                          LOGFILE_MESSAGE,
-                                           "* Warning : Unsupported router "
-                                           "option \'%s\' for readconnroute. "
-                                           "Expected router options are "
-                                           "[slave|master|synced|ndb]",
-                                               options[i])));
+                            MXS_WARNING("Unsupported router "
+                                        "option \'%s\' for readconnroute. "
+                                        "Expected router options are "
+                                        "[slave|master|synced|ndb]",
+                                        options[i]);
 			}
 		}
 	}
@@ -375,13 +368,11 @@ BACKEND                 *candidate = NULL;
 int                     i;
 BACKEND *master_host = NULL;
 
-        LOGIF(LD, (skygw_log_write_flush(
-                LOGFILE_DEBUG,
-                "%lu [newSession] new router session with session "
-                "%p, and inst %p.",
-                pthread_self(),
-                session,
-                inst)));
+        MXS_DEBUG("%lu [newSession] new router session with session "
+                  "%p, and inst %p.",
+                  pthread_self(),
+                  session,
+                  inst);
 
 
 	client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
@@ -420,16 +411,14 @@ BACKEND *master_host = NULL;
 	 */
 	for (i = 0; inst->servers[i]; i++) {
 		if(inst->servers[i]) {
-			LOGIF(LD, (skygw_log_write(
-				LOGFILE_DEBUG,
-				"%lu [newSession] Examine server in port %d with "
-                                "%d connections. Status is %s, "
-				"inst->bitvalue is %d",
-                                pthread_self(),
-				inst->servers[i]->server->port,
-				inst->servers[i]->current_connection_count,
-				STRSRVSTATUS(inst->servers[i]->server),
-				inst->bitmask)));
+                    MXS_DEBUG("%lu [newSession] Examine server in port %d with "
+                              "%d connections. Status is %s, "
+                              "inst->bitvalue is %d",
+                              pthread_self(),
+                              inst->servers[i]->server->port,
+                              inst->servers[i]->current_connection_count,
+                              STRSRVSTATUS(inst->servers[i]->server),
+                              inst->bitmask);
 		}
 
 		if (SERVER_IN_MAINT(inst->servers[i]->server))
@@ -512,13 +501,11 @@ BACKEND *master_host = NULL;
 		if (master_host) {
 			candidate = master_host;
 		} else {
-                	LOGIF(LE, (skygw_log_write_flush(
-                      	  LOGFILE_ERROR,
-                      	  "Error : Failed to create new routing session. "
-                      	  "Couldn't find eligible candidate server. Freeing "
-                       	 "allocated resources.")));
-			free(client_rses);
-			return NULL;
+                    MXS_ERROR("Failed to create new routing session. "
+                              "Couldn't find eligible candidate server. Freeing "
+                              "allocated resources.");
+                    free(client_rses);
+                    return NULL;
 		}
 	}
 
@@ -530,13 +517,11 @@ BACKEND *master_host = NULL;
 	 */
 	atomic_add(&candidate->current_connection_count, 1);
 	client_rses->backend = candidate;
-        LOGIF(LD, (skygw_log_write(
-                LOGFILE_DEBUG,
-                "%lu [newSession] Selected server in port %d. "
-                "Connections : %d\n",
-                pthread_self(),
-                candidate->server->port,
-                candidate->current_connection_count)));
+        MXS_DEBUG("%lu [newSession] Selected server in port %d. "
+                  "Connections : %d\n",
+                  pthread_self(),
+                  candidate->server->port,
+                  candidate->current_connection_count);
 
         /*
 	 * Open a backend connection, putting the DCB for this
@@ -568,10 +553,8 @@ BACKEND *master_host = NULL;
 
         CHK_CLIENT_RSES(client_rses);
 
-	skygw_log_write(
-                LOGFILE_TRACE,
-		 "Readconnroute: New session for server %s. "
-                "Connections : %d",
+	MXS_INFO("Readconnroute: New session for server %s. "
+                 "Connections : %d",
 		 candidate->server->unique_name,
 		 candidate->current_connection_count);
 	return (void *)client_rses;
@@ -623,15 +606,13 @@ static void freeSession(
 	}
 	spinlock_release(&router->lock);
 
-        LOGIF(LD, (skygw_log_write_flush(
-                LOGFILE_DEBUG,
-                "%lu [freeSession] Unlinked router_client_session %p from "
-                "router %p and from server on port %d. Connections : %d. ",
-                pthread_self(),
-                router_cli_ses,
-                router,
-                router_cli_ses->backend->server->port,
-                prev_val-1)));
+        MXS_DEBUG("%lu [freeSession] Unlinked router_client_session %p from "
+                  "router %p and from server on port %d. Connections : %d. ",
+                  pthread_self(),
+                  router_cli_ses,
+                  router,
+                  router_cli_ses->backend->server->port,
+                  prev_val-1);
 
         free(router_cli_ses);
 }
@@ -721,14 +702,12 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
         if (rses_is_closed ||  backend_dcb == NULL ||
             SERVER_IS_DOWN(router_cli_ses->backend->server))
         {
-                LOGIF(LT, (skygw_log_write(
-                        LOGFILE_TRACE|LOGFILE_ERROR,
-                        "Error : Failed to route MySQL command %d to backend "
-                        "server.%s",
-                        mysql_command,rses_is_closed ? " Session is closed." : "")));
-		rc = 0;
-        while((queue = GWBUF_CONSUME_ALL(queue)) != NULL);
-                goto return_rc;
+            MXS_ERROR("Failed to route MySQL command %d to backend "
+                      "server.%s",
+                      mysql_command,rses_is_closed ? " Session is closed." : "");
+            rc = 0;
+            while((queue = GWBUF_CONSUME_ALL(queue)) != NULL);
+            goto return_rc;
 
         }
 
@@ -743,19 +722,20 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 				queue);
 			break;
 		case MYSQL_COM_QUERY:
-			LOGIF(LOGFILE_TRACE,(trc = modutil_get_SQL(queue)));
+                        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
+                        {
+                            trc = modutil_get_SQL(queue);
+                        }
 		default:
 			rc = backend_dcb->func.write(backend_dcb, queue);
 			break;
         }
 
-	LOGIF(LOGFILE_TRACE,skygw_log_write(
-                LOGFILE_DEBUG|LOGFILE_TRACE,
-		 "Routed [%s] to '%s'%s%s",
+	MXS_INFO("Routed [%s] to '%s'%s%s",
 		 STRPACKETTYPE(mysql_command),
 		 backend_dcb->server->unique_name,
 		 trc?": ":".",
-		 trc?trc:""));
+		 trc?trc:"");
 	free(trc);
 return_rc:
         return rc;
