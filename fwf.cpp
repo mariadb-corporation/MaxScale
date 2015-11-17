@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Trying to connectt to Maxscale when 'rules' has syntax error, expecting failures\n");
     if (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") == 0) {
-        Test->add_result(1, "Rule has syntax error, but query OK");
+        Test->add_result(1, "Rule has syntax error, but query OK\n");
     }
 
     Test->copy_all_logs(); return(Test->global_result);

@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
     }
 
     sleep(5);
-    Test->check_log_err((char *) "Error : Unable to find library for module: foobar", TRUE);
+    Test->check_log_err((char *) "Failed to load filter module 'foobar'", TRUE);
 
     Test->tprintf("Trying ReaConn master\n");
     Test->add_result(Test->connect_readconn_master(), "Error connection to ReadConn master\n");

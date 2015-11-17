@@ -85,7 +85,6 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
 
-    //global_result    += CheckLogErr((char *) "Error : Couldn't find suitable Master", FALSE);
     Test->connect_maxscale();
 
     Test->tprintf("Trying query to ReadConn master\n"); fflush(stdout);
@@ -95,8 +94,8 @@ int main(int argc, char *argv[])
 
     Test->close_maxscale_connections();
 
-    Test->check_log_err((char *) "Error : Creating client session for Tee filter failed. Terminating session.", TRUE);
-    Test->check_log_err((char *) "Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
+    Test->check_log_err((char *) "Creating client session for Tee filter failed. Terminating session.", TRUE);
+    Test->check_log_err((char *) "Failed to create filter 'DuplicaFilter' for service 'RW_Router'", TRUE);
 
     Test->copy_all_logs(); return(Test->global_result);
 }

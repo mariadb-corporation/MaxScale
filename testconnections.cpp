@@ -99,6 +99,10 @@ TestConnections::TestConnections(int argc, char *argv[])
             galera->start_galera();
         }
     }
+    if ((repl->check_replication(0) != 0) || (galera->check_galera() != 0)) {
+        printf("****** BACKED IS STILL BROKEN! Exiting\n *****");
+        exit(200);
+    }
     //repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
     timeout = 99999;

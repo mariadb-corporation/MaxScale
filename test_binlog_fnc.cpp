@@ -20,8 +20,8 @@ int check_sha1(TestConnections* Test)
 
     Test->tprintf("ls before FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la %s/mar-bin.0000*'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_binlog_dir);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s ls -la %s/mar-bin.0000*'",
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_binlog_dir);
     system(sys);
     Test->tprintf("Master\n");fflush(stdout);
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.0000*'",
@@ -34,8 +34,8 @@ int check_sha1(TestConnections* Test)
     sleep(20);
     Test->tprintf("ls after first FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");fflush(stdout);
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la %s/mar-bin.0000*'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_binlog_dir);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s ls -la %s/mar-bin.0000*'",
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_binlog_dir);
     system(sys);
     Test->tprintf("Master\n");
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'",
@@ -50,8 +50,8 @@ int check_sha1(TestConnections* Test)
     sleep(19);
     Test->tprintf("ls before FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la %s/mar-bin.0000*'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_binlog_dir);
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s ls -la %s/mar-bin.0000*'",
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_binlog_dir);
     system(sys);
     Test->tprintf("Master\n");
     sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'",
