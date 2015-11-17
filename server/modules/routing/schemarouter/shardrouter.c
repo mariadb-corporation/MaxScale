@@ -343,7 +343,7 @@ parse_mapping_response(ROUTER_CLIENT_SES* rses, char* target, GWBUF* buf)
 	   {
 	       if(hashtable_add(rses->dbhash,data,target))
 	       {
-		   skygw_log_write(LOGFILE_TRACE,"shardrouter: <%s, %s>",target,data);
+		   MXS_INFO("shardrouter: <%s, %s>",target,data);
 	       }
 	       free(data);
 	   }
@@ -468,7 +468,7 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
                 }
                 else
                 {
-                    skygw_log_write(LOGFILE_TRACE,"shardrouter: Query targets database '%s' on server '%s",dbnms[i],rval);
+                    MXS_INFO("shardrouter: Query targets database '%s' on server '%s",dbnms[i],rval);
 		    has_dbs = true;
                 }
             }
@@ -487,15 +487,15 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
             ss_dassert(tok != NULL);
             tmp = (char*) hashtable_fetch(ht, tok);
             if(tmp)
-                skygw_log_write(LOGFILE_TRACE,"shardrouter: SHOW TABLES with specific database '%s' on server '%s'", tok, tmp);
+                MXS_INFO("shardrouter: SHOW TABLES with specific database '%s' on server '%s'", tok, tmp);
         }
         free(query);
         
         if(tmp == NULL)
         {
             rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
-            skygw_log_write(LOGFILE_TRACE,"shardrouter: SHOW TABLES query, current database '%s' on server '%s'",
-                            client->rses_mysql_session->db,rval);
+            MXS_INFO("shardrouter: SHOW TABLES query, current database '%s' on server '%s'",
+                     client->rses_mysql_session->db,rval);
         }
         else
         {
@@ -516,7 +516,7 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
                 if(strcmp(srvrf->server->unique_name,buffer->hint->data) == 0)
                 {
                     rval = srvrf->server->unique_name;
-                    skygw_log_write(LOGFILE_TRACE,"shardrouter: Routing hint found (%s)",rval);
+                    MXS_INFO("shardrouter: Routing hint found (%s)",rval);
                     
                 }
                 srvrf = srvrf->next;
@@ -535,7 +535,7 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
         rval = (char*) hashtable_fetch(ht, client->rses_mysql_session->db);
 	if(rval)
 	{
-	    skygw_log_write(LOGFILE_TRACE,"shardrouter: Using active database '%s'",client->rses_mysql_session->db);
+	    MXS_INFO("shardrouter: Using active database '%s'",client->rses_mysql_session->db);
 	}
     }
    
@@ -564,10 +564,8 @@ tokenize_string(char* str)
             if(tmp == NULL)
             {
                 char errbuf[STRERROR_BUFLEN];
-                LOGIF(LE, (skygw_log_write_flush(
-                                                 LOGFILE_ERROR,
-                                                 "Error : realloc returned NULL: %s.",
-                                                 strerror_r(errno, errbuf, sizeof(errbuf)))));
+                MXS_ERROR("realloc returned NULL: %s.",
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
                 free(list);
                 return NULL;
             }
@@ -634,9 +632,9 @@ filterReply(FILTER* instance, void *session, GWBUF *reply)
 		if(!logged)
 		{
 /*
-                    skygw_log_write(LOGFILE_DEBUG,"schemarouter: Still waiting for reply to SHOW DATABASES from %s for session %p",
-				    bkrf[i].bref_backend->backend_server->unique_name,
-				    rses->rses_client_dcb->session);
+                    MXS_DEBUG("schemarouter: Still waiting for reply to SHOW DATABASES from %s for session %p",
+                              bkrf[i].bref_backend->backend_server->unique_name,
+                              rses->rses_client_dcb->session);
 */
                     logged = true;
 		}
@@ -660,8 +658,8 @@ filterReply(FILTER* instance, void *session, GWBUF *reply)
 		if((target = hashtable_fetch(rses->dbhash,
 					 rses->connect_db)) == NULL)
 		{
-		    skygw_log_write_flush(LOGFILE_TRACE,"schemarouter: Connecting to a non-existent database '%s'",
-				     rses->connect_db);
+		    MXS_INFO("schemarouter: Connecting to a non-existent database '%s'",
+                             rses->connect_db);
 		    rses->rses_closed = true;
 		    if(rses->queue)
 		    {
@@ -682,7 +680,7 @@ filterReply(FILTER* instance, void *session, GWBUF *reply)
 		buffer = gwbuf_alloc(qlen + 5);
 		if(buffer == NULL)
 		{
-		    skygw_log_write_flush(LOGFILE_ERROR,"Error : Buffer allocation failed.");
+		    MXS_ERROR("Buffer allocation failed.");
 		    rses->rses_closed = true;
 		    if(rses->queue)
 			gwbuf_free(rses->queue);
@@ -707,15 +705,14 @@ filterReply(FILTER* instance, void *session, GWBUF *reply)
 		rses->queue = rses->queue->next;
 		tmp->next = NULL;
 		char* querystr = modutil_get_SQL(tmp);
-		skygw_log_write(LOGFILE_DEBUG,"schemarouter: Sending queued buffer for session %p: %s",
-			 rses->rses_client_dcb->session,
-			 querystr);
+		MXS_DEBUG("schemarouter: Sending queued buffer for session %p: %s",
+                          rses->rses_client_dcb->session,
+                          querystr);
 		poll_add_epollin_event_to_dcb(rses->routedcb,tmp);
 		free(querystr);
 
 	    }
-	    skygw_log_write_flush(LOGFILE_DEBUG,"session [%p] database map finished.",
-			     rses);
+	    MXS_DEBUG("session [%p] database map finished.", rses);
 	}
 
 	goto retblock;
@@ -727,9 +724,9 @@ filterReply(FILTER* instance, void *session, GWBUF *reply)
 	rses->queue = rses->queue->next;
 	tmp->next = NULL;
 	char* querystr = modutil_get_SQL(tmp);
-	skygw_log_write(LOGFILE_DEBUG,"schemarouter: Sending queued buffer for session %p: %s",
-		 rses->rses_client_dcb->session,
-		 querystr);
+	MXS_DEBUG("schemarouter: Sending queued buffer for session %p: %s",
+                  rses->rses_client_dcb->session,
+                  querystr);
 	poll_add_epollin_event_to_dcb(rses->routedcb,tmp);
 	free(querystr);
 	tmp = NULL;
@@ -737,9 +734,9 @@ filterReply(FILTER* instance, void *session, GWBUF *reply)
 
     if(rses->init & INIT_USE_DB)
     {
-	skygw_log_write(LOGFILE_DEBUG,"schemarouter: Reply to USE '%s' received for session %p",
-		 rses->connect_db,
-		 rses->rses_client_dcb->session);
+	MXS_DEBUG("schemarouter: Reply to USE '%s' received for session %p",
+                  rses->connect_db,
+                  rses->rses_client_dcb->session);
 	rses->init &= ~INIT_USE_DB;
 	strcpy(rses->rses_mysql_session->db,rses->connect_db);
 	ss_dassert(rses->init == INIT_READY);
@@ -831,9 +828,7 @@ version()
 void
 ModuleInit()
 {
-    LOGIF(LM, (skygw_log_write_flush(
-                                     LOGFILE_MESSAGE,
-                                     "Initializing statemend-based read/write split router module.")));
+    MXS_NOTICE("Initializing statemend-based read/write split router module.");
     spinlock_init(&instlock);
     instances = NULL;
 }
@@ -938,8 +933,8 @@ createInstance(SERVICE *service, char **options)
 
     if(conf == NULL)
     {
-        skygw_log_write(LOGFILE_ERROR, "Error : no 'subservices' confguration parameter found. "
-                        " Expected a list of service names.");
+        MXS_ERROR("No 'subservices' confguration parameter found. "
+                  " Expected a list of service names.");
         free(router);
         return NULL;
     }
@@ -951,7 +946,7 @@ createInstance(SERVICE *service, char **options)
     {
 	free(router);
 	free(services);
-	skygw_log_write(LOGFILE_ERROR,"Error: Memory allocation failed.");
+	MXS_ERROR("Memory allocation failed.");
 	return NULL;
     }
 
@@ -966,10 +961,10 @@ createInstance(SERVICE *service, char **options)
             temp = realloc(res_svc, sizeof(SERVICE*)*(sz * 2));
             if(temp == NULL)
             {
-                skygw_log_write(LOGFILE_ERROR, "Error : Memory reallocation failed.");
-                LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG, "shardrouter.c: realloc returned NULL. "
-                                          "service count[%d] buffer size [%lu] tried to allocate [%lu]",
-                                          sz, sizeof(SERVICE*) * (sz), sizeof(SERVICE*) * (sz * 2))));
+                MXS_ERROR("Memory reallocation failed.");
+                MXS_DEBUG("shardrouter.c: realloc returned NULL. "
+                          "service count[%d] buffer size [%lu] tried to allocate [%lu]",
+                          sz, sizeof(SERVICE*) * (sz), sizeof(SERVICE*) * (sz * 2));
                 free(res_svc);
                 free(router);
                 return NULL;
@@ -983,7 +978,7 @@ createInstance(SERVICE *service, char **options)
 	{
 	    free(res_svc);
 	    free(router);
-	    skygw_log_write(LOGFILE_ERROR, "Error : No service named '%s' found.", options[i]);
+	    MXS_ERROR("No service named '%s' found.", options[i]);
 	    return NULL;
 	}
         i++;
@@ -998,8 +993,8 @@ createInstance(SERVICE *service, char **options)
 
     if(i < min_nsvc)
     {
-        skygw_log_write(LOGFILE_ERROR, "Error : Not enough parameters for 'subservice' router option. Shardrouter requires at least %d "
-                        "configured services to work.", min_nsvc);
+        MXS_ERROR("Not enough parameters for 'subservice' router option. Shardrouter requires at least %d "
+                  "configured services to work.", min_nsvc);
         free(router->services);
         free(router);
         return NULL;
@@ -1107,7 +1102,7 @@ newSession(
         if(subsvc->scur == NULL)
         {
             subsvc_set_state(subsvc,SUBSVC_FAILED);
-            skygw_log_write_flush(LOGFILE_ERROR,"Error : Memory allocation failed in shardrouter.");
+            MXS_ERROR("Memory allocation failed in shardrouter.");
             continue;
         }
         subsvc->scur->scmd_cur_rses = client_rses;
@@ -1117,7 +1112,7 @@ newSession(
         
         if(subsvc->dcb == NULL){
             subsvc_set_state(subsvc,SUBSVC_FAILED);
-            skygw_log_write_flush(LOGFILE_ERROR,"Error : Failed to clone client DCB in shardrouter.");
+            MXS_ERROR("Failed to clone client DCB in shardrouter.");
             continue;
         }
         
@@ -1127,7 +1122,7 @@ newSession(
             dcb_close(subsvc->dcb);
             subsvc->dcb = NULL;
             subsvc_set_state(subsvc,SUBSVC_FAILED);
-            skygw_log_write_flush(LOGFILE_ERROR,"Error : Failed to create subsession for service %s in shardrouter.",subsvc->service->name);
+            MXS_ERROR("Failed to create subsession for service %s in shardrouter.",subsvc->service->name);
             continue;
         }
         
@@ -1136,7 +1131,7 @@ newSession(
         if(dummy_filterdef == NULL)
         {
             subsvc_set_state(subsvc,SUBSVC_FAILED);
-            skygw_log_write_flush(LOGFILE_ERROR,"Error : Failed to allocate filter definition in shardrouter.");
+            MXS_ERROR("Failed to allocate filter definition in shardrouter.");
             continue;
         }
         dummy_filterdef->obj = &dummyObject;
@@ -1146,7 +1141,7 @@ newSession(
         if(dummy_upstream == NULL)
         {
            subsvc_set_state(subsvc,SUBSVC_FAILED);
-           skygw_log_write_flush(LOGFILE_ERROR,"Error : Failed to set filterUpstream in shardrouter.");
+           MXS_ERROR("Failed to set filterUpstream in shardrouter.");
             continue; 
         }
         
@@ -1217,9 +1212,7 @@ closeSession(
 {
     ROUTER_CLIENT_SES* router_cli_ses;
     int i;
-    LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-                               "%lu [RWSplit:closeSession]",
-                               pthread_self())));
+    MXS_DEBUG("%lu [RWSplit:closeSession]", pthread_self());
 
     /** 
      * router session can be NULL if newSession failed and it is discarding
@@ -1351,10 +1344,7 @@ get_shard_route_target(skygw_query_type_t qtype,
         target = TARGET_ANY;
     }
 #if defined(SS_DEBUG)
-    LOGIF(LT, (skygw_log_write(
-                               LOGFILE_TRACE,
-                               "Selected target \"%s\"",
-                               STRTARGET(target))));
+    MXS_INFO("Selected target \"%s\"", STRTARGET(target));
 #endif
     return target;
 }
@@ -1551,7 +1541,7 @@ routeQuery(ROUTER* instance,
     char db[MYSQL_DATABASE_MAXLEN + 1];
     char errbuf[26+MYSQL_DATABASE_MAXLEN];
 
-    skygw_log_write_flush(LOGFILE_DEBUG,"shardrouter: routeQuery");
+    MXS_DEBUG("shardrouter: routeQuery");
     CHK_CLIENT_RSES(router_cli_ses);
 
     /** Dirty read for quick check if router is closed. */
@@ -1564,9 +1554,7 @@ routeQuery(ROUTER* instance,
     /** Lock router session */
     if(!rses_begin_locked_router_action(router_cli_ses))
     {
-        LOGIF(LT, (skygw_log_write(
-                                   LOGFILE_TRACE,
-                                   "Route query aborted! Routing session is closed <")));
+        MXS_INFO("Route query aborted! Routing session is closed <");
         ret = 0;
         goto retblock;
     }
@@ -1583,9 +1571,9 @@ routeQuery(ROUTER* instance,
 	    {
 
 		char* querystr = modutil_get_SQL(querybuf);
-		skygw_log_write(LOGFILE_DEBUG,"shardrouter: Storing query for session %p: %s",
-			 router_cli_ses->rses_client_dcb->session,
-			 querystr);
+		MXS_DEBUG("shardrouter: Storing query for session %p: %s",
+                          router_cli_ses->rses_client_dcb->session,
+                          querystr);
 		free(querystr);
 		gwbuf_make_contiguous(querybuf);
 		GWBUF* ptr = router_cli_ses->queue;
@@ -1625,14 +1613,11 @@ routeQuery(ROUTER* instance,
         {
             char* query_str = modutil_get_query(querybuf);
 
-            LOGIF(LE,
-                  (skygw_log_write_flush(
-                                         LOGFILE_ERROR,
-                                         "Error: Can't route %s:%s:\"%s\" to "
-                                         "backend server. Router is closed.",
-                                         STRPACKETTYPE(packet_type),
-                                         STRQTYPE(qtype),
-                                         (query_str == NULL ? "(empty)" : query_str))));
+            MXS_ERROR("Can't route %s:%s:\"%s\" to "
+                      "backend server. Router is closed.",
+                      STRPACKETTYPE(packet_type),
+                      STRQTYPE(qtype),
+                      (query_str == NULL ? "(empty)" : query_str));
             free(query_str);
         }
         ret = 0;
@@ -1699,9 +1684,7 @@ routeQuery(ROUTER* instance,
 	    extract_database(querybuf,db);
 	    snprintf(errbuf,25+MYSQL_DATABASE_MAXLEN,"Unknown database: %s",db);
 	    create_error_reply(errbuf,router_cli_ses->replydcb);
-            LOGIF(LE, (skygw_log_write_flush(
-                                             LOGFILE_ERROR,
-                                             "Error : Changing database failed.")));
+            MXS_ERROR("Changing database failed.");
             return 1;
         }
     }
@@ -1801,9 +1784,7 @@ routeQuery(ROUTER* instance,
     /** Lock router session */
     if(!rses_begin_locked_router_action(router_cli_ses))
     {
-        LOGIF(LT, (skygw_log_write(
-                                   LOGFILE_TRACE,
-                                   "Route query aborted! Routing session is closed <")));
+        MXS_INFO("Route query aborted! Routing session is closed <");
         ret = 0;
         goto retblock;
     }
@@ -1847,12 +1828,10 @@ routeQuery(ROUTER* instance,
        
         if(!succp)
         {
-            LOGIF(LT, (skygw_log_write(
-                                       LOGFILE_TRACE,
-                                       "Was supposed to route to named server "
-                                       "%s but couldn't find the server in a "
-                                       "suitable state.",
-                                       tname)));
+            MXS_INFO("Was supposed to route to named server "
+                     "%s but couldn't find the server in a "
+                     "suitable state.",
+                     tname);
         }
     }
 
@@ -1888,9 +1867,7 @@ routeQuery(ROUTER* instance,
         }
         else
         {
-            LOGIF(LE, (skygw_log_write_flush(
-                                             LOGFILE_ERROR,
-                                             "Error : Routing query failed.")));
+            MXS_ERROR("Routing query failed.");
             ret = 0;
         }
     }
@@ -2094,13 +2071,11 @@ rses_property_done(
         break;
 
     default:
-        LOGIF(LD, (skygw_log_write(
-                                   LOGFILE_DEBUG,
-                                   "%lu [rses_property_done] Unknown property type %d "
-                                   "in property %p",
-                                   pthread_self(),
-                                   prop->rses_prop_type,
-                                   prop)));
+        MXS_DEBUG("%lu [rses_property_done] Unknown property type %d "
+                  "in property %p",
+                  pthread_self(),
+                  prop->rses_prop_type,
+                  prop);
 
         ss_dassert(false);
         break;
@@ -2444,9 +2419,7 @@ execute_sescmd_in_backend(SUBSERVICE* subsvc)
     if(sescmd_cursor_get_command(scur) == NULL)
     {
         succp = false;
-        LOGIF(LT, (skygw_log_write_flush(
-                                         LOGFILE_TRACE,
-                                         "Cursor had no pending session commands.")));
+        MXS_INFO("Cursor had no pending session commands.");
 
         goto return_succp;
     }
@@ -2601,9 +2574,7 @@ route_session_write(
     SUBSERVICE* subsvc;
     int i;
 
-    LOGIF(LT, (skygw_log_write(
-                               LOGFILE_TRACE,
-                               "Session write, routing to all servers.")));
+    MXS_INFO("Session write, routing to all servers.");
 
     /**
      * These are one-way messages and server doesn't respond to them.
@@ -2632,12 +2603,10 @@ route_session_write(
 
             if(LOG_IS_ENABLED(LOGFILE_TRACE))
             {
-                LOGIF(LT, (skygw_log_write(
-                                           LOGFILE_TRACE,
-                                           "Route query to %s%s%s",
-                                           i == 0 ? ">":"",
-                                           subsvc->service->name,
-                                           i+1 >= router_cli_ses->n_subservice ? "<" : "")));
+                MXS_INFO("Route query to %s%s%s",
+                         i == 0 ? ">":"",
+                         subsvc->service->name,
+                         i+1 >= router_cli_ses->n_subservice ? "<" : "");
             }
 
             if(!SUBSVC_IS_CLOSED(subsvc) && SUBSVC_IS_OK(subsvc))
@@ -2687,12 +2656,10 @@ route_session_write(
 
             if(LOG_IS_ENABLED(LOGFILE_TRACE))
             {
-                 LOGIF(LT, (skygw_log_write(
-                                           LOGFILE_TRACE,
-                                           "Route query to %s%s%s",
-                                           i == 0 ? ">":"",
-                                           subsvc->service->name,
-                                           i+1 >= router_cli_ses->n_subservice ? "<" : "")));
+                MXS_INFO("Route query to %s%s%s",
+                         i == 0 ? ">":"",
+                         subsvc->service->name,
+                         i+1 >= router_cli_ses->n_subservice ? "<" : "");
             }
 
             
@@ -2715,10 +2682,8 @@ route_session_write(
             {
                 succp = true;
 
-                LOGIF(LT, (skygw_log_write(
-                                           LOGFILE_TRACE,
-                                           "Service %s already executing sescmd.",
-                                           subsvc->service->name)));
+                MXS_INFO("Service %s already executing sescmd.",
+                         subsvc->service->name);
             }
             else
             {
@@ -2726,11 +2691,9 @@ route_session_write(
 
                 if(!succp)
                 {
-                    LOGIF(LE, (skygw_log_write_flush(
-                                                     LOGFILE_ERROR,
-                                                     "Error : Failed to execute session "
-                                                     "command in %s",
-                                                     subsvc->service->name)));
+                    MXS_ERROR("Failed to execute session "
+                              "command in %s",
+                              subsvc->service->name);
                 }
             }
         }
