@@ -306,6 +306,38 @@ struct subcommand shutdownoptions[] = {
     }
 };
 
+static void sync_logs(DCB *dcb)
+{
+    if (mxs_log_flush_sync() == 0)
+    {
+        dcb_printf(dcb, "Logs flushed to disk\n");
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to flush logs to disk. Read the error log for "
+            "more details.\n");
+    }
+}
+
+struct subcommand syncoptions[] =
+{
+    {
+        "logs",
+        0,
+        sync_logs,
+        "Flush log files to disk",
+        "Flush log files to disk",
+        {0, 0, 0}
+    },
+    {
+        NULL,
+        0,
+        NULL,
+        NULL,
+        NULL,
+        {0, 0, 0}
+    }
+};
 
 static void restart_service(DCB *dcb, SERVICE *service);
 static void restart_monitor(DCB *dcb, MONITOR *monitor);
@@ -722,6 +754,7 @@ static struct {
     { "set",        setoptions },
     { "show",       showoptions },
     { "shutdown",   shutdownoptions },
+    { "sync",   syncoptions },
     { NULL,         NULL    }
 };
 
