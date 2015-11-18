@@ -4584,7 +4584,7 @@ static void rwsplit_process_router_options(
         {
                 if ((value = strchr(options[i], '=')) == NULL)
                 {
-                    MXS_ERROR("router option \"%s\" for "
+                    MXS_ERROR("Unsupported router option \"%s\" for "
                               "readwritesplit router.",
                               options[i]);
                 }
