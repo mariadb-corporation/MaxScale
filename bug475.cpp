@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
     Test->try_query(Test->conn_rwsplit, (char *) "select /* maxscale hintname begin */ @@server_id;");
     Test->try_query(Test->conn_rwsplit, (char *) "select /* maxscale route to master*/ @@server_id;");
 
-    Test->check_log_err((char *) "Error : Syntax error in hint", FALSE);
+    Test->check_log_err((char *) "Syntax error in hint", FALSE);
     Test->check_maxscale_alive();
     Test->copy_all_logs(); return(Test->global_result);
 }

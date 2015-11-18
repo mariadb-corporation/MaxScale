@@ -45,9 +45,9 @@ int main(int argc, char *argv[])
 
     Test->close_maxscale_connections();
 
-    Test->check_log_err((char *) "Warning: Failed to add user skysql", FALSE);
-    Test->check_log_err((char *) "Error : getaddrinfo failed", FALSE);
-    Test->check_log_err((char *) "Error : Couldn't find suitable Master", FALSE);
+    Test->check_log_err((char *) "Failed to add user skysql", FALSE);
+    Test->check_log_err((char *) "getaddrinfo failed", FALSE);
+    Test->check_log_err((char *) "Couldn't find suitable Master", FALSE);
 
     Test->check_maxscale_alive();
     Test->copy_all_logs(); return(Test->global_result);

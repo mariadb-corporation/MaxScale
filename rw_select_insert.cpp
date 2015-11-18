@@ -166,9 +166,10 @@ int main(int argc, char *argv[])
     print_delta(&new_selects[0], &new_inserts[0], &selects_before_100[0], &inserts_before_100[0], Test->repl->N);
 
     get_global_status_allnodes(&selects_before_100[0], &inserts_before_100[0], Test->repl, silent);
-    printf("Doing 100 inserts\n");
+    Test->tprintf("Doing 100 inserts\n");
     tolerance=2*Test->repl->N + 1;
-    printf("Tolerance is %d\n", tolerance);
+    Test->tprintf("Tolerance is %d\n", tolerance);
+    Test->set_timeout(40);
     for (i=0; i<100; i++) {
         Test->set_timeout(10);
         Test->try_query(Test->conn_rwsplit, "insert into t1 values(1);");

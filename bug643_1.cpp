@@ -60,7 +60,7 @@ filters=qla|tests|hints
  @endverbatim
  * - try to connect
  * - try simple query using all services
- * - check warnig in the log "Error : Failed to start service 'RW Split2"
+ * - check warnig in the log "Failed to start service 'RW Split2"
  * - check if Maxscale still alive
  */
 

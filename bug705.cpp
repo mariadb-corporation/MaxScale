@@ -36,8 +36,8 @@ int main(int argc, char *argv[])
     sleep(20);
 
     Test->set_timeout(60);
-    Test->check_log_err((char *) "Error : Loading database names", FALSE);
-    Test->check_log_err((char *) "error: Unknown column", FALSE);
+    Test->check_log_err((char *) "Loading database names", FALSE);
+    Test->check_log_err((char *) "Unknown column", FALSE);
 
     Test->copy_all_logs(); return(Test->global_result);
     //  }

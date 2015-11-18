@@ -19,7 +19,7 @@ service=RW Split Router
  @endverbatim
  * - try to connect
  * - try simple query using ReadConn router (both, master and slave)
- * - check warnig in the log "Error : RW Split Router: Recursive use of tee filter in service"
+ * - check warnig in the log "RW Split Router: Recursive use of tee filter in service"
  */
 
 #include <my_config.h>

@@ -23,7 +23,7 @@ $res = $dbh
 var_dump( $res );
 
  @endverbatim
- * - check log for "Error : Loading database names for service RW_Split encountered error: Unknown column"
+ * - check log for "Can't route MYSQL_COM_STMT_PREPARE"
  */
 
 #include <my_config.h>
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Executing PHP script: %s\n", str);
     Test->add_result(system(str), "PHP script FAILED!\n");
 
-    Test->check_log_err((char *) "Error : Can't route MYSQL_COM_STMT_PREPARE", FALSE);
+    Test->check_log_err((char *) "Can't route MYSQL_COM_STMT_PREPARE", FALSE);
 
     Test->copy_all_logs(); return(Test->global_result);
 }

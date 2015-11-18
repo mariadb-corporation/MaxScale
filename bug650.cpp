@@ -38,13 +38,13 @@ port=4016
  @endverbatim
  * - try to connect
  * - try simple query using ReadConn router (both, master and slave)
- * - check errors in the log "Error :
+ * - check errors in the log
  @verbatim
-    Error : Couldn't find suitable Master from 2 candidates
-    Error : Failed to create RW_Split session.
-    Error : Creating client session for Tee filter failed. Terminating session.
-    Error : Failed to create filter 'DuplicaFilter' for service 'RW_Router'
-    Error : Setting up filters failed. Terminating session RW_Router
+    Couldn't find suitable Master from 2 candidates
+    Failed to create RW_Split session.
+    Creating client session for Tee filter failed. Terminating session.
+    Failed to create filter 'DuplicaFilter' for service 'RW_Router'
+    Setting up filters failed. Terminating session RW_Router
  @endverbatim
  */
 
