@@ -129,8 +129,7 @@ int main(int argc, char **argv) {
 	mxs_log_set_priority_enabled(LOG_DEBUG, debug_out);
 
 	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Error: Memory allocation failed for ROUTER_INSTANCE")));
+		MXS_ERROR("Memory allocation failed for ROUTER_INSTANCE");
 
 		mxs_log_flush_sync();
       		mxs_log_finish();
@@ -152,9 +151,8 @@ int main(int argc, char **argv) {
 
 	if (fd == -1)
 	{
-		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Failed to open binlog file %s: %s",
-			path, strerror(errno))));
+		MXS_ERROR("Failed to open binlog file %s: %s",
+                          path, strerror(errno));
         
 		mxs_log_flush_sync();
 		mxs_log_finish();
@@ -175,14 +173,12 @@ int main(int argc, char **argv) {
 	else
 		strncpy(inst->binlog_name, path, BINLOG_FNAMELEN);
 
-	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-		"maxbinlogcheck %s", binlog_check_version)));
+	MXS_NOTICE("maxbinlogcheck %s", binlog_check_version);
 
 	if (fstat(inst->binlog_fd, &statb) == 0)
 		filelen = statb.st_size;
 
-	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-		"Checking %s (%s), size %lu bytes", path, inst->binlog_name, filelen)));
+	MXS_NOTICE("Checking %s (%s), size %lu bytes", path, inst->binlog_name, filelen);
 
 	/* read binary log */
 	ret = blr_read_events_all_events(inst, fix_file, debug_out);
@@ -191,8 +187,7 @@ int main(int argc, char **argv) {
 
 	mxs_log_flush_sync();
 
-	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-		"Check retcode: %i, Binlog Pos = %lu", ret, inst->binlog_position)));
+	MXS_NOTICE("Check retcode: %i, Binlog Pos = %lu", ret, inst->binlog_position);
 
 	mxs_log_flush_sync();
 	mxs_log_finish();
