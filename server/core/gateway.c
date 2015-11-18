@@ -1828,10 +1828,11 @@ int main(int argc, char **argv)
 
     if (!config_load(cnf_file_path))
     {
-        char* fprerr = "Failed to load MaxScale configuration "
+        char* fprerr =
+            "Failed to open, read or process the MaxScale configuration "
             "file. Exiting. See the error log for details.";
         print_log_n_stderr(false, !daemon_mode, fprerr, fprerr, 0);
-        MXS_ERROR("Failed to load MaxScale configuration file %s. "
+        MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
                   "Exiting.",
                   cnf_file_path);
         rc = MAXSCALE_BADCONFIG;
