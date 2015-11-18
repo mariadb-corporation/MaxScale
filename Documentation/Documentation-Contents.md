@@ -50,7 +50,7 @@
 ## Routers
 
  - [Read Write Split](Routers/ReadWriteSplit.md)
- - [Read Connnection Router](Routers/ReadConnRoute.md)
+ - [Read Connection Router](Routers/ReadConnRoute.md)
  - [Schemarouter](Routers/SchemaRouter.md)
 
 ## Filters

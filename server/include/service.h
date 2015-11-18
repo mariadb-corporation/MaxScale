@@ -192,7 +192,7 @@ typedef struct service {
         char* ssl_ca_cert; /*< SSL CA certificate */
         bool ssl_init_done; /*< If SSL has already been initialized for this service */
         bool retry_start; /*< If starting of the service should be retried later */
-
+        bool log_auth_warnings; /*< Log authentication failures and warnings */
 } SERVICE;
 
 typedef enum count_spec_t {COUNT_NONE=0, COUNT_ATLEAST, COUNT_EXACT, COUNT_ATMOST} count_spec_t;
@@ -219,7 +219,7 @@ extern	int	serviceStop(SERVICE *);
 extern	int	serviceRestart(SERVICE *);
 extern	int	serviceSetUser(SERVICE *, char *, char *);
 extern	int	serviceGetUser(SERVICE *, char **, char **);
-extern	void	serviceSetFilters(SERVICE *, char *);
+extern	bool	serviceSetFilters(SERVICE *, char *);
 extern  int     serviceSetSSL(SERVICE *service, char* action);
 extern  int     serviceInitSSL(SERVICE* service);
 extern  int     serviceSetSSLVersion(SERVICE *service, char* version);

@@ -307,53 +307,45 @@ init_conn(MQ_INSTANCE *my_instance)
     if((my_instance->sock = amqp_ssl_socket_new(my_instance->conn)) != NULL){
 
       if((amqp_ok = amqp_ssl_socket_set_cacert(my_instance->sock,my_instance->ssl_CA_cert)) != AMQP_STATUS_OK){
-	skygw_log_write(LOGFILE_ERROR,
-			"Error : Failed to set CA certificate: %s", amqp_error_string2(amqp_ok));
-	goto cleanup;
+          MXS_ERROR("Failed to set CA certificate: %s", amqp_error_string2(amqp_ok));
+          goto cleanup;
       }
       if((amqp_ok = amqp_ssl_socket_set_key(my_instance->sock,
 					    my_instance->ssl_client_cert,
 					    my_instance->ssl_client_key)) != AMQP_STATUS_OK){
-	skygw_log_write(LOGFILE_ERROR,
-			"Error : Failed to set client certificate and key: %s", amqp_error_string2(amqp_ok));
-	goto cleanup;
+          MXS_ERROR("Failed to set client certificate and key: %s", amqp_error_string2(amqp_ok));
+          goto cleanup;
       }
     }else{
 
       amqp_ok = AMQP_STATUS_SSL_CONNECTION_FAILED;
-      skygw_log_write(LOGFILE_ERROR,
-		      "Error : SSL socket creation failed.");
+      MXS_ERROR("SSL socket creation failed.");
       goto cleanup;
     }
 
     /**SSL is not used, falling back to TCP*/
   }else if((my_instance->sock = amqp_tcp_socket_new(my_instance->conn)) == NULL){
-    skygw_log_write(LOGFILE_ERROR,
-		    "Error : TCP socket creation failed.");
-    goto cleanup;    
+      MXS_ERROR("TCP socket creation failed.");
+      goto cleanup;
 
   }
 
   /**Socket creation was successful, trying to open the socket*/
   if((amqp_ok = amqp_socket_open(my_instance->sock,my_instance->hostname,my_instance->port)) != AMQP_STATUS_OK){
-    skygw_log_write(LOGFILE_ERROR,
-		    "Error : Failed to open socket: %s", amqp_error_string2(amqp_ok));
-    goto cleanup;
+      MXS_ERROR("Failed to open socket: %s", amqp_error_string2(amqp_ok));
+      goto cleanup;
   }
   amqp_rpc_reply_t reply;
   reply = amqp_login(my_instance->conn,my_instance->vhost,0,AMQP_DEFAULT_FRAME_SIZE,0,AMQP_SASL_METHOD_PLAIN,my_instance->username,my_instance->password);
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
-    skygw_log_write(LOGFILE_ERROR,
-		    "Error : Login to RabbitMQ server failed.");
-    
-    goto cleanup;
+      MXS_ERROR("Login to RabbitMQ server failed.");
+      goto cleanup;
   }
   amqp_channel_open(my_instance->conn,my_instance->channel);
   reply = amqp_get_rpc_reply(my_instance->conn);  
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
-    skygw_log_write(LOGFILE_ERROR,
-		    "Error : Channel creation failed.");
-    goto cleanup;
+      MXS_ERROR("Channel creation failed.");
+      goto cleanup;
   }
 
   amqp_exchange_declare(my_instance->conn,my_instance->channel,
@@ -365,8 +357,7 @@ init_conn(MQ_INSTANCE *my_instance)
   reply = amqp_get_rpc_reply(my_instance->conn);  
 
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
-    skygw_log_write(LOGFILE_ERROR,
-		    "Error : Exchange declaration failed,trying to redeclare the exchange.");
+    MXS_ERROR("Exchange declaration failed,trying to redeclare the exchange.");
     if(reply.reply_type == AMQP_RESPONSE_SERVER_EXCEPTION){
       if(reply.reply.id == AMQP_CHANNEL_CLOSE_METHOD){
 	amqp_send_method(my_instance->conn,my_instance->channel,AMQP_CHANNEL_CLOSE_OK_METHOD,NULL);
@@ -386,9 +377,8 @@ init_conn(MQ_INSTANCE *my_instance)
       reply = amqp_get_rpc_reply(my_instance->conn);  
     }
     if(reply.reply_type != AMQP_RESPONSE_NORMAL){
-      skygw_log_write(LOGFILE_ERROR,
-		      "Error : Exchange redeclaration failed.");
-      goto cleanup;
+        MXS_ERROR("Exchange redeclaration failed.");
+        goto cleanup;
     }
   }
 
@@ -402,9 +392,8 @@ init_conn(MQ_INSTANCE *my_instance)
 		       amqp_empty_table);
     reply = amqp_get_rpc_reply(my_instance->conn);  
     if(reply.reply_type != AMQP_RESPONSE_NORMAL){
-      skygw_log_write(LOGFILE_ERROR,
-		      "Error : Queue declaration failed.");
-      goto cleanup;
+        MXS_ERROR("Queue declaration failed.");
+        goto cleanup;
     }
 
  
@@ -415,9 +404,8 @@ init_conn(MQ_INSTANCE *my_instance)
 		    amqp_empty_table);
     reply = amqp_get_rpc_reply(my_instance->conn);  
     if(reply.reply_type != AMQP_RESPONSE_NORMAL){
-      skygw_log_write(LOGFILE_ERROR,
-		      "Error : Failed to bind queue to exchange.");
-      goto cleanup;
+        MXS_ERROR("Failed to bind queue to exchange.");
+        goto cleanup;
     }
   }
   rval = 1;
@@ -451,10 +439,9 @@ char** parse_optstr(char* str, char* tok, int* szstore)
   arr = malloc(sizeof(char*)*size);
 
   if(arr == NULL){
-    skygw_log_write(LOGFILE_ERROR,
-		    "Error : Cannot allocate enough memory.");
-    *szstore = 0;
-    return NULL;
+      MXS_ERROR("Cannot allocate enough memory.");
+      *szstore = 0;
+      return NULL;
   }
   
   *szstore = size;
@@ -552,7 +539,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 	    }else if(!strcmp(arr[x],"all")){
 	      my_instance->trgtype = TRG_ALL;
 	    }else{
-	      skygw_log_write(LOGFILE_ERROR,"Error: Unknown option for 'logging_trigger':%s.",arr[x]);
+                MXS_ERROR("Unknown option for 'logging_trigger':%s.",arr[x]);
 	    }
 	  }
 
@@ -719,8 +706,7 @@ int declareQueue(MQ_INSTANCE	*my_instance, MQ_SESSION* my_session, char* qname)
   reply = amqp_get_rpc_reply(my_instance->conn);  
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     success = 0;
-    skygw_log_write(LOGFILE_ERROR,
-		    "Error : Queue declaration failed.");
+    MXS_ERROR("Queue declaration failed.");
    
   }
 
@@ -733,8 +719,7 @@ int declareQueue(MQ_INSTANCE	*my_instance, MQ_SESSION* my_session, char* qname)
   reply = amqp_get_rpc_reply(my_instance->conn);  
   if(reply.reply_type != AMQP_RESPONSE_NORMAL){
     success = 0;
-    skygw_log_write(LOGFILE_ERROR,
-		    "Error : Failed to bind queue to exchange.");
+    MXS_ERROR("Failed to bind queue to exchange.");
    
   }
   spinlock_release(&my_instance->rconn_lock);        
@@ -766,8 +751,7 @@ void sendMessage(void* data)
 
       }else{
 	instance->rconn_intv += 5.0;
-	skygw_log_write(LOGFILE_ERROR,
-			"Error : Failed to reconnect to the MQRabbit server ");
+	MXS_ERROR("Failed to reconnect to the MQRabbit server ");
       }
     }
     err_num = instance->conn_stat;
@@ -853,11 +837,10 @@ void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg
     newmsg->prop = prop;
     
   }else{
-    skygw_log_write(LOGFILE_ERROR,
-		    "Error : Cannot allocate enough memory.");
-    free(prop);
-    free(msg);
-    return;
+      MXS_ERROR("Cannot allocate enough memory.");
+      free(prop);
+      free(msg);
+      return;
   }
 
   spinlock_acquire(&instance->msg_lock);
@@ -1033,8 +1016,8 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     }
 
     if(!success){
-      skygw_log_write(LOGFILE_ERROR,"Error: Parsing query failed.");      
-      goto send_downstream;
+        MXS_ERROR("Parsing query failed.");
+        goto send_downstream;
     }
 
     if(!my_instance->log_all){
@@ -1044,7 +1027,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     } 
 
     if(my_instance->trgtype == TRG_ALL){
-      skygw_log_write_flush(LOGFILE_TRACE,"Trigger is TRG_ALL");
+      MXS_INFO("Trigger is TRG_ALL");
       schema_ok = true;
       src_ok = true;
       obj_ok = true;
@@ -1064,8 +1047,8 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 	    if(strcmp(my_instance->src_trg->user[i],sessusr) == 0)
 	      {
-		skygw_log_write_flush(LOGFILE_TRACE,"Trigger is TRG_SOURCE: user: %s = %s",my_instance->src_trg->user[i],sessusr);
-		src_ok = true;
+                MXS_INFO("Trigger is TRG_SOURCE: user: %s = %s",my_instance->src_trg->user[i],sessusr);
+                src_ok = true;
 		break;
 	      }
 	    
@@ -1082,7 +1065,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	    
 	    if(strcmp(my_instance->src_trg->host[i],sesshost) == 0)
 	      {
-		skygw_log_write_flush(LOGFILE_TRACE,"Trigger is TRG_SOURCE: host: %s = %s",my_instance->src_trg->host[i],sesshost);
+                MXS_INFO("Trigger is TRG_SOURCE: host: %s = %s",my_instance->src_trg->host[i],sesshost);
 		src_ok = true;
 		break;
 	      }
@@ -1119,7 +1102,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	    
 	    if(strcmp(tmp,my_instance->shm_trg->objects[i]) == 0){
 	      
-	      skygw_log_write_flush(LOGFILE_TRACE,"Trigger is TRG_SCHEMA: %s = %s",tmp,my_instance->shm_trg->objects[i]);
+              MXS_INFO("Trigger is TRG_SCHEMA: %s = %s",tmp,my_instance->shm_trg->objects[i]);
 	      
 	      schema_ok = true;
 	      break;
@@ -1138,7 +1121,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 	  
 	  if(strcmp(my_session->db,my_instance->shm_trg->objects[i]) == 0){
 	    
-	    skygw_log_write_flush(LOGFILE_TRACE,"Trigger is TRG_SCHEMA: %s = %s",my_session->db,my_instance->shm_trg->objects[i]);
+            MXS_INFO("Trigger is TRG_SCHEMA: %s = %s",my_session->db,my_instance->shm_trg->objects[i]);
 	    
 	    schema_ok = true;
 	    break;
@@ -1178,7 +1161,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 	  if(!strcmp(tbnm,my_instance->obj_trg->objects[i])){
 	    obj_ok = true;
-	    skygw_log_write_flush(LOGFILE_TRACE,"Trigger is TRG_OBJECT: %s = %s",my_instance->obj_trg->objects[i],sesstbls[j]);
+	    MXS_INFO("Trigger is TRG_OBJECT: %s = %s",my_instance->obj_trg->objects[i],sesstbls[j]);
 	    break;
 	  }
 
@@ -1212,19 +1195,19 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
        * Something matched the trigger, log the query
        */
 
-      skygw_log_write_flush(LOGFILE_TRACE,"Routing message to: %s:%d %s as %s/%s, exchange: %s<%s> key:%s queue:%s",
-			    my_instance->hostname,my_instance->port,
-			    my_instance->vhost,my_instance->username,
-			    my_instance->password,my_instance->exchange,
-			    my_instance->exchange_type,my_instance->key,
-			    my_instance->queue);
+      MXS_INFO("Routing message to: %s:%d %s as %s/%s, exchange: %s<%s> key:%s queue:%s",
+               my_instance->hostname,my_instance->port,
+               my_instance->vhost,my_instance->username,
+               my_instance->password,my_instance->exchange,
+               my_instance->exchange_type,my_instance->key,
+               my_instance->queue);
 
       if(my_session->uid == NULL){
 
 	my_session->uid = calloc(33,sizeof(char));
 
 	if(!my_session->uid){
-	  skygw_log_write(LOGFILE_ERROR,"Error : Out of memory.");
+          MXS_ERROR("Out of memory.");
 	}else{
 	  genkey(my_session->uid,32);
 	}
@@ -1257,8 +1240,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
       
 	  /**Try to convert to a canonical form and use the plain query if unsuccessful*/
 	  if((canon_q = skygw_get_canonical(queue)) == NULL){
-	    skygw_log_write_flush(LOGFILE_ERROR,
-				  "Error: Cannot form canonical query.");	
+              MXS_ERROR("Cannot form canonical query.");
 	  }
 
 	}
@@ -1268,8 +1250,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
 	int qlen = strnlen(canon_q,length) + strnlen(t_buf,128);
 	if((combined = malloc((qlen+1)*sizeof(char))) == NULL){
-	  skygw_log_write_flush(LOGFILE_ERROR,
-				"Error: Out of memory");
+          MXS_ERROR("Out of memory");
 	}
 	strcpy(combined,t_buf);
 	strncat(combined,canon_q,length);
@@ -1409,8 +1390,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 	prop->message_id = amqp_cstring_bytes("reply");
       }
       if(!(combined = calloc(GWBUF_LENGTH(reply) + 256,sizeof(char)))){
-	skygw_log_write_flush(LOGFILE_ERROR,
-			      "Error : Out of memory");
+          MXS_ERROR("Out of memory");
       }
 
       memset(t_buf,0,128);

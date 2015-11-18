@@ -466,7 +466,8 @@ int	i, j, newline = 1;
 		{
 			if (newline == 1 && buf[j] == 'O')
 				newline = 2;
-			else if (newline == 2 && buf[j] == 'K' && j == i - 1)
+			else if ((newline == 2 && buf[j] == 'K' && j == i - 1) ||
+                     (j == i - 2 && buf[j] == 'O' && buf[j + 1] == 'K'))
 			{
 				return 1;
 			}

@@ -48,11 +48,6 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static SPINLOCK	server_spin = SPINLOCK_INIT;
 static SERVER	*allServers = NULL;
 
@@ -79,7 +74,7 @@ SERVER 	*server;
         server->server_chk_top = CHK_NUM_SERVER;
         server->server_chk_tail = CHK_NUM_SERVER;
 #endif
-	server->name = strdup(servname);
+	server->name = strndup(servname, MAX_SERVER_NAME_LEN);
 	server->protocol = strdup(protocol);
 	server->port = port;
 	server->status = SERVER_RUNNING;
@@ -87,6 +82,7 @@ SERVER 	*server;
 	server->rlag = -2;
 	server->master_id = -1;
 	server->depth = -1;
+	spinlock_init(&server->lock);
         server->persistent = NULL;
         server->persistmax = 0;
         spinlock_init(&server->persistlock);
@@ -154,7 +150,10 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
 {
     DCB *dcb, *previous = NULL;
     
-    if (server->persistent && dcb_persistent_clean_count(server->persistent, false) && server->persistent)
+    if (server->persistent 
+        && dcb_persistent_clean_count(server->persistent, false) 
+        && server->persistent
+        && (server->status & SERVER_RUNNING))
     {
         spinlock_acquire(&server->persistlock);
         dcb = server->persistent;
@@ -183,19 +182,17 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
             }
             else
             {
-                LOGIF(LD, (skygw_log_write_flush(
-                    LOGFILE_DEBUG,
-                    "%lu [server_get_persistent] Rejected dcb "
-                    "%p from pool, user %s looking for %s, protocol %s "
-                    "looking for %s, hung flag %s, error handle called %s.",
-                    pthread_self(),
-                    dcb,
-                    dcb->user ? dcb->user : "NULL",
-                    user,
-                    dcb->protoname ? dcb->protoname : "NULL",
-                    protocol,
-                    (dcb->flags & DCBF_HUNG) ? "true" : "false",
-                    dcb-> dcb_errhandle_called ? "true" : "false"))); 
+                MXS_DEBUG("%lu [server_get_persistent] Rejected dcb "
+                          "%p from pool, user %s looking for %s, protocol %s "
+                          "looking for %s, hung flag %s, error handle called %s.",
+                          pthread_self(),
+                          dcb,
+                          dcb->user ? dcb->user : "NULL",
+                          user,
+                          dcb->protoname ? dcb->protoname : "NULL",
+                          protocol,
+                          (dcb->flags & DCBF_HUNG) ? "true" : "false",
+                          dcb-> dcb_errhandle_called ? "true" : "false");
             }
             previous = dcb;
             dcb = dcb->nextpersistent;
@@ -722,26 +719,22 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
 {
 	if (!strcmp(server->protocol, protocol))
 	{
-                LOGIF(LM, (skygw_log_write(
-                        LOGFILE_MESSAGE,
-                        "Update server protocol for server %s to protocol %s.",
-                        server->name,
-                        protocol)));
-		free(server->protocol);
-		server->protocol = strdup(protocol);
+            MXS_NOTICE("Update server protocol for server %s to protocol %s.",
+                       server->name,
+                       protocol);
+            free(server->protocol);
+            server->protocol = strdup(protocol);
 	}
 
         if (user != NULL && passwd != NULL) {
                 if (strcmp(server->monuser, user) == 0 ||
                     strcmp(server->monpw, passwd) == 0)
                 {
-                        LOGIF(LM, (skygw_log_write(
-                                LOGFILE_MESSAGE,
-                                "Update server monitor credentials for server %s",
-				server->name)));
-                        free(server->monuser);
-                        free(server->monpw);
-                        serverAddMonUser(server, user, passwd);
+                    MXS_NOTICE("Update server monitor credentials for server %s",
+                               server->name);
+                    free(server->monuser);
+                    free(server->monpw);
+                    serverAddMonUser(server, user, passwd);
                 }
 	}
 }
@@ -912,3 +905,54 @@ server_update_port(SERVER *server, unsigned short port)
 	spinlock_release(&server_spin);
 }
 
+static struct {
+	char		*str;
+	unsigned int	bit;
+} ServerBits[] = {
+	{ "running", 		SERVER_RUNNING },
+	{ "master",		SERVER_MASTER },
+	{ "slave",		SERVER_SLAVE },
+	{ "synced",		SERVER_JOINED },
+	{ "ndb",		SERVER_NDB },
+	{ "maintenance",	SERVER_MAINT },
+	{ "maint",		SERVER_MAINT },
+	{ NULL,			0 }
+};
+
+/**
+ * Map the server status bit
+ *
+ * @param str	String representation
+ * @return bit value or 0 on error
+ */
+unsigned int
+server_map_status(char *str)
+{
+int i;
+
+	for (i = 0; ServerBits[i].str; i++)
+		if (!strcasecmp(str, ServerBits[i].str))
+			return ServerBits[i].bit;
+	return 0;
+}
+
+/**
+ * Set the version string of the server.
+ * @param server Server to update
+ * @param string Version string
+ * @return True if the assignment of the version string was successful, false if
+ * memory allocation failed.
+ */
+bool server_set_version_string(SERVER* server, const char* string)
+{
+    bool rval = true;
+    spinlock_acquire(&server->lock);
+    free(server->server_string);
+    if ((server->server_string = strdup(string)) == NULL)
+    {
+        MXS_ERROR("Memory allocation failed.");
+        rval = false;
+    }
+    spinlock_release(&server->lock);
+    return rval;
+}

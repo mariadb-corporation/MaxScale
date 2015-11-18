@@ -53,11 +53,6 @@
 #include <log_manager.h>
 
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
-
 /**
  * Initialise the cache for this instanceof the binlog router. As a side
  * effect also determine the binlog file to read and the position to read

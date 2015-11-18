@@ -318,7 +318,7 @@ The script exit code for "status" is 0
 
 Note: the MaxScale script is LSB compatible and returns the proper exit code for each action:
 
-For additional informations;
+For additional information;
 
 [http://www.linux-ha.org/wiki/LSB_Resource_Agents](http://www.linux-ha.org/wiki/LSB_Resource_Agents)
 

@@ -10,5 +10,5 @@ endif()
 
 add_subdirectory(canonical_tests)
 add_executable(classify classify.c)
-target_link_libraries(classify query_classifier fullcore)
+target_link_libraries(classify query_classifier ${CURL_LIBRARIES} utils log_manager pthread ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ssl aio rt crypt dl crypto inih z m stdc++ fullcore)
 add_test(Internal-TestQueryClassifier classify ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)

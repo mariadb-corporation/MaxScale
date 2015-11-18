@@ -39,6 +39,8 @@
  * 10/11/2014	Massimiliano Pinto	Added: client charset added to protocol struct
  * 29/05/2015   Markus Makela           Added SSL support
  * 11/06/2015   Martin Brampton		COM_QUIT suppressed for persistent connections
+ * 04/09/2015   Martin Brampton         Introduce DUMMY session to fulfill guarantee DCB always has session
+ * 09/09/2015   Martin Brampton         Modify error handler calls 
  */
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -55,11 +57,6 @@ MODULE_INFO info = {
 	GWPROTOCOL_VERSION,
 	"The client to MaxScale MySQL protocol implementation"
 };
-
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 
 static char *version_str = "V1.0.0";
 
@@ -483,16 +480,16 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 	    /** Client didn't requested SSL when SSL mode was required*/
 	    if(!ssl && protocol->owner_dcb->service->ssl_mode == SSL_REQUIRED)
 	    {
-		LOGIF(LT,(skygw_log_write(LT,"User %s@%s connected to service '%s' without SSL when SSL was required.",
-					 protocol->owner_dcb->user,
-					 protocol->owner_dcb->remote,
-					 protocol->owner_dcb->service->name)));
+		MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
+                         protocol->owner_dcb->user,
+                         protocol->owner_dcb->remote,
+                         protocol->owner_dcb->service->name);
 		return MYSQL_FAILED_AUTH_SSL;
 	    }
 
 	    if(LOG_IS_ENABLED(LT) && ssl)
 	    {
-		skygw_log_write(LT,"User %s@%s connected to service '%s' with SSL.",
+		MXS_INFO("User %s@%s connected to service '%s' with SSL.",
 			 protocol->owner_dcb->user,
 			 protocol->owner_dcb->remote,
 			 protocol->owner_dcb->service->name);
@@ -524,7 +521,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 		client_auth_packet = GWBUF_DATA(queue);
 		client_auth_packet_size = gwbuf_length(queue);
 		*buf = queue;
-		LOGIF(LD,(skygw_log_write(LD,"%lu Read %d bytes from fd %d",pthread_self(),bytes,dcb->fd)));
+		MXS_DEBUG("%lu Read %d bytes from fd %d",pthread_self(),bytes,dcb->fd);
 	    }
 	}
 
@@ -565,7 +562,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 	 * Decode the token and check the password
 	 * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
 	 */
-	skygw_log_write(LOGFILE_DEBUG,"Receiving connection from '%s' to database '%s'.",username,database);
+	MXS_DEBUG("Receiving connection from '%s' to database '%s'.",username,database);
 	auth_ret = gw_check_mysql_scramble_data(dcb,
                                                 auth_token,
                                                 auth_token_len,
@@ -599,18 +596,18 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 	/* on succesful auth set user into dcb field */
 	if (auth_ret == 0) {
 		dcb->user = strdup(client_data->user);
-	}
-	else
+    }
+    else if (dcb->service->log_auth_warnings)
     {
-        skygw_log_write(LM, "%s: login attempt for user '%s', authentication failed.",
-                        dcb->service->name, username);
+        MXS_NOTICE("%s: login attempt for user '%s', authentication failed.",
+                   dcb->service->name, username);
         if (dcb->ipv4.sin_addr.s_addr == 0x0100007F &&
             !dcb->service->localhost_match_wildcard_host)
         {
-            skygw_log_write_flush(LM, "If you have a wildcard grant that covers"
-                                  " this address, try adding "
-                                  "'localhost_match_wildcard_host=true' for "
-                                  "service '%s'. ", dcb->service->name);
+            MXS_NOTICE("If you have a wildcard grant that covers"
+                       " this address, try adding "
+                       "'localhost_match_wildcard_host=true' for "
+                       "service '%s'. ", dcb->service->name);
         }
     }
 
@@ -679,8 +676,8 @@ int gw_read_client_event(
         CHK_PROTOCOL(protocol);
 
 #ifdef SS_DEBUG
-	skygw_log_write(LD,"[gw_read_client_event] Protocol state: %s",
-		 gw_mysql_protocol_state2string(protocol->protocol_auth_state));
+	MXS_DEBUG("[gw_read_client_event] Protocol state: %s",
+                  gw_mysql_protocol_state2string(protocol->protocol_auth_state));
 
 #endif
 
@@ -701,8 +698,7 @@ int gw_read_client_event(
 		ioctl(dcb->fd,FIONREAD,&b);
 		if(b == 0) 
 		{
-		    skygw_log_write(LD,
-			     "[gw_read_client_event] No data in socket after SSL auth");
+		    MXS_DEBUG("[gw_read_client_event] No data in socket after SSL auth");
 		    return 0;
 		}
 		break;
@@ -750,76 +746,38 @@ int gw_read_client_event(
 
 	session = dcb->session;
 
-	if (protocol->protocol_auth_state == MYSQL_IDLE && session != NULL)
+	if (protocol->protocol_auth_state == MYSQL_IDLE && session != NULL && SESSION_STATE_DUMMY != session->state)
 	{
 		CHK_SESSION(session);
 		router = session->service->router;
 		router_instance = session->service->router_instance;
 		rsession = session->router_session;
-		ss_dassert(rsession != NULL);
 
-		if (router_instance != NULL && rsession != NULL) {
+        if (NULL == router_instance || NULL == rsession)
+        {
+            /** Send ERR 1045 to client */
+            mysql_send_auth_error(
+				dcb,
+				2,
+				0,
+				"failed to create new session");
+            while (read_buffer)
+            {
+                read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
+            }
+            return 0;
+        }
 
-	                /** Ask what type of input the router expects */
-			cap = router->getCapabilities(router_instance, rsession);
-                       
-			if (cap == 0 || (cap == RCAP_TYPE_PACKET_INPUT))
-			{
-				stmt_input = false;
-			}
-			else if (cap == RCAP_TYPE_STMT_INPUT)
-			{
-				stmt_input = true;
-				/** Mark buffer to as MySQL type */
-				gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
-			}
-
-			/** 
-			 * If router doesn't implement getCapabilities correctly we end 
-			 * up here.
-			 */
-			else
-			{
-				GWBUF* errbuf;
-				bool   succp;
-			
-				LOGIF(LD, (skygw_log_write_flush(
-					LOGFILE_DEBUG,
-					"%lu [gw_read_client_event] Reading router "
-					"capabilities failed.",
-					pthread_self())));
-
-				errbuf = mysql_create_custom_error(
-					1, 
-					0, 
-					"Read invalid router capabilities. Routing failed. "
-					"Session will be closed.");
-			
-				router->handleError(
-					router_instance,
-					rsession, 
-					errbuf, 
-					dcb,
-					ERRACT_REPLY_CLIENT,
-					&succp);
-				gwbuf_free(errbuf);
-				/** 
-				 * If there are not enough backends close 
-				 * session 
-				 */
-				if (!succp)
-				{
-					LOGIF(LE, (skygw_log_write_flush(
-						LOGFILE_ERROR,
-						"Error : Routing the query failed. "
-						"Session will be closed.")));
-					dcb_close(dcb);
-				}
-                        	rc = 1;
-                        	goto return_rc;
-                	}
-		}
-	}
+        /** Ask what type of input the router expects */
+        cap = router->getCapabilities(router_instance, rsession);
+        
+        if (cap & RCAP_TYPE_STMT_INPUT)
+        {
+            stmt_input = true;
+            /** Mark buffer to as MySQL type */
+            gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
+        }
+    }
 
 	if (stmt_input) {
                 
@@ -912,7 +870,7 @@ int gw_read_client_event(
 			if (session != NULL) 
 			{
 				CHK_SESSION(session);
-				ss_dassert(session->state != SESSION_STATE_ALLOC);
+				ss_dassert(session->state != SESSION_STATE_ALLOC && session->state != SESSION_STATE_DUMMY);
 				
 				protocol->protocol_auth_state = MYSQL_IDLE;
 				/** 
@@ -924,13 +882,11 @@ int gw_read_client_event(
 			else
 			{
 				protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
-				LOGIF(LD, (skygw_log_write(
-					LOGFILE_DEBUG,
-					"%lu [gw_read_client_event] session "
-					"creation failed. fd %d, "
-					"state = MYSQL_AUTH_FAILED.",
-					pthread_self(), 
-					protocol->owner_dcb->fd)));
+				MXS_DEBUG("%lu [gw_read_client_event] session "
+                                          "creation failed. fd %d, "
+                                          "state = MYSQL_AUTH_FAILED.",
+                                          pthread_self(),
+                                          protocol->owner_dcb->fd);
 				
 				/** Send ERR 1045 to client */
 				mysql_send_auth_error(
@@ -968,13 +924,11 @@ int gw_read_client_event(
 			if (fail_str)
 				free(fail_str);
 
-			LOGIF(LD, (skygw_log_write(
-				LOGFILE_DEBUG,
-				"%lu [gw_read_client_event] after "
-				"gw_mysql_do_authentication, fd %d, "
-				"state = MYSQL_AUTH_FAILED.",
-				protocol->owner_dcb->fd,
-				pthread_self())));
+			MXS_DEBUG("%lu [gw_read_client_event] after "
+                                  "gw_mysql_do_authentication, fd %d, "
+                                  "state = MYSQL_AUTH_FAILED.",
+                                  pthread_self(),
+                                  protocol->owner_dcb->fd);
 			/**
 			 * Release MYSQL_session since it is not used anymore.
 			 */
@@ -1012,7 +966,7 @@ int gw_read_client_event(
 		if (session != NULL)
 		{
 		    CHK_SESSION(session);
-		    ss_dassert(session->state != SESSION_STATE_ALLOC);
+		    ss_dassert(session->state != SESSION_STATE_ALLOC && session->state != SESSION_STATE_DUMMY);
 
 		    protocol->protocol_auth_state = MYSQL_IDLE;
 		    /**
@@ -1024,13 +978,11 @@ int gw_read_client_event(
 		else
 		{
 		    protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
-		    LOGIF(LD, (skygw_log_write(
-			    LOGFILE_DEBUG,
-					     "%lu [gw_read_client_event] session "
-			    "creation failed. fd %d, "
-			    "state = MYSQL_AUTH_FAILED.",
-					     pthread_self(),
-					     protocol->owner_dcb->fd)));
+		    MXS_DEBUG("%lu [gw_read_client_event] session "
+                              "creation failed. fd %d, "
+                              "state = MYSQL_AUTH_FAILED.",
+                              pthread_self(),
+                              protocol->owner_dcb->fd);
 
 		    /** Send ERR 1045 to client */
 		    mysql_send_auth_error(
@@ -1068,13 +1020,11 @@ int gw_read_client_event(
 		if (fail_str)
 		    free(fail_str);
 
-		LOGIF(LD, (skygw_log_write(
-			LOGFILE_DEBUG,
-					 "%lu [gw_read_client_event] after "
-			"gw_mysql_do_authentication, fd %d, "
-			"state = MYSQL_AUTH_FAILED.",
-					 protocol->owner_dcb->fd,
-					 pthread_self())));
+		MXS_DEBUG("%lu [gw_read_client_event] after "
+                          "gw_mysql_do_authentication, fd %d, "
+                          "state = MYSQL_AUTH_FAILED.",
+                          pthread_self(),
+                          protocol->owner_dcb->fd);
 		/**
 		 * Release MYSQL_session since it is not used anymore.
 		 */
@@ -1096,7 +1046,7 @@ int gw_read_client_event(
 		session_state_t ses_state;
 
                 session = dcb->session;
-                ss_dassert(session!= NULL);
+                ss_dassert(session!= NULL && SESSION_STATE_DUMMY != session->state);
                 
                 if (session != NULL) 
                 {
@@ -1122,6 +1072,7 @@ int gw_read_client_event(
                         /* Temporarily suppressed: SESSION_ROUTE_QUERY(session, read_buffer); */
 						/* Replaced with freeing the read buffer. */
 				gwbuf_free(read_buffer);
+                read_buffer = NULL;
             /**
 			 * Close router session which causes closing of backends.
 			 */
@@ -1130,7 +1081,7 @@ int gw_read_client_event(
 		    else
 		    {
 			/** Reset error handler when routing of the new query begins */
-			router->handleError(NULL, NULL, NULL, dcb, ERRACT_RESET, NULL);
+			dcb->dcb_errhandle_called = false;
 			
                         if (stmt_input)                                
                         {
@@ -1144,12 +1095,18 @@ int gw_read_client_event(
 			    {
 				/** add incomplete mysql packet to read queue */
 				dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
+                read_buffer = NULL;
 			    }
                         }
-                        else
+                        else if (NULL != session->router_session || cap & RCAP_TYPE_NO_RSESSION)
                         {
 			    /** Feed whole packet to router */
 			    rc = SESSION_ROUTE_QUERY(session, read_buffer);
+                read_buffer = NULL;
+                        }
+                        else
+                        {
+                            rc = 0;
                         }
 
                         /** Routing succeed */
@@ -1187,20 +1144,21 @@ int gw_read_client_event(
 			     */
 			    if (!succp)
 			    {
-				LOGIF(LE, (skygw_log_write_flush(
-					LOGFILE_ERROR,
-								 "Error : Routing the query failed. "
-					"Session will be closed.")));
+				MXS_ERROR("Routing the query failed. "
+                                          "Session will be closed.");
 				
-				dcb_close(dcb);
 			    }
+                            while (read_buffer)
+                            {
+                                read_buffer = gwbuf_consume(read_buffer, GWBUF_LENGTH(read_buffer));
+                            }
                         }
 		    }
 		}
 		else
 		{
-		    skygw_log_write_flush(LT,"Session received a query in state %s",
-				     STRSESSIONSTATE(ses_state));
+		    MXS_INFO("Session received a query in state %s",
+                             STRSESSIONSTATE(ses_state));
 		    while((read_buffer = GWBUF_CONSUME_ALL(read_buffer)) != NULL);
 		    goto return_rc;
 		}
@@ -1359,10 +1317,9 @@ int gw_MySQLListener(DCB *listen_dcb,
         if ((l_so = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
         {
             char errbuf[STRERROR_BUFLEN];
-            skygw_log_write(LE,
-                            "Error: Can't create UNIX socket: %i, %s",
-                            errno,
-                            strerror_r(errno, errbuf, sizeof(errbuf)));
+            MXS_ERROR("Can't create UNIX socket: %i, %s",
+                      errno,
+                      strerror_r(errno, errbuf, sizeof(errbuf)));
             return 0;
         }
         memset(&local_addr, 0, sizeof(local_addr));
@@ -1379,7 +1336,7 @@ int gw_MySQLListener(DCB *listen_dcb,
          */
         if (!parse_bindconfig(config_bind, 4406, &serv_addr))
         {
-            skygw_log_write(LE, "Error in parse_bindconfig for [%s]", config_bind);
+            MXS_ERROR("Error in parse_bindconfig for [%s]", config_bind);
             return 0;
         }
 
@@ -1387,10 +1344,9 @@ int gw_MySQLListener(DCB *listen_dcb,
         if ((l_so = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         {
             char errbuf[STRERROR_BUFLEN];
-            skygw_log_write(LE,
-                            "Error: Can't create socket: %i, %s",
-                            errno,
-                            strerror_r(errno, errbuf, sizeof(errbuf)));
+            MXS_ERROR("Can't create socket: %i, %s",
+                      errno,
+                      strerror_r(errno, errbuf, sizeof(errbuf)));
             return 0;
         }
 
@@ -1404,10 +1360,9 @@ int gw_MySQLListener(DCB *listen_dcb,
     if (setsockopt(l_so, SOL_SOCKET, SO_REUSEADDR, (char *) &one, sizeof(one)) != 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                         "Error: Failed to set socket options. Error %d: %s",
-                                         errno,
-                                         strerror_r(errno, errbuf, sizeof(errbuf)))));
+        MXS_ERROR("Failed to set socket options. Error %d: %s",
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
     }
 
     if (is_tcp)
@@ -1415,16 +1370,15 @@ int gw_MySQLListener(DCB *listen_dcb,
         char errbuf[STRERROR_BUFLEN];
         if (setsockopt(l_so, IPPROTO_TCP, TCP_NODELAY, (char *) &one, sizeof(one)) != 0)
         {
-            LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                             "Error: Failed to set socket options. Error %d: %s",
-                                             errno,
-                                             strerror_r(errno, errbuf, sizeof(errbuf)))));
+            MXS_ERROR("Failed to set socket options. Error %d: %s",
+                      errno,
+                      strerror_r(errno, errbuf, sizeof(errbuf)));
         }
     }
     // set NONBLOCKING mode
     if (setnonblocking(l_so) != 0)
     {
-        skygw_log_write(LE, "Error: Failed to set socket to non-blocking mode.");
+        MXS_ERROR("Failed to set socket to non-blocking mode.");
         close(l_so);
         return 0;
     }
@@ -1437,18 +1391,17 @@ int gw_MySQLListener(DCB *listen_dcb,
             if ((rc == -1) && (errno != ENOENT))
             {
                 char errbuf[STRERROR_BUFLEN];
-                skygw_log_write(LE, "Error: Failed to unlink Unix Socket %s: %d %s",
-                                config_bind, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+                MXS_ERROR("Failed to unlink Unix Socket %s: %d %s",
+                          config_bind, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
             }
 
             if (bind(l_so, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0)
             {
                 char errbuf[STRERROR_BUFLEN];
-                skygw_log_write(LE,
-                                "Error: Failed to bind to UNIX Domain socket '%s': %i, %s",
-                                config_bind,
-                                errno,
-                                strerror_r(errno, errbuf, sizeof(errbuf)));
+                MXS_ERROR("Failed to bind to UNIX Domain socket '%s': %i, %s",
+                          config_bind,
+                          errno,
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
                 close(l_so);
                 return 0;
             }
@@ -1457,31 +1410,28 @@ int gw_MySQLListener(DCB *listen_dcb,
             if (chmod(config_bind, 0777) < 0)
             {
                 char errbuf[STRERROR_BUFLEN];
-                skygw_log_write(LE,
-                                "Error: Failed to change permissions on UNIX Domain socket '%s': %i, %s",
-                                config_bind,
-                                errno,
-                                strerror_r(errno, errbuf, sizeof(errbuf)));
+                MXS_ERROR("Failed to change permissions on UNIX Domain socket '%s': %i, %s",
+                          config_bind,
+                          errno,
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
             }
-
             break;
 
         case AF_INET:
             if (bind(l_so, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
             {
                 char errbuf[STRERROR_BUFLEN];
-                skygw_log_write(LE,
-                                "Error: Failed to bind on '%s': %i, %s",
-                                config_bind,
-                                errno,
-                                strerror_r(errno, errbuf, sizeof(errbuf)));
+                MXS_ERROR("Failed to bind on '%s': %i, %s",
+                          config_bind,
+                          errno,
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
                 close(l_so);
                 return 0;
             }
             break;
 
         default:
-            skygw_log_write(LE, "Error: Socket Family %i not supported\n", current_addr->sa_family);
+            MXS_ERROR("Socket Family %i not supported\n", current_addr->sa_family);
             close(l_so);
             return 0;
     }
@@ -1489,16 +1439,15 @@ int gw_MySQLListener(DCB *listen_dcb,
     if (listen(l_so, 10 * SOMAXCONN) != 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        skygw_log_write(LE,
-                        "Failed to start listening on '%s': %d, %s",
-                        config_bind,
-                        errno,
-                        strerror_r(errno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Failed to start listening on '%s': %d, %s",
+                  config_bind,
+                  errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
         close(l_so);
         return 0;
     }
 
-    LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE, "Listening MySQL connections at %s", config_bind)));
+    MXS_NOTICE("Listening MySQL connections at %s", config_bind);
 
     // assign l_so to dcb
     listen_dcb->fd = l_so;
@@ -1506,9 +1455,8 @@ int gw_MySQLListener(DCB *listen_dcb,
     // add listening socket to poll structure
     if (poll_add_dcb(listen_dcb) != 0)
     {
-        skygw_log_write(LE,
-                        "MaxScale encountered system limit while "
-                        "attempting to register on an epoll instance.");
+        MXS_ERROR("MaxScale encountered system limit while "
+                  "attempting to register on an epoll instance.");
         return 0;
     }
 #if defined(FAKE_CODE)
@@ -1591,23 +1539,19 @@ int gw_MySQLAccept(DCB *listener)
                                  * (EMFILE) max. number of files limit.
                                  */
                                 char errbuf[STRERROR_BUFLEN];
-                                LOGIF(LD, (skygw_log_write(
-                                        LOGFILE_DEBUG,
-                                        "%lu [gw_MySQLAccept] Error %d, %s. ",
-                                        pthread_self(),
-                                        eno,
-                                        strerror_r(eno, errbuf, sizeof(errbuf)))));
+                                MXS_DEBUG("%lu [gw_MySQLAccept] Error %d, %s. ",
+                                          pthread_self(),
+                                          eno,
+                                          strerror_r(eno, errbuf, sizeof(errbuf)));
                                 
                                 if (i == 0)
                                 {
                                         char errbuf[STRERROR_BUFLEN];
-                                        LOGIF(LE, (skygw_log_write_flush(
-                                                LOGFILE_ERROR,
-                                                "Error %d, %s. "
-                                                "Failed to accept new client "
-                                                "connection.",
-                                                eno,
-                                                strerror_r(eno, errbuf, sizeof(errbuf)))));
+                                        MXS_ERROR("Error %d, %s. "
+                                                  "Failed to accept new client "
+                                                  "connection.",
+                                                  eno,
+                                                  strerror_r(eno, errbuf, sizeof(errbuf)));
                                 }
                                 i++;
 				ts1.tv_nsec = 100*i*i*1000000;
@@ -1625,18 +1569,14 @@ int gw_MySQLAccept(DCB *listener)
                                  * Other error.
                                  */
                                 char errbuf[STRERROR_BUFLEN];
-                                LOGIF(LD, (skygw_log_write(
-                                        LOGFILE_DEBUG,
-                                        "%lu [gw_MySQLAccept] Error %d, %s.",
-                                        pthread_self(),
-                                        eno,
-                                        strerror_r(eno, errbuf, sizeof(errbuf)))));
-                                LOGIF(LE, (skygw_log_write_flush(
-                                        LOGFILE_ERROR,
-                                        "Error : Failed to accept new client "
-                                        "connection due to %d, %s.",
-                                        eno,
-                                        strerror_r(eno, errbuf, sizeof(errbuf)))));
+                                MXS_DEBUG("%lu [gw_MySQLAccept] Error %d, %s.",
+                                          pthread_self(),
+                                          eno,
+                                          strerror_r(eno, errbuf, sizeof(errbuf)));
+                                MXS_ERROR("Failed to accept new client "
+                                          "connection due to %d, %s.",
+                                          eno,
+                                          strerror_r(eno, errbuf, sizeof(errbuf)));
                                 rc = 1;
                                 goto return_rc;
                         } /* if (eno == ..) */
@@ -1646,11 +1586,9 @@ int gw_MySQLAccept(DCB *listener)
                 
                 listener->stats.n_accepts++;
 #if defined(SS_DEBUG)
-                LOGIF(LD, (skygw_log_write_flush(
-                        LOGFILE_DEBUG,
-                        "%lu [gw_MySQLAccept] Accepted fd %d.",
-                        pthread_self(),
-                        c_sock)));
+                MXS_DEBUG("%lu [gw_MySQLAccept] Accepted fd %d.",
+                          pthread_self(),
+                          c_sock);
 #endif /* SS_DEBUG */
 #if defined(FAKE_CODE)
                 conn_open[c_sock] = true;
@@ -1660,29 +1598,29 @@ int gw_MySQLAccept(DCB *listener)
                 char errbuf[STRERROR_BUFLEN];
 
 			if((syseno = setsockopt(c_sock, SOL_SOCKET, SO_SNDBUF, &sendbuf, optlen)) != 0){
-                          LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)))));
+                            MXS_ERROR("Failed to set socket options. Error %d: %s",
+                                      errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 			}
 
         	sendbuf = GW_CLIENT_SO_RCVBUF;
 
 			if((syseno = setsockopt(c_sock, SOL_SOCKET, SO_RCVBUF, &sendbuf, optlen)) != 0){
-                          LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,"Error: Failed to set socket options. Error %d: %s", errno, strerror_r(errno, errbuf, sizeof(errbuf)))));
+                            MXS_ERROR("Failed to set socket options. Error %d: %s",
+                                      errno, strerror_r(errno, errbuf, sizeof(errbuf)));
 			}
                 setnonblocking(c_sock);
                 
                 client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
 
 		if (client_dcb == NULL) {
-			LOGIF(LE, (skygw_log_write_flush(
-				LOGFILE_ERROR,
-				"Error : Failed to create "
-				"DCB object for client connection.")));
-			close(c_sock);
-			rc = 1;
-			goto return_rc;
+                    MXS_ERROR("Failed to create DCB object for client connection.");
+                    close(c_sock);
+                    rc = 1;
+                    goto return_rc;
 		}
 
                 client_dcb->service = listener->session->service;
+                client_dcb->session = session_set_dummy(client_dcb);
                 client_dcb->fd = c_sock;
 
 		// get client address
@@ -1716,11 +1654,9 @@ int gw_MySQLAccept(DCB *listener)
                 if (protocol == NULL) {
                         /** delete client_dcb */
                         dcb_close(client_dcb);
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "%lu [gw_MySQLAccept] Failed to create "
-                                "protocol object for client connection.",
-                                pthread_self())));
+                        MXS_ERROR("%lu [gw_MySQLAccept] Failed to create "
+                                  "protocol object for client connection.",
+                                  pthread_self());
                         rc = 1;
                         goto return_rc;
                 }
@@ -1752,25 +1688,21 @@ int gw_MySQLAccept(DCB *listener)
                         dcb_close(client_dcb);
 
                         /** Previous state is recovered in poll_add_dcb. */
-                        LOGIF(LE, (skygw_log_write_flush(
-                                LOGFILE_ERROR,
-                                "%lu [gw_MySQLAccept] Failed to add dcb %p for "
-                                "fd %d to epoll set.",
-                                pthread_self(),
-                                client_dcb,
-                                client_dcb->fd)));
+                        MXS_ERROR("%lu [gw_MySQLAccept] Failed to add dcb %p for "
+                                  "fd %d to epoll set.",
+                                  pthread_self(),
+                                  client_dcb,
+                                  client_dcb->fd);
                         rc = 1;
                         goto return_rc;
                 }
                 else
                 {
-                        LOGIF(LD, (skygw_log_write(
-                                LOGFILE_DEBUG,
-                                "%lu [gw_MySQLAccept] Added dcb %p for fd "
-                                "%d to epoll set.",
-                                pthread_self(),
-                                client_dcb,
-                                client_dcb->fd)));
+                    MXS_DEBUG("%lu [gw_MySQLAccept] Added dcb %p for fd "
+                              "%d to epoll set.",
+                              pthread_self(),
+                              client_dcb,
+                              client_dcb->fd);
                 }
         } /**< while 1 */
 #if defined(SS_DEBUG)
@@ -1793,14 +1725,12 @@ static int gw_error_client_event(
         
         session = dcb->session;
         
-        LOGIF(LD, (skygw_log_write(
-                LOGFILE_DEBUG,
-                "%lu [gw_error_client_event] Error event handling for DCB %p "
-                "in state %s, session %p.",
-                pthread_self(),
-                dcb,
-                STRDCBSTATE(dcb->state),
-                (session != NULL ? session : NULL))));
+        MXS_DEBUG("%lu [gw_error_client_event] Error event handling for DCB %p "
+                  "in state %s, session %p.",
+                  pthread_self(),
+                  dcb,
+                  STRDCBSTATE(dcb->state),
+                  (session != NULL ? session : NULL));
         
         if (session != NULL && session->state == SESSION_STATE_STOPPING)
         {
@@ -1808,9 +1738,7 @@ static int gw_error_client_event(
         }
         
 #if defined(SS_DEBUG)
-        LOGIF(LD, (skygw_log_write_flush(
-                LOGFILE_DEBUG,
-                "Client error event handling.")));
+        MXS_DEBUG("Client error event handling.");
 #endif
         dcb_close(dcb);
         
@@ -1833,16 +1761,14 @@ gw_client_close(DCB *dcb)
 		if (!DCB_IS_CLONE(dcb)) CHK_PROTOCOL(protocol);
         }
 #endif
-	LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-				"%lu [gw_client_close]",
-				pthread_self())));                                
+	MXS_DEBUG("%lu [gw_client_close]", pthread_self());
 	mysql_protocol_done(dcb);
         session = dcb->session;
         /**
          * session may be NULL if session_alloc failed.
          * In that case, router session wasn't created.
          */
-        if (session != NULL)
+        if (session != NULL && SESSION_STATE_DUMMY != session->state)
         {
                 CHK_SESSION(session);
                 spinlock_acquire(&session->ses_lock);
@@ -1896,11 +1822,7 @@ gw_client_hangup_event(DCB *dcb)
         {
                 goto retblock;
         }
-#if defined(SS_DEBUG)
-        LOGIF(LD, (skygw_log_write_flush(
-                LOGFILE_DEBUG,
-                "Client hangup error handling.")));
-#endif
+
         dcb_close(dcb);
  
 retblock:
@@ -2009,9 +1931,9 @@ int do_ssl_accept(MySQLProtocol* protocol)
 	 queue and wait for more.*/
 
 	rval = 0;
-	skygw_log_write_flush(LT,"SSL_accept ongoing for %s@%s",
-			 protocol->owner_dcb->user,
-			 protocol->owner_dcb->remote);
+	MXS_INFO("SSL_accept ongoing for %s@%s",
+                 protocol->owner_dcb->user,
+                 protocol->owner_dcb->remote);
 	return 0;
 	break;
     case 1:
@@ -2027,9 +1949,9 @@ int do_ssl_accept(MySQLProtocol* protocol)
 
 	rval = 1;
 
-	skygw_log_write_flush(LT,"SSL_accept done for %s@%s",
-			 protocol->owner_dcb->user,
-			 protocol->owner_dcb->remote);
+	MXS_INFO("SSL_accept done for %s@%s",
+                 protocol->owner_dcb->user,
+                 protocol->owner_dcb->remote);
 	break;
 
     case -1:
@@ -2038,20 +1960,17 @@ int do_ssl_accept(MySQLProtocol* protocol)
 	    protocol->protocol_auth_state = MYSQL_AUTH_SSL_HANDSHAKE_FAILED;
 	    spinlock_release(&protocol->protocol_lock);
 	    rval = -1;
-	    skygw_log_write_flush(LE,
-			     "Error: Fatal error in SSL_accept for %s",
-			     protocol->owner_dcb->remote);
+	    MXS_ERROR("Fatal error in SSL_accept for %s",
+                      protocol->owner_dcb->remote);
 	break;
 
     default:
-	skygw_log_write_flush(LE,
-			 "Error: Fatal error in SSL_accept, returned value was %d.",
-			 rval);
+	MXS_ERROR("Fatal error in SSL_accept, returned value was %d.", rval);
 	break;
     }
 #ifdef SS_DEBUG
-	skygw_log_write(LD,"[do_ssl_accept] Protocol state: %s",
-		 gw_mysql_protocol_state2string(protocol->protocol_auth_state));
+    MXS_DEBUG("[do_ssl_accept] Protocol state: %s",
+              gw_mysql_protocol_state2string(protocol->protocol_auth_state));
 #endif
 
     return rval;

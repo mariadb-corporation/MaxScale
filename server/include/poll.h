@@ -29,6 +29,7 @@
  *
  * Date		Who		Description
  * 19/06/13	Mark Riddoch	Initial implementation
+ * 17/10/15 Martin Brampton Declare fake event functions
  *
  * @endverbatim
  */
@@ -60,9 +61,11 @@ extern	void		poll_set_maxwait(unsigned int);
 extern	void		poll_set_nonblocking_polls(unsigned int);
 extern	void		dprintPollStats(DCB *);
 extern	void		dShowThreads(DCB *dcb);
-void 			poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
+void                poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
 extern	void		dShowEventQ(DCB *dcb);
 extern	void		dShowEventStats(DCB *dcb);
-extern	int		poll_get_stat(POLL_STAT stat);
+extern	int         poll_get_stat(POLL_STAT stat);
 extern	RESULTSET	*eventTimesGetList();
+extern  void        poll_fake_hangup_event(DCB *dcb);
+extern  void        poll_fake_write_event(DCB *dcb);
 #endif

@@ -16,7 +16,9 @@ add_executable(maxbinlogcheck maxbinlogcheck.c blr_file.c blr_cache.c blr_master
   ${CMAKE_SOURCE_DIR}/server/core/resultset.c ${CMAKE_SOURCE_DIR}/server/core/load_utils.c
   ${CMAKE_SOURCE_DIR}/server/core/monitor.c ${CMAKE_SOURCE_DIR}/server/core/gw_utils.c
   ${CMAKE_SOURCE_DIR}/server/core/thread.c ${CMAKE_SOURCE_DIR}/server/core/secrets.c
+  ${CMAKE_SOURCE_DIR}/server/core/random_jkiss.c
   ${CMAKE_SOURCE_DIR}/log_manager/log_manager.cc)
+
 
 target_link_libraries(maxbinlogcheck utils ssl pthread ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} aio rt crypt dl crypto inih z m stdc++ ${CURL_LIBRARIES})
 

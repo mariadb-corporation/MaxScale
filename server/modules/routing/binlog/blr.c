@@ -46,8 +46,10 @@
  *					If set those values are sent to slaves instead of
  *					saved master responses
  * 23/08/2015	Massimiliano Pinto	Added strerror_r
+ * 09/09/2015   Martin Brampton         Modify error handler
  * 30/09/2015	Massimiliano Pinto	Addition of send_slave_heartbeat option
  * 23/10/2015	Markus Makela		Added current_safe_event
+ * 27/10/2015   Martin Brampton         Amend getCapabilities to return RCAP_TYPE_NO_RSESSION
  *
  * @endverbatim
  */
@@ -75,10 +77,6 @@
 #include <ini.h>
 #include <sys/stat.h>
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static char *version_str = "V2.0.0";
 
 /* The router entry points */
@@ -101,7 +99,7 @@ static  void    errorReply(
         error_action_t     action,
 	bool	*succp);
 
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
+static  int getCapabilities ();
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
 static int blr_set_service_mysql_user(SERVICE *service);
@@ -115,7 +113,6 @@ extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debu
 void blr_master_close(ROUTER_INSTANCE *);
 char * blr_last_event_description(ROUTER_INSTANCE *router);
 extern int MaxScaleUptime();
-static  uint8_t getCapabilities (ROUTER* inst, void* router_session);
 char	*blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 /** The module object definition */
@@ -472,8 +469,8 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 						LOGIF(LE, (skygw_log_write_flush(
 							LOGFILE_ERROR,
 							"Warning : invalid heartbeat period %s."
-							" Setting it to default value %d.",
-							value, inst->heartbeat )));
+							" Setting it to default value %ld.",
+							value, inst->heartbeat)));
 					} else {
 						inst->heartbeat = h_val;
 					}
@@ -532,8 +529,9 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 	if (inst->serverid <= 0) {
 		skygw_log_write_flush(LOGFILE_ERROR,
-			"Error : Service %s, server-id is not configured. Please configure it with a unique positive integer value (1..2^32-1)",
-			service->name, inst->serverid);
+                                      "Error : Service %s, server-id is not configured. "
+                                      "Please configure it with a unique positive integer value (1..2^32-1)",
+                                      service->name);
 		free(inst);
 		return NULL;
 	}
@@ -583,6 +581,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 				inst->service->name)));
 			if (service->users) {
 				users_free(service->users);
+                service->users = NULL;
 			}
 
 			free(inst);
@@ -661,6 +660,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 
 			if (service->users) {
 				users_free(service->users);
+                service->users = NULL;
 			}
 
 			if (service->dbref && service->dbref->server) {
@@ -889,7 +889,7 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		LOGIF(LM, (skygw_log_write_flush(
 			LOGFILE_MESSAGE,
 			"%s: Master %s disconnected after %ld seconds. "
-			"%d events read,",
+			"%lu events read,",
 			router->service->name, router->service->dbref->server->name,
 			time(0) - router->connect_time, router->stats.n_binlogs_ses)));
         	LOGIF(LE, (skygw_log_write_flush(
@@ -1393,8 +1393,8 @@ int	len;
  * @param       router_session  The router session
  * @param       message         The error message to reply
  * @param       backend_dcb     The backend DCB
- * @param       action     	The action: REPLY, REPLY_AND_CLOSE, NEW_CONNECTION
- * @param	succp		Result of action
+ * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
+ * @param	succp		Result of action: true iff router can continue
  *
  */
 static  void
@@ -1406,12 +1406,6 @@ socklen_t	len;
 char		msg[STRERROR_BUFLEN + 1 + 5] = "";
 char 		*errmsg;
 unsigned long	mysql_errno;
-
-	if (action == ERRACT_RESET)
-	{
-		backend_dcb->dcb_errhandle_called = false;
-		return;
-	}
 
 	/** Don't handle same error twice on same DCB */
         if (backend_dcb->dcb_errhandle_called)
@@ -1466,10 +1460,11 @@ unsigned long	mysql_errno;
 	if (errmsg)
 		free(errmsg);
 	*succp = true;
+        dcb_close(backend_dcb);
 	LOGIF(LM, (skygw_log_write_flush(
 		LOGFILE_MESSAGE,
 		"%s: Master %s disconnected after %ld seconds. "
-		"%d events read.",
+		"%lu events read.",
 		router->service->name, router->service->dbref->server->name,
 		time(0) - router->connect_time, router->stats.n_binlogs_ses)));
 	blr_master_reconnect(router);
@@ -1524,9 +1519,9 @@ static void rses_end_locked_router_action(ROUTER_SLAVE	* rses)
 }
 
 
-static uint8_t getCapabilities(ROUTER *inst, void *router_session)
+static int getCapabilities()
 {
-        return 0;
+        return RCAP_TYPE_NO_RSESSION;
 }
 
 /**

@@ -8,6 +8,7 @@ endif()
 
 add_library(regexfilter SHARED regexfilter.c)
 target_link_libraries(regexfilter log_manager ${PCRE2_LIBRARIES})
+add_dependencies(regexfilter pcre2)
 install(TARGETS regexfilter DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(testfilter SHARED testfilter.c)

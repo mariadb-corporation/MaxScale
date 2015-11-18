@@ -58,6 +58,7 @@
  * 25/09/2015	Massimiliano Pinto	Addition of slave heartbeat:
  *					the period set during registration is checked
  *					and heartbeat event might be sent to the affected slave.
+ * 25/09/2015   Martin Brampton         Block callback processing when no router session in the DCB
  * 23/10/15	Markus Makela		Added current_safe_event
  *
  * @endverbatim
@@ -153,10 +154,6 @@ static void blr_send_slave_heartbeat(void *inst);
 static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
 
 void poll_fake_write_event(DCB *dcb);
-
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 
 /**
  * Process a request packet from the slave server.
@@ -2003,7 +2000,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			blr_close_binlog(router, slave->file);
 			if (hkheartbeat - beat1 > 1)
 				LOGIF(LE, (skygw_log_write(
-					LOGFILE_ERROR, "blr_close_binlog took %d maxscale beats",
+					LOGFILE_ERROR, "blr_close_binlog took %lu maxscale beats",
 					hkheartbeat - beat1)));
 			blr_slave_rotate(router, slave, GWBUF_DATA(record));
 			beat1 = hkheartbeat;
@@ -2040,7 +2037,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			}
 			if (hkheartbeat - beat1 > 1)
 				LOGIF(LE, (skygw_log_write(
-					LOGFILE_ERROR, "blr_open_binlog took %d beats",
+					LOGFILE_ERROR, "blr_open_binlog took %lu beats",
 					hkheartbeat - beat1)));
 		}
 		slave->stats.n_bytes += gwbuf_length(head);
@@ -2245,6 +2242,15 @@ blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data)
 ROUTER_SLAVE		*slave = (ROUTER_SLAVE *)data;
 ROUTER_INSTANCE		*router = slave->router;
 
+    if (NULL == dcb->session->router_session)
+    {
+        /*
+         * The following processing will fail if there is no router session,
+         * because the "data" parameter will not contain meaningful data,
+         * so we have no choice but to stop here.
+         */
+        return 0;
+    }
 	if (reason == DCB_REASON_DRAINED)
 	{
 		if (slave->state == BLRS_DUMPING)
@@ -2981,7 +2987,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 				LOGFILE_ERROR,
 					"Warning: a transaction is still opened at pos %lu"
 					" File %s will be truncated. "
-					"Next binlog file is %s at pos %lu, "
+					"Next binlog file is %s at pos %d, "
 					"START SLAVE is required again.",
 					router->last_safe_pos,
 					router->prevbinlog,
@@ -3368,7 +3374,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 					router->binlog_name)));
 			}
 
-			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%u]",
+			LOGIF(LT, (skygw_log_write(LOGFILE_TRACE, "%s: New MASTER_LOG_POS is [%lu]",
 				router->service->name,
 				router->current_pos)));
 		}

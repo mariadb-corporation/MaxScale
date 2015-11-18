@@ -16,7 +16,13 @@
  * Copyright MariaDB Corporation Ab 2013-2014
  */
 #if !defined(LOG_MANAGER_H)
-# define LOG_MANAGER_H
+#define LOG_MANAGER_H
+
+#include <syslog.h>
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 /*
  * We need a common.h file that is included by every component.
@@ -25,12 +31,20 @@
 #define STRERROR_BUFLEN 512
 #endif
 
-typedef enum
+enum mxs_log_priorities
 {
-    BB_READY = 0x00,
-    BB_FULL,
-    BB_CLEARED
-} blockbuf_state_t;
+    MXS_LOG_EMERG   = (1 << LOG_EMERG),
+    MXS_LOG_ALERT   = (1 << LOG_ALERT),
+    MXS_LOG_CRIT    = (1 << LOG_CRIT),
+    MXS_LOG_ERR     = (1 << LOG_ERR),
+    MXS_LOG_WARNING = (1 << LOG_WARNING),
+    MXS_LOG_NOTICE  = (1 << LOG_NOTICE),
+    MXS_LOG_INFO    = (1 << LOG_INFO),
+    MXS_LOG_DEBUG   = (1 << LOG_DEBUG),
+
+    MXS_LOG_MASK    = (MXS_LOG_EMERG | MXS_LOG_ALERT | MXS_LOG_CRIT | MXS_LOG_ERR |
+                       MXS_LOG_WARNING | MXS_LOG_NOTICE | MXS_LOG_INFO | MXS_LOG_DEBUG),
+};
 
 typedef enum
 {
@@ -42,13 +56,12 @@ typedef enum
     LOGFILE_LAST = LOGFILE_DEBUG
 } logfile_id_t;
 
-
 typedef enum
 {
-    FILEWRITER_INIT,
-    FILEWRITER_RUN,
-    FILEWRITER_DONE
-} filewriter_state_t;
+    LOG_TARGET_DEFAULT = 0,
+    LOG_TARGET_FS      = 1, // File system
+    LOG_TARGET_SHMEM   = 2, // Shared memory
+} log_target_t;
 
 /**
 * Thread-specific logging information.
@@ -64,6 +77,11 @@ typedef struct log_info
 #define LT LOGFILE_TRACE
 #define LD LOGFILE_DEBUG
 
+extern int lm_enabled_priorities_bitmask;
+extern int lm_enabled_logfiles_bitmask;
+extern ssize_t log_ses_count[];
+extern __thread log_info_t tls_log_info;
+
 /**
  * Check if specified log type is enabled in general or if it is enabled
  * for the current session.
@@ -72,17 +90,11 @@ typedef struct log_info
                              (log_ses_count[id] > 0 &&                  \
                               tls_log_info.li_enabled_logs & id)) ? true : false)
 
-
 #define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||  \
                                  log_ses_count[id] > 0) ? true : false)
-/**
- * Execute the given command if specified log is enabled in general or
- * if there is at least one session for whom the log is enabled.
- */
-#define LOGIF_MAYBE(id,cmd) if (LOG_MAY_BE_ENABLED(id)) \
-    {                                                   \
-        cmd;                                            \
-    }
+
+// TODO: Add this at a later stage.
+#define MXS_LOG_PRIORITY_IS_ENABLED(priority) false
 
 /**
  * Execute the given command if specified log is enabled in general or
@@ -93,28 +105,6 @@ typedef struct log_info
         cmd;                                    \
     }
 
-#if !defined(LOGIF)
-#define LOGIF(id,cmd) if (lm_enabled_logfiles_bitmask & id)     \
-    {                                                           \
-        cmd;                                                    \
-    }
-#endif
-
-/**
- * UNINIT means zeroed memory buffer allocated for the struct.
- * INIT   means that struct members may have values, and memory may
- *        have been allocated. Done function must check and free it.
- * RUN    Struct is valid for run-time checking.
- * DONE   means that possible memory allocations have been released.
- */
-typedef enum
-{
-    UNINIT = 0,
-    INIT,
-    RUN,
-    DONE
-} flat_obj_state_t;
-
 /**
  * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].
  */
@@ -124,75 +114,42 @@ typedef enum
     LOG_AUGMENTATION_MASK     = (LOG_AUGMENT_WITH_FUNCTION)
 } log_augmentation_t;
 
-/**
- * LOG_FLUSH_NO  Do not flush after writing.
- * LOG_FLUSH_YES Flush after writing.
- */
-enum log_flush
+bool mxs_log_init(const char* ident, const char* logdir, log_target_t target);
+void mxs_log_finish(void);
+
+int mxs_log_flush();
+int mxs_log_flush_sync();
+int mxs_log_rotate();
+
+int  mxs_log_set_priority_enabled(int priority, bool enabled);
+void mxs_log_set_syslog_enabled(bool enabled);
+void mxs_log_set_maxscalelog_enabled(bool enabled);
+void mxs_log_set_highprecision_enabled(bool enabled);
+void mxs_log_set_augmentation(int bits);
+
+int mxs_log_message(int priority,
+                    const char* file, int line, const char* function,
+                    const char* format, ...) __attribute__((format(printf, 5, 6)));
+
+inline int mxs_log_id_to_priority(logfile_id_t id)
 {
-    LOG_FLUSH_NO  = 0,
-    LOG_FLUSH_YES = 1
-};
-
-EXTERN_C_BLOCK_BEGIN
-
-bool skygw_logmanager_init(int argc, char* argv[]);
-void skygw_logmanager_done(void);
-void skygw_logmanager_exit(void);
-
-/**
- * free private write buffer list
- */
-void skygw_log_done(void);
-int  skygw_log_write_context(logfile_id_t id,
-                             enum log_flush flush,
-                             const char* file, int line, const char* function,
-                             const char* format, ...);
-int  skygw_log_flush(logfile_id_t id);
-void skygw_log_sync_all(void);
-int  skygw_log_rotate(logfile_id_t id);
-int  skygw_log_enable(logfile_id_t id);
-int  skygw_log_disable(logfile_id_t id);
-void skygw_log_sync_all(void);
-void skygw_set_highp(int);
-void logmanager_enable_syslog(int);
-void logmanager_enable_maxscalelog(int);
+    if (id & LOGFILE_ERROR) return LOG_ERR;
+    if (id & LOGFILE_MESSAGE) return LOG_NOTICE;
+    if (id & LOGFILE_TRACE) return LOG_INFO;
+    if (id & LOGFILE_DEBUG) return LOG_DEBUG;
+    return LOG_ERR;
+}
 
 #define skygw_log_write(id, format, ...)\
-    skygw_log_write_context(id, LOG_FLUSH_NO, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+    mxs_log_message(mxs_log_id_to_priority(id), __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
-#define skygw_log_write_flush(id, format, ...)\
-    skygw_log_write_context(id, LOG_FLUSH_YES, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
-
-/**
- * What augmentation if any should a logged message be augmented with.
- *
- * Currently this is a global setting and affects all loggers.
- */
-void skygw_log_set_augmentation(int bits);
-int skygw_log_get_augmentation();
-
-EXTERN_C_BLOCK_END
-
-const char* get_trace_prefix_default(void);
-const char* get_trace_suffix_default(void);
-const char* get_msg_prefix_default(void);
-const char* get_msg_suffix_default(void);
-const char* get_err_prefix_default(void);
-const char* get_err_suffix_default(void);
-const char* get_logpath_default(void);
+#define skygw_log_write_flush(id, format, ...) skygw_log_write(id, format, ##__VA_ARGS__)
 
 /**
  * Helper, not to be called directly.
  */
-#define MXS_MESSAGE_FLUSH(id, format, ...)\
-    do { if (LOG_IS_ENABLED(id)) { skygw_log_write_flush(id, format, ##__VA_ARGS__); } } while (false)
-
-/**
- * Helper, not to be called directly.
- */
-#define MXS_MESSAGE(id, format, ...)\
-    do { if (LOG_IS_ENABLED(id)) { skygw_log_write(id, format, ##__VA_ARGS__); } } while (false)
+#define MXS_LOG_MESSAGE(priority, format, ...)\
+    mxs_log_message(priority, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 /**
  * Log an error, warning, notice, info, or debug  message.
@@ -200,10 +157,14 @@ const char* get_logpath_default(void);
  * @param format The printf format of the message.
  * @param ...    Arguments, depending on the format.
  */
-#define MXS_ERROR(format, ...)   MXS_MESSAGE_FLUSH(LOGFILE_ERROR, format, ##__VA_ARGS__)
-#define MXS_WARNING(format, ...) MXS_MESSAGE(LOGFILE_ERROR, format, ##__VA_ARGS__)
-#define MXS_NOTICE(format, ...)  MXS_MESSAGE(LOGFILE_MESSAGE, format, ##__VA_ARGS__)
-#define MXS_INFO(format, ...)    MXS_MESSAGE(LOGFILE_TRACE, format, ##__VA_ARGS__)
-#define MXS_DEBUG(format, ...)   MXS_MESSAGE(LOGFILE_DEBUG, format, ##__VA_ARGS__)
+#define MXS_ERROR(format, ...)   MXS_LOG_MESSAGE(LOG_ERR,     format, ##__VA_ARGS__)
+#define MXS_WARNING(format, ...) MXS_LOG_MESSAGE(LOG_WARNING, format, ##__VA_ARGS__)
+#define MXS_NOTICE(format, ...)  MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
+#define MXS_INFO(format, ...)    MXS_LOG_MESSAGE(LOG_INFO,    format, ##__VA_ARGS__)
+#define MXS_DEBUG(format, ...)   MXS_LOG_MESSAGE(LOG_DEBUG,   format, ##__VA_ARGS__)
+
+#if defined(__cplusplus)
+}
+#endif
 
 #endif /** LOG_MANAGER_H */

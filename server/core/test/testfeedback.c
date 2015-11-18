@@ -28,6 +28,13 @@
  * @endverbatim
  */
 
+// To ensure that ss_info_assert asserts also when builing in non-debug mode.
+#if !defined(SS_DEBUG)
+#define SS_DEBUG
+#endif
+#if defined(NDEBUG)
+#undef NDEBUG
+#endif
 #define FAILTEST(s) printf("TEST FAILED: " s "\n");return 1;
 #include <my_config.h>
 #include <mysql.h>

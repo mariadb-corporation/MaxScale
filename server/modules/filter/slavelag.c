@@ -26,11 +26,6 @@
 #include <query_classifier.h>
 #include <regex.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 /**
  * @file slavelag.c - a very simple filter designed to send queries to the 
  * master server after data modification has occurred. This is done to prevent
@@ -184,10 +179,8 @@ int		i,cflags = 0;
 		    my_instance->nomatch = strdup(params[i]->value);
 		else
 		{
-		    LOGIF(LE, (skygw_log_write_flush(
-			    LOGFILE_ERROR,
-						     "lagfilter: Unexpected parameter '%s'.\n",
-						     params[i]->name)));
+		    MXS_ERROR("lagfilter: Unexpected parameter '%s'.\n",
+                              params[i]->name);
 		}
 	    }
 
@@ -205,10 +198,8 @@ int		i,cflags = 0;
 			}
 			else
 			{
-			    LOGIF(LE, (skygw_log_write_flush(
-				    LOGFILE_ERROR,
-				    "lagfilter: unsupported option '%s'.",
-				    options[i])));
+			    MXS_ERROR("lagfilter: unsupported option '%s'.",
+                                      options[i])));
 			}
 		    }
 		}
@@ -217,20 +208,16 @@ int		i,cflags = 0;
 	    {
 		if(regcomp(&my_instance->re,my_instance->match,cflags))
 		{
-		    LOGIF(LE, (skygw_log_write_flush(
-				    LOGFILE_ERROR,
-				    "lagfilter: Failed to compile regex '%s'.",
-				    my_instance->match)));
+		    MXS_ERROR("lagfilter: Failed to compile regex '%s'.",
+                              my_instance->match);
 		}
 	    }
 	    if(my_instance->nomatch)
 	    {
 		if(regcomp(&my_instance->nore,my_instance->nomatch,cflags))
 		{
-		    LOGIF(LE, (skygw_log_write_flush(
-				    LOGFILE_ERROR,
-				    "lagfilter: Failed to compile regex '%s'.",
-				    my_instance->nomatch)));
+		    MXS_ERROR("lagfilter: Failed to compile regex '%s'.",
+                              my_instance->nomatch)));
 		}
 	    }
 	}

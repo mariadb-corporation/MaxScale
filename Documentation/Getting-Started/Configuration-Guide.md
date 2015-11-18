@@ -22,6 +22,23 @@ connection failover| When a connection currently being used between MaxScale and
   backend database | A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.
             filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
 
+# Table of Contents
+
+* [Configuration](#configuration)
+  * [Global Settings](#global-settings)
+  * [Service](#service)
+    * [Service and SSL](#service-and-ssl)
+  * [Server](#server)
+  * [Listener](#listener)
+  * [Filter](#filter)
+  * [Monitor](#monitor)
+  * [Protocol](#protocol)
+* [Router Modules](#router-modules)
+* [Monitor Modules](#monitor-modules)
+* [Filter Modules](#filter-modules)
+* [Reloading Configuration](#reloading-configuration)
+* [Authentication](#authentication)
+* [Error Reporting](#error-reporting)
 
 ## Configuration
 
@@ -353,6 +370,12 @@ Enabling this feature will transform wildcard grants to individual database gran
 #### `retry_on_failure`
 
 The retry_on_failure parameter controls whether MaxScale will try to restart failed services and accepts a boolean value. This functionality is enabled by default to prevent services being permanently disabled if the starting of the service failed due to a network outage. Disabling the restarting of the failed services will cause them to be permanently disabled if the services can't be started when MaxScale is started.
+
+#### `log_auth_warnings`
+
+Enable or disable the logging of authentication failures and warnings. This parameter takes a boolean value.
+
+MaxScale normally suppresses warning messages about failed authentication. Enabling this option will log those messages into the message log with details about who tried to connect to MaxScale and from where.
 
 #### `connection_timeout`
 
@@ -696,7 +719,7 @@ Default value is `1`. Read Timeout is the timeout in seconds for each attempt to
 
 Default value is `2`. Write Timeout is the timeout in seconds for each attempt to write to the server. There is a retry if necessary, so the total effective timeout value is two times the option value. That's for `mysql_real_connect` C API.
 
-## Protocol Modules
+## Protocol
 
 The protocols supported by MaxScale are implemented as external modules that are loaded dynamically into the MaxScale core. These modules reside in the directory `/usr/lib64/maxscale`. The location can be overridden with the `libdir=PATH` parameter under the `[maxscale]` section. It may also be set by passing the `-B PATH` or `--libdir=PATH` option on the MaxScale command line.
 
@@ -955,7 +978,7 @@ filters=qla|fetch|from
 
 In addition to this, readwritesplit needs configuration for a listener, for all servers listed, and for each filter. Listener, server - and filter configurations are described in their own sections in this document.
 
-An important parameter is the `max_slave_connections=50%` parameter. This sets the number of slaves each client connection will use. With the default values, client connections will only use a single slave for reads. For example, setting the parameter value to 100% will use all available slaves and read queries will be balanced evenly across all slaves. Changing the `max_slave_conections` parameter and `slave_selection_criteria` router option allows you to change the way MaxScale will balance reads. For more information about the `slave_selection_criteria` router option, please read the ReadWriteSplit documentation.
+An important parameter is the `max_slave_connections=50%` parameter. This sets the number of slaves each client connection will use. With the default values, client connections will only use a single slave for reads. For example, setting the parameter value to 100% will use all available slaves and read queries will be balanced evenly across all slaves. Changing the `max_slave_connections` parameter and `slave_selection_criteria` router option allows you to change the way MaxScale will balance reads. For more information about the `slave_selection_criteria` router option, please read the ReadWriteSplit documentation.
 
 Below is a listener example for the "RWSplit Service" defined above:
 

@@ -38,11 +38,6 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static SPINLOCK	filter_spin = SPINLOCK_INIT;	/**< Protects the list of all filters */
 static FILTER_DEF *allFilters = NULL;		/**< The list of all filters */
 
@@ -310,6 +305,40 @@ int     i;
 }
 
 /**
+ * Load a filter module for use and create an instance of it for a service.
+ * @param filter Filter definition
+ * @return True if module was successfully loaded, false if an error occurred
+ */
+bool filter_load(FILTER_DEF* filter)
+{
+    bool rval = false;
+    if (filter)
+    {
+        if (filter->obj == NULL)
+        {
+            /* Filter not yet loaded */
+            if ((filter->obj = load_module(filter->module, MODULE_FILTER)) == NULL)
+            {
+                MXS_ERROR("Failed to load filter module '%s'.", filter->module);
+                return false;
+            }
+        }
+
+        if ((filter->filter = (filter->obj->createInstance)(filter->options,
+                                                            filter->parameters)))
+        {
+            rval = true;
+        }
+        else
+        {
+            MXS_ERROR("Failed to create filter '%s' instance.", filter->name);
+        }
+
+    }
+    return rval;
+}
+
+/**
  * Connect the downstream filter chain for a filter.
  *
  * This will create the filter instance, loading the filter module, and
@@ -324,38 +353,15 @@ int     i;
 DOWNSTREAM *
 filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
 {
-DOWNSTREAM	*me;
+    DOWNSTREAM	*me;
 
-	if (filter == NULL)
-		return NULL;
-
-	if (filter->obj == NULL)
-	{
-		/* Filter not yet loaded */
-		if ((filter->obj = load_module(filter->module,
-					MODULE_FILTER)) == NULL)
-		{
-			return NULL;
-		}
-	}
-
-	if (filter->filter == NULL)
-	{
-		if ((filter->filter = (filter->obj->createInstance)(filter->options,
-					filter->parameters)) == NULL)
-		{
-			return NULL;
-		}
-	}
 	if ((me = (DOWNSTREAM *)calloc(1, sizeof(DOWNSTREAM))) == NULL)
 	{
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(
-			LOGFILE_ERROR,
-			"Error : Memory allocation for filter session failed "
-			"due to %d,%s.",
-			errno,
-			strerror_r(errno, errbuf, sizeof(errbuf)))));
+		MXS_ERROR("Memory allocation for filter session failed "
+                          "due to %d,%s.",
+                          errno,
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
 		
 		return NULL;
 	}

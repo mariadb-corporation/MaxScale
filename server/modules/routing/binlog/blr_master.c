@@ -78,10 +78,6 @@
 #include <mysql_client_server_protocol.h>
 
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static GWBUF *blr_make_query(char *statement);
 static GWBUF *blr_make_registration(ROUTER_INSTANCE *router);
 static GWBUF *blr_make_binlog_dump(ROUTER_INSTANCE *router);
@@ -401,7 +397,7 @@ char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
 		LOGIF(LE, (skygw_log_write(
 			LOGFILE_ERROR,
-			"%s: Received error: %u, '%s' from master during '%s' phase "
+			"%s: Received error: %lu, '%s' from master during '%s' phase "
 			"of the master state machine.",
 			router->service->name,
 			mysql_errno, msg_err,
@@ -872,11 +868,11 @@ int			n_bufs = -1, pn_bufs = -1;
 			if ((msg = malloc(len)) == NULL)
 			{
         			LOGIF(LE,(skygw_log_write(
-		                           LOGFILE_ERROR,
-					"Insufficient memory to buffer event "
-					"of %d bytes. Binlog %s @ %d.",
-					len, router->binlog_name,
-					router->current_pos)));
+                                              LOGFILE_ERROR,
+                                              "Insufficient memory to buffer event "
+                                              "of %d bytes. Binlog %s @ %lu.",
+                                              len, router->binlog_name,
+                                              router->current_pos)));
 				break;
 			}
 
@@ -896,10 +892,10 @@ int			n_bufs = -1, pn_bufs = -1;
 			if (remainder)
 			{
         			LOGIF(LE,(skygw_log_write(
-		                           LOGFILE_ERROR,
+                                              LOGFILE_ERROR,
 					"Expected entire message in buffer "
 					"chain, but failed to create complete "
-					"message as expected. %s @ %d",
+					"message as expected. %s @ %lu",
 					router->binlog_name,
 					router->current_pos)));
 				free(msg);
@@ -920,7 +916,7 @@ int			n_bufs = -1, pn_bufs = -1;
 			router->stats.n_residuals++;
 	        	LOGIF(LD,(skygw_log_write(
                            LOGFILE_DEBUG,
-			   "Residual data left after %d records. %s @ %d",
+			   "Residual data left after %lu records. %s @ %lu",
 					router->stats.n_binlogs,
 			   router->binlog_name, router->current_pos)));
 			break;
@@ -971,7 +967,7 @@ int			n_bufs = -1, pn_bufs = -1;
 				LOGIF(LE,(skygw_log_write(
 				   LOGFILE_ERROR,
 					"Packet length is %d, but event size is %d, "
-					"binlog file %s position %d "
+					"binlog file %s position %lu "
 					"reslen is %d and preslen is %d, "
 					"length of previous event %d. %s",
 						len, hdr.event_size,
@@ -1037,7 +1033,7 @@ int			n_bufs = -1, pn_bufs = -1;
 						LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
 							"%s: Checksum error in event "
 							"from master, "
-							"binlog %s @ %d. "
+							"binlog %s @ %lu. "
 							"Closing master connection.",
 							router->service->name,
 							router->binlog_name,
@@ -1094,7 +1090,7 @@ int			n_bufs = -1, pn_bufs = -1;
 									LOGIF(LE,(skygw_log_write_flush(LOGFILE_ERROR,
 										"Error: a MariaDB 10 transaction "
 										"is already open "
-										"@ %lu (GTID %lu-%lu-%llu) and "
+										"@ %lu (GTID %u-%u-%lu) and "
 										"a new one starts @ %lu",
 										router->binlog_position,
 										domainid, hdr.serverid, n_sequence,
@@ -1173,7 +1169,7 @@ int			n_bufs = -1, pn_bufs = -1;
 					// Fake format description message
 					LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG,
 						"Replication fake event. "
-							"Binlog %s @ %d.",
+							"Binlog %s @ %lu.",
 						router->binlog_name,
 						router->current_pos)));
 					router->stats.n_fakeevents++;
@@ -1219,12 +1215,14 @@ int			n_bufs = -1, pn_bufs = -1;
 						LOGIF(LD,(skygw_log_write(
 							   LOGFILE_DEBUG,
 							"Replication heartbeat. "
-							"Binlog %s @ %d.",
+							"Binlog %s @ %lu.",
 							router->binlog_name,
 							router->current_pos)));
 
 						router->stats.n_heartbeats++;
 
+						if (router->pending_transaction)
+							router->stats.lastReply = time(0);
 					}
 					else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
 					{
@@ -1354,7 +1352,7 @@ int			n_bufs = -1, pn_bufs = -1;
 										/* Some events have been sent */
 										LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
 											"Some events were not distributed to slaves for a pending transaction "
-											"in %s at %lu. Last distributed even at %lu, last event from master at %lu",
+											"in %s at %lu. Last distributed even at %llu, last event from master at %lu",
 											router->binlog_name,
 											router->binlog_position,
 											pos,
@@ -1387,7 +1385,7 @@ int			n_bufs = -1, pn_bufs = -1;
 						"Artificial event not written "
 						"to disk or distributed. "
 						"Type 0x%x, Length %d, Binlog "
-						"%s @ %d.",
+						"%s @ %lu.",
 							hdr.event_type,
 							hdr.event_size,
 							router->binlog_name,
@@ -1442,7 +1440,7 @@ int			n_bufs = -1, pn_bufs = -1;
 				spinlock_release(&router->lock);
 
 				LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
-					"Error packet in binlog stream.%s @ %d.",
+					"Error packet in binlog stream.%s @ %lu.",
 							router->binlog_name,
 							router->current_pos)));
 
@@ -1689,7 +1687,7 @@ int		action;
 				 * try to resolve the issue.
 				 */
 				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-					"Slave %d is ahead of expected position %s@%d. "
+					"Slave %d is ahead of expected position %s@%lu. "
 					"Expected position %d",
 						slave->serverid, slave->binlogfile,
 						(unsigned long)slave->binlog_pos,
@@ -1925,7 +1923,7 @@ int		event_limit;
 	if (pos > end_pos)
 	{
                 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                        "Error: Reading saved events, the specified pos %lu "
+                        "Error: Reading saved events, the specified pos %llu "
 			"is ahead of current pos %lu for file %s",
                         pos, router->current_pos, router->binlog_name)));
 		return NULL;
@@ -1938,14 +1936,14 @@ int		event_limit;
 		{
 		case 0:
 			LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-				"Reading saved events: reached end of binlog file at %d.", pos)));
+				"Reading saved events: reached end of binlog file at %llu.", pos)));
                         break;
                 case -1:
 			{
 			char err_msg[STRERROR_BUFLEN];
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: failed to read binlog "
-				"file %s at position %d"
+				"file %s at position %llu"
 				" (%s).", router->binlog_name,
 				pos, strerror_r(errno, err_msg, sizeof(err_msg)))));
 
@@ -1960,7 +1958,7 @@ int		event_limit;
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: short read when reading the header. "
 				"Expected 19 bytes but got %d bytes. "
-				"Binlog file is %s, position %d",
+				"Binlog file is %s, position %llu",
 				n, router->binlog_name, pos)));
 			break;
 		}
@@ -1981,7 +1979,7 @@ int		event_limit;
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"Error: Reading saved events: invalid event type 0x%x. "
-			"Binlog file is %s, position %d",
+			"Binlog file is %s, position %llu",
 			hdr->event_type,
 			router->binlog_name, pos)));
 		return NULL;
@@ -1991,7 +1989,7 @@ int		event_limit;
 	{
 		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 			"Error: Reading saved events: failed to allocate memory for binlog entry, "
-			"size %d at %d.",
+			"size %d at %llu.",
 			hdr->event_size, pos)));
 		return NULL;
 	}
@@ -2007,14 +2005,14 @@ int		event_limit;
 		{
 			char err_msg[STRERROR_BUFLEN];
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Error: Reading saved events: the event at %ld in %s. "
+				"Error: Reading saved events: the event at %llu in %s. "
 				"%s, expected %d bytes.",
 				pos, router->binlog_name,
 				strerror_r(errno, err_msg, sizeof(err_msg)), hdr->event_size - 19)));
 		} else {
 			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 				"Error: Reading saved events: short read when reading "
-				"the event at %ld in %s. "
+				"the event at %llu in %s. "
 				"Expected %d bytes got %d bytes.",
 				pos, router->binlog_name, hdr->event_size - 19, n)));
 
@@ -2023,7 +2021,7 @@ int		event_limit;
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 	                                "Error: Reading saved events: binlog event "
 					"is close to the end of the binlog file, "
-					"current file size is %u.", end_pos)));
+					"current file size is %llu.", end_pos)));
 			}
 		}
 
@@ -2079,14 +2077,10 @@ blr_stop_start_master(ROUTER_INSTANCE *router) {
         }
         router->residual = NULL;
 
-        /* Now it is safe to unleash other threads on this router instance */
-        router->reconnect_pending = 0;
-        router->active_logs = 0;
-
         router->master_state = BLRM_UNCONNECTED;
         spinlock_release(&router->lock);
 
-        blr_start_master(router);
+        blr_master_reconnect(router);
 }
 
 /**
@@ -2155,7 +2149,7 @@ char 	*event_desc  = NULL;
 	if (router->master_state == BLRM_BINLOGDUMP && router->lastEventReceived > 0) {
 		if ((t_now - router->stats.lastReply) > (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME)) {
 			 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"ERROR: No event received from master %s:%d in heartbeat period (%d seconds), last event (%s %d) received %lu seconds ago. Assuming connection is dead and reconnecting.",
+				"ERROR: No event received from master %s:%d in heartbeat period (%lu seconds), last event (%s %d) received %lu seconds ago. Assuming connection is dead and reconnecting.",
 				router->service->dbref->server->name,
 				router->service->dbref->server->port,
 				router->heartbeat,

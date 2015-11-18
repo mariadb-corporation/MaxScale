@@ -192,7 +192,6 @@ struct router_client_session {
 	rses_property_t* rses_properties[RSES_PROP_TYPE_COUNT];
 
         shard_config_t rses_config;    /*< copied config info from router instance */
-        int              rses_capabilities; /*< input type, for example */
         bool             rses_autocommit_enabled;
         bool             rses_transaction_active;
 	struct router_instance	 *router;	/*< The router instance */
@@ -204,6 +203,7 @@ struct router_client_session {
         SESSION*        session;
         GWBUF* queue;
         char            connect_db[MYSQL_DATABASE_MAXLEN+1]; /*< Database the user was trying to connect to */
+        char            current_db[MYSQL_DATABASE_MAXLEN + 1]; /*< Current active database */
         shard_init_mask_t    init; /*< Initialization state bitmask */
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;

@@ -33,6 +33,7 @@
 #include <sys/time.h>
 #include "skygw_utils.h"
 #include <atomic.h>
+#include <random_jkiss.h>
 #include <pcre2.h>
 
 #if defined(MLIST)
@@ -1276,7 +1277,7 @@ void acquire_lock(
                 misscount += 1;
                 if (misscount > 10) 
 		{
-			ts1.tv_nsec = (rand()%misscount)*1000000;
+			ts1.tv_nsec = (random_jkiss()%misscount)*1000000;
 			nanosleep(&ts1, NULL);
                 }
         }

@@ -63,10 +63,6 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-extern int lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_file_append(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(logfile_id_t file, char *msg, uint8_t *ptr);
@@ -286,7 +282,7 @@ int		fd;
 			/* If for any reason the file's length is between 1 and 3 bytes
 			 * then report an error. */
 	                LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"%s: binlog file %s has an invalid length %d.",
+				"%s: binlog file %s has an invalid length %lu.",
 				router->service->name, path, router->current_pos)));
 			close(fd);
 			spinlock_release(&router->binlog_lock);
@@ -484,7 +480,7 @@ struct	stat	statb;
 		{
 		case 0:
 			LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-				"Reached end of binlog file '%s' at %d.",
+				"Reached end of binlog file '%s' at %lu.",
 				file->binlogname, pos)));
 
 			/* set ok indicator */
@@ -552,7 +548,7 @@ struct	stat	statb;
 			{
 			case 0:
 				LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-					"Reached end of binlog file at %d.",
+					"Reached end of binlog file at %lu.",
 					pos)));
 
 				/* set ok indicator */
@@ -929,8 +925,8 @@ int fde_seen = 0;
                                         	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
 							"Transaction Summary for binlog '%s'\n"
 							"\t\t\tDescription        %17s%17s%17s\n\t\t\t"
-							 "No. of Transactions %16llu\n\t\t\t"
-							"No. of Events       %16llu %16.1f %16llu\n\t\t\t"
+							 "No. of Transactions %16lu\n\t\t\t"
+							"No. of Events       %16lu %16.1f %16lu\n\t\t\t"
 							"No. of Bytes       %16.1f%s%16.1f%s%16.1f%s", router->binlog_name,
 							"Total", "Average", "Max",
 							n_transactions, total_events,
@@ -1036,7 +1032,7 @@ int fde_seen = 0;
 			if (hdr.event_type > MAX_EVENT_TYPE_MARIADB10) {
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 					"Invalid MariaDB 10 event type 0x%x. "
-					"Binlog file is %s, position %d",
+					"Binlog file is %s, position %llu",
 					hdr.event_type,
 					router->binlog_name, pos)));
 
@@ -1046,7 +1042,7 @@ int fde_seen = 0;
 			if (hdr.event_type > MAX_EVENT_TYPE) {
 				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
 					"Invalid event type 0x%x. "
-					"Binlog file is %s, position %d",
+					"Binlog file is %s, position %llu",
 					hdr.event_type,
 					router->binlog_name, pos)));
 
@@ -1308,7 +1304,7 @@ int fde_seen = 0;
 
                         if(debug)
                                 LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-                                        "- Rotate event @ %llu, next file is [%s] @ %llu",
+                                        "- Rotate event @ %llu, next file is [%s] @ %lu",
                                         pos, file, new_pos)));
                 }
 
@@ -1331,7 +1327,7 @@ int fde_seen = 0;
 					if (pending_transaction > 0) {
 						LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
 							"ERROR: Transaction cannot be @ pos %llu: "
-							"Another MariaDB 10 transaction (GTID %lu-%lu-%llu)"
+							"Another MariaDB 10 transaction (GTID %u-%u-%lu)"
 							" was opened at %llu",
 							pos, domainid, hdr.serverid, n_sequence, last_known_commit)));
 
@@ -1346,7 +1342,7 @@ int fde_seen = 0;
 
 						if (debug)
 							LOGIF(LD, (skygw_log_write_flush(LOGFILE_DEBUG,
-								"> MariaDB 10 Transaction (GTID %lu-%lu-%llu)"
+								"> MariaDB 10 Transaction (GTID %u-%u-%lu)"
 								" starts @ pos %llu",
 								domainid, hdr.serverid, n_sequence, pos)));
 					}
@@ -1440,7 +1436,7 @@ int fde_seen = 0;
                 /* pos and next_pos sanity checks */
                 if (hdr.next_pos > 0 && hdr.next_pos < pos) {
                         LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
-                                "Binlog %s: next pos %llu < pos %llu, truncating to %llu",
+                                "Binlog %s: next pos %u < pos %llu, truncating to %llu",
                                 router->binlog_name,
                                 hdr.next_pos,
                                 pos,
@@ -1469,7 +1465,7 @@ int fde_seen = 0;
 
                 if (hdr.next_pos > 0 && hdr.next_pos != (pos + hdr.event_size)) {
                         LOGIF(LT, (skygw_log_write_flush(LOGFILE_TRACE,
-                                "Binlog %s: next pos %llu != (pos %llu + event_size %llu), truncating to %llu",
+                                "Binlog %s: next pos %u != (pos %llu + event_size %u), truncating to %llu",
                                 router->binlog_name,
                                 hdr.next_pos,
                                 pos,
@@ -1513,7 +1509,7 @@ int fde_seen = 0;
                 } else {
 
                         LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                                "Current event type %lu @ %llu has nex pos = %llu : exiting", hdr.event_type, pos, hdr.next_pos)));
+                                "Current event type %d @ %llu has nex pos = %u : exiting", hdr.event_type, pos, hdr.next_pos)));
                         break;
                 }
 
@@ -1663,7 +1659,7 @@ char err_msg[STRERROR_BUFLEN];
 
 	snprintf(filename,(PATH_MAX - 4), "%s/master.ini", path);
 
-	snprintf(tmp_file, (PATH_MAX -4), filename);
+	snprintf(tmp_file, (PATH_MAX - 4), "%s", filename);
 
 	strcat(tmp_file, ".tmp");
 

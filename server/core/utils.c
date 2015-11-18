@@ -43,11 +43,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
-
-/** Defined in log_manager.cc */
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
+#include <random_jkiss.h>
 
 /* used in the hex2bin function */
 #define char_val(X) (X >= '0' && X <= '9' ? X-'0' :\
@@ -69,23 +65,19 @@ int setnonblocking(int fd) {
 
 	if ((fl = fcntl(fd, F_GETFL, 0)) == -1) {
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Can't GET fcntl for %i, errno = %d, %s.",
-                        fd,
-                        errno,
-                        strerror_r(errno, errbuf, sizeof(errbuf)))));
+		MXS_ERROR("Can't GET fcntl for %i, errno = %d, %s.",
+                          fd,
+                          errno,
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
 		return 1;
 	}
 
 	if (fcntl(fd, F_SETFL, fl | O_NONBLOCK) == -1) {
                 char errbuf[STRERROR_BUFLEN];
-		LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Can't SET fcntl for %i, errno = %d, %s",
-                        fd,
-                        errno,
-                        strerror_r(errno, errbuf, sizeof(errbuf)))));
+		MXS_ERROR("Can't SET fcntl for %i, errno = %d, %s",
+                          fd,
+                          errno,
+                          strerror_r(errno, errbuf, sizeof(errbuf)));
 		return 1;
 	}
 	return 0;
@@ -102,7 +94,7 @@ char *gw_strend(register const char *s) {
 * generate a random char 
 *****************************************/
 static char gw_randomchar() {
-   return (char)((rand() % 78) + 30);
+   return (char)((random_jkiss() % 78) + 30);
 }
 
 /*****************************************
@@ -112,7 +104,6 @@ static char gw_randomchar() {
 int gw_generate_random_str(char *output, int len) {
 
 	int i;
-	srand(time(0L));
 
 	for ( i = 0; i < len; ++i ) {
 		output[i] = gw_randomchar();

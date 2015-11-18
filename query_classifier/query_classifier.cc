@@ -61,10 +61,6 @@
 #include <string.h>
 #include <stdarg.h>
 
-extern int            lm_enabled_logfiles_bitmask;
-extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
-
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
 
 static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
@@ -260,32 +256,24 @@ static THD* get_or_create_thd_for_parsing(
         thd = (THD *)create_embedded_thd(client_flags);
 
         if (thd == NULL) {
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Failed to create thread context for parsing. "
-                        "Exiting.")));
-                goto return_thd;
+            MXS_ERROR("Failed to create thread context for parsing.");
+            goto return_thd;
         }
         mysql->thd = thd;
         init_embedded_mysql(mysql, client_flags);
         failp = check_embedded_connection(mysql, db);
 
         if (failp) {
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Call to check_embedded_connection failed. "
-                        "Exiting.")));
-                goto return_err_with_thd;
+            MXS_ERROR("Call to check_embedded_connection failed.");
+            goto return_err_with_thd;
         }
         thd->clear_data_list();
 
         /** Check that we are calling the client functions in right order */
         if (mysql->status != MYSQL_STATUS_READY) {
                 set_mysql_error(mysql, CR_COMMANDS_OUT_OF_SYNC, unknown_sqlstate);
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Invalid status %d in embedded server. "
-                        "Exiting.")));
+                MXS_ERROR("Invalid status %d in embedded server.",
+                          mysql->status);
                 goto return_err_with_thd;
         }
         /** Clear result variables */
@@ -373,19 +361,15 @@ static bool create_parse_tree(
         failp = thd->set_db(virtual_db, strlen(virtual_db));
         if (failp) 
 	{
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : Failed to set database in thread context.")));
+            MXS_ERROR("Failed to set database in thread context.");
         }
         failp = parse_sql(thd, &parser_state, NULL);
 
         if (failp) 
 	{
-                LOGIF(LD, (skygw_log_write(
-                        LOGFILE_DEBUG,
-                        "%lu [readwritesplit:create_parse_tree] failed to "
-                        "create parse tree.",
-                        pthread_self())));
+            MXS_DEBUG("%lu [readwritesplit:create_parse_tree] failed to "
+                      "create parse tree.",
+                      pthread_self());
         }
 return_here:
         return failp;
@@ -444,18 +428,12 @@ static skygw_query_type_t resolve_query_type(
                         if (sql_command_flags[lex->sql_command] & 
                                 CF_IMPLICT_COMMIT_BEGIN)
                         {
-                                skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Implicit COMMIT before executing the "
-                                        "next command.");
+                            MXS_INFO("Implicit COMMIT before executing the next command.");
                         }
                         else if (sql_command_flags[lex->sql_command] & 
                                 CF_IMPLICIT_COMMIT_END)
                         {
-                                skygw_log_write(
-                                        LOGFILE_TRACE,
-                                        "Implicit COMMIT after executing the "
-                                        "next command.");
+                            MXS_INFO("Implicit COMMIT after executing the next command.");
                         }
                 }
                 
@@ -470,10 +448,8 @@ static skygw_query_type_t resolve_query_type(
         {
                 if (LOG_IS_ENABLED(LOGFILE_TRACE))
                 {
-                        skygw_log_write(
-                                LOGFILE_TRACE,
-                                "Disable autocommit : implicit START TRANSACTION"
-                                " before executing the next command.");
+                    MXS_INFO("Disable autocommit : implicit START TRANSACTION"
+                             " before executing the next command.");
                 }
                 type |= QUERY_TYPE_DISABLE_AUTOCOMMIT;  
                 type |= QUERY_TYPE_BEGIN_TRX;
@@ -645,12 +621,10 @@ static skygw_query_type_t resolve_query_type(
                         Item::Type itype;
                 
                         itype = item->type();
-                        LOGIF(LD, (skygw_log_write(
-                                LOGFILE_DEBUG,
-                                "%lu [resolve_query_type] Item %s:%s",
-                                pthread_self(),
-                                item->name,
-                                STRITEMTYPE(itype))));
+                        MXS_DEBUG("%lu [resolve_query_type] Item %s:%s",
+                                  pthread_self(),
+                                  item->name,
+                                  STRITEMTYPE(itype));
                         
                         if (itype == Item::SUBSELECT_ITEM) {
                                 continue;
@@ -711,50 +685,40 @@ static skygw_query_type_t resolve_query_type(
                                          * belongs to this category.
                                          */
                                         func_qtype |= QUERY_TYPE_WRITE;
-                                        LOGIF(LD, (skygw_log_write(
-                                                LOGFILE_DEBUG,
-                                                "%lu [resolve_query_type] "
-                                                "functype FUNC_SP, stored proc "
-                                                "or unknown function.",
-                                                pthread_self())));
+                                        MXS_DEBUG("%lu [resolve_query_type] "
+                                                  "functype FUNC_SP, stored proc "
+                                                  "or unknown function.",
+                                                  pthread_self());
                                         break;
                                 case Item_func::UDF_FUNC:
                                         func_qtype |= QUERY_TYPE_WRITE;
-                                        LOGIF(LD, (skygw_log_write(
-                                                LOGFILE_DEBUG,
-                                                "%lu [resolve_query_type] "
-                                                "functype UDF_FUNC, user-defined "
-                                                "function.",
-                                                pthread_self())));
+                                        MXS_DEBUG("%lu [resolve_query_type] "
+                                                  "functype UDF_FUNC, user-defined "
+                                                  "function.",
+                                                  pthread_self());
                                         break;
                                 case Item_func::NOW_FUNC:
                                         func_qtype |= QUERY_TYPE_LOCAL_READ;
-                                        LOGIF(LD, (skygw_log_write(
-                                                LOGFILE_DEBUG,
-                                                "%lu [resolve_query_type] "
-                                                "functype NOW_FUNC, could be "
-                                                "executed in MaxScale.",
-                                                pthread_self())));
+                                        MXS_DEBUG("%lu [resolve_query_type] "
+                                                  "functype NOW_FUNC, could be "
+                                                  "executed in MaxScale.",
+                                                  pthread_self());
                                         break;
 				/** System session variable */
 				case Item_func::GSYSVAR_FUNC:
 					func_qtype |= QUERY_TYPE_SYSVAR_READ;
-					LOGIF(LD, (skygw_log_write(
-						LOGFILE_DEBUG,
-						"%lu [resolve_query_type] "
-						"functype GSYSVAR_FUNC, system "
-						"variable read.",
-						pthread_self())));
+					MXS_DEBUG("%lu [resolve_query_type] "
+                                                  "functype GSYSVAR_FUNC, system "
+                                                  "variable read.",
+                                                  pthread_self());
 					break;
 					/** User-defined variable read */
 				case Item_func::GUSERVAR_FUNC:
 					func_qtype |= QUERY_TYPE_USERVAR_READ;
-					LOGIF(LD, (skygw_log_write(
-						LOGFILE_DEBUG,
-						"%lu [resolve_query_type] "
-						"functype GUSERVAR_FUNC, user "
-						"variable read.",
-						pthread_self())));
+                                        MXS_DEBUG("%lu [resolve_query_type] "
+                                                  "functype GUSERVAR_FUNC, user "
+                                                  "variable read.",
+                                                  pthread_self());
 					break;
 					/** User-defined variable modification */
 				case Item_func::SUSERVAR_FUNC:
@@ -764,12 +728,10 @@ static skygw_query_type_t resolve_query_type(
 					 * 15.9.14
 					 */
 					func_qtype |= QUERY_TYPE_GSYSVAR_WRITE;
-					LOGIF(LD, (skygw_log_write(
-						LOGFILE_DEBUG,
-						"%lu [resolve_query_type] "
-						"functype SUSERVAR_FUNC, user "
-						"variable write.",
-						pthread_self())));
+					MXS_DEBUG("%lu [resolve_query_type] "
+                                                  "functype SUSERVAR_FUNC, user "
+                                                  "variable write.",
+                                                  pthread_self());
 					break;
                                 case Item_func::UNKNOWN_FUNC:
 
@@ -787,21 +749,17 @@ static skygw_query_type_t resolve_query_type(
                                          * type, for example, rand(), soundex(),
                                          * repeat() .
                                          */
-                                        LOGIF(LD, (skygw_log_write(
-                                                LOGFILE_DEBUG,
-                                                "%lu [resolve_query_type] "
-                                                "functype UNKNOWN_FUNC, "
-                                                "typically some system function.",
-                                                pthread_self())));
+                                        MXS_DEBUG("%lu [resolve_query_type] "
+                                                  "functype UNKNOWN_FUNC, "
+                                                  "typically some system function.",
+                                                  pthread_self());
                                         break;
                                 default:
-                                        LOGIF(LD, (skygw_log_write(
-                                                LOGFILE_DEBUG,
-                                                "%lu [resolve_query_type] "
-                                                "Functype %d.",
-                                                pthread_self(),
-                                                ftype)));
-                                        break;
+                                    MXS_DEBUG("%lu [resolve_query_type] "
+                                              "Functype %d.",
+                                              pthread_self(),
+                                              ftype);
+                                    break;
                                 } /**< switch */
                                 /**< Set new query type */
 				type |= func_qtype;
@@ -1208,7 +1166,7 @@ inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
                         *bufsize = (*bufsize) * 2 + isize;
 			char *tmp = (char*)realloc(*buf,(*bufsize)* sizeof(char));
 			if(tmp == NULL){
-                            skygw_log_write_flush (LE,"Error: memory reallocation failed");
+                            MXS_ERROR("Error: memory reallocation failed.");
                             free(*buf);
                             *buf = NULL;
                             *bufsize = 0;
@@ -1251,7 +1209,7 @@ char* skygw_get_affected_fields(GWBUF* buf)
 	lex->current_select = lex->all_selects_list;
 	if((where = (char*)malloc(sizeof(char)*1)) == NULL)
         {
-            skygw_log_write_flush(LE,"Error: Memory allocation failed.");
+            MXS_ERROR("Memory allocation failed.");
             return NULL;
         }
         *where = '\0';
@@ -1449,13 +1407,11 @@ parsing_info_t* parsing_info_init(
         ss_dassert(mysql != NULL);
         
         if (mysql == NULL) {
-                LOGIF(LE, (skygw_log_write_flush(
-                        LOGFILE_ERROR,
-                        "Error : call to mysql_real_connect failed due %d, %s.",
-                        mysql_errno(mysql),
-			mysql_error(mysql))));
+            MXS_ERROR("Call to mysql_real_connect failed due %d, %s.",
+                      mysql_errno(mysql),
+                      mysql_error(mysql));
                 
-                goto retblock;
+            goto retblock;
         }
         /** Set methods and authentication to mysql */
         mysql_options(mysql, MYSQL_READ_DEFAULT_GROUP, "libmysqld_skygw");
@@ -1647,6 +1603,11 @@ retblock:
 
 skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
 {
+    if (!query_is_parsed(querybuf))
+    {
+        parse_query(querybuf);
+    }
+
 	LEX* lex = get_lex(querybuf);
 	skygw_query_op_t operation = QUERY_OP_UNDEFINED;
 	if(lex){
@@ -1687,6 +1648,9 @@ skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
                 case SQLCOM_CHANGE_DB:
                     operation = QUERY_OP_CHANGE_DB;
                     break;
+		case SQLCOM_LOAD:
+			operation = QUERY_OP_LOAD;
+		break;
 
 		default:
 	    operation = QUERY_OP_UNDEFINED;

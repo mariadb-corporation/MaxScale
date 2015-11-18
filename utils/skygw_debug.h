@@ -55,11 +55,11 @@
 # define ss_dassert(exp) if(!(exp)){(skygw_log_write(LE,\
                 "debug assert %s:%d\n", \
                 (char*)__FILE__, \
-                __LINE__));skygw_log_sync_all();assert(exp);}
+                __LINE__));mxs_log_flush_sync();assert(exp);}
 #define ss_info_dassert(exp,info) if(!(exp)){(skygw_log_write(LE,\
                 "debug assert %s:%d %s\n", \
                 (char*)__FILE__, \
-                __LINE__,info));skygw_log_sync_all();assert(exp);}
+                __LINE__,info));mxs_log_flush_sync();assert(exp);}
 # define ss_debug(exp) exp
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush
@@ -206,16 +206,16 @@ typedef enum skygw_chk_t {
                          ((s) == DCB_STATE_LISTENING ? "DCB_STATE_LISTENING" : \
                           ((s) == DCB_STATE_DISCONNECTED ? "DCB_STATE_DISCONNECTED" : \
                            ((s) == DCB_STATE_NOPOLLING ? "DCB_STATE_NOPOLLING" : \
-                            ((s) == DCB_STATE_FREED ? "DCB_STATE_FREED" : \
-                             ((s) == DCB_STATE_ZOMBIE ? "DCB_STATE_ZOMBIE" : \
-                              ((s) == DCB_STATE_UNDEFINED ? "DCB_STATE_UNDEFINED" : "DCB_STATE_UNKNOWN"))))))))
+                            ((s) == DCB_STATE_ZOMBIE ? "DCB_STATE_ZOMBIE" : \
+                             ((s) == DCB_STATE_UNDEFINED ? "DCB_STATE_UNDEFINED" : "DCB_STATE_UNKNOWN")))))))
 
 #define STRSESSIONSTATE(s) ((s) == SESSION_STATE_ALLOC ? "SESSION_STATE_ALLOC" : \
-                            ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY" : \
-                             ((s) == SESSION_STATE_LISTENER ? "SESSION_STATE_LISTENER" : \
-                              ((s) == SESSION_STATE_LISTENER_STOPPED ? "SESSION_STATE_LISTENER_STOPPED" : \
-                              (s) == SESSION_STATE_ROUTER_READY ? "SESSION_STATE_ROUTER_READY":\
-                               "SESSION_STATE_UNKNOWN"))))
+                            ((s) == SESSION_STATE_DUMMY ? "SESSION_STATE_DUMMY" : \
+                             ((s) == SESSION_STATE_READY ? "SESSION_STATE_READY" : \
+                              ((s) == SESSION_STATE_LISTENER ? "SESSION_STATE_LISTENER" : \
+                               ((s) == SESSION_STATE_LISTENER_STOPPED ? "SESSION_STATE_LISTENER_STOPPED" : \
+                               (s) == SESSION_STATE_ROUTER_READY ? "SESSION_STATE_ROUTER_READY":\
+                               "SESSION_STATE_UNKNOWN")))))
 
 #define STRPROTOCOLSTATE(s) ((s) == MYSQL_ALLOC ? "MYSQL_ALLOC" :       \
         ((s) == MYSQL_PENDING_CONNECT ? "MYSQL_PENDING_CONNECT" :       \
@@ -408,9 +408,6 @@ typedef enum skygw_chk_t {
                               lf->lf_name_suffix != NULL &&             \
                               lf->lf_full_file_name != NULL,                \
                               "NULL in name variable\n");               \
-              ss_info_dassert(lf->lf_id >= LOGFILE_FIRST &&             \
-                              lf->lf_id <= LOGFILE_LAST,                \
-                              "Invalid logfile id\n");                  \
               ss_debug(                                                 \
               (lf->lf_chk_top != CHK_NUM_LOGFILE ||                     \
                lf->lf_chk_tail != CHK_NUM_LOGFILE ?                     \

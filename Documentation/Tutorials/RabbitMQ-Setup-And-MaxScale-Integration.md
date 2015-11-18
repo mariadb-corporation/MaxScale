@@ -364,7 +364,7 @@ If the consumer.cnf file is not in the same directory as the binary file is, you
 # ./consumer -c path/to/file
 ```
 
-and start maxScale as well
+and start MaxScale as well
 
 ## Step 6 - Test the filter and check collected data 
 

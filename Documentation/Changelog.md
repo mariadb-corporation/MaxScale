@@ -10,7 +10,7 @@ These are the changes introduced in the next MaxScale version. This is not the o
 
 ## MaxScale 1.1.1
 
-* Schemarouter now also allows for an upper limit to session commans.
+* Schemarouter now also allows for an upper limit to session commands.
 * Schemarouter correctly handles SHOW DATABASES responses that span multiple buffers.
 * Readwritesplit and Schemarouter now allow disabling of the session command history.
 

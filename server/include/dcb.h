@@ -179,7 +179,6 @@ typedef enum {
         DCB_STATE_DISCONNECTED, /*< The socket is now closed */
         DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
         DCB_STATE_ZOMBIE,       /*< DCB is no longer active, waiting to free it */
-        DCB_STATE_FREED         /*< Memory freed */
 } dcb_state_t;
 
 typedef enum {
@@ -227,6 +226,7 @@ typedef struct dcb_callback {
 typedef struct dcb {
     skygw_chk_t     dcb_chk_top;
 	bool            dcb_errhandle_called; /*< this can be called only once */
+        bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
 	dcb_role_t      dcb_role;
     SPINLOCK        dcb_initlock;
 	DCBEVENTQ	evq;		/**< The event queue for this DCB */
@@ -339,6 +339,7 @@ int		dcb_count_by_usage(DCB_USAGE);		/* Return counts of DCBs */
 int             dcb_persistent_clean_count(DCB *, bool);      /* Clean persistent and return count */
 
 void   dcb_call_foreach (struct server* server, DCB_REASON reason);
+void    dcb_hangup_foreach (struct server* server);
 size_t dcb_get_session_id(DCB* dcb);
 bool   dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
 char   *dcb_role_name(DCB *);                  /* Return the name of a role */
