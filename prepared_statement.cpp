@@ -21,7 +21,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->set_timeout(20);
+    Test->set_timeout(60);
     int N=4;
 
     Test->repl->connect();
@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
     create_t1(Test->conn_rwsplit);
     insert_into_t1(Test->conn_rwsplit, N);
 
+    Test->set_timeout(20);
     Test->try_query(Test->conn_rwsplit, (char *) "PREPARE stmt FROM 'SELECT * FROM t1 WHERE fl=@x;';");
     Test->try_query(Test->conn_rwsplit, (char *) "SET @x = 3;");
     Test->try_query(Test->conn_rwsplit, (char *) "EXECUTE stmt");
