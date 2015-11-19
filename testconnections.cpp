@@ -274,7 +274,7 @@ int TestConnections::copy_all_logs()
 int TestConnections::start_binlog()
 {
     char sys1[4096];
-    char str[1024];
+    MYSQL * binlog;
     char log_file[256];
     char log_pos[256];
     char cmd_opt[256];
@@ -309,6 +309,10 @@ int TestConnections::start_binlog()
     }
 
     tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
+
+    binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+    execute_query(binlog, (char *) "stop slave");
+    mysql_close(binlog);
 
     tprintf("Stopping maxscale\n");
     add_result(stop_maxscale(), "Maxscale stopping failed\n");
@@ -366,7 +370,7 @@ int TestConnections::start_binlog()
     add_result(start_maxscale(), "Maxscale start failed\n");
 
     tprintf("Connecting to MaxScale binlog router (with any DB)\n");
-    MYSQL * binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+    binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
 
     add_result(mysql_errno(binlog), "Error connection to binlog router %s\n", mysql_error(binlog));
 
