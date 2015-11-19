@@ -298,11 +298,11 @@ int TestConnections::start_binlog()
 
     repl->connect();
     find_field(repl->nodes[0], "SELECT @@VERSION", "@@version", version_str);
-    execute_query(repl->nodes[0], "reset master");
+    /*execute_query(repl->nodes[0], "reset master");
     for (i = 1; i < repl->N; i++) {
         execute_query(repl->nodes[i], "stop slave");
         execute_query(repl->nodes[i], "reset slave");
-    }
+    }*/
     repl->close_connections();
 
     tprintf("Master server version %s\n", version_str);
@@ -327,19 +327,19 @@ int TestConnections::start_binlog()
     add_result(repl->stop_nodes(), "Nodes stopping failed\n");
 
     tprintf("Removing all binlog data from Maxscale node\n");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s rm -rf %s/*'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s rm -rf %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
     tprintf("%s\n", sys1);
     add_result(system(sys1), "Removing binlog data failed\n");
+
+    tprintf("Creating binlog dir\n");
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s mkdir -p %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
+    tprintf("%s\n", sys1);
+    add_result(system(sys1), "Creating binlog data dir failed\n");
 
     tprintf("ls binlog data dir on Maxscale node\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s ls -la %s/'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
     tprintf("%s\n", sys1);
     add_result(system(sys1), "ls failed\n");
-
-    //tprintf("Removing all binlog data from Master node\n");
-    //sprintf(sys1, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf /var/lib/mysql/mar-bin.0*'",
-    //        repl->sshkey[0], repl->access_user[0], repl->IP[0], repl->access_sudo[0]);
-    //system(sys1);
 
     tprintf("Set 'maxscale' as a owner of binlog dir\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s mkdir -p %s; %s chown maxscale:maxscale -R %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir, maxscale_access_sudo, maxscale_binlog_dir);
