@@ -255,7 +255,7 @@ typedef struct
 
 static int hashkeyfun(void* key);
 static int hashcmpfun(void *, void *);
-bool parse_at_times(char** tok, char** saveptr, RULE* ruledef);
+bool parse_at_times(const char** tok, char** saveptr, RULE* ruledef);
 bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule, char** saveptr);
 /**
  * Hashtable key hashing function. Uses a simple string hashing algorithm.
@@ -432,14 +432,13 @@ char* next_ip_class(char* str)
  * @param rule Poiter to a rule
  * @return True if the string was parses successfully, false if an error occurred
  */
-bool parse_querytypes(char* str, RULE* rule)
+bool parse_querytypes(const char* str, RULE* rule)
 {
     char buffer[512];
-    char *ptr, *dest;
     bool done = false;
     rule->on_queries = 0;
-    ptr = str;
-    dest = buffer;
+    const char *ptr = str;
+    char *dest = buffer;
 
     while (ptr - buffer < 512)
     {
@@ -485,11 +484,11 @@ bool parse_querytypes(char* str, RULE* rule)
  * @param str String to check
  * @return True if the string is valid
  */
-bool check_time(char* str)
+bool check_time(const char* str)
 {
     assert(str != NULL);
 
-    char* ptr = str;
+    const char* ptr = str;
     int colons = 0, numbers = 0, dashes = 0;
     while (*ptr && ptr - str < 18)
     {
@@ -898,7 +897,7 @@ void tr_free(TIMERANGE* tr)
 bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, char** saveptr)
 {
     bool rval = true;
-    char *tok = strtok_r(NULL, " ", saveptr);
+    const char *tok = strtok_r(NULL, " ", saveptr);
 
     if (tok == NULL)
     {
@@ -1015,7 +1014,7 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
                     tok++;
                 }
 
-                start = tok;
+                start = (char*)tok;
 
                 while (isspace(*tok) || *tok == delim)
                 {
@@ -2144,7 +2143,7 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
  * @param ruledef The rule definition to which this at_times rule is applied
  * @return True if parsing was successful, false if an error occurred
  */
-bool parse_at_times(char** tok, char** saveptr, RULE* ruledef)
+bool parse_at_times(const char** tok, char** saveptr, RULE* ruledef)
 {
     TIMERANGE *tr = NULL;
     bool success = true;
