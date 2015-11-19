@@ -425,8 +425,7 @@ struct	stat	statb;
 			hdr->ok = SLAVE_POS_READ_OK;
 			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "blr_read_binlog called with invalid file->fd, pos %lu", pos);
 			spinlock_release(&file->lock);
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"Slave has failed fstat %s", errmsg)));
+			MXS_ERROR("Slave has failed fstat %s", errmsg);
 			return NULL;
 		}
 	}
@@ -965,9 +964,8 @@ int fde_seen = 0;
                                 router->pending_transaction = 1;
                                 pending_transaction = 0;
 
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-					"Binlog '%s' ends at position %lu and has an incomplete transaction at %lu. ",
-					router->binlog_name, router->current_pos, router->binlog_position)));
+				MXS_ERROR("Binlog '%s' ends at position %lu and has an incomplete transaction at %lu. ",
+					router->binlog_name, router->current_pos, router->binlog_position);
 
 				return 0;
                         } else {

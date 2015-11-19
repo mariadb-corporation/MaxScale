@@ -1792,13 +1792,11 @@ uint32_t	chksum;
 
 	slave->state = BLRS_DUMPING;
 
-	LOGIF(LM, (skygw_log_write(
-		LOGFILE_MESSAGE,
-			"%s: Slave %s:%d, server id %d requested binlog file %s from position %lu",
-			router->service->name, slave->dcb->remote,
-			ntohs((slave->dcb->ipv4).sin_port),
-			slave->serverid,
-			slave->binlogfile, (unsigned long)slave->binlog_pos)));
+	MXS_NOTICE("%s: Slave %s:%d, server id %d requested binlog file %s from position %lu",
+		router->service->name, slave->dcb->remote,
+		ntohs((slave->dcb->ipv4).sin_port),
+		slave->serverid,
+		slave->binlogfile, (unsigned long)slave->binlog_pos);
 
 	if (slave->binlog_pos != router->binlog_position ||
 			strcmp(slave->binlogfile, router->binlog_name) != 0)
@@ -1934,11 +1932,10 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 				poll_fake_write_event(slave->dcb);
 				return rval;
 			}
-			LOGIF(LE, (skygw_log_write(
-				LOGFILE_ERROR,
-				"Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup failed to open binlog file",
+			MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup "
+				"failed to open binlog file",
 				slave->dcb->remote, ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
-				slave->binlogfile)));
+				slave->binlogfile);
 
 			slave->cstate &= ~CS_BUSY;
 			slave->state = BLRS_ERRORED;
@@ -1989,13 +1986,12 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 					poll_fake_write_event(slave->dcb);
 					return rval;
 				}
-				LOGIF(LE, (skygw_log_write(
-					LOGFILE_ERROR,
-					"Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup failed to open binlog file in rotate event",
+				MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s': blr_slave_catchup "
+					"failed to open binlog file in rotate event",
 					slave->dcb->remote,
 					ntohs((slave->dcb->ipv4).sin_port),
 					slave->serverid,
-					slave->binlogfile)));
+					slave->binlogfile);
 
 				slave->state = BLRS_ERRORED;
 
@@ -2029,13 +2025,13 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 		slave->stats.n_failed_read++;
 
                 if (hdr.ok == SLAVE_POS_READ_ERR) {
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
+			MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s', %s",
+				router->service->name,
 				slave->dcb->remote,
 				ntohs((slave->dcb->ipv4).sin_port),
 				slave->serverid,
 				slave->binlogfile,
-				read_errmsg)));
+				read_errmsg);
 
                         spinlock_acquire(&slave->catch_lock);
 
@@ -2063,14 +2059,13 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
 			spinlock_release(&router->lock);
 
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"%s: Slave %s:%i, server-id %d, binlog '%s', %s",
+			MXS_ERROR("%s: Slave %s:%i, server-id %d, binlog '%s', %s",
 				router->service->name,
 				slave->dcb->remote,
 				ntohs((slave->dcb->ipv4).sin_port),
 				slave->serverid,
 				slave->binlogfile,
-				read_errmsg)));
+				read_errmsg);
 
 			/*
 			 * Close the slave session and socket
@@ -2133,23 +2128,21 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			slave->stats.n_caughtup++;
 			if (slave->stats.n_caughtup == 1)
 			{
-				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-					"%s: Slave %s:%d, server-id %d is now up to date '%s', position %lu.",
+				MXS_ERROR("%s: Slave %s:%d, server-id %d is now up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
 					ntohs((slave->dcb->ipv4).sin_port),
 					slave->serverid,
-					slave->binlogfile, (unsigned long)slave->binlog_pos)));
+					slave->binlogfile, (unsigned long)slave->binlog_pos);
 			}
 			else if ((slave->stats.n_caughtup % 50) == 0)
 			{
-				LOGIF(LM, (skygw_log_write(LOGFILE_MESSAGE,
-					"%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
+				MXS_ERROR("%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
 					ntohs((slave->dcb->ipv4).sin_port),
 					slave->serverid,
-					slave->binlogfile, (unsigned long)slave->binlog_pos)));
+					slave->binlogfile, (unsigned long)slave->binlog_pos);
 			}
 		}
 	}
@@ -2397,13 +2390,12 @@ char err_msg[BINLOG_ERROR_MSG_LEN+1];
 	if ((record = blr_read_binlog(router, file, 4, &hdr, err_msg)) == NULL)
 	{
 		if (hdr.ok != SLAVE_POS_READ_OK) {
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
+			MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s', blr_read_binlog failure: %s",
 				slave->dcb->remote,
 				ntohs((slave->dcb->ipv4).sin_port),
 				slave->serverid,
 				slave->binlogfile,
-				err_msg)));
+				err_msg);
 		}
 
 		blr_close_binlog(router, file);
