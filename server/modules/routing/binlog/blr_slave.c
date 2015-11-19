@@ -2099,6 +2099,9 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 				spinlock_release(&slave->catch_lock);
 				spinlock_release(&router->binlog_lock);
 				state_change = 1;
+			} else {
+				spinlock_release(&slave->catch_lock);
+				spinlock_release(&router->binlog_lock);
 			}
 		}
 
@@ -4400,9 +4403,9 @@ time_t		t_now = time(0);
 		/* skip servers with state = 0 */
 		if ( (sptr->state == BLRS_DUMPING) && (sptr->heartbeat > 0) && ((t_now + 1 - sptr->lastReply) >= sptr->heartbeat) )
 		{
-			MXS_NOTICE("Sending Heartbeat to slave server-id %d in State %d, cstate %d. "
+			MXS_NOTICE("Sending Heartbeat to slave server-id %d. "
                                    "Heartbeat interval is %d, last event time is %lu",
-                                   sptr->serverid, sptr->state, sptr->cstate, sptr->heartbeat,
+                                   sptr->serverid, sptr->heartbeat,
                                    (unsigned long)sptr->lastReply);
 
 			blr_slave_send_heartbeat(router, sptr);
