@@ -41,6 +41,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>
+#include <maxscale_pcre2.h>
 #include <mysql/mysqld_error.h>
 
 static MONITOR	*allMonitors = NULL;
@@ -548,4 +549,356 @@ void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params)
         }
         params = params->next;
     }
+}
+
+/**
+ * Set a pending status bit in the monitor server
+ *
+ * @param server        The server to update
+ * @param bit           The bit to clear for the server
+ */
+void
+monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit)
+{
+    ptr->pending_status |= bit;
+}
+
+/**
+ * Clear a pending status bit in the monitor server
+ *
+ * @param server        The server to update
+ * @param bit           The bit to clear for the server
+ */
+void
+monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
+{
+    ptr->pending_status &= ~bit;
+}
+
+/*
+ * Determine a monitor event, defined by the difference between the old
+ * status of a server and the new status.
+ * 
+ * @param   node                The monitor server data for a particular server
+ * @result  monitor_event_t     A monitor event (enum)
+ */
+monitor_event_t
+mon_get_event_type(MONITOR_SERVERS* node)
+{
+    typedef enum {
+        DOWN_EVENT,
+        UP_EVENT,
+        LOSS_EVENT,
+        NEW_EVENT
+    } general_event_type;
+    general_event_type event_type;
+    
+    unsigned int prev = node->mon_prev_status 
+        & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB);
+    unsigned int present = node->server->status 
+        & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB);
+    
+    if (prev == present)
+    {
+        /* No change in the bits we're interested in */
+        return UNDEFINED_MONITOR_EVENT;
+    }
+    
+    if ((prev & SERVER_RUNNING) == 0)
+    {
+        /* The server was not running previously */
+        if ((present & SERVER_RUNNING) != 0)
+        {
+            event_type = UP_EVENT;
+        }
+    }
+    else
+    {
+        /* Previous state must have been running */
+        if ((present & SERVER_RUNNING) == 0)
+        {
+            event_type = DOWN_EVENT;
+        }
+        else
+        {
+            /* Was running and still is */
+            if (prev && (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB))
+            {
+                /* We used to know what kind of server it was */
+                event_type = LOSS_EVENT;
+            }
+            else
+            {
+                /* We didn't know what kind of server it was, now we do*/
+                event_type = NEW_EVENT;
+            }
+        }
+    }
+    
+    switch (event_type)
+    {
+        case UP_EVENT:
+            return (present & SERVER_MASTER) ? MASTER_UP_EVENT :
+                (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
+                    (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
+                        (present & SERVER_NDB) ? NDB_UP_EVENT :
+                            SERVER_UP_EVENT;
+        case DOWN_EVENT:
+            return (present & SERVER_MASTER) ? MASTER_DOWN_EVENT :
+                (present & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
+                    (present & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
+                        (present & SERVER_NDB) ? NDB_DOWN_EVENT :
+                            SERVER_DOWN_EVENT;
+        case LOSS_EVENT:
+            return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
+                (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
+                    (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
+                        LOST_NDB_EVENT;
+        case NEW_EVENT:
+            return (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
+                (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
+                    (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
+                        NEW_NDB_EVENT;
+        default:
+            /* This should be impossible */
+            return UNDEFINED_MONITOR_EVENT;
+    }
+}
+
+/*
+ * Given a monitor event (enum) provide a text string equivalent
+ * @param   node    The monitor server data whose event is wanted
+ * @result  string  The name of the monitor event for the server
+ */
+char*
+mon_get_event_name(MONITOR_SERVERS* node)
+{
+    return monitor_event_definitions[mon_get_event_type(node)].name;
+}
+
+/*
+ * Given the text version of a monitor event, determine the event (enum)
+ * 
+ * @param   event_name          String containing the event name
+ * @result  monitor_event_t     Monitor event corresponding to name
+ */
+monitor_event_t
+mon_name_to_event (char *event_name)
+{
+    monitor_event_t event;
+    
+    for (event = 0; event < MAX_MONITOR_EVENT; event++)
+    {
+        if (0 == strcasecmp(monitor_event_definitions[event].name, event_name))
+        {
+            return event;
+        }
+    }
+    return UNDEFINED_MONITOR_EVENT;
+}
+
+/**
+ * Create a list of running servers
+ * 
+ * @param servers Monitored servers
+ * @param dest Destination where the string is appended, must be null terminated
+ * @param len Length of @c dest
+ */
+void
+mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len)
+{
+    char *separator = "";
+    char arr[MAX_SERVER_NAME_LEN + 32]; // Some extra space for port
+    
+    while (servers && strlen(dest) < (len - strlen(separator)))
+    {
+        if (SERVER_IS_RUNNING(servers->server))
+        {
+            strcat(dest, separator, len);
+            separator = ",";
+            snprintf(arr, sizeof(arr), "%s:%d", servers->server->name, servers->server->port);
+            strncat(dest, arr, len - strlen(dest) - 1);
+        }
+        servers = servers->next;
+    }
+}
+
+/**
+ * Check if current monitored server status has changed
+ *
+ * @param mon_srv       The monitored server
+ * @return              true if status has changed or false
+ */
+bool
+mon_status_changed(MONITOR_SERVERS* mon_srv)
+{
+    /* Previous status is -1 if not yet set */
+    return (mon_srv->mon_prev_status != -1 
+        && mon_srv->mon_prev_status != mon_srv->server->status);
+}
+
+/**
+ * Check if current monitored server has a loggable failure status
+ *
+ * @param mon_srv	The monitored server
+ * @return		true if failed status can be logged or false
+ */
+bool
+mon_print_fail_status(MONITOR_SERVERS* mon_srv)
+{
+    return (SERVER_IS_DOWN(mon_srv->server) && mon_srv->mon_err_count == 0);
+}
+
+/**
+ * Launch a script
+ * @param mon Owning monitor
+ * @param ptr The server which has changed state
+ * @param script Script to execute
+ */
+void
+monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
+{
+    char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
+    char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
+
+    snprintf(initiator, sizeof(initiator), "%s:%d", ptr->server->name, ptr->server->port);
+    mon_append_node_names(mon->databases, nodelist, PATH_MAX + MON_ARG_MAX);
+
+    EXTERNCMD* cmd = externcmd_allocate(script);
+
+    if (cmd == NULL)
+    {
+        MXS_ERROR("Failed to initialize script: %s", script);
+        return;
+    }
+
+    externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
+    externcmd_substitute_arg(cmd, "[$]EVENT", mon_get_event_name(ptr));
+    externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
+
+    if (externcmd_execute(cmd))
+    {
+        MXS_ERROR("Failed to execute script "
+                  "'%s' on server state change event %s.",
+                  script, mon_get_event_name(ptr));
+    }
+    externcmd_free(cmd);
+}
+
+/**
+ * Parse a string of event names to an array with enabled events.
+ * @param events Pointer to an array of boolean values
+ * @param count Size of the array
+ * @param string String to parse
+ * @return 0 on success. 1 when an error has occurred or an unexpected event was
+ * found.
+ */
+int
+mon_parse_event_string(bool* events, size_t count, char* string)
+{
+    char *tok, *saved;
+    monitor_event_t event;
+
+    tok = strtok_r(string, ",| ", &saved);
+
+    if (tok == NULL)
+    {
+        return -1;
+    }
+
+    while (tok)
+    {
+        event = mon_name_to_event(tok);
+        if (event == UNDEFINED_MONITOR_EVENT)
+        {
+            MXS_ERROR("Invalid event name %s", tok);
+            return -1;
+        }
+        events[event] = true;
+        tok = strtok_r(NULL, ",| ", &saved);
+    }
+
+    return 0;
+}
+
+/**
+ * Connect to a database. This will always leave a valid database handle in the
+ * database->con pointer. This allows the user to call MySQL C API functions to
+ * find out the reason of the failure.
+ * @param mon Monitor
+ * @param database Monitored database
+ * @return MONITOR_CONN_OK if the connection is OK else the reason for the failure
+ */
+connect_result_t
+mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
+{
+    connect_result_t rval = MONITOR_CONN_OK;
+
+    /** Return if the connection is OK */
+    if (database->con && mysql_ping(database->con) == 0)
+    {
+        return rval;
+    }
+
+    int connect_timeout = mon->connect_timeout;
+    int read_timeout = mon->read_timeout;
+    int write_timeout = mon->write_timeout;
+    char *uname = database->server->monuser ? database->server->monuser : mon->user;
+    char *passwd = database->server->monpw ? database->server->monpw : mon->password;
+    char *dpwd = decryptPassword(passwd);
+
+    if (database->con)
+    {
+        mysql_close(database->con);
+    }
+    database->con = mysql_init(NULL);
+
+    mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &connect_timeout);
+    mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *) &read_timeout);
+    mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *) &write_timeout);
+
+    time_t start = time(NULL);
+    bool result = (mysql_real_connect(database->con,
+                                      database->server->name,
+                                      uname,
+                                      dpwd,
+                                      NULL,
+                                      database->server->port,
+                                      NULL,
+                                      0) != NULL);
+    time_t end = time(NULL);
+
+    if (!result)
+    {
+        if ((int) difftime(end, start) >= connect_timeout)
+        {
+            rval = MONITOR_CONN_TIMEOUT;
+        }
+        else
+        {
+            rval = MONITOR_CONN_REFUSED;
+        }
+    }
+
+    free(dpwd);
+    return rval;
+}
+
+/**
+ * Log an error about the failure to connect to a backend server
+ * and why it happened.
+ * @param database Backend database
+ * @param rval Return value of mon_connect_to_db
+ */
+void
+mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
+{
+    MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ?
+        "Monitor timed out when connecting to "
+        "server %s:%d : \"%s\"" :
+        "Monitor was unable to connect to "
+        "server %s:%d : \"%s\"",
+        database->server->name,
+        database->server->port,
+        mysql_error(database->con));
 }

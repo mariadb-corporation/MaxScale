@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <monitor.h>
-#include <monitor_common.h>
 #include <spinlock.h>
 #include <externcmd.h>
 #include <thread.h>

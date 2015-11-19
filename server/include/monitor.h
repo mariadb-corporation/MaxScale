@@ -20,8 +20,11 @@
 #include <mysql.h>
 #include <server.h>
 #include <dcb.h>
+#include <log_manager.h>
 #include <resultset.h>
 #include <maxconfig.h>
+#include <externcmd.h>
+#include <secrets.h>
 
 /**
  * @file monitor.h	The interface to the monitor module
@@ -39,6 +42,8 @@
  * 30/10/14	Massimiliano Pinto	Addition of disableMasterFailback
  * 07/11/14	Massimiliano Pinto	Addition of setNetworkTimeout
  * 19/02/15	Mark Riddoch		Addition of monitorGetList
+ * 19/11/15 Martin Brampton     Automation of event and name declaration, absorption
+ *                              of what was formerly monitor_common.h
  *
  * @endverbatim
  */
@@ -105,6 +110,18 @@ typedef enum
 	MONITOR_WRITE_TIMEOUT	= 2
 } monitor_timeouts_t;
 
+/*
+ * Results of attempt at database connection for monitoring
+ */
+typedef enum
+{
+    MONITOR_CONN_OK,
+    MONITOR_CONN_REFUSED,
+    MONITOR_CONN_TIMEOUT
+} connect_result_t;
+
+#define MON_ARG_MAX 8192
+
 #define DEFAULT_CONNECT_TIMEOUT 3
 #define DEFAULT_READ_TIMEOUT 1
 #define DEFAULT_WRITE_TIMEOUT 2
@@ -118,6 +135,31 @@ typedef enum
 #define MONITOR_DEFAULT_ID 1UL // unsigned long value
 #define MONITOR_MAX_NUM_SLAVES 20 //number of MySQL slave servers associated to a MySQL master server
 
+/*
+ * Create declarations of the enum for monitor events and also the array of
+ * structs containing the matching names. The data is taken from def_monitor_event.h
+ */
+#undef  ADDITEM
+#define ADDITEM( _event_type, _event_name )      _event_type
+typedef enum
+{
+#include "def_monitor_event.h"
+    MAX_MONITOR_EVENT
+} monitor_event_t;
+#undef  ADDITEM
+
+typedef struct monitor_def_s
+{
+    char name[30];
+} monitor_def_t;
+
+#undef ADDITEM
+#define ADDITEM( _event_type, _event_name ) { #_event_name }
+static const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
+{
+#include "def_monitor_event.h"
+};
+#undef ADDITEM
 
 /**
  * The linked list of servers that are being monitored by the monitor module.
@@ -174,5 +216,18 @@ extern void     monitorSetInterval (MONITOR *, unsigned long);
 extern void     monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
 bool check_monitor_permissions(MONITOR* monitor);
+
+monitor_event_t mon_name_to_event(char* tok);
+void mon_append_node_names(MONITOR_SERVERS* start, char* str, int len);
+monitor_event_t mon_get_event_type(MONITOR_SERVERS* node);
+char* mon_get_event_name(MONITOR_SERVERS* node);
+void monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit);
+void monitor_set_pending_status(MONITOR_SERVERS *ptr, int bit);
+bool mon_status_changed(MONITOR_SERVERS* mon_srv);
+bool mon_print_fail_status(MONITOR_SERVERS* mon_srv);
+void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script);
+int mon_parse_event_string(bool* events, size_t count, char* string);
+connect_result_t mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database);
+void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
 
 #endif

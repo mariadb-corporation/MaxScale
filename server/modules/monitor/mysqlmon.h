@@ -32,7 +32,6 @@
 #include <dcb.h>
 #include <modinfo.h>
 #include <maxconfig.h>
-#include <monitor_common.h>
 #include <externcmd.h>
 
 /**
