@@ -895,91 +895,10 @@ void tr_free(TIMERANGE* tr)
     }
 }
 
-/**
- * Parse the configuration value either as a new rule or a list of users.
- * @param rule The string to parse
- * @param instance The FW_FILTER instance
- */
-bool parse_rule(char* rule, FW_INSTANCE* instance)
+bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, char** saveptr)
 {
-    ss_dassert(rule != NULL && instance != NULL);
-
-    char *rulecpy = strdup(rule);
-    char *saveptr = NULL;
-    char *tok = strtok_r(rulecpy, " ,", &saveptr);
-    bool allow, deny, mode;
-    RULE* ruledef = NULL;
     bool rval = true;
-    bool req_defined, oq_def, at_def;
-    int i;
-
-    req_defined = oq_def = at_def = false;
-
-    if (tok == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Rule parsing failed, no rule: %s", rule);
-        rval = false;
-        goto retblock;
-    }
-
-
-    if (strcmp("rule", tok) == 0)
-    {
-        /**Define a new rule*/
-
-        tok = strtok_r(NULL, " ,", &saveptr);
-
-        if (tok == NULL)
-        {
-            MXS_ERROR("dbfwfilter: Rule parsing failed, incomplete rule: %s", rule);
-            rval = false;
-            goto retblock;
-        }
-
-        RULELIST* rlist = NULL;
-
-        ruledef = (RULE*) calloc(1, sizeof(RULE));
-
-        if (ruledef == NULL)
-        {
-            MXS_ERROR("Memory allocation failed.");
-            rval = false;
-            goto retblock;
-        }
-
-        rlist = (RULELIST*) calloc(1, sizeof(RULELIST));
-
-        if (rlist == NULL)
-        {
-            free(ruledef);
-            MXS_ERROR("Memory allocation failed.");
-            rval = false;
-            goto retblock;
-        }
-
-        ruledef->name = strdup(tok);
-        ruledef->type = RT_UNDEFINED;
-        ruledef->on_queries = QUERY_OP_UNDEFINED;
-        rlist->rule = ruledef;
-        rlist->next = instance->rules;
-        instance->rules = rlist;
-
-    }
-    else if (strcmp("users", tok) == 0)
-    {
-
-        /**Apply rules to users*/
-        add_users(rule, instance);
-        goto retblock;
-    }
-    else
-    {
-        MXS_ERROR("Unknown token in rule '%s': %s", rule, tok);
-        rval = false;
-        goto retblock;
-    }
-
-    tok = strtok_r(NULL, " ,", &saveptr);
+    char *tok = strtok_r(NULL, " ", saveptr);
 
     if (tok == NULL)
     {
@@ -988,21 +907,21 @@ bool parse_rule(char* rule, FW_INSTANCE* instance)
         goto retblock;
     }
 
+    bool deny, allow;
+
     if ((allow = (strcmp(tok, "allow") == 0)) ||
         (deny = (strcmp(tok, "deny") == 0)))
     {
-
-        mode = allow ? true : false;
+        bool req_defined = false, at_def = false, oq_def = false;
+        bool mode = allow ? true : false;
         ruledef->allow = mode;
         ruledef->type = RT_PERMISSION;
-        tok = strtok_r(NULL, " ,", &saveptr);
+        tok = strtok_r(NULL, " ,", saveptr);
 
 
         while (tok)
         {
-reparse_rule:
-
-            for (i = 0; required_rules[i] != NULL; i++)
+            for (int i = 0; required_rules[i] != NULL; i++)
             {
                 if (strcmp(tok, required_rules[i]) == 0)
                 {
@@ -1027,7 +946,7 @@ reparse_rule:
             {
                 STRLINK *tail = NULL, *current;
                 ruledef->type = RT_COLUMN;
-                tok = strtok_r(NULL, " ,", &saveptr);
+                tok = strtok_r(NULL, " ,", saveptr);
                 while (tok && strcmp(tok, "at_times") != 0 &&
                        strcmp(tok, "on_queries") != 0)
                 {
@@ -1035,7 +954,7 @@ reparse_rule:
                     current->value = strdup(tok);
                     current->next = tail;
                     tail = current;
-                    tok = strtok_r(NULL, " ,", &saveptr);
+                    tok = strtok_r(NULL, " ,", saveptr);
                 }
 
                 ruledef->data = (void*) tail;
@@ -1052,10 +971,10 @@ reparse_rule:
                 }
 
                 at_def = true;
-                tok = strtok_r(NULL, " ,", &saveptr);
+                tok = strtok_r(NULL, " ,", saveptr);
                 TIMERANGE *tr = NULL;
 
-                if (!parse_at_times(&tok, &saveptr, ruledef))
+                if (!parse_at_times(&tok, saveptr, ruledef))
                 {
                     rval = false;
                     break;
@@ -1063,7 +982,7 @@ reparse_rule:
 
                 if (tok && strcmp(tok, "on_queries") == 0)
                 {
-                    goto reparse_rule;
+                    continue;
                 }
 
             }
@@ -1072,7 +991,7 @@ reparse_rule:
                 bool escaped = false;
                 regex_t *re;
                 char* start, *str;
-                tok = strtok_r(NULL, " ", &saveptr);
+                tok = strtok_r(NULL, " ", saveptr);
                 char delim = '\'';
                 int n_char = 0;
 
@@ -1160,7 +1079,6 @@ reparse_rule:
             }
             else if (strcmp(tok, "limit_queries") == 0)
             {
-
                 QUERYSPEED* qs = (QUERYSPEED*) calloc(1, sizeof(QUERYSPEED));
                 char *errptr = NULL;
 
@@ -1168,7 +1086,7 @@ reparse_rule:
                 qs->id = ++instance->idgen;
                 spinlock_release(instance->lock);
 
-                tok = strtok_r(NULL, " ", &saveptr);
+                tok = strtok_r(NULL, " ", saveptr);
                 if (tok == NULL)
                 {
                     free(qs);
@@ -1196,7 +1114,7 @@ reparse_rule:
                 }
 
                 errptr = NULL;
-                tok = strtok_r(NULL, " ", &saveptr);
+                tok = strtok_r(NULL, " ", saveptr);
 
                 if (tok == NULL)
                 {
@@ -1225,7 +1143,7 @@ reparse_rule:
                 }
 
                 errptr = NULL;
-                tok = strtok_r(NULL, " ", &saveptr);
+                tok = strtok_r(NULL, " ", saveptr);
 
                 if (tok == NULL)
                 {
@@ -1269,7 +1187,7 @@ reparse_rule:
                     goto retblock;
                 }
                 oq_def = true;
-                tok = strtok_r(NULL, " ", &saveptr);
+                tok = strtok_r(NULL, " ", saveptr);
 
                 if (tok == NULL)
                 {
@@ -1291,16 +1209,81 @@ reparse_rule:
                 rval = false;
                 goto retblock;
             }
-            tok = strtok_r(NULL, " ,", &saveptr);
+            tok = strtok_r(NULL, " ,", saveptr);
         }
 
         goto retblock;
     }
+    retblock:
 
-retblock:
-    free(rulecpy);
     return rval;
+}
 
+/**
+ * Parse the configuration value either as a new rule or a list of users.
+ * @param rule The string to parse
+ * @param instance The FW_FILTER instance
+ */
+bool parse_rule(char* rulestr, FW_INSTANCE* instance)
+{
+    ss_dassert(rulestr != NULL && instance != NULL);
+
+    char rule[strlen(rulestr) + 1];
+    strcpy(rule, rulestr);
+    char *saveptr = NULL;
+    char *tok = strtok_r(rule, " ", &saveptr);
+    bool rval = false;
+
+    if (tok)
+    {
+        if (strcmp("rule", tok) == 0)
+        {
+            /**Define a new rule*/
+            tok = strtok_r(NULL, " ", &saveptr);
+            if (tok)
+            {
+                RULELIST* rlist = (RULELIST*) calloc(1, sizeof(RULELIST));
+                RULE* ruledef = (RULE*) calloc(1, sizeof(RULE));
+
+                if (ruledef && rlist)
+                {
+                    ruledef->name = strdup(tok);
+                    ruledef->type = RT_UNDEFINED;
+                    ruledef->on_queries = QUERY_OP_UNDEFINED;
+                    rlist->rule = ruledef;
+                    rlist->next = instance->rules;
+                    instance->rules = rlist;
+                    rval = parse_rule_definition(instance, ruledef, rule, &saveptr);
+                }
+                else
+                {
+                    free(rlist);
+                    free(ruledef);
+                    MXS_ERROR("Memory allocation failed.");
+                }
+            }
+            else
+            {
+                MXS_ERROR("dbfwfilter: Rule parsing failed, incomplete rule: %s", rule);
+            }
+        }
+        else if (strcmp("users", tok) == 0)
+        {
+            /** Rules are applied to users after they have been parsed */
+            add_users(rule, instance);
+            rval = true;
+        }
+        else
+        {
+            MXS_ERROR("Unknown token in rule '%s': %s", rule, tok);
+        }
+    }
+    else
+    {
+        MXS_ERROR("dbfwfilter: Rule parsing failed, no rule: %s", rule);
+    }
+
+    return rval;
 }
 
 bool is_comment(char* str)
@@ -2253,7 +2236,6 @@ bool parse_at_times(char** tok, char** saveptr, RULE* ruledef)
 {
     TIMERANGE *tr = NULL;
     bool success = true;
-    char token[FW_TOKENBUFFER_SIZE];
 
     while (*tok && strcmp(*tok, "on_queries") != 0)
     {
@@ -2281,7 +2263,7 @@ bool parse_at_times(char** tok, char** saveptr, RULE* ruledef)
 
         tmp->next = tr;
         tr = tmp;
-        *tok = fw_get_token(NULL, saveptr, token, sizeof(token));
+        *tok = strtok_r(NULL, " ", saveptr);
     }
 
     if (success)
