@@ -87,7 +87,7 @@ static int  blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *pkt, REP_HEADER *
 void blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr);
 static void *CreateMySQLAuthData(char *username, char *password, char *database);
 void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
-static void blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len);
+static void blr_log_packet(int priority, char *msg, uint8_t *ptr, int len);
 void blr_master_close(ROUTER_INSTANCE *);
 char *blr_extract_column(GWBUF *buf, int col);
 void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
@@ -119,13 +119,11 @@ DCB	*client;
 	if (router->master_state != BLRM_UNCONNECTED)
 	{
 		if (router->master_state != BLRM_SLAVE_STOPPED) {
-			LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"%s: Master Connect: Unexpected master state %s\n",
-				router->service->name, blrm_states[router->master_state])));
+			MXS_ERROR("%s: Master Connect: Unexpected master state %s\n",
+                      router->service->name, blrm_states[router->master_state]);
 		} else {
-			LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE,
-				"%s: Master Connect: binlog state is %s\n",
-				router->service->name, blrm_states[router->master_state])));
+			MXS_NOTICE("%s: Master Connect: binlog state is %s\n",
+                       router->service->name, blrm_states[router->master_state]);
 		}
 		spinlock_release(&router->lock);
 		return;
@@ -142,8 +140,7 @@ DCB	*client;
 	spinlock_release(&router->lock);
 	if ((client = dcb_alloc(DCB_ROLE_INTERNAL)) == NULL)
 	{
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Binlog router: failed to create DCB for dummy client")));
+		MXS_ERROR("Binlog router: failed to create DCB for dummy client");
 		return;
 	}
 	router->client = client;
@@ -151,8 +148,7 @@ DCB	*client;
 	client->data = CreateMySQLAuthData(router->user, router->password, "");
 	if ((router->session = session_alloc(router->service, client)) == NULL)
 	{
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Binlog router: failed to create session for connection to master")));
+		MXS_ERROR("Binlog router: failed to create session for connection to master");
 		return;
 	}
 	client->session = router->session;
@@ -169,17 +165,15 @@ DCB	*client;
 		}
 		if (router->retry_backoff > BLR_MAX_BACKOFF)
 			router->retry_backoff = BLR_MAX_BACKOFF;
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-		   "Binlog router: failed to connect to master server '%s'",
-			router->service->dbref->server->unique_name)));
+		MXS_ERROR("Binlog router: failed to connect to master server '%s'",
+                  router->service->dbref->server->unique_name);
 		return;
 	}
 	router->master->remote = strdup(router->service->dbref->server->name);
 
-	LOGIF(LM,(skygw_log_write(
-		LOGFILE_MESSAGE,
-		"%s: attempting to connect to master server %s:%d, binlog %s, pos %lu",
-		router->service->name, router->service->dbref->server->name, router->service->dbref->server->port, router->binlog_name, router->current_pos)));
+	MXS_NOTICE("%s: attempting to connect to master server %s:%d, binlog %s, pos %lu",
+               router->service->name, router->service->dbref->server->name,
+               router->service->dbref->server->port, router->binlog_name, router->current_pos);
 
 	router->connect_time = time(0);
 
@@ -339,10 +333,8 @@ char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 	spinlock_release(&router->lock);
 	if (router->master_state < 0 || router->master_state > BLRM_MAXSTATE)
 	{
-        	LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR,
-			"Invalid master state machine state (%d) for binlog router.",
-			router->master_state)));
+        	MXS_ERROR("Invalid master state machine state (%d) for binlog router.",
+                      router->master_state);
 		gwbuf_consume(buf, gwbuf_length(buf));
 
 		spinlock_acquire(&router->lock);
@@ -351,12 +343,9 @@ char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 			router->active_logs = 0;
 			spinlock_release(&router->lock);
 			atomic_add(&router->handling_threads, -1);
-	        	LOGIF(LE, (skygw_log_write(
-				LOGFILE_ERROR,
-				"%s: Pending reconnect in state %s.",
-				router->service->name,
-				blrm_states[router->master_state]
-				)));
+	        	MXS_ERROR("%s: Pending reconnect in state %s.",
+                          router->service->name,
+                          blrm_states[router->master_state]);
 			blr_restart_master(router);
 			return;
 		}
@@ -374,10 +363,8 @@ char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 		 * continue. The error is saved and replayed to slaves if
 		 * they also request the GTID mode.
 		 */
-        	LOGIF(LE, (skygw_log_write(
-                           LOGFILE_ERROR,
-			"%s: Master server does not support GTID Mode.",
-				router->service->name)));
+        	MXS_ERROR("%s: Master server does not support GTID Mode.",
+                      router->service->name);
 	}
 	else if (router->master_state != BLRM_BINLOGDUMP && MYSQL_RESPONSE_ERR(buf))
 	{
@@ -395,14 +382,11 @@ char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 		/* NULL terminated error string */
 		*(msg_err+msg_len)='\0';
 
-		LOGIF(LE, (skygw_log_write(
-			LOGFILE_ERROR,
-			"%s: Received error: %lu, '%s' from master during '%s' phase "
-			"of the master state machine.",
-			router->service->name,
-			mysql_errno, msg_err,
-			blrm_states[router->master_state]
-			)));
+		MXS_ERROR("%s: Received error: %lu, '%s' from master during '%s' phase "
+                  "of the master state machine.",
+                  router->service->name,
+                  mysql_errno, msg_err,
+                  blrm_states[router->master_state]);
 		gwbuf_consume(buf, gwbuf_length(buf));
 
 		spinlock_acquire(&router->lock);
@@ -643,14 +627,12 @@ char	task_name[BLRM_TASK_NAME_LEN + 1] = "";
 		buf = blr_make_binlog_dump(router);
 		router->master_state = BLRM_BINLOGDUMP;
 		router->master->func.write(router->master, buf);
-		LOGIF(LM,(skygw_log_write(
-			LOGFILE_MESSAGE,
-			"%s: Request binlog records from %s at "
-			"position %lu from master server %s:%d",
-			router->service->name, router->binlog_name,
-			router->current_pos,
-			router->service->dbref->server->name,
-			router->service->dbref->server->port)));
+		MXS_NOTICE("%s: Request binlog records from %s at "
+                   "position %lu from master server %s:%d",
+                   router->service->name, router->binlog_name,
+                   router->current_pos,
+                   router->service->dbref->server->name,
+                   router->service->dbref->server->port);
 
 		/* Log binlog router identity */
 		blr_log_identity(router);
@@ -867,12 +849,10 @@ int			n_bufs = -1, pn_bufs = -1;
 
 			if ((msg = malloc(len)) == NULL)
 			{
-        			LOGIF(LE,(skygw_log_write(
-                                              LOGFILE_ERROR,
-                                              "Insufficient memory to buffer event "
-                                              "of %d bytes. Binlog %s @ %lu.",
-                                              len, router->binlog_name,
-                                              router->current_pos)));
+        			MXS_ERROR("Insufficient memory to buffer event "
+                              "of %d bytes. Binlog %s @ %lu.",
+                              len, router->binlog_name,
+                              router->current_pos);
 				break;
 			}
 
@@ -891,13 +871,11 @@ int			n_bufs = -1, pn_bufs = -1;
 			}
 			if (remainder)
 			{
-        			LOGIF(LE,(skygw_log_write(
-                                              LOGFILE_ERROR,
-					"Expected entire message in buffer "
-					"chain, but failed to create complete "
-					"message as expected. %s @ %lu",
-					router->binlog_name,
-					router->current_pos)));
+        			MXS_ERROR("Expected entire message in buffer "
+                              "chain, but failed to create complete "
+                              "message as expected. %s @ %lu",
+                              router->binlog_name,
+                              router->current_pos);
 				free(msg);
 				msg = NULL;
 				break;
@@ -914,11 +892,9 @@ int			n_bufs = -1, pn_bufs = -1;
 			 * until we receive the next buffer.
 			 */
 			router->stats.n_residuals++;
-	        	LOGIF(LD,(skygw_log_write(
-                           LOGFILE_DEBUG,
-			   "Residual data left after %lu records. %s @ %lu",
-					router->stats.n_binlogs,
-			   router->binlog_name, router->current_pos)));
+	        	MXS_DEBUG("Residual data left after %lu records. %s @ %lu",
+                          router->stats.n_binlogs,
+                          router->binlog_name, router->current_pos);
 			break;
 		}
 		else
@@ -949,10 +925,7 @@ int			n_bufs = -1, pn_bufs = -1;
 			{
 				msg = "error";
 			}
-			LOGIF(LM,(skygw_log_write(
-				   LOGFILE_MESSAGE,
-					"Non-event message (%s) from master.",
-					msg)));
+			MXS_NOTICE("Non-event message (%s) from master.", msg);
 		}
 		else
 		{
@@ -964,25 +937,22 @@ int			n_bufs = -1, pn_bufs = -1;
 			/* Sanity check */
 			if (hdr.ok == 0 && hdr.event_size != len - 5)
 			{
-				LOGIF(LE,(skygw_log_write(
-				   LOGFILE_ERROR,
-					"Packet length is %d, but event size is %d, "
-					"binlog file %s position %lu "
-					"reslen is %d and preslen is %d, "
-					"length of previous event %d. %s",
-						len, hdr.event_size,
-						router->binlog_name,
-						router->current_pos,
-						reslen, preslen, prev_length,
-					(prev_length == -1 ?
-					(no_residual ? "No residual data from previous call" : "Residual data from previous call") : "")
-					)));
-				blr_log_packet(LOGFILE_ERROR, "Packet:", ptr, len);
-				LOGIF(LE,(skygw_log_write(
-				   LOGFILE_ERROR,
-					"This event (0x%x) was contained in %d GWBUFs, "
-					"the previous events was contained in %d GWBUFs",
-					router->lastEventReceived, n_bufs, pn_bufs)));
+				MXS_ERROR("Packet length is %d, but event size is %d, "
+                          "binlog file %s position %lu "
+                          "reslen is %d and preslen is %d, "
+                          "length of previous event %d. %s",
+                          len, hdr.event_size,
+                          router->binlog_name,
+                          router->current_pos,
+                          reslen, preslen, prev_length,
+                          (prev_length == -1 ?
+                           (no_residual ? "No residual data from previous call" :
+                            "Residual data from previous call") : ""));
+
+				blr_log_packet(LOG_ERR, "Packet:", ptr, len);
+				MXS_ERROR("This event (0x%x) was contained in %d GWBUFs, "
+                          "the previous events was contained in %d GWBUFs",
+                          router->lastEventReceived, n_bufs, pn_bufs);
 				if (msg)
 				{
 					free(msg);
@@ -1030,14 +1000,13 @@ int			n_bufs = -1, pn_bufs = -1;
 							free(msg);
 							msg = NULL;
 						}
-						LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
-							"%s: Checksum error in event "
-							"from master, "
-							"binlog %s @ %lu. "
-							"Closing master connection.",
-							router->service->name,
-							router->binlog_name,
-							router->current_pos)));
+						MXS_ERROR("%s: Checksum error in event "
+                                  "from master, "
+                                  "binlog %s @ %lu. "
+                                  "Closing master connection.",
+                                  router->service->name,
+                                  router->binlog_name,
+                                  router->current_pos);
 						blr_master_close(router);
 						blr_master_delayed_connect(router);
 						return;
@@ -1087,14 +1056,14 @@ int			n_bufs = -1, pn_bufs = -1;
 								spinlock_acquire(&router->binlog_lock);
 
 								if (router->pending_transaction > 0) {
-									LOGIF(LE,(skygw_log_write_flush(LOGFILE_ERROR,
-										"Error: a MariaDB 10 transaction "
-										"is already open "
-										"@ %lu (GTID %u-%u-%lu) and "
-										"a new one starts @ %lu",
-										router->binlog_position,
-										domainid, hdr.serverid, n_sequence,
-										router->current_pos)));
+									MXS_ERROR("A MariaDB 10 transaction "
+                                              "is already open "
+                                              "@ %lu (GTID %u-%u-%lu) and "
+                                              "a new one starts @ %lu",
+                                              router->binlog_position,
+                                              domainid, hdr.serverid,
+                                              n_sequence,
+                                              router->current_pos);
 
 										// An action should be taken here
 								}
@@ -1125,11 +1094,10 @@ int			n_bufs = -1, pn_bufs = -1;
 						/* Check for BEGIN (it comes for START TRANSACTION too) */
 						if (strncmp(statement_sql, "BEGIN", 5) == 0) {
 							if (router->pending_transaction > 0) {
-								LOGIF(LE,(skygw_log_write_flush(LOGFILE_ERROR,
-									"Error: a transaction is already open "
-									"@ %lu and a new one starts @ %lu",
-									router->binlog_position,
-									router->current_pos)));
+								MXS_ERROR("A transaction is already open "
+                                          "@ %lu and a new one starts @ %lu",
+                                          router->binlog_position,
+                                          router->current_pos);
 
 									// An action should be taken here
 							}
@@ -1167,11 +1135,10 @@ int			n_bufs = -1, pn_bufs = -1;
 				if (hdr.event_type == FORMAT_DESCRIPTION_EVENT && hdr.next_pos == 0)
 				{
 					// Fake format description message
-					LOGIF(LD,(skygw_log_write(LOGFILE_DEBUG,
-						"Replication fake event. "
-							"Binlog %s @ %lu.",
-						router->binlog_name,
-						router->current_pos)));
+					MXS_DEBUG("Replication fake event. "
+                              "Binlog %s @ %lu.",
+                              router->binlog_name,
+                              router->current_pos);
 					router->stats.n_fakeevents++;
 
 					if (hdr.event_type == FORMAT_DESCRIPTION_EVENT)
@@ -1194,13 +1161,12 @@ int			n_bufs = -1, pn_bufs = -1;
 						}
 						else
 						{
-							LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
-								"%s: Received a format description "
-								"event that MaxScale was unable to "
-								"record. Event length is %d.",
-								router->service->name,
-								hdr.event_size)));
-							blr_log_packet(LOGFILE_ERROR,
+							MXS_ERROR("%s: Received a format description "
+                                      "event that MaxScale was unable to "
+                                      "record. Event length is %d.",
+                                      router->service->name,
+                                      hdr.event_size);
+							blr_log_packet(LOG_ERR,
 								"Format Description Event:", ptr, len);
 						}
 					}
@@ -1212,12 +1178,10 @@ int			n_bufs = -1, pn_bufs = -1;
 #ifdef SHOW_EVENTS
 						printf("Replication heartbeat\n");
 #endif
-						LOGIF(LD,(skygw_log_write(
-							   LOGFILE_DEBUG,
-							"Replication heartbeat. "
-							"Binlog %s @ %lu.",
-							router->binlog_name,
-							router->current_pos)));
+						MXS_DEBUG("Replication heartbeat. "
+                                  "Binlog %s @ %lu.",
+                                  router->binlog_name,
+                                  router->current_pos);
 
 						router->stats.n_heartbeats++;
 
@@ -1340,23 +1304,23 @@ int			n_bufs = -1, pn_bufs = -1;
 
 									/* No event has been sent */
 									if (pos == router->binlog_position) {
-										LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
-											"No events distributed to slaves for a pending transaction in %s at %lu."
-											" Last event from master at %lu",
-											router->binlog_name,
-											router->binlog_position,
-											router->current_pos)));
+										MXS_ERROR("No events distributed to slaves for a pending "
+                                                  "transaction in %s at %lu. "
+                                                  "Last event from master at %lu",
+                                                  router->binlog_name,
+                                                  router->binlog_position,
+                                                  router->current_pos);
 
 										strncpy(err_message, "No transaction events sent", BINLOG_ERROR_MSG_LEN);
 									} else {
 										/* Some events have been sent */
-										LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
-											"Some events were not distributed to slaves for a pending transaction "
-											"in %s at %lu. Last distributed even at %llu, last event from master at %lu",
-											router->binlog_name,
-											router->binlog_position,
-											pos,
-											router->current_pos)));
+										MXS_ERROR("Some events were not distributed to slaves for a "
+                                                  "pending transaction in %s at %lu. Last distributed "
+                                                  "even at %llu, last event from master at %lu",
+                                                  router->binlog_name,
+                                                  router->binlog_position,
+                                                  pos,
+                                                  router->current_pos);
 
 										strncpy(err_message, "Incomplete transaction events sent", BINLOG_ERROR_MSG_LEN);
 									}
@@ -1380,16 +1344,14 @@ int			n_bufs = -1, pn_bufs = -1;
 					else
 					{
 						router->stats.n_artificial++;
-						LOGIF(LD,(skygw_log_write(
-							   LOGFILE_DEBUG,
-						"Artificial event not written "
-						"to disk or distributed. "
-						"Type 0x%x, Length %d, Binlog "
-						"%s @ %lu.",
-							hdr.event_type,
-							hdr.event_size,
-							router->binlog_name,
-							router->current_pos)));
+						MXS_DEBUG("Artificial event not written "
+                                  "to disk or distributed. "
+                                  "Type 0x%x, Length %d, Binlog "
+                                  "%s @ %lu.",
+                                  hdr.event_type,
+                                  hdr.event_size,
+                                  router->binlog_name,
+                                  router->current_pos);
 						ptr += 5;
 						if (hdr.event_type == ROTATE_EVENT)
 						{
@@ -1439,10 +1401,9 @@ int			n_bufs = -1, pn_bufs = -1;
 
 				spinlock_release(&router->lock);
 
-				LOGIF(LE,(skygw_log_write(LOGFILE_ERROR,
-					"Error packet in binlog stream.%s @ %lu.",
-							router->binlog_name,
-							router->current_pos)));
+				MXS_ERROR("Error packet in binlog stream.%s @ %lu.",
+                          router->binlog_name,
+                          router->current_pos);
 
 				router->stats.n_binlog_errors++;
 			}
@@ -1566,9 +1527,7 @@ MYSQL_session	*auth_info;
 
 	if (username == NULL || password == NULL)
 	{
-        	LOGIF(LE,(skygw_log_write(
-                           LOGFILE_ERROR,
-				"You must specify both username and password for the binlog router.\n")));
+        	MXS_ERROR("You must specify both username and password for the binlog router.\n");
 		return NULL;
 	}
 
@@ -1686,12 +1645,11 @@ int		action;
 				 * happen. Force the slave to catchup mode in order to
 				 * try to resolve the issue.
 				 */
-				LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-					"Slave %d is ahead of expected position %s@%lu. "
-					"Expected position %d",
-						slave->serverid, slave->binlogfile,
-						(unsigned long)slave->binlog_pos,
-						hdr->next_pos - hdr->event_size)));
+				MXS_ERROR("Slave %d is ahead of expected position %s@%lu. "
+                          "Expected position %d",
+                          slave->serverid, slave->binlogfile,
+                          (unsigned long)slave->binlog_pos,
+                          hdr->next_pos - hdr->event_size);
 			}
 
 			spinlock_release(&router->binlog_lock);
@@ -1790,13 +1748,13 @@ int		action;
 /**
  * Write a raw event (the first 40 bytes at most) to a log file
  *
- * @param file	The logfile to write to
- * @param msg	A textual message to write before the packet
- * @param ptr	Pointer to the message buffer
- * @param len	Length of message packet
+ * @param priority The syslog priority of the message (LOG_ERR, LOG_WARNING, etc.)
+ * @param msg	   A textual message to write before the packet
+ * @param ptr	   Pointer to the message buffer
+ * @param len	   Length of message packet
  */
 static void
-blr_log_packet(logfile_id_t file, char *msg, uint8_t *ptr, int len)
+blr_log_packet(int priority, char *msg, uint8_t *ptr, int len)
 {
 char	buf[400] = "";
 char	*bufp;
@@ -1807,10 +1765,9 @@ int	i;
 	for (i = 0; i < len && i < 40; i++)
 		bufp += sprintf(bufp, "0x%02x ", ptr[i]);
 	if (i < len)
-		skygw_log_write_flush(file, "%s...", buf);
+		MXS_LOG_MESSAGE(priority, "%s...", buf);
 	else
-		skygw_log_write_flush(file, "%s", buf);
-	
+		MXS_LOG_MESSAGE(priority, "%s", buf);
 }
 
 /**
@@ -1922,10 +1879,9 @@ int		event_limit;
 	/* error */
 	if (pos > end_pos)
 	{
-                LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-                        "Error: Reading saved events, the specified pos %llu "
-			"is ahead of current pos %lu for file %s",
-                        pos, router->current_pos, router->binlog_name)));
+        MXS_ERROR("Reading saved events, the specified pos %llu "
+                  "is ahead of current pos %lu for file %s",
+                  pos, router->current_pos, router->binlog_name);
 		return NULL;
 	}
 
@@ -1935,31 +1891,27 @@ int		event_limit;
 		switch (n)
 		{
 		case 0:
-			LOGIF(LD, (skygw_log_write(LOGFILE_DEBUG,
-				"Reading saved events: reached end of binlog file at %llu.", pos)));
+			MXS_DEBUG("Reading saved events: reached end of binlog file at %llu.", pos);
                         break;
                 case -1:
 			{
 			char err_msg[STRERROR_BUFLEN];
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Error: Reading saved events: failed to read binlog "
-				"file %s at position %llu"
-				" (%s).", router->binlog_name,
-				pos, strerror_r(errno, err_msg, sizeof(err_msg)))));
+			MXS_ERROR("Reading saved events: failed to read binlog "
+                      "file %s at position %llu"
+                      " (%s).", router->binlog_name,
+                      pos, strerror_r(errno, err_msg, sizeof(err_msg)));
 
 			if (errno == EBADF)
-				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-					"Error: Reading saved events: bad file descriptor for file %s"
-                                        ", descriptor %d.",
-                                        router->binlog_name, router->binlog_fd)));
+				MXS_ERROR("Reading saved events: bad file descriptor for file %s"
+                          ", descriptor %d.",
+                          router->binlog_name, router->binlog_fd);
 			break;
 			}
 		default:
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Error: Reading saved events: short read when reading the header. "
-				"Expected 19 bytes but got %d bytes. "
-				"Binlog file is %s, position %llu",
-				n, router->binlog_name, pos)));
+			MXS_ERROR("Reading saved events: short read when reading the header. "
+                      "Expected 19 bytes but got %d bytes. "
+                      "Binlog file is %s, position %llu",
+                      n, router->binlog_name, pos);
 			break;
 		}
 
@@ -1977,20 +1929,18 @@ int		event_limit;
 
 	if (hdr->event_type > event_limit)
 	{
-		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Error: Reading saved events: invalid event type 0x%x. "
-			"Binlog file is %s, position %llu",
-			hdr->event_type,
-			router->binlog_name, pos)));
+		MXS_ERROR("Reading saved events: invalid event type 0x%x. "
+                  "Binlog file is %s, position %llu",
+                  hdr->event_type,
+                  router->binlog_name, pos);
 		return NULL;
 	}
 
 	if ((result = gwbuf_alloc(hdr->event_size)) == NULL)
 	{
-		LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-			"Error: Reading saved events: failed to allocate memory for binlog entry, "
-			"size %d at %llu.",
-			hdr->event_size, pos)));
+		MXS_ERROR("Reading saved events: failed to allocate memory for binlog entry, "
+                  "size %d at %llu.",
+                  hdr->event_size, pos);
 		return NULL;
 	}
 
@@ -2004,24 +1954,21 @@ int		event_limit;
 		if (n == -1)
 		{
 			char err_msg[STRERROR_BUFLEN];
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Error: Reading saved events: the event at %llu in %s. "
-				"%s, expected %d bytes.",
-				pos, router->binlog_name,
-				strerror_r(errno, err_msg, sizeof(err_msg)), hdr->event_size - 19)));
+			MXS_ERROR("Reading saved events: the event at %llu in %s. "
+                      "%s, expected %d bytes.",
+                      pos, router->binlog_name,
+                      strerror_r(errno, err_msg, sizeof(err_msg)), hdr->event_size - 19);
 		} else {
-			LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-				"Error: Reading saved events: short read when reading "
-				"the event at %llu in %s. "
-				"Expected %d bytes got %d bytes.",
-				pos, router->binlog_name, hdr->event_size - 19, n)));
+			MXS_ERROR("Reading saved events: short read when reading "
+                      "the event at %llu in %s. "
+                      "Expected %d bytes got %d bytes.",
+                      pos, router->binlog_name, hdr->event_size - 19, n);
 
                         if (end_pos - pos < hdr->event_size)
                         {
-				LOGIF(LE, (skygw_log_write(LOGFILE_ERROR,
-	                                "Error: Reading saved events: binlog event "
-					"is close to the end of the binlog file, "
-					"current file size is %llu.", end_pos)));
+                            MXS_ERROR("Reading saved events: binlog event "
+                                      "is close to the end of the binlog file, "
+                                      "current file size is %llu.", end_pos);
 			}
 		}
 
@@ -2148,14 +2095,15 @@ char 	*event_desc  = NULL;
 
 	if (router->master_state == BLRM_BINLOGDUMP && router->lastEventReceived > 0) {
 		if ((t_now - router->stats.lastReply) > (router->heartbeat + BLR_NET_LATENCY_WAIT_TIME)) {
-			 LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-				"ERROR: No event received from master %s:%d in heartbeat period (%lu seconds), last event (%s %d) received %lu seconds ago. Assuming connection is dead and reconnecting.",
-				router->service->dbref->server->name,
-				router->service->dbref->server->port,
-				router->heartbeat,
-				event_desc != NULL ? event_desc : "unknown",
-				router->lastEventReceived,
-				t_now - router->stats.lastReply)));
+			 MXS_ERROR("No event received from master %s:%d in heartbeat period (%lu seconds), "
+                       "last event (%s %d) received %lu seconds ago. Assuming connection is dead "
+                       "and reconnecting.",
+                       router->service->dbref->server->name,
+                       router->service->dbref->server->port,
+                       router->heartbeat,
+                       event_desc != NULL ? event_desc : "unknown",
+                       router->lastEventReceived,
+                       t_now - router->stats.lastReply);
 
 			return 0;
 		}
@@ -2195,33 +2143,27 @@ static void blr_log_identity(ROUTER_INSTANCE *router) {
 	}
 
 	/* Seen by the master */
-	LOGIF(LM, (skygw_log_write_flush(
-		LOGFILE_MESSAGE,
-		"%s: identity seen by the master: "
-		"server_id: %d, uuid: %s",
-		router->service->name,
-		router->serverid, (router->uuid == NULL ? "not available" : router->uuid))));
+	MXS_NOTICE("%s: identity seen by the master: "
+               "server_id: %d, uuid: %s",
+               router->service->name,
+               router->serverid, (router->uuid == NULL ? "not available" : router->uuid));
 
 	/* Seen by the slaves */
 
 	/* MariaDB 5.5 and MariaDB don't have the MASTER_UUID var */
 	if (master_uuid == NULL) {
-		LOGIF(LM, (skygw_log_write_flush(
-			LOGFILE_MESSAGE,
-			"%s: identity seen by the slaves: "
-			"server_id: %d, hostname: %s, MySQL version: %s",
-			router->service->name,
-			router->masterid, (master_hostname == NULL ? "not available" : master_hostname),
-			(master_version == NULL ? "not available" : master_version))));
+		MXS_NOTICE("%s: identity seen by the slaves: "
+                   "server_id: %d, hostname: %s, MySQL version: %s",
+                   router->service->name,
+                   router->masterid, (master_hostname == NULL ? "not available" : master_hostname),
+                   (master_version == NULL ? "not available" : master_version));
 	} else {
-        	LOGIF(LM, (skygw_log_write_flush(
-	              	LOGFILE_MESSAGE,
-			"%s: identity seen by the slaves: "
-			"server_id: %d, uuid: %s, hostname: %s, MySQL version: %s",
-			router->service->name,
-			router->masterid, master_uuid,
-			(master_hostname == NULL ? "not available" : master_hostname),
-			(master_version == NULL ? "not available" : master_version))));
+        	MXS_NOTICE("%s: identity seen by the slaves: "
+                       "server_id: %d, uuid: %s, hostname: %s, MySQL version: %s",
+                       router->service->name,
+                       router->masterid, master_uuid,
+                       (master_hostname == NULL ? "not available" : master_hostname),
+                       (master_version == NULL ? "not available" : master_version));
 	}
 }
 

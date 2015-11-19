@@ -59,7 +59,7 @@ int     result, count;
                     "testusers : Initialise the user table."); 
         users = users_alloc();
         mxs_log_flush_sync();
-        ss_info_dassert(NULL != users, "Allocating user table should not return NULL.")
+        ss_info_dassert(NULL != users, "Allocating user table should not return NULL.");
         ss_dfprintf(stderr, "\t..done\nAdd a user");
         count = users_add(users, "username", "authorisation");
         mxs_log_flush_sync();

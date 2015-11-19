@@ -124,8 +124,7 @@ int main(int argc, char **argv) {
 	}
 
 	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
-		LOGIF(LE, (skygw_log_write_flush(LOGFILE_ERROR,
-			"Error: Memory allocation FAILED for ROUTER_INSTANCE")));
+		MXS_ERROR("Memory allocation FAILED for ROUTER_INSTANCE");
 
 		mxs_log_flush_sync();
 		mxs_log_finish();
@@ -137,7 +136,7 @@ int main(int argc, char **argv) {
 	inst->user = service->credentials.name;
 	inst->password = service->credentials.authdata;
 
-	LOGIF(LM, (skygw_log_write_flush(LOGFILE_MESSAGE, "testbinlog v1.0")));
+	MXS_NOTICE("testbinlog v1.0");
 
 	if (inst->fileroot == NULL)
 		inst->fileroot = strdup(BINLOG_NAME_ROOT);

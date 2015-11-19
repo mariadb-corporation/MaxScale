@@ -97,15 +97,6 @@ extern __thread log_info_t tls_log_info;
 #define MXS_LOG_PRIORITY_IS_ENABLED(priority) false
 
 /**
- * Execute the given command if specified log is enabled in general or
- * if the log is enabled for the current session.
- */
-#define LOGIF(id,cmd) if (LOG_IS_ENABLED(id))   \
-    {                                           \
-        cmd;                                    \
-    }
-
-/**
  * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].
  */
 typedef enum
@@ -130,23 +121,15 @@ void mxs_log_set_augmentation(int bits);
 int mxs_log_message(int priority,
                     const char* file, int line, const char* function,
                     const char* format, ...) __attribute__((format(printf, 5, 6)));
-
-inline int mxs_log_id_to_priority(logfile_id_t id)
-{
-    if (id & LOGFILE_ERROR) return LOG_ERR;
-    if (id & LOGFILE_MESSAGE) return LOG_NOTICE;
-    if (id & LOGFILE_TRACE) return LOG_INFO;
-    if (id & LOGFILE_DEBUG) return LOG_DEBUG;
-    return LOG_ERR;
-}
-
-#define skygw_log_write(id, format, ...)\
-    mxs_log_message(mxs_log_id_to_priority(id), __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
-
-#define skygw_log_write_flush(id, format, ...) skygw_log_write(id, format, ##__VA_ARGS__)
-
 /**
- * Helper, not to be called directly.
+ * Log an error, warning, notice, info, or debug  message.
+ *
+ * @param priority One of the syslog constants (LOG_ERR, LOG_WARNING, ...)
+ * @param format   The printf format of the message.
+ * @param ...      Arguments, depending on the format.
+ *
+ * NOTE: Should typically not be called directly. Use some of the
+ *       MXS_ERROR, MXS_WARNING, etc. macros instead.
  */
 #define MXS_LOG_MESSAGE(priority, format, ...)\
     mxs_log_message(priority, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)

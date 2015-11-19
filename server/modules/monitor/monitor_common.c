@@ -314,11 +314,9 @@ bool mon_print_fail_status(
 void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 {
     char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
-    char event[strlen(mon_get_event_name(ptr))];
     char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
 
     snprintf(initiator, sizeof(initiator), "%s:%d", ptr->server->name, ptr->server->port);
-    snprintf(event, sizeof(event), "%s", mon_get_event_name(ptr));
     mon_append_node_names(mon->databases, nodelist, PATH_MAX + MON_ARG_MAX);
 
     EXTERNCMD* cmd = externcmd_allocate(script);
@@ -330,7 +328,7 @@ void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
     }
 
     externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
-    externcmd_substitute_arg(cmd, "[$]EVENT", event);
+    externcmd_substitute_arg(cmd, "[$]EVENT", mon_get_event_name(ptr));
     externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
 
     if (externcmd_execute(cmd))

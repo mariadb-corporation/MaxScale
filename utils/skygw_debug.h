@@ -52,14 +52,12 @@
 
 #if defined(SS_DEBUG) && defined(LOG_ASSERT)
 #include <log_manager.h>
-# define ss_dassert(exp) if(!(exp)){(skygw_log_write(LE,\
-                "debug assert %s:%d\n", \
-                (char*)__FILE__, \
-                __LINE__));mxs_log_flush_sync();assert(exp);}
-#define ss_info_dassert(exp,info) if(!(exp)){(skygw_log_write(LE,\
-                "debug assert %s:%d %s\n", \
-                (char*)__FILE__, \
-                __LINE__,info));mxs_log_flush_sync();assert(exp);}
+# define ss_dassert(exp) do { if(!(exp)){\
+        MXS_ERROR("debug assert %s:%d\n", (char*)__FILE__, __LINE__);\
+        mxs_log_flush_sync(); assert(exp);} } while (false)
+#define ss_info_dassert(exp,info) do { if(!(exp)){\
+        MXS_ERROR("debug assert %s:%d %s\n", (char*)__FILE__, __LINE__, info);\
+        mxs_log_flush_sync();assert(exp);} } while (false)
 # define ss_debug(exp) exp
 # define ss_dfprintf fprintf
 # define ss_dfflush  fflush
