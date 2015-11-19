@@ -330,10 +330,10 @@ int TestConnections::start_binlog()
     tprintf("%s\n", sys1);
     add_result(system(sys1), "Removing binlog data failed\n");
 
-    tprintf("Removing all binlog data from Master node\n");
-    sprintf(sys1, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf /var/lib/mysql/mar-bin.0*'",
-            repl->sshkey[0], repl->access_user[0], repl->IP[0], repl->access_sudo[0]);
-    system(sys1);
+    //tprintf("Removing all binlog data from Master node\n");
+    //sprintf(sys1, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf /var/lib/mysql/mar-bin.0*'",
+    //        repl->sshkey[0], repl->access_user[0], repl->IP[0], repl->access_sudo[0]);
+    //system(sys1);
 
     tprintf("Set 'maxscale' as a owner of binlog dir\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s mkdir -p %s; %s chown maxscale:maxscale -R %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir, maxscale_access_sudo, maxscale_binlog_dir);
