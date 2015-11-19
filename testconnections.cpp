@@ -325,10 +325,15 @@ int TestConnections::start_binlog()
     tprintf("Stopping all backend nodes\n");
     add_result(repl->stop_nodes(), "Nodes stopping failed\n");
 
-    tprintf("Removing all binlog data\n");
+    tprintf("Removing all binlog data from Maxscale node\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s rm -rf %s/*'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
     tprintf("%s\n", sys1);
     add_result(system(sys1), "Removing binlog data failed\n");
+
+    tprintf("Removing all binlog data from Master node\n");
+    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf /var/lib/mysql/mar-bin.0*'",
+            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo);
+    system(sys);
 
     tprintf("Set 'maxscale' as a owner of binlog dir\n");
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s mkdir -p %s; %s chown maxscale:maxscale -R %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir, maxscale_access_sudo, maxscale_binlog_dir);
