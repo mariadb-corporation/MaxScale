@@ -255,6 +255,7 @@ typedef struct
 
 static int hashkeyfun(void* key);
 static int hashcmpfun(void *, void *);
+bool parse_at_times(char** tok, char** saveptr, RULE* ruledef);
 
 /**
  * Hashtable key hashing function. Uses a simple string hashing algorithm.
@@ -539,6 +540,8 @@ static TIMERANGE* parse_time(const char* str)
     struct tm start, end;
     TIMERANGE* tr = NULL;
 
+    memset(&start, 0, sizeof(start));
+    memset(&end, 0, sizeof(end));
     strcpy(strbuf, str);
 
     if ((separator = strchr(strbuf, '-')))
@@ -577,19 +580,15 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
 {
     TIMERANGE* tmp = NULL;
 
-    if (IS_RVRS_TIME(tr))
-    {
-        tmp = (TIMERANGE*) calloc(1, sizeof(TIMERANGE));
-        tmp->next = tr;
-        tmp->start.tm_hour = 0;
-        tmp->start.tm_min = 0;
-        tmp->start.tm_sec = 0;
-        tmp->end = tr->end;
-        tr->end.tm_hour = 23;
-        tr->end.tm_min = 59;
-        tr->end.tm_sec = 59;
-    }
-
+    tmp = (TIMERANGE*) calloc(1, sizeof(TIMERANGE));
+    tmp->next = tr;
+    tmp->start.tm_hour = 0;
+    tmp->start.tm_min = 0;
+    tmp->start.tm_sec = 0;
+    tmp->end = tr->end;
+    tr->end.tm_hour = 23;
+    tr->end.tm_min = 59;
+    tr->end.tm_sec = 59;
     return tmp;
 }
 
@@ -1056,38 +1055,11 @@ reparse_rule:
                 tok = strtok_r(NULL, " ,", &saveptr);
                 TIMERANGE *tr = NULL;
 
-                while (tok)
+                if (!parse_at_times(&tok, &saveptr, ruledef))
                 {
-                    if (strcmp(tok, "on_queries") == 0)
-                        break;
-                    if (!check_time(tok))
-                    {
-                        MXS_ERROR("dbfwfilter: Rule parsing failed, malformed time definition: %s", tok);
-                        rval = false;
-                        goto retblock;
-                    }
-
-                    TIMERANGE *tmp = parse_time(tok);
-
-                    if (tmp == NULL)
-                    {
-                        MXS_ERROR("dbfwfilter: Rule parsing failed, unexpected characters after time definition.");
-                        rval = false;
-                        tr_free(tr);
-                        goto retblock;
-                    }
-
-                    if (IS_RVRS_TIME(tmp))
-                    {
-                        tmp = split_reverse_time(tmp);
-                    }
-
-                    tmp->next = tr;
-                    tr = tmp;
-                    tok = strtok_r(NULL, " ,", &saveptr);
+                    rval = false;
+                    break;
                 }
-
-                ruledef->active = tr;
 
                 if (tok && strcmp(tok, "on_queries") == 0)
                 {
@@ -2268,6 +2240,56 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
         }
         spinlock_release(my_instance->lock);
     }
+}
+
+/**
+ * Parse at_times rule.
+ * @param tok Pointer to last token, should be a valid timerange
+ * @param saveptr Pointer to the beginning of next token
+ * @param ruledef The rule definition to which this at_times rule is applied
+ * @return True if parsing was successful, false if an error occurred
+ */
+bool parse_at_times(char** tok, char** saveptr, RULE* ruledef)
+{
+    TIMERANGE *tr = NULL;
+    bool success = true;
+    char token[FW_TOKENBUFFER_SIZE];
+
+    while (*tok && strcmp(*tok, "on_queries") != 0)
+    {
+        if (!check_time(*tok))
+        {
+            MXS_ERROR("dbfwfilter: Rule parsing failed, malformed time definition: %s", *tok);
+            success = false;
+            break;
+        }
+
+        TIMERANGE *tmp = parse_time(*tok);
+
+        if (tmp == NULL)
+        {
+            MXS_ERROR("dbfwfilter: Rule parsing failed, unexpected characters after time definition.");
+            success = false;
+            tr_free(tr);
+            break;
+        }
+
+        if (IS_RVRS_TIME(tmp))
+        {
+            tmp = split_reverse_time(tmp);
+        }
+
+        tmp->next = tr;
+        tr = tmp;
+        *tok = fw_get_token(NULL, saveptr, token, sizeof(token));
+    }
+
+    if (success)
+    {
+        ruledef->active = tr;
+    }
+
+    return success;
 }
 
 #ifdef BUILD_RULE_PARSER
