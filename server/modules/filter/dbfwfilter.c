@@ -238,7 +238,7 @@ typedef struct
     STRLINK* userstrings; /*< Temporary list of raw strings of users */
     bool def_op; /*< Default operation mode, defaults to deny */
     SPINLOCK* lock; /*< Instance spinlock */
-    long idgen; /*< UID generator */
+    int idgen; /*< UID generator */
     int regflags;
 } FW_INSTANCE;
 
@@ -256,7 +256,7 @@ typedef struct
 static int hashkeyfun(void* key);
 static int hashcmpfun(void *, void *);
 bool parse_at_times(char** tok, char** saveptr, RULE* ruledef);
-
+bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule, char** saveptr);
 /**
  * Hashtable key hashing function. Uses a simple string hashing algorithm.
  * @param key Key to hash
@@ -1079,99 +1079,11 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
             }
             else if (strcmp(tok, "limit_queries") == 0)
             {
-                QUERYSPEED* qs = (QUERYSPEED*) calloc(1, sizeof(QUERYSPEED));
-                char *errptr = NULL;
-
-                spinlock_acquire(instance->lock);
-                qs->id = ++instance->idgen;
-                spinlock_release(instance->lock);
-
-                tok = strtok_r(NULL, " ", saveptr);
-                if (tok == NULL)
+                if (!parse_limit_queries(instance, ruledef, rule, saveptr))
                 {
-                    free(qs);
-                    rval = false;
-                    MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
-                    goto retblock;
+                   rval = false;
+                   break;
                 }
-
-                qs->limit = strtol(tok, &errptr, 0);
-
-                if (errptr && *errptr != '\0')
-                {
-                    free(qs);
-                    rval = false;
-                    MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
-                    goto retblock;
-                }
-
-                if (qs->limit < 1)
-                {
-                    free(qs);
-                    rval = false;
-                    MXS_ERROR("dbfwfilter: Bad query amount: %s", tok);
-                    goto retblock;
-                }
-
-                errptr = NULL;
-                tok = strtok_r(NULL, " ", saveptr);
-
-                if (tok == NULL)
-                {
-                    free(qs);
-                    rval = false;
-                    MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
-                    goto retblock;
-                }
-
-                qs->period = strtod(tok, &errptr);
-
-                if (errptr && *errptr != '\0')
-                {
-                    free(qs);
-                    rval = false;
-                    MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
-                    goto retblock;
-                }
-
-                if (qs->period < 1)
-                {
-                    free(qs);
-                    rval = false;
-                    MXS_ERROR("dbfwfilter: Bad time period: %s", tok);
-                    goto retblock;
-                }
-
-                errptr = NULL;
-                tok = strtok_r(NULL, " ", saveptr);
-
-                if (tok == NULL)
-                {
-                    free(qs);
-                    rval = false;
-                    MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
-                    goto retblock;
-                }
-                qs->cooldown = strtod(tok, &errptr);
-
-                if (errptr && *errptr != '\0')
-                {
-                    free(qs);
-                    rval = false;
-                    MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
-                    goto retblock;
-                }
-
-                if (qs->cooldown < 1)
-                {
-                    free(qs);
-                    rval = false;
-                    MXS_ERROR("dbfwfilter: Bad blocking period: %s", tok);
-                    goto retblock;
-                }
-
-                ruledef->type = RT_THROTTLE;
-                ruledef->data = (void*) qs;
             }
             else if (strcmp(tok, "no_where_clause") == 0)
             {
@@ -2272,6 +2184,119 @@ bool parse_at_times(char** tok, char** saveptr, RULE* ruledef)
     }
 
     return success;
+}
+
+/**
+ * Parse limit_queries rule
+ * @param instance Filter instance
+ * @param ruledef Rule definition
+ * @param saveptr Pointer to start of next token
+ * @return True if parsing was successful and false if an error occurred.
+ */
+bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule, char** saveptr)
+{
+    char *errptr = NULL;
+    bool rval = false;
+    QUERYSPEED* qs = NULL;
+    const char *tok = strtok_r(NULL, " ", saveptr);
+
+    if (tok == NULL)
+    {
+        MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+        rval = false;
+        goto retblock;
+    }
+
+    qs = (QUERYSPEED*) calloc(1, sizeof(QUERYSPEED));
+
+    if (qs == NULL)
+    {
+        MXS_ERROR("dbfwfilter: Memory allocation failed when parsing "
+                  "'limit_queries' rule");
+        rval = false;
+        goto retblock;
+    }
+
+    qs->limit = strtol(tok, &errptr, 0);
+
+    if (errptr && *errptr != '\0')
+    {
+        MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+        rval = false;
+        goto retblock;
+    }
+
+    if (qs->limit < 1)
+    {
+        MXS_ERROR("dbfwfilter: Bad query amount: %s", tok);
+        rval = false;
+        goto retblock;
+    }
+
+    errptr = NULL;
+    tok = strtok_r(NULL, " ", saveptr);
+
+    if (tok == NULL)
+    {
+        MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+        rval = false;
+        goto retblock;
+    }
+
+    qs->period = strtod(tok, &errptr);
+
+    if (errptr && *errptr != '\0')
+    {
+        MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+        rval = false;
+        goto retblock;
+    }
+
+    if (qs->period < 1)
+    {
+        MXS_ERROR("dbfwfilter: Bad time period: %s", tok);
+        rval = false;
+        goto retblock;
+    }
+
+    errptr = NULL;
+    tok = strtok_r(NULL, " ", saveptr);
+
+    if (tok == NULL)
+    {
+        MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
+        rval = false;
+        goto retblock;
+    }
+    qs->cooldown = strtod(tok, &errptr);
+
+    if (errptr && *errptr != '\0')
+    {
+        MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
+        rval = false;
+        goto retblock;
+    }
+
+    if (qs->cooldown < 1)
+    {
+        MXS_ERROR("dbfwfilter: Bad blocking period: %s", tok);
+        rval = false;
+    }
+
+retblock:
+
+    if (rval)
+    {
+        qs->id = atomic_add(&instance->idgen, 1);
+        ruledef->type = RT_THROTTLE;
+        ruledef->data = (void*) qs;
+    }
+    else
+    {
+        free(qs);
+    }
+
+    return rval;
 }
 
 #ifdef BUILD_RULE_PARSER
