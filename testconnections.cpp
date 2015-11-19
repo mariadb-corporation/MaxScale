@@ -301,6 +301,7 @@ int TestConnections::start_binlog()
     execute_query(repl->nodes[0], "reset master");
     for (i = 1; i < repl->N; i++) {
         execute_query(repl->nodes[i], "stop slave");
+        execute_query(repl->nodes[i], "reset slave");
     }
     repl->close_connections();
 
@@ -316,7 +317,7 @@ int TestConnections::start_binlog()
 
     binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
     execute_query(binlog, (char *) "stop slave");
-    execute_query(binlog, (char *) "reset master");
+    execute_query(binlog, (char *) "reset slave");
     mysql_close(binlog);
 
     tprintf("Stopping maxscale\n");
@@ -329,6 +330,11 @@ int TestConnections::start_binlog()
     sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s rm -rf %s/*'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
     tprintf("%s\n", sys1);
     add_result(system(sys1), "Removing binlog data failed\n");
+
+    tprintf("ls binlog data dir on Maxscale node\n");
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s ls -la %s/'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
+    tprintf("%s\n", sys1);
+    add_result(system(sys1), "ls failed\n");
 
     //tprintf("Removing all binlog data from Master node\n");
     //sprintf(sys1, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s rm -rf /var/lib/mysql/mar-bin.0*'",
