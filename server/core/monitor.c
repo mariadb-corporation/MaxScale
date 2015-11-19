@@ -42,6 +42,7 @@
 #include <log_manager.h>
 #include <secrets.h>
 #include <maxscale_pcre2.h>
+#include <externcmd.h>
 #include <mysql/mysqld_error.h>
 
 static MONITOR	*allMonitors = NULL;
@@ -670,7 +671,7 @@ mon_get_event_type(MONITOR_SERVERS* node)
  * @param   node    The monitor server data whose event is wanted
  * @result  string  The name of the monitor event for the server
  */
-char*
+const char*
 mon_get_event_name(MONITOR_SERVERS* node)
 {
     return monitor_event_definitions[mon_get_event_type(node)].name;
@@ -714,7 +715,7 @@ mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len)
     {
         if (SERVER_IS_RUNNING(servers->server))
         {
-            strcat(dest, separator, len);
+            strcat(dest, separator);
             separator = ",";
             snprintf(arr, sizeof(arr), "%s:%d", servers->server->name, servers->server->port);
             strncat(dest, arr, len - strlen(dest) - 1);
