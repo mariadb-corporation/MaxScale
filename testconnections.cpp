@@ -298,6 +298,10 @@ int TestConnections::start_binlog()
 
     repl->connect();
     find_field(repl->nodes[0], "SELECT @@VERSION", "@@version", version_str);
+    execute_query(repl->nodes[0], "reset master");
+    for (i = 1; i < repl->N; i++) {
+        execute_query(repl->nodes[i], "stop slave");
+    }
     repl->close_connections();
 
     tprintf("Master server version %s\n", version_str);
@@ -312,6 +316,7 @@ int TestConnections::start_binlog()
 
     binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
     execute_query(binlog, (char *) "stop slave");
+    execute_query(binlog, (char *) "reset master");
     mysql_close(binlog);
 
     tprintf("Stopping maxscale\n");
