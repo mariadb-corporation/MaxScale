@@ -530,7 +530,8 @@ module_feedback_send(void* data) {
 	int http_send = 0;
 
 	now = time(NULL);
-	now_tm = localtime(&now);
+        struct tm now_result;
+	now_tm = localtime_r(&now, &now_result);
 	hour = now_tm->tm_hour;
 
 	FEEDBACK_CONF *feedback_config = (FEEDBACK_CONF *) data;

@@ -516,6 +516,8 @@ static bool file_write_footer(
     return succp;
 }
 
+// Documentation says 26 bytes is enough, but 32 is a nice round number.
+#define ASCTIME_BUF_LEN 32
 static bool file_write_header(
     FILE*       outfile)
 {
@@ -524,10 +526,10 @@ static bool file_write_header(
     size_t      len2;
     size_t      len3;
     const char* header_buf1;
-    char*       header_buf2 = NULL;
+    char        header_buf2[ASCTIME_BUF_LEN];
     const char* header_buf3;
-    time_t*     t  = NULL;
-    struct tm*  tm = NULL;
+    time_t      t;
+    struct tm   tm;
 #if defined(LAPTOP_TEST)
     struct timespec ts1;
     ts1.tv_sec = 0;
@@ -538,23 +540,10 @@ static bool file_write_header(
     return true;
 #endif
 
-    if ((t = (time_t *)malloc(sizeof(time_t))) == NULL) {
-        goto return_succp;
-    }
-
-    if ((tm = (struct tm *)malloc(sizeof(struct tm))) == NULL) {
-        goto return_succp;
-    }
-
-    *t = time(NULL);
-    *tm = *localtime(t);
+    localtime_r(&t, &tm);
 
     header_buf1 = "\n\nMariaDB Corporation MaxScale " MAXSCALE_VERSION "\t";
-    header_buf2 = strdup(asctime(tm));
-
-    if (header_buf2 == NULL) {
-        goto return_succp;
-    }
+    asctime_r(&tm, header_buf2);
     header_buf3 = "------------------------------------------------------\n";
 
     len1 = strlen(header_buf1);
@@ -570,16 +559,6 @@ static bool file_write_header(
 
     succp = true;
 
-return_succp:
-    if (tm != NULL) {
-        free(tm);
-    }
-    if (t != NULL) {
-        free(t);
-    }
-    if (header_buf2 != NULL) {
-        free(header_buf2);
-    }
     return succp;
 }
 

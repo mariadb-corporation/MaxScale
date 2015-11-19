@@ -387,8 +387,11 @@ closeSession(FILTER *instance, void *session)
             }
         }
         fprintf(fp, "-----------+-----------------------------------------------------------------\n");
-        fprintf(fp, "\n\nSession started %s",
-                asctime(localtime(&my_session->connect.tv_sec)));
+        struct tm tm;
+        localtime_r(&my_session->connect.tv_sec, &tm);
+        char buffer[32]; // asctime_r documentation requires 26
+        asctime_r(&tm, buffer);
+        fprintf(fp, "\n\nSession started %s", buffer);
         if (my_session->clientHost)
         {
             fprintf(fp, "Connection from %s\n",

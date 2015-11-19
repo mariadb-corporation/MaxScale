@@ -161,7 +161,7 @@ int main(int argc, char* argv[])
     ss_dassert(succp);
 
     t = time(NULL);
-    tm = *(localtime(&t));
+    localtime_r(&t, &tm);
     err = MXS_ERROR("%04d %02d/%02d %02d.%02d.%02d",
                     tm.tm_year+1900,
                     tm.tm_mon+1,

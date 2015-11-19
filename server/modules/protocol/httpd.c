@@ -491,7 +491,9 @@ static void httpd_send_headers(DCB *dcb, int final)
 	const char *fmt = "%a, %d %b %Y %H:%M:%S GMT";
 	time_t httpd_current_time = time(NULL);
 
-	strftime(date, sizeof(date), fmt, localtime(&httpd_current_time));
+        struct tm tm;
+        localtime_r(&httpd_current_time, &tm);
+	strftime(date, sizeof(date), fmt, &tm);
 
 	dcb_printf(dcb, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: %s\r\nConnection: close\r\nContent-Type: application/json\r\n", date, HTTP_SERVER_STRING);
 

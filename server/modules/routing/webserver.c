@@ -334,8 +334,13 @@ char date[64] = "";
 const char *fmt = "%a, %d %b %Y %H:%M:%S GMT";
 
 	time_t httpd_current_time = time(NULL);
+        struct tm tm;
+        char buffer[32]; // asctime_r documentation requires 26
 
-	strftime(date, sizeof(date), fmt, localtime(&httpd_current_time));
+        localtime_r(&http_current_time, &tm);
+        asctime_r(&tm, buffer);
+
+	strftime(date, sizeof(date), fmt, buffer);
 
 	dcb_printf(dcb, "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: %s\r\nConnection: close\r\nContent-Type: text/html\r\n", date, "MaxScale");
 
