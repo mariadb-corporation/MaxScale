@@ -698,12 +698,12 @@ createInstance(SERVICE *service, char **options)
 	    router->rwsplit_config.rw_max_sescmd_history_size = 0;
 	}
 
-	/** 
-         * Set default value for max_slave_connections and for slave selection
-         * criteria. If parameter is set in config file max_slave_connections 
-         * will be overwritten.
+        /**
+         * Set default value for max_slave_connections as 100%. This way
+         * LEAST_CURRENT_OPERATIONS allows us to balance evenly across all the
+         * configured slaves.
          */
-        router->rwsplit_config.rw_max_slave_conn_count = CONFIG_MAX_SLAVE_CONN;
+        router->rwsplit_config.rw_max_slave_conn_count = nservers;
         
         if (router->rwsplit_config.rw_slave_select_criteria == UNDEFINED_CRITERIA)
         {

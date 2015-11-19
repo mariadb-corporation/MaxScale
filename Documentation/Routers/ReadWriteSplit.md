@@ -52,7 +52,7 @@ passwd=<password>
 
 ### `max_slave_connections`
 
-**`max_slave_connections`** sets the maximum number of slaves a router session uses at any moment. Default value is `1`.
+**`max_slave_connections`** sets the maximum number of slaves a router session uses at any moment. The default is to use all available slaves.
 
 	max_slave_connections=<max. number, or % of available slaves>
 
