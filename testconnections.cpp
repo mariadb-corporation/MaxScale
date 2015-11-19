@@ -100,7 +100,7 @@ TestConnections::TestConnections(int argc, char *argv[])
         }
     }
     if ((repl->check_replication(0) != 0) || (galera->check_galera() != 0)) {
-        printf("****** BACKED IS STILL BROKEN! Exiting\n *****");
+        printf("****** BACKEND IS STILL BROKEN! Exiting\n *****");
         exit(200);
     }
     //repl->start_replication();

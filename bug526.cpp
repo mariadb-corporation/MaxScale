@@ -9,6 +9,7 @@
 #include <iostream>
 #include <unistd.h>
 #include "testconnections.h"
+#include "maxadmin_operations.h"
 
 using namespace std;
 
@@ -20,18 +21,19 @@ int main(int argc, char *argv[])
     if (Test->connect_rwsplit() == 0) {
         Test->add_result(1, "Filter config is broken, but service is started\n");
     }
+    if (Test->connect_readconn_master() == 0) {
+        Test->add_result(1, "Filter config is broken, but Maxscale is started\n");
+    }
+    if (Test->connect_readconn_slave() == 0) {
+        Test->add_result(1, "Filter config is broken, but Maxscale is started\n");
+    }
 
-    sleep(5);
+    //sleep(5);
+    execute_maxadmin_command(Test->maxscale_IP, (char*) "admin", Test->maxadmin_password, (char*) "sync logs");
+    Test->check_log_err((char *) "Unable to find library for module: foobar", TRUE);
     Test->check_log_err((char *) "Failed to load filter module 'foobar'", TRUE);
-
-    Test->tprintf("Trying ReaConn master\n");
-    Test->add_result(Test->connect_readconn_master(), "Error connection to ReadConn master\n");
-
-    Test->tprintf("Trying ReaConn slave\n");
-    Test->add_result(Test->connect_readconn_slave(), "Error connection to ReadConn slave\n");
-
-    Test->close_readconn_master();
-    Test->close_readconn_slave();
+    Test->check_log_err((char *) "Failed to load filter 'testfilter' for service 'RW Split Router'", TRUE);
+    Test->check_log_err((char *) "Failed to load MaxScale configuration file /etc/maxscale.cnf. Exiting", TRUE);
 
     Test->copy_all_logs(); return(Test->global_result);
 }

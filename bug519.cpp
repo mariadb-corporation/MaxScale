@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Create t1\n");
     create_t1(Test->conn_rwsplit);
     Test->tprintf("Insert data into t1\n");
-    Test->set_timeout(30);
+    Test->set_timeout(60);
     insert_into_t1(Test->conn_rwsplit, N);
     Test->tprintf("Sleeping to let replication happen\n");
     Test->stop_timeout();
