@@ -335,6 +335,10 @@ int TestConnections::start_binlog()
     tprintf("%s\n", sys1);
     add_result(system(sys1), "Master start failed\n");
 
+    MYSQL * master = open_conn_no_db(repl->port[0], repl->IP[0], repl->user_name, repl->password, ssl);
+    execute_query(master, (char*) "reset master");
+    mysql_close(master);
+
     for (i = 1; i < repl->N; i++) {
         tprintf("Starting node %d\n", i);
         sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s %s'", repl->sshkey[i], repl->access_user[i], repl->IP[i], repl->access_sudo[i], repl->start_db_command[i], cmd_opt);

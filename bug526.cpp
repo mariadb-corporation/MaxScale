@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     Test->check_log_err((char *) "Unable to find library for module: foobar", TRUE);
     Test->check_log_err((char *) "Failed to load filter module 'foobar'", TRUE);
     Test->check_log_err((char *) "Failed to load filter 'testfilter' for service 'RW Split Router'", TRUE);
-    Test->check_log_err((char *) "Failed to load MaxScale configuration file /etc/maxscale.cnf. Exiting", TRUE);
+    Test->check_log_err((char *) "Failed to open, read or process the MaxScale configuration file /etc/maxscale.cnf. Exiting", TRUE);
 
     Test->copy_all_logs(); return(Test->global_result);
 }
