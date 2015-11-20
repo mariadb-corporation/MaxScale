@@ -90,7 +90,7 @@ start() {
     chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
     chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
 
-    daemon --pidfile $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale $MAXSCALE_OPTIONS --user=maxscale # don't throw away errors!
+    daemon --pidfile $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale $MAXSCALE_OPTIONS # don't throw away errors!
 
     RETVAL=$?
     [ $RETVAL -eq 0 ] && touch /var/lock/subsys/$servicename
