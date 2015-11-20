@@ -202,6 +202,7 @@ extern void	dListServers(DCB *);
 extern char	*server_status(SERVER *);
 extern void	server_set_status(SERVER *, int);
 extern void	server_clear_status(SERVER *, int);
+extern void     server_transfer_status(SERVER *dest_server, SERVER *source_server);
 extern void	serverAddMonUser(SERVER *, char *, char *);
 extern void	serverAddParameter(SERVER *, char *, char *);
 extern char	*serverGetParameter(SERVER *, char *);

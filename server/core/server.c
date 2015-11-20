@@ -687,6 +687,18 @@ server_clear_status(SERVER *server, int bit)
 }
 
 /**
+ * Transfer status bitstring from one server to another
+ *
+ * @param dest_server       The server to be updated
+ * @param source_server		The server to provide the new bit string
+ */
+void
+server_transfer_status(SERVER *dest_server, SERVER *source_server)
+{
+	dest_server->status = source_server->status;
+}
+
+/**
  * Add a user name and password to use for monitoring the
  * state of the server.
  *

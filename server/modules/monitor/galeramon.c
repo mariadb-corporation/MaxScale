@@ -281,6 +281,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     int isjoined = 0;
     unsigned long int server_version = 0;
     char *server_string;
+    SERVER temp_server;
 
     /* Don't even probe server flagged as in maintenance */
     if (SERVER_IN_MAINT(database->server))
@@ -289,24 +290,25 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     /** Store previous status */
     database->mon_prev_status = database->server->status;
 
-    server_clear_status(database->server, SERVER_RUNNING);
+    server_transfer_status(&temp_server, database->server);
+    server_clear_status(&temp_server, SERVER_RUNNING);
 
     /* Also clear Joined, M/S and Stickiness bits */
-    server_clear_status(database->server, SERVER_JOINED);
-    server_clear_status(database->server, SERVER_SLAVE);
-    server_clear_status(database->server, SERVER_MASTER);
-    server_clear_status(database->server, SERVER_MASTER_STICKINESS);
+    server_clear_status(&temp_server, SERVER_JOINED);
+    server_clear_status(&temp_server, SERVER_SLAVE);
+    server_clear_status(&temp_server, SERVER_MASTER);
+    server_clear_status(&temp_server, SERVER_MASTER_STICKINESS);
 
     connect_result_t rval = mon_connect_to_db(mon, database);
     if (rval != MONITOR_CONN_OK)
     {
         if (mysql_errno(database->con) == ER_ACCESS_DENIED_ERROR)
         {
-            server_set_status(database->server, SERVER_AUTH_ERROR);
+            server_set_status(&temp_server, SERVER_AUTH_ERROR);
         }
         else
         {
-            server_clear_status(database->server, SERVER_AUTH_ERROR);
+            server_clear_status(&temp_server, SERVER_AUTH_ERROR);
         }
 
         database->server->node_id = -1;
@@ -320,7 +322,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     }
 
     /* If we get this far then we have a working connection */
-    server_set_status(database->server, SERVER_RUNNING);
+    server_set_status(&temp_server, SERVER_RUNNING);
 
     /* get server version string */
     server_string = (char *) mysql_get_server_info(database->con);
@@ -404,12 +406,14 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 
     if (isjoined)
     {
-        server_set_status(database->server, SERVER_JOINED);
+        server_set_status(&temp_server, SERVER_JOINED);
     }
     else
     {
-        server_clear_status(database->server, SERVER_JOINED);
+        server_clear_status(&temp_server, SERVER_JOINED);
     }
+    
+    server_transfer_status(database->server, &temp_server);
 }
 
 /**
