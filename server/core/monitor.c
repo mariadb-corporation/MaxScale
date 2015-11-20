@@ -590,9 +590,10 @@ mon_get_event_type(MONITOR_SERVERS* node)
         DOWN_EVENT,
         UP_EVENT,
         LOSS_EVENT,
-        NEW_EVENT
+        NEW_EVENT,
+        UNSUPPORTED_EVENT
     } general_event_type;
-    general_event_type event_type;
+    general_event_type event_type = UNSUPPORTED_EVENT;
     
     unsigned int prev = node->mon_prev_status 
         & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB);
@@ -612,6 +613,8 @@ mon_get_event_type(MONITOR_SERVERS* node)
         {
             event_type = UP_EVENT;
         }
+        /* Otherwise, was not running and still is not running */
+        /* - this is not a recognised event */
     }
     else
     {
@@ -623,7 +626,7 @@ mon_get_event_type(MONITOR_SERVERS* node)
         else
         {
             /* Was running and still is */
-            if (prev && (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB))
+            if (prev & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB))
             {
                 /* We used to know what kind of server it was */
                 event_type = LOSS_EVENT;
@@ -661,7 +664,6 @@ mon_get_event_type(MONITOR_SERVERS* node)
                     (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
                         NEW_NDB_EVENT;
         default:
-            /* This should be impossible */
             return UNDEFINED_MONITOR_EVENT;
     }
 }
