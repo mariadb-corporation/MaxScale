@@ -279,6 +279,7 @@ handler(void *userdata, const char *section, const char *name, const char *value
     param->name = strdup(name);
     param->value = strdup(value);
     param->next = ptr->parameters;
+    param->qfd_param_type = UNDEFINED_TYPE;
     ptr->parameters = param;
 
     return 1;
