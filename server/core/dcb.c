@@ -618,12 +618,9 @@ dcb_process_victim_queue(DCB *listofdcb)
             }
         }
 
-        if (LOG_MAY_BE_ENABLED(LOGFILE_TRACE))
-        {
-            dcb_get_ses_log_info(dcb,
-                                 &tls_log_info.li_sesid,
-                                 &tls_log_info.li_enabled_logs);
-        }
+        dcb_get_ses_log_info(dcb,
+                             &tls_log_info.li_sesid,
+                             &tls_log_info.li_enabled_logs);
 
         dcb->state = DCB_STATE_DISCONNECTED;
         nextdcb = dcb->memdata.next;
