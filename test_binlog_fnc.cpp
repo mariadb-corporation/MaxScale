@@ -112,7 +112,7 @@ void test_binlog(TestConnections* Test)
     Test->add_result(insert_into_t1(Test->repl->nodes[0], 4), "Data inserting to t1 failed\n");
     Test->stop_timeout();
     Test->tprintf("Sleeping to let replication happen\n");
-    sleep(30);
+    sleep(60);
 
     for (i = 0; i < Test->repl->N; i++) {
         Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
