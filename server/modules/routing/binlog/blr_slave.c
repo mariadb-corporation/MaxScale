@@ -2099,7 +2099,11 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 				spinlock_release(&slave->catch_lock);
 				spinlock_release(&router->binlog_lock);
 				state_change = 1;
-			} else {
+			}
+			else
+			{
+				MXS_NOTICE("Execution entered branch were locks previously were NOT "
+				           "released. Previously this would have caused a lock-up.");
 				spinlock_release(&slave->catch_lock);
 				spinlock_release(&router->binlog_lock);
 			}
