@@ -2208,13 +2208,11 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
 
         if (!succ)
         {
-            LOGIF(LE, (skygw_log_write(
-                           LOGFILE_ERROR,
-                           "Error : Log rotation failed. "
-                           "Creating replacement file %s "
-                           "failed. Continuing "
-                           "logging to existing file.",
-                           lf->lf_full_file_name)));
+            MXS_ERROR("Log rotation failed. "
+                      "Creating replacement file %s "
+                      "failed. Continuing "
+                      "logging to existing file.",
+                      lf->lf_full_file_name);
         }
         return true;
     }

@@ -146,7 +146,7 @@ char* config_clean_string_list(char* str)
         int re_err;
         size_t err_offset;
 
-        if ((re = pcre2_compile((PCRE2_SPTR) "[[:space:],]*([^,]+)\\b[[:space:],]*", PCRE2_ZERO_TERMINATED, 0,
+        if ((re = pcre2_compile((PCRE2_SPTR) "[[:space:],]*([^,]*[^[:space:],])[[:space:],]*", PCRE2_ZERO_TERMINATED, 0,
                                 &re_err, &err_offset, NULL)) == NULL ||
             (data = pcre2_match_data_create_from_pattern(re, NULL)) == NULL)
         {
@@ -279,6 +279,7 @@ handler(void *userdata, const char *section, const char *name, const char *value
     param->name = strdup(name);
     param->value = strdup(value);
     param->next = ptr->parameters;
+    param->qfd_param_type = UNDEFINED_TYPE;
     ptr->parameters = param;
 
     return 1;

@@ -15,9 +15,9 @@ endif()
 
 file(READ ${MYSQL_VERSION_H} MYSQL_VERSION_CONTENTS)
 string(REGEX REPLACE ".*MYSQL_SERVER_VERSION[^0-9.]+([0-9.]+).*" "\\1" MYSQL_VERSION ${MYSQL_VERSION_CONTENTS})
-string(REGEX REPLACE ".*MYSQL_COMPILATION_COMMENT.+\"(.+)\".*" "\\1" MYSQL_PROVIDER ${MYSQL_VERSION_CONTENTS})
+string(REGEX REPLACE ".*MYSQL_COMPILATION_COMMENT[[:space:]]+\"(.+)\".*" "\\1" MYSQL_PROVIDER ${MYSQL_VERSION_CONTENTS})
 string(TOLOWER ${MYSQL_PROVIDER} MYSQL_PROVIDER)
-if(MYSQL_PROVIDER MATCHES "mariadb")
+if(MYSQL_PROVIDER MATCHES "[mM]aria[dD][bB]")
   set(MYSQL_PROVIDER "MariaDB" CACHE INTERNAL "The MySQL provider")
 elseif(MYSQL_PROVIDER MATCHES "mysql")
   set(MYSQL_PROVIDER "MySQL" CACHE INTERNAL "The MySQL provider")
@@ -35,6 +35,17 @@ endif()
 if(MYSQL_VERSION VERSION_LESS 5.5.41)
 message(WARNING "MySQL version is ${MYSQL_VERSION}. Minimum supported version is 5.5.41.")
 endif()
+
+if(NOT (MYSQL_VERSION VERSION_LESS 10.1))
+
+  # 10.1 needs lzma
+  find_library(HAVE_LIBLZMA NAMES lzma)
+  if(NOT HAVE_LIBLZMA)
+    message(FATAL_ERROR "Could not find liblzma")
+  endif()
+  set(LZMA_LINK_FLAGS "lzma" CACHE STRING "liblzma link flags")
+endif()
+
 
 if (DEFINED EMBEDDED_LIB)
   if( NOT (IS_DIRECTORY ${EMBEDDED_LIB}) )

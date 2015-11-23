@@ -352,7 +352,7 @@ static bool create_parse_tree(
                 failp = TRUE;
                 goto return_here;
         }
-	mysql_reset_thd_for_next_command(thd);
+        thd->reset_for_next_command();
 
         /** 
 	 * Set some database to thd so that parsing won't fail because of
@@ -804,7 +804,7 @@ static bool skygw_stmt_causes_implicit_commit(
         
         switch (lex->sql_command) {
                 case SQLCOM_DROP_TABLE:
-                        succp = !(lex->drop_temporary);
+                        succp = !(lex->create_info.options & HA_LEX_CREATE_TMP_TABLE);
                         break;
                 case SQLCOM_ALTER_TABLE:
                 case SQLCOM_CREATE_TABLE:

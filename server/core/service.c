@@ -1113,7 +1113,7 @@ serviceSetFilters(SERVICE *service, char *filters)
         }
         else
         {
-            MXS_WARNING("Unable to find filter '%s' for service '%s'\n",
+            MXS_ERROR("Unable to find filter '%s' for service '%s'\n",
                         filter_name, service->name);
             rval = false;
             break;

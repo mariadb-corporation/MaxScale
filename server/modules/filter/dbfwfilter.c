@@ -1653,15 +1653,15 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
 bool inside_timerange(TIMERANGE* comp)
 {
 
-    struct tm* tm_now;
+    struct tm tm_now;
     struct tm tm_before, tm_after;
     time_t before, after, now, time_now;
     double to_before, to_after;
 
     time(&time_now);
-    tm_now = localtime(&time_now);
-    memcpy(&tm_before, tm_now, sizeof(struct tm));
-    memcpy(&tm_after, tm_now, sizeof(struct tm));
+    localtime_r(&time_now, &tm_now);
+    memcpy(&tm_before, &tm_now, sizeof(struct tm));
+    memcpy(&tm_after, &tm_now, sizeof(struct tm));
 
 
     tm_before.tm_sec = comp->start.tm_sec;
@@ -1674,7 +1674,7 @@ bool inside_timerange(TIMERANGE* comp)
 
     before = mktime(&tm_before);
     after = mktime(&tm_after);
-    now = mktime(tm_now);
+    now = mktime(&tm_now);
     to_before = difftime(now, before);
     to_after = difftime(now, after);
 
@@ -1730,10 +1730,10 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
     QUERYSPEED* queryspeed = NULL;
     QUERYSPEED* rule_qs = NULL;
     time_t time_now;
-    struct tm* tm_now;
+    struct tm tm_now;
 
     time(&time_now);
-    tm_now = localtime(&time_now);
+    localtime_r(&time_now, &tm_now);
 
     matches = false;
     is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
@@ -1781,7 +1781,9 @@ bool rule_matches(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue
                 {
                     matches = true;
                     msg = strdup("Permission denied at this time.");
-                    MXS_INFO("dbfwfilter: rule '%s': query denied at: %s", rulelist->rule->name, asctime(tm_now));
+                    char buffer[32]; // asctime documentation requires 26
+                    asctime_r(&tm_now, buffer);
+                    MXS_INFO("dbfwfilter: rule '%s': query denied at: %s", rulelist->rule->name, buffer);
                     goto queryresolved;
                 }
                 else

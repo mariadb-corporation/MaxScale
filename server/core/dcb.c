@@ -1986,9 +1986,9 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
         if (dcb->persistentstart)
         {
             char buff[20];
-            struct tm * timeinfo;
-            timeinfo = localtime (&dcb->persistentstart);
-            strftime(buff, sizeof(buff), "%b %d %H:%M:%S", timeinfo);    
+            struct tm timeinfo;
+            localtime_r(&dcb->persistentstart, &timeinfo);
+            strftime(buff, sizeof(buff), "%b %d %H:%M:%S", &timeinfo);
             dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
         }
 }
@@ -2160,9 +2160,9 @@ dprintDCB(DCB *pdcb, DCB *dcb)
         if (dcb->persistentstart)
         {
             char buff[20];
-            struct tm * timeinfo;
-            timeinfo = localtime (&dcb->persistentstart);
-            strftime(buff, sizeof(buff), "%b %d %H:%M:%S", timeinfo);    
+            struct tm timeinfo;
+            localtime_r(&dcb->persistentstart, &timeinfo);
+            strftime(buff, sizeof(buff), "%b %d %H:%M:%S", &timeinfo);
             dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
         }
 }
