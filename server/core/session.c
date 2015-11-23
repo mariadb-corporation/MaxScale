@@ -261,38 +261,34 @@ session_set_dummy(DCB *client_dcb)
 }
 
 /**
- * Enable specified logging for the current session and increase logger 
+ * Enable specified log priority for the current session and increase logger
  * counter.
  * Generic logging setting has precedence over session-specific setting.
- * 
- * @param ses	session 
- * @param id	logfile identifier
+ *
+ * @param ses	   session
+ * @param priority syslog priority
  */
-void session_enable_log(
-	SESSION*     ses,
-	logfile_id_t id)
+void session_enable_log_priority(SESSION* ses, int priority)
 {
-	ses->ses_enabled_logs |= id;
-	atomic_add((int *)&log_ses_count[id], 1);
+    ses->enabled_log_priorities |= (1 << priority);
+    atomic_add((int *)&log_ses_count[priority], 1);
 }
 
 /**
- * Disable specified logging for the current session and decrease logger
+ * Disable specified log priority for the current session and decrease logger
  * counter.
  * Generic logging setting has precedence over session-specific setting.
- * 
+ *
  * @param ses	session
- * @param id	logfile identifier
+ * @param priority syslog priority
  */
-void session_disable_log(
-	SESSION* ses, 
-	logfile_id_t id)
+void session_disable_log_priority(SESSION* ses, int priority)
 {
-	if (ses->ses_enabled_logs & id)
-	{
-		ses->ses_enabled_logs &= ~id;
-		atomic_add((int *)&log_ses_count[id], -1);
-	}
+    if (ses->enabled_log_priorities & (1 << priority))
+    {
+        ses->enabled_log_priorities &= ~(1 << priority);
+        atomic_add((int *)&log_ses_count[priority], -1);
+    }
 }
 
 /**
@@ -473,7 +469,7 @@ session_free(SESSION *session)
                  session->ses_id);
 	
 	/** Disable trace and decrease trace logger counter */
-	session_disable_log(session, LT);
+	session_disable_log_priority(session, LOG_INFO);
 	
 	/** If session doesn't have parent referencing to it, it can be freed */
 	if (!session->ses_is_child)

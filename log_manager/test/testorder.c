@@ -23,36 +23,14 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 
-static logfile_id_t id_to_priority(logfile_id_t id)
+static void skygw_log_enable(int priority)
 {
-    switch (id)
-    {
-    case LOGFILE_ERROR:
-        return LOG_ERR;
-
-    case LOGFILE_MESSAGE:
-        return LOG_NOTICE;
-
-    case LOGFILE_TRACE:
-        return LOG_INFO;
-
-    case LOGFILE_DEBUG:
-        return LOG_DEBUG;
-
-    default:
-        assert(!true);
-        return LOG_ERR;
-    }
+    mxs_log_set_priority_enabled(priority, true);
 }
 
-static void skygw_log_enable(logfile_id_t id)
+static void skygw_log_disable(int priority)
 {
-    mxs_log_set_priority_enabled(id_to_priority(id), true);
-}
-
-static void skygw_log_disable(logfile_id_t id)
-{
-    mxs_log_set_priority_enabled(id_to_priority(id), false);
+    mxs_log_set_priority_enabled(priority, false);
 }
 
 int main(int argc, char** argv)
@@ -107,9 +85,9 @@ int main(int argc, char** argv)
     }
     ss_dassert(succp);
 
-    skygw_log_disable(LOGFILE_TRACE);
-    skygw_log_disable(LOGFILE_MESSAGE);
-    skygw_log_disable(LOGFILE_DEBUG);
+    skygw_log_disable(LOG_INFO);
+    skygw_log_disable(LOG_NOTICE);
+    skygw_log_disable(LOG_DEBUG);
 
     for (i = 0; i < iterations; i++)
     {

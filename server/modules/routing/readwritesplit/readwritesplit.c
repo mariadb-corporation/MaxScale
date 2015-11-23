@@ -2810,7 +2810,7 @@ static void clientReply (
          */
 	if (sescmd_cursor_is_active(scur))
 	{
-                if (LOG_IS_ENABLED(LOGFILE_ERROR) && 
+                if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR) && 
                         MYSQL_IS_ERROR_PACKET(((uint8_t *)GWBUF_DATA(writebuf))))
                 {
                         uint8_t* buf = 
@@ -3483,7 +3483,7 @@ static bool select_connect_backend_servers(
                              slaves_found);
                 }
                 
-                if (LOG_IS_ENABLED(LT))
+                if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
                 {
                         for (i=0; i<router_nservers; i++)
                         {

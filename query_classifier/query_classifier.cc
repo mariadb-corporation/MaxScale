@@ -423,7 +423,7 @@ static skygw_query_type_t resolve_query_type(
                 lex, 
                 &set_autocommit_stmt))
         {
-                if (LOG_IS_ENABLED(LOGFILE_TRACE))
+                if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
                 {
                         if (sql_command_flags[lex->sql_command] & 
                                 CF_IMPLICT_COMMIT_BEGIN)
@@ -446,7 +446,7 @@ static skygw_query_type_t resolve_query_type(
         
         if (set_autocommit_stmt == 0)
         {
-                if (LOG_IS_ENABLED(LOGFILE_TRACE))
+                if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
                 {
                     MXS_INFO("Disable autocommit : implicit START TRANSACTION"
                              " before executing the next command.");

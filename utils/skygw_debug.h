@@ -167,17 +167,16 @@ typedef enum skygw_chk_t {
                         ((t) == QUERY_TYPE_SHOW_TABLES ? "QUERY_TYPE_SHOW_TABLES" :	\
                         "Unknown query type"))))))))))))))))))))))
 
-#define STRLOGID(i) ((i) == LOGFILE_TRACE ? "LOGFILE_TRACE" :           \
-                ((i) == LOGFILE_MESSAGE ? "LOGFILE_MESSAGE" :           \
-                 ((i) == LOGFILE_ERROR ? "LOGFILE_ERROR" :              \
-                  ((i) == LOGFILE_DEBUG ? "LOGFILE_DEBUG" :             \
-                   "Unknown logfile type"))))
-                   
-#define STRLOGNAME(n) ((n) == LOGFILE_TRACE ? "Trace log" :		\
-			((n) == LOGFILE_MESSAGE ? "Message log" :	\
-			((n) == LOGFILE_ERROR ? "Error log" :		\
-			((n) == LOGFILE_DEBUG ? "Debug log" :		\
-			"Unknown log file type"))))
+#define STRLOGPRIORITYNAME(n)\
+    ((n) == LOG_EMERG ? "LOG_EMERG" :                            \
+     ((n) == LOG_ALERT ? "LOG_ALERT" :                           \
+      ((n) == LOG_CRIT ? "LOG_CRIT" :                            \
+       ((n) == LOG_ERR ? "LOG_ERR" :                             \
+        ((n) == LOG_WARNING ? "LOG_WARNING" :                    \
+         ((n) == LOG_NOTICE ? "LOG_NOTICE" :                     \
+          ((n) == LOG_INFO ? "LOG_INFO" :                        \
+           ((n) == LOG_DEBUG ? "LOG_DEBUG" :                     \
+            "Unknown log priority"))))))))
 
 #define STRPACKETTYPE(p) ((p) == MYSQL_COM_INIT_DB ? "COM_INIT_DB" :          \
                           ((p) == MYSQL_COM_CREATE_DB ? "COM_CREATE_DB" :     \

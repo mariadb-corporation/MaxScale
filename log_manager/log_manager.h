@@ -48,16 +48,6 @@ enum mxs_log_priorities
 
 typedef enum
 {
-    LOGFILE_ERROR = 1,
-    LOGFILE_FIRST = LOGFILE_ERROR,
-    LOGFILE_MESSAGE = 2,
-    LOGFILE_TRACE = 4,
-    LOGFILE_DEBUG = 8,
-    LOGFILE_LAST = LOGFILE_DEBUG
-} logfile_id_t;
-
-typedef enum
-{
     LOG_TARGET_DEFAULT = 0,
     LOG_TARGET_FS      = 1, // File system
     LOG_TARGET_SHMEM   = 2, // Shared memory
@@ -69,16 +59,10 @@ typedef enum
 typedef struct log_info
 {
     size_t li_sesid;
-    int    li_enabled_logs;
+    int    li_enabled_priorities;
 } log_info_t;
 
-#define LE LOGFILE_ERROR
-#define LM LOGFILE_MESSAGE
-#define LT LOGFILE_TRACE
-#define LD LOGFILE_DEBUG
-
 extern int lm_enabled_priorities_bitmask;
-extern int lm_enabled_logfiles_bitmask;
 extern ssize_t log_ses_count[];
 extern __thread log_info_t tls_log_info;
 
@@ -86,12 +70,10 @@ extern __thread log_info_t tls_log_info;
  * Check if specified log type is enabled in general or if it is enabled
  * for the current session.
  */
-#define LOG_IS_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||      \
-                             (log_ses_count[id] > 0 &&                  \
-                              tls_log_info.li_enabled_logs & id)) ? true : false)
-
-// TODO: Add this at a later stage.
-#define MXS_LOG_PRIORITY_IS_ENABLED(priority) false
+#define MXS_LOG_PRIORITY_IS_ENABLED(priority) \
+    (((lm_enabled_priorities_bitmask & (1 << priority)) ||      \
+      (log_ses_count[priority] > 0 && \
+       tls_log_info.li_enabled_priorities & (1 << priority))) ? true : false)
 
 /**
  * LOG_AUGMENT_WITH_FUNCTION Each logged line is suffixed with [function-name].

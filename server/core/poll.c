@@ -860,7 +860,7 @@ unsigned long	qtime;
 			/** Read session id to thread's local storage */
                         dcb_get_ses_log_info(dcb,
                                              &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_logs);
+                                             &tls_log_info.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "write_ready"))
                         {
@@ -890,7 +890,7 @@ unsigned long	qtime;
 				&pollStats.n_accept, 1);
                         dcb_get_ses_log_info(dcb,
                                              &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_logs);
+                                             &tls_log_info.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "accept"))
                         {
@@ -908,7 +908,7 @@ unsigned long	qtime;
 			/** Read session id to thread's local storage */
                         dcb_get_ses_log_info(dcb,
                                              &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_logs);
+                                             &tls_log_info.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "read"))
                         {
@@ -944,7 +944,7 @@ unsigned long	qtime;
 		/** Read session id to thread's local storage */
                 dcb_get_ses_log_info(dcb,
                                      &tls_log_info.li_sesid,
-                                     &tls_log_info.li_enabled_logs);
+                                     &tls_log_info.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "error"))
                         {
@@ -974,7 +974,7 @@ unsigned long	qtime;
 			/** Read session id to thread's local storage */
                         dcb_get_ses_log_info(dcb,
                                              &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_logs);
+                                             &tls_log_info.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "hangup EPOLLHUP"))
                         {
@@ -1008,7 +1008,7 @@ unsigned long	qtime;
 			/** Read session id to thread's local storage */
                         dcb_get_ses_log_info(dcb,
                                              &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_logs);
+                                             &tls_log_info.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "hangup EPOLLRDHUP"))
                         {

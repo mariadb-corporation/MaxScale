@@ -2087,7 +2087,7 @@ static int routeQuery(
         } /**< switch by packet type */
 
 
-	if (LOG_IS_ENABLED(LOGFILE_TRACE))
+	if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
 	{
 		uint8_t*      packet = GWBUF_DATA(querybuf);
 		unsigned char ptype = packet[4];
@@ -2713,7 +2713,7 @@ static void clientReply(ROUTER* instance,
      */
     if (sescmd_cursor_is_active(scur))
     {
-        if (LOG_IS_ENABLED(LOGFILE_ERROR) &&
+        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR) &&
             MYSQL_IS_ERROR_PACKET(((uint8_t *) GWBUF_DATA(writebuf))))
         {
             uint8_t* buf =
@@ -3039,7 +3039,7 @@ static bool connect_backend_servers(
         }
 #endif
 
-        if (LOG_IS_ENABLED(LOGFILE_TRACE))
+        if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
         {
                 MXS_INFO("Servers and connection counts:");
 
@@ -3151,7 +3151,7 @@ static bool connect_backend_servers(
         {
 		succp = true;
 		
-		if (LOG_IS_ENABLED(LT))
+		if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
 		{
 			for (i=0; i<router_nservers; i++)
 			{
@@ -3831,7 +3831,7 @@ static bool route_session_write(
                 {
                         DCB* dcb = backend_ref[i].bref_dcb;     
 			
-			if (LOG_IS_ENABLED(LOGFILE_TRACE))
+			if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
 			{
                             MXS_INFO("Route query to %s\t%s:%d%s",
                                      (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server) ?
@@ -3939,7 +3939,7 @@ static bool route_session_write(
                 {
                         sescmd_cursor_t* scur;
                         
-			if (LOG_IS_ENABLED(LOGFILE_TRACE))
+			if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
 			{
                             MXS_INFO("Route query to %s\t%s:%d%s",
                                      (SERVER_IS_MASTER(backend_ref[i].bref_backend->backend_server) ?

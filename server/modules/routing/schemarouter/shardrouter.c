@@ -2601,7 +2601,7 @@ route_session_write(
         {
             subsvc = router_cli_ses->subservice[i];
 
-            if(LOG_IS_ENABLED(LOGFILE_TRACE))
+            if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
                 MXS_INFO("Route query to %s%s%s",
                          i == 0 ? ">":"",
@@ -2654,7 +2654,7 @@ route_session_write(
         {
             sescmd_cursor_t* scur;
 
-            if(LOG_IS_ENABLED(LOGFILE_TRACE))
+            if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
             {
                 MXS_INFO("Route query to %s%s%s",
                          i == 0 ? ">":"",

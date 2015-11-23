@@ -124,7 +124,7 @@ typedef struct session {
         SPINLOCK        ses_lock;
 	session_state_t state;		  /*< Current descriptor state */
 	size_t          ses_id;		  /*< Unique session identifier */
-	int             ses_enabled_logs; /*< Bitfield of enabled logs */
+	int             enabled_log_priorities; /*< Bitfield of enabled syslog priorities */
 	struct dcb	*client;	  /*< The client connection */
 	void 		*data;		  /*< The session data */
 	void		*router_session;  /*< The router instance data */
@@ -178,8 +178,8 @@ char	*session_state(int);
 bool	session_link_dcb(SESSION *, struct dcb *);
 int		session_unlink_dcb(SESSION*, DCB*);
 SESSION* get_session_by_router_ses(void* rses);
-void session_enable_log(SESSION* ses, logfile_id_t id);
-void session_disable_log(SESSION* ses, logfile_id_t id);
+void session_enable_log_priority(SESSION* ses, int priority);
+void session_disable_log_priority(SESSION* ses, int priority);
 void session_close_timeouts(void* data);
 RESULTSET	*sessionGetList(SESSIONLISTFILTER);
 

@@ -117,13 +117,6 @@ static struct
 };
 
 /**
- * Variable holding the enabled logfiles information.
- * Used from log users to check enabled logs prior calling
- * actual library calls such as skygw_log_write.
- */
-int lm_enabled_logfiles_bitmask = 0;
-
-/**
  * Variable holding the enabled priorities information.
  * Used from logging macros.
  */
@@ -139,7 +132,7 @@ __thread log_info_t tls_log_info = {0, 0};
  * Global counter for each log file type. It indicates for how many sessions
  * each log type is currently enabled.
  */
-ssize_t log_ses_count[LOGFILE_LAST] = {0};
+ssize_t log_ses_count[LOG_DEBUG] = {0};
 
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -271,7 +264,6 @@ struct logmanager
     skygw_chk_t      lm_chk_top;
 #endif
     bool             lm_enabled;
-    int              lm_enabled_logfiles;
     simple_mutex_t   lm_mutex;
     size_t           lm_nlinks;
     /** fwr_logmes is for messages from log clients */
@@ -326,7 +318,6 @@ static bool logmanager_init_nomutex(const char* ident,
                                     const char* logdir,
                                     log_target_t target);
 static void logmanager_done_nomutex(void);
-static bool logmanager_is_valid_id(logfile_id_t id);
 
 static int logmanager_write_log(int            priority,
                                 enum log_flush flush,
@@ -388,9 +379,6 @@ static bool logmanager_init_nomutex(const char* ident,
         goto return_succ;
     }
 
-    lm->lm_enabled_logfiles |= LOGFILE_ERROR;
-    lm->lm_enabled_logfiles |= LOGFILE_MESSAGE;
-
     fn = &lm->lm_fnames_conf;
     fw = &lm->lm_filewriter;
     fn->fn_state  = UNINIT;
@@ -417,7 +405,7 @@ static bool logmanager_init_nomutex(const char* ident,
     /**
      * Set global variable
      */
-    lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
+    lm_enabled_priorities_bitmask = MXS_LOG_ERR | MXS_LOG_NOTICE;
 
     /**
      * Initialize filewriter data and open the log file
@@ -584,43 +572,6 @@ static logfile_t* logmanager_get_logfile(logmanager_t* lmgr)
         CHK_LOGFILE(lf);
     }
     return lf;
-}
-
-
-/**
- * Returns true if the id log file id is valid.
- *
- * NOTE: Log manager is assumed to exist.
- *
- * @param id The id of a log file.
- *
- */
-
-static bool logmanager_is_valid_id(logfile_id_t id)
-{
-    bool rval = false;
-
-    CHK_LOGMANAGER(lm);
-
-    if ((id >= LOGFILE_FIRST) && (id <= LOGFILE_LAST))
-    {
-        rval = true;
-    }
-    else
-    {
-        const char ERRSTR[] = "Invalid logfile id argument.";
-
-        int err = logmanager_write_log(LOG_ERR,
-                                       LOG_FLUSH_YES,
-                                       0, sizeof(ERRSTR), ERRSTR);
-
-        if (err != 0)
-        {
-            fprintf(stderr, "Writing to logfile %s failed.\n", STRLOGID(LOGFILE_ERROR));
-        }
-    }
-
-    return rval;
 }
 
 /**
@@ -1178,50 +1129,6 @@ static blockbuf_t* blockbuf_init()
     }
     return bb;
 }
-
-
-static int skygw_log_enable(logfile_id_t id)
-{
-    bool rval = -1;
-
-    if (logmanager_register(true))
-    {
-        CHK_LOGMANAGER(lm);
-
-        lm->lm_enabled_logfiles |= id;
-        /**
-         * Set global variable
-         */
-        lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
-
-        logmanager_unregister();
-        rval = 0;
-    }
-
-    return rval;
-}
-
-static int skygw_log_disable(logfile_id_t id)
-{
-    bool rval = -1;
-
-    if (logmanager_register(true))
-    {
-        CHK_LOGMANAGER(lm);
-
-        lm->lm_enabled_logfiles &= ~id;
-        /**
-         * Set global variable
-         */
-        lm_enabled_logfiles_bitmask = lm->lm_enabled_logfiles;
-
-        logmanager_unregister();
-        rval = 0;
-    }
-
-    return rval;
-}
-
 
 /**
  * Set log augmentation.
@@ -2009,21 +1916,6 @@ static bool logfile_init(logfile_t*    logfile,
         goto return_with_succ;
     }
 
-#if defined(SS_DEBUG)
-    if (store_shmem && !log_config.use_stdout)
-    {
-        fprintf(stderr, "%s\t: %s->%s\n",
-                STRLOGNAME(LOGFILE_ERROR),
-                logfile->lf_full_link_name,
-                logfile->lf_full_file_name);
-    }
-    else if (!log_config.use_stdout)
-    {
-        fprintf(stderr, "%s\t: %s\n",
-                STRLOGNAME(LOGFILE_ERROR),
-                logfile->lf_full_file_name);
-    }
-#endif
     succ = true;
     logfile->lf_state = RUN;
     CHK_LOGFILE(logfile);
@@ -2258,17 +2150,16 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
                                    (flush_logfile || do_flushall));
             if (err)
             {
+                // TODO: Log this to syslog.
                 char errbuf[STRERROR_BUFLEN];
                 fprintf(stderr,
-                        "Error : Write to %s log "
-                        ": %s failed due to %d, "
-                        "%s. Disabling the log.",
-                        STRLOGNAME(LOGFILE_ERROR),
+                        "Error : Writing to the log-file %s failed due to (%d, %s). "
+                        "Disabling writing to the log.",
                         lf->lf_full_file_name,
                         err,
                         strerror_r(err, errbuf, sizeof(errbuf)));
-                /** Force log off */
-                skygw_log_disable(LOGFILE_ERROR);
+
+                mxs_log_set_maxscalelog_enabled(false);
             }
             /**
              * Reset buffer's counters and mark
@@ -2661,26 +2552,6 @@ int mxs_log_rotate()
     return err;
 }
 
-static logfile_id_t priority_to_file_id(int priority)
-{
-    switch (priority)
-    {
-    case LOG_DEBUG:
-        return LOGFILE_DEBUG;
-    case LOG_INFO:
-        return LOGFILE_TRACE;
-    case LOG_NOTICE:
-        return LOGFILE_MESSAGE;
-    case LOG_ERR:
-    case LOG_WARNING:
-    case LOG_CRIT:
-    case LOG_ALERT:
-    case LOG_EMERG:
-    default:
-        return LOGFILE_ERROR;
-    }
-}
-
 static const char* priority_name(int priority)
 {
     switch (priority)
@@ -2722,19 +2593,16 @@ int mxs_log_set_priority_enabled(int priority, bool enable)
 
     if ((priority & ~LOG_PRIMASK) == 0)
     {
-        logfile_id_t id = priority_to_file_id(priority);
         int bit = (1 << priority);
 
         if (enable)
         {
             // TODO: Put behind spinlock.
             lm_enabled_priorities_bitmask |= bit;
-            skygw_log_enable(id);
         }
         else
         {
             lm_enabled_priorities_bitmask &= ~bit;
-            skygw_log_disable(id);
         }
 
         MXS_NOTICE("The logging of %s messages has been %sd.", priority_name(priority), text);
@@ -2761,35 +2629,6 @@ static const char PREFIX_WARNING[] = "warning: ";
 static const char PREFIX_NOTICE[]  = "notice : ";
 static const char PREFIX_INFO[]    = "info   : ";
 static const char PREFIX_DEBUG[]   = "debug  : ";
-
-static logfile_id_t priority_to_id(int priority)
-{
-    assert((priority & ~LOG_PRIMASK) == 0);
-
-    switch (priority)
-    {
-    case LOG_EMERG:
-    case LOG_ALERT:
-    case LOG_CRIT:
-    case LOG_ERR:
-    case LOG_WARNING:
-        return LOGFILE_ERROR;
-
-    case LOG_NOTICE:
-        return LOGFILE_MESSAGE;
-
-    case LOG_INFO:
-        return LOGFILE_TRACE;
-
-    case LOG_DEBUG:
-        return LOGFILE_DEBUG;
-
-    default:
-        // Can't happen!
-        assert(!true);
-        return LOGFILE_ERROR;
-    }
-}
 
 static log_prefix_t priority_to_prefix(int priority)
 {
@@ -2893,9 +2732,7 @@ int mxs_log_message(int priority,
 
     if ((priority & ~LOG_PRIMASK) == 0) // Check that the priority is ok,
     {
-        logfile_id_t id = priority_to_id(priority);
-
-        if (LOG_IS_ENABLED(id))
+        if (MXS_LOG_PRIORITY_IS_ENABLED(priority))
         {
             va_list valist;
 
@@ -2912,7 +2749,8 @@ int mxs_log_message(int priority,
 
                 static const char FORMAT_FUNCTION[] = "(%s): ";
 
-                int augmentation = log_config.augmentation; // Other thread might change log_config.augmentation.
+                // Other thread might change log_config.augmentation.
+                int augmentation = log_config.augmentation;
                 int augmentation_len = 0;
 
                 switch (augmentation)

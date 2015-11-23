@@ -127,23 +127,23 @@ size_t dcb_get_session_id(
  * Read log info from session through DCB and store values to memory locations
  * passed as parameters.
  * 
- * @param dcb		DCB
- * @param sesid		location where session id is to be copied
- * @param enabled_logs	bit field indicating which log types are enabled for the
+ * @param dcb		          DCB
+ * @param sesid		          location where session id is to be copied
+ * @param enabled_log_prioritiess bit field indicating which log types are enabled for the
  * session
  *
- *@return true if call arguments included memory addresses, false if any of the 
- *parameters was NULL.
- */ 
+ *@return true if call arguments included memory addresses, false if any of the
+ *        parameters was NULL.
+ */
 bool dcb_get_ses_log_info(
     DCB     *dcb,
     size_t  *sesid,
-    int     *enabled_logs)
+    int     *enabled_log_priorities)
 {
-    if (sesid && enabled_logs && dcb && dcb->session)
+    if (sesid && enabled_log_priorities && dcb && dcb->session)
     {
         *sesid = dcb->session->ses_id;
-        *enabled_logs = dcb->session->ses_enabled_logs;
+        *enabled_log_priorities = dcb->session->enabled_log_priorities;
         return true;
     }
     return false;
@@ -620,7 +620,7 @@ dcb_process_victim_queue(DCB *listofdcb)
 
         dcb_get_ses_log_info(dcb,
                              &tls_log_info.li_sesid,
-                             &tls_log_info.li_enabled_logs);
+                             &tls_log_info.li_enabled_priorities);
 
         dcb->state = DCB_STATE_DISCONNECTED;
         nextdcb = dcb->memdata.next;
@@ -1247,7 +1247,7 @@ dcb_write_when_already_queued(DCB *dcb, GWBUF *queue)
 static void
 dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
 {
-    if (LOG_IS_ENABLED(LOGFILE_DEBUG))
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_DEBUG))
     {
         if (eno == EPIPE)
         {
@@ -1264,7 +1264,7 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
         }
     }
 
-    if (LOG_IS_ENABLED(LOGFILE_ERROR))
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR))
     {
         if (eno != EPIPE &&
             eno != EAGAIN &&
@@ -1430,7 +1430,7 @@ dcb_write_SSL_error_report (DCB *dcb, int ret, int ssl_errno)
 {
     char errbuf[STRERROR_BUFLEN];
 
-    if (LOG_IS_ENABLED(LOGFILE_DEBUG))
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_DEBUG))
     {
         switch(ssl_errno)
         {
@@ -1464,7 +1464,7 @@ dcb_write_SSL_error_report (DCB *dcb, int ret, int ssl_errno)
         }
     }
 
-    if (LOG_IS_ENABLED(LOGFILE_ERROR) && ssl_errno != SSL_ERROR_WANT_WRITE)
+    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_ERR) && ssl_errno != SSL_ERROR_WANT_WRITE)
     {
         if (ret == -1)
         {

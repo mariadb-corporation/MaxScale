@@ -487,7 +487,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf) {
 		return MYSQL_FAILED_AUTH_SSL;
 	    }
 
-	    if(LOG_IS_ENABLED(LT) && ssl)
+	    if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO) && ssl)
 	    {
 		MXS_INFO("User %s@%s connected to service '%s' with SSL.",
 			 protocol->owner_dcb->user,
