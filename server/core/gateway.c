@@ -540,6 +540,7 @@ static bool file_write_header(
     return true;
 #endif
 
+    t = time(NULL);
     localtime_r(&t, &tm);
 
     header_buf1 = "\n\nMariaDB Corporation MaxScale " MAXSCALE_VERSION "\t";
