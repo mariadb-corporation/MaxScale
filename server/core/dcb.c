@@ -629,10 +629,7 @@ dcb_process_victim_queue(DCB *listofdcb)
         dcb = nextdcb;
     }
     /** Reset threads session data */
-    if (LOG_IS_ENABLED(LOGFILE_TRACE))
-    {
-        tls_log_info.li_sesid = 0;
-    }
+    tls_log_info.li_sesid = 0;
 }
 
 /**

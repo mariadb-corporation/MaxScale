@@ -1075,10 +1075,7 @@ unsigned long	qtime;
 	}
 	dcb->evq.processing = 0;
 	/** Reset session id from thread's local storage */
-        if (LOG_IS_ENABLED(LOGFILE_TRACE))
-        {
-            tls_log_info.li_sesid = 0;
-        }
+        tls_log_info.li_sesid = 0;
 	spinlock_release(&pollqlock);
 
 	return 1;
