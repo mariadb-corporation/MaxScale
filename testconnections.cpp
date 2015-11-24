@@ -3,6 +3,7 @@
 #include "sql_t1.h"
 #include <getopt.h>
 #include <time.h>
+#include <libgen.h>
 
 TestConnections::TestConnections(int argc, char *argv[])
 {
@@ -19,6 +20,9 @@ TestConnections::TestConnections(int argc, char *argv[])
     global_result = 0;
 
     read_env();
+
+    strcpy(test_dir, dirname(argv[0]));
+    printf("test_dir in %s\n", test_dir);
 
     no_maxscale_stop = false;
     no_maxscale_start = false;
@@ -169,7 +173,7 @@ int TestConnections::read_env()
     env = getenv("maxscale_cnf"); if (env != NULL) {sprintf(maxscale_cnf, "%s", env);} else {sprintf(maxscale_cnf, "/etc/maxscale.cnf");}
     env = getenv("maxscale_log_dir"); if (env != NULL) {sprintf(maxscale_log_dir, "%s", env);} else {sprintf(maxscale_log_dir, "%s/logs/", maxdir);}
     env = getenv("maxscale_binlog_dir"); if (env != NULL) {sprintf(maxscale_binlog_dir, "%s", env);} else {sprintf(maxscale_binlog_dir, "%s/Binlog_Service/", maxdir);}
-    env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
+    //env = getenv("test_dir"); if (env != NULL) {sprintf(test_dir, "%s", env);}
     env = getenv("maxscale_access_user"); if (env != NULL) {sprintf(maxscale_access_user, "%s", env);}
     env = getenv("maxscale_access_sudo"); if (env != NULL) {sprintf(maxscale_access_sudo, "%s", env);}
     ssl = false;
