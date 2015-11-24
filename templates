@@ -108,3 +108,4 @@ pers_01 pers_01
 pers_02 pers_01
 mxs361 mxs361
 mxs431 sharding
+binlog_big_transaction setup_binlog
