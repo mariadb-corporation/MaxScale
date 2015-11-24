@@ -62,6 +62,7 @@ router_options= slave
 servers=server1,server2,server3,server4
 user=skysql
 passwd=skysql
+router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS,max_slave_connections=1
 filters=QLA
 
 [Read Connection Router Master]
@@ -71,6 +72,7 @@ router_options=master
 servers=server1,server2,server3,server4
 user=skysql
 passwd=skysql
+router_options=slave_selection_criteria=LEAST_ROUTER_CONNECTIONS,max_slave_connections=1
 filters=QLA
 
 [Debug Interface]
