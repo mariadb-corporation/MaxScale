@@ -1,14 +1,29 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
+ * software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Copyright MariaDB Corporation Ab 2013-2014
  */
 
-/* 
- * File:   def_event.h
- * Author: mbrampton
+/**
+ * @file def_monitor_event.h
  *
- * Created on 18 November 2015, 15:21
+ * @verbatim
+ * Revision History
+ *
+ * Date		Who			Description
+ * 01-06-2013	Martin Brampton		Initial implementation
  */
 
 ADDITEM( UNDEFINED_MONITOR_EVENT, undefined ),

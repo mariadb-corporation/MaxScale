@@ -24,7 +24,7 @@
  *
  * Date		Who			Description
  * 22/07/13	Mark Riddoch		Initial implementation
- * 21/05/14	Massimiliano Pinto	Monitor sets a master server 
+ * 21/05/14	Massimiliano Pinto	Monitor sets a master server
  *					that has the lowest value of wsrep_local_index
  * 23/05/14	Massimiliano Pinto	Added 1 configuration option (setInterval).
  * 					Interval is printed in diagnostics.
@@ -267,7 +267,9 @@ diagnostics(DCB *dcb, void *arg)
 }
 
 /**
- * Monitor an individual server
+ * Monitor an individual server. Does not deal with the setting of master or
+ * slave bits, except for clearing them when a server is not joined to the
+ * cluster.
  *
  * @param handle        The MySQL Monitor object
  * @param database      The database to probe
@@ -292,12 +294,8 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 
     server_transfer_status(&temp_server, database->server);
     server_clear_status(&temp_server, SERVER_RUNNING);
-
-    /* Also clear Joined, M/S and Stickiness bits */
+    /* Also clear Joined */
     server_clear_status(&temp_server, SERVER_JOINED);
-    server_clear_status(&temp_server, SERVER_SLAVE);
-    server_clear_status(&temp_server, SERVER_MASTER);
-    server_clear_status(&temp_server, SERVER_MASTER_STICKINESS);
 
     connect_result_t rval = mon_connect_to_db(mon, database);
     if (rval != MONITOR_CONN_OK)
@@ -412,7 +410,20 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     {
         server_clear_status(&temp_server, SERVER_JOINED);
     }
-    
+
+    /* clear bits for non member nodes */
+    if (!SERVER_IN_MAINT(database->server) && (!SERVER_IS_JOINED(&temp_server)))
+    {
+        database->server->depth = -1;
+
+        /* clear M/S status */
+        server_clear_status(&temp_server, SERVER_SLAVE);
+        server_clear_status(&temp_server, SERVER_MASTER);
+
+        /* clear master sticky status */
+        server_clear_status(&temp_server, SERVER_MASTER_STICKINESS);
+    }
+
     server_transfer_status(database->server, &temp_server);
 }
 
@@ -456,9 +467,9 @@ monitorMain(void *arg)
         }
         /** Wait base interval */
         thread_millisleep(MON_BASE_INTERVAL_MS);
-        /** 
-         * Calculate how far away the monitor interval is from its full 
-         * cycle and if monitor interval time further than the base 
+        /**
+         * Calculate how far away the monitor interval is from its full
+         * cycle and if monitor interval time further than the base
          * interval, then skip monitoring checks. Excluding the first
          * round.
          */
@@ -481,19 +492,6 @@ monitorMain(void *arg)
             ptr->mon_prev_status = ptr->server->status;
 
             monitorDatabase(mon, ptr);
-
-            /* clear bits for non member nodes */
-            if (!SERVER_IN_MAINT(ptr->server) && (!SERVER_IS_JOINED(ptr->server)))
-            {
-                ptr->server->depth = -1;
-
-                /* clear M/S status */
-                server_clear_status(ptr->server, SERVER_SLAVE);
-                server_clear_status(ptr->server, SERVER_MASTER);
-
-                /* clear master sticky status */
-                server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
-            }
 
             /* Log server status change */
             if (mon_status_changed(ptr))
@@ -560,28 +558,24 @@ monitorMain(void *arg)
             {
                 if (ptr != handle->master)
                 {
-                    /* set the Slave role */
-                    server_set_status(ptr->server, SERVER_SLAVE);
-                    server_clear_status(ptr->server, SERVER_MASTER);
-
-                    /* clear master stickiness */
-                    server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
+                    /* set the Slave role and clear master stickiness */
+                    server_clear_set_status(ptr->server, (SERVER_SLAVE|SERVER_MASTER|SERVER_MASTER_STICKINESS), SERVER_SLAVE);
                 }
                 else
                 {
-                    /* set the Master role */
-                    server_set_status(handle->master->server, SERVER_MASTER);
-                    server_clear_status(handle->master->server, SERVER_SLAVE);
-
                     if (candidate_master && handle->master->server->node_id != candidate_master->server->node_id)
                     {
-                        /* set master stickiness */
-                        server_set_status(handle->master->server, SERVER_MASTER_STICKINESS);
+                        /* set master role and master stickiness */
+                        server_clear_set_status(ptr->server,
+                            (SERVER_SLAVE|SERVER_MASTER|SERVER_MASTER_STICKINESS),
+                            (SERVER_MASTER|SERVER_MASTER_STICKINESS));
                     }
                     else
                     {
-                        /* clear master stickiness */
-                        server_clear_status(ptr->server, SERVER_MASTER_STICKINESS);
+                        /* set master role and clear master stickiness */
+                        server_clear_set_status(ptr->server,
+                            (SERVER_SLAVE|SERVER_MASTER|SERVER_MASTER_STICKINESS),
+                            SERVER_MASTER);
                     }
                 }
             }

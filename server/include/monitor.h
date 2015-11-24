@@ -51,18 +51,18 @@
 /**
  * The "Module Object" for a monitor module.
  *
- * The monitor modules are designed to monitor the backend databases that the gateway 
+ * The monitor modules are designed to monitor the backend databases that the gateway
  * connects to and provide information regarding the status of the databases that
  * is used in the routing decisions.
  *
  * startMonitor is called to start the monitoring process, it is called on the main
  * thread of the gateway and is responsible for creating a thread for the monitor
- * itself to run on. This should use the entry points defined in the thread.h 
+ * itself to run on. This should use the entry points defined in the thread.h
  * header file rather than make direct calls to the operating system thrading libraries.
  * The return from startMonitor is a void * handle that will be passed to all other monitor
  * API calls.
  *
- * stopMonitor is responsible for shuting down and destroying a monitor, it is called 
+ * stopMonitor is responsible for shuting down and destroying a monitor, it is called
  * with the void * handle that was returned by startMonitor.
  *
  * registerServer is called to register a server that must be monitored with a running
@@ -91,7 +91,7 @@ typedef struct {
 /**
  * Monitor state bit mask values
  */
-typedef enum 
+typedef enum
 {
 	MONITOR_STATE_ALLOC	= 0x00,
 	MONITOR_STATE_RUNNING	= 0x01,
@@ -153,13 +153,7 @@ typedef struct monitor_def_s
     char name[30];
 } monitor_def_t;
 
-#undef ADDITEM
-#define ADDITEM( _event_type, _event_name ) { #_event_name }
-static const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
-{
-#include "def_monitor_event.h"
-};
-#undef ADDITEM
+extern const monitor_def_t monitor_event_definitions[];
 
 /**
  * The linked list of servers that are being monitored by the monitor module.
@@ -217,7 +211,7 @@ extern void     monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
 bool check_monitor_permissions(MONITOR* monitor);
 
-monitor_event_t mon_name_to_event(char* tok);
+monitor_event_t mon_name_to_event(const char* tok);
 void mon_append_node_names(MONITOR_SERVERS* start, char* str, int len);
 monitor_event_t mon_get_event_type(MONITOR_SERVERS* node);
 const char* mon_get_event_name(MONITOR_SERVERS* node);

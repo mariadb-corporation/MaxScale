@@ -45,6 +45,20 @@
 #include <externcmd.h>
 #include <mysql/mysqld_error.h>
 
+/*
+ *  Create declarations of the enum for monitor events and also the array of
+ *  structs containing the matching names. The data is taken from def_monitor_event.h
+ *
+ */
+
+#undef ADDITEM
+#define ADDITEM( _event_type, _event_name ) { #_event_name }
+const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
+{
+#include "def_monitor_event.h"
+};
+#undef ADDITEM
+
 static MONITOR	*allMonitors = NULL;
 static SPINLOCK	monLock = SPINLOCK_INIT;
 
@@ -350,7 +364,7 @@ monitorSetInterval (MONITOR *mon, unsigned long interval)
  */
 void
 monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
-	
+
     int max_timeout = (int)(mon->interval/1000);
     int new_timeout = max_timeout -1;
 
@@ -579,7 +593,7 @@ monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
 /*
  * Determine a monitor event, defined by the difference between the old
  * status of a server and the new status.
- * 
+ *
  * @param   node                The monitor server data for a particular server
  * @result  monitor_event_t     A monitor event (enum)
  */
@@ -594,18 +608,18 @@ mon_get_event_type(MONITOR_SERVERS* node)
         UNSUPPORTED_EVENT
     } general_event_type;
     general_event_type event_type = UNSUPPORTED_EVENT;
-    
-    unsigned int prev = node->mon_prev_status 
+
+    unsigned int prev = node->mon_prev_status
         & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB);
-    unsigned int present = node->server->status 
+    unsigned int present = node->server->status
         & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB);
-    
+
     if (prev == present)
     {
         /* No change in the bits we're interested in */
         return UNDEFINED_MONITOR_EVENT;
     }
-    
+
     if ((prev & SERVER_RUNNING) == 0)
     {
         /* The server was not running previously */
@@ -638,7 +652,7 @@ mon_get_event_type(MONITOR_SERVERS* node)
             }
         }
     }
-    
+
     switch (event_type)
     {
         case UP_EVENT:
@@ -648,10 +662,10 @@ mon_get_event_type(MONITOR_SERVERS* node)
                         (present & SERVER_NDB) ? NDB_UP_EVENT :
                             SERVER_UP_EVENT;
         case DOWN_EVENT:
-            return (present & SERVER_MASTER) ? MASTER_DOWN_EVENT :
-                (present & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
-                    (present & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
-                        (present & SERVER_NDB) ? NDB_DOWN_EVENT :
+            return (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
+                (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
+                    (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
+                        (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
                             SERVER_DOWN_EVENT;
         case LOSS_EVENT:
             return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
@@ -681,15 +695,15 @@ mon_get_event_name(MONITOR_SERVERS* node)
 
 /*
  * Given the text version of a monitor event, determine the event (enum)
- * 
+ *
  * @param   event_name          String containing the event name
  * @result  monitor_event_t     Monitor event corresponding to name
  */
 monitor_event_t
-mon_name_to_event (char *event_name)
+mon_name_to_event (const char *event_name)
 {
     monitor_event_t event;
-    
+
     for (event = 0; event < MAX_MONITOR_EVENT; event++)
     {
         if (0 == strcasecmp(monitor_event_definitions[event].name, event_name))
@@ -702,7 +716,7 @@ mon_name_to_event (char *event_name)
 
 /**
  * Create a list of running servers
- * 
+ *
  * @param servers Monitored servers
  * @param dest Destination where the string is appended, must be null terminated
  * @param len Length of @c dest
@@ -712,7 +726,7 @@ mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len)
 {
     char *separator = "";
     char arr[MAX_SERVER_NAME_LEN + 32]; // Some extra space for port
-    
+
     while (servers && strlen(dest) < (len - strlen(separator)))
     {
         if (SERVER_IS_RUNNING(servers->server))
@@ -736,7 +750,7 @@ bool
 mon_status_changed(MONITOR_SERVERS* mon_srv)
 {
     /* Previous status is -1 if not yet set */
-    return (mon_srv->mon_prev_status != -1 
+    return (mon_srv->mon_prev_status != -1
         && mon_srv->mon_prev_status != mon_srv->server->status);
 }
 
@@ -797,15 +811,16 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
  * found.
  */
 int
-mon_parse_event_string(bool* events, size_t count, char* string)
+mon_parse_event_string(bool* events, size_t count, char* given_string)
 {
-    char *tok, *saved;
+    char *tok, *saved, *string = strdup(given_string);
     monitor_event_t event;
 
     tok = strtok_r(string, ",| ", &saved);
 
     if (tok == NULL)
     {
+        free(string);
         return -1;
     }
 
@@ -815,12 +830,17 @@ mon_parse_event_string(bool* events, size_t count, char* string)
         if (event == UNDEFINED_MONITOR_EVENT)
         {
             MXS_ERROR("Invalid event name %s", tok);
+            free(string);
             return -1;
         }
-        events[event] = true;
-        tok = strtok_r(NULL, ",| ", &saved);
+        if (event < count)
+        {
+            events[event] = true;
+            tok = strtok_r(NULL, ",| ", &saved);
+        }
     }
 
+    free(string);
     return 0;
 }
 
