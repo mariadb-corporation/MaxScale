@@ -2420,6 +2420,8 @@ void flushall_logfiles(bool flush)
 void mxs_log_set_highprecision_enabled(bool enabled)
 {
     log_config.do_highprecision = enabled;
+
+    MXS_NOTICE("highprecision logging is %s.", enabled ? "enabled" : "disabled");
 }
 
 /**
@@ -2430,6 +2432,8 @@ void mxs_log_set_highprecision_enabled(bool enabled)
 void mxs_log_set_syslog_enabled(bool enabled)
 {
     log_config.do_syslog = enabled;
+
+    MXS_NOTICE("syslog logging is %s.", enabled ? "enabled" : "disabled");
 }
 
 /**
@@ -2440,6 +2444,8 @@ void mxs_log_set_syslog_enabled(bool enabled)
 void mxs_log_set_maxscalelog_enabled(bool enabled)
 {
     log_config.do_maxscalelog = enabled;
+
+    MXS_NOTICE("maxscalelog logging is %s.", enabled ? "enabled" : "disabled");
 }
 
 

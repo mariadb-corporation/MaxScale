@@ -427,6 +427,10 @@ static void enable_service_root(DCB *dcb, SERVICE *service);
 static void disable_service_root(DCB *dcb, SERVICE *service);
 static void enable_feedback_action();
 static void disable_feedback_action();
+static void enable_syslog();
+static void disable_syslog();
+static void enable_maxscalelog();
+static void disable_maxscalelog();
 
 /**
  *  * The subcommands of the enable command
@@ -496,6 +500,22 @@ struct subcommand enableoptions[] = {
         enable_feedback_action,
         "Enable MaxScale modules list sending via http to notification service",
         "Enable MaxScale modules list sending via http to notification service",
+        {0, 0, 0}
+    },
+    {
+        "syslog",
+        0,
+        enable_syslog,
+        "Enable syslog logging",
+        "Enable syslog logging",
+        {0, 0, 0}
+    },
+    {
+        "maxscalelog",
+        0,
+        enable_maxscalelog,
+        "Enable maxscalelog logging",
+        "Enable maxscalelog logging",
         {0, 0, 0}
     },
     {
@@ -578,6 +598,22 @@ struct subcommand disableoptions[] = {
         disable_feedback_action,
         "Disable MaxScale modules list sending via http to notification service",
         "Disable MaxScale modules list sending via http to notification service",
+        {0, 0, 0}
+    },
+    {
+        "syslog",
+        0,
+        disable_syslog,
+        "Disable syslog logging",
+        "Disable syslog logging",
+        {0, 0, 0}
+    },
+    {
+        "maxscalelog",
+        0,
+        disable_maxscalelog,
+        "Disable maxscalelog logging",
+        "Disable maxscalelog logging",
         {0, 0, 0}
     },
     {
@@ -1748,6 +1784,42 @@ disable_feedback_action(void)
 {
     config_disable_feedback_task();
     return;
+}
+
+/**
+ * Enable syslog logging.
+ */
+static void
+enable_syslog()
+{
+    mxs_log_set_syslog_enabled(true);
+}
+
+/**
+ * Disable syslog logging.
+ */
+static void
+disable_syslog()
+{
+    mxs_log_set_syslog_enabled(false);
+}
+
+/**
+ * Enable maxscalelog logging.
+ */
+static void
+enable_maxscalelog()
+{
+    mxs_log_set_maxscalelog_enabled(true);
+}
+
+/**
+ * Disable maxscalelog logging.
+ */
+static void
+disable_maxscalelog()
+{
+    mxs_log_set_maxscalelog_enabled(false);
 }
 
 #if defined(FAKE_CODE)
