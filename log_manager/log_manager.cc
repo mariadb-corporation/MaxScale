@@ -754,15 +754,17 @@ static int logmanager_write_log(int            priority,
 
         switch (priority)
         {
+        case LOG_EMERG:
+        case LOG_ALERT:
+        case LOG_CRIT:
         case LOG_ERR:
-            syslog(LOG_ERR, "%s", message);
-            break;
-
+        case LOG_WARNING:
         case LOG_NOTICE:
-            syslog(LOG_NOTICE, "%s", message);
+            syslog(priority, "%s", message);
             break;
 
         default:
+            // LOG_INFO and LOG_DEBUG messages are never written to syslog.
             break;
         }
     }
