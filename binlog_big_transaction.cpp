@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
     conn = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password, Test->ssl);
     for (int i = 0; i < 100000; i++)
     {
+        Test->set_timeout(3000);
         Test->tprintf("Trying transactions: %d\n", i);
         Test->add_result(big_transaction(conn, 100), "Transaction %d failed!\n", i);
     }
