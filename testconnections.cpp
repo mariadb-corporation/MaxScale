@@ -21,8 +21,10 @@ TestConnections::TestConnections(int argc, char *argv[])
 
     read_env();
 
-    strcpy(test_dir, dirname(argv[0]));
-    printf("test_dir in %s\n", test_dir);
+    char short_path[1024];
+    strcpy(short_path, dirname(argv[0]));
+    realpath(short_path, test_dir);
+    printf("test_dir is %s\n", test_dir);
 
     no_maxscale_stop = false;
     no_maxscale_start = false;
