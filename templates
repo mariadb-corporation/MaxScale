@@ -18,7 +18,7 @@ bug509 galera
 bug507 replication
 short_sessions replication
 connect_to_nonexisting_db replication
-rwsplit_conn_num replication
+rwsplit_conn_num repl_lgc
 temporal_tables replication
 run_ctrl_c replication
 long_insert replication
