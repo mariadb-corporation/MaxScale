@@ -90,9 +90,6 @@ extern __thread log_info_t tls_log_info;
                              (log_ses_count[id] > 0 &&                  \
                               tls_log_info.li_enabled_logs & id)) ? true : false)
 
-#define LOG_MAY_BE_ENABLED(id) (((lm_enabled_logfiles_bitmask & id) ||  \
-                                 log_ses_count[id] > 0) ? true : false)
-
 // TODO: Add this at a later stage.
 #define MXS_LOG_PRIORITY_IS_ENABLED(priority) false
 
