@@ -43,6 +43,11 @@ int main(int argc, char *argv[])
     int options_set = 3;
     if (Test->smoke) {options_set = 1;}
 
+    Test->repl->connect();
+    execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1;");
+    Test->repl->close_connections();
+    sleep(5);
+
     for (int option = 0; option < options_set; option++) {
         Test->binlog_cmd_option = option;
         Test->start_binlog();
