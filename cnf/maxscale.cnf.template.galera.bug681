@@ -9,6 +9,7 @@
 
 [maxscale]
 threads=1
+log_warning=1
 
 # Define a monitor that can be used to determine the state and role of
 # the servers.
