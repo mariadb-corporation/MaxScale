@@ -30,7 +30,7 @@
  * 28/05/14	Massimiliano Pinto	Addition of rlagd and node_ts fields
  * 20/06/14	Massimiliano Pinto	Addition of master_id, depth, slaves fields
  * 26/06/14	Mark Riddoch		Addition of server parameters
- * 30/08/14	Massimiliano Pinto	Addition of new service status description 
+ * 30/08/14	Massimiliano Pinto	Addition of new service status description
  * 30/10/14	Massimiliano Pinto	Addition of SERVER_MASTER_STICKINESS description
  * 01/06/15	Massimiliano Pinto	Addition of server_update_address/port
  * 19/06/15 Martin Brampton		Extra code for persistent connections
@@ -149,20 +149,20 @@ DCB *
 server_get_persistent(SERVER *server, char *user, const char *protocol)
 {
     DCB *dcb, *previous = NULL;
-    
-    if (server->persistent 
-        && dcb_persistent_clean_count(server->persistent, false) 
+
+    if (server->persistent
+        && dcb_persistent_clean_count(server->persistent, false)
         && server->persistent
         && (server->status & SERVER_RUNNING))
     {
         spinlock_acquire(&server->persistlock);
         dcb = server->persistent;
         while (dcb) {
-            if (dcb->user 
-                && dcb->protoname 
+            if (dcb->user
+                && dcb->protoname
                 && !dcb-> dcb_errhandle_called
                 && !(dcb->flags & DCBF_HUNG)
-                && 0 == strcmp(dcb->user, user) 
+                && 0 == strcmp(dcb->user, user)
                 && 0 == strcmp(dcb->protoname, protocol))
             {
                 if (NULL == previous)
@@ -562,7 +562,7 @@ spin_reporter(void *dcb, char *desc, int value)
  * @param       pdcb    DCB to print results to
  * @param       server  SERVER for which DCBs are to be printed
  */
-void 
+void
 dprintPersistentDCBs(DCB *pdcb, SERVER *server)
 {
 DCB	*dcb;
@@ -666,12 +666,34 @@ void
 server_set_status(SERVER *server, int bit)
 {
 	server->status |= bit;
-	
+
 	/** clear error logged flag before the next failure */
-	if (SERVER_IS_MASTER(server)) 
+	if (SERVER_IS_MASTER(server))
 	{
 		server->master_err_is_logged = false;
 	}
+}
+
+/**
+ * Set one or more status bit(s) from a specified set, clearing any others
+ * in the specified set
+ *
+ * @param server	The server to update
+ * @param bit		The bit to set for the server
+ */
+void
+server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set)
+{
+	/** clear error logged flag before the next failure */
+	if ((bits_to_set & SERVER_MASTER) && ((server->status & SERVER_MASTER) == 0))
+	{
+		server->master_err_is_logged = false;
+	}
+
+    if ((server->status & specified_bits) != bits_to_set)
+    {
+        server->status = (server->status & ~specified_bits) | bits_to_set;
+    }
 }
 
 /**
@@ -684,6 +706,18 @@ void
 server_clear_status(SERVER *server, int bit)
 {
 	server->status &= ~bit;
+}
+
+/**
+ * Transfer status bitstring from one server to another
+ *
+ * @param dest_server       The server to be updated
+ * @param source_server		The server to provide the new bit string
+ */
+void
+server_transfer_status(SERVER *dest_server, SERVER *source_server)
+{
+	dest_server->status = source_server->status;
 }
 
 /**

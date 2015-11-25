@@ -919,7 +919,7 @@ monitorMain(void *arg)
                     /* log it once */
                     if (mon_status_changed(ptr))
                     {
-                        MXS_NOTICE("[mysql_mon]: root server "
+                        MXS_WARNING("[mysql_mon]: root server "
                                    "[%s:%i] is no longer Master,"
                                    " let's use it again even "
                                    " if it could be a stale master,"

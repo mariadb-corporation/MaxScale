@@ -150,12 +150,12 @@ typedef struct server {
 	(SERVER_RUNNING|SERVER_MASTER))
 
 /**
- * Is the server valid candidate for root master. The server must be running, 
+ * Is the server valid candidate for root master. The server must be running,
  * marked as master and not have maintenance bit set.
  */
 #define	SERVER_IS_ROOT_MASTER(server) \
 (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_MASTER))
-			
+
 			/**
  * Is the server a slave? The server must be both running and marked as a slave
  * in order for the macro to return true
@@ -164,7 +164,7 @@ typedef struct server {
 			(((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_SLAVE))
 
 /**
- * Is the server joined Galera node? The server must be running and joined. 
+ * Is the server joined Galera node? The server must be running and joined.
  */
 #define SERVER_IS_JOINED(server) \
 	(((server)->status & (SERVER_RUNNING|SERVER_JOINED|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_JOINED))
@@ -176,7 +176,7 @@ typedef struct server {
 	(((server)->status & (SERVER_RUNNING|SERVER_NDB|SERVER_MAINT)) == (SERVER_RUNNING|SERVER_NDB))
 
 /**
- * Is the server in maintenance mode. 
+ * Is the server in maintenance mode.
  */
 #define SERVER_IN_MAINT(server)		((server)->status & SERVER_MAINT)
 
@@ -200,8 +200,10 @@ extern void	dprintServer(DCB *, SERVER *);
 extern void     dprintPersistentDCBs(DCB *, SERVER *);
 extern void	dListServers(DCB *);
 extern char	*server_status(SERVER *);
+extern void     server_clear_set_status(SERVER *server, int specified_bits, int bits_to_set);
 extern void	server_set_status(SERVER *, int);
 extern void	server_clear_status(SERVER *, int);
+extern void     server_transfer_status(SERVER *dest_server, SERVER *source_server);
 extern void	serverAddMonUser(SERVER *, char *, char *);
 extern void	serverAddParameter(SERVER *, char *, char *);
 extern char	*serverGetParameter(SERVER *, char *);
