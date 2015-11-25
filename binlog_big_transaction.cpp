@@ -14,7 +14,6 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    MYSQL * conn;
     Test->set_timeout(3000);
 
     Test->repl->connect();
@@ -24,14 +23,14 @@ int main(int argc, char *argv[])
 
     Test->start_binlog();
 
-    conn = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password, Test->ssl);
+    Test->repl->connect();
     for (int i = 0; i < 100000; i++)
     {
         Test->set_timeout(3000);
         Test->tprintf("Trying transactions: %d\n", i);
-        Test->add_result(big_transaction(conn, 100), "Transaction %d failed!\n", i);
+        Test->add_result(big_transaction(Test->repl->nodes[0], 100), "Transaction %d failed!\n", i);
     }
-
+    Test->repl->close_connections();
 
     Test->copy_all_logs(); return(Test->global_result);
 }
