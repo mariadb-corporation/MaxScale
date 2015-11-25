@@ -1181,7 +1181,7 @@ bool parse_rule(char* rulestr, FW_INSTANCE* instance)
         else if (strcmp("users", tok) == 0)
         {
             /** Rules are applied to users after they have been parsed */
-            add_users(rule, instance);
+            add_users(rulestr, instance);
             rval = true;
         }
         else
