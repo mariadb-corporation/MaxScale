@@ -8,6 +8,7 @@ Restart=on-failure
 PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
 ExecStartPre=/usr/bin/install -d @MAXSCALE_VARDIR@/run/maxscale -o maxscale -g maxscale
 ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale
+TimeOutStartSec=120
 LimitNOFILE=65535
 
 [Install]
