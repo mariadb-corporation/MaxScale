@@ -40,6 +40,7 @@ find_package(TCMalloc)
 find_package(Jemalloc)
 find_package(Git)
 find_package(CURL) 
+find_package(RabbitMQ)
 
 # Build PCRE2
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
