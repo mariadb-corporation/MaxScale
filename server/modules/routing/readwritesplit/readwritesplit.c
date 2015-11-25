@@ -3462,7 +3462,7 @@ static bool select_connect_backend_servers(
                     MXS_WARNING("Couldn't connect to any of the %d "
                                 "slaves. Routing to %s only.",
                                 slaves_found,
-                                (is_synced_master ? "Galera nodes" : "Master"))));
+                                (is_synced_master ? "Galera nodes" : "Master"));
 #endif
                 }
                 else if (slaves_found == 0)

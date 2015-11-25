@@ -1633,8 +1633,7 @@ int main(int argc, char **argv)
         MXS_ERROR("%s", errorbuffer);
         if (!daemon_mode)
         {
-            strncat(errorbuffer, "\n", STRING_BUFFER_SIZE);
-            fprintf(stderr, "%s", errorbuffer);
+            fprintf(stderr, "%s\n", errorbuffer);
         }
 
         rc = MAXSCALE_BADCONFIG;

@@ -199,7 +199,7 @@ int		i,cflags = 0;
 			else
 			{
 			    MXS_ERROR("lagfilter: unsupported option '%s'.",
-                                      options[i])));
+                                      options[i]);
 			}
 		    }
 		}

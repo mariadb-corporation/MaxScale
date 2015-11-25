@@ -1718,10 +1718,10 @@ RESULT_ROW	*row;
 		buf[39] = '\0';
 		resultset_row_set(row, 0, buf);
 	}
-	snprintf(buf,39, "%d", queueStats.qtimes[*rowno]);
+	snprintf(buf,39, "%u", queueStats.qtimes[*rowno]);
 	buf[39] = '\0';
 	resultset_row_set(row, 1, buf);
-	snprintf(buf,39, "%d", queueStats.exectimes[*rowno]);
+	snprintf(buf,39, "%u", queueStats.exectimes[*rowno]);
 	buf[39] = '\0';
 	resultset_row_set(row, 2, buf);
 	(*rowno)++;

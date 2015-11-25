@@ -1623,6 +1623,7 @@ char err_msg[STRERROR_BUFLEN];
 
 	if(chmod(tmp_file, S_IRUSR | S_IWUSR) < 0) {
 		snprintf(error, BINLOG_ERROR_MSG_LEN, "%s, errno %u", strerror_r(errno, err_msg, sizeof(err_msg)), errno);
+        fclose(config_file);
 		return 2;
 	}
 

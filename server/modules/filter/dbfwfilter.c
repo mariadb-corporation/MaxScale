@@ -1242,6 +1242,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
     if ((my_instance = calloc(1, sizeof(FW_INSTANCE))) == NULL ||
         (my_instance->lock = (SPINLOCK*) malloc(sizeof(SPINLOCK))) == NULL)
     {
+        free(my_instance);
         MXS_ERROR("Memory allocation for firewall filter failed.");
         return NULL;
     }
