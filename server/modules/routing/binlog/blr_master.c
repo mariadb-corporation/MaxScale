@@ -92,7 +92,7 @@ void blr_master_close(ROUTER_INSTANCE *);
 char *blr_extract_column(GWBUF *buf, int col);
 void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
 void poll_fake_write_event(DCB *dcb);
-GWBUF *blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr);
+GWBUF *blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr, unsigned long long pos_end);
 static void blr_check_last_master_event(void *inst);
 extern int blr_check_heartbeat(ROUTER_INSTANCE *router);
 extern char * blr_last_event_description(ROUTER_INSTANCE *router);
@@ -1024,16 +1024,13 @@ int			n_bufs = -1, pn_bufs = -1;
 				 * won't be updated to router->current_pos
 				 */
 
+				spinlock_acquire(&router->binlog_lock);
 				if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0)) {
 					/* no pending transaction: set current_pos to binlog_position */
-
-					spinlock_acquire(&router->lock);
-
 					router->binlog_position = router->current_pos;
 					router->current_safe_event = router->current_pos;
-
-					spinlock_release(&router->lock);
 				}
+				spinlock_release(&router->binlog_lock);
 
 				/**
 				 * Detect transactions in events
@@ -1056,6 +1053,8 @@ int			n_bufs = -1, pn_bufs = -1;
 							flags = *(ptr+4+20 + 8 + 4);
 
 							if (flags == 0) {
+								spinlock_acquire(&router->binlog_lock);
+
 								if (router->pending_transaction > 0) {
 									MXS_ERROR("A MariaDB 10 transaction "
                                               "is already open "
@@ -1069,11 +1068,9 @@ int			n_bufs = -1, pn_bufs = -1;
 										// An action should be taken here
 								}
 
-								spinlock_acquire(&router->lock);
-
 								router->pending_transaction = 1;
 
-								spinlock_release(&router->lock);
+								spinlock_release(&router->binlog_lock);
 							}
 						}
 					}
@@ -1092,9 +1089,10 @@ int			n_bufs = -1, pn_bufs = -1;
 						statement_sql = calloc(1, statement_len+1);
 						strncpy(statement_sql, (char *)ptr+4+20+4+4+1+2+2+var_block_len+1+db_name_len, statement_len);
 
+						spinlock_acquire(&router->binlog_lock);
+
 						/* Check for BEGIN (it comes for START TRANSACTION too) */
 						if (strncmp(statement_sql, "BEGIN", 5) == 0) {
-
 							if (router->pending_transaction > 0) {
 								MXS_ERROR("A transaction is already open "
                                           "@ %lu and a new one starts @ %lu",
@@ -1104,34 +1102,28 @@ int			n_bufs = -1, pn_bufs = -1;
 									// An action should be taken here
 							}
 
-							spinlock_acquire(&router->lock);
-
 							router->pending_transaction = 1;
-
-							spinlock_release(&router->lock);
 						}
 
 						/* Check for COMMIT in non transactional store engines */
 						if (strncmp(statement_sql, "COMMIT", 6) == 0) {
-							spinlock_acquire(&router->lock);
 
 							router->pending_transaction = 2;
-
-							spinlock_release(&router->lock);
 						}
+
+						spinlock_release(&router->binlog_lock);
 
 						free(statement_sql);
 					}
 
 					/* Check for COMMIT in Transactional engines, i.e InnoDB */
 					if(hdr.event_type == XID_EVENT) {
+						spinlock_acquire(&router->binlog_lock);
+
 						if (router->pending_transaction) {
-							spinlock_acquire(&router->lock);
-
 							router->pending_transaction = 3;
-
-							spinlock_release(&router->lock);
 						}
+						spinlock_release(&router->binlog_lock);
 					}
 				}
 
@@ -1193,6 +1185,8 @@ int			n_bufs = -1, pn_bufs = -1;
 
 						router->stats.n_heartbeats++;
 
+						if (router->pending_transaction)
+							router->stats.lastReply = time(0);
 					}
 					else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
 					{
@@ -1241,13 +1235,14 @@ int			n_bufs = -1, pn_bufs = -1;
 						 * may depend on pending transaction
 						 */
 
+						spinlock_acquire(&router->binlog_lock);
+
 						if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0)) {
-							spinlock_acquire(&router->lock);
 
 							router->binlog_position = router->current_pos;
 							router->current_safe_event = router->current_pos;
 
-							spinlock_release(&router->lock);
+							spinlock_release(&router->binlog_lock);
 
 							/* Now distribute events */
 							blr_distribute_binlog_record(router, &hdr, ptr);
@@ -1267,26 +1262,25 @@ int			n_bufs = -1, pn_bufs = -1;
 
 							 if (router->pending_transaction > 1) {
 								unsigned long long pos;
+								unsigned long long end_pos;
 								GWBUF   *record;
 								uint8_t *raw_data;
 								REP_HEADER      new_hdr;
 								int i=0;
 
-								spinlock_acquire(&router->lock);
-
 								pos = router->binlog_position;
+								end_pos = router->current_pos;
 
-								spinlock_release(&router->lock);
-								
+								spinlock_release(&router->binlog_lock);
 
-								while ((record = blr_read_events_from_pos(router, pos, &new_hdr)) != NULL) {
+								while ((record = blr_read_events_from_pos(router, pos, &new_hdr, end_pos)) != NULL) {
 									i++;
 									raw_data = GWBUF_DATA(record);
 
 									/* distribute event */
 									blr_distribute_binlog_record(router, &new_hdr, raw_data);
 
-									spinlock_acquire(&router->lock);
+									spinlock_acquire(&router->binlog_lock);
 
 									/** The current safe position is only updated
 									* if it points to the event we just distributed. */
@@ -1297,13 +1291,12 @@ int			n_bufs = -1, pn_bufs = -1;
 
 									pos = new_hdr.next_pos;
 
-									spinlock_release(&router->lock);
+									spinlock_release(&router->binlog_lock);
 
 									gwbuf_free(record);
 								}
 
 								/* Check whether binlog records has been read in previous loop */
-
 								if (pos < router->current_pos) {
 									char err_message[BINLOG_ERROR_MSG_LEN+1];
 
@@ -1336,16 +1329,17 @@ int			n_bufs = -1, pn_bufs = -1;
 									blr_distribute_error_message(router, err_message, "HY000", 1236);
 								}
 
-								spinlock_acquire(&router->lock);
+								/* update binlog_position and set pending to 0 */
+								spinlock_acquire(&router->binlog_lock);
 
 								router->binlog_position = router->current_pos;
 								router->pending_transaction = 0;
 
-								spinlock_release(&router->lock);
+								spinlock_release(&router->binlog_lock);
+							} else {
+								spinlock_release(&router->binlog_lock);
 							}
-
 						}
-
 					}
 					else
 					{
@@ -1609,6 +1603,8 @@ int		action;
 
 		if (action == 1)
 		{
+			spinlock_acquire(&router->binlog_lock);
+
 			slave_event_action_t slave_action = SLAVE_FORCE_CATCHUP;
 
 			if(router->trx_safe && slave->binlog_pos == router->current_safe_event &&
@@ -1656,6 +1652,8 @@ int		action;
                           hdr->next_pos - hdr->event_size);
 			}
 
+			spinlock_release(&router->binlog_lock);
+
 			/*
 			 * If slave_action is SLAVE_FORCE_CATCHUP then
 			 * the slave is not at the position it should be. Force it into
@@ -1692,11 +1690,11 @@ int		action;
 					slave->stats.n_bytes += gwbuf_length(pkt);
 					slave->stats.n_events++;
 					slave->dcb->func.write(slave->dcb, pkt);
+					spinlock_acquire(&slave->catch_lock);
 					if (hdr->event_type != ROTATE_EVENT)
 					{
 						slave->binlog_pos = hdr->next_pos;
 					}
-					spinlock_acquire(&slave->catch_lock);
 					if (slave->overrun)
 					{
 						slave->stats.n_overrun++;
@@ -1861,7 +1859,7 @@ char	*rval;
  * @return		The binlog record wrapped in a GWBUF structure
  */
 GWBUF
-*blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr) {
+*blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr, unsigned long long pos_end) {
 unsigned long long end_pos = 0;
 struct  stat    statb;
 uint8_t         hdbuf[19];
@@ -1871,7 +1869,7 @@ int             n;
 int		event_limit;
 
 	/* Get current binnlog position */
-	end_pos = router->current_pos;
+	end_pos = pos_end;
 
 	/* end of file reached, we're done */
 	if (pos == end_pos) {
@@ -2026,14 +2024,10 @@ blr_stop_start_master(ROUTER_INSTANCE *router) {
         }
         router->residual = NULL;
 
-        /* Now it is safe to unleash other threads on this router instance */
-        router->reconnect_pending = 0;
-        router->active_logs = 0;
-
         router->master_state = BLRM_UNCONNECTED;
         spinlock_release(&router->lock);
 
-        blr_start_master(router);
+        blr_master_reconnect(router);
 }
 
 /**

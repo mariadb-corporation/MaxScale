@@ -866,10 +866,10 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		atomic_add(&router->stats.n_registered, -1);
 
 		if (slave->state > 0) {
-			MXS_NOTICE("%s: Slave %s, server id %d, disconnected after %ld seconds. "
-                                   "%d SQL commands, %d events sent (%lu bytes), binlog '%s', "
+			MXS_NOTICE("%s: Slave %s:%d, server id %d, disconnected after %ld seconds. "
+                                 "%d SQL commands, %d events sent (%lu bytes), binlog '%s', "
                                    "last position %lu",
-                                   router->service->name, slave->dcb->remote,
+                                   router->service->name, slave->dcb->remote, ntohs((slave->dcb->ipv4).sin_port),
                                    slave->serverid,
                                    time(0) - slave->connect_time,
                                    slave->stats.n_queries,
