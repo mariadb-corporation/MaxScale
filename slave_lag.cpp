@@ -78,6 +78,8 @@ int main(int argc, char *argv[])
         sscanf(server1_id, "%d", &server1_id_d);
         Test->tprintf("Master server_id: %d\n", server1_id_d);
 
+        Test->close_rwsplit();
+
         do {
             min_lag = 0;
             for (i = 1; i < Test->repl->N; i++ ) {
@@ -89,7 +91,9 @@ int main(int argc, char *argv[])
                 if (min_lag > res_d) {min_lag = res_d;}
             }
             Test->tprintf("Minimum lag: %d\n", min_lag);
+            Test->connect_rwsplit();
             find_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
+            Test->close_rwsplit();
             sscanf(server_id, "%d", &server_id_d);
             Test->tprintf("Connected to the server with server_id %d\n", server_id_d);
             if ((rounds < 10) and (server1_id_d == server_id_d)) {
@@ -109,7 +113,7 @@ int main(int argc, char *argv[])
             Test->tprintf("Connected to master\n");
         }
         // close connections
-        Test->close_rwsplit();
+        //Test->close_rwsplit();
     }
     while (exited == 0) {
         Test->tprintf("Waiting for load thread end\n");
