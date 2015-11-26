@@ -1032,7 +1032,7 @@ int main(int argc, char **argv)
     char*    tmp_path;
     char*    tmp_var;
     int      option_index;
-    log_target_t log_target = LOG_TARGET_FS;
+    mxs_log_target_t log_target = MXS_LOG_TARGET_FS;
     int      *syslog_enabled = &config_get_global_options()->syslog; /** Log to syslog */
     int      *maxscalelog_enabled = &config_get_global_options()->maxlog; /** Log with MaxScale */
     ssize_t  log_flush_timeout_ms = 0;
@@ -1121,9 +1121,9 @@ int main(int argc, char **argv)
 
         case 'l':
             if (strncasecmp(optarg, "file", PATH_MAX) == 0)
-                log_target = LOG_TARGET_FS;
+                log_target = MXS_LOG_TARGET_FS;
             else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
-                log_target = LOG_TARGET_SHMEM;
+                log_target = MXS_LOG_TARGET_SHMEM;
             else
             {
                 char* logerr = "Configuration file argument "

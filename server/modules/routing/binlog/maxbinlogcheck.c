@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
 
 	num_args = optind;
 
-	mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
+	mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 	mxs_log_set_augmentation(0);
 	mxs_log_set_priority_enabled(LOG_DEBUG, debug_out);
 

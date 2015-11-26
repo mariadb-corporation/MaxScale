@@ -271,7 +271,7 @@ session_set_dummy(DCB *client_dcb)
 void session_enable_log_priority(SESSION* ses, int priority)
 {
     ses->enabled_log_priorities |= (1 << priority);
-    atomic_add((int *)&log_ses_count[priority], 1);
+    atomic_add((int *)&mxs_log_session_count[priority], 1);
 }
 
 /**
@@ -287,7 +287,7 @@ void session_disable_log_priority(SESSION* ses, int priority)
     if (ses->enabled_log_priorities & (1 << priority))
     {
         ses->enabled_log_priorities &= ~(1 << priority);
-        atomic_add((int *)&log_ses_count[priority], -1);
+        atomic_add((int *)&mxs_log_session_count[priority], -1);
     }
 }
 

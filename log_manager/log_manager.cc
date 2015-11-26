@@ -120,19 +120,19 @@ static struct
  * Variable holding the enabled priorities information.
  * Used from logging macros.
  */
-int lm_enabled_priorities_bitmask = 0;
+int mxs_log_enabled_priorities = 0;
 
 /**
  * Thread-specific struct variable for storing current session id and currently
  * enabled log files for the session.
  */
-__thread log_info_t tls_log_info = {0, 0};
+__thread mxs_log_info_t mxs_log_tls = {0, 0};
 
 /**
  * Global counter for each log file type. It indicates for how many sessions
  * each log type is currently enabled.
  */
-ssize_t log_ses_count[LOG_DEBUG] = {0};
+ssize_t mxs_log_session_count[LOG_DEBUG] = {0};
 
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -273,7 +273,7 @@ struct logmanager
     fnames_conf_t    lm_fnames_conf;
     logfile_t        lm_logfile;
     filewriter_t     lm_filewriter;
-    log_target_t     lm_target;
+    mxs_log_target_t lm_target;
 #if defined(SS_DEBUG)
     skygw_chk_t      lm_chk_tail;
 #endif
@@ -300,7 +300,7 @@ static void logfile_done(logfile_t* logfile);
 static void logfile_free_memory(logfile_t* lf);
 static void logfile_flush(logfile_t* lf);
 static void logfile_rotate(logfile_t* lf);
-static bool logfile_create(logfile_t* lf);
+static bool logfile_build_name(logfile_t* lf);
 static bool logfile_open_file(filewriter_t* fw, logfile_t* lf);
 static char* form_full_file_name(strpart_t* parts, logfile_t* lf, int seqnoidx);
 
@@ -316,7 +316,7 @@ static bool logmanager_register(bool writep);
 static void logmanager_unregister(void);
 static bool logmanager_init_nomutex(const char* ident,
                                     const char* logdir,
-                                    log_target_t target);
+                                    mxs_log_target_t target);
 static void logmanager_done_nomutex(void);
 
 static int logmanager_write_log(int            priority,
@@ -346,7 +346,7 @@ bool thr_flushall_check();
 
 static bool logmanager_init_nomutex(const char* ident,
                                     const char* logdir,
-                                    log_target_t target)
+                                    mxs_log_target_t target)
 {
     fnames_conf_t* fn;
     filewriter_t*  fw;
@@ -361,7 +361,7 @@ static bool logmanager_init_nomutex(const char* ident,
         goto return_succ;
     }
 
-    lm->lm_target = (target == LOG_TARGET_DEFAULT ? LOG_TARGET_FS : target);
+    lm->lm_target = (target == MXS_LOG_TARGET_DEFAULT ? MXS_LOG_TARGET_FS : target);
 #if defined(SS_DEBUG)
     lm->lm_chk_top   = CHK_NUM_LOGMANAGER;
     lm->lm_chk_tail  = CHK_NUM_LOGMANAGER;
@@ -405,7 +405,7 @@ static bool logmanager_init_nomutex(const char* ident,
     /**
      * Set global variable
      */
-    lm_enabled_priorities_bitmask = MXS_LOG_ERR | MXS_LOG_NOTICE;
+    mxs_log_enabled_priorities = MXS_LOG_ERR | MXS_LOG_NOTICE;
 
     /**
      * Initialize filewriter data and open the log file
@@ -459,7 +459,7 @@ return_succ:
  * @return true if succeed, otherwise false
  *
  */
-bool mxs_log_init(const char* ident, const char* logdir, log_target_t target)
+bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target)
 {
     bool succ = false;
 
@@ -627,12 +627,12 @@ static int logmanager_write_log(int            priority,
     size_t cmplen = 0;
     /**
      * 2 braces, 2 spaces and terminating char
-     * If session id is stored to tls_log_info structure, allocate
+     * If session id is stored to mxs_log_tls structure, allocate
      * room for session id too.
      */
-    if ((priority == LOG_INFO) && (tls_log_info.li_sesid != 0))
+    if ((priority == LOG_INFO) && (mxs_log_tls.li_sesid != 0))
     {
-        sesid_str_len = 5 * sizeof(char) + get_decimal_len(tls_log_info.li_sesid);
+        sesid_str_len = 5 * sizeof(char) + get_decimal_len(mxs_log_tls.li_sesid);
     }
     else
     {
@@ -729,7 +729,7 @@ static int logmanager_write_log(int            priority,
         /**
          * Write session id
          */
-        snprintf(wp + timestamp_len, sesid_str_len, "[%lu]  ", tls_log_info.li_sesid);
+        snprintf(wp + timestamp_len, sesid_str_len, "[%lu]  ", mxs_log_tls.li_sesid);
         sesid_str_len -= 1; /*< don't calculate terminating char anymore */
     }
     /**
@@ -1139,7 +1139,7 @@ static blockbuf_t* blockbuf_init()
  */
 void mxs_log_set_augmentation(int bits)
 {
-    log_config.augmentation = bits & LOG_AUGMENTATION_MASK;
+    log_config.augmentation = bits & MXS_LOG_AUGMENTATION_MASK;
 }
 
 /**
@@ -1232,7 +1232,7 @@ static bool logmanager_register(bool writep)
             // If someone is logging before the log manager has been inited,
             // or after the log manager has been finished, the messages are
             // written to stdout.
-            succ = logmanager_init_nomutex(NULL, NULL, LOG_TARGET_DEFAULT);
+            succ = logmanager_init_nomutex(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
         }
     }
     /** if logmanager existed or was succesfully restarted, increase link */
@@ -1345,7 +1345,7 @@ static bool fnames_conf_init(fnames_conf_t* fn, const char* logdir)
  */
 static bool logfiles_init(logmanager_t* lm)
 {
-    bool store_shmem = (lm->lm_target == LOG_TARGET_SHMEM);
+    bool store_shmem = (lm->lm_target == MXS_LOG_TARGET_SHMEM);
 
     bool succ = logfile_init(&lm->lm_logfile, lm, store_shmem);
 
@@ -1394,7 +1394,7 @@ static void logfile_rotate(logfile_t* lf)
  * using log manager in parallel with multiple processes and by configuring
  * log manager to use same directories among those processes.
  */
-static bool logfile_create(logfile_t* lf)
+static bool logfile_build_name(logfile_t* lf)
 {
     bool namecreatefail;
     bool nameconflicts;
@@ -1897,7 +1897,7 @@ static bool logfile_init(logfile_t*    logfile,
     }
     logfile->lf_filepath = add_slash(logfile->lf_filepath);
 
-    if (!(succ = logfile_create(logfile)))
+    if (!(succ = logfile_build_name(logfile)))
     {
         goto return_with_succ;
     }
@@ -2084,7 +2084,7 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
 
         lf->lf_name_seqno += 1; /*< new sequence number */
 
-        if (!(succ = logfile_create(lf)))
+        if (!(succ = logfile_build_name(lf)))
         {
             lf->lf_name_seqno -= 1; /*< restore */
         }
@@ -2606,11 +2606,11 @@ int mxs_log_set_priority_enabled(int priority, bool enable)
         if (enable)
         {
             // TODO: Put behind spinlock.
-            lm_enabled_priorities_bitmask |= bit;
+            mxs_log_enabled_priorities |= bit;
         }
         else
         {
-            lm_enabled_priorities_bitmask &= ~bit;
+            mxs_log_enabled_priorities &= ~bit;
         }
 
         MXS_NOTICE("The logging of %s messages has been %sd.", priority_name(priority), text);
@@ -2763,7 +2763,7 @@ int mxs_log_message(int priority,
 
                 switch (augmentation)
                 {
-                case LOG_AUGMENT_WITH_FUNCTION:
+                case MXS_LOG_AUGMENT_WITH_FUNCTION:
                     augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
                     augmentation_len -= 2; // Remove the %s
                     augmentation_len += strlen(function);
@@ -2797,7 +2797,7 @@ int mxs_log_message(int priority,
 
                     switch (augmentation)
                     {
-                    case LOG_AUGMENT_WITH_FUNCTION:
+                    case MXS_LOG_AUGMENT_WITH_FUNCTION:
                         len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
                         break;
 

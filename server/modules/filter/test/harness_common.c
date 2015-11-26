@@ -17,7 +17,7 @@ int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 	char tmp[2048];
 
 	if(!(argc == 2 && strcmp(argv[1],"-h") == 0)){
-		mxs_log_init(NULL,NULL,LOG_TARGET_DEFAULT);
+		mxs_log_init(NULL,NULL,MXS_LOG_TARGET_DEFAULT);
 	}
  
 	if(!(instance.head = calloc(1,sizeof(FILTERCHAIN))))
@@ -51,7 +51,7 @@ int harness_init(int argc, char** argv, HARNESS_INSTANCE** inst){
 	getcwd(cwd,sizeof(cwd));
 	sprintf(tmp,"%s",cwd);
 
-	mxs_log_init(NULL, tmp, LOG_TARGET_DEFAULT);
+	mxs_log_init(NULL, tmp, MXS_LOG_TARGET_DEFAULT);
 	
 	rval = process_opts(argc,argv);
 	

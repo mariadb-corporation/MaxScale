@@ -51,7 +51,7 @@ main(int argc, char **argv)
         return 1;
     }
 
-    mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
+    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 
     pw = calloc(81, sizeof(char));
 

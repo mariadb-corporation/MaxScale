@@ -130,7 +130,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Couldn't register exit function.\n");
     }
 
-    succp = mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
 
     if (!succp)
     {
@@ -148,7 +148,7 @@ int main(int argc, char* argv[])
                     tm.tm_min,
                     tm.tm_sec);
 
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("First write with flush.");
     err = MXS_ERROR("%s", logstr);
 
@@ -196,7 +196,7 @@ int main(int argc, char* argv[])
     logstr = "Ph%dlip.";
     err = MXS_INFO(logstr, 1);
 
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("A terrible error has occurred!");
     err = MXS_ERROR("%s", logstr);
 
@@ -342,7 +342,7 @@ int main(int argc, char* argv[])
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOG_INFO);
 #endif
-    succp = mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     ss_dassert(succp); 
 
     logstr = ("\tTEST 3 - test enabling and disabling logs.");
@@ -407,7 +407,7 @@ int main(int argc, char* argv[])
 #endif /* TEST 3 */
 
 #if defined(TEST4)
-    succp = mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     ss_dassert(succp);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOG_INFO);
@@ -443,7 +443,7 @@ int main(int argc, char* argv[])
 
     mxs_log_finish();
 
-    succp = mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    succp = mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     ss_dassert(succp);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOG_INFO);
@@ -513,7 +513,7 @@ static void* thr_run(void* data)
     char*     logstr;
     int       err;
 
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     mxs_log_flush();
     logstr = ("Hi, how are you?");
     err = MXS_NOTICE("%s", logstr);
@@ -536,7 +536,7 @@ static void* thr_run(void* data)
     }
     ss_dassert(err == 0);
     err = MXS_NOTICE("%s", logstr);
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("Testing. One, two, three\n");
     err = MXS_ERROR("%s", logstr);
     if (err != 0)
@@ -544,8 +544,8 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     mxs_log_flush();
     logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 
@@ -559,7 +559,7 @@ static void* thr_run(void* data)
     }
     ss_dassert(err == 0);
     mxs_log_finish();
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("Rather more surprising, at least at first sight, is the fact that a reference "
               "to a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) "
               "immediately; the two forms are equivalent. Applying the operatos & to both parts "
@@ -571,11 +571,11 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     mxs_log_finish();
     mxs_log_flush();
     mxs_log_finish();
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("..and you?");
     err = MXS_NOTICE("%s", logstr);
     if (err != 0)
@@ -584,7 +584,7 @@ static void* thr_run(void* data)
     }
     ss_dassert(err == 0);
     mxs_log_finish();
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("For automatic and register variables, it is done each time the function or block is entered.");
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOG_INFO);
@@ -595,7 +595,7 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("Rather more surprising, at least at first sight, is the fact that a reference to "
               "a[i] can also be written as *(a+i). In evaluating a[i], C converts it to *(a+i) "
               "immediately; the two forms are equivalent. Applying the operatos & to both parts "
@@ -607,7 +607,7 @@ static void* thr_run(void* data)
         TEST_ERROR("Error, log write failed.");
     }
     ss_dassert(err == 0);
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("..... and you too?");
     err = MXS_NOTICE("%s", logstr);
     if (err != 0)
@@ -616,7 +616,7 @@ static void* thr_run(void* data)
     }
     ss_dassert(err == 0);
     mxs_log_finish();
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
 #if !defined(SS_DEBUG)
     skygw_log_enable(LOG_INFO);
 #endif
@@ -632,7 +632,7 @@ static void* thr_run(void* data)
     }
     ss_dassert(err == 0);
     mxs_log_finish();
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("Testing. One, two, three, four\n");
     err = MXS_ERROR("%s", logstr);
     if (err != 0)
@@ -641,7 +641,7 @@ static void* thr_run(void* data)
     }
     ss_dassert(err == 0);
     mxs_log_finish();
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     logstr = ("Testing. One, two, three, .. where was I?\n");
     err = MXS_ERROR("%s", logstr);
     if (err != 0)
@@ -650,7 +650,7 @@ static void* thr_run(void* data)
     }
     ss_dassert(err == 0);
     mxs_log_finish();
-    mxs_log_init(NULL, "/tmp", LOG_TARGET_FS);
+    mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
     mxs_log_finish();
     simple_mutex_lock(td->mtx, true);
     *td->nactive -= 1;

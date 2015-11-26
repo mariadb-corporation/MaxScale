@@ -619,8 +619,8 @@ dcb_process_victim_queue(DCB *listofdcb)
         }
 
         dcb_get_ses_log_info(dcb,
-                             &tls_log_info.li_sesid,
-                             &tls_log_info.li_enabled_priorities);
+                             &mxs_log_tls.li_sesid,
+                             &mxs_log_tls.li_enabled_priorities);
 
         dcb->state = DCB_STATE_DISCONNECTED;
         nextdcb = dcb->memdata.next;
@@ -629,7 +629,7 @@ dcb_process_victim_queue(DCB *listofdcb)
         dcb = nextdcb;
     }
     /** Reset threads session data */
-    tls_log_info.li_sesid = 0;
+    mxs_log_tls.li_sesid = 0;
 }
 
 /**

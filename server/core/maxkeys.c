@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         keyfile = argv[1];
     }
 
-    mxs_log_init(NULL, NULL, LOG_TARGET_DEFAULT);
+    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 
     if (secrets_writeKeys(keyfile))
     {

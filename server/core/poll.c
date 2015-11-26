@@ -859,8 +859,8 @@ unsigned long	qtime;
 			atomic_add(&pollStats.n_write, 1);
 			/** Read session id to thread's local storage */
                         dcb_get_ses_log_info(dcb,
-                                             &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_priorities);
+                                             &mxs_log_tls.li_sesid,
+                                             &mxs_log_tls.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "write_ready"))
                         {
@@ -889,8 +889,8 @@ unsigned long	qtime;
 			atomic_add(
 				&pollStats.n_accept, 1);
                         dcb_get_ses_log_info(dcb,
-                                             &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_priorities);
+                                             &mxs_log_tls.li_sesid,
+                                             &mxs_log_tls.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "accept"))
                         {
@@ -907,8 +907,8 @@ unsigned long	qtime;
 			atomic_add(&pollStats.n_read, 1);
 			/** Read session id to thread's local storage */
                         dcb_get_ses_log_info(dcb,
-                                             &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_priorities);
+                                             &mxs_log_tls.li_sesid,
+                                             &mxs_log_tls.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "read"))
                         {
@@ -943,8 +943,8 @@ unsigned long	qtime;
 		atomic_add(&pollStats.n_error, 1);
 		/** Read session id to thread's local storage */
                 dcb_get_ses_log_info(dcb,
-                                     &tls_log_info.li_sesid,
-                                     &tls_log_info.li_enabled_priorities);
+                                     &mxs_log_tls.li_sesid,
+                                     &mxs_log_tls.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "error"))
                         {
@@ -973,8 +973,8 @@ unsigned long	qtime;
 			spinlock_release(&dcb->dcb_initlock);
 			/** Read session id to thread's local storage */
                         dcb_get_ses_log_info(dcb,
-                                             &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_priorities);
+                                             &mxs_log_tls.li_sesid,
+                                             &mxs_log_tls.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "hangup EPOLLHUP"))
                         {
@@ -1007,8 +1007,8 @@ unsigned long	qtime;
 			spinlock_release(&dcb->dcb_initlock);
 			/** Read session id to thread's local storage */
                         dcb_get_ses_log_info(dcb,
-                                             &tls_log_info.li_sesid,
-                                             &tls_log_info.li_enabled_priorities);
+                                             &mxs_log_tls.li_sesid,
+                                             &mxs_log_tls.li_enabled_priorities);
 
                         if (poll_dcb_session_check(dcb, "hangup EPOLLRDHUP"))
                         {
@@ -1075,7 +1075,7 @@ unsigned long	qtime;
 	}
 	dcb->evq.processing = 0;
 	/** Reset session id from thread's local storage */
-        tls_log_info.li_sesid = 0;
+        mxs_log_tls.li_sesid = 0;
 	spinlock_release(&pollqlock);
 
 	return 1;
