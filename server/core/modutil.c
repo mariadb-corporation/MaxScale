@@ -575,6 +575,14 @@ GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
     {
 	ptr += len;
 	total += len;
+
+    /** We need at least 3 bytes of the packet header to know how long the whole
+     * packet is going to be. */
+    if (total + 3 >= blen)
+    {
+        break;
+    }
+
 	len = gw_mysql_get_byte3(ptr) + 4;
     }
 
