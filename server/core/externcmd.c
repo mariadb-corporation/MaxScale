@@ -107,12 +107,16 @@ EXTERNCMD* externcmd_allocate(char* argstr)
         }
         else
         {
+            MXS_ERROR("Failed to parse argument string for external command: %s",
+                      argstr);
             externcmd_free(cmd);
             cmd = NULL;
         }
     }
     else
     {
+        MXS_ERROR("Memory allocation for external command parameters failed when "
+                  "processing '%s'.", argstr);
         free(cmd);
         free(argv);
         cmd = NULL;

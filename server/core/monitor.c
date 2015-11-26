@@ -785,7 +785,8 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 
     if (cmd == NULL)
     {
-        MXS_ERROR("Failed to initialize script: %s", script);
+        MXS_ERROR("Failed to initialize script '%s'. See previous errors for the "
+                  "cause of this failure.", script);
         return;
     }
 
@@ -795,8 +796,7 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 
     if (externcmd_execute(cmd))
     {
-        MXS_ERROR("Failed to execute script "
-                  "'%s' on server state change event %s.",
+        MXS_ERROR("Failed to execute script '%s' on server state change event %s.",
                   script, mon_get_event_name(ptr));
     }
     externcmd_free(cmd);
