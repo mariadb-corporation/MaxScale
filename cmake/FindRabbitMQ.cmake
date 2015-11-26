@@ -14,13 +14,38 @@ if(${RABBITMQ_LIBRARIES} MATCHES "NOTFOUND")
   unset(RABBITMQ_LIBRARIES)
 else()
   set(RABBITMQ_FOUND TRUE CACHE INTERNAL "")
-  message(STATUS "Found RabbitMQ library: ${RABBITMQ_LIBRARIES}")
 endif()
 
-set(CMAKE_REQUIRED_INCLUDES ${RABBITMQ_HEADERS})
+if(RABBITMQ_FOUND)
+  set(CMAKE_REQUIRED_INCLUDES ${RABBITMQ_HEADERS})
 
-check_c_source_compiles("#include <amqp.h>\n int main(){if(AMQP_DELIVERY_PERSISTENT){return 0;}return 1;}" HAVE_RABBITMQ50)
+  check_c_source_compiles("#include <amqp.h>\n int main(){if(AMQP_DELIVERY_PERSISTENT){return 0;}return 1;}" HAVE_RABBITMQ50)
 
-if(RABBITMQ_FOUND AND NOT HAVE_RABBITMQ50)
-  message(WARNING "Old version of RabbitMQ-C library found. Version 0.5 or newer is required.")
+  if(HAVE_RABBITMQ50)
+    execute_process(COMMAND grep "#define *AMQP_VERSION_MAJOR" "${RABBITMQ_HEADERS}/amqp.h"
+      COMMAND sed -e "s/.* //"
+      OUTPUT_VARIABLE AMQP_VERSION_MAJOR
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND grep "#define *AMQP_VERSION_MINOR" "${RABBITMQ_HEADERS}/amqp.h"
+      COMMAND sed -e "s/.* //"
+      OUTPUT_VARIABLE AMQP_VERSION_MINOR
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    execute_process(COMMAND grep  "#define *AMQP_VERSION_PATCH" "${RABBITMQ_HEADERS}/amqp.h"
+      COMMAND sed -e "s/.* //"
+      OUTPUT_VARIABLE AMQP_VERSION_PATCH
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    set(AMQP_VERSION "${AMQP_VERSION_MAJOR}.${AMQP_VERSION_MINOR}.${AMQP_VERSION_PATCH}")
+
+    if(NOT "${AMQP_VERSION}" VERSION_LESS "0.6.0")
+      add_definitions(-DRABBITMQ_060)
+    endif()
+
+    message(STATUS "Found RabbitMQ version ${AMQP_VERSION}: ${RABBITMQ_LIBRARIES}")
+    message(STATUS "Found RabbitMQ development headers at: ${RABBITMQ_HEADERS}")
+
+  else()
+    message(WARNING "RabbitMQ-C library does not have AMQP_DELIVERY_PERSISTENT. Version 0.5 or newer is required but version ${AMQP_VERSION} was found.")
+  endif()
+
 endif()

@@ -368,7 +368,10 @@ init_conn(MQ_INSTANCE *my_instance)
     amqp_exchange_declare(my_instance->conn, my_instance->channel,
                           amqp_cstring_bytes(my_instance->exchange),
                           amqp_cstring_bytes(my_instance->exchange_type),
-                          0, 1,
+                          false, true,
+#ifdef RABBITMQ_060
+                          false, false,
+#endif
                           amqp_empty_table);
 
     reply = amqp_get_rpc_reply(my_instance->conn);
@@ -394,7 +397,10 @@ init_conn(MQ_INSTANCE *my_instance)
             amqp_exchange_declare(my_instance->conn, my_instance->channel,
                                   amqp_cstring_bytes(my_instance->exchange),
                                   amqp_cstring_bytes(my_instance->exchange_type),
-                                  0, 1,
+                                  false, true,
+#ifdef RABBITMQ_060
+                                  false, false,
+#endif
                                   amqp_empty_table);
             reply = amqp_get_rpc_reply(my_instance->conn);
         }
