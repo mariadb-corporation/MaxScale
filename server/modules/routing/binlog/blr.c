@@ -50,6 +50,7 @@
  * 30/09/2015	Massimiliano Pinto	Addition of send_slave_heartbeat option
  * 23/10/2015	Markus Makela		Added current_safe_event
  * 27/10/2015   Martin Brampton         Amend getCapabilities to return RCAP_TYPE_NO_RSESSION
+ * 26/11/2015	Massimiliano Pinto	Added check for missing service listener
  *
  * @endverbatim
  */
@@ -213,6 +214,14 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 	if(options == NULL || options[0] == NULL)
 	{
 	    MXS_ERROR("%s: Error: No router options supplied for binlogrouter",
+                      service->name);
+	    return NULL;
+	}
+
+	/* Check for listeners associated to this service */
+	if (service->ports == NULL)
+	{
+	    MXS_ERROR("%s: Error: No listener configured for binlogrouter. Add a listener section in config file.",
                       service->name);
 	    return NULL;
 	}
