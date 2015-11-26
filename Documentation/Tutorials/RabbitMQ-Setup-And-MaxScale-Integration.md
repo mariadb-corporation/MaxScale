@@ -12,7 +12,7 @@ On Centos 6.5 using fedora / RHEL rpm get the rpm from [http://www.rabbitmq.com/
 
 rabbitmq-server-3.3.4-1.noarch.rpm
 
-Please note, before installing RabbitMQ, you must install Erlang. 
+Please note, before installing RabbitMQ, you must install Erlang.
 
 Example:
 
@@ -32,7 +32,7 @@ rabbitmqctl is a command line tool for managing a RabbitMQ broker. It performs a
 
 ```
 rabbitmqctl list_queues
-rabbitmqctl list_queues | list_exchanges| cluster_status | list_bindings | list_connections | list_consumers | status 
+rabbitmqctl list_queues | list_exchanges| cluster_status | list_bindings | list_connections | list_consumers | status
 ```
 
 Example output:
@@ -66,7 +66,7 @@ Interaction with the server may require stop & reset at some point:
 
 ```
 rabbitmqctl stop_app
-rabbitmqctl reset 
+rabbitmqctl reset
 rabbitmqctl start_app
 ```
 
@@ -290,20 +290,20 @@ and finally we can launch it:
 
 If the consumer.cnf file is not in the same directory as the binary file is, you can provide the location of the folder that it is in by passing it the -c flag followed by the path:
 
-``` 
+```
 # ./consumer -c path/to/file
 ```
 
 and start MaxScale as well
 
-## Step 6 - Test the filter and check collected data 
+## Step 5 - Test the filter and check collected data
 
 Assuming that MaxScale and the message consumer are successfully running let’s connect to the service with an active mqfilter:
 
 ```
 [root@maxscale-02 MaxScale]#  mysql -h 127.0.0.1 -P 4506 -uxxx -pyyy
 ...
-MariaDB [(none)]> select RAND(3), RAND(5); 
+MariaDB [(none)]> select RAND(3), RAND(5);
 +--------------------+---------------------+
 | RAND(3)            | RAND(5)             |
 +--------------------+---------------------+
@@ -311,12 +311,12 @@ MariaDB [(none)]> select RAND(3), RAND(5);
 +--------------------+---------------------+
 1 row in set (0.01 sec)
 …
-MariaDB [(none)]> select RAND(3544), RAND(11); 
-```	
+MariaDB [(none)]> select RAND(3544), RAND(11);
+```
 
 we can check the consumer output in the terminal where it was started:
 
-```	
+```
 --------------------------------------------------------------
 Received: 1409671452|select @@version_comment limit ?
 Received: 1409671452|Columns: 1
