@@ -440,7 +440,7 @@ bool parse_querytypes(const char* str, RULE* rule)
     const char *ptr = str;
     char *dest = buffer;
 
-    while (ptr - buffer < 512)
+    while (ptr - str < 512)
     {
         if (*ptr == '|' || *ptr == ' ' || (done = *ptr == '\0'))
         {
@@ -1164,7 +1164,7 @@ bool parse_rule(char* rulestr, FW_INSTANCE* instance)
                     rlist->rule = ruledef;
                     rlist->next = instance->rules;
                     instance->rules = rlist;
-                    rval = parse_rule_definition(instance, ruledef, rule, &saveptr);
+                    rval = parse_rule_definition(instance, ruledef, rulestr, &saveptr);
                 }
                 else
                 {
@@ -2203,7 +2203,6 @@ bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule,
     if (tok == NULL)
     {
         MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
-        rval = false;
         goto retblock;
     }
 
@@ -2213,7 +2212,6 @@ bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule,
     {
         MXS_ERROR("dbfwfilter: Memory allocation failed when parsing "
                   "'limit_queries' rule");
-        rval = false;
         goto retblock;
     }
 
@@ -2222,14 +2220,12 @@ bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule,
     if (errptr && *errptr != '\0')
     {
         MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
-        rval = false;
         goto retblock;
     }
 
     if (qs->limit < 1)
     {
         MXS_ERROR("dbfwfilter: Bad query amount: %s", tok);
-        rval = false;
         goto retblock;
     }
 
@@ -2239,7 +2235,6 @@ bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule,
     if (tok == NULL)
     {
         MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
-        rval = false;
         goto retblock;
     }
 
@@ -2248,14 +2243,12 @@ bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule,
     if (errptr && *errptr != '\0')
     {
         MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
-        rval = false;
         goto retblock;
     }
 
     if (qs->period < 1)
     {
         MXS_ERROR("dbfwfilter: Bad time period: %s", tok);
-        rval = false;
         goto retblock;
     }
 
@@ -2265,7 +2258,6 @@ bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule,
     if (tok == NULL)
     {
         MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
-        rval = false;
         goto retblock;
     }
     qs->cooldown = strtod(tok, &errptr);
@@ -2273,15 +2265,14 @@ bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule,
     if (errptr && *errptr != '\0')
     {
         MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
-        rval = false;
         goto retblock;
     }
 
     if (qs->cooldown < 1)
     {
         MXS_ERROR("dbfwfilter: Bad blocking period: %s", tok);
-        rval = false;
     }
+    rval = true;
 
 retblock:
 
