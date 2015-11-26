@@ -634,6 +634,7 @@ int TestConnections::reconfigure_maxscale(char* config_template)
 int TestConnections::create_connections(int conn_N)
 {
     int i;
+    int local_result = 0;
     MYSQL * rwsplit_conn[conn_N];
     MYSQL * master_conn[conn_N];
     MYSQL * slave_conn[conn_N];
@@ -647,29 +648,29 @@ int TestConnections::create_connections(int conn_N)
 
         printf("RWSplit \t");
         rwsplit_conn[i] = open_rwsplit_connection();
-        if (!rwsplit_conn[i]) { add_result(1, "RWSplit connection failed\n");}
+        if (!rwsplit_conn[i]) { local_result++; tprintf("RWSplit connection failed\n");}
 
         printf("ReadConn master \t");
         master_conn[i] = open_readconn_master_connection();
-        if (!master_conn[i]) { add_result(1, "ReadConn master connection failed\n");}
+        if (!master_conn[i]) { local_result++; tprintf("ReadConn master connection failed\n");}
         printf("ReadConn slave \t");
         slave_conn[i] = open_readconn_slave_connection();
-        if (!slave_conn[i]) { add_result(1, "ReadConn slave connection failed\n");}
+        if (!slave_conn[i]) { local_result++; tprintf("ReadConn slave connection failed\n");}
         printf("galera \n");
         galera_conn[i] = open_conn(4016, maxscale_IP, maxscale_user, maxscale_password, ssl);
-        if (!galera_conn[i]) { add_result(1, "Galera connection failed\n");}
+        if (!galera_conn[i]) { local_result++; tprintf("Galera connection failed\n");}
     }
     for (i = 0; i < conn_N; i++) {
         set_timeout(10);
         tprintf("Trying query against %d-connection: ", i+1);
-        printf("RWSplit \t");
-        try_query(rwsplit_conn[i], "select 1;");
-        printf("ReadConn master \t");
-        try_query(master_conn[i], "select 1;");
-        printf("ReadConn slave \t");
-        try_query(slave_conn[i], "select 1;");
-        printf("galera \n");
-        try_query(galera_conn[i], "select 1;");
+        tprintf("RWSplit \t");
+        local_result += execute_query(rwsplit_conn[i], "select 1;");
+        tprintf("ReadConn master \t");
+        local_result += execute_query(master_conn[i], "select 1;");
+        tprintf("ReadConn slave \t");
+        local_result += execute_query(slave_conn[i], "select 1;");
+        tprintf("galera \n");
+        local_result += execute_query(galera_conn[i], "select 1;");
     }
 
     //global_result += check_pers_conn(Test, pers_conn_expected);
@@ -682,8 +683,8 @@ int TestConnections::create_connections(int conn_N)
         mysql_close(galera_conn[i]);
     }
     stop_timeout();
-    sleep(5);
-    return(0);
+    //sleep(5);
+    return(local_result);
 }
 
 int TestConnections::get_client_ip(char * ip)

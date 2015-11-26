@@ -4,61 +4,96 @@
  * @verbatim
 [server1]
 type=server
-address=54.78.193.99
-port=3306
+address=###repl_server_IP_1###
+port=###repl_server_port_1###
 protocol=MySQLBackend
 persistpoolmax=1
 persistmaxtime=3660
 
 [server2]
 type=server
-address=54.78.254.183
-port=3306
+address=###repl_server_IP_2###
+port=###repl_server_port_2###
 protocol=MySQLBackend
 persistpoolmax=5
 persistmaxtime=60
 
 [server3]
 type=server
-address=54.78.217.99
-port=3306
+address=###repl_server_IP_3###
+port=###repl_server_port_3###
 protocol=MySQLBackend
 persistpoolmax=10
 persistmaxtime=60
 
 [server4]
 type=server
-address=176.34.202.107
-port=3306
+address=###repl_server_IP_4###
+port=###repl_server_port_4###
 protocol=MySQLBackend
 persistpoolmax=30
 persistmaxtime=30
 
+[gserver1]
+type=server
+address=###galera_server_IP_1###
+port=###galera_server_port_1###
+protocol=MySQLBackend
+persistpoolmax=10
+persistmaxtime=3660
+
+[gserver2]
+type=server
+address=###galera_server_IP_2###
+port=###galera_server_port_2###
+protocol=MySQLBackend
+persistpoolmax=15
+persistmaxtime=30
+
+[gserver3]
+type=server
+address=###galera_server_IP_3###
+port=###galera_server_port_3###
+protocol=MySQLBackend
+persistpoolmax=19
+persistmaxtime=0
+
+[gserver4]
+type=server
+address=###galera_server_IP_4###
+port=###galera_server_port_4###
+protocol=MySQLBackend
+persistpoolmax=0
+persistmaxtime=3660
+
+
 @endverbatim
- * open 40 connections to all Maxscale services
+ * open 70 connections to all Maxscale services
  * close connections
- * check value of "Persistent measured pool size" parameter in  'maxadmin' output, expect:
+ * TEST1: check value of "Persistent measured pool size" parameter in  'maxadmin' output, expect:
  @verbatim
 server1:    1
 server2:    5
 server3:    10
 server4:    30
+gserver1:    10
+gserver2:    15
+gserver3:    0
+gserver4:    0
 @endverbatim
- * wait 10 seconds, check "Persistent measured pool size" again. expect the same
- * wait 30 seconds, expect:
+ * Test2: wait 10 seconds, check "Persistent measured pool size" again. expect the same
+ * Test3: wait 30 seconds more, expect:
 @verbatim
 server1:    1
 server2:    5
 server3:    10
 server4:    0
+gserver1:    10
+gserver2:    0
+gserver3:    0
+gserver4:    0
 @endverbatim
- * wait 30 seconds more, expect:
-@verbatim
-server1:    1
-server2:    0
-server3:    0
-server4:    0
-@endverbatim
+
  */
 
 #include <my_config.h>
@@ -102,7 +137,7 @@ int main(int argc, char *argv[])
 
     Test->restart_maxscale();
 
-    Test->create_connections(70);
+    Test->add_result(Test->create_connections(70), "Error creating connections\n");
 
     Test->set_timeout(20);
 
@@ -136,8 +171,8 @@ int main(int argc, char *argv[])
     pers_conn_expected[2] = 10;
     pers_conn_expected[3] = 0;
 
-    galera_pers_conn_expected[0] = 0;
-    galera_pers_conn_expected[1] = 15;
+    galera_pers_conn_expected[0] = 10;
+    galera_pers_conn_expected[1] = 0;
     galera_pers_conn_expected[2] = 0;
     galera_pers_conn_expected[3] = 0;
 
@@ -151,14 +186,14 @@ int main(int argc, char *argv[])
     sleep(30);
     Test->set_timeout(20);
 
-    Test->tprintf("Test 4:\n");
+    Test->tprintf("Test 3:\n");
 
     pers_conn_expected[0] = 1;
     pers_conn_expected[1] = 0;
     pers_conn_expected[2] = 0;
     pers_conn_expected[3] = 0;
 
-    galera_pers_conn_expected[0] = 0;
+    galera_pers_conn_expected[0] = 10;
     galera_pers_conn_expected[1] = 0;
     galera_pers_conn_expected[2] = 0;
     galera_pers_conn_expected[3] = 0;
