@@ -2024,6 +2024,16 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 	if (record == NULL) {
 		slave->stats.n_failed_read++;
 
+                if (hdr.ok == SLAVE_POS_FSTAT_ERR) {
+			MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s', %s",
+				router->service->name,
+				slave->dcb->remote,
+				ntohs((slave->dcb->ipv4).sin_port),
+				slave->serverid,
+				slave->binlogfile,
+				read_errmsg);
+		}
+
                 if (hdr.ok == SLAVE_POS_READ_ERR) {
 			MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s', %s",
 				router->service->name,
@@ -2166,12 +2176,17 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			 * but the new binlog file has not yet been created. Therefore
 			 * we ignore these issues during the rotate processing.
 			 */
-			MXS_ERROR("Slave reached end of file for binlog file %s at %lu "
-                                  "which is not the file currently being downloaded. "
+			MXS_ERROR("%s: Slave %s:%d, server-id %d reached end of file for binlog file %s "
+                                  "at %lu which is not the file currently being downloaded. "
                                   "Master binlog is %s, %lu. This may be caused by a "
                                   "previous failure of the master.",
+                                  router->service->name,
+                                  slave->dcb->remote,
+                                  ntohs((slave->dcb->ipv4).sin_port),
+                                  slave->serverid,
                                   slave->binlogfile, (unsigned long)slave->binlog_pos,
                                   router->binlog_name, router->binlog_position);
+
 			if (blr_slave_fake_rotate(router, slave))
 			{
 				spinlock_acquire(&slave->catch_lock);
