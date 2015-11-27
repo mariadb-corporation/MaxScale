@@ -101,33 +101,43 @@ Enable or disable the high precision timestamps in logfiles. Enabling this adds 
 ms_timestamp=1
 ```
 
-#### `log_messages`
-
-Enable or disable logging of status messages. This logfile is enabled by default and contains information about the modules MaxScale is using and details about the configuration.
-
-```
-# Valid options are:
-#       log_messages=<0|1>
-log_messages=1
-```
-
-To disable the log use the value 0 and to enable it use the value 1.
-
-#### `log_trace`
-
-Enable or disable logging of tracing messages. This logfile is disabled by default due to the verbose nature of it. It contains information about the internal logic of MaxScale and the modules it is using. The trace log can be used to find out the reasons why some actions were done e.g routing a query to a master instead of a slave.
+#### `log_warning`
+Enable or disable the logging of messages whose syslog priority is *warning*. Messages of this priority are enabled by default.
 
 ```
 # Valid options are:
-#       log_trace=<0|1>
-log_trace=1
+#       log_notice=<0|1>
+log_notice=0
 ```
 
-To disable the log use the value 0 and to enable it use the value 1.
+To disable these messages use the value 0 and to enable them use the value 1.
+
+#### `log_notice`
+Enable or disable the logging of messages whose syslog priority is *notice*. Messages of this priority are enabled by default and provide information about the functioning of MaxScale.
+
+```
+# Valid options are:
+#       log_notice=<0|1>
+log_notice=0
+```
+
+To disable these messages use the value 0 and to enable them use the value 1.
+
+#### `log_info`
+
+Enable or disable the logging of messages whose syslog priority is *info*. These messages provide detailed information about the internal workings of MaxScale and should not, due to their large number, be enabled unless there is a specific reason for that. For instance, from these messages it will be evident, e.g., why a particualr query was routed to the master instead of to a slave. This kind of messages are disabled by default.
+
+```
+# Valid options are:
+#       log_info=<0|1>
+log_info=1
+```
+
+To disable these messages use the value 0 and to enable them use the value 1.
 
 #### `log_debug`
 
-Enable or disable logging of debugging messages. This logfile is disabled by default since it contains information only useful to the developers.
+Enable or disable the logging of messages whose syslog priority is *debug*. This kind of messages are intended for development purposes and are disabled by default.
 
 ```
 # Valid options are:
@@ -135,7 +145,15 @@ Enable or disable logging of debugging messages. This logfile is disabled by def
 log_debug=1
 ```
 
-To disable the log use the value 0 and to enable it use the value 1.
+To disable these messages use the value 0 and to enable them use the value 1.
+
+#### `log_messages`
+
+**Deprecated** Use *log_notice* instead.
+
+#### `log_trace`
+
+**Deprecated** Use *log_info* instead.
 
 #### `log_augmentation`
 
