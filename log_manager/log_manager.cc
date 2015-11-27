@@ -405,7 +405,7 @@ static bool logmanager_init_nomutex(const char* ident,
     /**
      * Set global variable
      */
-    mxs_log_enabled_priorities = MXS_LOG_ERR | MXS_LOG_NOTICE;
+    mxs_log_enabled_priorities = MXS_LOG_ERR | MXS_LOG_NOTICE | MXS_LOG_WARNING;
 
     /**
      * Initialize filewriter data and open the log file
