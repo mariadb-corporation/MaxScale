@@ -316,6 +316,11 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             mon_log_connect_error(database, rval);
         }
 
+        server_clear_status(&temp_server, SERVER_MASTER);
+        server_clear_status(&temp_server, SERVER_MASTER_STICKINESS);
+        server_clear_status(&temp_server, SERVER_SLAVE);
+        server_transfer_status(database->server, &temp_server);
+
         return;
     }
 
