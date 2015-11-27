@@ -478,10 +478,10 @@ struct subcommand enableoptions[] = {
         "sessionlog-priority",
         2,
         enable_sess_log_priority,
-        "Enable a logging priority for a particular. "
+        "Enable a logging priority for a particular session. "
         "Usage: enable sessionlog-priority [err | warning | notice | info | debug] <session id>"
         "message | debug] <session id>\t E.g. enable sessionlog-priority info 123.",
-        "Enable a logging priority for a particular. "
+        "Enable a logging priority for a particular session. "
         "Usage: enable sessionlog-priority [err | warning | notice | info | debug] <session id>"
         "message | debug] <session id>\t E.g. enable sessionlog-priority info 123.",
         {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
@@ -1450,7 +1450,6 @@ static bool get_log_action(const char* name, struct log_action_entry* entryp)
             { "debug",   LOG_DEBUG,  "debug" },
             { "trace",   LOG_INFO,   "info" },
             { "message", LOG_NOTICE, "notice" },
-            { "error",   LOG_ERR,    "err" }
         };
     const int n_entries = sizeof(entries) / sizeof(entries[0]);
 
@@ -1500,12 +1499,12 @@ static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 
         if (!session)
         {
-            dcb_printf(dcb, "Session not found: %s\n", arg2);
+            dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
     }
     else
     {
-        dcb_printf(dcb, "%s is not supported for enable log\n", arg1);
+        dcb_printf(dcb, "%s is not supported for enable log.\n", arg1);
     }
 }
 
@@ -1538,12 +1537,12 @@ static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 
         if (!session)
         {
-            dcb_printf(dcb, "Session not found: %s\n", arg2);
+            dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
     }
     else
     {
-        dcb_printf(dcb, "%s is not supported for disable log\n", arg1);
+        dcb_printf(dcb, "%s is not supported for disable log.\n", arg1);
     }
 }
 
@@ -1567,7 +1566,6 @@ static int string_to_priority(const char* name)
         {
             // NOTE: If you make changes to this array, ensure that it remains alphabetically ordered.
             { "debug",   LOG_DEBUG },
-            { "err",     LOG_ERR },
             { "info",    LOG_INFO },
             { "notice",  LOG_NOTICE },
             { "warning", LOG_WARNING },
@@ -1614,12 +1612,12 @@ static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
 
         if (!session)
         {
-            dcb_printf(dcb, "Session not found: %s\n", arg2);
+            dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
     }
     else
     {
-        dcb_printf(dcb, "'%s' is not a supported log priority\n", arg1);
+        dcb_printf(dcb, "'%s' is not a supported log priority.\n", arg1);
     }
 }
 
@@ -1652,12 +1650,12 @@ static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
 
         if (!session)
         {
-            dcb_printf(dcb, "Session not found: %s\n", arg2);
+            dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
     }
     else
     {
-        dcb_printf(dcb, "'%s' is not a supported log priority\n", arg1);
+        dcb_printf(dcb, "'%s' is not a supported log priority.\n", arg1);
     }
 }
 
@@ -1678,7 +1676,7 @@ static void enable_log_action(DCB *dcb, char *arg1)
     }
     else
     {
-        dcb_printf(dcb, "'%s' is not supported for enable log\n", arg1);
+        dcb_printf(dcb, "'%s' is not supported for enable log.\n", arg1);
     }
 }
 
@@ -1699,7 +1697,7 @@ static void disable_log_action(DCB *dcb, char *arg1)
     }
     else
     {
-        dcb_printf(dcb, "'%s' is not supported for 'disable log'\n", arg1);
+        dcb_printf(dcb, "'%s' is not supported for 'disable log'.\n", arg1);
     }
 }
 
@@ -1717,7 +1715,7 @@ static void enable_log_priority(DCB *dcb, char *arg1)
     }
     else
     {
-        dcb_printf(dcb, "'%s' is not a supported log priority\n", arg1);
+        dcb_printf(dcb, "'%s' is not a supported log priority.\n", arg1);
     }
 }
 
@@ -1735,7 +1733,7 @@ static void disable_log_priority(DCB *dcb, char *arg1)
     }
     else
     {
-        dcb_printf(dcb, "'%s' is not a supported log priority\n", arg1);
+        dcb_printf(dcb, "'%s' is not a supported log priority.\n", arg1);
     }
 }
 
