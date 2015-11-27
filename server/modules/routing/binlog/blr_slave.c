@@ -2024,7 +2024,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 	if (record == NULL) {
 		slave->stats.n_failed_read++;
 
-                if (hdr.ok == SLAVE_POS_FSTAT_ERR) {
+                if (hdr.ok == SLAVE_POS_BAD_FD) {
 			MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s', %s",
 				router->service->name,
 				slave->dcb->remote,
