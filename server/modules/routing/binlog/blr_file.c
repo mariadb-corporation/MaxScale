@@ -422,10 +422,9 @@ struct	stat	statb;
 		filelen = statb.st_size;
 	else {
 		if (file->fd == -1) {
-			hdr->ok = SLAVE_POS_READ_OK;
+			hdr->ok = SLAVE_POS_FSTAT_ERR;
 			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "blr_read_binlog called with invalid file->fd, pos %lu", pos);
 			spinlock_release(&file->lock);
-			MXS_ERROR("Slave has failed fstat %s", errmsg);
 			return NULL;
 		}
 	}
