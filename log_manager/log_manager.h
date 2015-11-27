@@ -93,7 +93,7 @@ int mxs_log_rotate();
 
 int  mxs_log_set_priority_enabled(int priority, bool enabled);
 void mxs_log_set_syslog_enabled(bool enabled);
-void mxs_log_set_maxscalelog_enabled(bool enabled);
+void mxs_log_set_maxlog_enabled(bool enabled);
 void mxs_log_set_highprecision_enabled(bool enabled);
 void mxs_log_set_augmentation(int bits);
 

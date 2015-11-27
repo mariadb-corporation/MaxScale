@@ -429,8 +429,8 @@ static void enable_feedback_action();
 static void disable_feedback_action();
 static void enable_syslog();
 static void disable_syslog();
-static void enable_maxscalelog();
-static void disable_maxscalelog();
+static void enable_maxlog();
+static void disable_maxlog();
 
 /**
  *  * The subcommands of the enable command
@@ -511,11 +511,11 @@ struct subcommand enableoptions[] = {
         {0, 0, 0}
     },
     {
-        "maxscalelog",
+        "maxlog",
         0,
-        enable_maxscalelog,
-        "Enable maxscalelog logging",
-        "Enable maxscalelog logging",
+        enable_maxlog,
+        "Enable maxlog logging",
+        "Enable maxlog logging",
         {0, 0, 0}
     },
     {
@@ -609,11 +609,11 @@ struct subcommand disableoptions[] = {
         {0, 0, 0}
     },
     {
-        "maxscalelog",
+        "maxlog",
         0,
-        disable_maxscalelog,
-        "Disable maxscalelog logging",
-        "Disable maxscalelog logging",
+        disable_maxlog,
+        "Disable maxlog logging",
+        "Disable maxlog logging",
         {0, 0, 0}
     },
     {
@@ -1803,21 +1803,21 @@ disable_syslog()
 }
 
 /**
- * Enable maxscalelog logging.
+ * Enable maxlog logging.
  */
 static void
-enable_maxscalelog()
+enable_maxlog()
 {
-    mxs_log_set_maxscalelog_enabled(true);
+    mxs_log_set_maxlog_enabled(true);
 }
 
 /**
- * Disable maxscalelog logging.
+ * Disable maxlog logging.
  */
 static void
-disable_maxscalelog()
+disable_maxlog()
 {
-    mxs_log_set_maxscalelog_enabled(false);
+    mxs_log_set_maxlog_enabled(false);
 }
 
 #if defined(FAKE_CODE)

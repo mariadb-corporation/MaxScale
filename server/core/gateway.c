@@ -166,7 +166,7 @@ static struct option long_options[] = {
     {"cachedir",         required_argument, 0, 'A'},
     {"language",         required_argument, 0, 'N'},
     {"syslog",           required_argument, 0, 's'},
-    {"maxscalelog",      required_argument, 0, 'S'},
+    {"maxlog",          required_argument, 0, 'S'},
     {"user",             required_argument, 0, 'U'},
     {"version",          no_argument,       0, 'v'},
     {"help",             no_argument,       0, '?'},
@@ -970,7 +970,7 @@ static void usage(void)
             "  -U, --user=USER            run MaxScale as another user.\n"
             "                             The user ID and group ID of this user are used to run MaxScale.\n"
             "  -s, --syslog=[yes|no]      log messages to syslog (default:yes)\n"
-            "  -S, --maxscalelog=[yes|no] log messages to MaxScale log (default: yes)\n"
+            "  -S, --maxlog=[yes|no]      log messages to MaxScale log (default: yes)\n"
             "  -v, --version              print version info and exit\n"
             "  -V, --version-full         print full version info and exit\n"
             "  -?, --help                 show this help\n"
@@ -1034,7 +1034,7 @@ int main(int argc, char **argv)
     int      option_index;
     mxs_log_target_t log_target = MXS_LOG_TARGET_FS;
     int      *syslog_enabled = &config_get_global_options()->syslog; /** Log to syslog */
-    int      *maxscalelog_enabled = &config_get_global_options()->maxlog; /** Log with MaxScale */
+    int      *maxlog_enabled = &config_get_global_options()->maxlog; /** Log with MaxScale */
     ssize_t  log_flush_timeout_ms = 0;
     sigset_t sigset;
     sigset_t sigpipe_mask;
@@ -1042,7 +1042,7 @@ int main(int argc, char **argv)
     void   (*exitfunp[4])(void) = { mxs_log_finish, datadir_cleanup, write_footer, NULL };
 
     *syslog_enabled = 1;
-    *maxscalelog_enabled = 1;
+    *maxlog_enabled = 1;
 
     sigemptyset(&sigpipe_mask);
     sigaddset(&sigpipe_mask, SIGPIPE);
@@ -1210,11 +1210,11 @@ int main(int argc, char **argv)
             {
                 tok++;
                 if (tok)
-                    *maxscalelog_enabled = config_truth_value(tok);
+                    *maxlog_enabled = config_truth_value(tok);
             }
             else
             {
-                *maxscalelog_enabled = config_truth_value(optarg);
+                *maxlog_enabled = config_truth_value(optarg);
             }
         }
         break;
@@ -1666,13 +1666,13 @@ int main(int argc, char **argv)
             printf("Syslog logging is disabled.\n");
         }
 
-        if (!(*maxscalelog_enabled))
+        if (!(*maxlog_enabled))
         {
             printf("MaxScale logging is disabled.\n");
         }
 
         mxs_log_set_syslog_enabled(*syslog_enabled);
-        mxs_log_set_maxscalelog_enabled(*maxscalelog_enabled);
+        mxs_log_set_maxlog_enabled(*maxlog_enabled);
 
         succp = mxs_log_init(NULL, get_logdir(), log_target);
 

@@ -105,14 +105,14 @@ static struct
     int  augmentation;     // Can change during the lifetime of log_manager.
     bool do_highprecision; // Can change during the lifetime of log_manager.
     bool do_syslog;        // Can change during the lifetime of log_manager.
-    bool do_maxscalelog;   // Can change during the lifetime of log_manager.
+    bool do_maxlog;        // Can change during the lifetime of log_manager.
     bool use_stdout;       // Can NOT changed during the lifetime of log_manager.
 } log_config =
 {
     DEFAULT_LOG_AUGMENTATION, // augmentation
     false,                    // do_highprecision
     true,                     // do_syslog
-    true,                     // do_maxscalelog
+    true,                     // do_maxlog
     false                     // use_stdout
 };
 
@@ -609,7 +609,7 @@ static int logmanager_write_log(int            priority,
     // log_config may change during the course of the function, with would have
     // unpleasant side-effects.
     int do_highprecision = log_config.do_highprecision;
-    int do_maxscalelog = log_config.do_maxscalelog;
+    int do_maxlog = log_config.do_maxlog;
     int do_syslog = log_config.do_syslog;
 
     assert(str);
@@ -689,7 +689,7 @@ static int logmanager_write_log(int            priority,
     }
 #endif
     /** Book space for log string from buffer */
-    if (do_maxscalelog)
+    if (do_maxlog)
     {
         // All messages are now logged to the error log file.
         wp = blockbuf_get_writepos(&bb, safe_str_len, flush);
@@ -775,7 +775,7 @@ static int logmanager_write_log(int            priority,
     }
     wp[safe_str_len - 1] = '\n';
 
-    if (do_maxscalelog)
+    if (do_maxlog)
     {
         blockbuf_unregister(bb);
     }
@@ -2161,7 +2161,7 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
                         err,
                         strerror_r(err, errbuf, sizeof(errbuf)));
 
-                mxs_log_set_maxscalelog_enabled(false);
+                mxs_log_set_maxlog_enabled(false);
             }
             /**
              * Reset buffer's counters and mark
@@ -2443,11 +2443,11 @@ void mxs_log_set_syslog_enabled(bool enabled)
  *
  * @param enabled True, if syslog logging should be enabled, false if it should be disabled.
  */
-void mxs_log_set_maxscalelog_enabled(bool enabled)
+void mxs_log_set_maxlog_enabled(bool enabled)
 {
-    log_config.do_maxscalelog = enabled;
+    log_config.do_maxlog = enabled;
 
-    MXS_NOTICE("maxscalelog logging is %s.", enabled ? "enabled" : "disabled");
+    MXS_NOTICE("maxlog logging is %s.", enabled ? "enabled" : "disabled");
 }
 
 
