@@ -184,7 +184,7 @@
 #define SLAVE_POS_READ_OK			0x00
 #define SLAVE_POS_READ_ERR			0xff
 #define SLAVE_POS_READ_UNSAFE			0xfe
-#define SLAVE_POS_FSTAT_ERR			0xfd
+#define SLAVE_POS_BAD_FD			0xfd
 
 /**
  * Some useful macros for examining the MySQL Response packets
