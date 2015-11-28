@@ -316,9 +316,6 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             mon_log_connect_error(database, rval);
         }
 
-        server_clear_status(&temp_server, SERVER_MASTER);
-        server_clear_status(&temp_server, SERVER_MASTER_STICKINESS);
-        server_clear_status(&temp_server, SERVER_SLAVE);
         server_transfer_status(database->server, &temp_server);
 
         return;
@@ -553,40 +550,38 @@ monitorMain(void *arg)
 
         while (ptr)
         {
-            if (!SERVER_IS_JOINED(ptr->server) || SERVER_IN_MAINT(ptr->server))
+            const int repl_bits = (SERVER_SLAVE | SERVER_MASTER | SERVER_MASTER_STICKINESS);
+            if (SERVER_IS_JOINED(ptr->server))
             {
-                ptr = ptr->next;
-                continue;
-            }
-
-            if (handle->master)
-            {
-                if (ptr != handle->master)
+                if (handle->master)
                 {
-                    /* set the Slave role and clear master stickiness */
-                    server_clear_set_status(ptr->server, (SERVER_SLAVE|SERVER_MASTER|SERVER_MASTER_STICKINESS), SERVER_SLAVE);
-                }
-                else
-                {
-                    if (candidate_master && handle->master->server->node_id != candidate_master->server->node_id)
+                    if (ptr != handle->master)
                     {
-                        /* set master role and master stickiness */
-                        server_clear_set_status(ptr->server,
-                            (SERVER_SLAVE|SERVER_MASTER|SERVER_MASTER_STICKINESS),
-                            (SERVER_MASTER|SERVER_MASTER_STICKINESS));
+                        /* set the Slave role and clear master stickiness */
+                        server_clear_set_status(ptr->server, repl_bits, SERVER_SLAVE);
                     }
                     else
                     {
-                        /* set master role and clear master stickiness */
-                        server_clear_set_status(ptr->server,
-                            (SERVER_SLAVE|SERVER_MASTER|SERVER_MASTER_STICKINESS),
-                            SERVER_MASTER);
+                        if (candidate_master &&
+                            handle->master->server->node_id != candidate_master->server->node_id)
+                        {
+                            /* set master role and master stickiness */
+                            server_clear_set_status(ptr->server, repl_bits,
+                                                    (SERVER_MASTER | SERVER_MASTER_STICKINESS));
+                        }
+                        else
+                        {
+                            /* set master role and clear master stickiness */
+                            server_clear_set_status(ptr->server, repl_bits, SERVER_MASTER);
+                        }
                     }
                 }
+                is_cluster++;
             }
-
-            is_cluster++;
-
+            else
+            {
+                server_clear_set_status(ptr->server, repl_bits, 0);
+            }
             ptr = ptr->next;
         }
 
