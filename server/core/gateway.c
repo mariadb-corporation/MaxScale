@@ -174,6 +174,10 @@ static struct option long_options[] = {
     {"log_augmentation", required_argument, 0, 'G'},
     {0, 0, 0, 0}
 };
+static bool syslog_configured = false;
+static bool maxlog_configured = false;
+static bool log_to_shm_configured = false;
+
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static void log_flush_shutdown(void);
 static void log_flush_cb(void* arg);
@@ -1032,9 +1036,9 @@ int main(int argc, char **argv)
     char*    tmp_path;
     char*    tmp_var;
     int      option_index;
-    mxs_log_target_t log_target = MXS_LOG_TARGET_FS;
     int      *syslog_enabled = &config_get_global_options()->syslog; /** Log to syslog */
     int      *maxlog_enabled = &config_get_global_options()->maxlog; /** Log with MaxScale */
+    int      *log_to_shm = &config_get_global_options()->log_to_shm; /** Log to shared memory */
     ssize_t  log_flush_timeout_ms = 0;
     sigset_t sigset;
     sigset_t sigpipe_mask;
@@ -1043,6 +1047,7 @@ int main(int argc, char **argv)
 
     *syslog_enabled = 1;
     *maxlog_enabled = 1;
+    *log_to_shm = 0;
 
     sigemptyset(&sigpipe_mask);
     sigaddset(&sigpipe_mask, SIGPIPE);
@@ -1121,9 +1126,15 @@ int main(int argc, char **argv)
 
         case 'l':
             if (strncasecmp(optarg, "file", PATH_MAX) == 0)
-                log_target = MXS_LOG_TARGET_FS;
+            {
+                *log_to_shm = false;
+                log_to_shm_configured = true;
+            }
             else if (strncasecmp(optarg, "shm", PATH_MAX) == 0)
-                log_target = MXS_LOG_TARGET_SHMEM;
+            {
+                *log_to_shm = true;
+                log_to_shm_configured = true;
+            }
             else
             {
                 char* logerr = "Configuration file argument "
@@ -1210,11 +1221,15 @@ int main(int argc, char **argv)
             {
                 tok++;
                 if (tok)
+                {
                     *maxlog_enabled = config_truth_value(tok);
+                    maxlog_configured = true;
+                }
             }
             else
             {
                 *maxlog_enabled = config_truth_value(optarg);
+                maxlog_configured = true;
             }
         }
         break;
@@ -1225,11 +1240,15 @@ int main(int argc, char **argv)
             {
                 tok++;
                 if (tok)
+                {
                     *syslog_enabled = config_truth_value(tok);
+                    syslog_configured = true;
+                }
             }
             else
             {
                 *syslog_enabled = config_truth_value(optarg);
+                syslog_configured = true;
             }
         }
         break;
@@ -1673,6 +1692,8 @@ int main(int argc, char **argv)
 
         mxs_log_set_syslog_enabled(*syslog_enabled);
         mxs_log_set_maxlog_enabled(*maxlog_enabled);
+
+        mxs_log_target_t log_target = *log_to_shm ? MXS_LOG_TARGET_SHMEM : MXS_LOG_TARGET_FS;
 
         succp = mxs_log_init(NULL, get_logdir(), log_target);
 
@@ -2376,15 +2397,28 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, "syslog") == 0)
         {
-            cnf->syslog = config_truth_value((char*)value);
+            if (!syslog_configured)
+            {
+                cnf->syslog = config_truth_value((char*)value);
+            }
         }
         else if (strcmp(name, "maxlog") == 0)
         {
-            cnf->maxlog = config_truth_value((char*)value);
+            if (!maxlog_configured)
+            {
+                cnf->maxlog = config_truth_value((char*)value);
+            }
         }
         else if (strcmp(name, "log_augmentation") == 0)
         {
             set_log_augmentation(value);
+        }
+        else if (strcmp(name, "log_to_shm") == 0)
+        {
+            if (!log_to_shm_configured)
+            {
+                cnf->log_to_shm = config_truth_value((char*)value);
+            }
         }
     }
 
