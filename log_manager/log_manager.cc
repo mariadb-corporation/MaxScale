@@ -43,7 +43,7 @@
 # define _GNU_SOURCE
 #endif
 
-static const char LOGFILE_NAME_PREFIX[] = "error";
+static const char LOGFILE_NAME_PREFIX[] = "maxscale";
 static const char LOGFILE_NAME_SUFFIX[] = ".log";
 
 extern char *program_invocation_name;
