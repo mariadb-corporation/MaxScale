@@ -486,9 +486,9 @@ void TestConnections::check_log_err(char * err_msg, bool expected)
     system(sys1);
     set_timeout(50);
 
-    tprintf("Reading error1.log\n");
-    if ( read_log((char *) "error1.log", &err_log_content) != 0) {
-        //tprintf("Reading error1.log\n");
+    tprintf("Reading maxscale1.log\n");
+    if ( read_log((char *) "maxscale1.log", &err_log_content) != 0) {
+        //tprintf("Reading maxscale1.log\n");
         //read_log((char *) "skygw_err1.log", &err_log_content);
         add_result(1, "Error reading log\n");
     } else {
