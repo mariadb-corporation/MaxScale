@@ -25,24 +25,25 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		        Description
- * 28/06/13	Mark Riddoch	Initial implementation
- * 17/10/15 Martin Brampton Add bitmask_render_readable
+ * Date         Who             Description
+ * 28/06/13     Mark Riddoch    Initial implementation
+ * 17/10/15     Martin Brampton Add bitmask_render_readable
  *
  * @endverbatim
  */
 
 /* Both these numbers MUST be exact multiples of 8 */
-#define BIT_LENGTH_INITIAL	32	/**< Initial number of bits in the bitmask */
-#define BIT_LENGTH_INC		32	/**< Number of bits to add on each increment */
+#define BIT_LENGTH_INITIAL      32      /**< Initial number of bits in the bitmask */
+#define BIT_LENGTH_INC          32      /**< Number of bits to add on each increment */
 
 /**
  * The bitmask structure used to store an arbitrary large bitmask
  */
-typedef struct {
-	SPINLOCK	lock;		/**< Lock to protect the bitmask */
-	unsigned char	*bits;		/**< Pointer to the bits themselves */
-	unsigned int	length;		/**< The number of bits in the bitmask */
+typedef struct
+{
+    SPINLOCK lock;       /**< Lock to protect the bitmask */
+    unsigned char *bits; /**< Pointer to the bits themselves */
+    unsigned int length; /**< The number of bits in the bitmask */
 } GWBITMASK;
 
 extern void bitmask_init(GWBITMASK *);
