@@ -1,3 +1,21 @@
+/*
+ * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
+ * software: you can redistribute it and/or modify it under the terms of the
+ * GNU General Public License as published by the Free Software Foundation,
+ * version 2.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Copyright MariaDB Corporation Ab 2013-2014
+ */
+
 #include <externcmd.h>
 
 /**
@@ -20,19 +38,19 @@ int tokenize_arguments(char* argstr, char** argv)
     start = args;
     ptr = start;
 
-    while(*ptr != '\0' && i < MAXSCALE_EXTCMD_ARG_MAX)
+    while (*ptr != '\0' && i < MAXSCALE_EXTCMD_ARG_MAX)
     {
-	if(escaped)
+	if (escaped)
 	{
 	    escaped = false;
 	}
 	else
 	{
-	    if(*ptr == '\\')
+	    if (*ptr == '\\')
 	    {
 		escaped = true;
 	    }
-	    else if(quoted && !escaped && *ptr == qc) /** End of quoted string */
+	    else if (quoted && !escaped && *ptr == qc) /** End of quoted string */
 	    {
 		*ptr = '\0';
 		argv[i++] = strdup(start);
@@ -41,23 +59,23 @@ int tokenize_arguments(char* argstr, char** argv)
 	    }
 	    else if (!quoted)
 	    {
-		if(isspace(*ptr))
+		if (isspace(*ptr))
 		{
 		    *ptr = '\0';
-		    if(read) /** New token */
+		    if (read) /** New token */
 		    {
 			argv[i++] = strdup(start);
 			read = false;
 		    }
 		}
-		else if( *ptr == '\"' || *ptr == '\'')
+		else if (*ptr == '\"' || *ptr == '\'')
 		{
 		    /** New quoted token, strip quotes */
 		    quoted = true;
 		    qc = *ptr;
 		    start = ptr + 1;
 		}
-		else if(!read)
+		else if (!read)
 		{
 		    start = ptr;
 		    read = true;
@@ -66,8 +84,11 @@ int tokenize_arguments(char* argstr, char** argv)
 	}
 	ptr++;
     }
-    if(read)
+    if (read)
+    {
 	argv[i++] = strdup(start);
+    }
+
     argv[i] = NULL;
 
     return 0;
