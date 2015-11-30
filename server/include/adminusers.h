@@ -24,19 +24,19 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 18/07/13	Mark Riddoch	Initial implementation
+ * Date         Who             Description
+ * 18/07/13     Mark Riddoch    Initial implementation
  *
  * @endverbatim
  */
 #include <dcb.h>
 
-#define	ADMIN_SALT	"MS"
+#define ADMIN_SALT "MS"
 
-extern int	admin_verify(char *, char *);
-extern char	*admin_add_user(char *, char *);
-extern int	admin_search_user(char *);
-extern void	dcb_PrintAdminUsers(DCB *dcb);
+extern int  admin_verify(char *, char *);
+extern char *admin_add_user(char *, char *);
+extern int  admin_search_user(char *);
+extern void dcb_PrintAdminUsers(DCB *dcb);
 
 char* admin_remove_user(char* uname, char* passwd);
 
