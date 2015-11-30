@@ -23,17 +23,17 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 24/06/2013	Massimiliano Pinto	Initial implementation
- * 08/08/2013	Massimiliano Pinto	Fixed bug for invalid memory access in row[1]+1 when row[1] is ""
- * 06/02/2014	Massimiliano Pinto	Mysql user root selected based on configuration flag
- * 26/02/2014	Massimiliano Pinto	Addd: replace_mysql_users() routine may replace users' table based on a checksum
- * 28/02/2014	Massimiliano Pinto	Added Mysql user@host authentication
- * 29/09/2014	Massimiliano Pinto	Added Mysql user@host authentication with wildcard in IPv4 hosts:
- *					x.y.z.%, x.y.%.%, x.%.%.%
- * 03/10/14	Massimiliano Pinto	Added netmask to user@host authentication for wildcard in IPv4 hosts
- * 13/10/14	Massimiliano Pinto	Added (user@host)@db authentication
- * 04/12/14	Massimiliano Pinto	Added support for IPv$ wildcard hosts: a.%, a.%.% and a.b.%
+ * Date         Who                 Description
+ * 24/06/2013   Massimiliano Pinto  Initial implementation
+ * 08/08/2013   Massimiliano Pinto  Fixed bug for invalid memory access in row[1]+1 when row[1] is ""
+ * 06/02/2014   Massimiliano Pinto  Mysql user root selected based on configuration flag
+ * 26/02/2014   Massimiliano Pinto  Addd: replace_mysql_users() routine may replace users' table based on a checksum
+ * 28/02/2014   Massimiliano Pinto  Added Mysql user@host authentication
+ * 29/09/2014   Massimiliano Pinto  Added Mysql user@host authentication with wildcard in IPv4 hosts:
+ *                                  x.y.z.%, x.y.%.%, x.%.%.%
+ * 03/10/14     Massimiliano Pinto  Added netmask to user@host authentication for wildcard in IPv4 hosts
+ * 13/10/14     Massimiliano Pinto  Added (user@host)@db authentication
+ * 04/12/14     Massimiliano Pinto  Added support for IPv$ wildcard hosts: a.%, a.%.% and a.b.%
  *
  * @endverbatim
  */
@@ -57,21 +57,21 @@
 
 /** Alternate query which resolves user grants at the table level */
 #if 0
-#define LOAD_MYSQL_USERS_QUERY 						\
-	"SELECT  DISTINCT							\
-	user.user AS user,							\
-	user.host AS host,							\
-	user.password AS password,						\
-	concat(user.user,user.host,user.password, 				\
-		IF((user.Select_priv+0)||find_in_set('Select',Coalesce(tp.Table_priv,0)),'Y','N') ,	\
-		COALESCE( db.db,tp.db, '')) AS userdata,			\
-	user.Select_priv AS anydb,						\
-	COALESCE( db.db,tp.db, NULL)  AS db 					\
-	FROM 									\
-	mysql.user LEFT JOIN 							\
-	mysql.db ON user.user=db.user AND user.host=db.host  LEFT JOIN 		\
-	mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host 	\
-	WHERE user.user IS NOT NULL AND user.user <> ''"
+#define LOAD_MYSQL_USERS_QUERY                      \
+    "SELECT  DISTINCT                           \
+    user.user AS user,                          \
+    user.host AS host,                          \
+    user.password AS password,                      \
+    concat(user.user,user.host,user.password,               \
+        IF((user.Select_priv+0)||find_in_set('Select',Coalesce(tp.Table_priv,0)),'Y','N') , \
+        COALESCE( db.db,tp.db, '')) AS userdata,            \
+    user.Select_priv AS anydb,                      \
+    COALESCE( db.db,tp.db, NULL)  AS db                     \
+    FROM                                    \
+    mysql.user LEFT JOIN                            \
+    mysql.db ON user.user=db.user AND user.host=db.host  LEFT JOIN      \
+    mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host     \
+    WHERE user.user IS NOT NULL AND user.user <> ''"
 
 #else
 #define LOAD_MYSQL_USERS_QUERY "SELECT \
@@ -384,7 +384,7 @@ bool host_has_singlechar_wildcard(const char *host)
  * @param users         The users table
  * @param user          The user name
  * @param host          The host to add, with possible wildcards
- * @param passwd	The sha1(sha1(passoword)) to add
+ * @param passwd        The sha1(sha1(passoword)) to add
  * @return              1 on success, 0 on failure and -1 on duplicate user
  */
 
@@ -499,9 +499,9 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host,
  * Add the database specific grants from mysql.db table into the service resources hashtable
  * environment.
  *
- * @param service	The current service
- * @param users		The users table into which to load the users
- * @return      -1 on any error or the number of users inserted (0 means no users at all)
+ * @param service   The current service
+ * @param users     The users table into which to load the users
+ * @return          -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
 addDatabases(SERVICE *service, MYSQL *con)
@@ -604,9 +604,9 @@ addDatabases(SERVICE *service, MYSQL *con)
  * Load the database specific grants from mysql.db table into the service resources hashtable
  * environment.
  *
- * @param service	The current service
- * @param users		The users table into which to load the users
- * @return      -1 on any error or the number of users inserted (0 means no users at all)
+ * @param service   The current service
+ * @param users     The users table into which to load the users
+ * @return          -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
 getDatabases(SERVICE *service, MYSQL *con)
@@ -710,10 +710,9 @@ getDatabases(SERVICE *service, MYSQL *con)
  * Load the user/passwd from mysql.user table into the service users' hashtable
  * environment from all the backend servers.
  *
- * @param service	The current service
- * @param users		The users table into which to load the users
- * @return      	-1 on any error or the number of users inserted
- * 			(0 means no users at all)
+ * @param service   The current service
+ * @param users     The users table into which to load the users
+ * @return          -1 on any error or the number of users inserted
  */
 static int
 getAllUsers(SERVICE *service, USERS *users)
@@ -1240,10 +1239,9 @@ cleanup:
  * Load the user/passwd form mysql.user table into the service users' hashtable
  * environment.
  *
- * @param service	The current service
- * @param users		The users table into which to load the users
- * @return      	-1 on any error or the number of users inserted
- * 			(0 means no users at all)
+ * @param service   The current service
+ * @param users     The users table into which to load the users
+ * @return          -1 on any error or the number of users inserted
  */
 static int
 getUsers(SERVICE *service, USERS *users)
@@ -1751,10 +1749,10 @@ mysql_users_alloc()
 /**
  * Add a new MySQL user to the user table. The user name must be unique
  *
- * @param users		The users table
- * @param user		The user name
- * @param auth		The authentication data
- * @return		The number of users added to the table
+ * @param users     The users table
+ * @param user      The user name
+ * @param auth      The authentication data
+ * @return          The number of users added to the table
  */
 int
 mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth)
@@ -1777,8 +1775,8 @@ mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth)
  * Fetch the authentication data for a particular user from the users table
  *
  * @param users The MySQL users table
- * @param key	The key with user@host
- * @return	The authentication data or NULL on error
+ * @param key   The key with user@host
+ * @return  The authentication data or NULL on error
  */
 char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key)
 {
@@ -1794,8 +1792,8 @@ char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key)
  * The hash function we use for storing MySQL users as: users@hosts.
  * Currently only IPv4 addresses are supported
  *
- * @param key	The key value, i.e. username@host (IPv4)
- * @return	The hash key
+ * @param key   The key value, i.e. username@host (IPv4)
+ * @return      The hash key
  */
 
 static int uh_hfun(void* key)
@@ -1817,9 +1815,9 @@ static int uh_hfun(void* key)
  * The compare function we use for compare MySQL users as: users@hosts.
  * Currently only IPv4 addresses are supported
  *
- * @param key1	The key value, i.e. username@host (IPv4)
- * @param key2	The key value, i.e. username@host (IPv4)
- * @return	The compare value
+ * @param key1  The key value, i.e. username@host (IPv4)
+ * @param key2  The key value, i.e. username@host (IPv4)
+ * @return      The compare value
  */
 
 static int uh_cmpfun(void* v1, void* v2)
@@ -1922,7 +1920,7 @@ static int uh_cmpfun(void* v1, void* v2)
 /**
  *The key dup function we use for duplicate the users@hosts.
  *
- * @param key	The key value, i.e. username@host ip4/ip6 data
+ * @param key   The key value, i.e. username@host ip4/ip6 data
  */
 
 static void *uh_keydup(void* key)
@@ -1970,7 +1968,7 @@ static void *uh_keydup(void* key)
 /**
  * The key free function we use for freeing the users@hosts data
  *
- * @param key	The key value, i.e. username@host ip4 data
+ * @param key   The key value, i.e. username@host ip4 data
  */
 static void uh_keyfree(void* key)
 {
@@ -1998,8 +1996,8 @@ static void uh_keyfree(void* key)
  * Format the mysql user as user@host
  * The returned memory must be freed by the caller
  *
- *  @param data		Input data
- *  @return 		the MySQL user@host
+ *  @param data     Input data
+ *  @return         the MySQL user@host
  */
 char *mysql_format_user_entry(void *data)
 {
@@ -2068,7 +2066,7 @@ char *mysql_format_user_entry(void *data)
 /**
  * Remove the resources table
  *
- * @param resources	The resources table to remove
+ * @param resources The resources table to remove
  */
 void
 resource_free(HASHTABLE *resources)
@@ -2082,7 +2080,7 @@ resource_free(HASHTABLE *resources)
 /**
  * Allocate a MySQL database names table
  *
- * @return	The database names table
+ * @return  The database names table
  */
 HASHTABLE *
 resource_alloc()
@@ -2103,10 +2101,10 @@ resource_alloc()
 /**
  * Add a new MySQL database name to the resources table. The resource name must
  * be unique.
- * @param resources	The resources table
- * @param key		The resource name
- * @param value		The value for resource (not used)
- * @return		The number of resources dded to the table
+ * @param resources The resources table
+ * @param key       The resource name
+ * @param value     The value for resource (not used)
+ * @return          The number of resources dded to the table
  */
 int
 resource_add(HASHTABLE *resources, char *key, char *value)
@@ -2117,9 +2115,9 @@ resource_add(HASHTABLE *resources, char *key, char *value)
 /**
  * Fetch a particular database name from the resources table
  *
- * @param resources	The MySQL database names table
- * @param key		The database name to fetch
- * @return		The database esists or NULL if not found
+ * @param resources The MySQL database names table
+ * @param key       The database name to fetch
+ * @return          The database esists or NULL if not found
  */
 void *
 resource_fetch(HASHTABLE *resources, char *key)
@@ -2137,9 +2135,9 @@ resource_fetch(HASHTABLE *resources, char *key)
  *
  * Last host byte is set to 1, avoiding setipadress() failure
  *
- * @param input_host	The hostname with possible % wildcards
- * @param output_host	The normalized hostname (buffer must be preallocated)
- * @return		The calculated netmask or -1 on failure
+ * @param input_host    The hostname with possible % wildcards
+ * @param output_host   The normalized hostname (buffer must be preallocated)
+ * @return              The calculated netmask or -1 on failure
  */
 static int normalize_hostname(char *input_host, char *output_host)
 {
@@ -2220,10 +2218,10 @@ static int normalize_hostname(char *input_host, char *output_host)
 /**
  * Set read, write and connect timeout values for MySQL database connection.
  *
- * @param handle		MySQL handle
- * @param read_timeout		Read timeout value in seconds
- * @param write_timeout		Write timeout value in seconds
- * @param connect_timeout	Connect timeout value in seconds
+ * @param handle            MySQL handle
+ * @param read_timeout      Read timeout value in seconds
+ * @param write_timeout     Write timeout value in seconds
+ * @param connect_timeout   Connect timeout value in seconds
  *
  * @return 0 if succeed, 1 if failed
  */
@@ -2261,9 +2259,9 @@ retblock:
 /*
  * Serialise a key for the dbusers hashtable to a file
  *
- * @param fd	File descriptor to write to
- * @param key	The key to write
- * @return 	0 on error, 1 if the key was written
+ * @param fd    File descriptor to write to
+ * @param key   The key to write
+ * @return      0 on error, 1 if the key was written
  */
 static int
 dbusers_keywrite(int fd, void *key)
@@ -2314,9 +2312,9 @@ dbusers_keywrite(int fd, void *key)
 /**
  * Serialise a value for the dbusers hashtable to a file
  *
- * @param fd	File descriptor to write to
- * @param value	The value to write
- * @return 	0 on error, 1 if the value was written
+ * @param fd    File descriptor to write to
+ * @param value The value to write
+ * @return      0 on error, 1 if the value was written
  */
 static int
 dbusers_valuewrite(int fd, void *value)
@@ -2338,8 +2336,8 @@ dbusers_valuewrite(int fd, void *value)
 /**
  * Unserialise a key for the dbusers hashtable from a file
  *
- * @param fd	File descriptor to read from
- * @return 	Pointer to the new key or NULL on error
+ * @param fd    File descriptor to read from
+ * @return      Pointer to the new key or NULL on error
  */
 static void *
 dbusers_keyread(int fd)
@@ -2413,8 +2411,8 @@ dbusers_keyread(int fd)
 /**
  * Unserialise a value for the dbusers hashtable from a file
  *
- * @param fd	File descriptor to read from
- * @return 	Return the new value data or NULL on error
+ * @param fd    File descriptor to read from
+ * @return      Return the new value data or NULL on error
  */
 static void *
 dbusers_valueread(int fd)
@@ -2442,9 +2440,9 @@ dbusers_valueread(int fd)
 /**
  * Save the dbusers data to a hashtable file
  *
- * @param users		The hashtable that stores the user data
- * @param filename	The filename to save the data in
- * @return		The number of entries saved
+ * @param users     The hashtable that stores the user data
+ * @param filename  The filename to save the data in
+ * @return      The number of entries saved
  */
 int
 dbusers_save(USERS *users, char *filename)
@@ -2455,9 +2453,9 @@ dbusers_save(USERS *users, char *filename)
 /**
  * Load the dbusers data from a saved hashtable file
  *
- * @param users		The hashtable that stores the user data
- * @param filename	The filename to laod the data from
- * @return		The number of entries loaded
+ * @param users     The hashtable that stores the user data
+ * @param filename  The filename to laod the data from
+ * @return      The number of entries loaded
  */
 int
 dbusers_load(USERS *users, char *filename)
