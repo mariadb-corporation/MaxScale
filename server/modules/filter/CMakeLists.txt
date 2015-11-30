@@ -13,35 +13,44 @@ endif()
 add_library(regexfilter SHARED regexfilter.c)
 target_link_libraries(regexfilter log_manager ${PCRE2_LIBRARIES})
 add_dependencies(regexfilter pcre2)
+set_target_properties(regexfilter PROPERTIES VERSION "1.1.0")
 install(TARGETS regexfilter DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(testfilter SHARED testfilter.c)
 target_link_libraries(testfilter log_manager)
+set_target_properties(testfilter PROPERTIES VERSION "1.0.0")
 install(TARGETS testfilter DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(qlafilter SHARED qlafilter.c)
 target_link_libraries(qlafilter log_manager)
+set_target_properties(qlafilter PROPERTIES VERSION "1.1.1")
 install(TARGETS qlafilter DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(tee SHARED tee.c)
 target_link_libraries(tee log_manager)
+set_target_properties(tee PROPERTIES VERSION "1.0.0")
 install(TARGETS tee DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(topfilter SHARED topfilter.c)
 target_link_libraries(topfilter log_manager)
+set_target_properties(topfilter PROPERTIES VERSION "1.0.1")
 install(TARGETS topfilter DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(dbfwfilter SHARED dbfwfilter.c)
 target_link_libraries(dbfwfilter log_manager query_classifier)
+set_target_properties(dbfwfilter PROPERTIES VERSION "1.0.0")
 install(TARGETS dbfwfilter DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(namedserverfilter SHARED namedserverfilter.c)
 target_link_libraries(namedserverfilter log_manager)
+set_target_properties(namedserverfilter PROPERTIES VERSION "1.1.0")
 install(TARGETS namedserverfilter DESTINATION ${MAXSCALE_LIBDIR})
+
 
 if(BUILD_SLAVELAG)
   add_library(slavelag SHARED slavelag.c)
   target_link_libraries(slavelag log_manager query_classifier)
+  set_target_properties(slavelag PROPERTIES VERSION "1.1.0")
   install(TARGETS slavelag DESTINATION ${MAXSCALE_LIBDIR})
 endif()
 
