@@ -2,7 +2,7 @@
 threads=4
 libdir=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
 logdir=@CMAKE_INSTALL_PREFIX@/
-datadir=@CMAKE_INSTALL_PREFIX@/data/
+datadir=@CMAKE_INSTALL_PREFIX@/
 cachedir=@CMAKE_INSTALL_PREFIX@/
 language=@CMAKE_INSTALL_PREFIX@/lib/maxscale/
 piddir=@CMAKE_INSTALL_PREFIX@/
