@@ -56,13 +56,13 @@ secrets_random_str(unsigned char *output, int len)
 static MAXKEYS *
 secrets_readKeys(const char* path)
 {
-    char            secret_file[PATH_MAX + 1];
-    char            *home;
-    MAXKEYS         *keys;
-    struct stat     secret_stats;
-    int             fd;
-    int             len;
-    static int      reported = 0;
+    char secret_file[PATH_MAX + 1];
+    char *home;
+    MAXKEYS *keys;
+    struct stat secret_stats;
+    int fd;
+    int len;
+    static int reported = 0;
 
     if (path != NULL)
     {
@@ -212,10 +212,10 @@ secrets_readKeys(const char* path)
  */
 int secrets_writeKeys(const char *path)
 {
-    int             fd, randfd;
-    unsigned int    randval;
-    MAXKEYS         key;
-    char            secret_file[PATH_MAX + 10];
+    int fd, randfd;
+    unsigned int randval;
+    MAXKEYS key;
+    char secret_file[PATH_MAX + 10];
 
     if (strlen(path) > PATH_MAX)
     {
@@ -312,12 +312,12 @@ int secrets_writeKeys(const char *path)
 char *
 decryptPassword(const char *crypt)
 {
-    MAXKEYS         *keys;
-    AES_KEY         aeskey;
-    unsigned char   *plain;
-    const char      *ptr;
-    unsigned char   encrypted[80];
-    int             enlen;
+    MAXKEYS *keys;
+    AES_KEY aeskey;
+    unsigned char *plain;
+    const char *ptr;
+    unsigned char encrypted[80];
+    int enlen;
 
     keys = secrets_readKeys(NULL);
     if (!keys)
@@ -325,9 +325,9 @@ decryptPassword(const char *crypt)
         return strdup(crypt);
     }
     /*
-     ** If the input is not a HEX string return the input 
-     ** it probably was not encrypted
-     */
+    ** If the input is not a HEX string return the input
+    ** it probably was not encrypted
+    */
     for (ptr = crypt; *ptr; ptr++)
     {
         if (!isxdigit(*ptr))
@@ -365,12 +365,12 @@ decryptPassword(const char *crypt)
 char *
 encryptPassword(const char* path, const char *password)
 {
-    MAXKEYS         *keys;
-    AES_KEY         aeskey;
-    int             padded_len;
-    char            *hex_output;
-    unsigned char   padded_passwd[80];
-    unsigned char   encrypted[80];
+    MAXKEYS *keys;
+    AES_KEY aeskey;
+    int padded_len;
+    char *hex_output;
+    unsigned char padded_passwd[80];
+    unsigned char encrypted[80];
 
     if ((keys = secrets_readKeys(path)) == NULL)
     {

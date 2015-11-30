@@ -19,7 +19,7 @@
  */
 
 /**
- * @file secrets.h 
+ * @file secrets.h
  *
  * @verbatim
  * Revision History
@@ -55,4 +55,5 @@ typedef struct maxkeys
 extern int  secrets_writeKeys(const char *filename);
 extern char *decryptPassword(const char *);
 extern char *encryptPassword(const char*, const char *);
+
 #endif
