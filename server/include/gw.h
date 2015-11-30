@@ -55,7 +55,7 @@
 #define GW_CLIENT_SO_SNDBUF  (128 * 1024)
 #define GW_CLIENT_SO_RCVBUF  (128 * 1024)
 
-#define GW_NOINTR_CALL(A)	do { errno = 0; A; } while (errno == EINTR)
+#define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1
