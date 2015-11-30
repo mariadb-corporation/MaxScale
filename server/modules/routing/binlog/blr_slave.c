@@ -2142,7 +2142,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			slave->stats.n_caughtup++;
 			if (slave->stats.n_caughtup == 1)
 			{
-				MXS_ERROR("%s: Slave %s:%d, server-id %d is now up to date '%s', position %lu.",
+				MXS_NOTICE("%s: Slave %s:%d, server-id %d is now up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
 					ntohs((slave->dcb->ipv4).sin_port),
@@ -2151,7 +2151,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			}
 			else if ((slave->stats.n_caughtup % 50) == 0)
 			{
-				MXS_ERROR("%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
+				MXS_NOTICE("%s: Slave %s:%d, server-id %d is up to date '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
 					ntohs((slave->dcb->ipv4).sin_port),
