@@ -24,8 +24,8 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 26/09/14	Mark Riddoch	Initial implementation
+ * Date         Who             Description
+ * 26/09/14     Mark Riddoch    Initial implementation
  *
  * @endverbatim
  */
@@ -33,33 +33,35 @@
 
 typedef enum { ML_INT, ML_LONG, ML_LONGLONG, ML_STRING } MEMLOGTYPE;
 
-typedef struct memlog {
-	char		*name;
-	SPINLOCK	lock;
-	void		*values;
-	int		offset;
-	int		size;
-	MEMLOGTYPE	type;
-	unsigned int	flags;
-	unsigned int	iflags;
-	struct memlog	*next;
+typedef struct memlog
+{
+    char            *name;
+    SPINLOCK        lock;
+    void            *values;
+    int             offset;
+    int             size;
+    MEMLOGTYPE      type;
+    unsigned int    flags;
+    unsigned int    iflags;
+    struct memlog   *next;
 } MEMLOG;
 
 /*
  * MEMLOG flag bits
  */
-#define	MLNOAUTOFLUSH		0x0001
+#define MLNOAUTOFLUSH           0x0001
 
 /*
  * MEMLOG internal flags
  */
-#define MLWRAPPED		0x0001
+#define MLWRAPPED               0x0001
 
 
-extern	MEMLOG *memlog_create(char *, MEMLOGTYPE, int);
-extern	void	memlog_destroy(MEMLOG *);
-extern	void	memlog_set(MEMLOG *, unsigned int);
-extern	void	memlog_log(MEMLOG *, void *);
-extern	void	memlog_flush_all();
-extern	void	memlog_flush(MEMLOG *);
+extern MEMLOG *memlog_create(char *, MEMLOGTYPE, int);
+extern void    memlog_destroy(MEMLOG *);
+extern void    memlog_set(MEMLOG *, unsigned int);
+extern void    memlog_log(MEMLOG *, void *);
+extern void    memlog_flush_all();
+extern void    memlog_flush(MEMLOG *);
+
 #endif
