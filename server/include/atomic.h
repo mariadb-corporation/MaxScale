@@ -24,9 +24,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 10/06/13	Mark Riddoch	Initial implementation
- * 23/06/15 Martin Brampton Alternative for C++
+ * Date         Who             Description
+ * 10/06/13     Mark Riddoch    Initial implementation
+ * 23/06/15     Martin Brampton Alternative for C++
  *
  * @endverbatim
  */
