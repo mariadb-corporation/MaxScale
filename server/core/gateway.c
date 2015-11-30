@@ -220,9 +220,13 @@ static SPINLOCK* ssl_locks;
 static void ssl_locking_function(int mode, int n, const char* file, int line)
 {
     if (mode & CRYPTO_LOCK)
+    {
         spinlock_acquire(&ssl_locks[n]);
+    }
     else
+    {
         spinlock_release(&ssl_locks[n]);
+    }
 }
 /**
  * OpenSSL requires this struct to be defined in order to use dynamic locks
@@ -376,7 +380,8 @@ static int signal_set(int sig, void (*handler)(int));
 static void
 sigfatal_handler(int i)
 {
-    if (fatal_handling) {
+    if (fatal_handling)
+    {
         fprintf(stderr, "Fatal signal %d while backtracing\n", i);
         _exit(1);
     }
@@ -395,12 +400,16 @@ sigfatal_handler(int i)
         int n, count = backtrace(addrs, 128);
         char** symbols = backtrace_symbols(addrs, count);
 
-        if (symbols) {
-            for (n = 0; n < count; n++) {
+        if (symbols)
+        {
+            for (n = 0; n < count; n++)
+            {
                 MXS_ERROR("  %s\n", symbols[n]);
             }
             free(symbols);
-        } else {
+        }
+        else
+        {
             fprintf(stderr, "\nresolving symbols to error log failed, writing call trace to stderr:\n");
             backtrace_symbols_fd(addrs, count, fileno(stderr));
         }
@@ -429,7 +438,8 @@ sigfatal_handler(int i)
  * @details (write detailed description here)
  *
  */
-static int signal_set(int sig, void (*handler)(int)) {
+static int signal_set(int sig, void (*handler)(int))
+{
     static struct sigaction sigact;
     static int err;
     int rc = 0;
@@ -457,11 +467,10 @@ static int signal_set(int sig, void (*handler)(int)) {
 /**
  * Cleanup the temporary data directory we created for the gateway
  */
-int ntfw_cb(
-    const char*        filename,
-    const struct stat* filestat,
-    int                fileflags,
-    struct FTW*        pfwt)
+int ntfw_cb(const char*        filename,
+            const struct stat* filestat,
+            int                fileflags,
+            struct FTW*        pfwt)
 {
     int rc = remove(filename);
 
@@ -492,7 +501,8 @@ void datadir_cleanup()
 
 static void libmysqld_done(void)
 {
-    if (libmysqld_started) {
+    if (libmysqld_started)
+    {
         mysql_library_end();
     }
 }
@@ -503,8 +513,7 @@ static void write_footer(void)
     file_write_footer(stdout);
 }
 
-static bool file_write_footer(
-    FILE*       outfile)
+static bool file_write_footer(FILE* outfile)
 {
     bool        succp = false;
     size_t      len1;
@@ -522,8 +531,7 @@ static bool file_write_footer(
 
 // Documentation says 26 bytes is enough, but 32 is a nice round number.
 #define ASCTIME_BUF_LEN 32
-static bool file_write_header(
-    FILE*       outfile)
+static bool file_write_header(FILE* outfile)
 {
     bool        succp = false;
     size_t      len1;
@@ -567,10 +575,9 @@ static bool file_write_header(
     return succp;
 }
 
-static bool resolve_maxscale_conf_fname(
-    char** cnf_full_path,
-    char*  home_dir,
-    char*  cnf_file_arg)
+static bool resolve_maxscale_conf_fname(char** cnf_full_path,
+                                        char*  home_dir,
+                                        char*  cnf_file_arg)
 {
     bool  succp = false;
 
@@ -592,9 +599,7 @@ static bool resolve_maxscale_conf_fname(
          * directory.
          * '-f MaxScale.cnf'
          */
-        *cnf_full_path = get_expanded_pathname(NULL,
-                                               home_dir,
-                                               cnf_file_arg);
+        *cnf_full_path = get_expanded_pathname(NULL, home_dir, cnf_file_arg);
 
         if (*cnf_full_path != NULL)
         {
@@ -680,8 +685,7 @@ return_succp:
  * @return NULL if directory can be read and written, an error message if either
  *      read or write is not permitted.
  */
-static char* check_dir_access(
-    char* dirname, bool rd, bool wr)
+static char* check_dir_access(char* dirname, bool rd, bool wr)
 {
     char errbuf[PATH_MAX * 2];
     char* errstr = NULL;
@@ -747,7 +751,8 @@ static void print_log_n_stderr(
     char* fpr_err = "*\n* Error :";
     char* fpr_end   = "\n*\n";
 
-    if (do_log) {
+    if (do_log)
+    {
         char errbuf[STRERROR_BUFLEN];
         MXS_ERROR("%s %s %s %s",
                   log_err,
@@ -755,7 +760,8 @@ static void print_log_n_stderr(
                   eno == 0 ? " " : "Error :",
                   eno == 0 ? " " : strerror_r(eno, errbuf, sizeof(errbuf)));
     }
-    if (do_stderr) {
+    if (do_stderr)
+    {
         char errbuf[STRERROR_BUFLEN];
         fprintf(stderr,
                 "%s %s %s %s %s",
@@ -767,8 +773,7 @@ static void print_log_n_stderr(
     }
 }
 
-static bool file_is_readable(
-    char* absolute_pathname)
+static bool file_is_readable(char* absolute_pathname)
 {
     bool succp = true;
 
@@ -797,8 +802,7 @@ static bool file_is_readable(
     return succp;
 }
 
-static bool file_is_writable(
-    char* absolute_pathname)
+static bool file_is_writable(char* absolute_pathname)
 {
     bool succp = true;
 
@@ -846,13 +850,12 @@ static bool file_is_writable(
  *
  *
  */
-static char* get_expanded_pathname(
-    char** output_path,
-    char*  relative_path,
-    const char*  fname)
+static char* get_expanded_pathname(char** output_path,
+                                   char*  relative_path,
+                                   const char*  fname)
 {
-    char*  cnf_file_buf = NULL;
-    char*  expanded_path;
+    char* cnf_file_buf = NULL;
+    char* expanded_path;
 
     if (relative_path == NULL)
     {
@@ -893,9 +896,7 @@ static char* get_expanded_pathname(
          * readability.
          */
         size_t pathlen = strnlen(expanded_path, PATH_MAX)+
-            1+
-            strnlen(fname, PATH_MAX)+
-            1;
+            1 + strnlen(fname, PATH_MAX) + 1;
         cnf_file_buf = (char*)malloc(pathlen);
 
         if (cnf_file_buf == NULL)
@@ -1627,7 +1628,9 @@ int main(int argc, char **argv)
     snprintf(pathbuf, PATH_MAX, "%s", get_configdir());
     pathbuf[PATH_MAX] = '\0';
     if (pathbuf[strlen(pathbuf) - 1] != '/')
+    {
         strcat(pathbuf, "/");
+    }
 
     if (!resolve_maxscale_conf_fname(&cnf_file_path, pathbuf, cnf_file_arg))
     {
@@ -1988,8 +1991,7 @@ static void log_flush_shutdown(void)
  *
  *
  */
-static void log_flush_cb(
-    void* arg)
+static void log_flush_cb(void* arg)
 {
     ssize_t timeout_ms = *(ssize_t *)arg;
     struct timespec ts1;
@@ -1998,7 +2000,8 @@ static void log_flush_cb(
     ts1.tv_nsec = (timeout_ms%1000) * 1000000;
 
     MXS_NOTICE("Started MaxScale log flusher.");
-    while (!do_exit) {
+    while (!do_exit)
+    {
         mxs_log_flush();
         nanosleep(&ts1, NULL);
     }
@@ -2025,7 +2028,8 @@ static void unlock_pidfile()
  */
 static void unlink_pidfile(void)
 {
-    if (strlen(pidfile)) {
+    if (strlen(pidfile))
+    {
         if (unlink(pidfile))
         {
             char errbuf[STRERROR_BUFLEN];
@@ -2057,7 +2061,9 @@ bool pid_file_exists()
     pathbuf[PATH_MAX] = '\0';
 
     if (access(pathbuf, F_OK) != 0)
+    {
         return false;
+    }
 
     if (access(pathbuf, R_OK) == 0)
     {
@@ -2249,7 +2255,9 @@ bool handle_path_arg(char** dest, char* path, char* arg, bool rd, bool wr)
     bool rval = false;
 
     if (path == NULL && arg == NULL)
+    {
         return rval;
+    }
 
     if (path)
     {
