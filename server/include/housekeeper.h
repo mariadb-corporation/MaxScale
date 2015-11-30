@@ -26,30 +26,30 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 29/08/14	Mark Riddoch	Initial implementation
+ * Date         Who             Description
+ * 29/08/14     Mark Riddoch    Initial implementation
  *
  * @endverbatim
  */
 
-typedef enum {
-	HK_REPEATED = 1,
-	HK_ONESHOT
+typedef enum
+{
+    HK_REPEATED = 1,
+    HK_ONESHOT
 } HKTASK_TYPE;
 
 /**
  * The housekeeper task list
  */
-typedef struct hktask {
-	char	*name;			/*< A simple task name */
-	void	(*task)(void *data);	/*< The task to call */
-	void	*data;			/*< Data to pass the task */
-	int	frequency;		/*< How often to call the tasks (seconds) */
-	time_t	nextdue;		/*< When the task should be next run */
-	HKTASK_TYPE
-		type;			/*< The task type */
-	struct	hktask
-		*next;			/*< Next task in the list */
+typedef struct hktask
+{
+    char *name;               /*< A simple task name */
+    void (*task)(void *data); /*< The task to call */
+    void *data;               /*< Data to pass the task */
+    int frequency;            /*< How often to call the tasks (seconds) */
+    time_t nextdue;           /*< When the task should be next run */
+    HKTASK_TYPE type;         /*< The task type */
+    struct hktask *next;      /*< Next task in the list */
 } HKTASK;
 
 extern void hkinit();
@@ -58,4 +58,5 @@ extern int  hktask_oneshot(char *name, void (*task)(void *), void *data, int whe
 extern int  hktask_remove(char *name);
 extern void hkshutdown();
 extern void hkshow_tasks(DCB *pdcb);
+
 #endif
