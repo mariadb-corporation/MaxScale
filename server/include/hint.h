@@ -24,8 +24,8 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 10/07/14	Mark Riddoch	Initial implementation
+ * Date         Who             Description
+ * 10/07/14     Mark Riddoch    Initial implementation
  *
  * @endverbatim
  */
@@ -36,13 +36,14 @@
 /**
  * The types of hint that are supported by the generic hinting mechanism.
  */
-typedef enum {
-	HINT_ROUTE_TO_MASTER = 1,
-	HINT_ROUTE_TO_SLAVE,
-	HINT_ROUTE_TO_NAMED_SERVER,
-	HINT_ROUTE_TO_UPTODATE_SERVER,
-        HINT_ROUTE_TO_ALL, /*< not implemented yet */
-	HINT_PARAMETER
+typedef enum
+{
+    HINT_ROUTE_TO_MASTER = 1,
+    HINT_ROUTE_TO_SLAVE,
+    HINT_ROUTE_TO_NAMED_SERVER,
+    HINT_ROUTE_TO_UPTODATE_SERVER,
+    HINT_ROUTE_TO_ALL, /*< not implemented yet */
+    HINT_PARAMETER
 } HINT_TYPE;
 
 /**
@@ -52,18 +53,19 @@ typedef enum {
  * specific data.
  * Multiple hints may be attached to a single buffer.
  */
-typedef struct hint {
-	HINT_TYPE	type;	/*< The Type of hint */
-	void		*data;	/*< Type specific data */
-	void		*value;	/*< Parameter value for hint */
-	unsigned int	dsize;	/*< Size of the hint data */
-	struct hint	*next;	/*< Another hint for this buffer */
+typedef struct hint
+{
+    HINT_TYPE       type;   /*< The Type of hint */
+    void            *data;  /*< Type specific data */
+    void            *value; /*< Parameter value for hint */
+    unsigned int    dsize;  /*< Size of the hint data */
+    struct hint     *next;  /*< Another hint for this buffer */
 } HINT;
 
-extern	HINT	*hint_alloc(HINT_TYPE, void *, unsigned int);
-extern	HINT	*hint_create_parameter(HINT *, char *, char *);
-extern	HINT	*hint_create_route(HINT *, HINT_TYPE, char *);
-extern	void	hint_free(HINT *);
-extern	HINT	*hint_dup(HINT *);
+extern  HINT    *hint_alloc(HINT_TYPE, void *, unsigned int);
+extern  HINT    *hint_create_parameter(HINT *, char *, char *);
+extern  HINT    *hint_create_route(HINT *, HINT_TYPE, char *);
+extern  void    hint_free(HINT *);
+extern  HINT    *hint_dup(HINT *);
 bool            hint_exists(HINT **, HINT_TYPE);
 #endif
