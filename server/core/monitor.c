@@ -22,12 +22,12 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 08/07/13	Mark Riddoch		Initial implementation
- * 23/05/14	Massimiliano Pinto	Addition of monitor_interval parameter
- * 					and monitor id
- * 30/10/14	Massimiliano Pinto	Addition of disable_master_failback parameter
- * 07/11/14	Massimiliano Pinto	Addition of monitor network timeouts
+ * Date         Who                     Description
+ * 08/07/13     Mark Riddoch            Initial implementation
+ * 23/05/14     Massimiliano Pinto      Addition of monitor_interval parameter
+ *                                      and monitor id
+ * 30/10/14     Massimiliano Pinto      Addition of disable_master_failback parameter
+ * 07/11/14     Massimiliano Pinto      Addition of monitor network timeouts
  * 08/05/15     Markus Makela           Moved common monitor variables to MONITOR struct
  *
  * @endverbatim
@@ -59,82 +59,88 @@ const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
 };
 #undef ADDITEM
 
-static MONITOR	*allMonitors = NULL;
-static SPINLOCK	monLock = SPINLOCK_INIT;
+static MONITOR  *allMonitors = NULL;
+static SPINLOCK monLock = SPINLOCK_INIT;
 
 /**
  * Allocate a new monitor, load the associated module for the monitor
  * and start execution on the monitor.
  *
- * @param name		The name of the monitor module to load
- * @param module	The module to load
- * @return 	The newly created monitor
+ * @param name          The name of the monitor module to load
+ * @param module        The module to load
+ * @return      The newly created monitor
  */
 MONITOR *
 monitor_alloc(char *name, char *module)
 {
-MONITOR	*mon;
+    MONITOR *mon;
 
-	if ((mon = (MONITOR *)malloc(sizeof(MONITOR))) == NULL)
-	{
-		return NULL;
-	}
+    if ((mon = (MONITOR *)malloc(sizeof(MONITOR))) == NULL)
+    {
+        return NULL;
+    }
 
-	if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
-	{
-            MXS_ERROR("Unable to load monitor module '%s'.", name);
-            free(mon);
-            return NULL;
-	}
-	mon->state = MONITOR_STATE_ALLOC;
-	mon->name = strdup(name);
-	mon->handle = NULL;
-	mon->databases = NULL;
-	mon->password = NULL;
-	mon->user = NULL;
-	mon->password = NULL;
-	mon->read_timeout = DEFAULT_READ_TIMEOUT;
-	mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
-	mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
-	mon->interval = MONITOR_INTERVAL;
-	mon->parameters = NULL;
-	spinlock_init(&mon->lock);
-	spinlock_acquire(&monLock);
-	mon->next = allMonitors;
-	allMonitors = mon;
-	spinlock_release(&monLock);
+    if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
+    {
+        MXS_ERROR("Unable to load monitor module '%s'.", name);
+        free(mon);
+        return NULL;
+    }
+    mon->state = MONITOR_STATE_ALLOC;
+    mon->name = strdup(name);
+    mon->handle = NULL;
+    mon->databases = NULL;
+    mon->password = NULL;
+    mon->user = NULL;
+    mon->password = NULL;
+    mon->read_timeout = DEFAULT_READ_TIMEOUT;
+    mon->write_timeout = DEFAULT_WRITE_TIMEOUT;
+    mon->connect_timeout = DEFAULT_CONNECT_TIMEOUT;
+    mon->interval = MONITOR_INTERVAL;
+    mon->parameters = NULL;
+    spinlock_init(&mon->lock);
+    spinlock_acquire(&monLock);
+    mon->next = allMonitors;
+    allMonitors = mon;
+    spinlock_release(&monLock);
 
-	return mon;
+    return mon;
 }
 
 /**
  * Free a monitor, first stop the monitor and then remove the monitor from
  * the chain of monitors and free the memory.
  *
- * @param mon	The monitor to free
+ * @param mon   The monitor to free
  */
 void
 monitor_free(MONITOR *mon)
 {
-MONITOR	*ptr;
+    MONITOR *ptr;
 
-	mon->module->stopMonitor(mon);
-	mon->state = MONITOR_STATE_FREED;
-	spinlock_acquire(&monLock);
-	if (allMonitors == mon)
-		allMonitors = mon->next;
-	else
-	{
-		ptr = allMonitors;
-		while (ptr->next && ptr->next != mon)
-			ptr = ptr->next;
-		if (ptr->next)
-			ptr->next = mon->next;
-	}
-	spinlock_release(&monLock);
-	free_config_parameter(mon->parameters);
-	free(mon->name);
-	free(mon);
+    mon->module->stopMonitor(mon);
+    mon->state = MONITOR_STATE_FREED;
+    spinlock_acquire(&monLock);
+    if (allMonitors == mon)
+    {
+        allMonitors = mon->next;
+    }
+    else
+    {
+        ptr = allMonitors;
+        while (ptr->next && ptr->next != mon)
+        {
+            ptr = ptr->next;
+        }
+        if (ptr->next)
+        {
+            ptr->next = mon->next;
+        }
+    }
+    spinlock_release(&monLock);
+    free_config_parameter(mon->parameters);
+    free(mon->name);
+    free(mon);
 }
 
 
@@ -146,10 +152,10 @@ MONITOR	*ptr;
 void
 monitorStart(MONITOR *monitor, void* params)
 {
-	spinlock_acquire(&monitor->lock);
-	monitor->handle = (*monitor->module->startMonitor)(monitor,params);
-	monitor->state = MONITOR_STATE_RUNNING;
-	spinlock_release(&monitor->lock);
+    spinlock_acquire(&monitor->lock);
+    monitor->handle = (*monitor->module->startMonitor)(monitor,params);
+    monitor->state = MONITOR_STATE_RUNNING;
+    spinlock_release(&monitor->lock);
 }
 
 /**
@@ -172,16 +178,16 @@ void monitorStartAll()
 /**
  * Stop a given monitor
  *
- * @param monitor	The monitor to stop
+ * @param monitor       The monitor to stop
  */
 void
 monitorStop(MONITOR *monitor)
 {
-    if(monitor->state != MONITOR_STATE_STOPPED)
+    if (monitor->state != MONITOR_STATE_STOPPED)
     {
-	monitor->state = MONITOR_STATE_STOPPING;
-	monitor->module->stopMonitor(monitor);
-	monitor->state = MONITOR_STATE_STOPPED;
+        monitor->state = MONITOR_STATE_STOPPING;
+        monitor->module->stopMonitor(monitor);
+        monitor->state = MONITOR_STATE_STOPPED;
     }
 }
 
@@ -191,63 +197,69 @@ monitorStop(MONITOR *monitor)
 void
 monitorStopAll()
 {
-MONITOR	*ptr;
+    MONITOR *ptr;
 
-	spinlock_acquire(&monLock);
-	ptr = allMonitors;
-	while (ptr)
-	{
-		monitorStop(ptr);
-		ptr = ptr->next;
-	}
-	spinlock_release(&monLock);
+    spinlock_acquire(&monLock);
+    ptr = allMonitors;
+    while (ptr)
+    {
+        monitorStop(ptr);
+        ptr = ptr->next;
+    }
+    spinlock_release(&monLock);
 }
 
 /**
  * Add a server to a monitor. Simply register the server that needs to be
  * monitored to the running monitor module.
  *
- * @param mon		The Monitor instance
- * @param server	The Server to add to the monitoring
+ * @param mon           The Monitor instance
+ * @param server        The Server to add to the monitoring
  */
 void
 monitorAddServer(MONITOR *mon, SERVER *server)
 {
-    MONITOR_SERVERS	*ptr, *db;
+    MONITOR_SERVERS     *ptr, *db;
 
     if ((db = (MONITOR_SERVERS *)malloc(sizeof(MONITOR_SERVERS))) == NULL)
-		return;
-	db->server = server;
-	db->con = NULL;
-	db->next = NULL;
-        db->mon_err_count = 0;
-	db->log_version_err = true;
-	/** Server status is uninitialized */
-        db->mon_prev_status = -1;
-	/* pending status is updated by get_replication_tree */
-	db->pending_status = 0;
+    {
+        return;
+    }
+    db->server = server;
+    db->con = NULL;
+    db->next = NULL;
+    db->mon_err_count = 0;
+    db->log_version_err = true;
+    /** Server status is uninitialized */
+    db->mon_prev_status = -1;
+    /* pending status is updated by get_replication_tree */
+    db->pending_status = 0;
 
-	spinlock_acquire(&mon->lock);
+    spinlock_acquire(&mon->lock);
 
-	if (mon->databases == NULL)
-		mon->databases = db;
-	else
-	{
-		ptr = mon->databases;
-		while (ptr->next != NULL)
-			ptr = ptr->next;
-		ptr->next = db;
-	}
-	spinlock_release(&mon->lock);
+    if (mon->databases == NULL)
+    {
+        mon->databases = db;
+    }
+    else
+    {
+        ptr = mon->databases;
+        while (ptr->next != NULL)
+        {
+            ptr = ptr->next;
+        }
+        ptr->next = db;
+    }
+    spinlock_release(&mon->lock);
 }
 
 /**
  * Add a default user to the monitor. This user is used to connect to the
  * monitored databases but may be overriden on a per server basis.
  *
- * @param mon		The monitor instance
- * @param user		The default username to use when connecting
- * @param passwd	The default password associated to the default user.
+ * @param mon           The monitor instance
+ * @param user          The default username to use when connecting
+ * @param passwd        The default password associated to the default user.
  */
 void
 monitorAddUser(MONITOR *mon, char *user, char *passwd)
@@ -259,98 +271,104 @@ monitorAddUser(MONITOR *mon, char *user, char *passwd)
 /**
  * Show all monitors
  *
- * @param dcb	DCB for printing output
+ * @param dcb   DCB for printing output
  */
 void
 monitorShowAll(DCB *dcb)
 {
-MONITOR	*ptr;
+    MONITOR *ptr;
 
-	spinlock_acquire(&monLock);
-	ptr = allMonitors;
-	while (ptr)
-	{
-		dcb_printf(dcb, "Monitor: %p\n", ptr);
-		dcb_printf(dcb, "\tName:		%s\n", ptr->name);
-		if (ptr->module->diagnostics)
-			ptr->module->diagnostics(dcb, ptr);
-		ptr = ptr->next;
-	}
-	spinlock_release(&monLock);
+    spinlock_acquire(&monLock);
+    ptr = allMonitors;
+    while (ptr)
+    {
+        dcb_printf(dcb, "Monitor: %p\n", ptr);
+        dcb_printf(dcb, "\tName:                %s\n", ptr->name);
+        if (ptr->module->diagnostics)
+        {
+            ptr->module->diagnostics(dcb, ptr);
+        }
+        ptr = ptr->next;
+    }
+    spinlock_release(&monLock);
 }
 
 /**
  * Show a single monitor
  *
- * @param dcb	DCB for printing output
+ * @param dcb   DCB for printing output
  */
 void
 monitorShow(DCB *dcb, MONITOR *monitor)
 {
 
-	dcb_printf(dcb, "Monitor: %p\n", monitor);
-	dcb_printf(dcb, "\tName:		%s\n", monitor->name);
-	if (monitor->module->diagnostics)
-		monitor->module->diagnostics(dcb, monitor);
+    dcb_printf(dcb, "Monitor: %p\n", monitor);
+    dcb_printf(dcb, "\tName:                %s\n", monitor->name);
+    if (monitor->module->diagnostics)
+    {
+        monitor->module->diagnostics(dcb, monitor);
+    }
 }
 
 /**
  * List all the monitors
  *
- * @param dcb	DCB for printing output
+ * @param dcb   DCB for printing output
  */
 void
 monitorList(DCB *dcb)
 {
-MONITOR	*ptr;
+    MONITOR *ptr;
 
-	spinlock_acquire(&monLock);
-	ptr = allMonitors;
-	dcb_printf(dcb, "---------------------+---------------------\n");
-	dcb_printf(dcb, "%-20s | Status\n", "Monitor");
-	dcb_printf(dcb, "---------------------+---------------------\n");
-	while (ptr)
-	{
-		dcb_printf(dcb, "%-20s | %s\n", ptr->name,
-			ptr->state & MONITOR_STATE_RUNNING
-					? "Running" : "Stopped");
-		ptr = ptr->next;
-	}
-	dcb_printf(dcb, "---------------------+---------------------\n");
-	spinlock_release(&monLock);
+    spinlock_acquire(&monLock);
+    ptr = allMonitors;
+    dcb_printf(dcb, "---------------------+---------------------\n");
+    dcb_printf(dcb, "%-20s | Status\n", "Monitor");
+    dcb_printf(dcb, "---------------------+---------------------\n");
+    while (ptr)
+    {
+        dcb_printf(dcb, "%-20s | %s\n", ptr->name,
+                   ptr->state & MONITOR_STATE_RUNNING
+                   ? "Running" : "Stopped");
+        ptr = ptr->next;
+    }
+    dcb_printf(dcb, "---------------------+---------------------\n");
+    spinlock_release(&monLock);
 }
 
 /**
  * Find a monitor by name
  *
- * @param	name	The name of the monitor
- * @return	Pointer to the monitor or NULL
+ * @param       name    The name of the monitor
+ * @return      Pointer to the monitor or NULL
  */
 MONITOR *
 monitor_find(char *name)
 {
-MONITOR	*ptr;
+    MONITOR *ptr;
 
-	spinlock_acquire(&monLock);
-	ptr = allMonitors;
-	while (ptr)
-	{
-		if (!strcmp(ptr->name, name))
-			break;
-		ptr = ptr->next;
-	}
-	spinlock_release(&monLock);
-	return ptr;
+    spinlock_acquire(&monLock);
+    ptr = allMonitors;
+    while (ptr)
+    {
+        if (!strcmp(ptr->name, name))
+        {
+            break;
+        }
+        ptr = ptr->next;
+    }
+    spinlock_release(&monLock);
+    return ptr;
 }
 
 /**
  * Set the monitor sampling interval.
  *
- * @param mon		The monitor instance
- * @param interval	The sampling interval in milliseconds
+ * @param mon           The monitor instance
+ * @param interval      The sampling interval in milliseconds
  */
 void
-monitorSetInterval (MONITOR *mon, unsigned long interval)
+monitorSetInterval(MONITOR *mon, unsigned long interval)
 {
     mon->interval = interval;
 }
@@ -358,9 +376,9 @@ monitorSetInterval (MONITOR *mon, unsigned long interval)
 /**
  * Set Monitor timeouts for connect/read/write
  *
- * @param mon		The monitor instance
- * @param type		The timeout handling type
- * @param value		The timeout to set
+ * @param mon           The monitor instance
+ * @param type          The timeout handling type
+ * @param value         The timeout to set
  */
 void
 monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
@@ -369,38 +387,49 @@ monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
     int new_timeout = max_timeout -1;
 
     if (new_timeout <= 0)
-	new_timeout = DEFAULT_CONNECT_TIMEOUT;
+    {
+        new_timeout = DEFAULT_CONNECT_TIMEOUT;
+    }
 
     switch(type) {
     case MONITOR_CONNECT_TIMEOUT:
-	if (value < max_timeout) {
-	    memcpy(&mon->connect_timeout, &value, sizeof(int));
-	} else {
-	    memcpy(&mon->connect_timeout, &new_timeout, sizeof(int));
-	    MXS_WARNING("Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
+        if (value < max_timeout)
+        {
+            memcpy(&mon->connect_timeout, &value, sizeof(int));
+        }
+        else
+        {
+            memcpy(&mon->connect_timeout, &new_timeout, sizeof(int));
+            MXS_WARNING("Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
                         ", lowering to %i seconds", value, max_timeout, new_timeout);
-	}
-	break;
+        }
+        break;
 
     case MONITOR_READ_TIMEOUT:
-	if (value < max_timeout) {
-	    memcpy(&mon->read_timeout, &value, sizeof(int));
-	} else {
-	    memcpy(&mon->read_timeout, &new_timeout, sizeof(int));
-	    MXS_WARNING("Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
+        if (value < max_timeout)
+        {
+            memcpy(&mon->read_timeout, &value, sizeof(int));
+        }
+        else
+        {
+            memcpy(&mon->read_timeout, &new_timeout, sizeof(int));
+            MXS_WARNING("Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
                         ", lowering to %i seconds", value, max_timeout, new_timeout);
-	}
-	break;
+        }
+        break;
 
     case MONITOR_WRITE_TIMEOUT:
-	if (value < max_timeout) {
-	    memcpy(&mon->write_timeout, &value, sizeof(int));
-	} else {
-	    memcpy(&mon->write_timeout, &new_timeout, sizeof(int));
-	    MXS_WARNING("Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
+        if (value < max_timeout)
+        {
+            memcpy(&mon->write_timeout, &value, sizeof(int));
+        }
+        else
+        {
+            memcpy(&mon->write_timeout, &new_timeout, sizeof(int));
+            MXS_WARNING("Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
                         ", lowering to %i seconds", value, max_timeout, new_timeout);
-	}
-	break;
+        }
+        break;
     default:
         MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
         break;
@@ -410,39 +439,39 @@ monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
 /**
  * Provide a row to the result set that defines the set of monitors
  *
- * @param set	The result set
- * @param data	The index of the row to send
+ * @param set   The result set
+ * @param data  The index of the row to send
  * @return The next row or NULL
  */
 static RESULT_ROW *
 monitorRowCallback(RESULTSET *set, void *data)
 {
-int		*rowno = (int *)data;
-int		i = 0;;
-char		buf[20];
-RESULT_ROW	*row;
-MONITOR		*ptr;
+    int *rowno = (int *)data;
+    int i = 0;;
+    char buf[20];
+    RESULT_ROW *row;
+    MONITOR *ptr;
 
-	spinlock_acquire(&monLock);
-	ptr = allMonitors;
-	while (i < *rowno && ptr)
-	{
-		i++;
-		ptr = ptr->next;
-	}
-	if (ptr == NULL)
-	{
-		spinlock_release(&monLock);
-		free(data);
-		return NULL;
-	}
-	(*rowno)++;
-	row = resultset_make_row(set);
-	resultset_row_set(row, 0, ptr->name);
-	resultset_row_set(row, 1, ptr->state & MONITOR_STATE_RUNNING
-                                        ? "Running" : "Stopped");
-	spinlock_release(&monLock);
-	return row;
+    spinlock_acquire(&monLock);
+    ptr = allMonitors;
+    while (i < *rowno && ptr)
+    {
+        i++;
+        ptr = ptr->next;
+    }
+    if (ptr == NULL)
+    {
+        spinlock_release(&monLock);
+        free(data);
+        return NULL;
+    }
+    (*rowno)++;
+    row = resultset_make_row(set);
+    resultset_row_set(row, 0, ptr->name);
+    resultset_row_set(row, 1, ptr->state & MONITOR_STATE_RUNNING
+                      ? "Running" : "Stopped");
+    spinlock_release(&monLock);
+    return row;
 }
 
 /**
@@ -453,21 +482,23 @@ MONITOR		*ptr;
 RESULTSET *
 monitorGetList()
 {
-RESULTSET	*set;
-int		*data;
+    RESULTSET *set;
+    int *data;
 
-	if ((data = (int *)malloc(sizeof(int))) == NULL)
-		return NULL;
-	*data = 0;
-	if ((set = resultset_create(monitorRowCallback, data)) == NULL)
-	{
-		free(data);
-		return NULL;
-	}
-	resultset_add_column(set, "Monitor", 20, COL_TYPE_VARCHAR);
-	resultset_add_column(set, "Status", 10, COL_TYPE_VARCHAR);
+    if ((data = (int *)malloc(sizeof(int))) == NULL)
+    {
+        return NULL;
+    }
+    *data = 0;
+    if ((set = resultset_create(monitorRowCallback, data)) == NULL)
+    {
+        free(data);
+        return NULL;
+    }
+    resultset_add_column(set, "Monitor", 20, COL_TYPE_VARCHAR);
+    resultset_add_column(set, "Status", 10, COL_TYPE_VARCHAR);
 
-	return set;
+    return set;
 }
 
 /**
@@ -489,11 +520,11 @@ bool check_monitor_permissions(MONITOR* monitor)
     user = monitor->user;
     dpasswd = decryptPassword(monitor->password);
 
-    if((mysql = mysql_init(NULL)) == NULL)
+    if ((mysql = mysql_init(NULL)) == NULL)
     {
-	MXS_ERROR("[%s] Error: MySQL connection initialization failed.", __FUNCTION__);
-	free(dpasswd);
-	return false;
+        MXS_ERROR("[%s] Error: MySQL connection initialization failed.", __FUNCTION__);
+        free(dpasswd);
+        return false;
     }
 
     server = monitor->databases->server;
@@ -502,22 +533,22 @@ bool check_monitor_permissions(MONITOR* monitor)
 
     /** Connect to the first server. This assumes all servers have identical
      * user permissions. */
-    if(mysql_real_connect(mysql,server->name,user,dpasswd,NULL,server->port,NULL,0) == NULL)
+    if (mysql_real_connect(mysql, server->name, user, dpasswd, NULL, server->port, NULL, 0) == NULL)
     {
-	MXS_ERROR("%s: Failed to connect to server %s(%s:%d) when"
+        MXS_ERROR("%s: Failed to connect to server %s(%s:%d) when"
                   " checking monitor user credentials and permissions.",
                   monitor->name,
                   server->unique_name,
                   server->name,
                   server->port);
-	mysql_close(mysql);
-	free(dpasswd);
-	return false;
+        mysql_close(mysql);
+        free(dpasswd);
+        return false;
     }
 
-    if(mysql_query(mysql,"show slave status") != 0)
+    if (mysql_query(mysql,"show slave status") != 0)
     {
-        if(mysql_errno(mysql) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
+        if (mysql_errno(mysql) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
         {
             MXS_ERROR("%s: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
                       monitor->name,user,mysql_error(mysql));
@@ -531,7 +562,7 @@ bool check_monitor_permissions(MONITOR* monitor)
     }
     else
     {
-        if((res = mysql_use_result(mysql)) == NULL)
+        if ((res = mysql_use_result(mysql)) == NULL)
         {
             MXS_ERROR("%s: Result retrieval failed when checking for REPLICATION CLIENT permissions: %s",
                       monitor->name,mysql_error(mysql));
@@ -600,13 +631,15 @@ monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit)
 monitor_event_t
 mon_get_event_type(MONITOR_SERVERS* node)
 {
-    typedef enum {
+    typedef enum
+    {
         DOWN_EVENT,
         UP_EVENT,
         LOSS_EVENT,
         NEW_EVENT,
         UNSUPPORTED_EVENT
     } general_event_type;
+
     general_event_type event_type = UNSUPPORTED_EVENT;
 
     unsigned int prev = node->mon_prev_status
@@ -655,30 +688,30 @@ mon_get_event_type(MONITOR_SERVERS* node)
 
     switch (event_type)
     {
-        case UP_EVENT:
-            return (present & SERVER_MASTER) ? MASTER_UP_EVENT :
-                (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
-                    (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
-                        (present & SERVER_NDB) ? NDB_UP_EVENT :
-                            SERVER_UP_EVENT;
-        case DOWN_EVENT:
-            return (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
-                (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
-                    (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
-                        (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
-                            SERVER_DOWN_EVENT;
-        case LOSS_EVENT:
-            return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
-                (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
-                    (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
-                        LOST_NDB_EVENT;
-        case NEW_EVENT:
-            return (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
-                (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
-                    (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
-                        NEW_NDB_EVENT;
-        default:
-            return UNDEFINED_MONITOR_EVENT;
+    case UP_EVENT:
+        return (present & SERVER_MASTER) ? MASTER_UP_EVENT :
+            (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
+                (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
+                    (present & SERVER_NDB) ? NDB_UP_EVENT :
+                        SERVER_UP_EVENT;
+    case DOWN_EVENT:
+        return (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
+            (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
+                (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
+                    (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
+                        SERVER_DOWN_EVENT;
+    case LOSS_EVENT:
+        return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
+            (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
+                (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
+                    LOST_NDB_EVENT;
+    case NEW_EVENT:
+        return (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
+            (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
+                (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
+                    NEW_NDB_EVENT;
+    default:
+        return UNDEFINED_MONITOR_EVENT;
     }
 }
 
@@ -700,7 +733,7 @@ mon_get_event_name(MONITOR_SERVERS* node)
  * @result  monitor_event_t     Monitor event corresponding to name
  */
 monitor_event_t
-mon_name_to_event (const char *event_name)
+mon_name_to_event(const char *event_name)
 {
     monitor_event_t event;
 
@@ -751,14 +784,14 @@ mon_status_changed(MONITOR_SERVERS* mon_srv)
 {
     /* Previous status is -1 if not yet set */
     return (mon_srv->mon_prev_status != -1
-        && mon_srv->mon_prev_status != mon_srv->server->status);
+            && mon_srv->mon_prev_status != mon_srv->server->status);
 }
 
 /**
  * Check if current monitored server has a loggable failure status
  *
- * @param mon_srv	The monitored server
- * @return		true if failed status can be logged or false
+ * @param mon_srv       The monitored server
+ * @return              true if failed status can be logged or false
  */
 bool
 mon_print_fail_status(MONITOR_SERVERS* mon_srv)
@@ -917,11 +950,11 @@ void
 mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
 {
     MXS_ERROR(rval == MONITOR_CONN_TIMEOUT ?
-        "Monitor timed out when connecting to "
-        "server %s:%d : \"%s\"" :
-        "Monitor was unable to connect to "
-        "server %s:%d : \"%s\"",
-        database->server->name,
-        database->server->port,
-        mysql_error(database->con));
+              "Monitor timed out when connecting to "
+              "server %s:%d : \"%s\"" :
+              "Monitor was unable to connect to "
+              "server %s:%d : \"%s\"",
+              database->server->name,
+              database->server->port,
+              mysql_error(database->con));
 }

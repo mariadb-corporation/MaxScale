@@ -27,23 +27,23 @@
 #include <secrets.h>
 
 /**
- * @file monitor.h	The interface to the monitor module
+ * @file monitor.h      The interface to the monitor module
  *
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 07/07/13	Mark Riddoch		Initial implementation
- * 25/07/13	Mark Riddoch		Addition of diagnotics
- * 23/05/14	Mark Riddoch		Addition of routine to find monitors by name
- * 23/05/14	Massimiliano Pinto	Addition of defaultId and setInterval
- * 23/06/14	Massimiliano Pinto	Addition of replicationHeartbeat
- * 28/08/14	Massimiliano Pinto	Addition of detectStaleMaster
- * 30/10/14	Massimiliano Pinto	Addition of disableMasterFailback
- * 07/11/14	Massimiliano Pinto	Addition of setNetworkTimeout
- * 19/02/15	Mark Riddoch		Addition of monitorGetList
- * 19/11/15 Martin Brampton     Automation of event and name declaration, absorption
- *                              of what was formerly monitor_common.h
+ * Date         Who                     Description
+ * 07/07/13     Mark Riddoch            Initial implementation
+ * 25/07/13     Mark Riddoch            Addition of diagnotics
+ * 23/05/14     Mark Riddoch            Addition of routine to find monitors by name
+ * 23/05/14     Massimiliano Pinto      Addition of defaultId and setInterval
+ * 23/06/14     Massimiliano Pinto      Addition of replicationHeartbeat
+ * 28/08/14     Massimiliano Pinto      Addition of detectStaleMaster
+ * 30/10/14     Massimiliano Pinto      Addition of disableMasterFailback
+ * 07/11/14     Massimiliano Pinto      Addition of setNetworkTimeout
+ * 19/02/15     Mark Riddoch            Addition of monitorGetList
+ * 19/11/15     Martin Brampton         Automation of event and name declaration, absorption
+ *                                      of what was formerly monitor_common.h
  *
  * @endverbatim
  */
@@ -73,17 +73,18 @@
  * unregisterServer is called to remove a server from the set of servers that need to be
  * monitored.
  */
-typedef struct {
-	void 	*(*startMonitor)(void *, void*);
-	void	(*stopMonitor)(void *);
-	void	(*diagnostics)(DCB *, void *);
+typedef struct
+{
+    void *(*startMonitor)(void *, void*);
+    void (*stopMonitor)(void *);
+    void (*diagnostics)(DCB *, void *);
 } MONITOR_OBJECT;
 
 /**
  * The monitor API version number. Any change to the monitor module API
  * must change these versions usign the rules defined in modinfo.h
  */
-#define	MONITOR_VERSION	{3, 0, 0}
+#define MONITOR_VERSION {3, 0, 0}
 
 /** Monitor's poll frequency */
 #define MON_BASE_INTERVAL_MS 100
@@ -93,11 +94,11 @@ typedef struct {
  */
 typedef enum
 {
-	MONITOR_STATE_ALLOC	= 0x00,
-	MONITOR_STATE_RUNNING	= 0x01,
-	MONITOR_STATE_STOPPING	= 0x02,
-	MONITOR_STATE_STOPPED	= 0x04,
-	MONITOR_STATE_FREED	= 0x08
+    MONITOR_STATE_ALLOC     = 0x00,
+    MONITOR_STATE_RUNNING   = 0x01,
+    MONITOR_STATE_STOPPING  = 0x02,
+    MONITOR_STATE_STOPPED   = 0x04,
+    MONITOR_STATE_FREED     = 0x08
 } monitor_state_t;
 
 /**
@@ -105,9 +106,9 @@ typedef enum
  */
 typedef enum
 {
-	MONITOR_CONNECT_TIMEOUT	= 0,
-	MONITOR_READ_TIMEOUT	= 1,
-	MONITOR_WRITE_TIMEOUT	= 2
+    MONITOR_CONNECT_TIMEOUT = 0,
+    MONITOR_READ_TIMEOUT    = 1,
+    MONITOR_WRITE_TIMEOUT   = 2
 } monitor_timeouts_t;
 
 /*
@@ -127,9 +128,9 @@ typedef enum
 #define DEFAULT_WRITE_TIMEOUT 2
 
 
-#define MONITOR_RUNNING		1
-#define MONITOR_STOPPING	2
-#define MONITOR_STOPPED		3
+#define MONITOR_RUNNING 1
+#define MONITOR_STOPPING 2
+#define MONITOR_STOPPED 3
 
 #define MONITOR_INTERVAL 10000 // in milliseconds
 #define MONITOR_DEFAULT_ID 1UL // unsigned long value
@@ -158,56 +159,59 @@ extern const monitor_def_t monitor_event_definitions[];
 /**
  * The linked list of servers that are being monitored by the monitor module.
  */
-typedef struct monitor_servers {
-	SERVER		*server;	/**< The server being monitored */
-	MYSQL		*con;		/**< The MySQL connection */
-        bool log_version_err;
-	int		mon_err_count;
-	unsigned int	mon_prev_status;
-	unsigned int	pending_status; /**< Pending Status flag bitmap */
-	struct monitor_servers
-			*next;		/**< The next server in the list */
+typedef struct monitor_servers
+{
+    SERVER *server;               /**< The server being monitored */
+    MYSQL *con;                   /**< The MySQL connection */
+    bool log_version_err;
+    int mon_err_count;
+    unsigned int mon_prev_status;
+    unsigned int pending_status;  /**< Pending Status flag bitmap */
+    struct monitor_servers *next; /**< The next server in the list */
 } MONITOR_SERVERS;
 
 /**
  * Representation of the running monitor.
  */
-typedef struct monitor {
-	char		*name;		/**< The name of the monitor module */
-        char* user; /*< Monitor username */
-        char* password; /*< Monitor password */
-        SPINLOCK lock;
-        CONFIG_PARAMETER* parameters; /*< configuration parameters */
-        MONITOR_SERVERS* databases; /*< List of databases the monitor monitors */
-	monitor_state_t state;		/**< The state of the monitor */
-        int	connect_timeout;	/**< Connect timeout in seconds for mysql_real_connect */
-	int	read_timeout;		/**< Timeout in seconds to read from the server.
-					 * There are retries and the total effective timeout value is three times the option value.
-					 */
-	int	write_timeout;		/**< Timeout in seconds for each attempt to write to the server.
-					 * There are retries and the total effective timeout value is two times the option value.
-					 */
-	MONITOR_OBJECT	*module;	/**< The "monitor object" */
-	void		*handle;	/**< Handle returned from startMonitor */
-	size_t		interval;	/**< The monitor interval */
-	struct monitor	*next;		/**< Next monitor in the linked list */
+typedef struct monitor
+{
+    char *name;                   /**< The name of the monitor module */
+    char *user;                   /*< Monitor username */
+    char *password;               /*< Monitor password */
+    SPINLOCK lock;
+    CONFIG_PARAMETER* parameters; /*< configuration parameters */
+    MONITOR_SERVERS* databases;   /*< List of databases the monitor monitors */
+    monitor_state_t state;        /**< The state of the monitor */
+    int connect_timeout;          /**< Connect timeout in seconds for mysql_real_connect */
+    int read_timeout;             /**< Timeout in seconds to read from the server.
+                                   * There are retries and the total effective timeout
+                                   * value is three times the option value.
+                                   */
+    int write_timeout;            /**< Timeout in seconds for each attempt to write to the server.
+                                     * There are retries and the total effective timeout value is
+                                     * two times the option value.
+                                     */
+    MONITOR_OBJECT *module;       /**< The "monitor object" */
+    void *handle;                 /**< Handle returned from startMonitor */
+    size_t interval;              /**< The monitor interval */
+    struct monitor *next;         /**< Next monitor in the linked list */
 } MONITOR;
 
-extern MONITOR	*monitor_alloc(char *, char *);
-extern void	monitor_free(MONITOR *);
-extern MONITOR	*monitor_find(char *);
-extern void	monitorAddServer(MONITOR *, SERVER *);
-extern void	monitorAddUser(MONITOR *, char *, char *);
+extern MONITOR *monitor_alloc(char *, char *);
+extern void monitor_free(MONITOR *);
+extern MONITOR *monitor_find(char *);
+extern void monitorAddServer(MONITOR *, SERVER *);
+extern void monitorAddUser(MONITOR *, char *, char *);
 extern void monitorAddParameters(MONITOR *monitor, CONFIG_PARAMETER *params);
-extern void	monitorStop(MONITOR *);
-extern void	monitorStart(MONITOR *, void*);
-extern void	monitorStopAll();
+extern void monitorStop(MONITOR *);
+extern void monitorStart(MONITOR *, void*);
+extern void monitorStopAll();
 extern void monitorStartAll();
-extern void	monitorShowAll(DCB *);
-extern void	monitorShow(DCB *, MONITOR *);
-extern void	monitorList(DCB *);
-extern void     monitorSetInterval (MONITOR *, unsigned long);
-extern void     monitorSetNetworkTimeout(MONITOR *, int, int);
+extern void monitorShowAll(DCB *);
+extern void monitorShow(DCB *, MONITOR *);
+extern void monitorList(DCB *);
+extern void monitorSetInterval (MONITOR *, unsigned long);
+extern void monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
 bool check_monitor_permissions(MONITOR* monitor);
 
