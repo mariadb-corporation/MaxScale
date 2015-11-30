@@ -10,7 +10,7 @@ install(TARGETS MySQLBackend DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(telnetd SHARED telnetd.c)
 target_link_libraries(telnetd log_manager)
-set_target_properties(MySQLBackend PROPERTIES VERSION "2.0.0")
+set_target_properties(telnetd PROPERTIES VERSION "1.0.1")
 install(TARGETS telnetd DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(HTTPD SHARED httpd.c)
