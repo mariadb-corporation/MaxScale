@@ -23,8 +23,8 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 25/06/13	Mark Riddoch	Initial implementation
+ * Date         Who             Description
+ * 25/06/13     Mark Riddoch    Initial implementation
  *
  * @endverbatim
  */
@@ -33,46 +33,46 @@
 /**
  * Start a polling thread
  *
- * @param entry		The entry point to call
- * @param arg		The argument to pass the thread entry point
- * @return	The thread handle
+ * @param entry         The entry point to call
+ * @param arg           The argument to pass the thread entry point
+ * @return      The thread handle
  */
 void *
 thread_start(void (*entry)(void *), void *arg)
 {
-pthread_t	thd;
+    pthread_t thd;
 
-	if (pthread_create(&thd, NULL, (void *(*)(void *))entry, arg) != 0)
-	{
-		return NULL;
-	}
-	return (void *)thd;
+    if (pthread_create(&thd, NULL, (void *(*)(void *))entry, arg) != 0)
+    {
+        return NULL;
+    }
+    return (void *)thd;
 }
 
 /**
  * Wait for a running threads to complete.
  *
- * @param thd	The thread handle
+ * @param thd   The thread handle
  */
 void
 thread_wait(void *thd)
 {
-void	*rval;
+    void *rval;
 
-	pthread_join((pthread_t)thd, &rval);
+    pthread_join((pthread_t)thd, &rval);
 }
 
 /**
  * Put the thread to sleep for a number of milliseconds
  *
- * @param ms	Number of milliseconds to sleep
+ * @param ms    Number of milliseconds to sleep
  */
 void
 thread_millisleep(int ms)
 {
-struct timespec req;
+    struct timespec req;
 
-	req.tv_sec = ms / 1000;
-	req.tv_nsec = (ms % 1000) * 1000000;
-	nanosleep(&req, NULL);
+    req.tv_sec = ms / 1000;
+    req.tv_nsec = (ms % 1000) * 1000000;
+    nanosleep(&req, NULL);
 }
