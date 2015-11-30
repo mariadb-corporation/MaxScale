@@ -665,10 +665,7 @@ createInstance(SERVICE *service, char **options)
 
                     if (perc == 0)
                     {
-                        if (wght != 0)
-                        {
-                            perc = 1;
-                        }
+                        perc = 1;
                         MXS_ERROR("Weighting parameter '%s' with a value of %d for"
                                   " server '%s' rounds down to zero with total weight"
                                   " of %d for service '%s'. No queries will be "
