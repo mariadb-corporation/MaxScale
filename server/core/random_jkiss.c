@@ -18,15 +18,15 @@
 
 /**
  * @file random_jkiss.c  -  Random number generator for the MariaDB Corporation MaxScale
- * 
+ *
  * See http://www0.cs.ucl.ac.uk/staff/d.jones/GoodPracticeRNG.pdf for discussion of random
  * number generators (RNGs).
  *
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 26/08/15	Martin Brampton	Initial implementation
+ * Date         Who             Description
+ * 26/08/15     Martin Brampton Initial implementation
  *
  * @endverbatim
  */
@@ -53,18 +53,18 @@ static unsigned int random_jkiss_devrand(void);
 static void random_init_jkiss(void);
 
 /***
- * 
+ *
  * Return a pseudo-random number that satisfies major tests for random sequences
- * 
+ *
  * @return  uint    Random number
- * 
+ *
  */
-unsigned int 
+unsigned int
 random_jkiss(void)
 {
     unsigned long long t;
     unsigned int result;
-    
+
     spinlock_acquire(&random_jkiss_spinlock);
     if (!init)
     {
@@ -88,18 +88,23 @@ random_jkiss(void)
 /* Own code adapted from http://www0.cs.ucl.ac.uk/staff/d.jones/GoodPracticeRNG.pdf */
 
 /***
- * 
+ *
  * Obtain a seed random number from /dev/urandom if available.
- * 
+ *
  * @return  uint    Random number
- * 
+ *
  */
-static unsigned int 
+static unsigned int
 random_jkiss_devrand(void)
 {
     int fn;
     unsigned int r;
-    if ((fn = open("/dev/urandom", O_RDONLY)) == -1) return 0;
+
+    if ((fn = open("/dev/urandom", O_RDONLY)) == -1)
+    {
+        return 0;
+    }
+
     if (read(fn, &r, sizeof(r)) != sizeof(r))
     {
         r = 0;
@@ -109,23 +114,41 @@ random_jkiss_devrand(void)
 }
 
 /***
- * 
+ *
  * Initialise the generator using /dev/urandom if available, and warm up
  * with 1000 iterations
- * 
+ *
  */
 static void
 random_init_jkiss(void)
 {
     int newrand, i;
+
     spinlock_acquire(&random_jkiss_spinlock);
-    if ((newrand = random_jkiss_devrand()) != 0) x = newrand;
-    if ((newrand = random_jkiss_devrand()) != 0) y = newrand;
-    if ((newrand = random_jkiss_devrand()) != 0) z = newrand;
-    if ((newrand = random_jkiss_devrand()) != 0) 
+    if ((newrand = random_jkiss_devrand()) != 0)
+    {
+        x = newrand;
+    }
+
+    if ((newrand = random_jkiss_devrand()) != 0)
+    {
+        y = newrand;
+    }
+
+    if ((newrand = random_jkiss_devrand()) != 0)
+    {
+        z = newrand;
+    }
+
+    if ((newrand = random_jkiss_devrand()) != 0)
+    {
         c = newrand % 698769068 + 1; /* Should be less than 698769069 */
+    }
     spinlock_release(&random_jkiss_spinlock);
-    
+
     /* "Warm up" our random number generator */
-    for (i = 0; i < 100; i++) random_jkiss();
+    for (i = 0; i < 100; i++)
+    {
+        random_jkiss();
+    }
 }
