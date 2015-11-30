@@ -642,11 +642,10 @@ struct	stat	statb;
 void
 blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
 {
-	spinlock_acquire(&file->lock);
+	spinlock_acquire(&router->fileslock);
 	file->refcnt--;
 	if (file->refcnt == 0)
 	{
-		spinlock_acquire(&router->fileslock);
 		if (router->files == file)
 			router->files = file->next;
 		else
@@ -657,18 +656,18 @@ blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
 			if (ptr)
 				ptr->next = file->next;
 		}
-		spinlock_release(&router->fileslock);
+	}
+	else
+	{
+		file = NULL;
+	}
+	spinlock_release(&router->fileslock);
 
+	if (file)
+	{
 		close(file->fd);
 		file->fd = -1;
-	}
-
-	if (file->refcnt == 0) {
-		spinlock_release(&file->lock);
-
 		free(file);
-	} else {
-		spinlock_release(&file->lock);
 	}
 }
 
