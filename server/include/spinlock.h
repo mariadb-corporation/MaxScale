@@ -31,7 +31,7 @@
 #include <thread.h>
 #include <stdbool.h>
 
-#define	SPINLOCK_PROFILE		0
+#define SPINLOCK_PROFILE 0
 
 /**
  * The spinlock structure.
@@ -43,24 +43,25 @@
  * a number of profile related fields that count the number of spins, number
  * of waiting threads and the number of times the lock has been acquired.
  */
-typedef struct spinlock {
-	int		lock;		/*< Is the lock held? */
+typedef struct spinlock
+{
+    int lock;         /*< Is the lock held? */
 #if SPINLOCK_PROFILE
-	int		spins;		/*< Number of spins on this lock */
-	int		maxspins;	/*< Max no of spins to acquire lock */
-	int		acquired;	/*< No. of times lock was acquired */
-	int		waiting;	/*< No. of threads acquiring this lock */
-	int		max_waiting;	/*< Max no of threads waiting for lock */
-	int		contended;	/*< No. of times acquire was contended */
-	THREAD		owner;		/*< Last owner of this lock */
+    int spins;        /*< Number of spins on this lock */
+    int maxspins;     /*< Max no of spins to acquire lock */
+    int acquired;     /*< No. of times lock was acquired */
+    int waiting;      /*< No. of threads acquiring this lock */
+    int max_waiting;  /*< Max no of threads waiting for lock */
+    int contended;    /*< No. of times acquire was contended */
+    THREAD owner;     /*< Last owner of this lock */
 #endif
 } SPINLOCK;
 
 #ifndef TRUE
-#define TRUE	true
+#define TRUE    true
 #endif
 #ifndef FALSE
-#define FALSE	false
+#define FALSE   false
 #endif
 
 #if SPINLOCK_PROFILE
@@ -70,11 +71,11 @@ typedef struct spinlock {
 #endif
 
 #define SPINLOCK_IS_LOCKED(l) ((l)->lock != 0 ? true : false)
-	
-extern void	spinlock_init(SPINLOCK *lock);
-extern void	spinlock_acquire(SPINLOCK *lock);
-extern int	spinlock_acquire_nowait(SPINLOCK *lock);
-extern void	spinlock_release(SPINLOCK *lock);
-extern void	spinlock_stats(SPINLOCK *lock, 
-			void (*reporter)(void *, char *, int), void *hdl);
+
+extern void spinlock_init(SPINLOCK *lock);
+extern void spinlock_acquire(SPINLOCK *lock);
+extern int spinlock_acquire_nowait(SPINLOCK *lock);
+extern void spinlock_release(SPINLOCK *lock);
+extern void spinlock_stats(SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl);
+
 #endif
