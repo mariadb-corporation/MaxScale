@@ -69,6 +69,15 @@ int create_t1(MYSQL * conn)
     return(result);
 }
 
+int create_t2(MYSQL * conn)
+{
+    int result = 0;
+    result += execute_query(conn, "DROP TABLE IF EXISTS t2;");
+    printf("Creating test table\n");
+    result += execute_query(conn, "CREATE TABLE t2 (x1 int, fl int);");
+    return(result);
+}
+
 int create_insert_string(char *sql, int N, int fl)
 {
     char *ins1 = (char *) "INSERT INTO t1 (x1, fl) VALUES ";
