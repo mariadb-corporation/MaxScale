@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(3000);
         Test->tprintf("Trying transactions: %d\n", i);
-        Test->add_result(big_transaction(Test->repl->nodes[0], 100), "Transaction %d failed!\n", i);
+        Test->add_result(big_transaction(Test->repl->nodes[0], 500), "Transaction %d failed!\n", i);
     }
     Test->repl->close_connections();
 
