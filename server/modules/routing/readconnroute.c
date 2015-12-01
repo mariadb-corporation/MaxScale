@@ -499,18 +499,18 @@ newSession(ROUTER *instance, SESSION *session)
             {
                 candidate = inst->servers[i];
             }
-            else if ((inst->servers[i]->current_connection_count
+            else if (((inst->servers[i]->current_connection_count + 1)
                       * 1000) / inst->servers[i]->weight <
-                     (candidate->current_connection_count *
+                     ((candidate->current_connection_count + 1) *
                       1000) / candidate->weight)
             {
                 /* This running server has fewer
                 connections, set it as a new candidate */
                 candidate = inst->servers[i];
             }
-            else if ((inst->servers[i]->current_connection_count
+            else if (((inst->servers[i]->current_connection_count + 1)
                       * 1000) / inst->servers[i]->weight ==
-                     (candidate->current_connection_count *
+                     ((candidate->current_connection_count + 1) *
                       1000) / candidate->weight &&
                      inst->servers[i]->server->stats.n_connections <
                      candidate->server->stats.n_connections)
