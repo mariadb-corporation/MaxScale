@@ -1562,6 +1562,7 @@ GWBUF		*pkt;
 uint8_t		*buf;
 ROUTER_SLAVE	*slave, *nextslave;
 int		action;
+unsigned int cstate;
 
 	spinlock_acquire(&router->lock);
 	slave = router->slaves;
@@ -1716,9 +1717,19 @@ int		action;
 
 				case SLAVE_FORCE_CATCHUP:
 					spinlock_acquire(&slave->catch_lock);
+					cstate = slave->cstate;
 					slave->cstate &= ~(CS_UPTODATE|CS_BUSY);
 					slave->cstate |= CS_EXPECTCB;
 					spinlock_release(&slave->catch_lock);
+					if ((cstate & CS_UPTODATE) == CS_UPTODATE)
+					{
+						MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up to date to catch-up in blr_distribute_binlog_record, binlog file '%s', position %lu.",
+							router->service->name,
+							slave->dcb->remote,
+							ntohs((slave->dcb->ipv4).sin_port),
+							slave->serverid,
+							slave->binlogfile, (unsigned long)slave->binlog_pos);
+					}
 					poll_fake_write_event(slave->dcb);
 					break;
 			}
