@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Current no. of conns:", res);
     sscanf(res, "%d", &res_d);
     Test->tprintf("Before: Current num of conn %d\n", res_d);
-    Test->add_result(res_d, "curr num of conn is not 0");
+    Test->add_result(res_d, "curr num of conn is not 0\n");
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Number of connections:", res);
     sscanf(res, "%d", &res_d);
     Test->tprintf("Before: num of conn %d\n", res_d);
@@ -30,14 +30,19 @@ int main(int argc, char *argv[])
     Test->try_query(Test->conn_rwsplit, (char *) "select 1");
     Test->close_rwsplit();
 
+    Test->stop_timeout();
+    sleep(10);
+
+    Test->set_timeout(10);
+
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Current no. of conns:", res);
     sscanf(res, "%d", &res_d);
     Test->tprintf("After: Current num of conn %d\n", res_d);
-    Test->add_result(res_d, "curr num of conn is not 0");
+    Test->add_result(res_d, "curr num of conn is not 0\n");
     get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Number of connections:", res);
     sscanf(res, "%d", &res_d);
-    Test->tprintf("Aftwr: num of conn %d\n", res_d);
-    if (res_d != 1) {Test->add_result(1, "num of conn is not 0");}
+    Test->tprintf("After: num of conn %d\n", res_d);
+    if (res_d != 1) {Test->add_result(1, "num of conn is not 1");}
 
     Test->check_maxscale_alive();
 
