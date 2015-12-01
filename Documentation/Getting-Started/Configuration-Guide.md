@@ -486,6 +486,21 @@ monitorpw=mymonitorpasswd
 
 The monpasswd parameter may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the maxscale.cnf file.
 
+#### `persistpoolmax`
+
+The `persistpoolmax` parameter defaults to zero but can be set to an integer value for a back end server.
+If it is non zero, then when a DCB connected to a back end server is discarded by the
+system, it will be held in a pool for reuse, remaining connected to the back end server.
+If the number of DCBs in the pool has reached the value given by `persistpoolmax` then
+any further DCB that is discarded will not be retained, but disconnected and discarded.
+
+#### `persistmaxtime`
+
+The `persistmaxtime` parameter defaults to zero but can be set to an integer value
+indicating a number of seconds. A DCB placed in the persistent pool for a server will
+only be reused if the elapsed time since it joined the pool is less than the given
+value. Otherwise, the DCB will be discarded and the connection closed.
+
 ### Listener
 
 The listener defines a port and protocol pair that is used to listen for connections to a service. A service may have multiple listeners associated with it, either to support multiple protocols or multiple ports. As with other elements of the configuration the section name is the listener name and it can be selected freely. A type parameter is used to identify the section as a listener definition. Address is optional and it allows the user to limit connections to certain interface only. Socket is also optional and used for Unix socket connections.
@@ -521,21 +536,6 @@ The port to use to listen for incoming connections to MaxScale from the clients.
 The `socket` option may be included in a listener definition, this configures the listener to use Unix domain sockets to listen for incoming connections. The parameter value given is the name of the socket to use.
 
 If a socket option and an address option is given then the listener will listen on both the specific IP address and the Unix socket.
-
-#### `persistpoolmax`
-
-The `persistpoolmax` parameter defaults to zero but can be set to an integer value for a back end server.
-If it is non zero, then when a DCB connected to a back end server is discarded by the
-system, it will be held in a pool for reuse, remaining connected to the back end server.
-If the number of DCBs in the pool has reached the value given by `persistpoolmax` then
-any further DCB that is discarded will not be retained, but disconnected and discarded.
-
-#### `persistmaxtime`
-
-The `persistmaxtime` parameter defaults to zero but can be set to an integer value
-indicating a number of seconds. A DCB placed in the persistent pool for a server will
-only be reused if the elapsed time since it joined the pool is less than the given
-value. Otherwise, the DCB will be discarded and the connection closed.
 
 ### Filter
 
