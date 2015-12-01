@@ -213,7 +213,9 @@ createInstance(SERVICE *service, char **options)
      * backend server.
      */
     for (sref = service->dbref, n = 0; sref; sref = sref->next)
+    {
         n++;
+    }
 
     inst->servers = (BACKEND **) calloc(n + 1, sizeof(BACKEND *));
     if (!inst->servers)
@@ -613,8 +615,7 @@ newSession(ROUTER *instance, SESSION *session)
  * @details (write detailed description here)
  *
  */
-static void freeSession(ROUTER* router_instance,
-                        void* router_client_ses)
+static void freeSession(ROUTER* router_instance, void* router_client_ses)
 {
     ROUTER_INSTANCE* router = (ROUTER_INSTANCE *) router_instance;
     ROUTER_CLIENT_SES* router_cli_ses =
@@ -746,7 +747,10 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
                   "server.%s",
                   mysql_command, rses_is_closed ? " Session is closed." : "");
         rc = 0;
-        while ((queue = GWBUF_CONSUME_ALL(queue)) != NULL);
+        while ((queue = GWBUF_CONSUME_ALL(queue)) != NULL)
+        {
+            ;
+        }
         goto return_rc;
 
     }
@@ -841,11 +845,7 @@ diagnostics(ROUTER *router, DCB *dcb)
  * @param       queue           The GWBUF with reply data
  */
 static void
-clientReply(
-            ROUTER *instance,
-            void *router_session,
-            GWBUF *queue,
-            DCB *backend_dcb)
+clientReply(ROUTER *instance, void *router_session, GWBUF *queue, DCB *backend_dcb)
 {
     ss_dassert(backend_dcb->session->client != NULL);
     SESSION_ROUTE_REPLY(backend_dcb->session, queue);
@@ -864,13 +864,8 @@ clientReply(
  * @param	succp		Result of action: true if router can continue
  *
  */
-static void handleError(
-                        ROUTER *instance,
-                        void *router_session,
-                        GWBUF *errbuf,
-                        DCB *problem_dcb,
-                        error_action_t action,
-                        bool *succp)
+static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
+                        DCB *problem_dcb, error_action_t action, bool *succp)
 
 {
     DCB *client_dcb;
@@ -935,8 +930,7 @@ static void handleError(
  * @details (write detailed description here)
  *
  */
-static bool rses_begin_locked_router_action(
-                                            ROUTER_CLIENT_SES* rses)
+static bool rses_begin_locked_router_action(ROUTER_CLIENT_SES* rses)
 {
     bool succp = false;
 
@@ -973,8 +967,7 @@ return_succp:
  * @details (write detailed description here)
  *
  */
-static void rses_end_locked_router_action(
-                                          ROUTER_CLIENT_SES* rses)
+static void rses_end_locked_router_action(ROUTER_CLIENT_SES* rses)
 {
     CHK_CLIENT_RSES(rses);
     spinlock_release(&rses->rses_lock);
