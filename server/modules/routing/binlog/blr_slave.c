@@ -2121,7 +2121,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			spinlock_release(&router->binlog_lock);
 
 			if ((cstate & CS_UPTODATE) == CS_UPTODATE)
-			{	
+			{
 				MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up to date to catch-up in blr_slave_catchup, binlog file '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
@@ -2260,7 +2260,7 @@ unsigned int cstate;
 			spinlock_acquire(&router->binlog_lock);
 
 			do_return = 0;
-			cstate = slave->cstate;	
+			cstate = slave->cstate;
 
 			/* check for a pending transaction and not rotating */
 			if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
@@ -2289,7 +2289,7 @@ unsigned int cstate;
 			}
 
 			spinlock_acquire(&slave->catch_lock);
-			cstate = slave->cstate;	
+			cstate = slave->cstate;
 			slave->cstate &= ~(CS_UPTODATE|CS_EXPECTCB);
 			spinlock_release(&slave->catch_lock);
 
