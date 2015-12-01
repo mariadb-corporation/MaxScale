@@ -109,13 +109,13 @@ bitmask_set(GWBITMASK *bitmask, int bit)
     unsigned char mask;
 
     spinlock_acquire(&bitmask->lock);
-    if (bit >= bitmask->length)
+    while (bit >= bitmask->length)
     {
         bitmask->bits = realloc(bitmask->bits,
                                 (bitmask->length + BIT_LENGTH_INC) / 8);
         memset(bitmask->bits + (bitmask->length / 8), 0,
                BIT_LENGTH_INC / 8);
-        bitmask->length += (BIT_LENGTH_INC / 8);
+        bitmask->length += BIT_LENGTH_INC;
     }
     ptr = bitmask->bits + (bit / 8);
     mask = 1 << (bit % 8);
