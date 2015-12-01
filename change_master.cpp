@@ -1,10 +1,8 @@
-
 #include <my_config.h>
 #include <iostream>
 #include "testconnections.h"
 
 using namespace std;
-
 
 int main(int argc, char *argv[])
 {

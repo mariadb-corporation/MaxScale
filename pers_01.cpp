@@ -139,6 +139,7 @@ int main(int argc, char *argv[])
 
     Test->add_result(Test->create_connections(70), "Error creating connections\n");
 
+    sleep(5);
     Test->set_timeout(20);
 
     Test->tprintf("Test 1:\n");

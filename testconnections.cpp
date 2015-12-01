@@ -1,4 +1,3 @@
-
 #include "testconnections.h"
 #include "sql_t1.h"
 #include <getopt.h>
