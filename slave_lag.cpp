@@ -64,8 +64,6 @@ int main(int argc, char *argv[])
 
     char server1_id[1024];
     int server1_id_d;
-    int server_id_d;
-    int rounds = 0;
     int i;
     int min_lag=0;
     int ms;
@@ -83,7 +81,6 @@ int main(int argc, char *argv[])
         Test->copy_all_logs();
         exit(1);
     } else {
-
         for ( i = 0; i < Test->repl->N; i++) {
             Test->tprintf("set max_connections = 200 for node %d\n", i);
             execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 200;");
@@ -94,9 +91,9 @@ int main(int argc, char *argv[])
 
         create_insert_string(sql, 50000, 1);
         Test->tprintf("sql_len=%lu\n", strlen(sql));
-        for ( i = 0; i < 100; i++) {
+/*      for ( i = 0; i < 100; i++) {
             Test->try_query(Test->conn_rwsplit, sql);
-        }
+        }*/
 
         pthread_t threads[1000];
         //pthread_t check_thread;
@@ -109,36 +106,13 @@ int main(int argc, char *argv[])
             iret[j] = pthread_create( &threads[j], NULL, query_thread, &sql);
         }
 
-        execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20");
+        execute_query(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=10");
 
         find_field(Test->repl->nodes[0], (char *) "select @@server_id;", (char *) "@@server_id", &server1_id[0]);
         sscanf(server1_id, "%d", &server1_id_d);
         Test->tprintf("Master server_id: %d\n", server1_id_d);
 
         Test->close_rwsplit();
-
-        for (i = 0; i < 10; i++) {
-            ms = check_lag(&min_lag);
-            if ((ms = 0) && (min_lag < 20)) {
-                Test->add_result(1, "Lag is small, but connected to master\n");
-            }
-            if ((ms = 1) && (min_lag > 20)) {
-                Test->add_result(1, "Lag is big, but connected to slave\n");
-            }
-        }
-
-        Test->tprintf("Blocking slaves\n");
-        for (i = 1; i < Test->repl->N; i++) {
-            Test->repl->block_node(i);
-        }
-
-        Test->tprintf("sleeping\n");
-        sleep(40);
-
-        Test->tprintf("Unblocking slaves\n");
-        for (i = 1; i < Test->repl->N; i++) {
-            Test->repl->unblock_node(i);
-        }
 
         for (i = 0; i < 1000; i++) {
             ms = check_lag(&min_lag);
@@ -151,9 +125,6 @@ int main(int argc, char *argv[])
         }
 
         exit_flag = 1;
-
-        // close connections
-        //Test->close_rwsplit();
     }
     while (exited == 0) {
         Test->tprintf("Waiting for load thread end\n");
@@ -173,10 +144,6 @@ void *query_thread( void *ptr )
     while (exit_flag == 0) {
         //execute_query(conn, (char *) "INSERT INTO t2 (x1, fl) SELECT x1,fl FROM t1");
         execute_query_silent(conn, (char *) ptr);
-        /*if (execute_query_silent(conn, (char *) ptr) != 0)
-        {
-            //printf("Query failed!\n");
-        }*/
     }
     exited = 1;
     return NULL;
