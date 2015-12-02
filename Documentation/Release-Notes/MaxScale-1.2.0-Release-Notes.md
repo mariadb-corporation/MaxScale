@@ -5,7 +5,7 @@
 This document details the changes in version 1.2 since the release of the 1.1.1 GA Release of the MaxScale product.
 
 ###***PLEASE NOTICE: MaxScale installation directories have changed in this version***
-The 1.2 version of MaxScale differs from previos versions in its installation layout. Please take great care when upgrading MaxScale from previous versions to version 1.2. An automatic upgrade will not work due to the severe changes in the installation layout.
+The 1.2 version of MaxScale differs from previous versions in its installation layout. Please take great care when upgrading MaxScale from previous versions to version 1.2. An automatic upgrade will not work due to the severe changes in the installation layout.
 
 ## New Features
 
@@ -31,7 +31,7 @@ MaxScale now supports SSL/TLS encrypted connections to MaxScale.
 Now you can configure MaxScale monitor module to automatically launch a script when it detects change in the state of a backend server. The script can be any customer script defined by you to take diagnostic or reporting action. With this you can easily customize MaxScale's behavior.
 
 ### Lsyncd configuration guide
-A new tutorial has beed added which helps you keep MaxScale's configuration files in sync across multiple hosts. This allows for easier HA setups with MaxScale and guarantees up-to-date configuration files on all nodes. The tutorial can be found [here](../Reference/MaxScale-HA-with-lsyncd.md).
+A new tutorial has been added which helps you keep MaxScale's configuration files in sync across multiple hosts. This allows for easier HA setups with MaxScale and guarantees up-to-date configuration files on all nodes. The tutorial can be found [here](../Reference/MaxScale-HA-with-lsyncd.md).
 
 ## Bug fixes
 

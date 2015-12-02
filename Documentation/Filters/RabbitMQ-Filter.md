@@ -1,7 +1,7 @@
 #RabbitMQ Filter
 
 ## Overview
-This filter is designed to extract queries and transform them into a canonical form e.g. `INSERT INTO dabata.table VALUES ("John Doe", "Downtown",100,50.0);` turns into `INSERT INTO dabata.table VALUES ("?", "?",?,?);`. The filter pushes these canonized queries and their replies in to a RabbitMQ broker where they can later be retrieved. The retrieval can be done with your own application or the [RabbitMQ Consumer Client](RabbitMQ-Consumer-Client.md) utility tool, which reads the messages from the broker and sends the contents of those messages as SQL queries to a database.
+This filter is designed to extract queries and transform them into a canonical form e.g. `INSERT INTO database.table VALUES ("John Doe", "Downtown",100,50.0);` turns into `INSERT INTO database.table VALUES ("?", "?",?,?);`. The filter pushes these canonicalized queries and their replies in to a RabbitMQ broker where they can later be retrieved. The retrieval can be done with your own application or the [RabbitMQ Consumer Client](RabbitMQ-Consumer-Client.md) utility tool, which reads the messages from the broker and sends the contents of those messages as SQL queries to a database.
 
 ## Configuration
 
@@ -46,24 +46,22 @@ The RabbitMQ filter has parameters to control which queries are logged based on 
 
  Option | Description | Accepted Values | Default |
 --------|-------------|-----------------|-------------
- logging_trigger  |  Set the logging level  |  `all, source, schema, object`  |  `all`  |  
- logging_strict  |  Sets whether to trigger when any of the parameters match or only if all parameters match  |  `true, false`  |  `false`  |  
- logging_log_all  |  Log only SELECT, UPDATE, DELETE and INSERT or all possible queries  |  `true, false`  |  `true`  |  
- logging_source_user  |  Comma-separated list of usernames to log  |     |     |  
- logging_source_host  |  Comma-separated list of hostnames to log  |     |     |  
- logging_schema  |  Comma-separated list of databases  |     |     |  
- logging_object  |  Comma-separated list of database objects  |  
- hostname  |  The server hostname where the messages are sent  |    |  `localhost`  |  
- port  |  Port to send the messages to  |    |  `5672`  |  
- username  |  Server login username  |    |  `guest`  |  
- password  |  Server login password  |    |  `guest`  |  
- vhost  |  The virtual host location on the server, where the messages are sent  |    |  `/`  |  
- exchange  |  The name of the exchange  |    |  `default_exchange`  |  
- exchange_type  |  The type of the exchange  |  `direct, fanout, topic, headers`  |  `direct`  |  
- key  |  The routing key used when sending messages to the exchange  |    |  `key`  |  
- queue  |  The queue that will be bound to the used exchange  |    |    |  
- ssl_CA_cert  |  Path to the CA certificate in PEM format  |    |    |  
- ssl_client_cert  |  Path to the client cerificate in PEM format  |    |    |  
+ logging_trigger  |  Set the logging level  |  `all, source, schema, object`  |  `all`  |
+ logging_strict  |  Sets whether to trigger when any of the parameters match or only if all parameters match  |  `true, false`  |  `false`  |
+ logging_log_all  |  Log only SELECT, UPDATE, DELETE and INSERT or all possible queries  |  `true, false`  |  `true`  |
+ logging_source_user  |  Comma-separated list of usernames to log  |     |     |
+ logging_source_host  |  Comma-separated list of hostnames to log  |     |     |
+ logging_schema  |  Comma-separated list of databases  |     |     |
+ logging_object  |  Comma-separated list of database objects  |
+ hostname  |  The server hostname where the messages are sent  |    |  `localhost`  |
+ port  |  Port to send the messages to  |    |  `5672`  |
+ username  |  Server login username  |    |  `guest`  |
+ password  |  Server login password  |    |  `guest`  |
+ vhost  |  The virtual host location on the server, where the messages are sent  |    |  `/`  |
+ exchange  |  The name of the exchange  |    |  `default_exchange`  |
+ exchange_type  |  The type of the exchange  |  `direct, fanout, topic, headers`  |  `direct`  |
+ key  |  The routing key used when sending messages to the exchange  |    |  `key`  |
+ queue  |  The queue that will be bound to the used exchange  |    |    |
+ ssl_CA_cert  |  Path to the CA certificate in PEM format  |    |    |
+ ssl_client_cert  |  Path to the client certificate in PEM format  |    |    |
  ssl_client_key  |  Path to the client public key in PEM format  |    |    |
-
-
