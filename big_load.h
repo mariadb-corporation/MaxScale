@@ -9,8 +9,8 @@
 //pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 typedef struct  {
     int exit_flag;
-    int i1;
-    int i2;
+    long i1;
+    long i2;
     int rwsplit_only;
     TestConnections * Test;
 } thread_data;

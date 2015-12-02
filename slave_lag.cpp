@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
             Test->repl->unblock_node(i);
         }
 
-        for (i = 0; i < 10; i++) {
+        for (i = 0; i < 1000; i++) {
             ms = check_lag(&min_lag);
             if ((ms = 0) && (min_lag < 20)) {
                 Test->add_result(1, "Lag is small, but connected to master\n");
@@ -152,12 +152,6 @@ int main(int argc, char *argv[])
 
         exit_flag = 1;
 
-        if (server1_id_d != server_id_d) {
-            Test->tprintf("Master id is %d\n", server1_id_d);
-            Test->add_result(1, "Lag is big, but connection is done to server with id %d\n", server_id_d);
-        } else {
-            Test->tprintf("Connected to master\n");
-        }
         // close connections
         //Test->close_rwsplit();
     }
@@ -177,7 +171,8 @@ void *query_thread( void *ptr )
     MYSQL * conn;
     conn = open_conn(Test->repl->port[0], Test->repl->IP[0], Test->repl->user_name, Test->repl->password, Test->repl->ssl);
     while (exit_flag == 0) {
-        execute_query(conn, (char *) "INSERT INTO t2 (x1, fl) SELECT x1,fl FROM t1");
+        //execute_query(conn, (char *) "INSERT INTO t2 (x1, fl) SELECT x1,fl FROM t1");
+        execute_query_silent(conn, (char *) ptr);
         /*if (execute_query_silent(conn, (char *) ptr) != 0)
         {
             //printf("Query failed!\n");
