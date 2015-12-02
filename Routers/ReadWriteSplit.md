@@ -205,3 +205,50 @@ Most imaginable reasons are related to replication lag but it could be possible 
 ## Examples
 
 Examples of the readwritesplit router in use can be found in the [Tutorials](../Tutorials) folder.
+
+## Readwritesplit routing decisions
+
+Here is a small explanation which shows what kinds of queries are routed to which type of server.
+
+### Routing to Master
+
+Routing to master is important for data consistency and because majority of writes are written to binlog and thus become replicated to slaves.
+
+The following operations are routed to master:
+
+* write statements,
+* all statements within an open transaction,
+* stored procedure calls, and
+* user-defined function calls.
+* DDL statements (`DROP`|`CREATE`|`ALTER TABLE` … etc.)
+* `EXECUTE` (prepared) statements
+* all statements using temporary tables
+
+In addition to these, if the **readwritesplit** service is configured with the `max_slave_replication_lag` parameter, and if all slaves suffer from too much replication lag, then statements will be routed to the _Master_. (There might be other similar configuration parameters in the future which limit the number of statements that will be routed to slaves.)
+
+### Routing to Slaves
+
+The ability to route some statements to *Slave*s is important because it also decreases the load targeted to master. Moreover, it is possible to have multiple slaves to share the load in contrast to single master.
+
+Queries which can be routed to slaves must be auto committed and belong to one of the following group:
+
+* read-only database queries,
+* read-only queries to system, or user-defined variables,
+* `SHOW` statements, and
+* system function calls.
+
+### Routing to every session backend
+
+A third class of statements includes those which modify session data, such as session system variables, user-defined variables, the default database, etc. We call them session commands, and they must be replicated as they affect the future results of read and write operations, so they must be executed on all servers that could execute statements on behalf of this client.
+
+Session commands include for example:
+
+* `SET` statements
+* `USE `*`<dbname>`*
+* system/user-defined variable assignments embedded in read-only statements, such as `SELECT (@myvar := 5)`
+* `PREPARE` statements
+* `QUIT`, `PING`, `STMT RESET`, `CHANGE USER`, etc. commands
+
+**NOTE: if variable assignment is embedded in a write statement it is routed to _Master_ only. For example, `INSERT INTO t1 values(@myvar:=5, 7)` would be routed to _Master_ only.**
+
+The router stores all of the executed session commands so that in case of a slave failure, a replacement slave can be chosen and the session command history can be repeated on that new slave. This means that the router stores each executed session command for the duration of the session. Applications that use long-running sessions might cause MaxScale to consume a growing amount of memory unless the sessions are closed. This can be solved by setting a connection timeout on the application side.
