@@ -2122,7 +2122,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
 			if ((cstate & CS_UPTODATE) == CS_UPTODATE)
 			{
-				MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up to date to catch-up in blr_slave_catchup, binlog file '%s', position %lu.",
+				MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up-to-date to catch-up in blr_slave_catchup, binlog file '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
 					ntohs((slave->dcb->ipv4).sin_port),
@@ -2271,15 +2271,6 @@ unsigned int cstate;
 			spinlock_release(&router->binlog_lock);
 
 			if (do_return) {
-				if ((slave->cstate & CS_EXPECTCB) == CS_EXPECTCB)
-				{
-					MXS_NOTICE("%s: Slave %s:%d, server-id %d transition to expect_call_back in blr_slave_callback, binlog file '%s', position %lu.",
-						router->service->name,
-						slave->dcb->remote,
-						ntohs((slave->dcb->ipv4).sin_port),
-						slave->serverid,
-						slave->binlogfile, (unsigned long)slave->binlog_pos);
-				}
 				spinlock_acquire(&slave->catch_lock);
 				slave->cstate |= CS_EXPECTCB;
 				spinlock_release(&slave->catch_lock);
@@ -2295,7 +2286,7 @@ unsigned int cstate;
 
 			if ((cstate & CS_UPTODATE) == CS_UPTODATE)
 			{
-				MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up to date to catch-up in blr_slave_callback, binlog file '%s', position %lu.",
+				MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up-to-date to catch-up in blr_slave_callback, binlog file '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
 					ntohs((slave->dcb->ipv4).sin_port),

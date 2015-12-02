@@ -1723,7 +1723,7 @@ unsigned int cstate;
 					spinlock_release(&slave->catch_lock);
 					if ((cstate & CS_UPTODATE) == CS_UPTODATE)
 					{
-						MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up to date to catch-up in blr_distribute_binlog_record, binlog file '%s', position %lu.",
+						MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up-to-date to catch-up in blr_distribute_binlog_record, binlog file '%s', position %lu.",
 							router->service->name,
 							slave->dcb->remote,
 							ntohs((slave->dcb->ipv4).sin_port),
