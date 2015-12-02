@@ -284,7 +284,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 	inst->m_errno = 0;
 	inst->m_errmsg = NULL;
 
-	inst->trx_safe = 1;
+	inst->trx_safe = 0;
 	inst->pending_transaction = 0;
 	inst->last_safe_pos = 0;
 
