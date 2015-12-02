@@ -23,18 +23,52 @@ void *checks_thread( void *ptr);
 
 TestConnections * Test;
 
-int main(int argc, char *argv[])
+int check_lag(int * min_lag)
 {
     char result[1024];
     char server_id[1024];
-    char server1_id[1024];
     char ma_cmd[256];
     int res_d;
+    int server1_id_d;
+    int server_id_d;
+    int i;
+    int ret = 0;
+
+    *min_lag = 0;
+    for (i = 1; i < Test->repl->N; i++ ) {
+        sprintf(ma_cmd, "show server server%d", i+1);
+        get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, ma_cmd, (char *) "Slave delay:", result);
+        sscanf(result, "%d", &res_d);
+        Test->tprintf("server%d lag: %d\n", i+1, res_d);
+        if (i == 1) {*min_lag = res_d;}
+        if (*min_lag > res_d) {*min_lag = res_d;}
+    }
+    Test->tprintf("Minimum lag: %d\n", *min_lag);
+    Test->connect_rwsplit();
+    find_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
+    Test->close_rwsplit();
+    sscanf(server_id, "%d", &server_id_d);
+    Test->tprintf("Connected to the server with server_id %d\n", server_id_d);
+    if ((server1_id_d == server_id_d)) {
+        Test->add_result(1, "Connected to the master!\n");
+        ret = 0;
+    } else {
+        Test->tprintf("Connected to slave\n");
+        ret = 1;
+    }
+    return(ret);
+}
+
+int main(int argc, char *argv[])
+{
+
+    char server1_id[1024];
     int server1_id_d;
     int server_id_d;
     int rounds = 0;
     int i;
     int min_lag=0;
+    int ms;
 
     Test = new TestConnections(argc, argv);
     Test->set_timeout(2000);
@@ -83,29 +117,38 @@ int main(int argc, char *argv[])
 
         Test->close_rwsplit();
 
-        do {
-            min_lag = 0;
-            for (i = 1; i < Test->repl->N; i++ ) {
-                sprintf(ma_cmd, "show server server%d", i+1);
-                get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, ma_cmd, (char *) "Slave delay:", result);
-                sscanf(result, "%d", &res_d);
-                Test->tprintf("server%d lag: %d\n", i+1, res_d);
-                if (i == 1) {min_lag = res_d;}
-                if (min_lag > res_d) {min_lag = res_d;}
+        for (i = 0; i < 10; i++) {
+            ms = check_lag(&min_lag);
+            if ((ms = 0) && (min_lag < 20)) {
+                Test->add_result(1, "Lag is small, but connected to master\n");
             }
-            Test->tprintf("Minimum lag: %d\n", min_lag);
-            Test->connect_rwsplit();
-            find_field(Test->conn_rwsplit, (char *) "select @@server_id; -- maxscale max_slave_replication_lag=20", (char *) "@@server_id", &server_id[0]);
-            Test->close_rwsplit();
-            sscanf(server_id, "%d", &server_id_d);
-            Test->tprintf("Connected to the server with server_id %d\n", server_id_d);
-            if ((rounds < 10) and (server1_id_d == server_id_d)) {
-                Test->add_result(1, "Connected to the master!\n");
-            } else {
-                Test->tprintf("Connected to slave\n");
+            if ((ms = 1) && (min_lag > 20)) {
+                Test->add_result(1, "Lag is big, but connected to slave\n");
             }
-            rounds++;
-        } while (min_lag < 21);
+        }
+
+        Test->tprintf("Blocking slaves\n");
+        for (i = 1; i < Test->repl->N; i++) {
+            Test->repl->block_node(i);
+        }
+
+        Test->tprintf("sleeping\n");
+        sleep(40);
+
+        Test->tprintf("Unblocking slaves\n");
+        for (i = 1; i < Test->repl->N; i++) {
+            Test->repl->unblock_node(i);
+        }
+
+        for (i = 0; i < 10; i++) {
+            ms = check_lag(&min_lag);
+            if ((ms = 0) && (min_lag < 20)) {
+                Test->add_result(1, "Lag is small, but connected to master\n");
+            }
+            if ((ms = 1) && (min_lag > 20)) {
+                Test->add_result(1, "Lag is big, but connected to slave\n");
+            }
+        }
 
         exit_flag = 1;
 
