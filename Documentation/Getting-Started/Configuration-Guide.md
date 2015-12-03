@@ -574,7 +574,8 @@ Read/Write aware statement based router:
 Simple sharding on database level:
 * [SchemaRouter](../Routers/SchemaRouter.md)
 
-In addition to these routing modules, the binlogrouter module can act as a binary log proxy between a master and slave servers.
+Binary log server:
+* [Binlogrouter](../Routers/Binlogrouter.md)
 
 ## Diagnostic modules
 
