@@ -4,6 +4,22 @@
 
 The purpose of this document is to describe how to configure MaxScale and to discuss some possible usage scenarios for MaxScale. MaxScale is designed with flexibility in mind, and consists of an event processing core with various support functions and plugin modules that tailor the behavior of the MaxScale itself.
 
+# Table of Contents
+
+* [Configuration](#configuration)
+  * [Global Settings](#global-settings)
+  * [Service](#service)
+    * [Service and SSL](#service-and-ssl)
+  * [Server](#server)
+  * [Listener](#listener)
+* [Router Modules](#routing-modules)
+* [Diagnostic Modules](#diagnostic-modules)
+* [Monitor Modules](#monitor-modules)
+* [Filter Modules](#filter-modules)
+* [Reloading Configuration](#reloading-configuration)
+* [Authentication](#authentication)
+* [Error Reporting](#error-reporting)
+
 ### Terms
 
 
@@ -21,22 +37,6 @@ statement routing  | Statement routing is a method of handling requests in which
 connection failover| When a connection currently being used between MaxScale and the database server fails a replacement will be automatically created to another server by MaxScale without client intervention
   backend database | A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.
             filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
-
-# Table of Contents
-
-* [Configuration](#configuration)
-  * [Global Settings](#global-settings)
-  * [Service](#service)
-    * [Service and SSL](#service-and-ssl)
-  * [Server](#server)
-  * [Listener](#listener)
-* [Router Modules](#routing-modules)
-* [Diagnostic Modules](#diagnostic-modules)
-* [Monitor Modules](#monitor-modules)
-* [Filter Modules](#filter-modules)
-* [Reloading Configuration](#reloading-configuration)
-* [Authentication](#authentication)
-* [Error Reporting](#error-reporting)
 
 ## Configuration
 
