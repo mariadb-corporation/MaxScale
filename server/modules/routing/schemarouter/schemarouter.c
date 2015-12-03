@@ -2242,8 +2242,7 @@ static int routeQuery(
 	}
 
  	/** prepared statment handling */
- 	if(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
- 		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT))
+ 	if(QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT))
  	{
  		if(route_target == TARGET_NAMED_SERVER)
  		{
