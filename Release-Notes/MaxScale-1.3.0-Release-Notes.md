@@ -48,7 +48,7 @@ Note that *info* and *debug* messages are never logged to syslog.
 
 ## Bug fixes
 
-Here is a list of bugs fixed since the release of MaxScale 1.1.1.
+Here is a list of bugs fixed since the release of MaxScale 1.2.1.
 
  * [MXS-414](https://mariadb.atlassian.net/browse/MXS-414): Maxscale crashed every day!
  * [MXS-415](https://mariadb.atlassian.net/browse/MXS-415): MaxScale 1.2.1 crashed with Signal 6 and 11
