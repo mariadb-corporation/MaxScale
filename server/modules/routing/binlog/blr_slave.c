@@ -2122,12 +2122,14 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
 			if ((cstate & CS_UPTODATE) == CS_UPTODATE)
 			{
+#ifdef STATE_CHANGE_LOGGING_ENABLED
 				MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up-to-date to catch-up in blr_slave_catchup, binlog file '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
 					ntohs((slave->dcb->ipv4).sin_port),
 					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos);
+#endif
 			}
 
 			poll_fake_write_event(slave->dcb);
@@ -2154,6 +2156,8 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 		if (state_change)
 		{
 			slave->stats.n_caughtup++;
+#ifdef STATE_CHANGE_LOGGING_ENABLED
+                        // TODO: The % 50 should be removed. Now only every 50th state change is logged.
 			if (slave->stats.n_caughtup == 1)
 			{
 				MXS_NOTICE("%s: Slave %s:%d, server-id %d is now up to date '%s', position %lu.",
@@ -2172,6 +2176,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos);
 			}
+#endif
 		}
 	}
 	else
@@ -2286,12 +2291,14 @@ unsigned int cstate;
 
 			if ((cstate & CS_UPTODATE) == CS_UPTODATE)
 			{
+#ifdef STATE_CHANGE_LOGGING_ENABLED
 				MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up-to-date to catch-up in blr_slave_callback, binlog file '%s', position %lu.",
 					router->service->name,
 					slave->dcb->remote,
 					ntohs((slave->dcb->ipv4).sin_port),
 					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos);
+#endif
 			}
 
 			slave->stats.n_dcb++;
