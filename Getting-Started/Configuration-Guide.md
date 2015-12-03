@@ -61,8 +61,6 @@ servers=server1,
 
 The values of the parameter that are not on the first line need to have at least one whitespace character before them in order for them to be recognized as a part of the multi-line parameter.
 
-Please see the section about [Protocol Modules](#protocol-modules) for more details about MaxScale and the default directories where modules will be searched for.
-
 ### Global Settings
 
 The global settings, in a section named `[MaxScale]`, allow various parameters that affect MaxScale as a whole to be tuned.
