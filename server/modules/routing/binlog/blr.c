@@ -747,7 +747,9 @@ ROUTER_SLAVE		*slave;
         spinlock_init(&slave->catch_lock);
 	slave->dcb = session->client;
 	slave->router = inst;
+#ifdef BLFILE_IN_SLAVE
 	slave->file = NULL;
+#endif
 	strcpy(slave->binlogfile, "unassigned");
 	slave->connect_time = time(0);
 	slave->lastEventTimestamp = 0;
@@ -892,8 +894,12 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 		 */
 		slave->state = BLRS_UNREGISTERED;
 
+#if BLFILE_IN_SLAVE
+                // TODO: Is it really certain the file can be closed here? If other
+                // TODO: threads are using the slave instance, bag things will happen. [JWi].
 		if (slave->file)
 			blr_close_binlog(router, slave->file);
+#endif
 
                 /* Unlock */
                 rses_end_locked_router_action(slave);
