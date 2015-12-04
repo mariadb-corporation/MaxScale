@@ -12,7 +12,28 @@ Martin, please update this section.
 
 ### Binlog Server
 
-Massimiliano, please update this section.
+There are new administrative commands: STOP SLAVE, START SLAVE, RESET SLAVE and CHANGE MASTER TO  
+The master server details are now provided by a master.ini file located in binlog directory and could be changed via CHANGE MASTER TO command issued via MySQL connection to MaxScale.
+
+Before migrating to 1.3.0 it's necessary to put a writable master.ini file into binlog directory, containing these parameters:
+
+```
+[binlog_configuration]
+master_host=127.0.0.1
+master_port=3308
+master_user=repl
+master_password=somepass
+filestem=repl-bin
+```
+
+User may change parameters accordingly to his configuration
+
+Note: the "servers" parameter is no longer required in the service definition.
+
+Additional information are available in:
+
+Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md  
+Upgrading/Upgrading-Binlogrouter-to-1.3.0.md
 
 ### Logging Changes
 
