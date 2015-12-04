@@ -1,6 +1,6 @@
 # Setting up MaxScale for a Master/Slave replication cluster
 
-This series of documents is designed as a quick introduction to setting up MaxScale in an environment in which you have a MySQL Replication Cluster with one master and multiple slave servers. The process of setting and configuring MaxScale will be covered within this document.
+This document is designed as a quick introduction to setting up MaxScale in an environment in which you have a MySQL Replication Cluster with one master and multiple slave servers. The process of setting and configuring MaxScale will be covered within this document.
 
 However the installation and configuration of the MySQL Replication subsystem will not be covered nor will any discussion of installation management tools to handle automated or semi-automated failover of the replication cluster. The [Setting Up Replication](https://mariadb.com/kb/en/mariadb/setting-up-replication/) article on the MariaDB knowledgebase can help you get started with replication clusters.
 
@@ -15,8 +15,6 @@ The steps involved in setting up MaxScale are:
 * Create the required users in your MariaDB or MySQL Replication cluster
 
 * Create a MaxScale configuration file
-
-The configuration file creation is covered in two different sub-tutorials which create either a simple load balancer or a read/write splitting configuration.
 
 ## Installation
 
@@ -97,3 +95,7 @@ Query OK, 0 rows affected (0.00 sec)
 
 The other option is to use a wildcard grant like  `GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'%'`. This is more convenient but also less secure than having specific grants for both the client's address and MaxScale's address.
 
+
+## Creating the configuration file
+
+The configuration file creation is covered in different tutorials, either [MySQL Replication Connection Routing Tutorial](MySQL-Replication-Connection-Routing-Tutorial.md) or [MySQL Replication Read-Write Splitting Tutorial](MySQL-Replication-Read-Write-Splitting-Tutorial.md).
