@@ -201,5 +201,5 @@ CLI                  | maxscaled          | localhost       |  6603 | Running
 ```
 
 
-MaxScale is now ready to start accepting client connections and routing them to the master or slaves within your cluster. Other configuration options are available that can alter the criteria used for routing, these include monitoring the replication lag within the cluster and routing only to slaves that are within a predetermined delay from the current master or using weights to obtain unequal balancing operations. These options may be found in the MaxScale Configuration Guide. More detail on the use of maxadmin can be found in the document "MaxAdmin - The MaxScale Administration & Monitoring Client Application".
+MaxScale is now ready to start accepting client connections and routing them to the master or slaves within your cluster. Other configuration options are available that can alter the criteria used for routing, these include monitoring the replication lag within the cluster and routing only to slaves that are within a predetermined delay from the current master or using weights to obtain unequal balancing operations. These options may be found in the MaxScale Configuration Guide. More detail on the use of maxadmin can be found in the document [MaxAdmin - The MaxScale Administration & Monitoring Client Application](Administration-Tutorial.md).
 
