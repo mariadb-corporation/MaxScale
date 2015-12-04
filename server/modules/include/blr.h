@@ -302,7 +302,9 @@ typedef struct router_slave {
 	char		binlogfile[BINLOG_FNAMELEN+1];
 					/*< Current binlog file for this slave */
 	char		*uuid;		/*< Slave UUID */
+#ifdef BLFILE_IN_SLAVE
 	BLFILE		*file;		/*< Currently open binlog file */
+#endif
 	int		serverid;	/*< Server-id of the slave */
 	char		*hostname;	/*< Hostname of the slave, if known */
 	char		*user;		/*< Username if given */
