@@ -1,6 +1,8 @@
 # Setting up MaxScale for a Master/Slave replication cluster
 
-This series of documents is designed as a quick introduction to setting up MaxScale in an environment in which you have a MySQL Replication Cluster with one master and multiple slave servers. The process of setting and configuring MaxScale will be covered within this document. However the installation and configuration of the MySQL Replication subsystem will not be covered nor will any discussion of installation management tools to handle automated or semi-automated failover of the replication cluster. The [Setting Up Replication](https://mariadb.com/kb/en/mariadb/setting-up-replication/) article on the MariaDB knowledgebase can help you get started with replication clusters.
+This series of documents is designed as a quick introduction to setting up MaxScale in an environment in which you have a MySQL Replication Cluster with one master and multiple slave servers. The process of setting and configuring MaxScale will be covered within this document.
+
+However the installation and configuration of the MySQL Replication subsystem will not be covered nor will any discussion of installation management tools to handle automated or semi-automated failover of the replication cluster. The [Setting Up Replication](https://mariadb.com/kb/en/mariadb/setting-up-replication/) article on the MariaDB knowledgebase can help you get started with replication clusters.
 
 This tutorial will assume the user is running from one of the binary distributions available and has installed this in the default location. Building from source code in GitHub is covered in the [Building from Source](../Getting-Started/Building-MaxScale-from-Source-Code.md) document.
 
@@ -66,32 +68,32 @@ If you wish to use two different usernames for the two different roles of monito
 
 ## Creating additional grants for users
 
-Because MaxScale is a proxy, the backend databases will see all clients as if they were connecting from the MaxScale server's address. This usually requires users to create additional grants for MaxScale's hostname. The best way to describe this is with an example.
+Because MaxScale is a proxy the backend databases will see all clients as if they were connecting from MaxScale's address. This usually requires users to create additional grants for MaxScale's hostname. The best way to describe this process is with an example.
 
-User `'john'@'192.168.0.200` has the following grant on the cluster: `GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'john'@'192.168.0.200'`. When the user connects directly to the server it will see it as  `'john'@'192.168.0.200` connecting to the server and it will match the grant for `'john'@'192.168.0.200`.
+User `'jdoe'@'192.168.0.200` has the following grant on the cluster: `GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'192.168.0.200'`. When the user connects directly to the server it will see it as  `'jdoe'@'192.168.0.200` connecting to the server and it will match the grant for `'jdoe'@'192.168.0.200`.
 
-If MaxScale is at the address `192.168.0.101` and the user `john` connects to this MaxScale, the backend server will see the connection as `'john'@'192.168.0.101'`. Since the backend server has no grants for `'john'@'192.168.0.101'`, the connection from MaxScale to the server will be refused.
+If MaxScale is at the address `192.168.0.101` and the user `jdoe` connects to this MaxScale, the backend server will see the connection as `'jdoe'@'192.168.0.101'`. Since the backend server has no grants for `'jdoe'@'192.168.0.101'`, the connection from MaxScale to the server will be refused.
 
-We can fix this by either creating a matching grant for user `john` from the MaxScale address or by using a wildcard to cover both addresses.
+We can fix this by either creating a matching grant for user `jdoe` from the MaxScale address or by using a wildcard to cover both addresses.
 
 The quickest way to do this is by doing a SHOW GRANTS query:
 ```
-MariaDB [(none)]> SHOW GRANTS FOR 'john'@'192.168.0.200';
+MariaDB [(none)]> SHOW GRANTS FOR 'jdoe'@'192.168.0.200';
 +-----------------------------------------------------------------------+
-| Grants for john@192.168.0.200                                         |
+| Grants for jdoe@192.168.0.200                                         |
 +-----------------------------------------------------------------------+
-| GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'john'@'192.168.0.200' |
+| GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'192.168.0.200' |
 +-----------------------------------------------------------------------+
 1 row in set (0.01 sec)
 ```
-Then creating the user `'john'@'192.168.0.101'` and giving it the same grants:
+Then creating the user `'jdoe'@'192.168.0.101'` and giving it the same grants:
 ```
-MariaDB [(none)]> CREATE USER 'john'@'192.168.0.101';
+MariaDB [(none)]> CREATE USER 'jdoe'@'192.168.0.101';
 Query OK, 0 rows affected (0.00 sec)
 
-MariaDB [(none)]> GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'john'@'192.168.0.101';
+MariaDB [(none)]> GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'192.168.0.101';
 Query OK, 0 rows affected (0.00 sec)
 ```
 
-The other option is to use a wildcard grant like  `GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'john'@'%'`. This is more convenient but also less secure than having specific grants for both the client's address and MaxScale's address.
+The other option is to use a wildcard grant like  `GRANT SELECT, INSERT, UPDATE, DELETE ON *.* TO 'jdoe'@'%'`. This is more convenient but also less secure than having specific grants for both the client's address and MaxScale's address.
 
