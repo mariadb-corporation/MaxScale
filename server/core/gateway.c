@@ -968,7 +968,7 @@ static void usage(void)
             "                             (default: /etc/)\n"
             "  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
             "                             (default: /var/cache/maxscale)\n"
-            "  -N, --language=PATH         apth to errmsg.sys file\n"
+            "  -N, --language=PATH         path to errmsg.sys file\n"
             "                             (default: /var/lib/maxscale)\n"
             "  -P, --piddir=PATH          path to PID file directory\n"
             "                             (default: /var/run/maxscale)\n"
