@@ -2,7 +2,11 @@ Regex Filter
 
 # Overview
 
-The regex filter is a filter module for MaxScale that is able to rewrite query content using regular expression matches and text substitution.
+The regex filter is a filter module for MaxScale that is able to rewrite query content using regular expression matches and text substitution. It uses the PCRE2 syntax which differs from the POSIX regular expressions used in MaxScale versions prior to 1.3.0.
+
+For all details about the PCRE2 syntax, please read the [PCRE2 syntax documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html).
+
+Please note that the PCRE2 library uses a different syntax to refer to capture groups in the replacement string. The main difference is the usage of the dollar character instead of the backslash character for references e.g. `$1` instead of `\1`. For more details about the replacement string differences, please read the [Creating a new string with substitutions](http://www.pcre.org/current/doc/html/pcre2api.html#SEC34) chapter in the PCRE2 manual.
 
 # Configuration
 
@@ -93,7 +97,7 @@ MySQL 5.1 used the parameter TYPE = to set the storage engine that should be use
 type=filter
 module=regexfilter
 options=ignorecase
-match=TYPE[ 	]*=
+match=TYPE\s*=
 replace=ENGINE=
 
 [MyService]
