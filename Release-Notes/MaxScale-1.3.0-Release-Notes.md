@@ -26,14 +26,13 @@ master_password=somepass
 filestem=repl-bin
 ```
 
-User may change parameters accordingly to his configuration
+Users may change parameters accordingly to their configuration
 
-Note: the "servers" parameter is no longer required in the service definition.
+**Note**: the "servers" parameter is no longer required in the service definition.
 
-Additional information are available in:
-
-Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md  
-Upgrading/Upgrading-Binlogrouter-to-1.3.0.md
+Additional information is available in the following documents:
+* [Binlogrouter Tutorial](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
+* [Upgrading binlogrouter to 1.3.0](../Upgrading/Upgrading-Binlogrouter-to-1.3.0.md)
 
 ### Logging Changes
 
@@ -47,7 +46,7 @@ By default, *notice*, *warning* and *error* messages are logged, while *info* an
 
 Earlier, the *error* and *message* files were written to the filesystem, while the *trace* and *debug* files were written to shared memory. The one and only log file of MaxScale is now by default written to the filesystem. This will have performance implications if *info* and *debug* messages are enabled.
 
-If you want to retain the possiblity of turning on *info* and *debug* messages, without it impacting the performance too much, the recommended approach is to add the following entries to the MaxScale configuration file:
+If you want to retain the possibility of turning on *info* and *debug* messages, without it impacting the performance too much, the recommended approach is to add the following entries to the MaxScale configuration file:
 
 ```
 [maxscale]
@@ -66,6 +65,20 @@ MaxScale> enable maxlog
 ```
 
 Note that *info* and *debug* messages are never logged to syslog.
+
+### PCRE2 integration
+
+MaxScale now uses the PCRE2 library for regular expressions. This has been integrated into the core configuration processing and most of the modules. The main module which uses this is the regexfilter which now fully supports the PCRE2 syntax with proper substitutions. For a closer look at how this differs from the POSIX regular expression syntax take a look at the [PCRE2 documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html).
+
+**Please note**, that the substitution string follows different rules than the traditional substitution strings. The usual way of referring to capture groups in the substitution string is with the backslash character followed by the capture group reference e.g. `\1` but the PCRE2 library uses the dollar character followed by the group reference. To quote the PCRE2 native API manual:
+
+```
+In the replacement string, which is interpreted as a UTF string in UTF mode, and is checked for UTF validity unless the PCRE2_NO_UTF_CHECK option is set, a dollar character is an escape character that can specify the insertion of characters from capturing groups in the pattern. The following forms are recognized:
+
+  $$      insert a dollar character
+  $<n>    insert the contents of group <n>
+  ${<n>}  insert the contents of group <n>
+```
 
 ## Bug fixes
 
