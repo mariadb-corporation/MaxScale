@@ -37,52 +37,55 @@
  * connections to. This provides the storage for routing module specific data
  * that is required for each of the backend servers.
  */
-typedef struct backend {
-	SERVER		*server;	           /*< The server itself */
-	int		current_connection_count;  /*< Number of connections to the server */
-	int		weight;			   /*< Desired routing weight */
+typedef struct backend
+{
+    SERVER *server; /*< The server itself */
+    int current_connection_count; /*< Number of connections to the server */
+    int weight; /*< Desired routing weight */
 } BACKEND;
 
 /**
  * The client session structure used within this router.
  */
-typedef struct router_client_session {
+typedef struct router_client_session
+{
 #if defined(SS_DEBUG)
-        skygw_chk_t     rses_chk_top;
+    skygw_chk_t rses_chk_top;
 #endif
-        SPINLOCK        rses_lock;     /*< protects rses_deleted              */
-        int             rses_versno;   /*< even = no active update, else odd  */
-        bool            rses_closed;   /*< true when closeSession is called   */
-	BACKEND		*backend;      /*< Backend used by the client session */
-	DCB		*backend_dcb;  /*< DCB Connection to the backend      */
-	struct router_client_session *next;
-        int             rses_capabilities; /*< input type, for example */
+    SPINLOCK rses_lock; /*< protects rses_deleted              */
+    int rses_versno; /*< even = no active update, else odd  */
+    bool rses_closed; /*< true when closeSession is called   */
+    BACKEND *backend; /*< Backend used by the client session */
+    DCB *backend_dcb; /*< DCB Connection to the backend      */
+    struct router_client_session *next;
+    int rses_capabilities; /*< input type, for example */
 #if defined(SS_DEBUG)
-        skygw_chk_t     rses_chk_tail;
+    skygw_chk_t rses_chk_tail;
 #endif
 } ROUTER_CLIENT_SES;
 
 /**
  * The statistics for this router instance
  */
-typedef struct {
-	int		n_sessions;	/*< Number sessions created     */
-	int		n_queries;	/*< Number of queries forwarded */
+typedef struct
+{
+    int n_sessions; /*< Number sessions created     */
+    int n_queries; /*< Number of queries forwarded */
 } ROUTER_STATS;
-
 
 /**
  * The per instance data for the router.
  */
-typedef struct router_instance {
-	SERVICE		  *service;     /*< Pointer to the service using this router */
-	ROUTER_CLIENT_SES *connections; /*< Link list of all the client connections  */
-	SPINLOCK	  lock;	        /*< Spinlock for the instance data           */
-	BACKEND		  **servers;    /*< List of backend servers                  */
-	unsigned int	  bitmask;	/*< Bitmask to apply to server->status       */
-	unsigned int	  bitvalue;	/*< Required value of server->status         */
-	ROUTER_STATS	  stats;	/*< Statistics for this router               */
-	struct router_instance
-                          *next;
+typedef struct router_instance
+{
+    SERVICE *service; /*< Pointer to the service using this router */
+    ROUTER_CLIENT_SES *connections; /*< Link list of all the client connections  */
+    SPINLOCK lock; /*< Spinlock for the instance data           */
+    BACKEND **servers; /*< List of backend servers                  */
+    unsigned int bitmask; /*< Bitmask to apply to server->status       */
+    unsigned int bitvalue; /*< Required value of server->status         */
+    ROUTER_STATS stats; /*< Statistics for this router               */
+    struct router_instance
+    *next;
 } ROUTER_INSTANCE;
 #endif

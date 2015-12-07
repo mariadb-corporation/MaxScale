@@ -210,7 +210,7 @@ static bool resolve_maxscale_conf_fname(
     char*  cnf_file_arg);
 
 static char* check_dir_access(char* dirname, bool, bool);
-static int set_user();
+static int set_user(const char* user);
 bool pid_file_exists();
 void write_child_exit_code(int fd, int code);
 /** SSL multi-threading functions and structures */
@@ -968,7 +968,7 @@ static void usage(void)
             "                             (default: /etc/)\n"
             "  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
             "                             (default: /var/cache/maxscale)\n"
-            "  -N, --language=PATH         apth to errmsg.sys file\n"
+            "  -N, --language=PATH         path to errmsg.sys file\n"
             "                             (default: /var/lib/maxscale)\n"
             "  -P, --piddir=PATH          path to PID file directory\n"
             "                             (default: /var/run/maxscale)\n"
@@ -2433,7 +2433,7 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
     return 1;
 }
 
-static int set_user(char* user)
+static int set_user(const char* user)
 {
     errno = 0;
     struct passwd *pwname;

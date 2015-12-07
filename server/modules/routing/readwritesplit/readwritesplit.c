@@ -4653,7 +4653,7 @@ static void rwsplit_process_router_options(
 
 /**
  * Error Handler routine to resolve _backend_ failures. If it succeeds then there
- * are enough operative backends available and connected. Otherwise it fails, 
+ * are enough operative backends available and connected. Otherwise it fails,
  * and session is terminated.
  *
  * @param       instance        The router instance
@@ -4662,7 +4662,7 @@ static void rwsplit_process_router_options(
  * @param       backend_dcb     The backend DCB
  * @param       action     	The action: ERRACT_NEW_CONNECTION or ERRACT_REPLY_CLIENT
  * @param	succp		Result of action: true iff router can continue
- * 
+ *
  * Even if succp == true connecting to new slave may have failed. succp is to
  * tell whether router has enough master/slave connections to continue work.
  */
@@ -4670,7 +4670,7 @@ static void handleError (
         ROUTER*        instance,
         void*          router_session,
         GWBUF*         errmsgbuf,
-        DCB*           backend_dcb,
+        DCB*           problem_dcb,
         error_action_t action,
         bool*          succp)
 {
@@ -4678,10 +4678,10 @@ static void handleError (
         ROUTER_INSTANCE*   inst    = (ROUTER_INSTANCE *)instance;
         ROUTER_CLIENT_SES* rses    = (ROUTER_CLIENT_SES *)router_session;
 
-        CHK_DCB(backend_dcb);
+        CHK_DCB(problem_dcb);
 
 	/** Don't handle same error twice on same DCB */
-	if (backend_dcb->dcb_errhandle_called)
+	if (problem_dcb->dcb_errhandle_called)
 	{
             /** we optimistically assume that previous call succeed */
             /*
@@ -4693,24 +4693,28 @@ static void handleError (
 	}
 	else
 	{
-		backend_dcb->dcb_errhandle_called = true;
+		problem_dcb->dcb_errhandle_called = true;
 	}
-        session = backend_dcb->session;
-        
+        session = problem_dcb->session;
+
         if (session == NULL || rses == NULL)
 	{
                 *succp = false;
-	}
+    }
+    else if (dcb_isclient(problem_dcb))
+    {
+        *succp = false;
+    }
         else
         {
             CHK_SESSION(session);
             CHK_CLIENT_RSES(rses);
-        
+
             switch (action) {
                 case ERRACT_NEW_CONNECTION:
                 {
 			SERVER* srv;
-			
+
 			if (!rses_begin_locked_router_action(rses))
 			{
 				*succp = false;
@@ -4718,14 +4722,14 @@ static void handleError (
 			}
 			srv = rses->rses_master_ref->bref_backend->backend_server;
 			/**
-			 * If master has lost its Master status error can't be 
+			 * If master has lost its Master status error can't be
 			 * handled so that session could continue.
 			 */
-                        if (rses->rses_master_ref->bref_dcb == backend_dcb &&
+                        if (rses->rses_master_ref->bref_dcb == problem_dcb &&
 				!SERVER_IS_MASTER(srv))
 			{
                         	backend_ref_t*  bref;
-                            bref = get_bref_from_dcb(rses, backend_dcb);
+                            bref = get_bref_from_dcb(rses, problem_dcb);
                         	if (bref != NULL)
                             {
                                     CHK_BACKEND_REF(bref);
@@ -4739,7 +4743,7 @@ static void handleError (
                                           "corresponding backend ref.",
                                           srv->name,
                                           srv->port);
-                                dcb_close(backend_dcb);
+                                dcb_close(problem_dcb);
                             }
 				if (!srv->master_err_is_logged)
 				{
@@ -4756,35 +4760,35 @@ static void handleError (
 			else
 			{
 				/**
-				* This is called in hope of getting replacement for 
+				* This is called in hope of getting replacement for
 				* failed slave(s).  This call may free rses.
 				*/
-				*succp = handle_error_new_connection(inst, 
-								&rses, 
-								backend_dcb, 
+				*succp = handle_error_new_connection(inst,
+								&rses,
+								problem_dcb,
 								errmsgbuf);
 			}
                         /* Free the lock if rses still exists */
                         if (rses) rses_end_locked_router_action(rses);
                         break;
                 }
-                
+
                 case ERRACT_REPLY_CLIENT:
                 {
-                        handle_error_reply_client(session, 
-						  rses, 
-						  backend_dcb, 
+                        handle_error_reply_client(session,
+						  rses,
+						  problem_dcb,
 						  errmsgbuf);
 			*succp = false; /*< no new backend servers were made available */
-                        break;       
+                        break;
                 }
-                
-		default:                        
+
+		default:
                         *succp = false;
                         break;
             }
         }
-        dcb_close(backend_dcb);
+        dcb_close(problem_dcb);
 }
 
 
@@ -4797,7 +4801,7 @@ static void handle_error_reply_client(
 	session_state_t sesstate;
 	DCB*            client_dcb;
 	backend_ref_t*  bref;
-	
+
 	spinlock_acquire(&ses->ses_lock);
 	sesstate = ses->state;
 	client_dcb = ses->client;
@@ -4812,7 +4816,7 @@ static void handle_error_reply_client(
 		bref_clear_state(bref, BREF_IN_USE);
 		bref_set_state(bref, BREF_CLOSED);
 	}
-	
+
 	if (sesstate == SESSION_STATE_ROUTER_READY)
 	{
 		CHK_DCB(client_dcb);

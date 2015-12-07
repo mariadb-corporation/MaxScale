@@ -117,7 +117,7 @@ This parameter is used to define the maximum amount of data that will be sent to
 This parameter is used to enable/disable incomplete transactions detection in binlog router.
 When MaxScale starts an error message may appear if current binlog file is corrupted or an incomplete transaction is found.
 During normal operations binlog events are not distributed to the slaves until a COMMIT is seen.
-The default value is on, set transaction_safety=off to completely disable the incomplete transactions detection.
+The default value is off, set transaction_safety=on to enable the incomplete transactions detection.
 
 A complete example of a service entry for a binlog router service would be as follows.
 ```

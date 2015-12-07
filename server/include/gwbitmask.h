@@ -33,8 +33,8 @@
  */
 
 /* Both these numbers MUST be exact multiples of 8 */
-#define BIT_LENGTH_INITIAL      32      /**< Initial number of bits in the bitmask */
-#define BIT_LENGTH_INC          32      /**< Number of bits to add on each increment */
+#define BIT_LENGTH_INITIAL      256      /**< Initial number of bits in the bitmask */
+#define BIT_LENGTH_INC          256      /**< Number of bits to add on each increment */
 
 /**
  * The bitmask structure used to store an arbitrary large bitmask
