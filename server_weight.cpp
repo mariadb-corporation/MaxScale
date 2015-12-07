@@ -61,6 +61,17 @@ serversize_rws=1000000
 #include <my_config.h>
 #include "testconnections.h"
 
+void check_conn_num(TestConnections* Test, int * Nc, unsigned int conn_num)
+{
+    for (int i = 0; i < 4; i++) {
+        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
+        Test->tprintf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
+        if ((i<4) && (Nc[i] != conn_num)) {
+            Test->add_result(1, "Read: Expected number of connections to node %d is %d\n", i, Nc[i]);
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     int maxscale_conn_num=60;
@@ -85,13 +96,7 @@ int main(int argc, char *argv[])
     Nc[2] = maxscale_conn_num / 2;
     Nc[3] = 0;
 
-    for (i = 0; i < 4; i++) {
-        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
-        Test->tprintf("connections to node %d: %u (expected: %u)\n", i, conn_num, Nc[i]);
-        if ((i<4) && (Nc[i] != conn_num)) {
-            Test->add_result(1, "Read: Expected number of connections to node %d is %d\n", i, Nc[i]);
-        }
-    }
+    check_conn_num(Test, Nc, conn_num);
 
     for (i = 0; i < maxscale_conn_num; i++) { mysql_close(conn_read[i]);}
 
@@ -100,21 +105,12 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Sleeping 5 seconds\n");  sleep(5);
 
-    int slave_found = 0;
-    for (i = 1; i < Test->galera->N; i++) {
-        conn_num = get_conn_num(Test->galera->nodes[i], Test->maxscale_IP, Test->maxscale_hostname, (char *) "test");
-        Test->tprintf("connections to node %d: %u \n", i, conn_num);
-        if ((conn_num != 0) && (conn_num != maxscale_conn_num)) {
-            Test->add_result(1, "one slave has wrong number of connections\n");
-        }
-        if (conn_num == maxscale_conn_num) {
-            if (slave_found != 0) {
-                Test->add_result(1, "more then one slave have connections\n");
-            } else {
-                slave_found = i;
-            }
-        }
-    }
+    Nc[1] = maxscale_conn_num / 2;
+    Nc[2] = maxscale_conn_num / 3;
+    Nc[3] = maxscale_conn_num / 6;
+    Nc[4] = 0;
+
+    check_conn_num(Test, Nc, conn_num);
 
     for (i=0; i<maxscale_conn_num; i++) {mysql_close(conn_rwsplit[i]);}
     Test->galera->close_connections();
