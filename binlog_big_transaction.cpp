@@ -10,10 +10,12 @@
 #include "test_binlog_fnc.h"
 #include "big_transaction.h"
 
-
+void *query_thread( void *ptr );
+TestConnections * Test ;
+int exit_flag;
 int main(int argc, char *argv[])
 {
-    TestConnections * Test = new TestConnections(argc, argv);
+     Test = new TestConnections(argc, argv);
     Test->set_timeout(3000);
 
     Test->repl->connect();
@@ -23,14 +25,35 @@ int main(int argc, char *argv[])
 
     Test->start_binlog();
 
+    pthread_t threads;
+    int  iret;
+    exit_flag=0;
+    iret = pthread_create( &threads, NULL, query_thread, NULL);
+
     Test->repl->connect();
     for (int i = 0; i < 100000; i++)
     {
         Test->set_timeout(3000);
         Test->tprintf("Trying transactions: %d\n", i);
-        Test->add_result(big_transaction(Test->repl->nodes[0], 500), "Transaction %d failed!\n", i);
+        Test->add_result(big_transaction(Test->repl->nodes[0], 50), "Transaction %d failed!\n", i);
     }
     Test->repl->close_connections();
 
     Test->copy_all_logs(); return(Test->global_result);
+}
+
+void *query_thread( void *ptr )
+{
+    MYSQL * conn;
+    char cmd[256];
+    int i;
+    conn = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password, Test->repl->ssl);
+    i = 3;
+    while (exit_flag == 0) {
+        sprintf(cmd, "DISCONNECT SERVER server%d", i);
+        execute_query_silent(conn, cmd);
+        i++; if (i > Test->repl->N) {i = 3;}
+        sleep(5);
+    }
+    return NULL;
 }
