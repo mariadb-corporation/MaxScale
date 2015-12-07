@@ -33,7 +33,7 @@
 #define MB MEGABYTE_BYTE
 #define GB GIGABYTE_BYTE
 
-#define CALCLEN(i) (floor(log10(abs(i))) + 1)
+#define CALCLEN(i) ((size_t)(floor(log10(abs(i))) + 1))
 
 #define UINTLEN(i) (i<10 ? 1 : (i<100 ? 2 : (i<1000 ? 3 : CALCLEN(i))))
 
