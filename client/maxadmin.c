@@ -67,7 +67,7 @@ static int setipaddress(struct in_addr *a, char *p);
 static int authMaxScale(int so, char *user, char *password);
 static int sendCommand(int so, char *cmd);
 static void DoSource(int so, char *cmd);
-static void DoUsage();
+static void DoUsage(const char*);
 static int isquit(char *buf);
 static void PrintVersion(const char *progname);
 static void read_inifile(char **hostname, char **port, char **user, char **passwd,int*);
