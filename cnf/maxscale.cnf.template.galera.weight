@@ -116,7 +116,7 @@ address=###galera_server_IP_2###
 port=###galera_server_port_2###
 protocol=MySQLBackend
 serversize=2
-serversize_rws=3000000
+serversize_rws=30000
 
 [server3]
 type=server
@@ -124,7 +124,7 @@ address=###galera_server_IP_3###
 port=###galera_server_port_3###
 protocol=MySQLBackend
 serversize=3
-serversize_rws=2000000
+serversize_rws=20000
 
 [server4]
 type=server
@@ -132,4 +132,4 @@ address=###galera_server_IP_4###
 port=###galera_server_port_4###
 protocol=MySQLBackend
 serversize=0
-serversize_rws=1000000
+serversize_rws=10000
