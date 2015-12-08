@@ -1129,7 +1129,7 @@ int			n_bufs = -1, pn_bufs = -1;
 
 				event_limit = router->mariadb10_compat ? MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
 
-				if (hdr.event_type >= 0 && hdr.event_type <= event_limit)
+				if (hdr.event_type <= event_limit)
 					router->stats.events[hdr.event_type]++;
 
 				if (hdr.event_type == FORMAT_DESCRIPTION_EVENT && hdr.next_pos == 0)
