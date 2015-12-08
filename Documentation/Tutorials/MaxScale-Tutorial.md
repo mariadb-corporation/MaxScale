@@ -1,8 +1,8 @@
 # Setting up MaxScale for a Master/Slave replication cluster
 
-This document is designed as a quick introduction to setting up MaxScale in an environment in which you have a MySQL Replication Cluster with one master and multiple slave servers. The process of setting and configuring MaxScale will be covered within this document.
+This document is designed as a quick introduction to setting up MaxScale in an environment in which you have either a MySQL Master-Slave replication cluster with one master and multiple slave servers or a multi-node Galera cluster. The process of setting and configuring MaxScale will be covered within this document.
 
-However the installation and configuration of the MySQL Replication subsystem will not be covered nor will any discussion of installation management tools to handle automated or semi-automated failover of the replication cluster. The [Setting Up Replication](https://mariadb.com/kb/en/mariadb/setting-up-replication/) article on the MariaDB knowledgebase can help you get started with replication clusters.
+The installation and configuration of the MySQL Replication or the Galera cluster will not be covered nor will any discussion of installation management tools to handle automated or semi-automated failover of the replication cluster. The [Setting Up Replication](https://mariadb.com/kb/en/mariadb/setting-up-replication/) article on the MariaDB knowledgebase can help you get started with replication clusters and the [Getting Started With Mariadb Galera Cluster](https://mariadb.com/kb/en/mariadb/getting-started-with-mariadb-galera-cluster/) article will help you set up a Galera cluster.
 
 This tutorial will assume the user is running from one of the binary distributions available and has installed this in the default location. Building from source code in GitHub is covered in the [Building from Source](../Getting-Started/Building-MaxScale-from-Source-Code.md) document.
 
@@ -98,4 +98,14 @@ The other option is to use a wildcard grant like  `GRANT SELECT, INSERT, UPDATE,
 
 ## Creating the configuration file
 
-The configuration file creation is covered in different tutorials, either [MySQL Replication Connection Routing Tutorial](MySQL-Replication-Connection-Routing-Tutorial.md) or [MySQL Replication Read-Write Splitting Tutorial](MySQL-Replication-Read-Write-Splitting-Tutorial.md).
+The configuration file creation is covered in different tutorials.
+
+### Master-Slave cluster
+
+* [MySQL Replication Connection Routing Tutorial](MySQL-Replication-Connection-Routing-Tutorial.md)
+* [MySQL Replication Read-Write Splitting Tutorial](MySQL-Replication-Read-Write-Splitting-Tutorial.md)
+
+### Galera cluster
+
+* [Galera Cluster Connection Routing Tutorial](Galera-Cluster-Connection-Routing-Tutorial.md)
+* [Galera Cluster Read Write Splitting Tutorial](Galera-Cluster-Read-Write-Splitting-Tutorial.md)

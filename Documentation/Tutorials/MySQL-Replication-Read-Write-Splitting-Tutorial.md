@@ -2,11 +2,11 @@
 
 ## Environment & Solution Space
 
-The object of this tutorial is to have a system that appears to the clients of MaxScale as if there is a single database behind MaxScale. MaxScale will split the statements such that write statements will be sent to the current master server in the replication cluster and read statements will be balanced across a number of the slave statements.
+The object of this tutorial is to have a system that appears to the clients of MaxScale as if there is a single database behind MaxScale. MaxScale will split the statements such that write statements will be sent to the current master server in the replication cluster and read statements will be balanced across the rest of the slave servers.
 
 ## Setting up MaxScale
 
-The first part of this tutorial is covered in [MaxScale and Master Slave Replication](MaxScale-and-Master-Slave-Replication.md). Please read it and follow the instructions for setting up MaxScale with a Master/Slave replication cluster.
+The first part of this tutorial is covered in [MaxScale Tutorial](MaxScale-Tutorial.md). Please read it and follow the instructions for setting up MaxScale with the type of cluster you want to use.
 
 Once you have MaxScale installed and the database users created, we can create the configuration file for MaxScale.
 

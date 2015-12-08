@@ -1,4 +1,4 @@
-# Connection Routing with MySQL Replication
+# Connection Routing with Galera Cluster
 
 # Environment & Solution Space
 
@@ -6,7 +6,7 @@ The object of this tutorial is to have a system that has two ports available, on
 
 ## Setting up MaxScale
 
-The first part of this tutorial is covered in [MaxScale and Master Slave Replication](MaxScale-and-Master-Slave-Replication.md). Please read it and follow the instructions for setting up MaxScale with a Master/Slave replication cluster.
+The first part of this tutorial is covered in [MaxScale Tutorial](MaxScale-Tutorial.md). Please read it and follow the instructions for setting up MaxScale with the type of cluster you want to use.
 
 Once you have MaxScale installed and the database users created, we can create the configuration file for MaxScale.
 

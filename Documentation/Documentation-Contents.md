@@ -34,13 +34,15 @@
  
 ## Tutorials
 
+The main tutorial for MaxScale consist of setting up MaxScale for the environment you are using with either a connection-based or a read/write-based configuration.
+
+ - [MaxScale Tutorial](Tutorials/MaxScale-Tutorial.md)
+
+These tutorials are for specific use cases and module combinations.
+
  - [Administration Tutorial](Tutorials/Administration-Tutorial.md)
  - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
- - [Galera Cluster Connection Routing Tutorial](Tutorials/Galera-Cluster-Connection-Routing-Tutorial.md)
- - [Galera Cluster Read-Write Splitting Tutorial](Tutorials/Galera-Cluster-Read-Write-Splitting-Tutorial.md)
  - [MaxScale Information Schema Tutorial](Tutorials/MaxScale-Information-Schema.md)
- - [MySQL Replication Connection Routing Tutorial](Tutorials/MySQL-Replication-Connection-Routing-Tutorial.md)
- - [MySQL Replication Read-Write Splitting Tutorial](Tutorials/MySQL-Replication-Read-Write-Splitting-Tutorial.md)
  - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
  - [RabbitMQ Setup and MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
