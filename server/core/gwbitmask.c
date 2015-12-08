@@ -281,8 +281,8 @@ bitmask_copy(GWBITMASK *dest, GWBITMASK *src)
 char *
 bitmask_render_readable(GWBITMASK *bitmask)
 {
-    char *toobig = "Bitmask is too large to render readable";
-    char *empty = "No bits are set";
+    static const char toobig[] = "Bitmask is too large to render readable";
+    static const char empty[] = "No bits are set";
     char onebit[5];
     char *result;
     int count_set = 0;
@@ -290,7 +290,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
     spinlock_acquire(&bitmask->lock);
     if (999 < bitmask->length)
     {
-        result = malloc(strlen(toobig));
+        result = malloc(sizeof(toobig));
         if (result)
         {
             strcpy(result, toobig);
@@ -318,7 +318,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
         }
         else
         {
-            result = malloc(strlen(empty));
+            result = malloc(sizeof(empty));
             if (result)
             {
                 strcpy(result, empty);
