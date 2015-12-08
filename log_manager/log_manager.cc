@@ -132,7 +132,7 @@ __thread mxs_log_info_t mxs_log_tls = {0, 0};
  * Global counter for each log file type. It indicates for how many sessions
  * each log type is currently enabled.
  */
-ssize_t mxs_log_session_count[LOG_DEBUG] = {0};
+ssize_t mxs_log_session_count[LOG_DEBUG + 1] = {0};
 
 /**
  * BUFSIZ comes from the system. It equals with block size or
@@ -926,6 +926,7 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
                      */
                     if ((bb = blockbuf_init()) == NULL)
                     {
+                        simple_mutex_unlock(&bb_list->mlist_mutex);
                         return NULL;
                     }
 
