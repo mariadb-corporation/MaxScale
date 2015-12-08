@@ -1,4 +1,4 @@
-# Setting up MaxScale for a Master/Slave replication cluster
+# Setting up MaxScale
 
 This document is designed as a quick introduction to setting up MaxScale in an environment in which you have either a MySQL Master-Slave replication cluster with one master and multiple slave servers or a multi-node Galera cluster. The process of setting and configuring MaxScale will be covered within this document.
 
