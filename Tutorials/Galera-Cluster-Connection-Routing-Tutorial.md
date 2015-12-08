@@ -1,64 +1,16 @@
 # Connection Routing with Galera Cluster
 
-## Environment & Solution Space
+# Environment & Solution Space
 
-This document is designed as a quick introduction to setting up MaxScale in an environment in which you have a Galera Cluster within which you wish to balance connection across all the database nodes of the cluster that are active members of cluster.
+The object of this tutorial is to have a system that has two ports available, one for write connections to the database cluster and the other for read connections to the database.
 
-The process of setting and configuring MaxScale will be covered within this document. However the installation and configuration of the Galera Cluster will not be covered.
+## Setting up MaxScale
 
-This tutorial will assume the user is running from one of the binary distributions available and has installed this in the default location. Building from source code in GitHub is covered in guides elsewhere as is installing to non-default locations.
+The first part of this tutorial is covered in [MaxScale Tutorial](MaxScale-Tutorial.md). Please read it and follow the instructions for setting up MaxScale with the type of cluster you want to use.
 
-## Process
+Once you have MaxScale installed and the database users created, we can create the configuration file for MaxScale.
 
-The steps involved in creating a system from the binary distribution of MaxScale are:
-
-* Install the package relevant to your distribution
-
-* Create the required users in your MariaDB or MySQL Galera cluster
-
-* Create a MaxScale configuration file
-
-### Installation
-
-The precise installation process will vary from one distribution to another details of what to do with the RPM and DEB packages can be found on the download site when you select the distribution you are downloading from. The process involves setting up your package manager to include the MariaDB repositories and then running the package manager for your distribution, RPM or apt-get.
-
-Upon successful completion of the installation command you will have MaxScale installed and ready to be run but without a configuration. You must create a configuration file before you first run MaxScale.
-
-### Creating Database Users
-
-MaxScale needs to connect to the backend databases and run queries for two reasons; one to determine the current state of the database and the other to retrieve the user information for the database cluster. This may be done either using two separate usernames or with a single user.
-
-The first user required must be able to select data from the table mysql.user, to create this user follow the steps below.
-
-1. Connect to one of the nodes in your Galera cluster as the root user
-
-2. Create the user, substituting the username, password and host on which maxscale runs within your environment
-
-MariaDB [(none)]> create user '*username*'@'*maxscalehost*' identified by '*password*';
-
-**Query OK, 0 rows affected (0.00 sec)**
-
-3. Grant select privileges on the mysql.user table
-
-MariaDB [(none)]> grant SELECT on mysql.user to '*username*'@'*maxscalehost*';
-
-**Query OK, 0 rows affected (0.03 sec)**
-
-Additionally, GRANT SELECT on the mysql.db table and SHOW DATABASES privileges are required in order to load databases name and grants suitable for database name authorization.
-
-MariaDB [(none)]> GRANT SELECT ON mysql.db TO 'username'@'maxscalehost';
-
-**Query OK, 0 rows affected (0.00 sec)**
-
-MariaDB [(none)]> GRANT SHOW DATABASES ON *.* TO 'username'@'maxscalehost';
-
-**Query OK, 0 rows affected (0.00 sec)**
-
-The second user is used to monitored the state of the cluster. This user, which may be the same username as the first, requires permissions to access the various sources of monitoring data within the information schema. No special permission need to be granted to the user in order to query the information schema.
-
-If you wish to use two different usernames for the two different roles of monitoring and collecting user information then create a different username using the first two steps from above.
-
-### Creating Your MaxScale Configuration
+## Creating Your MaxScale Configuration
 
 MaxScale configuration is held in an ini file that is located in the file maxscale.cnf in the directory /etc, if you have installed in the default location then this file is available in /etc/maxscale.cnf.  This is not created as part of the installation process and must be manually created. A template file does exist within the /usr/share/maxscale directory that may be use as a basis for your configuration.
 
