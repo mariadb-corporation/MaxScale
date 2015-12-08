@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
     Nc[1] = maxscale_conn_num / 2;
     Nc[2] = maxscale_conn_num / 3;
     Nc[3] = maxscale_conn_num / 6;
-    Nc[4] = 0;
+    Nc[0] = maxscale_conn_num;
 
     check_conn_num(Test, Nc, conn_num);
 
