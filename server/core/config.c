@@ -2760,7 +2760,7 @@ bool config_has_duplicate_sections(const char* config)
     HASHTABLE *hash = hashtable_alloc(table_size, simple_str_hash, strcmp);
     pcre2_code *re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED,
                                    0, &errcode, &erroffset, NULL);
-    pcre2_match_data *mdata;
+    pcre2_match_data *mdata = NULL;
     int size = 1024;
     char *buffer = malloc(size * sizeof(char));
 
