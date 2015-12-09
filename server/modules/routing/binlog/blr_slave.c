@@ -1577,7 +1577,7 @@ ROUTER_SLAVE	*sptr;
 	sptr = router->slaves;
 	while (sptr)
 	{
-		if (sptr->state != 0)
+		if (sptr->state == BLRS_DUMPING || sptr->state == BLRS_REGISTERED)
 		{
 			sprintf(server_id, "%d", sptr->serverid);
 			sprintf(host, "%s", sptr->hostname ? sptr->hostname : "");
