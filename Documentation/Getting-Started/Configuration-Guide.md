@@ -33,14 +33,15 @@ statement routing  | Statement routing is a method of handling requests in which
           protocol | A protocol is a module of software that is used to communicate with another software entity within the system. MaxScale supports the dynamic loading of protocol modules to allow for increased flexibility.
             module | A module is a separate code entity that may be loaded dynamically into MaxScale to increase the available functionality. Modules are implemented as run-time loadable shared objects.
            monitor | A monitor is a module that can be executed within MaxScale to monitor the state of a set of database. The use of an internal monitor is optional, monitoring may be performed externally to MaxScale.
-          listener | A listener is the network endpoint that is used to listen for connections to MaxScale from the client applications. A listener is associated to a single service, however a service may have many listeners.
+          listener | A listener is the network endpoint that is used to listen for connections to MaxScale from the client applications. A listener is associated to a single service, however, a service may have many listeners.
 connection failover| When a connection currently being used between MaxScale and the database server fails a replacement will be automatically created to another server by MaxScale without client intervention
   backend database | A term used to refer to a database that sits behind MaxScale and is accessed by applications via MaxScale.
             filter | A module that can be placed between the client and the MaxScale router module. All client data passes through the filter module and may be examined or modified by the filter modules.  Filters may be chained together to form processing pipelines.
 
 ## Configuration
 
-The MaxScale configuration is read from a file which can be located in a number of placing, MaxScale will search for the configuration file in a number of locations.
+The MaxScale configuration is read from a file that MaxScale will look for
+in a number of places.
 
 1. Location given with the --configdir=<path> command line argument
 
@@ -48,7 +49,7 @@ The MaxScale configuration is read from a file which can be located in a number 
 
 An explicit path to a configuration file can be passed by using the `-f` option to MaxScale.
 
-The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration, these sections define services, servers, listeners, monitors and global settings. Parameters which expect a comma-separated list of values can be defined on multiple lines. The following is an example of a multi-line definition.
+The configuration file itself is based on the ".ini" file format and consists of various sections that are used to build the configuration; these sections define services, servers, listeners, monitors and global settings. Parameters, which expect a comma-separated list of values can be defined on multiple lines. The following is an example of a multi-line definition.
 
 ```
 [MyService]
@@ -67,7 +68,16 @@ The global settings, in a section named `[MaxScale]`, allow various parameters t
 
 #### `threads`
 
-This parameter controls the number of worker threads that are handling the events coming from the kernel. MaxScale will auto-detect the number of processors of the system unless number of threads is manually configured. It is recommended that you let MaxScale detect how many cores the system has and leave this parameter undefined. The number of used cores will be logged into the message logs and if you are not satisfied with the auto-detected value, you can manually configure it. Increasing the amount of worker threads beyond the number of processor cores does not improve performance and can consume resources needlessly.
+This parameter controls the number of worker threads that are handling the
+events coming from the kernel. MaxScale will auto-detect the number of
+processors of the system unless number of threads is manually configured.
+It is recommended that you let MaxScale detect how many cores the system
+has and leave this parameter undefined. The number of used cores will be
+logged into the message logs and if you are not satisfied with the
+auto-detected value, you can manually configure it. Increasing the amount
+of worker threads beyond the number of processor cores does not improve
+the performance, rather is likely to degrade it, and can consume resources
+needlessly.
 
 ```
 # Valid options are:
@@ -101,19 +111,51 @@ Enable or disable the high precision timestamps in logfiles. Enabling this adds 
 ms_timestamp=1
 ```
 
-#### `log_warning`
-Enable or disable the logging of messages whose syslog priority is *warning*. Messages of this priority are enabled by default.
+#### `log_to_shm`
+Enable or disable the writing of the *maxscale.log* file to shared memory.
+If enabled, then the actual log file will be created under `/dev/shm` and
+a symbolic link to that file will be created in the *MaxScale* log directory.
+
+Logging to shared memory may be appropriate if *log_info* and/or *log_debug*
+are enabled, as logging to a regular file may in that case cause performance
+degradation, due to the amount of data logged.
+
+However, as shared memory is a scarce resource, logging to shared memory
+should be used only temporarily and not regularly. Since *MaxScale* can
+log to both file and *syslog* an approach that provides maximum flexibility
+is to enable *syslog* and *log_to_shm*, and to disable *maxlog*. That way
+messages will normally be logged to *syslog*, but if there is something
+to investigate, *log_info* and *maxlog* can be enabled from *maxadmin*
+in which case informational messages will be logged to the *maxscale.log*
+file that resides in shared memory.
+
+By default, logging to shared memory is disabled.
 
 ```
 # Valid options are:
-#       log_notice=<0|1>
-log_notice=0
+#       log_to_shm=<0|1>
+log_to_shm=1
+```
+
+To enable logging to shared memory use the value 1 and to disable use
+the value 1.
+
+#### `log_warning`
+Enable or disable the logging of messages whose syslog priority is *warning*.
+Messages of this priority are enabled by default.
+
+```
+# Valid options are:
+#       log_warning=<0|1>
+log_warning=0
 ```
 
 To disable these messages use the value 0 and to enable them use the value 1.
 
 #### `log_notice`
-Enable or disable the logging of messages whose syslog priority is *notice*. Messages of this priority are enabled by default and provide information about the functioning of MaxScale.
+Enable or disable the logging of messages whose syslog priority is *notice*.
+Messages of this priority provide information about the functioning of
+MaxScale and are enabled by default.
 
 ```
 # Valid options are:
@@ -125,7 +167,12 @@ To disable these messages use the value 0 and to enable them use the value 1.
 
 #### `log_info`
 
-Enable or disable the logging of messages whose syslog priority is *info*. These messages provide detailed information about the internal workings of MaxScale and should not, due to their large number, be enabled unless there is a specific reason for that. For instance, from these messages it will be evident, e.g., why a particualr query was routed to the master instead of to a slave. This kind of messages are disabled by default.
+Enable or disable the logging of messages whose syslog priority is *info*.
+These messages provide detailed information about the internal workings of
+MaxScale and should not, due to their frequency, be enabled, unless there
+is a specific reason for that. For instance, from these messages it will be
+evident, e.g., why a particular query was routed to the master instead of
+to a slave. These informational messages are disabled by default.
 
 ```
 # Valid options are:
