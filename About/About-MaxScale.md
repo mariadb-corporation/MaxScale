@@ -5,8 +5,8 @@ The forwarding is performed using rules that can be based on a the semantic
 understanding of the database statements and on the roles of the various
 servers within the backend cluster of databases.
 
-MaxScale is designed to provide load balancing and high availability
-functionality, transparently to applications. In addition, it provides
+MaxScale is designed to provide, transparently to applications, load
+balancing and high availability functionality. In addition, it provides
 a highly scalable and flexible architecture, with plugin components to
 support different protocols and routing approaches.
 
@@ -17,7 +17,7 @@ input and output via sockets. Similar features in Windows&reg; could
 be used in future development of MaxScale.
 
 Many of the services provided by MaxScale are implemented as external
-shared object modules which can be loaded at runtime. These modules
+shared object modules, which are loaded at runtime. These modules
 support a fixed interface, communicating the entry points via a structure
 consisting of a set of function pointers. This structure is called the
 "module object". Additional modules can be created to work with MaxScale.
