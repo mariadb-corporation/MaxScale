@@ -88,7 +88,6 @@ static unsigned char required_packets[] =
 {
     MYSQL_COM_QUIT,
     MYSQL_COM_INITDB,
-    MYSQL_COM_FIELD_LIST,
     MYSQL_COM_CHANGE_USER,
     MYSQL_COM_STMT_PREPARE,
     MYSQL_COM_STMT_EXECUTE,
@@ -1323,6 +1322,7 @@ int route_single_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF
     {
         /** We won't be expecting any response from the child branch */
         my_session->waiting[CHILD] = false;
+        my_session->multipacket[CHILD] = false;
         my_session->eof[CHILD] = 2;
         my_session->n_rejected++;
     }
