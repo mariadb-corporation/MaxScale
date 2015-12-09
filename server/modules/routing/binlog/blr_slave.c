@@ -2656,7 +2656,8 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int se
 	while (sptr)
 	{
 		/* don't examine slaves with state = 0 */
-		if (sptr->state != 0 && sptr->serverid == server_id)
+		if ((sptr->state == BLRS_REGISTERED || sptr->state == BLRS_DUMPING) &&
+			sptr->serverid == server_id)
 		{
 			/* server_id found */
 			server_found = 1;
@@ -2670,6 +2671,7 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int se
 			/* send server_id with disconnect state to client */
 			n = blr_slave_send_disconnected_server(router, slave, server_id, 1);
 
+			sptr->state = BLRS_UNREGISTERED;
 			dcb_close(sptr->dcb);
 
 			break;
@@ -2731,7 +2733,7 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 	while (sptr)
 	{
 		/* skip servers with state = 0 */
-		if (sptr->state != 0)
+		if (sptr->state == BLRS_REGISTERED || sptr->state == BLRS_DUMPING)
 		{
 			sprintf(server_id, "%d", sptr->serverid);
 			sprintf(state, "disconnected");
@@ -2768,6 +2770,7 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
 			slave->dcb->func.write(slave->dcb, pkt);
 
+			sptr->state = BLRS_UNREGISTERED;
 			dcb_close(sptr->dcb);
 
 		}
