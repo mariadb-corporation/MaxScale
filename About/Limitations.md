@@ -12,7 +12,7 @@ Compression is not included in MySQL server handshake
 
 ## Limitations with Galera Cluster Monitoring
 
-Master selection is based only on MIN(wsrep_local_index), no other server parameter.
+The default master selection is based only on MIN(wsrep_local_index). This can be influenced with the server priority mechanic described in the [Galera Monitor](../Monitors/Galera-Monitor.md) manual.
 
 ## Limitations in the connection router
 
