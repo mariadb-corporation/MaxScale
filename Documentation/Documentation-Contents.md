@@ -46,6 +46,7 @@ These tutorials are for specific use cases and module combinations.
  - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
  - [RabbitMQ Setup and MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
+ - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
  - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
  - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
 
