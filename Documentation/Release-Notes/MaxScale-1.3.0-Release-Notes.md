@@ -2,20 +2,33 @@
 
 ## 1.3.0 Beta
 
-This document describes the changes in release 1.3, when compared to release 1.2.1.
+This document describes the changes in release 1.3, when compared to
+release 1.2.1.
 
 ## New Features
 
 ### Persistent Connections
 
-Martin, please update this section.
+MaxScale 1.3.0 introduces the concept of *Persistent Connections*. With
+that is meant that the connection from MaxScale to the backend server is
+not terminated even if the connection from the client to MaxScale is.
+If a client makes frequent short connections, there may be a benefit from
+using the *Persistent Connection* feature as it may reduce the time it
+takes from establishing a connection from the client through MaxScale to
+the backend server.
+
+Additional information is available in the following document:
+* [Administration Tutorial](../Tutorials/Administration-Tutorial.md)
 
 ### Binlog Server
 
-There are new administrative commands: STOP SLAVE, START SLAVE, RESET SLAVE and CHANGE MASTER TO  
-The master server details are now provided by a master.ini file located in binlog directory and could be changed via CHANGE MASTER TO command issued via MySQL connection to MaxScale.
+There are new administrative commands: STOP SLAVE, START SLAVE, RESET SLAVE
+and CHANGE MASTER TO. The master server details are now provided by a
+master.ini file located in binlog directory and could be changed via
+CHANGE MASTER TO command issued via MySQL connection to MaxScale.
 
-Before migrating to 1.3.0 it's necessary to put a writable master.ini file into binlog directory, containing these parameters:
+Before migrating to 1.3.0 it is necessary to put a writable master.ini file
+into binlog directory, containing these parameters:
 
 ```
 [binlog_configuration]
@@ -26,9 +39,10 @@ master_password=somepass
 filestem=repl-bin
 ```
 
-Users may change parameters accordingly to their configuration
+Users may change parameters according to their configuration.
 
-**Note**: the "servers" parameter is no longer required in the service definition.
+**Note**: the "servers" parameter is no longer required in the service
+definition.
 
 Additional information is available in the following documents:
 * [Binlogrouter Tutorial](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
@@ -36,17 +50,37 @@ Additional information is available in the following documents:
 
 ### Logging Changes
 
-Before 1.3, MaxScale logged data to four different log files; *error*, *message*, *trace* and *debug*. Complementary and/or alternatively, MaxScale could also log to syslog, in which case messages intended for the error and message file were logged there. What files were enabled and written to was controlled by entries in the MaxScale configuration file.
+Before 1.3, MaxScale logged data to four different log files; *error*,
+*message*, *trace* and *debug*. Complementary and/or alternatively, MaxScale
+could also log to syslog, in which case messages intended for the error and
+message file were logged there. What files were enabled and written to was
+controlled by entries in the MaxScale configuration file.
 
-This has now been changed so that MaxScale logs to a single file - *maxscale.log* - and each logged entry is prepended with *error*, *warning*, *notice*, *info* or *debug*, depending on the seriousness or priority of the message. The levels are the same as those of syslog. MaxScale is still capable of complementary or alternatively logging to syslog.
+This has now been changed so that MaxScale logs to a single
+file - *maxscale.log* - and each logged entry is prepended with *error*,
+*warning*, *notice*, *info* or *debug*, depending on the seriousness or
+priority of the message. The levels are the same as those of syslog.
+MaxScale is still capable of complementary or alternatively logging to syslog.
 
-What used to be logged to the *message* file is now logged as a *notice* message and what used to be written to the *trace* file, is logged as an *info* message.
+What used to be logged to the *message* file is now logged as a *notice*
+message and what used to be written to the *trace* file, is logged as an
+*info* message.
 
-By default, *notice*, *warning* and *error* messages are logged, while *info* and *debug* messages are not. Exactly what kind of messages are logged can be controlled via the MaxScale configuration file, but enabling and disabling different kinds of messages can also be performed at runtime from maxadmin.
+By default, *notice*, *warning* and *error* messages are logged, while
+*info* and *debug* messages are not. Exactly what kind of messages are
+logged can be controlled via the MaxScale configuration file, but enabling
+and disabling different kinds of messages can also be performed at runtime
+from maxadmin.
 
-Earlier, the *error* and *message* files were written to the filesystem, while the *trace* and *debug* files were written to shared memory. The one and only log file of MaxScale is now by default written to the filesystem. This will have performance implications if *info* and *debug* messages are enabled.
+Earlier, the *error* and *message* files were written to the filesystem,
+while the *trace* and *debug* files were written to shared memory. The
+one and only log file of MaxScale is now by default written to the filesystem.
+This will have performance implications if *info* and *debug* messages are
+enabled.
 
-If you want to retain the possibility of turning on *info* and *debug* messages, without it impacting the performance too much, the recommended approach is to add the following entries to the MaxScale configuration file:
+If you want to retain the possibility of turning on *info* and *debug*
+messages, without it impacting the performance too much, the recommended
+approach is to add the following entries to the MaxScale configuration file:
 
 ```
 [maxscale]
@@ -55,9 +89,12 @@ maxlog=0
 log_to_shm=1
 ```
 
-This will have the effect of MaxScale creating the *maxscale.log* into shared memory, but not logging anything to it. However, all *notice*, *warning* and *error* messages will be logged to syslog.
+This will have the effect of MaxScale creating the *maxscale.log* into
+shared memory, but not logging anything to it. However, all *notice*,
+*warning* and *error* messages will be logged to syslog.
 
-Then, if there is a need to turn on *info* messages that can be done via the maxadmin interface:
+Then, if there is a need to turn on *info* messages that can be done via
+the maxadmin interface:
 
 ```
 MaxScale> enable log-priority info
@@ -68,9 +105,18 @@ Note that *info* and *debug* messages are never logged to syslog.
 
 ### PCRE2 integration
 
-MaxScale now uses the PCRE2 library for regular expressions. This has been integrated into the core configuration processing and most of the modules. The main module which uses this is the regexfilter which now fully supports the PCRE2 syntax with proper substitutions. For a closer look at how this differs from the POSIX regular expression syntax take a look at the [PCRE2 documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html).
+MaxScale now uses the PCRE2 library for regular expressions. This has been
+integrated into the core configuration processing and most of the modules.
+The main module which uses this is the regexfilter which now fully supports
+the PCRE2 syntax with proper substitutions. For a closer look at how this
+differs from the POSIX regular expression syntax take a look at the
+[PCRE2 documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html).
 
-**Please note**, that the substitution string follows different rules than the traditional substitution strings. The usual way of referring to capture groups in the substitution string is with the backslash character followed by the capture group reference e.g. `\1` but the PCRE2 library uses the dollar character followed by the group reference. To quote the PCRE2 native API manual:
+**Please note**, that the substitution string follows different rules than
+the traditional substitution strings. The usual way of referring to capture
+groups in the substitution string is with the backslash character followed
+by the capture group reference e.g. `\1` but the PCRE2 library uses the dollar
+character followed by the group reference. To quote the PCRE2 native API manual:
 
 ```
 In the replacement string, which is interpreted as a UTF string in UTF mode, and is checked for UTF validity unless the PCRE2_NO_UTF_CHECK option is set, a dollar character is an escape character that can specify the insertion of characters from capturing groups in the pattern. The following forms are recognized:
@@ -161,7 +207,8 @@ Here is a list of bugs fixed since the release of MaxScale 1.2.1.
 
 ## Known Issues and Limitations
 
-There are a number bugs and known limitations within this version of MaxScale, the most serious of this are listed below.
+There are a number bugs and known limitations within this version of MaxScale,
+the most serious of this are listed below.
 
 * MaxScale can not manage authentication that uses wildcard matching in hostnames in the mysql.user table of the backend database. The only wildcards that can be used are in IP address entries.
 
@@ -175,7 +222,8 @@ There are a number bugs and known limitations within this version of MaxScale, t
 
 ## Packaging
 
-Both RPM and Debian packages are available for MaxScale in addition to the tar based releases previously distributed we now provide
+Both RPM and Debian packages are available for MaxScale in addition to the
+tar based releases previously distributed we now provide
 
 * CentOS/RedHat 5
 
