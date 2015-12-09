@@ -31,25 +31,27 @@ Using MaxScale as a Binlog Server is much the same as using MaxScale as a proxy 
 ## Service Configuration
 
 As with any MaxScale configuration a good starting point is with the service definition with the *maxscale.cnf* file. The service requires a name which is the section name in the ini file, a type parameter with a value of service and the name of the router plugin that should be loaded. In the case of replication proxies this router name is *binlogrouter*.
+
+```
+[Replication]
+type=service
+router=binlogrouter
 ```
 
-[Replication]
-type=service
-router=binlogrouter
-```
-Other standard service parameters need to be given in the configuration section that are used to retrieve the set of users from the backend (master) database, also a version string can be given such that the MaxScale instance will report this version string to the slave servers that connect to MaxScale. The master server entry must also be given. In the current implementation of the router only a single server can be given.
+Other standard service parameters need to be given in the configuration section that are used to retrieve the set of users from the backend (master) database, also a version string can be given such that the MaxScale instance will report this version string to the slave servers that connect to MaxScale.
+
 ```
 [Replication]
 type=service
 router=binlogrouter
-servers=masterdb
 version_string=5.6.17-log
 user=maxscale
 passwd=Mhu87p2D
 ```
+
 The *user* and *passwd* entries in the above example are used in order for MaxScale to populate the credential information that is required to allow the slaves to connect to MaxScale. This user should be configured in exactly the same way a for any other MaxScale service, i.e. the user needs access to the *mysql.user* table and the *mysql.db* table as well as having the ability to perform a *SHOW DATABASES* command.
 
-The master server details are provided by a *master.ini* file located in binlog directory and could be changed via *CHANGE MASTER TO* command issued via MySQL connection to MaxScale; refer to the Master setup section below for further details.
+The master server details are currently provided by a **master.ini** file located in binlog directory and could be changed via *CHANGE MASTER TO* command issued via MySQL connection to MaxScale; refer to the Master setup section below for further details.
 
 In the current implementation of the router only a single server can be used.
 
@@ -122,6 +124,7 @@ During normal operations binlog events are not distributed to the slaves until a
 The default value is off, set *transaction_safety=on* to enable the incomplete transactions detection.
 
 A complete example of a service entry for a binlog router service would be as follows.
+
 ```
     [Replication]
     type=service
