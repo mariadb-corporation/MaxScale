@@ -897,14 +897,6 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
 
                 /* Unlock */
                 rses_end_locked_router_action(slave);
-
-		/**
-		 * Close the slave server connection
-		 */
-                if (slave->dcb != NULL) {
-                        CHK_DCB(slave->dcb);
-                        dcb_close(slave->dcb);
-                }
         }
 }
 
