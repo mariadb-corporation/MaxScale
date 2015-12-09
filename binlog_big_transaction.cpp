@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     {
         Test->set_timeout(3000);
         Test->tprintf("Trying transactions: %d\n", i);
-        Test->add_result(big_transaction(Test->repl->nodes[0], 50), "Transaction %d failed!\n", i);
+        Test->add_result(big_transaction(Test->repl->nodes[0], 7), "Transaction %d failed!\n", i);
     }
     Test->repl->close_connections();
 
@@ -50,9 +50,9 @@ void *query_thread( void *ptr )
     conn = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password, Test->repl->ssl);
     i = 3;
     while (exit_flag == 0) {
-        sprintf(cmd, "DISCONNECT SERVER server%d", i);
-        execute_query_silent(conn, cmd);
-        i++; if (i > Test->repl->N) {i = 3;}
+        sprintf(cmd, "DISCONNECT SERVER %d", i);
+        execute_query(conn, cmd);
+        i++; if (i > Test->repl->N) {i = 3; sleep(5); execute_query(conn, (char *) "DISCONNECT SERVER ALL");}
         sleep(5);
     }
     return NULL;
