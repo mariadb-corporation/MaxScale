@@ -111,6 +111,32 @@ Enable or disable the high precision timestamps in logfiles. Enabling this adds 
 ms_timestamp=1
 ```
 
+#### `syslog`
+Enable to disable to logging of messages to *syslog*.
+
+By default logging to *syslog* is enabled.
+```
+# Valid options are:
+#       syslog=<0|1>
+syslog=1
+```
+
+To enable logging to syslog use the value 1 and to disable use
+the value 0.
+
+#### `maxlog`
+Enable to disable to logging of messages to MaxScale's log file.
+
+By default logging to *maxlog* is enabled.
+```
+# Valid options are:
+#       syslog=<0|1>
+maxlog=1
+```
+
+To enable logging to the MaxScale log file use the value 1 and to
+disable use the value 0.
+
 #### `log_to_shm`
 Enable or disable the writing of the *maxscale.log* file to shared memory.
 If enabled, then the actual log file will be created under `/dev/shm` and
@@ -118,16 +144,16 @@ a symbolic link to that file will be created in the *MaxScale* log directory.
 
 Logging to shared memory may be appropriate if *log_info* and/or *log_debug*
 are enabled, as logging to a regular file may in that case cause performance
-degradation, due to the amount of data logged.
+degradation, due to the amount of data logged. However, as shared memory is
+a scarce resource, logging to shared memory should be used only temporarily
+and not regularly.
 
-However, as shared memory is a scarce resource, logging to shared memory
-should be used only temporarily and not regularly. Since *MaxScale* can
-log to both file and *syslog* an approach that provides maximum flexibility
-is to enable *syslog* and *log_to_shm*, and to disable *maxlog*. That way
-messages will normally be logged to *syslog*, but if there is something
-to investigate, *log_info* and *maxlog* can be enabled from *maxadmin*
-in which case informational messages will be logged to the *maxscale.log*
-file that resides in shared memory.
+Since *MaxScale* can log to both file and *syslog* an approach that provides
+maximum flexibility is to enable *syslog* and *log_to_shm*, and to disable
+*maxlog*. That way messages will normally be logged to *syslog*, but if
+there is something to investigate, *log_info* and *maxlog* can be enabled
+from *maxadmin*, in which case informational messages will be logged to
+the *maxscale.log* file that resides in shared memory.
 
 By default, logging to shared memory is disabled.
 
@@ -138,7 +164,7 @@ log_to_shm=1
 ```
 
 To enable logging to shared memory use the value 1 and to disable use
-the value 1.
+the value 0.
 
 #### `log_warning`
 Enable or disable the logging of messages whose syslog priority is *warning*.
@@ -381,7 +407,7 @@ enable_root_user=true
 
 #### `localhost_match_wildcard_host`
 
-This parameter enables matching of "127.0.0.1" (localhost) against "%" wildcard host for MySQL protocol authentication. The default value is `0`, so in order to authenticate a connection from the same machine as the one on which MaxScale is running, an explicit user@lcoalhost entry will be required in the MySQL user table.
+This parameter enables matching of "127.0.0.1" (localhost) against "%" wildcard host for MySQL protocol authentication. The default value is `0`, so in order to authenticate a connection from the same machine as the one on which MaxScale is running, an explicit user@localhost entry will be required in the MySQL user table.
 
 #### `version_string`
 
