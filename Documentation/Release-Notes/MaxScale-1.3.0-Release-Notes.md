@@ -223,25 +223,9 @@ the most serious of this are listed below.
 
 * The Database Firewall filter does not support multi-statements. Using them will result in an error being sent to the client.
 
+* The SSL support is known to be unstable.
+
 ## Packaging
 
-Both RPM and Debian packages are available for MaxScale in addition to the
-tar based releases previously distributed we now provide
-
-* CentOS/RedHat 5
-
-* CentOS/RedHat 6
-
-* CentOS/RedHat 7
-
-* Debian 6
-
-* Debian 7
-
-* Ubuntu 12.04 LTS
-
-* Ubuntu 14.04 LTS
-
-* SuSE Linux Enterprise 11
-
-* SuSE Linux Enterprise 12
+RPM and Debian packages are provided for the Linux distributions supported
+by MariaDB Enterprise.
