@@ -136,6 +136,7 @@ Here is a list of bugs fixed since the release of MaxScale 1.2.1.
  * [MXS-428](https://mariadb.atlassian.net/browse/MXS-428): Maxscale crashes at startup.
  * [MXS-376](https://mariadb.atlassian.net/browse/MXS-376): MaxScale terminates with SIGABRT.
  * [MXS-269](https://mariadb.atlassian.net/browse/MXS-269): Crash in MySQL backend protocol
+ * [MXS-500](https://mariadb.atlassian.net/browse/MXS-500): Tee filter hangs when statement aren't duplicated.
  * [MXS-447](https://mariadb.atlassian.net/browse/MXS-447): Monitors are started before they have been fully configured
  * [MXS-417](https://mariadb.atlassian.net/browse/MXS-417): Single character wildcard doesn't work in MaxScale
  * [MXS-409](https://mariadb.atlassian.net/browse/MXS-409): prepare should not hit all servers
@@ -144,6 +145,8 @@ Here is a list of bugs fixed since the release of MaxScale 1.2.1.
  * [MXS-289](https://mariadb.atlassian.net/browse/MXS-289): Corrupted memory or empty value are in Master_host field of SHOW SLAVE STATUS when master connection is broken
  * [MXS-283](https://mariadb.atlassian.net/browse/MXS-283): SSL connections leak memory
  * [MXS-54](https://mariadb.atlassian.net/browse/MXS-54): Write failed auth attempt to trace log
+ * [MXS-501](https://mariadb.atlassian.net/browse/MXS-501): Use<db> hangs when Tee filter uses matching
+ * [MXS-499](https://mariadb.atlassian.net/browse/MXS-499): Init script error on Debian Wheezy
  * [MXS-323](https://mariadb.atlassian.net/browse/MXS-323): mysql_client readwritesplit handleError seems using wrong dcb and cause wrong behavior
  * [MXS-494](https://mariadb.atlassian.net/browse/MXS-494): Weight calculation favors servers without connections
  * [MXS-493](https://mariadb.atlassian.net/browse/MXS-493): SIGFPE when weightby parameter is 0 and using LEAST_GLOBAL_CONNECTIONS
