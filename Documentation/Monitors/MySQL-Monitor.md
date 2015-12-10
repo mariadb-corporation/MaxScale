@@ -60,10 +60,6 @@ Enable support for MySQL 5.1 replication monitoring. This is needed if a MySQL s
 mysql51_replication=true
 ```
 
-### Common Monitor Parameters
-
-For a list of optional parameters that all monitors support, read the [Monitor Common](Monitor-Common.md) document.
-
 ## Example 1 - Monitor script
 
 Here is an example shell script which sends an email to an admin when a server goes down.
