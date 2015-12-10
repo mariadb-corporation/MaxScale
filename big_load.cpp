@@ -82,11 +82,12 @@ void *query_thread1( void *ptr )
         conn3 = data->Test->open_readconn_slave_connection();
     }
     while (data->exit_flag == 0) {
-        execute_query_silent(conn1, (char *) "SELECT * FROM t1;"); data->i1++;
+        data->Test->add_result(execute_query_silent(conn1, (char *) "SELECT * FROM t1;"), "RWSplit query failed, i=%d\n", data->i1);
         if (data->rwsplit_only == 0) {
-            execute_query_silent(conn2, (char *) "SELECT * FROM t1;");
-            execute_query_silent(conn3, (char *) "SELECT * FROM t1;");
+            data->Test->add_result(execute_query_silent(conn2, (char *) "SELECT * FROM t1;"), "ReadConn master query failed, i=%d\n", data->i1);
+            data->Test->add_result(execute_query_silent(conn3, (char *) "SELECT * FROM t1;"), "ReadConn slave  query failed, i=%d\n", data->i1);
         }
+        data->i1++;
     }
     mysql_close(conn1);
     if (data->rwsplit_only == 0) {
@@ -109,11 +110,12 @@ void *query_thread2(void *ptr )
     }
     while (data->exit_flag == 0) {
         sleep(1);
-        execute_query_silent(conn1, (char *) "SELECT * FROM t1;"); data->i2++;
+        data->Test->add_result(execute_query_silent(conn1, (char *) "SELECT * FROM t1;"), "RWSplit query failed, slow thread, i=%d\n", data->i2);
         if (data->rwsplit_only == 0) {
-            execute_query_silent(conn2, (char *) "SELECT * FROM t1;");
-            execute_query_silent(conn3, (char *) "SELECT * FROM t1;");
+            data->Test->add_result(execute_query_silent(conn2, (char *) "SELECT * FROM t1;"), "ReadConn master query failed, slow thread, i=%d\n", data->i2);
+            data->Test->add_result(execute_query_silent(conn3, (char *) "SELECT * FROM t1;"), "ReadConn slave  query failed, slow thread,  i=%d\n", data->i2);
         }
+        data->i2++;
     }
     mysql_close(conn1);
     if (data->rwsplit_only == 0) {
