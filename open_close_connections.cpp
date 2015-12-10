@@ -73,8 +73,8 @@ void *query_thread1( void *ptr )
         }
         if (conn1 != NULL) {mysql_close(conn1);}
         if (rw_o == 0) {
-            if (conn2 != NULL) {mysql_close(conn2);
-            if (conn3 != NULL) {mysql_close(conn3);
+            if (conn2 != NULL) {mysql_close(conn2);}
+            if (conn3 != NULL) {mysql_close(conn3);}
         }
         data->i++;
     }
