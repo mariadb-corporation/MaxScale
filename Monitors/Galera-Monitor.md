@@ -58,10 +58,6 @@ Enable interaction with server priorities. This will allow the monitor to determ
 use_priority=true
 ```
 
-### Common Monitor Parameters
-
-For a list of optional parameters that all monitors support, read the [Monitor Common](Monitor-Common.md) document.
-
 ## Interaction with Server Priorities
 
 If the `use_priority` option is set and a server is configured with the `priority=<int>` parameter, galeramon will use that as the basis on which the master node is chosen. This requires the `disable_master_role_setting` to be undefined or disabled. The server with the lowest value in `priority` will be chosen as the master node when a replacement Galera node is promoted to a master server inside MaxScale.

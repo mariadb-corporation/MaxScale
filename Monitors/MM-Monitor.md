@@ -35,7 +35,3 @@ This is a situation which can happen if all slave servers are unreachable or the
 ```
 detect_stale_master=true
 ```
-
-### Common Monitor Parameters
-
-For a list of optional parameters that all monitors support, read the [Monitor Common](Monitor-Common.md) document.
