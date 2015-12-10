@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 
     int threads_num = 20;
 
-    int run_time=100;
+    int run_time=300;
 
     if (Test->smoke) {
         run_time=10;
@@ -63,12 +63,12 @@ void *query_thread1( void *ptr )
 
     while (data->exit_flag == 0) {
         conn1 = data->Test->open_rwsplit_connection();
-        data->Test->add_result(mysql_errno(conn1), "Error opening RWsplit conn, iteration %d\n", data->i);
+        data->Test->add_result(mysql_errno(conn1), "Error opening RWsplit conn, iteration %d. error is %s\n", data->i, mysql_error(conn1));
         if (data->rwsplit_only == 0) {
             conn2 = data->Test->open_readconn_master_connection();
-            data->Test->add_result(mysql_errno(conn2), "Error opening ReadConn master conn, iteration %d\n", data->i);
+            data->Test->add_result(mysql_errno(conn2), "Error opening ReadConn master conn, iteration %d. error is %s\n", data->i, mysql_error(conn2));
             conn3 = data->Test->open_readconn_slave_connection();
-            data->Test->add_result(mysql_errno(conn3), "Error opening ReadConn slave conn, iteration %d\n", data->i);
+            data->Test->add_result(mysql_errno(conn3), "Error opening ReadConn master conn, iteration %d. error is %s\n", data->i, mysql_error(conn3));
         }
         mysql_close(conn1);
         if (data->rwsplit_only == 0) {
