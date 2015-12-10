@@ -69,6 +69,13 @@ Here are detailed documents about the filters MaxScale offers. They contain conf
  - [Named Server Filter](Filters/Named-Server-Filter.md)
 
 ## Monitors
+
+Common options for all monitor modules.
+
+ - [Monitor Common](Monitors/Monitor-Common.md)
+
+Module specific documentation.
+
  - [MySQL Monitor](Monitors/MySQL-Monitor.md)
  - [Galera Monitor](Monitors/Galera-Monitor.md)
  - [Multi-Master Monitor](Monitors/MM-Monitor.md)
