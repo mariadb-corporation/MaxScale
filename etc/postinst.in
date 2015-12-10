@@ -16,8 +16,7 @@ mkdir -p @MAXSCALE_VARDIR@/run/maxscale
 # Create MaxScale user
 if [ -f "/etc/passwd" -a "$(grep -c 'maxscale' /etc/passwd)" -eq 0 ]
 then
-    useradd -r -s /bin/false maxscale
-    groupadd maxscale
+    useradd -r -U -s /bin/false maxscale
 fi
 
 # Change the owner of the directories to maxscale:maxscale
@@ -34,17 +33,30 @@ chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
 if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
 then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
+else
+    echo "Could not find init script: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" >& 2
 fi
 
 if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" ]
 then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf /etc/ld.so.conf.d/
+else
+    echo "Could not find ldconfig file: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" >& 2
 fi
 
-if [ -d "/usr/lib/systemd/system" -a -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ]
+if [-f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ]
 then
-    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
-    systemctl daemon-reload
+    if [ -d "/lib/systemd/system"  ]
+    then
+        cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /lib/systemd/system
+        systemctl daemon-reload
+    elif [ -d "/usr/lib/systemd/system"  ]
+    then
+        cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
+        systemctl daemon-reload
+    fi
+else
+    echo "Could not find systemd service file: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service" >& 2
 fi
 
 # If no maxscale.cnf file is found in /etc, copy the template file there
