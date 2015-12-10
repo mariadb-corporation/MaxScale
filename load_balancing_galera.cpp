@@ -66,10 +66,7 @@ int main(int argc, char *argv[])
     }
     Test->galera->close_connections();
 
-
     Test->check_maxscale_alive();
-
-    Test->galera->start_replication();
 
     Test->copy_all_logs(); return(Test->global_result);
 }
