@@ -112,3 +112,4 @@ binlog_big_transaction setup_binlog2
 bug469 replication
 load_balancing_galera load_galera
 ssl_load_galera ssl_load_galera
+short_sessions_ssl ssl
