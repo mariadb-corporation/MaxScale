@@ -142,6 +142,9 @@ target_link_libraries(bug565 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(load_balancing load_balancing.cpp big_load.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(load_balancing ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(load_balancing_galera load_balancing_galera.cpp big_load.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
+target_link_libraries(load_balancing_galera ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 add_executable(crash_out_of_files crash_out_of_files.cpp big_load.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
 target_link_libraries(crash_out_of_files ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
@@ -330,14 +333,14 @@ install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num tempor
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 bug699 bug705 bug519 setup_binlog setup_binlog_crc_none setup_binlog_crc_32 binlog_incompl bug729 bug718 bug730 bug711 bug656 DESTINATION system-test)
 install(TARGETS mxs47 sharding schemarouter_duplicate_db fwf mm mxs118 mxs127 session_limits script config_reload config_reload_stress mxs314 mxs321 DESTINATION system-test)
-install(TARGETS pers_01 pers_02 mxs431 binlog_big_transaction bug469 DESTINATION system-test)
+install(TARGETS pers_01 pers_02 mxs431 binlog_big_transaction bug469 load_balancing_galera DESTINATION system-test)
 
 install(FILES set_env.sh get_logs.sh run_ctrl_c.sh long_insert.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut.sh configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut_galera.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES bug567.sh bug516.sh bug561.sh bug562.sh bug585 bug587_1 reload_server.sh reload_service.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES run_session_hang.sh bug564.sh crash_out_of_files_galera DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
-install(FILES bug648 ssl ssl_load mxs361 set_env.sh copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
+install(FILES bug648 ssl ssl_load ssl_load_galera mxs361 set_env.sh copy_logs.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
 install(FILES templates DESTINATION system-test)
 install(FILES bug729.php DESTINATION system-test)
@@ -384,6 +387,7 @@ add_test(bug475 bug475)
 add_test(change_user change_user)
 add_test(bug565 bug565)
 add_test(load_balancing load_balancing)
+add_test(load_balancing_galera load_balancing_galera)
 add_test(bug448 bug448)
 add_test(prepared_statement prepared_statement)
 add_test(bug592 bug592)
@@ -445,6 +449,7 @@ add_test(session_limits session_limits)
 add_test(script script)
 add_test(mm mm)
 add_test(ssl_load ssl_load)
+add_test(ssl_load_galera ssl_load_galera)
 #add_test(config_reload config_reload)
 #add_test(config_reload_stress config_reload_stress)
 #add_test(reload_server reload_server.sh)
