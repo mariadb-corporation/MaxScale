@@ -1,17 +1,16 @@
 # MariaDB MaxScale 1.3 Release Notes
 
+This document describes the changes in release 1.3, when compared to
+release 1.2.1.
+
 ## 1.3.0 Beta
 
 **NOTE** This is a beta release. We think it is better than 1.2.1,
 but there may still be rough edges. Keep that in mind when trying it
 out.
 
-For any problems you encounter, please consider submitting a bug report
-at [Jira](https://mariadb.atlassian.net).
-
-
-This document describes the changes in release 1.3, when compared to
-release 1.2.1.
+For any problems you encounter, please consider submitting a bug
+report at [Jira](https://mariadb.atlassian.net).
 
 ## New Features
 
