@@ -60,20 +60,21 @@ void *query_thread1( void *ptr )
     MYSQL * conn2;
     MYSQL * conn3;
     openclose_thread_data * data = (openclose_thread_data *) ptr;
+    int rw_o = data->rwsplit_only;
 
     while (data->exit_flag == 0) {
         conn1 = data->Test->open_rwsplit_connection();
-        data->Test->add_result(mysql_errno(conn1), "Error opening RWsplit conn, iteration %d. error is %s\n", data->i, mysql_error(conn1));
-        if (data->rwsplit_only == 0) {
+        data->Test->add_result(mysql_errno(conn1), "Error opening RWsplit conn, iteration %d, error is %s\n", data->i, mysql_error(conn1));
+        if (rw_o == 0) {
             conn2 = data->Test->open_readconn_master_connection();
-            data->Test->add_result(mysql_errno(conn2), "Error opening ReadConn master conn, iteration %d. error is %s\n", data->i, mysql_error(conn2));
+            data->Test->add_result(mysql_errno(conn2), "Error opening ReadConn master conn, iteration %d, error is %s\n", data->i, mysql_error(conn2));
             conn3 = data->Test->open_readconn_slave_connection();
-            data->Test->add_result(mysql_errno(conn3), "Error opening ReadConn master conn, iteration %d. error is %s\n", data->i, mysql_error(conn3));
+            data->Test->add_result(mysql_errno(conn3), "Error opening ReadConn master conn, iteration %d, error is %s\n", data->i, mysql_error(conn3));
         }
-        mysql_close(conn1);
-        if (data->rwsplit_only == 0) {
-            mysql_close(conn2);
-            mysql_close(conn3);
+        if (conn1 != NULL) {mysql_close(conn1);}
+        if (rw_o == 0) {
+            if (conn2 != NULL) {mysql_close(conn2);
+            if (conn3 != NULL) {mysql_close(conn3);
         }
         data->i++;
     }

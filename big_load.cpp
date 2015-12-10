@@ -75,24 +75,39 @@ void *query_thread1( void *ptr )
     MYSQL * conn1;
     MYSQL * conn2;
     MYSQL * conn3;
+    int conn_err = 0;
     thread_data * data = (thread_data *) ptr;
     conn1 = data->Test->open_rwsplit_connection();
+    if (mysql_errno(conn1) != 0) {
+        data->Test->add_result(1, "Error opening RWSplit conn: %s\n", mysql_error(conn1));
+        conn_err++;
+    }
     if (data->rwsplit_only == 0) {
         conn2 = data->Test->open_readconn_master_connection();
-        conn3 = data->Test->open_readconn_slave_connection();
-    }
-    while (data->exit_flag == 0) {
-        data->Test->add_result(execute_query_silent(conn1, (char *) "SELECT * FROM t1;"), "RWSplit query failed, i=%d\n", data->i1);
-        if (data->rwsplit_only == 0) {
-            data->Test->add_result(execute_query_silent(conn2, (char *) "SELECT * FROM t1;"), "ReadConn master query failed, i=%d\n", data->i1);
-            data->Test->add_result(execute_query_silent(conn3, (char *) "SELECT * FROM t1;"), "ReadConn slave  query failed, i=%d\n", data->i1);
+        if (mysql_errno(conn2) != 0) {
+            data->Test->add_result(1, "Error opening ReadConn master: %s\n", mysql_error(conn2));
+            conn_err++;
         }
-        data->i1++;
+        conn3 = data->Test->open_readconn_slave_connection();
+        if (mysql_errno(conn3) != 0) {
+            data->Test->add_result(1, "Error opening ReadConn slave: %s\n", mysql_error(conn3));
+            conn_err++;
+        }
     }
-    mysql_close(conn1);
-    if (data->rwsplit_only == 0) {
-        mysql_close(conn2);
-        mysql_close(conn3);
+    if (conn_err == 0) {
+        while (data->exit_flag == 0) {
+            data->Test->add_result(execute_query_silent(conn1, (char *) "SELECT * FROM t1;"), "RWSplit query failed, i=%d\n", data->i1);
+            if (data->rwsplit_only == 0) {
+                data->Test->add_result(execute_query_silent(conn2, (char *) "SELECT * FROM t1;"), "ReadConn master query failed, i=%d\n", data->i1);
+                data->Test->add_result(execute_query_silent(conn3, (char *) "SELECT * FROM t1;"), "ReadConn slave  query failed, i=%d\n", data->i1);
+            }
+            data->i1++;
+        }
+        mysql_close(conn1);
+        if (data->rwsplit_only == 0) {
+            mysql_close(conn2);
+            mysql_close(conn3);
+        }
     }
     return NULL;
 }
