@@ -4,6 +4,38 @@ This document lists optional parameters that all current monitors support.
 
 ## Parameters
 
+### `monitor_interval`
+
+This is the time the monitor waits between each cycle of monitoring. The default value of 10000 milliseconds (10 seconds) should be lowered if you want a faster response to changes in the server states. The value is defined in milliseconds and the smallest possible value is 100 milliseconds.
+
+```
+monitor_interval=2500
+```
+
+### `backend_connect_timeout`
+
+This parameter controls the timeout for connecting to a monitored server. It is in seconds and the minimum value is 1 second. The default value for this parameter is 3 seconds.
+
+```
+backend_connect_timeout=6
+```
+
+### `backend_write_timeout`
+
+This parameter controls the timeout for writing to a monitored server. It is in seconds and the minimum value is 1 second. The default value for this parameter is 2 seconds.
+
+```
+backend_write_timeout=4
+```
+
+### `backend_read_timeout`
+
+This parameter controls the timeout for reading from a monitored server. It is in seconds and the minimum value is 1 second. The default value for this parameter is 1 seconds.
+
+```
+backend_read_timeout=2
+```
+
 ### `script`
 
 This command will be executed when a server changes its state. The parameter should be an absolute path to a command or the command should be in the executable path. The user which is used to run MaxScale should have execution rights to the file itself and the directory it resides in.

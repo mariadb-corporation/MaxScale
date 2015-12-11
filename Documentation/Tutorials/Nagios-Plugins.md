@@ -64,7 +64,7 @@ Assuming Nagios installed on a separated server and the plugins are in /usr/lib6
 * Copy New commands and server1 definition (./nagios/plugins/maxscale_commands.cfg, server1.cfg) to /etc/nagios/objects/ on Nagios Server
 * Edit /etc/nagios/nagios.cfg on Nagios Server
 
-and add (just after localhost.cfg or commnads.cfg)
+and add (just after localhost.cfg or commands.cfg)
 
 ```
 cfg_file=/etc/nagios/objects/maxscale_commands.cfg
