@@ -621,7 +621,6 @@ char* TestConnections::execute_ssh_maxscale(char* ssh)
     return result;
 }
 
-
 int TestConnections::reconfigure_maxscale(char* config_template)
 {
     char cmd[1024];
@@ -651,13 +650,13 @@ int TestConnections::create_connections(int conn_N)
 
         printf("ReadConn master \t");
         master_conn[i] = open_readconn_master_connection();
-        if (!master_conn[i]) { local_result++; tprintf("ReadConn master connection failed\n");}
+        if ( mysql_errno(master_conn[i]) != 0 ) { local_result++; tprintf("ReadConn master connection failed, error: %s\n", mysql_error(master_conn[i]) );}
         printf("ReadConn slave \t");
         slave_conn[i] = open_readconn_slave_connection();
-        if (!slave_conn[i]) { local_result++; tprintf("ReadConn slave connection failed\n");}
+        if ( mysql_errno(slave_conn[i]) != 0 )  { local_result++; tprintf("ReadConn slave connection failed, error: %s\n", mysql_error(slave_conn[i]) );}
         printf("galera \n");
         galera_conn[i] = open_conn(4016, maxscale_IP, maxscale_user, maxscale_password, ssl);
-        if (!galera_conn[i]) { local_result++; tprintf("Galera connection failed\n");}
+        if ( mysql_errno(galera_conn[i]) != 0)  { local_result++; tprintf("Galera connection failed, error: %s\n", mysql_error(galera_conn[i]));}
     }
     for (i = 0; i < conn_N; i++) {
         set_timeout(10);
@@ -762,7 +761,6 @@ int TestConnections::tprintf(const char *format, ...)
     vprintf(format, argp);
     va_end(argp);
 }
-
 
 void *timeout_thread( void *ptr )
 {

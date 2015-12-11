@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 
     Test->connect_maxscale();
 
-    if (Test->conn_rwsplit != NULL) {
+    if (mysql_errno(Test->conn_rwsplit) == 0) {
         Test->add_result(1, "RWSplit services should fail, but it is started\n");
     }
 

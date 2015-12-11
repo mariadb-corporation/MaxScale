@@ -31,24 +31,20 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(5);
     MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass1", Test->ssl);
-    if (conn != NULL) {
+    if (mysql_errno(conn) == 0) {
         Test->add_result(1, "MaxScale ignores host in authentification\n");
-        mysql_close(conn);
     }
+    if (conn != NULL) {mysql_close(conn);}
 
     conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass2", Test->ssl);
-    if (conn == NULL) {
-        Test->add_result(1, "MaxScale can't connect\n");
-    }
-    else {
-        mysql_close(conn);
-    }
+    Test->add_result(mysql_errno(conn), "MaxScale can't connect: %s\n", mysql_error(conn));
+    if (conn != NULL) {mysql_close(conn);}
 
     conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user", (char *) "pass3", Test->ssl);
-    if (conn != NULL) {
+    if (mysql_errno(conn) == 0) {
         Test->add_result(1, "MaxScale ignores host in authentification\n");
-        mysql_close(conn);
     }
+    if (conn != NULL) {mysql_close(conn);}
 
     execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
     execute_query(Test->conn_rwsplit, (char *) "DROP USER user@'non_existing_host1';");

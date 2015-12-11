@@ -48,6 +48,7 @@ void *query_thread( void *ptr )
     char cmd[256];
     int i;
     conn = open_conn(Test->binlog_port, Test->maxscale_IP, Test->repl->user_name, Test->repl->password, Test->repl->ssl);
+    Test->add_result(mysql_errno(conn), "Error connecting to Binlog router, error: %s\n", mysql_error(conn));
     i = 3;
     while (exit_flag == 0) {
         sprintf(cmd, "DISCONNECT SERVER %d", i);

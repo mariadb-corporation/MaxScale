@@ -32,13 +32,13 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Connecting using 'root'@'%%'\n");
     conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "root", (char *)  "skysqlroot", Test->ssl);
-    if (conn == NULL) {
-        Test->add_result(1, "Connection using 'root' user failed\n");
+    if (mysql_errno(conn) != 0) {
+        Test->add_result(1, "Connection using 'root' user failed, error: %s\n", mysql_error(conn));
     } else {
         Test->tprintf("Simple query...\n");
         Test->try_query(conn, (char *) "SELECT * from mysql.user");
-        mysql_close(conn);
     }
+    if (conn != NULL) {mysql_close(conn);}
 
     Test->tprintf("Dropping 'root'@'%%'\n");
     Test->try_query(Test->conn_rwsplit, (char *) "DROP USER 'root'@'%';");

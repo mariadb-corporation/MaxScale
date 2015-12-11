@@ -43,11 +43,11 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying to open connection using user1\n");
 
     MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "user1", (char *) "pass1", Test->ssl);
-    if (conn == NULL) {
-        Test->add_result(1, "TEST_FAILED! Authentification failed!\n");
+    if (mysql_errno(conn) != 0) {
+        Test->add_result(1, "TEST_FAILED! Authentification failed! error: %s\n", mysql_error(conn));
     } else {
         Test->tprintf("Authentification for user@'%s' is ok", my_ip);
-        mysql_close(conn);
+        if (conn != NULL) {mysql_close(conn);}
     }
     sprintf(sql, "DROP USER user1@'%s';  FLUSH PRIVILEGES;", my_ip);
     Test->add_result(execute_query(Test->conn_rwsplit, sql), "Query Failed\n");

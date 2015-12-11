@@ -28,12 +28,12 @@ int main(int argc, char *argv[])
     printf("Trying to connect using user with old style password\n");
     MYSQL * conn = open_conn(Test->rwsplit_port, Test->maxscale_IP, (char *) "old", (char *)  "old", Test->ssl);
 
-    if ( conn == NULL) {
+    if ( mysql_errno(conn) != 0) {
         Test->tprintf("Connections is not open as expected\n");
     } else {
-        Test->add_result(1, "Connections is open for the user with old style password. FAILED!\n");
-        mysql_close(conn);
+        Test->add_result(1, "Connections is open for the user with old style password.\n");
     }
+    if (conn != NULL) {mysql_close(conn);}
 
     Test->try_query(Test->conn_rwsplit, (char *) "DROP USER 'old'@'%'");
     Test->close_maxscale_connections();
