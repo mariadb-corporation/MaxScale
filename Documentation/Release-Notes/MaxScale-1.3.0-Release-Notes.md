@@ -133,6 +133,13 @@ In the replacement string, which is interpreted as a UTF string in UTF mode, and
   ${<n>}  insert the contents of group <n>
 ```
 
+### Improved launchable scripts
+
+The launchable scripts were modified to allow usage without wrapper scripts.
+The scripts are now executed as they are in the configuration files with certain
+keywords being replaced with the initiator, event and node list. For more
+details, please read the [Monitor Common](../Monitors/Monitor-Common.md) document.
+
 ## Bug fixes
 
 Here is a list of bugs fixed since the release of MaxScale 1.2.1.
