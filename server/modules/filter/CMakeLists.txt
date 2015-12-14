@@ -46,6 +46,11 @@ target_link_libraries(namedserverfilter log_manager)
 set_target_properties(namedserverfilter PROPERTIES VERSION "1.1.0")
 install(TARGETS namedserverfilter DESTINATION ${MAXSCALE_LIBDIR})
 
+add_library(tpmfilter SHARED tpmfilter.c)
+target_link_libraries(tpmfilter log_manager)
+set_target_properties(tpmfilter PROPERTIES VERSION "1.0.0")
+install(TARGETS tpmfilter DESTINATION ${MAXSCALE_LIBDIR})
+
 
 if(BUILD_SLAVELAG)
   add_library(slavelag SHARED slavelag.c)
