@@ -849,7 +849,7 @@ int count_replies(GWBUF* buffer)
 
 int lenenc_length(uint8_t* ptr)
 {
-    char val = *ptr;
+    uint8_t val = *ptr;
     if (val < 251)
     {
         return 1;

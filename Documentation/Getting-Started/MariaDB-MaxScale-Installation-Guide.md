@@ -36,7 +36,7 @@ An example configuration file is installed into the `/etc/` folder. This file sh
 
 ## Building MaxScale From Source Code
 
-Alternatively you may download the MaxScale source and build your own binaries. To do this, refer to the separate document [Building MaxScale from Source Code](/Documentation/Getting-Started/Building-MaxScale-from-Source-Code.md)
+Alternatively you may download the MaxScale source and build your own binaries. To do this, refer to the separate document [Building MaxScale from Source Code](Building-MaxScale-from-Source-Code.md)
 
 ## Configuring MaxScale
 

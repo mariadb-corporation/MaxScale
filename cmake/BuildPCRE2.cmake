@@ -9,7 +9,9 @@ include(ExternalProject)
 
 set(PCRE2_ROOT_DIR ${CMAKE_SOURCE_DIR}/pcre2/)
 set(PCRE2_BUILD_DIR ${CMAKE_BINARY_DIR}/pcre2/)
-set(PCRE2_LIBRARIES ${CMAKE_BINARY_DIR}/pcre2/libpcre2-8.so CACHE STRING "PCRE2 dynamic libraries" FORCE)
+set(PCRE2_LIBRARIES ${CMAKE_BINARY_DIR}/pcre2/libpcre2-8.so
+  ${CMAKE_BINARY_DIR}/pcre2/libpcre2-8.so.1.0.0
+  CACHE STRING "PCRE2 dynamic libraries" FORCE)
 
 ExternalProject_Add(pcre2 SOURCE_DIR ${PCRE2_ROOT_DIR}
   CMAKE_ARGS -DBUILD_SHARED_LIBS=Y -DPCRE2_BUILD_PCRE2GREP=N -DPCRE2_BUILD_TESTS=N

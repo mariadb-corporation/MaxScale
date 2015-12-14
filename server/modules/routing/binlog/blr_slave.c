@@ -2094,8 +2094,11 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			strcmp(slave->binlogfile, router->binlog_name) == 0)
 	{
 		int state_change = 0;
+		unsigned int cstate =0;
 		spinlock_acquire(&router->binlog_lock);
 		spinlock_acquire(&slave->catch_lock);
+
+		cstate = slave->cstate;
 
 		/*
 		 * Now check again since we hold the router->binlog_lock
@@ -2108,6 +2111,19 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			slave->cstate |= CS_EXPECTCB;
 			spinlock_release(&slave->catch_lock);
 			spinlock_release(&router->binlog_lock);
+
+			if ((cstate & CS_UPTODATE) == CS_UPTODATE)
+			{
+#ifdef STATE_CHANGE_LOGGING_ENABLED
+				MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up-to-date to catch-up in blr_slave_catchup, binlog file '%s', position %lu.",
+					router->service->name,
+					slave->dcb->remote,
+					ntohs((slave->dcb->ipv4).sin_port),
+					slave->serverid,
+					slave->binlogfile, (unsigned long)slave->binlog_pos);
+#endif
+			}
+
 			poll_fake_write_event(slave->dcb);
 		}
 		else
@@ -2132,6 +2148,8 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 		if (state_change)
 		{
 			slave->stats.n_caughtup++;
+#ifdef STATE_CHANGE_LOGGING_ENABLED
+                        // TODO: The % 50 should be removed. Now only every 50th state change is logged.
 			if (slave->stats.n_caughtup == 1)
 			{
 				MXS_NOTICE("%s: Slave %s:%d, server-id %d is now up to date '%s', position %lu.",
@@ -2150,6 +2168,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 					slave->serverid,
 					slave->binlogfile, (unsigned long)slave->binlog_pos);
 			}
+#endif
 		}
 	}
 	else
@@ -2218,6 +2237,7 @@ blr_slave_callback(DCB *dcb, DCB_REASON reason, void *data)
 {
 ROUTER_SLAVE		*slave = (ROUTER_SLAVE *)data;
 ROUTER_INSTANCE		*router = slave->router;
+unsigned int cstate;
 
     if (NULL == dcb->session->router_session)
     {
@@ -2237,6 +2257,7 @@ ROUTER_INSTANCE		*router = slave->router;
 			spinlock_acquire(&router->binlog_lock);
 
 			do_return = 0;
+			cstate = slave->cstate;
 
 			/* check for a pending transaction and not rotating */
 			if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
@@ -2256,8 +2277,22 @@ ROUTER_INSTANCE		*router = slave->router;
 			}
 
 			spinlock_acquire(&slave->catch_lock);
+			cstate = slave->cstate;
 			slave->cstate &= ~(CS_UPTODATE|CS_EXPECTCB);
 			spinlock_release(&slave->catch_lock);
+
+			if ((cstate & CS_UPTODATE) == CS_UPTODATE)
+			{
+#ifdef STATE_CHANGE_LOGGING_ENABLED
+				MXS_NOTICE("%s: Slave %s:%d, server-id %d transition from up-to-date to catch-up in blr_slave_callback, binlog file '%s', position %lu.",
+					router->service->name,
+					slave->dcb->remote,
+					ntohs((slave->dcb->ipv4).sin_port),
+					slave->serverid,
+					slave->binlogfile, (unsigned long)slave->binlog_pos);
+#endif
+			}
+
 			slave->stats.n_dcb++;
 			blr_slave_catchup(router, slave, true);
 		}

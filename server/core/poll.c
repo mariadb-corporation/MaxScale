@@ -1634,7 +1634,11 @@ poll_fake_write_event(DCB *dcb)
 void
 poll_fake_hangup_event(DCB *dcb)
 {
+#ifdef EPOLLRDHUP
     uint32_t ev = EPOLLRDHUP;
+#else
+    uint32_t ev = EPOLLHUP;
+#endif
 
     spinlock_acquire(&pollqlock);
     if (DCB_POLL_BUSY(dcb))

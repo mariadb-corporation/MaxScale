@@ -34,16 +34,19 @@
  
 ## Tutorials
 
+The main tutorial for MaxScale consist of setting up MaxScale for the environment you are using with either a connection-based or a read/write-based configuration.
+
+ - [MaxScale Tutorial](Tutorials/MaxScale-Tutorial.md)
+
+These tutorials are for specific use cases and module combinations.
+
  - [Administration Tutorial](Tutorials/Administration-Tutorial.md)
  - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
- - [Galera Cluster Connection Routing Tutorial](Tutorials/Galera-Cluster-Connection-Routing-Tutorial.md)
- - [Galera Cluster Read-Write Splitting Tutorial](Tutorials/Galera-Cluster-Read-Write-Splitting-Tutorial.md)
  - [MaxScale Information Schema Tutorial](Tutorials/MaxScale-Information-Schema.md)
- - [MySQL Replication Connection Routing Tutorial](Tutorials/MySQL-Replication-Connection-Routing-Tutorial.md)
- - [MySQL Replication Read-Write Splitting Tutorial](Tutorials/MySQL-Replication-Read-Write-Splitting-Tutorial.md)
  - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
  - [RabbitMQ Setup and MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
+ - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
  - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
  - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
 
@@ -66,6 +69,13 @@ Here are detailed documents about the filters MaxScale offers. They contain conf
  - [Named Server Filter](Filters/Named-Server-Filter.md)
 
 ## Monitors
+
+Common options for all monitor modules.
+
+ - [Monitor Common](Monitors/Monitor-Common.md)
+
+Module specific documentation.
+
  - [MySQL Monitor](Monitors/MySQL-Monitor.md)
  - [Galera Monitor](Monitors/Galera-Monitor.md)
  - [Multi-Master Monitor](Monitors/MM-Monitor.md)

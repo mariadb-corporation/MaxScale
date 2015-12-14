@@ -8,20 +8,20 @@ Mark Riddoch
 
 Last Updated: 24th June 2015
 
-[Overview](#overview)
-[Running MaxAdmin](#running)
-[Working With Administration Interface Users](#interface)
-[Getting Help](#help)
-[Working with Services](#services)
-[Working with Servers](#servers)
-[Working with Sessions](#sessions)
-[Descriptor Control Blocks](#dcbs)
-[Working with Filters](#filters)
-[Working with Monitors](#monitors)
-[MaxScale Status Commands](#statuscommands)
-[Administration Commands](#admincommands)
-[Configuring MaxScale to Accept MaxAdmin Connections](#connections)
-[Tuning MaxScale](#tuning)
+ - [Overview](#overview)
+ - [Running MaxAdmin](#running)
+ - [Working With Administration Interface Users](#interface)
+ - [Getting Help](#help)
+ - [Working with Services](#services)
+ - [Working with Servers](#servers)
+ - [Working with Sessions](#sessions)
+ - [Descriptor Control Blocks](#dcbs)
+ - [Working with Filters](#filters)
+ - [Working with Monitors](#monitors)
+ - [MaxScale Status Commands](#statuscommands)
+ - [Administration Commands](#admincommands)
+ - [Configuring MaxScale to Accept MaxAdmin Connections](#connections)
+ - [Tuning MaxScale](#tuning)
 
 <a name="overview"></a>
 # Overview
@@ -821,29 +821,38 @@ In order to determine what modules are in use, and the version and status of tho
     debugcli        | Router      | V1.1.1  | 1.0.0 | Alpha
     cli             | Router      | V1.0.0  | 1.0.0 | Alpha
     ----------------+-------------+---------+-------+-------------------------
-    MaxScale> 
+    MaxScale>
 
 This command provides important version information for the module. Each module has two versions; the version of the module itself and the version of the module API that it supports. Also included in the output is the status of the module, this may be "In Development", “Alpha”, “Beta”, “GA” or “Experimental”.
 
-## Rotating the log files
+## Enabling syslog and maxlog logging
 
-MaxScale write a number of log files in the log directory within MaxScale home directory. The default option for these is that the grow continually, it is recommended that periodically the log files are rotated. This will close the current log file and open a new one with a new name. The log file names use a sequence number which is incremented each time the logs are rotated.
+MaxScale can log messages to syslog, to a log file or to both. The approach can be set in the config file, but can also be changed from maxadmin. Syslog logging is identified by *syslog* and file logging by *maxlog*.
 
-It is possible to rotate just a single log file, using the flush log command and the name of the log to flush. The names that are recognized by MaxAdmin are error, message, trace or debug.
+    MaxScale> enable syslog
+    MaxScale> disable maxlog
 
-    MaxScale> flush log message
+**NOTE** If you disable both, then you will see no messages at all.
+
+## Rotating the log file
+
+MaxScale logs messages to a log file in the log directory of MaxScale. As the log file grows continuously, it is recommended to periodically rotate it. When rotated, the current log file will be closed and a new one with a new name opened. The log file name contain a sequence number, which is incremented each time the log is rotated.
+
+There are two ways for rotating the log - *flush log maxscale* and *flush logs* - and the result is identical. The two alternatives are due to historical reasons; earlier MaxScale had several different log files.
+
+    MaxScale> flush log maxscale
     MaxScale>
     The flush logs command may be used to rotate all logs with a single command.
-    MaxScale> flush log
+    MaxScale> flush logs
     MaxScale>
 
 ## Change MaxScale Logging Options
 
-Two commands are provided to change the logging levels within MaxScale, disable log and enable log. Using these commands the various log levels can be turned on and off, the supported levels are trace, debug and message. The error log level can not be turned off.
+From version 1.3 onwards, MaxScale has a single log file where messages of various priority (aka severity) are logged. Consequently, you no longer enable or disable log files but log priorities. The priorities are the same as those of syslog and the ones that can be enabled or disabled are *debug*, *info*, *notice* and *warning*. *Error* and any more severe messages can not be disabled.
 
-    MaxScale> enable log trace
-    MaxScale> disable log debug
-    MaxScale> 
+    MaxScale> enable log-priority info
+    MaxScale> disable log-priority notice
+    MaxScale>
 
 Please note that changes made via this interface will not persist across restarts of MaxScale. To make a permanent change edit the maxscale.cnf file.
 

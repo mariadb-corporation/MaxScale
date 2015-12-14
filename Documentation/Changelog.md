@@ -1,9 +1,11 @@
 #Changelog
 
-These are the changes introduced in the next MaxScale version. This is not the official change log and the latest changelog can always be found in here7: [MaxScale 1.1 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
-
 ## MaxScale 1.3
 * Added support for persistent backend connections
+* The *binlog server* is now an integral component of MaxScale.
+* The logging has been changed; instead of different log files there is one log file and different message priorities.
+
+For more details, please refer to [MaxScale 1.3 Release Notes](Release-Notes/MaxScale-1.3.0-Release-Notes.md)
 
 ## MaxScale 1.2
 * Logfiles have been renamed. The log names are now named error.log, messages.log, trace.log and debug.log.
