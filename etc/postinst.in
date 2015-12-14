@@ -44,7 +44,8 @@ else
     echo "Could not find ldconfig file: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" >& 2
 fi
 
-if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ]
+# Only copy the scripts if systemd folder and systemctl executable are found
+if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && [ -x "$(which systemctl)" ]
 then
     if [ -d "/lib/systemd/system"  ]
     then
