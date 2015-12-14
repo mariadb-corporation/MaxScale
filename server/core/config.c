@@ -1578,15 +1578,33 @@ handle_global_item(const char *name, const char *value)
     int i;
     if (strcmp(name, "threads") == 0)
     {
-        int thrcount = atoi(value);
-        if (thrcount > 0)
+        if (strcmp(name, "auto") == 0)
         {
-            gateway.n_threads = thrcount;
+            if ((gateway.n_threads = get_processor_count()) > 1)
+            {
+                gateway.n_threads--;
+            }
         }
         else
         {
-            MXS_WARNING("Invalid value for 'threads': %s.", value);
-            return 0;
+            int thrcount = atoi(value);
+            if (thrcount > 0)
+            {
+                gateway.n_threads = thrcount;
+
+                int processor_count = get_processor_count();
+                if (thrcount > processor_count)
+                {
+                    MXS_WARNING("Number of threads set to %d which is greater than"
+                                " the number of processors available: %d",
+                                thrcount, processor_count);
+                }
+            }
+            else
+            {
+                MXS_WARNING("Invalid value for 'threads': %s.", value);
+                return 0;
+            }
         }
     }
     else if (strcmp(name, "non_blocking_polls") == 0)
@@ -1706,7 +1724,7 @@ global_defaults()
 {
     uint8_t mac_addr[6]="";
     struct utsname uname_data;
-    gateway.n_threads = get_processor_count();
+    gateway.n_threads = DEFAULT_NTHREADS;
     gateway.n_nbpoll = DEFAULT_NBPOLLS;
     gateway.pollsleep = DEFAULT_POLLSLEEP;
     gateway.auth_conn_timeout = DEFAULT_AUTH_CONNECT_TIMEOUT;
