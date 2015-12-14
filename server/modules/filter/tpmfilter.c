@@ -60,7 +60,6 @@
 /** Defined in log_manager.cc */
 extern int            lm_enabled_logfiles_bitmask;
 extern size_t         log_ses_count[];
-extern __thread log_info_t tls_log_info;
 
 MODULE_INFO 	info = {
 	MODULE_API_FILTER,
@@ -228,7 +227,7 @@ DBS_INSTANCE	*my_instance;
 	  my_instance->fp = fopen(my_instance->filename, "w");
 		if (my_instance->fp == NULL)
 		{
-			skygw_log_write(LOGFILE_ERROR, "Error: Opening output file '%s' for tpmfilter failed due to %d, %s", my_instance->filename, errno, strerror(errno));
+			MXS_ERROR("Opening output file '%s' for tpmfilter failed due to %d, %s", my_instance->filename, errno, strerror(errno));
 			return NULL;
 		}
 	}
@@ -413,7 +412,7 @@ size_t i;
 				/* if the total length of query statements exceeds the maximum limit, print an error and return */
 				if (len > sql_size_limit)
 				{
-						skygw_log_write(LOGFILE_ERROR, "Error: The size of query statements exceeds the maximum buffer limit of 64MB.");
+						MXS_ERROR("The size of query statements exceeds the maximum buffer limit of 64MB.");
 						goto retblock;
 				}
 
@@ -427,7 +426,7 @@ size_t i;
 					char* new_sql = (char*)malloc(new_sql_size);
 					if (new_sql == NULL)
 					{
-						skygw_log_write(LOGFILE_ERROR, "Error: Memory allocation failure.");
+						MXS_ERROR("Memory allocation failure.");
 						goto retblock;
 					}
 					memcpy(new_sql, my_session->sql, my_session->sql_index);
