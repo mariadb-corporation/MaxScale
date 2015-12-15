@@ -250,7 +250,7 @@ int Mariadb_nodes::start_galera()
     global_result += stop_nodes();
 
     printf("Starting new Galera cluster\n");  fflush(stdout);
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s --wsrep-new-cluster'", sshkey[0], access_user[0], IP[0], access_sudo[0], start_db_command[0]);
+    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s --wsrep-cluster-address=gcomm://'", sshkey[0], access_user[0], IP[0], access_sudo[0], start_db_command[0]);
     printf("%s\n", sys1);  fflush(stdout);
     global_result +=  system(sys1); fflush(stdout);
 
