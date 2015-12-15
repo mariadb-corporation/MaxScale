@@ -502,7 +502,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
     MQ_INSTANCE *my_instance;
     int paramcount = 0, parammax = 64, i = 0, x = 0, arrsize = 0;
     FILTER_PARAMETER** paramlist;
-    char** arr;
+    char** arr = NULL;
     char taskname[512];
 
     if ((my_instance = calloc(1, sizeof(MQ_INSTANCE))))
@@ -514,6 +514,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         if ((my_instance->conn = amqp_new_connection()) == NULL)
         {
+            free(paramlist);
+            free(my_instance);
             return NULL;
         }
         my_instance->channel = 1;
@@ -610,6 +612,10 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
                 if (arrsize > 0)
                 {
+                    for (int x = 0; x < arrsize; x++)
+                    {
+                        free(arr[x]);
+                    }
                     free(arr);
                 }
                 arrsize = 0;
@@ -777,7 +783,11 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         snprintf(taskname, 511, "mqtask%d", atomic_add(&hktask_id, 1));
         hktask_add(taskname, sendMessage, (void*) my_instance, 5);
-
+        for (int x = 0; x < arrsize; x++)
+        {
+            free(arr[x]);
+        }
+        free(arr);
     }
     return(FILTER *) my_instance;
 }
@@ -834,7 +844,7 @@ void sendMessage(void* data)
 {
     MQ_INSTANCE *instance = (MQ_INSTANCE*) data;
     mqmessage *tmp;
-    int err_num;
+    int err_num = AMQP_STATUS_OK;
 
     spinlock_acquire(&instance->rconn_lock);
     if (instance->conn_stat != AMQP_STATUS_OK)

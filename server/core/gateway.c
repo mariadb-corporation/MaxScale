@@ -1024,7 +1024,7 @@ int main(int argc, char **argv)
     int      n_services;
     int      eno = 0;   /*< local variable for errno */
     int      opt;
-    int      daemon_pipe[2];
+    int      daemon_pipe[2] = {-1, -1};
     bool     parent_process;
     int      child_status;
     void**   threads = NULL;   /*< thread list */

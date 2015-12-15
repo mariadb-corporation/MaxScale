@@ -2343,29 +2343,30 @@ static void *
 dbusers_keyread(int fd)
 {
     MYSQL_USER_HOST *dbkey;
-    int tmp;
 
     if ((dbkey = (MYSQL_USER_HOST *) malloc(sizeof(MYSQL_USER_HOST))) == NULL)
     {
         return NULL;
     }
-    if (read(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
+
+    int user_size;
+    if (read(fd, &user_size, sizeof(user_size)) != sizeof(user_size))
     {
         free(dbkey);
         return NULL;
     }
-    if ((dbkey->user = (char *) malloc(tmp + 1)) == NULL)
+    if ((dbkey->user = (char *) malloc(user_size + 1)) == NULL)
     {
         free(dbkey);
         return NULL;
     }
-    if (read(fd, dbkey->user, tmp) != tmp)
+    if (read(fd, dbkey->user, user_size) != user_size)
     {
         free(dbkey->user);
         free(dbkey);
         return NULL;
     }
-    dbkey->user[tmp] = 0; // NULL Terminate
+    dbkey->user[user_size] = 0; // NULL Terminate
     if (read(fd, &dbkey->ipv4, sizeof(dbkey->ipv4)) != sizeof(dbkey->ipv4))
     {
         free(dbkey->user);
@@ -2378,28 +2379,30 @@ dbusers_keyread(int fd)
         free(dbkey);
         return NULL;
     }
-    if (read(fd, &tmp, sizeof(tmp)) != sizeof(tmp))
+
+    int res_size;
+    if (read(fd, &res_size, sizeof(res_size)) != sizeof(res_size))
     {
         free(dbkey->user);
         free(dbkey);
         return NULL;
     }
-    if (tmp != -1)
+    else if (res_size != -1)
     {
-        if ((dbkey->resource = (char *) malloc(tmp + 1)) == NULL)
+        if ((dbkey->resource = (char *) malloc(res_size + 1)) == NULL)
         {
             free(dbkey->user);
             free(dbkey);
             return NULL;
         }
-        if (read(fd, dbkey->resource, tmp) != tmp)
+        if (read(fd, dbkey->resource, res_size) != res_size)
         {
             free(dbkey->resource);
             free(dbkey->user);
             free(dbkey);
             return NULL;
         }
-        dbkey->resource[tmp] = 0; // NULL Terminate
+        dbkey->resource[res_size] = 0; // NULL Terminate
     }
     else // NULL is valid, so represent with a length of -1
     {

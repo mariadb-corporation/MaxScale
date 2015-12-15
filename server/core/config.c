@@ -2528,6 +2528,7 @@ config_get_ifaddr(unsigned char *output)
     {
         memcpy(output, ifr.ifr_hwaddr.sa_data, 6);
     }
+    close(sock);
 
     return success;
 }

@@ -643,6 +643,9 @@ dcb_process_victim_queue(DCB *listofdcb)
             }
             else
             {
+#if defined(FAKE_CODE)
+                conn_open[dcb->fd] = false;
+#endif /* FAKE_CODE */
                 dcb->fd = DCBFD_CLOSED;
 
                 MXS_DEBUG("%lu [dcb_process_victim_queue] Closed socket "
@@ -650,9 +653,6 @@ dcb_process_victim_queue(DCB *listofdcb)
                           pthread_self(),
                           dcb->fd,
                           dcb);
-#if defined(FAKE_CODE)
-                conn_open[dcb->fd] = false;
-#endif /* FAKE_CODE */
             }
         }
 

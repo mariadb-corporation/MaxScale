@@ -1497,7 +1497,7 @@ gen_show_dbs_response(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
     rval = gwbuf_append(rval, last_packet);
 
     rval = gwbuf_make_contiguous(rval);
-
+    hashtable_iterator_free(iter);
     return rval;
 }
 

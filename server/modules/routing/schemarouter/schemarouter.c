@@ -1254,7 +1254,7 @@ static void* newSession(
         if(db[0] != 0x0)
         {
             /* Store the database the client is connecting to */
-            strncpy(client_rses->connect_db,db,MYSQL_DATABASE_MAXLEN+1);
+            snprintf(client_rses->connect_db, MYSQL_DATABASE_MAXLEN + 1, "%s", db);
         }
         
              
@@ -3797,7 +3797,7 @@ static bool route_session_write(
         unsigned char      packet_type,
         skygw_query_type_t qtype)
 {
-        bool              succp;
+        bool              succp = false;
         rses_property_t*  prop;
         backend_ref_t*    backend_ref;
         int               i;
