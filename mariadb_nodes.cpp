@@ -472,3 +472,16 @@ int Mariadb_nodes::set_repl_user()
     close_connections();
     return(global_result);
 }
+
+int Mariadb_nodes::get_server_id(int index)
+{
+    int id = -1;
+    char str[1024];
+
+    if (find_field(this->nodes[index], "SELECT @@server_id", "@@server_id", (char*) &str) == 0)
+    {
+        id = atoi(str);
+    }
+
+    return id;
+}

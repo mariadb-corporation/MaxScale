@@ -328,6 +328,9 @@ target_link_libraries(bug469 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl
 add_executable(open_close_connections open_close_connections.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
 target_link_libraries(open_close_connections ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
+add_executable(galera_priority galera_priority.cpp testconnections.cpp sql_t1.cpp mariadb_nodes.cpp mariadb_func.cpp)
+target_link_libraries(galera_priority ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+
 add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
 
 install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover kill_master DESTINATION system-test)
@@ -336,7 +339,7 @@ install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num tempor
 install(TARGETS prepared_statement bug592 bug620 bug634 bug626 bug643 bug643_1 bug645 bug645_1 bug601 bug649 bug650 bug653 bug657 bug676 generate_log_sql bug654 bug658 bug662 DESTINATION system-test)
 install(TARGETS bug664 bug681 bug673 bug670 bug539 bug694 bug507 bug699 bug705 bug519 setup_binlog setup_binlog_crc_none setup_binlog_crc_32 binlog_incompl bug729 bug718 bug730 bug711 bug656 DESTINATION system-test)
 install(TARGETS mxs47 sharding schemarouter_duplicate_db fwf mm mxs118 mxs127 session_limits script config_reload config_reload_stress mxs314 mxs321 DESTINATION system-test)
-install(TARGETS pers_01 pers_02 mxs431 binlog_big_transaction bug469 load_balancing_galera open_close_connections DESTINATION system-test)
+install(TARGETS pers_01 pers_02 mxs431 binlog_big_transaction bug469 load_balancing_galera open_close_connections galera_priority DESTINATION system-test)
 
 install(FILES set_env.sh get_logs.sh run_ctrl_c.sh long_insert.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 install(FILES mariadb_tests_hartmut.sh configure_maxscale.sh DESTINATION system-test PERMISSIONS WORLD_READ WORLD_EXECUTE OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
@@ -483,6 +486,7 @@ add_test(mxs361 mxs361)
 add_test(mxs431 mxs431)
 add_test(open_close_connections open_close_connections)
 add_test(open_close_connections_ssl open_close_connections_ssl)
+add_test(galera_priority galera_priority)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)

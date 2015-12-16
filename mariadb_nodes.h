@@ -265,6 +265,13 @@ public:
      * @return 0 if everything is ok
      */
     int set_repl_user();
+
+    /**
+     * @brief Get the server_id of the node
+     * @param index The index of the node whose server_id to retrieve
+     * @return Node id of the server or -1 on error
+     */
+    int get_server_id(int index);
 };
 
 #endif // MARIADB_NODES_H
