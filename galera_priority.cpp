@@ -45,7 +45,7 @@ int main(int argc, char **argv)
     /** Get server_id for each node */
     for (int i = 0; i < test->galera->N; i++)
     {
-        printf(server_id[i], "%s", test->galera->get_server_id(i));
+        printf(server_id[i], "%d", test->galera->get_server_id(i));
     }
 
     /** Node 3 should be master */
