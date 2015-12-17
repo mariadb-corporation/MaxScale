@@ -12,7 +12,9 @@ System level tests for MaxScale
 - configuring of Master/Slave and Galera can be done with help of [build scripts package](https://github.com/mariadb-corporation/build-scripts-vagrant)
 
 ## Manuals
-How to run tests with existing backend
+
+[How to run tests with existing backend](https://github.com/mariadb-corporation/build-scripts-vagrant/blob/master/RUN_TEST.md#running-tests-with-existing-test-configuration)
+
 Hints: How to write a test
 
 ## Environmental variables
@@ -54,3 +56,4 @@ Hints: How to write a test
 |get_logs_command|bash command to copy logs from Maxscale machine|
 |sysbench_dir|directory where Sysbanch is installed|
 |ssl|'yes' if tests should try to use ssl to connect to Maxscale and to backends (obsolete, now should be 'yes' in all cases)|
+|smoke|if 'yes' all tests are executed in 'quick' mode (less iterations, skip heavy operations)|
