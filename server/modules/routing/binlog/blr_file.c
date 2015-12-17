@@ -432,8 +432,28 @@ struct	stat	statb;
 
 	if (pos > filelen)
 	{
-		snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is beyond end of the binlog file '%s', size %lu",
-			pos, file->binlogname, filelen);
+		spinlock_acquire(&router->binlog_lock);
+		spinlock_acquire(&file->lock);
+
+		if (strcmp(router->binlog_name, file->binlogname) != 0)
+		{
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is beyond "
+				"'closed' binlog file '%s', size %lu. Generating Error '1236'",
+				pos, file->binlogname, filelen);
+		} else {
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested position %lu is beyond "
+				"end of the latest binlog file '%s', size %lu. Disconnecting",
+                                pos, file->binlogname, filelen);
+
+				/* Slave will be disconnected by the calling routine */
+				hdr->ok = SLAVE_POS_BEYOND_EOF;
+			}
+
+		}
+
+		spinlock_release(&file->lock);
+		spinlock_release(&router->binlog_lock);
+
 		return NULL;
 	}
 
