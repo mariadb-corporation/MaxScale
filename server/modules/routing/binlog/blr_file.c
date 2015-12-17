@@ -445,9 +445,8 @@ struct	stat	statb;
 				"end of the latest binlog file '%s', size %lu. Disconnecting",
                                 pos, file->binlogname, filelen);
 
-				/* Slave will be disconnected by the calling routine */
-				hdr->ok = SLAVE_POS_BEYOND_EOF;
-			}
+			/* Slave will be disconnected by the calling routine */
+			hdr->ok = SLAVE_POS_BEYOND_EOF;
 
 		}
 
