@@ -100,10 +100,7 @@ int simple_failover(TestConnections* test)
         test->close_rwsplit();
     }
 
-    for (int i = 0; i < test->galera->N; i++)
-    {
-        test->galera->unblock_node(i);
-    }
+    test->galera->unblock_all_nodes();
 
     return rval;
 }

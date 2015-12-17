@@ -285,6 +285,17 @@ int Mariadb_nodes::unblock_node(int node)
     return(system(sys1));
 }
 
+
+int Mariadb_nodes::unblock_all_nodes()
+{
+    int rval = 0;
+    for (int i = 0; i < this->N; i++)
+    {
+        rval += this->unblock_node(i);
+    }
+    return rval;
+}
+
 int Mariadb_nodes::check_and_restart_nodes()
 {
     int res = 0;

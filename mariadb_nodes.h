@@ -209,6 +209,13 @@ public:
      */
     int unblock_node(int node);
 
+
+    /**
+     * @brief Unblock all nodes for this cluster
+     * @return 0 in case of success
+     */
+    int unblock_all_nodes();
+
     /**
      * @brief Check if all nodes are avaliable (via ssh) and restart nodes that are not available
      * @return 0 if everything is ok
