@@ -2034,6 +2034,27 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 				read_errmsg);
 		}
 
+		if (hdr.ok == SLAVE_POS_BEYOND_EOF) {
+			MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s', %s",
+				router->service->name,
+				slave->dcb->remote,
+				ntohs((slave->dcb->ipv4).sin_port),
+				slave->serverid,
+				slave->binlogfile,
+				read_errmsg);
+
+			/*
+			 * Close the slave session and socket
+			 * The slave will try to reconnect
+			 */
+			dcb_close(slave->dcb);
+
+#ifndef BLFILE_IN_SLAVE
+			blr_close_binlog(router, file);
+#endif
+			return 0;
+		}
+
                 if (hdr.ok == SLAVE_POS_READ_ERR) {
 			MXS_ERROR("%s Slave %s:%i, server-id %d, binlog '%s', %s",
 				router->service->name,
