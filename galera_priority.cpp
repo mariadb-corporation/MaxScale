@@ -113,5 +113,6 @@ int main(int argc, char **argv)
     int rval = 0;
     rval += simple_failover(test);
     test->galera->unblock_all_nodes();
+    test->copy_all_logs();
     return rval;
 }
