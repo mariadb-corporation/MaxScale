@@ -25,12 +25,12 @@ int check_server_id(TestConnections* test, char *node_id)
         find_field(test->conn_rwsplit, "SELECT @@server_id", "@@server_id", str) ||
         execute_query(test->conn_rwsplit, "COMMIT"))
     {
-        printf("Failed to compare @@server_id.\n");
+        test->tprintf("Failed to compare @@server_id.\n");
         rval = 1;
     }
     else if (strcmp(node_id, str))
     {
-        printf("@@server_id is %s instead of %s\n", node_id, str);
+        test->tprintf("@@server_id is %s instead of %s\n", node_id, str);
         rval = 1;
     }
     return rval;
@@ -48,12 +48,14 @@ int simple_failover(TestConnections* test)
         sprintf(server_id[i], "%d", test->galera->get_server_id(i));
     }
 
-    try
+    do
     {
         /** Node 3 should be master */
         if (test->connect_rwsplit() || check_server_id(test, server_id[2]))
         {
-            throw;
+            test->tprintf("Test failed without any blocked nodes.\n");
+            rval = 1;
+            break;
         }
         test->close_rwsplit();
         test->galera->block_node(2);
@@ -62,7 +64,9 @@ int simple_failover(TestConnections* test)
         /** Block node 3 and node 1 should be master */
         if (test->connect_rwsplit() || check_server_id(test, server_id[0]))
         {
-            throw;
+            test->tprintf("Test failed with first blocked node.\n");
+            rval = 1;
+            break;
         }
         test->close_rwsplit();
         test->galera->block_node(0);
@@ -71,7 +75,9 @@ int simple_failover(TestConnections* test)
         /** Block node 1 and node 4 should be master */
         if (test->connect_rwsplit() || check_server_id(test, server_id[3]))
         {
-            throw;
+            test->tprintf("Test failed with second blocked node.\n");
+            rval = 1;
+            break;
         }
         test->close_rwsplit();
         test->galera->block_node(3);
@@ -80,7 +86,9 @@ int simple_failover(TestConnections* test)
         /** Block node 4 and node 2 should be master */
         if (test->connect_rwsplit() || check_server_id(test, server_id[1]))
         {
-            throw;
+            test->tprintf("Test failed with third blocked node.\n");
+            rval = 1;
+            break;
         }
         test->close_rwsplit();
         test->galera->block_node(1);
@@ -89,18 +97,12 @@ int simple_failover(TestConnections* test)
         /** All nodes blocked, expect failure */
         if (test->connect_rwsplit() || execute_query(test->conn_rwsplit, "SELECT @@server_id") == 0)
         {
-            printf("SELECT @@server_id was expected to fail but the query was successful.\n");
-            throw;
+            test->tprintf("SELECT @@server_id was expected to fail but the query was successful.\n");
+            test->tprintf("Test failed with all nodes blocked.\n");
+            rval = 1;
         }
-        test->close_rwsplit();
     }
-    catch (...)
-    {
-        rval = 1;
-        test->close_rwsplit();
-    }
-
-    test->galera->unblock_all_nodes();
+    while (false);
 
     return rval;
 }
@@ -110,5 +112,6 @@ int main(int argc, char **argv)
     TestConnections *test = new TestConnections(argc, argv);
     int rval = 0;
     rval += simple_failover(test);
+    test->galera->unblock_all_nodes();
     return rval;
 }
