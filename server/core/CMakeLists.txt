@@ -5,7 +5,7 @@ if(BUILD_TESTS OR BUILD_TOOLS)
   elseif(WITH_TCMALLOC)
     target_link_libraries(fullcore ${TCMALLOC_LIBRARIES})
   endif()
-  target_link_libraries(fullcore ${CURL_LIBRARIES} utils log_manager pthread ${LZMA_LINK_FLAGS} ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ssl aio rt crypt dl crypto inih z m stdc++)
+  target_link_libraries(fullcore ${CURL_LIBRARIES} utils ${PCRE2_LIBRARIES} log_manager pthread ${LZMA_LINK_FLAGS} ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ssl aio rt crypt dl crypto inih z m stdc++)
   add_dependencies(fullcore pcre2)
 endif()
 
@@ -22,15 +22,15 @@ elseif(WITH_TCMALLOC)
   target_link_libraries(maxscale ${TCMALLOC_LIBRARIES})
 endif()
 
-target_link_libraries(maxscale ${LZMA_LINK_FLAGS} ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ${CURL_LIBRARIES} log_manager utils ssl aio pthread crypt dl crypto inih z rt m stdc++)
+target_link_libraries(maxscale ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} ${CURL_LIBRARIES} log_manager utils ssl aio pthread crypt dl crypto inih z rt m stdc++)
 install(TARGETS maxscale DESTINATION ${MAXSCALE_BINDIR})
 
 add_executable(maxkeys maxkeys.c spinlock.c secrets.c utils.c gwdirs.c random_jkiss.c ${CMAKE_SOURCE_DIR}/log_manager/log_manager.cc)
-target_link_libraries(maxkeys utils pthread  crypt crypto)
+target_link_libraries(maxkeys utils pthread crypt crypto ${PCRE2_LIBRARIES})
 install(TARGETS maxkeys DESTINATION ${MAXSCALE_BINDIR})
 
 add_executable(maxpasswd maxpasswd.c spinlock.c secrets.c utils.c gwdirs.c random_jkiss.c ${CMAKE_SOURCE_DIR}/log_manager/log_manager.cc)
-target_link_libraries(maxpasswd utils pthread crypt crypto)
+target_link_libraries(maxpasswd utils pthread crypt crypto ${PCRE2_LIBRARIES})
 install(TARGETS maxpasswd DESTINATION ${MAXSCALE_BINDIR})
 
 if(BUILD_TESTS)
