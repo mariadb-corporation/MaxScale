@@ -110,10 +110,10 @@ typedef struct {
 
 	int query_delimiter_size; /* the length of the query delimiter */
 	FILE* fp;
-} DBS_INSTANCE;
+} TPM_INSTANCE;
 
 /**
- * The session structure for this DBS filter.
+ * The session structure for this TPM filter.
  * This stores the downstream filter information, such that the
  * filter is able to pass the query on to the next filter (or router)
  * in the chain.
@@ -136,7 +136,7 @@ typedef struct {
 	char	*buf;
 	int	sql_index;
 	size_t		max_sql_size;
-} DBS_SESSION;
+} TPM_SESSION;
 
 /**
  * Implementation of the mandatory version entry point
@@ -185,9 +185,9 @@ static	FILTER	*
 createInstance(char **options, FILTER_PARAMETER **params)
 {
 int		i;
-DBS_INSTANCE	*my_instance;
+TPM_INSTANCE	*my_instance;
 
-	if ((my_instance = calloc(1, sizeof(DBS_INSTANCE))) != NULL)
+	if ((my_instance = calloc(1, sizeof(TPM_INSTANCE))) != NULL)
 	{
 		my_instance->source = NULL;
 		my_instance->user = NULL;
@@ -246,12 +246,12 @@ DBS_INSTANCE	*my_instance;
 static	void	*
 newSession(FILTER *instance, SESSION *session)
 {
-DBS_INSTANCE	*my_instance = (DBS_INSTANCE *)instance;
-DBS_SESSION	*my_session;
+TPM_INSTANCE	*my_instance = (TPM_INSTANCE *)instance;
+TPM_SESSION	*my_session;
 int		i;
 char		*remote, *user;
 
-	if ((my_session = calloc(1, sizeof(DBS_SESSION))) != NULL)
+	if ((my_session = calloc(1, sizeof(TPM_SESSION))) != NULL)
 	{
 		atomic_add(&my_instance->sessions,1);
 
@@ -294,8 +294,8 @@ char		*remote, *user;
 static	void
 closeSession(FILTER *instance, void *session)
 {
-	DBS_SESSION	*my_session = (DBS_SESSION *)session;
-	DBS_INSTANCE	*my_instance = (DBS_INSTANCE *)instance;
+	TPM_SESSION	*my_session = (TPM_SESSION *)session;
+	TPM_INSTANCE	*my_instance = (TPM_INSTANCE *)instance;
 	if (my_instance->fp != NULL)
 	{
 		// flush FP when a session is closed.
@@ -313,7 +313,7 @@ closeSession(FILTER *instance, void *session)
 static void
 freeSession(FILTER *instance, void *session)
 {
-DBS_SESSION	*my_session = (DBS_SESSION *)session;
+TPM_SESSION	*my_session = (TPM_SESSION *)session;
 
 	free(my_session->clientHost);
 	free(my_session->userName);
@@ -334,7 +334,7 @@ DBS_SESSION	*my_session = (DBS_SESSION *)session;
 static void
 setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
-DBS_SESSION	*my_session = (DBS_SESSION *)session;
+TPM_SESSION	*my_session = (TPM_SESSION *)session;
 
 	my_session->down = *downstream;
 }
@@ -350,7 +350,7 @@ DBS_SESSION	*my_session = (DBS_SESSION *)session;
 static void
 setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
 {
-DBS_SESSION	*my_session = (DBS_SESSION *)session;
+TPM_SESSION	*my_session = (TPM_SESSION *)session;
 
 	my_session->up = *upstream;
 }
@@ -368,8 +368,8 @@ DBS_SESSION	*my_session = (DBS_SESSION *)session;
 static	int
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
-DBS_INSTANCE	*my_instance = (DBS_INSTANCE *)instance;
-DBS_SESSION	*my_session = (DBS_SESSION *)session;
+TPM_INSTANCE	*my_instance = (TPM_INSTANCE *)instance;
+TPM_SESSION	*my_session = (TPM_SESSION *)session;
 char		*ptr = NULL;
 size_t i;
 
@@ -467,8 +467,8 @@ retblock:
 static int
 clientReply(FILTER *instance, void *session, GWBUF *reply)
 {
-DBS_INSTANCE	*my_instance = (DBS_INSTANCE *)instance;
-DBS_SESSION	*my_session = (DBS_SESSION *)session;
+TPM_INSTANCE	*my_instance = (TPM_INSTANCE *)instance;
+TPM_SESSION	*my_session = (TPM_SESSION *)session;
 struct		timeval		tv, diff;
 int		i, inserted;
 
@@ -519,8 +519,8 @@ int		i, inserted;
 static	void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
-DBS_INSTANCE	*my_instance = (DBS_INSTANCE *)instance;
-DBS_SESSION	*my_session = (DBS_SESSION *)fsession;
+TPM_INSTANCE	*my_instance = (TPM_INSTANCE *)instance;
+TPM_SESSION	*my_session = (TPM_SESSION *)fsession;
 int		i;
 
 	if (my_instance->source)
@@ -529,9 +529,13 @@ int		i;
 	if (my_instance->user)
 		dcb_printf(dcb, "\t\tLimit logging to user		%s\n",
 				my_instance->user);
-	if (my_session)
-	{
+	if (my_instance->filename)
 		dcb_printf(dcb, "\t\tLogging to file %s.\n",
 			my_instance->filename);
-	}
+	if (my_instance->delimiter)
+		dcb_printf(dcb, "\t\tLogging with delimiter %s.\n",
+			my_instance->delimiter);
+	if (my_instance->query_delimiter)
+		dcb_printf(dcb, "\t\tLogging with query delimiter %s.\n",
+			my_instance->query_delimiter);
 }
