@@ -13,9 +13,9 @@ System level tests for MaxScale
 
 ## Manuals
 
-[How to run tests with existing backend](https://github.com/mariadb-corporation/build-scripts-vagrant/blob/master/RUN_TEST.md#running-tests-with-existing-test-configuration)
+[How to run tests](https://github.com/mariadb-corporation/build-scripts-vagrant/blob/master/RUN_TEST.md)
 
-Hints: How to write a test
+[Hints: How to write a test](HOW_TO_WRITE_TEST.md)
 
 ## Environmental variables
 |variable|meaning|
