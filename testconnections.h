@@ -385,13 +385,11 @@ public:
      */
     int create_connections(int conn_N);
 
-
     /**
-     * Trying to get client IP address by connection to DB and execution 'show processlist'
+     * Trying to get client IP address by connection to DB via RWSplit and execution 'show processlist'
      *
-     * @param ip	connections from this IP address are counted
-     * @param db    name of DB to which connections are counted
-     * @return number of connections
+     * @param ip client IP address as it visible by Maxscale
+     * @return 0 in case of success
      */
     int get_client_ip(char * ip);
 
@@ -413,9 +411,7 @@ public:
      * @param __format
      * @return
      */
-
     int tprintf(const char *format, ...);
-
 
     /**
      * @brief Creats t1 table, insert data into it and checks if data can be correctly read from all Maxscale services
@@ -435,7 +431,6 @@ public:
 
     /**
      * @brief Checks if table t1 exists in DB
-     * @param Test Pointer to TestConnections object that contains references to test setup
      * @param presence expected result
      * @param db DB name
      * @return 0 if (t1 table exists AND presence=TRUE) OR (t1 table does not exist AND presence=FALSE)
@@ -482,8 +477,6 @@ public:
      */
     int try_query(MYSQL *conn, const char *sql);
 };
-
-
 
 /**
  * @brief timeout_thread Thread which terminates test application after 'timeout' milliseconds

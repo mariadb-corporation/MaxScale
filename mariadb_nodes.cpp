@@ -51,9 +51,6 @@ int Mariadb_nodes::read_env()
     sprintf(env_name, "%s_password", prefix);
     env = getenv(env_name); if (env != NULL) {sscanf(env, "%s", password); } else {sprintf(password, "skysql"); }
 
-
-
-
     ssl = false;
     sprintf(env_name, "%s_ssl", prefix);
     env = getenv(env_name); if ((env != NULL) && ((strcasecmp(env, "yes") == 0) || (strcasecmp(env, "true") == 0) )) {ssl = true;}

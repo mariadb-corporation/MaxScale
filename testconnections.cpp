@@ -813,22 +813,22 @@ int TestConnections::insert_select(int N)
 
 int TestConnections::use_db(char * db)
 {
-    int global_result = 0;
+    int local_result = 0;
     char sql[100];
 
     sprintf(sql, "USE %s;", db);
     set_timeout(20);
     tprintf("selecting DB '%s' for rwsplit\n", db);
-    global_result += execute_query(conn_rwsplit, sql);
+    local_result += execute_query(conn_rwsplit, sql);
     tprintf("selecting DB '%s' for readconn master\n", db);
-    global_result += execute_query(conn_slave, sql);
+    local_result += execute_query(conn_slave, sql);
     tprintf("selecting DB '%s' for readconn slave\n", db);
-    global_result += execute_query(conn_master, sql);
+    local_result += execute_query(conn_master, sql);
     for (int i = 0; i < repl->N; i++) {
         tprintf("selecting DB '%s' for direct connection to node %d\n", db, i);
-        global_result += execute_query(repl->nodes[i], sql);
+        local_result += execute_query(repl->nodes[i], sql);
     }
-    return(global_result);
+    return(local_result);
 }
 
 int TestConnections::check_t1_table(bool presence, char * db)

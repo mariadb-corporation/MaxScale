@@ -118,7 +118,7 @@ public:
     bool no_set_pos;
 
     /**
-     * @brief connect open connecxtions to all Maxscale services
+     * @brief connect open connections to all nodes
      * @return 0  in case of success
      */
     int connect();
