@@ -309,17 +309,17 @@ public:
     /**
      * @brief CloseRWSplit Closes RWplit connections stored in conn_rwsplit
      */
-    void close_rwsplit(){mysql_close(conn_rwsplit);}
+    void close_rwsplit(){mysql_close(conn_rwsplit);conn_rwsplit = NULL;}
 
     /**
      * @brief CloseReadMaster Closes ReadConn master connections stored in conn_master
      */
-    void close_readconn_master(){mysql_close(conn_master);}
+    void close_readconn_master(){mysql_close(conn_master);conn_master = NULL;}
 
     /**
      * @brief CloseReadSlave Closes ReadConn slave connections stored in conn_slave
      */
-    void close_readconn_slave(){mysql_close(conn_slave);}
+    void close_readconn_slave(){mysql_close(conn_slave);conn_slave = NULL;}
 
     /**
      * @brief restart_maxscale Issues 'service maxscale restart' command
