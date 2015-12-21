@@ -115,3 +115,4 @@ ssl_load_galera ssl_load_galera
 short_sessions_ssl ssl
 open_close_connections replication
 open_close_connections_ssl ssl
+galera_prority galera_prority
