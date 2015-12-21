@@ -51,6 +51,7 @@ int simple_failover(TestConnections* test)
     do
     {
         /** Node 3 should be master */
+        test->tprintf("Expecting '%s'...", server_id[2]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[2]))
         {
             test->tprintf("Test failed without any blocked nodes.\n");
@@ -59,9 +60,11 @@ int simple_failover(TestConnections* test)
         }
         test->close_rwsplit();
         test->galera->block_node(2);
+        test->tprintf(" OK\n");
         sleep(15);
 
         /** Block node 3 and node 1 should be master */
+        test->tprintf("Expecting '%s'...", server_id[0]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[0]))
         {
             test->tprintf("Test failed with first blocked node.\n");
@@ -70,9 +73,11 @@ int simple_failover(TestConnections* test)
         }
         test->close_rwsplit();
         test->galera->block_node(0);
+        test->tprintf(" OK\n");
         sleep(15);
 
         /** Block node 1 and node 4 should be master */
+        test->tprintf("Expecting '%s'...", server_id[3]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[3]))
         {
             test->tprintf("Test failed with second blocked node.\n");
@@ -81,9 +86,11 @@ int simple_failover(TestConnections* test)
         }
         test->close_rwsplit();
         test->galera->block_node(3);
+        test->tprintf(" OK\n");
         sleep(15);
 
         /** Block node 4 and node 2 should be master */
+        test->tprintf("Expecting '%s'...", server_id[1]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[1]))
         {
             test->tprintf("Test failed with third blocked node.\n");
@@ -92,15 +99,18 @@ int simple_failover(TestConnections* test)
         }
         test->close_rwsplit();
         test->galera->block_node(1);
+        test->tprintf(" OK\n");
         sleep(15);
 
         /** All nodes blocked, expect failure */
+        test->tprintf("Expecting failure...");
         if (test->connect_rwsplit() || execute_query(test->conn_rwsplit, "SELECT @@server_id") == 0)
         {
             test->tprintf("SELECT @@server_id was expected to fail but the query was successful.\n");
             test->tprintf("Test failed with all nodes blocked.\n");
             rval = 1;
         }
+        test->tprintf(" OK\n");
     }
     while (false);
 
