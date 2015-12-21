@@ -30,7 +30,7 @@ int check_server_id(TestConnections* test, char *node_id)
     }
     else if (strcmp(node_id, str))
     {
-        test->tprintf("@@server_id is %s instead of %s\n", node_id, str);
+        test->tprintf("@@server_id is %s instead of %s\n", str, node_id);
         rval = 1;
     }
     return rval;
