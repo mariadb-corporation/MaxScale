@@ -16,6 +16,7 @@ a=( $template_line )
 template=${a[1]}
 
 if [ -z $template ] ; then
+  echo "Template $template not found, using 'replication' template."
   template="replication"
 fi
 
