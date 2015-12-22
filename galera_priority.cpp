@@ -40,6 +40,7 @@ int simple_failover(TestConnections* test)
 {
     test->galera->connect();
     int rval = 0;
+    bool blocked = false;
     char server_id[test->galera->N][1024];
 
     /** Get server_id for each node */
@@ -60,6 +61,7 @@ int simple_failover(TestConnections* test)
         }
         test->close_rwsplit();
         test->galera->block_node(2);
+        blocked = true;
         test->tprintf(" OK\n");
         sleep(15);
 
@@ -121,9 +123,27 @@ int simple_failover(TestConnections* test)
             rval = 1;
         }
         test->tprintf(" OK\n");
+
+        /** Unblock all nodes, node 3 should be master again */
+        test->galera->unblock_all_nodes();
+        blocked = false;
+        sleep(15);
+        test->tprintf("Expecting '%s'...", server_id[2]);
+        if (test->connect_rwsplit() || check_server_id(test, server_id[2]))
+        {
+            test->tprintf("Test failed after unblocking all nodes.\n");
+            rval = 1;
+            break;
+        }
+        test->close_rwsplit();
+        test->tprintf(" OK\n");
     }
     while (false);
 
+    if (blocked)
+    {
+        test->galera->unblock_all_nodes();
+    }
     return rval;
 }
 
@@ -132,7 +152,6 @@ int main(int argc, char **argv)
     TestConnections *test = new TestConnections(argc, argv);
     int rval = 0;
     rval += simple_failover(test);
-    test->galera->unblock_all_nodes();
     test->copy_all_logs();
     return rval;
 }
