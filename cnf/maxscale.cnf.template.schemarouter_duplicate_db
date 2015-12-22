@@ -18,10 +18,6 @@ passwd=skysql
 auth_all_servers=1
 #filters=QLA
 
-[Debug Interface]
-type=service
-router=debugcli
-
 [Sharding Listener]
 type=listener
 service=Sharding router
