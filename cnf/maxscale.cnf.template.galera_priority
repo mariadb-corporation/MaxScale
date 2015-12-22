@@ -10,6 +10,7 @@ module=galeramon
 servers=server1,server2,server3,server4
 user=skysql
 passwd=skysql
+use_priority=true
 
 [RW Split Router]
 type=service
