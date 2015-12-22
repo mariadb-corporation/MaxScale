@@ -107,7 +107,7 @@ int simple_failover(TestConnections* test)
         /** All nodes blocked, expect failure */
         test->tprintf("Expecting failure...");
         int myerrno = 0;
-        if ((myerrno = test->connect_rwsplit()) && test->conn_rwsplit)
+        if ((myerrno = test->connect_rwsplit()) == 0 && test->conn_rwsplit)
         {
             test->tprintf("Connecting to rwsplit was expected to fail but it was"
                     " successful. Returned error was %d.\n", myerrno);
@@ -117,7 +117,7 @@ int simple_failover(TestConnections* test)
             }
             else
             {
-                test->tprintf("Connection failed but query was successful.\n");
+                test->tprintf("Connection succeeded but query failed.\n");
             }
             test->tprintf("Test failed with all nodes blocked.\n");
             rval = 1;
