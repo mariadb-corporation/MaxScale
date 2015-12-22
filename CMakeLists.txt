@@ -9,6 +9,7 @@ set_maxscale_version()
 # Installation directory
 
 set(CMAKE_INSTALL_PREFIX "/usr/local/mariadb-maxscale" CACHE INTERNAL "Prefix prepended to install directories." FORCE)
+set(CMAKE_INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/system-test)
 # Build type
 set(CMAKE_BUILD_TYPE "None" CACHE STRING "Build type, possible values are:None, Debug, Optimized.")
 
@@ -28,310 +29,319 @@ include_directories("/usr/include/mysql/")
 #LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")
 aux_source_directory(. SRC_LIST)
 
-add_executable(readconnrouter_master readconnrouter_master.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(readconnrouter_master ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(readconnrouter_slave readconnrouter_slave.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(readconnrouter_slave ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 
-add_executable(rwsplit_conn_num rwsplit_conn_num.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(rwsplit_conn_num ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_library(testcore SHARED testconnections.cpp mariadb_nodes.cpp
+  mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
+  sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp)
+target_link_libraries(testcore ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+install(TARGETS testcore DESTINATION system-test)
 
-add_executable(sql_queries sql_queries.cpp sql_t1.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(sql_queries ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(readconnrouter_master readconnrouter_master.cpp)
+target_link_libraries(readconnrouter_master testcore)
 
-add_executable(rw_galera_select_insert rw_galera_select_insert.cpp  get_com_select_insert.cpp maxadmin_operations.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(rw_galera_select_insert ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(readconnrouter_slave readconnrouter_slave.cpp)
+target_link_libraries(readconnrouter_slave testcore)
 
-add_executable(rwsplit_connect rwsplit_connect.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(rwsplit_connect ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(rwsplit_conn_num rwsplit_conn_num.cpp)
+target_link_libraries(rwsplit_conn_num testcore)
 
-add_executable(rw_select_insert rw_select_insert.cpp get_com_select_insert.cpp maxadmin_operations.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(rw_select_insert ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(sql_queries sql_queries.cpp)
+target_link_libraries(sql_queries testcore)
 
-add_executable(server_weight server_weight.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(server_weight ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(rw_galera_select_insert rw_galera_select_insert.cpp)
+target_link_libraries(rw_galera_select_insert testcore)
 
-add_executable(slave_failover slave_failover.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(slave_failover ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(rwsplit_connect rwsplit_connect.cpp)
+target_link_libraries(rwsplit_connect testcore)
 
-add_executable(kill_master kill_master.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(kill_master ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(rw_select_insert rw_select_insert.cpp)
+target_link_libraries(rw_select_insert testcore)
 
-add_executable(sysbench_kill_slave sysbench_kill_slave.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(sysbench_kill_slave ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(server_weight server_weight.cpp)
+target_link_libraries(server_weight testcore)
 
-add_executable(slave_lag slave_lag.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(slave_lag ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(slave_failover slave_failover.cpp)
+target_link_libraries(slave_failover testcore)
 
-add_executable(bug359 bug359.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug359 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(kill_master kill_master.cpp)
+target_link_libraries(kill_master testcore)
 
-add_executable(bug493 bug493.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug493 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(sysbench_kill_slave sysbench_kill_slave.cpp)
+target_link_libraries(sysbench_kill_slave testcore)
 
-add_executable(bug495 bug495.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug495 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(slave_lag slave_lag.cpp)
+target_link_libraries(slave_lag testcore)
 
-add_executable(bug479 bug479.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug479 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug359 bug359.cpp)
+target_link_libraries(bug359 testcore)
 
-add_executable(bug572 bug572.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug572 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug493 bug493.cpp)
+target_link_libraries(bug493 testcore)
 
-add_executable(short_sessions short_sessions.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(short_sessions ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug495 bug495.cpp)
+target_link_libraries(bug495 testcore)
 
-add_executable(connect_to_nonexisting_db connect_to_nonexisting_db.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(connect_to_nonexisting_db ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug479 bug479.cpp)
+target_link_libraries(bug479 testcore)
 
-add_executable(temporal_tables temporal_tables.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(temporal_tables ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug572 bug572.cpp)
+target_link_libraries(bug572 testcore)
 
-add_executable(change_master_during_session change_master_during_session.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(change_master_during_session ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(short_sessions short_sessions.cpp)
+target_link_libraries(short_sessions testcore)
 
-add_executable(bug143 bug143.cpp sql_t1.cpp  testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug143 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(connect_to_nonexisting_db connect_to_nonexisting_db.cpp)
+target_link_libraries(connect_to_nonexisting_db testcore)
 
-add_executable(bug488 bug488.cpp sql_t1.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug488 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(temporal_tables temporal_tables.cpp)
+target_link_libraries(temporal_tables testcore)
 
-add_executable(bug507 bug507.cpp sql_t1.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug507 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(change_master_during_session change_master_during_session.cpp)
+target_link_libraries(change_master_during_session testcore)
 
-add_executable(bug509 bug509.cpp sql_t1.cpp testconnections.cpp  mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug509 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug143 bug143.cpp)
+target_link_libraries(bug143 testcore)
 
-add_executable(bug526 bug526.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug526 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug488 bug488.cpp)
+target_link_libraries(bug488 testcore)
 
-add_executable(change_master change_master.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(change_master ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug507 bug507.cpp)
+target_link_libraries(bug507 testcore)
 
-add_executable(bug529 bug529.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug529 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug509 bug509.cpp)
+target_link_libraries(bug509 testcore)
 
-add_executable(bug547 bug547.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug547 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug526 bug526.cpp)
+target_link_libraries(bug526 testcore)
 
-add_executable(bug422 bug422.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug422 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(change_master change_master.cpp)
+target_link_libraries(change_master testcore)
 
-add_executable(bug571 bug571.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug571 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug529 bug529.cpp)
+target_link_libraries(bug529 testcore)
 
-add_executable(bug473 bug473.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug473 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug547 bug547.cpp)
+target_link_libraries(bug547 testcore)
 
-add_executable(bug587 bug587.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug587 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug422 bug422.cpp)
+target_link_libraries(bug422 testcore)
 
-add_executable(bug471 bug471.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug471 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug571 bug571.cpp)
+target_link_libraries(bug571 testcore)
 
-add_executable(bug475 bug475.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug475 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug473 bug473.cpp)
+target_link_libraries(bug473 testcore)
 
-add_executable(change_user change_user.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(change_user ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug587 bug587.cpp)
+target_link_libraries(bug587 testcore)
 
-add_executable(bug565 bug565.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug565 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug471 bug471.cpp)
+target_link_libraries(bug471 testcore)
 
-add_executable(load_balancing load_balancing.cpp big_load.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(load_balancing ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug475 bug475.cpp)
+target_link_libraries(bug475 testcore)
 
-add_executable(load_balancing_galera load_balancing_galera.cpp big_load.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(load_balancing_galera ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(change_user change_user.cpp)
+target_link_libraries(change_user testcore)
 
-add_executable(crash_out_of_files crash_out_of_files.cpp big_load.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(crash_out_of_files ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug565 bug565.cpp)
+target_link_libraries(bug565 testcore)
 
-add_executable(crash_out_of_files_galera crash_out_of_files_galera.cpp big_load.cpp testconnections.cpp sql_t1.cpp get_com_select_insert.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(crash_out_of_files_galera ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(load_balancing load_balancing.cpp)
+target_link_libraries(load_balancing testcore)
 
-add_executable(bug448 bug448.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug448 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(load_balancing_galera load_balancing_galera.cpp)
+target_link_libraries(load_balancing_galera testcore)
 
-add_executable(prepared_statement prepared_statement.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(prepared_statement ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(crash_out_of_files crash_out_of_files.cpp)
+target_link_libraries(crash_out_of_files testcore)
 
-add_executable(bug592 bug592.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug592 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(crash_out_of_files_galera crash_out_of_files_galera.cpp)
+target_link_libraries(crash_out_of_files_galera testcore)
 
-add_executable(bug620 bug620.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug620 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug448 bug448.cpp)
+target_link_libraries(bug448 testcore)
 
-add_executable(bug634 bug634.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug634 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(prepared_statement prepared_statement.cpp)
+target_link_libraries(prepared_statement testcore)
 
-add_executable(bug626 bug626.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug626 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug592 bug592.cpp)
+target_link_libraries(bug592 testcore)
 
-add_executable(bug643 bug643.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug643 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug620 bug620.cpp)
+target_link_libraries(bug620 testcore)
 
-add_executable(bug643_1 bug643_1.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug643_1 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug634 bug634.cpp)
+target_link_libraries(bug634 testcore)
 
-add_executable(bug645 bug645.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug645 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug626 bug626.cpp)
+target_link_libraries(bug626 testcore)
 
-add_executable(bug645_1 bug645_1.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug645_1 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug643 bug643.cpp)
+target_link_libraries(bug643 testcore)
 
-add_executable(bug601 bug601.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug601 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug643_1 bug643_1.cpp)
+target_link_libraries(bug643_1 testcore)
 
-add_executable(bug649 bug649.cpp testconnections.cpp sql_t1.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug649 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug645 bug645.cpp)
+target_link_libraries(bug645 testcore)
 
-add_executable(bug650 bug650.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug650 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug645_1 bug645_1.cpp)
+target_link_libraries(bug645_1 testcore)
 
-add_executable(bug653 bug653.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug653 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug601 bug601.cpp)
+target_link_libraries(bug601 testcore)
 
-add_executable(bug657 bug657.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug657 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug649 bug649.cpp)
+target_link_libraries(bug649 testcore)
 
-add_executable(bug676 bug676.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp get_my_ip.cpp mariadb_func.cpp)
-target_link_libraries(bug676 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug650 bug650.cpp)
+target_link_libraries(bug650 testcore)
 
-add_executable(generate_log_sql generate_log_sql.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(generate_log_sql ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug653 bug653.cpp)
+target_link_libraries(bug653 testcore)
 
-add_executable(bug654 bug654.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug654 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug657 bug657.cpp)
+target_link_libraries(bug657 testcore)
 
-add_executable(bug658 bug658.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug658 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug676 bug676.cpp)
+target_link_libraries(bug676 testcore)
 
-add_executable(bug662 bug662.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug662 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(generate_log_sql generate_log_sql.cpp)
+target_link_libraries(generate_log_sql testcore)
 
-add_executable(bug664 bug664.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug664 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug654 bug654.cpp)
+target_link_libraries(bug654 testcore)
 
-add_executable(bug681 bug681.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug681 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug658 bug658.cpp)
+target_link_libraries(bug658 testcore)
 
-add_executable(bug673 bug673.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug673 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug662 bug662.cpp)
+target_link_libraries(bug662 testcore)
 
-add_executable(bug670 bug670.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug670 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug664 bug664.cpp)
+target_link_libraries(bug664 testcore)
 
-add_executable(bug539 bug539.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug539 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug681 bug681.cpp)
+target_link_libraries(bug681 testcore)
 
-add_executable(bug694 bug694.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug694 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug673 bug673.cpp)
+target_link_libraries(bug673 testcore)
 
-add_executable(bug699 bug699.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug699 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug670 bug670.cpp)
+target_link_libraries(bug670 testcore)
 
-add_executable(bug705 bug705.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug705 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug539 bug539.cpp)
+target_link_libraries(bug539 testcore)
 
-add_executable(setup_binlog setup_binlog.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp test_binlog_fnc.cpp)
-target_link_libraries(setup_binlog ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug694 bug694.cpp)
+target_link_libraries(bug694 testcore)
 
-add_executable(setup_binlog_crc_none setup_binlog_crc_none.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(setup_binlog_crc_none ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug699 bug699.cpp)
+target_link_libraries(bug699 testcore)
 
-add_executable(setup_binlog_crc_32 setup_binlog_crc_32.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(setup_binlog_crc_32 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug705 bug705.cpp)
+target_link_libraries(bug705 testcore)
 
-add_executable(binlog_incompl binlog_incompl.cpp testconnections.cpp sql_t1.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(binlog_incompl ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(setup_binlog setup_binlog.cpp)
+target_link_libraries(setup_binlog testcore)
 
-add_executable(bug519 bug519.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug519 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(setup_binlog_crc_none setup_binlog_crc_none.cpp)
+target_link_libraries(setup_binlog_crc_none testcore)
 
-add_executable(bug729 bug729.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug729 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(setup_binlog_crc_32 setup_binlog_crc_32.cpp)
+target_link_libraries(setup_binlog_crc_32 testcore)
 
-add_executable(bug718 bug718.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug718 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(binlog_incompl binlog_incompl.cpp)
+target_link_libraries(binlog_incompl testcore)
 
-add_executable(bug730 bug730.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug730 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug519 bug519.cpp)
+target_link_libraries(bug519 testcore)
 
-add_executable(bug711 bug711.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug711 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug729 bug729.cpp)
+target_link_libraries(bug729 testcore)
 
-add_executable(bug656 bug656.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(bug656 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug718 bug718.cpp)
+target_link_libraries(bug718 testcore)
 
-add_executable(mxs47 mxs47.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(mxs47 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug730 bug730.cpp)
+target_link_libraries(bug730 testcore)
 
-add_executable(sharding sharding.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(sharding ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug711 bug711.cpp)
+target_link_libraries(bug711 testcore)
 
-add_executable(schemarouter_duplicate_db schemarouter_duplicate_db.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(schemarouter_duplicate_db ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(bug656 bug656.cpp)
+target_link_libraries(bug656 testcore)
 
-add_executable(mxs431 mxs431.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(mxs431 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(mxs47 mxs47.cpp)
+target_link_libraries(mxs47 testcore)
 
-add_executable(fwf fwf.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(fwf ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(sharding sharding.cpp)
+target_link_libraries(sharding testcore)
 
-add_executable(t t.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(t ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(schemarouter_duplicate_db schemarouter_duplicate_db.cpp)
+target_link_libraries(schemarouter_duplicate_db testcore)
 
-add_executable(mm mm.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(mm ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(mxs431 mxs431.cpp)
+target_link_libraries(mxs431 testcore)
 
-add_executable(mxs118 mxs118.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(mxs118 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(fwf fwf.cpp)
+target_link_libraries(fwf testcore)
 
-add_executable(mxs127 mxs127.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(mxs127 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(t t.cpp)
+target_link_libraries(t testcore)
 
-add_executable(transaction_test_wo_maxscale transaction_test_wo_maxscale.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(transaction_test_wo_maxscale ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(mm mm.cpp)
+target_link_libraries(mm testcore)
 
-add_executable(session_limits session_limits.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(session_limits ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(mxs118 mxs118.cpp)
+target_link_libraries(mxs118 testcore)
 
-add_executable(script script.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp) ##
-target_link_libraries(script ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(mxs127 mxs127.cpp)
+target_link_libraries(mxs127 testcore)
 
-add_executable(config_reload config_reload.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(config_reload ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(transaction_test_wo_maxscale transaction_test_wo_maxscale.cpp)
+target_link_libraries(transaction_test_wo_maxscale testcore)
 
-add_executable(config_reload_stress config_reload_stress.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(config_reload_stress ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(session_limits session_limits.cpp)
+target_link_libraries(session_limits testcore)
 
-add_executable(mxs314 mxs314.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(mxs314 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(script script.cpp)
+target_link_libraries(script testcore)
 
-add_executable(mxs321 mxs321.cpp sql_t1.cpp testconnections.cpp mariadb_nodes.cpp mariadb_func.cpp maxadmin_operations.cpp)
-target_link_libraries(mxs321 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(config_reload config_reload.cpp)
+target_link_libraries(config_reload testcore)
 
-add_executable(pers_01 pers_01.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(pers_01 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(config_reload_stress config_reload_stress.cpp)
+target_link_libraries(config_reload_stress testcore)
 
-add_executable(pers_02 pers_02.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(pers_02 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(mxs314 mxs314.cpp)
+target_link_libraries(mxs314 testcore)
 
-add_executable(binlog_big_transaction binlog_big_transaction.cpp sql_t1.cpp testconnections.cpp big_transaction.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(binlog_big_transaction ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(mxs321 mxs321.cpp)
+target_link_libraries(mxs321 testcore)
 
-add_executable(bug469 bug469.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(bug469 ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(pers_01 pers_01.cpp)
+target_link_libraries(pers_01 testcore)
 
-add_executable(open_close_connections open_close_connections.cpp sql_t1.cpp testconnections.cpp maxadmin_operations.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(open_close_connections ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(pers_02 pers_02.cpp)
+target_link_libraries(pers_02 testcore)
 
-add_executable(galera_priority galera_priority.cpp testconnections.cpp sql_t1.cpp mariadb_nodes.cpp mariadb_func.cpp)
-target_link_libraries(galera_priority ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
+add_executable(binlog_big_transaction binlog_big_transaction.cpp)
+target_link_libraries(binlog_big_transaction testcore)
 
-add_executable(maxadmin maxadmin.cpp maxadmin_operations.cpp)
+add_executable(bug469 bug469.cpp)
+target_link_libraries(bug469 testcore)
+
+add_executable(open_close_connections open_close_connections.cpp)
+target_link_libraries(open_close_connections testcore)
+
+add_executable(galera_priority galera_priority.cpp)
+target_link_libraries(galera_priority testcore)
+
+add_executable(maxadmin maxadmin.cpp)
+target_link_libraries(maxadmin testcore)
 
 install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover kill_master DESTINATION system-test)
 install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 bug547 bug422 bug571 bug473 bug587 bug475 bug471 bug565 bug448 DESTINATION system-test)
