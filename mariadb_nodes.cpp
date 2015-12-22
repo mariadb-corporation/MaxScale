@@ -497,3 +497,52 @@ int Mariadb_nodes::get_server_id(int index)
 
     return id;
 }
+
+void Mariadb_nodes::generate_ssh_cmd(char * cmd, int index, char * ssh, bool sudo)
+{
+    if (sudo)
+    {
+        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s %s\"",
+                sshkey[index], access_user[index], IP[index], access_sudo[index], ssh);
+    } else
+    {
+        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s\"",
+                sshkey[index], access_user[index], IP[index], ssh);
+    }
+}
+
+char * Mariadb_nodes::ssh_node_output(int index, char * ssh, bool sudo)
+{
+    char sys[strlen(ssh) + 1024];
+
+    generate_ssh_cmd(sys, index, ssh, sudo);
+
+    FILE *output = popen(sys, "r");
+    char buffer[1024];
+    size_t rsize = sizeof(buffer);
+    char* result = (char*)calloc(rsize, sizeof(char));
+
+    while(fgets(buffer, sizeof(buffer), output))
+    {
+        result = (char*)realloc(result, sizeof(buffer) + rsize);
+        strcat(result, buffer);
+    }
+
+    return result;
+}
+
+int Mariadb_nodes::ssh_node(int index, char * ssh, bool sudo)
+{
+    char sys[strlen(ssh) + 1024];
+    generate_ssh_cmd(sys, index, ssh, sudo);
+    return(system(sys));
+}
+
+int Mariadb_nodes::flush_hosts()
+{
+    int local_result = 0;
+    for (int i = 0; i < N; i++)
+    {
+        local_result += ssh_node(i, (char *) "mysqladmin flush-hosts", true);
+    }
+}

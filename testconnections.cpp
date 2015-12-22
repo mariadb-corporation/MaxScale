@@ -104,6 +104,10 @@ TestConnections::TestConnections(int argc, char *argv[])
             galera->start_galera();
         }
     }
+
+    repl->flush_hosts();
+    galera->flush_hosts();
+
     if ((repl->check_replication(0) != 0) || (galera->check_galera() != 0)) {
         printf("****** BACKEND IS STILL BROKEN! Exiting\n *****");
         exit(200);

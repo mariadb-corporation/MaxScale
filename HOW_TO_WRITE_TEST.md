@@ -180,6 +180,9 @@ they are availve from [mariadb_func.h](mariadb_func.h)
 |check_node()|check if MariaDB server on the node is alive|
 |check_and_restart_node()|check if MariaDB server on the node is alive and restart it if it is not alive|
 |stop_nodes()|stop MariaDB server on all nodes|
+|ssh_node()|Execute command on the node via ssh, return error code|
+|ssh_node_output()|Same as ssh_nodE(), but return command output|
+|flush_hosts|Execute 'mysqladmin flush-hosts' on all nodes|
 
 #### Properties 
 |Name|Short description|Corresponding env variable|

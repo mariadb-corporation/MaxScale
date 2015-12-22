@@ -279,6 +279,39 @@ public:
      * @return Node id of the server or -1 on error
      */
     int get_server_id(int index);
+
+    /**
+     * @brief Generate command line to execute command on the node via ssh
+     * @param cmd result
+     * @param index index number of the node (index)
+     * @param ssh command to execute
+     * @param sudo if true the command is executed with root privelegues
+     */
+    void generate_ssh_cmd(char * cmd, int index, char * ssh, bool sudo);
+
+    /**
+     * @brief executes shell command on the node using ssh
+     * @param index number of the node (index)
+     * @param ssh command to execute
+     * @param sudo if true the command is executed with root privelegues
+     * @return output of the command
+     */
+    char *ssh_node_output(int index, char * ssh, bool sudo);
+
+    /**
+     * @brief executes shell command on the node using ssh
+     * @param index number of the node (index)
+     * @param ssh command to execute
+     * @param sudo if true the command is executed with root privelegues
+     * @return exit code of the coomand
+     */
+    int ssh_node(int index, char * ssh, bool sudo);
+
+    /**
+     * @brief Execute 'mysqladmin flush-hosts' on all nodes
+     * @return 0 in case of success
+     */
+    int flush_hosts();
 };
 
 #endif // MARIADB_NODES_H
