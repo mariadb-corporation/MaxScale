@@ -52,7 +52,7 @@ int simple_failover(TestConnections* test)
     do
     {
         /** Node 3 should be master */
-        test->tprintf("Expecting '%s'...", server_id[2]);
+        test->tprintf("Expecting '%s'...\n", server_id[2]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[2]))
         {
             test->tprintf("Test failed without any blocked nodes.\n");
@@ -62,11 +62,11 @@ int simple_failover(TestConnections* test)
         test->close_rwsplit();
         test->galera->block_node(2);
         blocked = true;
-        test->tprintf(" OK\n");
+        test->tprintf("OK\n");
         sleep(15);
 
         /** Block node 3 and node 1 should be master */
-        test->tprintf("Expecting '%s'...", server_id[0]);
+        test->tprintf("Expecting '%s'...\n", server_id[0]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[0]))
         {
             test->tprintf("Test failed with first blocked node.\n");
@@ -75,11 +75,11 @@ int simple_failover(TestConnections* test)
         }
         test->close_rwsplit();
         test->galera->block_node(0);
-        test->tprintf(" OK\n");
+        test->tprintf("OK\n");
         sleep(15);
 
         /** Block node 1 and node 4 should be master */
-        test->tprintf("Expecting '%s'...", server_id[3]);
+        test->tprintf("Expecting '%s'...\n", server_id[3]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[3]))
         {
             test->tprintf("Test failed with second blocked node.\n");
@@ -88,11 +88,11 @@ int simple_failover(TestConnections* test)
         }
         test->close_rwsplit();
         test->galera->block_node(3);
-        test->tprintf(" OK\n");
+        test->tprintf("OK\n");
         sleep(15);
 
         /** Block node 4 and node 2 should be master */
-        test->tprintf("Expecting '%s'...", server_id[1]);
+        test->tprintf("Expecting '%s'...\n", server_id[1]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[1]))
         {
             test->tprintf("Test failed with third blocked node.\n");
@@ -101,11 +101,11 @@ int simple_failover(TestConnections* test)
         }
         test->close_rwsplit();
         test->galera->block_node(1);
-        test->tprintf(" OK\n");
+        test->tprintf("OK\n");
         sleep(15);
 
         /** All nodes blocked, expect failure */
-        test->tprintf("Expecting failure...");
+        test->tprintf("Expecting failure...\n");
         int myerrno = 0;
         if ((myerrno = test->connect_rwsplit()) == 0 && test->conn_rwsplit)
         {
@@ -122,7 +122,7 @@ int simple_failover(TestConnections* test)
             test->tprintf("Test failed with all nodes blocked.\n");
             rval = 1;
         }
-        test->tprintf(" OK\n");
+        test->tprintf("OK\n");
 
         /** Unblock all nodes, node 3 should be master again */
         test->galera->unblock_all_nodes();
@@ -136,7 +136,7 @@ int simple_failover(TestConnections* test)
             break;
         }
         test->close_rwsplit();
-        test->tprintf(" OK\n");
+        test->tprintf("OK\n");
     }
     while (false);
 
@@ -150,6 +150,7 @@ int simple_failover(TestConnections* test)
 int main(int argc, char **argv)
 {
     TestConnections *test = new TestConnections(argc, argv);
+    test->galera->verbose = false;
     int rval = 0;
     rval += simple_failover(test);
     test->copy_all_logs();

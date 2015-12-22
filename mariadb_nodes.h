@@ -118,6 +118,11 @@ public:
     bool no_set_pos;
 
     /**
+     * @brief Verbose command output
+     */
+    bool verbose;
+
+    /**
      * @brief connect open connections to all nodes
      * @return 0  in case of success
      */
