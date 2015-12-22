@@ -37,6 +37,37 @@ add_library(testcore SHARED testconnections.cpp mariadb_nodes.cpp
 target_link_libraries(testcore ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 install(TARGETS testcore DESTINATION system-test)
 
+# The `templates` file is created automatically from the
+# add_test_executable/add_test_script function calls.
+file(REMOVE templates.test)
+
+# This functions adds a source file as an executable, links that file against
+# the common test core and creates a test from it. The first parameter is the
+# source file, the second is the name of the executable and the test and the
+# last parameter is the template suffix of the test. The template should follow
+# the following naming policy: `maxscale.cnf.template.<template name>` and the
+# file should be located in the /cnf/ directory.
+#
+# Example: to add simple_test.cpp with maxscale.cnf.template.simple_config to the
+# test set, the function should be called as follows:
+#     add_test_executable(simple_test.cpp simple_test simple_config)
+function(add_test_executable source name template)
+  file(APPEND templates.test "${name} ${template}\n")
+  add_executable(${name} ${source})
+  target_link_libraries(${name} testcore)
+  install(TARGETS ${name} DESTINATION system-test)
+  add_test(${name} ${name})
+endfunction()
+
+# This function adds a script as a test with the specified name and template.
+# The naming of the templates follow the same principles as add_test_executable.
+function(add_test_script script suffix)
+  file(APPEND templates.test "${name} ${template}\n")
+  install(PROGRAMS ${name} DESTINATION system-test)
+  add_test(${name} ${name})
+endfunction()
+
+
 add_executable(readconnrouter_master readconnrouter_master.cpp)
 target_link_libraries(readconnrouter_master testcore)
 
