@@ -1940,7 +1940,7 @@ process_config_update(CONFIG_CONTEXT *context)
                                             "count or\n\t<int>%% for specifying the "
                                             "maximum percentage of available the "
                                             "slaves that will be connected.",
-                                            ((SERVICE*)obj->element)->name,
+                                            service->name,
                                             param->name,
                                             param->value);
                             }
@@ -1978,7 +1978,7 @@ process_config_update(CONFIG_CONTEXT *context)
                                                 "for parameter \'%s.%s = %s\'\n\tExpected "
                                                 "type is <int> for maximum "
                                                 "slave replication lag.",
-                                                ((SERVICE*)obj->element)->name,
+                                                service->name,
                                                 param->name,
                                                 param->value);
                                 }
