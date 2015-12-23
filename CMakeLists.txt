@@ -371,6 +371,7 @@ add_executable(maxadmin maxadmin.cpp)
 target_link_libraries(maxadmin testcore)
 
 add_test_executable(regexfilter1.cpp regexfilter1 regexfilter1)
+add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter)
 
 install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover kill_master DESTINATION system-test)
 install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 bug547 bug422 bug571 bug473 bug587 bug475 bug471 bug565 bug448 DESTINATION system-test)
