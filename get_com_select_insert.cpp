@@ -13,10 +13,18 @@ int get_global_status_allnodes(long int *selects, long int *inserts, Mariadb_nod
         if (nodes->nodes[i] != NULL) {
 
             if(mysql_query(nodes->nodes[i], "show global status like 'COM_SELECT';") != 0)
+            {
                 printf("Error: can't execute SQL-query\n");
+                printf("%s\n", mysql_error(nodes->nodes[i]));
+                return(1);
+            }
 
             res = mysql_store_result(nodes->nodes[i]);
-            if(res == NULL) printf("Error: can't get the result description\n");
+            if(res == NULL)
+            {
+                printf("Error: can't get the result description\n");
+                return(1);
+            }
 
             if(mysql_num_rows(res) > 0)
             {

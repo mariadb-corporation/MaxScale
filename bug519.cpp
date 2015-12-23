@@ -38,8 +38,9 @@ int main(int argc, char *argv[])
     sleep(30);
     Test->set_timeout(200);
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s rm /tmp/t*.csv; %s chmod 777 /tmp'", Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0], Test->repl->access_sudo[0], Test->repl->access_sudo[0]);
+    sprintf(str, "'%s rm /tmp/t*.csv; %s chmod 777 /tmp'", Test->repl->access_sudo[0], Test->repl->access_sudo[0]);
     Test->tprintf("%s\n", str);
+    Test->repl->ssh_node(0, str, false);
     system(str);
 
     Test->tprintf("Copying data from t1 to file...\n");

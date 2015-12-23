@@ -354,11 +354,26 @@ public:
     int copy_all_logs();
 
     /**
+     * @brief Generate command line to execute command on the Maxscale ode via ssh
+     * @param cmd result
+     * @param ssh command to execute
+     * @param sudo if true the command is executed with root privelegues
+     */
+    void generate_ssh_cmd(char * cmd, char * ssh, bool sudo);
+
+    /**
      * @brief Execute a command via ssh on the MaxScale machine
      * @param ssh ssh command to execute on the MaxScale machine
      * @return Output of the command or NULL if the command failed to execute
      */
-    char* execute_ssh_maxscale(char* ssh);
+    char* ssh_maxscale_output(char* ssh, bool sudo);
+
+    /**
+     * @brief Execute a command via ssh on the MaxScale machine
+     * @param ssh ssh command to execute on the MaxScale machine
+     * @return exit code of the command
+     */
+    int ssh_maxscale(char* ssh, bool sudo);
 
     /**
      * @brief Test that connections to MaxScale are in the expected state

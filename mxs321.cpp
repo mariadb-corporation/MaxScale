@@ -49,7 +49,7 @@ void create_and_check_connections(TestConnections* test, int target)
     }
 
     sleep(10);
-    char result[1024]; // = test->execute_ssh_maxscale((char*)"maxadmin list servers|grep 'server[0-9]'|cut -d '|' -f 4|tr -d ' '|uniq");
+    char result[1024];
     char cmd[1024];
     int result_d;
 

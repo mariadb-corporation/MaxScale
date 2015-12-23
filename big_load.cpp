@@ -48,7 +48,9 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
         int  iret2[threads_num];
 
         Test->tprintf("COM_INSERT and COM_SELECT before executing test\n");
-        get_global_status_allnodes(&selects[0], &inserts[0], nodes, 0);
+
+        Test->add_result(get_global_status_allnodes(&selects[0], &inserts[0], nodes, 0), "get_global_status_allnodes failed\n");
+
         data.exit_flag=0;
         /* Create independent threads each of them will execute function */
         for (int i = 0; i < threads_num; i++) {

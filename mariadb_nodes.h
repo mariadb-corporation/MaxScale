@@ -225,28 +225,43 @@ public:
      * @brief Check if all nodes are avaliable (via ssh) and restart nodes that are not available
      * @return 0 if everything is ok
      */
-    int check_and_restart_nodes();
+    int check_and_restart_nodes_vm();
 
     /**
      * @brief Check if all node is avaliable (via ssh)
      * @param node Node index
      * @return 0 if node is ok, 1 if broken
      */
-    int check_node(int node);
+    int check_node_vm(int node);
+
+    /**
+     * @brief Stop DB server on the node
+     * @param node Node index
+     * @return 0 if success
+     */
+    int stop_node(int node);
+
+    /**
+     * @brief Start DB server on the node
+     * @param node Node index
+     * @param param command line parameters for DB server start command
+     * @return 0 if success
+     */
+    int start_node(int node, char * param);
 
     /**
      * @brief Execute kill and start command agains node
      * @param node Node index
      * @return 0 if node is ok, 1 if start failed
      */
-    int restart_node(int node);
+    int restart_node_vm(int node);
 
     /**
      * @brief Check node via ssh and restart it if it is not resposible
      * @param node Node index
      * @return 0 if node is ok, 1 if start failed
      */
-    int check_and_restart_node(int node);
+    int check_and_restart_node_vm(int node);
 
     /**
      * @brief Check if all slaves have "Slave_IO_Running" set to "Yes" and master has N-1 slaves
@@ -292,7 +307,7 @@ public:
      * @param ssh command to execute
      * @param sudo if true the command is executed with root privelegues
      */
-    void generate_ssh_cmd(char * cmd, int index, char * ssh, bool sudo);
+    void generate_ssh_cmd(char * cmd, int node, char * ssh, bool sudo);
 
     /**
      * @brief executes shell command on the node using ssh
@@ -301,7 +316,7 @@ public:
      * @param sudo if true the command is executed with root privelegues
      * @return output of the command
      */
-    char *ssh_node_output(int index, char * ssh, bool sudo);
+    char *ssh_node_output(int node, char * ssh, bool sudo);
 
     /**
      * @brief executes shell command on the node using ssh
@@ -310,7 +325,7 @@ public:
      * @param sudo if true the command is executed with root privelegues
      * @return exit code of the coomand
      */
-    int ssh_node(int index, char * ssh, bool sudo);
+    int ssh_node(int node, char * ssh, bool sudo);
 
     /**
      * @brief Execute 'mysqladmin flush-hosts' on all nodes

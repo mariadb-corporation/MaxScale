@@ -20,28 +20,22 @@ int check_sha1(TestConnections* Test)
 
     Test->tprintf("ls before FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s ls -la %s/mar-bin.0000*'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_binlog_dir);
-    system(sys);
-    Test->tprintf("Master\n");fflush(stdout);
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.0000*'",
-            Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
-    system(sys);
+    sprintf(sys, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
+    Test->ssh_maxscale(sys, TRUE);
+    Test->tprintf("Master\n");
+    Test->ssh_maxscale((char *) "ls -la /var/lib/mysql/mar-bin.0000*", FALSE);
 
     printf("FLUSH LOGS\n");fflush(stdout);
     global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
     Test->tprintf("Logs flushed\n");
     sleep(20);
     Test->tprintf("ls after first FLUSH LOGS\n");
-    Test->tprintf("Maxscale\n");fflush(stdout);
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s ls -la %s/mar-bin.0000*'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_binlog_dir);
-    system(sys);
-    Test->tprintf("Master\n");
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'",
-            Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
-    system(sys);
+    Test->tprintf("Maxscale\n");
+    sprintf(sys, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
+    Test->ssh_maxscale(sys, TRUE);
 
+    Test->tprintf("Master\n");
+    Test->ssh_maxscale((char *) "ls -la /var/lib/mysql/mar-bin.0000*", FALSE);
 
     Test->tprintf("FLUSH LOGS\n");
     global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
@@ -50,30 +44,25 @@ int check_sha1(TestConnections* Test)
     sleep(19);
     Test->tprintf("ls before FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s ls -la %s/mar-bin.0000*'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_binlog_dir);
-    system(sys);
+
+    sprintf(sys, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
+    Test->ssh_maxscale(sys, TRUE);
+
     Test->tprintf("Master\n");
-    sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s 'ls -la /var/lib/mysql/mar-bin.00000*'",
-            Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0]);
-    system(sys);fflush(stdout);
+    Test->ssh_maxscale((char *) "ls -la /var/lib/mysql/mar-bin.0000*", FALSE);
+
 
     for (i = 1; i < 3; i++) {
         Test->tprintf("\nFILE: 000000%d\n", i);
-        sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s sha1sum %s/mar-bin.00000%d'",
-                Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_binlog_dir, i);
-        ls = popen(sys, "r");
-        s = fgets(buf_max, sizeof(buf), ls);
-        pclose(ls);
+        sprintf(sys, "sha1sum %s/mar-bin.00000%d", Test->maxscale_binlog_dir, i);
+        s = Test->ssh_maxscale_output(sys, TRUE);
         if (s != NULL) {
             x = strchr(buf_max, ' '); x[0] = 0;
             Test->tprintf("Binlog checksum from Maxscale %s\n", buf_max);
         }
-        sprintf(sys, "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s@%s '%s sha1sum /var/lib/mysql/mar-bin.00000%d'",
-                Test->repl->sshkey[0], Test->repl->access_user[0], Test->repl->IP[0], Test->repl->access_sudo[0], i);
-        ls = popen(sys, "r");
-        s = fgets(buf, sizeof(buf), ls);
-        pclose(ls);
+
+        sprintf(sys, "sha1sum /var/lib/mysql/mar-bin.00000%d", i);
+        s = Test->repl->ssh_node_output(i, sys, TRUE);
         if (s != NULL) {
             x = strchr(buf, ' '); x[0] = 0;
             Test->tprintf("Binlog checksum from master %s\n", buf);

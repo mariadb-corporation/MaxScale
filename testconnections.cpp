@@ -91,8 +91,8 @@ TestConnections::TestConnections(int argc, char *argv[])
     }
     if (!no_nodes_check) {
         //  checking all nodes and restart if needed
-        repl->check_and_restart_nodes();
-        galera->check_and_restart_nodes();
+        repl->check_and_restart_nodes_vm();
+        galera->check_and_restart_nodes_vm();
         //  checking repl
         if (repl->check_replication(0) != 0) {
             printf("Backend broken! Restarting replication nodes\n");
@@ -241,27 +241,21 @@ int TestConnections::close_maxscale_connections()
 
 int TestConnections::restart_maxscale()
 {
-    char sys[1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s service maxscale restart\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
-    int res = system(sys);
+    int res = ssh_maxscale((char *) "service maxscale restart", true);
     sleep(10);
     return(res);
 }
 
 int TestConnections::start_maxscale()
 {
-    char sys[1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s service maxscale start\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
-    int res = system(sys);
+    int res = ssh_maxscale((char *) "service maxscale start", true);
     sleep(10);
     return(res);
 }
 
 int TestConnections::stop_maxscale()
 {
-    char sys[1024];
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s service maxscale stop\"", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo);
-    int res = system(sys);
+    int res = ssh_maxscale((char *) "service maxscale stop", true);
     return(res);
 }
 
@@ -270,12 +264,12 @@ int TestConnections::copy_all_logs()
     char str[4096];
     set_timeout(300);
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
-    tprintf("Executing %s\n", str); fflush(stdout);
+    tprintf("Executing %s\n", str);
     if (system(str) !=0) {
-        tprintf("copy_logs.sh executing FAILED!\n"); fflush(stdout);
+        tprintf("copy_logs.sh executing FAILED!\n");
         return(1);
     } else {
-        tprintf("copy_logs.sh OK!\n"); fflush(stdout);
+        tprintf("copy_logs.sh OK!\n");
         return(0);
     }
 }
@@ -317,9 +311,9 @@ int TestConnections::start_binlog()
     tprintf("Master server version %s\n", version_str);
 
     if (strstr(version_str, "5.5") != NULL) {
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s sed -i \"s/,mariadb10-compatibility=1//\" %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_cnf);
+        sprintf(&sys1[0], "'sed -i \"s/,mariadb10-compatibility=1//\" %s'", maxscale_cnf);
         tprintf("%s\n", sys1);
-        add_result(system(sys1), "Error editing maxscale.cnf");
+        add_result(ssh_maxscale(sys1, true), "Error editing maxscale.cnf");
     }
 
     tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
@@ -336,29 +330,27 @@ int TestConnections::start_binlog()
     add_result(repl->stop_nodes(), "Nodes stopping failed\n");
 
     tprintf("Removing all binlog data from Maxscale node\n");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s rm -rf %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
+    sprintf(&sys1[0], "rm -rf %s", maxscale_binlog_dir);
     tprintf("%s\n", sys1);
-    add_result(system(sys1), "Removing binlog data failed\n");
+    add_result(ssh_maxscale(sys1, true), "Removing binlog data failed\n");
 
     tprintf("Creating binlog dir\n");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s mkdir -p %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
+    sprintf(&sys1[0], "mkdir -p %s", maxscale_binlog_dir);
     tprintf("%s\n", sys1);
-    add_result(system(sys1), "Creating binlog data dir failed\n");
+    add_result(ssh_maxscale(sys1, true), "Creating binlog data dir failed\n");
 
     tprintf("ls binlog data dir on Maxscale node\n");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s ls -la %s/'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir);
+    sprintf(&sys1[0], "ls -la %s/", maxscale_binlog_dir);
     tprintf("%s\n", sys1);
-    add_result(system(sys1), "ls failed\n");
+    add_result(ssh_maxscale(sys1, true), "ls failed\n");
 
     tprintf("Set 'maxscale' as a owner of binlog dir\n");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s mkdir -p %s; %s chown maxscale:maxscale -R %s'", maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, maxscale_binlog_dir, maxscale_access_sudo, maxscale_binlog_dir);
+    sprintf(&sys1[0], "%s mkdir -p %s; %s chown maxscale:maxscale -R %s", maxscale_access_sudo, maxscale_binlog_dir, maxscale_access_sudo, maxscale_binlog_dir);
     tprintf("%s\n", sys1);
-    add_result(system(sys1), "directory ownership change failed\n");
+    add_result(ssh_maxscale(sys1, false), "directory ownership change failed\n");
 
     tprintf("Starting back Master\n");
-    sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s %s'", repl->sshkey[0], repl->access_user[0], repl->IP[0], repl->access_sudo[0], repl->start_db_command[0], cmd_opt);
-    tprintf("%s\n", sys1);
-    add_result(system(sys1), "Master start failed\n");
+    add_result(repl->start_node(0, cmd_opt), "Master start failed\n");
 
     MYSQL * master = open_conn_no_db(repl->port[0], repl->IP[0], repl->user_name, repl->password, ssl);
     execute_query(master, (char*) "reset master");
@@ -366,9 +358,7 @@ int TestConnections::start_binlog()
 
     for (i = 1; i < repl->N; i++) {
         tprintf("Starting node %d\n", i);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s %s'", repl->sshkey[i], repl->access_user[i], repl->IP[i], repl->access_sudo[i], repl->start_db_command[i], cmd_opt);
-        tprintf("%s\n", sys1);
-        add_result(system(sys1), "Node %d start failed\n", i+1);
+        add_result(repl->start_node(i, cmd_opt), "Node %d start failed\n", i+1);
     }
     sleep(5);
 
@@ -445,10 +435,8 @@ int TestConnections::start_mm()
     global_result += repl->stop_nodes();
 
     for (i = 0; i < 2; i++) {
-        tprintf("Starting back node %d\n", i);  fflush(stdout);
-        sprintf(&sys1[0], "ssh -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet %s@%s '%s %s'", repl->sshkey[i], maxscale_access_user, repl->IP[i], maxscale_access_sudo, repl->start_db_command[i]);
-        tprintf("%s\n", sys1);  fflush(stdout);
-        global_result += system(sys1); fflush(stdout);
+        tprintf("Starting back node %d\n", i);
+        global_result += repl->start_node(i, (char *) "");
     }
 
     repl->connect();
@@ -604,12 +592,25 @@ bool TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, b
     return rval;
 }
 
-char* TestConnections::execute_ssh_maxscale(char* ssh)
+void TestConnections::generate_ssh_cmd(char * cmd, char * ssh, bool sudo)
+{
+    if (sudo)
+    {
+        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s %s\"",
+                maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, ssh);
+    } else
+    {
+        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s\"",
+                maxscale_sshkey, maxscale_access_user, maxscale_IP, ssh);
+    }
+}
+
+
+char* TestConnections::ssh_maxscale_output(char* ssh, bool sudo)
 {
     char sys[strlen(ssh) + 1024];
 
-    sprintf(sys, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s %s\"",
-            maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, ssh);
+    generate_ssh_cmd(sys, ssh, sudo);
 
     FILE *output = popen(sys, "r");
     char buffer[1024];
@@ -624,6 +625,16 @@ char* TestConnections::execute_ssh_maxscale(char* ssh)
 
     return result;
 }
+
+int  TestConnections::ssh_maxscale(char* ssh, bool sudo)
+{
+    char sys[strlen(ssh) + 1024];
+
+    generate_ssh_cmd(sys, ssh, sudo);
+
+    return system(sys);
+}
+
 
 int TestConnections::reconfigure_maxscale(char* config_template)
 {

@@ -34,14 +34,15 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * exp
     char str[1024];
     Test->set_timeout(200);
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s 'rm %s/script_output'", Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
+    sprintf(str, "rm %s/script_output", Test->maxscale_access_homedir);
     system(str);
+    Test->ssh_maxscale(str, FALSE);
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s touch %s/script_output; %s chown maxscale:maxscale %s/script_output'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo,
-            Test->maxscale_access_homedir, Test->maxscale_access_sudo, Test->maxscale_access_homedir);
+    sprintf(str, "%s touch %s/script_output; %s chown maxscale:maxscale %s/script_output",
+            Test->maxscale_access_sudo, Test->maxscale_access_homedir,
+            Test->maxscale_access_sudo, Test->maxscale_access_homedir);
     Test->tprintf("%s\n", str);fflush(stdout);
-    system(str);
+    Test->ssh_maxscale(str, FALSE);
 
     sleep(30);
 
@@ -70,15 +71,13 @@ void test_script_monitor(TestConnections* Test, Mariadb_nodes* nodes, char * exp
     sleep(30);
 
     Test->tprintf("Printf results\n");
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s 'cat %s/script_output'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
-    system(str);
+    sprintf(str, "cat %s/script_output", Test->maxscale_access_homedir);
+    Test->ssh_maxscale(str, FALSE);
 
     Test->tprintf("Comparing results\n");
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s 'diff %s/script_output %s'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir, expected_filename);
+    sprintf(str, "diff %s/script_output %s", Test->maxscale_access_homedir, expected_filename);
     Test->tprintf("%s\n", str);
-    if (system(str) != 0) {
+    if (Test->ssh_maxscale(str, FALSE) != 0) {
         Test->add_result(1, "Wrong script output!\n");
     } else {
         Test->tprintf("Script output is OK!\n");
@@ -95,15 +94,14 @@ int main(int argc, char *argv[])
     Test->tprintf("Creating script on Maxscale machine\n");
 
 
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \
-            '%s rm -rf %s/script; mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; \
-            chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo, Test->maxscale_access_homedir,
+    sprintf(str, "%s rm -rf %s/script; mkdir %s/script; echo \"echo \\$* >> %s/script_output\" > %s/script/script.sh; \
+            chmod a+x %s/script/script.sh; chmod a+x %s; %s chown maxscale:maxscale %s/script -R",
+            Test->maxscale_access_sudo, Test->maxscale_access_homedir,
             Test->maxscale_access_homedir, Test->maxscale_access_homedir,
             Test->maxscale_access_homedir, Test->maxscale_access_homedir, Test->maxscale_access_homedir, Test->maxscale_access_sudo,
             Test->maxscale_access_homedir);
     Test->tprintf("%s\n", str);
-    system(str);
+    Test->ssh_maxscale(str, FALSE);
 
     Test->restart_maxscale();
 
@@ -166,10 +164,8 @@ int main(int argc, char *argv[])
     Test->set_timeout(200);
 
     Test->tprintf("Making script non-executable\n");
-    sprintf(str, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s chmod a-x %s/script/script.sh'",
-            Test->maxscale_sshkey, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_sudo,
-            Test->maxscale_access_homedir);
-    system(str);
+    sprintf(str, "chmod a-x %s/script/script.sh", Test->maxscale_access_homedir);
+    Test->ssh_maxscale(str, TRUE);
 
     sleep(3);
 
