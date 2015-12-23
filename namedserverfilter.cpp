@@ -38,24 +38,8 @@ int main(int argc, char **argv)
 
     sprintf(server_id, "%d", test->repl->get_server_id(1));
     test->tprintf("Server ID of server2 is: %d\n", server_id);
-
-    if (test->connect_rwsplit() == 0)
-    {
-        if (compare_server_id(test, server_id))
-        {
-            test->tprintf("Test failed, server ID was not correct.\n");
-            rval = 1;
-        }
-        else
-        {
-            test->tprintf("Query returned correct server ID.\n");
-        }
-    }
-    else
-    {
-        test->tprintf("Test failed to connect to MaxScale.\n");
-        rval = 1;
-    }
+    test->add_result(test->connect_rwsplit(), "Test failed to connect to MaxScale.\n");
+    test->add_result(compare_server_id(test, server_id), "Test failed, server ID was not correct.\n");
     test->copy_all_logs();
-    return rval;
+    return test->global_result;
 }

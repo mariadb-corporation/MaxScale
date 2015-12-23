@@ -16,19 +16,13 @@ int main(int argc, char *argv[])
     int rval = 0;
     TestConnections * test = new TestConnections(argc, argv);
     test->connect_maxscale();
-    if ((rval += execute_query_check_one(test->conn_rwsplit, "SELECT 123", "0")))
-    {
-        test->tprintf("FAILED: Query to first service should have replaced the query.");
-    }
-    if ((rval += execute_query_check_one(test->conn_slave, "SELECT 123", "123")))
-    {
-        test->tprintf("FAILED: Query to second service should not have replaced the query.");
-    }
-    if ((rval += execute_query_check_one(test->conn_master, "SELECT 123", "123")))
-    {
-        test->tprintf("FAILED: Query to third service should not have replaced the query.");
-    }
+    test->add_result(execute_query_check_one(test->conn_rwsplit, "SELECT 123", "0"),
+                     "Query to first service should have replaced the query.\n");
+    test->add_result(execute_query_check_one(test->conn_slave, "SELECT 123", "123"),
+                     "Query to second service should not have replaced the query.");
+    test->add_result(execute_query_check_one(test->conn_master, "SELECT 123", "123"),
+                     "Query to third service should not have replaced the query.");
     test->close_maxscale_connections();
     test->copy_all_logs();
-    return rval;
+    return test->global_result;
 }
