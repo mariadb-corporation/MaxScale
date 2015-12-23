@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     sleep(30);
     Test->set_timeout(200);
 
-    sprintf(str, "'%s rm /tmp/t*.csv; %s chmod 777 /tmp'", Test->repl->access_sudo[0], Test->repl->access_sudo[0]);
+    sprintf(str, "%s rm /tmp/t*.csv; %s chmod 777 /tmp", Test->repl->access_sudo[0], Test->repl->access_sudo[0]);
     Test->tprintf("%s\n", str);
     Test->repl->ssh_node(0, str, false);
     system(str);

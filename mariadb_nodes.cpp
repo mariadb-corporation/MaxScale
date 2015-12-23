@@ -266,7 +266,7 @@ int Mariadb_nodes::start_galera()
 
     for (i = 1; i < N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        sprintf(&sys1[0], " --wsrep-cluster-address=gcomm://%s'", IP_private[0]);
+        sprintf(&sys1[0], " --wsrep-cluster-address=gcomm://%s", IP_private[0]);
         if (this->verbose)
         {
             printf("%s\n", sys1);

@@ -119,3 +119,5 @@ galera_priority galera_priority
 regexfilter1 regexfilter1
 regexfilter1 regexfilter1
 namedserverfilter namedserverfilter
+regexfilter1 regexfilter1
+namedserverfilter namedserverfilter
