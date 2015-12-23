@@ -51,7 +51,7 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
 
         Test->add_result(get_global_status_allnodes(&selects[0], &inserts[0], nodes, 0), "get_global_status_allnodes failed\n");
 
-        data.exit_flag=0;
+        data.exit_flag = 0;
         /* Create independent threads each of them will execute function */
         for (int i = 0; i < threads_num; i++) {
             iret1[i] = pthread_create( &thread1[i], NULL, query_thread1, &data);
@@ -60,6 +60,10 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
         Test->tprintf("Threads are running %d seconds \n", run_time);
         sleep(run_time);
         data.exit_flag = 1;
+        for (int i = 0; i < threads_num; i++) {
+            pthread_join( thread1[i], NULL);
+            pthread_join( thread2[i], NULL);
+        }
         sleep(1);
 
         Test->tprintf("COM_INSERT and COM_SELECT after executing test\n");
