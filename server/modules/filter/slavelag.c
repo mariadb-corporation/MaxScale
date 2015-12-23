@@ -217,7 +217,7 @@ int		i,cflags = 0;
 		if(regcomp(&my_instance->nore,my_instance->nomatch,cflags))
 		{
 		    MXS_ERROR("lagfilter: Failed to compile regex '%s'.",
-                              my_instance->nomatch)));
+                              my_instance->nomatch);
 		}
 	    }
 	}
