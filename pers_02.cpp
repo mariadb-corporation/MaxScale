@@ -58,8 +58,8 @@ int main(int argc, char *argv[])
     Test->repl->start_replication();
     Test->set_timeout(60);
     Test->add_result(Test->create_connections(70), "Error creation connections");
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "flush logs");
-    sleep(3);
+    //execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "flush logs");
+    sleep(15);
 
     Test->check_log_err((char *) "fatal signal 11", false);
     Test->copy_all_logs(); return(Test->global_result);

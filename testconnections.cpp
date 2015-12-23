@@ -596,11 +596,11 @@ void TestConnections::generate_ssh_cmd(char * cmd, char * ssh, bool sudo)
 {
     if (sudo)
     {
-        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s %s\"",
+        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s %s'",
                 maxscale_sshkey, maxscale_access_user, maxscale_IP, maxscale_access_sudo, ssh);
     } else
     {
-        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s\"",
+        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s\'",
                 maxscale_sshkey, maxscale_access_user, maxscale_IP, ssh);
     }
 }

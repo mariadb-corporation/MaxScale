@@ -122,9 +122,10 @@ int main(int argc, char *argv[])
         Test->set_timeout(30);
         Test->tprintf("Stopping %d\n", i);
         Test->galera->stop_node(i);
-         fflush(stdout);
+        fflush(stdout);
     }
 
+    Test->stop_timeout();
     Test->tprintf("Restarting Galera cluster\n");
     Test->galera->start_galera();
 

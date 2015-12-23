@@ -528,11 +528,11 @@ void Mariadb_nodes::generate_ssh_cmd(char * cmd, int node, char * ssh, bool sudo
 {
     if (sudo)
     {
-        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s %s\"",
+        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s %s\'",
                 sshkey[node], access_user[node], IP[node], access_sudo[node], ssh);
     } else
     {
-        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s \"%s\"",
+        sprintf(cmd, "ssh -i %s -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no  -o LogLevel=quiet %s@%s '%s'",
                 sshkey[node], access_user[node], IP[node], ssh);
     }
 }
