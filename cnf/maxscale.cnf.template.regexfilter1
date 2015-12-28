@@ -5,7 +5,7 @@ log_warning=1
 # Normal usage, should replace SELECT 123 with SELECT 0
 [regex1]
 type=filter
-module=regex
+module=regexfilter
 match=SELECT [1-5]*
 replace=SELECT 0
 
@@ -26,7 +26,7 @@ port=4006
 # Test with a username, should not match
 [regex2]
 type=filter
-module=regex
+module=regexfilter
 match=SELECT [1-5]*
 replace=SELECT 0
 user=bad_username
@@ -49,7 +49,7 @@ port=4008
 # Test with a hostname, should not match
 [regex3]
 type=filter
-module=regex
+module=regexfilter
 match=SELECT [1-5]*
 replace=SELECT 0
 source=127.0.0.1
