@@ -64,8 +64,12 @@ int main(int argc, char *argv[])
             if ((i / 100) * 100 == i) {Test->tprintf("i=%d\n", i);}
         }
 
-        Test->set_timeout(10);
-        exit_flag = 1; sleep(3);
+        Test->set_timeout(30);
+        exit_flag = 1;
+        for (int j = 0; j < 25; j++) {
+            pthread_join(check_iret[j], NULL);
+        }
+        sleep(3);
         mysql_change_user(Test->conn_rwsplit, Test->maxscale_user, Test->maxscale_password, NULL);
 
         Test->try_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");

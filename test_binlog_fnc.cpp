@@ -10,12 +10,10 @@ int check_sha1(TestConnections* Test)
 {
     char sys[1024];
     char * x;
-    FILE *ls;
-    int global_result = 0;
+    int local_result = 0;
     int i;
 
-    char buf[1024];
-    char buf_max[1024];
+    char *s_maxscale;
     char *s;
 
     Test->tprintf("ls before FLUSH LOGS\n");
@@ -26,7 +24,7 @@ int check_sha1(TestConnections* Test)
     Test->ssh_maxscale((char *) "ls -la /var/lib/mysql/mar-bin.0000*", FALSE);
 
     printf("FLUSH LOGS\n");fflush(stdout);
-    global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+    local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
     Test->tprintf("Logs flushed\n");
     sleep(20);
     Test->tprintf("ls after first FLUSH LOGS\n");
@@ -38,7 +36,7 @@ int check_sha1(TestConnections* Test)
     Test->ssh_maxscale((char *) "ls -la /var/lib/mysql/mar-bin.0000*", FALSE);
 
     Test->tprintf("FLUSH LOGS\n");
-    global_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
+    local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
     Test->tprintf("Logs flushed\n");
 
     sleep(19);
@@ -55,39 +53,39 @@ int check_sha1(TestConnections* Test)
     for (i = 1; i < 3; i++) {
         Test->tprintf("\nFILE: 000000%d\n", i);
         sprintf(sys, "sha1sum %s/mar-bin.00000%d", Test->maxscale_binlog_dir, i);
-        s = Test->ssh_maxscale_output(sys, TRUE);
-        if (s != NULL) {
-            x = strchr(buf_max, ' '); x[0] = 0;
-            Test->tprintf("Binlog checksum from Maxscale %s\n", buf_max);
+        s_maxscale = Test->ssh_maxscale_output(sys, TRUE);
+        if (s_maxscale != NULL) {
+            x = strchr(s_maxscale, ' '); x[0] = 0;
+            Test->tprintf("Binlog checksum from Maxscale %s\n", s_maxscale);
         }
 
         sprintf(sys, "sha1sum /var/lib/mysql/mar-bin.00000%d", i);
-        s = Test->repl->ssh_node_output(i, sys, TRUE);
+        s1 = Test->repl->ssh_node_output(i, sys, TRUE);
         if (s != NULL) {
-            x = strchr(buf, ' '); x[0] = 0;
-            Test->tprintf("Binlog checksum from master %s\n", buf);
+            x = strchr(s, ' '); x[0] = 0;
+            Test->tprintf("Binlog checksum from master %s\n", s);
         }
-        if (strcmp(buf_max, buf) != 0) {
+        if (strcmp(s_maxscale, s) != 0) {
             Test->tprintf("Binlog from master checksum is not eqiual to binlog checksum from Maxscale node\n");
-            global_result++;
+            local_result++;
         }
     }
-    return(global_result);
+    return(local_result);
 }
 
 int start_transaction(TestConnections* Test)
 {
-    int global_result = 0;
+    int local_result = 0;
     Test->tprintf("Transaction test\n");
     Test->tprintf("Start transaction\n");
     execute_query(Test->repl->nodes[0], (char *) "DELETE FROM t1 WHERE fl=10;");
-    global_result += execute_query(Test->repl->nodes[0], (char *) "START TRANSACTION");
-    global_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
+    local_result += execute_query(Test->repl->nodes[0], (char *) "START TRANSACTION");
+    local_result += execute_query(Test->repl->nodes[0], (char *) "SET autocommit = 0");
     Test->tprintf("INSERT data\n");
-    global_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
+    local_result += execute_query(Test->repl->nodes[0], (char *) "INSERT INTO t1 VALUES(111, 10)");
     Test->stop_timeout();
     sleep(20);
-    return(global_result);
+    return(local_result);
 }
 
 void test_binlog(TestConnections* Test)
