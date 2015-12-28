@@ -60,7 +60,7 @@ int check_sha1(TestConnections* Test)
         }
 
         sprintf(sys, "sha1sum /var/lib/mysql/mar-bin.00000%d", i);
-        s1 = Test->repl->ssh_node_output(i, sys, TRUE);
+        s = Test->repl->ssh_node_output(i, sys, TRUE);
         if (s != NULL) {
             x = strchr(s, ' '); x[0] = 0;
             Test->tprintf("Binlog checksum from master %s\n", s);

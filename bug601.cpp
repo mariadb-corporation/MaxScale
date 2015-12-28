@@ -70,6 +70,7 @@ int main(int argc, char *argv[])
             pthread_join(check_iret[j], NULL);
         }
         sleep(3);
+        Test->set_timeout(10);
         mysql_change_user(Test->conn_rwsplit, Test->maxscale_user, Test->maxscale_password, NULL);
 
         Test->try_query(Test->conn_rwsplit, (char *) "DROP USER user@'%';");
