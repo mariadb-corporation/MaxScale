@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
         printf("Doing change_user in the loop\n");fflush(stdout);
         for (int i = 0; i < iterations; i++) {
-            Test->set_timeout(5);
+            Test->set_timeout(15);
             Test->add_result(mysql_change_user(Test->conn_rwsplit, "user", "pass2", (char *) "test"), "change_user failed!\n");
             Test->add_result(mysql_change_user(Test->conn_rwsplit, Test->maxscale_user, Test->maxscale_password, (char *) "test"), "change_user failed!\n"); fflush(stdout);
             if ((i / 100) * 100 == i) {Test->tprintf("i=%d\n", i);}

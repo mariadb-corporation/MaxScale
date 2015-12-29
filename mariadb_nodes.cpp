@@ -190,7 +190,6 @@ int Mariadb_nodes::stop_nodes()
 {
     int i;
     int local_result = 0;
-    char sys1[4096];
     connect();
     for (i = 0; i < N; i++)
     {
@@ -217,52 +216,51 @@ int Mariadb_nodes::stop_slaves()
 
 int Mariadb_nodes::start_replication()
 {
-    char sys1[4096];
     char str[1024];
     char log_file[256];
     char log_pos[256];
     int i;
-    int global_result = 0;
-    global_result += stop_nodes();
+    int local_result = 0;
+    local_result += stop_nodes();
 
     printf("Starting back Master\n"); fflush(stdout);
-    global_result += start_node(0, (char *) ""); fflush(stdout);
+    local_result += start_node(0, (char *) ""); fflush(stdout);
 
     for (i = 1; i < N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
-        global_result += start_node(i, (char *) ""); fflush(stdout);
+        local_result += start_node(i, (char *) ""); fflush(stdout);
     }
     sleep(5);
 
-    global_result += connect();
-    global_result += execute_query(nodes[0], create_repl_user);
+    local_result += connect();
+    local_result += execute_query(nodes[0], create_repl_user);
     execute_query(nodes[0], (char *) "reset master;");
     execute_query(nodes[0], (char *) "stop slave;");
 
     find_field(nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
     find_field(nodes[0], (char *) "show master status", (char *) "Position", &log_pos[0]);
     for (i = 1; i < N; i++) {
-        global_result += execute_query(nodes[i], (char *) "stop slave;");
+        local_result += execute_query(nodes[i], (char *) "stop slave;");
         sprintf(str, setup_slave, IP_private[0], log_file, log_pos, port[0]);
         if (this->verbose)
         {
             printf("%s", str);
         }
-        global_result += execute_query(nodes[i], str);
+        local_result += execute_query(nodes[i], str);
     }
     close_connections();
-    return(global_result);
+    return(local_result);
 }
 
 int Mariadb_nodes::start_galera()
 {
     char sys1[4096];
     int i;
-    int global_result = 0;
-    global_result += stop_nodes();
+    int local_result = 0;
+    local_result += stop_nodes();
 
     printf("Starting new Galera cluster\n");  fflush(stdout);
-    global_result += start_node(0, (char *) " --wsrep-cluster-address=gcomm://");
+    local_result += start_node(0, (char *) " --wsrep-cluster-address=gcomm://");
 
     for (i = 1; i < N; i++) {
         printf("Starting node %d\n", i); fflush(stdout);
@@ -272,15 +270,15 @@ int Mariadb_nodes::start_galera()
             printf("%s\n", sys1);
             fflush(stdout);
         }
-        global_result += start_node(i, sys1); fflush(stdout);
+        local_result += start_node(i, sys1); fflush(stdout);
     }
     sleep(5);
 
-    global_result += connect();
-    global_result += execute_query(nodes[0], create_repl_user);
+    local_result += connect();
+    local_result += execute_query(nodes[0], create_repl_user);
 
     close_connections();
-    return(global_result);
+    return(local_result);
 }
 
 int Mariadb_nodes::block_node(int node)
@@ -570,4 +568,16 @@ int Mariadb_nodes::flush_hosts()
     {
         local_result += ssh_node(i, (char *) "mysqladmin flush-hosts", true);
     }
+}
+
+int Mariadb_nodes::execute_query_all_nodes(char * sql)
+{
+    int local_result = 0;
+    connect();
+    for (int i = 0; i < N; i++) {
+        printf("'%s' for node %d\n", sql, i);
+        local_result += execute_query(nodes[i], sql);
+    }
+    close_connections();
+    return(local_result);
 }

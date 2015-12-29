@@ -38,6 +38,8 @@ int main(int argc, char *argv[])
 
     int  iret1[threads_num];
 
+    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 200;");
+
     /* Create independent threads each of them will execute function */
     for (i = 0; i < threads_num; i++) {
         iret1[i] = pthread_create( &thread1[i], NULL, query_thread1, &data[i]);
@@ -48,13 +50,18 @@ int main(int argc, char *argv[])
     sleep(run_time);
 
     Test->tprintf("all routers are involved, threads are running %d seconds more\n", run_time);
-    Test->set_timeout(run_time + 20);
+    Test->set_timeout(run_time + 40);
 
     for (i = 0; i < threads_num; i++) { data[i].rwsplit_only = 0;}
     sleep(run_time);
-    for (i = 0; i < threads_num; i++) { data[i].exit_flag = 1;}
+    for (i = 0; i < threads_num; i++)
+    {
+        data[i].exit_flag = 1;
+        pthread_join(iret1[i], NULL);
+    }
     sleep(5);
 
+    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
     Test->stop_timeout();
     Test->check_maxscale_alive();
     Test->copy_all_logs(); return(Test->global_result);

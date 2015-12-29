@@ -53,13 +53,17 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(60);
 
+    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 20;");
     Test->create_connections(75);
     Test->set_timeout(100);
     Test->repl->start_replication();
+    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 200;");
     Test->set_timeout(60);
-    Test->add_result(Test->create_connections(70), "Error creation connections");
+    Test->add_result(Test->create_connections(70), "Connections creation error \n");
     //execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "flush logs");
     sleep(15);
+
+    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
 
     Test->check_log_err((char *) "fatal signal 11", false);
     Test->copy_all_logs(); return(Test->global_result);

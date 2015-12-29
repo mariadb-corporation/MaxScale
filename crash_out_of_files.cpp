@@ -17,13 +17,7 @@ int main(int argc, char *argv[])
     long int new_selects[256];
     long int new_inserts[256];
 
-    Test->tprintf("Connecting to all nodes\n");
-    Test->repl->connect();
-    for (int i = 0; i < Test->repl->N; i++) {
-        Test->tprintf("set max_connections = 20 for node %d\n", i);
-        execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 20;");
-    }
-    Test->repl->close_connections();
+    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 20;");
 
     Test->tprintf("Start load\n");
     Test->set_timeout(1200);
@@ -55,5 +49,6 @@ int main(int argc, char *argv[])
     Test->check_maxscale_alive();
     Test->set_timeout(600);
     Test->repl->start_replication();
+    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
     Test->copy_all_logs(); return(Test->global_result);
 }

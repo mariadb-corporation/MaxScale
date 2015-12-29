@@ -20,11 +20,7 @@ int main(int argc, char *argv[])
     Test->read_env();
     Test->print_env();
 
-    Test->galera->connect();
-    for (int i = 0; i < Test->galera->N; i++) {
-        execute_query(Test->galera->nodes[i], (char *) "set global max_connections = 20;");
-    }
-    Test->galera->close_connections();
+    Test->galera->execute_query_all_nodes((char *) "set global max_connections = 20;");
 
     Test->set_timeout(1200);
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], 100, Test, &i1, &i2, 0, true, false);
@@ -43,6 +39,8 @@ int main(int argc, char *argv[])
     Test->galera->close_connections();
 
     Test->check_log_err((char *) "refresh rate limit exceeded", FALSE);
+
+    Test->galera->execute_query_all_nodes((char *) "set global max_connections = 100;");
 
     Test->check_maxscale_alive();
     Test->copy_all_logs(); return(Test->global_result);

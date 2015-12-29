@@ -332,6 +332,13 @@ public:
      * @return 0 in case of success
      */
     int flush_hosts();
+
+    /**
+     * @brief Execute query on all nodes
+     * @param sql query to execute
+     * @return
+     */
+    int execute_query_all_nodes(char * sql);
 };
 
 #endif // MARIADB_NODES_H
