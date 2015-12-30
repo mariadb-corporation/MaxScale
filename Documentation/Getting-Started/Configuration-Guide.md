@@ -589,6 +589,8 @@ indicating a number of seconds. A DCB placed in the persistent pool for a server
 only be reused if the elapsed time since it joined the pool is less than the given
 value. Otherwise, the DCB will be discarded and the connection closed.
 
+For more information about persistent connections, please read the [Administration Tutorial](../Tutorials/Administration-Tutorial.md).
+
 ### Listener
 
 The listener defines a port and protocol pair that is used to listen for connections to a service. A service may have multiple listeners associated with it, either to support multiple protocols or multiple ports. As with other elements of the configuration the section name is the listener name and it can be selected freely. A type parameter is used to identify the section as a listener definition. Address is optional and it allows the user to limit connections to certain interface only. Socket is also optional and used for Unix socket connections.
