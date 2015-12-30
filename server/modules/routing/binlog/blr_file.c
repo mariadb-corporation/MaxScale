@@ -464,8 +464,7 @@ struct	stat	statb;
 	{
 		if (pos > router->binlog_position && !router->rotating)
 		{
-			/* Unsafe position, slave will be disconnected by the calling routine */
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested binlog position %lu. Position is unsafe so disconnecting. "
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested binlog position %lu is unsafe. "
 				"Latest safe position %lu, end of binlog file %lu",
 				pos, router->binlog_position, router->current_pos);
 

@@ -1962,6 +1962,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 #ifdef BLSLAVE_IN_FILE
         slave->file = file;
 #endif
+	int events_before = slave->stats.n_events;
 
 	while (burst-- && burst_size > 0 &&
 		(record = blr_read_binlog(router, file, slave->binlog_pos, &hdr, read_errmsg)) != NULL)
@@ -2103,24 +2104,16 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
 		if (hdr.ok == SLAVE_POS_READ_UNSAFE) {
 
-			MXS_ERROR("%s: Slave %s:%i, server-id %d, binlog '%s', %s",
+			MXS_NOTICE("%s: Slave %s:%i, server-id %d, binlog '%s', read %d events, "
+				"current committed transaction event being sent: %lu, %s",
 				router->service->name,
 				slave->dcb->remote,
 				ntohs((slave->dcb->ipv4).sin_port),
 				slave->serverid,
 				slave->binlogfile,
+				slave->stats.n_events - events_before,
+				router->current_safe_event,
 				read_errmsg);
-
-			/*
-			 * Close the slave session and socket
-			 * The slave will try to reconnect
-			 */
-			dcb_close(slave->dcb);
-
-#ifndef BLFILE_IN_SLAVE
-                        blr_close_binlog(router, file);
-#endif
-			return 0;
 		}
 	}
 	spinlock_acquire(&slave->catch_lock);
