@@ -24,6 +24,12 @@ using the *Persistent Connection* feature as it may reduce the time it
 takes from establishing a connection from the client through MaxScale to
 the backend server.
 
+**NOTE**: The persistent connections do not track session state. This means
+that changing the default database or modifying the session state will cause
+those changes to be active even for new connections. If you use queries with
+implicit databases or use connections with different client settings, you
+should take great care when using persistent connections.
+
 Additional information is available in the following document:
 * [Administration Tutorial](../Tutorials/Administration-Tutorial.md)
 
