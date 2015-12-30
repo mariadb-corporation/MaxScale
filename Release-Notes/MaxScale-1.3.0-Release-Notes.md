@@ -237,7 +237,7 @@ the most serious of this are listed below.
 
 * When users have different passwords based on the host from which they connect MaxScale is unable to determine which password it should use to connect to the backend database. This results in failed connections and unusable usernames in MaxScale.
 
-* LONGBLOB are currently not supported.
+* The readconnroute module does not support sending of LONGBLOB data.
 
 * Galera Cluster variables, such as @@wsrep_node_name, are not resolved by the embedded MariaDB parser.
 

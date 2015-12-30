@@ -18,7 +18,7 @@ The default master selection is based only on MIN(wsrep_local_index). This can b
 
 * If Master changes (ie. new Master promotion) during current connection the router cannot check the change
 
-* LONGBLOB is not supported
+* Sending of LONGBLOB data is not supported
 
 ## Limitations in the Read/Write Splitter
 
