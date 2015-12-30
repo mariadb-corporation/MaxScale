@@ -353,9 +353,12 @@ static int gw_read_backend_event(DCB *dcb) {
                                 }
                                 spinlock_release(&dcb->delayqlock);
 
-				/* try reload users' table for next connection */
-				if (backend_protocol->protocol_auth_state == 
-					MYSQL_AUTH_FAILED) 
+				/* Only reload the users table if authentication failed and the
+				 * client session is not stopping. It is possible that authentication
+				 * fails because the client has closed the connection before all
+				 * backends have done authentication. */
+				if (backend_protocol->protocol_auth_state ==  MYSQL_AUTH_FAILED &&
+				 dcb->session->state != SESSION_STATE_STOPPING)
 				{
 					service_refresh_users(dcb->session->service);
 				}
@@ -694,12 +697,15 @@ gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue)
         switch (backend_protocol->protocol_auth_state) {
                 case MYSQL_HANDSHAKE_FAILED:
                 case MYSQL_AUTH_FAILED:
-                    MXS_ERROR("Unable to write to backend '%s' due to "
-                              "%s failure. Server in state %s.",
-                              dcb->server->unique_name,
-                              backend_protocol->protocol_auth_state == MYSQL_HANDSHAKE_FAILED ?
-                              "handshake" : "authentication",
-                              STRSRVSTATUS(dcb->server));
+            if (dcb->session->state != SESSION_STATE_STOPPING)
+            {
+                MXS_ERROR("Unable to write to backend '%s' due to "
+                          "%s failure. Server in state %s.",
+                          dcb->server->unique_name,
+                          backend_protocol->protocol_auth_state == MYSQL_HANDSHAKE_FAILED ?
+                          "handshake" : "authentication",
+                          STRSRVSTATUS(dcb->server));
+            }
                         /** Consume query buffer */
                         while ((queue = gwbuf_consume(
                                                 queue,
