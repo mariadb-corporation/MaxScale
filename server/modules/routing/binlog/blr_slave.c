@@ -1895,7 +1895,7 @@ GWBUF		*head, *record;
 REP_HEADER	hdr;
 int		written, rval = 1, burst;
 int		rotating = 0;
-unsigned long	burst_size;
+long	burst_size;
 uint8_t		*ptr;
 char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
