@@ -8,6 +8,8 @@ archiving the data and one for actual use, a RabbitMQ server and a MaxScale serv
 For testing purposes some of these can locate on the same server but for actual
 use, an HA solution is recommended.
 
+![Data archiving with Mqfilter and Tee filters](images/rabbit-and-tee.png)
+
 The use case for this tutorial is a production system with one main server where all
 queries are routed and an archive server where only INSERT, UPDATE and DELETE statements
 are routed. The queries routed to the archive servers are also transformed into a canonical
