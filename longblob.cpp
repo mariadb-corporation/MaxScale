@@ -1,5 +1,5 @@
 /**
- * @file longblob.cpp - trying to use LONGBLOD
+ * @file longblob.cpp - trying to use LONGBLOB
  */
 
 #include <my_config.h>
@@ -9,9 +9,9 @@ int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(60);
-    long int size = 10000000;
-    long int * data;
-    long int i;
+    unsigned long size = 1000000;
+    unsigned long * data;
+    unsigned long i;
     MYSQL_BIND param[1];
 
     char *insert_stmt = (char *) "INSERT INTO long_blob_table(x, b) VALUES(1, ?)";
@@ -19,8 +19,10 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
 
     Test->tprintf("Creating table with LONGBLOB\n");
-    execute_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS long_blob_table");
-    execute_query(Test->conn_rwsplit, (char *) "CREATE TABLE long_blob_table(x INT, b LONGBLOB)");
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS long_blob_table");
+    Test->try_query(Test->conn_rwsplit, (char *) "CREATE TABLE long_blob_table(x INT, b LONGBLOB)");
+    Test->tprintf("set global max_allowed_packet=10000000\n");
+    Test->try_query(Test->conn_rwsplit, (char *) "set global max_allowed_packet=10000000");
 
     Test->tprintf("Preparintg INSERT stmt\n");
     MYSQL_STMT * stmt = mysql_stmt_init(Test->conn_rwsplit);
@@ -33,15 +35,21 @@ int main(int argc, char *argv[])
     Test->tprintf("Binding parameter\n");
     Test->add_result(mysql_stmt_bind_param(stmt, param), "Error parameter binding: %s\n", mysql_stmt_error(stmt));
 
+    Test->tprintf("Filling buffer\n");
     data = (long int *) malloc(size * sizeof(long int));
+
+    if (data == NULL)
+    {
+        Test->add_result(1, "Memory allocation error\n");
+    }
 
     for (i = 0; i < size; i++)
     {
         data[i] = i;
     }
 
-    Test->tprintf("Sending data in %d bytes chanks\n", size * sizeof(long int));
-    for (i = 0; i < 1000; i++) {
+    Test->tprintf("Sending data in %d bytes chunks\n", size * sizeof(long int));
+    for (i = 0; i < 100; i++) {
         Test->add_result(mysql_stmt_send_long_data(stmt, 0, (char *) data, size * sizeof(long int)), "Error inserting data, iteration %d, error %s\n", i, mysql_stmt_error(stmt));
     }
 
