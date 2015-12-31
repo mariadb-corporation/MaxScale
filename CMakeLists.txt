@@ -373,6 +373,8 @@ target_link_libraries(maxadmin testcore)
 add_test_executable(regexfilter1.cpp regexfilter1 regexfilter1)
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter)
 
+add_test_executable(longblob.cpp longblog replication)
+
 install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover kill_master DESTINATION system-test)
 install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 bug547 bug422 bug571 bug473 bug587 bug475 bug471 bug565 bug448 DESTINATION system-test)
 install(TARGETS short_sessions connect_to_nonexisting_db rwsplit_conn_num temporal_tables change_master_during_session change_master change_user maxadmin load_balancing crash_out_of_files DESTINATION system-test)
