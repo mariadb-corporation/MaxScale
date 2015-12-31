@@ -40,9 +40,9 @@ int main(int argc, char *argv[])
         data[i] = i;
     }
 
-    Test->tprintf("Sending data in %d chancks\n", sizeof(data));
+    Test->tprintf("Sending data in %d bytes chanks\n", size * sizeof(long int));
     for (i = 0; i < 1000; i++) {
-        Test->add_result(mysql_stmt_send_long_data(stmt, 0, (char *) data, sizeof(data)), "Error inserting data, iteration %d, error %s\n", i, mysql_stmt_error(stmt));
+        Test->add_result(mysql_stmt_send_long_data(stmt, 0, (char *) data, size * sizeof(long int)), "Error inserting data, iteration %d, error %s\n", i, mysql_stmt_error(stmt));
     }
 
     Test->add_result(mysql_stmt_execute(stmt), mysql_stmt_error(stmt));
