@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     Test->add_result(mysql_stmt_bind_param(stmt, param), "Error parameter binding: %s\n", mysql_stmt_error(stmt));
 
     Test->tprintf("Filling buffer\n");
-    data = (long int *) malloc(size * sizeof(long int));
+    data = (unsigned long *) malloc(size * sizeof(long int));
 
     if (data == NULL)
     {
