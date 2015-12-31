@@ -124,3 +124,6 @@ namedserverfilter namedserverfilter
 regexfilter1 regexfilter1
 namedserverfilter namedserverfilter
 longblog replication
+regexfilter1 regexfilter1
+namedserverfilter namedserverfilter
+longblob replication
