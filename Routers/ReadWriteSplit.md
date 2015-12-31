@@ -133,6 +133,14 @@ disable_sescmd_history=true
 master_accept_reads=true
 ```
 
+### `weightby`
+
+This parameter defines the name of the value which is used to calculate the
+weights of the servers. The value should be the name of a parameter in the
+server definitions and it should exist in all the servers used by this router.
+For more information, see the description of the `weightby` parameter in
+the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
+
 ## Routing hints
 
 The readwritesplit router supports routing hints. For a detailed guide on hint syntax and functionality, please read [this](../Reference/Hint-Syntax.md) document.
