@@ -372,6 +372,7 @@ target_link_libraries(maxadmin testcore)
 
 add_test_executable(regexfilter1.cpp regexfilter1 regexfilter1)
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter)
+add_test_executable(mxs365.cpp mxs365 replication)
 
 add_test_executable(longblob.cpp longblob replication)
 
