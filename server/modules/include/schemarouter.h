@@ -281,6 +281,13 @@ typedef struct schemarouter_config_st {
         bool debug; /*< Enable verbose debug messages to clients */
 } schemarouter_config_t;
 
+/** Prepared statement mapping
+ */
+typedef struct prep_stmt_map {
+	int				stmt_id;	/*< statment id returned by server    */
+	char*			tname;    /*< server name */
+} PREP_MAP;
+
 /**
  * The statistics for this router instance
  */
@@ -330,6 +337,12 @@ struct router_client_session {
         ROUTER_STATS    stats;     /*< Statistics for this router         */
         int             n_sescmd;
         int             pos_generator;
+	/** for prepared statement handling */
+        char            *rses_last_tname; /*< prepare statement target */
+        bool            rses_sent_prepare; /*< prepare statement was sent */
+        int			    rses_next_stmtid; /*< next stmtid to use */
+        int			    rses_max_stmtid; /*< stmtid map size */
+        PREP_MAP**		rses_prep_map; /*< mapping client stmtid to server, server stmtid */
 #if defined(SS_DEBUG)
         skygw_chk_t      rses_chk_tail;
 #endif
