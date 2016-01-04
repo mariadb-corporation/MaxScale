@@ -1380,8 +1380,6 @@ static route_target_t get_route_target (
 	 * These queries are not affected by hints
 	 */
 	if (!load_active && (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_STMT) ||
-		QUERY_IS_TYPE(qtype, QUERY_TYPE_PREPARE_NAMED_STMT) ||
 		/** Configured to allow writing variables to all nodes */
 		(use_sql_variables_in == TYPE_ALL &&
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
@@ -2131,14 +2129,14 @@ static bool route_single_stmt(
 		case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
 		case MYSQL_COM_PING:        /*< 0e all servers are pinged */
 		case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
-		case MYSQL_COM_STMT_CLOSE:  /*< free prepared statement */
-		case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
-		case MYSQL_COM_STMT_RESET:  /*< resets the data of a prepared statement */
 			qtype = QUERY_TYPE_SESSION_WRITE;
 			break;
 			
 		case MYSQL_COM_CREATE_DB:   /**< 5 DDL must go to the master */
 		case MYSQL_COM_DROP_DB:     /**< 6 DDL must go to the master */
+		case MYSQL_COM_STMT_CLOSE:  /*< free prepared statement */
+		case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
+		case MYSQL_COM_STMT_RESET:  /*< resets the data of a prepared statement */
 			qtype = QUERY_TYPE_WRITE;
 			break;
 			
