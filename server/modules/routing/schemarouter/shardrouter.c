@@ -482,8 +482,8 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
         query = modutil_get_SQL(buffer);
         if((tmp = strcasestr(query,"from")))
         {
-            char* tok = strtok(tmp, " ;");
-            tok = strtok(NULL," ;");
+            char *saved, *tok = strtok_r(tmp, " ;", &saved);
+            tok = strtok_r(NULL, " ;", &saved);
             ss_dassert(tok != NULL);
             tmp = (char*) hashtable_fetch(ht, tok);
             if(tmp)
@@ -540,44 +540,6 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
     }
    
     return rval;
-}
-
-char**
-tokenize_string(char* str)
-{
-    char *tok;
-    char **list = NULL;
-    int sz = 2, count = 0;
-
-    tok = strtok(str, ", ");
-
-    if(tok == NULL)
-        return NULL;
-
-    list = (char**) malloc(sizeof(char*)*(sz));
-
-    while(tok)
-    {
-        if(count + 1 >= sz)
-        {
-            char** tmp = realloc(list, sizeof(char*)*(sz * 2));
-            if(tmp == NULL)
-            {
-                char errbuf[STRERROR_BUFLEN];
-                MXS_ERROR("realloc returned NULL: %s.",
-                          strerror_r(errno, errbuf, sizeof(errbuf)));
-                free(list);
-                return NULL;
-            }
-            list = tmp;
-            sz *= 2;
-        }
-        list[count] = strdup(tok);
-        count++;
-        tok = strtok(NULL, ", ");
-    }
-    list[count] = NULL;
-    return list;
 }
 
 /**
