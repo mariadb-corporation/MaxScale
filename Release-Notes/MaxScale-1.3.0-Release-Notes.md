@@ -249,3 +249,13 @@ the most serious of this are listed below.
 
 RPM and Debian packages are provided for the Linux distributions supported
 by MariaDB Enterprise.
+
+Packages can be downloaded [here](https://mariadb.com/resources/downloads).
+
+## Source Code
+
+The source code of MaxScale is tagged at GitHub with a tag, which is identical
+with the version of MaxScale. For instance, the tag of version 1.2.1 of MaxScale
+is 1.2.1. Further, *master* always refers to the latest released non-beta version.
+
+The source code is available [here](https://github.com/mariadb-corporation/MaxScale).
