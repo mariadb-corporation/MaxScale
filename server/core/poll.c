@@ -35,6 +35,7 @@
 #include <maxconfig.h>
 #include <mysql.h>
 #include <resultset.h>
+#include <session.h>
 
 #define         PROFILE_POLL    0
 
@@ -703,6 +704,11 @@ poll_waitevents(void *arg)
         if (process_pollq(thread_id))
         {
             timeout_bias = 1;
+        }
+
+        if (check_timeouts && hkheartbeat >= next_timeout_check)
+        {
+            process_idle_sessions();
         }
 
         if (thread_data)

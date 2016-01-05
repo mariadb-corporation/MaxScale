@@ -135,6 +135,10 @@ enum
 
 #define DEFAULT_SSL_CERT_VERIFY_DEPTH 100 /*< The default certificate verification depth */
 #define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */
+
+/** Value of service timeout if timeout checks are disabled */
+#define SERVICE_NO_SESSION_TIMEOUT LONG_MAX
+
 /**
  * Parameters that are automatically detected but can also be configured by the
  * user are initially set to this value.
@@ -180,7 +184,7 @@ typedef struct service
     SERVICE_REFRESH_RATE rate_limit;   /**< The refresh rate limit for users table */
     FILTER_DEF **filters;              /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
-    int conn_timeout;                  /*< Session timeout in seconds */
+    long conn_idle_timeout;            /**< Session timeout in seconds */
     ssl_mode_t ssl_mode;               /*< one of DISABLED, ENABLED or REQUIRED */
     char *weightby;
     struct service *next;              /**< The next service in the linked list */

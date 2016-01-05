@@ -54,6 +54,14 @@ static SESSION *allSessions = NULL;
 
 static struct session session_dummy_struct;
 
+/**
+ * These two are declared in session.h
+ */
+bool check_timeouts = false;
+long next_timeout_check = 0;
+
+static SPINLOCK timeout_lock = SPINLOCK_INIT;
+
 static int session_setup_filters(SESSION *session);
 static void session_simple_free(SESSION *session, DCB *dcb);
 
@@ -962,33 +970,47 @@ SESSION *get_all_sessions()
 }
 
 /**
+ * Enable the timing out of idle connections.
+ *
+ * This will prevent unnecessary acquisitions of the session spinlock if no
+ * service is configured with a session idle timeout.
+ */
+void enable_session_timeouts()
+{
+    check_timeouts = true;
+}
+
+/**
  * Close sessions that have been idle for too long.
  *
- * If the time since a session last sent data is grater than the set value in the
- * service, it is disconnected. The default value for the timeout for a service is 0.
- * This means that connections are never timed out.
- * @param data NULL, this is only here to satisfy the housekeeper function requirements.
+ * If the time since a session last sent data is greater than the set value in the
+ * service, it is disconnected. The connection timeout is disabled by default.
  */
-void session_close_timeouts(void* data)
+void process_idle_sessions()
 {
-    SESSION* ses;
-
-    spinlock_acquire(&session_spin);
-    ses = get_all_sessions();
-    spinlock_release(&session_spin);
-
-    while (ses)
+    if (spinlock_acquire_nowait(&timeout_lock))
     {
-        if (ses->client && ses->client->state == DCB_STATE_POLLING &&
-            ses->service->conn_timeout > 0 &&
-            hkheartbeat - ses->client->last_read > ses->service->conn_timeout * 10)
+        if (hkheartbeat >= next_timeout_check)
         {
-            dcb_close(ses->client);
-        }
+            /** Because the resolution of the timeout is one second, we only need to
+             * check for it once per second. One heartbeat is 100 milliseconds. */
+            next_timeout_check = hkheartbeat + 10;
+            spinlock_acquire(&session_spin);
+            SESSION *ses = get_all_sessions();
 
-        spinlock_acquire(&session_spin);
-        ses = ses->next;
-        spinlock_release(&session_spin);
+            while (ses)
+            {
+                if (ses->service && ses->client && ses->client->state == DCB_STATE_POLLING &&
+                    hkheartbeat - ses->client->last_read > ses->service->conn_idle_timeout * 10)
+                {
+                    dcb_close(ses->client);
+                }
+
+                ses = ses->next;
+            }
+            spinlock_release(&session_spin);
+        }
+        spinlock_release(&timeout_lock);
     }
 }
 

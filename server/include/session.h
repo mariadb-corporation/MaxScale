@@ -146,6 +146,13 @@ typedef struct session
 #endif
 } SESSION;
 
+/** Whether to do session timeout checks */
+extern bool check_timeouts;
+
+/** When the next timeout check is done. This is compared to hkheartbeat in
+ * hk_heartbeat.h */
+extern long next_timeout_check;
+
 #define SESSION_PROTOCOL(x, type)       DCB_PROTOCOL((x)->client, type)
 
 /**
@@ -184,7 +191,7 @@ int session_unlink_dcb(SESSION*, DCB*);
 SESSION* get_session_by_router_ses(void* rses);
 void session_enable_log_priority(SESSION* ses, int priority);
 void session_disable_log_priority(SESSION* ses, int priority);
-void session_close_timeouts(void* data);
 RESULTSET *sessionGetList(SESSIONLISTFILTER);
-
+void process_idle_sessions();
+void enable_session_timeouts();
 #endif
