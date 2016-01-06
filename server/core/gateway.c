@@ -1574,6 +1574,14 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
+    if (!utils_init())
+    {
+        char* logerr = "Failed to initialise utility library.";
+        print_log_n_stderr(true, true, logerr, logerr, eno);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
     /** OpenSSL initialization */
     if (!HAVE_OPENSSL_THREADS)
     {
@@ -1939,6 +1947,7 @@ int main(int argc, char **argv)
     /** Release mysql thread context*/
     mysql_thread_end();
 
+    utils_end();
     datadir_cleanup();
     MXS_NOTICE("MaxScale shutdown completed.");
 

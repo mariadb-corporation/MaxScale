@@ -158,6 +158,8 @@ struct skygw_file_st {
 
 EXTERN_C_BLOCK_BEGIN
 
+bool utils_init(); /*< Call this first before using any other function */
+void utils_end();
 slist_cursor_t* slist_init(void);
 void slist_done(slist_cursor_t* c);
 size_t slist_size(slist_cursor_t* c);

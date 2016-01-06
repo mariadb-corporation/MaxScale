@@ -2122,6 +2122,9 @@ retblock:
         return newstr;
 }
 
+static pcre2_code* replace_quoted_re = NULL;
+static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR) "(['\"])[^'\"]+(['\"])";
+
 /**
  * Replace everything inside single or double quotes with question marks.
  * @param str String to modify
@@ -2129,52 +2132,35 @@ retblock:
  */
 char* replace_quoted(const char* str)
 {
-    PCRE2_SIZE erroffset;
-    int errcore;
-    static const PCRE2_SPTR pattern = (PCRE2_SPTR) "(['\"])[^'\"]+(['\"])";
     static const PCRE2_SPTR replace = (PCRE2_SPTR) "$1?$2";
-    pcre2_code* re;
     pcre2_match_data* mdata;
-    int orig_len = strlen(str);
-    size_t len = strlen(str);
+    size_t orig_len = strlen(str);
+    size_t len = orig_len;
     char* output;
 
-    if ((output = (char*) malloc(len * sizeof(char))))
+    if ((output = (char*) malloc(len * sizeof (char))) &&
+        (mdata = pcre2_match_data_create_from_pattern(replace_quoted_re, NULL)))
     {
-         /** TODO: Consider moving pattern compilation to some init function. */
-        if ((re = pcre2_compile(pattern, PCRE2_ZERO_TERMINATED,
-                                0, &errcore, &erroffset, NULL)))
+        while (pcre2_substitute(replace_quoted_re, (PCRE2_SPTR) str, orig_len, 0,
+                                PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
+                                replace, PCRE2_ZERO_TERMINATED,
+                                (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
         {
-            if ((mdata = pcre2_match_data_create_from_pattern(re, NULL)))
-            {
-                while (pcre2_substitute(re, (PCRE2_SPTR) str, orig_len, 0,
-                                        PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                        replace, PCRE2_ZERO_TERMINATED,
-                                        (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
-                {
-                    char* tmp = (char*) realloc(output, len *= 2);
-                    if (tmp == NULL)
-                    {
-                        free(output);
-                        output = NULL;
-                        break;
-                    }
-                    output = tmp;
-                }
-                pcre2_match_data_free(mdata);
-            }
-            else
+            char* tmp = (char*) realloc(output, len *= 2);
+            if (tmp == NULL)
             {
                 free(output);
                 output = NULL;
+                break;
             }
-            pcre2_code_free(re);
+            output = tmp;
         }
-        else
-        {
-            free(output);
-            output = NULL;
-        }
+        pcre2_match_data_free(mdata);
+    }
+    else
+    {
+        free(output);
+        output = NULL;
     }
     return output;
 }
@@ -2266,4 +2252,37 @@ int simple_str_hash(char* key)
   }
 
   return hash;
+}
+
+/**
+ * Initialize the utils library
+ *
+ * This function initializes structures used in various functions.
+ * @return true on success, false on error
+ */
+bool utils_init()
+{
+    bool rval = true;
+
+    PCRE2_SIZE erroffset;
+    int errcore;
+
+    ss_info_dassert(replace_quoted_re == NULL, "utils_init called multiple times");
+    replace_quoted_re = pcre2_compile(replace_quoted_pattern, PCRE2_ZERO_TERMINATED, 0, &errcore,
+                                      &erroffset, NULL);
+    if (replace_quoted_re == NULL)
+    {
+        rval = false;
+    }
+
+    return rval;
+}
+
+/**
+ * Close the utils library. This should be the last call to this library.
+ */
+void utils_end()
+{
+    pcre2_code_free(replace_quoted_re);
+    replace_quoted_re = NULL;
 }
