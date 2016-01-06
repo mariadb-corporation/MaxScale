@@ -60,24 +60,26 @@ int main(int argc, char** argv)
     while (!feof(infile))
     {
         fgets(readbuff,4092,infile);
+		char* nl = strchr(readbuff, '\n');
+		if(nl)
+		{
+			*nl = '\0';
+		}
         psize = strlen(readbuff);
-        if (psize < 4092)
-        {
-            qbuff = gwbuf_alloc(psize + 7);
-            *(qbuff->sbuf->data + 0) = (unsigned char)psize;
-            *(qbuff->sbuf->data + 1) = (unsigned char)(psize>>8);
-            *(qbuff->sbuf->data + 2) = (unsigned char)(psize>>16);
-            *(qbuff->sbuf->data + 4) = 0x03;
-            memcpy(qbuff->start + 5,readbuff,psize + 1);
-            tok = qc_get_canonical(qbuff);
-            fprintf(outfile,"%s\n",tok);
-            free(tok);
-            gwbuf_free(qbuff);
-        }
+        qbuff = gwbuf_alloc(psize + 7);
+        *(qbuff->sbuf->data + 0) = (unsigned char)psize;
+        *(qbuff->sbuf->data + 1) = (unsigned char)(psize>>8);
+        *(qbuff->sbuf->data + 2) = (unsigned char)(psize>>16);
+        *(qbuff->sbuf->data + 4) = 0x03;
+        memcpy(qbuff->start + 5,readbuff,psize + 1);
+        tok = qc_get_canonical(qbuff);
+        fprintf(outfile,"%s\n",tok);
+        free(tok);
+        gwbuf_free(qbuff);
     }
     fclose(infile);
     fclose(outfile);
     mysql_library_end();
 
-    return 0;
+	return 0;
 }

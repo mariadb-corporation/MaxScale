@@ -61,6 +61,7 @@
 #include <string.h>
 #include <stdarg.h>
 
+#define MAX_QUERYBUF_SIZE 2048
 typedef struct parsing_info_st
 {
 #if defined(SS_DEBUG)
@@ -1427,107 +1428,27 @@ bool qc_query_has_clause(GWBUF* buf)
 }
 
 /*
- * Replace user-provided literals with question marks. Return a copy of the
- * querystr with replacements.
+ * Replace user-provided literals with question marks.
  *
- * @param querybuf      GWBUF buffer including necessary parsing info
- *
- * @return Copy of querystr where literals are replaces with question marks or
- * NULL if querystr is NULL, thread context or lex are NULL or if replacement
- * function fails.
- *
- * Replaced literal types are STRING_ITEM,INT_ITEM,DECIMAL_ITEM,REAL_ITEM,
- * VARBIN_ITEM,NULL_ITEM
+ * @param querybuf GWBUF with a COM_QUERY statement
+ * @return A copy of the query in its canonical form or NULL if an error occurred.
  */
 char* qc_get_canonical(GWBUF* querybuf)
 {
-    parsing_info_t* pi;
-    MYSQL* mysql;
-    THD* thd;
-    LEX* lex;
-    Item* item;
-    char* querystr = NULL;
-
-    if (!querybuf)
+    char *querystr = NULL;
+    if (GWBUF_LENGTH(querybuf) > 5 && GWBUF_IS_SQL(querybuf))
     {
-        goto retblock;
-    }
-
-    if (!ensure_query_is_parsed(querybuf))
-    {
-        goto retblock;
-    }
-
-    pi = (parsing_info_t *) gwbuf_get_buffer_object_data(querybuf, GWBUF_PARSING_INFO);
-    CHK_PARSING_INFO(pi);
-
-    if (pi == NULL)
-    {
-        goto retblock;
-    }
-
-    if (pi->pi_query_plain_str == NULL ||
-        (mysql = (MYSQL *) pi->pi_handle) == NULL ||
-        (thd = (THD *) mysql->thd) == NULL ||
-        (lex = thd->lex) == NULL)
-    {
-        ss_dassert(pi->pi_query_plain_str != NULL &&
-                   mysql != NULL &&
-                   thd != NULL &&
-                   lex != NULL);
-        goto retblock;
-    }
-
-    querystr = strdup(pi->pi_query_plain_str);
-
-    for (item = thd->free_list; item != NULL; item = item->next)
-    {
-        Item::Type itype;
-
-        if (item->name == NULL)
+        const size_t bufsize = MIN(MAX_QUERYBUF_SIZE, GWBUF_LENGTH(querybuf) - 5);
+        char buffer[bufsize + 1];
+        memcpy(buffer, (uint8_t*) GWBUF_DATA(querybuf) + 5, bufsize);
+        buffer[bufsize] = '\0';
+        char* replaced = replace_quoted(buffer);
+        if (replaced == NULL || (querystr = replace_values(replaced)) == NULL)
         {
-            continue;
+            querystr = NULL;
         }
-
-        itype = item->type();
-
-        if (itype == Item::STRING_ITEM)
-        {
-            String tokenstr;
-            String* res = item->val_str_ascii(&tokenstr);
-
-            if (res->is_empty()) /*< empty string */
-            {
-                querystr = replace_literal(querystr, "\"\"", "\"?\"");
-            }
-            else
-            {
-                querystr = replace_literal(querystr, res->ptr(), "?");
-            }
-        }
-        else if (itype == Item::INT_ITEM ||
-                 itype == Item::DECIMAL_ITEM ||
-                 itype == Item::REAL_ITEM ||
-                 itype == Item::VARBIN_ITEM ||
-                 itype == Item::NULL_ITEM)
-        {
-            querystr = replace_literal(querystr, item->name, "?");
-        }
-    } /*< for */
-
-    /** Check for SET ... options with no Item classes */
-    if (thd->free_list == NULL)
-    {
-        char *replaced = replace_quoted(querystr);
-
-        if (replaced)
-        {
-            free(querystr);
-            querystr = replaced;
-        }
+        free(replaced);
     }
-
-retblock:
     return querystr;
 }
 

@@ -2031,6 +2031,50 @@ void skygw_file_close(
 	}
 }
 
+
+static pcre2_code* replace_values_re = NULL;
+static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b)([0-9.]+|NULL)([-=,+*/)[:space:];]|$)";
+
+/**
+ * Replace every literal number and NULL value with a question mark.
+ * @param str String to modify
+ * @return Pointer to new modified string or NULL if memory allocation failed
+ */
+char* replace_values(const char* str)
+{
+    static const PCRE2_SPTR replace = (PCRE2_SPTR) "$1?$3";
+    pcre2_match_data* mdata;
+    size_t orig_len = strlen(str);
+    size_t len = orig_len;
+    char* output;
+
+    if ((output = (char*) malloc(len * sizeof (char))) &&
+        (mdata = pcre2_match_data_create_from_pattern(replace_values_re, NULL)))
+    {
+        while (pcre2_substitute(replace_values_re, (PCRE2_SPTR) str, orig_len, 0,
+                                PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
+                                replace, PCRE2_ZERO_TERMINATED,
+                                (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+        {
+            char* tmp = (char*) realloc(output, len *= 2);
+            if (tmp == NULL)
+            {
+                free(output);
+                output = NULL;
+                break;
+            }
+            output = tmp;
+        }
+        pcre2_match_data_free(mdata);
+    }
+    else
+    {
+        free(output);
+        output = NULL;
+    }
+    return output;
+}
+
 /**
  * Find the given needle - user-provided literal -  and replace it with 
  * replacement string. Separate user-provided literals from matching table names 
@@ -2123,7 +2167,7 @@ retblock:
 }
 
 static pcre2_code* replace_quoted_re = NULL;
-static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR) "(['\"])[^'\"]+(['\"])";
+static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR) "(['\"])[^'\"]*(['\"])";
 
 /**
  * Replace everything inside single or double quotes with question marks.
@@ -2275,6 +2319,14 @@ bool utils_init()
         rval = false;
     }
 
+    ss_info_dassert(replace_values_re == NULL, "utils_init called multiple times");
+    replace_values_re = pcre2_compile(replace_values_pattern, PCRE2_ZERO_TERMINATED, 0, &errcore,
+                                      &erroffset, NULL);
+    if (replace_values_re == NULL)
+    {
+        rval = false;
+    }
+
     return rval;
 }
 
@@ -2285,4 +2337,6 @@ void utils_end()
 {
     pcre2_code_free(replace_quoted_re);
     replace_quoted_re = NULL;
+    pcre2_code_free(replace_values_re);
+    replace_values_re = NULL;
 }
