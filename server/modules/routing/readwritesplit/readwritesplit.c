@@ -833,6 +833,7 @@ static void* newSession(
          */
         client_rses->rses_autocommit_enabled = true;
         client_rses->rses_transaction_active = false;
+        client_rses->have_tmp_tables = false;
         
         router_nservers = router_get_servercount(router);
         
@@ -1753,6 +1754,11 @@ static void check_create_tmp_table(
 	GWBUF*  querybuf,
 	skygw_query_type_t type)
 {
+    if (!QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
+    {
+        return;
+    }
+
   int klen = 0;
   char *hkey,*dbname;
   MYSQL_session* data;
@@ -1774,6 +1780,7 @@ static void check_create_tmp_table(
       return;
   }
 
+  router_cli_ses->have_tmp_tables = true;
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
@@ -1798,8 +1805,6 @@ static void check_create_tmp_table(
   dbname = (char*)data->db;
 
 
-  if (QUERY_IS_TYPE(type, QUERY_TYPE_CREATE_TMP_TABLE))
-    {
       bool  is_temp = true;
       char* tblname = NULL;
 		
@@ -1875,7 +1880,6 @@ static void check_create_tmp_table(
 	  
       free(hkey);
       free(tblname);
-    }
 }
 
 /**
@@ -2174,9 +2178,16 @@ static bool route_single_stmt(
     /**
      * Check if the query has anything to do with temporary tables.
      */
-	qtype = is_read_tmp_table(rses, querybuf, qtype);
+    if(rses->have_tmp_tables && (packet_type == MYSQL_COM_QUERY ||
+                                 packet_type == MYSQL_COM_DROP_DB))
+    {
+        check_drop_tmp_table(rses, querybuf,qtype);
+        if(packet_type == MYSQL_COM_QUERY)
+        {
+            qtype = is_read_tmp_table(rses, querybuf, qtype);
+        }
+    }
 	check_create_tmp_table(rses, querybuf, qtype);
-	check_drop_tmp_table(rses, querybuf,qtype);
 
     /**
      * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries

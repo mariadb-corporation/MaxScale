@@ -294,6 +294,7 @@ struct router_client_session {
         bool             rses_transaction_active;
         bool             rses_load_active; /*< If LOAD DATA LOCAL INFILE is
                                             * being currently executed */
+        bool             have_tmp_tables;
         uint64_t         rses_load_data_sent; /*< How much data has been sent */
         DCB* client_dcb;
         int             pos_generator;
