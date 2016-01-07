@@ -57,8 +57,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    while (!feof(infile))
-    {
+	while (!feof(infile) && fgets(readbuff, 4092, infile))
+	{
         fgets(readbuff,4092,infile);
 		char* nl = strchr(readbuff, '\n');
 		if(nl)

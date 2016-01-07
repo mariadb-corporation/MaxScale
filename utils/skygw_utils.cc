@@ -2033,7 +2033,8 @@ void skygw_file_close(
 
 
 static pcre2_code* replace_values_re = NULL;
-static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b)([0-9.]+|NULL)([-=,+*/)[:space:];]|$)";
+static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b|[@])"
+    "(?:[0-9.]+|(?<=[@])[a-z_]+|NULL)([-=,+*/)[:space:];]|$)";
 
 /**
  * Replace every literal number and NULL value with a question mark.
@@ -2042,7 +2043,7 @@ static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:sp
  */
 char* replace_values(const char* str)
 {
-    static const PCRE2_SPTR replace = (PCRE2_SPTR) "$1?$3";
+    static const PCRE2_SPTR replace = (PCRE2_SPTR) "$1?$2";
     pcre2_match_data* mdata;
     size_t orig_len = strlen(str);
     size_t len = orig_len;
