@@ -1,10 +1,10 @@
-Named Server Filter
+# Named Server Filter
 
-# Overview
+## Overview
 
 The **namedserverfilter** is a filter module for MaxScale which is able to route queries to servers based on regular expression matches.
 
-# Configuration
+## Configuration
 
 The configuration block for the Named Server filter requires the minimal filter options in it’s section within the maxscale.cnf file, stored in /etc/maxscale.cnf.
 

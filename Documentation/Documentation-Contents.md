@@ -53,13 +53,24 @@ These tutorials are for specific use cases and module combinations.
 
 ## Routers
 
+The routing module is the core of a MaxScale service. The router documentation
+contains all module specific configuration options and detailed explanations
+of their use.
+
  - [Read Write Split](Routers/ReadWriteSplit.md)
  - [Read Connection Router](Routers/ReadConnRoute.md)
  - [Schemarouter](Routers/SchemaRouter.md)
+ - [Binlogrouter](Routers/Binlogrouter.md)
+
+There are also two diagnostic routing modules. The CLI is for MaxAdmin and
+the Debug CLI client for Telnet.
+
+ - [CLI](Routers/CLI.md)
+ - [Debug CLI](Routers/Debug-CLI.md)
 
 ## Filters
 
-Here are detailed documents about the filters MaxScale offers. They contain configuration guides and example use cases. Before reading these,you should have read the filter tutorial so that you know how they work and how to configure them.
+Here are detailed documents about the filters MaxScale offers. They contain configuration guides and example use cases. Before reading these, you should have read the filter tutorial so that you know how they work and how to configure them.
 
  - [Query Log All](Filters/Query-Log-All-Filter.md)
  - [Regex Filter](Filters/Regex-Filter.md)

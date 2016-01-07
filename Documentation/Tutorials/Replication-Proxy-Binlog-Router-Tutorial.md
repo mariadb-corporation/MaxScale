@@ -6,7 +6,7 @@ In a traditional MySQL replication setup a single master server is created and a
 Introducing a proxy layer between the master server and the slave servers can improve the situation, by reducing the load on the master to simply serving the proxy layer rather than all of the slaves. The slaves only need to be aware of the proxy layer and not of the real master server. Removing need for the slaves to have knowledge of the master, greatly simplifies the process of replacing a failed master within a replication environment.
 
 ## MariaDB/MySQL as a Binlog Server
-The most obvious solution to the requirement for a proxy layer within a replication environment is to use a MariaDB or MySQL database instance. The database server is designed to allow this, since a slave server is able to be configured such that it will produce binary logs for updates it has itself received via replication from the master server. This is done with the *log_slave_updates* configuration option of the server. In this case the server is known as an intermediate master, it is simultanously a slave to the real master and a master to the other slaves in the configuration.
+The most obvious solution to the requirement for a proxy layer within a replication environment is to use a MariaDB or MySQL database instance. The database server is designed to allow this, since a slave server is able to be configured such that it will produce binary logs for updates it has itself received via replication from the master server. This is done with the *log_slave_updates* configuration option of the server. In this case the server is known as an intermediate master, it is simultaneously a slave to the real master and a master to the other slaves in the configuration.
 
 Using an intermediate master does not, however, solve all the problems and introduces some new ones, due to the way replication is implemented. A slave server reads the binary log data and creates a relay log from that binary log. This log provides a source of SQL statements, which are executed within the slave in order to make the same changes to the databases on the slaves as were made on the master. If the *log_slave_updates* option has been enabled, new binary log entries are created for the statements executed from the relay log.
 
@@ -60,7 +60,7 @@ The final configuration requirement is the router specific options. The binlog r
 ### binlogdir
 
 This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory */var/cache/maxscale/<Service Name>*.
-In the binlog dir there is also the 'cache' directory that contains data retrieved from the master during registration phase and the *master.ini* file wich contains the configuration of current configured master.
+In the binlog dir there is also the 'cache' directory that contains data retrieved from the master during registration phase and the *master.ini* file which contains the configuration of current configured master.
 
 ### uuid
 
@@ -110,7 +110,7 @@ This defines the value of the heartbeat interval in seconds for the connection t
 
 ### send_slave_heartbeat
 
-This defines whether (on | off) MaxScale sends to the slave the heartbeat packet when there are no real binlog events to send. The default value if 'off', no heartbeat event is sent to slave server. If value is 'on' the interval value (requested by the slave during registration) is reported in the diagnostic output and the packect is send after the time interval without any event to send.
+This defines whether (on | off) MaxScale sends to the slave the heartbeat packet when there are no real binlog events to send. The default value if 'off', no heartbeat event is sent to slave server. If value is 'on' the interval value (requested by the slave during registration) is reported in the diagnostic output and the packet is send after the time interval without any event to send.
 
 ### burstsize
 
@@ -262,7 +262,7 @@ Enabling replication from a master server requires:
 
 It's possible to specify the desired *MASTER_LOG_FILE* but position must be 4
 
-The initfile option is nolonger available, filestem option also not available as the stem is automatically set by parsing *MASTER_LOG_FILE*.
+The initfile option is no longer available, filestem option also not available as the stem is automatically set by parsing *MASTER_LOG_FILE*.
 
 ### Stop/start the replication
 
@@ -287,11 +287,11 @@ Next step is the master configuration
 
 	MariaDB> CHANGE MASTER TO ...
 
-A succesful configuration change results in *master.ini* being updated.
+A successful configuration change results in *master.ini* being updated.
 
 Any error is reported in the MySQL and in log files
 
-The upported options are:
+The supported options are:
 
 	MASTER_HOST
 	MASTER_PORT
@@ -311,7 +311,7 @@ Examples:
 	MariaDB> CHANGE MASTER TO MASTER_LOG_FILE=‘mysql-bin.000003',MASTER_LOG_POS=8888
 
 This could be applied to current master_host/port or a new one.
-If there is a master server maintenance and a slave is beeing promoted as master it should be checked that binlog file and position are valid: in case of any error replication stops and errors are reported via *SHOW SLAVE STATUS* and in error logs.
+If there is a master server maintenance and a slave is being promoted as master it should be checked that binlog file and position are valid: in case of any error replication stops and errors are reported via *SHOW SLAVE STATUS* and in error logs.
 
 2) Current binlog file is ‘mysql-bin.000099', position 1234
 
@@ -319,7 +319,7 @@ If there is a master server maintenance and a slave is beeing promoted as master
 
 This could be applied with current master_host/port or a new one
 If transaction safety option is on and the current binlog file contains an incomplete transaction it will be truncated to the position where transaction started.
-In such situation a proper message is reported in MySQL connection and with next START SLAVE binlog file truncation will occurr and MaxScale will request events from the master using the next binlog file at position 4.
+In such situation a proper message is reported in MySQL connection and with next START SLAVE binlog file truncation will occur and MaxScale will request events from the master using the next binlog file at position 4.
 
 The above scenario might refer to a master crash/failure:
  the new server that has just been promoted as master doesn't have last transaction events but it should have the new binlog file (the next in sequence).
@@ -332,7 +332,7 @@ Check for any error in log files and with
 
 	MariaDB> SHOW SLAVE STATUS;
 
-In some situations replication state could be *STOPPED* and proper messages are displyed in error logs and in *SHOW SLAVE STATUS*,
+In some situations replication state could be *STOPPED* and proper messages are displayed in error logs and in *SHOW SLAVE STATUS*,
 
 In order to resolve any mistake done with *CHANGE MASTER TO MASTER_LOG_FILE / MASTER_LOG_POS*, another administrative command would be helpful.
 

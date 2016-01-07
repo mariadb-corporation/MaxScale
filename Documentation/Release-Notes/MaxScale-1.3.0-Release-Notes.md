@@ -31,7 +31,7 @@ implicit databases or use connections with different client settings, you
 should take great care when using persistent connections.
 
 Additional information is available in the following document:
-* [Administration Tutorial](../Tutorials/Administration-Tutorial.md)
+* [Administration Tutorial](../Tutorials/Administration-Tutorial.md#persistent-connections)
 
 ### Binlog Server
 
@@ -59,7 +59,8 @@ definition.
 
 Additional information is available in the following documents:
 * [Binlogrouter Tutorial](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
-* [Upgrading binlogrouter to 1.3.0](../Upgrading/Upgrading-Binlogrouter-to-1.3.0.md)
+* [Upgrading Binlogrouter to 1.3](../Upgrading/Upgrading-BinlogRouter-To-Maxscale-1.3.md)
+* [Binlogrouter Documentation](../Routers/Binlogrouter.md)
 
 ### Logging Changes
 
