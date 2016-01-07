@@ -45,7 +45,7 @@
 #include <memlog.h>
 #include <zlib.h>
 
-#define BINLOG_FNAMELEN		16
+#define BINLOG_FNAMELEN		255
 #define BLR_PROTOCOL		"MySQLBackend"
 #define BINLOG_MAGIC		{ 0xfe, 0x62, 0x69, 0x6e }
 #define BINLOG_NAMEFMT		"%s.%06d"
