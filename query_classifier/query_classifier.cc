@@ -70,7 +70,10 @@ static skygw_query_type_t resolve_query_type(THD* thd);
 static bool skygw_stmt_causes_implicit_commit(LEX* lex, int* autocommit_stmt);
 
 static int is_autocommit_stmt(LEX* lex);
+static parsing_info_t* parsing_info_init(void (*donefun)(void *));
 static void parsing_info_set_plain_str(void* ptr, char* str);
+/** Free THD context and close MYSQL */
+static void parsing_info_done(void* ptr);
 static void* skygw_get_affected_tables(void* lexptr);
 
 /**
@@ -1462,7 +1465,7 @@ retblock:
  *
  * @return pointer to parsing information
  */
-parsing_info_t* parsing_info_init(void (*donefun)(void *))
+static parsing_info_t* parsing_info_init(void (*donefun)(void *))
 {
     parsing_info_t* pi = NULL;
     MYSQL* mysql;
@@ -1521,7 +1524,7 @@ retblock:
  * @return void
  *
  */
-void parsing_info_done(void* ptr)
+static void parsing_info_done(void* ptr)
 {
     parsing_info_t* pi;
     THD* thd;
