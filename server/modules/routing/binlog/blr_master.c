@@ -731,7 +731,10 @@ blr_make_binlog_dump(ROUTER_INSTANCE *router)
 {
 GWBUF		*buf;
 unsigned char	*data;
-int		len = 0x1b;
+int		binlog_file_len = strlen(router->binlog_name);
+/* COM_BINLOG_DUMP needs 11 bytes + binlogname (terminating NULL is not required) */
+int		len = 11 + binlog_file_len;
+
 
 	if ((buf = gwbuf_alloc(len + 4)) == NULL)
 		return NULL;
@@ -745,8 +748,8 @@ int		len = 0x1b;
 	encode_value(&data[9], 0, 16);			// Flags
 	encode_value(&data[11],
 		router->serverid, 32);			// Server-id of MaxScale
-	strncpy((char *)&data[15], router->binlog_name,
-				BINLOG_FNAMELEN);	// binlog filename
+	memcpy((char *)&data[15], router->binlog_name,
+		binlog_file_len);			// binlog filename
 	return buf;
 }
 
