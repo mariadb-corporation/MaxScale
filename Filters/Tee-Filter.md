@@ -1,10 +1,10 @@
-TEE Filter
+# Tee Filter
 
-# Overview
+## Overview
 
 The tee filter is a filter module for MaxScale is a "plumbing" fitting in the MaxScale filter toolkit. It can be used in a filter pipeline of a service to make a copy of requests from the client and dispatch a copy of the request to another service within MaxScale. 
 
-# Configuration
+## Configuration
 
 The configuration block for the TEE filter requires the minimal filter parameters in it’s section within the maxscale.cnf file, stored in /etc/maxscale.cnf, that defines the filter to load and the service to send the duplicates to. Currently the tee filter does not support multi-statements.
 

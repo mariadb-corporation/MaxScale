@@ -17,7 +17,7 @@ Binlogrouter is configured with a comma-separated list of key-value pairs. The f
 ### `binlogdir`
 
 This parameter allows the location that MaxScale uses to store binlog files to be set. If this parameter is not set to a directory name then MaxScale will store the binlog files in the directory /var/cache/maxscale/<Service Name>.
-In the binlog dir there is also the 'cache' directory that contains data retrieved from the master dureing registration phase and the master.ini file wich contains the configuration of current configured master.
+In the binlog dir there is also the 'cache' directory that contains data retrieved from the master during registration phase and the master.ini file which contains the configuration of current configured master.
 
 ### `uuid`
 
@@ -87,7 +87,7 @@ The default value is off, set transaction_safety=on to enable the incomplete tra
 
 ### `send_slave_heartbeat`
 
-This defines whether (on | off) MaxSclale sends to the slave the heartbeat packet when there are no real binlog events to send. The default value if 'off', no heartbeat event is sent to slave server. If value is 'on' the interval value (requested by the slave during registration) is reported in the diagnostic output and the packect is send after the time interval without any event to send.
+This defines whether (on | off) MaxScale sends to the slave the heartbeat packet when there are no real binlog events to send. The default value if 'off', no heartbeat event is sent to slave server. If value is 'on' the interval value (requested by the slave during registration) is reported in the diagnostic output and the packet is send after the time interval without any event to send.
 
 A complete example of a service entry for a binlog router service would be as follows.
 ```
