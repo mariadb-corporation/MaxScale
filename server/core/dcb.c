@@ -489,7 +489,7 @@ dcb_process_zombies(int threadid)
         else
         {
 
-            if (bitmask_clear_without_spinlock(&zombiedcb->memdata.bitmask))
+            if (bitmask_clear_without_spinlock(&zombiedcb->memdata.bitmask, threadid))
             {
                 /**
                  * Remove the DCB from the zombie queue
