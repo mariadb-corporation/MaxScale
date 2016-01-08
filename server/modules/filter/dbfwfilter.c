@@ -1610,13 +1610,8 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
     if (is_sql)
     {
-        if (!query_is_parsed(queue))
-        {
-            parse_query(queue);
-        }
         optype = query_classifier_get_operation(queue);
         is_real = skygw_is_real_query(queue);
-
     }
 
     if (rulelist->rule->on_queries == QUERY_OP_UNDEFINED || rulelist->rule->on_queries & optype)
@@ -1867,11 +1862,6 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *qu
 
     if (is_sql)
     {
-        if (!query_is_parsed(queue))
-        {
-            parse_query(queue);
-        }
-
         qlen = gw_mysql_get_byte3(memptr);
         qlen = qlen < 0xffffff ? qlen : 0xffffff;
         fullquery = malloc((qlen) * sizeof(char));
@@ -1932,11 +1922,6 @@ bool check_match_all(FW_INSTANCE* my_instance,
 
     if (is_sql)
     {
-        if (!query_is_parsed(queue))
-        {
-            parse_query(queue);
-        }
-
         qlen = gw_mysql_get_byte3(memptr);
         qlen = qlen < 0xffffff ? qlen : 0xffffff;
         fullquery = malloc((qlen) * sizeof(char));
