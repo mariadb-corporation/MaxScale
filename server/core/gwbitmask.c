@@ -49,12 +49,21 @@
  * 28/06/13     Mark Riddoch        Initial implementation
  * 20/08/15     Martin Brampton     Added caveats about limitations (above)
  * 17/10/15     Martin Brampton     Added display of bitmask
+ * 04/01/16     Martin Brampton     Changed bitmask_clear to not lock and return
+ *                                  whether bitmask is clear; added bitmask_clear_with_lock.
  *
  * @endverbatim
  */
 
 static int bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit);
 static int bitmask_count_bits_set(GWBITMASK *bitmask);
+
+static const unsigned char bitmapclear[8] = {
+    255-1, 255-2, 255-4, 255-8, 255-16, 255-32, 255-64, 255-128
+};
+static const unsigned char bitmapset[8] = {
+    1, 2, 4, 8, 16, 32, 64, 128
+};
 
 /**
  * Initialise a bitmask
@@ -66,13 +75,10 @@ void
 bitmask_init(GWBITMASK *bitmask)
 {
     bitmask->length = BIT_LENGTH_INITIAL;
-    if ((bitmask->bits = malloc(bitmask->length / 8)) == NULL)
+    bitmask->size = bitmask->length / 8;
+    if ((bitmask->bits = calloc(bitmask->size, 1)) == NULL)
     {
-        bitmask->length = 0;
-    }
-    else
-    {
-        memset(bitmask->bits, 0, bitmask->length / 8);
+        bitmask->length = bitmask->size = 0;
     }
     spinlock_init(&bitmask->lock);
 }
@@ -88,7 +94,7 @@ bitmask_free(GWBITMASK *bitmask)
     if (bitmask->length)
     {
         free(bitmask->bits);
-        bitmask->length = 0;
+        bitmask->length = bitmask->size = 0;
     }
 }
 
@@ -105,60 +111,91 @@ bitmask_free(GWBITMASK *bitmask)
 void
 bitmask_set(GWBITMASK *bitmask, int bit)
 {
-    unsigned char *ptr;
-    unsigned char mask;
+    unsigned char *ptr = bitmask->bits;
 
     spinlock_acquire(&bitmask->lock);
-    while (bit >= bitmask->length)
+    if (bit >= 8)
     {
-        bitmask->bits = realloc(bitmask->bits,
-                                (bitmask->length + BIT_LENGTH_INC) / 8);
-        memset(bitmask->bits + (bitmask->length / 8), 0,
+        while (bit >= bitmask->length)
+        {
+            bitmask->bits = realloc(bitmask->bits,
+                                (bitmask->size + (BIT_LENGTH_INC / 8)));
+            memset(bitmask->bits + (bitmask->size), 0,
                BIT_LENGTH_INC / 8);
-        bitmask->length += BIT_LENGTH_INC;
+            bitmask->length += BIT_LENGTH_INC;
+            bitmask->size += (BIT_LENGTH_INC / 8);
+        }
+
+        ptr += (bit / 8);
+        bit = bit % 8;
     }
-    ptr = bitmask->bits + (bit / 8);
-    mask = 1 << (bit % 8);
-    *ptr |= mask;
+    *ptr |= bitmapset[bit];
     spinlock_release(&bitmask->lock);
 }
 
 /**
  * Clear the bit at the specified bit position in the bitmask.
- * The bitmask will automatically be extended if the bit is
- * beyond the current bitmask length. This could be optimised
- * by always assuming that a bit beyond the current length is
- * unset (i.e. 0) and not extending the actual bitmask.
+ * Bits beyond the bitmask length are always assumed to be clear, so no
+ * action is needed if the bit parameter is beyond the length.
+ * Note that this function does not lock the bitmask, but assumes that
+ * it is under the exclusive control of the caller.  If you want to use the
+ * bitmask spinlock to protect access while clearing the bit, then call
+ * the alternative bitmask_clear_with_lock.
  *
  * @param bitmask       Pointer the bitmask
  * @param bit           Bit to clear
+ * @return int          1 if the bitmask is all clear after the operation, else 0.
  */
-void
+int
 bitmask_clear(GWBITMASK *bitmask, int bit)
 {
-    unsigned char *ptr;
-    unsigned char mask;
+    unsigned char *ptr = bitmask->bits;
+    int i;
 
-    if (bit >= bitmask->length)
+    if (bit < bitmask->length)
     {
-        bitmask->bits = realloc(bitmask->bits,
-                                (bitmask->length + BIT_LENGTH_INC) / 8);
-        memset(bitmask->bits + (bitmask->length / 8), 0,
-               BIT_LENGTH_INC / 8);
-        bitmask->length += (BIT_LENGTH_INC / 8);
+        if (bit >= 8)
+        {
+            ptr += (bit / 8);
+            bit = bit % 8;
+        }
+        *ptr &= bitmapclear[bit];
     }
-    ptr = bitmask->bits + (bit / 8);
-    mask = 1 << (bit % 8);
-    *ptr &= ~mask;
+    ptr = bitmask->bits;
+    for (i = 0; i < bitmask->size; i++)
+    {
+        if (*(ptr+i) != 0)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/**
+ * Clear the bit at the specified bit position in the bitmask using a spinlock.
+ * See bitmask_clear for more details
+ *
+ * @param bitmask       Pointer the bitmask
+ * @param bit           Bit to clear
+ * @return int          1 if the bitmask is all clear after the operation, else 0
+ */
+int
+bitmask_clear_with_lock(GWBITMASK *bitmask, int bit)
+{
+    int result;
+
+    spinlock_acquire(&bitmask->lock);
+    result = bitmask_clear(bitmask, bit);
+    spinlock_release(&bitmask->lock);
+    return result;
 }
 
 /**
  * Return a non-zero value if the bit at the specified bit
- * position in the bitmask is set.
- * The bitmask will automatically be extended if the bit is
- * beyond the current bitmask length. The work is done in the function
- * bitmask_isset_without_spinlock, which can be called when a spinlock
- * has already been acquired.
+ * position in the bitmask is set. If the specified bit is outside the
+ * bitmask, it is assumed to be unset; the bitmask is not extended.
+ * This function wraps bitmask_isset_without_spinlock with a spinlock.
  *
  * @param bitmask       Pointer the bitmask
  * @param bit           Bit to test
@@ -177,11 +214,9 @@ bitmask_isset(GWBITMASK *bitmask, int bit)
 /**
  * Return a non-zero value if the bit at the specified bit
  * position in the bitmask is set.  Should be called while holding a
- * lock on the bitmask.
+ * lock on the bitmask or having control of it in some other way.
  *
- * The bitmask will automatically be extended if the bit is
- * beyond the current bitmask length. This could be optimised
- * by assuming that a bit beyond the length is unset.
+ * Bits beyond the current length are deemed unset.
  *
  * @param bitmask       Pointer the bitmask
  * @param bit           Bit to test
@@ -189,20 +224,18 @@ bitmask_isset(GWBITMASK *bitmask, int bit)
 static int
 bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit)
 {
-    unsigned char *ptr;
-    unsigned char mask;
+    unsigned char *ptr = bitmask->bits;
 
     if (bit >= bitmask->length)
     {
-        bitmask->bits = realloc(bitmask->bits,
-                                (bitmask->length + BIT_LENGTH_INC) / 8);
-        memset(bitmask->bits + (bitmask->length / 8), 0,
-               BIT_LENGTH_INC / 8);
-        bitmask->length += (BIT_LENGTH_INC / 8);
+        return 0;
     }
-    ptr = bitmask->bits + (bit / 8);
-    mask = 1 << (bit % 8);
-    return *ptr & mask;
+    if (bit >= 8)
+    {
+        ptr += (bit / 8);
+        bit = bit % 8;
+    }
+    return *ptr & bitmapset[bit];
 }
 
 /**
@@ -217,23 +250,22 @@ bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit)
 int
 bitmask_isallclear(GWBITMASK *bitmask)
 {
-    unsigned char *ptr, *eptr;
+    unsigned char *ptr = bitmask->bits;
+    int i;
+    int result = 1;
 
     spinlock_acquire(&bitmask->lock);
-    ptr = bitmask->bits;
-    eptr = ptr + (bitmask->length / 8);
-    while (ptr < eptr)
+    for (i = 0; i < bitmask->size; i++)
     {
-        if (*ptr != 0)
+        if (*(ptr+i) != 0)
         {
-            spinlock_release(&bitmask->lock);
-            return 0;
+            result = 0;
+            break;
         }
-        ptr++;
     }
     spinlock_release(&bitmask->lock);
 
-    return 1;
+    return result;
 }
 
 /**
@@ -255,14 +287,15 @@ bitmask_copy(GWBITMASK *dest, GWBITMASK *src)
     {
         free(dest->bits);
     }
-    if ((dest->bits = malloc(src->length / 8)) == NULL)
+    if ((dest->bits = malloc(src->size)) == NULL)
     {
         dest->length = 0;
     }
     else
     {
         dest->length = src->length;
-        memcpy(dest->bits, src->bits, src->length / 8);
+        dest->size = src->size;
+        memcpy(dest->bits, src->bits, src->size);
     }
     spinlock_release(&dest->lock);
     spinlock_release(&src->lock);
@@ -334,7 +367,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
  * the size of string needed to show the set bits in readable form.
  *
  * @param bitmask       Bitmap whose bits are to be counted
- * @return int      Number of set bits
+ * @return int          Number of set bits
  */
 static int
 bitmask_count_bits_set(GWBITMASK *bitmask)

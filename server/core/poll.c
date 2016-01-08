@@ -15,7 +15,7 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
- 
+
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -725,7 +725,7 @@ poll_waitevents(void *arg)
             {
                 thread_data[thread_id].state = THREAD_STOPPED;
             }
-            bitmask_clear(&poll_mask, thread_id);
+            bitmask_clear_with_lock(&poll_mask, thread_id);
             /** Release mysql thread context */
             mysql_thread_end();
             return;
@@ -1703,7 +1703,7 @@ dShowEventQ(DCB *pdcb)
     do
     {
         dcb_printf(pdcb, "%-16p | %-10s | %-18s | %-18s\n", dcb,
-                   dcb->evq.processing ? "Processing" : "Pending", 
+                   dcb->evq.processing ? "Processing" : "Pending",
                    (tmp1 = event_to_string(dcb->evq.processing_events)),
                    (tmp2 = event_to_string(dcb->evq.pending_events)));
         free(tmp1);
