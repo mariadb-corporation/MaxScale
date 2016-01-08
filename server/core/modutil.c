@@ -565,7 +565,7 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
     /** Give up if the parameter is not a pointer to a pointer or
      * the total buffer length is less than the 3 bytes needed to
      * hold a packet length. */
-    if(p_readbuf == NULL || (*p_readbuf) == NULL ||
+    if (p_readbuf == NULL || (*p_readbuf) == NULL ||
        (blen = gwbuf_length(*p_readbuf)) < 3)
     {
         return NULL;
@@ -576,7 +576,7 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
 
     /** We need at least 3 bytes of the packet header to know how long the next
      * packet is going to be, if we are going to cycle round again. */
-    while(total + (len = gw_mysql_get_byte3(ptr) + 4) < (blen - 3))
+    while (total + (len = gw_mysql_get_byte3(ptr) + 4) < (blen - 3))
     {
         ptr += len;
         total += len;
@@ -589,7 +589,7 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
         return NULL;
     }
     /** Full packets only, return original and null the passed buffer */
-    if(total == blen)
+    if (total == blen)
     {
         GWBUF *packet = *p_readbuf;
         *p_readbuf = NULL;
@@ -597,12 +597,12 @@ GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
     }
 
     /** The next packet is a partial, split into complete and partial packets */
-    if((complete_part = gwbuf_clone_portion(*p_readbuf,0,total)) == NULL)
+    if ((complete_part = gwbuf_clone_portion(*p_readbuf, 0, total)) == NULL)
     {
         MXS_ERROR("Failed to partially clone buffer while extracting complete packets.");
         return NULL;
     }
-    *p_readbuf = gwbuf_consume(*p_readbuf,total);
+    *p_readbuf = gwbuf_consume(*p_readbuf, total);
     return complete_part;
 }
 
