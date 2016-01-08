@@ -1697,6 +1697,7 @@ uint8_t		*ptr;
 int		len, rval, binlognamelen;
 REP_HEADER	hdr;
 uint32_t	chksum;
+bool		force_disconnect = false;
 
 	ptr = GWBUF_DATA(queue);
 	len = extract_field(ptr, 24);
@@ -1722,6 +1723,45 @@ uint32_t	chksum;
 	ptr += 4;
 	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
 	slave->binlogfile[binlognamelen] = 0;
+
+	if (router->trx_safe)
+	{
+		/**
+		 * Check for a pending transaction and possible unsafe position.
+		 * Force slave disconnection if requested position is unsafe.
+		 */
+
+		spinlock_acquire(&router->binlog_lock);
+		if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
+			(slave->binlog_pos > router->binlog_position) && !router->rotating)
+		{
+			force_disconnect = true;
+		}
+		spinlock_release(&router->binlog_lock);
+
+		if (force_disconnect)
+		{
+			MXS_ERROR("%s: Slave %s:%i, server-id %d, binlog '%s', blr_slave_binlog_dump failure: "
+				"Requested binlog position %lu. Position is unsafe so disconnecting. "
+				"Latest safe position %lu, end of binlog file %lu",
+				router->service->name,
+				slave->dcb->remote,
+				ntohs((slave->dcb->ipv4).sin_port),
+				slave->serverid,
+				slave->binlogfile,
+				(unsigned long)slave->binlog_pos,
+				router->binlog_position,
+				router->current_pos);
+
+			/*
+			 * Close the slave session and socket
+			 * The slave will try to reconnect
+			 */
+			dcb_close(slave->dcb);
+
+			return 1;
+		}
+	}
 
        	MXS_DEBUG("%s: COM_BINLOG_DUMP: binlog name '%s', length %d, "
                   "from position %lu.", router->service->name,
