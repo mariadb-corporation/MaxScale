@@ -140,14 +140,14 @@ bitmask_set(GWBITMASK *bitmask, int bit)
  * Note that this function does not lock the bitmask, but assumes that
  * it is under the exclusive control of the caller.  If you want to use the
  * bitmask spinlock to protect access while clearing the bit, then call
- * the alternative bitmask_clear_with_lock.
+ * the alternative bitmask_clear.
  *
  * @param bitmask       Pointer the bitmask
  * @param bit           Bit to clear
  * @return int          1 if the bitmask is all clear after the operation, else 0.
  */
 int
-bitmask_clear(GWBITMASK *bitmask, int bit)
+bitmask_clear_without_spinlock(GWBITMASK *bitmask, int bit)
 {
     unsigned char *ptr = bitmask->bits;
     int i;
@@ -174,19 +174,19 @@ bitmask_clear(GWBITMASK *bitmask, int bit)
 
 /**
  * Clear the bit at the specified bit position in the bitmask using a spinlock.
- * See bitmask_clear for more details
+ * See bitmask_clear_without_spinlock for more details
  *
  * @param bitmask       Pointer the bitmask
  * @param bit           Bit to clear
  * @return int          1 if the bitmask is all clear after the operation, else 0
  */
 int
-bitmask_clear_with_lock(GWBITMASK *bitmask, int bit)
+bitmask_clear(GWBITMASK *bitmask, int bit)
 {
     int result;
 
     spinlock_acquire(&bitmask->lock);
-    result = bitmask_clear(bitmask, bit);
+    result = bitmask_clear_without_spinlock(bitmask, bit);
     spinlock_release(&bitmask->lock);
     return result;
 }

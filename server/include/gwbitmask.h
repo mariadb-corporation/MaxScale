@@ -52,7 +52,7 @@ extern void bitmask_init(GWBITMASK *);
 extern void bitmask_free(GWBITMASK *);
 extern void bitmask_set(GWBITMASK *, int);
 extern int  bitmask_clear(GWBITMASK *, int);
-extern int  bitmask_clear_with_lock(GWBITMASK *, int);
+extern int  bitmask_clear_without_spinlock(GWBITMASK *, int);
 extern int  bitmask_isset(GWBITMASK *, int);
 extern int  bitmask_isallclear(GWBITMASK *);
 extern void bitmask_copy(GWBITMASK *, GWBITMASK *);

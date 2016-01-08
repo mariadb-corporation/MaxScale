@@ -489,9 +489,7 @@ dcb_process_zombies(int threadid)
         else
         {
 
-            bitmask_clear(&zombiedcb->memdata.bitmask, threadid);
-
-            if (bitmask_isallclear(&zombiedcb->memdata.bitmask))
+            if (bitmask_clear_without_spinlock(&zombiedcb->memdata.bitmask))
             {
                 /**
                  * Remove the DCB from the zombie queue
@@ -1736,7 +1734,7 @@ dcb_drain_writeq_SSL(DCB *dcb)
     return n;
 }
 
-/** 
+/**
  * Removes dcb from poll set, and adds it to zombies list. As a consequence,
  * dcb first moves to DCB_STATE_NOPOLLING, and then to DCB_STATE_ZOMBIE state.
  * At the end of the function state may not be DCB_STATE_ZOMBIE because once

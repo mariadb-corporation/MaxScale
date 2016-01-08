@@ -725,7 +725,7 @@ poll_waitevents(void *arg)
             {
                 thread_data[thread_id].state = THREAD_STOPPED;
             }
-            bitmask_clear_with_lock(&poll_mask, thread_id);
+            bitmask_clear(&poll_mask, thread_id);
             /** Release mysql thread context */
             mysql_thread_end();
             return;
