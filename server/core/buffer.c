@@ -20,7 +20,7 @@
  * @file buffer.h  - The MaxScale buffer management functions
  *
  * The buffer management is based on the principle of a linked list
- * of variable size buffer, the intention beign to allow longer
+ * of variable size buffer, the intention being to allow longer
  * content to be buffered in a list and minimise any need to copy
  * data between buffers.
  *
@@ -37,6 +37,8 @@
  *                                      the gwbuf_append process
  * 09/11/2015   Martin Brampton         Add buffer tracing (conditional compilation),
  *                                      accessed by "show buffers" maxadmin command
+ * 20/12/2015   Martin Brampton         Change gwbuf_free to free the whole list; add the
+ *                                      gwbuf_count and gwbuf_alloc_and_load functions.
  *
  * @endverbatim
  */
@@ -56,6 +58,7 @@
 static HASHTABLE *buffer_hashtable = NULL;
 #endif
 
+static void gwbuf_free_one(GWBUF *buf);
 static buffer_object_t* gwbuf_remove_buffer_object(GWBUF*           buf,
                                                    buffer_object_t* bufobj);
 
@@ -71,7 +74,7 @@ static void gwbuf_remove_from_hashtable(GWBUF *buf);
  *
  * For now we allocate memory directly from malloc for buffer the management
  * structure and the actual data buffer itself. We may swap at a future date
- * to a more effecient mechanism.
+ * to a more efficient mechanism.
  *
  * @param       size The size in bytes of the data area required
  * @return      Pointer to the buffer structure or NULL if memory could not
@@ -132,6 +135,25 @@ retblock:
         gwbuf_add_to_hashtable(rval);
     }
 #endif
+    return rval;
+}
+
+/**
+ * Allocate a new gateway buffer structure of size bytes and load with data.
+ *
+ * @param       size    The size in bytes of the data area required
+ * @param       data    Pointer to the data (size bytes) to be loaded
+ * @return      Pointer to the buffer structure or NULL if memory could not
+ *              be allocated.
+ */
+GWBUF *
+gwbuf_alloc_and_load(unsigned int size, void *data)
+{
+    GWBUF      *rval;
+    if ((rval = gwbuf_alloc(size)) != NULL)
+    {
+        memcpy(GWBUF_DATA(rval), data, size);
+    }
     return rval;
 }
 
@@ -232,17 +254,37 @@ dprintAllBuffers(void *pdcb)
 #endif
 
 /**
- * Free a gateway buffer
+ * Free a list of gateway buffers
  *
- * @param buf The buffer to free
+ * @param buf The head of the list of buffers to free
  */
 void
 gwbuf_free(GWBUF *buf)
 {
+    GWBUF *nextbuf;
     BUF_PROPERTY    *prop;
     buffer_object_t *bo;
 
-    CHK_GWBUF(buf);
+    while (buf)
+    {
+        CHK_GWBUF(buf);
+        nextbuf = buf->next;
+        gwbuf_free_one(buf);
+        buf = nextbuf;
+    }
+}
+
+/**
+ * Free a single gateway buffer
+ *
+ * @param buf The buffer to free
+ */
+static void
+gwbuf_free_one(GWBUF *buf)
+{
+    BUF_PROPERTY    *prop;
+    buffer_object_t *bo;
+
     if (atomic_add(&buf->sbuf->refcount, -1) == 1)
     {
         free(buf->sbuf->data);
@@ -493,7 +535,7 @@ gwbuf_consume(GWBUF *head, unsigned int length)
             head->next->tail = head->tail;
         }
 
-        gwbuf_free(head);
+        gwbuf_free_one(head);
     }
 
     ss_dassert(rval == NULL || (rval->end > rval->start));
@@ -521,6 +563,26 @@ gwbuf_length(GWBUF *head)
         head = head->next;
     }
     return rval;
+}
+
+/**
+ * Return the number of individual buffers in the linked list.
+ *
+ * Currently not used, provided mainly for use during debugging sessions.
+ *
+ * @param head  The current head of the linked list
+ * @return The number of bytes of data in the linked list
+ */
+int
+gwbuf_count(GWBUF *head)
+{
+    int result = 0;
+    while (head)
+    {
+        result++;
+        head = head->next;
+    }
+    return result;
 }
 
 /**
@@ -599,7 +661,7 @@ void gwbuf_set_type(
  * @param buf           GWBUF where object is added
  * @param id            Type identifier for object
  * @param data          Object data
- * @param donefun_dp    Clean-up function to be executed before buffer is freed.
+ * @param donefun_fp    Clean-up function to be executed before buffer is freed.
  */
 void gwbuf_add_buffer_object(GWBUF* buf,
                              bufobj_id_t id,
