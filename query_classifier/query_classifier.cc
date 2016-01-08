@@ -75,6 +75,30 @@ static void parsing_info_set_plain_str(void* ptr, char* str);
 /** Free THD context and close MYSQL */
 static void parsing_info_done(void* ptr);
 static void* skygw_get_affected_tables(void* lexptr);
+static bool ensure_query_is_parsed(GWBUF* query);
+
+/**
+ * Ensures that the query is parsed. If it is not already parsed, it
+ * will be parsed.
+ *
+ * @return true if the query is parsed, false otherwise.
+ */
+bool ensure_query_is_parsed(GWBUF* query)
+{
+    bool parsed = query_is_parsed(query);
+
+    if (!parsed)
+    {
+        parsed = parse_query(query);
+
+        if (!parsed)
+        {
+            MXS_ERROR("Unable to parse query, out of resources?");
+        }
+    }
+
+    return parsed;
+}
 
 /**
  * Calls parser for the query includede in the buffer. Creates and adds parsing
@@ -98,13 +122,7 @@ skygw_query_type_t query_classifier_get_type(GWBUF* querybuf)
         goto retblock;
     }
 
-    /** Create parsing info for the query and store it to buffer */
-    succp = query_is_parsed(querybuf);
-
-    if (!succp)
-    {
-        succp = parse_query(querybuf);
-    }
+    succp = ensure_query_is_parsed(querybuf);
 
     /** Read thd pointer and resolve the query type with it. */
     if (succp)
@@ -1027,8 +1045,17 @@ char** skygw_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
     int i = 0, currtblsz = 0;
     char **tables = NULL, **tmp = NULL;
 
-    if (querybuf == NULL || tblsize == NULL ||
-        (lex = get_lex(querybuf)) == NULL || lex->current_select == NULL)
+    if (querybuf == NULL || tblsize == NULL)
+    {
+        goto retblock;
+    }
+
+    if (!ensure_query_is_parsed(querybuf))
+    {
+        goto retblock;
+    }
+
+    if ((lex = get_lex(querybuf)) == NULL || lex->current_select == NULL)
     {
         goto retblock;
     }
@@ -1114,9 +1141,19 @@ retblock:
  */
 char* skygw_get_created_table_name(GWBUF* querybuf)
 {
-    LEX* lex;
+    if (querybuf == NULL)
+    {
+        return NULL;
+    }
 
-    if (querybuf == NULL || (lex = get_lex(querybuf)) == NULL)
+    if (!ensure_query_is_parsed(querybuf))
+    {
+        return NULL;
+    }
+
+    LEX* lex = get_lex(querybuf);
+
+    if (lex == NULL)
     {
         return NULL;
     }
@@ -1148,8 +1185,19 @@ bool skygw_is_real_query(GWBUF* querybuf)
     bool succp;
     LEX* lex;
 
-    if (querybuf == NULL ||
-        (lex = get_lex(querybuf)) == NULL)
+    if (querybuf == NULL)
+    {
+        succp = false;
+        goto retblock;
+    }
+
+    if (!ensure_query_is_parsed(querybuf))
+    {
+        succp = false;
+        goto retblock;
+    }
+
+    if ((lex = get_lex(querybuf)) == NULL)
     {
         succp = false;
         goto retblock;
@@ -1192,11 +1240,19 @@ retblock:
  */
 bool is_drop_table_query(GWBUF* querybuf)
 {
-    LEX* lex;
+    bool answer = false;
 
-    return (querybuf != NULL &&
-            (lex = get_lex(querybuf)) != NULL &&
-            lex->sql_command == SQLCOM_DROP_TABLE);
+    if (querybuf)
+    {
+        if (ensure_query_is_parsed(querybuf))
+        {
+            LEX* lex = get_lex(querybuf);
+
+            answer = lex && lex->sql_command == SQLCOM_DROP_TABLE;
+        }
+    }
+
+    return answer;
 }
 
 inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
@@ -1249,9 +1305,14 @@ char* skygw_get_affected_fields(GWBUF* buf)
     Item* item;
     Item::Type itype;
 
-    if (!query_is_parsed(buf))
+    if (!buf)
     {
-        parse_query(buf);
+        return NULL;
+    }
+
+    if (!ensure_query_is_parsed(buf))
+    {
+        return NULL;
     }
 
     if ((lex = get_lex(buf)) == NULL)
@@ -1323,30 +1384,29 @@ char* skygw_get_affected_fields(GWBUF* buf)
 
 bool skygw_query_has_clause(GWBUF* buf)
 {
-    LEX* lex;
-    SELECT_LEX* current;
     bool clause = false;
 
-    if (!query_is_parsed(buf))
+    if (buf)
     {
-        parse_query(buf);
-    }
-
-    if ((lex = get_lex(buf)) == NULL)
-    {
-        return false;
-    }
-
-    current = lex->all_selects_list;
-
-    while (current)
-    {
-        if (current->where || current->having)
+        if (ensure_query_is_parsed(buf))
         {
-            clause = true;
-        }
+            LEX* lex = get_lex(buf);
 
-        current = current->next_select_in_list();
+            if (lex)
+            {
+                SELECT_LEX* current = lex->all_selects_list;
+
+                while (current && !clause)
+                {
+                    if (current->where || current->having)
+                    {
+                        clause = true;
+                    }
+
+                    current = current->next_select_in_list();
+                }
+            }
+        }
     }
 
     return clause;
@@ -1372,22 +1432,23 @@ char* skygw_get_canonical(GWBUF* querybuf)
     THD* thd;
     LEX* lex;
     Item* item;
-    char* querystr;
+    char* querystr = NULL;
 
-    if (querybuf == NULL ||
-        !GWBUF_IS_PARSED(querybuf))
+    if (!querybuf)
     {
-        querystr = NULL;
         goto retblock;
     }
 
-    pi = (parsing_info_t *) gwbuf_get_buffer_object_data(querybuf,
-                                                         GWBUF_PARSING_INFO);
+    if (!ensure_query_is_parsed(querybuf))
+    {
+        goto retblock;
+    }
+
+    pi = (parsing_info_t *) gwbuf_get_buffer_object_data(querybuf, GWBUF_PARSING_INFO);
     CHK_PARSING_INFO(pi);
 
     if (pi == NULL)
     {
-        querystr = NULL;
         goto retblock;
     }
 
@@ -1400,7 +1461,6 @@ char* skygw_get_canonical(GWBUF* querybuf)
                    mysql != NULL &&
                    thd != NULL &&
                    lex != NULL);
-        querystr = NULL;
         goto retblock;
     }
 
@@ -1640,6 +1700,16 @@ char** skygw_get_database_names(GWBUF* querybuf, int* size)
     char **databases = NULL, **tmp = NULL;
     int currsz = 0, i = 0;
 
+    if (!querybuf)
+    {
+        goto retblock;
+    }
+
+    if (!ensure_query_is_parsed(querybuf))
+    {
+        goto retblock;
+    }
+
     if ((lex = get_lex(querybuf)) == NULL)
     {
         goto retblock;
@@ -1685,72 +1755,74 @@ retblock:
 
 skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
 {
-    if (!query_is_parsed(querybuf))
-    {
-        parse_query(querybuf);
-    }
-
-    LEX* lex = get_lex(querybuf);
     skygw_query_op_t operation = QUERY_OP_UNDEFINED;
 
-    if (lex)
+    if (querybuf)
     {
-        switch (lex->sql_command)
+        if (ensure_query_is_parsed(querybuf))
         {
-        case SQLCOM_SELECT:
-            operation = QUERY_OP_SELECT;
-            break;
+            LEX* lex = get_lex(querybuf);
 
-        case SQLCOM_CREATE_TABLE:
-            operation = QUERY_OP_CREATE_TABLE;
-            break;
+            if (lex)
+            {
+                switch (lex->sql_command)
+                {
+                case SQLCOM_SELECT:
+                    operation = QUERY_OP_SELECT;
+                    break;
 
-        case SQLCOM_CREATE_INDEX:
-            operation = QUERY_OP_CREATE_INDEX;
-            break;
+                case SQLCOM_CREATE_TABLE:
+                    operation = QUERY_OP_CREATE_TABLE;
+                    break;
 
-        case SQLCOM_ALTER_TABLE:
-            operation = QUERY_OP_ALTER_TABLE;
-            break;
+                case SQLCOM_CREATE_INDEX:
+                    operation = QUERY_OP_CREATE_INDEX;
+                    break;
 
-        case SQLCOM_UPDATE:
-            operation = QUERY_OP_UPDATE;
-            break;
+                case SQLCOM_ALTER_TABLE:
+                    operation = QUERY_OP_ALTER_TABLE;
+                    break;
 
-        case SQLCOM_INSERT:
-            operation = QUERY_OP_INSERT;
-            break;
+                case SQLCOM_UPDATE:
+                    operation = QUERY_OP_UPDATE;
+                    break;
 
-        case SQLCOM_INSERT_SELECT:
-            operation = QUERY_OP_INSERT_SELECT;
-            break;
+                case SQLCOM_INSERT:
+                    operation = QUERY_OP_INSERT;
+                    break;
 
-        case SQLCOM_DELETE:
-            operation = QUERY_OP_DELETE;
-            break;
+                case SQLCOM_INSERT_SELECT:
+                    operation = QUERY_OP_INSERT_SELECT;
+                    break;
 
-        case SQLCOM_TRUNCATE:
-            operation = QUERY_OP_TRUNCATE;
-            break;
+                case SQLCOM_DELETE:
+                    operation = QUERY_OP_DELETE;
+                    break;
 
-        case SQLCOM_DROP_TABLE:
-            operation = QUERY_OP_DROP_TABLE;
-            break;
+                case SQLCOM_TRUNCATE:
+                    operation = QUERY_OP_TRUNCATE;
+                    break;
 
-        case SQLCOM_DROP_INDEX:
-            operation = QUERY_OP_DROP_INDEX;
-            break;
+                case SQLCOM_DROP_TABLE:
+                    operation = QUERY_OP_DROP_TABLE;
+                    break;
 
-        case SQLCOM_CHANGE_DB:
-            operation = QUERY_OP_CHANGE_DB;
-            break;
+                case SQLCOM_DROP_INDEX:
+                    operation = QUERY_OP_DROP_INDEX;
+                    break;
 
-        case SQLCOM_LOAD:
-            operation = QUERY_OP_LOAD;
-            break;
+                case SQLCOM_CHANGE_DB:
+                    operation = QUERY_OP_CHANGE_DB;
+                    break;
 
-        default:
-            operation = QUERY_OP_UNDEFINED;
+                case SQLCOM_LOAD:
+                    operation = QUERY_OP_LOAD;
+                    break;
+
+                default:
+                    operation = QUERY_OP_UNDEFINED;
+                }
+            }
         }
     }
 
