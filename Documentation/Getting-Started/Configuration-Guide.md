@@ -69,19 +69,20 @@ The global settings, in a section named `[MaxScale]`, allow various parameters t
 #### `threads`
 
 This parameter controls the number of worker threads that are handling the
-events coming from the kernel. MaxScale will auto-detect the number of
-processors of the system unless number of threads is manually configured.
-It is recommended that you let MaxScale detect how many cores the system
-has and leave this parameter undefined. The number of used cores will be
-logged into the message logs and if you are not satisfied with the
-auto-detected value, you can manually configure it. Increasing the amount
-of worker threads beyond the number of processor cores does not improve
-the performance, rather is likely to degrade it, and can consume resources
-needlessly.
+events coming from the kernel. The default is 1 thread. It is recommended that
+you start with one thread and increase the number if you require greater
+performance. Increasing the amount of worker threads beyond the number of
+processor cores does not improve the performance, rather is likely to degrade
+it, and can consume resources needlessly.
+
+You can enable automatic configuration of this value by setting the value to
+`auto`. This way MaxScale will detect the number of available processors and
+set the amount of threads to be equal to that number. This should only be used
+for systems dedicated for running MaxScale.
 
 ```
 # Valid options are:
-#       threads=<number of epoll threads>
+#       threads=[<number of threads> | auto ]
 
 [MaxScale]
 threads=1
@@ -587,6 +588,8 @@ The `persistmaxtime` parameter defaults to zero but can be set to an integer val
 indicating a number of seconds. A DCB placed in the persistent pool for a server will
 only be reused if the elapsed time since it joined the pool is less than the given
 value. Otherwise, the DCB will be discarded and the connection closed.
+
+For more information about persistent connections, please read the [Administration Tutorial](../Tutorials/Administration-Tutorial.md).
 
 ### Listener
 

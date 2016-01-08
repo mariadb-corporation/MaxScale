@@ -99,10 +99,12 @@ router_options=slave_selection_criteria=<criteria>
 
 Where `<criteria>` is one of the following values.
 
-* `LEAST_GLOBAL_CONNECTIONS`, the slave with least connections in total
-* `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this router
+* `LEAST_GLOBAL_CONNECTIONS`, the slave with least connections from MaxScale
+* `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this service
 * `LEAST_BEHIND_MASTER`, the slave with smallest replication lag
 * `LEAST_CURRENT_OPERATIONS` (default), the slave with least active operations
+
+The `LEAST_GLOBAL_CONNECTIONS` and `LEAST_ROUTER_CONNECTIONS` use the connections from MaxScale to the server, not the amount of connections reported by the server itself.
 
 ### `max_sescmd_history`
 
@@ -132,6 +134,14 @@ disable_sescmd_history=true
 # Use the master for reads
 master_accept_reads=true
 ```
+
+### `weightby`
+
+This parameter defines the name of the value which is used to calculate the
+weights of the servers. The value should be the name of a parameter in the
+server definitions and it should exist in all the servers used by this router.
+For more information, see the description of the `weightby` parameter in
+the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
 ## Routing hints
 

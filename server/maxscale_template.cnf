@@ -3,12 +3,11 @@
 
 # Global parameters
 #
-# Number of threads is autodetected, uncomment for manual configuration
 # Complete list of configuration options:
 # https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Getting-Started/Configuration-Guide.md
 
 [maxscale]
-#threads=8
+threads=1
 
 # Server definitions
 #

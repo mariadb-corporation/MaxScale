@@ -360,6 +360,10 @@ int	n_connect = 0;
 					}
 				n_connect++;
 			}
+			else
+			{
+				close(so);
+			}
 		}
 	}
 	

@@ -8,6 +8,8 @@ archiving the data and one for actual use, a RabbitMQ server and a MaxScale serv
 For testing purposes some of these can locate on the same server but for actual
 use, an HA solution is recommended.
 
+![Data archiving with Mqfilter and Tee filters](images/rabbit-and-tee.png)
+
 The use case for this tutorial is a production system with one main server where all
 queries are routed and an archive server where only INSERT, UPDATE and DELETE statements
 are routed. The queries routed to the archive servers are also transformed into a canonical
@@ -30,14 +32,14 @@ in the Creating Database Users section of the [MaxScale Tutorial](MaxScale-Tutor
 
 ## Setting up RabbitMQ server
 
-To set up the RabbitMQ server, follow the instructions for your OS onthe [RabbitMQ website](https://www.rabbitmq.com/download.html).
+To set up the RabbitMQ server, follow the instructions for your OS on the [RabbitMQ website](https://www.rabbitmq.com/download.html).
 Useful documentation about access rights can be found on the [Access Control](https://www.rabbitmq.com/access-control.html)
 page and for UNIX systems the [`rabbitmqctl` manpage](https://www.rabbitmq.com/man/rabbitmqctl.1.man.html)
 has all the needed commands to manage your installation of RabbitMQ.
 
 For this tutorial, we will use a RabbitMQ server installed on a CentOS 7 from
 the RPM packages. Since CentOS 7 doesn't have the RabbitMQ server in the default
-repositores, we will need two extra repositories: The EPEL repository and the Erlang repository.
+repositories, we will need two extra repositories: The EPEL repository and the Erlang repository.
 
 * [EPEL repositories](https://fedoraproject.org/wiki/EPEL)
 * [Erlang repositories](https://www.erlang-solutions.com/resources/download.html)
@@ -132,7 +134,7 @@ filters=MQ Filter
 The `filters` parameters for the services refer to the filters we will be creating next.
 The Production service will use the Tee filter to duplicate INSERT, UPDATE and DELETE
 statements to the Archive service. The statements passed to the Archive service will
-use the MQ Filter to send the canonic versions of the statements to the RabbitMQ broker.
+use the MQ Filter to send the canonical versions of the statements to the RabbitMQ broker.
 The Production service will use the `production-1` server and the Archive service will
 use the `archive-1` server. Both services user the `maxuser` user with the `maxpwd` password.
 
@@ -156,7 +158,7 @@ The `port` parameter controls which port the listener will listen on and where t
 connections should be made. The `service` parameter tells which listener belongs to which
 service.
 
-After the serivces and their listeners are configured we will configure the two filters we'll use. We
+After the services and their listeners are configured we will configure the two filters we'll use. We
 begin with the Tee filter.
 
 ```
@@ -335,7 +337,7 @@ Listing queues ...
 ```
 
 If we create a connection on the Production service on port 4000 and execute
-a set of data modifying statemets we should see an equal number of statements
+a set of data modifying statements we should see an equal number of statements
 being sent to the RabbitMQ server:
 
 ```

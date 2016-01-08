@@ -25,6 +25,8 @@
 #include <gwdirs.h>
 #include <random_jkiss.h>
 
+#include "gw.h"
+
 /**
  * Generate a random printable character
  *
@@ -67,6 +69,7 @@ secrets_readKeys(const char* path)
     if (path != NULL)
     {
         snprintf(secret_file, PATH_MAX, "%s/.secrets", path);
+        clean_up_pathname(secret_file);
     }
     else
     {
@@ -224,7 +227,7 @@ int secrets_writeKeys(const char *path)
     }
 
     snprintf(secret_file, PATH_MAX + 9, "%s/.secrets", path);
-    secret_file[PATH_MAX + 9] = '\0';
+    clean_up_pathname(secret_file);
 
     /* Open for writing | Create | Truncate the file for writing */
     if ((fd = open(secret_file, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR)) < 0)

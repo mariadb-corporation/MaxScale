@@ -41,6 +41,7 @@
 #define		DEFAULT_POLLSLEEP	1000	/**< Default poll wait time (milliseconds) */
 #define		_SYSNAME_STR_LENGTH	256	/**< sysname len */
 #define		_RELEASE_STR_LENGTH	256	/**< release len */
+#define		DEFAULT_NTHREADS	1 /**< Default number of polling threads */
 /**
  * Maximum length for configuration parameter value.
  */

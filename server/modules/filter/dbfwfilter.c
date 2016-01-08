@@ -998,7 +998,7 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
             {
                 bool escaped = false;
                 regex_t *re;
-                char* start, *str;
+                char* start;
                 tok = strtok_r(NULL, " ", saveptr);
                 char delim = '\'';
                 int n_char = 0;
@@ -1052,20 +1052,13 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
                     goto retblock;
                 }
 
-                str = calloc(((tok - start) + 1), sizeof(char));
-                if (str == NULL)
-                {
-                    MXS_ERROR("Fatal Error: malloc returned NULL.");
-                    rval = false;
-                    goto retblock;
-                }
+                char str[(tok - start) + 1];
                 re = (regex_t*) malloc(sizeof(regex_t));
 
                 if (re == NULL)
                 {
                     MXS_ERROR("Fatal Error: malloc returned NULL.");
                     rval = false;
-                    free(str);
                     goto retblock;
                 }
 
@@ -1083,7 +1076,6 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
                     ruledef->type = RT_REGEX;
                     ruledef->data = (void*) re;
                 }
-                free(str);
 
             }
             else if (strcmp(tok, "limit_queries") == 0)
@@ -1277,11 +1269,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
     {
         if (strcmp(params[i]->name, "rules") == 0)
         {
-            if (filename)
-            {
-                free(filename);
-            }
-            filename = strdup(params[i]->value);
+            filename = params[i]->value;
+            break;
         }
     }
 
@@ -1292,6 +1281,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             if (strcmp(options[i], "ignorecase") == 0)
             {
                 my_instance->regflags |= REG_ICASE;
+                break;
             }
         }
     }
@@ -1310,7 +1300,6 @@ createInstance(char **options, FILTER_PARAMETER **params)
         MXS_ERROR("Error while opening rule file for firewall filter.");
         hashtable_free(my_instance->htable);
         free(my_instance);
-        free(filename);
         return NULL;
     }
 
@@ -1360,16 +1349,15 @@ createInstance(char **options, FILTER_PARAMETER **params)
     if (file_empty)
     {
         MXS_ERROR("dbfwfilter: File is empty: %s", filename);
-        free(filename);
         err = true;
         goto retblock;
     }
 
     fclose(file);
-    free(filename);
 
     /**Apply the rules to users*/
     ptr = my_instance->userstrings;
+    my_instance->userstrings = NULL;
 
     if (ptr == NULL)
     {
@@ -2204,6 +2192,10 @@ bool parse_at_times(const char** tok, char** saveptr, RULE* ruledef)
     if (success)
     {
         ruledef->active = tr;
+    }
+    else
+    {
+        free(tr);
     }
 
     return success;

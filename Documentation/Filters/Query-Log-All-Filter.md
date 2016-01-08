@@ -107,3 +107,7 @@ filters=ProductsSelectLogger
 ```
 
 The  result  of  then  putting  this  filter  into  the  service  used  by  the  application  would  be  a  log  file  of  all  select  queries  that  mentioned  the  table  but  did  not  mention  the  PRODUCT_ID  primary  key  in  the  predicates  for  the  query.
+Executing `SELECT * FROM PRODUCTS` would log the following into `/var/logs/qla/SelectProducts`:
+```
+07:12:56.324 7/01/2016, SELECT * FROM PRODUCTS
+```

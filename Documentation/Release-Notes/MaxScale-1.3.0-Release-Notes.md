@@ -24,8 +24,14 @@ using the *Persistent Connection* feature as it may reduce the time it
 takes from establishing a connection from the client through MaxScale to
 the backend server.
 
+**NOTE**: The persistent connections do not track session state. This means
+that changing the default database or modifying the session state will cause
+those changes to be active even for new connections. If you use queries with
+implicit databases or use connections with different client settings, you
+should take great care when using persistent connections.
+
 Additional information is available in the following document:
-* [Administration Tutorial](../Tutorials/Administration-Tutorial.md)
+* [Administration Tutorial](../Tutorials/Administration-Tutorial.md#persistent-connections)
 
 ### Binlog Server
 
@@ -53,7 +59,8 @@ definition.
 
 Additional information is available in the following documents:
 * [Binlogrouter Tutorial](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
-* [Upgrading binlogrouter to 1.3.0](../Upgrading/Upgrading-Binlogrouter-to-1.3.0.md)
+* [Upgrading Binlogrouter to 1.3](../Upgrading/Upgrading-BinlogRouter-To-Maxscale-1.3.md)
+* [Binlogrouter Documentation](../Routers/Binlogrouter.md)
 
 ### Logging Changes
 
@@ -231,7 +238,7 @@ the most serious of this are listed below.
 
 * When users have different passwords based on the host from which they connect MaxScale is unable to determine which password it should use to connect to the backend database. This results in failed connections and unusable usernames in MaxScale.
 
-* LONGBLOB are currently not supported.
+* The readconnroute module does not support sending of LONGBLOB data.
 
 * Galera Cluster variables, such as @@wsrep_node_name, are not resolved by the embedded MariaDB parser.
 
@@ -243,3 +250,13 @@ the most serious of this are listed below.
 
 RPM and Debian packages are provided for the Linux distributions supported
 by MariaDB Enterprise.
+
+Packages can be downloaded [here](https://mariadb.com/resources/downloads).
+
+## Source Code
+
+The source code of MaxScale is tagged at GitHub with a tag, which is identical
+with the version of MaxScale. For instance, the tag of version 1.2.1 of MaxScale
+is 1.2.1. Further, *master* always refers to the latest released non-beta version.
+
+The source code is available [here](https://github.com/mariadb-corporation/MaxScale).

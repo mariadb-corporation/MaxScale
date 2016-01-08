@@ -156,6 +156,7 @@ MAXINFO_TREE	*col, *table;
                 {
                     /** Unknown token after RESTART MONITOR|SERVICE */
                     *parse_error = PARSE_SYNTAX_ERROR;
+                    free(text);
                     free_tree(tree);
                     return NULL;
                 }
@@ -376,7 +377,10 @@ int	i;
 	}
 
 	if (s1 == s2)
+	{
+		*text = NULL;
 		return NULL;
+	}
 
 	*text = strndup(s1, s2 - s1);
 	for (i = 0; keywords[i].text; i++)

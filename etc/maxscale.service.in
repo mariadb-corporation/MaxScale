@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=forking
-Restart=on-failure
+Restart=on-abnormal
 PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
 ExecStartPre=/usr/bin/install -d @MAXSCALE_VARDIR@/run/maxscale -o maxscale -g maxscale
 ExecStart=@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale

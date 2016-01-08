@@ -125,7 +125,7 @@ than `persistmaxtime` seconds.  It was also be discarded if it has been disconne
 by the back end server. Connections will be selected that match the user name and
 protocol for the new request.
 
-Please note that because persistent connections have previously been in use, they
+**Please note** that because persistent connections have previously been in use, they
 may give a different environment from a fresh connection. For example, if the 
 previous use of the connection issued "use mydatabase" then this setting will be
 carried over into the reuse of the same connection. For many applications this will

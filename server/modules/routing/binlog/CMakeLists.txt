@@ -20,7 +20,7 @@ add_executable(maxbinlogcheck maxbinlogcheck.c blr_file.c blr_cache.c blr_master
   ${CMAKE_SOURCE_DIR}/log_manager/log_manager.cc ${CMAKE_SOURCE_DIR}/server/core/externcmd.c)
 
 
-target_link_libraries(maxbinlogcheck utils ssl pthread ${LZMA_LINK_FLAGS} ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} aio rt crypt dl crypto inih z m stdc++ ${CURL_LIBRARIES})
+target_link_libraries(maxbinlogcheck utils ssl pthread ${LZMA_LINK_FLAGS} ${EMBEDDED_LIB} ${PCRE_LINK_FLAGS} aio rt crypt dl crypto inih z m stdc++ ${CURL_LIBRARIES} ${PCRE2_LIBRARIES})
 
 install(TARGETS maxbinlogcheck DESTINATION bin)
 

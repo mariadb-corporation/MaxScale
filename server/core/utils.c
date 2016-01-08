@@ -278,3 +278,44 @@ char *create_hex_sha1_sha1_passwd(char *passwd)
 
     return hexpasswd;
 }
+
+/**
+ * Remove duplicate and trailing forward slashes from a path.
+ * @param path Path to clean up
+ */
+void clean_up_pathname(char *path)
+{
+    char *data = path;
+    size_t len = strlen(path);
+
+    if (len > PATH_MAX)
+    {
+        MXS_WARNING("Pathname too long: %s", path);
+    }
+
+    while (*data != '\0')
+    {
+        if (*data == '/')
+        {
+            if (*(data + 1) == '/')
+            {
+                memmove(data, data + 1, len);
+                len--;
+            }
+            else if (*(data + 1) == '\0' && data != path)
+            {
+                *data = '\0';
+            }
+            else
+            {
+                data++;
+                len--;
+            }
+        }
+        else
+        {
+            data++;
+            len--;
+        }
+    }
+}

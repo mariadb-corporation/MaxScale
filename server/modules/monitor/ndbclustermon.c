@@ -417,7 +417,7 @@ monitorMain(void *arg)
                 evtype = mon_get_event_type(ptr);
                 if (isNdbEvent(evtype))
                 {
-                    MXS_INFO("Server changed state: %s[%s:%u]: %s",
+                    MXS_NOTICE("Server changed state: %s[%s:%u]: %s",
                              ptr->server->unique_name,
                              ptr->server->name, ptr->server->port,
                              mon_get_event_name(ptr));

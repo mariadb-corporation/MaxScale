@@ -237,8 +237,8 @@ long get_processor_count()
 #ifdef _SC_NPROCESSORS_ONLN
     if ((processors = sysconf(_SC_NPROCESSORS_ONLN)) <= 0)
     {
-        MXS_WARNING("Unable to establish the number of available cores. Defaulting to 4.");
-        processors = 4;
+        MXS_WARNING("Unable to establish the number of available cores. Defaulting to 1.");
+        processors = 1;
     }
 #else
 #error _SC_NPROCESSORS_ONLN not available.

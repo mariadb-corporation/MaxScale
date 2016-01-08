@@ -391,7 +391,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     REGEX_SESSION *my_session = (REGEX_SESSION *) session;
     char *sql, *newsql;
 
-    if (modutil_is_SQL(queue))
+    if (my_session->active && modutil_is_SQL(queue))
     {
         if (queue->next != NULL)
         {
