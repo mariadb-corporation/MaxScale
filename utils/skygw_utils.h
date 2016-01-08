@@ -276,6 +276,7 @@ EXTERN_C_BLOCK_BEGIN
 
 size_t get_decimal_len(size_t s);
 
+char* remove_mysql_comments(const char* str);
 char* replace_values(const char* str);
 char* replace_literal(char* haystack, 
                       const char* needle, 

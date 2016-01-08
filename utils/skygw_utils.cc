@@ -2031,10 +2031,63 @@ void skygw_file_close(
 	}
 }
 
+static pcre2_code* remove_comments_re = NULL;
+static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
+"((--\\s.*)|(#.*))";
+
+/**
+ * Remove SQL comments from the end of a string
+ *
+ * The inline comments are not removed due to the fact that they can alter the
+ * behavior of the query.
+ * @param str String to modify
+ * @return Pointer to new modified string or NULL if memory allocation failed
+ */
+char* remove_mysql_comments(const char* str)
+{
+    static const PCRE2_SPTR replace = (PCRE2_SPTR) "";
+    pcre2_match_data* mdata;
+    size_t orig_len = strlen(str);
+    size_t len = orig_len;
+    char* output = NULL;
+
+    if (len > 0)
+    {
+        if ((output = (char*) malloc(len * sizeof (char))) &&
+            (mdata = pcre2_match_data_create_from_pattern(remove_comments_re, NULL)))
+        {
+            while (pcre2_substitute(remove_comments_re, (PCRE2_SPTR) str, orig_len, 0,
+                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
+                                    replace, PCRE2_ZERO_TERMINATED,
+                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+            {
+                char* tmp = (char*) realloc(output, len *= 2);
+                if (tmp == NULL)
+                {
+                    free(output);
+                    output = NULL;
+                    break;
+                }
+                output = tmp;
+            }
+            pcre2_match_data_free(mdata);
+        }
+        else
+        {
+            free(output);
+            output = NULL;
+        }
+    }
+    else
+    {
+        output = strdup(str);
+    }
+    return output;
+}
 
 static pcre2_code* replace_values_re = NULL;
 static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b|[@])"
-    "(?:[0-9.]+|(?<=[@])[a-z_]+|NULL)([-=,+*/)[:space:];]|$)";
+"(?:[0-9.]+|(?<=[@])[a-z_]+|NULL)([-=,+*/)[:space:];]|$)";
 
 /**
  * Replace every literal number and NULL value with a question mark.
@@ -2047,31 +2100,38 @@ char* replace_values(const char* str)
     pcre2_match_data* mdata;
     size_t orig_len = strlen(str);
     size_t len = orig_len;
-    char* output;
+    char* output = NULL;
 
-    if ((output = (char*) malloc(len * sizeof (char))) &&
-        (mdata = pcre2_match_data_create_from_pattern(replace_values_re, NULL)))
+    if (len > 0)
     {
-        while (pcre2_substitute(replace_values_re, (PCRE2_SPTR) str, orig_len, 0,
-                                PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                replace, PCRE2_ZERO_TERMINATED,
-                                (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+        if ((output = (char*) malloc(len * sizeof (char))) &&
+            (mdata = pcre2_match_data_create_from_pattern(replace_values_re, NULL)))
         {
-            char* tmp = (char*) realloc(output, len *= 2);
-            if (tmp == NULL)
+            while (pcre2_substitute(replace_values_re, (PCRE2_SPTR) str, orig_len, 0,
+                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
+                                    replace, PCRE2_ZERO_TERMINATED,
+                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                free(output);
-                output = NULL;
-                break;
+                char* tmp = (char*) realloc(output, len *= 2);
+                if (tmp == NULL)
+                {
+                    free(output);
+                    output = NULL;
+                    break;
+                }
+                output = tmp;
             }
-            output = tmp;
+            pcre2_match_data_free(mdata);
         }
-        pcre2_match_data_free(mdata);
+        else
+        {
+            free(output);
+            output = NULL;
+        }
     }
     else
     {
-        free(output);
-        output = NULL;
+        output = strdup(str);
     }
     return output;
 }
@@ -2168,7 +2228,8 @@ retblock:
 }
 
 static pcre2_code* replace_quoted_re = NULL;
-static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR) "(['\"])[^'\"]*(['\"])";
+static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR)
+"(((?>(?<=[\"]))[^\"]*(?>(?=[\"])))|((?>(?<=[']))[^']*(?>(?=[']))))";
 
 /**
  * Replace everything inside single or double quotes with question marks.
@@ -2177,35 +2238,41 @@ static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR) "(['\"])[^'\"]*(['
  */
 char* replace_quoted(const char* str)
 {
-    static const PCRE2_SPTR replace = (PCRE2_SPTR) "$1?$2";
+    static const PCRE2_SPTR replace = (PCRE2_SPTR) "?";
     pcre2_match_data* mdata;
     size_t orig_len = strlen(str);
     size_t len = orig_len;
-    char* output;
-
-    if ((output = (char*) malloc(len * sizeof (char))) &&
-        (mdata = pcre2_match_data_create_from_pattern(replace_quoted_re, NULL)))
+    char* output = NULL;
+    if (len > 0)
     {
-        while (pcre2_substitute(replace_quoted_re, (PCRE2_SPTR) str, orig_len, 0,
-                                PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
-                                replace, PCRE2_ZERO_TERMINATED,
-                                (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
+        if ((output = (char*) malloc(len * sizeof (char))) &&
+            (mdata = pcre2_match_data_create_from_pattern(replace_quoted_re, NULL)))
         {
-            char* tmp = (char*) realloc(output, len *= 2);
-            if (tmp == NULL)
+            while (pcre2_substitute(replace_quoted_re, (PCRE2_SPTR) str, orig_len, 0,
+                                    PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
+                                    replace, PCRE2_ZERO_TERMINATED,
+                                    (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                free(output);
-                output = NULL;
-                break;
+                char* tmp = (char*) realloc(output, len *= 2);
+                if (tmp == NULL)
+                {
+                    free(output);
+                    output = NULL;
+                    break;
+                }
+                output = tmp;
             }
-            output = tmp;
+            pcre2_match_data_free(mdata);
         }
-        pcre2_match_data_free(mdata);
+        else
+        {
+            free(output);
+            output = NULL;
+        }
     }
     else
     {
-        free(output);
-        output = NULL;
+        output = strdup(str);
     }
     return output;
 }
@@ -2310,10 +2377,18 @@ bool utils_init()
     bool rval = true;
 
     PCRE2_SIZE erroffset;
-    int errcore;
+    int errcode;
+
+    ss_info_dassert(remove_comments_re == NULL, "utils_init called multiple times");
+    remove_comments_re = pcre2_compile(remove_comments_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
+                                       &erroffset, NULL);
+    if (remove_comments_re == NULL)
+    {
+        rval = false;
+    }
 
     ss_info_dassert(replace_quoted_re == NULL, "utils_init called multiple times");
-    replace_quoted_re = pcre2_compile(replace_quoted_pattern, PCRE2_ZERO_TERMINATED, 0, &errcore,
+    replace_quoted_re = pcre2_compile(replace_quoted_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
                                       &erroffset, NULL);
     if (replace_quoted_re == NULL)
     {
@@ -2321,7 +2396,7 @@ bool utils_init()
     }
 
     ss_info_dassert(replace_values_re == NULL, "utils_init called multiple times");
-    replace_values_re = pcre2_compile(replace_values_pattern, PCRE2_ZERO_TERMINATED, 0, &errcore,
+    replace_values_re = pcre2_compile(replace_values_pattern, PCRE2_ZERO_TERMINATED, 0, &errcode,
                                       &erroffset, NULL);
     if (replace_values_re == NULL)
     {
@@ -2336,6 +2411,8 @@ bool utils_init()
  */
 void utils_end()
 {
+    pcre2_code_free(remove_comments_re);
+    remove_comments_re = NULL;
     pcre2_code_free(replace_quoted_re);
     replace_quoted_re = NULL;
     pcre2_code_free(replace_values_re);

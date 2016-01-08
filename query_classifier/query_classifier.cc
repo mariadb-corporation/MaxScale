@@ -1443,6 +1443,11 @@ char* qc_get_canonical(GWBUF* querybuf)
         memcpy(buffer, (uint8_t*) GWBUF_DATA(querybuf) + 5, bufsize);
         buffer[bufsize] = '\0';
         char* replaced = replace_quoted(buffer);
+        if (replaced == NULL || (querystr = remove_mysql_comments(replaced)) == NULL)
+        {
+            querystr = NULL;
+        }
+        replaced = querystr;
         if (replaced == NULL || (querystr = replace_values(replaced)) == NULL)
         {
             querystr = NULL;
