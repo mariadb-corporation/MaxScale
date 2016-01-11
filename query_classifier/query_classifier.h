@@ -81,20 +81,6 @@ typedef enum
     QUERY_OP_LOAD = (1 << 12)
 } qc_query_op_t;
 
-typedef struct parsing_info_st
-{
-#if defined(SS_DEBUG)
-    skygw_chk_t pi_chk_top;
-#endif
-    void* pi_handle; /*< parsing info object pointer */
-    char* pi_query_plain_str; /*< query as plain string */
-    void (*pi_done_fp)(void *); /*< clean-up function for parsing info */
-#if defined(SS_DEBUG)
-    skygw_chk_t pi_chk_tail;
-#endif
-} parsing_info_t;
-
-
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
 
 /**

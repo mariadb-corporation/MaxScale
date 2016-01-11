@@ -61,6 +61,19 @@
 #include <string.h>
 #include <stdarg.h>
 
+typedef struct parsing_info_st
+{
+#if defined(SS_DEBUG)
+    skygw_chk_t pi_chk_top;
+#endif
+    void* pi_handle; /*< parsing info object pointer */
+    char* pi_query_plain_str; /*< query as plain string */
+    void (*pi_done_fp)(void *); /*< clean-up function for parsing info */
+#if defined(SS_DEBUG)
+    skygw_chk_t pi_chk_tail;
+#endif
+} parsing_info_t;
+
 #define QTYPE_LESS_RESTRICTIVE_THAN_WRITE(t) (t<QUERY_TYPE_WRITE ? true : false)
 
 static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
