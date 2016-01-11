@@ -1125,19 +1125,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
     if (modutil_is_SQL(queue))
     {
-
-        /**Parse the query*/
-
-        if (!query_is_parsed(queue))
-        {
-            success = parse_query(queue);
-        }
-
-        if (!success)
-        {
-            MXS_ERROR("Parsing query failed.");
-            goto send_downstream;
-        }
+        success = true;
 
         if (!my_instance->log_all)
         {

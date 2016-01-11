@@ -522,10 +522,6 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 	char* rval = NULL,*query, *tmp = NULL;
 	bool has_dbs = false; /**If the query targets any database other than the current one*/
 
-	if(!query_is_parsed(buffer)){
-		parse_query(buffer);
-	}
-
 	dbnms = skygw_get_database_names(buffer,&sz);
 
     HASHTABLE* ht = client->shardmap->hash;

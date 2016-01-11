@@ -316,11 +316,6 @@ time_t now = time(NULL);
 		queue = gwbuf_make_contiguous(queue);
 	    }
 
-	    if(!query_is_parsed(queue))
-	    {
-		parse_query(queue);
-	    }
-
 	    if(query_classifier_get_operation(queue) & (QUERY_OP_DELETE|QUERY_OP_INSERT|QUERY_OP_UPDATE))
 	    {
 		if((sql = modutil_get_SQL(queue)) != NULL)
