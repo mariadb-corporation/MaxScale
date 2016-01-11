@@ -195,7 +195,7 @@ typedef struct rule_t
     void* data; /*< Actual implementation of the rule */
     char* name; /*< Name of the rule */
     ruletype_t type; /*< Type of the rule */
-    skygw_query_op_t on_queries; /*< Types of queries to inspect */
+    qc_query_op_t on_queries; /*< Types of queries to inspect */
     bool allow; /*< Allow or deny the query if this rule matches */
     int times_matched; /*< Number of times this rule has been matched */
     TIMERANGE* active; /*< List of times when this rule is active */
@@ -1595,7 +1595,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
     unsigned char* memptr = (unsigned char*) queue->start;
     bool is_sql, is_real, matches;
-    skygw_query_op_t optype = QUERY_OP_UNDEFINED;
+    qc_query_op_t optype = QUERY_OP_UNDEFINED;
     STRLINK* strln = NULL;
     QUERYSPEED* queryspeed = NULL;
     QUERYSPEED* rule_qs = NULL;

@@ -61,7 +61,7 @@ typedef enum
     QUERY_TYPE_READ_TMP_TABLE = 0x100000, /*< Read temporary table:master (could be any) */
     QUERY_TYPE_SHOW_DATABASES = 0x200000, /*< Show list of databases */
     QUERY_TYPE_SHOW_TABLES = 0x400000 /*< Show list of tables */
-} skygw_query_type_t;
+} qc_query_type_t;
 
 typedef enum
 {
@@ -79,7 +79,7 @@ typedef enum
     QUERY_OP_DROP_INDEX = (1 << 10),
     QUERY_OP_CHANGE_DB = (1 << 11),
     QUERY_OP_LOAD = (1 << 12)
-} skygw_query_op_t;
+} qc_query_op_t;
 
 typedef struct parsing_info_st
 {
@@ -101,8 +101,8 @@ typedef struct parsing_info_st
  * Create THD and use it for creating parse tree. Examine parse tree and
  * classify the query.
  */
-skygw_query_type_t qc_get_type(GWBUF* querybuf);
-skygw_query_op_t qc_get_operation(GWBUF* querybuf);
+qc_query_type_t qc_get_type(GWBUF* querybuf);
+qc_query_op_t qc_get_operation(GWBUF* querybuf);
 
 #if defined(NOT_USED)
 char* qc_get_stmtname(GWBUF* buf);
@@ -114,7 +114,7 @@ bool qc_is_real_query(GWBUF* querybuf);
 char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames);
 char* qc_get_canonical(GWBUF* querybuf);
 bool qc_query_has_clause(GWBUF* buf);
-char* qc_get_qtype_str(skygw_query_type_t qtype);
+char* qc_get_qtype_str(qc_query_type_t qtype);
 char* qc_get_affected_fields(GWBUF* buf);
 char** qc_get_database_names(GWBUF* querybuf, int* size);
 

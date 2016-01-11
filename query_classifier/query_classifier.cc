@@ -66,7 +66,7 @@
 static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
 static unsigned long set_client_flags(MYSQL* mysql);
 static bool create_parse_tree(THD* thd);
-static skygw_query_type_t resolve_query_type(THD* thd);
+static qc_query_type_t resolve_query_type(THD* thd);
 static bool skygw_stmt_causes_implicit_commit(LEX* lex, int* autocommit_stmt);
 
 static int is_autocommit_stmt(LEX* lex);
@@ -108,10 +108,10 @@ bool ensure_query_is_parsed(GWBUF* query)
  *
  * @return query type
  */
-skygw_query_type_t qc_get_type(GWBUF* querybuf)
+qc_query_type_t qc_get_type(GWBUF* querybuf)
 {
     MYSQL* mysql;
-    skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
+    qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
     bool succp;
 
     ss_info_dassert(querybuf != NULL, ("querybuf is NULL"));
@@ -416,9 +416,9 @@ return_here:
  * the resulting type may be different.
  *
  */
-static skygw_query_type_t resolve_query_type(THD* thd)
+static qc_query_type_t resolve_query_type(THD* thd)
 {
-    skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
+    qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
     u_int32_t type = QUERY_TYPE_UNKNOWN;
     int set_autocommit_stmt = -1; /*< -1 no, 0 disable, 1 enable */
     LEX* lex;
@@ -826,7 +826,7 @@ static skygw_query_type_t resolve_query_type(THD* thd)
         } /**< if */
 
 return_qtype:
-    qtype = (skygw_query_type_t) type;
+    qtype = (qc_query_type_t) type;
     return qtype;
 }
 
@@ -1641,11 +1641,11 @@ static void parsing_info_set_plain_str(void* ptr, char* str)
  *
  * @return  string representing the query type value
  */
-char* qc_get_qtype_str(skygw_query_type_t qtype)
+char* qc_get_qtype_str(qc_query_type_t qtype)
 {
     int t1 = (int) qtype;
     int t2 = 1;
-    skygw_query_type_t t = QUERY_TYPE_UNKNOWN;
+    qc_query_type_t t = QUERY_TYPE_UNKNOWN;
     char* qtype_str = NULL;
 
     /**
@@ -1656,7 +1656,7 @@ char* qc_get_qtype_str(skygw_query_type_t qtype)
     {
         if (t1 & t2)
         {
-            t = (skygw_query_type_t) t2;
+            t = (qc_query_type_t) t2;
 
             if (qtype_str == NULL)
             {
@@ -1751,9 +1751,9 @@ retblock:
     return databases;
 }
 
-skygw_query_op_t qc_get_operation(GWBUF* querybuf)
+qc_query_op_t qc_get_operation(GWBUF* querybuf)
 {
-    skygw_query_op_t operation = QUERY_OP_UNDEFINED;
+    qc_query_op_t operation = QUERY_OP_UNDEFINED;
 
     if (querybuf)
     {

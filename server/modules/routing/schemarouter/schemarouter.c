@@ -95,9 +95,9 @@ static int  router_get_servercount(ROUTER_INSTANCE* router);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 
 static route_target_t get_shard_route_target (
-	skygw_query_type_t qtype,
-	bool               trx_active,
-	HINT*              hint);
+	qc_query_type_t qtype,
+	bool            trx_active,
+	HINT*           hint);
 
 static  int getCapabilities ();
 
@@ -192,7 +192,7 @@ static bool route_session_write(
         GWBUF*             querybuf,
         ROUTER_INSTANCE*   inst,
         unsigned char      packet_type,
-        skygw_query_type_t qtype);
+        qc_query_type_t    qtype);
 
 static void bref_clear_state(backend_ref_t* bref, bref_state_t state);
 static void bref_set_state(backend_ref_t*   bref, bref_state_t state);
@@ -515,7 +515,7 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
  * @param buffer Query to inspect
  * @return Name of the backend or NULL if the query contains no known databases.
  */
-char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer,skygw_query_type_t qtype)
+char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer,qc_query_type_t qtype)
 {
 	int sz = 0,i,j;
 	char** dbnms = NULL;
@@ -1481,9 +1481,9 @@ return_succp:
  *          if the query would otherwise be routed to slave.
  */
 static route_target_t get_shard_route_target (
-        skygw_query_type_t qtype,
-        bool               trx_active, /*< !!! turha ? */
-        HINT*              hint) /*< !!! turha ? */
+        qc_query_type_t qtype,
+        bool            trx_active, /*< !!! turha ? */
+        HINT*           hint) /*< !!! turha ? */
 {
         route_target_t target = TARGET_UNDEFINED;
 
@@ -1520,11 +1520,10 @@ static route_target_t get_shard_route_target (
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */
-void check_drop_tmp_table(
-ROUTER* instance,
-			  void*   router_session,
-			  GWBUF*  querybuf,
-			  skygw_query_type_t type)
+void check_drop_tmp_table(ROUTER* instance,
+			  void* router_session,
+			  GWBUF* querybuf,
+			  qc_query_type_t type)
 {
 
     int tsize = 0, klen = 0,i;
@@ -1575,11 +1574,10 @@ ROUTER* instance,
  * @param type The type of the query resolved so far
  * @return The type of the query
  */
-skygw_query_type_t is_read_tmp_table(
-ROUTER* instance,
-				     void*   router_session,
-				     GWBUF*  querybuf,
-				     skygw_query_type_t type)
+qc_query_type_t is_read_tmp_table(ROUTER* instance,
+                                  void* router_session,
+                                  GWBUF* querybuf,
+                                  qc_query_type_t type)
 {
 
     bool target_tmp_table = false;
@@ -1588,7 +1586,7 @@ ROUTER* instance,
     char *hkey,*dbname;
 
     ROUTER_CLIENT_SES* router_cli_ses = (ROUTER_CLIENT_SES *)router_session;
-    skygw_query_type_t qtype = type;
+    qc_query_type_t    qtype = type;
     rses_property_t*   rses_prop_tmp;
 
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
@@ -1654,11 +1652,10 @@ ROUTER* instance,
  * @param querybuf GWBUF containing the query
  * @param type The type of the query resolved so far
  */ 
-void check_create_tmp_table(
-			    ROUTER* instance,
-			    void*   router_session,
-			    GWBUF*  querybuf,
-			    skygw_query_type_t type)
+void check_create_tmp_table(ROUTER* instance,
+			    void* router_session,
+			    GWBUF* querybuf,
+			    qc_query_type_t type)
 {
 
   int klen = 0;
@@ -1866,7 +1863,7 @@ static int routeQuery(
         void*   router_session,
         GWBUF* qbuf)
 {
-        skygw_query_type_t qtype          = QUERY_TYPE_UNKNOWN;
+        qc_query_type_t    qtype          = QUERY_TYPE_UNKNOWN;
         mysql_server_cmd_t packet_type;
         uint8_t*           packet;
         int                i,ret            = 0;
@@ -2066,7 +2063,7 @@ static int routeQuery(
 	 * all of them.
 	 */
 
-        skygw_query_op_t op = qc_get_operation(querybuf);
+        qc_query_op_t op = qc_get_operation(querybuf);
 
         if (packet_type == MYSQL_COM_INIT_DB ||
 	    op == QUERY_OP_CHANGE_DB)
@@ -3748,7 +3745,7 @@ static bool route_session_write(
         GWBUF*             querybuf,
         ROUTER_INSTANCE*   inst,
         unsigned char      packet_type,
-        skygw_query_type_t qtype)
+        qc_query_type_t    qtype)
 {
         bool              succp = false;
         rses_property_t*  prop;

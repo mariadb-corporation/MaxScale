@@ -112,7 +112,7 @@ static int router_get_servercount(ROUTER_INSTANCE* router);
 
 
 static route_target_t get_shard_route_target(
-                                             skygw_query_type_t qtype,
+                                             qc_query_type_t qtype,
                                              bool trx_active,
                                              HINT* hint);
 
@@ -197,7 +197,7 @@ static bool route_session_write(
                                 GWBUF* querybuf,
                                 ROUTER_INSTANCE* inst,
                                 unsigned char packet_type,
-                                skygw_query_type_t qtype);
+                                qc_query_type_t qtype);
 
 static void refreshInstance(
                             ROUTER_INSTANCE* router,
@@ -438,7 +438,7 @@ gen_subsvc_dblist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
  * @return Name of the backend or NULL if the query contains no known databases.
  */
 char*
-get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer, skygw_query_type_t qtype)
+get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF* buffer, qc_query_type_t qtype)
 {
     HASHTABLE* ht = client->dbhash;
     int sz = 0, i, j;
@@ -1275,7 +1275,7 @@ freeSession(
  *          if the query would otherwise be routed to slave.
  */
 static route_target_t
-get_shard_route_target(skygw_query_type_t qtype,
+get_shard_route_target(qc_query_type_t qtype,
                        bool trx_active, /*< !!! turha ? */
                        HINT* hint) /*< !!! turha ? */
 {
@@ -1483,7 +1483,7 @@ routeQuery(ROUTER* instance,
            void* router_session,
            GWBUF* querybuf)
 {
-    skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
+    qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
     mysql_server_cmd_t packet_type;
     uint8_t* packet;
     int i,ret = 1;
@@ -2524,7 +2524,7 @@ route_session_write(
                     GWBUF* querybuf,
                     ROUTER_INSTANCE* inst,
                     unsigned char packet_type,
-                    skygw_query_type_t qtype)
+                    qc_query_type_t qtype)
 {
     bool succp;
     rses_property_t* prop;
