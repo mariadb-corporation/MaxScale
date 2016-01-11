@@ -69,7 +69,6 @@ int main(int argc, char** argv)
             *(qbuff->sbuf->data + 2) = (unsigned char)(psize>>16);
             *(qbuff->sbuf->data + 4) = 0x03;
             memcpy(qbuff->start + 5,readbuff,psize + 1);
-            parse_query(qbuff);
             tok = qc_get_canonical(qbuff);
             fprintf(outfile,"%s\n",tok);
             free(tok);
