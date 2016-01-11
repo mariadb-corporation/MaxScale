@@ -29,3 +29,10 @@ add_test(NAME Internal-CanonicalQueryAlter COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/c
   ${CMAKE_CURRENT_BINARY_DIR}/alter.output
   ${CMAKE_CURRENT_SOURCE_DIR}/alter.expected
   $<TARGET_FILE:canonizer>)
+
+add_test(NAME Internal-CanonicalQueryComment COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/canontest.sh
+  ${CMAKE_CURRENT_BINARY_DIR}/test.log
+  ${CMAKE_CURRENT_SOURCE_DIR}/comment.sql
+  ${CMAKE_CURRENT_BINARY_DIR}/comment.output
+  ${CMAKE_CURRENT_SOURCE_DIR}/comment.expected
+  $<TARGET_FILE:canonizer>)

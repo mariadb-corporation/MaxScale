@@ -2034,13 +2034,13 @@ void skygw_file_close(
 #define BUFFER_GROWTH_RATE 1.2
 static pcre2_code* remove_comments_re = NULL;
 static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
-"(?:`[^`]*`\\K)|(?:#.*|--[[:space]].*)";
+"(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
 
 /**
  * Remove SQL comments from the end of a string
  *
- * The inline comments are not removed due to the fact that they can alter the
- * behavior of the query.
+ * The inline executable comments are not removed due to the fact that they can
+ * alter the behavior of the query.
  * @param src Pointer to the string to modify.
  * @param srcsize Pointer to a size_t variable which holds the length of the string to
  * be modified.
