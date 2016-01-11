@@ -2031,37 +2031,46 @@ void skygw_file_close(
 	}
 }
 
+#define BUFFER_GROWTH_RATE 1.2
 static pcre2_code* remove_comments_re = NULL;
 static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
-"((--\\s.*)|(#.*))";
+"(?:`[^`]*`\\K)|(?:#.*|--[[:space]].*)";
 
 /**
  * Remove SQL comments from the end of a string
  *
  * The inline comments are not removed due to the fact that they can alter the
  * behavior of the query.
- * @param str String to modify
- * @return Pointer to new modified string or NULL if memory allocation failed
+ * @param src Pointer to the string to modify.
+ * @param srcsize Pointer to a size_t variable which holds the length of the string to
+ * be modified.
+ * @param dest The address of the pointer where the result will be stored. If the
+ * value pointed by this parameter is NULL, new memory will be allocated as needed.
+ * @param Pointer to a size_t variable where the size of the result string is stored.
+ * @return Pointer to new modified string or NULL if memory allocation failed.
+ * If NULL is returned and the value pointed by @c dest was not NULL, no new
+ * memory will be allocated, the memory pointed by @dest will be freed and the
+ * contents of @c dest and @c destsize will be invalid.
  */
-char* remove_mysql_comments(const char* str)
+char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest, size_t* destsize)
 {
     static const PCRE2_SPTR replace = (PCRE2_SPTR) "";
     pcre2_match_data* mdata;
-    size_t orig_len = strlen(str);
-    size_t len = orig_len;
-    char* output = NULL;
+    char* output = *dest;
+    size_t orig_len = *srcsize;
+    size_t len = output ? *destsize : orig_len;
 
-    if (len > 0)
+    if (orig_len > 0)
     {
-        if ((output = (char*) malloc(len * sizeof (char))) &&
+        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
             (mdata = pcre2_match_data_create_from_pattern(remove_comments_re, NULL)))
         {
-            while (pcre2_substitute(remove_comments_re, (PCRE2_SPTR) str, orig_len, 0,
+            while (pcre2_substitute(remove_comments_re, (PCRE2_SPTR) * src, orig_len, 0,
                                     PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, len *= 2);
+                char* tmp = (char*) realloc(output, (len = len * BUFFER_GROWTH_RATE + 1));
                 if (tmp == NULL)
                 {
                     free(output);
@@ -2078,41 +2087,56 @@ char* remove_mysql_comments(const char* str)
             output = NULL;
         }
     }
-    else
+    else if (output == NULL)
     {
-        output = strdup(str);
+        output = strdup(*src);
     }
+
+    if (output)
+    {
+        *destsize = strlen(output);
+        *dest = output;
+    }
+
     return output;
 }
 
 static pcre2_code* replace_values_re = NULL;
 static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b|[@])"
-"(?:[0-9.]+|(?<=[@])[a-z_]+|NULL)([-=,+*/)[:space:];]|$)";
+"(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
 
 /**
- * Replace every literal number and NULL value with a question mark.
- * @param str String to modify
- * @return Pointer to new modified string or NULL if memory allocation failed
+ * Replace literal numbers and user variables with a question mark.
+ * @param src Pointer to the string to modify.
+ * @param srcsize Pointer to a size_t variable which holds the length of the string to
+ * be modified.
+ * @param dest The address of the pointer where the result will be stored. If the
+ * value pointed by this parameter is NULL, new memory will be allocated as needed.
+ * @param Pointer to a size_t variable where the size of the result string is stored.
+ * @return Pointer to new modified string or NULL if memory allocation failed.
+ * If NULL is returned and the value pointed by @c dest was not NULL, no new
+ * memory will be allocated, the memory pointed by @dest will be freed and the
+ * contents of @c dest and @c destsize will be invalid.
  */
-char* replace_values(const char* str)
+char* replace_values(const char** src, const size_t* srcsize, char** dest, size_t* destsize)
 {
     static const PCRE2_SPTR replace = (PCRE2_SPTR) "$1?$2";
     pcre2_match_data* mdata;
-    size_t orig_len = strlen(str);
-    size_t len = orig_len;
-    char* output = NULL;
+    char* output = *dest;
+    size_t orig_len = *srcsize;
+    size_t len = output ? *destsize : orig_len;
 
-    if (len > 0)
+    if (orig_len > 0)
     {
-        if ((output = (char*) malloc(len * sizeof (char))) &&
+        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
             (mdata = pcre2_match_data_create_from_pattern(replace_values_re, NULL)))
         {
-            while (pcre2_substitute(replace_values_re, (PCRE2_SPTR) str, orig_len, 0,
+            while (pcre2_substitute(replace_values_re, (PCRE2_SPTR) * src, orig_len, 0,
                                     PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, len *= 2);
+                char* tmp = (char*) realloc(output, (len = len * BUFFER_GROWTH_RATE + 1));
                 if (tmp == NULL)
                 {
                     free(output);
@@ -2129,10 +2153,17 @@ char* replace_values(const char* str)
             output = NULL;
         }
     }
-    else
+    else if (output == NULL)
     {
-        output = strdup(str);
+        output = strdup(*src);
     }
+
+    if (output)
+    {
+        *destsize = strlen(output);
+        *dest = output;
+    }
+
     return output;
 }
 
@@ -2229,31 +2260,40 @@ retblock:
 
 static pcre2_code* replace_quoted_re = NULL;
 static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR)
-"(((?>(?<=[\"]))[^\"]*(?>(?=[\"])))|((?>(?<=[']))[^']*(?>(?=[']))))";
+"(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
 
 /**
- * Replace everything inside single or double quotes with question marks.
- * @param str String to modify
- * @return Pointer to new modified string or NULL if memory allocation failed
+ * Replace contents of single or double quoted strings with question marks.
+  * @param src Pointer to the string to modify.
+ * @param srcsize Pointer to a size_t variable which holds the length of the string to
+ * be modified.
+ * @param dest The address of the pointer where the result will be stored. If the
+ * value pointed by this parameter is NULL, new memory will be allocated as needed.
+ * @param Pointer to a size_t variable where the size of the result string is stored.
+ * @return Pointer to new modified string or NULL if memory allocation failed.
+ * If NULL is returned and the value pointed by @c dest was not NULL, no new
+ * memory will be allocated, the memory pointed by @dest will be freed and the
+ * contents of @c dest and @c destsize will be invalid.
  */
-char* replace_quoted(const char* str)
+char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_t* destsize)
 {
-    static const PCRE2_SPTR replace = (PCRE2_SPTR) "?";
+    static const PCRE2_SPTR replace = (PCRE2_SPTR) "?$1";
     pcre2_match_data* mdata;
-    size_t orig_len = strlen(str);
-    size_t len = orig_len;
-    char* output = NULL;
-    if (len > 0)
+    char* output = *dest;
+    size_t orig_len = *srcsize;
+    size_t len = output ? *destsize : orig_len;
+
+    if (orig_len > 0)
     {
-        if ((output = (char*) malloc(len * sizeof (char))) &&
+        if ((output || (output = (char*) malloc(len * sizeof (char)))) &&
             (mdata = pcre2_match_data_create_from_pattern(replace_quoted_re, NULL)))
         {
-            while (pcre2_substitute(replace_quoted_re, (PCRE2_SPTR) str, orig_len, 0,
+            while (pcre2_substitute(replace_quoted_re, (PCRE2_SPTR) * src, orig_len, 0,
                                     PCRE2_SUBSTITUTE_GLOBAL, mdata, NULL,
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, len *= 2);
+                char* tmp = (char*) realloc(output, (len = len * BUFFER_GROWTH_RATE + 1));
                 if (tmp == NULL)
                 {
                     free(output);
@@ -2270,10 +2310,21 @@ char* replace_quoted(const char* str)
             output = NULL;
         }
     }
+    else if (output == NULL)
+    {
+        output = strdup(*src);
+    }
+
+    if (output)
+    {
+        *destsize = strlen(output);
+        *dest = output;
+    }
     else
     {
-        output = strdup(str);
+        *dest = NULL;
     }
+
     return output;
 }
 

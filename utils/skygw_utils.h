@@ -276,12 +276,15 @@ EXTERN_C_BLOCK_BEGIN
 
 size_t get_decimal_len(size_t s);
 
-char* remove_mysql_comments(const char* str);
-char* replace_values(const char* str);
+char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest,
+                            size_t* destsize);
+char* replace_values(const char** src, const size_t* srcsize, char** dest,
+                     size_t* destsize);
 char* replace_literal(char* haystack, 
                       const char* needle, 
                       const char* replacement);
-char* replace_quoted(const char* str);
+char* replace_quoted(const char** src, const size_t* srcsize, char** dest,
+                     size_t* destsize);
 bool is_valid_posix_path(char* path);
 bool strip_escape_chars(char*);
 int simple_str_hash(char* key);

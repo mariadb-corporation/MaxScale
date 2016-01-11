@@ -7,7 +7,7 @@ select * from tst where lname='?';
 select ?,?,?,?,?,? from tst;
 select * from tst where fname like '?';
 select * from tst where lname like '?' order by fname;
-insert into tst values ("?","?"),("?",?),("?","?");
+insert into tst values ("?","?"),("?",null),("?","?");
 drop table if exists tst;
 create table tst(fname varchar(?), lname varchar(?));
 update tst set lname="?" where fname like '?' or lname like '?';

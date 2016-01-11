@@ -61,6 +61,7 @@
 #include <string.h>
 #include <stdarg.h>
 
+#define MYSQL_COM_QUERY_HEADER_SIZE 5 /*< 3 bytes size, 1 sequence, 1 command */
 #define MAX_QUERYBUF_SIZE 2048
 typedef struct parsing_info_st
 {
@@ -1436,23 +1437,24 @@ bool qc_query_has_clause(GWBUF* buf)
 char* qc_get_canonical(GWBUF* querybuf)
 {
     char *querystr = NULL;
-    if (GWBUF_LENGTH(querybuf) > 5 && GWBUF_IS_SQL(querybuf))
+    if (GWBUF_LENGTH(querybuf) > MYSQL_COM_QUERY_HEADER_SIZE && GWBUF_IS_SQL(querybuf))
     {
-        const size_t bufsize = MIN(MAX_QUERYBUF_SIZE, GWBUF_LENGTH(querybuf) - 5);
-        char buffer[bufsize + 1];
-        memcpy(buffer, (uint8_t*) GWBUF_DATA(querybuf) + 5, bufsize);
-        buffer[bufsize] = '\0';
-        char* replaced = replace_quoted(buffer);
-        if (replaced == NULL || (querystr = remove_mysql_comments(replaced)) == NULL)
+        size_t srcsize = GWBUF_LENGTH(querybuf) - MYSQL_COM_QUERY_HEADER_SIZE;
+        char *src = (char*) malloc(srcsize);
+        size_t destsize = 0;
+        char *dest = NULL;
+        if (src)
         {
-            querystr = NULL;
+            memcpy(src, (uint8_t*) GWBUF_DATA(querybuf) + MYSQL_COM_QUERY_HEADER_SIZE,
+                   srcsize);
+            if (replace_quoted((const char**) &src, &srcsize, &dest, &destsize) &&
+                remove_mysql_comments((const char**) &dest, &destsize, &src, &srcsize) &&
+                replace_values((const char**) &src, &srcsize, &dest, &destsize))
+            {
+                querystr = dest;
+            }
+            free(src);
         }
-        replaced = querystr;
-        if (replaced == NULL || (querystr = replace_values(replaced)) == NULL)
-        {
-            querystr = NULL;
-        }
-        free(replaced);
     }
     return querystr;
 }
