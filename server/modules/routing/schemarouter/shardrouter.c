@@ -447,7 +447,7 @@ get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, GWBUF*
     char *query = NULL,*tmp = NULL;
     bool has_dbs = false; /**If the query targets any database other than the current one*/
 
-    dbnms = skygw_get_database_names(buffer, &sz);
+    dbnms = qc_get_database_names(buffer, &sz);
 
     if(sz > 0)
     {
@@ -1607,11 +1607,11 @@ routeQuery(ROUTER* instance,
         break;
 
     case MYSQL_COM_QUERY:
-        qtype = query_classifier_get_type(querybuf);
+        qtype = qc_get_type(querybuf);
         break;
 
     case MYSQL_COM_STMT_PREPARE:
-        qtype = query_classifier_get_type(querybuf);
+        qtype = qc_get_type(querybuf);
         qtype |= QUERY_TYPE_PREPARE_STMT;
         break;
 

@@ -1129,7 +1129,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
         if (!my_instance->log_all)
         {
-            if (!skygw_is_real_query(queue))
+            if (!qc_is_real_query(queue))
             {
                 goto send_downstream;
             }
@@ -1200,7 +1200,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
         if (my_instance->trgtype & TRG_SCHEMA && my_instance->shm_trg)
         {
             int tbsz = 0, z;
-            char** tblnames = skygw_get_table_names(queue, &tbsz, true);
+            char** tblnames = qc_get_table_names(queue, &tbsz, true);
             char* tmp;
             bool all_remotes = true;
 
@@ -1267,7 +1267,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
         if (my_instance->trgtype & TRG_OBJECT && my_instance->obj_trg)
         {
 
-            sesstbls = skygw_get_table_names(queue, &dbcount, false);
+            sesstbls = qc_get_table_names(queue, &dbcount, false);
 
             for (j = 0; j < dbcount; j++)
             {
@@ -1384,7 +1384,7 @@ validate_triggers:
                 {
 
                     /**Try to convert to a canonical form and use the plain query if unsuccessful*/
-                    if ((canon_q = skygw_get_canonical(queue)) == NULL)
+                    if ((canon_q = qc_get_canonical(queue)) == NULL)
                     {
                         MXS_ERROR("Cannot form canonical query.");
                     }

@@ -108,7 +108,7 @@ int main(int argc, char** argv)
 			memmove(strbuff,tok + 1, strsz - qlen);
 			strsz -= qlen;
 			memset(strbuff + strsz,0,buffsz - strsz);
-			skygw_query_type_t type = query_classifier_get_type(buff);
+			skygw_query_type_t type = qc_get_type(buff);
 			char qtypestr[64];
 			char expbuff[256];
 			int expos = 0;

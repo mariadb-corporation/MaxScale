@@ -101,25 +101,26 @@ typedef struct parsing_info_st
  * Create THD and use it for creating parse tree. Examine parse tree and
  * classify the query.
  */
-skygw_query_type_t query_classifier_get_type(GWBUF* querybuf);
-skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf);
+skygw_query_type_t qc_get_type(GWBUF* querybuf);
+skygw_query_op_t qc_get_operation(GWBUF* querybuf);
 
 #if defined(NOT_USED)
-char* skygw_query_classifier_get_stmtname(GWBUF* buf);
+char* qc_get_stmtname(GWBUF* buf);
 #endif
 
-char* skygw_get_created_table_name(GWBUF* querybuf);
-bool is_drop_table_query(GWBUF* querybuf);
-bool skygw_is_real_query(GWBUF* querybuf);
-char** skygw_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames);
-char* skygw_get_canonical(GWBUF* querybuf);
-bool parse_query(GWBUF* querybuf);
+char* qc_get_created_table_name(GWBUF* querybuf);
+bool qc_is_drop_table_query(GWBUF* querybuf);
+bool qc_is_real_query(GWBUF* querybuf);
+char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames);
+char* qc_get_canonical(GWBUF* querybuf);
+bool qc_query_has_clause(GWBUF* buf);
+char* qc_get_qtype_str(skygw_query_type_t qtype);
+char* qc_get_affected_fields(GWBUF* buf);
+char** qc_get_database_names(GWBUF* querybuf, int* size);
 
+// To be removed.
+bool parse_query(GWBUF* querybuf);
 bool query_is_parsed(GWBUF* buf);
-bool skygw_query_has_clause(GWBUF* buf);
-char* skygw_get_qtype_str(skygw_query_type_t qtype);
-char* skygw_get_affected_fields(GWBUF* buf);
-char** skygw_get_database_names(GWBUF* querybuf, int* size);
 
 EXTERN_C_BLOCK_END
 

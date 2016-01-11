@@ -1610,8 +1610,8 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
     if (is_sql)
     {
-        optype = query_classifier_get_operation(queue);
-        is_real = skygw_is_real_query(queue);
+        optype = qc_get_operation(queue);
+        is_real = qc_is_real_query(queue);
     }
 
     if (rulelist->rule->on_queries == QUERY_OP_UNDEFINED || rulelist->rule->on_queries & optype)
@@ -1660,7 +1660,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
             case RT_COLUMN:
                 if (is_sql && is_real)
                 {
-                    where = skygw_get_affected_fields(queue);
+                    where = qc_get_affected_fields(queue);
                     if (where != NULL)
                     {
                         char* saveptr;
@@ -1700,7 +1700,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 if (is_sql && is_real)
                 {
                     char * strptr;
-                    where = skygw_get_affected_fields(queue);
+                    where = qc_get_affected_fields(queue);
 
                     if (where != NULL)
                     {
@@ -1809,7 +1809,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
             case RT_CLAUSE:
                 if (is_sql && is_real &&
-                    !skygw_query_has_clause(queue))
+                    !qc_query_has_clause(queue))
                 {
                     matches = true;
                     msg = strdup("Required WHERE/HAVING clause is missing.");

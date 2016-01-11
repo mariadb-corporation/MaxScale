@@ -1607,9 +1607,9 @@ void check_drop_tmp_table(
 
   dbname = (char*)data->db;
 
-  if (is_drop_table_query(querybuf))
+  if (qc_is_drop_table_query(querybuf))
     {
-      tbl = skygw_get_table_names(querybuf,&tsize,false);
+      tbl = qc_get_table_names(querybuf,&tsize,false);
 	  if(tbl != NULL){		
 		  for(i = 0; i<tsize; i++)
 			  {
@@ -1703,7 +1703,7 @@ static skygw_query_type_t is_read_tmp_table(
 	  QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
 	  QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))	  
     {
-      tbl = skygw_get_table_names(querybuf,&tsize,false);
+      tbl = qc_get_table_names(querybuf,&tsize,false);
 
       if (tbl != NULL && tsize > 0)
 	{ 
@@ -1808,7 +1808,7 @@ static void check_create_tmp_table(
       bool  is_temp = true;
       char* tblname = NULL;
 		
-      tblname = skygw_get_created_table_name(querybuf);
+      tblname = qc_get_created_table_name(querybuf);
 		
       if (tblname && strlen(tblname) > 0)
 	{
@@ -2145,11 +2145,11 @@ static bool route_single_stmt(
 			break;
 			
 		case MYSQL_COM_QUERY:
-			qtype = query_classifier_get_type(querybuf);
+			qtype = qc_get_type(querybuf);
 			break;
 			
 		case MYSQL_COM_STMT_PREPARE:
-			qtype = query_classifier_get_type(querybuf);
+			qtype = qc_get_type(querybuf);
 			qtype |= QUERY_TYPE_PREPARE_STMT;
 			break;
 			
@@ -2195,7 +2195,7 @@ static bool route_single_stmt(
      */
     if (!rses->rses_load_active)
     {
-        skygw_query_op_t queryop = query_classifier_get_operation(querybuf);
+        skygw_query_op_t queryop = qc_get_operation(querybuf);
         if (queryop == QUERY_OP_LOAD)
         {
             rses->rses_load_active = true;
@@ -2255,7 +2255,7 @@ static bool route_single_stmt(
                                  MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
                 char* data = (char*) &packet[5];
                 char* contentstr = strndup(data, MIN(len, RWSPLIT_TRACE_MSG_LEN));
-                char* qtypestr = skygw_get_qtype_str(qtype);
+                char* qtypestr = qc_get_qtype_str(qtype);
 
                 MXS_INFO("> Autocommit: %s, trx is %s, cmd: %s, type: %s, "
                          "stmt: %s%s %s",
@@ -2308,7 +2308,7 @@ static bool route_single_stmt(
 			backend_ref_t* bref = rses->rses_backend_ref;
 			
 			char* query_str = modutil_get_query(querybuf);
-			char* qtype_str = skygw_get_qtype_str(qtype);
+			char* qtype_str = qc_get_qtype_str(qtype);
 			
 			MXS_ERROR("Can't route %s:%s:\"%s\". SELECT with "
                                   "session data modification is not supported "

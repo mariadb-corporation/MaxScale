@@ -35,7 +35,7 @@ bool extract_database(GWBUF* buf, char* str)
     plen = gw_mysql_get_byte3(packet) - 1;
 
     /** Copy database name from MySQL packet to session */
-    if(query_classifier_get_operation(buf) == QUERY_OP_CHANGE_DB)
+    if(qc_get_operation(buf) == QUERY_OP_CHANGE_DB)
     {
 	query = modutil_get_SQL(buf);
 	tok = strtok_r(query," ;",&saved);

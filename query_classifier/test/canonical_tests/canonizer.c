@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 				*(qbuff->sbuf->data + 4) = 0x03;
 				memcpy(qbuff->start + 5,readbuff,psize + 1);
 				parse_query(qbuff);
-				tok = skygw_get_canonical(qbuff);
+				tok = qc_get_canonical(qbuff);
 				fprintf(outfile,"%s\n",tok);
 				free(tok);
 				gwbuf_free(qbuff);

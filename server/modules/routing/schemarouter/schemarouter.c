@@ -522,7 +522,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client, 
 	char* rval = NULL,*query, *tmp = NULL;
 	bool has_dbs = false; /**If the query targets any database other than the current one*/
 
-	dbnms = skygw_get_database_names(buffer,&sz);
+	dbnms = qc_get_database_names(buffer,&sz);
 
     HASHTABLE* ht = client->shardmap->hash;
 
@@ -1537,9 +1537,9 @@ ROUTER* instance,
     rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
     dbname = router_cli_ses->current_db;
 
-    if (is_drop_table_query(querybuf))
+    if (qc_is_drop_table_query(querybuf))
     {
-	tbl = skygw_get_table_names(querybuf,&tsize,false);
+	tbl = qc_get_table_names(querybuf,&tsize,false);
 	if(tbl != NULL){
 	    for(i = 0; i<tsize; i++)
 	    {
@@ -1600,7 +1600,7 @@ ROUTER* instance,
 	QUERY_IS_TYPE(qtype, QUERY_TYPE_SYSVAR_READ) ||
 	QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_READ))
     {
-	tbl = skygw_get_table_names(querybuf,&tsize,false);
+	tbl = qc_get_table_names(querybuf,&tsize,false);
 
 	if (tbl != NULL && tsize > 0)
 	{ 
@@ -1677,7 +1677,7 @@ void check_create_tmp_table(
       bool  is_temp = true;
       char* tblname = NULL;
 		
-      tblname = skygw_get_created_table_name(querybuf);
+      tblname = qc_get_created_table_name(querybuf);
 		
       if (tblname && strlen(tblname) > 0)
 	{
@@ -2014,11 +2014,11 @@ static int routeQuery(
                         break;
 
                 case MYSQL_COM_QUERY:
-                        qtype = query_classifier_get_type(querybuf);
+                        qtype = qc_get_type(querybuf);
                         break;
                         
                 case MYSQL_COM_STMT_PREPARE:
-                        qtype = query_classifier_get_type(querybuf);
+                        qtype = qc_get_type(querybuf);
                         qtype |= QUERY_TYPE_PREPARE_STMT;
                         break;
                         
@@ -2048,7 +2048,7 @@ static int routeQuery(
 					 MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start)-1);
 		char*         data = (char*)&packet[5];
 		char*         contentstr = strndup(data, len);
-		char*         qtypestr = skygw_get_qtype_str(qtype);
+		char*         qtypestr = qc_get_qtype_str(qtype);
 
 		MXS_INFO("> Cmd: %s, type: %s, "
                          "stmt: %s%s %s",
@@ -2066,7 +2066,7 @@ static int routeQuery(
 	 * all of them.
 	 */
 
-        skygw_query_op_t op = query_classifier_get_operation(querybuf);
+        skygw_query_op_t op = qc_get_operation(querybuf);
 
         if (packet_type == MYSQL_COM_INIT_DB ||
 	    op == QUERY_OP_CHANGE_DB)

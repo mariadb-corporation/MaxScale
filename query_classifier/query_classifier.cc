@@ -108,7 +108,7 @@ bool ensure_query_is_parsed(GWBUF* query)
  *
  * @return query type
  */
-skygw_query_type_t query_classifier_get_type(GWBUF* querybuf)
+skygw_query_type_t qc_get_type(GWBUF* querybuf)
 {
     MYSQL* mysql;
     skygw_query_type_t qtype = QUERY_TYPE_UNKNOWN;
@@ -954,9 +954,7 @@ return_rc:
 
 #if defined(NOT_USED)
 
-char*
-skygw_query_classifier_get_stmtname(
-                                    GWBUF* buf)
+char* qc_get_stmtname(GWBUF* buf)
 {
     MYSQL* mysql;
 
@@ -1139,7 +1137,7 @@ retblock:
  * @param querybuf Buffer to use.
  * @return A pointer to the name if a table was created, otherwise NULL
  */
-char* skygw_get_created_table_name(GWBUF* querybuf)
+char* qc_get_created_table_name(GWBUF* querybuf)
 {
     if (querybuf == NULL)
     {
@@ -1180,7 +1178,7 @@ char* skygw_get_created_table_name(GWBUF* querybuf)
  *
  * @return true if the query is a real query, otherwise false
  */
-bool skygw_is_real_query(GWBUF* querybuf)
+bool qc_is_real_query(GWBUF* querybuf)
 {
     bool succp;
     LEX* lex;
@@ -1238,7 +1236,7 @@ retblock:
  * @param querybuf Buffer to inspect
  * @return true if it contains the query otherwise false
  */
-bool is_drop_table_query(GWBUF* querybuf)
+bool qc_is_drop_table_query(GWBUF* querybuf)
 {
     bool answer = false;
 
@@ -1297,7 +1295,7 @@ inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
  * @param buf Buffer to parse
  * @return Pointer to newly allocated string or NULL if nothing was found
  */
-char* skygw_get_affected_fields(GWBUF* buf)
+char* qc_get_affected_fields(GWBUF* buf)
 {
     LEX* lex;
     int buffsz = 0, bufflen = 0;
@@ -1382,7 +1380,7 @@ char* skygw_get_affected_fields(GWBUF* buf)
     return where;
 }
 
-bool skygw_query_has_clause(GWBUF* buf)
+bool qc_query_has_clause(GWBUF* buf)
 {
     bool clause = false;
 
@@ -1425,7 +1423,7 @@ bool skygw_query_has_clause(GWBUF* buf)
  * Replaced literal types are STRING_ITEM,INT_ITEM,DECIMAL_ITEM,REAL_ITEM,
  * VARBIN_ITEM,NULL_ITEM
  */
-char* skygw_get_canonical(GWBUF* querybuf)
+char* qc_get_canonical(GWBUF* querybuf)
 {
     parsing_info_t* pi;
     MYSQL* mysql;
@@ -1643,7 +1641,7 @@ static void parsing_info_set_plain_str(void* ptr, char* str)
  *
  * @return  string representing the query type value
  */
-char* skygw_get_qtype_str(skygw_query_type_t qtype)
+char* qc_get_qtype_str(skygw_query_type_t qtype)
 {
     int t1 = (int) qtype;
     int t2 = 1;
@@ -1693,7 +1691,7 @@ char* skygw_get_qtype_str(skygw_query_type_t qtype)
  * @return A new array of strings containing the database names or NULL if no
  * databases were found.
  */
-char** skygw_get_database_names(GWBUF* querybuf, int* size)
+char** qc_get_database_names(GWBUF* querybuf, int* size)
 {
     LEX* lex;
     TABLE_LIST* tbl;
@@ -1753,7 +1751,7 @@ retblock:
     return databases;
 }
 
-skygw_query_op_t query_classifier_get_operation(GWBUF* querybuf)
+skygw_query_op_t qc_get_operation(GWBUF* querybuf)
 {
     skygw_query_op_t operation = QUERY_OP_UNDEFINED;
 
