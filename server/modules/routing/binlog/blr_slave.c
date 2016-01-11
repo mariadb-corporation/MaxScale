@@ -1697,7 +1697,6 @@ uint8_t		*ptr;
 int		len, rval, binlognamelen;
 REP_HEADER	hdr;
 uint32_t	chksum;
-bool		force_disconnect = false;
 
 	ptr = GWBUF_DATA(queue);
 	len = extract_field(ptr, 24);
@@ -1730,6 +1729,8 @@ bool		force_disconnect = false;
 		 * Check for a pending transaction and possible unsafe position.
 		 * Force slave disconnection if requested position is unsafe.
 		 */
+
+		bool force_disconnect = false;
 
 		spinlock_acquire(&router->binlog_lock);
 		if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
