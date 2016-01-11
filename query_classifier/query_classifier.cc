@@ -89,6 +89,9 @@ static void parsing_info_set_plain_str(void* ptr, char* str);
 static void parsing_info_done(void* ptr);
 static void* skygw_get_affected_tables(void* lexptr);
 static bool ensure_query_is_parsed(GWBUF* query);
+static bool parse_query(GWBUF* querybuf);
+static bool query_is_parsed(GWBUF* buf);
+
 
 /**
  * Ensures that the query is parsed. If it is not already parsed, it
@@ -169,7 +172,7 @@ retblock:
  *
  * @return true if succeed, false otherwise
  */
-bool parse_query(GWBUF* querybuf)
+static bool parse_query(GWBUF* querybuf)
 {
     bool succp;
     THD* thd;
@@ -248,7 +251,7 @@ retblock:
  *
  * @return true or false
  */
-bool query_is_parsed(GWBUF* buf)
+static bool query_is_parsed(GWBUF* buf)
 {
     CHK_GWBUF(buf);
     return (buf != NULL && GWBUF_IS_PARSED(buf));

@@ -104,10 +104,6 @@ char* qc_get_qtype_str(qc_query_type_t qtype);
 char* qc_get_affected_fields(GWBUF* buf);
 char** qc_get_database_names(GWBUF* querybuf, int* size);
 
-// To be removed.
-bool parse_query(GWBUF* querybuf);
-bool query_is_parsed(GWBUF* buf);
-
 EXTERN_C_BLOCK_END
 
 #endif
