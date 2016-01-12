@@ -21,6 +21,14 @@ enable_testing()
 ENABLE_TESTING()
 INCLUDE(CTest)
 
+# Enable Java
+find_package(Java)
+if(NOT Java_FOUND)
+  message(WARNING "Java not found, Java based tests are not run.")
+else()
+  include(UseJava)
+endif()
+
 configure_file(${CMAKE_SOURCE_DIR}/cnf/maxscale.cnf.template.setup_binlog.in ${CMAKE_BINARY_DIR}/cnf/maxscale.cnf.template.setup_binlog @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/set_env.sh.in ${CMAKE_BINARY_DIR}/set_env.sh @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/test_ctrl_c/test_ctrl_c.sh.in ${CMAKE_BINARY_DIR}/test_ctrl_c/test_ctrl_c.sh @ONLY)
@@ -375,6 +383,8 @@ add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter)
 add_test_executable(mxs365.cpp mxs365 replication)
 
 add_test_executable(longblob.cpp longblob replication)
+
+add_subdirectory(maxscale/java/test1)
 
 install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover kill_master DESTINATION system-test)
 install(TARGETS sysbench_kill_slave slave_lag bug143 bug359 bug493 bug495 bug572 bug479 bug488 bug509 bug526 bug529 bug547 bug422 bug571 bug473 bug587 bug475 bug471 bug565 bug448 DESTINATION system-test)
