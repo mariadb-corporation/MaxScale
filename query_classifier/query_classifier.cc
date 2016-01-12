@@ -1054,7 +1054,7 @@ static void* skygw_get_affected_tables(void* lexptr)
  * @param tblsize Pointer where the number of tables is written
  * @return Array of null-terminated strings with the table names
  */
-char** skygw_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
+char** qc_get_table_names(GWBUF* querybuf, int* tblsize, bool fullnames)
 {
     LEX* lex;
     TABLE_LIST* tbl;
