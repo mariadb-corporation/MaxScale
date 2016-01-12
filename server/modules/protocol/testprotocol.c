@@ -24,8 +24,8 @@
  *
  * @verbatim
  * Revision History
- * Date		Who			Description
- * 20/02/2015	Markus Mäkelä	Initial implementation
+ * Date         Who                     Description
+ * 20/02/2015   Markus Mäkelä   Initial implementation
  *
  * @endverbatim
  */
@@ -34,11 +34,12 @@
 #include <dcb.h>
 #include <buffer.h>
 
-MODULE_INFO info = {
-	MODULE_API_PROTOCOL,
-	MODULE_IN_DEVELOPMENT,
-	GWPROTOCOL_VERSION,
-	"Test protocol"
+MODULE_INFO info =
+{
+    MODULE_API_PROTOCOL,
+    MODULE_IN_DEVELOPMENT,
+    GWPROTOCOL_VERSION,
+    "Test protocol"
 };
 
 static char *version_str = "V1.0.0";
@@ -57,19 +58,20 @@ static int test_session(DCB *dcb, void* data){ return 1;}
 /**
  * The "module object" for the httpd protocol module.
  */
-static GWPROTOCOL MyObject = { 
-	test_read,			/**< Read - EPOLLIN handler	 */
-	test_write,				/**< Write - data from gateway	 */
-	test_write_ready,			/**< WriteReady - EPOLLOUT handler */
-	test_error,				/**< Error - EPOLLERR handler	 */
-	test_hangup,				/**< HangUp - EPOLLHUP handler	 */
-	test_accept,				/**< Accept			 */
-	test_connect,					/**< Connect			 */
-	test_close,				/**< Close			 */
-	test_listen,				/**< Create a listener		 */
-	test_auth,					/**< Authentication		 */
-	test_session					/**< Session			 */
-	};
+static GWPROTOCOL MyObject =
+{
+    test_read,        /**< Read - EPOLLIN handler        */
+    test_write,       /**< Write - data from gateway     */
+    test_write_ready, /**< WriteReady - EPOLLOUT handler */
+    test_error,       /**< Error - EPOLLERR handler      */
+    test_hangup,      /**< HangUp - EPOLLHUP handler     */
+    test_accept,      /**< Accept                        */
+    test_connect,     /**< Connect                       */
+    test_close,       /**< Close                         */
+    test_listen,      /**< Create a listener             */
+    test_auth,        /**< Authentication                */
+    test_session      /**< Session                       */
+};
 
 
 /**
@@ -77,18 +79,16 @@ static GWPROTOCOL MyObject = {
  *
  * @return version string of the module
  */
-char *
-version()
+char* version()
 {
-	return version_str;
+    return version_str;
 }
 
 /**
  * The module initialisation routine, called when the module
  * is first loaded.
  */
-void
-ModuleInit()
+void ModuleInit()
 {
 }
 
@@ -100,8 +100,7 @@ ModuleInit()
  *
  * @return The module object
  */
-GWPROTOCOL *
-GetModuleObject()
+GWPROTOCOL* GetModuleObject()
 {
-	return &MyObject;
+    return &MyObject;
 }
