@@ -122,6 +122,8 @@ typedef struct
     char *filename;
     FILE *fp;
     int active;
+    char *user;
+    char *remote;
 } QLA_SESSION;
 
 /**
@@ -295,22 +297,21 @@ newSession(FILTER *instance, SESSION *session)
         }
         my_session->active = 1;
 
-        if (my_instance->source
-            && (remote = session_get_remote(session)) != NULL)
-        {
-            if (strcmp(remote, my_instance->source))
-            {
-                my_session->active = 0;
-            }
-        }
+        remote = session_get_remote(session);
         userName = session_getUser(session);
+        ss_dassert(userName && remote);
 
-        if (my_instance->userName &&
-            userName &&
-            strcmp(userName, my_instance->userName))
+        if ((my_instance->source && remote &&
+             strcmp(remote, my_instance->source)) ||
+            (my_instance->userName && userName &&
+             strcmp(userName, my_instance->userName)))
         {
             my_session->active = 0;
         }
+
+        my_session->user = userName;
+        my_session->remote = remote;
+
         sprintf(my_session->filename, "%s.%d",
                 my_instance->filebase,
                 my_instance->sessions);
@@ -436,6 +437,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                         "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
                         t.tm_hour, t.tm_min, t.tm_sec, (int) (tv.tv_usec / 1000),
                         t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
+                fprintf(my_session->fp, "%s@%s, ", my_session->user, my_session->remote);
                 fprintf(my_session->fp, "%s\n", ptr);
 
             }
