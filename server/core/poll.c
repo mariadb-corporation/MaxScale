@@ -1567,7 +1567,44 @@ static void poll_add_event_to_dcb(DCB*       dcb,
 void
 poll_fake_write_event(DCB *dcb)
 {
-    uint32_t ev = EPOLLOUT;
+    poll_fake_event(dcb, EPOLLOUT);
+}
+
+/*
+ * Insert a fake read completion event for a DCB into the polling
+ * queue.
+ *
+ * This is used to trigger transmission activity on another DCB from
+ * within the event processing routine of a DCB. or to allow a DCB
+ * to defer some further input processing, to allow for other DCBs
+ * to receive a slice of the processing time. Fake events are added
+ * to the tail of the event queue, in the same way that real events
+ * are, so maintain the "fairness" of processing.
+ *
+ * @param dcb	DCB to emulate an EPOLLIN event for
+ */
+void
+poll_fake_read_event(DCB *dcb)
+{
+    poll_fake_event(dcb, EPOLLIN);
+}
+
+/*
+ * Insert a fake completion event for a DCB into the polling queue.
+ *
+ * This is used to trigger transmission activity on another DCB from
+ * within the event processing routine of a DCB. or to allow a DCB
+ * to defer some further output processing, to allow for other DCBs
+ * to receive a slice of the processing time. Fake events are added
+ * to the tail of the event queue, in the same way that real events
+ * are, so maintain the "fairness" of processing.
+ *
+ * @param dcb	DCB to emulate an event for
+ * @param ev    Event to emulate
+ */
+void
+poll_fake_event(DCB *dcb, uint32_t ev)
+{
 
     spinlock_acquire(&pollqlock);
     /*

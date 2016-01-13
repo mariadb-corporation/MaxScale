@@ -278,7 +278,11 @@ typedef struct dcb
     unsigned int    high_water;     /**< High water mark */
     unsigned int    low_water;      /**< Low water mark */
     struct server   *server;        /**< The associated backend server */
-    SSL* ssl; /*< SSL struct for connection */
+    SSL*            ssl;            /*< SSL struct for connection */
+    bool            ssl_read_want_read;    /*< Flag */
+    bool            ssl_read_want_write;    /*< Flag */
+    bool            ssl_write_want_read;    /*< Flag */
+    bool            ssl_write_want_write;    /*< Flag */
     int             dcb_port;       /**< port of target server */
     skygw_chk_t     dcb_chk_tail;
 } DCB;
@@ -318,7 +322,6 @@ int           fail_accept_errno;
 #define DCB_POLL_BUSY(x)                ((x)->evq.next != NULL)
 
 DCB *dcb_get_zombies(void);
-int gw_write(DCB *, const void *, size_t);
 int dcb_write(DCB *, GWBUF *);
 DCB *dcb_alloc(dcb_role_t);
 void dcb_free(DCB *);
@@ -353,10 +356,7 @@ char *dcb_role_name(DCB *);                  /* Return the name of a role */
 int dcb_create_SSL(DCB* dcb);
 int dcb_accept_SSL(DCB* dcb);
 int dcb_connect_SSL(DCB* dcb);
-int gw_write_SSL(SSL* ssl, const void *buf, size_t nbytes);
-int dcb_write_SSL(DCB *dcb,GWBUF *queue);
 int dcb_read_SSL(DCB   *dcb,GWBUF **head);
-int dcb_drain_writeq_SSL(DCB *dcb);
 
 
 /**

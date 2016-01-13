@@ -22,14 +22,14 @@
 #include <resultset.h>
 
 /**
- * @file poll.h The poll related functionality
+ * @file poll.h     The poll related functionality
  *
  * @verbatim
  * Revision History
  *
  * Date         Who             Description
  * 19/06/13     Mark Riddoch    Initial implementation
- * 17/10/15 Martin Brampton Declare fake event functions
+ * 17/10/15     Martin Brampton Declare fake event functions
  *
  * @endverbatim
  */
@@ -52,22 +52,23 @@ typedef enum
     POLL_STAT_MAX_EXECTIME
 } POLL_STAT;
 
-extern  void poll_init();
-extern  int poll_add_dcb(DCB *);
-extern  int poll_remove_dcb(DCB *);
-extern  void poll_waitevents(void *);
-extern  void poll_shutdown();
-extern  GWBITMASK* poll_bitmask();
-extern  void poll_set_maxwait(unsigned int);
-extern  void poll_set_nonblocking_polls(unsigned int);
-extern  void dprintPollStats(DCB *);
-extern  void dShowThreads(DCB *dcb);
-void poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
-extern  void dShowEventQ(DCB *dcb);
-extern  void dShowEventStats(DCB *dcb);
-extern  int poll_get_stat(POLL_STAT stat);
-extern  RESULTSET* eventTimesGetList();
-extern  void poll_fake_hangup_event(DCB *dcb);
-extern  void poll_fake_write_event(DCB *dcb);
-
+extern  void            poll_init();
+extern  int             poll_add_dcb(DCB *);
+extern  int             poll_remove_dcb(DCB *);
+extern  void            poll_waitevents(void *);
+extern  void            poll_shutdown();
+extern  GWBITMASK       *poll_bitmask();
+extern  void            poll_set_maxwait(unsigned int);
+extern  void            poll_set_nonblocking_polls(unsigned int);
+extern  void            dprintPollStats(DCB *);
+extern  void            dShowThreads(DCB *dcb);
+extern  void            poll_add_epollin_event_to_dcb(DCB* dcb, GWBUF* buf);
+extern  void            dShowEventQ(DCB *dcb);
+extern  void            dShowEventStats(DCB *dcb);
+extern  int             poll_get_stat(POLL_STAT stat);
+extern  RESULTSET       *eventTimesGetList();
+extern  void            poll_fake_event(DCB *dcb, uint32_t ev);
+extern  void            poll_fake_hangup_event(DCB *dcb);
+extern  void            poll_fake_write_event(DCB *dcb);
+extern  void            poll_fake_read_event(DCB *dcb);
 #endif
