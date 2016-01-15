@@ -9,10 +9,8 @@ For every test case following should be created:
 - test executable
 - record in the 'templates' file 
 - Maxscale configuration template (if test requires special Maxscale configuration)
-- [CMakeLists.txt](CMakeLists.txt) records:
-  - 'add_executable' and 'target_link_libraries'
-  - add new executable to 'install' directive
-  - 'add_test'
+- [CMakeLists.txt](CMakeLists.txt) record:
+  - add_test_executable(<source.cpp> <binary_name> <cnf_template_name>)
   - 'set_tests_properties' if test should be added to the group or bigger timeout should be defined (> default 1800s)
 
 ## 'templates' file
