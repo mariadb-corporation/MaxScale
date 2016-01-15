@@ -142,6 +142,14 @@ service_alloc(const char *servname, const char *router)
     service->resources = NULL;
     service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
     service->retry_start = true;
+    service->weightby = NULL;
+    service->credentials.authdata = NULL;
+    service->credentials.name = NULL;
+    service->version_string = NULL;
+    service->ctx = NULL;
+    service->svc_config_param = NULL;
+    service->users = NULL;
+    service->routerOptions = NULL;
     service->ssl_mode = SSL_DISABLED;
     service->ssl_init_done = false;
     service->ssl_ca_cert = NULL;
@@ -654,14 +662,20 @@ service_free(SERVICE *service)
 
     free(service->name);
     free(service->routerModule);
-    if (service->credentials.name)
-    {
-        free(service->credentials.name);
-    }
-    if (service->credentials.authdata)
-    {
-        free(service->credentials.authdata);
-    }
+    free(service->weightby);
+    free(service->version_string);
+    free(service->ssl_key);
+    free(service->ssl_cert);
+    free(service->ssl_ca_cert);
+    free(service->credentials.name);
+    free(service->credentials.authdata);
+
+    SSL_CTX_free(service->ctx);
+    free_config_parameter(service->svc_config_param);
+    users_free(service->users);
+    hashtable_free(service->resources);
+    serviceClearRouterOptions(service);
+
     free(service);
     return 1;
 }
