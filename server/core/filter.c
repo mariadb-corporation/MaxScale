@@ -41,6 +41,8 @@
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
 static FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
 
+static void filter_free_parameters(FILTER_DEF *filter);
+
 /**
  * Allocate a new filter within MaxScale
  *
@@ -113,6 +115,18 @@ filter_free(FILTER_DEF *filter)
         /* Clean up session and free the memory */
         free(filter->name);
         free(filter->module);
+
+        if (filter->options)
+        {
+            for (int i = 0; filter->options[i]; i++)
+            {
+                free(filter->options[i]);
+            }
+            free(filter->options);
+        }
+
+        filter_free_parameters(filter);
+
         free(filter);
     }
 }
@@ -328,6 +342,23 @@ filterAddParameter(FILTER_DEF *filter, char *name, char *value)
     filter->parameters[i]->value = strdup(value);
     filter->parameters[i+1] = NULL;
     spinlock_release(&filter->spin);
+}
+
+/**
+ * Free filter parameters
+ * @param filter Filter whose parameters are to be freed
+ */
+static void filter_free_parameters(FILTER_DEF *filter)
+{
+    if (filter->parameters)
+    {
+        for (int i = 0; filter->parameters[i]; i++)
+        {
+            free(filter->parameters[i]->name);
+            free(filter->parameters[i]->value);
+        }
+        free(filter->parameters);
+    }
 }
 
 /**
