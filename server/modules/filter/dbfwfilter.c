@@ -257,48 +257,8 @@ typedef struct
     UPSTREAM up; /*< Next object in the upstream chain */
 } FW_SESSION;
 
-static int hashkeyfun(void* key);
-static int hashcmpfun(void *, void *);
 bool parse_at_times(const char** tok, char** saveptr, RULE* ruledef);
 bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule, char** saveptr);
-/**
- * Hashtable key hashing function. Uses a simple string hashing algorithm.
- * @param key Key to hash
- * @return The hash value of the key
- */
-static int hashkeyfun(
-                      void* key)
-{
-    if (key == NULL)
-    {
-        return 0;
-    }
-    unsigned int hash = 0, c = 0;
-    char* ptr = (char*) key;
-    while ((c = *ptr++))
-    {
-        hash = c + (hash << 6) + (hash << 16) - hash;
-    }
-    return hash;
-}
-
-/**
- * Hashtable entry comparison function. Does a string matching operation on the
- * two keys. This function assumes the values are pointers to null-terminated
- * character arrays.
- * @param v1 The first key
- * @param v2 The second key
- * @return Zero if the values are equal. Non-zero in other cases.
- */
-static int hashcmpfun(
-                      void* v1,
-                      void* v2)
-{
-    char* i1 = (char*) v1;
-    char* i2 = (char*) v2;
-
-    return strcmp(i1, i2);
-}
 
 void* rlistdup(void* fval)
 {
@@ -1251,7 +1211,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
     spinlock_init(my_instance->lock);
 
-    if ((ht = hashtable_alloc(100, hashkeyfun, hashcmpfun)) == NULL)
+    if ((ht = hashtable_alloc(100, simple_str_hash, strcmp)) == NULL)
     {
         MXS_ERROR("Unable to allocate hashtable.");
         free(my_instance);
