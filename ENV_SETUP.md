@@ -1,4 +1,4 @@
-# Build and test environment setup and running
+# Build and test environment setup
 
 ### Full build and test environment setup
 
