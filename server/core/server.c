@@ -52,6 +52,7 @@ static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
 
 static void spin_reporter(void *, char *, int);
+static void server_parameter_free(SERVER_PARAM *tofree);
 
 /**
  * Allocate a new server withn the gateway
@@ -84,6 +85,9 @@ server_alloc(char *servname, char *protocol, unsigned short port)
     server->rlag = -2;
     server->master_id = -1;
     server->depth = -1;
+    server->slaves = NULL;
+    server->parameters = NULL;
+    server->server_string = NULL;
     spinlock_init(&server->lock);
     server->persistent = NULL;
     server->persistmax = 0;
@@ -132,14 +136,11 @@ server_free(SERVER *tofreeserver)
     /* Clean up session and free the memory */
     free(tofreeserver->name);
     free(tofreeserver->protocol);
-    if (tofreeserver->unique_name)
-    {
-        free(tofreeserver->unique_name);
-    }
-    if (tofreeserver->server_string)
-    {
-        free(tofreeserver->server_string);
-    }
+    free(tofreeserver->unique_name);
+    free(tofreeserver->server_string);
+    free(tofreeserver->slaves);
+    server_parameter_free(server->parameters);
+
     if (tofreeserver->persistent)
     {
         dcb_persistent_clean_count(tofreeserver->persistent, true);
@@ -879,6 +880,24 @@ serverAddParameter(SERVER *server, char *name, char *value)
 
     param->next = server->parameters;
     server->parameters = param;
+}
+
+/**
+ * Free a list of server parameters
+ * @param tofree Parameter list to free
+ */
+static void server_parameter_free(SERVER_PARAM *tofree)
+{
+    SERVER_PARAM *param;
+
+    if (tofree)
+    {
+        param = tofree;
+        tofree = tofree->next;
+        free(param->name);
+        free(param->value);
+        free(param);
+    }
 }
 
 /**
