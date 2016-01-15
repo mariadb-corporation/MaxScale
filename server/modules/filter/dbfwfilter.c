@@ -80,6 +80,7 @@
 #include <time.h>
 #include <assert.h>
 #include <regex.h>
+#include <maxscale_pcre2.h>
 
 MODULE_INFO info =
 {
@@ -879,6 +880,67 @@ void tr_free(TIMERANGE* tr)
     }
 }
 
+/**
+ * Retrieve the quoted regex string from a rule definition and
+ * return the unquoted version of it.
+ * @param saved Pointer to the last stored position in the string
+ * @return The unquoted string or NULL if the string was malformed
+ */
+char* get_regex_string(char** saved)
+{
+    char *start = NULL, *ptr = *saved;
+    bool escaped = false, quoted = false;
+    char delimiter;
+    while(*ptr != '\0')
+    {
+        if (!escaped)
+        {
+            if (!isspace(*ptr))
+            {
+                switch (*ptr)
+                {
+                    case '\'':
+                    case '"':
+                        if (quoted)
+                        {
+                            if (*ptr == delimiter)
+                            {
+                                *ptr = '\0';
+                                *saved = ptr + 1;
+                                return start;
+                            }
+                        }
+                        else
+                        {
+                            delimiter = *ptr;
+                            start = ptr + 1;
+                            quoted = true;
+                        }
+                        break;
+                    case '\\':
+                        escaped = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        else
+        {
+            escaped = false;
+        }
+        ptr++;
+    }
+
+    if (quoted)
+    {
+        MXS_ERROR("Missing ending quote, found '%c' but no matching unescaped"
+                  " one was found.", delimiter);
+    }
+
+    return NULL;
+}
+
 bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, char** saveptr)
 {
     bool rval = true;
@@ -887,8 +949,7 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
     if (tok == NULL)
     {
         MXS_ERROR("dbfwfilter: Rule parsing failed, no allow or deny: %s", rule);
-        rval = false;
-        goto retblock;
+        return false;
     }
 
     bool deny, allow;
@@ -902,8 +963,7 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
         ruledef->type = RT_PERMISSION;
         tok = strtok_r(NULL, " ,", saveptr);
 
-
-        while (tok)
+        while (tok && rval)
         {
             for (int i = 0; required_rules[i] != NULL; i++)
             {
@@ -913,13 +973,17 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
                     {
                         MXS_ERROR("dbfwfilter: Rule parsing failed, Multiple non-optional rules: %s", rule);
                         rval = false;
-                        goto retblock;
                     }
                     else
                     {
                         req_defined = true;
                     }
                 }
+            }
+
+            if (!rval)
+            {
+                break;
             }
 
             if (strcmp(tok, "wildcard") == 0)
@@ -949,117 +1013,60 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
             {
                 if (at_def)
                 {
-                    MXS_ERROR("dbfwfilter: Rule parsing failed, multiple 'at_times' tokens: %s", rule);
+                    MXS_ERROR("dbfwfilter: Rule parsing failed, multiple "
+                              "'at_times' tokens: %s", rule);
                     rval = false;
-                    goto retblock;
-                }
-
-                at_def = true;
-                tok = strtok_r(NULL, " ,", saveptr);
-                TIMERANGE *tr = NULL;
-
-                if (!parse_at_times(&tok, saveptr, ruledef))
-                {
-                    rval = false;
-                    break;
-                }
-
-                if (tok && strcmp(tok, "on_queries") == 0)
-                {
-                    continue;
-                }
-
-            }
-            else if (strcmp(tok, "regex") == 0)
-            {
-                bool escaped = false;
-                regex_t *re;
-                char* start;
-                tok = strtok_r(NULL, " ", saveptr);
-                char delim = '\'';
-                int n_char = 0;
-
-                if (tok == NULL)
-                {
-                    MXS_ERROR("dbfwfilter: Rule parsing failed, No regex string.");
-                    rval = false;
-                    goto retblock;
-                }
-
-                if (*tok != '\'' && *tok != '\"')
-                {
-                    MXS_ERROR("dbfwfilter: Rule parsing failed, regex string not quoted.");
-                    rval = false;
-                    goto retblock;
-                }
-
-                while (*tok == '\'' || *tok == '"')
-                {
-                    delim = *tok;
-                    tok++;
-                }
-
-                start = (char*)tok;
-
-                while (isspace(*tok) || *tok == delim)
-                {
-                    tok++;
-                }
-
-                while (n_char < 2048)
-                {
-
-                    /** Hard-coded regex length cap */
-
-                    if ((*tok == delim) && !escaped)
-                    {
-                        break;
-                    }
-                    escaped = (*tok == '\\');
-                    tok++;
-                    n_char++;
-                }
-
-                if (n_char >= 2048)
-                {
-                    MXS_ERROR("dbfwfilter: Failed to parse rule, "
-                              "regular expression length is over 2048 characters.");
-                    rval = false;
-                    goto retblock;
-                }
-
-                char str[(tok - start) + 1];
-                re = (regex_t*) malloc(sizeof(regex_t));
-
-                if (re == NULL)
-                {
-                    MXS_ERROR("Fatal Error: malloc returned NULL.");
-                    rval = false;
-                    goto retblock;
-                }
-
-                memcpy(str, start, (tok - start));
-
-                if (regcomp(re, str, REG_NOSUB | instance->regflags))
-                {
-                    MXS_ERROR("dbfwfilter: Invalid regular expression '%s'.", str);
-                    rval = false;
-                    free(re);
-                    goto retblock;
                 }
                 else
                 {
-                    ruledef->type = RT_REGEX;
-                    ruledef->data = (void*) re;
-                }
+                    at_def = true;
+                    tok = strtok_r(NULL, " ,", saveptr);
+                    TIMERANGE *tr = NULL;
 
+                    if (!parse_at_times(&tok, saveptr, ruledef))
+                    {
+                        rval = false;
+                    }
+                    else if (tok && strcmp(tok, "on_queries") == 0)
+                    {
+                        continue;
+                    }
+                }
+            }
+            else if (strcmp(tok, "regex") == 0)
+            {
+                pcre2_code *re;
+                int err;
+                size_t offset;
+                PCRE2_SPTR start = (PCRE2_SPTR)get_regex_string(saveptr);
+                if (start)
+                {
+                    if ((re = pcre2_compile(start, PCRE2_ZERO_TERMINATED,
+                                            0, &err, &offset, NULL)))
+                    {
+                        ruledef->type = RT_REGEX;
+                        ruledef->data = (void*) re;
+                    }
+                    else
+                    {
+                        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+                        pcre2_get_error_message(err, errbuf, sizeof (errbuf));
+                        MXS_ERROR("dbfwfilter: Invalid regular expression '%s': %s",
+                                  start, errbuf);
+                        rval = false;
+                    }
+                }
+                else
+                {
+                    MXS_ERROR("Malformed regex string in rule: %s", rule);
+                    rval = false;
+                }
             }
             else if (strcmp(tok, "limit_queries") == 0)
             {
                 if (!parse_limit_queries(instance, ruledef, rule, saveptr))
                 {
-                   rval = false;
-                   break;
+                    rval = false;
                 }
             }
             else if (strcmp(tok, "no_where_clause") == 0)
@@ -1071,39 +1078,35 @@ bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, cha
             {
                 if (oq_def)
                 {
-                    MXS_ERROR("dbfwfilter: Rule parsing failed, multiple 'on_queries' tokens: %s", rule);
+                    MXS_ERROR("dbfwfilter: Rule parsing failed, multiple "
+                              "'on_queries' tokens: %s", rule);
                     rval = false;
-                    goto retblock;
                 }
-                oq_def = true;
-                tok = strtok_r(NULL, " ", saveptr);
-
-                if (tok == NULL)
+                else
                 {
-                    MXS_ERROR("dbfwfilter: Missing parameter for 'on_queries'.");
-                    rval = false;
-                    goto retblock;
-                }
+                    oq_def = true;
+                    tok = strtok_r(NULL, " ", saveptr);
 
-                if (!parse_querytypes(tok, ruledef))
-                {
-                    MXS_ERROR("dbfwfilter: Invalid query type requirements: %s.", tok);
-                    rval = false;
-                    goto retblock;
+                    if (tok == NULL)
+                    {
+                        MXS_ERROR("dbfwfilter: Missing parameter for 'on_queries'.");
+                        rval = false;
+                    }
+                    else if (!parse_querytypes(tok, ruledef))
+                    {
+                        MXS_ERROR("dbfwfilter: Invalid query type requirements: %s.", tok);
+                        rval = false;
+                    }
                 }
             }
             else
             {
                 MXS_ERROR("dbfwfilter: Unknown rule type: %s", tok);
                 rval = false;
-                goto retblock;
             }
             tok = strtok_r(NULL, " ,", saveptr);
         }
-
-        goto retblock;
     }
-    retblock:
 
     return rval;
 }
@@ -1599,20 +1602,31 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 break;
 
             case RT_REGEX:
-                if (query && regexec(rulelist->rule->data, query, 0, NULL, 0) == 0)
+                if (query)
                 {
+                    pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(
+                        rulelist->rule->data, NULL);
 
-                    matches = true;
-
-                    if (!rulelist->rule->allow)
+                    if (mdata)
                     {
-                        msg = strdup("Permission denied, query matched regular expression.");
-                        MXS_INFO("dbfwfilter: rule '%s': regex matched on query", rulelist->rule->name);
-                        goto queryresolved;
+                        if (pcre2_match((pcre2_code*) rulelist->rule->data,
+                                          (PCRE2_SPTR)query, PCRE2_ZERO_TERMINATED,
+                                          0, 0, mdata, NULL) > 0)
+                        {
+                            matches = true;
+                        }
+                        pcre2_match_data_free(mdata);
+                        if (matches && !rulelist->rule->allow)
+                        {
+                            msg = strdup("Permission denied, query matched regular expression.");
+                            MXS_INFO("dbfwfilter: rule '%s': regex matched on query", rulelist->rule->name);
+                            goto queryresolved;
+                        }
                     }
                     else
                     {
-                        break;
+                        MXS_ERROR("Allocation of matching data for PCRE2 failed."
+                                  " This is most likely caused by a lack of memory");
                     }
                 }
                 break;
