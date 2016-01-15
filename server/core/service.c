@@ -66,6 +66,7 @@
 #include <gw.h>
 #include <gwdirs.h>
 #include <math.h>
+#include <version.h>
 
 static RSA *rsa_512 = NULL;
 static RSA *rsa_1024 = NULL;
@@ -1103,8 +1104,12 @@ serviceSetTimeout(SERVICE *service, int val)
     {
         return 0;
     }
+#ifdef UNSAFE_CODE
     service->conn_timeout = val;
-
+#else
+    MXS_WARNING("The `connection_timeout` parameter is not safe for use. "
+        "The functionality is disabled for MaxScale "MAXSCALE_VERSION".");
+#endif
     return 1;
 }
 
