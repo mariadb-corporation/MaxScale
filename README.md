@@ -19,6 +19,8 @@ System level tests for MaxScale
 
 [Build and test environment setup (if you want to play with MDBCI and Vagrant on your local machine](ENV_SETUP.md)
 
+[Jenkins instructions](JENKINS.md)
+
 ## Environmental variables
 |variable|meaning|
 |--------|-------|
