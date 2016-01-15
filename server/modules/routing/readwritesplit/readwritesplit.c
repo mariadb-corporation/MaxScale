@@ -1675,6 +1675,8 @@ static qc_query_type_t is_read_tmp_table(
       return type;
   }
 
+  if (BREF_IS_IN_USE(router_cli_ses->rses_master_ref))
+  {
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
   master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
 
@@ -1736,7 +1738,8 @@ static qc_query_type_t is_read_tmp_table(
 			}
 		free(tbl);
 	}
-	
+  }
+
 	return qtype;
 }
 
@@ -2488,8 +2491,7 @@ static bool route_single_stmt(
 #if defined(SS_EXTRA_DEBUG)
                         MXS_INFO("Found DCB for slave.");
 #endif
-			ss_dassert(get_root_master_bref(rses) == 
-				rses->rses_master_ref);
+
 			atomic_add(&inst->stats.n_slave, 1);
 		}
 		else
