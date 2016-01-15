@@ -17,6 +17,8 @@ System level tests for MaxScale
 
 [Hints: How to write a test](HOW_TO_WRITE_TEST.md)
 
+[Build and test environment setup (if you want to play with MDBCI and Vagrant on your local machine](ENV_SETUP.md)
+
 ## Environmental variables
 |variable|meaning|
 |--------|-------|
