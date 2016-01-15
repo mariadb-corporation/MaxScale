@@ -209,3 +209,10 @@ Another way is to use 'vagrant ssh':
 cd ~/mdbci/$name/
 vagrant ssh <node_name>
 </pre>
+
+### Destroying configuration
+
+<pre>
+cd ~/mdbci/$name
+vagrant destroy -f
+</pre>
