@@ -62,6 +62,8 @@ const monitor_def_t monitor_event_definitions[MAX_MONITOR_EVENT] =
 static MONITOR  *allMonitors = NULL;
 static SPINLOCK monLock = SPINLOCK_INIT;
 
+static void monitor_servers_free(MONITOR_SERVERS *servers);
+
 /**
  * Allocate a new monitor, load the associated module for the monitor
  * and start execution on the monitor.
@@ -139,6 +141,7 @@ monitor_free(MONITOR *mon)
     }
     spinlock_release(&monLock);
     free_config_parameter(mon->parameters);
+    monitor_servers_free(mon->databases);
     free(mon->name);
     free(mon);
 }
@@ -251,6 +254,24 @@ monitorAddServer(MONITOR *mon, SERVER *server)
         ptr->next = db;
     }
     spinlock_release(&mon->lock);
+}
+
+/**
+ * Free monitor server list
+ * @param servers Servers to free
+ */
+static void monitor_servers_free(MONITOR_SERVERS *servers)
+{
+    while (servers)
+    {
+        MONITOR_SERVERS *tofree = servers;
+        servers = servers->next;
+        if (tofree->con)
+        {
+            mysql_close(tofree->con);
+        }
+        free(tofree);
+    }
 }
 
 /**
