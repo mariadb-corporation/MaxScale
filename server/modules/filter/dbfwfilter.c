@@ -631,6 +631,68 @@ void add_users(char* rule, FW_INSTANCE* instance)
     instance->userstrings = link;
 }
 
+enum match_type
+{
+    MATCH_ANY,
+    MATCH_ALL,
+    MATCH_STRICT_ALL
+};
+
+/**
+ * Apply a rule set to a user
+ *
+ * @param instance Filter instance
+ * @param user User name
+ * @param rulelist List of rules to apply
+ * @param type Matching type, one of MATCH_ANY, MATCH_ALL or MATCH_STRICT_ALL
+ * @return True of the rules were successfully applied. False if memory allocation
+ * fails
+ */
+static bool apply_rule_to_user(FW_INSTANCE *instance, char *username,
+                               RULELIST *rulelist, enum match_type type)
+{
+    USER* user;
+    ss_dassert(type == MATCH_ANY || type == MATCH_STRICT_ALL || type == MATCH_ALL);
+    if ((user = (USER*) hashtable_fetch(instance->htable, username)) == NULL)
+    {
+        /**New user*/
+        if ((user = (USER*) calloc(1, sizeof (USER))) == NULL)
+        {
+            MXS_ERROR("dbfwfilter: failed to allocate memory when parsing rules.");
+            return false;
+        }
+        spinlock_init(&user->lock);
+    }
+
+    user->name = (char*) strdup(username);
+    user->qs_limit = NULL;
+    RULELIST *tl = (RULELIST*) rlistdup(rulelist);
+    RULELIST *tail = tl;
+
+    while (tail && tail->next)
+    {
+        tail = tail->next;
+    }
+
+    switch (type)
+    {
+        case MATCH_ANY:
+            tail->next = user->rules_or;
+            user->rules_or = tl;
+            break;
+        case MATCH_STRICT_ALL:
+            tail->next = user->rules_and;
+            user->rules_strict_and = tl;
+            break;
+        case MATCH_ALL:
+            tail->next = user->rules_and;
+            user->rules_and = tl;
+            break;
+    }
+    hashtable_add(instance->htable, (void *) username, (void *) user);
+    return true;
+}
+
 /**
  * Parses the list of rule strings for users and links them against the listed rules.
  * Only adds those rules that are found. If the rule isn't found a message is written to the error log.
@@ -639,16 +701,12 @@ void add_users(char* rule, FW_INSTANCE* instance)
  */
 bool link_rules(char* orig, FW_INSTANCE* instance)
 {
-
-    /**Apply rules to users*/
-
-    bool match_any = true;
     bool rval = true;
     char *rule = strdup(orig);
     char *tok, *ruleptr, *userptr, *modeptr;
     char *saveptr = NULL;
+    enum match_type type;
     RULELIST* rulelist = NULL;
-    bool strict = false;
     userptr = strstr(rule, "users ");
     modeptr = strstr(rule, " match ");
     ruleptr = strstr(rule, " rules ");
@@ -686,16 +744,15 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
         }
         if (strcmp(tok, "any") == 0)
         {
-            match_any = true;
+            type = MATCH_ANY;
         }
         else if (strcmp(tok, "all") == 0)
         {
-            match_any = false;
+            type = MATCH_ALL;
         }
         else if (strcmp(tok, "strict_all") == 0)
         {
-            match_any = false;
-            strict = true;
+            type = MATCH_STRICT_ALL;
         }
         else
         {
@@ -784,52 +841,11 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
 
     while (userptr)
     {
-        USER* user;
-        RULELIST *tl = NULL, *tail = NULL;
-
-        if ((user = (USER*) hashtable_fetch(instance->htable, userptr)) == NULL)
+        if (!apply_rule_to_user(instance, userptr, rulelist, type))
         {
-
-            /**New user*/
-            user = (USER*) calloc(1, sizeof(USER));
-
-            if (user == NULL)
-            {
-                MXS_ERROR("dbfwfilter: failed to allocate memory when parsing rules.");
-                rval = false;
-                goto parse_err;
-            }
-
-            spinlock_init(&user->lock);
+            rval = false;
+            break;
         }
-
-        user->name = (char*) strdup(userptr);
-        user->qs_limit = NULL;
-        tl = (RULELIST*) rlistdup(rulelist);
-        tail = tl;
-        while (tail && tail->next)
-        {
-            tail = tail->next;
-        }
-
-
-        if (match_any)
-        {
-            tail->next = user->rules_or;
-            user->rules_or = tl;
-        }
-        else if (strict)
-        {
-            tail->next = user->rules_and;
-            user->rules_strict_and = tl;
-        }
-        else
-        {
-            tail->next = user->rules_and;
-            user->rules_and = tl;
-        }
-
-        hashtable_add(instance->htable, (void *) userptr, (void *) user);
         userptr = strtok_r(NULL, " ", &saveptr);
     }
 parse_err:
