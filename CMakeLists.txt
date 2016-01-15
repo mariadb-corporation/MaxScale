@@ -23,7 +23,7 @@ INCLUDE(CTest)
 
 # Enable Java
 find_package(Java)
-if(Java_FOUND)
+if(EXISTS ${Java_JAVA_EXECUTABLE} ${JAVA_JAVAC_EXECUTABLE} ${JAVA_JAR_EXECUTABLE})
   include(UseJava)
 else()
   message(WARNING "Java not found, Java based tests are not run.")
