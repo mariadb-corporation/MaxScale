@@ -1,0 +1,20 @@
+{
+    global:
+        qc_end;
+        qc_get_affected_fields;
+        qc_get_canonical;
+        qc_get_created_table_name;
+        qc_get_database_names;
+        qc_get_operation;
+        qc_get_qtype_str;
+        qc_get_table_names;
+        qc_get_type;
+        qc_init;
+        qc_is_drop_table_query;
+        qc_is_real_query;
+        qc_query_has_clause;
+        qc_thread_end;
+        qc_thread_init;
+    local:
+        *;
+};

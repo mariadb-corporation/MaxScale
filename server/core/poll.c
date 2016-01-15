@@ -36,6 +36,7 @@
 #include <mysql.h>
 #include <resultset.h>
 #include <session.h>
+#include <query_classifier.h>
 
 #define         PROFILE_POLL    0
 

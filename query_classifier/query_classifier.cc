@@ -46,6 +46,11 @@
 #include <sql_parse.h>
 #include <errmsg.h>
 #include <client_settings.h>
+// In client_settings.h mysql_server_init and mysql_server_end are defined to
+// mysql_client_plugin_init and mysql_client_plugin_deinit respectively.
+// Those must be undefined, so that we here really call mysql_server_[init|end].
+#undef mysql_server_init
+#undef mysql_server_end
 #include <set_var.h>
 #include <strfunc.h>
 #include <item_func.h>
@@ -1478,14 +1483,13 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *))
 
     /** Get server handle */
     mysql = mysql_init(NULL);
-    ss_dassert(mysql != NULL);
 
     if (mysql == NULL)
     {
         MXS_ERROR("Call to mysql_real_connect failed due %d, %s.",
                   mysql_errno(mysql),
                   mysql_error(mysql));
-
+        ss_dassert(mysql != NULL);
         goto retblock;
     }
 
@@ -1769,4 +1773,43 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
     }
 
     return operation;
+}
+
+
+bool qc_init(int argc, char** argv, char** groups)
+{
+    int rc = mysql_library_init(argc, argv, groups);
+
+    if (rc != 0)
+    {
+        MXS_ERROR("mysql_library_init() failed. Error code: %d", rc);
+    }
+    else
+    {
+        MXS_NOTICE("Query classifier initialized.");
+    }
+
+    return rc == 0;
+}
+
+void qc_end()
+{
+    mysql_library_end();
+}
+
+bool qc_thread_init()
+{
+    bool inited = (mysql_thread_init() == 0);
+
+    if (!inited)
+    {
+        MXS_ERROR("mysql_thread_init() failed.");
+    }
+
+    return inited;
+}
+
+void qc_thread_end()
+{
+    mysql_thread_end();
 }

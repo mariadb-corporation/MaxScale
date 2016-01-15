@@ -79,8 +79,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-# include <skygw_utils.h>
-# include <log_manager.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+#include <query_classifier.h>
 
 #include <execinfo.h>
 
@@ -990,17 +991,26 @@ static void usage(void)
  */
 void worker_thread_main(void* arg)
 {
-    /** Init mysql thread context for use with a mysql handle and a parser */
-    if (mysql_thread_init() == 0)
+    if (qc_thread_init())
     {
-        poll_waitevents(arg);
+        /** Init mysql thread context for use with a mysql handle and a parser */
+        if (mysql_thread_init() == 0)
+        {
+            poll_waitevents(arg);
 
-        /** Release mysql thread context */
-        mysql_thread_end();
+            /** Release mysql thread context */
+            mysql_thread_end();
+        }
+        else
+        {
+            MXS_ERROR("Could not perform thread initialization for MySQL. Exiting thread.");
+        }
+
+        qc_thread_end();
     }
     else
     {
-        MXS_ERROR("Could not perform thread initialization for MySQL. Exiting thread.");
+        MXS_ERROR("Could not perform thread initialization for query classifier. Exiting thread.");
     }
 }
 
@@ -1816,6 +1826,14 @@ int main(int argc, char **argv)
                      get_langdir());
             server_options[i] = language_arg;
         }
+    }
+
+    if (!qc_init(num_elements, server_options, server_groups))
+    {
+        char* logerr = "Failed to initialise query classifier library.";
+        print_log_n_stderr(true, true, logerr, logerr, eno);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
     }
 
     if (mysql_library_init(num_elements, server_options, server_groups))

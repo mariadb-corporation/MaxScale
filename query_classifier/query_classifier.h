@@ -83,6 +83,12 @@ typedef enum
 
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
 
+bool qc_init(int argc, char** argv, char** groups);
+void qc_end();
+
+bool qc_thread_init();
+void qc_thread_end();
+
 /**
  * Create THD and use it for creating parse tree. Examine parse tree and
  * classify the query.

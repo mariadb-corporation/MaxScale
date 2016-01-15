@@ -4,7 +4,7 @@ target_link_libraries(binlogrouter maxscale-common)
 install(TARGETS binlogrouter DESTINATION ${MAXSCALE_LIBDIR})
 
 add_executable(maxbinlogcheck maxbinlogcheck.c blr_file.c blr_cache.c blr_master.c blr_slave.c blr.c)
-target_link_libraries(maxbinlogcheck maxscale-common)
+target_link_libraries(maxbinlogcheck maxscale-common query_classifier)
 
 install(TARGETS maxbinlogcheck DESTINATION bin)
 
