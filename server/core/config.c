@@ -91,12 +91,13 @@ static void feedback_defaults();
 static void check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
 int config_truth_value(char *str);
-bool isInternalService(char *router);
 int config_get_ifaddr(unsigned char *output);
 int config_get_release_string(char* release);
 FEEDBACK_CONF *config_get_feedback_data();
 void config_add_param(CONFIG_CONTEXT*, char*, char*);
 bool config_has_duplicate_sections(const char* config);
+int create_new_router(CONFIG_CONTEXT *obj, const char *router);
+
 static char          *config_file = NULL;
 static GATEWAY_CONF  gateway;
 static FEEDBACK_CONF feedback;
@@ -467,374 +468,8 @@ process_config_context(CONFIG_CONTEXT *context)
             char *router = config_get_value(obj->parameters, "router");
             if (router)
             {
-                char* max_slave_conn_str;
-                char* max_slave_rlag_str;
-                char *user;
-                char *auth;
-                char *enable_root_user;
-                char *connection_timeout;
-                char *auth_all_servers;
-                char *optimize_wildcard;
-                char *strip_db_esc;
-                char *weightby;
-                char *version_string;
-                char *subservices;
-                char *ssl, *ssl_cert, *ssl_key, *ssl_ca_cert, *ssl_version;
-                char* ssl_cert_verify_depth;
-                bool  is_rwsplit = false;
-                bool  is_schemarouter = false;
-                char *allow_localhost_match_wildcard_host;
-
-                obj->element = service_alloc(obj->object, router);
-                user = config_get_value(obj->parameters, "user");
-                auth = config_get_value(obj->parameters, "passwd");
-                subservices = config_get_value(obj->parameters, "subservices");
-                ssl = config_get_value(obj->parameters, "ssl");
-                ssl_cert = config_get_value(obj->parameters, "ssl_cert");
-                ssl_key = config_get_value(obj->parameters, "ssl_key");
-                ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
-                ssl_version = config_get_value(obj->parameters, "ssl_version");
-                ssl_cert_verify_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
-                enable_root_user = config_get_value(obj->parameters, "enable_root_user");
-                connection_timeout = config_get_value(obj->parameters, "connection_timeout");
-                optimize_wildcard = config_get_value(obj->parameters, "optimize_wildcard");
-                auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
-                strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
-                allow_localhost_match_wildcard_host = config_get_value(obj->parameters,
-                                                                       "localhost_match_wildcard_host");
-                weightby = config_get_value(obj->parameters, "weightby");
-
-                version_string = config_get_value(obj->parameters, "version_string");
-
-                if (subservices)
-                {
-                    service_set_param_value(obj->element,
-                                            obj->parameters,
-                                            subservices,
-                                            1, STRING_TYPE);
-                }
-                char *log_auth_warnings = config_get_value(obj->parameters, "log_auth_warnings");
-                int truthval;
-                if (log_auth_warnings && (truthval = config_truth_value(log_auth_warnings)) != -1)
-                {
-                    ((SERVICE*) obj->element)->log_auth_warnings = (bool) truthval;
-                }
-
-                CONFIG_PARAMETER* param;
-                if ((param = config_get_param(obj->parameters, "ignore_databases")))
-                {
-                    service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
-                }
-
-                if ((param = config_get_param(obj->parameters, "ignore_databases_regex")))
-                {
-                    service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
-                }
-                /** flag for rwsplit-specific parameters */
-                if (strncmp(router, "readwritesplit", strlen("readwritesplit")+1) == 0)
-                {
-                    is_rwsplit = true;
-                }
-
-                allow_localhost_match_wildcard_host =
-                    config_get_value(obj->parameters, "localhost_match_wildcard_host");
-
-                if (obj->element == NULL) /*< if module load failed */
-                {
-                    MXS_ERROR("Reading configuration "
-                              "for router service '%s' failed. "
-                              "Router %s is not loaded.",
-                              obj->object,
-                              obj->object);
-                    obj = obj->next;
-                    continue; /*< process next obj */
-                }
-
-                if (version_string) {
-                    /** Add the 5.5.5- string to the start of the version string if
-                     * the version string starts with "10.".
-                     * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
-                    if (strncmp(version_string, "10.", 3) == 0)
-                    {
-                        ((SERVICE *)(obj->element))->version_string =
-                            malloc((strlen(version_string) + strlen("5.5.5-") + 1) * sizeof(char));
-                        strcpy(((SERVICE *)(obj->element))->version_string, "5.5.5-");
-                        strcat(((SERVICE *)(obj->element))->version_string, version_string);
-                    }
-                    else
-                    {
-                        ((SERVICE *)(obj->element))->version_string = strdup(version_string);
-                    }
-                }
-                else
-                {
-                    if (gateway.version_string)
-                        ((SERVICE *)(obj->element))->version_string = strdup(gateway.version_string);
-                }
-
-                max_slave_conn_str = config_get_value(obj->parameters, "max_slave_connections");
-                max_slave_rlag_str = config_get_value(obj->parameters, "max_slave_replication_lag");
-
-                if (ssl)
-                {
-                    if (ssl_cert == NULL)
-                    {
-                        error_count++;
-                        MXS_ERROR("Server certificate missing for service '%s'."
-                                  "Please provide the path to the server certificate by adding "
-                                  "the ssl_cert=<path> parameter", obj->object);
-                    }
-
-                    if (ssl_ca_cert == NULL)
-                    {
-                        error_count++;
-                        MXS_ERROR("CA Certificate missing for service '%s'."
-                                  "Please provide the path to the certificate authority "
-                                  "certificate by adding the ssl_ca_cert=<path> parameter",
-                                  obj->object);
-                    }
-
-                    if (ssl_key == NULL)
-                    {
-                        error_count++;
-                        MXS_ERROR("Server private key missing for service '%s'. "
-                                  "Please provide the path to the server certificate key by "
-                                  "adding the ssl_key=<path> parameter",
-                                  obj->object);
-                    }
-
-                    if (access(ssl_ca_cert, F_OK) != 0)
-                    {
-                        MXS_ERROR("Certificate authority file for service '%s' "
-                                  "not found: %s",
-                                  obj->object, ssl_ca_cert);
-                        error_count++;
-                    }
-
-                    if (access(ssl_cert, F_OK) != 0)
-                    {
-                        MXS_ERROR("Server certificate file for service '%s' not found: %s",
-                                  obj->object,
-                                  ssl_cert);
-                        error_count++;
-                    }
-
-                    if (access(ssl_key, F_OK) != 0)
-                    {
-                        MXS_ERROR("Server private key file for service '%s' not found: %s",
-                                  obj->object,
-                                  ssl_key);
-                        error_count++;
-                    }
-
-                    if (error_count == 0)
-                    {
-                        if (serviceSetSSL(obj->element, ssl) != 0)
-                        {
-                            MXS_ERROR("Unknown parameter for service '%s': %s",
-                                      obj->object, ssl);
-                            error_count++;
-                        }
-                        else
-                        {
-                            serviceSetCertificates(obj->element, ssl_cert, ssl_key, ssl_ca_cert);
-                            if (ssl_version)
-                            {
-                                if (serviceSetSSLVersion(obj->element, ssl_version) != 0)
-                                {
-                                    MXS_ERROR("Unknown parameter value for "
-                                              "'ssl_version' for service '%s': %s",
-                                              obj->object, ssl_version);
-                                    error_count++;
-                                }
-                            }
-                            if (ssl_cert_verify_depth)
-                            {
-                                if (serviceSetSSLVerifyDepth(obj->element, atoi(ssl_cert_verify_depth)) != 0)
-                                {
-                                    MXS_ERROR("Invalid parameter value for "
-                                              "'ssl_cert_verify_depth' for service '%s': %s",
-                                              obj->object, ssl_cert_verify_depth);
-                                    error_count++;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                serviceSetRetryOnFailure(obj->element, config_get_value(obj->parameters, "retry_on_failure"));
-
-                if (enable_root_user)
-                {
-                    serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
-                }
-
-                if (connection_timeout)
-                {
-                    serviceSetTimeout(obj->element, atoi(connection_timeout));
-                }
-
-                if(auth_all_servers)
-                {
-                    serviceAuthAllServers(obj->element, config_truth_value(auth_all_servers));
-                }
-
-                if(optimize_wildcard)
-                {
-                    serviceOptimizeWildcard(obj->element, config_truth_value(optimize_wildcard));
-                }
-
-                if(strip_db_esc)
-                {
-                    serviceStripDbEsc(obj->element, config_truth_value(strip_db_esc));
-                }
-
-                if (weightby)
-                {
-                    serviceWeightBy(obj->element, weightby);
-                }
-
-                if (allow_localhost_match_wildcard_host)
-                {
-                    serviceEnableLocalhostMatchWildcardHost(
-                        obj->element,
-                        config_truth_value(allow_localhost_match_wildcard_host));
-                }
-
-                if (!auth)
-                {
-                    auth = config_get_value(obj->parameters, "auth");
-                }
-
-                if (obj->element && user && auth)
-                {
-                    serviceSetUser(obj->element, user, auth);
-                }
-                else if (user && auth == NULL)
-                {
-                    MXS_ERROR("Service '%s' has a "
-                              "user defined but no "
-                              "corresponding password.",
-                              obj->object);
-                }
-                /** Read, validate and set max_slave_connections */
-                if (max_slave_conn_str != NULL)
-                {
-                    CONFIG_PARAMETER* param;
-                    bool              succp;
-
-                    param = config_get_param(obj->parameters, "max_slave_connections");
-
-                    if (param == NULL)
-                    {
-                        succp = false;
-                    }
-                    else
-                    {
-                        succp = service_set_param_value(
-                            obj->element,
-                            param,
-                            max_slave_conn_str,
-                            COUNT_ATMOST,
-                            (COUNT_TYPE|PERCENT_TYPE));
-                    }
-
-                    if (!succp)
-                    {
-                        MXS_WARNING("Invalid value type "
-                                    "for parameter \'%s.%s = %s\'\n\tExpected "
-                                    "type is either <int> for slave connection "
-                                    "count or\n\t<int>%% for specifying the "
-                                    "maximum percentage of available the "
-                                    "slaves that will be connected.",
-                                    ((SERVICE*)obj->element)->name,
-                                    param->name,
-                                    param->value);
-                    }
-                }
-                /** Read, validate and set max_slave_replication_lag */
-                if (max_slave_rlag_str != NULL)
-                {
-                    CONFIG_PARAMETER* param;
-                    bool              succp;
-
-                    param = config_get_param(
-                        obj->parameters, 
-                        "max_slave_replication_lag");
-
-                    if (param == NULL)
-                    {
-                        succp = false;
-                    }
-                    else
-                    {
-                        succp = service_set_param_value(
-                            obj->element,
-                            param,
-                            max_slave_rlag_str,
-                            COUNT_ATMOST,
-                            COUNT_TYPE);
-                    }
-
-                    if (!succp)
-                    {
-                        MXS_WARNING("Invalid value type "
-                                    "for parameter \'%s.%s = %s\'\n\tExpected "
-                                    "type is <int> for maximum "
-                                    "slave replication lag.",
-                                    ((SERVICE*)obj->element)->name,
-                                    param->name,
-                                    param->value);
-                    }
-                }
-                /** Parameters for rwsplit router only */
-                if (is_rwsplit)
-                {
-                    CONFIG_PARAMETER* param;
-                    char*             use_sql_variables_in;
-                    bool              succp;
-
-                    use_sql_variables_in =
-                        config_get_value(obj->parameters, "use_sql_variables_in");
-
-                    if (use_sql_variables_in != NULL)
-                    {
-                        param = config_get_param(obj->parameters,
-                                                 "use_sql_variables_in");
-
-                        if (param == NULL)
-                        {
-                            succp = false;
-                        }
-                        else
-                        {
-                            succp = service_set_param_value(obj->element,
-                                                            param,
-                                                            use_sql_variables_in,
-                                                            COUNT_NONE,
-                                                            SQLVAR_TARGET_TYPE);
-                        }
-
-                        if (!succp)
-                        {
-                            if(param)
-                            {
-                                MXS_WARNING("Invalid value type "
-                                            "for parameter \'%s.%s = %s\'\n\tExpected "
-                                            "type is [master|all] for "
-                                            "use sql variables in.",
-                                            ((SERVICE*)obj->element)->name,
-                                            param->name,
-                                            param->value);
-                            }
-                            else
-                            {
-                                MXS_ERROR("Parameter was NULL");
-                            }
-                        }
-                    }
-                } /*< if (rw_split) */
-            } /*< if (router) */
+                error_count += create_new_router(obj, router);
+            }
             else
             {
                 obj->element = NULL;
@@ -1813,8 +1448,7 @@ process_config_update(CONFIG_CONTEXT *context)
         }
         else if (!strcmp(type, "service"))
         {
-            char *router = config_get_value(obj->parameters,
-                                            "router");
+            char *router = config_get_value(obj->parameters, "router");
             if (router)
             {
                 if ((service = service_find(obj->object)) != NULL)
@@ -1994,47 +1628,7 @@ process_config_update(CONFIG_CONTEXT *context)
                 }
                 else
                 {
-                    char *user;
-                    char *auth;
-                    char *enable_root_user;
-                    char *connection_timeout;
-                    char *allow_localhost_match_wildcard_host;
-
-                    enable_root_user = config_get_value(obj->parameters,
-                                                        "enable_root_user");
-
-                    connection_timeout = config_get_value(obj->parameters,
-                                                          "connection_timeout");
-
-                    allow_localhost_match_wildcard_host =
-                        config_get_value(obj->parameters, "localhost_match_wildcard_host");
-
-                    user = config_get_value(obj->parameters, "user");
-                    auth = config_get_value(obj->parameters, "passwd");
-                    obj->element = service_alloc(obj->object, router);
-
-                    if (obj->element && user && auth)
-                    {
-                        serviceSetUser(obj->element,
-                                       user,
-                                       auth);
-                        if (enable_root_user)
-                        {
-                            serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
-                        }
-
-                        if (connection_timeout)
-                        {
-                            serviceSetTimeout(obj->element, atoi(connection_timeout));
-                        }
-
-                        if (allow_localhost_match_wildcard_host)
-                        {
-                            serviceEnableLocalhostMatchWildcardHost(
-                                obj->element,
-                                config_truth_value(allow_localhost_match_wildcard_host));
-                        }
-                    }
+                    create_new_router(obj, router);
                 }
             }
             else
@@ -2470,8 +2064,7 @@ static char *InternalRouters[] =
  * @param router        The router name
  * @return      Non-zero if the router is in the InternalRouters table
  */
-bool
-isInternalService(char *router)
+bool isInternalService(const char *router)
 {
     if (router)
     {
@@ -2895,4 +2488,288 @@ int maxscale_getline(char** dest, int* size, FILE* file)
 
     *dest = destptr;
     return 1;
+}
+
+/**
+ * Validate the SSL parameters for a service
+ * @param ssl_cert SSL certificate (private key)
+ * @param ssl_ca_cert SSL CA certificate
+ * @param ssl_key SSL key (public key)
+ * @return 0 if parameters are valid otherwise the number of errors if errors
+ * were detected
+ */
+static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ssl_ca_cert, char *ssl_key)
+{
+    int error_count = 0;
+    if (ssl_cert == NULL)
+    {
+        error_count++;
+        MXS_ERROR("Server certificate missing for service '%s'."
+                  "Please provide the path to the server certificate by adding "
+                  "the ssl_cert=<path> parameter", obj->object);
+    }
+
+    if (ssl_ca_cert == NULL)
+    {
+        error_count++;
+        MXS_ERROR("CA Certificate missing for service '%s'."
+                  "Please provide the path to the certificate authority "
+                  "certificate by adding the ssl_ca_cert=<path> parameter",
+                  obj->object);
+    }
+
+    if (ssl_key == NULL)
+    {
+        error_count++;
+        MXS_ERROR("Server private key missing for service '%s'. "
+                  "Please provide the path to the server certificate key by "
+                  "adding the ssl_key=<path> parameter", obj->object);
+    }
+
+    if (access(ssl_ca_cert, F_OK) != 0)
+    {
+        error_count++;
+        MXS_ERROR("Certificate authority file for service '%s' "
+                  "not found: %s", obj->object, ssl_ca_cert);
+    }
+
+    if (access(ssl_cert, F_OK) != 0)
+    {
+        error_count++;
+        MXS_ERROR("Server certificate file for service '%s' not found: %s",
+                  obj->object, ssl_cert);
+    }
+
+    if (access(ssl_key, F_OK) != 0)
+    {
+        error_count++;
+        MXS_ERROR("Server private key file for service '%s' not found: %s",
+                  obj->object, ssl_key);
+    }
+    return error_count;
+}
+
+/**
+ * Create a new router for a service
+ * @param obj Service configuration context
+ * @return True if configuration was successful, false if an error occurred.
+ */
+int create_new_router(CONFIG_CONTEXT *obj, const char *router)
+{
+    if ((obj->element = service_alloc(obj->object, router)) == NULL)
+    {
+        MXS_ERROR("Service creation failed.");
+        return 1;
+    }
+    SERVICE* service = (SERVICE*) obj->element;
+    int error_count = 0;
+    CONFIG_PARAMETER* param;
+
+    char *retry = config_get_value(obj->parameters, "retry_on_failure");
+    if (retry)
+    {
+        serviceSetRetryOnFailure(obj->element, retry);
+    }
+
+    char *enable_root_user = config_get_value(obj->parameters, "enable_root_user");
+    if (enable_root_user)
+    {
+        serviceEnableRootUser(obj->element, config_truth_value(enable_root_user));
+    }
+
+    char *connection_timeout = config_get_value(obj->parameters, "connection_timeout");
+    if (connection_timeout)
+    {
+        serviceSetTimeout(obj->element, atoi(connection_timeout));
+    }
+
+    char *auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
+    if (auth_all_servers)
+    {
+        serviceAuthAllServers(obj->element, config_truth_value(auth_all_servers));
+    }
+
+    char *optimize_wildcard = config_get_value(obj->parameters, "optimize_wildcard");
+    if (optimize_wildcard)
+    {
+        serviceOptimizeWildcard(obj->element, config_truth_value(optimize_wildcard));
+    }
+
+    char *strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
+    if (strip_db_esc)
+    {
+        serviceStripDbEsc(obj->element, config_truth_value(strip_db_esc));
+    }
+
+    char *weightby = config_get_value(obj->parameters, "weightby");
+    if (weightby)
+    {
+        serviceWeightBy(obj->element, weightby);
+    }
+
+    char *wildcard = config_get_value(obj->parameters, "localhost_match_wildcard_host");
+    if (wildcard)
+    {
+        serviceEnableLocalhostMatchWildcardHost(obj->element, config_truth_value(wildcard));
+    }
+
+    char *user = config_get_value(obj->parameters, "user");
+    char *auth = config_get_value(obj->parameters, "passwd");
+
+    if (user && auth)
+    {
+        serviceSetUser(obj->element, user, auth);
+    }
+    else if(!isInternalService(router))
+    {
+        error_count++;
+        MXS_ERROR("Service '%s' is missing %s%s%s.",
+                  obj->object,
+                  user ? "" : "the 'user' parameter",
+                  !user && !auth ? " and " : "",
+                  auth ? "" : "the 'passwd' parameter");
+    }
+ 
+    char *subservices = config_get_value(obj->parameters, "subservices");
+    if (subservices)
+    {
+        service_set_param_value(obj->element, obj->parameters, subservices, 1, STRING_TYPE);
+    }
+
+    char *log_auth_warnings = config_get_value(obj->parameters, "log_auth_warnings");
+    if (log_auth_warnings)
+    {
+        int truthval = config_truth_value(log_auth_warnings);
+        if (truthval != -1)
+        {
+            service->log_auth_warnings = (bool) truthval;
+        }
+        else
+        {
+            MXS_ERROR("Invalid value for 'log_auth_warnings': %s", log_auth_warnings);
+        }
+    }
+
+    if ((param = config_get_param(obj->parameters, "ignore_databases")))
+    {
+        service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
+    }
+
+    if ((param = config_get_param(obj->parameters, "ignore_databases_regex")))
+    {
+        service_set_param_value(obj->element, param, param->value, 0, STRING_TYPE);
+    }
+
+
+    char *version_string = config_get_value(obj->parameters, "version_string");
+    if (version_string)
+    {
+        /** Add the 5.5.5- string to the start of the version string if
+         * the version string starts with "10.".
+         * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
+        if (strncmp(version_string, "10.", 3) == 0)
+        {
+            size_t len = strlen(version_string) + strlen("5.5.5-") + 1;
+            service->version_string = malloc(len);
+            strcpy(service->version_string, "5.5.5-");
+            strcat(service->version_string, version_string);
+        }
+        else
+        {
+            service->version_string = strdup(version_string);
+        }
+    }
+    else
+    {
+        if (gateway.version_string)
+        {
+            service->version_string = strdup(gateway.version_string);
+        }
+    }
+
+    char *ssl = config_get_value(obj->parameters, "ssl");
+    if (ssl)
+    {
+        char *ssl_cert = config_get_value(obj->parameters, "ssl_cert");
+        char *ssl_key = config_get_value(obj->parameters, "ssl_key");
+        char *ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
+        error_count += validate_ssl_parameters(obj, ssl_cert, ssl_ca_cert, ssl_key);
+
+        if (error_count == 0)
+        {
+            if (serviceSetSSL(obj->element, ssl) == 0)
+            {
+                serviceSetCertificates(obj->element, ssl_cert, ssl_key, ssl_ca_cert);
+
+                char *ssl_version = config_get_value(obj->parameters, "ssl_version");
+                if (ssl_version)
+                {
+                    if (serviceSetSSLVersion(obj->element, ssl_version) != 0)
+                    {
+                        MXS_ERROR("Unknown parameter value for 'ssl_version' for"
+                                  " service '%s': %s", obj->object, ssl_version);
+                        error_count++;
+                    }
+                }
+
+                char *cert_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
+                if (cert_depth)
+                {
+                    if (serviceSetSSLVerifyDepth(obj->element, atoi(cert_depth)) != 0)
+                    {
+                        MXS_ERROR("Invalid parameter value for 'ssl_cert_verify_depth'"
+                                  " for service '%s': %s", obj->object, cert_depth);
+                        error_count++;
+                    }
+                }
+            }
+            else
+            {
+                MXS_ERROR("Unknown parameter for service '%s': %s", obj->object, ssl);
+                error_count++;
+            }
+        }
+    }
+
+    /** Parameters for rwsplit router only */
+    if (strcmp(router, "readwritesplit"))
+    {
+        if ((param = config_get_param(obj->parameters, "max_slave_connections")))
+        {
+            if (!service_set_param_value(obj->element, param, param->value,
+                                         COUNT_ATMOST, (COUNT_TYPE | PERCENT_TYPE)))
+            {
+                MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
+                            "type is either <int> for slave connection count or\n\t<int>%% for specifying the "
+                            "maximum percentage of available the slaves that will be connected.",
+                            service->name, param->name, param->value);
+            }
+        }
+
+        if ((param = config_get_param(obj->parameters, "max_slave_replication_lag")))
+        {
+            if (!service_set_param_value(obj->element, param, param->value,
+                                         COUNT_ATMOST, COUNT_TYPE))
+            {
+                MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
+                            "type is <int> for maximum slave replication lag.",
+                            service->name, param->name, param->value);
+            }
+        }
+
+        if ((param = config_get_param(obj->parameters, "use_sql_variables_in")))
+        {
+            if (service_set_param_value(obj->element, param, param->value,
+                                        COUNT_NONE, SQLVAR_TARGET_TYPE))
+            {
+                if (param)
+                {
+                    MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
+                                "type is [master|all] for use sql variables in.",
+                                service->name, param->name, param->value);
+                }
+            }
+        }
+    }
+    return error_count;
 }
