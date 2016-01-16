@@ -1,5 +1,8 @@
 package maxscale.java.test1;
 
+import maxscale.java.MaxScaleConfiguration;
+import maxscale.java.MaxScaleConnection;
+
 public class SimpleConnectorJTest {
 
     public static final int RWSPLIT_PORT = 4006;
@@ -15,6 +18,7 @@ public class SimpleConnectorJTest {
         boolean error = false;
 
         try {
+            MaxScaleConfiguration config = new MaxScaleConfiguration("simplejavatest");
             MaxScaleConnection maxscale = new MaxScaleConnection();
 
             if (maxscale.isSmokeTest()) {

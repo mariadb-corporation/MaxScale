@@ -385,7 +385,7 @@ add_test_executable(mxs365.cpp mxs365 replication)
 add_test_executable(longblob.cpp longblob replication)
 
 if(Java_FOUND)
-  add_subdirectory(maxscale/java/test1)
+  add_subdirectory(maxscale/java/)
 endif()
 
 install(TARGETS readconnrouter_master readconnrouter_slave sql_queries rw_galera_select_insert rwsplit_connect rw_select_insert server_weight slave_failover kill_master DESTINATION system-test)

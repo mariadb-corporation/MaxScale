@@ -1,0 +1,18 @@
+package maxscale.java;
+
+import java.io.IOException;
+
+/**
+ * MaxScale configuration class
+ *
+ * Configures MaxScale for testing
+ */
+public class MaxScaleConfiguration {
+    
+    private static final String CONFIG_COMMAND = "@CMAKE_SOURCE_DIR@/configure_maxscale.sh";
+
+    public MaxScaleConfiguration(String test) throws IOException
+    {
+        Runtime.getRuntime().exec("test_name=" + test + CONFIG_COMMAND);
+    }
+}
