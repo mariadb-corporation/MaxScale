@@ -89,6 +89,7 @@
 #include <sys/wait.h>
 #include <sys/prctl.h>
 #include <sys/file.h>
+#include <statistics.h>
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -1916,6 +1917,9 @@ int main(int argc, char **argv)
         rc = MAXSCALE_ALREADYRUNNING;
         goto return_main;
     }
+
+    /** Initialize statistics */
+    ts_stats_init();
 
     /* Init MaxScale poll system */
     poll_init();

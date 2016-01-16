@@ -36,6 +36,7 @@
 #include <mysql.h>
 #include <resultset.h>
 #include <session.h>
+#include <statistics.h>
 #include <query_classifier.h>
 
 #define         PROFILE_POLL    0
@@ -156,21 +157,21 @@ static THREAD_DATA *thread_data = NULL;    /*< Status of each thread */
  */
 static struct
 {
-    int n_read;         /*< Number of read events   */
-    int n_write;        /*< Number of write events  */
-    int n_error;        /*< Number of error events  */
-    int n_hup;          /*< Number of hangup events */
-    int n_accept;       /*< Number of accept events */
-    int n_polls;        /*< Number of poll cycles   */
-    int n_pollev;       /*< Number of polls returning events */
-    int n_nbpollev;     /*< Number of polls returning events */
-    int n_nothreads;    /*< Number of times no threads are polling */
-    int n_fds[MAXNFDS]; /*< Number of wakeups with particular n_fds value */
-    int evq_length;     /*< Event queue length */
-    int evq_pending;    /*< Number of pending descriptors in event queue */
-    int evq_max;        /*< Maximum event queue length */
-    int wake_evqpending;/*< Woken from epoll_wait with pending events in queue */
-    int blockingpolls;  /*< Number of epoll_waits with a timeout specified */
+    ts_stats_t *n_read;         /*< Number of read events   */
+    ts_stats_t *n_write;        /*< Number of write events  */
+    ts_stats_t *n_error;        /*< Number of error events  */
+    ts_stats_t *n_hup;          /*< Number of hangup events */
+    ts_stats_t *n_accept;       /*< Number of accept events */
+    ts_stats_t *n_polls;        /*< Number of poll cycles   */
+    ts_stats_t *n_pollev;       /*< Number of polls returning events */
+    ts_stats_t *n_nbpollev;     /*< Number of polls returning events */
+    ts_stats_t *n_nothreads;    /*< Number of times no threads are polling */
+    int n_fds[MAXNFDS];         /*< Number of wakeups with particular n_fds value */
+    int evq_length;             /*< Event queue length */
+    int evq_pending;            /*< Number of pending descriptors in event queue */
+    int evq_max;                /*< Maximum event queue length */
+    int wake_evqpending;        /*< Woken from epoll_wait with pending events in queue */
+    ts_stats_t *blockingpolls;  /*< Number of epoll_waits with a timeout specified */
 } pollStats;
 
 #define N_QUEUE_TIMES   30
@@ -230,6 +231,22 @@ poll_init()
             thread_data[i].state = THREAD_STOPPED;
         }
     }
+
+    if ((pollStats.n_read = ts_stats_alloc()) == NULL ||
+        (pollStats.n_write = ts_stats_alloc()) == NULL ||
+        (pollStats.n_error = ts_stats_alloc()) == NULL ||
+        (pollStats.n_hup = ts_stats_alloc()) == NULL ||
+        (pollStats.n_accept = ts_stats_alloc()) == NULL ||
+        (pollStats.n_polls = ts_stats_alloc()) == NULL ||
+        (pollStats.n_pollev = ts_stats_alloc()) == NULL ||
+        (pollStats.n_nbpollev = ts_stats_alloc()) == NULL ||
+        (pollStats.n_nothreads = ts_stats_alloc()) == NULL ||
+        (pollStats.blockingpolls = ts_stats_alloc()) == NULL)
+    {
+        perror("Fatal error: Memory allocation failed.");
+        exit(-1);
+    }
+
 #if MUTEX_EPOLL
     simple_mutex_init(&epoll_wait_mutex, "epoll_wait_mutex");
 #endif
@@ -540,6 +557,8 @@ poll_waitevents(void *arg)
     intptr_t thread_id = (intptr_t)arg;
     int poll_spins = 0;
 
+    ts_stats_set_thread_id(thread_id);
+
     /** Add this thread to the bitmask of running polling threads */
     bitmask_set(&poll_mask, thread_id);
     if (thread_data)
@@ -567,7 +586,7 @@ poll_waitevents(void *arg)
             thread_data[thread_id].state = THREAD_POLLING;
         }
 
-        atomic_add(&pollStats.n_polls, 1);
+        ts_stats_add(pollStats.n_polls, 1);
         if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
         {
             atomic_add(&n_waiting, -1);
@@ -590,7 +609,7 @@ poll_waitevents(void *arg)
          */
         else if (nfds == 0 && pollStats.evq_pending == 0 && poll_spins++ > number_poll_spins)
         {
-            atomic_add(&pollStats.blockingpolls, 1);
+            ts_stats_add(pollStats.blockingpolls, 1);
             nfds = epoll_wait(epoll_fd,
                               events,
                               MAX_EVENTS,
@@ -608,7 +627,7 @@ poll_waitevents(void *arg)
 
         if (n_waiting == 0)
         {
-            atomic_add(&pollStats.n_nothreads, 1);
+            ts_stats_add(pollStats.n_nothreads, 1);
         }
 #if MUTEX_EPOLL
         simple_mutex_unlock(&epoll_wait_mutex);
@@ -619,13 +638,13 @@ poll_waitevents(void *arg)
             timeout_bias = 1;
             if (poll_spins <= number_poll_spins + 1)
             {
-                atomic_add(&pollStats.n_nbpollev, 1);
+                ts_stats_add(pollStats.n_nbpollev, 1);
             }
             poll_spins = 0;
             MXS_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
                       pthread_self(),
                       nfds);
-            atomic_add(&pollStats.n_pollev, 1);
+            ts_stats_add(pollStats.n_pollev, 1);
             if (thread_data)
             {
                 thread_data[thread_id].n_fds = nfds;
@@ -910,7 +929,7 @@ process_pollq(int thread_id)
 
         if (eno == 0)
         {
-            atomic_add(&pollStats.n_write, 1);
+            ts_stats_add(pollStats.n_write, 1);
             /** Read session id to thread's local storage */
             dcb_get_ses_log_info(dcb,
                                  &mxs_log_tls.li_sesid,
@@ -942,7 +961,7 @@ process_pollq(int thread_id)
                       "Accept in fd %d",
                       pthread_self(),
                       dcb->fd);
-            atomic_add(&pollStats.n_accept, 1);
+            ts_stats_add(pollStats.n_accept, 1);
             dcb_get_ses_log_info(dcb,
                                  &mxs_log_tls.li_sesid,
                                  &mxs_log_tls.li_enabled_priorities);
@@ -959,7 +978,7 @@ process_pollq(int thread_id)
                       pthread_self(),
                       dcb,
                       dcb->fd);
-            atomic_add(&pollStats.n_read, 1);
+            ts_stats_add(pollStats.n_read, 1);
             /** Read session id to thread's local storage */
             dcb_get_ses_log_info(dcb,
                                  &mxs_log_tls.li_sesid,
@@ -997,7 +1016,7 @@ process_pollq(int thread_id)
                       eno,
                       strerror_r(eno, errbuf, sizeof(errbuf)));
         }
-        atomic_add(&pollStats.n_error, 1);
+        ts_stats_add(pollStats.n_error, 1);
         /** Read session id to thread's local storage */
         dcb_get_ses_log_info(dcb,
                              &mxs_log_tls.li_sesid,
@@ -1022,7 +1041,7 @@ process_pollq(int thread_id)
                   dcb->fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
-        atomic_add(&pollStats.n_hup, 1);
+        ts_stats_add(pollStats.n_hup, 1);
         spinlock_acquire(&dcb->dcb_initlock);
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
@@ -1058,7 +1077,7 @@ process_pollq(int thread_id)
                   dcb->fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
-        atomic_add(&pollStats.n_hup, 1);
+        ts_stats_add(pollStats.n_hup, 1);
         spinlock_acquire(&dcb->dcb_initlock);
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
@@ -1209,7 +1228,6 @@ spin_reporter(void *dcb, char *desc, int value)
     dcb_printf((DCB *)dcb, "\t%-40s  %d\n", desc, value);
 }
 
-
 /**
  * Debug routine to print the polling statistics
  *
@@ -1222,25 +1240,25 @@ dprintPollStats(DCB *dcb)
 
     dcb_printf(dcb, "\nPoll Statistics.\n\n");
     dcb_printf(dcb, "No. of epoll cycles:                           %d\n",
-               pollStats.n_polls);
+               ts_stats_sum(pollStats.n_polls));
     dcb_printf(dcb, "No. of epoll cycles with wait:                         %d\n",
-               pollStats.blockingpolls);
+               ts_stats_sum(pollStats.blockingpolls));
     dcb_printf(dcb, "No. of epoll calls returning events:           %d\n",
-               pollStats.n_pollev);
+               ts_stats_sum(pollStats.n_pollev));
     dcb_printf(dcb, "No. of non-blocking calls returning events:    %d\n",
-               pollStats.n_nbpollev);
+               ts_stats_sum(pollStats.n_nbpollev));
     dcb_printf(dcb, "No. of read events:                            %d\n",
-               pollStats.n_read);
+               ts_stats_sum(pollStats.n_read));
     dcb_printf(dcb, "No. of write events:                           %d\n",
-               pollStats.n_write);
+               ts_stats_sum(pollStats.n_write));
     dcb_printf(dcb, "No. of error events:                           %d\n",
-               pollStats.n_error);
+               ts_stats_sum(pollStats.n_error));
     dcb_printf(dcb, "No. of hangup events:                          %d\n",
-               pollStats.n_hup);
+               ts_stats_sum(pollStats.n_hup));
     dcb_printf(dcb, "No. of accept events:                          %d\n",
-               pollStats.n_accept);
+               ts_stats_sum(pollStats.n_accept));
     dcb_printf(dcb, "No. of times no threads polling:               %d\n",
-               pollStats.n_nothreads);
+               ts_stats_sum(pollStats.n_nothreads));
     dcb_printf(dcb, "Current event queue length:                    %d\n",
                pollStats.evq_length);
     dcb_printf(dcb, "Maximum event queue length:                    %d\n",
@@ -1796,15 +1814,15 @@ poll_get_stat(POLL_STAT stat)
     switch (stat)
     {
     case POLL_STAT_READ:
-        return pollStats.n_read;
+        return ts_stats_sum(pollStats.n_read);
     case POLL_STAT_WRITE:
-        return pollStats.n_write;
+        return ts_stats_sum(pollStats.n_write);
     case POLL_STAT_ERROR:
-        return pollStats.n_error;
+        return ts_stats_sum(pollStats.n_error);
     case POLL_STAT_HANGUP:
-        return pollStats.n_hup;
+        return ts_stats_sum(pollStats.n_hup);
     case POLL_STAT_ACCEPT:
-        return pollStats.n_accept;
+        return ts_stats_sum(pollStats.n_accept);
     case POLL_STAT_EVQ_LEN:
         return pollStats.evq_length;
     case POLL_STAT_EVQ_PENDING:
