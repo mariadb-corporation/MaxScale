@@ -91,6 +91,8 @@ server_alloc(char *servname, char *protocol, unsigned short port)
     spinlock_init(&server->lock);
     server->persistent = NULL;
     server->persistmax = 0;
+    server->persistmaxtime = 0;
+    server->persistpoolmax = 0;
     spinlock_init(&server->persistlock);
 
     spinlock_acquire(&server_spin);

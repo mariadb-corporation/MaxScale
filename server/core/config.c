@@ -97,12 +97,92 @@ FEEDBACK_CONF *config_get_feedback_data();
 void config_add_param(CONFIG_CONTEXT*, char*, char*);
 bool config_has_duplicate_sections(const char* config);
 int create_new_router(CONFIG_CONTEXT *obj, const char *router);
+int create_new_server(CONFIG_CONTEXT *obj);
 
 static char          *config_file = NULL;
 static GATEWAY_CONF  gateway;
 static FEEDBACK_CONF feedback;
 char                 *version_string = NULL;
 
+
+static char *service_params[] =
+{
+    "type",
+    "router",
+    "router_options",
+    "servers",
+    "user",
+    "passwd",
+    "enable_root_user",
+    "connection_timeout",
+    "auth_all_servers",
+    "optimize_wildcard",
+    "strip_db_esc",
+    "localhost_match_wildcard_host",
+    "max_slave_connections",
+    "max_slave_replication_lag",
+    "use_sql_variables_in",         /*< rwsplit only */
+    "subservices",
+    "version_string",
+    "filters",
+    "weightby",
+    "ssl_cert",
+    "ssl_ca_cert",
+    "ssl",
+    "ssl_key",
+    "ssl_version",
+    "ssl_cert_verify_depth",
+    "ignore_databases",
+    "ignore_databases_regex",
+    "log_auth_warnings",
+    NULL
+};
+
+static char *listener_params[] =
+{
+    "type",
+    "service",
+    "protocol",
+    "port",
+    "address",
+    "socket",
+    NULL
+};
+
+static char *monitor_params[] =
+{
+    "type",
+    "module",
+    "servers",
+    "user",
+    "passwd",
+    "script",
+    "events",
+    "mysql51_replication",
+    "monitor_interval",
+    "detect_replication_lag",
+    "detect_stale_master",
+    "disable_master_failback",
+    "backend_connect_timeout",
+    "backend_read_timeout",
+    "backend_write_timeout",
+    "available_when_donor",
+    "disable_master_role_setting",
+    NULL
+};
+
+static char *server_params[] =
+{
+    "type",
+    "protocol",
+    "port",
+    "address",
+    "monitoruser",
+    "monitorpw",
+    "persistpoolmax",
+    "persistmaxtime",
+    NULL
+};
 
 /**
  * Trim whitespace from the front and rear of a string
@@ -479,73 +559,8 @@ process_config_context(CONFIG_CONTEXT *context)
         }
         else if (!strcmp(type, "server"))
         {
-            char *address;
-            char *port;
-            char *protocol;
-            char *monuser;
-            char *monpw;
+            error_count += create_new_server(obj);
 
-            address = config_get_value(obj->parameters, "address");
-            port = config_get_value(obj->parameters, "port");
-            protocol = config_get_value(obj->parameters, "protocol");
-            monuser = config_get_value(obj->parameters, "monitoruser");
-            monpw = config_get_value(obj->parameters, "monitorpw");
-
-            if (address && port && protocol)
-            {
-                obj->element = server_alloc(address,
-                                            protocol,
-                                            atoi(port));
-                server_set_unique_name(obj->element, obj->object);
-            }
-            else
-            {
-                obj->element = NULL;
-                MXS_ERROR("Server '%s' is missing a "
-                          "required configuration parameter. A "
-                          "server must "
-                          "have address, port and protocol "
-                          "defined.",
-                          obj->object);
-                error_count++;
-            }
-
-            if (obj->element && monuser && monpw)
-            {
-                serverAddMonUser(obj->element, monuser, monpw);
-            }
-            else if (monuser && monpw == NULL)
-            {
-                MXS_ERROR("Server '%s' has a monitoruser"
-                          "defined but no corresponding password.",
-                          obj->object);
-            }
-
-            if (obj->element)
-            {
-                SERVER *server = obj->element;
-                server->persistpoolmax = strtol(config_get_value_string(obj->parameters,
-                                                                        "persistpoolmax"), NULL, 0);
-                server->persistmaxtime = strtol(config_get_value_string(obj->parameters,
-                                                                        "persistmaxtime"), NULL, 0);
-                CONFIG_PARAMETER *params = obj->parameters;
-
-                while (params)
-                {
-                    if (strcmp(params->name, "address")
-                        && strcmp(params->name, "port")
-                        && strcmp(params->name, "protocol")
-                        && strcmp(params->name, "monitoruser")
-                        && strcmp(params->name, "monitorpw")
-                        && strcmp(params->name, "type")
-                        && strcmp(params->name, "persistpoolmax")
-                        && strcmp(params->name, "persistmaxtime"))
-                    {
-                        serverAddParameter(obj->element, params->name, params->value);
-                    }
-                    params = params->next;
-                }
-            }
         }
         else if (!strcmp(type, "filter"))
         {
@@ -1639,52 +1654,21 @@ process_config_update(CONFIG_CONTEXT *context)
         }
         else if (!strcmp(type, "server"))
         {
-            char *address;
-            char *port;
-            char *protocol;
-            char *monuser;
-            char *monpw;
+            char *address = config_get_value(obj->parameters, "address");
+            char *port = config_get_value(obj->parameters, "port");
 
-            address = config_get_value(obj->parameters, "address");
-            port = config_get_value(obj->parameters, "port");
-            protocol = config_get_value(obj->parameters, "protocol");
-            monuser = config_get_value(obj->parameters, "monitoruser");
-            monpw = config_get_value(obj->parameters, "monitorpw");
-
-            if (address && port && protocol)
+            if (address && port &&
+                (server = server_find(address, atoi(port))) != NULL)
             {
-                if ((server = server_find(address, atoi(port))) != NULL)
-                {
-                    server_update(server,
-                                  protocol,
-                                  monuser,
-                                  monpw);
-                    obj->element = server;
-                }
-                else
-                {
-                    obj->element = server_alloc(address,
-                                                protocol,
-                                                atoi(port));
-
-                    server_set_unique_name(obj->element, obj->object);
-
-                    if (obj->element && monuser && monpw)
-                    {
-                        serverAddMonUser(obj->element,
-                                         monuser,
-                                         monpw);
-                    }
-                }
+                char *protocol = config_get_value(obj->parameters, "protocol");
+                char *monuser = config_get_value(obj->parameters, "monuser");
+                char *monpw = config_get_value(obj->parameters, "monpw");
+                server_update(server, protocol, monuser, monpw);
+                obj->element = server;
             }
             else
             {
-                MXS_ERROR("Server '%s' is missing a "
-                          "required "
-                          "configuration parameter. A server must "
-                          "have address, port and protocol "
-                          "defined.",
-                          obj->object);
+                create_new_server(obj);
             }
         }
         obj = obj->next;
@@ -1825,71 +1809,6 @@ process_config_update(CONFIG_CONTEXT *context)
     return 1;
 }
 
-static char *service_params[] =
-{
-    "type",
-    "router",
-    "router_options",
-    "servers",
-    "user",
-    "passwd",
-    "enable_root_user",
-    "connection_timeout",
-    "auth_all_servers",
-    "optimize_wildcard",
-    "strip_db_esc",
-    "localhost_match_wildcard_host",
-    "max_slave_connections",
-    "max_slave_replication_lag",
-    "use_sql_variables_in",         /*< rwsplit only */
-    "subservices",
-    "version_string",
-    "filters",
-    "weightby",
-    "ssl_cert",
-    "ssl_ca_cert",
-    "ssl",
-    "ssl_key",
-    "ssl_version",
-    "ssl_cert_verify_depth",
-    "ignore_databases",
-    "ignore_databases_regex",
-    "log_auth_warnings",
-    NULL
-};
-
-static char *listener_params[] =
-{
-    "type",
-    "service",
-    "protocol",
-    "port",
-    "address",
-    "socket",
-    NULL
-};
-
-static char *monitor_params[] =
-{
-    "type",
-    "module",
-    "servers",
-    "user",
-    "passwd",
-    "script",
-    "events",
-    "mysql51_replication",
-    "monitor_interval",
-    "detect_replication_lag",
-    "detect_stale_master",
-    "disable_master_failback",
-    "backend_connect_timeout",
-    "backend_read_timeout",
-    "backend_write_timeout",
-    "available_when_donor",
-    "disable_master_role_setting",
-    NULL
-};
 /**
  * Check the configuration objects have valid parameters
  */
@@ -2769,6 +2688,109 @@ int create_new_router(CONFIG_CONTEXT *obj, const char *router)
                                 service->name, param->name, param->value);
                 }
             }
+        }
+    }
+    return error_count;
+}
+
+/**
+ * Check if a parameter is a default server parameter.
+ * @param param Parameter name
+ * @return True if it is one of the standard server parameters
+ */
+bool is_normal_server_parameter(const char *param)
+{
+    for (int i = 0; server_params[i]; i++)
+    {
+        if (strcmp(param, server_params[i]) == 0)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Create a new server
+ * @param obj Server configuration context
+ * @return Number of errors
+ */
+int create_new_server(CONFIG_CONTEXT *obj)
+{
+    int error_count = 0;
+    char *address = config_get_value(obj->parameters, "address");
+    char *port = config_get_value(obj->parameters, "port");
+    char *protocol = config_get_value(obj->parameters, "protocol");
+    char *monuser = config_get_value(obj->parameters, "monitoruser");
+    char *monpw = config_get_value(obj->parameters, "monitorpw");
+
+    if (address && port && protocol)
+    {
+        if ((obj->element = server_alloc(address, protocol, atoi(port))))
+        {
+            server_set_unique_name(obj->element, obj->object);
+        }
+        else
+        {
+            MXS_ERROR("Failed to create a new server, memory allocation failed.");
+            error_count++;
+        }
+    }
+    else
+    {
+        obj->element = NULL;
+        MXS_ERROR("Server '%s' is missing a required configuration parameter. A "
+                  "server must have address, port and protocol defined.", obj->object);
+        error_count++;
+    }
+
+    if (error_count == 0)
+    {
+        SERVER *server = obj->element;
+
+        if (monuser && monpw)
+        {
+            serverAddMonUser(server, monuser, monpw);
+        }
+        else if (monuser && monpw == NULL)
+        {
+            MXS_ERROR("Server '%s' has a monitoruser defined but no corresponding "
+                      "password.", obj->object);
+            error_count++;
+        }
+
+        char *endptr;
+        const char *poolmax = config_get_value_string(obj->parameters, "persistpoolmax");
+        if (poolmax)
+        {
+            server->persistpoolmax = strtol(poolmax, &endptr, 0);
+            if (*endptr != '\0')
+            {
+                MXS_ERROR("Invalid value for 'persistpoolmax' for server %s: %s",
+                          server->unique_name, poolmax);
+            }
+        }
+
+        const char *persistmax = config_get_value_string(obj->parameters, "persistmaxtime");
+        if (persistmax)
+        {
+            server->persistmaxtime = strtol(persistmax, &endptr, 0);
+            if (*endptr != '\0')
+            {
+                MXS_ERROR("Invalid value for 'persistmaxtime' for server %s: %s",
+                          server->unique_name, persistmax);
+            }
+        }
+
+        CONFIG_PARAMETER *params = obj->parameters;
+
+        while (params)
+        {
+            if (!is_normal_server_parameter(params->name))
+            {
+                serverAddParameter(obj->element, params->name, params->value);
+            }
+            params = params->next;
         }
     }
     return error_count;
