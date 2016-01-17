@@ -98,6 +98,7 @@ void config_add_param(CONFIG_CONTEXT*, char*, char*);
 bool config_has_duplicate_sections(const char* config);
 int create_new_router(CONFIG_CONTEXT *obj, const char *router);
 int create_new_server(CONFIG_CONTEXT *obj);
+int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* monitorhash);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
 
 static char          *config_file = NULL;
@@ -704,133 +705,7 @@ process_config_context(CONFIG_CONTEXT *context)
         }
         else if (!strcmp(type, "monitor"))
         {
-            char *module;
-            char *servers;
-            char *user;
-            char *passwd;
-            unsigned long interval = 0;
-            int connect_timeout = 0;
-            int read_timeout = 0;
-            int write_timeout = 0;
-
-            module = config_get_value(obj->parameters, "module");
-            servers = config_get_value(obj->parameters, "servers");
-            user = config_get_value(obj->parameters, "user");
-            passwd = config_get_value(obj->parameters, "passwd");
-            if (config_get_value(obj->parameters, "monitor_interval"))
-            {
-                interval = strtoul(config_get_value(obj->parameters, "monitor_interval"), NULL, 10);
-            }
-
-            if (config_get_value(obj->parameters, "backend_connect_timeout"))
-            {
-                connect_timeout = atoi(config_get_value(obj->parameters, "backend_connect_timeout"));
-            }
-            if (config_get_value(obj->parameters, "backend_read_timeout"))
-            {
-                read_timeout = atoi(config_get_value(obj->parameters, "backend_read_timeout"));
-            }
-            if (config_get_value(obj->parameters, "backend_write_timeout"))
-            {
-                write_timeout = atoi(config_get_value(obj->parameters, "backend_write_timeout"));
-            }
-
-            if (module)
-            {
-                obj->element = monitor_alloc(obj->object, module);
-                if (servers && obj->element)
-                {
-                    char *s, *lasts;
-
-                    /* if id is not set, compute it now with pid only */
-                    if (gateway.id == 0)
-                    {
-                        gateway.id = getpid();
-                    }
-
-                    monitorAddParameters(obj->element, obj->parameters);
-
-                    /* set monitor interval */
-                    if (interval > 0)
-                    {
-                        monitorSetInterval(obj->element, interval);
-                    }
-                    else
-                    {
-                        MXS_WARNING("Monitor '%s' "
-                                    "missing monitor_interval parameter, "
-                                    "default value of 10000 miliseconds.", obj->object);
-                    }
-
-                    /* set timeouts */
-                    if (connect_timeout > 0)
-                    {
-                        monitorSetNetworkTimeout(obj->element, MONITOR_CONNECT_TIMEOUT, connect_timeout);
-                    }
-                    if (read_timeout > 0)
-                    {
-                        monitorSetNetworkTimeout(obj->element, MONITOR_READ_TIMEOUT, read_timeout);
-                    }
-                    if (write_timeout > 0)
-                    {
-                        monitorSetNetworkTimeout(obj->element, MONITOR_WRITE_TIMEOUT, write_timeout);
-                    }
-
-                    /* get the servers to monitor */
-                    s = strtok_r(servers, ",", &lasts);
-                    while (s)
-                    {
-                        CONFIG_CONTEXT *obj1 = context;
-                        int             found = 0;
-                        while (obj1)
-                        {
-                            if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
-                            {
-                                found = 1;
-                                if (hashtable_add(monitorhash, obj1->object, "") == 0)
-                                {
-                                    MXS_WARNING("Multiple monitors are monitoring server [%s]. "
-                                                "This will cause undefined behavior.",
-                                                obj1->object);
-                                }
-                                monitorAddServer(obj->element, obj1->element);
-                            }
-                            obj1 = obj1->next;
-                        }
-                        if (!found)
-                        {
-                            MXS_ERROR("Unable to find "
-                                      "server '%s' that is "
-                                      "configured in the "
-                                      "monitor '%s'.",
-                                      s, obj->object);
-                        }
-
-                        s = strtok_r(NULL, ",", &lasts);
-                    }
-                }
-
-                if (obj->element && user && passwd)
-                {
-                    monitorAddUser(obj->element, user, passwd);
-                    check_monitor_permissions(obj->element);
-                }
-                else if (obj->element && user)
-                {
-                    MXS_ERROR("Monitor '%s' defines a "
-                              "username with no password.",
-                              obj->object);
-                    error_count++;
-                }
-            }
-            else
-            {
-                obj->element = NULL;
-                MXS_ERROR("Monitor '%s' is missing a "
-                          "require module parameter.",
-                          obj->object);
-                error_count++;
-            }
+            error_count += create_new_monitor(context, obj, monitorhash);
         }
         else if (strcmp(type, "server") != 0 && strcmp(type, "filter") != 0)
         {
@@ -2745,6 +2620,124 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
             {
                 error_count++;
             }
+        }
+    }
+
+    return error_count;
+}
+
+/**
+ * Create a new monitor
+ * @param context The complete configuration context
+ * @param obj Monitor configuration context
+ * @param monitorhash Hashtable containing the servers that are already monitored
+ * @return Number of errors
+ */
+int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* monitorhash)
+{
+    int error_count = 0;
+
+    char *module = config_get_value(obj->parameters, "module");
+    if (module)
+    {
+        if ((obj->element = monitor_alloc(obj->object, module)) == NULL)
+        {
+            MXS_ERROR("Failed to create monitor '%s'.", obj->object);
+            error_count++;
+        }
+    }
+    else
+    {
+        obj->element = NULL;
+        MXS_ERROR("Monitor '%s' is missing a require module parameter.", obj->object);
+        error_count++;
+    }
+
+    char *servers = config_get_value(obj->parameters, "servers");
+    if (servers == NULL)
+    {
+        MXS_ERROR("Monitor '%s' is missing the 'servers' parameter that "
+                  "lists the servers that it monitors.", obj->object);
+        error_count++;
+    }
+
+    if (error_count == 0)
+    {
+        monitorAddParameters(obj->element, obj->parameters);
+
+        char *interval = config_get_value(obj->parameters, "monitor_interval");
+        if (interval)
+        {
+            monitorSetInterval(obj->element, atoi(interval));
+        }
+        else
+        {
+            MXS_WARNING("Monitor '%s' is missing the 'monitor_interval' parameter, "
+                        "using default value of 10000 milliseconds.", obj->object);
+        }
+
+        char *connect_timeout = config_get_value(obj->parameters, "backend_connect_timeout");
+        if (connect_timeout)
+        {
+            monitorSetNetworkTimeout(obj->element, MONITOR_CONNECT_TIMEOUT, atoi(connect_timeout));
+        }
+
+        char *read_timeout = config_get_value(obj->parameters, "backend_read_timeout");
+        if (read_timeout)
+        {
+            monitorSetNetworkTimeout(obj->element, MONITOR_READ_TIMEOUT, atoi(read_timeout));
+        }
+
+        char *write_timeout = config_get_value(obj->parameters, "backend_write_timeout");
+        if (write_timeout)
+        {
+            monitorSetNetworkTimeout(obj->element, MONITOR_WRITE_TIMEOUT, atoi(write_timeout));
+        }
+
+        /* get the servers to monitor */
+        char *s, *lasts;
+        s = strtok_r(servers, ",", &lasts);
+        while (s)
+        {
+            CONFIG_CONTEXT *obj1 = context;
+            int found = 0;
+            while (obj1)
+            {
+                if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
+                {
+                    found = 1;
+                    if (hashtable_add(monitorhash, obj1->object, "") == 0)
+                    {
+                        MXS_WARNING("Multiple monitors are monitoring server [%s]. "
+                                    "This will cause undefined behavior.",
+                                    obj1->object);
+                    }
+                    monitorAddServer(obj->element, obj1->element);
+                }
+                obj1 = obj1->next;
+            }
+            if (!found)
+            {
+                MXS_ERROR("Unable to find server '%s' that is "
+                          "configured in the monitor '%s'.", s, obj->object);
+                error_count++;
+            }
+
+            s = strtok_r(NULL, ",", &lasts);
+        }
+
+        char *user = config_get_value(obj->parameters, "user");
+        char *passwd = config_get_value(obj->parameters, "passwd");
+        if (user && passwd)
+        {
+            monitorAddUser(obj->element, user, passwd);
+            check_monitor_permissions(obj->element);
+        }
+        else if (user)
+        {
+            MXS_ERROR("Monitor '%s' defines a username but does not define a password.",
+                      obj->object);
+            error_count++;
         }
     }
 
