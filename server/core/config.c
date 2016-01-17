@@ -98,6 +98,7 @@ void config_add_param(CONFIG_CONTEXT*, char*, char*);
 bool config_has_duplicate_sections(const char* config);
 int create_new_router(CONFIG_CONTEXT *obj, const char *router);
 int create_new_server(CONFIG_CONTEXT *obj);
+int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
 
 static char          *config_file = NULL;
 static GATEWAY_CONF  gateway;
@@ -565,44 +566,42 @@ process_config_context(CONFIG_CONTEXT *context)
         else if (!strcmp(type, "filter"))
         {
             char *module = config_get_value(obj->parameters, "module");
-            char *options = config_get_value(obj->parameters, "options");
 
             if (module)
             {
-                obj->element = filter_alloc(obj->object, module);
+                if ((obj->element = filter_alloc(obj->object, module)))
+                {
+                    char *options = config_get_value(obj->parameters, "options");
+                    if (options)
+                    {
+                        char *lasts;
+                        char *s = strtok_r(options, ",", &lasts);
+                        while (s)
+                        {
+                            filterAddOption(obj->element, s);
+                            s = strtok_r(NULL, ",", &lasts);
+                        }
+                    }
+
+                    CONFIG_PARAMETER *params = obj->parameters;
+                    while (params)
+                    {
+                        if (strcmp(params->name, "module") &&
+                            strcmp(params->name, "options"))
+                        {
+                            filterAddParameter(obj->element,
+                                               params->name,
+                                               params->value);
+                        }
+                        params = params->next;
+                    }
+                }
             }
             else
             {
-                MXS_ERROR("Filter '%s' has no module "
-                          "defined defined to load.",
+                MXS_ERROR("Filter '%s' has no module defined defined to load.",
                           obj->object);
                 error_count++;
-            }
-
-            if (obj->element && options)
-            {
-                char *lasts;
-                char *s = strtok_r(options, ",", &lasts);
-                while (s)
-                {
-                    filterAddOption(obj->element, s);
-                    s = strtok_r(NULL, ",", &lasts);
-                }
-            }
-
-            if (obj->element)
-            {
-                CONFIG_PARAMETER *params = obj->parameters;
-                while (params)
-                {
-                    if (strcmp(params->name, "module") && strcmp(params->name, "options"))
-                    {
-                        filterAddParameter(obj->element,
-                                           params->name,
-                                           params->value);
-                    }
-                    params = params->next;
-                }
             }
         }
         obj = obj->next;
@@ -622,68 +621,7 @@ process_config_context(CONFIG_CONTEXT *context)
         }
         else if (!strcmp(type, "service"))
         {
-            char *servers;
-            char *roptions;
-            char *router;
-            char *filters = config_get_value(obj->parameters, "filters");
-            servers = config_get_value(obj->parameters, "servers");
-            roptions = config_get_value(obj->parameters, "router_options");
-            router = config_get_value(obj->parameters, "router");
-            if (servers && obj->element)
-            {
-                char *lasts;
-                char *s = strtok_r(servers, ",", &lasts);
-                while (s)
-                {
-                    CONFIG_CONTEXT *obj1 = context;
-                    int found = 0;
-                    while (obj1)
-                    {
-                        if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
-                        {
-                            found = 1;
-                            serviceAddBackend(obj->element, obj1->element);
-                        }
-                        obj1 = obj1->next;
-                    }
-
-                    if (!found)
-                    {
-                        MXS_ERROR("Unable to find "
-                                  "server '%s' that is "
-                                  "configured as part of "
-                                  "service '%s'.",
-                                  s, obj->object);
-                    }
-                    s = strtok_r(NULL, ",", &lasts);
-                }
-            }
-            else if (servers == NULL && !isInternalService(router))
-            {
-                MXS_WARNING("The service '%s' is missing a "
-                            "definition of the servers that provide "
-                            "the service.",
-                            obj->object);
-            }
-
-            if (roptions && obj->element)
-            {
-                char *lasts;
-                char *s = strtok_r(roptions, ",", &lasts);
-                while (s)
-                {
-                    serviceAddRouterOption(obj->element, s);
-                    s = strtok_r(NULL, ",", &lasts);
-                }
-            }
-
-            if (filters && obj->element)
-            {
-                if (!serviceSetFilters(obj->element, filters))
-                {
-                    error_count++;
-                }
-            }
+            error_count += configure_new_service(context, obj);
         }
         else if (!strcmp(type, "listener"))
         {
@@ -1688,65 +1626,7 @@ process_config_update(CONFIG_CONTEXT *context)
         }
         else if (!strcmp(type, "service"))
         {
-            char *servers;
-            char *roptions;
-            char *filters;
-
-            servers = config_get_value(obj->parameters, "servers");
-            roptions = config_get_value(obj->parameters, "router_options");
-            filters = config_get_value(obj->parameters, "filters");
-
-            if (servers && obj->element)
-            {
-                char *lasts;
-                char *s = strtok_r(servers, ",", &lasts);
-                while (s)
-                {
-                    CONFIG_CONTEXT *obj1 = context;
-                    int             found = 0;
-                    while (obj1)
-                    {
-                        if (strcmp(trim(s), obj1->object) == 0 && obj->element && obj1->element)
-                        {
-                            found = 1;
-                            if (!serviceHasBackend(obj->element, obj1->element))
-                            {
-                                serviceAddBackend(obj->element, obj1->element);
-                            }
-                        }
-
-                        obj1 = obj1->next;
-                    }
-                    if (!found)
-                    {
-                        MXS_ERROR("Unable to find "
-                                  "server '%s' that is "
-                                  "configured as part of "
-                                  "service '%s'.",
-                                  s, obj->object);
-                    }
-                    s = strtok_r(NULL, ",", &lasts);
-                }
-            }
-            if (roptions && obj->element)
-            {
-                char *lasts;
-                char *s = strtok_r(roptions, ",", &lasts);
-                serviceClearRouterOptions(obj->element);
-                while (s)
-                {
-                    serviceAddRouterOption(obj->element, s);
-                    s = strtok_r(NULL, ",", &lasts);
-                }
-            }
-            if (filters && obj->element)
-            {
-                if (!serviceSetFilters(obj->element, filters))
-                {
-                    MXS_ERROR("Failed to set service filters for '%s'. This "
-                              "service will not use filters.", obj->object);
-                }
-            }
+            configure_new_service(context, obj);
         }
         else if (!strcmp(type, "listener"))
         {
@@ -2793,5 +2673,80 @@ int create_new_server(CONFIG_CONTEXT *obj)
             params = params->next;
         }
     }
+    return error_count;
+}
+
+/**
+ * Configure a new service
+ *
+ * Add servers, router options and filters to a new service.
+ * @param context The complete configuration context
+ * @param obj The service configuration context
+ * @return Number of errors
+ */
+int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
+{
+    int error_count = 0;
+    char *filters = config_get_value(obj->parameters, "filters");
+    char *servers = config_get_value(obj->parameters, "servers");
+    char *roptions = config_get_value(obj->parameters, "router_options");
+    char *router = config_get_value(obj->parameters, "router");
+    SERVICE *service = obj->element;
+
+    if (service)
+    {
+        if (servers)
+        {
+            char *lasts;
+            char *s = strtok_r(servers, ",", &lasts);
+            while (s)
+            {
+                CONFIG_CONTEXT *obj1 = context;
+                int found = 0;
+                while (obj1)
+                {
+                    if (strcmp(trim(s), obj1->object) == 0 && obj1->element)
+                    {
+                        found = 1;
+                        serviceAddBackend(service, obj1->element);
+                    }
+                    obj1 = obj1->next;
+                }
+
+                if (!found)
+                {
+                    MXS_ERROR("Unable to find server '%s' that is "
+                              "configured as part of service '%s'.", s, obj->object);
+                }
+                s = strtok_r(NULL, ",", &lasts);
+            }
+        }
+        else if (servers == NULL && !isInternalService(router))
+        {
+            MXS_ERROR("The service '%s' is missing a definition of the servers "
+                      "that provide the service.", obj->object);
+            error_count++;
+        }
+
+        if (roptions)
+        {
+            char *lasts;
+            char *s = strtok_r(roptions, ",", &lasts);
+            while (s)
+            {
+                serviceAddRouterOption(service, s);
+                s = strtok_r(NULL, ",", &lasts);
+            }
+        }
+
+        if (filters)
+        {
+            if (!serviceSetFilters(service, filters))
+            {
+                error_count++;
+            }
+        }
+    }
+
     return error_count;
 }
