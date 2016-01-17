@@ -96,9 +96,11 @@ int config_get_release_string(char* release);
 FEEDBACK_CONF *config_get_feedback_data();
 void config_add_param(CONFIG_CONTEXT*, char*, char*);
 bool config_has_duplicate_sections(const char* config);
-int create_new_router(CONFIG_CONTEXT *obj, const char *router);
+int create_new_service(CONFIG_CONTEXT *obj);
 int create_new_server(CONFIG_CONTEXT *obj);
 int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* monitorhash);
+int create_new_listener(CONFIG_CONTEXT *obj);
+int create_new_filter(CONFIG_CONTEXT *obj);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
 
 static char          *config_file = NULL;
@@ -518,7 +520,7 @@ config_reload()
  * @param context       The configuration data
  * @return A zero result indicates a fatal error
  */
-static  int
+static int
 process_config_context(CONFIG_CONTEXT *context)
 {
     CONFIG_CONTEXT  *obj;
@@ -530,7 +532,8 @@ process_config_context(CONFIG_CONTEXT *context)
         MXS_ERROR("Failed to allocate, monitor configuration check hashtable.");
         return 0;
     }
-    hashtable_memory_fns(monitorhash, (HASHMEMORYFN)strdup, NULL, (HASHMEMORYFN)free, NULL);
+    hashtable_memory_fns(monitorhash, (HASHMEMORYFN) strdup, NULL,
+                         (HASHMEMORYFN) free, NULL);
 
     /**
      * Process the data and create the services and servers defined
@@ -540,184 +543,64 @@ process_config_context(CONFIG_CONTEXT *context)
     while (obj)
     {
         char *type = config_get_value(obj->parameters, "type");
-        if (type == NULL)
+        if (type)
+        {
+            if (!strcmp(type, "service"))
+            {
+                error_count += create_new_service(obj);
+            }
+            else if (!strcmp(type, "server"))
+            {
+                error_count += create_new_server(obj);
+            }
+            else if (!strcmp(type, "filter"))
+            {
+                error_count += create_new_filter(obj);
+            }
+        }
+        else
         {
             MXS_ERROR("Configuration object '%s' has no type.", obj->object);
             error_count++;
         }
-        else if (!strcmp(type, "service"))
-        {
-            char *router = config_get_value(obj->parameters, "router");
-            if (router)
-            {
-                error_count += create_new_router(obj, router);
-            }
-            else
-            {
-                obj->element = NULL;
-                MXS_ERROR("No router defined for service '%s'.", obj->object);
-                error_count++;
-            }
-        }
-        else if (!strcmp(type, "server"))
-        {
-            error_count += create_new_server(obj);
-
-        }
-        else if (!strcmp(type, "filter"))
-        {
-            char *module = config_get_value(obj->parameters, "module");
-
-            if (module)
-            {
-                if ((obj->element = filter_alloc(obj->object, module)))
-                {
-                    char *options = config_get_value(obj->parameters, "options");
-                    if (options)
-                    {
-                        char *lasts;
-                        char *s = strtok_r(options, ",", &lasts);
-                        while (s)
-                        {
-                            filterAddOption(obj->element, s);
-                            s = strtok_r(NULL, ",", &lasts);
-                        }
-                    }
-
-                    CONFIG_PARAMETER *params = obj->parameters;
-                    while (params)
-                    {
-                        if (strcmp(params->name, "module") &&
-                            strcmp(params->name, "options"))
-                        {
-                            filterAddParameter(obj->element,
-                                               params->name,
-                                               params->value);
-                        }
-                        params = params->next;
-                    }
-                }
-            }
-            else
-            {
-                MXS_ERROR("Filter '%s' has no module defined defined to load.",
-                          obj->object);
-                error_count++;
-            }
-        }
         obj = obj->next;
     }
 
-    /*
-     * Now we have the services we can add the servers to the services
-     * add the protocols to the services
-     */
-    obj = context;
-    while (obj)
+    if (error_count == 0)
     {
-        char *type = config_get_value(obj->parameters, "type");
-        if (type == NULL)
+        /*
+         * Now we have created the services, servers and filters and we can add the
+         * servers and filters to the services. Monitors are also created at this point
+         * because they require a set of servers to monitor.
+         */
+        obj = context;
+        while (obj)
         {
-            ;
-        }
-        else if (!strcmp(type, "service"))
-        {
-            error_count += configure_new_service(context, obj);
-        }
-        else if (!strcmp(type, "listener"))
-        {
-            char *service;
-            char *address;
-            char *port;
-            char *protocol;
-            char *socket;
-            struct sockaddr_in serv_addr;
-
-            service = config_get_value(obj->parameters, "service");
-            port = config_get_value(obj->parameters, "port");
-            address = config_get_value(obj->parameters, "address");
-            protocol = config_get_value(obj->parameters, "protocol");
-            socket = config_get_value(obj->parameters, "socket");
-
-            /* if id is not set, do it now */
-            if (gateway.id == 0)
+            char *type = config_get_value(obj->parameters, "type");
+            if (type)
             {
-                setipaddress(&serv_addr.sin_addr, (address == NULL) ? "0.0.0.0" : address);
-                gateway.id = (unsigned long) (serv_addr.sin_addr.s_addr +
-                                              (port != NULL ? atoi(port) : 0 + getpid()));
-            }
-
-            if (service && protocol && (socket || port))
-            {
-                if (socket)
+                if (!strcmp(type, "service"))
                 {
-                    CONFIG_CONTEXT *ptr = context;
-                    while (ptr && strcmp(ptr->object, service) != 0)
-                    {
-                        ptr = ptr->next;
-                    }
-
-                    if (ptr && ptr->element)
-                    {
-                        serviceAddProtocol(ptr->element, protocol, socket, 0);
-                    }
-                    else
-                    {
-                        MXS_ERROR("Listener '%s', "
-                                  "service '%s' not found. "
-                                  "Listener will not execute for socket %s.",
-                                  obj->object, service, socket);
-                        error_count++;
-                    }
+                    error_count += configure_new_service(context, obj);
                 }
-
-                if (port)
+                else if (!strcmp(type, "listener"))
                 {
-                    CONFIG_CONTEXT *ptr = context;
-                    while (ptr && strcmp(ptr->object, service) != 0)
-                    {
-                        ptr = ptr->next;
-                    }
-
-                    if (ptr && ptr->element)
-                    {
-                        serviceAddProtocol(ptr->element, protocol, address, atoi(port));
-                    }
-                    else
-                    {
-                        MXS_ERROR("Listener '%s', "
-                                  "service '%s' not found. "
-                                  "Listener will not execute.",
-                                  obj->object, service);
-                        error_count++;
-                    }
+                    error_count += create_new_listener(obj);
+                }
+                else if (!strcmp(type, "monitor"))
+                {
+                    error_count += create_new_monitor(context, obj, monitorhash);
+                }
+                else if (strcmp(type, "server") != 0 && strcmp(type, "filter") != 0)
+                {
+                    MXS_ERROR("Configuration object '%s' has an invalid type specified.",
+                              obj->object);
+                    error_count++;
                 }
             }
-            else
-            {
-                MXS_ERROR("Listener '%s' is missing a "
-                          "required "
-                          "parameter. A Listener must have a "
-                          "service, port and protocol defined.",
-                          obj->object);
-                error_count++;
-            }
+            obj = obj->next;
         }
-        else if (!strcmp(type, "monitor"))
-        {
-            error_count += create_new_monitor(context, obj, monitorhash);
-        }
-        else if (strcmp(type, "server") != 0 && strcmp(type, "filter") != 0)
-        {
-            MXS_ERROR("Configuration object '%s' has an "
-                      "invalid type specified.",
-                      obj->object);
-            error_count++;
-        }
-
-        obj = obj->next;
-    } /*< while */
-
+    }
     /** TODO: consistency check function */
 
     hashtable_free(monitorhash);
@@ -727,10 +610,8 @@ process_config_context(CONFIG_CONTEXT *context)
 
     if (error_count)
     {
-        MXS_ERROR("%d errors where encountered processing the "
-                  "configuration file '%s'.",
-                  error_count,
-                  config_file);
+        MXS_ERROR("%d errors where encountered processing the configuration "
+                  "file '%s'.", error_count, config_file);
         return 0;
     }
 
@@ -1456,7 +1337,7 @@ process_config_update(CONFIG_CONTEXT *context)
                 }
                 else
                 {
-                    create_new_router(obj, router);
+                    create_new_service(obj);
                 }
             }
             else
@@ -1738,7 +1619,7 @@ static char *InternalRouters[] =
  * @param router        The router name
  * @return      Non-zero if the router is in the InternalRouters table
  */
-bool isInternalService(const char *router)
+bool is_internal_service(const char *router)
 {
     if (router)
     {
@@ -2182,6 +2063,12 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
                   "Please provide the path to the server certificate by adding "
                   "the ssl_cert=<path> parameter", obj->object);
     }
+    else if (access(ssl_cert, F_OK) != 0)
+    {
+        error_count++;
+        MXS_ERROR("Server certificate file for service '%s' not found: %s",
+                  obj->object, ssl_cert);
+    }
 
     if (ssl_ca_cert == NULL)
     {
@@ -2191,6 +2078,12 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
                   "certificate by adding the ssl_ca_cert=<path> parameter",
                   obj->object);
     }
+    else if (access(ssl_ca_cert, F_OK) != 0)
+    {
+        error_count++;
+        MXS_ERROR("Certificate authority file for service '%s' "
+                  "not found: %s", obj->object, ssl_ca_cert);
+    }
 
     if (ssl_key == NULL)
     {
@@ -2199,22 +2092,7 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
                   "Please provide the path to the server certificate key by "
                   "adding the ssl_key=<path> parameter", obj->object);
     }
-
-    if (access(ssl_ca_cert, F_OK) != 0)
-    {
-        error_count++;
-        MXS_ERROR("Certificate authority file for service '%s' "
-                  "not found: %s", obj->object, ssl_ca_cert);
-    }
-
-    if (access(ssl_cert, F_OK) != 0)
-    {
-        error_count++;
-        MXS_ERROR("Server certificate file for service '%s' not found: %s",
-                  obj->object, ssl_cert);
-    }
-
-    if (access(ssl_key, F_OK) != 0)
+    else if (access(ssl_key, F_OK) != 0)
     {
         error_count++;
         MXS_ERROR("Server private key file for service '%s' not found: %s",
@@ -2228,13 +2106,21 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
  * @param obj Service configuration context
  * @return True if configuration was successful, false if an error occurred.
  */
-int create_new_router(CONFIG_CONTEXT *obj, const char *router)
+int create_new_service(CONFIG_CONTEXT *obj)
 {
-    if ((obj->element = service_alloc(obj->object, router)) == NULL)
+    char *router = config_get_value(obj->parameters, "router");
+    if (router == NULL)
+    {
+        obj->element = NULL;
+        MXS_ERROR("No router defined for service '%s'.", obj->object);
+        return 1;
+    }
+    else if ((obj->element = service_alloc(obj->object, router)) == NULL)
     {
         MXS_ERROR("Service creation failed.");
         return 1;
     }
+
     SERVICE* service = (SERVICE*) obj->element;
     int error_count = 0;
     CONFIG_PARAMETER* param;
@@ -2294,7 +2180,7 @@ int create_new_router(CONFIG_CONTEXT *obj, const char *router)
     {
         serviceSetUser(obj->element, user, auth);
     }
-    else if(!isInternalService(router))
+    else if(!is_internal_service(router))
     {
         error_count++;
         MXS_ERROR("Service '%s' is missing %s%s%s.",
@@ -2303,7 +2189,7 @@ int create_new_router(CONFIG_CONTEXT *obj, const char *router)
                   !user && !auth ? " and " : "",
                   auth ? "" : "the 'passwd' parameter");
     }
- 
+
     char *subservices = config_get_value(obj->parameters, "subservices");
     if (subservices)
     {
@@ -2596,7 +2482,7 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
                 s = strtok_r(NULL, ",", &lasts);
             }
         }
-        else if (servers == NULL && !isInternalService(router))
+        else if (servers == NULL && !is_internal_service(router))
         {
             MXS_ERROR("The service '%s' is missing a definition of the servers "
                       "that provide the service.", obj->object);
@@ -2739,6 +2625,104 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
                       obj->object);
             error_count++;
         }
+    }
+
+    return error_count;
+}
+
+/**
+ * Create a new listener for a service
+ * @param obj Listener configuration context
+ * @return Number of errors
+ */
+int create_new_listener(CONFIG_CONTEXT *obj)
+{
+    int error_count = 0;
+    char *service_name = config_get_value(obj->parameters, "service");
+    char *port = config_get_value(obj->parameters, "port");
+    char *address = config_get_value(obj->parameters, "address");
+    char *protocol = config_get_value(obj->parameters, "protocol");
+    char *socket = config_get_value(obj->parameters, "socket");
+
+    if (service_name && protocol && (socket || port))
+    {
+        SERVICE *service = service_find(service_name);
+        if (service)
+        {
+            if (socket)
+            {
+                serviceAddProtocol(service, protocol, socket, 0);
+            }
+
+            if (port)
+            {
+                serviceAddProtocol(service, protocol, address, atoi(port));
+            }
+        }
+        else
+        {
+            MXS_ERROR("Listener '%s', service '%s' not found.", obj->object,
+                      service_name);
+            error_count++;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Listener '%s' is missing a required parameter. A Listener "
+                  "must have a service, port and protocol defined.", obj->object);
+        error_count++;
+    }
+
+    return error_count;
+}
+
+/**
+ * Create a new filter
+ * @param obj Filter configuration context
+ * @return Number of errors
+ */
+int create_new_filter(CONFIG_CONTEXT *obj)
+{
+    int error_count = 0;
+    char *module = config_get_value(obj->parameters, "module");
+
+    if (module)
+    {
+        if ((obj->element = filter_alloc(obj->object, module)))
+        {
+            char *options = config_get_value(obj->parameters, "options");
+            if (options)
+            {
+                char *lasts;
+                char *s = strtok_r(options, ",", &lasts);
+                while (s)
+                {
+                    filterAddOption(obj->element, s);
+                    s = strtok_r(NULL, ",", &lasts);
+                }
+            }
+
+            CONFIG_PARAMETER *params = obj->parameters;
+            while (params)
+            {
+                if (strcmp(params->name, "module") && strcmp(params->name, "options"))
+                {
+                    filterAddParameter(obj->element, params->name, params->value);
+                }
+                params = params->next;
+            }
+        }
+        else
+        {
+            MXS_ERROR("Failed to create filter '%s'. Memory allocation failed.",
+                      obj->object);
+            error_count++;
+        }
+    }
+    else
+    {
+        MXS_ERROR("Filter '%s' has no module defined defined to load.", obj->object);
+        error_count++;
     }
 
     return error_count;

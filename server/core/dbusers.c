@@ -2583,7 +2583,7 @@ bool check_service_permissions(SERVICE* service)
     int conn_timeout = 1;
     bool rval = true;
 
-    if (isInternalService(service->routerModule))
+    if (is_internal_service(service->routerModule))
     {
         return true;
     }
