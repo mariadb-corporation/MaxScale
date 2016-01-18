@@ -98,11 +98,12 @@ virsh pool-start default
 It is necessary to generate descriptions of MariaDB and Maxscale repositories before bringin up Maxscale machine with Vagrant 
 <pre>
 export ci_url="http://my_repository_site.com/repostory/"
-~/mdbci-repository-config/generate_all.sh <directory_for_repo_descriptions>
-~/mdbci-repository-config/maxscale-ci.sh $target <directory_for_repo_descriptions>
+~/mdbci-repository-config/generate_all.sh $repo_dir
+~/mdbci-repository-config/maxscale-ci.sh $target $repo_dir
 </pre>
 where
 <pre>
+$repo_dir - directory where repository descriptions will be created
 $target - directory with MaxScale packages in the repositoy
 </pre>
 example:
