@@ -82,6 +82,12 @@ scp -r vagrant@maxscale-jenkins.mariadb.com:/home/vagrant/.vagrant.d/boxes/dummy
 
 # put AWS keys to aws-config.yml (see [aws-config.yml.template](https://github.com/OSLL/mdbci/blob/master/aws-config.yml.template))
 
+# add curent user to the group 'libvirtd'
+sudo usermod -a -G <user_name> libvirtd
+
+# start libvirt default pool
+virsh pool-start default
+
 </pre>
 
 ### Setup VMs manually
