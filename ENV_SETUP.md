@@ -31,11 +31,16 @@ scp -r mdbci-boxes/* mdbci/
 chmod 400 mdbci/KEYS/*
 
 # install all the stuff for test package build
-sudo apt-get install cmake libmariadbclient-dev gcc g++ libssl-dev
+sudo apt-get install cmake gcc g++ libssl-dev
 sudo apt-get install mariadb-client shellcheck
 
+# install MariaDB development library
+sudo apt-get install libmariadbclient-dev 
+# or in some distributions
+sudo apt-get install libmariadb-client-lgpl-dev
+
 # install qemu (more info https://en.wikibooks.org/wiki/QEMU/Installing_QEMU)
-apt-get install qemu qemu-kvm libvirt-bin
+sudo apt-get install qemu qemu-kvm libvirt-bin
 
 # install docker (if needed) - see https://docs.docker.com/engine/installation/
 
@@ -74,6 +79,8 @@ scp -r vagrant@maxscale-jenkins.mariadb.com:/home/vagrant/sysbench_deb7  .
 scp -r vagrant@maxscale-jenkins.mariadb.com:/home/vagrant/.vagrant.d/boxes/dummy .vagrant.d/boxes/
 
 # MariaDBManager-GPG* files are needed for Maxscale builds in the home directory
+
+# put AWS keys to aws-config.yml (see [aws-config.yml.template](https://github.com/OSLL/mdbci/blob/master/aws-config.yml.template))
 
 </pre>
 
