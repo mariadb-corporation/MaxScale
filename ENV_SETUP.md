@@ -42,6 +42,9 @@ sudo apt-get install libmariadb-client-lgpl-dev
 # install qemu (more info https://en.wikibooks.org/wiki/QEMU/Installing_QEMU)
 sudo apt-get install qemu qemu-kvm libvirt-bin
 
+# install virt-manager (if you prefer UI)
+sudo apt-get install virt-manager
+
 # install docker (if needed) - see https://docs.docker.com/engine/installation/
 
 # if cmake from distribution repository is too old it is recommended to build it from latest sources
@@ -80,7 +83,7 @@ scp -r vagrant@maxscale-jenkins.mariadb.com:/home/vagrant/.vagrant.d/boxes/dummy
 
 # MariaDBManager-GPG* files are needed for Maxscale builds in the home directory
 
-# put AWS keys to aws-config.yml (see [aws-config.yml.template](https://github.com/OSLL/mdbci/blob/master/aws-config.yml.template))
+# put AWS keys to aws-config.yml (see https://github.com/OSLL/mdbci/blob/master/aws-config.yml.template)
 
 # add curent user to the group 'libvirtd'
 sudo usermod -a -G <user_name> libvirtd
