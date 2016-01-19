@@ -95,6 +95,40 @@ virsh pool-start default
 
 ### Setup VMs manually
 
+#### Empty virtual machine
+
+Following template can be used to create empty VM (for qemu machines):
+<pre>
+{
+  "cookbook_path" : "../recipes/cookbooks/",
+  "build" :
+  {
+        "hostname" : "default",
+        "box" : "###box###",
+        "product" : {
+                "name" : "packages"
+        }
+  }
+}
+</pre>
+
+for AWS machines:
+<pre>
+{
+  "cookbook_path" : "../recipes/cookbooks/",
+  "aws_config" : "../aws-config.yml",
+  "build" :
+  {
+        "hostname" : "build",
+        "box" : "###box###"
+  }
+}
+</pre>
+
+Following boxes are availabe: 
+* qemu: debian_7.5_libvirt, ubuntu_trusty_libvirt, centos_7.0_libvirt, centos_6.5_libvirt
+* AWS: rhel5, rhel6, rhel7, sles11, sles12, fedora20, fedora21, fediora22, ubuntu_wily, ubuntu_vivid, centos7, deb_jessie
+* 
 #### Maxscale and backend machines creation
 
 * Generation of Maxscale repository description
