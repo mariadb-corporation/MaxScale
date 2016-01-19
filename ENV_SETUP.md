@@ -224,7 +224,7 @@ ssh -i $maxscale_sshkey $maxscale_access_user@$maxscale_IP
 Another way is to use 'vagrant ssh':
 <pre>
 cd ~/mdbci/$name/
-vagrant ssh &lt;node_name&qt;
+vagrant ssh &lt;node_name&gt;
 </pre>
 
 ### Destroying configuration
