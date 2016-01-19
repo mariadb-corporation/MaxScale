@@ -37,6 +37,7 @@
  * 05/02/14     Mark Riddoch            Addition of version string
  * 29/06/14     Massimiliano Pinto      Addition of pidfile
  * 10/08/15     Markus Makela           Added configurable directory locations
+ * 19/01/16     Markus Makela           Set cwd to log directory
  * @endverbatim
  */
 #define _XOPEN_SOURCE 700
@@ -213,6 +214,7 @@ static char* check_dir_access(char* dirname, bool, bool);
 static int set_user(const char* user);
 bool pid_file_exists();
 void write_child_exit_code(int fd, int code);
+static bool change_cwd();
 /** SSL multi-threading functions and structures */
 
 static SPINLOCK* ssl_locks;
@@ -773,6 +775,11 @@ static void print_log_n_stderr(
     }
 }
 
+/**
+ * Check if the file or directory is readable
+ * @param absolute_pathname Path of the file or directory to check
+ * @return True if file is readable
+ */
 static bool file_is_readable(char* absolute_pathname)
 {
     bool succp = true;
@@ -785,23 +792,22 @@ static bool file_is_readable(char* absolute_pathname)
 
         if (!daemon_mode)
         {
-            fprintf(stderr,
-                    "*\n* Warning : Failed to read the configuration "
-                    "file %s. %s.\n*\n",
-                    absolute_pathname,
-                    strerror_r(eno, errbuf, sizeof(errbuf)));
+            fprintf(stderr, "*\n* Error : Failed to read '%s' due to error %d, %s.\n*\n",
+                    absolute_pathname, eno, strerror_r(eno, errbuf, sizeof (errbuf)));
         }
-        MXS_WARNING("Failed to read the configuration file %s due "
-                    "to %d, %s.",
-                    absolute_pathname,
-                    eno,
-                    strerror_r(eno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Failed to read '%s' due to error %d, %s.", absolute_pathname,
+                  eno, strerror_r(eno, errbuf, sizeof (errbuf)));
         mxs_log_flush_sync();
         succp = false;
     }
     return succp;
 }
 
+/**
+ * Check if the file or directory is writable
+ * @param absolute_pathname Path of the file or directory to check
+ * @return True if file is writable
+ */
 static bool file_is_writable(char* absolute_pathname)
 {
     bool succp = true;
@@ -814,18 +820,12 @@ static bool file_is_writable(char* absolute_pathname)
 
         if (!daemon_mode)
         {
-            fprintf(stderr,
-                    "*\n* Error : unable to open file %s for write "
-                    "due %d, %s.\n*\n",
-                    absolute_pathname,
-                    eno,
-                    strerror_r(eno, errbuf, sizeof(errbuf)));
+            fprintf(stderr, "*\n* Error : Unable to open file '%s' for writing "
+                    "due to error %d, %s.\n*\n", absolute_pathname, eno,
+                    strerror_r(eno, errbuf, sizeof (errbuf)));
         }
-        MXS_ERROR("Unable to open file %s for write due "
-                  "to %d, %s.",
-                  absolute_pathname,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Unable to open file '%s' for writing due to error %d, %s.",
+                  absolute_pathname, eno, strerror_r(eno, errbuf, sizeof (errbuf)));
         succp = false;
     }
     return succp;
@@ -1715,6 +1715,14 @@ int main(int argc, char **argv)
         }
     }
 
+    if (daemon_mode)
+    {
+        if (!change_cwd())
+        {
+            rc = MAXSCALE_INTERNALERROR;
+            goto return_main;
+        }
+    }
 
     /*
      * Set a data directory for the mysqld library, we use
@@ -2507,3 +2515,36 @@ void write_child_exit_code(int fd, int code)
     close(fd);
 }
 
+/**
+ * Change the current working directory
+ *
+ * Change the current working directory to the log directory. If this is not
+ * possible, try to change location to the file system root. If this also fails,
+ * return with an error.
+ * @return True if changing the current working directory was successful.
+ */
+static bool change_cwd()
+{
+    bool rval = true;
+
+    if (chdir(get_logdir()) != 0)
+    {
+        char errbuf[STRERROR_BUFLEN];
+        MXS_ERROR("Failed to change working directory to '%s': %d, %s. "
+                  "Trying to change working directory to '/'.",
+                  get_logdir(), errno, strerror_r(errno, errbuf, sizeof (errbuf)));
+        if (chdir("/") != 0)
+        {
+            MXS_ERROR("Failed to change working directory to '/': %d, %s",
+                      errno, strerror_r(errno, errbuf, sizeof (errbuf)));
+            rval = false;
+        }
+        else
+        {
+            MXS_WARNING("Using '/' instead of '%s' as the current working directory.",
+                        get_logdir());
+        }
+    }
+
+    return rval;
+}
