@@ -10,7 +10,7 @@ sudo apt-get install ruby
 sudo apt-get install libxslt-dev libxml2-dev libvirt-dev zlib1g-dev
 
 # install vagrant
-# it is also possible to install Vagrant fro distribution repository, but it is recommended to use 1.7.2
+# it is also possible to install Vagrant from distribution repository, but in case of problems please use 1.7.2
 wget https://dl.bintray.com/mitchellh/vagrant/vagrant_1.7.2_x86_64.deb
 sudo dpkg -i vagrant_1.7.2_x86_64.deb
 
@@ -36,8 +36,10 @@ sudo apt-get install mariadb-client shellcheck
 
 # install MariaDB development library
 sudo apt-get install libmariadbclient-dev 
-# or in some distributions
-sudo apt-get install libmariadb-client-lgpl-dev
+# Ubuntu repos can contain the sa,e package with different name 'libmariadb-client-lgpl-dev'
+# but it can not be used to build maxscale-system-test; please use mariadb.org repositories
+# https://downloads.mariadb.org/mariadb/repositories/
+# Do not forget to remove all other MariaDB and MySQL packages!
 
 # install qemu (more info https://en.wikibooks.org/wiki/QEMU/Installing_QEMU)
 sudo apt-get install qemu qemu-kvm libvirt-bin
@@ -128,7 +130,7 @@ for AWS machines:
 Following boxes are availabe: 
 * qemu: debian_7.5_libvirt, ubuntu_trusty_libvirt, centos_7.0_libvirt, centos_6.5_libvirt
 * AWS: rhel5, rhel6, rhel7, sles11, sles12, fedora20, fedora21, fediora22, ubuntu_wily, ubuntu_vivid, centos7, deb_jessie
-* 
+
 #### Maxscale and backend machines creation
 
 * Generation of Maxscale repository description
