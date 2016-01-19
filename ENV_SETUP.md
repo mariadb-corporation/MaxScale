@@ -263,6 +263,24 @@ cd ~/mdbci/$name/
 vagrant ssh &lt;node_name&gt;
 </pre>
 
+MDBCI can give IP address, path to ssh key:
+<pre>
+./mdbci show network &lt;configuration_name&gt;/&lt;node_name&gt; --silent
+./mdbci show keyfile &lt;configuration_name&gt;/&lt;node_name&gt; --silent
+./mdbci ssh --command 'whoami' &lt;configuration_name&gt;/&lt;node_name&gt; --silent
+</pre>
+
+Node name for build machine is 'build'
+
+Nodes names for typical test setup are node0, ..., node3, galera0, ..., galera3, maxscale
+
+Example:
+<pre>
+./mdbci show network centos6_vm01/build --silent
+./mdbci show keyfile centos6_vm01/build --silent
+./mdbci ssh --command 'whoami' centos6_vm01/build --silent
+</pre>
+
 ### Destroying configuration
 
 <pre>
