@@ -3,11 +3,7 @@
 This document describes the changes in release 1.3, when compared to
 release 1.2.1.
 
-## 1.3.0 Beta
-
-**NOTE** This is a beta release. We think it is better than 1.2.1,
-but there may still be rough edges. Keep that in mind when trying it
-out.
+## 1.3.0
 
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://mariadb.atlassian.net).
@@ -149,85 +145,91 @@ details, please read the [Monitor Common](../Monitors/Monitor-Common.md) documen
 
 ## Bug fixes
 
-Here is a list of bugs fixed since the release of MaxScale 1.2.1.
+[Here is a list of bugs fixed since the release of MaxScale 1.2.1.](https://mariadb.atlassian.net/browse/MXS-550?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20resolution%20in%20(Fixed%2C%20Done)%20AND%20fixVersion%20%3D%201.3.0)
 
- * [MXS-414](https://mariadb.atlassian.net/browse/MXS-414): Maxscale crashed every day!
- * [MXS-415](https://mariadb.atlassian.net/browse/MXS-415): MaxScale 1.2.1 crashed with Signal 6 and 11
- * [MXS-351](https://mariadb.atlassian.net/browse/MXS-351): Router error handling can cause crash by leaving dangling DCB pointer
- * [MXS-428](https://mariadb.atlassian.net/browse/MXS-428): Maxscale crashes at startup.
- * [MXS-376](https://mariadb.atlassian.net/browse/MXS-376): MaxScale terminates with SIGABRT.
- * [MXS-269](https://mariadb.atlassian.net/browse/MXS-269): Crash in MySQL backend protocol
- * [MXS-500](https://mariadb.atlassian.net/browse/MXS-500): Tee filter hangs when statement aren't duplicated.
- * [MXS-447](https://mariadb.atlassian.net/browse/MXS-447): Monitors are started before they have been fully configured
- * [MXS-417](https://mariadb.atlassian.net/browse/MXS-417): Single character wildcard doesn't work in MaxScale
- * [MXS-409](https://mariadb.atlassian.net/browse/MXS-409): prepare should not hit all servers
- * [MXS-405](https://mariadb.atlassian.net/browse/MXS-405): Maxscale bin router crash
- * [MXS-412](https://mariadb.atlassian.net/browse/MXS-412): show dbusers segmentation fault
- * [MXS-289](https://mariadb.atlassian.net/browse/MXS-289): Corrupted memory or empty value are in Master_host field of SHOW SLAVE STATUS when master connection is broken
- * [MXS-283](https://mariadb.atlassian.net/browse/MXS-283): SSL connections leak memory
- * [MXS-54](https://mariadb.atlassian.net/browse/MXS-54): Write failed auth attempt to trace log
- * [MXS-501](https://mariadb.atlassian.net/browse/MXS-501): Use<db> hangs when Tee filter uses matching
+ * [MXS-508](https://mariadb.atlassian.net/browse/MXS-508): regex filter ignores username
+ * [MXS-505](https://mariadb.atlassian.net/browse/MXS-505): if Maxscale fails to start it goes to infinite "try-to-start and fail" loop
+ * [MXS-501](https://mariadb.atlassian.net/browse/MXS-501): USE <db> hangs when Tee filter uses matching
+ * [MXS-500](https://mariadb.atlassian.net/browse/MXS-500): Tee filter hangs when statements aren't duplicated.
  * [MXS-499](https://mariadb.atlassian.net/browse/MXS-499): Init script error on Debian Wheezy
- * [MXS-323](https://mariadb.atlassian.net/browse/MXS-323): mysql_client readwritesplit handleError seems using wrong dcb and cause wrong behavior
  * [MXS-494](https://mariadb.atlassian.net/browse/MXS-494): Weight calculation favors servers without connections
  * [MXS-493](https://mariadb.atlassian.net/browse/MXS-493): SIGFPE when weightby parameter is 0 and using LEAST_GLOBAL_CONNECTIONS
  * [MXS-492](https://mariadb.atlassian.net/browse/MXS-492): Segfault if server is missing weighting parameter
- * [MXS-360](https://mariadb.atlassian.net/browse/MXS-360): Persistent connections: maxadmin reports 0 all the time even if connections are created
- * [MXS-429](https://mariadb.atlassian.net/browse/MXS-429): Binlog Router crashes due to segmentation fault with no meaningful error if no listener is configured
- * [MXS-416](https://mariadb.atlassian.net/browse/MXS-416): Orphan sessions appear after many network errors
- * [MXS-472](https://mariadb.atlassian.net/browse/MXS-472): Monitors update status in multiple steps
- * [MXS-361](https://mariadb.atlassian.net/browse/MXS-361): crash on backend restart if persistent connections are in use
- * [MXS-403](https://mariadb.atlassian.net/browse/MXS-403): Monitor callback to DCBs evades thread control causing crashes
- * [MXS-392](https://mariadb.atlassian.net/browse/MXS-392): Update to "Rabbit MQ setup and MaxScale Integration" document
  * [MXS-491](https://mariadb.atlassian.net/browse/MXS-491): MaxScale can time out systemd if startup of services takes too long
- * [MXS-329](https://mariadb.atlassian.net/browse/MXS-329): The session pointer in a DCB can be null unexpectedly
- * [MXS-479](https://mariadb.atlassian.net/browse/MXS-479): localtime must not be used in the multi-threaded program.
  * [MXS-480](https://mariadb.atlassian.net/browse/MXS-480): Readwritesplit defaults cause connection pileup
+ * [MXS-479](https://mariadb.atlassian.net/browse/MXS-479): localtime must not be used in the multi-threaded program.
+ * [MXS-472](https://mariadb.atlassian.net/browse/MXS-472): Monitors update status in multiple steps
  * [MXS-464](https://mariadb.atlassian.net/browse/MXS-464): Upgrade 1.2.0 to 1.2.1 blocking start of `maxscale` service
- * [MXS-365](https://mariadb.atlassian.net/browse/MXS-365): Load data local infile connection abort when loading certain files
+ * [MXS-450](https://mariadb.atlassian.net/browse/MXS-450): Syslog default prefix is MaxScale not maxscale
+ * [MXS-447](https://mariadb.atlassian.net/browse/MXS-447): Monitors are started before they have been fully configured
+ * [MXS-436](https://mariadb.atlassian.net/browse/MXS-436): Invalid threads argument is ignored and MaxScale starts with one thread
  * [MXS-431](https://mariadb.atlassian.net/browse/MXS-431): Backend authentication fails with schemarouter
- * [MXS-394](https://mariadb.atlassian.net/browse/MXS-394): Faults in regex_replace function of regexfilter.c
- * [MXS-379](https://mariadb.atlassian.net/browse/MXS-379): Incorrect handing of a GWBUF may cause SIGABRT.
- * [MXS-321](https://mariadb.atlassian.net/browse/MXS-321): Incorrect number of connections in maxadmin list view
+ * [MXS-429](https://mariadb.atlassian.net/browse/MXS-429): Binlog Router crashes due to segmentation fault with no meaningful error if no listener is configured
+ * [MXS-428](https://mariadb.atlassian.net/browse/MXS-428): Maxscale crashes at startup.
+ * [MXS-427](https://mariadb.atlassian.net/browse/MXS-427): Logging a large string causes a segmentation fault
+ * [MXS-417](https://mariadb.atlassian.net/browse/MXS-417): Single character wildcard doesn't work in MaxScale
+ * [MXS-416](https://mariadb.atlassian.net/browse/MXS-416): Orphan sessions appear after many network errors
+ * [MXS-415](https://mariadb.atlassian.net/browse/MXS-415): MaxScale 1.2.1 crashed with Signal 6 and 11
+ * [MXS-414](https://mariadb.atlassian.net/browse/MXS-414): Maxscale crashed every day!
  * [MXS-413](https://mariadb.atlassian.net/browse/MXS-413): MaxAdmin hangs with show session
+ * [MXS-412](https://mariadb.atlassian.net/browse/MXS-412): show dbusers segmentation fault
+ * [MXS-409](https://mariadb.atlassian.net/browse/MXS-409): prepare should not hit all servers
  * [MXS-408](https://mariadb.atlassian.net/browse/MXS-408): Connections to backend databases do not clear promptly
- * [MXS-385](https://mariadb.atlassian.net/browse/MXS-385): disable_sescmd_history can cause false data to be read.
+ * [MXS-407](https://mariadb.atlassian.net/browse/MXS-407): Maxscale binlogrouter binlog names are unncessarily length-limited
+ * [MXS-405](https://mariadb.atlassian.net/browse/MXS-405): Maxscale bin router crash
+ * [MXS-403](https://mariadb.atlassian.net/browse/MXS-403): Monitor callback to DCBs evades thread control causing crashes
+ * [MXS-394](https://mariadb.atlassian.net/browse/MXS-394): Faults in regex_replace function of regexfilter.c
+ * [MXS-392](https://mariadb.atlassian.net/browse/MXS-392): Update to "Rabbit MQ setup and MaxScale Integration" document
  * [MXS-386](https://mariadb.atlassian.net/browse/MXS-386): max_sescmd_history should not close connections
+ * [MXS-385](https://mariadb.atlassian.net/browse/MXS-385): disable_sescmd_history can cause false data to be read.
+ * [MXS-379](https://mariadb.atlassian.net/browse/MXS-379): Incorrect handing of a GWBUF may cause SIGABRT.
+ * [MXS-376](https://mariadb.atlassian.net/browse/MXS-376): MaxScale terminates with SIGABRT.
  * [MXS-373](https://mariadb.atlassian.net/browse/MXS-373): If config file is non-existent, maxscale crashes.
  * [MXS-366](https://mariadb.atlassian.net/browse/MXS-366): Multi-source slave servers are not detected.
- * [MXS-271](https://mariadb.atlassian.net/browse/MXS-271): Schemarouter and unknown databases
+ * [MXS-365](https://mariadb.atlassian.net/browse/MXS-365): Load data local infile connection abort when loading certain files
+ * [MXS-363](https://mariadb.atlassian.net/browse/MXS-363): rpm building seems to do something wrong with maxscale libraries
+ * [MXS-361](https://mariadb.atlassian.net/browse/MXS-361): crash on backend restart if persistent connections are in use
+ * [MXS-360](https://mariadb.atlassian.net/browse/MXS-360): Persistent connections: maxadmin reports 0 all the time even if connections are created
+ * [MXS-358](https://mariadb.atlassian.net/browse/MXS-358): Crash, Error in `/usr/bin/maxscale': free(): invalid next size (fast)
+ * [MXS-352](https://mariadb.atlassian.net/browse/MXS-352): With no backend connection, services aren't started
+ * [MXS-351](https://mariadb.atlassian.net/browse/MXS-351): Router error handling can cause crash by leaving dangling DCB pointer
+ * [MXS-345](https://mariadb.atlassian.net/browse/MXS-345): maxscale.conf in /etc/init.d prevents puppet from starting maxscale
+ * [MXS-342](https://mariadb.atlassian.net/browse/MXS-342): When ini_parse fails to parse config file, no log messages are printed.
+ * [MXS-333](https://mariadb.atlassian.net/browse/MXS-333): use_sql_variables_in=master doesn't work
+ * [MXS-329](https://mariadb.atlassian.net/browse/MXS-329): The session pointer in a DCB can be null unexpectedly
+ * [MXS-323](https://mariadb.atlassian.net/browse/MXS-323): mysql_client readwritesplit handleError seems using wrong dcb and cause wrong behavior
+ * [MXS-321](https://mariadb.atlassian.net/browse/MXS-321): Incorrect number of connections in maxadmin list view
+ * [MXS-310](https://mariadb.atlassian.net/browse/MXS-310): MaxScale 1.2 does not completely cleanly change to the maxscale user
+ * [MXS-297](https://mariadb.atlassian.net/browse/MXS-297): postinstall on debian copies wrong file in /etc/init.d
+ * [MXS-293](https://mariadb.atlassian.net/browse/MXS-293): Bug in init script, and maxscale --user=maxscale does run as root
+ * [MXS-291](https://mariadb.atlassian.net/browse/MXS-291): Random number generation has flaws
+ * [MXS-289](https://mariadb.atlassian.net/browse/MXS-289): Corrupted memory or empty value are in Master_host field of SHOW SLAVE STATUS when master connection is broken
  * [MXS-286](https://mariadb.atlassian.net/browse/MXS-286): Fix the content and format of MaxScale-HA-with-Corosync-Pacemaker document
+ * [MXS-283](https://mariadb.atlassian.net/browse/MXS-283): SSL connections leak memory
+ * [MXS-282](https://mariadb.atlassian.net/browse/MXS-282): Add example to "Routing Hints" document
+ * [MXS-281](https://mariadb.atlassian.net/browse/MXS-281): SELECT INTO OUTFILE query goes several times to one slave
+ * [MXS-280](https://mariadb.atlassian.net/browse/MXS-280): SELECT INTO OUTFILE query succeeds even if backed fails
+ * [MXS-276](https://mariadb.atlassian.net/browse/MXS-276): Memory leak of buffer in connection router readQuery
  * [MXS-274](https://mariadb.atlassian.net/browse/MXS-274): Memory Leak
+ * [MXS-271](https://mariadb.atlassian.net/browse/MXS-271): Schemarouter and unknown databases
+ * [MXS-269](https://mariadb.atlassian.net/browse/MXS-269): Crash in MySQL backend protocol
+ * [MXS-260](https://mariadb.atlassian.net/browse/MXS-260): Multiple MaxScale processes
+ * [MXS-258](https://mariadb.atlassian.net/browse/MXS-258): ERR_error_string could overflow in future
  * [MXS-254](https://mariadb.atlassian.net/browse/MXS-254): Failure to read configuration file results in no error log messages
  * [MXS-251](https://mariadb.atlassian.net/browse/MXS-251): Non-thread safe strerror
- * [MXS-291](https://mariadb.atlassian.net/browse/MXS-291): Random number generation has flaws
- * [MXS-342](https://mariadb.atlassian.net/browse/MXS-342): When ini_parse fails to parse config file, no log messages are printed.
- * [MXS-345](https://mariadb.atlassian.net/browse/MXS-345): maxscale.conf in /etc/init.d prevents puppet from starting maxscale
- * [MXS-333](https://mariadb.atlassian.net/browse/MXS-333): use_sql_variables_in=master doesn't work
- * [MXS-260](https://mariadb.atlassian.net/browse/MXS-260): Multiple MaxScale processes
- * [MXS-184](https://mariadb.atlassian.net/browse/MXS-184): init script issues in CentOS 7
- * [MXS-280](https://mariadb.atlassian.net/browse/MXS-280): SELECT INTO OUTFILE query succeeds even if backed fails
- * [MXS-202](https://mariadb.atlassian.net/browse/MXS-202): User password not handled correctly
- * [MXS-282](https://mariadb.atlassian.net/browse/MXS-282): Add example to "Routing Hints" document
  * [MXS-220](https://mariadb.atlassian.net/browse/MXS-220): LAST_INSERT_ID() query is redirect to slave if function call is in where clause
- * [MXS-196](https://mariadb.atlassian.net/browse/MXS-196): DCB state is changed prior to polling operation
- * [MXS-281](https://mariadb.atlassian.net/browse/MXS-281): SELECT INTO OUTFILE query goes several times to one slave
+ * [MXS-210](https://mariadb.atlassian.net/browse/MXS-210): Check MaxScale user privileges
+ * [MXS-202](https://mariadb.atlassian.net/browse/MXS-202): User password not handled correctly
  * [MXS-197](https://mariadb.atlassian.net/browse/MXS-197): Incorrect sequence of operations with DCB
+ * [MXS-196](https://mariadb.atlassian.net/browse/MXS-196): DCB state is changed prior to polling operation
  * [MXS-195](https://mariadb.atlassian.net/browse/MXS-195): maxscaled.c ineffective DCB disposal
- * [MXS-363](https://mariadb.atlassian.net/browse/MXS-363): rpm building seems to do something wrong with maxscale libraries
+ * [MXS-184](https://mariadb.atlassian.net/browse/MXS-184): init script issues in CentOS 7
+ * [MXS-183](https://mariadb.atlassian.net/browse/MXS-183): MaxScale crash after 'reload config'
+ * [MXS-111](https://mariadb.atlassian.net/browse/MXS-111): maxscale binlog events shown in show services seems to be double-counted for the master connection
+ * [MXS-54](https://mariadb.atlassian.net/browse/MXS-54): Write failed auth attempt to trace log
  * [MXS-35](https://mariadb.atlassian.net/browse/MXS-35): bugzillaId-451: maxscale main() exit code is always 0 after it daemonizes
  * [MXS-29](https://mariadb.atlassian.net/browse/MXS-29): bugzillaId-589: detect if MAXSCALE_SCHEMA.HEARTBEAT table is not replicated
- * [MXS-436](https://mariadb.atlassian.net/browse/MXS-436): Invalid threads argument is ignored and MaxScale starts with one thread
- * [MXS-427](https://mariadb.atlassian.net/browse/MXS-427): Logging a large string causes a segmentation fault
- * [MXS-352](https://mariadb.atlassian.net/browse/MXS-352): With no backend connection, services aren't started
- * [MXS-293](https://mariadb.atlassian.net/browse/MXS-293): Bug in init script, and maxscale --user=maxscale does run as root
- * [MXS-210](https://mariadb.atlassian.net/browse/MXS-210): Check MaxScale user privileges
- * [MXS-111](https://mariadb.atlassian.net/browse/MXS-111): maxscale binlog events shown in show services seems to be double-counted for the master connection
  * [MXS-3](https://mariadb.atlassian.net/browse/MXS-3): Remove code for atomic_add in skygw_utils.cc
- * [MXS-258](https://mariadb.atlassian.net/browse/MXS-258): ERR_error_string could overflow in future
- * [MXS-310](https://mariadb.atlassian.net/browse/MXS-310): MaxScale 1.2 does not completely cleanly change to the maxscale user
- * [MXS-450](https://mariadb.atlassian.net/browse/MXS-450): Syslog default prefix is MaxScale not maxscale
- * [MXS-297](https://mariadb.atlassian.net/browse/MXS-297): postinstall on debian copies wrong file in /etc/init.d
 
 ## Known Issues and Limitations
 
