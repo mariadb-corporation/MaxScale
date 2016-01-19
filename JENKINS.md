@@ -72,6 +72,22 @@ e.g. if 'target' is 'develop' packages are going to
 
 NOTE: building is executed only for selected distribution ('box' parameter). Be careful with  other distributions: if build is not executed for same distribution old version can be in the repository (from some old builds). Later tests have to be executed against the same distribution otherwise they can be run against old version of MaxScale. It is recommended to use unique name for 'target'.
 
+To debug failed build:
+* set 'do_not_destroy_vm' parameter to 'yes'
+* after the build:
+<pre>
+ssh -i vagrant.pem vagrant@max-tst-01.mariadb.com
+cd ~/mdbci/build-&lt;box&gt;-&lt;date&gt;&lt;time&gt;
+vagrant ssh 
+</pre>
+
+For example:
+<pre>
+ssh -i vagrant.pem vagrant@max-tst-01.mariadb.com
+cd ~/mdbci/build_centos6-20160119-0935
+vagrant ssh 
+</pre>
+
 ### Create set of Master/Slave and Galera nodes and setup build environment for Maxscale on one more node
 
 Execute [create_env](http://max-tst-01.mariadb.com:8089/view/env/job/create_env/) job.
