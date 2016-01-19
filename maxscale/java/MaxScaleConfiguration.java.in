@@ -13,6 +13,6 @@ public class MaxScaleConfiguration {
 
     public MaxScaleConfiguration(String test) throws IOException
     {
-        Runtime.getRuntime().exec("test_name=" + test + CONFIG_COMMAND);
+        Runtime.getRuntime().exec("test_name=" + test + " " + CONFIG_COMMAND);
     }
 }
