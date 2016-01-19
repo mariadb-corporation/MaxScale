@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# If a parameter is given, it's the test name
+if [ $# -gt 0 ]
+then
+    test_name=$1
+fi
+
 #set -x
 export opt_str="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=quiet"
 
