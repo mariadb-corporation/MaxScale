@@ -244,7 +244,7 @@ TODO: add it into 'maxscale-system-test'
 
 MDBCI provides a number of commands to get information about running vrtial machines. See [MDBCI documentation](https://github.com/OSLL/mdbci#mdbci-syntax) for details.
 
-[set_env_vbagrant.sh script](https://github.com/mariadb-corporation/build-scripts-vagrant/blob/master/test/set_env_vagrant.sh) defines environmental variables needed by 'maxscale-system-test'. The same variables can be used to access VMs manually.
+[set_env_vagrant.sh script](https://github.com/mariadb-corporation/build-scripts-vagrant/blob/master/test/set_env_vagrant.sh) defines environmental variables needed by 'maxscale-system-test'. The same variables can be used to access VMs manually.
 
 Script have to be executed fro 'mbdci' directory. Do not forget '.':
 <pre>
