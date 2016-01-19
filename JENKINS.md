@@ -118,7 +118,7 @@ can be used for debugging. See [environment documentation](ENV_SETUP.md#access-v
 ### Maintenance operations
 
 If test run was executed with parameter 'do_not_destroy' set yo 'yes' please do not forget to execute
-[destroy](http://max-tst-01.mariadb.com:8089/view/axilary/job/destroy/ against your 'target'
+[destroy](http://max-tst-01.mariadb.com:8089/view/axilary/job/destroy/) against your 'target'
 
 This job also have to be executed if test run job crashed or it was interrupted.
 
