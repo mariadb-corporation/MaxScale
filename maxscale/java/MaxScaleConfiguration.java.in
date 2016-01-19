@@ -10,9 +10,10 @@ import java.io.IOException;
 public class MaxScaleConfiguration {
     
     private static final String CONFIG_COMMAND = "@CMAKE_SOURCE_DIR@/configure_maxscale.sh";
-
+    private static final int DEFAULT_SLEEP = 10;
     public MaxScaleConfiguration(String test) throws IOException
     {
         Runtime.getRuntime().exec(CONFIG_COMMAND + " " + test);
+        Thread.sleep(DEFAULT_SLEEP * 1000);
     }
 }
