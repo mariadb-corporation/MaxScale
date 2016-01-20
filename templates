@@ -151,3 +151,10 @@ mxs365 replication
 longblob replication
 maxscale_process_user replication
 mxs244_prepared_stmt_loop galera
+regexfilter1 regexfilter1
+namedserverfilter namedserverfilter
+mxs365 replication
+longblob replication
+maxscale_process_user replication
+mxs244_prepared_stmt_loop galera
+mxs280_select_outfile replication

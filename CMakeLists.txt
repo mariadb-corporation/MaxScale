@@ -386,6 +386,7 @@ add_test_executable(longblob.cpp longblob replication)
 
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication)
 add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop galera)
+add_test_executable(mxs280_select_outfile.cpp mxs280_select_outfile replication)
 
 if(Java_FOUND)
   add_subdirectory(maxscale/java/)

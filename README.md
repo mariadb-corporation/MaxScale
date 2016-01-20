@@ -57,7 +57,6 @@ System level tests for MaxScale
 |maxscale_user|DB user to access via Maxscale|
 |maxscale_password|password for maxscale_user|
 |maxscale_hostname|hostname of Maxscale machine|
-|get_logs_command|bash command to copy logs from Maxscale machine|
 |sysbench_dir|directory where Sysbanch is installed|
 |ssl|'yes' if tests should try to use ssl to connect to Maxscale and to backends (obsolete, now should be 'yes' in all cases)|
 |smoke|if 'yes' all tests are executed in 'quick' mode (less iterations, skip heavy operations)|

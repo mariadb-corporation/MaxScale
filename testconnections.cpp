@@ -24,6 +24,7 @@ TestConnections::TestConnections(int argc, char *argv[])
     strcpy(short_path, dirname(argv[0]));
     realpath(short_path, test_dir);
     printf("test_dir is %s\n", test_dir);
+    sprintf(get_logs_command, "%s/get_logs.sh", test_dir);
 
     no_maxscale_stop = false;
     no_maxscale_start = false;
@@ -171,7 +172,8 @@ int TestConnections::read_env()
     env = getenv("maxadmin_password"); if (env != NULL) {sprintf(maxadmin_password, "%s", env); } else {sprintf(maxadmin_password, "mariadb");}
     env = getenv("maxscale_sshkey"); if (env != NULL) {sprintf(maxscale_sshkey, "%s", env); } else {sprintf(maxscale_sshkey, "skysql");}
 
-    env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
+    //env = getenv("get_logs_command"); if (env != NULL) {sprintf(get_logs_command, "%s", env);}
+
     env = getenv("sysbench_dir"); if (env != NULL) {sprintf(sysbench_dir, "%s", env);}
 
     env = getenv("maxdir"); if (env != NULL) {sprintf(maxdir, "%s", env);}
