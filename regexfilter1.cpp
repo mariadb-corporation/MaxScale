@@ -1,5 +1,5 @@
 /**
- * @file regexfilter1.cpp Simple regexfilter tests
+ * @file regexfilter1.cpp Simple regexfilter tests; aslo regression case for mxs508 ("regex filter ignores username")
  *
  * Three services are configured with regexfilter, each with different parameters.
  * All services are queried with SELECT 123. The first service should replace it
