@@ -1,6 +1,8 @@
 #!/bin/bash
 
-export test_name=bug564
+rp=`realpath $0`
+export test_dir=`dirname $rp`
+export test_name=`basename $rp`
 $test_dir/configure_maxscale.sh
 
 echo "Waiting for 15 seconds"

@@ -15,12 +15,15 @@ function check_server_count()
     return 0
 }
 
+rp=`realpath $0`
+export test_dir=`dirname $rp`
+export test_name=`basename $rp`
+
 # Save the old configuration value
 old_val=$maxscale_restart
 export maxscale_restart=no
 
 # Start with a 4 server config file
-export test_name=config_reload
 $test_dir/configure_maxscale.sh
 echo "Waiting for 15 seconds"
 sleep 15

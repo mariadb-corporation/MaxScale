@@ -74,6 +74,7 @@ endfunction()
 
 # This function adds a script as a test with the specified name and template.
 # The naming of the templates follow the same principles as add_test_executable.
+# also suitable for symlinks
 function(add_test_script name template)
   file(APPEND templates "${name} ${template}\n")
   install(PROGRAMS ${name} DESTINATION system-test)

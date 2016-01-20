@@ -29,6 +29,9 @@ echo "--enable_query_log" >> testconf.inc
 RESULT=0
 
 mysqltest --host=$THOST --port=$TPORT --user=$TUSER --password=$TPWD --logdir=log --test-file=$srcdir/t/$TEST.test --result-file=r/$TEST.result --silent  || RESULT=1
+if [ $? -ne 0 ] ; then
+	exit 1
+fi
 
 if test -f r/$TEST.reject
 then

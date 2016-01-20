@@ -1,6 +1,8 @@
 #!/bin/bash
 
-export test_name=start_without_root
+rp=`realpath $0`
+export test_dir=`dirname $rp`
+export test_name=`basename $rp`
 $test_dir/configure_maxscale.sh
 
 errmsg="MaxScale doesn't have write permission to MAXSCALE_HOME. Exiting"

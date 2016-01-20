@@ -1,7 +1,9 @@
 #!/bin/bash
 
-export test_name=mariadb_tests_hartmut_galera
-$test_dir/configure_maxscale.sh &
+rp=`realpath $0`
+export test_dir=`dirname $rp`
+export test_name=`basename $rp`
+$test_dir/configure_maxscale.sh 
 sleep 15
 
 export Master_id=`echo "SELECT (@@server_id)" | mysql -u$galera_user -p$galera_password -h $galera_000 | tail -n1`

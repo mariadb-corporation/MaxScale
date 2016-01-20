@@ -18,9 +18,11 @@ function check_service_count()
 # Save the old configuration value
 old_val=$maxscale_restart
 export maxscale_restart=no
+rp=`realpath $0`
+export test_dir=`dirname $rp`
+export test_name=`basename $rp`
 
 # Start with a 2 service config file
-export test_name=config_reload
 $test_dir/configure_maxscale.sh
 echo "Waiting for 15 seconds"
 sleep 15

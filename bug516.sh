@@ -1,6 +1,9 @@
 #!/bin/bash
 
-export test_name=bug516
+rp=`realpath $0`
+export test_dir=`dirname $rp`
+export test_name=`basename $rp`
+
 $test_dir/configure_maxscale.sh
 
 echo "executing simple maxadmin command 100 times"

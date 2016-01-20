@@ -1,8 +1,10 @@
 #!/bin/bash
 
-export test_name=long_insert
-
+rp=`realpath $0`
+export test_dir=`dirname $rp`
+export test_name=`basename $rp`
 $test_dir/configure_maxscale.sh
+sleep 15
 
 IP=$Maxscale_IP
 

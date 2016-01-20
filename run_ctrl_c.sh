@@ -1,6 +1,8 @@
 #!/bin/bash
+rp=`realpath $0`
+export test_dir=`dirname $rp`
+export test_name=`basename $rp`
 
-export test_name=run_ctrl_c
 $test_dir/configure_maxscale.sh
 
 scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r $test_dir/test_ctrl_c/* $maxscale_access_user@$maxscale_IP:./

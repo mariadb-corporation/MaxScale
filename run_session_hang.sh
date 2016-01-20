@@ -1,7 +1,10 @@
 #!/bin/bash
 
 #bug 454
-export test_name=run_session_hang
+rp=`realpath $0`
+export test_dir=`dirname $rp`
+export test_name=`basename $rp`
+
 $test_dir/configure_maxscale.sh
 
 $test_dir/session_hang/run_setmix.sh &
