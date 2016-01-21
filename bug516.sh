@@ -7,8 +7,8 @@ export test_name=`basename $rp`
 $test_dir/configure_maxscale.sh
 
 echo "executing simple maxadmin command 100 times"
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo echo 'for i in {1..100}; do $maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 list clients; done' > $maxdir_bin/maxadmin_test.sh"
-ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chmod a+x $maxdir_bin/maxadmin_test.sh ; $maxdir_bin/maxadmin_test.sh "
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo echo 'for i in {1..100}; do $maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 list clients; done' > ./maxadmin_test.sh"
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chmod a+x ./maxadmin_test.sh ; ./maxadmin_test.sh "
 echo "sleeping 100 seconds"
 sleep 100
 lines=`ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo netstat | grep 6603" | wc -l`
@@ -24,6 +24,6 @@ if [ "$lines" -gt 10 ]; then
 else
 	res=0
 fi
-
+ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $maxscale_access_user@$maxscale_IP "rm ./maxadmin_test.sh "
 $test_dir/copy_logs.sh bug516
 exit $res

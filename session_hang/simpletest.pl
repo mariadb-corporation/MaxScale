@@ -2,8 +2,8 @@
 
 my $host = $ENV{'repl_000'};
 my $port = $ENV{'repl_port_000'};
-my $user = $ENV{'repl_User'};
-my $password = $ENV{'repl_Password'};
+my $user = $ENV{'repl_user'};
+my $password = $ENV{'repl_password'};
 
 use strict;
 use DBI;

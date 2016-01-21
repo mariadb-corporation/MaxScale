@@ -28,7 +28,8 @@ for i in $(seq 25); do
   echo "============"
   for test in $TESTS; do
     echo -n "testing $test: "
-    ./mysqltest_driver.sh . 127.0.0.1 $port maxuser maxpwd 2 $test 
+#    ./mysqltest_driver.sh . 127.0.0.1 $port maxuser maxpwd 2 $test 
+    ./mysqltest_driver.sh . $maxscale_IP $port maxuser maxpwd $Master_id $test
     if [ "$?" == 0 ] ; then
 	echo "PASSED" 
     else 

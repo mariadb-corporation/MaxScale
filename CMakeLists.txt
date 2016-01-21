@@ -31,7 +31,7 @@ endif()
 
 configure_file(${CMAKE_SOURCE_DIR}/cnf/maxscale.cnf.template.setup_binlog.in ${CMAKE_BINARY_DIR}/cnf/maxscale.cnf.template.setup_binlog @ONLY)
 #configure_file(${CMAKE_SOURCE_DIR}/set_env.sh.in ${CMAKE_BINARY_DIR}/set_env.sh @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/test_ctrl_c/test_ctrl_c.sh.in ${CMAKE_BINARY_DIR}/test_ctrl_c/test_ctrl_c.sh @ONLY)
+#configure_file(${CMAKE_SOURCE_DIR}/test_ctrl_c/test_ctrl_c.sh.in ${CMAKE_BINARY_DIR}/test_ctrl_c/test_ctrl_c.sh @ONLY)
 
 include_directories("/usr/include/mysql/")
 #LINK_DIRECTORIES("/usr/lib/x86_64-linux-gnu/")

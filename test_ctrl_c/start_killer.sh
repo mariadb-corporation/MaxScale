@@ -1,3 +1,3 @@
 sleep 5
-killall maxscale -s INT
+$maxscale_access_sudo /usr/bin/killall maxscale -s INT
 

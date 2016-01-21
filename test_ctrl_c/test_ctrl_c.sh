@@ -1,18 +1,21 @@
 #!/bin/bash
 
-if [[ -z $maxdir ]]; then
-	maxdir="/usr/local/mariadb-maxscale"
-fi
-cd $maxdir/bin
 export MAXSCALE_HOME=$maxdir
 
-service maxscale stop
+$maxscale_access_sudo service maxscale stop
 
-/home/ec2-user/start_killer.sh &
+hm=`pwd`
+$hm/start_killer.sh &
+if [ $? -ne 0 ] ; then 
+        exit 1
+fi
 
 T="$(date +%s)"
 
-./maxscale -d
+$maxscale_access_sudo maxscale -d
+if [ $? -ne 0 ] ; then 
+	exit 1
+fi
 
 T="$(($(date +%s)-T))"
 echo "Time in seconds: ${T} (including 5 seconds before kill)"

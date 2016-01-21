@@ -1,5 +1,5 @@
 #! /bin/sh
-
+set -x
 srcdir=$1
 THOST=$2
 TPORT=$3

@@ -1,16 +1,15 @@
 #!/bin/bash
-
 port=$1
 
+dir=`pwd`
 
 cat $test_dir/Hartmut_tests/maxscale-mysqltest/r/test_implicit_commit4.result.template | sed "s/####server_id####/$Master_id/" > test_implicit_commit4.result
 cat $test_dir/Hartmut_tests/maxscale-mysqltest/r/select_for_var_set.result.template | sed "s/####server_id####/$Master_id/" > select_for_var_set.result
-set -x
-ssh -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $maxscale_access_user@$maxscale_IP '$maxscale_access_sudo service iptables stop; $maxscale_access_sudo yum install -y MariaDB-test MariaDB-client; $maxscale_access_sudo apt-get install -y --force-yes mariadb-test mariadb-client; maxscale_access_sudo yum install -y mariadb-test mariadb-client'
 
-scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r $test_dir/Hartmut_tests/maxscale-mysqltest $maxscale_access_user@$maxscale_IP:./
-scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r test_implicit_commit4.result $maxscale_access_user@$maxscale_IP:./maxscale-mysqltest/r/
-scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -r select_for_var_set.result $maxscale_access_user@$maxscale_IP:./maxscale-mysqltest/r/
+cp test_implicit_commit4.result $test_dir/Hartmut_tests/maxscale-mysqltest/r/
+cp select_for_var_set.result $test_dir/Hartmut_tests/maxscale-mysqltest/r/
 
-ssh -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $maxscale_access_user@$maxscale_IP "cd ./maxscale-mysqltest/ ; ls -la ; ./test.sh $port"
+cd $test_dir/Hartmut_tests/maxscale-mysqltest/ 
+./test.sh $port
 
+cd $dir
