@@ -55,14 +55,16 @@ int check_sha1(TestConnections* Test)
         sprintf(sys, "sha1sum %s/mar-bin.00000%d", Test->maxscale_binlog_dir, i);
         s_maxscale = Test->ssh_maxscale_output(sys, TRUE);
         if (s_maxscale != NULL) {
-            x = strchr(s_maxscale, ' '); x[0] = 0;
+            x = strchr(s_maxscale, ' ');
+            if (x != NULL ) { x[0] = 0; }
             Test->tprintf("Binlog checksum from Maxscale %s\n", s_maxscale);
         }
 
         sprintf(sys, "sha1sum /var/lib/mysql/mar-bin.00000%d", i);
         s = Test->repl->ssh_node_output(0, sys, TRUE);
         if (s != NULL) {
-            x = strchr(s, ' '); x[0] = 0;
+            x = strchr(s, ' ');
+            if (x != NULL ) { x[0] = 0; }
             Test->tprintf("Binlog checksum from master %s\n", s);
         }
         if (strcmp(s_maxscale, s) != 0) {
