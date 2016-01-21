@@ -65,6 +65,9 @@ macro(set_variables)
   # Build the multimaster monitor
   set(BUILD_MMMON TRUE CACHE BOOL "Build multimaster monitor")
 
+  # Build Luafilter
+  set(BUILD_LUAFILTER FALSE CACHE BOOL "Build Luafilter")
+
   # Use gcov build flags
   set(GCOV FALSE CACHE BOOL "Use gcov build flags")
 

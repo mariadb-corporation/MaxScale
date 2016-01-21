@@ -173,23 +173,38 @@ static FILTER *
 createInstance(char **options, FILTER_PARAMETER **params)
 {
     LUA_INSTANCE *my_instance;
+    bool error = false;
 
     if ((my_instance = (LUA_INSTANCE*) calloc(1, sizeof(LUA_INSTANCE))) == NULL)
     {
         return NULL;
     }
-    spinlock_init(&my_instance->lock);
-    for (int i = 0; params[i]; i++)
-    {
 
+    spinlock_init(&my_instance->lock);
+
+    for (int i = 0; params[i] && !error; i++)
+    {
         if (strcmp(params[i]->name, "global_script") == 0)
         {
-            my_instance->global_script = strdup(params[i]->value);
+            error = (my_instance->global_script = strdup(params[i]->value)) == NULL;
         }
         else if (strcmp(params[i]->name, "session_script") == 0)
         {
-            my_instance->session_script = strdup(params[i]->value);
+            error = (my_instance->session_script = strdup(params[i]->value)) == NULL;
         }
+        else if (!filter_standard_parameter(params[i]->name))
+        {
+            MXS_ERROR("Unexpected parameter '%s'", params[i]->name);
+            error = true;
+        }
+    }
+
+    if (error)
+    {
+        free(my_instance->global_script);
+        free(my_instance->session_script);
+        free(my_instance);
+        return NULL;
     }
 
     if (my_instance->global_script)
@@ -205,16 +220,16 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 free(my_instance->global_script);
                 free(my_instance->session_script);
                 free(my_instance);
-                return NULL;
+                my_instance = NULL;
             }
-
-            if (my_instance->global_lua_state)
+            else if (my_instance->global_lua_state)
             {
                 lua_getglobal(my_instance->global_lua_state, "createInstance");
                 if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
                 {
-                    MXS_ERROR("luafilter: Failed to get global variable 'createInstance':  %s.",
-                              lua_tostring(my_instance->global_lua_state, -1));
+                    MXS_WARNING("luafilter: Failed to get global variable 'createInstance':  %s."
+                                " The createInstance entry point will not be called for the global script.",
+                                lua_tostring(my_instance->global_lua_state, -1));
                 }
             }
         }
@@ -222,7 +237,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
         {
             MXS_ERROR("Unable to initialize new Lua state.");
             free(my_instance);
-            return NULL;
+            my_instance = NULL;
         }
     }
 
@@ -270,32 +285,35 @@ static void * newSession(FILTER *instance, SESSION *session)
                       lua_tostring(my_session->lua_state, -1));
             lua_close(my_session->lua_state);
             free(my_session);
-            return NULL;
+            my_session = NULL;
         }
-
-        lua_pushcfunction(my_session->lua_state, id_gen);
-        lua_setglobal(my_session->lua_state, "id_gen");
-
-        lua_getglobal(my_session->lua_state, "newSession");
-        if (lua_pcall(my_session->lua_state, 0, 0, 0))
+        else
         {
-            MXS_ERROR("luafilter: Failed to get global variable 'newSession': '%s'.",
-                      lua_tostring(my_session->lua_state, -1));
+            lua_pushcfunction(my_session->lua_state, id_gen);
+            lua_setglobal(my_session->lua_state, "id_gen");
+
+            lua_getglobal(my_session->lua_state, "newSession");
+            if (lua_pcall(my_session->lua_state, 0, 0, 0))
+            {
+                MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
+                          " The newSession entry point will not be called.",
+                          lua_tostring(my_session->lua_state, -1));
+            }
         }
     }
 
-    if (my_instance->global_lua_state)
+    if (my_session && my_instance->global_lua_state)
     {
         spinlock_acquire(&my_instance->lock);
         lua_getglobal(my_instance->global_lua_state, "newSession");
         if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
-            MXS_ERROR("luafilter: Failed to get global variable 'newSession': '%s'.",
+            MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
+                      " The newSession entry point will not be called for the global script.",
                       lua_tostring(my_instance->global_lua_state, -1));
         }
         spinlock_release(&my_instance->lock);
     }
-
 
     return my_session;
 }
@@ -320,11 +338,10 @@ static void closeSession(FILTER *instance, void *session)
         lua_getglobal(my_session->lua_state, "closeSession");
         if (lua_pcall(my_session->lua_state, 0, 0, 0))
         {
-            MXS_ERROR("luafilter: Failed to get global variable 'closeSession': '%s'.",
+            MXS_WARNING("luafilter: Failed to get global variable 'closeSession': '%s'."
+                        " The closeSession entry point will not be called.",
                       lua_tostring(my_session->lua_state, -1));
         }
-
-        lua_close(my_session->lua_state);
         spinlock_release(&my_session->lock);
     }
 
@@ -334,8 +351,9 @@ static void closeSession(FILTER *instance, void *session)
         lua_getglobal(my_instance->global_lua_state, "closeSession");
         if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
-            MXS_ERROR("luafilter: Failed to get global variable 'closeSession': '%s'.",
-                      lua_tostring(my_instance->global_lua_state, -1));
+            MXS_WARNING("luafilter: Failed to get global variable 'closeSession': '%s'."
+                        " The closeSession entry point will not be called for the global script.",
+                        lua_tostring(my_instance->global_lua_state, -1));
         }
         spinlock_release(&my_instance->lock);
     }
@@ -350,6 +368,7 @@ static void closeSession(FILTER *instance, void *session)
 static void freeSession(FILTER *instance, void *session)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
+    lua_close(my_session->lua_state);
     free(my_session);
 }
 
@@ -367,6 +386,12 @@ static void setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstrea
     my_session->down = *downstream;
 }
 
+/**
+ * Set the filter upstream
+ * @param instance Filter instance
+ * @param session Filter session
+ * @param upstream Upstream filter
+ */
 static void setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
@@ -386,37 +411,30 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
-    char *fullquery;
 
-    if (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue))
+    if (my_session->lua_state)
     {
-        fullquery = modutil_get_SQL(queue);
-
-        if (my_session->lua_state)
+        spinlock_acquire(&my_session->lock);
+        lua_getglobal(my_session->lua_state, "clientReply");
+        if (lua_pcall(my_session->lua_state, 0, 0, 0))
         {
-            spinlock_acquire(&my_session->lock);
-            lua_getglobal(my_session->lua_state, "clientReply");
-            lua_pushlstring(my_session->lua_state, fullquery, strlen(fullquery));
-            if (lua_pcall(my_session->lua_state, 1, 0, 0))
-            {
-                MXS_ERROR("luafilter: Session scope call to 'clientReply' failed: '%s'.",
-                          lua_tostring(my_session->lua_state, -1));
-            }
-            spinlock_release(&my_session->lock);
+            MXS_ERROR("luafilter: Session scope call to 'clientReply' failed: '%s'.",
+                      lua_tostring(my_session->lua_state, -1));
         }
-        if (my_instance->global_lua_state)
-        {
-            spinlock_acquire(&my_instance->lock);
-            lua_getglobal(my_instance->global_lua_state, "clientReply");
-            lua_pushlstring(my_instance->global_lua_state, fullquery, strlen(fullquery));
-            if (lua_pcall(my_instance->global_lua_state, 1, 0, 0))
-            {
-                MXS_ERROR("luafilter: Global scope call to 'clientReply' failed: '%s'.",
-                          lua_tostring(my_session->lua_state, -1));
-            }
-            spinlock_release(&my_instance->lock);
-        }
+        spinlock_release(&my_session->lock);
     }
+    if (my_instance->global_lua_state)
+    {
+        spinlock_acquire(&my_instance->lock);
+        lua_getglobal(my_instance->global_lua_state, "clientReply");
+        if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
+        {
+            MXS_ERROR("luafilter: Global scope call to 'clientReply' failed: '%s'.",
+                      lua_tostring(my_session->lua_state, -1));
+        }
+        spinlock_release(&my_instance->lock);
+    }
+
     return my_session->up.clientReply(my_session->up.instance,
                                       my_session->up.session, queue);
 }
@@ -463,8 +481,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 MXS_ERROR("luafilter: Session scope call to 'routeQuery' failed: '%s'.",
                           lua_tostring(my_session->lua_state, -1));
             }
-
-            if (lua_gettop(my_session->lua_state))
+            else if (lua_gettop(my_session->lua_state))
             {
                 if (lua_isstring(my_session->lua_state, -1))
                 {
@@ -492,7 +509,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 MXS_ERROR("luafilter: Global scope call to 'routeQuery' failed: '%s'.",
                           lua_tostring(my_session->lua_state, -1));
             }
-            if (lua_gettop(my_instance->global_lua_state))
+            else if (lua_gettop(my_instance->global_lua_state))
             {
                 if (lua_isstring(my_instance->global_lua_state, -1))
                 {
