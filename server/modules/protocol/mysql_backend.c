@@ -77,7 +77,7 @@ static bool sescmd_response_complete(DCB* dcb);
 #if defined(NOT_USED)
   static int gw_session(DCB *backend_dcb, void *data);
 #endif
-static MYSQL_session* gw_get_shared_session_auth_info(DCB* dcb);
+static bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session);
 
 static GWPROTOCOL MyObject = { 
 	gw_read_backend_event,			/* Read - EPOLLIN handler	 */
@@ -128,28 +128,35 @@ GetModuleObject()
 }
 
 
-static MYSQL_session* gw_get_shared_session_auth_info(
-        DCB* dcb)
+/**
+ * Copy shared session authentication info
+ *
+ * @param dcb A backend DCB
+ * @param session Destination where authentication data is copied
+ */
+static bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
 {
-        MYSQL_session* auth_info = NULL;
-        CHK_DCB(dcb);
-        CHK_SESSION(dcb->session);
+    bool rval = true;
+    CHK_DCB(dcb);
+    CHK_SESSION(dcb->session);
 
-        spinlock_acquire(&dcb->session->ses_lock);
+    spinlock_acquire(&dcb->session->ses_lock);
 
-        if (dcb->session->state != SESSION_STATE_ALLOC && dcb->session->state != SESSION_STATE_DUMMY) { 
-                auth_info = dcb->session->data;
-        } else {
-            MXS_ERROR("%lu [gw_get_shared_session_auth_info] Couldn't get "
-                      "session authentication info. Session in a wrong state %d.",
-                      pthread_self(),
-                      dcb->session->state);
-        }
-        spinlock_release(&dcb->session->ses_lock);
-
-        return auth_info;
+    if (dcb->session->state != SESSION_STATE_ALLOC &&
+        dcb->session->state != SESSION_STATE_DUMMY)
+    {
+        memcpy(session, dcb->session->data, sizeof(MYSQL_session));
+    }
+    else
+    {
+        MXS_ERROR("%lu [gw_get_shared_session_auth_info] Couldn't get "
+                  "session authentication info. Session in a wrong state %d.",
+                  pthread_self(), dcb->session->state);
+        rval = false;
+    }
+    spinlock_release(&dcb->session->ses_lock);
+    return rval;
 }
-
 /**
  * Backend Read Event for EPOLLIN on the MySQL backend protocol module
  * @param dcb   The backend Descriptor Control Block
@@ -158,7 +165,7 @@ static MYSQL_session* gw_get_shared_session_auth_info(
 static int gw_read_backend_event(DCB *dcb) {
 	MySQLProtocol *client_protocol = NULL;
 	MySQLProtocol *backend_protocol = NULL;
-	MYSQL_session *current_session = NULL;
+	MYSQL_session local_session;
         int            rc = 0;
 
         CHK_DCB(dcb);        
@@ -176,8 +183,10 @@ static int gw_read_backend_event(DCB *dcb) {
 	CHK_SESSION(dcb->session);
                 
         /*< return only with complete session */
-        current_session = gw_get_shared_session_auth_info(dcb);
-        ss_dassert(current_session != NULL);
+        if (!gw_get_shared_session_auth_info(dcb, &local_session))
+        {
+            goto return_rc;
+        }
 
         backend_protocol = (MySQLProtocol *) dcb->protocol;
         CHK_PROTOCOL(backend_protocol);
@@ -229,9 +238,9 @@ static int gw_read_backend_event(DCB *dcb) {
 				 * to backend.
 				 */
                                 if (gw_send_authentication_to_backend(
-                                            current_session->db,
-                                            current_session->user,
-                                            current_session->client_sha1,
+                                            local_session.db,
+                                            local_session.user,
+                                            local_session.client_sha1,
                                             backend_protocol) != 0)
                                 {
                                         backend_protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
@@ -304,7 +313,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                         MXS_ERROR("Backend server didn't "
                                                   "accept authentication for user "
                                                   "%s.",
-                                                  current_session->user);
+                                                  local_session.user);
                                         break;
                                 case 1:
                                         backend_protocol->protocol_auth_state = MYSQL_IDLE;
@@ -315,7 +324,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                                   pthread_self(),
                                                   dcb,
                                                   dcb->fd,
-                                                  current_session->user);
+                                                  local_session.user);
                                         break;
                                 default:
                                         ss_dassert(receive_rc == 0);
@@ -326,7 +335,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                                   pthread_self(),
                                                   dcb,
                                                   dcb->fd,
-                                                  current_session->user);
+                                                  local_session.user);
                                         rc = 0;
                                         goto return_with_lock;
                                         break;
@@ -416,7 +425,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                           "user %s.",
                                           pthread_self(),
                                           dcb->fd,
-                                          current_session->user);
+                                          local_session.user);
                                
                                 /* check the delay queue and flush the data */
                                 if (dcb->delayq)
@@ -540,7 +549,7 @@ static int gw_read_backend_event(DCB *dcb) {
                                        "Read buffer unexpectedly null, even though response "
                                        "not marked as complete. User: %s",
                                        pthread_self(),
-                                       current_session->user);
+                                       local_session.user);
 				rc = 0;
 				goto return_rc;
 			}
@@ -1236,23 +1245,21 @@ static int backend_write_delayqueue(DCB *dcb)
                 dcb->delayq = NULL;
                 spinlock_release(&dcb->delayqlock);
 		
-		if (MYSQL_IS_CHANGE_USER(((uint8_t *)GWBUF_DATA(localq))))
-		{
-			MYSQL_session* mses;
-			GWBUF*         new_packet;
-			
-			mses = (MYSQL_session *)dcb->session->client->data;
-			new_packet = gw_create_change_user_packet(
-					mses,
-					(MySQLProtocol *)dcb->protocol);
-			/** 
-			* Remove previous packet which lacks scramble 
-			* and append the new.
-			*/
-			localq = gwbuf_consume(localq, GWBUF_LENGTH(localq));
-			localq = gwbuf_append(localq, new_packet);
-		}
-		rc = dcb_write(dcb, localq);
+                if (MYSQL_IS_CHANGE_USER(((uint8_t *)GWBUF_DATA(localq))))
+                {
+                    MYSQL_session mses;
+                    GWBUF*         new_packet;
+
+                    gw_get_shared_session_auth_info(dcb, &mses);
+                    new_packet = gw_create_change_user_packet( &mses, dcb->protocol);
+                    /**
+                     * Remove previous packet which lacks scramble
+                     * and append the new.
+                     */
+                    localq = gwbuf_consume(localq, GWBUF_LENGTH(localq));
+                    localq = gwbuf_append(localq, new_packet);
+                }
+                rc = dcb_write(dcb, localq);
         }
 
         if (rc == 0)
@@ -1366,43 +1373,47 @@ static int gw_change_user(
 	if (client_auth_packet && *client_auth_packet)
 		memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
 
-	/* save current_database name */
-	strncpy(current_database, current_session->db,MYSQL_DATABASE_MAXLEN);
+    spinlock_acquire(&in_session->ses_lock);
 
-	/*
-	 * Now clear database name in dcb as we don't do local authentication on db name for change user.
-	 * Local authentication only for user@host and if successful the database name change is sent to backend.
-	 */
-	strcpy(current_session->db, "");
+    /* save current_database name */
+    strncpy(current_database, current_session->db, MYSQL_DATABASE_MAXLEN);
 
-        /*
-	 *  decode the token and check the password.
-         * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
-	 */
-        auth_ret = gw_check_mysql_scramble_data(backend->session->client, 
-						auth_token, 
-						auth_token_len, 
-						client_protocol->scramble, 
-						sizeof(client_protocol->scramble), 
-						username, 
-						client_sha1);
+    /*
+     * Now clear database name in dcb as we don't do local authentication on db name for change user.
+     * Local authentication only for user@host and if successful the database name change is sent to backend.
+     */
+    strncpy(current_session->db, "", MYSQL_DATABASE_MAXLEN);
 
-	if (auth_ret != 0) {
-		if (!service_refresh_users(backend->session->client->service)) {
-			/* Try authentication again with new repository data */
-			/* Note: if no auth client authentication will fail */
-        		auth_ret = gw_check_mysql_scramble_data(
-					backend->session->client, 
-					auth_token, auth_token_len, 
-					client_protocol->scramble, 
-					sizeof(client_protocol->scramble), 
-					username, 
-					client_sha1);
-		}
-	}
+    /*
+     * Decode the token and check the password.
+     * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
+     */
+    auth_ret = gw_check_mysql_scramble_data(backend->session->client,
+                                            auth_token, auth_token_len,
+                                            client_protocol->scramble,
+                                            sizeof (client_protocol->scramble),
+                                            username, client_sha1);
+    strncpy(current_session->db, current_database, MYSQL_DATABASE_MAXLEN);
+    spinlock_release(&in_session->ses_lock);
 
-	/* copy back current datbase to client session */
-	strcpy(current_session->db, current_database);
+    if (auth_ret != 0)
+    {
+        if (service_refresh_users(backend->session->client->service) == 0)
+        {
+            /* Try authentication again with new repository data */
+            /* Note: if no auth client authentication will fail */
+            spinlock_acquire(&in_session->ses_lock);
+            strncpy(current_session->db, "", MYSQL_DATABASE_MAXLEN);
+            auth_ret = gw_check_mysql_scramble_data(
+                                                    backend->session->client,
+                                                    auth_token, auth_token_len,
+                                                    client_protocol->scramble,
+                                                    sizeof (client_protocol->scramble),
+                                                    username, client_sha1);
+            strncpy(current_session->db, current_database, MYSQL_DATABASE_MAXLEN);
+            spinlock_release(&in_session->ses_lock);
+        }
+    }
 
         /* let's free the auth_token now */
         if (auth_token)
