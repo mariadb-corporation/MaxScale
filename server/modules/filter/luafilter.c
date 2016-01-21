@@ -85,8 +85,7 @@ static void setDownstream(FILTER *instance, void *fsession, DOWNSTREAM *downstre
 static void setUpstream(FILTER *instance, void *fsession, UPSTREAM *upstream);
 static int routeQuery(FILTER *instance, void *fsession, GWBUF *queue);
 static int clientReply(FILTER *instance, void *fsession, GWBUF *queue);
-static void
-diagnostic(FILTER *instance, void *fsession, DCB *dcb);
+static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 
 
 static FILTER_OBJECT MyObject =
@@ -118,8 +117,12 @@ GetModuleObject()
 
 static int id_pool = 0;
 
-static int
-id_gen(lua_State* state)
+/**
+ * Push an unique integer to the Lua state's stack
+ * @param state Lua state
+ * @return Always 1
+ */
+static int id_gen(lua_State* state)
 {
     lua_pushinteger(state, atomic_add(&id_pool, 1));
     return 1;
@@ -236,15 +239,13 @@ createInstance(char **options, FILTER_PARAMETER **params)
  * After this, the newSession function in the Lua scripts is called.
  *
  * There is a single C function exported as a global variable for the session
- * script named id_gen. The id_gen function returns an int which is unique for
- * each the sessions for this service. This function is only accessible to the
- * session level scripts.
+ * script named id_gen. The id_gen function returns an integer that is unique for
+ * this service only. This function is only accessible to the session level scripts.
  * @param instance	The filter instance data
  * @param session	The session itself
  * @return Session specific data for this session
  */
-static void *
-newSession(FILTER *instance, SESSION *session)
+static void * newSession(FILTER *instance, SESSION *session)
 {
     LUA_SESSION *my_session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE*) instance;
@@ -307,8 +308,7 @@ newSession(FILTER *instance, SESSION *session)
  * @param instance	The filter instance data
  * @param session	The session being closed
  */
-static void
-closeSession(FILTER *instance, void *session)
+static void closeSession(FILTER *instance, void *session)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE*) instance;
@@ -347,8 +347,7 @@ closeSession(FILTER *instance, void *session)
  * @param instance	The filter instance
  * @param session	The filter session
  */
-static void
-freeSession(FILTER *instance, void *session)
+static void freeSession(FILTER *instance, void *session)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     free(my_session);
@@ -362,15 +361,13 @@ freeSession(FILTER *instance, void *session)
  * @param session	The filter session
  * @param downstream	The downstream filter or router.
  */
-static void
-setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
+static void setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     my_session->down = *downstream;
 }
 
-static void
-setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
+static void setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     my_session->up = *upstream;
@@ -385,8 +382,7 @@ setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
  * @param queue Server response
  * @return 1 on success
  */
-static int
-clientReply(FILTER *instance, void *session, GWBUF *queue)
+static int clientReply(FILTER *instance, void *session, GWBUF *queue)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
@@ -443,8 +439,7 @@ clientReply(FILTER *instance, void *session, GWBUF *queue)
  * @param session	The filter session
  * @param queue		The query data
  */
-static int
-routeQuery(FILTER *instance, void *session, GWBUF *queue)
+static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
@@ -543,8 +538,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * @param	fsession	Filter session, may be NULL
  * @param	dcb		The DCB for diagnostic output
  */
-static void
-diagnostic(FILTER *instance, void *fsession, DCB *dcb)
+static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
 
