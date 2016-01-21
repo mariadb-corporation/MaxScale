@@ -260,7 +260,7 @@ void skygw_message_wait(
 
 skygw_mes_rc_t skygw_message_request(
         skygw_message_t* mes);
-        
+
 void skygw_message_reset(
         skygw_message_t* mes);
 /** Skygw message routines */
@@ -280,8 +280,8 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
                             size_t* destsize);
 char* replace_values(const char** src, const size_t* srcsize, char** dest,
                      size_t* destsize);
-char* replace_literal(char* haystack, 
-                      const char* needle, 
+char* replace_literal(char* haystack,
+                      const char* needle,
                       const char* replacement);
 char* replace_quoted(const char** src, const size_t* srcsize, char** dest,
                      size_t* destsize);

@@ -107,7 +107,8 @@
 
 #define CHK_NUM_BASE 101
 
-typedef enum skygw_chk_t {
+typedef enum skygw_chk_t
+{
     CHK_NUM_SLIST = CHK_NUM_BASE,
     CHK_NUM_SLIST_NODE,
     CHK_NUM_SLIST_CURSOR,
