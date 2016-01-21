@@ -69,7 +69,6 @@ function(add_test_executable_notest source name template)
   add_executable(${name} ${source})
   target_link_libraries(${name} testcore)
   install(TARGETS ${name} DESTINATION system-test)
-  add_test(${name} ${name})
 endfunction()
 
 # This function adds a script as a test with the specified name and template.
