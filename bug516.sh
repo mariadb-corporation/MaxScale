@@ -5,6 +5,11 @@ export test_dir=`dirname $rp`
 export test_name=`basename $rp`
 
 $test_dir/configure_maxscale.sh
+if [ $? -ne 0 ] ; then 
+        echo "configure_maxscale.sh failed"
+        exit 1
+fi
+
 
 echo "executing simple maxadmin command 100 times"
 ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo echo 'for i in {1..100}; do $maxdir_bin/maxadmin -p$maxadmin_password -uadmin -P6603 list clients; done' > ./maxadmin_test.sh"

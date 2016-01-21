@@ -4,6 +4,11 @@ rp=`realpath $0`
 export test_dir=`dirname $rp`
 export test_name=`basename $rp`
 $test_dir/configure_maxscale.sh
+if [ $? -ne 0 ] ; then 
+        echo "configure_maxscale.sh failed"
+        exit 1
+fi
+
 
 echo "Waiting for 15 seconds"
 sleep 15
