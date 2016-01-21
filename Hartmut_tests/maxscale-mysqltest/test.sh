@@ -22,13 +22,18 @@ TESTS="t/test_transaction_routing1.test \
 #TESTS="t/test_sescmd.test"
 
 echo "PASSED" > fail.txt
-for i in $(seq 25); do
+if [ $smoke == "yes" ] ; then 
+	iterations=10
+else
+	iterations=100
+fi
+
+for i in $(seq $iterations); do
   echo
   echo "Test run #$i"
   echo "============"
   for test in $TESTS; do
     echo -n "testing $test: "
-#    ./mysqltest_driver.sh . 127.0.0.1 $port maxuser maxpwd 2 $test 
     ./mysqltest_driver.sh . $maxscale_IP $port maxuser maxpwd $Master_id $test
     if [ "$?" == 0 ] ; then
 	echo "PASSED" 
