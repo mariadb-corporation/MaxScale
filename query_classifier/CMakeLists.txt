@@ -1,4 +1,5 @@
 add_library(query_classifier SHARED query_classifier.cc)
+target_link_libraries(query_classifier maxscale-common)
 set_target_properties(query_classifier PROPERTIES VERSION "1.0.0")
 install(TARGETS query_classifier COMPONENT lib DESTINATION ${MAXSCALE_LIBDIR})
 if(BUILD_TESTS)

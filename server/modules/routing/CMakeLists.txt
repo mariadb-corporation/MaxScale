@@ -1,23 +1,23 @@
 if(BUILD_TESTS)
   add_subdirectory(test)
   add_library(testroute SHARED testroute.c)
-  target_link_libraries(testroute log_manager)
+  target_link_libraries(testroute maxscale-common)
   set_target_properties(testroute PROPERTIES VERSION "1.0.0")
   install(TARGETS testroute DESTINATION ${MAXSCALE_LIBDIR})
 endif()
 
 add_library(readconnroute SHARED readconnroute.c)
-target_link_libraries(readconnroute log_manager)
+target_link_libraries(readconnroute maxscale-common)
 set_target_properties(readconnroute PROPERTIES VERSION "1.1.0")
 install(TARGETS readconnroute DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(debugcli SHARED debugcli.c debugcmd.c)
-target_link_libraries(debugcli log_manager)
+target_link_libraries(debugcli maxscale-common)
 set_target_properties(debugcli PROPERTIES VERSION "1.1.1")
 install(TARGETS debugcli DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(cli SHARED cli.c debugcmd.c)
-target_link_libraries(cli log_manager)
+target_link_libraries(cli maxscale-common)
 set_target_properties(cli PROPERTIES VERSION "1.0.0")
 install(TARGETS cli DESTINATION ${MAXSCALE_LIBDIR})
 

@@ -1,5 +1,5 @@
 if(BUILD_TESTS)
   add_executable(testbinlogrouter testbinlog.c ../blr.c ../blr_slave.c ../blr_master.c ../blr_file.c ../blr_cache.c)
-  target_link_libraries(testbinlogrouter fullcore ssl pthread log_manager)
+  target_link_libraries(testbinlogrouter maxscale-common)
   add_test(TestBinlogRouter ${CMAKE_CURRENT_BINARY_DIR}/testbinlogrouter)
 endif()

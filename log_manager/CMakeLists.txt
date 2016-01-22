@@ -1,3 +1,5 @@
+# NOTE: This is currently not used. log_manager.cc is built directly into maxscale-common.
+#       To be removed completely.
 if(LOG_DEBUG)
   add_definitions(-DSS_LOG_DEBUG)
 endif()

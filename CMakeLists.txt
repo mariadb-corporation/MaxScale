@@ -174,8 +174,6 @@ include_directories(${CMAKE_BINARY_DIR}/server/include)
 include_directories(${CURL_INCLUDE_DIRS})
 
 add_subdirectory(plugins)
-add_subdirectory(utils)
-add_subdirectory(log_manager)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
 if(NOT WITHOUT_MAXADMIN)
