@@ -139,6 +139,7 @@ main(int argc, char **argv)
 
             case 'p':
                 passwd = strdup(optarg);
+                memset(optarg, '\0', strlen(optarg));
                 break;
 
             case 'P':
