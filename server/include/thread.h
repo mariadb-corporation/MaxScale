@@ -17,22 +17,25 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
-#include <pthread.h>
 
 /**
  * @file thread.h       The gateway threading interface
  *
  * An encapsulation of the threading used by the gateway. This is designed to
- * isolate the majority of the gateway code from th epthread library, enabling
+ * isolate the majority of the gateway code from the pthread library, enabling
  * the gateway to be ported to a different threading package with the minimum
  * of changes.
  */
 
-#define THREAD       pthread_t
-#define THREAD_SHELF pthread_self
+/**
+ * Thread type and thread identifier function macros
+ */
+#include <pthread.h>
+#define THREAD         pthread_t
+#define thread_self()  pthread_self()
 
-extern void *thread_start(void (*entry)(void *), void *arg);
-extern void thread_wait(void *thd);
+extern THREAD *thread_start(THREAD *thd, void (*entry)(void *), void *arg);
+extern void thread_wait(THREAD thd);
 extern void thread_millisleep(int ms);
 
 #endif

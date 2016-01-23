@@ -51,7 +51,7 @@
 typedef struct
 {
     SPINLOCK lock; /**< The monitor spinlock */
-    pthread_t tid; /**< id of monitor thread */
+    THREAD thread; /**< Monitor thread */
     int shutdown; /**< Flag to shutdown the monitor thread */
     int status; /**< Monitor status */
     unsigned long id; /**< Monitor ID */

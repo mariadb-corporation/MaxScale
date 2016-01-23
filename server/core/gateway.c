@@ -1059,13 +1059,13 @@ int main(int argc, char **argv)
     int      daemon_pipe[2] = {-1, -1};
     bool     parent_process;
     int      child_status;
-    void**   threads = NULL;   /*< thread list */
+    THREAD*   threads = NULL;   /*< thread list */
     char     mysql_home[PATH_MAX+1];
     char     datadir_arg[10+PATH_MAX+1];  /*< '--datadir='  + PATH_MAX */
     char     language_arg[11+PATH_MAX+1]; /*< '--language=' + PATH_MAX */
     char*    cnf_file_path = NULL;        /*< conf file, to be freed */
     char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
-    void*    log_flush_thr = NULL;
+    THREAD    log_flush_thr;
     char*    tmp_path;
     char*    tmp_var;
     int      option_index;
@@ -1940,9 +1940,14 @@ int main(int argc, char **argv)
      * Start periodic log flusher thread.
      */
     log_flush_timeout_ms = 1000;
-    log_flush_thr = thread_start(
-        log_flush_cb,
-        (void *)&log_flush_timeout_ms);
+
+    if (thread_start(&log_flush_thr, log_flush_cb, (void *) &log_flush_timeout_ms) == NULL)
+    {
+        char* logerr = "Failed to start log flushing thread.";
+        print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
 
     /*
      * Start the housekeeper thread
@@ -1954,14 +1959,22 @@ int main(int argc, char **argv)
      * configured as the main thread will also poll.
      */
     n_threads = config_threadcount();
-    threads = (void **)calloc(n_threads, sizeof(void *));
+    threads = calloc(n_threads, sizeof(THREAD));
     /*<
      * Start server threads.
      */
     for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
     {
-        threads[thread_id] = thread_start(worker_thread_main, (void *)(thread_id + 1));
+        if (thread_start(&threads[thread_id], worker_thread_main,
+                         (void *)(thread_id + 1)) == NULL)
+        {
+            char* logerr = "Failed to start worker thread.";
+            print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+            rc = MAXSCALE_INTERNALERROR;
+            goto return_main;
+        }
     }
+
     MXS_NOTICE("MaxScale started with %d server threads.", config_threadcount());
     /**
      * Successful start, notify the parent process that it can exit.

@@ -111,7 +111,7 @@ static int
 test2()
 {
 SPINLOCK	lck;
-void		*handle;
+THREAD		handle;
 struct timespec sleeptime;
 
     sleeptime.tv_sec = 10;
@@ -120,7 +120,7 @@ struct timespec sleeptime;
 	acquire_time = 0;
 	spinlock_init(&lck);
 	spinlock_acquire(&lck);
-	handle = thread_start(test2_helper, (void *)&lck);
+	thread_start(&handle, test2_helper, (void *)&lck);
 	nanosleep(&sleeptime, NULL);
 	spinlock_release(&lck);
 	thread_wait(handle);
@@ -206,7 +206,7 @@ static int
 test3()
 {
 // SPINLOCK	lck;
-void		*handle[THREADS];
+THREAD          handle[THREADS];
 int             i;
 int             tnum[THREADS];
 time_t          rawtime;
@@ -220,7 +220,7 @@ time_t          rawtime;
     for (i = 0; i<THREADS; i++) {
         threadrun[i] = 0;
         tnum[i] = i;
-        handle[i] = thread_start(test3_helper, &tnum[i]);
+        thread_start(&handle[i], test3_helper, &tnum[i]);
     }
     for (i = 0; i<THREADS; i++) {
         fprintf(stderr, "spinlock_test 3 thread %d ran %d times, no wait %d times before waits.\n", i, threadrun[i], nowait[i]);
