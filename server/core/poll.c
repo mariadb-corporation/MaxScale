@@ -546,9 +546,6 @@ poll_waitevents(void *arg)
         thread_data[thread_id].state = THREAD_IDLE;
     }
 
-    /** Init mysql thread context for use with a mysql handle and a parser */
-    mysql_thread_init();
-
     while (1)
     {
         if (pollStats.evq_pending == 0 && timeout_bias < 10)
@@ -732,8 +729,6 @@ poll_waitevents(void *arg)
                 thread_data[thread_id].state = THREAD_STOPPED;
             }
             bitmask_clear(&poll_mask, thread_id);
-            /** Release mysql thread context */
-            mysql_thread_end();
             return;
         }
         if (thread_data)

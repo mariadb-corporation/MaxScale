@@ -982,6 +982,28 @@ static void usage(void)
             , progname);
 }
 
+
+/**
+ * The entry point of each worker thread.
+ *
+ * @param arg The thread argument.
+ */
+void worker_thread_main(void* arg)
+{
+    /** Init mysql thread context for use with a mysql handle and a parser */
+    if (mysql_thread_init() == 0)
+    {
+        poll_waitevents(arg);
+
+        /** Release mysql thread context */
+        mysql_thread_end();
+    }
+    else
+    {
+        MXS_ERROR("Could not perform thread initialization for MySQL. Exiting thread.");
+    }
+}
+
 /**
  * The main entry point into the gateway
  *
@@ -1920,7 +1942,7 @@ int main(int argc, char **argv)
      */
     for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
     {
-        threads[thread_id] = thread_start(poll_waitevents, (void *)(thread_id + 1));
+        threads[thread_id] = thread_start(worker_thread_main, (void *)(thread_id + 1));
     }
     MXS_NOTICE("MaxScale started with %d server threads.", config_threadcount());
     /**
