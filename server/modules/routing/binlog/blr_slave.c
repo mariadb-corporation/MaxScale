@@ -1734,7 +1734,7 @@ uint32_t	chksum;
 
 		spinlock_acquire(&router->binlog_lock);
 		if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
-			(slave->binlog_pos > router->binlog_position) && !router->rotating)
+			(slave->binlog_pos > router->binlog_position))
 		{
 			force_disconnect = true;
 		}
@@ -1946,7 +1946,32 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 		burst = router->long_burst;
 	else
 		burst = router->short_burst;
+
 	burst_size = router->burst_size;
+
+        int do_return;
+
+        spinlock_acquire(&router->binlog_lock);
+
+        do_return = 0;
+
+        /* check for a pending transaction and safe position */
+        if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
+               (slave->binlog_pos > router->binlog_position)) {
+               do_return = 1;
+        }
+
+        spinlock_release(&router->binlog_lock);
+
+        if (do_return) {
+               spinlock_acquire(&slave->catch_lock);
+               slave->cstate |= CS_EXPECTCB;
+               spinlock_release(&slave->catch_lock);
+               poll_fake_write_event(slave->dcb);
+
+               return 0;
+        }
+
 	spinlock_acquire(&slave->catch_lock);
 	if (slave->cstate & CS_BUSY)
 	{
@@ -1998,6 +2023,7 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			return 0;
 		}
 	}
+
 	slave->stats.n_bursts++;
 
 #ifdef BLSLAVE_IN_FILE
@@ -2342,30 +2368,6 @@ unsigned int cstate;
 	{
 		if (slave->state == BLRS_DUMPING)
 		{
-			int do_return;
-
-			spinlock_acquire(&router->binlog_lock);
-
-			do_return = 0;
-			cstate = slave->cstate;
-
-			/* check for a pending transaction and not rotating */
-			if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
-				(slave->binlog_pos > router->binlog_position) && !router->rotating) {
-				do_return = 1;
-			}
-
-			spinlock_release(&router->binlog_lock);
-
-			if (do_return) {
-				spinlock_acquire(&slave->catch_lock);
-				slave->cstate |= CS_EXPECTCB;
-				spinlock_release(&slave->catch_lock);
-				poll_fake_write_event(slave->dcb);
-
-				return 0;
-			}
-
 			spinlock_acquire(&slave->catch_lock);
 			cstate = slave->cstate;
 			slave->cstate &= ~(CS_UPTODATE|CS_EXPECTCB);
