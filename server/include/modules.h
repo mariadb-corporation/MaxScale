@@ -20,6 +20,9 @@
 #include <dcb.h>
 #include <modinfo.h>
 #include <resultset.h>
+#include <skygw_debug.h>
+
+EXTERN_C_BLOCK_BEGIN
 
 /**
  * @file modules.h	Utilities for loading modules
@@ -71,5 +74,7 @@ extern	void	dprintAllModules(DCB *);
 extern 	RESULTSET	*moduleGetList();
 extern void module_feedback_send(void*);
 extern void moduleShowFeedbackReport(DCB *dcb);
+
+EXTERN_C_BLOCK_END
 
 #endif
