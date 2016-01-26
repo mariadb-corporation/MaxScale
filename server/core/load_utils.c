@@ -198,6 +198,12 @@ load_module(const char *module, const char *type)
                 MXS_ERROR("Module '%s' does not implement the filter API.", module);
                 fatal = 1;
             }
+            if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
+                && mod_info->modapi != MODULE_API_QUERY_CLASSIFIER)
+            {
+                MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
+                fatal = 1;
+            }
             if (fatal)
             {
                 dlclose(dlhandle);
