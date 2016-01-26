@@ -19,13 +19,11 @@
  */
 #include <spinlock.h>
 #include <buffer.h>
+#include <gw_protocol.h>
 #include <modinfo.h>
 #include <gwbitmask.h>
 #include <skygw_utils.h>
 #include <netinet/in.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
 
 #define ERRHANDLE
 
@@ -59,49 +57,12 @@ struct service;
  * 27/08/2014   Mark Riddoch            Addition of write event queuing
  * 23/09/2014   Mark Riddoch            New poll processing queue
  * 19/06/2015   Martin Brampton         Provision of persistent connections
+ * 20/01/2016   Martin Brampton         Moved GWPROTOCOL to gw_protocol.h
  *
  * @endverbatim
  */
 
 struct dcb;
-
-/**
- * @verbatim
- * The operations that can be performed on the descriptor
- *
- *      read            EPOLLIN handler for the socket
- *      write           MaxScale data write entry point
- *      write_ready     EPOLLOUT handler for the socket, indicates
- *                      that the socket is ready to send more data
- *      error           EPOLLERR handler for the socket
- *      hangup          EPOLLHUP handler for the socket
- *      accept          Accept handler for listener socket only
- *      connect         Create a connection to the specified server
- *                      for the session pased in
- *      close           MaxScale close entry point for the socket
- *      listen          Create a listener for the protocol
- *      auth            Authentication entry point
- *  session         Session handling entry point
- * @endverbatim
- *
- * This forms the "module object" for protocol modules within the gateway.
- *
- * @see load_module
- */
-typedef struct gw_protocol
-{
-    int (*read)(struct dcb *);
-    int (*write)(struct dcb *, GWBUF *);
-    int (*write_ready)(struct dcb *);
-    int (*error)(struct dcb *);
-    int (*hangup)(struct dcb *);
-    int (*accept)(struct dcb *);
-    int (*connect)(struct dcb *, struct server *, struct session *);
-    int (*close)(struct dcb *);
-    int (*listen)(struct dcb *, char *);
-    int (*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
-    int (*session)(struct dcb *, void *);
-} GWPROTOCOL;
 
 /**
  * The event queue structure used in the polling loop to maintain a queue
@@ -127,13 +88,6 @@ typedef struct
     unsigned long   inserted;
     unsigned long   started;
 } DCBEVENTQ;
-
-/**
- * The GWPROTOCOL version data. The following should be updated whenever
- * the GWPROTOCOL structure is changed. See the rules defined in modinfo.h
- * that define how these numbers should change.
- */
-#define GWPROTOCOL_VERSION      {1, 0, 0}
 
 #define DCBFD_CLOSED -1
 

@@ -21,6 +21,7 @@
 #include <string.h>
 #include <dcb.h>
 #include <buffer.h>
+#include <gw_protocol.h>
 #include <service.h>
 #include <session.h>
 #include <sys/ioctl.h>

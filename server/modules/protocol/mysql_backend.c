@@ -50,6 +50,7 @@
  *
  */
 #include <modinfo.h>
+#include <gw_protocol.h>
 
 MODULE_INFO info =
 {

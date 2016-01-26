@@ -38,6 +38,7 @@
  */
 
 #include <httpd.h>
+#include <gw_protocol.h>
 #include <gw.h>
 #include <modinfo.h>
 #include <log_manager.h>

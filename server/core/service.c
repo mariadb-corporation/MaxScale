@@ -48,6 +48,8 @@
 #include <errno.h>
 #include <session.h>
 #include <service.h>
+#include <gw_protocol.h>
+#include <listener.h>
 #include <server.h>
 #include <router.h>
 #include <spinlock.h>
@@ -218,7 +220,7 @@ service_isvalid(SERVICE *service)
  * @return              The number of listeners started
  */
 static int
-serviceStartPort(SERVICE *service, SERV_PROTOCOL *port)
+serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 {
     int listeners = 0;
     char config_bind[40];
@@ -230,6 +232,11 @@ serviceStartPort(SERVICE *service, SERV_PROTOCOL *port)
     {
         MXS_ERROR("Failed to create listener for service %s.", service->name);
         goto retblock;
+    }
+
+    if (port->ssl)
+    {
+        listener_init_SSL(port->ssl);
     }
 
     if (strcmp(port->protocol, "MySQLClient") == 0)
@@ -420,7 +427,7 @@ retblock:
  */
 int serviceStartAllPorts(SERVICE* service)
 {
-    SERV_PROTOCOL *port = service->ports;
+    SERV_LISTENER *port = service->ports;
     int listeners = 0;
     while (!service->svc_do_shutdown && port)
     {
@@ -507,7 +514,7 @@ serviceStart(SERVICE *service)
 void
 serviceStartProtocol(SERVICE *service, char *protocol, int port)
 {
-    SERV_PROTOCOL *ptr;
+    SERV_LISTENER *ptr;
 
     ptr = service->ports;
     while (ptr)
@@ -560,7 +567,7 @@ serviceStartAll()
 int
 serviceStop(SERVICE *service)
 {
-    SERV_PROTOCOL *port;
+    SERV_LISTENER *port;
     int listeners = 0;
 
     port = service->ports;
@@ -592,7 +599,7 @@ serviceStop(SERVICE *service)
 int
 serviceRestart(SERVICE *service)
 {
-    SERV_PROTOCOL *port;
+    SERV_LISTENER *port;
     int listeners = 0;
 
     port = service->ports;
@@ -686,25 +693,20 @@ service_free(SERVICE *service)
  * @return      TRUE if the protocol/port could be added
  */
 int
-serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned short port)
+serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl)
 {
-    SERV_PROTOCOL   *proto;
+    SERV_LISTENER   *proto;
 
-    if ((proto = (SERV_PROTOCOL *)malloc(sizeof(SERV_PROTOCOL))) == NULL)
+    if ((proto = (SERV_LISTENER *)malloc(sizeof(SERV_LISTENER))) == NULL)
     {
         return 0;
     }
     proto->listener = NULL;
     proto->protocol = strdup(protocol);
-    if (address)
-    {
-        proto->address = strdup(address);
-    }
-    else
-    {
-        proto->address = NULL;
-    }
+    proto->address = address ? strdup(address) : NULL;
     proto->port = port;
+    proto->authenticator = authenticator ? strdup(authenticator) : NULL;
+    proto->ssl = ssl;
     spinlock_acquire(&service->spin);
     proto->next = service->ports;
     service->ports = proto;
@@ -724,7 +726,7 @@ serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned sho
 int
 serviceHasProtocol(SERVICE *service, char *protocol, unsigned short port)
 {
-    SERV_PROTOCOL *proto;
+    SERV_LISTENER *proto;
 
     spinlock_acquire(&service->spin);
     proto = service->ports;
@@ -1457,7 +1459,7 @@ void
 dListListeners(DCB *dcb)
 {
     SERVICE *service;
-    SERV_PROTOCOL *lptr;
+    SERV_LISTENER *lptr;
 
     spinlock_acquire(&service_spin);
     service = allServices;
@@ -1930,7 +1932,7 @@ serviceListenerRowCallback(RESULTSET *set, void *data)
     char buf[20];
     RESULT_ROW *row;
     SERVICE *service;
-    SERV_PROTOCOL *lptr = NULL;
+    SERV_LISTENER *lptr = NULL;
 
     spinlock_acquire(&service_spin);
     service = allServices;
@@ -2134,6 +2136,9 @@ int serviceInitSSL(SERVICE* service)
 {
     DH* dh;
     RSA* rsa;
+
+    /* Pending removal in favour of processing in listener. */
+    return 0;
 
     if (!service->ssl_init_done)
     {

@@ -23,6 +23,7 @@
 #include <buffer.h>
 #include <service.h>
 #include <session.h>
+#include <gw_protocol.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/socket.h>

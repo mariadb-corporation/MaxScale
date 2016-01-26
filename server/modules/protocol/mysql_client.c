@@ -47,6 +47,7 @@
  * 11/01/2016   Martin Brampton         Remove SSL write code, now handled at lower level;
  *                                      replace gwbuf_consume by gwbuf_free (multiple).
  */
+#include <gw_protocol.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql_client_server_protocol.h>
@@ -74,16 +75,15 @@ static int gw_MySQLWrite_client(DCB *dcb, GWBUF *queue);
 static int gw_error_client_event(DCB *dcb);
 static int gw_client_close(DCB *dcb);
 static int gw_client_hangup_event(DCB *dcb);
-int gw_read_client_event_SSL(DCB* dcb);
-int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
-int MySQLSendHandshake(DCB* dcb);
+static int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
+static int MySQLSendHandshake(DCB* dcb);
 static int gw_mysql_do_authentication(DCB *dcb, GWBUF **queue);
 static int route_by_statement(SESSION *, GWBUF **);
 extern char* get_username_from_auth(char* ptr, uint8_t* data);
 extern int check_db_name_after_auth(DCB *, char *, int);
 extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
 
-int do_ssl_accept(MySQLProtocol* protocol);
+static int do_ssl_accept(MySQLProtocol* protocol);
 
 /*
  * The "module object" for the mysqld client protocol module.
