@@ -1818,6 +1818,9 @@ void qc_thread_end()
  * EXPORTS
  */
 
+extern "C"
+{
+
 static char version_string[] = "V1.0.0";
 
 static QUERY_CLASSIFIER qc =
@@ -1862,4 +1865,4 @@ QUERY_CLASSIFIER* GetModuleObject()
     return &qc;
 }
 
-
+}

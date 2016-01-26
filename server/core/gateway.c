@@ -507,7 +507,15 @@ static void libmysqld_done(void)
 {
     if (libmysqld_started)
     {
-        mysql_library_end();
+        // TODO: qc_end() (if qc_mysqlembedded is used) also calls mysql_library_end(),
+        // TODO: which refers to the mysql_library_end() in the embedded library. This
+        // TODO: one would call the mysql_library_end() in the client library. It seems
+        // TODO: that would work, but for the fact that both de-initialize some lower
+        // TODO: level library, which in turn does not work. Thus, for the time being
+        // TODO: this call is not made.
+        // TODO: Linking MaxScale with Connector-C would likely make this problem
+        // TODO: go away.
+        //mysql_library_end();
     }
 }
 
@@ -2011,6 +2019,8 @@ int main(int argc, char **argv)
     MXS_NOTICE("MaxScale is shutting down.");
     /** Release mysql thread context*/
     mysql_thread_end();
+
+    qc_end();
 
     utils_end();
     datadir_cleanup();

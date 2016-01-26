@@ -2,7 +2,7 @@
     global:
         info;
         version;
-        GetModuleInfo;
+        GetModuleObject;
         ModuleInit;
     local:
         *;
