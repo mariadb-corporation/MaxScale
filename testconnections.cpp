@@ -475,7 +475,7 @@ void TestConnections::check_log_err(char * err_msg, bool expected)
     char sys1[4096];
     set_timeout(100);
     sprintf(&sys1[0], "rm *.log; %s %s", get_logs_command, maxscale_IP);
-    tprintf("Executing: %s\n", sys1);
+    //tprintf("Executing: %s\n", sys1);
     system(sys1);
     set_timeout(50);
 

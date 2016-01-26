@@ -255,6 +255,7 @@ add_test_script(open_close_connections_ssl ssl)
 add_test_executable(galera_priority.cpp galera_priority galera_priority)
 add_test_executable(bug718.cpp bug718 bug718)
 #add_test_executable(bug656.cpp bug656 replication)
+add_test_executable(mxs548_short_session_change_user.cpp mxs548_short_session_change_user mxs548)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)

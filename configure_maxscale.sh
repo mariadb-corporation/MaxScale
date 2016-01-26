@@ -25,7 +25,7 @@ if [ -z $template ] ; then
   echo "Template $template not found, using 'replication' template."
   template="replication"
 fi
-
+echo "template $template"
 if [ -z $threads ] ; then
 	threads=8
 fi
