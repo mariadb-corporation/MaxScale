@@ -279,6 +279,7 @@ dcb_clone(DCB *orig)
         clonedcb->flags |= DCBF_CLONE;
         clonedcb->state = orig->state;
         clonedcb->data = orig->data;
+        clonedcb->listen_ssl = orig->listen_ssl;
         if (orig->remote)
         {
             clonedcb->remote = strdup(orig->remote);
@@ -2828,12 +2829,12 @@ dcb_count_by_usage(DCB_USAGE usage)
  */
 int dcb_create_SSL(DCB* dcb)
 {
-    if (serviceInitSSL(dcb->service) != 0)
+    if (NULL == dcb->listen_ssl || listener_init_SSL(dcb->listen_ssl) != 0)
     {
         return -1;
     }
 
-    if ((dcb->ssl = SSL_new(dcb->service->ctx)) == NULL)
+    if ((dcb->ssl = SSL_new(dcb->listen_ssl->ctx)) == NULL)
     {
         MXS_ERROR("Failed to initialize SSL for connection.");
         return -1;

@@ -33,37 +33,8 @@
  */
 
 #include <gw_protocol.h>
+#include <gw_ssl.h>
 #include <dcb.h>
-
-enum
-{
-    SERVICE_SSLV3,
-    SERVICE_TLS10,
-#ifdef OPENSSL_1_0
-    SERVICE_TLS11,
-    SERVICE_TLS12,
-#endif
-    SERVICE_SSL_MAX,
-    SERVICE_TLS_MAX,
-    SERVICE_SSL_TLS_MAX
-};
-
-/**
- * The ssl_listener structure is used to aggregate the SSL configuration items
- * and data for a particular listener
- */
-typedef struct ssl_listener
-{
-    SSL_CTX *ctx;
-    SSL_METHOD *method;                 /*<  SSLv3 or TLS1.0/1.1/1.2 methods
-                                         * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
-    int ssl_cert_verify_depth;          /*< SSL certificate verification depth */
-    int ssl_method_type;                /*< Which of the SSLv3 or TLS1.0/1.1/1.2 methods to use */
-    char *ssl_cert;                     /*< SSL certificate */
-    char *ssl_key;                      /*< SSL private key */
-    char *ssl_ca_cert;                  /*< SSL CA certificate */
-    bool ssl_init_done;                 /*< If SSL has already been initialized for this service */
-} SSL_LISTENER;
 
 /**
  * The servlistener structure is used to link a service to the protocols that

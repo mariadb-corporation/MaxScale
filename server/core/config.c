@@ -91,7 +91,7 @@ static void global_defaults();
 static void feedback_defaults();
 static void check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
-static SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj);
+static SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count);
 
 int config_truth_value(char *str);
 int config_get_ifaddr(unsigned char *output);
@@ -195,6 +195,14 @@ static char *server_params[] =
     "monitorpw",
     "persistpoolmax",
     "persistmaxtime",
+    /* The following, or something similar, will be needed for backend SSL
+    "ssl_cert",
+    "ssl_ca_cert",
+    "ssl",
+    "ssl_key",
+    "ssl_version",
+    "ssl_cert_verify_depth",
+     */
     NULL
 };
 
@@ -1036,16 +1044,17 @@ handle_global_item(const char *name, const char *value)
 /**
  * Form an SSL structure from listener section parameters
  *
- * @param name  The item name
- * @param value The item value
- * @return 0 on error
+ * @param obj The configuration object for the item being created
+ * @param require_cert  Whether a certificate and key are required
+ * @param *error_count  An error count which may be incremented
+ * @return SSL_LISTENER structure or NULL
  */
 static SSL_LISTENER *
-make_ssl_structure (CONFIG_CONTEXT *obj)
+make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
 {
     char *ssl, *ssl_version, *ssl_cert, *ssl_key, *ssl_ca_cert, *ssl_cert_verify_depth;
+    int local_errors = 0;
     SSL_LISTENER *new_ssl;
-    int error_count = 0;
 
     ssl = config_get_value(obj->parameters, "ssl");
     if (ssl && !strcmp(ssl, "required"))
@@ -1068,7 +1077,7 @@ make_ssl_structure (CONFIG_CONTEXT *obj)
             {
                 MXS_ERROR("Unknown parameter value for 'ssl_version' for"
                     " service '%s': %s", obj->object, ssl_version);
-                error_count++;
+                local_errors++;
             }
         }
 
@@ -1080,15 +1089,15 @@ make_ssl_structure (CONFIG_CONTEXT *obj)
                 MXS_ERROR("Invalid parameter value for 'ssl_cert_verify_depth"
                     " for service '%s': %s", obj->object, ssl_cert_verify_depth);
                 new_ssl->ssl_cert_verify_depth = 0;
-                error_count++;
+                local_errors++;
             }
         }
 
         listener_set_certificates(new_ssl, ssl_cert, ssl_key, ssl_ca_cert);
 
-        if (new_ssl->ssl_cert == NULL)
+        if (require_cert && new_ssl->ssl_cert == NULL)
         {
-            error_count++;
+            local_errors++;
             MXS_ERROR("Server certificate missing for service '%s'."
                       "Please provide the path to the server certificate by adding "
                       "the ssl_cert=<path> parameter", obj->object);
@@ -1096,16 +1105,16 @@ make_ssl_structure (CONFIG_CONTEXT *obj)
 
         if (new_ssl->ssl_ca_cert == NULL)
         {
-            error_count++;
+            local_errors++;
             MXS_ERROR("CA Certificate missing for service '%s'."
                       "Please provide the path to the certificate authority "
                       "certificate by adding the ssl_ca_cert=<path> parameter",
                       obj->object);
         }
 
-        if (new_ssl->ssl_key == NULL)
+        if (require_cert && new_ssl->ssl_key == NULL)
         {
-            error_count++;
+            local_errors++;
             MXS_ERROR("Server private key missing for service '%s'. "
                       "Please provide the path to the server certificate key by "
                       "adding the ssl_key=<path> parameter",
@@ -1117,29 +1126,30 @@ make_ssl_structure (CONFIG_CONTEXT *obj)
             MXS_ERROR("Certificate authority file for service '%s' not found: %s",
                 obj->object,
                 new_ssl->ssl_ca_cert);
-            error_count++;
+            local_errors++;
         }
 
-        if (access(new_ssl->ssl_cert, F_OK) != 0)
+        if (require_cert && access(new_ssl->ssl_cert, F_OK) != 0)
         {
             MXS_ERROR("Server certificate file for service '%s' not found: %s",
                       obj->object,
                       new_ssl->ssl_cert);
-            error_count++;
+            local_errors++;
         }
 
-        if (access(new_ssl->ssl_key, F_OK) != 0)
+        if (require_cert && access(new_ssl->ssl_key, F_OK) != 0)
         {
             MXS_ERROR("Server private key file for service '%s' not found: %s",
                       obj->object,
                       new_ssl->ssl_key);
-            error_count++;
+            local_errors++;
         }
 
-        if (error_count == 0)
+        if (0 == local_errors)
         {
             return new_ssl;
         }
+        *error_count += local_errors;
         free(new_ssl);
     }
     return NULL;
@@ -2325,6 +2335,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
         }
     }
 
+    /*
     char *ssl = config_get_value(obj->parameters, "ssl");
     if (ssl)
     {
@@ -2368,6 +2379,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
             }
         }
     }
+     */
 
     /** Parameters for rwsplit router only */
     if (strcmp(router, "readwritesplit"))
@@ -2502,6 +2514,8 @@ int create_new_server(CONFIG_CONTEXT *obj)
         }
 
         CONFIG_PARAMETER *params = obj->parameters;
+
+        server->server_ssl = make_ssl_structure(obj, false, &error_count);
 
         while (params)
         {
@@ -2729,7 +2743,7 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
         SERVICE *service = service_find(service_name);
         if (service)
         {
-            SSL_LISTENER *ssl_info = make_ssl_structure(obj);
+            SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
             if (socket)
             {
                 if (serviceHasProtocol(service, protocol, 0))

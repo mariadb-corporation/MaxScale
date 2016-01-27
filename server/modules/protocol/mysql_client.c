@@ -335,7 +335,8 @@ int MySQLSendHandshake(DCB* dcb)
 
     mysql_server_capabilities_one[0] &= ~GW_MYSQL_CAPABILITIES_COMPRESS;
 
-    if (dcb->service->ssl_mode != SSL_DISABLED)
+    /* if (dcb->service->ssl_mode != SSL_DISABLED) */
+    if (NULL != dcb->listen_ssl)
     {
         mysql_server_capabilities_one[1] |= GW_MYSQL_CAPABILITIES_SSL >> 8;
     }
@@ -489,7 +490,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf)
         ssl = protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 
         /** Client didn't requested SSL when SSL mode was required*/
-        if (!ssl && protocol->owner_dcb->service->ssl_mode == SSL_REQUIRED)
+        /* if (!ssl && protocol->owner_dcb->service->ssl_mode == SSL_REQUIRED) */
+        if (!ssl && NULL != protocol->owner_dcb->listen_ssl)
         {
             MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
                      protocol->owner_dcb->user,
@@ -507,7 +509,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf)
         }
 
         /** Do the SSL Handshake */
-        if (ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED)
+        /* if (ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED) */
+        if (ssl && NULL != protocol->owner_dcb->listen_ssl)
         {
             protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
 
@@ -520,7 +523,8 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf)
                 return 0;
             }
         }
-        else if (dcb->service->ssl_mode == SSL_ENABLED)
+        /* else if (dcb->service->ssl_mode == SSL_ENABLED) */
+        else if (NULL != dcb->listen_ssl)
         {
             /** This is a non-SSL connection to a SSL enabled service.
              * We have only read enough of the packet to know that the client
@@ -712,7 +716,8 @@ int gw_read_client_event(DCB* dcb)
         /** SSL handshake is done, communication is now encrypted with SSL */
         rc = dcb_read_SSL(dcb, &read_buffer);
     }
-    else if (dcb->service->ssl_mode != SSL_DISABLED &&
+    /* else if (dcb->service->ssl_mode != SSL_DISABLED && */
+    else if (dcb->listen_ssl != NULL &&
              protocol->protocol_auth_state == MYSQL_AUTH_SENT)
     {
         /** The service allows both SSL and non-SSL connections.
@@ -1586,6 +1591,7 @@ int gw_MySQLAccept(DCB *listener)
             goto return_rc;
         }
 
+        client_dcb->listen_ssl = listener->listen_ssl;
         client_dcb->service = listener->session->service;
         client_dcb->session = session_set_dummy(client_dcb);
         client_dcb->fd = c_sock;

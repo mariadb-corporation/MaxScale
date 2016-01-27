@@ -93,17 +93,25 @@ listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
 void
 listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert)
 {
-    if (ssl_listener->ssl_cert)
+    if (NULL != cert)
     {
-        free(ssl_listener->ssl_cert);
+        if (ssl_listener->ssl_cert)
+        {
+            free(ssl_listener->ssl_cert);
+        }
+        ssl_listener->ssl_cert = strdup(cert);
     }
-    ssl_listener->ssl_cert = strdup(cert);
+    else ssl_listener->ssl_cert = NULL;
 
-    if (ssl_listener->ssl_key)
+    if (NULL != key)
     {
-        free(ssl_listener->ssl_key);
+        if (ssl_listener->ssl_key)
+        {
+            free(ssl_listener->ssl_key);
+        }
+        ssl_listener->ssl_key = strdup(key);
     }
-    ssl_listener->ssl_key = strdup(key);
+    else ssl_listener->ssl_key = NULL;
 
     if (ssl_listener->ssl_ca_cert)
     {

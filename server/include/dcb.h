@@ -20,6 +20,7 @@
 #include <spinlock.h>
 #include <buffer.h>
 #include <gw_protocol.h>
+#include <gw_ssl.h>
 #include <modinfo.h>
 #include <gwbitmask.h>
 #include <skygw_utils.h>
@@ -201,6 +202,7 @@ typedef struct dcb
     char            *protoname;     /**< Name of the protocol */
     void            *protocol;      /**< The protocol specific state */
     struct session  *session;       /**< The owning session */
+    SSL_LISTENER    *listen_ssl;    /**< For a client DCB, the SSL descriptor, if any */
     GWPROTOCOL      func;           /**< The functions for this descriptor */
 
     int             writeqlen;      /**< Current number of byes in the write queue */
