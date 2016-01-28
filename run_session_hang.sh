@@ -12,8 +12,8 @@ if [ $? -ne 0 ] ; then
 fi
 
 
-echo "drop table if exists t1; create table t1(id integer primary key); " | mysql -u$repl_user -p$repl_password -h$maxscale_IP -p 4006 test
-echo "drop table if exists t1; create table t1(id integer primary key); " | mysql -u$repl_user -p$repl_password -h$maxscale_IP -p 4006 mysql
+echo "drop table if exists t1; create table t1(id integer primary key); " | mysql -u$repl_user -p$repl_password -h$maxscale_IP -P 4006 test
+echo "drop table if exists t1; create table t1(id integer primary key); " | mysql -u$repl_user -p$repl_password -h$maxscale_IP -P 4006 mysql
 
 $test_dir/session_hang/run_setmix.sh &
 perl $test_dir/session_hang/simpletest.pl
@@ -48,7 +48,7 @@ fi
 sleep 15
 
 
-echo "show databases;" |  mysql -u$repl_user -p$repl_password -h$maxscale_IP -p 4006
+echo "show databases;" |  mysql -u$repl_user -p$repl_password -h$maxscale_IP -P 4006
 if [ $? -ne 0 ] ; then 
         res=1
 fi
