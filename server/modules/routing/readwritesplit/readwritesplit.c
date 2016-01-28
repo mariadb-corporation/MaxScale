@@ -2052,7 +2052,6 @@ static bool route_single_stmt(
 	if ((master_dcb = rses->rses_master_ref->bref_dcb) == NULL)
 	{
 		char* query_str = modutil_get_query(querybuf);
-		CHK_DCB(master_dcb);
 		MXS_ERROR("Can't route %s:%s:\"%s\" to "
                           "backend server. Session doesn't have a Master "
                           "node",
@@ -2064,6 +2063,7 @@ static bool route_single_stmt(
 		goto retblock;
 	}
 
+	CHK_DCB(master_dcb);
 	packet = GWBUF_DATA(querybuf);
 	packet_len = gw_mysql_get_byte3(packet);
 	
