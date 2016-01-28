@@ -174,7 +174,7 @@ startMonitor(void *arg, void* opt)
         memset(handle->events, true, sizeof(handle->events));
     }
 
-    if (thread_start(handle->thread, monitorMain, mon) == NULL)
+    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
     }
@@ -194,7 +194,7 @@ stopMonitor(void *arg)
     MM_MONITOR *handle = (MM_MONITOR *) mon->handle;
 
     handle->shutdown = 1;
-    thread_wait((void *) handle->thread);
+    thread_wait(handle->thread);
 }
 
 /**
