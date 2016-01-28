@@ -1965,21 +1965,13 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
         if (do_return) {
                spinlock_acquire(&slave->catch_lock);
+               slave->cstate &= ~CS_BUSY;
                slave->cstate |= CS_EXPECTCB;
                spinlock_release(&slave->catch_lock);
                poll_fake_write_event(slave->dcb);
 
                return 0;
         }
-
-	spinlock_acquire(&slave->catch_lock);
-	if (slave->cstate & CS_BUSY)
-	{
-		spinlock_release(&slave->catch_lock);
-		return 0;
-	}
-	slave->cstate |= CS_BUSY;
-	spinlock_release(&slave->catch_lock);
 
         BLFILE *file;
 #ifdef BLFILE_IN_SLAVE
@@ -2369,8 +2361,14 @@ unsigned int cstate;
 		if (slave->state == BLRS_DUMPING)
 		{
 			spinlock_acquire(&slave->catch_lock);
+                        if (slave->cstate & CS_BUSY)
+                        {
+                            spinlock_release(&slave->catch_lock);
+                            return 0;
+                        }
 			cstate = slave->cstate;
 			slave->cstate &= ~(CS_UPTODATE|CS_EXPECTCB);
+			slave->cstate |= CS_BUSY;
 			spinlock_release(&slave->catch_lock);
 
 			if ((cstate & CS_UPTODATE) == CS_UPTODATE)

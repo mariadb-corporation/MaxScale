@@ -1602,6 +1602,11 @@ unsigned int cstate;
 			/* Slave is in catchup mode */
 			action = 3;
 		}
+        else
+        {
+            MXS_ERROR("slave->cstate does not contain a meaningful state %d", slave->cstate);
+            action = 0;
+        }
 		slave->stats.n_actions[action-1]++;
 		spinlock_release(&slave->catch_lock);
 
