@@ -1079,7 +1079,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:G:",
+    while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:G:N:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;
