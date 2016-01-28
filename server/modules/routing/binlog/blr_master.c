@@ -1196,7 +1196,11 @@ int			n_bufs = -1, pn_bufs = -1;
 						ptr = ptr + 5;	// We don't put the first byte of the payload
 								// into the binlog file
 						if (hdr.event_type == ROTATE_EVENT)
+						{
+							spinlock_acquire(&router->binlog_lock);
 							router->rotating = 1;
+							spinlock_release(&router->binlog_lock);
+						}
 
 						/* current event is being written to disk file */
 						if (blr_write_binlog_record(router, &hdr, ptr) == 0)
@@ -1358,7 +1362,9 @@ int			n_bufs = -1, pn_bufs = -1;
 						ptr += 5;
 						if (hdr.event_type == ROTATE_EVENT)
 						{
+							spinlock_acquire(&router->binlog_lock);
 							router->rotating = 1;
+							spinlock_release(&router->binlog_lock);
 							if (!blr_rotate_event(router, ptr, &hdr))
 							{
 								/*
@@ -1474,6 +1480,7 @@ blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr)
  * @param router	The instance of the router
  * @param ptr		The packet containing the rotate event
  * @param hdr		The replication message header
+ * @return 		    1 if the file could be rotated, 0 otherwise.
  */
 static int
 blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
@@ -1505,17 +1512,20 @@ char		file[BINLOG_FNAMELEN+1];
 
 	strcpy(router->prevbinlog, router->binlog_name);
 
+	int rotated = 1;
+
 	if (strncmp(router->binlog_name, file, slen) != 0)
 	{
 		router->stats.n_rotates++;
 		if (blr_file_rotate(router, file, pos) == 0)
 		{
-			router->rotating = 0;
-			return 0;
+			rotated = 0;
 		}
 	}
+	spinlock_acquire(&router->binlog_lock);
 	router->rotating = 0;
-	return 1;
+	spinlock_release(&router->binlog_lock);
+	return rotated;
 }
 
 /**
