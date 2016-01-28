@@ -63,7 +63,7 @@ macro(set_variables)
   set(BUILD_BINLOG TRUE CACHE BOOL "Build binlog router")
 
   # Build the multimaster monitor
-  set(BUILD_MMMON FALSE CACHE BOOL "Build multimaster monitor")
+  set(BUILD_MMMON TRUE CACHE BOOL "Build multimaster monitor")
 
   # Use gcov build flags
   set(GCOV FALSE CACHE BOOL "Use gcov build flags")
