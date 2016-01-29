@@ -711,7 +711,7 @@ hashtable_iterator_free(HASHITERATOR *iter)
  * @return              Number of entries written or -1 on error
  */
 int
-hashtable_save(HASHTABLE *table, char *filename,
+hashtable_save(HASHTABLE *table, const char *filename,
                int (*keywrite)(int, void*),
                int (*valuewrite)(int, void*))
 {
@@ -771,7 +771,7 @@ hashtable_save(HASHTABLE *table, char *filename,
  * @return              Number of entries read or -1 on error
  */
 int
-hashtable_load(HASHTABLE *table, char *filename,
+hashtable_load(HASHTABLE *table, const char *filename,
                void *(*keyread)(int),
                void *(*valueread)(int))
 {

@@ -119,11 +119,11 @@ void hashtable_get_stats(void* hashtable,
                          int*  nelems,
                          int*  longest);
 extern int hashtable_save(HASHTABLE *,
-                          char *,
+                          const char *filename,
                           int (*keywrite)(int, void*),
                           int (*valuewrite)(int, void*));
 extern int hashtable_load(HASHTABLE *,
-                          char *,
+                          const char *filename,
                           void *(*keyread)(int),
                           void *(*valueread)(int));
 
