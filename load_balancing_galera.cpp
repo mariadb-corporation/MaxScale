@@ -1,6 +1,8 @@
 /**
  * @file load_balancing_galera.cpp Checks how Maxscale balances load
  *
+ * - also used for 'load_balancing_galera_pers1' and 'load_balancing_galera_pers10' tests (with 'persistpoolmax=1' and 'persistpoolmax=10' for all servers)
+ *
  * - start two groups of threads: each group consists of 25 threads, each thread creates connections to RWSplit,
  * threads from first group try to execute as many SELECTs as possible, from second group - one query per second
  * - after 100 seconds all threads are stopped

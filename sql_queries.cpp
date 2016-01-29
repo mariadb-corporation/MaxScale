@@ -1,5 +1,6 @@
 /**
  * @file sql_queries.cpp  Execute long sql queries as well as "use" command (also used for bug648 "use database is sent forever with tee filter to a readwrite split service")
+ * - also used for 'sql_queries_pers1' and 'sql_queries_pers10' tests (with 'persistpoolmax=1' and 'persistpoolmax=10' for all servers)
  * - for bug648:
  * @verbatim
 [RW Split Router]
@@ -15,6 +16,7 @@ type=filter
 module=tee
 service=RW Split Router
 @endverbatim
+ *
  * - create t1 table and INSERT a lot of date into it
  * @verbatim
 INSERT INTO t1 (x1, fl) VALUES (0, 0), (1, 0), ...(15, 0);
