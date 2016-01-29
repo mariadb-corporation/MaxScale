@@ -143,6 +143,7 @@ static int get_databases(SERVICE *, MYSQL *);
 static const char* get_mysql_users_db_count_query(char* server_version);
 static const char* get_mysql_users_query(char* server_version, bool include_root);
 static int get_users(SERVICE *service, USERS *users);
+static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
 static bool host_has_singlechar_wildcard(const char *host);
 static bool host_matches_singlechar_wildcard(const char* user, const char* wild);
@@ -778,31 +779,12 @@ get_all_users(SERVICE *service, USERS *users)
 
     while (server != NULL)
     {
+        con = gw_mysql_init();
 
-        con = mysql_init(NULL);
-
-        if (con == NULL)
+        if (!con)
         {
-            MXS_ERROR("mysql_init: %s", mysql_error(con));
             goto cleanup;
         }
-
-        /** Set read, write and connect timeout values */
-        if (gw_mysql_set_timeouts(con))
-        {
-            MXS_ERROR("Failed to set timeout values for backend connection.");
-            mysql_close(con);
-            goto cleanup;
-        }
-
-        if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL))
-        {
-            MXS_ERROR("Failed to set external connection. "
-                      "It is needed for backend server connections.");
-            mysql_close(con);
-            goto cleanup;
-        }
-
 
         while (!service->svc_do_shutdown &&
                server != NULL &&
@@ -837,28 +819,10 @@ get_all_users(SERVICE *service, USERS *users)
 
     while (server != NULL)
     {
+        con = gw_mysql_init();
 
-        con = mysql_init(NULL);
-
-        if (con == NULL)
+        if (!con)
         {
-            MXS_ERROR("mysql_init: %s", mysql_error(con));
-            goto cleanup;
-        }
-
-        /** Set read, write and connect timeout values */
-        if (gw_mysql_set_timeouts(con))
-        {
-            MXS_ERROR("Failed to set timeout values for backend connection.");
-            mysql_close(con);
-            goto cleanup;
-        }
-
-        if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL))
-        {
-            MXS_ERROR("Failed to set external connection. "
-                      "It is needed for backend server connections.");
-            mysql_close(con);
             goto cleanup;
         }
 
@@ -1288,28 +1252,13 @@ get_users(SERVICE *service, USERS *users)
         return get_all_users(service, users);
     }
 
-    con = mysql_init(NULL);
+    con = gw_mysql_init();
 
-    if (con == NULL)
+    if (!con)
     {
-        MXS_ERROR("mysql_init: %s", mysql_error(con));
-        return -1;
-    }
-    /** Set read, write and connect timeout values */
-    if (gw_mysql_set_timeouts(con))
-    {
-        MXS_ERROR("Failed to set timeout values for backend connection.");
-        mysql_close(con);
         return -1;
     }
 
-    if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL))
-    {
-        MXS_ERROR("Failed to set external connection. "
-                  "It is needed for backend server connections.");
-        mysql_close(con);
-        return -1;
-    }
     /**
      * Attempt to connect to one of the databases database or until we run
      * out of databases
@@ -2225,6 +2174,42 @@ static int normalize_hostname(const char *input_host, char *output_host)
 }
 
 /**
+ * Returns a MYSQL object suitably configured.
+ *
+ * @return An object or NULL if something fails.
+ */
+MYSQL *gw_mysql_init()
+{
+    MYSQL* con = mysql_init(NULL);
+
+    if (con)
+    {
+        if (gw_mysql_set_timeouts(con) == 0)
+        {
+            if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL) != 0)
+            {
+                MXS_ERROR("Failed to set external connection. "
+                          "It is needed for backend server connections.");
+                mysql_close(con);
+                con = NULL;
+            }
+        }
+        else
+        {
+            MXS_ERROR("Failed to set timeout values for backend connection.");
+            mysql_close(con);
+            con = NULL;
+        }
+    }
+    else
+    {
+        MXS_ERROR("mysql_init: %s", mysql_error(NULL));
+    }
+
+    return con;
+}
+
+/**
  * Set read, write and connect timeout values for MySQL database connection.
  *
  * @param handle            MySQL handle
@@ -2589,7 +2574,6 @@ bool check_service_permissions(SERVICE* service)
     MYSQL_RES* res;
     char *user, *password, *dpasswd;
     SERVER_REF* server;
-    int conn_timeout = 1;
     bool rval = true;
 
     if (is_internal_service(service->routerModule))
@@ -2614,15 +2598,14 @@ bool check_service_permissions(SERVICE* service)
 
     dpasswd = decryptPassword(password);
 
-    if ((mysql = mysql_init(NULL)) == NULL)
+    mysql = gw_mysql_init();
+
+    if (!mysql)
     {
-        MXS_ERROR("[%s] MySQL connection initialization failed.", __FUNCTION__);
         free(dpasswd);
         return false;
     }
 
-    mysql_options(mysql, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL);
-    mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &conn_timeout);
     /** Connect to the first server. This assumes all servers have identical
      * user permissions. */
 
