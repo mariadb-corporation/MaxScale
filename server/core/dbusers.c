@@ -27,7 +27,8 @@
  * 24/06/2013   Massimiliano Pinto  Initial implementation
  * 08/08/2013   Massimiliano Pinto  Fixed bug for invalid memory access in row[1]+1 when row[1] is ""
  * 06/02/2014   Massimiliano Pinto  Mysql user root selected based on configuration flag
- * 26/02/2014   Massimiliano Pinto  Addd: replace_mysql_users() routine may replace users' table based on a checksum
+ * 26/02/2014   Massimiliano Pinto  Addd: replace_mysql_users() routine may replace users' table
+ *                                  based on a checksum
  * 28/02/2014   Massimiliano Pinto  Added Mysql user@host authentication
  * 29/09/2014   Massimiliano Pinto  Added Mysql user@host authentication with wildcard in IPv4 hosts:
  *                                  x.y.z.%, x.y.%.%, x.%.%.%
@@ -130,26 +131,34 @@
     MaxScale authentication will proceed without including database permissions. \
     To correct this GRANT SHOW DATABASES ON *.* privilege to the user %s."
 
-static int getUsers(SERVICE *service, USERS *users);
+static int add_databases(SERVICE *service, MYSQL *con);
+static int add_wildcard_users(USERS *users, char* name, char* host,
+                              char* password, char* anydb, char* db, HASHTABLE* hash);
+static void *dbusers_keyread(int fd);
+static int dbusers_keywrite(int fd, void *key);
+static void *dbusers_valueread(int fd);
+static int dbusers_valuewrite(int fd, void *value);
+static int get_all_users(SERVICE *service, USERS *users);
+static int get_databases(SERVICE *, MYSQL *);
+static const char* get_mysql_users_db_count_query(char* server_version);
+static const char* get_mysql_users_query(char* server_version, bool include_root);
+static int get_users(SERVICE *service, USERS *users);
+static int gw_mysql_set_timeouts(MYSQL* handle);
+static bool host_has_singlechar_wildcard(const char *host);
+static bool host_matches_singlechar_wildcard(const char* user, const char* wild);
+static bool is_ipaddress(const char* host);
+static char *mysql_format_user_entry(void *data);
+static char *mysql_format_user_entry(void *data);
+static int normalize_hostname(const char *input_host, char *output_host);
+static int resource_add(HASHTABLE *, char *, char *);
+static HASHTABLE *resource_alloc();
+static void *resource_fetch(HASHTABLE *, char *);
+static void resource_free(HASHTABLE *resource);
 static int uh_cmpfun(void* v1, void* v2);
+static int uh_hfun(void* key);
 static void *uh_keydup(void* key);
 static void uh_keyfree(void* key);
-static int uh_hfun(void* key);
-char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
-char *mysql_format_user_entry(void *data);
-int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host,
-                                   char *passwd, char *anydb, char *db);
-static int getDatabases(SERVICE *, MYSQL *);
-HASHTABLE *resource_alloc();
-void resource_free(HASHTABLE *resource);
-void *resource_fetch(HASHTABLE *, char *);
-int resource_add(HASHTABLE *, char *, char *);
-int resource_hash(char *);
-static int normalize_hostname(char *input_host, char *output_host);
-int wildcard_db_grant(char* str);
-int add_wildcard_users(USERS *users, char* name, char* host, char* password,
-                       char* anydb, char* db, HASHTABLE* hash);
-static int gw_mysql_set_timeouts(MYSQL* handle);
+static int wildcard_db_grant(char* str);
 
 /**
  * Get the user data query.
@@ -157,7 +166,7 @@ static int gw_mysql_set_timeouts(MYSQL* handle);
  * @param include_root Include root user
  * @return Users query
  */
-const char* get_mysql_users_query(char* server_version, bool include_root)
+static const char* get_mysql_users_query(char* server_version, bool include_root)
 {
     const char* rval;
     if (strstr(server_version, "5.7."))
@@ -178,7 +187,7 @@ const char* get_mysql_users_query(char* server_version, bool include_root)
  * @param server_version Server version string
  * @return User vount query
  * */
-const char* get_mysq_users_db_count_query(char* server_version)
+static const char* get_mysql_users_db_count_query(char* server_version)
 {
     return strstr(server_version, "5.7.") ?
         MYSQL57_USERS_WITH_DB_COUNT : MYSQL_USERS_WITH_DB_COUNT;
@@ -191,7 +200,7 @@ const char* get_mysq_users_db_count_query(char* server_version)
  * @param wildcardhost Host address in the grant
  * @return True if the host address matches
  */
-bool host_matches_singlechar_wildcard(const char* user, const char* wild)
+static bool host_matches_singlechar_wildcard(const char* user, const char* wild)
 {
     while (*user != '\0' && *wild != '\0')
     {
@@ -215,7 +224,7 @@ bool host_matches_singlechar_wildcard(const char* user, const char* wild)
 int
 load_mysql_users(SERVICE *service)
 {
-    return getUsers(service, service->users);
+    return get_users(service, service->users);
 }
 
 /**
@@ -239,7 +248,7 @@ reload_mysql_users(SERVICE *service)
 
     oldresources = service->resources;
 
-    i = getUsers(service, newusers);
+    i = get_users(service, newusers);
 
     spinlock_acquire(&service->spin);
     oldusers = service->users;
@@ -279,7 +288,7 @@ replace_mysql_users(SERVICE *service)
     oldresources = service->resources;
 
     /* load db users ad db grants */
-    i = getUsers(service, newusers);
+    i = get_users(service, newusers);
 
     if (i <= 0)
     {
@@ -332,7 +341,7 @@ replace_mysql_users(SERVICE *service)
  * @param host IP address to check
  * @return True if the address is a valid, MySQL type IP address
  */
-bool is_ipaddress(const char* host)
+static bool is_ipaddress(const char* host)
 {
     while (*host != '\0')
     {
@@ -351,7 +360,7 @@ bool is_ipaddress(const char* host)
  * @param host Hostname to check
  * @return True if the hostname is a valid IP address with a single character wildcard
  */
-bool host_has_singlechar_wildcard(const char *host)
+static bool host_has_singlechar_wildcard(const char *host)
 {
     const char* chrptr = host;
     bool retval = false;
@@ -388,8 +397,8 @@ bool host_has_singlechar_wildcard(const char *host)
  * @return              1 on success, 0 on failure and -1 on duplicate user
  */
 
-int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host,
-                                   char *passwd, char *anydb, char *db)
+int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *host,
+                                   char *passwd, const char *anydb, const char *db)
 {
     struct sockaddr_in serv_addr;
     MYSQL_USER_HOST key;
@@ -504,7 +513,7 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host,
  * @return          -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
-addDatabases(SERVICE *service, MYSQL *con)
+add_databases(SERVICE *service, MYSQL *con)
 {
     MYSQL_ROW row;
     MYSQL_RES *result = NULL;
@@ -609,7 +618,7 @@ addDatabases(SERVICE *service, MYSQL *con)
  * @return          -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
-getDatabases(SERVICE *service, MYSQL *con)
+get_databases(SERVICE *service, MYSQL *con)
 {
     MYSQL_ROW row;
     MYSQL_RES *result = NULL;
@@ -715,7 +724,7 @@ getDatabases(SERVICE *service, MYSQL *con)
  * @return          -1 on any error or the number of users inserted
  */
 static int
-getAllUsers(SERVICE *service, USERS *users)
+get_all_users(SERVICE *service, USERS *users)
 {
     MYSQL *con = NULL;
     MYSQL_ROW row;
@@ -819,7 +828,7 @@ getAllUsers(SERVICE *service, USERS *users)
             goto cleanup;
         }
 
-        addDatabases(service, con);
+        add_databases(service, con);
         mysql_close(con);
         server = server->next;
     }
@@ -881,7 +890,7 @@ getAllUsers(SERVICE *service, USERS *users)
             }
         }
         /** Count users. Start with users and db grants for users */
-        const char *user_with_db_count = get_mysq_users_db_count_query(server->server->server_string);
+        const char *user_with_db_count = get_mysql_users_db_count_query(server->server->server_string);
         if (mysql_query(con, user_with_db_count))
         {
             if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR)
@@ -1244,7 +1253,7 @@ cleanup:
  * @return          -1 on any error or the number of users inserted
  */
 static int
-getUsers(SERVICE *service, USERS *users)
+get_users(SERVICE *service, USERS *users)
 {
     MYSQL *con = NULL;
     MYSQL_ROW row;
@@ -1276,7 +1285,7 @@ getUsers(SERVICE *service, USERS *users)
 
     if (service->users_from_all)
     {
-        return getAllUsers(service, users);
+        return get_all_users(service, users);
     }
 
     con = mysql_init(NULL);
@@ -1383,7 +1392,7 @@ getUsers(SERVICE *service, USERS *users)
         }
     }
 
-    const char *user_with_db_count = get_mysq_users_db_count_query(server->server->server_string);
+    const char *user_with_db_count = get_mysql_users_db_count_query(server->server->server_string);
     /** Count users. Start with users and db grants for users */
     if (mysql_query(con, user_with_db_count))
     {
@@ -1524,7 +1533,7 @@ getUsers(SERVICE *service, USERS *users)
     if (db_grants)
     {
         /* load all mysql database names */
-        dbnames = getDatabases(service, con);
+        dbnames = get_databases(service, con);
         MXS_DEBUG("Loaded %d MySQL Database Names for service [%s]",
                   dbnames, service->name);
     }
@@ -1999,7 +2008,7 @@ static void uh_keyfree(void* key)
  *  @param data     Input data
  *  @return         the MySQL user@host
  */
-char *mysql_format_user_entry(void *data)
+static char *mysql_format_user_entry(void *data)
 {
     MYSQL_USER_HOST *entry;
     char *mysql_user;
@@ -2068,7 +2077,7 @@ char *mysql_format_user_entry(void *data)
  *
  * @param resources The resources table to remove
  */
-void
+static void
 resource_free(HASHTABLE *resources)
 {
     if (resources)
@@ -2082,7 +2091,7 @@ resource_free(HASHTABLE *resources)
  *
  * @return  The database names table
  */
-HASHTABLE *
+static HASHTABLE *
 resource_alloc()
 {
     HASHTABLE *resources;
@@ -2106,7 +2115,7 @@ resource_alloc()
  * @param value     The value for resource (not used)
  * @return          The number of resources dded to the table
  */
-int
+static int
 resource_add(HASHTABLE *resources, char *key, char *value)
 {
     return hashtable_add(resources, key, value);
@@ -2119,7 +2128,7 @@ resource_add(HASHTABLE *resources, char *key, char *value)
  * @param key       The database name to fetch
  * @return          The database esists or NULL if not found
  */
-void *
+static void *
 resource_fetch(HASHTABLE *resources, char *key)
 {
     return hashtable_fetch(resources, key);
@@ -2139,7 +2148,7 @@ resource_fetch(HASHTABLE *resources, char *key)
  * @param output_host   The normalized hostname (buffer must be preallocated)
  * @return              The calculated netmask or -1 on failure
  */
-static int normalize_hostname(char *input_host, char *output_host)
+static int normalize_hostname(const char *input_host, char *output_host)
 {
     int netmask, bytes, bits = 0, found_wildcard = 0;
     char *p, *lasts, *tmp;
@@ -2448,7 +2457,7 @@ dbusers_valueread(int fd)
  * @return      The number of entries saved
  */
 int
-dbusers_save(USERS *users, char *filename)
+dbusers_save(USERS *users, const char *filename)
 {
     return hashtable_save(users->data, filename, dbusers_keywrite, dbusers_valuewrite);
 }
@@ -2461,7 +2470,7 @@ dbusers_save(USERS *users, char *filename)
  * @return      The number of entries loaded
  */
 int
-dbusers_load(USERS *users, char *filename)
+dbusers_load(USERS *users, const char *filename)
 {
     return hashtable_load(users->data, filename, dbusers_keyread, dbusers_valueread);
 }
@@ -2471,7 +2480,7 @@ dbusers_load(USERS *users, char *filename)
  * @param str Database grant
  * @return 1 if the name contains the '%' wildcard character, 0 if it does not
  */
-int wildcard_db_grant(char* str)
+static int wildcard_db_grant(char* str)
 {
     char* ptr = str;
 
@@ -2498,8 +2507,8 @@ int wildcard_db_grant(char* str)
  * @param hash Hashtable with all database names
  * @return number of unique grants generated from wildcard database name
  */
-int add_wildcard_users(USERS *users, char* name, char* host, char* password,
-                       char* anydb, char* db, HASHTABLE* hash)
+static int add_wildcard_users(USERS *users, char* name, char* host, char* password,
+                              char* anydb, char* db, HASHTABLE* hash)
 {
     HASHITERATOR* iter;
     HASHTABLE* ht = hash;
