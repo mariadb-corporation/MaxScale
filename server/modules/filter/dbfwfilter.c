@@ -244,6 +244,16 @@ enum fw_actions
 };
 
 /**
+ * Logging options for matched queries
+ */
+#define FW_LOG_NONE         0x00
+#define FW_LOG_MATCH        0x01
+#define FW_LOG_NO_MATCH     0x02
+
+/** Maximum length of the match/nomatch messages */
+#define FW_MAX_SQL_LEN      400
+
+/**
  * The Firewall filter instance.
  */
 typedef struct
@@ -252,6 +262,7 @@ typedef struct
     RULELIST* rules; /*< List of all the rules */
     STRLINK* userstrings; /*< Temporary list of raw strings of users */
     enum fw_actions action; /*< Default operation mode, defaults to deny */
+    int log_match; /*< Log matching and/or non-matching queries */
     SPINLOCK* lock; /*< Instance spinlock */
     int idgen; /*< UID generator */
     int regflags;
@@ -1251,6 +1262,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
     my_instance->htable = ht;
     my_instance->action = FW_ACTION_BLOCK;
+    my_instance->log_match = FW_LOG_NONE;
     my_instance->userstrings = NULL;
     my_instance->regflags = 0;
 
@@ -1259,6 +1271,16 @@ createInstance(char **options, FILTER_PARAMETER **params)
         if (strcmp(params[i]->name, "rules") == 0)
         {
             filename = params[i]->value;
+        }
+        else if (strcmp(params[i]->name, "log_match") == 0 &&
+                 config_truth_value(params[i]->value))
+        {
+            my_instance->log_match |= FW_LOG_MATCH;
+        }
+        else if (strcmp(params[i]->name, "log_no_match") == 0 &&
+                 config_truth_value(params[i]->value))
+        {
+            my_instance->log_match |= FW_LOG_NO_MATCH;
         }
         else if (strcmp(params[i]->name, "action") == 0)
         {
@@ -1874,49 +1896,34 @@ queryresolved:
  * @param user The user whose rulelist is checked
  * @return True if the query matches at least one of the rules otherwise false
  */
-bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session, GWBUF *queue, USER* user)
+bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+                     GWBUF *queue, USER* user, char** rulename)
 {
-    bool is_sql, rval = false;
-    int qlen;
-    char *fullquery = NULL, *ptr;
-    unsigned char* memptr = (unsigned char*) queue->start;
     RULELIST* rulelist;
-    is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
+    bool rval = false;
 
-    if (is_sql)
+    if ((rulelist = user->rules_or) &&
+        (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue)))
     {
-        qlen = gw_mysql_get_byte3(memptr);
-        qlen = qlen < 0xffffff ? qlen : 0xffffff;
-        fullquery = malloc((qlen) * sizeof(char));
-        memcpy(fullquery, memptr + 5, qlen - 1);
-        memset(fullquery + qlen - 1, 0, 1);
-    }
-
-    if ((rulelist = user->rules_or) == NULL)
-    {
-        goto retblock;
-    }
-
-    while (rulelist)
-    {
-
-        if (!rule_is_active(rulelist->rule))
+        char *fullquery = modutil_get_SQL(queue);
+        while (rulelist)
         {
+            if (!rule_is_active(rulelist->rule))
+            {
+                rulelist = rulelist->next;
+                continue;
+            }
+            if (rule_matches(my_instance, my_session, queue, user, rulelist, fullquery))
+            {
+                *rulename = rulelist->rule->name;
+                rval = true;
+                break;
+            }
             rulelist = rulelist->next;
-            continue;
-        }
-        if ((rval = rule_matches(my_instance, my_session, queue, user, rulelist, fullquery)))
-        {
-            goto retblock;
         }
 
-        rulelist = rulelist->next;
+        free(fullquery);
     }
-
-retblock:
-
-    free(fullquery);
-
     return rval;
 }
 
@@ -1928,75 +1935,47 @@ retblock:
  * @param user The user whose rulelist is checked
  * @return True if the query matches all of the rules otherwise false
  */
-bool check_match_all(FW_INSTANCE* my_instance,
-                     FW_SESSION* my_session,
-                     GWBUF *queue,
-                     USER* user,
-                     bool strict_all)
+bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
+                     GWBUF *queue, USER* user, bool strict_all, char** rulename)
 {
-    bool is_sql, rval = true;
+    bool rval = false;
     bool have_active_rule = false;
-    int qlen;
-    unsigned char* memptr = (unsigned char*) queue->start;
-    char *fullquery = NULL, *ptr;
+    RULELIST* rulelist = strict_all ? user->rules_strict_and : user->rules_and;
 
-    RULELIST* rulelist;
-    is_sql = modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue);
-
-    if (is_sql)
+    if (rulelist && (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue)))
     {
-        qlen = gw_mysql_get_byte3(memptr);
-        qlen = qlen < 0xffffff ? qlen : 0xffffff;
-        fullquery = malloc((qlen) * sizeof(char));
-        memcpy(fullquery, memptr + 5, qlen - 1);
-        memset(fullquery + qlen - 1, 0, 1);
-    }
-
-    if (strict_all)
-    {
-        rulelist = user->rules_strict_and;
-    }
-    else
-    {
-        rulelist = user->rules_and;
-    }
-
-    if (rulelist == NULL)
-    {
-        rval = false;
-        goto retblock;
-    }
-
-    while (rulelist)
-    {
-
-        if (!rule_is_active(rulelist->rule))
+        char *fullquery = modutil_get_SQL(queue);
+        rval = true;
+        while (rulelist)
         {
-            rulelist = rulelist->next;
-            continue;
-        }
-
-        have_active_rule = true;
-
-        if (!rule_matches(my_instance, my_session, queue, user, rulelist, fullquery))
-        {
-            rval = false;
-            if (strict_all)
+            if (!rule_is_active(rulelist->rule))
             {
-                break;
+                rulelist = rulelist->next;
+                continue;
             }
+
+            have_active_rule = true;
+
+            if (!rule_matches(my_instance, my_session, queue, user, rulelist, fullquery))
+            {
+                *rulename = rulelist->rule->name;
+                rval = false;
+                if (strict_all)
+                {
+                    break;
+                }
+            }
+            rulelist = rulelist->next;
         }
-        rulelist = rulelist->next;
+
+        if (!have_active_rule)
+        {
+            /** No active rules */
+            rval = false;
+        }
+        free(fullquery);
     }
 
-    if (!have_active_rule)
-    {
-        /** No active rules */
-        rval = false;
-    }
-
-retblock:
-    free(fullquery);
     return rval;
 }
 
@@ -2072,9 +2051,10 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
         if (user)
         {
             bool match = false;
-            if (check_match_any(my_instance, my_session, queue, user) ||
-                check_match_all(my_instance, my_session, queue, user, false) ||
-                check_match_all(my_instance, my_session, queue, user, true))
+            char* rname;
+            if (check_match_any(my_instance, my_session, queue, user, &rname) ||
+                check_match_all(my_instance, my_session, queue, user, false, &rname) ||
+                check_match_all(my_instance, my_session, queue, user, true, &rname))
             {
                 match = true;
             }
@@ -2098,6 +2078,26 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 case FW_ACTION_IGNORE:
                     query_ok = true;
                     break;
+            }
+
+            if (my_instance->log_match != FW_LOG_NONE)
+            {
+                char *sql;
+                int len;
+                if (modutil_extract_SQL(queue, &sql, &len))
+                {
+                    len = MIN(len, FW_MAX_SQL_LEN);
+                    if (match && my_instance->log_match & FW_LOG_MATCH)
+                    {
+                        MXS_NOTICE("Rule '%s' matched by '%s': %.*s", rname,
+                                   user->name, len, sql);
+                    }
+                    else if (!match && my_instance->log_match & FW_LOG_NO_MATCH)
+                    {
+                        MXS_NOTICE("Query by '%s' was not matched: %.*s",
+                                   user->name, len, sql);
+                    }
+                }
             }
         }
             /** If the instance is in whitelist mode, only users that have a rule
