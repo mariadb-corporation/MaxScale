@@ -1,3 +1,9 @@
+subdirs(MYSQL_DIR_ALL ${MYSQL_DIR})
+foreach(DIR ${MYSQL_DIR_ALL})
+  include_directories(${DIR})
+endforeach()
+include_directories(${MYSQL_INCLUDE})
+
 add_library(qc_mysqlembedded SHARED qc_mysqlembedded.cc)
 
 target_link_libraries(qc_mysqlembedded ${MYSQL_EMBEDDED_LIB} aio crypt crypto dl m ${PCRE_LINK_FLAGS} ssl stdc++ z)

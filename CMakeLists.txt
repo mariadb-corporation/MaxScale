@@ -157,12 +157,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb")
 
-subdirs(MYSQL_DIR_ALL ${MYSQL_DIR})
-foreach(DIR ${MYSQL_DIR_ALL})
-  include_directories(${DIR})
-endforeach()
-
-include_directories(${MYSQL_DIR}/..)
 include_directories(utils)
 include_directories(log_manager)
 include_directories(query_classifier)
