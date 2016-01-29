@@ -28,7 +28,13 @@ The database firewall filter supports a single option, `ignorecase`. This will s
 
 ### Filter Parameters
 
-The database firewall filter has one mandatory parameter that defines the location of the rule file. This is the `rules` parameter and it expects an absolute path to the rule file.
+#### `rules`
+
+The database firewall filter has one mandatory parameter that defines the location of the rule file. It expects an absolute path to the rule file.
+
+#### `action`
+
+This parameter is optional and determines what action is taken when a query matches a rule. The value can be either `allow`, which allows all matching queries to proceed but blocks those that don't match, or `block`, which blocks all matching queries, or `ignore` which allows all queries to proceed.
 
 ## Rule syntax
 
