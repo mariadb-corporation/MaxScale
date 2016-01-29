@@ -27,8 +27,6 @@
 ## Reference
 
  - [MaxAdmin](Reference/MaxAdmin.md)
- - [MaxScale HA with Corosync-Pacemaker](Reference/MaxScale-HA-with-Corosync-Pacemaker.md)
- - [MaxScale HA with Lsyncd](Reference/MaxScale-HA-with-lsyncd.md)
  - [How Errors are Handled in MaxScale](Reference/How-errors-are-handled-in-MaxScale.md)
  - [Debug and Diagnostic Support](Reference/Debug-And-Diagnostic-Support.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
@@ -48,8 +46,13 @@ These tutorials are for specific use cases and module combinations.
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
  - [RabbitMQ Setup and MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
  - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
- - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
  - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
+
+Here are tutorials on monitoring and managing MaxScale in cluster envoronments.
+
+ - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
+ - [MaxScale HA with Corosync-Pacemaker](Tutorials/MaxScale-HA-with-Corosync-Pacemaker.md)
+ - [MaxScale HA with Lsyncd](Tutorials/MaxScale-HA-with-lsyncd.md)
 
 ## Routers
 

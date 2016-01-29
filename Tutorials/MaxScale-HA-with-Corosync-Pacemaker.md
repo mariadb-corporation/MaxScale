@@ -79,7 +79,7 @@ On one of the nodes, say node2 run the corosync-keygen utility and follow
 ```
 [root@node2 ~]# corosync-keygen
 
-Corosync Cluster Engine Authentication key generator.       Gathering 1024 bits for key from /dev/random.       Press keys on your keyboard to generate entropy.
+Corosync Cluster Engine Authentication key generator.       Gathering 1024 bits for key from /dev/random.       Press keys on your keyboard to generate entropy.
 
 After completion the key will be found in /etc/corosync/authkey.
 ```
@@ -141,7 +141,7 @@ name: pacemaker
 }
 ```
 
-**Please note **in this example:
+**Please note** in this example:
 
 - unicast UDP is used
 
