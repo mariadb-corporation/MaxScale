@@ -234,6 +234,16 @@ typedef struct iprange_t
 } IPRANGE;
 
 /**
+ * Possible actions to take when the query matches a rule
+ */
+enum fw_actions
+{
+    FW_ACTION_ALLOW,
+    FW_ACTION_BLOCK,
+    FW_ACTION_IGNORE
+};
+
+/**
  * The Firewall filter instance.
  */
 typedef struct
@@ -241,7 +251,7 @@ typedef struct
     HASHTABLE* htable; /*< User hashtable */
     RULELIST* rules; /*< List of all the rules */
     STRLINK* userstrings; /*< Temporary list of raw strings of users */
-    bool def_op; /*< Default operation mode, defaults to deny */
+    enum fw_actions action; /*< Default operation mode, defaults to deny */
     SPINLOCK* lock; /*< Instance spinlock */
     int idgen; /*< UID generator */
     int regflags;
@@ -1240,7 +1250,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
     hashtable_memory_fns(ht, (HASHMEMORYFN) strdup, NULL, (HASHMEMORYFN) free, huserfree);
 
     my_instance->htable = ht;
-    my_instance->def_op = true;
+    my_instance->action = FW_ACTION_BLOCK;
     my_instance->userstrings = NULL;
     my_instance->regflags = 0;
 
@@ -1249,7 +1259,30 @@ createInstance(char **options, FILTER_PARAMETER **params)
         if (strcmp(params[i]->name, "rules") == 0)
         {
             filename = params[i]->value;
-            break;
+        }
+        else if (strcmp(params[i]->name, "action") == 0)
+        {
+            if (strcmp(params[i]->value, "allow") == 0)
+            {
+                my_instance->action = FW_ACTION_ALLOW;
+            }
+            else if (strcmp(params[i]->value, "block") == 0)
+            {
+                my_instance->action = FW_ACTION_BLOCK;
+            }
+            else if (strcmp(params[i]->value, "ignore") == 0)
+            {
+                my_instance->action = FW_ACTION_IGNORE;
+            }
+            else
+            {
+                MXS_ERROR("Unknown value for %s: %s. Expected one of 'allow', "
+                          "'block' or 'ignore'.", params[i]->name, params[i]->value);
+            }
+        }
+        else if (!filter_standard_parameter(params[i]->name))
+        {
+            MXS_ERROR("Unknown parameter '%s' for dbfwfilter.", params[i]->name);
         }
     }
 
@@ -1968,6 +2001,40 @@ retblock:
 }
 
 /**
+ * Retrieve the user specific data for this session
+ *
+ * @param hash Hashtable containing the user data
+ * @param name Username
+ * @param remote Remove network address
+ * @return The user data or NULL if it was not found
+ */
+USER* find_user_data(HASHTABLE *hash, char *name, char *remote)
+{
+    char nameaddr[strlen(name) + strlen(remote) + 2];
+    snprintf(nameaddr, sizeof(nameaddr), "%s@%s", name, remote);
+    USER* user = (USER*) hashtable_fetch(hash, nameaddr);
+    if (user == NULL)
+    {
+        char *ip_start = strchr(nameaddr, '@') + 1;
+        while (user == NULL && next_ip_class(ip_start))
+        {
+            user = (USER*) hashtable_fetch(hash, nameaddr);
+        }
+
+        if (user == NULL)
+        {
+            snprintf(nameaddr, sizeof(nameaddr), "%%@%s", remote);
+            ip_start = strchr(nameaddr, '@') + 1;
+            while (user == NULL && next_ip_class(ip_start))
+            {
+                user = (USER*) hashtable_fetch(hash, nameaddr);
+            }
+        }
+    }
+    return user;
+}
+
+/**
  * The routeQuery entry point. This is passed the query buffer
  * to which the filter should be applied. Once processed the
  * query is passed to the downstream component
@@ -1982,100 +2049,79 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
     FW_SESSION *my_session = (FW_SESSION *) session;
     FW_INSTANCE *my_instance = (FW_INSTANCE *) instance;
-    bool accept = my_instance->def_op;
-    char *msg = NULL, *fullquery = NULL, *ipaddr;
-    char uname_addr[128];
-    DCB* dcb = my_session->session->client;
-    USER* user = NULL;
-    GWBUF* forward;
-    ipaddr = strdup(dcb->remote);
-    sprintf(uname_addr, "%s@%s", dcb->user, ipaddr);
+    DCB *dcb = my_session->session->client;
+    int rval = 0;
+    ss_dassert(dcb && dcb->session);
 
     if (modutil_is_SQL(queue) && modutil_count_statements(queue) > 1)
     {
-        if (my_session->errmsg)
-        {
-            free(my_session->errmsg);
-        }
-        my_session->errmsg = strdup("This filter does not support multi-statements.");
-        accept = false;
-        goto queryresolved;
-    }
-
-    if ((user = (USER*) hashtable_fetch(my_instance->htable, uname_addr)) == NULL)
-    {
-        while (user == NULL && next_ip_class(ipaddr))
-        {
-            sprintf(uname_addr, "%s@%s", dcb->user, ipaddr);
-            user = (USER*) hashtable_fetch(my_instance->htable, uname_addr);
-        }
-    }
-
-    if (user == NULL)
-    {
-        strcpy(ipaddr, dcb->remote);
-        do
-        {
-            sprintf(uname_addr, "%%@%s", ipaddr);
-            user = (USER*) hashtable_fetch(my_instance->htable, uname_addr);
-        }
-        while (user == NULL && next_ip_class(ipaddr));
-    }
-
-    if (user == NULL)
-    {
-        /**
-         *No rules matched, do default operation.
-         */
-
-        goto queryresolved;
-    }
-
-    if (check_match_any(my_instance, my_session, queue, user))
-    {
-        accept = false;
-        goto queryresolved;
-    }
-
-    if (check_match_all(my_instance, my_session, queue, user, false))
-    {
-        accept = false;
-        goto queryresolved;
-    }
-
-    if (check_match_all(my_instance, my_session, queue, user, true))
-    {
-        accept = false;
-        goto queryresolved;
-    }
-
-queryresolved:
-
-    free(ipaddr);
-    free(fullquery);
-
-    if (accept)
-    {
-        return my_session->down.routeQuery(my_session->down.instance,
-                                           my_session->down.session, queue);
+        GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
+                                     "multi-statements.");
+        gwbuf_free(queue);
+        free(my_session->errmsg);
+        my_session->errmsg = NULL;
+        rval = dcb->func.write(dcb, err);
     }
     else
     {
-        gwbuf_free(queue);
+        USER *user = find_user_data(my_instance->htable,
+                                    my_session->session->client->user,
+                                    my_session->session->client->remote);
+        bool query_ok = false;
 
-        if (my_session->errmsg)
+        if (user)
         {
-            msg = my_session->errmsg;
+            bool match = false;
+            if (check_match_any(my_instance, my_session, queue, user) ||
+                check_match_all(my_instance, my_session, queue, user, false) ||
+                check_match_all(my_instance, my_session, queue, user, true))
+            {
+                match = true;
+            }
+
+            switch (my_instance->action)
+            {
+                case FW_ACTION_ALLOW:
+                    if (match)
+                    {
+                        query_ok = true;
+                    }
+                    break;
+
+                case FW_ACTION_BLOCK:
+                    if (!match)
+                    {
+                        query_ok = true;
+                    }
+                    break;
+
+                case FW_ACTION_IGNORE:
+                    query_ok = true;
+                    break;
+            }
         }
-        forward = gen_dummy_error(my_session, msg);
-
-        if (my_session->errmsg)
+            /** If the instance is in whitelist mode, only users that have a rule
+             * defined for them are allowed */
+        else if (my_instance->action != FW_ACTION_ALLOW)
         {
+            query_ok = true;
+        }
+
+        if (query_ok)
+        {
+            rval = my_session->down.routeQuery(my_session->down.instance,
+                                               my_session->down.session, queue);
+        }
+        else
+        {
+            GWBUF* forward = gen_dummy_error(my_session, my_session->errmsg);
+            gwbuf_free(queue);
             free(my_session->errmsg);
             my_session->errmsg = NULL;
+            rval = dcb->func.write(dcb, forward);
         }
-        return dcb->func.write(dcb, forward);
     }
+    return rval;
 }
 
 /**
