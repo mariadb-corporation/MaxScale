@@ -36,11 +36,6 @@ target_link_libraries(topfilter maxscale-common)
 set_target_properties(topfilter PROPERTIES VERSION "1.0.1")
 install(TARGETS topfilter DESTINATION ${MAXSCALE_LIBDIR})
 
-add_library(dbfwfilter SHARED dbfwfilter.c)
-target_link_libraries(dbfwfilter maxscale-common)
-set_target_properties(dbfwfilter PROPERTIES VERSION "1.0.0")
-install(TARGETS dbfwfilter DESTINATION ${MAXSCALE_LIBDIR})
-
 add_library(namedserverfilter SHARED namedserverfilter.c)
 target_link_libraries(namedserverfilter maxscale-common)
 set_target_properties(namedserverfilter PROPERTIES VERSION "1.1.0")
@@ -62,6 +57,7 @@ if(BUILD_TOOLS)
 endif()
 
 add_subdirectory(hint)
+add_subdirectory(dbfwfilter)
 
 if(BUILD_TESTS)
   add_subdirectory(test)
