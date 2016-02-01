@@ -1769,6 +1769,19 @@ int main(int argc, char **argv)
     MXS_NOTICE("Module directory: %s", get_libdir());
     MXS_NOTICE("Service cache: %s", get_cachedir());
 
+    if (!config_load(cnf_file_path))
+    {
+        char* fprerr =
+            "Failed to open, read or process the MaxScale configuration "
+            "file. Exiting. See the error log for details.";
+        print_log_n_stderr(false, !daemon_mode, fprerr, fprerr, 0);
+        MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
+                  "Exiting.",
+                  cnf_file_path);
+        rc = MAXSCALE_BADCONFIG;
+        goto return_main;
+    }
+
     if (!qc_init(NULL))
     {
         char* logerr = "Failed to initialise query classifier library.";
@@ -1824,18 +1837,6 @@ int main(int argc, char **argv)
     }
     libmysql_initialized = TRUE;
 
-    if (!config_load(cnf_file_path))
-    {
-        char* fprerr =
-            "Failed to open, read or process the MaxScale configuration "
-            "file. Exiting. See the error log for details.";
-        print_log_n_stderr(false, !daemon_mode, fprerr, fprerr, 0);
-        MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
-                  "Exiting.",
-                  cnf_file_path);
-        rc = MAXSCALE_BADCONFIG;
-        goto return_main;
-    }
     MXS_NOTICE("MariaDB Corporation MaxScale %s (C) MariaDB Corporation Ab 2013-2015", MAXSCALE_VERSION);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
 
