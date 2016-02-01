@@ -104,33 +104,6 @@ time_t  MaxScaleStarted;
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
-/*
- * Server options are passed to the mysql_server_init. Each gateway must have a unique
- * data directory that is passed to the mysql_server_init, therefore the data directory
- * is not fixed here and will be updated elsewhere.
- */
-static char* server_options[] = {
-    "MariaDB Corporation MaxScale",
-    "--no-defaults",
-    "--datadir=",
-    "--language=",
-    "--skip-innodb",
-    "--default-storage-engine=myisam",
-    NULL
-};
-
-const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
-
-static char* server_groups[] = {
-    "embedded",
-    "server",
-    "server",
-    "embedded",
-    "server",
-    "server",
-    NULL
-};
-
 /* The data directory we created for this gateway instance */
 static char     datadir[PATH_MAX + 1] = "";
 static bool     datadir_defined = false; /*< If the datadir was already set */
@@ -144,9 +117,9 @@ static int pidfd = PIDFD_CLOSED;
 static bool do_exit = FALSE;
 
 /**
- * Flag to indicate whether libmysqld is successfully initialized.
+ * Flag to indicate whether MySQL is successfully initialized.
  */
-static bool libmysqld_started = FALSE;
+static bool libmysql_initialized = FALSE;
 
 /**
  * If MaxScale is started to run in daemon process the value is true.
@@ -505,7 +478,7 @@ void datadir_cleanup()
 
 static void libmysqld_done(void)
 {
-    if (libmysqld_started)
+    if (libmysql_initialized)
     {
         mysql_library_end();
     }
@@ -1062,8 +1035,6 @@ int main(int argc, char **argv)
     int      child_status;
     THREAD*   threads = NULL;   /*< thread list */
     char     mysql_home[PATH_MAX+1];
-    char     datadir_arg[10+PATH_MAX+1];  /*< '--datadir='  + PATH_MAX */
-    char     language_arg[11+PATH_MAX+1]; /*< '--language=' + PATH_MAX */
     char*    cnf_file_path = NULL;        /*< conf file, to be freed */
     char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
     THREAD    log_flush_thr;
@@ -1777,19 +1748,6 @@ int main(int argc, char **argv)
         }
     }
 
-    snprintf(datadir, PATH_MAX, "%s/data%d", get_datadir(), getpid());
-
-    if (mkdir(datadir, 0777) != 0){
-
-        if (errno != EEXIST){
-            char errbuf[STRERROR_BUFLEN];
-            fprintf(stderr,
-                    "Error: Cannot create data directory '%s': %d %s\n",
-                    datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
-            goto return_main;
-        }
-    }
-
     if (!daemon_mode)
     {
         fprintf(stderr,
@@ -1811,24 +1769,6 @@ int main(int argc, char **argv)
     MXS_NOTICE("Module directory: %s", get_libdir());
     MXS_NOTICE("Service cache: %s", get_cachedir());
 
-    /*< Update the server options */
-    for (i = 0; server_options[i]; i++)
-    {
-        if (!strcmp(server_options[i], "--datadir="))
-        {
-            snprintf(datadir_arg, 10+PATH_MAX+1, "--datadir=%s", datadir);
-            server_options[i] = datadir_arg;
-        }
-        else if (!strcmp(server_options[i], "--language="))
-        {
-            snprintf(language_arg,
-                     11+PATH_MAX+1,
-                     "--language=%s",
-                     get_langdir());
-            server_options[i] = language_arg;
-        }
-    }
-
     if (!qc_init())
     {
         char* logerr = "Failed to initialise query classifier library.";
@@ -1837,7 +1777,7 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if (mysql_library_init(num_elements, server_options, server_groups))
+    if (mysql_library_init(0, NULL, NULL))
     {
         if (!daemon_mode)
         {
@@ -1876,15 +1816,13 @@ int main(int argc, char **argv)
         }
         MXS_ERROR("mysql_library_init failed. It is a "
                   "mandatory component, required by router services and "
-                  "the MaxScale core. Error %d, %s, %s : %d. Exiting.",
+                  "the MaxScale core. Error %d, %s. Exiting.",
                   mysql_errno(NULL),
-                  mysql_error(NULL),
-                  __FILE__,
-                  __LINE__);
+                  mysql_error(NULL));
         rc = MAXSCALE_NOLIBRARY;
         goto return_main;
     }
-    libmysqld_started = TRUE;
+    libmysql_initialized = TRUE;
 
     if (!config_load(cnf_file_path))
     {
