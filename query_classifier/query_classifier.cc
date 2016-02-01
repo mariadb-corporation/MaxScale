@@ -47,6 +47,7 @@ bool qc_init(const char* plugin_name)
 
     if (!plugin_name || (*plugin_name == 0))
     {
+        MXS_NOTICE("No query classifier specified, using default '%s'.", default_qc_name);
         plugin_name = default_qc_name;
     }
 

@@ -1782,7 +1782,10 @@ int main(int argc, char **argv)
         goto return_main;
     }
 
-    if (!qc_init(NULL))
+    GATEWAY_CONF* cnf = config_get_global_options();
+    ss_dassert(cnf);
+
+    if (!qc_init(cnf->qc_name))
     {
         char* logerr = "Failed to initialise query classifier library.";
         print_log_n_stderr(true, true, logerr, logerr, eno);
