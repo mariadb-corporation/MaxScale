@@ -1,18 +1,18 @@
-# This CMake file tries to find the the MySQL client library
+# This CMake file tries to find the the MariaDB Connector-C
 # The following variables are set:
-# MYSQLCLIENT_FOUND - System has MySQL client
-# MYSQLCLIENT_STATIC_FOUND - System has statically linked MySQL client
-# MARIADB_CONNECTOR_LIB - The MySQL client library
-# MARIADB_CONNECTOR_STATIC_LIB - The static MySQL client library
-# MYSQLCLIENT_HEADERS - The MySQL client headers
+# MARIADB_CONNECTOR_FOUND - System has the connector
+# MARIADB_CONNECTOR_STATIC_FOUND - System has static version of the connector library
+# MARIADB_CONNECTOR_LIBRARIES - The dynamic connector libraries
+# MARIADB_CONNECTOR_STATIC_LIBRARIES - The static connector libraries
+# MARIADB_CONNECTOR_INCLUDE_DIR - The connector headers
 
 find_library(MARIADB_CONNECTOR_LIB NAMES mysqlclient PATH_SUFFIXES mysql mariadb)
 if(${MARIADB_CONNECTOR_LIB} MATCHES "NOTFOUND")
-  set(MYSQLCLIENT_FOUND FALSE CACHE INTERNAL "")
+  set(MARIADB_CONNECTOR_FOUND FALSE CACHE INTERNAL "")
   message(STATUS "Dynamic MySQL client library not found.")
   unset(MARIADB_CONNECTOR_LIB)
 else()
-  set(MYSQLCLIENT_FOUND TRUE CACHE INTERNAL "")
+  set(MARIADB_CONNECTOR_FOUND TRUE CACHE INTERNAL "")
   message(STATUS "Found dynamic MySQL client library: ${MARIADB_CONNECTOR_LIB}")
 endif()
 
@@ -22,12 +22,12 @@ find_library(MARIADB_CONNECTOR_STATIC_LIB NAMES mysqlclient PATH_SUFFIXES mysql 
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${OLD_SUFFIXES})
 
 if(${MARIADB_CONNECTOR_STATIC_LIB} MATCHES "NOTFOUND")
-  set(MYSQLCLIENT_STATIC_FOUND FALSE CACHE INTERNAL "")
+  set(MARIADB_CONNECTOR_STATIC_FOUND FALSE CACHE INTERNAL "")
   message(STATUS "Static MySQL client library not found.")
   unset(MARIADB_CONNECTOR_STATIC_LIB)
 else()
-  set(MYSQLCLIENT_STATIC_FOUND TRUE CACHE INTERNAL "")
+  set(MARIADB_CONNECTOR_STATIC_FOUND TRUE CACHE INTERNAL "")
   message(STATUS "Found statc MySQL client library: ${MARIADB_CONNECTOR_STATIC_LIB}")
 endif()
 
-find_path(MYSQLCLIENT_HEADERS mysql.h PATH_SUFFIXES mysql mariadb)
+find_path(MARIADB_CONNECTOR_INCLUDE_DIR mysql.h PATH_SUFFIXES mysql mariadb)

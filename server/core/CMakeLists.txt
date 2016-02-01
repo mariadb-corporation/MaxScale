@@ -10,6 +10,7 @@ endif()
 
 add_dependencies(maxscale-common pcre2)
 install(TARGETS maxscale-common DESTINATION ${MAXSCALE_LIBDIR})
+set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 
 add_executable(maxscale gateway.c)
 add_dependencies(maxscale pcre2)
