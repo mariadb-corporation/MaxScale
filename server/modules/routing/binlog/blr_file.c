@@ -488,7 +488,7 @@ struct	stat	statb;
 	if (strcmp(router->binlog_name, file->binlogname) == 0 &&
 			pos >= router->binlog_position)
 	{
-		if (pos > router->binlog_position && !router->rotating)
+		if (pos > router->binlog_position)
 		{
 			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested binlog position %lu is unsafe. "
 				"Latest safe position %lu, end of binlog file %lu",
