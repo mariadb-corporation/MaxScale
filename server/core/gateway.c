@@ -1829,7 +1829,7 @@ int main(int argc, char **argv)
         }
     }
 
-    if (!qc_init(num_elements, server_options, server_groups))
+    if (!qc_init())
     {
         char* logerr = "Failed to initialise query classifier library.";
         print_log_n_stderr(true, true, logerr, logerr, eno);

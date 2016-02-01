@@ -40,7 +40,7 @@ static const char default_qc_name[] = "qc_mysqlembedded";
 static QUERY_CLASSIFIER* classifier;
 
 
-bool qc_init(int argc, char** argv, char** groups)
+bool qc_init(void)
 {
     QC_TRACE();
     ss_dassert(!classifier);
@@ -53,7 +53,7 @@ bool qc_init(int argc, char** argv, char** groups)
         classifier = (QUERY_CLASSIFIER*) module;
         MXS_NOTICE("%s loaded.", default_qc_name);
 
-        success = classifier->qc_init(argc, argv, groups);
+        success = classifier->qc_init();
     }
     else
     {
@@ -63,7 +63,7 @@ bool qc_init(int argc, char** argv, char** groups)
     return success;
 }
 
-void qc_end()
+void qc_end(void)
 {
     QC_TRACE();
     ss_dassert(classifier);
@@ -72,7 +72,7 @@ void qc_end()
     classifier = NULL;
 }
 
-bool qc_thread_init()
+bool qc_thread_init(void)
 {
     QC_TRACE();
     ss_dassert(classifier);
@@ -80,7 +80,7 @@ bool qc_thread_init()
     return classifier->qc_thread_init();
 }
 
-void qc_thread_end()
+void qc_thread_end(void)
 {
     QC_TRACE();
     ss_dassert(classifier);
