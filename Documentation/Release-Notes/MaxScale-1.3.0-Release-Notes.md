@@ -147,6 +147,9 @@ details, please read the [Monitor Common](../Monitors/Monitor-Common.md) documen
 
 [Here is a list of bugs fixed since the release of MaxScale 1.2.1.](https://mariadb.atlassian.net/browse/MXS-550?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20resolution%20in%20(Fixed%2C%20Done)%20AND%20fixVersion%20%3D%201.3.0)
 
+ * [MXS-559](https://mariadb.atlassian.net/browse/MXS-559): Crash due to debug assertion in readwritesplit
+ * [MXS-551](https://mariadb.atlassian.net/browse/MXS-551): Maxscale BETA 1.3.0 running as root
+ * [MXS-548](https://mariadb.atlassian.net/browse/MXS-548): Maxscale 1.2.1 crash on Ubuntu 4.04.3 x86_64
  * [MXS-508](https://mariadb.atlassian.net/browse/MXS-508): regex filter ignores username
  * [MXS-505](https://mariadb.atlassian.net/browse/MXS-505): if Maxscale fails to start it goes to infinite "try-to-start and fail" loop
  * [MXS-501](https://mariadb.atlassian.net/browse/MXS-501): USE <db> hangs when Tee filter uses matching
@@ -249,6 +252,10 @@ the most serious of this are listed below.
 * The Database Firewall filter does not support multi-statements. Using them will result in an error being sent to the client.
 
 * The SSL support is known to be unstable.
+
+* Importing a large dump via readwritesplit may fail.
+
+  Workaround is to bypass MaxScale when importing or to use the readconn router.
 
 ## Packaging
 
