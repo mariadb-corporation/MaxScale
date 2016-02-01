@@ -11,9 +11,10 @@ if [ $? -ne 0 ] ; then
         exit 1
 fi
 
-
+set -x
 echo "drop table if exists t1; create table t1(id integer primary key); " | mysql -u$repl_user -p$repl_password -h$maxscale_IP -P 4006 test
 echo "drop table if exists t1; create table t1(id integer primary key); " | mysql -u$repl_user -p$repl_password -h$maxscale_IP -P 4006 mysql
+set +x
 
 $test_dir/session_hang/run_setmix.sh &
 perl $test_dir/session_hang/simpletest.pl

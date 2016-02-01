@@ -41,6 +41,7 @@ int check_conf(TestConnections* Test, int blocked_node)
     for (int i = 0; i < 2; i++) {
         if ( i != blocked_node) {
             Test->tprintf("Checking data from node %d (%s)\n", i, Test->repl->IP[i]);
+            Test->set_timeout(100);
             global_result += select_from_t1(Test->repl->nodes[i], 4);
         }
     }
@@ -92,12 +93,12 @@ int main(int argc, char *argv[])
     Test->tprintf("Put some data and check\n");
     Test->add_result(check_conf(Test, 0), "configuration broken\n");
 
-    Test->set_timeout(60);
+    Test->set_timeout(120);
     Test->tprintf("Unlock slave\n");
     Test->repl->unblock_node(0);
     sleep(15);
 
-    Test->set_timeout(60);
+    Test->set_timeout(120);
     Test->tprintf("Block master\n");
     Test->repl->block_node(1);
     sleep(15);
@@ -108,13 +109,13 @@ int main(int argc, char *argv[])
     }
     Test->tprintf("Make node 1 master\n");
 
-    Test->set_timeout(60);
+    Test->set_timeout(120);
     Test->repl->connect();
     execute_query(Test->repl->nodes[0], (char *) "SET GLOBAL READ_ONLY=OFF");
     Test->repl->close_connections();
 
     sleep(15);
-    Test->set_timeout(60);
+    Test->set_timeout(120);
     Test->tprintf("Put some data and check\n");
     Test->add_result(check_conf(Test, 1), "configuration broken\n");
 
@@ -122,14 +123,14 @@ int main(int argc, char *argv[])
     Test->repl->unblock_node(1);
     sleep(15);
 
-    Test->set_timeout(60);
+    Test->set_timeout(120);
     printf("Make node 2 slave\n");
     Test->repl->connect();
     execute_query(Test->repl->nodes[1], (char *) "SET GLOBAL READ_ONLY=ON");
     Test->repl->close_connections();
     sleep(15);
 
-    Test->set_timeout(60);
+    Test->set_timeout(120);
     printf("Put some data and check\n");
     Test->add_result(check_conf(Test, 2), "Configuration broken\n");
 

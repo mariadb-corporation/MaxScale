@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(30);
     sleep(5);
-    Test->check_log_err((char *) "Failed to execute SELECT * INTO OUTFILE '/tmp/t1.csv'", TRUE);
+    Test->check_log_err((char *) "Failed to execute session command in", TRUE);
     Test->check_log_err((char *) "File '/tmp/t1.csv' already exists", TRUE);
 
     Test->copy_all_logs(); return(Test->global_result);
