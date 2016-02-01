@@ -1769,7 +1769,7 @@ int main(int argc, char **argv)
     MXS_NOTICE("Module directory: %s", get_libdir());
     MXS_NOTICE("Service cache: %s", get_cachedir());
 
-    if (!qc_init())
+    if (!qc_init(NULL))
     {
         char* logerr = "Failed to initialise query classifier library.";
         print_log_n_stderr(true, true, logerr, logerr, eno);

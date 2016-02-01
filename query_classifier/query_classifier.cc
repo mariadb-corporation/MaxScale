@@ -40,24 +40,29 @@ static const char default_qc_name[] = "qc_mysqlembedded";
 static QUERY_CLASSIFIER* classifier;
 
 
-bool qc_init(void)
+bool qc_init(const char* plugin_name)
 {
     QC_TRACE();
     ss_dassert(!classifier);
 
+    if (!plugin_name || (*plugin_name == 0))
+    {
+        plugin_name = default_qc_name;
+    }
+
     bool success = false;
-    void* module = load_module(default_qc_name, MODULE_QUERY_CLASSIFIER);
+    void* module = load_module(plugin_name, MODULE_QUERY_CLASSIFIER);
 
     if (module)
     {
         classifier = (QUERY_CLASSIFIER*) module;
-        MXS_NOTICE("%s loaded.", default_qc_name);
+        MXS_NOTICE("%s loaded.", plugin_name);
 
         success = classifier->qc_init();
     }
     else
     {
-        MXS_ERROR("Could not load %s.", default_qc_name);
+        MXS_ERROR("Could not load %s.", plugin_name);
     }
 
     return success;

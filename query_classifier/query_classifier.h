@@ -74,7 +74,7 @@ typedef enum
 
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
 
-bool qc_init(void);
+bool qc_init(const char* plugin_name);
 void qc_end(void);
 
 bool qc_thread_init(void);
