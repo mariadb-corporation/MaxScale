@@ -50,21 +50,27 @@ int main(int argc, char *argv[])
     Test->tprintf("Connecting to ReadConnnRouter in 'master' mode\n");
     Test->connect_readconn_master();
     printf("Sleeping 10 seconds\n");
+    Test->stop_timeout();
     sleep(10);
+    Test->set_timeout(50);
     Test->add_result(check_connnections_only_to_master(Test, 0), "connections are not only to Master\n");
     Test->close_readconn_master();
     Test->tprintf("Changing master to node 1\n");
+    Test->set_timeout(50);
     Test->repl->change_master(1, 0);
     printf("Sleeping 10 seconds\n");
+    Test->stop_timeout();
     sleep(10);
-
+    Test->set_timeout(50);
     printf("Connecting to ReadConnnRouter in 'master' mode\n");
     Test->connect_readconn_master();
     printf("Sleeping 10 seconds\n");
+    Test->stop_timeout();
     sleep(10);
+    Test->set_timeout(50);
     Test->add_result(check_connnections_only_to_master(Test, 1), "connections are not only to master");
     Test->close_readconn_master();
-
+    Test->set_timeout(50);
     printf("Changing master back to node 0\n");
     Test->repl->change_master(0, 1);
 

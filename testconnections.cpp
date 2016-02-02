@@ -430,7 +430,6 @@ int TestConnections::start_mm()
     char log_pos1[256];
     char log_file2[256];
     char log_pos2[256];
-    char sys1[1024];
 
     tprintf("Stopping maxscale\n");fflush(stdout);
     int global_result = stop_maxscale();

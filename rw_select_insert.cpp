@@ -110,7 +110,6 @@ int check_com_insert(long int *new_selects, long int *new_inserts, long int *sel
 
 int main(int argc, char *argv[])
 {
-    int global_result = 0;
     int i;
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
@@ -135,22 +134,22 @@ int main(int argc, char *argv[])
     printf("Trying SELECT * FROM t1\n"); fflush(stdout);
     Test->try_query(Test->conn_rwsplit, "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_select result");
+    Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_select result\n");
 
     printf("Trying INSERT INTO t1 VALUES(1);\n"); fflush(stdout);
     Test->try_query(Test->conn_rwsplit, "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_insert result");
+    Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_insert result\n");
 
     printf("Trying SELECT * FROM t1\n"); fflush(stdout);
     execute_query(Test->conn_rwsplit, "select * from t1;");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_select result");
+    Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_select result\n");
 
     printf("Trying INSERT INTO t1 VALUES(1);\n"); fflush(stdout);
     execute_query(Test->conn_rwsplit, "insert into t1 values(1);");
     get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-    Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_insert result");
+    Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_insert result\n");
 
     long int selects_before_100[255];
     long int inserts_before_100[255];
@@ -161,8 +160,9 @@ int main(int argc, char *argv[])
     for (i=0; i<100; i++) {
         Test->set_timeout(20);
         Test->try_query(Test->conn_rwsplit, "select * from t1;");
+        sleep(1);
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-        Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_select result");
+        Test->add_result(check_com_select(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_select result\n");
     }
     Test->set_timeout(20);
     print_delta(&new_selects[0], &new_inserts[0], &selects_before_100[0], &inserts_before_100[0], Test->repl->N);
@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
         Test->set_timeout(20);
         Test->try_query(Test->conn_rwsplit, "insert into t1 values(1);");
         get_global_status_allnodes(&new_selects[0], &new_inserts[0], Test->repl, silent);
-        Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_insert result");
+        Test->add_result(check_com_insert(&new_selects[0], &new_inserts[0], &selects[0], &inserts[0], Test->repl), "Wrong check_com_insert result\n");
     }
     print_delta(&new_selects[0], &new_inserts[0], &selects_before_100[0], &inserts_before_100[0], Test->repl->N);
 

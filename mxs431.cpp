@@ -18,17 +18,19 @@ int main(int argc, char *argv[])
     int iterations = Test->smoke ? 100 : 500;
     Test->set_timeout(30);
     Test->repl->stop_slaves();
+    Test->set_timeout(30);
     Test->restart_maxscale();
+    Test->set_timeout(30);
     Test->repl->connect();
     Test->stop_timeout();
 
     /** Create a database on each node */
     for (int i = 0; i < Test->repl->N; i++) {
-        Test->set_timeout(10);
+        Test->set_timeout(20);
         sprintf(str, "DROP DATABASE IF EXISTS shard_db%d", i);
         Test->tprintf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
-
+        Test->set_timeout(20);
         sprintf(str, "CREATE DATABASE shard_db%d", i);
         Test->tprintf("%s\n", str);
         execute_query(Test->repl->nodes[i], str);
@@ -41,10 +43,11 @@ int main(int argc, char *argv[])
     {
         for (int i = 0; i < Test->repl->N; i++) {        
             sprintf(str, "shard_db%d", i);
-            Test->set_timeout(5);
+            Test->set_timeout(15);
             MYSQL *conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, 
                                        str, Test->maxscale_user,
                                        Test->maxscale_password, Test->ssl);
+            Test->set_timeout(15);
             if(execute_query(conn, "SELECT 1"))
             {
                 Test->add_result(1, "Failed at %d\n", j);

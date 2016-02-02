@@ -38,24 +38,29 @@ int main(int argc, char *argv[])
     Test->tprintf("Table t1 is created\n");
 
     for (int i = 0; i < iterations; i++) {
-        Test->set_timeout(5);
+        Test->set_timeout(15);
         conn = Test->open_rwsplit_connection();
         sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES(%d, 1);", i);
         Test->tprintf("%s\n", sql);
         execute_query(conn, sql);
         mysql_close(conn);
     }
+    Test->set_timeout(20);
     fflush(stdout);
 
-    Test->set_timeout(10);
+    Test->set_timeout(20);
     Test->tprintf("Connecting to MaxScale\n");
     Test->add_result(Test->connect_maxscale(), "Error connecting to Maxscale\n");
     Test->tprintf("Checking t1 table using RWSplit router\n");
+    Test->set_timeout(20);
     Test->add_result( execute_select_query_and_check(Test->conn_rwsplit, (char *) "SELECT * FROM t1;", iterations), "t1 is wrong\n");
     Test->tprintf("Checking t1 table using ReadConn router in master mode\n");
+    Test->set_timeout(20);
     Test->add_result(  execute_select_query_and_check(Test->conn_master, (char *) "SELECT * FROM t1;", iterations), "t1 is wrong\n");
     Test->tprintf("Checking t1 table using ReadConn router in slave mode\n");
+    Test->set_timeout(20);
     Test->add_result(  execute_select_query_and_check(Test->conn_slave, (char *) "SELECT * FROM t1;", iterations), "t1 is wrong\n");
+    Test->set_timeout(20);
     Test->close_maxscale_connections();
 
     Test->check_maxscale_alive();
