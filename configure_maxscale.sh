@@ -84,7 +84,7 @@ sed -i "s/###access_user###/$maxscale_access_user/g" MaxScale.cnf
 sed -i "s|###access_homedir###|$maxscale_access_homedir|g" MaxScale.cnf
 
 echo "copying maxscale.cnf using ssh $maxscale_access_user"
-ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chown $maxscale_access_user:$maxscale_access_user /home/$maxscale_access_user"
+ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chown $maxscale_access_user /home/$maxscale_access_user"
 scp -i $maxscale_sshkey $opt_str MaxScale.cnf $maxscale_access_user@$maxscale_IP:./
 ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo cp MaxScale.cnf $maxscale_cnf"
 
