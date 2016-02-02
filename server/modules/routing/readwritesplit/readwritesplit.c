@@ -2049,7 +2049,8 @@ static bool route_single_stmt(
 	 * Read stored master DCB pointer. If master is not set, routing must 
 	 * be aborted 
 	 */
-	if ((master_dcb = rses->rses_master_ref->bref_dcb) == NULL)
+	if ((master_dcb = rses->rses_master_ref->bref_dcb) == NULL ||
+		BREF_IS_CLOSED(rses->rses_master_ref))
 	{
 		char* query_str = modutil_get_query(querybuf);
 		MXS_ERROR("Can't route %s:%s:\"%s\" to "
@@ -2060,6 +2061,10 @@ static bool route_single_stmt(
                           (query_str == NULL ? "(empty)" : query_str));
 		free(query_str);
 		succp = false;
+        while(querybuf)
+        {
+            querybuf = GWBUF_CONSUME_ALL(querybuf);
+        }
 		goto retblock;
 	}
 
