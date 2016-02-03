@@ -2061,10 +2061,6 @@ static bool route_single_stmt(
                           (query_str == NULL ? "(empty)" : query_str));
 		free(query_str);
 		succp = false;
-        while(querybuf)
-        {
-            querybuf = GWBUF_CONSUME_ALL(querybuf);
-        }
 		goto retblock;
 	}
 
