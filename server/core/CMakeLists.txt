@@ -1,6 +1,6 @@
 add_library(maxscale-common SHARED adminusers.c atomic.c buffer.c config.c dbusers.c dcb.c filter.c externcmd.c gwbitmask.c gwdirs.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c maxscale_pcre2.c memlog.c modutil.c monitor.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c ${CMAKE_SOURCE_DIR}/log_manager/log_manager.cc ${CMAKE_SOURCE_DIR}/utils/skygw_utils.cc statistics.c)
 
-target_link_libraries(maxscale-common ${MARIADB_CONNECTOR_LIB} ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${CURL_LIBRARIES} ssl aio pthread crypt dl crypto inih z rt m stdc++)
+target_link_libraries(maxscale-common ${MARIADB_CONNECTOR_LIBRARIES} ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${CURL_LIBRARIES} ssl aio pthread crypt dl crypto inih z rt m stdc++)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale-common ${JEMALLOC_LIBRARIES})

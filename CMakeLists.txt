@@ -46,6 +46,12 @@ find_package(RabbitMQ)
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
 include(cmake/BuildPCRE2.cmake)
 
+# If the connector was not found, download and build it from source
+if(NOT MARIADB_CONNECTOR_FOUND)
+  message(STATUS "Building MariaDB Connector-C from source.")
+  include(cmake/BuildMariaDBConnector.cmake)
+endif()
+
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
 
