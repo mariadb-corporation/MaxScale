@@ -77,13 +77,11 @@ static int gw_client_close(DCB *dcb);
 static int gw_client_hangup_event(DCB *dcb);
 static int mysql_send_ok(DCB *dcb, int packet_number, int in_affected_rows, const char* mysql_message);
 static int MySQLSendHandshake(DCB* dcb);
-static int gw_mysql_do_authentication(DCB *dcb, GWBUF **queue);
+static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf);
 static int route_by_statement(SESSION *, GWBUF **);
 extern char* get_username_from_auth(char* ptr, uint8_t* data);
 extern int check_db_name_after_auth(DCB *, char *, int);
 extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
-
-static int do_ssl_accept(MySQLProtocol* protocol);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -485,7 +483,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf)
 
     /** Skip this if the SSL handshake is already done.
      * If not, start the SSL handshake.  */
-    if (protocol->protocol_auth_state != MYSQL_AUTH_SSL_HANDSHAKE_DONE)
+    if (protocol->owner_dcb->ssl_state != SSL_HANDSHAKE_DONE && protocol->owner_dcb->ssl_state != SSL_ESTABLISHED)
     {
         ssl = protocol->client_capabilities & GW_MYSQL_CAPABILITIES_SSL;
 
@@ -510,11 +508,13 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf)
 
         /** Do the SSL Handshake */
         /* if (ssl && protocol->owner_dcb->service->ssl_mode != SSL_DISABLED) */
-        if (ssl && NULL != protocol->owner_dcb->listen_ssl)
+        if (NULL != protocol->owner_dcb->listen_ssl)
         {
-            protocol->protocol_auth_state = MYSQL_AUTH_SSL_REQ;
-
-            if (do_ssl_accept(protocol) < 0)
+            if (SSL_HANDSHAKE_UNKNOWN == protocol->owner_dcb->ssl_state)
+            {
+                protocol->owner_dcb->ssl_state = SSL_HANDSHAKE_REQUIRED;
+            }
+            if (dcb_accept_SSL(protocol->owner_dcb) < 0)
             {
                 return MYSQL_FAILED_AUTH;
             }
@@ -611,7 +611,7 @@ static int gw_mysql_do_authentication(DCB *dcb, GWBUF **buf)
         }
     }
 
-    /* on succesful auth set user into dcb field */
+    /* on successful auth set user into dcb field */
     if (auth_ret == 0)
     {
         dcb->user = strdup(client_data->user);
@@ -679,13 +679,11 @@ int gw_read_client_event(DCB* dcb)
 
 #endif
 
-    /** SSL authentication is still going on, we need to call do_ssl_accept
+    /** SSL authentication is still going on, we need to call dcb_accept_SSL
      * until it return 1 for success or -1 for error */
-    if (protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_ONGOING ||
-        protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ)
+    if (protocol->owner_dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
     {
-
-        switch(do_ssl_accept(protocol))
+        switch(dcb_accept_SSL(protocol->owner_dcb))
         {
         case 0:
             return 0;
@@ -711,7 +709,7 @@ int gw_read_client_event(DCB* dcb)
         }
     }
 
-    if (protocol->use_ssl)
+    if (SSL_HANDSHAKE_DONE == protocol->owner_dcb->ssl_state || SSL_ESTABLISHED == protocol->owner_dcb->ssl_state)
     {
         /** SSL handshake is done, communication is now encrypted with SSL */
         rc = dcb_read_SSL(dcb, &read_buffer);
@@ -837,21 +835,28 @@ int gw_read_client_event(DCB* dcb)
     {
     case MYSQL_AUTH_SENT:
         {
-            int auth_val;
+            int auth_val, packet_number;
 
+            packet_number = protocol->owner_dcb->listen_ssl ? 3 : 2;
             auth_val = gw_mysql_do_authentication(dcb, &read_buffer);
 
-            if (protocol->protocol_auth_state == MYSQL_AUTH_SSL_REQ ||
-                protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_ONGOING ||
-                protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_DONE ||
-                protocol->protocol_auth_state == MYSQL_AUTH_SSL_HANDSHAKE_FAILED)
+            if (protocol->owner_dcb->ssl_state == SSL_HANDSHAKE_REQUIRED ||
+                protocol->owner_dcb->ssl_state == SSL_HANDSHAKE_DONE ||
+                protocol->owner_dcb->ssl_state == SSL_HANDSHAKE_FAILED)
             {
                 /** SSL was requested and the handshake is either done or
                  * still ongoing. After the handshake is done, the client
                  * will send another auth packet. */
-                gwbuf_free(read_buffer);
-                read_buffer = NULL;
-                break;
+                if (protocol->owner_dcb->ssl_state == SSL_HANDSHAKE_DONE)
+                {
+                    protocol->owner_dcb->ssl_state = SSL_ESTABLISHED;
+                }
+                else
+                {
+                    gwbuf_free(read_buffer);
+                    read_buffer = NULL;
+                    break;
+                }
             }
 
             if (auth_val == 0)
@@ -875,9 +880,9 @@ int gw_read_client_event(DCB* dcb)
                     protocol->protocol_auth_state = MYSQL_IDLE;
                     /**
                      * Send an AUTH_OK packet to the client,
-                     * packet sequence is # 2
+                     * packet sequence is # packet_number
                      */
-                    mysql_send_ok(dcb, 2, 0, NULL);
+                    mysql_send_ok(dcb, packet_number, 0, NULL);
                 }
                 else
                 {
@@ -890,7 +895,7 @@ int gw_read_client_event(DCB* dcb)
 
                     /** Send ERR 1045 to client */
                     mysql_send_auth_error(dcb,
-                                          2,
+                                          packet_number,
                                           0,
                                           "failed to create new session");
 
@@ -912,7 +917,7 @@ int gw_read_client_event(DCB* dcb)
                     snprintf(fail_str, message_len, "Unknown database '%s'",
                              (char*)((MYSQL_session *)dcb->data)->db);
 
-                    modutil_send_mysql_err_packet(dcb, 2, 0, 1049, "42000", fail_str);
+                    modutil_send_mysql_err_packet(dcb, packet_number, 0, 1049, "42000", fail_str);
                 }
                 else
                 {
@@ -921,108 +926,7 @@ int gw_read_client_event(DCB* dcb)
                                                     dcb->remote,
                                                     (char*)((MYSQL_session *)dcb->data)->client_sha1,
                                                     (char*)((MYSQL_session *)dcb->data)->db,auth_val);
-                    modutil_send_mysql_err_packet(dcb, 2, 0, 1045, "28000", fail_str);
-                }
-                if (fail_str)
-                {
-                    free(fail_str);
-                }
-
-                MXS_DEBUG("%lu [gw_read_client_event] after "
-                          "gw_mysql_do_authentication, fd %d, "
-                          "state = MYSQL_AUTH_FAILED.",
-                          pthread_self(),
-                          protocol->owner_dcb->fd);
-                /**
-                 * Release MYSQL_session since it is not used anymore.
-                 */
-                if (!DCB_IS_CLONE(dcb))
-                {
-                    free(dcb->data);
-                }
-                dcb->data = NULL;
-
-                dcb_close(dcb);
-            }
-            gwbuf_free(read_buffer);
-            read_buffer = NULL;
-        }
-        break;
-
-    case MYSQL_AUTH_SSL_HANDSHAKE_DONE:
-        {
-            int auth_val;
-
-            auth_val = gw_mysql_do_authentication(dcb, &read_buffer);
-
-            if (auth_val == 0)
-            {
-                SESSION *session;
-
-                protocol->protocol_auth_state = MYSQL_AUTH_RECV;
-                /**
-                 * Create session, and a router session for it.
-                 * If successful, there will be backend connection(s)
-                 * after this point.
-                 */
-                session = session_alloc(dcb->service, dcb);
-
-                if (session != NULL)
-                {
-                    CHK_SESSION(session);
-                    ss_dassert(session->state != SESSION_STATE_ALLOC &&
-                               session->state != SESSION_STATE_DUMMY);
-
-                    protocol->protocol_auth_state = MYSQL_IDLE;
-                    /**
-                     * Send an AUTH_OK packet to the client,
-                     * packet sequence is # 2
-                     */
-                    mysql_send_ok(dcb, 3, 0, NULL);
-                }
-                else
-                {
-                    protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
-                    MXS_DEBUG("%lu [gw_read_client_event] session "
-                              "creation failed. fd %d, "
-                              "state = MYSQL_AUTH_FAILED.",
-                              pthread_self(),
-                              protocol->owner_dcb->fd);
-
-                    /** Send ERR 1045 to client */
-                    mysql_send_auth_error(dcb,
-                                          3,
-                                          0,
-                                          "failed to create new session");
-
-                    dcb_close(dcb);
-                }
-            }
-            else
-            {
-                char* fail_str = NULL;
-
-                protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
-
-                if (auth_val == 2)
-                {
-                    /** Send error 1049 to client */
-                    int message_len = 25 + MYSQL_DATABASE_MAXLEN;
-
-                    fail_str = calloc(1, message_len+1);
-                    snprintf(fail_str, message_len, "Unknown database '%s'",
-                             (char*)((MYSQL_session *)dcb->data)->db);
-
-                    modutil_send_mysql_err_packet(dcb, 3, 0, 1049, "42000", fail_str);
-                }
-                else
-                {
-                    /** Send error 1045 to client */
-                    fail_str = create_auth_fail_str((char *)((MYSQL_session *)dcb->data)->user,
-                                                    dcb->remote,
-                                                    (char*)((MYSQL_session *)dcb->data)->client_sha1,
-                                                    (char*)((MYSQL_session *)dcb->data)->db,auth_val);
-                    modutil_send_mysql_err_packet(dcb, 3, 0, 1045, "28000", fail_str);
+                    modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
                 }
                 if (fail_str)
                 {
@@ -1874,72 +1778,4 @@ static int route_by_statement(SESSION* session, GWBUF** p_readbuf)
 
 return_rc:
     return rc;
-}
-
-/**
- * Do the SSL authentication handshake.
- * This creates the DCB SSL structure if one has not been created and starts the
- * SSL handshake handling.
- * @param protocol Protocol to connect with SSL
- * @return 1 on success, 0 when the handshake is ongoing or -1 on error
- */
-int do_ssl_accept(MySQLProtocol* protocol)
-{
-    int rval,errnum;
-    char errbuf[2014];
-    DCB* dcb = protocol->owner_dcb;
-    if (dcb->ssl == NULL)
-    {
-        if (dcb_create_SSL(dcb) != 0)
-        {
-            return -1;
-        }
-    }
-
-    rval = dcb_accept_SSL(dcb);
-
-    switch(rval)
-    {
-    case 0:
-        /** Not all of the data has been read. Go back to the poll
-            queue and wait for more.*/
-
-        rval = 0;
-        MXS_INFO("SSL_accept ongoing for %s@%s",
-                 protocol->owner_dcb->user,
-                 protocol->owner_dcb->remote);
-        return 0;
-        break;
-    case 1:
-        spinlock_acquire(&protocol->protocol_lock);
-        protocol->protocol_auth_state = MYSQL_AUTH_SSL_HANDSHAKE_DONE;
-        protocol->use_ssl = true;
-        spinlock_release(&protocol->protocol_lock);
-
-        rval = 1;
-
-        MXS_INFO("SSL_accept done for %s@%s",
-                 protocol->owner_dcb->user,
-                 protocol->owner_dcb->remote);
-        break;
-
-    case -1:
-        spinlock_acquire(&protocol->protocol_lock);
-        protocol->protocol_auth_state = MYSQL_AUTH_SSL_HANDSHAKE_FAILED;
-        spinlock_release(&protocol->protocol_lock);
-        rval = -1;
-        MXS_ERROR("Fatal error in SSL_accept for %s",
-                  protocol->owner_dcb->remote);
-        break;
-
-    default:
-        MXS_ERROR("Fatal error in SSL_accept, returned value was %d.", rval);
-        break;
-    }
-#ifdef SS_DEBUG
-    MXS_DEBUG("[do_ssl_accept] Protocol state: %s",
-              gw_mysql_protocol_state2string(protocol->protocol_auth_state));
-#endif
-
-    return rval;
 }

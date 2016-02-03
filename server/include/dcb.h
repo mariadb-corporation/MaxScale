@@ -59,6 +59,7 @@ struct service;
  * 23/09/2014   Mark Riddoch            New poll processing queue
  * 19/06/2015   Martin Brampton         Provision of persistent connections
  * 20/01/2016   Martin Brampton         Moved GWPROTOCOL to gw_protocol.h
+ * 01/02/2016   Martin Brampton         Added fields for SSL and authentication
  *
  * @endverbatim
  */
@@ -173,6 +174,17 @@ typedef struct dcb_callback
     struct dcb_callback  *next;          /*< Next callback for this DCB */
 } DCB_CALLBACK;
 
+/**
+ * State of SSL connection
+ */
+typedef enum
+{
+    SSL_HANDSHAKE_UNKNOWN,          /*< The DCB has unknown SSL status */
+    SSL_HANDSHAKE_REQUIRED,         /*< SSL handshake is needed */
+    SSL_HANDSHAKE_DONE,             /*< The SSL handshake completed OK */
+    SSL_ESTABLISHED,                /*< The SSL connection is in use */
+    SSL_HANDSHAKE_FAILED            /*< The SSL handshake failed */
+} SSL_STATE;
 
 /**
  * Descriptor Control Block
@@ -195,6 +207,7 @@ typedef struct dcb
     DCBEVENTQ       evq;            /**< The event queue for this DCB */
     int             fd;             /**< The descriptor */
     dcb_state_t     state;          /**< Current descriptor state */
+    SSL_STATE       ssl_state;      /**< Current state of SSL if in use */
     int             flags;          /**< DCB flags */
     char            *remote;        /**< Address of remote end */
     char            *user;          /**< User name for connection */

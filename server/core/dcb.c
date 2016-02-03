@@ -223,6 +223,9 @@ dcb_alloc(dcb_role_t role)
     newdcb->callbacks = NULL;
     newdcb->data = NULL;
 
+    newdcb->listen_ssl = NULL;
+    newdcb->ssl_state = SSL_HANDSHAKE_UNKNOWN;
+
     newdcb->remote = NULL;
     newdcb->user = NULL;
     newdcb->flags = 0;
@@ -280,6 +283,7 @@ dcb_clone(DCB *orig)
         clonedcb->state = orig->state;
         clonedcb->data = orig->data;
         clonedcb->listen_ssl = orig->listen_ssl;
+        clonedcb->ssl_state = orig->ssl_state;
         if (orig->remote)
         {
             clonedcb->remote = strdup(orig->remote);
@@ -2863,42 +2867,56 @@ int dcb_create_SSL(DCB* dcb)
 int dcb_accept_SSL(DCB* dcb)
 {
     int ssl_rval;
+    char *remote;
+    char *user;
+
+    if (dcb->ssl == NULL && dcb_create_SSL(dcb) != 0)
+    {
+        return -1;
+    }
+
+    remote = dcb->remote ? dcb->remote : "";
+    user = dcb->user ? dcb->user : "";
 
     ssl_rval = SSL_accept(dcb->ssl);
+
     switch (SSL_get_error(dcb->ssl, ssl_rval))
     {
         case SSL_ERROR_NONE:
-            MXS_DEBUG("SSL_accept done for %s", dcb->remote);
+            MXS_DEBUG("SSL_accept done for %s@%s", user, remote);
+            dcb->ssl_state = SSL_HANDSHAKE_DONE;
             return 1;
             break;
 
         case SSL_ERROR_WANT_READ:
-            MXS_DEBUG("SSL_accept ongoing want read for %s", dcb->remote);
+            MXS_DEBUG("SSL_accept ongoing want read for %s@%s", user, remote);
             return 0;
             break;
 
         case SSL_ERROR_WANT_WRITE:
-            MXS_DEBUG("SSL_accept ongoing want write for %s", dcb->remote);
+            MXS_DEBUG("SSL_accept ongoing want write for %s@%s", user, remote);
             return 0;
             break;
 
         case SSL_ERROR_ZERO_RETURN:
-            MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s", dcb->remote);
+            MXS_DEBUG("SSL error, shut down cleanly during SSL accept %s@%s", user, remote);
             dcb_log_errors_SSL(dcb, __func__, 0);
             poll_fake_hangup_event(dcb);
             return 0;
             break;
 
         case SSL_ERROR_SYSCALL:
-            MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s", dcb->remote);
+            MXS_DEBUG("SSL connection SSL_ERROR_SYSCALL error during accept %s@%s", user, remote);
             dcb_log_errors_SSL(dcb, __func__, ssl_rval);
+            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
             return -1;
             break;
 
         default:
-            MXS_DEBUG("SSL connection shut down with error during SSL accept %s", dcb->remote);
+            MXS_DEBUG("SSL connection shut down with error during SSL accept %s@%s", user, remote);
             dcb_log_errors_SSL(dcb, __func__, 0);
+            dcb->ssl_state = SSL_HANDSHAKE_FAILED;
             poll_fake_hangup_event(dcb);
             return -1;
             break;
