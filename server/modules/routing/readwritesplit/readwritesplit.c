@@ -2437,8 +2437,6 @@ static bool route_single_stmt(
 #if defined(SS_EXTRA_DEBUG)
                         MXS_INFO("Found DCB for slave.");
 #endif
-			ss_dassert(get_root_master_bref(rses) == 
-				rses->rses_master_ref);
 			atomic_add(&inst->stats.n_slave, 1);
 		}
 		else
