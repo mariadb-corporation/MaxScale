@@ -186,12 +186,22 @@ void monitorStartAll()
 void
 monitorStop(MONITOR *monitor)
 {
+    spinlock_acquire(&monitor->lock);
     if (monitor->state != MONITOR_STATE_STOPPED)
     {
         monitor->state = MONITOR_STATE_STOPPING;
         monitor->module->stopMonitor(monitor);
         monitor->state = MONITOR_STATE_STOPPED;
+
+        MONITOR_SERVERS* db = monitor->databases;
+        while (db)
+        {
+            mysql_close(db->con);
+            db->con = NULL;
+            db = db->next;
+        }
     }
+    spinlock_release(&monitor->lock);
 }
 
 /**
