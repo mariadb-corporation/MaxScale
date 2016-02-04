@@ -1128,10 +1128,10 @@ static bool get_dcb(
         int            i;
         bool           succp = false;
 	BACKEND*       master_host;
-        
+
         CHK_CLIENT_RSES(rses);
         ss_dassert(p_dcb != NULL && *(p_dcb) == NULL);
-        
+
         if (p_dcb == NULL)
         {
                 goto return_succp;
@@ -1158,29 +1158,31 @@ static bool get_dcb(
 	if (name != NULL) /*< Choose backend by name from a hint */
 	{
 		ss_dassert(btype != BE_MASTER); /*< Master dominates and no name should be passed with it */
-		
+
 		for (i=0; i<rses->rses_nbackends; i++)
 		{
-			BACKEND* b = backend_ref[i].bref_backend;			
+			BACKEND* b = backend_ref[i].bref_backend;
+			SERVER server;
+			server.status = backend_ref[i].bref_backend->backend_server->status;
 			/**
 			 * To become chosen:
 			 * backend must be in use, name must match,
 			 * root master node must be found,
-			 * backend's role must be either slave, relay 
+			 * backend's role must be either slave, relay
 			 * server, or master.
 			 */
 			if (BREF_IS_IN_USE((&backend_ref[i])) &&
 				(strncasecmp(
 					name,
-					b->backend_server->unique_name, 
+					b->backend_server->unique_name,
 					PATH_MAX) == 0) &&
-				master_bref->bref_backend != NULL && 
-				(SERVER_IS_SLAVE(b->backend_server) || 
-					SERVER_IS_RELAY_SERVER(b->backend_server) ||
-					SERVER_IS_MASTER(b->backend_server)))
+				master_bref->bref_backend != NULL &&
+				(SERVER_IS_SLAVE(&server) ||
+					SERVER_IS_RELAY_SERVER(&server) ||
+					SERVER_IS_MASTER(&server)))
 			{
 				*p_dcb = backend_ref[i].bref_dcb;
-				succp = true; 
+				succp = true;
 				ss_dassert(backend_ref[i].bref_dcb->state != DCB_STATE_ZOMBIE);
 				break;
 			}
@@ -1194,7 +1196,7 @@ static bool get_dcb(
 			btype = BE_SLAVE;
 		}
 	}
-	
+
         if (btype == BE_SLAVE)
         {
 		backend_ref_t* candidate_bref = NULL;
@@ -1202,31 +1204,35 @@ static bool get_dcb(
 		for (i=0; i<rses->rses_nbackends; i++)
 		{
 			BACKEND* b = (&backend_ref[i])->bref_backend;
-			/** 
+			SERVER server;
+			SERVER candidate;
+			server.status = backend_ref[i].bref_backend->backend_server->status;
+			/**
 			 * Unused backend or backend which is not master nor
-			 * slave can't be used 
+			 * slave can't be used
 			 */
-			if (!BREF_IS_IN_USE(&backend_ref[i]) || 
-				(!SERVER_IS_MASTER(b->backend_server) &&
-				!SERVER_IS_SLAVE(b->backend_server)))
+			if (!BREF_IS_IN_USE(&backend_ref[i]) ||
+				(!SERVER_IS_MASTER(&server) &&
+				!SERVER_IS_SLAVE(&server)))
 			{
 				continue;
 			}
-			/** 
+			/**
 			 * If there are no candidates yet accept both master or
 			 * slave.
 			 */
 			else if (candidate_bref == NULL)
 			{
-				/** 
-				 * Ensure that master has not changed dunring 
+				/**
+				 * Ensure that master has not changed dunring
 				 * session and abort if it has.
 				 */
-				if (SERVER_IS_MASTER(b->backend_server) &&
+				if (SERVER_IS_MASTER(&server) &&
 					&backend_ref[i] == master_bref)
 				{
 					/** found master */
-					candidate_bref = &backend_ref[i];						
+					candidate_bref = &backend_ref[i];
+					candidate.status = candidate_bref->bref_backend->backend_server->status;
 					succp = true;
 				}
 				/**
@@ -1240,15 +1246,16 @@ static bool get_dcb(
 				{
 					/** found slave */
 					candidate_bref = &backend_ref[i];
+					candidate.status = candidate_bref->bref_backend->backend_server->status;
 					succp = true;
 				}
 			}
 			/**
-			 * If candidate is master, any slave which doesn't break 
+			 * If candidate is master, any slave which doesn't break
 			 * replication lag limits replaces it.
 			 */
-			else if (SERVER_IS_MASTER(candidate_bref->bref_backend->backend_server) &&
-				SERVER_IS_SLAVE(b->backend_server) &&
+			else if (SERVER_IS_MASTER(&candidate) &&
+				SERVER_IS_SLAVE(&server) &&
 				(max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
 				b->backend_server->rlag <= max_rlag)) &&
@@ -1256,14 +1263,15 @@ static bool get_dcb(
 			{
 				/** found slave */
 				candidate_bref = &backend_ref[i];
-				succp = true;				
+				candidate.status = candidate_bref->bref_backend->backend_server->status;
+				succp = true;
 			}
-			/** 
+			/**
 			 * When candidate exists, compare it against the current
-			 * backend and update assign it to new candidate if 
+			 * backend and update assign it to new candidate if
 			 * necessary.
 			 */
-			else if (SERVER_IS_SLAVE(b->backend_server))
+			else if (SERVER_IS_SLAVE(&server))
 			{
 				if (max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
@@ -1273,6 +1281,7 @@ static bool get_dcb(
 								candidate_bref,
 								&backend_ref[i],
 								rses->rses_config.rw_slave_select_criteria);
+					candidate.status = candidate_bref->bref_backend->backend_server->status;
 				}
 				else
 				{
@@ -1289,34 +1298,38 @@ static bool get_dcb(
 		{
 			*p_dcb = candidate_bref->bref_dcb;
 		}
-		
+
 		goto return_succp;
 	} /*< if (btype == BE_SLAVE) */
-	/** 
-	 * If target was originally master only then the execution jumps 
-	 * directly here.
-	 */
-        if (btype == BE_MASTER)
+    /**
+     * If target was originally master only then the execution jumps
+     * directly here.
+     */
+    if (btype == BE_MASTER)
+    {
+        /** It is possible for the server status to change at any point in time
+         * so copying it locally will make possible error messages
+         * easier to understand */
+        SERVER server;
+        server.status = master_bref->bref_backend->backend_server->status;
+        if (BREF_IS_IN_USE(master_bref) && SERVER_IS_MASTER(&server))
         {
-		if (BREF_IS_IN_USE(master_bref) &&
-			SERVER_IS_MASTER(master_bref->bref_backend->backend_server))
-		{
-			*p_dcb = master_bref->bref_dcb;
-			succp = true;
-			/** if bref is in use DCB should not be closed */
-			ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
-		}
-		else
-		{
-                    MXS_ERROR("Server at %s:%d should be master but "
-                              "is %s instead and can't be chosen to master.",
-                              master_bref->bref_backend->backend_server->name,
-                              master_bref->bref_backend->backend_server->port,
-                              STRSRVSTATUS(master_bref->bref_backend->backend_server));
-			succp = false;
-		}
+            *p_dcb = master_bref->bref_dcb;
+            succp = true;
+            /** if bref is in use DCB should not be closed */
+            ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
         }
-        
+        else
+        {
+            MXS_ERROR("Server at %s:%d should be master but "
+                      "is %s instead and can't be chosen to master.",
+                      master_bref->bref_backend->backend_server->name,
+                      master_bref->bref_backend->backend_server->port,
+                      STRSRVSTATUS(&server));
+            succp = false;
+        }
+    }
+
 return_succp:
         return succp;
 }
