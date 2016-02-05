@@ -2834,11 +2834,9 @@ static void clientReply (
                  * This applies to session commands only. Counter decrement
                  * for other type of queries is done outside this block.
                  */
-                if (writebuf != NULL && client_dcb != NULL)
-                {
-                        /** Set response status as replied */
-                        bref_clear_state(bref, BREF_WAITING_RESULT);
-                }
+
+                /** Set response status as replied */
+                bref_clear_state(bref, BREF_WAITING_RESULT);
 	}
 	/**
          * Clear BREF_QUERY_ACTIVE flag and decrease waiter counter.
@@ -3756,8 +3754,8 @@ static GWBUF* sescmd_cursor_process_replies(
 			
 			if(bref->reply_cmd != scmd->reply_cmd)
 			{
-			    MXS_INFO("Backend server '%s' response differs from master's response. "
-                                     "Closing connection.",
+			    MXS_ERROR("Slave server '%s': response differs from master's response. "
+                                     "Closing connection due to inconsistent session state.",
                                      bref->bref_backend->backend_server->unique_name);
 			    sescmd_cursor_set_active(scur,false);
 			     bref_clear_state(bref,BREF_QUERY_ACTIVE);
