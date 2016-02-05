@@ -267,6 +267,7 @@ add_test_script(load_balancing_pers10 load_pers10)
 add_test_script(load_balancing_galera_pers1 load_galera_pers1)
 add_test_script(load_balancing_galera_pers10 load_galera_pers10)
 #add_test_executable(bad_pers.cpp bad_pers bad_pers)
+add_test_executable(mxs564_big_dump.cpp mxs564_big_dump galera)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
