@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     }
 
     sprintf(&sys1[0], sysbench_command_long, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP, current_port, readonly);
-
+    Test->set_log_copy_interval(300);
     Test->tprintf("Executing sysbench \n%s\n", sys1);
     if (system(sys1) != 0) {
         Test->tprintf("Error executing sysbench test\n");
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 
     Test->close_maxscale_connections();
 
-    Test->tprintf("Checxking if MaxScale is still alive!\n"); fflush(stdout);
+    Test->tprintf("Checking if MaxScale is still alive!\n"); fflush(stdout);
     Test->check_maxscale_alive();
 
     Test->copy_all_logs(); fflush(stdout);

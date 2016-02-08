@@ -6,10 +6,14 @@ if [ -z $1 ]; then
 	echo "Test name missing"
 	logs_dir="LOGS/nomane"
 else
-
-	logs_dir="LOGS/$1"
+	if [ -z $2 ]; then
+                logs_dir="LOGS/$1"
+	else
+		logs_dir="LOGS/$1/$2"
+	fi
 	rm -rf $logs_dir
 fi
+
 
 echo "Creating log dir in workspace $logs_dir"
 mkdir -p $logs_dir
@@ -31,3 +35,8 @@ fi
 scp -i $maxscale_sshkey -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o LogLevel=quiet $maxscale_access_user@$maxscale_IP:$maxscale_cnf $logs_dir
 chmod a+r $logs_dir/*
 
+if [ -z $logs_publish_dir ] ; then
+	echo "logs are in workspace only"
+else
+	rsync -a LOGS $logs_publish_dir
+fi

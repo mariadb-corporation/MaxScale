@@ -219,9 +219,24 @@ public:
     long int timeout;
 
     /**
+     * @brief log_copy_interval seconds between log copying
+     */
+    long int log_copy_interval;
+
+    /**
+     * @brief log_copy_interval seconds until next log copying
+     */
+    long int log_copy_to_go;
+
+    /**
      * @brief timeout_thread_p pointer to timeout thread
      */
     pthread_t timeout_thread_p;
+
+    /**
+     * @brief log_copy_thread_p pointer to log copying thread
+     */
+    pthread_t log_copy_thread_p;
 
     /**
      * @brief start_time time when test was started (used by printf to print Timestamp)
@@ -349,9 +364,14 @@ public:
     int start_mm();
 
     /**
-     * @brief Copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
+     * @brief copy_all_logs Copies all MaxScale logs and (if happens) core to current workspace
      */
     int copy_all_logs();
+
+    /**
+     * @brief copy_all_logs_periodic Copies all MaxScale logs and (if happens) core to current workspace and sends time stemp to log copying script
+     */
+    int copy_all_logs_periodic();
 
     /**
      * @brief Generate command line to execute command on the Maxscale ode via ssh
@@ -414,6 +434,13 @@ public:
      * @return 0 if success
      */
     int set_timeout(long int timeout_seconds);
+
+    /**
+     * @brief set_log_copy_interval sets interval for periodic log copying
+     * @param interval_seconds interval in seconds
+     * @return 0 if success
+     */
+    int set_log_copy_interval(long int interval_seconds);
 
     /**
      * @brief stop_timeout stops timeout thread
@@ -499,5 +526,12 @@ public:
  * @return void
  */
 void * timeout_thread(void *ptr );
+
+/**
+ * @brief log_copy_thread Thread which peridically copies logs from Maxscale machine
+ * @param ptr pointer to TestConnections object
+ * @return void
+ */
+void * log_copy_thread(void *ptr );
 
 #endif // TESTCONNECTIONS_H

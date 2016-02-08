@@ -117,8 +117,10 @@ TestConnections::TestConnections(int argc, char *argv[])
     }
     //repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
-    timeout = 99999;
+    timeout = 999999999;
+    set_log_copy_interval(999999999);
     pthread_create( &timeout_thread_p, NULL, timeout_thread, this);
+    pthread_create( &log_copy_thread_p, NULL, log_copy_thread, this);
     gettimeofday(&start_time, NULL);
 }
 
@@ -135,8 +137,10 @@ TestConnections::TestConnections()
 
     read_env();
 
-    timeout = 99999;
+    timeout = 999999999;
+    set_log_copy_interval(999999999);
     pthread_create( &timeout_thread_p, NULL, timeout_thread, this);
+    pthread_create( &log_copy_thread_p, NULL, log_copy_thread, this);
     gettimeofday(&start_time, NULL);
 }
 
@@ -284,6 +288,28 @@ int TestConnections::copy_all_logs()
         return(0);
     }
 }
+
+int TestConnections::copy_all_logs_periodic()
+{
+    char str[4096];
+    //set_timeout(300);
+
+    timeval t2;
+    gettimeofday(&t2, NULL);
+    double elapsedTime = (t2.tv_sec - start_time.tv_sec);
+    elapsedTime += (double) (t2.tv_usec - start_time.tv_usec) / 1000000.0;
+
+    sprintf(str, "%s/copy_logs.sh %s %04f", test_dir, test_name, elapsedTime);
+    tprintf("Executing %s\n", str);
+    if (system(str) !=0) {
+        tprintf("copy_logs.sh executing FAILED!\n");
+        return(1);
+    } else {
+        tprintf("copy_logs.sh OK!\n");
+        return(0);
+    }
+}
+
 
 int TestConnections::start_binlog()
 {
@@ -766,6 +792,13 @@ int TestConnections::set_timeout(long int timeout_seconds)
     return(0);
 }
 
+int TestConnections::set_log_copy_interval(long int interval_seconds)
+{
+    log_copy_to_go = interval_seconds;
+    log_copy_interval = interval_seconds;
+    return(0);
+}
+
 int TestConnections::stop_timeout()
 {
     timeout = 999999999;
@@ -800,6 +833,25 @@ void *timeout_thread( void *ptr )
     Test->tprintf("\n **** Timeout! *** \n");
     Test->copy_all_logs();
     exit(250);
+}
+
+void *log_copy_thread( void *ptr )
+{
+    TestConnections * Test = (TestConnections *) ptr;
+    struct timespec tim;
+    while (true)
+    {
+        while (Test->log_copy_interval > 0)
+        {
+            tim.tv_sec = 1;
+            tim.tv_nsec = 0;
+            nanosleep(&tim, NULL);
+            Test->log_copy_interval--;
+        }
+        Test->log_copy_to_go = Test->log_copy_interval;
+        Test->tprintf("\n **** Copying all logs *** \n");
+        Test->copy_all_logs_periodic();
+    }
 }
 
 int TestConnections::insert_select(int N)
