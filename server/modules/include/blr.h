@@ -415,6 +415,7 @@ typedef struct router_instance {
 	SPINLOCK		binlog_lock;	/*< Lock to control update of the binlog position */
 	int			trx_safe;	/*< Detect and handle partial transactions */
 	int			pending_transaction; /*< Pending transaction */
+	int			pending_16mb; /*< Pending larger than 16mb transmission */
 	uint64_t		last_safe_pos; /* last committed transaction */
 	char			binlog_name[BINLOG_FNAMELEN+1];
 					/*< Name of the current binlog file */
