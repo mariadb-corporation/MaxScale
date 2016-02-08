@@ -1002,6 +1002,22 @@ handle_global_item(const char *name, const char *value)
             MXS_ERROR("Invalid timeout value for 'auth_write_timeout': %s", value);
         }
     }
+    else if (strcmp(name, "query_classifier") == 0)
+    {
+        int len = strlen(value);
+        int max_len = sizeof(gateway.qc_name) - 1;
+
+        if (len <= max_len)
+        {
+            strcpy(gateway.qc_name, value);
+        }
+        else
+        {
+            MXS_ERROR("The length of '%s' is %d, while the maximum length is %d.",
+                      value, len, max_len);
+            return 0;
+        }
+    }
     else
     {
         for (i = 0; lognames[i].name; i++)
@@ -1110,6 +1126,9 @@ global_defaults()
     {
         strncpy(gateway.sysname, uname_data.sysname, _SYSNAME_STR_LENGTH);
     }
+
+    /* query_classifier */
+    memset(gateway.qc_name, 0, sizeof(gateway.qc_name));
 }
 
 /**

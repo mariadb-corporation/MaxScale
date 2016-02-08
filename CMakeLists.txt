@@ -33,7 +33,7 @@ check_deps()
 check_dirs()
 find_package(OpenSSL)
 find_package(Valgrind)
-find_package(MySQLClient)
+find_package(MariaDBConnector)
 find_package(MySQL)
 find_package(Pandoc)
 find_package(TCMalloc)
@@ -45,6 +45,12 @@ find_package(RabbitMQ)
 # Build PCRE2
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
 include(cmake/BuildPCRE2.cmake)
+
+# If the connector was not found, download and build it from source
+if(NOT MARIADB_CONNECTOR_FOUND)
+  message(STATUS "Building MariaDB Connector-C from source.")
+  include(cmake/BuildMariaDBConnector.cmake)
+endif()
 
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
@@ -157,12 +163,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb")
 
-subdirs(MYSQL_DIR_ALL ${MYSQL_DIR})
-foreach(DIR ${MYSQL_DIR_ALL})
-  include_directories(${DIR})
-endforeach()
-
-include_directories(${MYSQL_DIR}/..)
 include_directories(utils)
 include_directories(log_manager)
 include_directories(query_classifier)

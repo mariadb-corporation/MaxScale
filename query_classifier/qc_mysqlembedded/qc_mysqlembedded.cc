@@ -60,6 +60,7 @@
 #include <log_manager.h>
 #include <query_classifier.h>
 #include <mysql_client_server_protocol.h>
+#include <gwdirs.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1775,29 +1776,126 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
     return operation;
 }
 
-
-bool qc_init(int argc, char** argv, char** groups)
+namespace
 {
-    int rc = mysql_library_init(argc, argv, groups);
 
-    if (rc != 0)
+// Do not change the order without making corresponding changes to IDX_... below.
+const char* server_options[] =
+{
+    "MariaDB Corporation MaxScale",
+    "--no-defaults",
+    "--datadir=",
+    "--language=",
+    "--skip-innodb",
+    "--default-storage-engine=myisam",
+    NULL
+};
+
+const int IDX_DATADIR = 2;
+const int IDX_LANGUAGE = 3;
+const int N_OPTIONS = (sizeof(server_options) / sizeof(server_options[0])) - 1;
+
+const char* server_groups[] = {
+    "embedded",
+    "server",
+    "server",
+    "embedded",
+    "server",
+    "server",
+    NULL
+};
+
+const int OPTIONS_DATADIR_SIZE = 10 + PATH_MAX; // strlen("--datadir=");
+const int OPTIONS_LANGUAGE_SIZE = 11 + PATH_MAX; // strlen("--language=");
+
+char datadir_arg[OPTIONS_DATADIR_SIZE];
+char language_arg[OPTIONS_LANGUAGE_SIZE];
+
+
+bool create_datadir(const char* base, char* datadir)
+{
+    bool created = false;
+
+    if (snprintf(datadir, PATH_MAX, "%s/data%d", base, getpid()) < PATH_MAX)
     {
-        MXS_ERROR("mysql_library_init() failed. Error code: %d", rc);
+        int rc = mkdir(datadir, 0777);
+
+        if ((rc == 0) || (errno == EEXIST))
+        {
+            created = true;
+        }
+        else
+        {
+            char errbuf[STRERROR_BUFLEN];
+            fprintf(stderr, "MaxScale: error: Cannot create data directory '%s': %d %s\n",
+                    datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        }
     }
     else
     {
-        MXS_NOTICE("Query classifier initialized.");
+        fprintf(stderr, "MaxScale: error: Too long data directory: %s/data%d.", base, getpid());
     }
 
-    return rc == 0;
+    return created;
 }
 
-void qc_end()
+void configure_options(const char* datadir, const char* langdir)
+{
+    int rv;
+
+    rv = snprintf(datadir_arg, OPTIONS_DATADIR_SIZE, "--datadir=%s", datadir);
+    ss_dassert(rv < OPTIONS_DATADIR_SIZE); // Ensured by create_datadir().
+    server_options[IDX_DATADIR] = datadir_arg;
+
+    rv = sprintf(language_arg, "--language=%s", langdir);
+    ss_dassert(rv < OPTIONS_LANGUAGE_SIZE); // Ensured by qc_init().
+    server_options[IDX_LANGUAGE] = language_arg;
+}
+
+}
+
+bool qc_init(void)
+{
+    bool inited = false;
+    char datadir[PATH_MAX];
+
+    if (strlen(get_langdir()) >= PATH_MAX)
+    {
+        fprintf(stderr, "MaxScale: error: Language path is too long: %s.", get_langdir());
+    }
+    else
+    {
+        if (create_datadir(get_datadir(), datadir))
+        {
+            configure_options(datadir, get_langdir());
+
+            int argc = N_OPTIONS;
+            char** argv = const_cast<char**>(server_options);
+            char** groups = const_cast<char**>(server_groups);
+
+            int rc = mysql_library_init(argc, argv, groups);
+
+            if (rc != 0)
+            {
+                MXS_ERROR("mysql_library_init() failed. Error code: %d", rc);
+            }
+            else
+            {
+                MXS_NOTICE("Query classifier initialized.");
+                inited = true;
+            }
+        }
+    }
+
+    return inited;
+}
+
+void qc_end(void)
 {
     mysql_library_end();
 }
 
-bool qc_thread_init()
+bool qc_thread_init(void)
 {
     bool inited = (mysql_thread_init() == 0);
 
@@ -1809,7 +1907,7 @@ bool qc_thread_init()
     return inited;
 }
 
-void qc_thread_end()
+void qc_thread_end(void)
 {
     mysql_thread_end();
 }
@@ -1817,6 +1915,9 @@ void qc_thread_end()
 /**
  * EXPORTS
  */
+
+extern "C"
+{
 
 static char version_string[] = "V1.0.0";
 
@@ -1862,4 +1963,4 @@ QUERY_CLASSIFIER* GetModuleObject()
     return &qc;
 }
 
-
+}

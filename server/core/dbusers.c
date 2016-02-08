@@ -2186,6 +2186,10 @@ MYSQL *gw_mysql_init()
     {
         if (gw_mysql_set_timeouts(con) == 0)
         {
+            // MYSQL_OPT_USE_REMOTE_CONNECTION must be set if the embedded
+            // libary is used. With Connector-C (at least 2.2.1) the call
+            // fails.
+#if !defined(LIBMARIADB)
             if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL) != 0)
             {
                 MXS_ERROR("Failed to set external connection. "
@@ -2193,6 +2197,7 @@ MYSQL *gw_mysql_init()
                 mysql_close(con);
                 con = NULL;
             }
+#endif
         }
         else
         {

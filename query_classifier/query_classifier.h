@@ -74,11 +74,11 @@ typedef enum
 
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
 
-bool qc_init(int argc, char** argv, char** groups);
-void qc_end();
+bool qc_init(const char* plugin_name);
+void qc_end(void);
 
-bool qc_thread_init();
-void qc_thread_end();
+bool qc_thread_init(void);
+void qc_thread_end(void);
 
 /**
  * Create THD and use it for creating parse tree. Examine parse tree and
@@ -99,11 +99,11 @@ char** qc_get_database_names(GWBUF* querybuf, int* size);
 
 typedef struct query_classifier
 {
-    bool (*qc_init)(int argc, char** argv, char** groups);
-    void (*qc_end)();
+    bool (*qc_init)(void);
+    void (*qc_end)(void);
 
-    bool (*qc_thread_init)();
-    void (*qc_thread_end)();
+    bool (*qc_thread_init)(void);
+    void (*qc_thread_end)(void);
 
     qc_query_type_t (*qc_get_type)(GWBUF* querybuf);
     qc_query_op_t (*qc_get_operation)(GWBUF* querybuf);

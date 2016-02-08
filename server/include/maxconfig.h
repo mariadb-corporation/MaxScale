@@ -124,7 +124,8 @@ typedef struct
     int           log_to_shm;                          /**< Write log-file to shared memory */
     unsigned int  auth_conn_timeout;                   /**< Connection timeout for the user authentication */
     unsigned int  auth_read_timeout;                   /**< Read timeout for the user authentication */
-    unsigned int  auth_write_timeout;                  /**<  Write timeout for the user authentication */
+    unsigned int  auth_write_timeout;                  /**< Write timeout for the user authentication */
+    char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
 } GATEWAY_CONF;
 
 
