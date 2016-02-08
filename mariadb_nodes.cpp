@@ -361,7 +361,16 @@ int Mariadb_nodes::check_replication(int master)
     char str[1024];
     MYSQL *conn;
     MYSQL_RES *res;
+    bool v51 = false;
     printf("Checking Master/Slave setup\n"); fflush(stdout);
+    get_versions();
+    for (int i = 0; i < N; i++)
+    {
+        if (strcmp(version_major[i], "5.1") == 0)
+        {
+            v51 = true;
+        }
+    }
     for (int i = 0; i < N; i++) {
         conn = open_conn(port[i], IP[i], user_name, password, ssl);
         if (mysql_errno(conn) != 0) {
@@ -382,7 +391,12 @@ int Mariadb_nodes::check_replication(int master)
                         } else {
                             if (mysql_num_rows(res) != N-1) {
                                 printf("Number if slaves is not equal to N-1\n"); fflush(stdout);
-                                res1 = 1;
+                                if (v51)
+                                {
+                                    printf("But version is 5.1 is present in the setup, ignoring number of slaves\n"); fflush(stdout);
+                                } else {
+                                    res1 = 1;
+                                }
                             }
                         }
                         mysql_free_result(res);
@@ -418,6 +432,7 @@ int Mariadb_nodes::check_galera()
     int cluster_size;
     MYSQL *conn;
     printf("Checking Galera\n"); fflush(stdout);
+    get_versions();
     for (int i = 0; i < N; i++) {
         conn = open_conn(port[i], IP[i], user_name, password, ssl);
         if (mysql_errno(conn) != 0) {
@@ -577,6 +592,24 @@ int Mariadb_nodes::execute_query_all_nodes(char * sql)
     for (int i = 0; i < N; i++) {
         printf("'%s' for node %d\n", sql, i);
         local_result += execute_query(nodes[i], sql);
+    }
+    close_connections();
+    return(local_result);
+}
+
+int Mariadb_nodes::get_versions()
+{
+    int local_result = 0;
+    char * str;
+    connect();
+    for (int i = 0; i < N; i++) {
+        local_result += find_field(nodes[i], (char *) "SELECT @@version", (char *) "@@version", version[i]);
+        strcpy(version_number[i], version[i]);
+        str = strchr(version_number[i], '-');
+        if (str != NULL) {str = 0;}
+        strcpy(version_major[i], version_number[i]);
+        if (strstr(version_major[i], "5.") ==  version_major[i]) {version_major[i][3] = 0;}
+        if (strstr(version_major[i], "10.") ==  version_major[i]) {version_major[i][4] = 0;}
     }
     close_connections();
     return(local_result);

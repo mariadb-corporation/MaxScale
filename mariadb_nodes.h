@@ -123,6 +123,21 @@ public:
     bool verbose;
 
     /**
+     * @brief version Value of @@version
+     */
+    char version[256][256];
+
+    /**
+     * @brief version major part of number value of @@version
+     */
+    char version_major[256][256];
+
+    /**
+     * @brief version Number part of @@version
+     */
+    char version_number[256][256];
+
+    /**
      * @brief connect open connections to all nodes
      * @return 0  in case of success
      */
@@ -336,9 +351,15 @@ public:
     /**
      * @brief Execute query on all nodes
      * @param sql query to execute
-     * @return
+     * @return 0 in case of success
      */
     int execute_query_all_nodes(char * sql);
+
+    /**
+     * @brief execute 'SELECT @@version' against all nodes and store result in 'vesion' fied
+     * @return 0 in case of success
+     */
+    int get_versions();
 };
 
 #endif // MARIADB_NODES_H
