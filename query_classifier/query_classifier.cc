@@ -133,12 +133,21 @@ bool qc_is_real_query(GWBUF* query)
 
     return classifier->qc_is_real_query(query);
 }
+<<<<<<< HEAD
 
 char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
 {
     QC_TRACE();
     ss_dassert(classifier);
 
+=======
+
+char** qc_get_table_names(GWBUF* query, int* tblsize, bool fullnames)
+{
+    QC_TRACE();
+    ss_dassert(classifier);
+
+>>>>>>> origin/MXS-517
     return classifier->qc_get_table_names(query, tblsize, fullnames);
 }
 
