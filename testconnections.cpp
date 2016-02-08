@@ -841,12 +841,12 @@ void *log_copy_thread( void *ptr )
     struct timespec tim;
     while (true)
     {
-        while (Test->log_copy_interval > 0)
+        while (Test->log_copy_to_go > 0)
         {
             tim.tv_sec = 1;
             tim.tv_nsec = 0;
             nanosleep(&tim, NULL);
-            Test->log_copy_interval--;
+            Test->log_copy_to_go--;
         }
         Test->log_copy_to_go = Test->log_copy_interval;
         Test->tprintf("\n **** Copying all logs *** \n");

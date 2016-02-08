@@ -40,3 +40,4 @@ if [ -z $logs_publish_dir ] ; then
 else
 	rsync -a LOGS $logs_publish_dir
 fi
+
