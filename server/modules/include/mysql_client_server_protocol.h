@@ -80,6 +80,9 @@
 #define GW_MYSQL_SCRAMBLE_SIZE 20
 #define GW_SCRAMBLE_LENGTH_323 8
 
+/** Maximum length of a MySQL packet */
+#define MYSQL_PACKET_LENGTH_MAX 0x00ffffff
+
 #ifndef MYSQL_SCRAMBLE_LEN
 # define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
 #endif

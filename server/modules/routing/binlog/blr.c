@@ -498,6 +498,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 	inst->binlog_position = 0;
 	inst->current_pos = 0;
 	inst->current_safe_event = 0;
+	inst->master_event_state = BLR_EVENT_DONE;
 
 	strcpy(inst->binlog_name, "");
 	strcpy(inst->prevbinlog, "");

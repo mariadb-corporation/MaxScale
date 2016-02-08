@@ -198,6 +198,14 @@
 #define MYSQL_ERROR_MSG(buf)	((uint8_t *)GWBUF_DATA(buf) + 7)
 #define MYSQL_COMMAND(buf)	(*((uint8_t *)GWBUF_DATA(buf) + 4))
 
+enum blr_event_state
+{
+    BLR_EVENT_DONE,
+    BLR_EVENT_STARTED,
+    BLR_EVENT_ONGOING,
+    BLR_EVENT_COMPLETE
+};
+
 /* Master Server configuration struct */
 typedef struct master_server_config {
 	char *host;
@@ -415,7 +423,8 @@ typedef struct router_instance {
 	SPINLOCK		binlog_lock;	/*< Lock to control update of the binlog position */
 	int			trx_safe;	/*< Detect and handle partial transactions */
 	int			pending_transaction; /*< Pending transaction */
-	int			pending_16mb; /*< Pending larger than 16mb transmission */
+	enum blr_event_state master_event_state; /*< Packet read state */
+	REP_HEADER	stored_header; /*< Relication header of the event the master is sending */
 	uint64_t		last_safe_pos; /* last committed transaction */
 	char			binlog_name[BINLOG_FNAMELEN+1];
 					/*< Name of the current binlog file */
@@ -426,7 +435,8 @@ typedef struct router_instance {
 	int			binlog_fd;	/*< File descriptor of the binlog
 					 *  file being written
 					 */
-	uint64_t	  last_written;	/*< Position of last event written */
+	uint64_t	  last_written;	/*< Position of the last write operation */
+	uint64_t	  last_event_pos;	/*< Position of last event written */
 	uint64_t	  current_safe_event;
 	/*< Position of the latest safe event being sent to slaves */
 	char		  prevbinlog[BINLOG_FNAMELEN+1];
@@ -557,7 +567,7 @@ extern int blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool 
 extern void blr_init_cache(ROUTER_INSTANCE *);
 
 extern int  blr_file_init(ROUTER_INSTANCE *);
-extern int  blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *,uint8_t *);
+extern int  blr_write_binlog_record(ROUTER_INSTANCE *, REP_HEADER *, uint32_t pos, uint8_t *);
 extern int  blr_file_rotate(ROUTER_INSTANCE *, char *, uint64_t);
 extern void blr_file_flush(ROUTER_INSTANCE *);
 extern BLFILE *blr_open_binlog(ROUTER_INSTANCE *, char *);
