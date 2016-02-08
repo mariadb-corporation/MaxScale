@@ -1,4 +1,4 @@
-add_library(maxscale-common SHARED adminusers.c atomic.c buffer.c config.c dbusers.c dcb.c filter.c externcmd.c gwbitmask.c gwdirs.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c maxscale_pcre2.c memlog.c modutil.c monitor.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c ${CMAKE_SOURCE_DIR}/log_manager/log_manager.cc ${CMAKE_SOURCE_DIR}/utils/skygw_utils.cc statistics.c)
+add_library(maxscale-common SHARED adminusers.c atomic.c buffer.c config.c dbusers.c dcb.c filter.c externcmd.c gwbitmask.c gwdirs.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c maxscale_pcre2.c memlog.c modutil.c monitor.c query_classifier.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c spinlock.c thread.c users.c utils.c ${CMAKE_SOURCE_DIR}/log_manager/log_manager.cc ${CMAKE_SOURCE_DIR}/utils/skygw_utils.cc statistics.c)
 
 target_link_libraries(maxscale-common ${MARIADB_CONNECTOR_LIBRARIES} ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${CURL_LIBRARIES} ssl aio pthread crypt dl crypto inih z rt m stdc++)
 
@@ -21,15 +21,15 @@ elseif(WITH_TCMALLOC)
   target_link_libraries(maxscale ${TCMALLOC_LIBRARIES})
 endif()
 
-target_link_libraries(maxscale maxscale-common query_classifier)
+target_link_libraries(maxscale maxscale-common)
 install(TARGETS maxscale DESTINATION ${MAXSCALE_BINDIR})
 
 add_executable(maxkeys maxkeys.c)
-target_link_libraries(maxkeys maxscale-common query_classifier)
+target_link_libraries(maxkeys maxscale-common)
 install(TARGETS maxkeys DESTINATION ${MAXSCALE_BINDIR})
 
 add_executable(maxpasswd maxpasswd.c)
-target_link_libraries(maxpasswd maxscale-common query_classifier)
+target_link_libraries(maxpasswd maxscale-common)
 install(TARGETS maxpasswd DESTINATION ${MAXSCALE_BINDIR})
 
 if(BUILD_TESTS)

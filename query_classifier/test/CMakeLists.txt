@@ -17,5 +17,5 @@ endif()
 
 add_subdirectory(canonical_tests)
 add_executable(classify classify.c)
-target_link_libraries(classify query_classifier maxscale-common)
+target_link_libraries(classify maxscale-common)
 add_test(Internal-TestQueryClassifier classify ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)

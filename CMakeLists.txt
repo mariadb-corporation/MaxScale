@@ -165,7 +165,6 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb")
 
 include_directories(utils)
 include_directories(log_manager)
-include_directories(query_classifier)
 include_directories(server/include)
 include_directories(server/include/maxscale)
 include_directories(server/inih)

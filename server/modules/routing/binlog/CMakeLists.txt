@@ -6,7 +6,7 @@ install(TARGETS binlogrouter DESTINATION ${MAXSCALE_LIBDIR})
 add_executable(maxbinlogcheck maxbinlogcheck.c blr_file.c blr_cache.c blr_master.c blr_slave.c blr.c)
 # maxbinlogcheck refers to my_uuid_init and my_uuin. They are non-public functions and
 # should not be used. They are found only from the embedded lib.
-target_link_libraries(maxbinlogcheck maxscale-common query_classifier ${MYSQL_EMBEDDED_LIBRARIES})
+target_link_libraries(maxbinlogcheck maxscale-common ${MYSQL_EMBEDDED_LIBRARIES})
 
 install(TARGETS maxbinlogcheck DESTINATION bin)
 
