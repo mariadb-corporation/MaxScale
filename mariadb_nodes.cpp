@@ -182,7 +182,12 @@ int Mariadb_nodes::stop_node(int node)
 int Mariadb_nodes::start_node(int node, char * param)
 {
     char cmd[1024];
-    sprintf(cmd, "%s %s", start_db_command[node], param);
+    if (v51)
+    {
+        sprintf(cmd, "%s %s --report-host", start_db_command[node], param);
+    } else {
+        sprintf(cmd, "%s %s", start_db_command[node], param);
+    }
     return(ssh_node(node, cmd, true));
 }
 
