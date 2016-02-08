@@ -610,6 +610,7 @@ int Mariadb_nodes::get_versions()
         strcpy(version_major[i], version_number[i]);
         if (strstr(version_major[i], "5.") ==  version_major[i]) {version_major[i][3] = 0;}
         if (strstr(version_major[i], "10.") ==  version_major[i]) {version_major[i][4] = 0;}
+        printf("Node %s%d: %s\t\%s\%s\n", prefix, i, version[i], version_number[i], version_major[i]);
     }
     close_connections();
     return(local_result);
