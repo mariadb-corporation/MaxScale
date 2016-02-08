@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     }
     //Test->CloseRWSplit();
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
-    Test->set_timeout(1000);
+    Test->set_timeout(5000);
     Test->add_result(system(sys1), "Error executing sysbench prepare\n");
 
     char *readonly;

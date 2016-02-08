@@ -28,14 +28,14 @@ int main(int argc, char *argv[])
     sprintf(&sys1[0], sysbench_prepare, Test->sysbench_dir, Test->sysbench_dir, Test->maxscale_IP);
 
     Test->tprintf("Preparing sysbench tables\n%s\n", sys1);
-    Test->set_timeout(1000);
+    Test->set_timeout(10000);
     Test->add_result(system(sys1), "Error executing sysbench prepare\n");
 
     char *readonly;
     char *ro_on = (char *) "on";
     char *ro_off = (char *) "off";
 
-    Test->set_timeout(10000000);
+    Test->stop_timeout();
 
     current_port = port[0];
 

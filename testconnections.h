@@ -216,7 +216,7 @@ public:
     /**
      * @brief timeout seconds until test termination
      */
-    int timeout;
+    long int timeout;
 
     /**
      * @brief timeout_thread_p pointer to timeout thread
@@ -413,7 +413,7 @@ public:
      * @param timeout_seconds timeout time
      * @return 0 if success
      */
-    int set_timeout(int timeout_seconds);
+    int set_timeout(long int timeout_seconds);
 
     /**
      * @brief stop_timeout stops timeout thread

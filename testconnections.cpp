@@ -760,7 +760,7 @@ int TestConnections::get_client_ip(char * ip)
     return(ret);
 }
 
-int TestConnections::set_timeout(int timeout_seconds)
+int TestConnections::set_timeout(long int timeout_seconds)
 {
     timeout = timeout_seconds;
     return(0);
@@ -768,7 +768,7 @@ int TestConnections::set_timeout(int timeout_seconds)
 
 int TestConnections::stop_timeout()
 {
-    timeout = 99999;
+    timeout = 999999999;
     return(0);
 }
 
