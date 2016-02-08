@@ -38,9 +38,9 @@ fi
 
 sed -i "s/###threads###/$threads/"  MaxScale.cnf
 
-if [ "x$mysql51_only" == "xyes" ] ; then
-	sed -i "s/module=mysqlmon/module=mysqlmon\nmysql51_replication=true/"  MaxScale.cnf
-fi
+#if [ "x$mysql51_only" == "xyes" ] ; then
+#	sed -i "s/module=mysqlmon/module=mysqlmon\nmysql51_replication=true/"  MaxScale.cnf
+#fi
 
 for prefix in "repl" "galera"
 do
@@ -82,6 +82,9 @@ fi
 
 sed -i "s/###access_user###/$maxscale_access_user/g" MaxScale.cnf
 sed -i "s|###access_homedir###|$maxscale_access_homedir|g" MaxScale.cnf
+if [ "$v51" == "yes" ] ; then
+	sed -i "s/###repl51###/mysql51_replication=true/g" MaxScale.cnf
+fi
 
 echo "copying maxscale.cnf using ssh $maxscale_access_user"
 ssh -i $maxscale_sshkey $opt_str $maxscale_access_user@$maxscale_IP "$maxscale_access_sudo chown $maxscale_access_user /home/$maxscale_access_user"

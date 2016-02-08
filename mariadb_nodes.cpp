@@ -361,16 +361,10 @@ int Mariadb_nodes::check_replication(int master)
     char str[1024];
     MYSQL *conn;
     MYSQL_RES *res;
-    bool v51 = false;
+    //bool v51 = false;
     printf("Checking Master/Slave setup\n"); fflush(stdout);
     get_versions();
-    for (int i = 0; i < N; i++)
-    {
-        if (strcmp(version_major[i], "5.1") == 0)
-        {
-            v51 = true;
-        }
-    }
+
     for (int i = 0; i < N; i++) {
         conn = open_conn(port[i], IP[i], user_name, password, ssl);
         if (mysql_errno(conn) != 0) {
@@ -601,17 +595,25 @@ int Mariadb_nodes::get_versions()
 {
     int local_result = 0;
     char * str;
+    v51 = false;
     connect();
     for (int i = 0; i < N; i++) {
         local_result += find_field(nodes[i], (char *) "SELECT @@version", (char *) "@@version", version[i]);
         strcpy(version_number[i], version[i]);
         str = strchr(version_number[i], '-');
-        if (str != NULL) {str = 0;}
+        if (str != NULL) {str[0] = 0;}
         strcpy(version_major[i], version_number[i]);
         if (strstr(version_major[i], "5.") ==  version_major[i]) {version_major[i][3] = 0;}
         if (strstr(version_major[i], "10.") ==  version_major[i]) {version_major[i][4] = 0;}
-        printf("Node %s%d: %s\t\%s\%s\n", prefix, i, version[i], version_number[i], version_major[i]);
+        printf("Node %s%d: %s\t %s \t %s\n", prefix, i, version[i], version_number[i], version_major[i]);
     }
     close_connections();
+    for (int i = 0; i < N; i++)
+    {
+        if (strcmp(version_major[i], "5.1") == 0)
+        {
+            v51 = true;
+        }
+    }
     return(local_result);
 }

@@ -216,7 +216,14 @@ int TestConnections::print_env()
 int TestConnections::init_maxscale()
 {
     char str[4096];
-    sprintf(str, "export test_name=%s; export test_dir=%s; %s/configure_maxscale.sh", test_name, test_dir, test_dir);
+    if (repl->v51)
+    {
+        sprintf(str, "export test_name=%s; export test_dir=%s; export v51=yes; %s/configure_maxscale.sh",
+                test_name, test_dir, test_dir);
+    } else {
+        sprintf(str, "export test_name=%s; export test_dir=%s; %s/configure_maxscale.sh",
+                test_name, test_dir, test_dir);
+    }
     printf("\nExecuting configure_maxscale.sh\n"); fflush(stdout);
     if (system(str) !=0) {
         printf("configure_maxscale.sh executing FAILED!\n"); fflush(stdout);

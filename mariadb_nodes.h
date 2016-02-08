@@ -141,6 +141,11 @@ public:
      * @brief connect open connections to all nodes
      * @return 0  in case of success
      */
+
+    /**
+    * @brief v51 true indicates that ione backed is 5.1
+    */
+    bool v51;
     int connect();
     /**
      * @brief  close connections which were previously opened by Connect()
