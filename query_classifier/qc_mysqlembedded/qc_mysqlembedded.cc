@@ -1850,6 +1850,10 @@ void configure_options(const char* datadir, const char* langdir)
     rv = sprintf(language_arg, "--language=%s", langdir);
     ss_dassert(rv < OPTIONS_LANGUAGE_SIZE); // Ensured by qc_init().
     server_options[IDX_LANGUAGE] = language_arg;
+
+    // To prevent warning of unused variable when built in release mode,
+    // when ss_dassert() turns into empty statement.
+    (void)rv;
 }
 
 }
