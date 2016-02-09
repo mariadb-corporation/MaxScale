@@ -22,9 +22,6 @@
 
 #define DISKWRITE_LATENCY (5*MSEC_USEC)
 
-typedef struct slist_node_st    slist_node_t;
-typedef struct slist_st         slist_t;
-typedef struct slist_cursor_st  slist_cursor_t;
 typedef struct mlist_node_st    mlist_node_t;
 typedef struct skygw_file_st    skygw_file_t;
 typedef struct skygw_thread_st  skygw_thread_t;
@@ -97,33 +94,6 @@ static const char*  timestamp_formatstr_hp = "%04d-%02d-%02d %02d:%02d:%02d.%03d
 /** One for terminating '\0' */
 static const size_t    timestamp_len_hp       =    (4+1 +2+1 +2+1 +2+1 +2+1 +2+1+3+3  +1) * sizeof(char);
 
-/** Single-linked list for storing test cases */
-
-struct slist_node_st {
-        skygw_chk_t   slnode_chk_top;
-        slist_t*      slnode_list;
-        slist_node_t* slnode_next;
-        void*         slnode_data;
-        size_t        slnode_cursor_refcount;
-        skygw_chk_t   slnode_chk_tail;
-};
-
-struct slist_st {
-        skygw_chk_t   slist_chk_top;
-        slist_node_t* slist_head;
-        slist_node_t* slist_tail;
-        int        slist_nelems;
-        slist_t*      slist_cursors_list;
-        skygw_chk_t   slist_chk_tail;
-};
-
-struct slist_cursor_st {
-        skygw_chk_t     slcursor_chk_top;
-        slist_t*        slcursor_list;
-        slist_node_t*   slcursor_pos;
-        skygw_chk_t     slcursor_chk_tail;
-};
-
 struct skygw_thread_st {
         skygw_chk_t       sth_chk_top;
         bool              sth_must_exit;
@@ -160,15 +130,6 @@ EXTERN_C_BLOCK_BEGIN
 
 bool utils_init(); /*< Call this first before using any other function */
 void utils_end();
-slist_cursor_t* slist_init(void);
-void slist_done(slist_cursor_t* c);
-size_t slist_size(slist_cursor_t* c);
-void slcursor_add_data(slist_cursor_t* c, void* data);
-void slcursor_remove_data(slist_cursor_t* c);
-void* slcursor_get_data(slist_cursor_t* c);
-
-bool slcursor_move_to_begin(slist_cursor_t* c);
-bool slcursor_step_ahead(slist_cursor_t* c);
 
 EXTERN_C_BLOCK_END
 
