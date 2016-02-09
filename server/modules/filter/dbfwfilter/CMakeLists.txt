@@ -1,7 +1,7 @@
 find_package(FLEX)
 find_package(BISON)
 if(BISON_FOUND AND FLEX_FOUND)
-  bison_target(ruleparser ruleparser.y ${CMAKE_CURRENT_BINARY_DIR}/ruleparser.c DEFINES_FILE ${CMAKE_CURRENT_BINARY_DIR}/ruleparser.yy.h)
+  bison_target(ruleparser ruleparser.y ${CMAKE_CURRENT_BINARY_DIR}/ruleparser.c COMPILE_FLAGS "--defines=${CMAKE_CURRENT_BINARY_DIR}/ruleparser.yy.h")
   flex_target(token token.l ${CMAKE_CURRENT_BINARY_DIR}/token.c COMPILE_FLAGS "--header-file=${CMAKE_CURRENT_BINARY_DIR}/lex.yy.h")
   add_flex_bison_dependency(token ruleparser)
   include_directories(${CMAKE_CURRENT_BINARY_DIR})

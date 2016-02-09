@@ -27,8 +27,6 @@
 #include <dbfwfilter.h>
 %}
 
-%defines
-
 /** We need a reentrant scanner so no global variables are used */
 %define api.pure full
 
