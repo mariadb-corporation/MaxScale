@@ -8,7 +8,6 @@
 #define STRERROR_BUFLEN 512
 #endif
 
-#define MLIST
 #ifndef MIN
 #define MIN(a,b) (a<b ? a : b)
 #endif
@@ -22,7 +21,6 @@
 
 #define DISKWRITE_LATENCY (5*MSEC_USEC)
 
-typedef struct mlist_node_st    mlist_node_t;
 typedef struct skygw_file_st    skygw_file_t;
 typedef struct skygw_thread_st  skygw_thread_t;
 typedef struct skygw_message_st skygw_message_t;
@@ -44,41 +42,6 @@ typedef struct skygw_rwlock_st {
         pthread_t         srw_rwlock_thr;
         skygw_chk_t       srw_chk_tail;
 } skygw_rwlock_t;
-
-
-typedef struct mlist_st {
-        skygw_chk_t        mlist_chk_top;
-        char*              mlist_name;
-        void (*mlist_datadel)(void *);  /**< clean-up function for data */
-        simple_mutex_t     mlist_mutex; /**< protect node updates and clean-up */
-        bool               mlist_uselock;
-        bool               mlist_islocked;
-        bool               mlist_deleted;
-        size_t             mlist_nodecount;
-        size_t             mlist_nodecount_max; /**< size limit. 0 == no limit */
-        size_t             mlist_versno;
-        bool               mlist_flat;
-        mlist_node_t*      mlist_first;
-        mlist_node_t*      mlist_last;
-        skygw_chk_t        mlist_chk_tail;
-} mlist_t;
-
-typedef struct mlist_cursor_st {
-        skygw_chk_t     mlcursor_chk_top;
-        mlist_t*        mlcursor_list;
-        mlist_node_t*   mlcursor_pos;
-        pthread_t*      mlcursor_owner_thr;
-        skygw_chk_t     mlcursor_chk_tail;
-} mlist_cursor_t;
-
-struct mlist_node_st {
-        skygw_chk_t   mlnode_chk_top;
-        mlist_t*      mlnode_list;
-        mlist_node_t* mlnode_next;
-        void*         mlnode_data;
-        bool          mlnode_deleted;
-        skygw_chk_t   mlnode_chk_tail;
-};
 
 
 typedef enum { THR_INIT, THR_RUNNING, THR_STOPPED, THR_DONE } skygw_thr_state_t;
@@ -132,27 +95,6 @@ bool utils_init(); /*< Call this first before using any other function */
 void utils_end();
 
 EXTERN_C_BLOCK_END
-
-mlist_t*      mlist_init(mlist_t*         mlist,
-                         mlist_cursor_t** cursor,
-                         char*            name,
-                         void           (*datadel)(void*),
-                         int              maxnodes);
-
-void          mlist_done(mlist_t* list);
-bool          mlist_add_data_nomutex(mlist_t* list, void* data);
-bool          mlist_add_node_nomutex(mlist_t* list, mlist_node_t* newnode);
-void*         mlist_node_get_data(mlist_node_t* node);
-mlist_node_t* mlist_detach_nodes(mlist_t* ml);
-mlist_node_t* mlist_detach_first(mlist_t* ml);
-void          mlist_node_done(mlist_node_t* n);
-
-int             mlist_cursor_done(mlist_cursor_t* c);
-mlist_cursor_t* mlist_cursor_init(mlist_t* ml);
-void            mlist_cursor_add_data(mlist_cursor_t* c, void* data);
-void*           mlist_cursor_get_data_nomutex(mlist_cursor_t* c);
-bool            mlist_cursor_move_to_first(mlist_cursor_t* c);
-bool            mlist_cursor_step_ahead(mlist_cursor_t* c);
 
 /** Skygw thread routines */
 skygw_thread_t*   skygw_thread_init(

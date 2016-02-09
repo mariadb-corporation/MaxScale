@@ -28,6 +28,7 @@
 #include <syslog.h>
 #include <atomic.h>
 
+#include <mlist.h>
 #include <skygw_debug.h>
 #include <skygw_types.h>
 #include <skygw_utils.h>
