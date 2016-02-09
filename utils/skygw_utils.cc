@@ -42,7 +42,6 @@ static void simple_mutex_free_memory(simple_mutex_t* sm);
 static void thread_free_memory(skygw_thread_t* th, char* name);
 /** End of static function declarations */
 
-/** mutexed list */
 
 int skygw_rwlock_rdlock(skygw_rwlock_t* rwlock)
 {
@@ -990,10 +989,10 @@ return_succp:
 /**
  * Write data to a file.
  *
- * @param file		write target
- * @param data		pointer to contiguous memory buffer
- * @param nbytes	amount of bytes to be written
- * @param flush		ensure that write is permanent
+ * @param file          write target
+ * @param data          pointer to contiguous memory buffer
+ * @param nbytes        amount of bytes to be written
+ * @param flush         ensure that write is permanent
  *
  * @return 0 if succeed, errno if failed.
  */
@@ -1157,7 +1156,7 @@ void skygw_file_close(skygw_file_t* file, bool shutdown)
 #define BUFFER_GROWTH_RATE 1.2
 static pcre2_code* remove_comments_re = NULL;
 static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
-"(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
+    "(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
 
 /**
  * Remove SQL comments from the end of a string
@@ -1226,7 +1225,7 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
 
 static pcre2_code* replace_values_re = NULL;
 static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b|[@])"
-"(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
+    "(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
 
 /**
  * Replace literal numbers and user variables with a question mark.
@@ -1378,7 +1377,7 @@ retblock:
 
 static pcre2_code* replace_quoted_re = NULL;
 static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR)
-"(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
+    "(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
 
 /**
  * Replace contents of single or double quoted strings with question marks.
@@ -1449,14 +1448,14 @@ char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_
 /**
  * Calculate the number of decimal numbers from a size_t value.
  *
- * @param	value	value
+ * @param       value   value
  *
- * @return	number of decimal numbers of which the value consists of
- * 		value==123 returns 3, for example.
- * @note 	Does the same as UINTLEN macro
+ * @return      number of decimal numbers of which the value consists of
+ *              value==123 returns 3, for example.
+ * @note        Does the same as UINTLEN macro
  */
 size_t get_decimal_len(
-                       size_t value)
+    size_t value)
 {
     return value > 0 ? (size_t) log10((double) value) + 1 : 1;
 }
