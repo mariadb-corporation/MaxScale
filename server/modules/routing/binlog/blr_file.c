@@ -344,7 +344,7 @@ int	n;
 	}
 	spinlock_acquire(&router->binlog_lock);
 	router->current_pos = hdr->next_pos;
-	router->last_written =+ size;
+	router->last_written += size;
 	router->last_event_pos = hdr->next_pos - hdr->event_size;
 	spinlock_release(&router->binlog_lock);
 	return n;
