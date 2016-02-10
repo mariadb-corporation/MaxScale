@@ -54,72 +54,68 @@
 #include <mysqld_error.h>
 #include <regex.h>
 
-#define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
+/** Don't include the root user */
+#define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
 
-/** Alternate query which resolves user grants at the table level */
+/** User count without databases */
+#define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
+
+/** Order by host name */
+#define MYSQL_USERS_ORDER_BY " ORDER BY host DESC "
+
+/** Normal password column name */
+#define MYSQL_PASSWORD "password"
+
+/** MySQL 5.7 password column name */
+#define MYSQL57_PASSWORD "authentication_string"
+
+/** Alternate query templates which resolves user grants at the table level */
 #if 0
-#define LOAD_MYSQL_USERS_QUERY                      \
-    "SELECT  DISTINCT                           \
-    user.user AS user,                          \
-    user.host AS host,                          \
-    user.password AS password,                      \
-    concat(user.user,user.host,user.password,               \
+#define MYSQL_USERS_DB_QUERY_TEMPLATE \
+    "SELECT  DISTINCT \
+    user.user AS user, \
+    user.host AS host, \
+    user.%s AS password, \
+    concat(user.user,user.host,user.%s, \
         IF((user.Select_priv+0)||find_in_set('Select',Coalesce(tp.Table_priv,0)),'Y','N') , \
-        COALESCE( db.db,tp.db, '')) AS userdata,            \
-    user.Select_priv AS anydb,                      \
-    COALESCE( db.db,tp.db, NULL)  AS db                     \
-    FROM                                    \
-    mysql.user LEFT JOIN                            \
-    mysql.db ON user.user=db.user AND user.host=db.host  LEFT JOIN      \
-    mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host     \
+        COALESCE( db.db,tp.db, '')) AS userdata, \
+    user.Select_priv AS anydb, \
+    COALESCE( db.db,tp.db, NULL)  AS db \
+    FROM \
+    mysql.user LEFT JOIN \
+    mysql.db ON user.user=db.user AND user.host=db.host  LEFT JOIN \
+    mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host \
     WHERE user.user IS NOT NULL AND user.user <> ''"
 
 #else
-#define LOAD_MYSQL_USERS_QUERY "SELECT \
-    user, host, password, concat(user,host,password,Select_priv) AS userdata, \
-    Select_priv AS anydb FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
+/** Old user query templates */
+#define MYSQL_USERS_DB_QUERY_TEMPLATE "SELECT \
+    user.user AS user, \
+    user.host AS host, \
+    user.%s AS password, \
+    concat(user.user,user.host,user.%s,user.Select_priv,IFNULL(db,'')) AS userdata, \
+    user.Select_priv AS anydb, \
+    db.db AS db \
+    FROM mysql.user LEFT JOIN mysql.db \
+    ON user.user=db.user AND user.host=db.host \
+    WHERE user.user IS NOT NULL "
 
 #endif
 
-#define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
+#define MYSQL_USERS_QUERY_TEMPLATE "SELECT \
+    user, host, %s, concat(user, host, %s, Select_priv) AS userdata, \
+    Select_priv AS anydb FROM mysql.user WHERE user.user IS NOT NULL AND user.user <> ''"
 
-#define MYSQL_USERS_WITH_DB_ORDER " ORDER BY host DESC"
+/** User count query split into two parts. This way the actual query used to
+ * fetch the users can be inserted as a subquery between the START and END
+ * portions of them. */
+#define MYSQL_USERS_COUNT_TEMPLATE_START "SELECT COUNT(1) AS nusers_db FROM ("
+#define MYSQL_USERS_COUNT_TEMPLATE_END ") AS tbl_count"
 
-#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT \
-    user.user AS user, \
-    user.host AS host, \
-    user.password AS password, \
-    concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, \
-    user.Select_priv AS anydb, \
-    db.db AS db \
-    FROM mysql.user LEFT JOIN mysql.db \
-    ON user.user=db.user AND user.host=db.host \
-    WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
-
-#define LOAD_MYSQL57_USERS_WITH_DB_QUERY "SELECT \
-    user.user AS user, \
-    user.host AS host, \
-    user.authentication_string AS password, \
-    concat(user.user,user.host,user.authentication_string,user.Select_priv,IFNULL(db,'')) AS userdata, \
-    user.Select_priv AS anydb, \
-    db.db AS db \
-    FROM mysql.user LEFT JOIN mysql.db \
-    ON user.user=db.user AND user.host=db.host \
-    WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
-
-#define MYSQL_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM \
-    (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS tbl_count"
-
-#define MYSQL57_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM \
-    (" LOAD_MYSQL57_USERS_WITH_DB_QUERY ") AS tbl_count"
-
-#define LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * \
-    FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS t1 \
-    WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
-
-#define LOAD_MYSQL57_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * \
-    FROM (" LOAD_MYSQL57_USERS_WITH_DB_QUERY ") AS t1 \
-    WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
+/** The maximum possible length of the query */
+#define MAX_QUERY_STR_LEN strlen(MYSQL_USERS_COUNT_TEMPLATE_START \
+    MYSQL_USERS_COUNT_TEMPLATE_END MYSQL_USERS_DB_QUERY_TEMPLATE \
+    MYSQL_USERS_ORDER_BY) + strlen(MYSQL57_PASSWORD) * 2 + 1
 
 #define LOAD_MYSQL_DATABASE_NAMES "SELECT * \
     FROM ( (SELECT COUNT(1) AS ndbs \
@@ -140,8 +136,6 @@ static void *dbusers_valueread(int fd);
 static int dbusers_valuewrite(int fd, void *value);
 static int get_all_users(SERVICE *service, USERS *users);
 static int get_databases(SERVICE *, MYSQL *);
-static const char* get_mysql_users_db_count_query(char* server_version);
-static const char* get_mysql_users_query(char* server_version, bool include_root);
 static int get_users(SERVICE *service, USERS *users);
 static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
@@ -162,36 +156,66 @@ static void uh_keyfree(void* key);
 static int wildcard_db_grant(char* str);
 
 /**
- * Get the user data query.
+ * Get the user data query with databases
+ *
  * @param server_version Server version string
  * @param include_root Include root user
- * @return Users query
+ * @param buffer Destination where the query is written. Must be at least
+ * MAX_QUERY_STR_LEN bytes long
+ * @return Users query with databases included
  */
-static const char* get_mysql_users_query(char* server_version, bool include_root)
+static char* get_users_db_query(char* server_version, bool include_root, char* buffer)
 {
-    const char* rval;
-    if (strstr(server_version, "5.7."))
-    {
-        rval = include_root ? LOAD_MYSQL57_USERS_WITH_DB_QUERY :
-            LOAD_MYSQL57_USERS_WITH_DB_QUERY_NO_ROOT;
-    }
-    else
-    {
-        rval = include_root ? LOAD_MYSQL_USERS_WITH_DB_QUERY :
-            LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
-    }
-    return rval;
+    const char* password = strstr(server_version, "5.7.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+
+    snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_DB_QUERY_TEMPLATE
+             "%s" MYSQL_USERS_ORDER_BY, password, password,
+             include_root ? "" : USERS_QUERY_NO_ROOT);
+
+    return buffer;
 }
 
 /**
- * Get the user count query.
+ * Get the user data query
+ *
  * @param server_version Server version string
- * @return User vount query
- * */
-static const char* get_mysql_users_db_count_query(char* server_version)
+ * @param include_root Include root user
+ * @param buffer Destination where the query is written. Must be at least
+ * MAX_QUERY_STR_LEN bytes long
+ * @return Users query
+ */
+static char* get_users_query(char* server_version, bool include_root, char* buffer)
 {
-    return strstr(server_version, "5.7.") ?
-        MYSQL57_USERS_WITH_DB_COUNT : MYSQL_USERS_WITH_DB_COUNT;
+    const char* password = strstr(server_version, "5.7.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+
+    snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_QUERY_TEMPLATE "%s"
+             MYSQL_USERS_ORDER_BY, password, password,
+             include_root ? "" : USERS_QUERY_NO_ROOT);
+
+    return buffer;
+}
+
+/**
+ * Get the user count query
+ *
+ * @param server_version Server version string
+ * @param buffer Destination where the query is written. Must be at least
+ * MAX_QUERY_STR_LEN bytes long
+ * @return User count query
+ * */
+static char* get_usercount_query(char* server_version, bool include_root, char* buffer)
+{
+    const char* password = strstr(server_version, "5.7.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+
+    snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_COUNT_TEMPLATE_START
+             MYSQL_USERS_DB_QUERY_TEMPLATE "%s" MYSQL_USERS_ORDER_BY
+             MYSQL_USERS_COUNT_TEMPLATE_END, password, password,
+             include_root ? "" : USERS_QUERY_NO_ROOT);
+
+    return buffer;
 }
 
 /**
@@ -735,7 +759,7 @@ get_all_users(SERVICE *service, USERS *users)
     char *dpwd = NULL;
     int total_users = 0;
     SERVER_REF *server;
-    const char *users_query;
+    const char *userquery;
     char *tmp;
     unsigned char hash[SHA_DIGEST_LENGTH] = "";
     char *users_data = NULL;
@@ -853,9 +877,12 @@ get_all_users(SERVICE *service, USERS *users)
                 goto cleanup;
             }
         }
+
+        char querybuffer[MAX_QUERY_STR_LEN];
         /** Count users. Start with users and db grants for users */
-        const char *user_with_db_count = get_mysql_users_db_count_query(server->server->server_string);
-        if (mysql_query(con, user_with_db_count))
+        const char *usercount = get_usercount_query(server->server->server_string,
+                                                    service->enable_root, querybuffer);
+        if (mysql_query(con, usercount))
         {
             if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR)
             {
@@ -907,11 +934,11 @@ get_all_users(SERVICE *service, USERS *users)
             goto cleanup;
         }
 
-        users_query = get_mysql_users_query(server->server->server_string,
-                                            service->enable_root);
+        userquery = get_users_db_query(server->server->server_string,
+                                      service->enable_root, querybuffer);
 
         /* send first the query that fetches users and db grants */
-        if (mysql_query(con, users_query))
+        if (mysql_query(con, userquery))
         {
             /*
              * An error occurred executing the query
@@ -942,17 +969,10 @@ get_all_users(SERVICE *service, USERS *users)
 
                 MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
 
-                /* check for root user select */
-                if (service->enable_root)
-                {
-                    users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
-                }
-                else
-                {
-                    users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT " ORDER BY HOST DESC";
-                }
+                userquery = get_users_query(server->server->server_string,
+                                            service->enable_root, querybuffer);
 
-                if (mysql_query(con, users_query))
+                if (mysql_query(con, userquery))
                 {
                     MXS_ERROR("Loading users for service [%s] encountered "
                               "error: [%s], code %i",
@@ -1227,7 +1247,7 @@ get_users(SERVICE *service, USERS *users)
     char *dpwd;
     int total_users = 0;
     SERVER_REF *server;
-    const char *users_query;
+    const char *userquery;
     unsigned char hash[SHA_DIGEST_LENGTH] = "";
     char *users_data = NULL;
     int nusers = 0;
@@ -1341,9 +1361,11 @@ get_users(SERVICE *service, USERS *users)
         }
     }
 
-    const char *user_with_db_count = get_mysql_users_db_count_query(server->server->server_string);
+    char querybuffer[MAX_QUERY_STR_LEN];
+    const char *usercount = get_usercount_query(server->server->server_string,
+                                                service->enable_root, querybuffer);
     /** Count users. Start with users and db grants for users */
-    if (mysql_query(con, user_with_db_count))
+    if (mysql_query(con, usercount))
     {
         if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR)
         {
@@ -1392,10 +1414,10 @@ get_users(SERVICE *service, USERS *users)
         return -1;
     }
 
-    users_query = get_mysql_users_query(server->server->server_string,
-                                        service->enable_root);
+    userquery = get_users_db_query(server->server->server_string,
+                                  service->enable_root, querybuffer);
     /* send first the query that fetches users and db grants */
-    if (mysql_query(con, users_query))
+    if (mysql_query(con, userquery))
     {
         /*
          * An error occurred executing the query
@@ -1419,20 +1441,13 @@ get_users(SERVICE *service, USERS *users)
             /*
              * We have got ER_TABLEACCESS_DENIED_ERROR
              * try loading users from mysql.user without DB names.
-             */
+            */
             MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
 
-            /* check for root user select */
-            if (service->enable_root)
-            {
-                users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
-            }
-            else
-            {
-                users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT " ORDER BY HOST DESC";
-            }
+            userquery = get_users_query(server->server->server_string,
+                                        service->enable_root, querybuffer);
 
-            if (mysql_query(con, users_query))
+            if (mysql_query(con, userquery))
             {
                 MXS_ERROR("Loading users for service [%s] encountered error: "
                           "[%s], code %i", service->name, mysql_error(con),
