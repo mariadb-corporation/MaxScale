@@ -1,6 +1,29 @@
 /**
  * @file bug649.cpp regression case for bug 649 ("Segfault using RW Splitter")
- *
+ * @verbatim
+
+[RW_Router]
+type=service
+router=readconnroute
+servers=server1
+user=skysql
+passwd=skysql
+version_string=5.1-OLD-Bored-Mysql
+filters=DuplicaFilter
+
+[RW_Split]
+type=service
+router=readwritesplit
+servers=server1,server3,server2
+user=skysql
+passwd=skysql
+
+[DuplicaFilter]
+type=filter
+module=tee
+service=RW_Split
+
+   @endverbatim
  * - Connect to RWSplit
  * - create load on RWSplit (25 threads doing long INSERTs in the loop)
  * - block Mariadb server on Master node by Firewall
@@ -25,52 +48,75 @@ void *parall_traffic( void *ptr );
 
 int main(int argc, char *argv[])
 {
-    pthread_t parall_traffic1[100];
-    int check_iret[100];
+    int threads_num = 15;
+    pthread_t parall_traffic1[threads_num];
+    int check_iret[threads_num];
 
     Test = new TestConnections(argc, argv);
-    Test->set_timeout(100);
+    Test->set_timeout(10);
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     Test->connect_rwsplit();
 
+    Test->tprintf("Drop t1 if exists\n");
+    execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1;");
+
+    Test->stop_timeout();
+    sleep(5);
+
+    Test->set_timeout(20);
+    Test->tprintf("Create t1\n");
     Test->add_result(create_t1(Test->conn_rwsplit), "t1 creation Failed\n");
     create_insert_string(sql, 65000, 1);
 
-    for (int j = 0; j < 25; j++) {
+    Test->set_timeout(20);
+    for (int j = 0; j < threads_num; j++) {
         check_iret[j] = pthread_create( &parall_traffic1[j], NULL, parall_traffic, NULL);
     }
 
-    sleep(1);
-
+    sleep(5);
+    Test->set_timeout(30);
     Test->tprintf("Setup firewall to block mysql on master\n");
     Test->repl->block_node(0); fflush(stdout);
 
-    sleep(1);
+    Test->stop_timeout();
+    sleep(5);
 
+    Test->set_timeout(30);
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
-    execute_query(Test->conn_rwsplit, (char *) "show processlist;");fflush(stdout);
+    if (execute_query_silent(Test->conn_rwsplit, (char *) "show processlist;") == 0)
+    {
+        Test->add_result(1, "Failure is expected, but query is ok\n");
+    }
 
-    sleep(1);
+    Test->stop_timeout();
+    sleep(5);
 
+    Test->set_timeout(20);
     Test->tprintf("Setup firewall back to allow mysql\n");
     Test->repl->unblock_node(0); fflush(stdout);
+    Test->stop_timeout();
     sleep(10);
     exit_flag = 1;
-    sleep(10);
+    for (int i = 0; i < threads_num; i++)
+    {
+        Test->set_timeout(30);
+        pthread_join(parall_traffic1[i], NULL);
+        Test->tprintf("exit %d\n", i);
+    }
+    Test->stop_timeout();
+    sleep(5);
 
+    Test->set_timeout(20);
     Test->tprintf("Checking Maxscale is alive\n");
     Test->check_maxscale_alive();
 
-    Test->close_rwsplit();
-
-    Test->tprintf("Reconnecting and trying query to RWSplit\n"); fflush(stdout);
+    Test->set_timeout(20);
+    Test->tprintf("Reconnecting to RWSplit ...\n");
     Test->connect_rwsplit();
+    Test->tprintf("                        ... and trying query\n");
     Test->try_query(Test->conn_rwsplit, (char *) "show processlist;");
     Test->close_rwsplit();
-
-    exit_flag = 1;
-    sleep(10);
 
     Test->copy_all_logs(); return(Test->global_result);
 }
@@ -79,11 +125,18 @@ int main(int argc, char *argv[])
 void *parall_traffic( void *ptr )
 {
     MYSQL * conn;
-    while (exit_flag == 0) {
-        conn = Test->open_rwsplit_connection();
-        execute_query(conn, sql);
-        mysql_close(conn);
-        fflush(stdout);
+    conn = Test->open_rwsplit_connection();
+    if ((conn != NULL) && (mysql_errno(conn) == 0))
+    {
+        while (exit_flag == 0)
+        {
+            execute_query_silent(conn, sql);
+            fflush(stdout);
+        }
+    } else {
+        Test->tprintf("Error opening connection");
     }
+
+    if (conn != NULL ) {mysql_close(conn);}
     return NULL;
 }
