@@ -152,6 +152,7 @@ static int blr_slave_handle_status_variables(ROUTER_INSTANCE *router, ROUTER_SLA
 static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
 static void blr_send_slave_heartbeat(void *inst);
 static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -2026,60 +2027,6 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 	while (burst-- && burst_size > 0 &&
 		(record = blr_read_binlog(router, file, slave->binlog_pos, &hdr, read_errmsg)) != NULL)
 	{
-        uint32_t totalsize = hdr.event_size + 1;
-
-        if (totalsize >= 0x00ffffff)
-        {
-            /** Write first header with the OK byte */
-            GWBUF *head_part = gwbuf_alloc(5);
-            ptr = GWBUF_DATA(head_part);
-            encode_value(ptr, 0x00ffffff, 24);
-            ptr += 3;
-            *ptr++ = slave->seqno++;
-            *ptr++ = 0;
-            GWBUF* record_part = gwbuf_clone_portion(record, 0, 0x00ffffff - 1);
-            head_part = gwbuf_append(head_part, record_part);
-            record = gwbuf_consume(record, 0x00ffffff - 1);
-            written = slave->dcb->func.write(slave->dcb, head_part);
-            totalsize -= 0x00ffffff;
-
-            /** Write all packets that are larger than 0x00ffffff */
-            while (totalsize >= 0x00ffffff)
-            {
-                head_part = gwbuf_alloc(4);
-                ptr = GWBUF_DATA(head_part);
-                encode_value(ptr, 0x00ffffff, 24);
-                ptr += 3;
-                *ptr = slave->seqno++;
-                record_part = gwbuf_clone_portion(record, 0, 0x00ffffff);
-                head_part = gwbuf_append(head_part, record_part);
-                record = gwbuf_consume(record, 0x00ffffff);
-                written += slave->dcb->func.write(slave->dcb, head_part);
-                totalsize -= 0x00ffffff;
-            }
-
-            /** Write last packet which is smaller than 0x00ffffff */
-            head_part = gwbuf_alloc(4);
-            ptr = GWBUF_DATA(head_part);
-            encode_value(ptr, totalsize, 24);
-            ptr += 3;
-            *ptr = slave->seqno++;
-            head_part = gwbuf_append(head_part, record);
-            ss_dassert(totalsize - (gwbuf_length(head_part) - 4) == 0);
-            written += slave->dcb->func.write(slave->dcb, head_part);
-        }
-        else
-        {
-            head = gwbuf_alloc(5);
-            ptr = GWBUF_DATA(head);
-            encode_value(ptr, hdr.event_size + 1, 24);
-            ptr += 3;
-            *ptr++ = slave->seqno++;
-            *ptr++ = 0;		// OK
-            head = gwbuf_append(head, record);
-            slave->lastEventTimestamp = hdr.timestamp;
-            slave->lastEventReceived = hdr.event_type;
-
 		if (hdr.event_type == ROTATE_EVENT)
 		{
 			unsigned long beat1 = hkheartbeat;
@@ -2130,11 +2077,12 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 				MXS_ERROR("blr_open_binlog took %lu beats",
                                           hkheartbeat - beat1);
 		}
-		slave->stats.n_bytes += gwbuf_length(head);
-		written = slave->dcb->func.write(slave->dcb, head);
-        }
 
-		if (written && hdr.event_type != ROTATE_EVENT)
+        blr_send_event(slave, &hdr, (uint8_t*) record->start);
+        gwbuf_free(record);
+        record = NULL;
+
+		if (hdr.event_type != ROTATE_EVENT)
 		{
 			slave->binlog_pos = hdr.next_pos;
 		}
@@ -4720,4 +4668,3 @@ int filename_len = strlen(slave->binlogfile);
 	/* Write the packet */
 	return slave->dcb->func.write(slave->dcb, resp);
 }
-

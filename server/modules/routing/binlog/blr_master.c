@@ -100,6 +100,7 @@ static void blr_log_identity(ROUTER_INSTANCE *router);
 static void blr_distribute_error_message(ROUTER_INSTANCE *router, char *message, char *state, unsigned int err_code);
 
 int blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *buf);
+bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf);
 
 static int keepalive = 1;
 
@@ -999,11 +1000,9 @@ uint32_t 		partialpos = 0;
 					router->m_errmsg = NULL;
 
 					spinlock_release(&router->lock);
-#define SHOW_EVENTS
 #ifdef SHOW_EVENTS
 					printf("blr: len %lu, event type 0x%02x, flags 0x%04x, event size %d, event timestamp %lu\n", (unsigned long)len-4, hdr.event_type, hdr.flags, hdr.event_size, (unsigned long)hdr.timestamp);
 #endif
-
 					/*
 					 * First check that the checksum we calculate matches the
 					 * checksum in the packet we received.
@@ -1778,20 +1777,13 @@ unsigned int cstate;
 					if (router->send_slave_heartbeat)
 						slave->lastReply = time(0);
 
-					pkt = gwbuf_alloc(hdr->event_size + 5);
-					buf = GWBUF_DATA(pkt);
-					encode_value(buf, hdr->event_size + 1, 24);
-					buf += 3;
-					*buf++ = slave->seqno++;
-					*buf++ = 0;	// OK
-					memcpy(buf, ptr, hdr->event_size);
 					if (hdr->event_type == ROTATE_EVENT)
 					{
 						blr_slave_rotate(router, slave, ptr);
 					}
-					slave->stats.n_bytes += gwbuf_length(pkt);
-					slave->stats.n_events++;
-					slave->dcb->func.write(slave->dcb, pkt);
+
+					blr_send_event(slave, hdr, ptr);
+
 					spinlock_acquire(&slave->catch_lock);
 					if (hdr->event_type != ROTATE_EVENT)
 					{
@@ -2334,4 +2326,131 @@ int     n;
         }
         router->last_written += data_len;
         return n;
+}
+
+/**
+ * Send a replication event packet to a slave
+ *
+ * The first replication event packet contains one byte set to either
+ * 0x0, 0xfe or 0xff which signals what the state of the replication stream is.
+ * If the data pointed by @c buf is not the start of the replication header
+ * and part of the replication event is already sent, @c first must be set to
+ * false so that the first status byte is not sent again.
+ *
+ * @param slave Slave where the packet is sent to
+ * @param buf Buffer containing the data
+ * @param len Length of the data
+ * @param first If this is the first packet of a multi-packet event
+ * @return True on success, false when memory allocation fails
+ */
+bool blr_send_packet(ROUTER_SLAVE *slave, uint8_t *buf, uint32_t len, bool first)
+{
+    bool rval = true;
+    unsigned int datalen = len + (first ? 1 : 0);
+    GWBUF *buffer = gwbuf_alloc(datalen + MYSQL_HEADER_LEN);
+    if (buffer)
+    {
+        uint8_t *data = GWBUF_DATA(buffer);
+        encode_value(data, datalen, 24);
+        data += 3;
+        *data++ = slave->seqno++;
+
+        if (first)
+        {
+            *data++ = 0; // OK byte
+        }
+
+        if (len > 0)
+        {
+            memcpy(data, buf, len);
+        }
+
+        slave->stats.n_bytes += GWBUF_LENGTH(buffer);
+        slave->dcb->func.write(slave->dcb, buffer);
+    }
+    else
+    {
+        MXS_ERROR("failed to allocate %ld bytes of memory when writing an"
+                  " event.", datalen + MYSQL_HEADER_LEN);
+        rval = false;
+    }
+    return rval;
+}
+
+/**
+ * Send a single replication event to a slave
+ *
+ * This sends the complete replication event to a slave. If the event size exceeds
+ * the maximum size of a MySQL packet, it will be sent in multiple packets.
+ *
+ * @param slave Slave where the event is sent to
+ * @param hdr Replication header
+ * @param buf Pointer to the replication event as it was read from the disk
+ * @return True on success, false if memory allocation failed
+ */
+bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf)
+{
+    bool rval = true;
+
+    /** Check if the event and the OK byte fit into a single packet  */
+    if (hdr->event_size + 1 < MYSQL_PACKET_LENGTH_MAX)
+    {
+        rval = blr_send_packet(slave, buf, hdr->event_size, true);
+    }
+    else
+    {
+        int64_t len = hdr->event_size + 1;
+
+        if (blr_send_packet(slave, buf, MYSQL_PACKET_LENGTH_MAX - 1, true))
+        {
+            len -= MYSQL_PACKET_LENGTH_MAX;
+            buf += MYSQL_PACKET_LENGTH_MAX - 1;
+
+            /** Check for special case where length of the MySQL packet
+             * is exactly 0x00ffffff bytes long. In this case we need to send
+             * an empty packet to tell the slave that the whole event is sent. */
+            if (len == 0)
+            {
+                blr_send_packet(slave, buf, 0, false);
+            }
+        }
+        else
+        {
+            rval = false;
+        }
+
+        while (rval && len > 0)
+        {
+            /** Write rest of the event data */
+            uint64_t payload_len = MIN(MYSQL_PACKET_LENGTH_MAX, len);
+
+            if (blr_send_packet(slave, buf, payload_len, false))
+            {
+                /** The check for exactly 0x00ffffff bytes needs to be done
+                 * here as well */
+                if (len == MYSQL_PACKET_LENGTH_MAX)
+                {
+                    ss_dassert(len - MYSQL_PACKET_LENGTH_MAX == 0);
+                    blr_send_packet(slave, buf, 0, false);
+                }
+
+                len -= payload_len;
+                buf += payload_len;
+            }
+            else
+            {
+                rval = false;
+            }
+        }
+    }
+
+    slave->stats.n_events++;
+
+    if (!rval)
+    {
+        MXS_ERROR("Failed to send an event of %u bytes to slave at %s:%d.",
+                  hdr->event_size, slave->dcb->remote,
+                  ntohs(slave->dcb->ipv4.sin_port));
+    }
+    return rval;
 }
