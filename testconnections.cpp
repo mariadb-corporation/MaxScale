@@ -597,9 +597,9 @@ int TestConnections::check_maxscale_alive()
     return(global_result-gr);
 }
 
-bool TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bool rc_slave)
+int TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, bool rc_slave)
 {
-    bool rval = true;
+    int rval = 0;
     int rc;
 
     tprintf("Testing RWSplit, expecting %s\n", (rw_split ? "success" : "failure"));
@@ -607,7 +607,7 @@ bool TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, b
     if((rc == 0) != rw_split)
     {
         tprintf("Error: Query %s\n", (rw_split ? "failed" : "succeeded"));
-        rval = false;
+        rval++;
     }
 
     tprintf("Testing ReadConnRoute Master, expecting %s\n", (rc_master ? "success" : "failure"));
@@ -615,15 +615,15 @@ bool TestConnections::test_maxscale_connections(bool rw_split, bool rc_master, b
     if((rc == 0) != rc_master)
     {
         tprintf("Error: Query %s", (rc_master ? "failed" : "succeeded"));
-        rval = false;
+        rval++;
     }
 
-    tprintf("Testing ReadConnRoute Slave, expecting %s", (rc_slave ? "success" : "failure"));
+    tprintf("Testing ReadConnRoute Slave, expecting %s\n", (rc_slave ? "success" : "failure"));
     rc = execute_query(conn_slave, "select 1");
     if((rc == 0) != rc_slave)
     {
         tprintf("Error: Query %s", (rc_slave ? "failed" : "succeeded"));
-        rval = false;
+        rval++;
     }
     return rval;
 }

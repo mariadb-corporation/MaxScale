@@ -400,9 +400,9 @@ public:
      * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false for no connection. 
      * @param rc_master State of the MaxScale connection to Readconnroute Master. True for working connection, false for no connection.
      * @param rc_slave State of the MaxScale connection to Readconnroute Slave. True for working connection, false for no connection.
-     * @return  True if connections are in the expected state
+     * @return  0 if connections are in the expected state
      */
-    bool test_maxscale_connections(bool rw_split,
+    int test_maxscale_connections(bool rw_split,
                                    bool rc_master,
                                    bool rc_slave);
 
