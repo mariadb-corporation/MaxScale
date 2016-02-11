@@ -77,6 +77,14 @@ When value all is used, queries reading session variables can be routed to any a
 
 In above-mentioned case the user-defined variable would only be updated in the master where query would be routed due to `INSERT` statement.
 
+### `weightby`
+
+This parameter defines the name of the value which is used to calculate the
+weights of the servers. The value should be the name of a parameter in the
+server definitions and it should exist in all the servers used by this router.
+For more information, see the description of the `weightby` parameter in
+the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
+
 ## Router options
 
 **`router_options`** may include multiple **readwritesplit**-specific options. All the options are parameter-value pairs. All parameters listed in this section must be configured as a value in `router_options`.
@@ -134,14 +142,6 @@ disable_sescmd_history=true
 # Use the master for reads
 master_accept_reads=true
 ```
-
-### `weightby`
-
-This parameter defines the name of the value which is used to calculate the
-weights of the servers. The value should be the name of a parameter in the
-server definitions and it should exist in all the servers used by this router.
-For more information, see the description of the `weightby` parameter in
-the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
 ## Routing hints
 

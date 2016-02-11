@@ -24,7 +24,7 @@ Run MaxScale in the terminal process
 Relative or absolute pathname of MaxScale configuration file to load.
 .TP
 .BR -l "[\fIfile|shm\fB], --log=[\fIfile|shm\fB]"
-Log trace and debug logs to file or shared memory. The debug and trace logs are disabled by default and if enabled, will log to shared memory.
+Log to file or shared memory. The default is to log to file.
 .TP
 .BR -L " \fIPATH\fB, --logdir=\fIPATH\fB"
 Path to log file directory.
@@ -50,7 +50,7 @@ Run MaxScale as another user. The user ID and group ID of this user are used to 
 .BR -s " [\fIyes\fB|\fIno\fB], --syslog=[\fIyes\fB|\fIno\fB]"
 Log messages to syslog.
 .TP
-.BR -S " [\fIyes\fB|\fIno\fB], \fB--maxscalelog=[\fIyes\fB|\fIno\fB]"
+.BR -S " [\fIyes\fB|\fIno\fB], \fB--maxlog=[\fIyes\fB|\fIno\fB]"
 Log messages to MaxScale's own log files.
 .TP
 .BR "-v, --version"
@@ -61,12 +61,27 @@ Print full version information including the Git commit the binary was built fro
 .TP
 .BR "-?, --help"
 Show the help information for MaxScale and exit.
-
 .SH EXAMPLES
 Tutorials on GitHub:
-.UR https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md#tutorials
-.UE
+
+.RS
+.I https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md#tutorials
+.RE
 .SH SEE ALSO
+The MaxScale documentation on the MariaDB Knowledge Base:
+
+.RS
+.I https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale/
+.RE
+
 The MaxScale documentation on GitHub:
-.UR https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md
-.UE
+
+.RS
+.I https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md
+.RE
+.SH BUGS
+You can see a list of known bugs and report new bugs at:
+
+.RS
+.I https://mariadb.atlassian.net/browse/MXS
+.RE
