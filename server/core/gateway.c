@@ -165,25 +165,25 @@ static bool file_write_header(FILE* outfile);
 static bool file_write_footer(FILE* outfile);
 static void write_footer(void);
 static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
-static bool file_is_readable(char* absolute_pathname);
-static bool file_is_writable(char* absolute_pathname);
+static bool file_is_readable(const char* absolute_pathname);
+static bool file_is_writable(const char* absolute_pathname);
 bool handle_path_arg(char** dest, char* path, char* arg, bool rd, bool wr);
 static void set_log_augmentation(const char* value);
 static void usage(void);
 static char* get_expanded_pathname(
     char** abs_path,
-    char* input_path,
+    const char* input_path,
     const char* fname);
 static void print_log_n_stderr(
     bool do_log,
     bool do_stderr,
-    char* logstr,
-    char*  fprstr,
+    const char* logstr,
+    const char* fprstr,
     int eno);
 static bool resolve_maxscale_conf_fname(
     char** cnf_full_path,
-    char*  home_dir,
-    char*  cnf_file_arg);
+    const char* home_dir,
+    char* cnf_file_arg);
 
 static char* check_dir_access(char* dirname, bool, bool);
 static int set_user(const char* user);
@@ -553,8 +553,8 @@ static bool file_write_header(FILE* outfile)
 }
 
 static bool resolve_maxscale_conf_fname(char** cnf_full_path,
-                                        char*  home_dir,
-                                        char*  cnf_file_arg)
+                                        const char* home_dir,
+                                        char* cnf_file_arg)
 {
     bool  succp = false;
 
@@ -718,11 +718,11 @@ retblock:
  * @param eno Errno, if it is set, zero, otherwise
  */
 static void print_log_n_stderr(
-    bool     do_log,   /*< is printing to log enabled */
-    bool     do_stderr,/*< is printing to stderr enabled */
-    char*    logstr,   /*< string to be printed to log */
-    char*    fprstr,   /*< string to be printed to stderr */
-    int      eno)      /*< errno, if it is set, zero, otherwise */
+    bool        do_log,   /*< is printing to log enabled */
+    bool        do_stderr,/*< is printing to stderr enabled */
+    const char* logstr,   /*< string to be printed to log */
+    const char* fprstr,   /*< string to be printed to stderr */
+    int         eno)      /*< errno, if it is set, zero, otherwise */
 {
     char* log_err = "Error :";
     char* fpr_err = "*\n* Error :";
@@ -755,7 +755,7 @@ static void print_log_n_stderr(
  * @param absolute_pathname Path of the file or directory to check
  * @return True if file is readable
  */
-static bool file_is_readable(char* absolute_pathname)
+static bool file_is_readable(const char* absolute_pathname)
 {
     bool succp = true;
 
@@ -783,7 +783,7 @@ static bool file_is_readable(char* absolute_pathname)
  * @param absolute_pathname Path of the file or directory to check
  * @return True if file is writable
  */
-static bool file_is_writable(char* absolute_pathname)
+static bool file_is_writable(const char* absolute_pathname)
 {
     bool succp = true;
 
@@ -826,8 +826,8 @@ static bool file_is_writable(char* absolute_pathname)
  *
  */
 static char* get_expanded_pathname(char** output_path,
-                                   char*  relative_path,
-                                   const char*  fname)
+                                   const char* relative_path,
+                                   const char* fname)
 {
     char* cnf_file_buf = NULL;
     char* expanded_path;
