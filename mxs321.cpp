@@ -26,6 +26,7 @@ void create_and_check_connections(TestConnections* test, int target)
 
     for(int i=0;i<CONNECTIONS;i++)
     {
+        test->set_timeout(20);
         switch(target)
         {
             case 1:
@@ -44,10 +45,12 @@ void create_and_check_connections(TestConnections* test, int target)
 
     for(int i=0;i<CONNECTIONS;i++)
     {
+        test->set_timeout(20);
         if(stmt[i])
             mysql_close(stmt[i]);
     }
 
+    test->stop_timeout();
     sleep(10);
     char result[1024];
     char cmd[1024];
@@ -55,6 +58,7 @@ void create_and_check_connections(TestConnections* test, int target)
 
     for (int j = 0; j < test->repl->N; j++)
     {
+        test->set_timeout(30);
         sprintf(cmd, "show server server%d", j+1);
         test->add_result(get_maxadmin_param(test->maxscale_IP, (char*) "admin", test->maxadmin_password, cmd, (char*) "Current no. of conns:", result), "maxadmin command %s failed\n", cmd);
         result_d = 999;
@@ -74,25 +78,22 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(50);
 
+    Test->repl->execute_query_all_nodes((char *) "SET GLOBAL max_connections=100");
     Test->connect_maxscale();
     execute_query(Test->conn_rwsplit, "SET GLOBAL max_connections=100");
     Test->close_maxscale_connections();
     Test->stop_timeout();
 
     /** Create connections to readwritesplit */
-    Test->set_timeout(50);
     create_and_check_connections(Test, 1);
-    Test->stop_timeout();
 
     /** Create connections to readconnroute master */
-    Test->set_timeout(50);
     create_and_check_connections(Test, 2);
-    Test->stop_timeout();
 
     /** Create connections to readconnroute slave */
-    Test->set_timeout(50);
     create_and_check_connections(Test, 3);
-    Test->stop_timeout();
+
+    Test->repl->flush_hosts();
 
     Test->copy_all_logs();
     return(Test->global_result);

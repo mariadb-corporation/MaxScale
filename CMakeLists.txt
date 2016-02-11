@@ -169,9 +169,16 @@ add_test_executable(bug662.cpp bug662 replication)
 add_test_executable(bug664.cpp bug664 bug664)
 add_test_executable(bug681.cpp bug681 galera.bug681)
 add_test_executable(bug673.cpp bug673 bug673)
-#add_test_executable(bug670.cpp bug670 bug670)
+
+# Tee-filter related, fails:  query got stuck, log says  error  : Slave server 'server2': response differs from master's response. Closing connection due to inconsistent session state.
+# ReadConn router in master mode with TEE filter
+add_test_executable(bug670.cpp bug670 bug670)
+
+# FAKE_CODE assert, sending 'fail clientfd' maxadmin command (should it be removed from Maxscale?)
 #add_test_executable(bug539.cpp bug539 bug539)
-#add_test_executable(bug699.cpp bug699 galera)
+
+# valid case, problem is not resolved, tracked by https://mariadb.atlassian.net/browse/MXS-15
+add_test_executable(bug699.cpp bug699 galera)
 add_test_executable(bug705.cpp bug705 bug705)
 add_test_executable(setup_binlog_crc_none.cpp setup_binlog_crc_none setup_binlog)
 add_test_executable(setup_binlog_crc_32.cpp setup_binlog_crc_32 setup_binlog)
@@ -213,7 +220,7 @@ add_test_script(ssl_load_galera ssl_load_galera)
 #add_test_script(reload_server.cpp reload_server.sh add_server)
 #add_test_script(reload_service.cpp reload_service.sh add_service)
 add_test_executable(mxs314.cpp mxs314 galera)
-#add_test_executable(mxs321.cpp mxs321)
+add_test_executable(mxs321.cpp mxs321 replication)
 set_tests_properties(mxs314 PROPERTIES TIMEOUT 3600)
 add_test_executable(sql_queries.cpp sql_queries replication)
 set_tests_properties(sql_queries PROPERTIES TIMEOUT 3600)

@@ -171,19 +171,19 @@ int main(int argc, char *argv[])
 
     Test->tprintf("executing sql 100 times (ReadConn Slave)\n");
     for (i = 0; i < 100; i++)  {
-        Test->set_timeout(5);
+        Test->set_timeout(15);
         Test->try_query(Test->conn_slave, bug670_sql);
     }
 
     Test->tprintf("executing sql 100 times (ReadConn Master)\n");
     for (i = 0; i < 100; i++)  {
-        Test->set_timeout(5);
+        Test->set_timeout(15);
         Test->try_query(Test->conn_master, bug670_sql);
     }
 
     Test->tprintf("executing sql 100 times (RWSplit)\n");
     for (i = 0; i < 100; i++)  {
-        Test->set_timeout(5);
+        Test->set_timeout(15);
         Test->try_query(Test->conn_rwsplit, bug670_sql);
     }
 
