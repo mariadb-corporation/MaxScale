@@ -1767,7 +1767,7 @@ bool send_database_list(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
 {
     bool rval = false;
     spinlock_acquire(&client->shardmap->lock);
-    if (client->shardmap->state == SHMAP_READY)
+    if (client->shardmap->state != SHMAP_UNINIT)
     {
         struct string_array strarray;
         const int size = hashtable_size(client->shardmap->hash);
@@ -1849,12 +1849,7 @@ static int routeQuery(ROUTER* instance,
     char errbuf[26+MYSQL_DATABASE_MAXLEN];
     CHK_CLIENT_RSES(router_cli_ses);
 
-    /** Dirty read for quick check if router is closed. */
-    if (router_cli_ses->rses_closed)
-    {
-        rses_is_closed = true;
-    }
-    ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
+        ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
 
     if (!rses_begin_locked_router_action(router_cli_ses))
     {
@@ -4313,7 +4308,7 @@ int process_show_shards(ROUTER_CLIENT_SES* rses)
     int rval = 0;
 
     spinlock_acquire(&rses->shardmap->lock);
-    if (rses->shardmap->state == SHMAP_READY)
+    if(rses->shardmap->state != SHMAP_UNINIT)
     {
         HASHITERATOR* iter = hashtable_iterator(rses->shardmap->hash);
         struct shard_list sl;
@@ -4380,7 +4375,7 @@ bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses)
     char* target = NULL;
 
     spinlock_acquire(&router_cli_ses->shardmap->lock);
-    if (router_cli_ses->shardmap->state == SHMAP_READY)
+    if(router_cli_ses->shardmap->state != SHMAP_UNINIT)
     {
         target = hashtable_fetch(router_cli_ses->shardmap->hash, router_cli_ses->connect_db);
     }

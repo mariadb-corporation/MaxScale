@@ -66,6 +66,7 @@
 #include <gw.h>
 #include <gwdirs.h>
 #include <math.h>
+#include <version.h>
 
 static RSA *rsa_512 = NULL;
 static RSA *rsa_1024 = NULL;

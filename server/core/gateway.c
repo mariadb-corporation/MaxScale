@@ -930,27 +930,24 @@ static void usage(void)
     fprintf(stderr,
             "\nUsage : %s [OPTION]...\n\n"
             "  -d, --nodaemon             enable running in terminal process (default:disabled)\n"
-            "  -f, --config=FILE          relative|absolute pathname of MaxScale configuration file\n"
+            "  -f, --config=FILE          relative or absolute pathname of MaxScale configuration file\n"
             "                             (default:/etc/maxscale.cnf)\n"
-            "  -l, --log=[file|shm]       log to file or shared memory (default: shm)\n"
-            "  -L, --logdir=PATH          path to log file directory\n"
-            "                             (default: /var/log/maxscale)\n"
-            "  -A, --cachedir=PATH        path to cache directory\n"
-            "                             (default: /var/cache/maxscale)\n"
-            "  -B, --libdir=PATH          path to module directory\n"
-            "                             (default: /usr/lib64/maxscale)\n"
-            "  -C, --configdir=PATH       path to configuration file directory\n"
-            "                             (default: /etc/)\n"
+            "  -l, --log=[file|shm]       log to file or shared memory (default: file)\n"
+            "  -L, --logdir=PATH          path to log file directory (default: /var/log/maxscale)\n"
+            "  -A, --cachedir=PATH        path to cache directory (default: /var/cache/maxscale)\n"
+            "  -B, --libdir=PATH          path to module directory (default: /usr/lib64/maxscale)\n"
+            "  -C, --configdir=PATH       path to configuration file directory (default: /etc/)\n"
             "  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
             "                             (default: /var/cache/maxscale)\n"
-            "  -N, --language=PATH         path to errmsg.sys file\n"
-            "                             (default: /var/lib/maxscale)\n"
-            "  -P, --piddir=PATH          path to PID file directory\n"
-            "                             (default: /var/run/maxscale)\n"
+            "  -N, --language=PATH         path to errmsg.sys file (default: /var/lib/maxscale)\n"
+            "  -P, --piddir=PATH          path to PID file directory (default: /var/run/maxscale)\n"
             "  -U, --user=USER            run MaxScale as another user.\n"
             "                             The user ID and group ID of this user are used to run MaxScale.\n"
             "  -s, --syslog=[yes|no]      log messages to syslog (default:yes)\n"
             "  -S, --maxlog=[yes|no]      log messages to MaxScale log (default: yes)\n"
+            "  -G, --log_augmentation=0|1 augment messages with the name of the function where\n"
+            "                             the message was logged (default: 0). Primarily for \n"
+            "                             development purposes.\n"
             "  -v, --version              print version info and exit\n"
             "  -V, --version-full         print full version info and exit\n"
             "  -?, --help                 show this help\n"
@@ -1086,7 +1083,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:G:",
+    while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:G:N:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;

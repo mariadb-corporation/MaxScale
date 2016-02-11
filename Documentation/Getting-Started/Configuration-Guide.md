@@ -771,6 +771,8 @@ and short notations
 192.%.%
 192.168.%
 
+Note that currently wildcards are only supported in conjunction with IP-addresses, not with domain names.
+
 ## Error Reporting
 
 MaxScale is designed to be executed as a service, therefore all error reports, including configuration errors, are written to the MaxScale error log file. By default, MaxScale will log to a file in `/var/log/maxscale`, the only exception to this is if the log directory is not writable, in which case a message is sent to the standard error descriptor.
