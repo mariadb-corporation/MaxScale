@@ -29,14 +29,7 @@ chmod 0755 @MAXSCALE_VARDIR@/lib/maxscale
 chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
 chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
 
-# Copy init.d script and ldconfig file
-if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
-then
-    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
-else
-    echo "Could not find init script: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" >& 2
-fi
-
+# Install ldconfig files
 if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" ]
 then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf /etc/ld.so.conf.d/
@@ -44,7 +37,7 @@ else
     echo "Could not find ldconfig file: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" >& 2
 fi
 
-# Only copy the scripts if systemd folder and systemctl executable are found
+# Only copy the service files if the systemd folder and systemctl executable are found
 if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && [ -x "$(which systemctl)" ]
 then
     if [ -d "/lib/systemd/system"  ]
@@ -57,7 +50,13 @@ then
         systemctl daemon-reload
     fi
 else
-    echo "Could not find systemd service file: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service" >& 2
+    # If systemd is not present, use init.d scripts
+    if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
+    then
+        cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
+    else
+        echo "Could not find init script: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" >& 2
+    fi
 fi
 
 # If no maxscale.cnf file is found in /etc, copy the template file there
