@@ -257,6 +257,9 @@ add_test_script(load_balancing_pers1 load_pers1)
 add_test_script(load_balancing_pers10 load_pers10)
 add_test_script(load_balancing_galera_pers1 load_galera_pers1)
 add_test_script(load_balancing_galera_pers10 load_galera_pers10)
+
+# https://mariadb.atlassian.net/browse/MXS-576 - it is possible to set negative value for
+# 'persistpoolmax' without any warning
 #add_test_executable(bad_pers.cpp bad_pers bad_pers)
 add_test_executable(mxs564_big_dump.cpp mxs564_big_dump galera)
 add_test_executable_notest(long_sysbench.cpp long_sysbench replication)

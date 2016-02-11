@@ -1,7 +1,8 @@
 
 /**
  * @file mxs559_block_master Playing with blocking and unblocking Master
-
+ * It does not reproduce the bug in reliavle way, but it is a good
+ * load and robustness test
  * - create load on Master RWSplit
  * - block and unblock Master in the loop
  * - repeat with different time between block/unblock
