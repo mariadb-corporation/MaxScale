@@ -4609,13 +4609,14 @@ GWBUF		*resp;
 uint8_t		*ptr;
 int len = BINLOG_EVENT_HDR_LEN;
 uint32_t	chksum;
+int filename_len = strlen(slave->binlogfile);
 
 	/* Add CRC32 4 bytes */
 	if (!slave->nocrc)
 		len +=4;
 
 	/* add binlogname to data content len */
-	len += strlen(slave->binlogfile);
+	len += filename_len;
 
 	/**
 	 * Alloc buffer for network binlog stream:
@@ -4659,9 +4660,9 @@ uint32_t	chksum;
 	ptr = blr_build_header(resp, &hdr);
 
 	/* Copy binlog name */
-	memcpy(ptr, slave->binlogfile, BINLOG_FNAMELEN);
+	memcpy(ptr, slave->binlogfile, filename_len);
 
-	ptr += strlen(slave->binlogfile);
+	ptr += filename_len;
 
 	/* Add the CRC32 */
 	if (!slave->nocrc)
