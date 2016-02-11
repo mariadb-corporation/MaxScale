@@ -979,7 +979,6 @@ uint32_t 		partialpos = 0;
 					}
                     else if ((hdr.event_size + 1) >= MYSQL_PACKET_LENGTH_MAX)
                     {
-                        MXS_INFO("Transmission of event > 16MB");
                         router->master_event_state = BLR_EVENT_STARTED;
 
                         /** Store the header for later use */
