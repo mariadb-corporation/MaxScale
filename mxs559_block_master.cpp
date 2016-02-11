@@ -1,12 +1,11 @@
 
 /**
- * @file mxs548_short_session_change_user.cpp MXS-548 regression case ("Maxscale crash")
- * - configure 2 backend servers (one Master, one Slave)
- * - create 'user' with password 'pass2'
- * - create load on Master (3 threads are inserting data into 't1' in the loop)
- * - in 40 parallel threads open connection, execute change_user to 'user', execute change_user to default user, close connection
- * - repeat test first only for RWSplit and second for all routers
- * - check logs for lack of "Unable to write to backend 'server2' due to authentication failure" errors
+ * @file mxs559_block_master Playing with blocking and unblocking Master
+
+ * - create load on Master RWSplit
+ * - block and unblock Master in the loop
+ * - repeat with different time between block/unblock
+ * - check logs for lack of errors "authentication failure", "handshake failure"
  * - check for lack of crashes in the log
  */
 
@@ -32,17 +31,24 @@ int main(int argc, char *argv[])
     TestConnections * Test = new TestConnections(argc, argv);
     Test->set_timeout(20);
 
-    int load_threads_num = 1;
+    int load_threads_num = 3;
     openclose_thread_data data_master[load_threads_num];
 
     int i;
 
     int run_time = 300;
     int iterations = 25;
+    int t_iterations = 3;
+    int tt[t_iterations];
+
+    tt[0] = 1;
+    tt[1] = 5;
+    tt[2] = 10;
 
     if (Test->smoke) {
         run_time = 10;
         iterations = 5;
+        t_iterations = 1;
     }
 
     for (i = 0; i < load_threads_num; i++) {
@@ -69,16 +75,19 @@ int main(int argc, char *argv[])
         iret_master[i] = pthread_create( &thread_master[i], NULL, query_thread, &data_master[i]);
     }
 
-    for (i = 0; i < iterations; i++)
+    for (int j = 0; j < t_iterations; j++)
     {
-        Test->set_timeout(20);
-        Test->repl->block_node(0);
-        sleep(1);
-        Test->set_timeout(20);
-        Test->repl->unblock_node(0);
-        sleep(1);
-        Test->set_timeout(20);
-        Test->repl->flush_hosts();
+        for (i = 0; i < iterations; i++)
+        {
+            Test->set_timeout(30);
+            Test->repl->block_node(0);
+            sleep(tt[j]);
+            Test->set_timeout(30);
+            Test->repl->unblock_node(0);
+            sleep(tt[j]);
+            Test->set_timeout(30);
+            Test->repl->flush_hosts();
+        }
     }
 
     Test->set_timeout(120);
@@ -112,6 +121,7 @@ void *query_thread( void *ptr )
     openclose_thread_data * data = (openclose_thread_data *) ptr;
     char sql[1000000];
 
+    sleep(data->thread_id);
     create_insert_string(sql, 50000, 2);
     if (data->conn1 != NULL)
     {
