@@ -922,7 +922,7 @@ uint32_t 		partialpos = 0;
 		 * copy if the message straddles GWBUF's.
 		 */
 
-		if (len < BINLOG_EVENT_HDR_LEN)
+		if (len < BINLOG_EVENT_HDR_LEN && router->master_event_state != BLR_EVENT_ONGOING)
 		{
 		char	*msg = "";
 
@@ -1040,7 +1040,7 @@ uint32_t 		partialpos = 0;
 			/* pending large event */
 			if (router->master_event_state != BLR_EVENT_DONE)
 			{
-				if (len < MYSQL_PACKET_LENGTH_MAX)
+				if (len - MYSQL_HEADER_LEN < MYSQL_PACKET_LENGTH_MAX)
 				{
 					/** This is the last packet, we can now proceed to distribute
 					 * the event */
@@ -1277,8 +1277,13 @@ uint32_t 		partialpos = 0;
 							spinlock_release(&router->binlog_lock);
 						}
 
-						/* current event is being written to disk file */
-						if (blr_write_binlog_record(router, &hdr, len - offset, ptr) == 0)
+						/* Current event is being written to disk file.
+						 * It is possible for an empty packet to be sent if an
+						 * event is exactly 2^24 bytes long. In this case the
+						 * empty packet should be discarded. */
+
+						if (len > MYSQL_HEADER_LEN + 1 &&
+							blr_write_binlog_record(router, &hdr, len - offset, ptr) == 0)
 						{
 							/*
 							 * Failed to write to the
