@@ -351,6 +351,14 @@ unregister_module(const char *module)
         {
             ptr = ptr->next;
         }
+
+        /*<
+         * Remove the module to be be freed from the list.
+         */
+        if (ptr && (ptr->next == mod))
+        {
+            ptr->next = ptr->next->next;
+        }
     }
 
     /*<
