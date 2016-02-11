@@ -48,18 +48,21 @@ void *parall_traffic( void *ptr );
 
 int main(int argc, char *argv[])
 {
-    int threads_num = 15;
+    int threads_num = 20;
     pthread_t parall_traffic1[threads_num];
     int check_iret[threads_num];
 
     Test = new TestConnections(argc, argv);
+    int time_to_run = (Test->smoke) ? 10 : 30;
     Test->set_timeout(10);
 
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     Test->connect_rwsplit();
 
+    Test->repl->connect();
     Test->tprintf("Drop t1 if exists\n");
-    execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS t1;");
+    execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
+    Test->repl->close_connections();
 
     Test->stop_timeout();
     sleep(5);
@@ -73,14 +76,14 @@ int main(int argc, char *argv[])
     for (int j = 0; j < threads_num; j++) {
         check_iret[j] = pthread_create( &parall_traffic1[j], NULL, parall_traffic, NULL);
     }
-
-    sleep(5);
+    Test->stop_timeout();
+    sleep(time_to_run);
     Test->set_timeout(30);
     Test->tprintf("Setup firewall to block mysql on master\n");
     Test->repl->block_node(0); fflush(stdout);
 
     Test->stop_timeout();
-    sleep(5);
+    sleep(time_to_run);
 
     Test->set_timeout(30);
     Test->tprintf("Trying query to RWSplit, expecting failure, but not a crash\n");
@@ -90,13 +93,13 @@ int main(int argc, char *argv[])
     }
 
     Test->stop_timeout();
-    sleep(5);
+    sleep(time_to_run);
 
-    Test->set_timeout(20);
+    //Test->set_timeout(20);
     Test->tprintf("Setup firewall back to allow mysql\n");
     Test->repl->unblock_node(0); fflush(stdout);
     Test->stop_timeout();
-    sleep(10);
+    sleep(time_to_run);
     exit_flag = 1;
     for (int i = 0; i < threads_num; i++)
     {
