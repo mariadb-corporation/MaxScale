@@ -22,6 +22,8 @@
  *
  */
 
+#include <sys/auxv.h>
+#include <elf.h>
 #include <log_manager.h>
 #include <modules.h>
 #include <query_classifier.h>
@@ -86,53 +88,48 @@ static void end_and_unload_classifier(QUERY_CLASSIFIER* classifier, const char* 
 static bool resolve_pp_path(char* path, int size)
 {
     bool success = false;
-    ssize_t sz = readlink("/proc/self/exe", path, size);
+    const char* exe_path = (const char*) getauxval(AT_EXECFN);
+    size_t len = strlen(exe_path);
 
-    if (sz >= 0)
+    if (len < size)
     {
-        if (sz == size)
+        strcpy(path, exe_path);
+        char* s = path + len;
+
+        // Find the last '/'.
+        while ((*s != '/') && (s != path))
         {
-            MXS_ERROR("The full path of the current executable does not fit in a "
-                      "buffer of %d bytes.", size);
+            --s;
+            --len;
+        }
+
+        if (*s == '/')
+        {
+            ++s;
+            ++len;
+        }
+
+        *s = 0;
+
+        int required_size = len + sizeof(MAXPP) + 1;
+
+        if (required_size <= size)
+        {
+            strcat(path, MAXPP);
+
+            MXS_NOTICE("Path of plugin process executable: %s", path);
+            success = true;
         }
         else
         {
-            char* s = path + sz;
-
-            // Find the last '/'.
-            while ((*s != '/') && (s != path))
-            {
-                --s;
-                --sz;
-            }
-
-            if (*s == '/')
-            {
-                ++s;
-                ++sz;
-            }
-
-            *s = 0;
-
-            int required_size = sz + sizeof(MAXPP) + 1;
-
-            if (required_size + 1 <= size)
-            {
-                strcat(path, MAXPP);
-
-                MXS_NOTICE("Path of plugin process executable: %s", path);
-                success = true;
-            }
-            else
-            {
-                MXS_ERROR("The full path of the plugin process executable does "
-                          "not fit into a buffer of %d bytes. ", size);
-            }
+            MXS_ERROR("The full path of the plugin process executable does "
+                      "not fit into a buffer of %d bytes. ", size);
         }
     }
     else
     {
-        MXS_ERROR("Could not establish location of current process.");
+        MXS_ERROR("The full path of the current executable does not fit in a "
+                  "buffer of %d bytes.", size);
     }
 
     return success;
