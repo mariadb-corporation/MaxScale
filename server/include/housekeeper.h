@@ -53,9 +53,9 @@ typedef struct hktask
 } HKTASK;
 
 extern void hkinit();
-extern int  hktask_add(char *name, void (*task)(void *), void *data, int frequency);
-extern int  hktask_oneshot(char *name, void (*task)(void *), void *data, int when);
-extern int  hktask_remove(char *name);
+extern int  hktask_add(const char *name, void (*task)(void *), void *data, int frequency);
+extern int  hktask_oneshot(const char *name, void (*task)(void *), void *data, int when);
+extern int  hktask_remove(const char *name);
 extern void hkshutdown();
 extern void hkshow_tasks(DCB *pdcb);
 

@@ -89,7 +89,7 @@ hkinit()
  *                      if the task was added, otherwise 0
  */
 int
-hktask_add(char *name, void (*taskfn)(void *), void *data, int frequency)
+hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
 {
     HKTASK *task, *ptr;
 
@@ -155,7 +155,7 @@ hktask_add(char *name, void (*taskfn)(void *), void *data, int frequency)
  *
  */
 int
-hktask_oneshot(char *name, void (*taskfn)(void *), void *data, int when)
+hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
 {
     HKTASK *task, *ptr;
 
@@ -208,7 +208,7 @@ hktask_oneshot(char *name, void (*taskfn)(void *), void *data, int when)
  * @return              Returns 0 if the task could not be removed
  */
 int
-hktask_remove(char *name)
+hktask_remove(const char *name)
 {
     HKTASK *ptr, *lptr = NULL;
 
