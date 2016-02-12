@@ -1354,9 +1354,18 @@ uint32_t 		partialpos = 0;
 							{
 								/** Read the complete event from the disk */
 								GWBUF *record = blr_read_events_from_pos(router, old_pos, &hdr, hdr.next_pos);
-								uint8_t *data = GWBUF_DATA(record);
-								blr_distribute_binlog_record(router, &hdr, data);
-								gwbuf_free(record);
+                                if (record)
+                                {
+                                    uint8_t *data = GWBUF_DATA(record);
+                                    blr_distribute_binlog_record(router, &hdr, data);
+                                    gwbuf_free(record);
+                                }
+                                else
+                                {
+                                    MXS_ERROR("Failed to read event at position"
+                                              "%lu with a size of %u bytes.",
+                                              old_pos, hdr.event_size);
+                                }
 							}
 							else
 							{
