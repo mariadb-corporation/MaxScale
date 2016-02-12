@@ -31,7 +31,7 @@
  */
 #include <dcb.h>
 
-#define ADMIN_SALT "MS"
+#define ADMIN_SALT "$1$MXS"
 
 extern int  admin_verify(char *, char *);
 extern char *admin_add_user(char *, char *);
