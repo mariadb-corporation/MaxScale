@@ -424,6 +424,7 @@ typedef struct router_instance {
 	int			trx_safe;	/*< Detect and handle partial transactions */
 	int			pending_transaction; /*< Pending transaction */
 	enum blr_event_state master_event_state; /*< Packet read state */
+	uint32_t	stored_checksum; /*< The current value of the checksum */
 	REP_HEADER	stored_header; /*< Relication header of the event the master is sending */
 	uint64_t		last_safe_pos; /* last committed transaction */
 	char			binlog_name[BINLOG_FNAMELEN+1];
