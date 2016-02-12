@@ -44,6 +44,7 @@
 #include <stdint.h>
 #include <memlog.h>
 #include <zlib.h>
+#include <mysql_client_server_protocol.h>
 
 #define BINLOG_FNAMELEN		255
 #define BLR_PROTOCOL		"MySQLBackend"
@@ -425,6 +426,10 @@ typedef struct router_instance {
 	int			pending_transaction; /*< Pending transaction */
 	enum blr_event_state master_event_state; /*< Packet read state */
 	uint32_t	stored_checksum; /*< The current value of the checksum */
+	uint8_t	partial_checksum[MYSQL_CHECKSUM_LEN]; /*< The partial value of the checksum
+										  * received from the master */
+	uint8_t		partial_checksum_bytes; /*< How many bytes of the checksum we have read	 */
+	uint64_t	checksum_size; /*< Data size for the checksum */
 	REP_HEADER	stored_header; /*< Relication header of the event the master is sending */
 	uint64_t		last_safe_pos; /* last committed transaction */
 	char			binlog_name[BINLOG_FNAMELEN+1];

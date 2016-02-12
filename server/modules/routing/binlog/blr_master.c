@@ -101,6 +101,7 @@ static void blr_distribute_error_message(ROUTER_INSTANCE *router, char *message,
 
 int blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *buf);
 bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf);
+void extract_checksum(ROUTER_INSTANCE* router, uint8_t *cksumptr, uint8_t len);
 
 static int keepalive = 1;
 
@@ -1033,15 +1034,24 @@ uint32_t 		partialpos = 0;
                         if (router->master_chksum)
                         {
                             router->stored_checksum = crc32(0L, NULL, 0);
+                            router->checksum_size = hdr.event_size - MYSQL_CHECKSUM_LEN;
+                            router->partial_checksum_bytes = 0;
                             extra_bytes = MYSQL_HEADER_LEN + 1;
                         }
                     }
 
                     if (router->master_chksum)
                     {
+                        uint32_t size = MIN(len - extra_bytes, router->checksum_size);
                         router->stored_checksum = crc32(router->stored_checksum,
                                                         ptr + offset,
-                                                        len - extra_bytes);
+                                                        size);
+                        router->checksum_size -= size;
+
+                        if(router->checksum_size == 0 && size < len - offset)
+                        {
+                            extract_checksum(router, ptr + offset + size, len - offset - size);
+                        }
                     }
 
                     if (blr_write_data_into_binlog(router, len - offset, ptr + offset) == 0)
@@ -1076,26 +1086,49 @@ uint32_t 		partialpos = 0;
                     /** Initialize the checksum and set the pointer offset to
                      * the first byte after the header and OK byte */
                     router->stored_checksum = crc32(0L, NULL, 0);
+                    router->checksum_size = hdr.event_size - MYSQL_CHECKSUM_LEN;
+                    router->partial_checksum_bytes = 0;
                     offset = MYSQL_HEADER_LEN + 1;
                     size = len - MYSQL_HEADER_LEN - MYSQL_CHECKSUM_LEN - 1;
                 }
 
-                router->stored_checksum = crc32(router->stored_checksum,
-                                                ptr + offset, size);
+                size = MIN(size, router->checksum_size);
 
-                pktsum = EXTRACT32(ptr + len - MYSQL_CHECKSUM_LEN);
-                if (pktsum != router->stored_checksum)
+                if (router->checksum_size > 0)
                 {
-                    router->stats.n_badcrc++;
-                    free(msg);
-                    msg = NULL;
-                    MXS_ERROR("%s: Checksum error in event from master, "
-                              "binlog %s @ %lu. Closing master connection.",
-                              router->service->name, router->binlog_name,
-                              router->current_pos);
-                    blr_master_close(router);
-                    blr_master_delayed_connect(router);
-                    return;
+                    router->stored_checksum = crc32(router->stored_checksum,
+                                                    ptr + offset,
+                                                    size);
+                    router->checksum_size -= size;
+                }
+
+                if(router->checksum_size == 0 && size < len - offset)
+                {
+                    extract_checksum(router, ptr + offset + size, len - offset - size);
+                }
+
+                if (router->partial_checksum_bytes == MYSQL_CHECKSUM_LEN)
+                {
+                    pktsum = EXTRACT32(&router->partial_checksum);
+                    if (pktsum != router->stored_checksum)
+                    {
+                        router->stats.n_badcrc++;
+                        free(msg);
+                        msg = NULL;
+                        MXS_ERROR("%s: Checksum error in event from master, "
+                            "binlog %s @ %lu. Closing master connection.",
+                                  router->service->name, router->binlog_name,
+                                  router->current_pos);
+                        blr_master_close(router);
+                        blr_master_delayed_connect(router);
+                        return;
+                    }
+                }
+                else
+                {
+                    pkt = gwbuf_consume(pkt, len);
+                    pkt_length -= len;
+                    continue;
                 }
             }
 
@@ -2496,4 +2529,15 @@ bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf)
                   ntohs(slave->dcb->ipv4.sin_port));
     }
     return rval;
+}
+
+void extract_checksum(ROUTER_INSTANCE* router, uint8_t *cksumptr, uint8_t len)
+{
+    uint8_t *ptr = cksumptr;
+    while (ptr - cksumptr < len)
+    {
+        router->partial_checksum[router->partial_checksum_bytes] = *ptr;
+        ptr++;
+        router->partial_checksum_bytes++;
+    }
 }
