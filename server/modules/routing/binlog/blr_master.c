@@ -1333,7 +1333,7 @@ uint32_t 		partialpos = 0;
 						 * event is exactly 2^24 bytes long. In this case the
 						 * empty packet should be discarded. */
 
-						if (len > MYSQL_HEADER_LEN + 1 &&
+						if (len > MYSQL_HEADER_LEN &&
 							blr_write_binlog_record(router, &hdr, len - offset, ptr) == 0)
 						{
 							/*
@@ -1377,7 +1377,6 @@ uint32_t 		partialpos = 0;
 
 						if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0)) {
 
-							uint64_t old_pos = router->binlog_position;
 							router->binlog_position = router->current_pos;
 							router->current_safe_event = router->current_pos;
 
@@ -1386,7 +1385,7 @@ uint32_t 		partialpos = 0;
 							if (router->master_event_state == BLR_EVENT_COMPLETE)
 							{
 								/** Read the complete event from the disk */
-								GWBUF *record = blr_read_events_from_pos(router, old_pos, &hdr, hdr.next_pos);
+								GWBUF *record = blr_read_events_from_pos(router, router->last_event_pos, &hdr, hdr.next_pos);
                                 if (record)
                                 {
                                     uint8_t *data = GWBUF_DATA(record);
@@ -1397,7 +1396,7 @@ uint32_t 		partialpos = 0;
                                 {
                                     MXS_ERROR("Failed to read event at position"
                                               "%lu with a size of %u bytes.",
-                                              old_pos, hdr.event_size);
+                                              router->last_event_pos, hdr.event_size);
                                 }
 							}
 							else
