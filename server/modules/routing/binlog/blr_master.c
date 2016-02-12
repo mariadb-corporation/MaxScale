@@ -1344,13 +1344,25 @@ uint32_t 		partialpos = 0;
 
 						if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0)) {
 
+							uint64_t old_pos = router->binlog_position;
 							router->binlog_position = router->current_pos;
 							router->current_safe_event = router->current_pos;
 
 							spinlock_release(&router->binlog_lock);
 
-							/* Now distribute events */
-							blr_distribute_binlog_record(router, &hdr, ptr);
+							if (router->master_event_state == BLR_EVENT_COMPLETE)
+							{
+								/** Read the complete event from the disk */
+								GWBUF *record = blr_read_events_from_pos(router, old_pos, &hdr, hdr.next_pos);
+								uint8_t *data = GWBUF_DATA(record);
+								blr_distribute_binlog_record(router, &hdr, data);
+								gwbuf_free(record);
+							}
+							else
+							{
+								/* Now distribute events */
+								blr_distribute_binlog_record(router, &hdr, ptr);
+							}
 						} else {
 							/**
 							 * If transaction is closed:
