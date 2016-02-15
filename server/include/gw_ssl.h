@@ -34,6 +34,8 @@
 
 #include <gw_protocol.h>
 
+struct dcb;
+
 enum
 {
     SERVICE_SSLV3,
@@ -46,6 +48,13 @@ enum
     SERVICE_TLS_MAX,
     SERVICE_SSL_TLS_MAX
 };
+
+/**
+ * Return codes for SSL authentication checks
+ */
+#define SSL_AUTH_CHECKS_OK 0
+#define SSL_ERROR_CLIENT_NOT_SSL 1
+#define SSL_ERROR_ACCEPT_FAILED 2
 
 /**
  * The ssl_listener structure is used to aggregate the SSL configuration items
@@ -64,4 +73,10 @@ typedef struct ssl_listener
     bool ssl_init_done;                 /*< If SSL has already been initialized for this service */
 } SSL_LISTENER;
 
-#endif
+int ssl_authenticate_client(struct dcb *dcb, bool is_capable);
+bool ssl_is_connection_healthy(struct dcb *dcb);
+bool ssl_check_data_to_process(struct dcb *dcb);
+bool ssl_required_by_dcb(struct dcb *dcb);
+bool ssl_required_but_not_negotiated(struct dcb *dcb);
+
+#endif /* _GW_SSL_H */

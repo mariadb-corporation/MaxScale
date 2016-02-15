@@ -33,9 +33,10 @@
  * 					and repository to gw_check_mysql_scramble_data()
  * 					It's now possible to specify a different users' table than
  * 					dcb->service->users default
- * 26-02-2014	Massimiliano Pinto	Removed previouvsly added parameters to gw_check_mysql_scramble_data() and
+ * 26-02-2014	Massimiliano Pinto	Removed previously added parameters to gw_check_mysql_scramble_data() and
  * 					gw_find_mysql_user_password_sha1()
  * 28-02-2014	Massimiliano Pinto	MYSQL_DATABASE_MAXLEN,MYSQL_USER_MAXLEN moved to dbusers.h
+ * 07-02-2016   Martin Brampton     Extend MYSQL_session type; add MYSQL_AUTH_SUCCEEDED
  *
  */
 
@@ -91,9 +92,12 @@
 #define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
+#define MYSQL_AUTH_SUCCEEDED 0
 #define MYSQL_FAILED_AUTH 1
 #define MYSQL_FAILED_AUTH_DB 2
 #define MYSQL_FAILED_AUTH_SSL 3
+#define MYSQL_AUTH_SSL_INCOMPLETE 4
+#define MYSQL_AUTH_NO_SESSION 5
 
 typedef enum {
         MYSQL_ALLOC,                        /* Initial state of protocol auth state */
@@ -132,9 +136,11 @@ typedef struct mysql_session {
 #if defined(SS_DEBUG)
 	skygw_chk_t	myses_chk_top;
 #endif
-        uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /*< SHA1(passowrd) */
+        uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /*< SHA1(password) */
         char user[MYSQL_USER_MAXLEN+1];                 /*< username       */
         char db[MYSQL_DATABASE_MAXLEN+1];               /*< database       */
+        int  auth_token_len;                            /*< token length   */
+        uint8_t *auth_token;                            /*< token          */
 #if defined(SS_DEBUG)
 	skygw_chk_t	myses_chk_tail;
 #endif
@@ -306,7 +312,6 @@ typedef struct {
         unsigned        long tid;                         /*< MySQL Thread ID, in
         * handshake */
         unsigned int    charset;                          /*< MySQL character set at connect time */
-        bool use_ssl;
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;
 #endif
@@ -370,14 +375,6 @@ int gw_find_mysql_user_password_sha1(
         char *username,
         uint8_t *gateway_password,
 	DCB *dcb);
-int gw_check_mysql_scramble_data(
-        DCB *dcb,
-        uint8_t *token,
-        unsigned int token_len,
-        uint8_t *scramble,
-        unsigned int scramble_len,
-        char *username,
-        uint8_t *stage1_hash);
 int mysql_send_auth_error (
         DCB *dcb,
         int packet_number,

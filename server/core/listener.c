@@ -36,6 +36,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <listener.h>
+#include <gw_ssl.h>
 #include <gw_protocol.h>
 #include <log_manager.h>
 

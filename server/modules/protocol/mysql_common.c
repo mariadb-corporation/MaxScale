@@ -41,7 +41,8 @@
  * 03/10/2014   Massimiliano Pinto      Added netmask for wildcard in IPv4 hosts.
  * 24/10/2014   Massimiliano Pinto      Added Mysql user@host @db authentication support
  * 10/11/2014   Massimiliano Pinto      Charset at connect is passed to backend during authentication
- * 07/07/15     Martin Brampton         Fix problem recognising null password
+ * 07/07/2015   Martin Brampton         Fix problem recognising null password
+ * 07/02/2016   Martin Brampton         Remove authentication functions to mysql_auth.c
  *
  */
 
@@ -59,7 +60,6 @@ extern int gw_read_backend_event(DCB* dcb);
 extern int gw_write_backend_event(DCB *dcb);
 extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
 extern int gw_error_backend_event(DCB *dcb);
-char* get_username_from_auth(char* ptr, uint8_t* data);
 
 static server_command_t* server_command_init(server_command_t* srvcmd, mysql_server_cmd_t cmd);
 
@@ -1293,132 +1293,6 @@ int gw_send_change_user_to_backend(char          *dbname,
     return rc;
 }
 
-/**
- * gw_check_mysql_scramble_data
- *
- * Check authentication token received against stage1_hash and scramble
- *
- * @param dcb The current dcb
- * @param token         The token sent by the client in the authentication request
- * @param token_len     The token size in bytes
- * @param scramble      The scramble data sent by the server during handshake
- * @param scramble_len  The scrable size in bytes
- * @param username      The current username in the authentication request
- * @param stage1_hash   The SHA1(candidate_password) decoded by this routine
- * @return 0 on succesful check or 1 on failure
- *
- */
-int gw_check_mysql_scramble_data(DCB *dcb,
-                                 uint8_t *token,
-                                 unsigned int token_len,
-                                 uint8_t *scramble,
-                                 unsigned int scramble_len,
-                                 char *username,
-                                 uint8_t *stage1_hash)
-{
-    uint8_t step1[GW_MYSQL_SCRAMBLE_SIZE]="";
-    uint8_t step2[GW_MYSQL_SCRAMBLE_SIZE +1]="";
-    uint8_t check_hash[GW_MYSQL_SCRAMBLE_SIZE]="";
-    char hex_double_sha1[2 * GW_MYSQL_SCRAMBLE_SIZE + 1]="";
-    uint8_t password[GW_MYSQL_SCRAMBLE_SIZE]="";
-    int ret_val = 1;
-
-    if ((username == NULL) || (scramble == NULL) || (stage1_hash == NULL))
-    {
-        return 1;
-    }
-
-    /*<
-     * get the user's password from repository in SHA1(SHA1(real_password));
-     * please note 'real_password' is unknown!
-     */
-
-    ret_val = gw_find_mysql_user_password_sha1(username, password, dcb);
-
-    if (ret_val)
-    {
-        /* if password was sent, fill stage1_hash with at least 1 byte in order
-         * to create right error message: (using password: YES|NO)
-         */
-        if (token_len)
-            memcpy(stage1_hash, (char *)"_", 1);
-
-        return 1;
-    }
-
-    if (token && token_len)
-    {
-        /*<
-         * convert in hex format: this is the content of mysql.user table.
-         * The field password is without the '*' prefix and it is 40 bytes long
-         */
-
-        gw_bin2hex(hex_double_sha1, password, SHA_DIGEST_LENGTH);
-    }
-    else
-    {
-        /* check if the password is not set in the user table */
-        return memcmp(password, null_client_sha1, MYSQL_SCRAMBLE_LEN) ? 1 : 0;
-    }
-
-    /*<
-     * Auth check in 3 steps
-     *
-     * Note: token = XOR (SHA1(real_password), SHA1(CONCAT(scramble, SHA1(SHA1(real_password)))))
-     * the client sends token
-     *
-     * Now, server side:
-     *
-     *
-     * step 1: compute the STEP1 = SHA1(CONCAT(scramble, gateway_password))
-     * the result in step1 is SHA_DIGEST_LENGTH long
-     */
-
-    gw_sha1_2_str(scramble, scramble_len, password, SHA_DIGEST_LENGTH, step1);
-
-    /*<
-     * step2: STEP2 = XOR(token, STEP1)
-     *
-     * token is transmitted form client and it's based on the handshake scramble and SHA1(real_passowrd)
-     * step1 has been computed in the previous step
-     * the result STEP2 is SHA1(the_password_to_check) and is SHA_DIGEST_LENGTH long
-     */
-
-    gw_str_xor(step2, token, step1, token_len);
-
-    /*<
-     * copy the stage1_hash back to the caller
-     * stage1_hash will be used for backend authentication
-     */
-
-    memcpy(stage1_hash, step2, SHA_DIGEST_LENGTH);
-
-    /*<
-     * step 3: prepare the check_hash
-     *
-     * compute the SHA1(STEP2) that is SHA1(SHA1(the_password_to_check)), and is SHA_DIGEST_LENGTH long
-     */
-
-    gw_sha1_str(step2, SHA_DIGEST_LENGTH, check_hash);
-
-
-#ifdef GW_DEBUG_CLIENT_AUTH
-    {
-        char inpass[128]="";
-        gw_bin2hex(inpass, check_hash, SHA_DIGEST_LENGTH);
-
-        fprintf(stderr, "The CLIENT hex(SHA1(SHA1(password))) for \"%s\" is [%s]", username, inpass);
-    }
-#endif
-
-    /* now compare SHA1(SHA1(gateway_password)) and check_hash: return 0 is MYSQL_AUTH_OK */
-    ret_val = memcmp(password, check_hash, SHA_DIGEST_LENGTH);
-
-    if (ret_val != 0)
-        return 1;
-    else
-        return 0;
-}
 
 /**
  * gw_find_mysql_user_password_sha1
@@ -2086,89 +1960,6 @@ char* create_auth_failed_msg(GWBUF*readbuf,
     }
 
     return errstr;
-}
-
-/**
- * Read username from MySQL authentication packet.
- *
- * Only for client to server packet, COM_CHANGE_USER packet has different format.
- *
- * @param       ptr     address where to write the result or NULL if memory
- *                      is allocated here.
- * @param       data    Address of MySQL packet.
- *
- * @return      Pointer to a copy of the username. NULL if memory allocation
- *              failed or if username was empty.
- */
-char* get_username_from_auth(char* ptr,
-                             uint8_t* data)
-{
-    char* first_letter;
-    char* rval;
-
-    first_letter = (char *)(data + 4 + 4 + 4 + 1 + 23);
-
-    if (*first_letter == '\0')
-    {
-        rval = NULL;
-        goto retblock;
-    }
-
-    if (ptr == NULL)
-    {
-        if ((rval = (char *)malloc(MYSQL_USER_MAXLEN + 1)) == NULL)
-        {
-            goto retblock;
-        }
-    }
-    else
-    {
-        rval = ptr;
-    }
-    snprintf(rval, MYSQL_USER_MAXLEN + 1, "%s", first_letter);
-
-retblock:
-
-    return rval;
-}
-
-int check_db_name_after_auth(DCB *dcb, char *database, int auth_ret)
-{
-    int db_exists = -1;
-
-    /* check for dabase name and possible match in resource hashtable */
-    if (database && strlen(database))
-    {
-        /* if database names are loaded we can check if db name exists */
-        if (dcb->service->resources != NULL)
-        {
-            if (hashtable_fetch(dcb->service->resources, database))
-            {
-                db_exists = 1;
-            }
-            else
-            {
-                db_exists = 0;
-            }
-        }
-        else
-        {
-            /* if database names are not loaded we don't allow connection with db name*/
-            db_exists = -1;
-        }
-
-        if (db_exists == 0 && auth_ret == 0)
-        {
-            auth_ret = 2;
-        }
-
-        if (db_exists < 0 && auth_ret == 0)
-        {
-            auth_ret = 1;
-        }
-    }
-
-    return auth_ret;
 }
 
 /**

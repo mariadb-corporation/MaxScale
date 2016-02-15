@@ -9,9 +9,9 @@ The purpose of this document is to describe how to configure MaxScale and to dis
 * [Configuration](#configuration)
   * [Global Settings](#global-settings)
   * [Service](#service)
-    * [Service and SSL](#service-and-ssl)
   * [Server](#server)
   * [Listener](#listener)
+  * [Listener and SSL](#listener-and-ssl) 
 * [Router Modules](#routing-modules)
 * [Diagnostic Modules](#diagnostic-modules)
 * [Monitor Modules](#monitor-modules)
@@ -476,62 +476,6 @@ Example:
 connection_timeout=300
 ```
 
-### Service and SSL
-
-This section describes configuration parameters for services that control the SSL/TLS encryption method and the various certificate files involved in it. To enable SSL, you must configure the `ssl` parameter with either `enabled` or `required` and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`. After this, MySQL connections to this service can be encrypted with SSL.
-
-#### `ssl`
-
-This enables SSL connections to the service. If this parameter is set to either `required` or `enabled` and the three certificate files can be found (these are explained afterwards), then client connections will be encrypted with SSL. If the parameter is `enabled` then both SSL and non-SSL connections can connect to this service. If the parameter is set to `required` then only SSL connections can be used for this service and non-SSL connections will get an error when they try to connect to the service.
-
-#### `ssl_key`
-
-The SSL private key the service should use. This will be the private key that is used as the server side private key during a client-server SSL handshake. This is a required parameter for SSL enabled services.
-
-#### `ssl_cert`
-
-The SSL certificate the service should use. This will be the public certificate that is used as the server side certificate during a client-server SSL handshake. This is a required parameter for SSL enabled services.
-
-#### `ssl_ca_cert`
-
-This is the Certificate Authority file. It will be used to verify that both the client and the server certificates are valid. This is a required parameter for SSL enabled services.
-
-### `ssl_version`
-
-This parameter controls the level of encryption used. Accepted values are:
- * SSLv3
- * TLSv10
- * TLSv11
- * TLSv12
- * MAX   
-
-### `ssl_cert_verification_depth`
-
-The maximum length of the certificate authority chain that will be accepted. Accepted values are positive integers.
-
-```
-# Example
-ssl_cert_verification_depth=10
-```
-
-Example SSL enabled service configuration:
-
-```
-[ReadWriteSplitService]
-type=service
-router=readwritesplit
-servers=server1,server2,server3
-user=myuser
-passwd=mypasswd
-ssl=required
-ssl_cert=/home/markus/certs/server-cert.pem
-ssl_key=/home/markus/certs/server-key.pem
-ssl_ca_cert=/home/markus/certs/ca.pem
-ssl_version=TLSv12
-```
-
-This configuration requires all connections to be encrypted with SSL. It also specifies that TLSv1.2 should be used as the encryption method. The paths to the server certificate files and the Certificate Authority file are also provided.
-
 ### Server
 
 Server sections are used to define the backend database servers that can be formed into a service. A server may be a member of one or more services within MaxScale. Servers are identified by a server name which is the section name in the configuration file. Servers have a type parameter of server, plus address port and protocol parameters.
@@ -650,6 +594,65 @@ The protocol used used by the maxadmin client application in order to connect to
 ##### `HTTPD`
 
 This protocol module is currently still under development, it provides a means to create HTTP connections to MaxScale for use by web browsers or RESTful API clients.
+
+### Listener and SSL
+
+This section describes configuration parameters for listeners that control the SSL/TLS encryption method and the various certificate files involved in it. To enable SSL, you must configure the `ssl` parameter to the value `required` and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`. After this, MySQL connections to this listener will be encrypted with SSL. Attempts to connect to the listener with a non-SSL client will fail. Note that the same service can have an SSL listener and a non-SSL listener if you wish, although they must be on different ports.
+
+#### `ssl`
+
+This enables SSL connections to the listener, when set to `required`. If that is done, the three certificate files mentioned below must also be supplied. Client connections to this listener will then be encrypted with SSL. Non-SSL connections will get an error when they try to connect to the listener.
+
+#### `ssl_key`
+
+A string giving a file path that identifies an existing readable file. The file must be the SSL private key the listener should use. This will be the private key that is used as the server side private key during a client-server SSL handshake. This is a required parameter for SSL enabled listeners.
+
+#### `ssl_cert`
+
+A string giving a file path that identifies an existing readable file. The file must be the SSL certificate the listener should use. This will be the public certificate that is used as the server side certificate during a client-server SSL handshake. This is a required parameter for SSL enabled listeners. The certificate must be compatible with the key defined above.
+
+#### `ssl_ca_cert`
+
+A string giving a file path that identifies an existing readable file. The file must be the SSL Certificate Authority (CA) certificate for the CA that signed the server certificate referred to in the previous parameter. It will be used to verify that the server certificate is valid. This is a required parameter for SSL enabled listeners.
+
+#### `ssl_version`
+
+This parameter controls the level of encryption used. Accepted values are:
+ * SSLv3
+ * TLSv10
+ * TLSv11
+ * TLSv12
+ * MAX   
+
+#### `ssl_cert_verification_depth`
+
+The maximum length of the certificate authority chain that will be accepted. Legal values are positive integers. Note that if the client is to submit an SSL certificate, the `ssl_cert_verification_depth` parameter must not be 0. If no value is specified, the default is 9.
+
+```
+# Example
+ssl_cert_verification_depth=5
+```
+
+**Example SSL enabled listener configuration:**
+
+```
+[RW Split Listener]
+type=listener
+service=RW Split Router
+protocol=MySQLClient
+address=10.131.218.83
+port=3306
+authenticator=MySQL
+ssl=required
+ssl_cert=/usr/local/mariadb/maxscale/ssl/crt.maxscale.pem
+ssl_key=/usr/local/mariadb/maxscale/ssl/key.csr.maxscale.pem
+ssl_ca_cert=/usr/local/mariadb/maxscale/ssl/crt.ca.maxscale.pem
+ssl_version=TLSv12
+ssl_cert_verify_depth=9
+```
+
+This example configuration requires all connections to be encrypted with SSL. It also specifies that TLSv1.2 should be used as the encryption method. The paths to the server certificate files and the Certificate Authority file are also provided.
+
 
 ## Routing Modules
 

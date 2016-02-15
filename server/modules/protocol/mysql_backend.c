@@ -51,6 +51,7 @@
  */
 #include <modinfo.h>
 #include <gw_protocol.h>
+#include <mysql_auth.h>
 
 MODULE_INFO info =
 {

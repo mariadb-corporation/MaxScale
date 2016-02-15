@@ -71,7 +71,8 @@ int max_poll_sleep;
  *                              processing.
  * 07/07/15     Martin Brampton Simplified add and remove DCB, improve error handling.
  * 23/08/15     Martin Brampton Added test so only DCB with a session link can be added to the poll list
- *
+ * 07/02/16     Martin Brampton Added a small piece of SSL logic to EPOLLIN
+ * 
  * @endverbatim
  */
 
@@ -971,7 +972,17 @@ process_pollq(int thread_id)
 
             if (poll_dcb_session_check(dcb, "read"))
             {
-                dcb->func.read(dcb);
+                int return_code = 1;
+                /** SSL authentication is still going on, we need to call dcb_accept_SSL
+                 * until it return 1 for success or -1 for error */
+                if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
+                {
+                    return_code = dcb_accept_SSL(dcb);
+                }
+                if (1 == return_code)
+                {
+                    dcb->func.read(dcb);
+                }
             }
         }
     }
