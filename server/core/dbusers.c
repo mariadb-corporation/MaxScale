@@ -69,8 +69,7 @@
 /** MySQL 5.7 password column name */
 #define MYSQL57_PASSWORD "authentication_string"
 
-/** Alternate query templates which resolves user grants at the table level */
-#if 0
+/** Query template which resolves user grants and access to databases at the table level */
 #define MYSQL_USERS_DB_QUERY_TEMPLATE \
     "SELECT  DISTINCT \
     user.user AS user, \
@@ -86,21 +85,6 @@
     mysql.db ON user.user=db.user AND user.host=db.host  LEFT JOIN \
     mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host \
     WHERE user.user IS NOT NULL AND user.user <> ''"
-
-#else
-/** Old user query templates */
-#define MYSQL_USERS_DB_QUERY_TEMPLATE "SELECT \
-    user.user AS user, \
-    user.host AS host, \
-    user.%s AS password, \
-    concat(user.user,user.host,user.%s,user.Select_priv,IFNULL(db,'')) AS userdata, \
-    user.Select_priv AS anydb, \
-    db.db AS db \
-    FROM mysql.user LEFT JOIN mysql.db \
-    ON user.user=db.user AND user.host=db.host \
-    WHERE user.user IS NOT NULL "
-
-#endif
 
 #define MYSQL_USERS_QUERY_TEMPLATE "SELECT \
     user, host, %s, concat(user, host, %s, Select_priv) AS userdata, \
