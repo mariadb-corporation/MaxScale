@@ -939,6 +939,8 @@ static void usage(void)
             "  -C, --configdir=PATH       path to configuration file directory (default: /etc/)\n"
             "  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
             "                             (default: /var/cache/maxscale)\n"
+            "  -E, --execdir=PATH         path to the maxscale and other executable files\n"
+            "                             (default: /usr/bin)\n"
             "  -N, --language=PATH         path to errmsg.sys file (default: /var/lib/maxscale)\n"
             "  -P, --piddir=PATH          path to PID file directory (default: /var/run/maxscale)\n"
             "  -U, --user=USER            run MaxScale as another user.\n"
@@ -1271,7 +1273,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:G:N:",
+    while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;
@@ -1404,6 +1406,18 @@ int main(int argc, char **argv)
                 succp = false;
             }
             break;
+
+        case 'E':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_execdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+
         case 'S':
         {
             char* tok = strstr(optarg, "=");
@@ -2294,7 +2308,7 @@ void set_log_augmentation(const char* value)
 }
 
 /**
- * Pre-parse the MaxScale.cnf for config, log and module directories.
+ * Pre-parse the configuration file for various directory paths.
  * @param data Parameter passed by inih
  * @param section Section name
  * @param name Parameter name
@@ -2389,6 +2403,20 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
                     set_langdir(tmp);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+        else if (strcmp(name, "execdir") == 0)
+        {
+            if (strcmp(get_execdir(), default_execdir) == 0)
+            {
+                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                {
+                    set_execdir(tmp);
                 }
                 else
                 {

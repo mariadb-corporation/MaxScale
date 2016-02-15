@@ -22,11 +22,11 @@
  *
  */
 
-#include <sys/auxv.h>
 #include <elf.h>
 #include <log_manager.h>
 #include <modules.h>
 #include <query_classifier.h>
+#include <gwdirs.h>
 
 //#define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
@@ -88,28 +88,14 @@ static void end_and_unload_classifier(QUERY_CLASSIFIER* classifier, const char* 
 static bool resolve_pp_path(char* path, int size)
 {
     bool success = false;
-    const char* exe_path = (const char*) getauxval(AT_EXECFN);
+    const char* exe_path = (const char*) get_execdir();
     size_t len = strlen(exe_path);
 
     if (len < size)
     {
+        /** get_execdir will always return a cleaned up version of
+         * the executable path */
         strcpy(path, exe_path);
-        char* s = path + len;
-
-        // Find the last '/'.
-        while ((*s != '/') && (s != path))
-        {
-            --s;
-            --len;
-        }
-
-        if (*s == '/')
-        {
-            ++s;
-            ++len;
-        }
-
-        *s = 0;
 
         int required_size = len + sizeof(MAXPP) + 1;
 

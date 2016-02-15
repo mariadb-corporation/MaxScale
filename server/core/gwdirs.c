@@ -97,6 +97,18 @@ void set_libdir(char* param)
 }
 
 /**
+ * Set the executable directory. Internal processes will look for executables
+ * from here.
+ * @param str Path to directory
+ */
+void set_execdir(char* param)
+{
+    free(execdir);
+    clean_up_pathname(param);
+    execdir = param;
+}
+
+/**
  * Get the directory with all the modules.
  * @return The module directory
  */
@@ -157,4 +169,13 @@ char* get_logdir()
 char* get_langdir()
 {
     return langdir ? langdir : (char*) default_langdir;
+}
+
+/**
+ * Get the directory with the executables.
+ * @return The executables directory
+ */
+char* get_execdir()
+{
+    return execdir ? execdir : (char*) default_execdir;
 }

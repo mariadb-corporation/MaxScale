@@ -44,6 +44,9 @@ Path to cache directory. This is where MaxScale stores cached authentication dat
 .BR -P " \fIPATH\fB, --piddir=\fIPATH\fB"
 Location of MaxScale's PID file.
 .TP
+.BR -E " \fIPATH\fB, --execdir=\fIPATH\fB"
+Location of the executable files. When internal processes are launched from within MaxScale the binaries are assumed to be in this directory. If you have a custom location for binary executable files you need to add this parameter.
+.TP
 .BR -U " \fIUSER\fB, --user=\fIUSER\fB"
 Run MaxScale as another user. The user ID and group ID of this user are used to run MaxScale.
 .TP
