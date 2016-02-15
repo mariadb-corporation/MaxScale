@@ -199,12 +199,15 @@
 #define MYSQL_ERROR_MSG(buf)	((uint8_t *)GWBUF_DATA(buf) + 7)
 #define MYSQL_COMMAND(buf)	(*((uint8_t *)GWBUF_DATA(buf) + 4))
 
+/** Possible states of an event sent by the master */
 enum blr_event_state
 {
-    BLR_EVENT_DONE,
-    BLR_EVENT_STARTED,
-    BLR_EVENT_ONGOING,
-    BLR_EVENT_COMPLETE
+    BLR_EVENT_DONE, /*< No event being processed  */
+    BLR_EVENT_STARTED, /*< The first packet of an event which spans multiple packets
+                        * has been received */
+    BLR_EVENT_ONGOING, /*< Other packets of a multi-packet event are being processed */
+    BLR_EVENT_COMPLETE /*< A multi-packet event has been successfully processed
+                        * but the router is not yet ready to process another one */
 };
 
 /* Master Server configuration struct */

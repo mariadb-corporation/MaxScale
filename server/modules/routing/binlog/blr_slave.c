@@ -2078,16 +2078,17 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
                                           hkheartbeat - beat1);
 		}
 
-        blr_send_event(slave, &hdr, (uint8_t*) record->start);
+        if (blr_send_event(slave, &hdr, (uint8_t*) record->start))
+        {
+            if (hdr.event_type != ROTATE_EVENT)
+            {
+                slave->binlog_pos = hdr.next_pos;
+            }
+            slave->stats.n_events++;
+            burst_size -= hdr.event_size;
+        }
         gwbuf_free(record);
         record = NULL;
-
-		if (hdr.event_type != ROTATE_EVENT)
-		{
-			slave->binlog_pos = hdr.next_pos;
-		}
-		slave->stats.n_events++;
-		burst_size -= hdr.event_size;
 
 		/* set lastReply for slave heartbeat check */
 		if (router->send_slave_heartbeat)
