@@ -39,7 +39,7 @@ aux_source_directory(. SRC_LIST)
 
 
 
-add_library(testcore SHARED testconnections.cpp mariadb_nodes.cpp
+add_library(testcore SHARED testconnections.cpp mariadb_nodes.cpp config_check.cpp
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
   sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp)
 target_link_libraries(testcore ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
@@ -264,6 +264,7 @@ add_test_script(load_balancing_galera_pers10 load_galera_pers10)
 add_test_executable(mxs564_big_dump.cpp mxs564_big_dump galera)
 add_test_executable_notest(long_sysbench.cpp long_sysbench replication)
 add_test_executable_notest(check_backend.cpp check_backend check_backend)
+add_test_executable(config_test.cpp config_test replication)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
