@@ -672,6 +672,30 @@ int  TestConnections::ssh_maxscale(char* ssh, bool sudo)
 }
 
 
+int TestConnections::copy_to_maxscale(char* src, char* dest)
+{
+    char sys[strlen(src) + strlen(dest) + 1024];
+
+    sprintf(sys, "scp -i %s -o UserKnownHostsFile=/dev/null "
+            "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
+            maxscale_sshkey, src, maxscale_access_user, maxscale_IP, dest);
+
+    return system(sys);
+}
+
+
+int TestConnections::copy_from_maxscale(char* src, char* dest)
+{
+    char sys[strlen(src) + strlen(dest) + 1024];
+
+    sprintf(sys, "scp -i %s -o UserKnownHostsFile=/dev/null "
+            "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
+            maxscale_sshkey, maxscale_access_user, maxscale_IP, src, dest);
+
+    return system(sys);
+}
+
+
 int TestConnections::reconfigure_maxscale(char* config_template)
 {
     char cmd[1024];
