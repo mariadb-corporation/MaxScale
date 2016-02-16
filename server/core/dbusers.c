@@ -148,15 +148,16 @@ static int wildcard_db_grant(char* str);
  * MAX_QUERY_STR_LEN bytes long
  * @return Users query with databases included
  */
-static char* get_users_db_query(char* server_version, bool include_root, char* buffer)
+static char* get_users_db_query(const char* server_version, bool include_root, char* buffer)
 {
     const char* password = strstr(server_version, "5.7.") ?
         MYSQL57_PASSWORD : MYSQL_PASSWORD;
 
-    snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_DB_QUERY_TEMPLATE
-             "%s" MYSQL_USERS_ORDER_BY, password, password,
-             include_root ? "" : USERS_QUERY_NO_ROOT);
-
+    int nchars = snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_DB_QUERY_TEMPLATE
+                          "%s" MYSQL_USERS_ORDER_BY, password, password,
+                          include_root ? "" : USERS_QUERY_NO_ROOT);
+    ss_dassert(nchars < MAX_QUERY_STR_LEN);
+    (void) nchars;
     return buffer;
 }
 
@@ -169,15 +170,16 @@ static char* get_users_db_query(char* server_version, bool include_root, char* b
  * MAX_QUERY_STR_LEN bytes long
  * @return Users query
  */
-static char* get_users_query(char* server_version, bool include_root, char* buffer)
+static char* get_users_query(const char* server_version, bool include_root, char* buffer)
 {
     const char* password = strstr(server_version, "5.7.") ?
         MYSQL57_PASSWORD : MYSQL_PASSWORD;
 
-    snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_QUERY_TEMPLATE "%s"
-             MYSQL_USERS_ORDER_BY, password, password,
-             include_root ? "" : USERS_QUERY_NO_ROOT);
-
+    int nchars = snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_QUERY_TEMPLATE "%s"
+                          MYSQL_USERS_ORDER_BY, password, password,
+                          include_root ? "" : USERS_QUERY_NO_ROOT);
+    ss_dassert(nchars < MAX_QUERY_STR_LEN);
+    (void) nchars;
     return buffer;
 }
 
@@ -189,16 +191,17 @@ static char* get_users_query(char* server_version, bool include_root, char* buff
  * MAX_QUERY_STR_LEN bytes long
  * @return User count query
  * */
-static char* get_usercount_query(char* server_version, bool include_root, char* buffer)
+static char* get_usercount_query(const char* server_version, bool include_root, char* buffer)
 {
     const char* password = strstr(server_version, "5.7.") ?
         MYSQL57_PASSWORD : MYSQL_PASSWORD;
 
-    snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_COUNT_TEMPLATE_START
-             MYSQL_USERS_DB_QUERY_TEMPLATE "%s" MYSQL_USERS_ORDER_BY
-             MYSQL_USERS_COUNT_TEMPLATE_END, password, password,
-             include_root ? "" : USERS_QUERY_NO_ROOT);
-
+    int nchars = snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_COUNT_TEMPLATE_START
+                          MYSQL_USERS_DB_QUERY_TEMPLATE "%s" MYSQL_USERS_ORDER_BY
+                          MYSQL_USERS_COUNT_TEMPLATE_END, password, password,
+                          include_root ? "" : USERS_QUERY_NO_ROOT);
+    ss_dassert(nchars < MAX_QUERY_STR_LEN);
+    (void) nchars;
     return buffer;
 }
 
