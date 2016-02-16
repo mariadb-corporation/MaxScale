@@ -13,7 +13,10 @@ public class MaxScaleConfiguration {
     private static final int DEFAULT_SLEEP = 10;
     public MaxScaleConfiguration(String test) throws Exception
     {
-        Runtime.getRuntime().exec(CONFIG_COMMAND + " " + test);
+        ProcessBuilder pb = new ProcessBuilder(CONFIG_COMMAND ,  test);
+        pb.inheritIO();
+        Process process = pb.start();
+        process.waitFor();
         Thread.sleep(DEFAULT_SLEEP * 1000);
     }
 }
