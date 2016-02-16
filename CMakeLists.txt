@@ -265,6 +265,7 @@ add_test_executable(mxs564_big_dump.cpp mxs564_big_dump galera)
 add_test_executable_notest(long_sysbench.cpp long_sysbench replication)
 add_test_executable_notest(check_backend.cpp check_backend check_backend)
 add_test_executable(config_test.cpp config_test replication)
+add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
