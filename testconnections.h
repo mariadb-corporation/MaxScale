@@ -396,6 +396,22 @@ public:
     int ssh_maxscale(char* ssh, bool sudo);
 
     /**
+     * @brief Copy a local file to the MaxScale machine
+     * @param src Source file on the local filesystem
+     * @param dest Destination file on the MaxScale machine's file system
+     * @return exit code of the system command
+     */
+    int copy_to_maxscale(char* src, char* dest);
+
+    /**
+     * @brief Copy a remote file from the MaxScale machine
+     * @param src Source file on the remote filesystem
+     * @param dest Destination file on the local file system
+     * @return exit code of the system command
+     */
+    int copy_from_maxscale(char* src, char* dest);
+
+    /**
      * @brief Test that connections to MaxScale are in the expected state
      * @param rw_split State of the MaxScale connection to Readwritesplit. True for working connection, false for no connection. 
      * @param rc_master State of the MaxScale connection to Readconnroute Master. True for working connection, false for no connection.

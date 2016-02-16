@@ -44,13 +44,13 @@ TestConnections::TestConnections(int argc, char *argv[])
             {"no-maxscale-start", no_argument, 0, 's'},
             {"no-maxscale-stop",  no_argument, 0, 'd'},
             {"no-nodes-check",  no_argument, 0, 'r'},
-
+            {"quiet",  no_argument, 0, 'q'},
             {0, 0, 0, 0}
         };
         /* getopt_long stores the option index here. */
         int option_index = 0;
 
-        c = getopt_long (argc, argv, "h:",
+        c = getopt_long (argc, argv, "h:q",
                          long_options, &option_index);
 
         /* Detect the end of the options. */
@@ -65,6 +65,10 @@ TestConnections::TestConnections(int argc, char *argv[])
 
         case 'n':
             verbose = false;
+            break;
+
+        case 'q':
+            freopen("/dev/null", "w", stdout);
             break;
 
         case 'h':
@@ -667,6 +671,30 @@ int  TestConnections::ssh_maxscale(char* ssh, bool sudo)
     char sys[strlen(ssh) + 1024];
 
     generate_ssh_cmd(sys, ssh, sudo);
+
+    return system(sys);
+}
+
+
+int TestConnections::copy_to_maxscale(char* src, char* dest)
+{
+    char sys[strlen(src) + strlen(dest) + 1024];
+
+    sprintf(sys, "scp -i %s -o UserKnownHostsFile=/dev/null "
+            "-o StrictHostKeyChecking=no -o LogLevel=quiet %s %s@%s:%s",
+            maxscale_sshkey, src, maxscale_access_user, maxscale_IP, dest);
+
+    return system(sys);
+}
+
+
+int TestConnections::copy_from_maxscale(char* src, char* dest)
+{
+    char sys[strlen(src) + strlen(dest) + 1024];
+
+    sprintf(sys, "scp -i %s -o UserKnownHostsFile=/dev/null "
+            "-o StrictHostKeyChecking=no -o LogLevel=quiet %s@%s:%s %s",
+            maxscale_sshkey, maxscale_access_user, maxscale_IP, src, dest);
 
     return system(sys);
 }
