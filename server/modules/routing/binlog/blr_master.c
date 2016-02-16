@@ -2388,7 +2388,7 @@ int     n;
                           strerror_r(errno, err_msg, sizeof(err_msg)));
 
                 /* Remove any partial event that was written */
-                if(ftruncate(router->binlog_fd, router->last_written))
+                if (ftruncate(router->binlog_fd, router->last_written))
                 {
                     MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
                               router->service->name, router->last_written,
