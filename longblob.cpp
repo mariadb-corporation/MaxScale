@@ -12,6 +12,7 @@ int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, long in
     unsigned long i;
     MYSQL_BIND param[1];
     char sql[256];
+    int global_res = Test->global_result;
 
     char *insert_stmt = (char *) "INSERT INTO long_blob_table(x, b) VALUES(1, ?)";
 
@@ -54,10 +55,15 @@ int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, long in
         Test->tprintf("Chunk #%d\n", i);
         Test->add_result(mysql_stmt_send_long_data(stmt, 0, (char *) data, size * sizeof(long int)), "Error inserting data, iteration %d, error %s\n", i, mysql_stmt_error(stmt));
     }
-    Test->tprintf("Executing stetement\n");
+    Test->tprintf("Executing statement\n");
     Test->set_timeout(160);
-    Test->add_result(mysql_stmt_execute(stmt), "%s\n", mysql_stmt_error(stmt));
+    Test->add_result(mysql_stmt_execute(stmt), "INSERT Statement with %s failed, error is %s\n", blob_name, mysql_stmt_error(stmt));
     Test->add_result(mysql_stmt_close(stmt), "Error closing stmt\n");
+
+    if (global_res == Test->global_result)
+    {
+        Test->tprintf("%s is OK\n", blob_name);
+    }
 
     return 0;
 }
@@ -69,31 +75,53 @@ int main(int argc, char *argv[])
 
     Test->repl->execute_query_all_nodes( (char *) "set global max_allowed_packet=10000000");
 
-    Test->connect_maxscale();
-    Test->repl->connect();
+    Test->connect_maxscale(); Test->repl->connect();
     Test->tprintf("LONGBLOB: Trying send data directly to Master\n");
     test_longblob(Test, Test->repl->nodes[0], (char *) "LONGBLOB", 1000000, 20);
+    Test->repl->close_connections(); Test->close_maxscale_connections();
+
+    Test->connect_maxscale(); Test->repl->connect();
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
     test_longblob(Test, Test->conn_rwsplit, (char *) "LONGBLOB", 1000000, 20);
+    Test->repl->close_connections(); Test->close_maxscale_connections();
+
+    //Test->connect_maxscale(); Test->repl->connect();
     //Test->tprintf("LONGBLOB: Trying send data via ReadConn master\n");
     //test_longblob(Test, Test->conn_master, 1000000, 20);
+    //Test->repl->close_connections(); Test->close_maxscale_connections();
 
+
+
+    Test->connect_maxscale(); Test->repl->connect();
     Test->tprintf("BLOB: Trying send data directly to Master\n");
     test_longblob(Test, Test->repl->nodes[0], (char *) "BLOB", 1000, 8);
+    Test->repl->close_connections(); Test->close_maxscale_connections();
+
+    Test->connect_maxscale(); Test->repl->connect();
     Test->tprintf("BLOB: Trying send data via RWSplit\n");
     test_longblob(Test, Test->conn_rwsplit, (char *) "BLOB", 1000, 8);
+    Test->repl->close_connections(); Test->close_maxscale_connections();
+
+    //Test->connect_maxscale(); Test->repl->connect();
     //Test->tprintf("BLOB: Trying send data via ReadConn master\n");
     //test_longblob(Test, Test->conn_master, 1000, 8);
+    //Test->repl->close_connections(); Test->close_maxscale_connections();
 
+
+    Test->connect_maxscale(); Test->repl->connect();
     Test->tprintf("MEDIUMBLOB: Trying send data directly to Master\n");
     test_longblob(Test, Test->repl->nodes[0], (char *) "MEDIUMBLOB", 1000000, 2);
+    Test->repl->close_connections(); Test->close_maxscale_connections();
+
+    Test->connect_maxscale(); Test->repl->connect();
     Test->tprintf("MEDIUMBLOB: Trying send data via RWSplit\n");
     test_longblob(Test, Test->conn_rwsplit, (char *) "MEDIUMBLOB", 1000000, 2);
+    Test->repl->close_connections(); Test->close_maxscale_connections();
+
+    //Test->connect_maxscale(); Test->repl->connect();
     //Test->tprintf("LONGBLOB: Trying send data via ReadConn master\n");
     //test_longblob(Test, Test->conn_master, 1000000, 2);
-
-    Test->close_maxscale_connections();
-    Test->repl->close_connections();
+    //Test->repl->close_connections(); Test->close_maxscale_connections();
 
     Test->copy_all_logs(); return(Test->global_result);
 }
