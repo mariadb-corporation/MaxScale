@@ -53,7 +53,10 @@ int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, long in
     for (i = 0; i < chunks; i++) {
         Test->set_timeout(60);
         Test->tprintf("Chunk #%d\n", i);
-        Test->add_result(mysql_stmt_send_long_data(stmt, 0, (char *) data, size * sizeof(long int)), "Error inserting data, iteration %d, error %s\n", i, mysql_stmt_error(stmt));
+        if (mysql_stmt_send_long_data(stmt, 0, (char *) data, size * sizeof(long int)) != 0) {
+            Test->add_result(1, "Error inserting data, iteration %d, error %s\n", i, mysql_stmt_error(stmt));
+            return 1;
+        }
     }
     Test->tprintf("Executing statement\n");
     Test->set_timeout(160);
@@ -63,6 +66,8 @@ int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, long in
     if (global_res == Test->global_result)
     {
         Test->tprintf("%s is OK\n", blob_name);
+    } else {
+        Test->tprintf("%s FAILED\n", blob_name);
     }
 
     return 0;
@@ -87,7 +92,7 @@ int main(int argc, char *argv[])
 
     //Test->connect_maxscale(); Test->repl->connect();
     //Test->tprintf("LONGBLOB: Trying send data via ReadConn master\n");
-    //test_longblob(Test, Test->conn_master, 1000000, 20);
+    //test_longblob(Test, Test->conn_master, (char *) "LONGBLOB", 1000000, 20);
     //Test->repl->close_connections(); Test->close_maxscale_connections();
 
 
@@ -104,7 +109,7 @@ int main(int argc, char *argv[])
 
     //Test->connect_maxscale(); Test->repl->connect();
     //Test->tprintf("BLOB: Trying send data via ReadConn master\n");
-    //test_longblob(Test, Test->conn_master, 1000, 8);
+    //test_longblob(Test, Test->conn_master, (char *) "BLOB", 1000, 8);
     //Test->repl->close_connections(); Test->close_maxscale_connections();
 
 
@@ -120,7 +125,7 @@ int main(int argc, char *argv[])
 
     //Test->connect_maxscale(); Test->repl->connect();
     //Test->tprintf("LONGBLOB: Trying send data via ReadConn master\n");
-    //test_longblob(Test, Test->conn_master, 1000000, 2);
+    //test_longblob(Test, Test->conn_master, (char *) "MEDIUMBLOB", 1000000, 2);
     //Test->repl->close_connections(); Test->close_maxscale_connections();
 
     Test->copy_all_logs(); return(Test->global_result);
