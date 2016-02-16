@@ -15,7 +15,7 @@ bool test_config_works(const char* config, const char **expected_output = NULL)
     const char *argv[] =
         {
             config,
-            "--quiet"
+            "--quiet",
             NULL
         };
 
