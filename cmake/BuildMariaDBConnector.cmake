@@ -7,9 +7,15 @@
 
 include(ExternalProject)
 
+set(MARIADB_CONNECTOR_C_REPO "https://github.com/MariaDB/mariadb-connector-c.git"
+  CACHE STRING "MariaDB Connector-C Git repository")
+
+set(MARIADB_CONNECTOR_C_TAG "v2.2.1"
+  CACHE STRING "MariaDB Connector-C Git tag")
+
 ExternalProject_Add(connector-c
-  GIT_REPOSITORY https://github.com/MariaDB/mariadb-connector-c.git
-  GIT_TAG v2.2.1
+  GIT_REPOSITORY ${MARIADB_CONNECTOR_C_REPO}
+  GIT_TAG ${MARIADB_CONNECTOR_C_TAG}
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/connector-c/install
   BINARY_DIR ${CMAKE_BINARY_DIR}/connector-c
   INSTALL_DIR ${CMAKE_BINARY_DIR}/connector-c/install)
