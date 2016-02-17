@@ -87,23 +87,24 @@
 
 MODULE_INFO info =
 {
-                    MODULE_API_FILTER,
-                    MODULE_ALPHA_RELEASE,
-                    FILTER_VERSION,
-                    "Firewall Filter"
+    MODULE_API_FILTER,
+    MODULE_ALPHA_RELEASE,
+    FILTER_VERSION,
+    "Firewall Filter"
 };
 
 static char *version_str = "V1.0.0";
 
 static char* required_rules[] =
 {
-                                 "wildcard",
-                                 "columns",
-                                 "regex",
-                                 "limit_queries",
-                                 "no_where_clause",
-                                 NULL
+    "wildcard",
+    "columns",
+    "regex",
+    "limit_queries",
+    "no_where_clause",
+    NULL
 };
+
 /*
  * The filter entry points
  */
@@ -117,15 +118,15 @@ static void diagnostic(FILTER *instance, void *fsession, DCB *dcb);
 
 static FILTER_OBJECT MyObject =
 {
-                                 createInstance,
-                                 newSession,
-                                 closeSession,
-                                 freeSession,
-                                 setDownstream,
-                                 NULL,
-                                 routeQuery,
-                                 NULL,
-                                 diagnostic,
+    createInstance,
+    newSession,
+    closeSession,
+    freeSession,
+    setDownstream,
+    NULL,
+    routeQuery,
+    NULL,
+    diagnostic,
 };
 
 /**
@@ -144,13 +145,13 @@ typedef enum
 
 const char* rule_names[] =
 {
-                            "UNDEFINED",
-                            "COLUMN",
-                            "THROTTLE",
-                            "PERMISSION",
-                            "WILDCARD",
-                            "REGEX",
-                            "CLAUSE"
+    "UNDEFINED",
+    "COLUMN",
+    "THROTTLE",
+    "PERMISSION",
+    "WILDCARD",
+    "REGEX",
+    "CLAUSE"
 };
 
 /**
@@ -2543,13 +2544,15 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                     len = MIN(len, FW_MAX_SQL_LEN);
                     if (match && my_instance->log_match & FW_LOG_MATCH)
                     {
-                        MXS_NOTICE("Rule '%s' matched by '%s': %.*s", rname,
-                                   user->name, len, sql);
+                        MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %.*s",
+                                   dcb->service->name, rname, user->name,
+                                   dcb->user, dcb->remote, len, sql);
                     }
                     else if (!match && my_instance->log_match & FW_LOG_NO_MATCH)
                     {
-                        MXS_NOTICE("Query by '%s' was not matched: %.*s",
-                                   user->name, len, sql);
+                        MXS_NOTICE("[%s] Query for '%s' by %s@%s was not matched: %.*s",
+                                   dcb->service->name, user->name, dcb->user,
+                                   dcb->remote, len, sql);
                     }
                 }
             }
