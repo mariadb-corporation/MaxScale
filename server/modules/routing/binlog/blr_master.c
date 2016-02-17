@@ -2473,7 +2473,7 @@ bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf)
     else
     {
         /** Total size of all the payloads in all the packets */
-        int64_t len = hdr->event_size;
+        int64_t len = hdr->event_size + 1;
         bool first = true;
 
         while (rval && len > 0)
