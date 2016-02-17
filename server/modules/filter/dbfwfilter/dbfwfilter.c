@@ -88,12 +88,12 @@
 MODULE_INFO info =
 {
     MODULE_API_FILTER,
-    MODULE_ALPHA_RELEASE,
+    MODULE_GA,
     FILTER_VERSION,
     "Firewall Filter"
 };
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.1.0";
 
 static char* required_rules[] =
 {
