@@ -149,6 +149,7 @@ delete from mysql.t1 where id = 7;
 select 1 as "endof cycle" from dual;
  @endverbatim
  *
+ * check that Maxscale is alive, no crash
  */
 
 
@@ -172,19 +173,19 @@ int main(int argc, char *argv[])
     Test->tprintf("executing sql 100 times (ReadConn Slave)\n");
     for (i = 0; i < 100; i++)  {
         Test->set_timeout(15);
-        Test->try_query(Test->conn_slave, bug670_sql);
+        execute_query_silent(Test->conn_slave, bug670_sql);
     }
 
     Test->tprintf("executing sql 100 times (ReadConn Master)\n");
     for (i = 0; i < 100; i++)  {
         Test->set_timeout(15);
-        Test->try_query(Test->conn_master, bug670_sql);
+        execute_query_silent(Test->conn_master, bug670_sql);
     }
 
     Test->tprintf("executing sql 100 times (RWSplit)\n");
     for (i = 0; i < 100; i++)  {
         Test->set_timeout(15);
-        Test->try_query(Test->conn_rwsplit, bug670_sql);
+        execute_query_silent(Test->conn_rwsplit, bug670_sql);
     }
 
     Test->set_timeout(10);

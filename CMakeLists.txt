@@ -105,6 +105,7 @@ install(DIRECTORY ssl-cert DESTINATION system-test USE_SOURCE_PERMISSIONS)
 add_test_executable(regexfilter1.cpp regexfilter1 regexfilter1)
 add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter)
 add_test_executable(mxs365.cpp mxs365 replication)
+# ReadConn cases are commented out now due to Maxscale failures
 add_test_executable(longblob.cpp longblob longblob)
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication)
 add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop galera)

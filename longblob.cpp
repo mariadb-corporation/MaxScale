@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
     Test->repl->close_connections(); Test->close_maxscale_connections();
 
     //Test->connect_maxscale(); Test->repl->connect();
-    //Test->tprintf("LONGBLOB: Trying send data via ReadConn master\n");
+    //Test->tprintf("MEDIUMBLOB: Trying send data via ReadConn master\n");
     //test_longblob(Test, Test->conn_master, (char *) "MEDIUMBLOB", 1000000, 2);
     //Test->repl->close_connections(); Test->close_maxscale_connections();
 
