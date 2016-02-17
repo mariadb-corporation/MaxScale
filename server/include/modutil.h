@@ -67,5 +67,6 @@ GWBUF*          modutil_create_mysql_err_msg(int             packet_number,
                                              const char      *msg);
 int modutil_count_signal_packets(GWBUF*,int,int,int*);
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string);
+void* strnchr_esc(char* ptr, char c, int len);
 
 #endif

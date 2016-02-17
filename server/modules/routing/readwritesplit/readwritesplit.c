@@ -102,13 +102,6 @@ static int  rses_get_max_replication_lag(ROUTER_CLIENT_SES* rses);
 static backend_ref_t* get_bref_from_dcb(ROUTER_CLIENT_SES* rses, DCB* dcb);
 static DCB* rses_get_client_dcb(ROUTER_CLIENT_SES* rses);
 
-static route_target_t get_route_target (
-	qc_query_type_t qtype,
-	bool            trx_active,
-	bool            load_active,
-	target_t        use_sql_variables_in,
-	HINT*           hint);
-
 static backend_ref_t* check_candidate_bref(
 	backend_ref_t* candidate_bref,
 	backend_ref_t* new_bref,
@@ -834,6 +827,7 @@ static void* newSession(
         client_rses->rses_autocommit_enabled = true;
         client_rses->rses_transaction_active = false;
         client_rses->have_tmp_tables = false;
+        client_rses->forced_node = NULL;
         
         router_nservers = router_get_servercount(router);
         
@@ -1382,18 +1376,22 @@ static backend_ref_t* check_candidate_bref(
  *  @return bitfield including the routing target, or the target server name 
  *          if the query would otherwise be routed to slave.
  */
-static route_target_t get_route_target (
-        qc_query_type_t qtype,
-        bool            trx_active,
-        bool            load_active,
-	target_t        use_sql_variables_in,
-        HINT*           hint)
+static route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
+                                       qc_query_type_t qtype, HINT *hint)
 {
-        route_target_t target = TARGET_UNDEFINED;
+    bool trx_active = rses->rses_transaction_active;
+    bool load_active = rses->rses_load_active;
+    target_t use_sql_variables_in = rses->rses_config.rw_use_sql_variables_in;
+    route_target_t target = TARGET_UNDEFINED;
+
+    if (rses->forced_node == rses->rses_master_ref)
+    {
+        target = TARGET_MASTER;
+    }
 	/**
 	 * These queries are not affected by hints
 	 */
-	if (!load_active && (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
+	else if (!load_active && (QUERY_IS_TYPE(qtype, QUERY_TYPE_SESSION_WRITE) ||
 		/** Configured to allow writing variables to all nodes */
 		(use_sql_variables_in == TYPE_ALL &&
 			QUERY_IS_TYPE(qtype, QUERY_TYPE_GSYSVAR_WRITE)) ||
@@ -2150,7 +2148,29 @@ static bool route_single_stmt(
 	{
 	    succp = false;
 	    goto retblock;
+    }
+
+    /** Check for multi-statement queries. We assume here that the client
+     * protocol is MySQLClient.
+     * TODO: add warnings when incompatible protocols are used */
+    MySQLProtocol *proto = (MySQLProtocol*)rses->client_dcb->protocol;
+    if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS &&
+        packet_type == MYSQL_COM_QUERY && rses->forced_node != rses->rses_master_ref)
+    {
+        for (GWBUF *buf = querybuf; buf != NULL; buf = buf->next)
+        {
+            if (strnchr_esc(GWBUF_DATA(buf), ';', GWBUF_LENGTH(buf)))
+            {
+                /** It is possible that the session state is modified inside
+                 * the multi-statement query which would leave any slave sessions
+                 * in an inconsistent state. Due to this, for the duration of
+                 * this session, all queries will be sent to the master. */
+                rses->forced_node = rses->rses_master_ref;
+                MXS_INFO("Multi-statement query, routing all future queries to master.");
+            }
         }
+    }
+
     /**
      * Check if the query has anything to do with temporary tables.
      */
@@ -2269,11 +2289,7 @@ static bool route_single_stmt(
 	 * - route primarily according to the hints and if they failed, 
 	 *   eventually to master
 	 */
-	route_target = get_route_target(qtype, 
-					rses->rses_transaction_active,
-					rses->rses_load_active,
-					rses->rses_config.rw_use_sql_variables_in,
-					querybuf->hint);
+	route_target = get_route_target(rses, qtype, querybuf->hint);
 
 	if (TARGET_IS_ALL(route_target))
 	{

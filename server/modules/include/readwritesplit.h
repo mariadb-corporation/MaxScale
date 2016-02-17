@@ -298,6 +298,7 @@ struct router_client_session {
         uint64_t         rses_load_data_sent; /*< How much data has been sent */
         DCB* client_dcb;
         int             pos_generator;
+        backend_ref_t          *forced_node; /*< Current server where all queries should be sent */
 #if defined(PREP_STMT_CACHING)
         HASHTABLE*       rses_prep_stmt[2];
 #endif
