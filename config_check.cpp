@@ -19,7 +19,7 @@ bool test_config_works(const char* config, const char **expected_output = NULL)
             NULL
         };
 
-    TestConnections * Test = new TestConnections(1, (char**)argv);
+    TestConnections * Test = new TestConnections(2, (char**)argv);
     Test->set_timeout(10);
     if (expected_output)
     {
