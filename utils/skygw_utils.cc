@@ -1192,7 +1192,7 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = len * BUFFER_GROWTH_RATE + 1));
+                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
                 if (tmp == NULL)
                 {
                     free(output);
@@ -1258,7 +1258,7 @@ char* replace_values(const char** src, const size_t* srcsize, char** dest, size_
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = len * BUFFER_GROWTH_RATE + 1));
+                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
                 if (tmp == NULL)
                 {
                     free(output);
@@ -1410,7 +1410,7 @@ char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = len * BUFFER_GROWTH_RATE + 1));
+                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
                 if (tmp == NULL)
                 {
                     free(output);
