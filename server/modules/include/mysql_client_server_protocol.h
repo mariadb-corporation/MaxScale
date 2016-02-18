@@ -66,7 +66,7 @@
 #include <housekeeper.h>
 #include <mysql.h>
 
-#define GW_MYSQL_VERSION "MaxScale " MAXSCALE_VERSION
+#define GW_MYSQL_VERSION "5.5.5-"MAXSCALE_VERSION"-maxscale"
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1
