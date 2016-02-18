@@ -1529,6 +1529,13 @@ bool define_regex_rule(void* scanner, char* pattern)
     return re != NULL;
 }
 
+/**
+ * @brief Find a rule by name
+ *
+ * @param rules List of all rules
+ * @param name Name of the rule
+ * @return Pointer to the rule or NULL if rule was not found
+ */
 static RULE* find_rule_by_name(RULE* rules, const char* name)
 {
     while (rules)
@@ -1543,6 +1550,14 @@ static RULE* find_rule_by_name(RULE* rules, const char* name)
     return NULL;
 }
 
+/**
+ * @brief Process the user templates into actual user definitions
+ *
+ * @param instance Filter instance
+ * @param templates User templates
+ * @param rules List of all rules
+ * @return True on success, false on error.
+ */
 static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templates,
                                    RULE* rules)
 {
@@ -1616,13 +1631,20 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
         }
         templates = templates->next;
     }
+
+    if (templates == NULL)
+    {
+        MXS_ERROR("No user definitions found in the rule file.");
+        rval = false;
+    }
+
     return rval;
 }
 
 /**
  * Read a rule file from disk and process it into rule and user definitions
  * @param filename Name of the file
- * @param instance Filter isntance
+ * @param instance Filter instance
  * @return True on success, false on error.
  */
 static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
@@ -1656,6 +1678,7 @@ static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
     {
         rc = 1;
         free_rules(pstack.rule);
+        MXS_ERROR("Failed to process rule file '%s'.", filename);
     }
 
     free_user_templates(pstack.templates);
