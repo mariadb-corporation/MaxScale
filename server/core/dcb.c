@@ -908,7 +908,7 @@ int dcb_read(DCB   *dcb,
  * @param dcb       The DCB to read from
  * @return          -1 on error, otherwise the total number of bytes available
  */
-static inline int
+static int
 dcb_bytes_readable(DCB *dcb)
 {
     int bytesavailable;
@@ -941,7 +941,7 @@ dcb_bytes_readable(DCB *dcb)
  * @param nreadtotal    Number of bytes that have been read
  * @return              -1 on error, 0 for conditions not treated as error
  */
-static inline int
+static int
 dcb_read_no_bytes_available(DCB *dcb, int nreadtotal)
 {
     /** Handle closed client socket */
@@ -976,7 +976,7 @@ dcb_read_no_bytes_available(DCB *dcb, int nreadtotal)
  * @param nsingleread       To be set as the number of bytes read this time
  * @return                  GWBUF* buffer containing new data, or null.
  */
-static inline GWBUF *
+static GWBUF *
 dcb_basic_read(DCB *dcb, int bytesavailable, int maxbytes, int nreadtotal, int *nsingleread)
 {
     GWBUF *buffer;
