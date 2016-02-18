@@ -2584,19 +2584,31 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         char *connect_timeout = config_get_value(obj->parameters, "backend_connect_timeout");
         if (connect_timeout)
         {
-            monitorSetNetworkTimeout(obj->element, MONITOR_CONNECT_TIMEOUT, atoi(connect_timeout));
+            if (!monitorSetNetworkTimeout(obj->element, MONITOR_CONNECT_TIMEOUT, atoi(connect_timeout)))
+            {
+                MXS_ERROR("Failed to set backend_connect_timeout");
+                error_count++;
+            }
         }
 
         char *read_timeout = config_get_value(obj->parameters, "backend_read_timeout");
         if (read_timeout)
         {
-            monitorSetNetworkTimeout(obj->element, MONITOR_READ_TIMEOUT, atoi(read_timeout));
+            if (!monitorSetNetworkTimeout(obj->element, MONITOR_READ_TIMEOUT, atoi(read_timeout)))
+            {
+                MXS_ERROR("Failed to set backend_read_timeout");
+                error_count++;
+            }
         }
 
         char *write_timeout = config_get_value(obj->parameters, "backend_write_timeout");
         if (write_timeout)
         {
-            monitorSetNetworkTimeout(obj->element, MONITOR_WRITE_TIMEOUT, atoi(write_timeout));
+            if (!monitorSetNetworkTimeout(obj->element, MONITOR_WRITE_TIMEOUT, atoi(write_timeout)))
+            {
+                MXS_ERROR("Failed to set backend_write_timeout");
+                error_count++;
+            }
         }
 
         /* get the servers to monitor */

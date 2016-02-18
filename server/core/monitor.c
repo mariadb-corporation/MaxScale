@@ -411,60 +411,39 @@ monitorSetInterval(MONITOR *mon, unsigned long interval)
  * @param type          The timeout handling type
  * @param value         The timeout to set
  */
-void
-monitorSetNetworkTimeout(MONITOR *mon, int type, int value) {
+bool
+monitorSetNetworkTimeout(MONITOR *mon, int type, int value)
+{
+    bool rval = true;
 
-    int max_timeout = (int)(mon->interval/1000);
-    int new_timeout = max_timeout -1;
-
-    if (new_timeout <= 0)
+    if (value > 0)
     {
-        new_timeout = DEFAULT_CONNECT_TIMEOUT;
+        switch (type)
+        {
+            case MONITOR_CONNECT_TIMEOUT:
+                mon->connect_timeout = value;
+                break;
+
+            case MONITOR_READ_TIMEOUT:
+                mon->read_timeout = value;
+                break;
+
+            case MONITOR_WRITE_TIMEOUT:
+                mon->write_timeout = value;
+                break;
+
+            default:
+                MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
+                rval = false;
+                break;
+        }
     }
-
-    switch(type) {
-    case MONITOR_CONNECT_TIMEOUT:
-        if (value < max_timeout)
-        {
-            memcpy(&mon->connect_timeout, &value, sizeof(int));
-        }
-        else
-        {
-            memcpy(&mon->connect_timeout, &new_timeout, sizeof(int));
-            MXS_WARNING("Monitor Connect Timeout %i is greater than monitor interval ~%i seconds"
-                        ", lowering to %i seconds", value, max_timeout, new_timeout);
-        }
-        break;
-
-    case MONITOR_READ_TIMEOUT:
-        if (value < max_timeout)
-        {
-            memcpy(&mon->read_timeout, &value, sizeof(int));
-        }
-        else
-        {
-            memcpy(&mon->read_timeout, &new_timeout, sizeof(int));
-            MXS_WARNING("Monitor Read Timeout %i is greater than monitor interval ~%i seconds"
-                        ", lowering to %i seconds", value, max_timeout, new_timeout);
-        }
-        break;
-
-    case MONITOR_WRITE_TIMEOUT:
-        if (value < max_timeout)
-        {
-            memcpy(&mon->write_timeout, &value, sizeof(int));
-        }
-        else
-        {
-            memcpy(&mon->write_timeout, &new_timeout, sizeof(int));
-            MXS_WARNING("Monitor Write Timeout %i is greater than monitor interval ~%i seconds"
-                        ", lowering to %i seconds", value, max_timeout, new_timeout);
-        }
-        break;
-    default:
-        MXS_ERROR("Monitor setNetworkTimeout received an unsupported action type %i", type);
-        break;
+    else
+    {
+        MXS_ERROR("Negative value for monitor timeout.");
+        rval = false;
     }
+    return rval;
 }
 
 /**
