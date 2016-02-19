@@ -10,7 +10,8 @@ import org.mariadb.jdbc.MariaDbDataSource;
 /**
  * Simple MaxScale connection class
  *
- * Allows execution of queries to one of the MaxScale services configured for testing.
+ * Allows execution of queries to one of the MaxScale services configured for
+ * testing.
  */
 public class MaxScaleConnection {
 
@@ -41,13 +42,19 @@ public class MaxScaleConnection {
     public MaxScaleConnection() throws SQLException, Exception {
         String s = System.getenv("smoke");
         smoke_test = (s != null && s.compareTo("yes") == 0);
-        ip = System.getenv("maxscale_IP");
-        user = System.getenv("maxscale_user");
-        password = System.getenv("maxscale_password");
-        if (ip == null || user == null || password == null) {
-            throw new Exception("Missing environment variables. One of "
-                    + "'maxscale_IP', 'maxscale_user' or 'maxscale_password' is missing.");
+
+        if ((ip = System.getenv("maxscale_IP")) == null) {
+            throw new Exception("Missing environment variable 'maxscale_IP'.");
         }
+
+        if ((user = System.getenv("maxscale_user")) == null) {
+            throw new Exception("Missing environment variable 'maxscale_user'.");
+        }
+
+        if ((password = System.getenv("maxscale_password")) == null) {
+            throw new Exception("Missing environment variable 'maxscale_password'.");
+        }
+
         datasource_rw = new MariaDbDataSource(ip, READWRITESPLIT_PORT, "");
         datasource_rc_master = new MariaDbDataSource(ip, READCONNROUTE_MASTER_PORT, "");
         datasource_rc_slave = new MariaDbDataSource(ip, READCONNROUTE_SLAVE_PORT, "");
@@ -61,6 +68,7 @@ public class MaxScaleConnection {
     }
 
     public void query(Connection connection, String query) throws SQLException {
+        System.out.println(query);
         Statement stmt = connection.createStatement();
         ResultSet rset = stmt.executeQuery(query);
         ResultSetMetaData meta = rset.getMetaData();

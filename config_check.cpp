@@ -33,7 +33,7 @@ bool test_config_works(const char* config, const char **expected_output = NULL)
     if (pid == 0)
     {
         char testname[1024];
-        sprintf(testname, "%s-%d-%u.log", config, getpid(), time(NULL));
+        sprintf(testname, "%s-%d-%ld.log", config, getpid(), time(NULL));
         freopen(testname, "w", stdout);
         freopen(testname, "w", stderr);
         TestConnections * Test = new TestConnections(1, (char**)argv);

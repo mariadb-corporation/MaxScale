@@ -30,7 +30,7 @@ public class SimpleConnectorJTest {
             for (int i = 0; i < test_rows; i++) {
                 maxscale.query(maxscale.getConn_master(),
                         "INSERT INTO " + DATABASE_NAME + "." + TABLE_NAME
-                        + "(data) VALUES" + String.valueOf(System.currentTimeMillis()));
+                        + "(data) VALUES (" + String.valueOf(System.currentTimeMillis()) + ")");
             }
 
             maxscale.query(maxscale.getConn_master(),
@@ -38,6 +38,7 @@ public class SimpleConnectorJTest {
         } catch (Exception ex) {
             error = true;
             System.out.println("Error: " + ex.getMessage());
+            ex.printStackTrace();
         }
 
         if (error) {

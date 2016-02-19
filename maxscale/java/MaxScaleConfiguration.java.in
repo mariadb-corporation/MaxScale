@@ -20,6 +20,7 @@ public class MaxScaleConfiguration {
         pb.environment().put("test_dir", TEST_DIR);
         Process process = pb.start();
         process.waitFor();
+        System.out.println("Sleeping for " + DEFAULT_SLEEP + " seconds.");
         Thread.sleep(DEFAULT_SLEEP * 1000);
     }
 }
