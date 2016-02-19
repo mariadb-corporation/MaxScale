@@ -24,22 +24,41 @@ public class SimpleConnectorJTest {
             if (maxscale.isSmokeTest()) {
                 test_rows = ITERATIONS_SMOKE;
             }
+
+            System.out.println("Creating databases and tables..");
             maxscale.query(maxscale.getConn_master(), "DROP DATABASE IF EXISTS " + DATABASE_NAME);
             maxscale.query(maxscale.getConn_master(), "CREATE DATABASE " + DATABASE_NAME);
-            maxscale.query(maxscale.getConn_master(), "CREATE TABLE " + DATABASE_NAME +
-                    "." + TABLE_NAME + "(id int primary key auto_increment, data varchar(128))");
+            maxscale.query(maxscale.getConn_master(), "CREATE TABLE " + DATABASE_NAME
+                    + "." + TABLE_NAME + "(id int primary key auto_increment, data varchar(128))");
+
+            System.out.println("Inserting " + test_rows + " values");
+            System.out.print("|");
 
             for (int i = 0; i < test_rows; i++) {
                 maxscale.query(maxscale.getConn_master(),
                         "INSERT INTO " + DATABASE_NAME + "." + TABLE_NAME
                         + "(data) VALUES (" + String.valueOf(System.currentTimeMillis()) + ")");
-                maxscale.query(maxscale.getConn_master(),
-                        "SELECT * FROM " + DATABASE_NAME + "." + TABLE_NAME +
-                                " LIMIT " + test_rows / 10);
+                if (i % (test_rows / 100) == 0) {
+                    System.out.print("-");
+                }
             }
 
-            maxscale.query(maxscale.getConn_master(),
-                    "SELECT * FROM " + DATABASE_NAME + "." + TABLE_NAME);
+            System.out.println("|");
+
+            System.out.println("Querying " + test_rows / 10 + "rows " + test_rows + " times");
+            System.out.print("|");
+
+            for (int i = 0; i < test_rows; i++) {
+                maxscale.query(maxscale.getConn_master(),
+                        "SELECT * FROM " + DATABASE_NAME + "." + TABLE_NAME
+                        + " LIMIT " + test_rows / 10);
+                if (i % (test_rows / 100) == 0) {
+                    System.out.print("-");
+                }
+            }
+
+            System.out.println("|");
+
         } catch (Exception ex) {
             error = true;
             System.out.println("Error: " + ex.getMessage());
