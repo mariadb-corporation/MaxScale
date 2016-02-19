@@ -24,7 +24,7 @@ public class SimpleConnectorJTest {
             if (maxscale.isSmokeTest()) {
                 test_rows = ITERATIONS_SMOKE;
             }
-            maxscale.query(maxscale.getConn_master(), "DATABASE IF EXISTS " + DATABASE_NAME);
+            maxscale.query(maxscale.getConn_master(), "DROP DATABASE IF EXISTS " + DATABASE_NAME);
             maxscale.query(maxscale.getConn_master(), "CREATE DATABASE " + DATABASE_NAME);
             maxscale.query(maxscale.getConn_master(), "CREATE TABLE " + TABLE_NAME
                     + "(id int primary key auto_increment, data varchar(128))");
