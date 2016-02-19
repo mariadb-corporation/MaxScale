@@ -17,6 +17,7 @@ public class MaxScaleConfiguration {
         ProcessBuilder pb = new ProcessBuilder(CONFIG_COMMAND ,  test);
         pb.inheritIO();
         pb.directory(new File(TEST_DIR));
+        pb.environment().put("test_dir", TEST_DIR);
         Process process = pb.start();
         process.waitFor();
         Thread.sleep(DEFAULT_SLEEP * 1000);
