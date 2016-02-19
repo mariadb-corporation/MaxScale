@@ -59,7 +59,7 @@ int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, long in
         }
     }
     Test->tprintf("Executing statement\n");
-    Test->set_timeout(160);
+    Test->set_timeout(600);
     Test->add_result(mysql_stmt_execute(stmt), "INSERT Statement with %s failed, error is %s\n", blob_name, mysql_stmt_error(stmt));
     Test->add_result(mysql_stmt_close(stmt), "Error closing stmt\n");
 
