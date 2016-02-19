@@ -40,6 +40,7 @@ public class SimpleConnectorJTest {
                         + "(data) VALUES (" + String.valueOf(System.currentTimeMillis()) + ")");
                 if (i % (test_rows / 100) == 0) {
                     System.out.print("-");
+                    System.out.flush();
                 }
             }
 
@@ -54,6 +55,7 @@ public class SimpleConnectorJTest {
                         + " LIMIT " + test_rows / 10);
                 if (i % (test_rows / 100) == 0) {
                     System.out.print("-");
+                    System.out.flush();
                 }
             }
 
