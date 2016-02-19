@@ -72,15 +72,8 @@ public class MaxScaleConnection {
     public void query(Connection connection, String query) throws SQLException {
         System.out.println(query);
         Statement stmt = connection.createStatement();
-        try (ResultSet rset = stmt.executeQuery(query)) {
-            ResultSetMetaData meta = rset.getMetaData();
-            while (rset.next()) {
-                String row = new String();
-                for (int x = 0; x < meta.getColumnCount(); x++) {
-                    row += rset.getString(x) + " ";
-                }
-                System.out.println(row);
-            }
+        if (!stmt.execute(query)) {
+            System.out.println("Failed to execute query");
         }
     }
 }

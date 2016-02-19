@@ -10,8 +10,8 @@ public class SimpleConnectorJTest {
     public static final int READCONN_SLAVE = 4009;
     public static final String DATABASE_NAME = "mytestdb";
     public static final String TABLE_NAME = "t1";
-    public static final int ITERATIONS_NORMAL = 1000000;
-    public static final int ITERATIONS_SMOKE = 1000000;
+    public static final int ITERATIONS_NORMAL = 100000;
+    public static final int ITERATIONS_SMOKE = 10000;
     public static int test_rows = ITERATIONS_NORMAL;
 
     public static void main(String[] args) {
@@ -26,12 +26,16 @@ public class SimpleConnectorJTest {
             }
             maxscale.query(maxscale.getConn_master(), "DROP DATABASE IF EXISTS " + DATABASE_NAME);
             maxscale.query(maxscale.getConn_master(), "CREATE DATABASE " + DATABASE_NAME);
-            maxscale.query(maxscale.getConn_master(), "CREATE TABLE " + TABLE_NAME
-                    + "(id int primary key auto_increment, data varchar(128))");
+            maxscale.query(maxscale.getConn_master(), "CREATE TABLE " + DATABASE_NAME +
+                    "." + TABLE_NAME + "(id int primary key auto_increment, data varchar(128))");
+
             for (int i = 0; i < test_rows; i++) {
                 maxscale.query(maxscale.getConn_master(),
                         "INSERT INTO " + DATABASE_NAME + "." + TABLE_NAME
                         + "(data) VALUES (" + String.valueOf(System.currentTimeMillis()) + ")");
+                maxscale.query(maxscale.getConn_master(),
+                        "SELECT * FROM " + DATABASE_NAME + "." + TABLE_NAME +
+                                " LIMIT " + test_rows / 10);
             }
 
             maxscale.query(maxscale.getConn_master(),
