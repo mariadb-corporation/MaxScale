@@ -70,7 +70,6 @@ public class MaxScaleConnection {
     }
 
     public void query(Connection connection, String query) throws SQLException {
-        System.out.println(query);
         Statement stmt = connection.createStatement();
         stmt.execute(query);
     }
