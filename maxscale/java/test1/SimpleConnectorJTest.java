@@ -10,8 +10,8 @@ public class SimpleConnectorJTest {
     public static final int READCONN_SLAVE = 4009;
     public static final String DATABASE_NAME = "mytestdb";
     public static final String TABLE_NAME = "t1";
-    public static final int ITERATIONS_NORMAL = 100000;
-    public static final int ITERATIONS_SMOKE = 10000;
+    public static final int ITERATIONS_NORMAL = 10000;
+    public static final int ITERATIONS_SMOKE = 1000;
     public static int test_rows = ITERATIONS_NORMAL;
 
     public static void main(String[] args) {
