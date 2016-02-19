@@ -43,7 +43,7 @@ void add_rule(const char *rule)
 void copy_rule(TestConnections* test)
 {
     char dest[PATH_MAX];
-    sprintf(dest, "/rules/rules.txt", test->maxscale_access_homedir);
+    sprintf(dest, "%s/rules/rules.txt", test->maxscale_access_homedir);
     test->copy_to_maxscale((char*)temp_rules, dest);
 }
 
