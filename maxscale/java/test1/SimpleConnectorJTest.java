@@ -32,34 +32,18 @@ public class SimpleConnectorJTest {
                     + "." + TABLE_NAME + "(id int primary key auto_increment, data varchar(128))");
 
             System.out.println("Inserting " + test_rows + " values");
-            System.out.print("|");
-
             for (int i = 0; i < test_rows; i++) {
                 maxscale.query(maxscale.getConn_master(),
                         "INSERT INTO " + DATABASE_NAME + "." + TABLE_NAME
                         + "(data) VALUES (" + String.valueOf(System.currentTimeMillis()) + ")");
-                if (i % (test_rows / 100) == 0) {
-                    System.out.print("-");
-                    System.out.flush();
-                }
             }
 
-            System.out.println("|");
-
             System.out.println("Querying " + test_rows / 10 + "rows " + test_rows + " times");
-            System.out.print("|");
-
             for (int i = 0; i < test_rows; i++) {
                 maxscale.query(maxscale.getConn_master(),
                         "SELECT * FROM " + DATABASE_NAME + "." + TABLE_NAME
                         + " LIMIT " + test_rows / 10);
-                if (i % (test_rows / 100) == 0) {
-                    System.out.print("-");
-                    System.out.flush();
-                }
             }
-
-            System.out.println("|");
 
         } catch (Exception ex) {
             error = true;
