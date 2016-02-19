@@ -43,17 +43,19 @@ public class MaxScaleConnection {
         String s = System.getenv("smoke");
         smoke_test = (s != null && s.compareTo("yes") == 0);
 
-        if ((ip = System.getenv("maxscale_IP")) == null) {
+        if ((ip = System.getenv("maxscale_IP")) == null || ip.length() == 0) {
             throw new Exception("Missing environment variable 'maxscale_IP'.");
         }
 
-        if ((user = System.getenv("maxscale_user")) == null) {
+        if ((user = System.getenv("maxscale_user")) == null || user.length() == 0) {
             throw new Exception("Missing environment variable 'maxscale_user'.");
         }
 
-        if ((password = System.getenv("maxscale_password")) == null) {
+        if ((password = System.getenv("maxscale_password")) == null || password.length() == 0) {
             throw new Exception("Missing environment variable 'maxscale_password'.");
         }
+
+        System.out.println("IP: " + ip + " User: " + user + " Password: " + password);
 
         datasource_rw = new MariaDbDataSource(ip, READWRITESPLIT_PORT, "");
         datasource_rc_master = new MariaDbDataSource(ip, READCONNROUTE_MASTER_PORT, "");
