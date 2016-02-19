@@ -189,59 +189,78 @@ blr_file_rotate(ROUTER_INSTANCE *router, char *file, uint64_t pos)
  * binlog files need an initial 4 magic bytes at the start. blr_file_add_magic()
  * adds them.
  *
- * @param router	The router instance
- * @param fd		file descriptor to the open binlog file
- * @return		Nothing
+ * @param fd            file descriptor to the open binlog file
+ * @return              True if the magic string could be written to the file.
  */
-static void
-blr_file_add_magic(ROUTER_INSTANCE *router, int fd)
+static bool
+blr_file_add_magic(int fd)
 {
-unsigned char	magic[] = BINLOG_MAGIC;
+    static const unsigned char magic[] = BINLOG_MAGIC;
 
-	write(fd, magic, 4);
-	router->current_pos = 4;			/* Initial position after the magic number */
-	router->binlog_position = 4;			/* Initial position after the magic number */
-	router->current_safe_event = 4;
-	router->last_written = 0;
+    ssize_t written = write(fd, magic, BINLOG_MAGIC_SIZE);
+
+    return written == BINLOG_MAGIC_SIZE;
 }
 
 
 /**
  * Create a new binlog file for the router to use.
  *
- * @param router	The router instance
- * @param file		The binlog file name
- * @return		Non-zero if the fie creation succeeded
+ * @param router        The router instance
+ * @param file          The binlog file name
+ * @return              Non-zero if the fie creation succeeded
  */
 static int
 blr_file_create(ROUTER_INSTANCE *router, char *file)
 {
-char		path[PATH_MAX + 1] = "";
-int		fd;
+    int created = 0;
+    char err_msg[STRERROR_BUFLEN];
 
-	strcpy(path, router->binlogdir);
-	strcat(path, "/");
-	strcat(path, file);
+    char path[PATH_MAX + 1] = "";
 
-	if ((fd = open(path, O_RDWR|O_CREAT, 0666)) != -1)
-	{
-		blr_file_add_magic(router,fd);
-	}
-	else
-	{
-		char err_msg[STRERROR_BUFLEN];
+    strcpy(path, router->binlogdir);
+    strcat(path, "/");
+    strcat(path, file);
 
-		MXS_ERROR("%s: Failed to create binlog file %s, %s.",
+    int fd = open(path, O_RDWR|O_CREAT, 0666);
+
+    if (fd != -1)
+    {
+        if (blr_file_add_magic(fd))
+        {
+            close(router->binlog_fd);
+            spinlock_acquire(&router->binlog_lock);
+            strncpy(router->binlog_name, file, BINLOG_FNAMELEN);
+            router->binlog_fd = fd;
+            router->current_pos = BINLOG_MAGIC_SIZE;     /* Initial position after the magic number */
+            router->binlog_position = BINLOG_MAGIC_SIZE;
+            router->current_safe_event = BINLOG_MAGIC_SIZE;
+            router->last_written = BINLOG_MAGIC_SIZE;
+            router->last_event_pos = 0;
+            spinlock_release(&router->binlog_lock);
+
+            created = 1;
+        }
+        else
+        {
+            MXS_ERROR("%s: Failed to write magic string to created binlog file %s, %s.",
+                      router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)));
+            close(fd);
+
+            if (!unlink(path))
+            {
+                MXS_ERROR("%s: Failed to delete file %s, %s.",
                           router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)));
-		return 0;
-	}
-	fsync(fd);
-	close(router->binlog_fd);
-	spinlock_acquire(&router->binlog_lock);
-	strncpy(router->binlog_name, file, BINLOG_FNAMELEN);
-	router->binlog_fd = fd;
-	spinlock_release(&router->binlog_lock);
-	return 1;
+            }
+        }
+    }
+    else
+    {
+        MXS_ERROR("%s: Failed to create binlog file %s, %s.",
+                  router->service->name, path, strerror_r(errno, err_msg, sizeof(err_msg)));
+    }
+
+    return created;
 }
 
 /**
@@ -273,7 +292,16 @@ int		fd;
 	router->current_pos = lseek(fd, 0L, SEEK_END);
 	if (router->current_pos < 4) {
 		if (router->current_pos == 0) {
-			blr_file_add_magic(router, fd);
+			if (blr_file_add_magic(fd))
+			{
+				router->current_pos = BINLOG_MAGIC_SIZE;
+				router->binlog_position = BINLOG_MAGIC_SIZE;
+				router->current_safe_event = BINLOG_MAGIC_SIZE;
+				router->last_written = BINLOG_MAGIC_SIZE;
+				router->last_event_pos = 0;
+			} else {
+			    MXS_ERROR("%s: Could not write magic to binlog file.", router->service->name);
+			}
 		} else {
 			/* If for any reason the file's length is between 1 and 3 bytes
 			 * then report an error. */
@@ -297,26 +325,33 @@ int		fd;
  * @return 		Return the number of bytes written
  */
 int
-blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *buf)
+blr_write_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint32_t size, uint8_t *buf)
 {
 int	n;
 
-	if ((n = pwrite(router->binlog_fd, buf, hdr->event_size,
-				hdr->next_pos - hdr->event_size)) != hdr->event_size)
+	if ((n = pwrite(router->binlog_fd, buf, size,
+				router->last_written)) != size)
 	{
 		char err_msg[STRERROR_BUFLEN];
-		MXS_ERROR("%s: Failed to write binlog record at %d of %s, %s. "
+		MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
                           "Truncating to previous record.",
-                          router->service->name, hdr->next_pos - hdr->event_size,
+                          router->service->name, router->last_written,
                           router->binlog_name,
                           strerror_r(errno, err_msg, sizeof(err_msg)));
-		/* Remove any partual event that was written */
-		ftruncate(router->binlog_fd, hdr->next_pos - hdr->event_size);
+		/* Remove any partial event that was written */
+		if (ftruncate(router->binlog_fd, router->last_written))
+		{
+			MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
+					  router->service->name, router->last_written,
+					  router->binlog_name,
+					  strerror_r(errno, err_msg, sizeof(err_msg)));
+		}
 		return 0;
 	}
 	spinlock_acquire(&router->binlog_lock);
 	router->current_pos = hdr->next_pos;
-	router->last_written = hdr->next_pos - hdr->event_size;
+	router->last_written += size;
+	router->last_event_pos = hdr->next_pos - hdr->event_size;
 	spinlock_release(&router->binlog_lock);
 	return n;
 }
@@ -462,10 +497,9 @@ struct	stat	statb;
 	if (strcmp(router->binlog_name, file->binlogname) == 0 &&
 			pos >= router->binlog_position)
 	{
-		if (pos > router->binlog_position && !router->rotating)
+		if (pos > router->binlog_position)
 		{
-			/* Unsafe position, slave will be disconnected by the calling routine */
-			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested binlog position %lu. Position is unsafe so disconnecting. "
+			snprintf(errmsg, BINLOG_ERROR_MSG_LEN, "Requested binlog position %lu is unsafe. "
 				"Latest safe position %lu, end of binlog file %lu",
 				pos, router->binlog_position, router->current_pos);
 

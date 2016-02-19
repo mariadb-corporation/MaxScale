@@ -99,6 +99,10 @@ extern char * blr_last_event_description(ROUTER_INSTANCE *router);
 static void blr_log_identity(ROUTER_INSTANCE *router);
 static void blr_distribute_error_message(ROUTER_INSTANCE *router, char *message, char *state, unsigned int err_code);
 
+int blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *buf);
+bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf);
+void extract_checksum(ROUTER_INSTANCE* router, uint8_t *cksumptr, uint8_t len);
+
 static int keepalive = 1;
 
 /**
@@ -289,6 +293,7 @@ blr_master_close(ROUTER_INSTANCE *router)
 {
 	dcb_close(router->master);
 	router->master_state = BLRM_UNCONNECTED;
+	router->master_event_state = BLR_EVENT_DONE;
 }
 
 /**
@@ -915,7 +920,7 @@ int			n_bufs = -1, pn_bufs = -1;
 		 * copy if the message straddles GWBUF's.
 		 */
 
-		if (len < BINLOG_EVENT_HDR_LEN)
+		if (len < BINLOG_EVENT_HDR_LEN && router->master_event_state != BLR_EVENT_ONGOING)
 		{
 		char	*msg = "";
 
@@ -932,90 +937,193 @@ int			n_bufs = -1, pn_bufs = -1;
 		}
 		else
 		{
-			router->stats.n_binlogs++;
-			router->stats.n_binlogs_ses++;
-
-			blr_extract_header(ptr, &hdr);
-
-			/* Sanity check */
-			if (hdr.ok == 0 && hdr.event_size != len - 5)
+			if (router->master_event_state == BLR_EVENT_DONE)
 			{
-				MXS_ERROR("Packet length is %d, but event size is %d, "
-                          "binlog file %s position %lu "
-                          "reslen is %d and preslen is %d, "
-                          "length of previous event %d. %s",
-                          len, hdr.event_size,
-                          router->binlog_name,
-                          router->current_pos,
-                          reslen, preslen, prev_length,
-                          (prev_length == -1 ?
-                           (no_residual ? "No residual data from previous call" :
-                            "Residual data from previous call") : ""));
+				router->stats.n_binlogs++;
+				router->stats.n_binlogs_ses++;
 
-				blr_log_packet(LOG_ERR, "Packet:", ptr, len);
-				MXS_ERROR("This event (0x%x) was contained in %d GWBUFs, "
-                          "the previous events was contained in %d GWBUFs",
-                          router->lastEventReceived, n_bufs, pn_bufs);
-				if (msg)
+				blr_extract_header(ptr, &hdr);
+
+				/* Sanity check */
+				if (hdr.ok == 0)
 				{
-					free(msg);
-					msg = NULL;
-				}
-				break;
-			}
-
-			if (hdr.ok == 0)
-			{
-				int event_limit;
-
-				spinlock_acquire(&router->lock);
-
-				/* set mysql errno to 0 */
-				router->m_errno = 0;
-
-				/* Remove error message */
-				if (router->m_errmsg)
-					free(router->m_errmsg);
-				router->m_errmsg = NULL;
-
-				spinlock_release(&router->lock);
-
-#ifdef SHOW_EVENTS
-				printf("blr: event type 0x%02x, flags 0x%04x, event size %d, event timestamp %lu\n", hdr.event_type, hdr.flags, hdr.event_size, hdr.timestamp);
-#endif
-
-				/*
-				 * First check that the checksum we calculate matches the
-				 * checksum in the packet we received.
-				 */
-				if (router->master_chksum)
-				{
-					uint32_t	chksum, pktsum;
-
-					chksum = crc32(0L, NULL, 0);
-					chksum = crc32(chksum, ptr + 5, hdr.event_size  - 4);
-					pktsum = EXTRACT32(ptr + hdr.event_size + 1);
-					if (pktsum != chksum)
+					if (hdr.event_size != len - 5 && (hdr.event_size + 1) < MYSQL_PACKET_LENGTH_MAX)
 					{
-						router->stats.n_badcrc++;
+						MXS_ERROR("Packet length is %d, but event size is %d, "
+							"binlog file %s position %lu "
+							"reslen is %d and preslen is %d, "
+							"length of previous event %d. %s",
+											len, hdr.event_size,
+											router->binlog_name,
+										router->current_pos,
+										reslen, preslen, prev_length,
+										(prev_length == -1 ?
+										(no_residual ? "No residual data from previous call" :
+											"Residual data from previous call") : ""));
+
+						blr_log_packet(LOG_ERR, "Packet:", ptr, len);
+
+						MXS_ERROR("This event (0x%x) was contained in %d GWBUFs, "
+										"the previous events was contained in %d GWBUFs",
+										router->lastEventReceived, n_bufs, pn_bufs);
+
 						if (msg)
 						{
 							free(msg);
 							msg = NULL;
 						}
-						MXS_ERROR("%s: Checksum error in event "
-                                  "from master, "
-                                  "binlog %s @ %lu. "
-                                  "Closing master connection.",
-                                  router->service->name,
-                                  router->binlog_name,
-                                  router->current_pos);
-						blr_master_close(router);
-						blr_master_delayed_connect(router);
-						return;
+
+						break;
 					}
+                    else if ((hdr.event_size + 1) >= MYSQL_PACKET_LENGTH_MAX)
+                    {
+                        router->master_event_state = BLR_EVENT_STARTED;
+
+                        /** Store the header for later use */
+                        memcpy(&router->stored_header, &hdr, sizeof(hdr));
+                    }
+
+					/** Prepare the checksum variables for this event */
+					router->stored_checksum = crc32(0L, NULL, 0);
+					router->checksum_size = hdr.event_size - MYSQL_CHECKSUM_LEN;
+					router->partial_checksum_bytes = 0;
 				}
 
+				if (hdr.ok == 0)
+				{
+					spinlock_acquire(&router->lock);
+
+					/* set mysql errno to 0 */
+					router->m_errno = 0;
+
+					/* Remove error message */
+					if (router->m_errmsg)
+						free(router->m_errmsg);
+					router->m_errmsg = NULL;
+
+					spinlock_release(&router->lock);
+#ifdef SHOW_EVENTS
+					printf("blr: len %lu, event type 0x%02x, flags 0x%04x, event size %d, event timestamp %lu\n", (unsigned long)len-4, hdr.event_type, hdr.flags, hdr.event_size, (unsigned long)hdr.timestamp);
+#endif
+				}
+            }
+
+            /* pending large event */
+            if (router->master_event_state != BLR_EVENT_DONE)
+            {
+                if (len - MYSQL_HEADER_LEN < MYSQL_PACKET_LENGTH_MAX)
+                {
+                    /** This is the last packet, we can now proceed to distribute
+                     * the event afer it has been written to disk */
+                    ss_dassert(router->master_event_state != BLR_EVENT_COMPLETE);
+                    router->master_event_state = BLR_EVENT_COMPLETE;
+                    memcpy(&hdr, &router->stored_header, sizeof(hdr));
+                }
+                else
+                {
+                    /* current partial event is being written to disk file */
+                    uint32_t offset = MYSQL_HEADER_LEN;
+                    uint32_t extra_bytes = MYSQL_HEADER_LEN;
+
+                    /** Don't write the OK byte into the binlog */
+                    if (router->master_event_state == BLR_EVENT_STARTED)
+                    {
+                        offset = MYSQL_HEADER_LEN + 1;
+                        router->master_event_state = BLR_EVENT_ONGOING;
+                        extra_bytes = MYSQL_HEADER_LEN + 1;
+                    }
+
+                    if (router->master_chksum)
+                    {
+                        uint32_t size = MIN(len - extra_bytes, router->checksum_size);
+                        router->stored_checksum = crc32(router->stored_checksum,
+                                                        ptr + offset,
+                                                        size);
+                        router->checksum_size -= size;
+
+                        if (router->checksum_size == 0 && size < len - offset)
+                        {
+                            extract_checksum(router, ptr + offset + size, len - offset - size);
+                        }
+                    }
+
+                    if (blr_write_data_into_binlog(router, len - offset, ptr + offset) == 0)
+                    {
+                        /** Failed to write to the binlog file, destroy the buffer
+                         * chain and close the connection with the master */
+                        while (pkt)
+                        {
+                            pkt = GWBUF_CONSUME_ALL(pkt);
+                        }
+                        blr_master_close(router);
+                        blr_master_delayed_connect(router);
+                        return;
+                    }
+                    pkt = gwbuf_consume(pkt, len);
+                    pkt_length -= len;
+                    continue;
+                }
+            }
+
+            /*
+             * First check that the checksum we calculate matches the
+             * checksum in the packet we received.
+             */
+            if (router->master_chksum)
+            {
+                uint32_t pktsum, offset = MYSQL_HEADER_LEN;
+                uint32_t size = len - MYSQL_HEADER_LEN - MYSQL_CHECKSUM_LEN;
+
+                if (router->master_event_state == BLR_EVENT_DONE)
+                {
+                    /** Set the pointer offset to the first byte after
+                     * the header and OK byte */
+                    offset = MYSQL_HEADER_LEN + 1;
+                    size = len - MYSQL_HEADER_LEN - MYSQL_CHECKSUM_LEN - 1;
+                }
+
+                size = MIN(size, router->checksum_size);
+
+                if (router->checksum_size > 0)
+                {
+                    router->stored_checksum = crc32(router->stored_checksum,
+                                                    ptr + offset,
+                                                    size);
+                    router->checksum_size -= size;
+                }
+
+                if(router->checksum_size == 0 && size < len - offset)
+                {
+                    extract_checksum(router, ptr + offset + size, len - offset - size);
+                }
+
+                if (router->partial_checksum_bytes == MYSQL_CHECKSUM_LEN)
+                {
+                    pktsum = EXTRACT32(&router->partial_checksum);
+                    if (pktsum != router->stored_checksum)
+                    {
+                        router->stats.n_badcrc++;
+                        free(msg);
+                        msg = NULL;
+                        MXS_ERROR("%s: Checksum error in event from master, "
+                            "binlog %s @ %lu. Closing master connection.",
+                                  router->service->name, router->binlog_name,
+                                  router->current_pos);
+                        blr_master_close(router);
+                        blr_master_delayed_connect(router);
+                        return;
+                    }
+                }
+                else
+                {
+                    pkt = gwbuf_consume(pkt, len);
+                    pkt_length -= len;
+                    continue;
+                }
+            }
+
+			if (hdr.ok == 0)
+			{
 				router->lastEventReceived = hdr.event_type;
 				router->lastEventTimestamp = hdr.timestamp;
 
@@ -1045,7 +1153,7 @@ int			n_bufs = -1, pn_bufs = -1;
 				 * This marks the transaction starts instead of
 				 * QUERY_EVENT with "BEGIN"
 				*/
-				if (router->trx_safe) {
+				if (router->trx_safe && router->master_event_state == BLR_EVENT_DONE) {
 					if (router->mariadb10_compat) {
 						if (hdr.event_type == MARIADB10_GTID_EVENT) {
 							uint64_t n_sequence;
@@ -1130,7 +1238,9 @@ int			n_bufs = -1, pn_bufs = -1;
 					}
 				}
 
-				event_limit = router->mariadb10_compat ? MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
+				/** Gather statistics about the replication event types */
+				int event_limit = router->mariadb10_compat ?
+					MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
 
 				if (hdr.event_type <= event_limit)
 					router->stats.events[hdr.event_type]++;
@@ -1193,13 +1303,30 @@ int			n_bufs = -1, pn_bufs = -1;
 					}
 					else if (hdr.flags != LOG_EVENT_ARTIFICIAL_F)
 					{
-						ptr = ptr + 5;	// We don't put the first byte of the payload
-								// into the binlog file
-						if (hdr.event_type == ROTATE_EVENT)
-							router->rotating = 1;
+						ptr = ptr + 4; // Skip header
+						uint32_t offset = 4;
 
-						/* current event is being written to disk file */
-						if (blr_write_binlog_record(router, &hdr, ptr) == 0)
+						if (router->master_event_state == BLR_EVENT_STARTED ||
+							router->master_event_state == BLR_EVENT_DONE)
+						{
+							ptr++;
+							offset++;
+						}
+
+						if (hdr.event_type == ROTATE_EVENT)
+						{
+							spinlock_acquire(&router->binlog_lock);
+							router->rotating = 1;
+							spinlock_release(&router->binlog_lock);
+						}
+
+						/* Current event is being written to disk file.
+						 * It is possible for an empty packet to be sent if an
+						 * event is exactly 2^24 bytes long. In this case the
+						 * empty packet should be discarded. */
+
+						if (len > MYSQL_HEADER_LEN &&
+							blr_write_binlog_record(router, &hdr, len - offset, ptr) == 0)
 						{
 							/*
 							 * Failed to write to the
@@ -1247,8 +1374,28 @@ int			n_bufs = -1, pn_bufs = -1;
 
 							spinlock_release(&router->binlog_lock);
 
-							/* Now distribute events */
-							blr_distribute_binlog_record(router, &hdr, ptr);
+							if (router->master_event_state == BLR_EVENT_COMPLETE)
+							{
+								/** Read the complete event from the disk */
+								GWBUF *record = blr_read_events_from_pos(router, router->last_event_pos, &hdr, hdr.next_pos);
+                                if (record)
+                                {
+                                    uint8_t *data = GWBUF_DATA(record);
+                                    blr_distribute_binlog_record(router, &hdr, data);
+                                    gwbuf_free(record);
+                                }
+                                else
+                                {
+                                    MXS_ERROR("Failed to read event at position"
+                                              "%lu with a size of %u bytes.",
+                                              router->last_event_pos, hdr.event_size);
+                                }
+							}
+							else
+							{
+								/* Now distribute events */
+								blr_distribute_binlog_record(router, &hdr, ptr);
+							}
 						} else {
 							/**
 							 * If transaction is closed:
@@ -1358,7 +1505,9 @@ int			n_bufs = -1, pn_bufs = -1;
 						ptr += 5;
 						if (hdr.event_type == ROTATE_EVENT)
 						{
+							spinlock_acquire(&router->binlog_lock);
 							router->rotating = 1;
+							spinlock_release(&router->binlog_lock);
 							if (!blr_rotate_event(router, ptr, &hdr))
 							{
 								/*
@@ -1375,6 +1524,12 @@ int			n_bufs = -1, pn_bufs = -1;
 							}
 						}
 					}
+				}
+
+				/** A large event is now fully received and processed */
+				if(router->master_event_state == BLR_EVENT_COMPLETE)
+				{
+					router->master_event_state = BLR_EVENT_DONE;
 				}
 			}
 			else
@@ -1474,6 +1629,7 @@ blr_extract_header(register uint8_t *ptr, register REP_HEADER *hdr)
  * @param router	The instance of the router
  * @param ptr		The packet containing the rotate event
  * @param hdr		The replication message header
+ * @return 		    1 if the file could be rotated, 0 otherwise.
  */
 static int
 blr_rotate_event(ROUTER_INSTANCE *router, uint8_t *ptr, REP_HEADER *hdr)
@@ -1505,17 +1661,20 @@ char		file[BINLOG_FNAMELEN+1];
 
 	strcpy(router->prevbinlog, router->binlog_name);
 
+	int rotated = 1;
+
 	if (strncmp(router->binlog_name, file, slen) != 0)
 	{
 		router->stats.n_rotates++;
 		if (blr_file_rotate(router, file, pos) == 0)
 		{
-			router->rotating = 0;
-			return 0;
+			rotated = 0;
 		}
 	}
+	spinlock_acquire(&router->binlog_lock);
 	router->rotating = 0;
-	return 1;
+	spinlock_release(&router->binlog_lock);
+	return rotated;
 }
 
 /**
@@ -1602,6 +1761,11 @@ unsigned int cstate;
 			/* Slave is in catchup mode */
 			action = 3;
 		}
+        else
+        {
+            MXS_ERROR("slave->cstate does not contain a meaningful state %d", slave->cstate);
+            action = 0;
+        }
 		slave->stats.n_actions[action-1]++;
 		spinlock_release(&slave->catch_lock);
 
@@ -1621,7 +1785,7 @@ unsigned int cstate;
 				 */
 				slave_action = SLAVE_SEND_EVENT;
 			}
-			else if (slave->binlog_pos == router->last_written &&
+			else if (slave->binlog_pos == router->last_event_pos &&
 				(strcmp(slave->binlogfile, router->binlog_name) == 0 ||
 				(hdr->event_type == ROTATE_EVENT &&
 				strcmp(slave->binlogfile, router->prevbinlog))))
@@ -1680,20 +1844,13 @@ unsigned int cstate;
 					if (router->send_slave_heartbeat)
 						slave->lastReply = time(0);
 
-					pkt = gwbuf_alloc(hdr->event_size + 5);
-					buf = GWBUF_DATA(pkt);
-					encode_value(buf, hdr->event_size + 1, 24);
-					buf += 3;
-					*buf++ = slave->seqno++;
-					*buf++ = 0;	// OK
-					memcpy(buf, ptr, hdr->event_size);
 					if (hdr->event_type == ROTATE_EVENT)
 					{
 						blr_slave_rotate(router, slave, ptr);
 					}
-					slave->stats.n_bytes += gwbuf_length(pkt);
-					slave->stats.n_events++;
-					slave->dcb->func.write(slave->dcb, pkt);
+
+					blr_send_event(slave, hdr, ptr);
+
 					spinlock_acquire(&slave->catch_lock);
 					if (hdr->event_type != ROTATE_EVENT)
 					{
@@ -2215,3 +2372,163 @@ ROUTER_SLAVE    *slave;
 	spinlock_release(&router->lock);
 }
 
+int
+blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *buf)
+{
+int     n;
+
+        if ((n = pwrite(router->binlog_fd, buf, data_len,
+                                router->last_written)) != data_len)
+        {
+                char err_msg[STRERROR_BUFLEN];
+                MXS_ERROR("%s: Failed to write binlog record at %lu of %s, %s. "
+                          "Truncating to previous record.",
+                          router->service->name, router->last_written,
+                          router->binlog_name,
+                          strerror_r(errno, err_msg, sizeof(err_msg)));
+
+                /* Remove any partial event that was written */
+                if (ftruncate(router->binlog_fd, router->last_written))
+                {
+                    MXS_ERROR("%s: Failed to truncate binlog record at %lu of %s, %s. ",
+                              router->service->name, router->last_written,
+                              router->binlog_name,
+                              strerror_r(errno, err_msg, sizeof(err_msg)));
+                }
+                return 0;
+        }
+        router->last_written += data_len;
+        return n;
+}
+
+/**
+ * Send a replication event packet to a slave
+ *
+ * The first replication event packet contains one byte set to either
+ * 0x0, 0xfe or 0xff which signals what the state of the replication stream is.
+ * If the data pointed by @c buf is not the start of the replication header
+ * and part of the replication event is already sent, @c first must be set to
+ * false so that the first status byte is not sent again.
+ *
+ * @param slave Slave where the packet is sent to
+ * @param buf Buffer containing the data
+ * @param len Length of the data
+ * @param first If this is the first packet of a multi-packet event
+ * @return True on success, false when memory allocation fails
+ */
+bool blr_send_packet(ROUTER_SLAVE *slave, uint8_t *buf, uint32_t len, bool first)
+{
+    bool rval = true;
+    unsigned int datalen = len + (first ? 1 : 0);
+    GWBUF *buffer = gwbuf_alloc(datalen + MYSQL_HEADER_LEN);
+    if (buffer)
+    {
+        uint8_t *data = GWBUF_DATA(buffer);
+        encode_value(data, datalen, 24);
+        data += 3;
+        *data++ = slave->seqno++;
+
+        if (first)
+        {
+            *data++ = 0; // OK byte
+        }
+
+        if (len > 0)
+        {
+            memcpy(data, buf, len);
+        }
+
+        slave->stats.n_bytes += GWBUF_LENGTH(buffer);
+        slave->dcb->func.write(slave->dcb, buffer);
+    }
+    else
+    {
+        MXS_ERROR("failed to allocate %ld bytes of memory when writing an"
+                  " event.", datalen + MYSQL_HEADER_LEN);
+        rval = false;
+    }
+    return rval;
+}
+
+/**
+ * Send a single replication event to a slave
+ *
+ * This sends the complete replication event to a slave. If the event size exceeds
+ * the maximum size of a MySQL packet, it will be sent in multiple packets.
+ *
+ * @param slave Slave where the event is sent to
+ * @param hdr Replication header
+ * @param buf Pointer to the replication event as it was read from the disk
+ * @return True on success, false if memory allocation failed
+ */
+bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf)
+{
+    bool rval = true;
+
+    /** Check if the event and the OK byte fit into a single packet  */
+    if (hdr->event_size + 1 < MYSQL_PACKET_LENGTH_MAX)
+    {
+        rval = blr_send_packet(slave, buf, hdr->event_size, true);
+    }
+    else
+    {
+        /** Total size of all the payloads in all the packets */
+        int64_t len = hdr->event_size + 1;
+        bool first = true;
+
+        while (rval && len > 0)
+        {
+            uint64_t payload_len = first ? MYSQL_PACKET_LENGTH_MAX - 1 :
+                MIN(MYSQL_PACKET_LENGTH_MAX, len);
+
+            if (blr_send_packet(slave, buf, payload_len, first))
+            {
+                /** The check for exactly 0x00ffffff bytes needs to be done
+                 * here as well */
+                if (len == MYSQL_PACKET_LENGTH_MAX)
+                {
+                    blr_send_packet(slave, buf, 0, false);
+                }
+
+                /** Add the extra byte written by blr_send_packet */
+                len -= first ? payload_len + 1 : payload_len;
+                buf += payload_len;
+                first = false;
+            }
+            else
+            {
+                rval = false;
+            }
+        }
+    }
+
+    slave->stats.n_events++;
+
+    if (!rval)
+    {
+        MXS_ERROR("Failed to send an event of %u bytes to slave at %s:%d.",
+                  hdr->event_size, slave->dcb->remote,
+                  ntohs(slave->dcb->ipv4.sin_port));
+    }
+    return rval;
+}
+
+/**
+ * Extract the checksum from the binlogs
+ *
+ * This updates the internal state of the router and will allow us to detect
+ * if the checksum is split across two packets.
+ * @param router Router instance
+ * @param cksumptr Pointer to the checksum
+ * @param len How much of the data is readable
+ */
+void extract_checksum(ROUTER_INSTANCE* router, uint8_t *cksumptr, uint8_t len)
+{
+    uint8_t *ptr = cksumptr;
+    while (ptr - cksumptr < len)
+    {
+        router->partial_checksum[router->partial_checksum_bytes] = *ptr;
+        ptr++;
+        router->partial_checksum_bytes++;
+    }
+}
