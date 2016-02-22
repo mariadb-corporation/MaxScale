@@ -191,6 +191,10 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 {
                     cflags &= ~REG_ICASE;
                 }
+                else if (!strcasecmp(options[i], "extended"))
+                {
+                    cflags |= REG_EXTENDED;
+                }
                 else
                 {
                     MXS_ERROR("namedserverfilter: unsupported option '%s'.",

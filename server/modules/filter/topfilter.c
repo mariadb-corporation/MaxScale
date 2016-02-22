@@ -233,14 +233,36 @@ createInstance(char **options, FILTER_PARAMETER **params)
                           params[i]->name);
             }
         }
+
+        int cflags = REG_ICASE;
+
         if (options)
         {
-            MXS_ERROR("topfilter: Options are not supported by this "
-                      " filter. They will be ignored.");
+            for (i = 0; options[i]; i++)
+            {
+                if (!strcasecmp(options[i], "ignorecase"))
+                {
+                    cflags |= REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "case"))
+                {
+                    cflags &= ~REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "extended"))
+                {
+                    cflags |= REG_EXTENDED;
+                }
+                else
+                {
+                    MXS_ERROR("topfilter: unsupported option '%s'.",
+                              options[i]);
+                }
+            }
         }
+
         my_instance->sessions = 0;
         if (my_instance->match &&
-            regcomp(&my_instance->re, my_instance->match, REG_ICASE))
+            regcomp(&my_instance->re, my_instance->match, cflags))
         {
             MXS_ERROR("topfilter: Invalid regular expression '%s'"
                       " for the match parameter.",
@@ -253,8 +275,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             return NULL;
         }
         if (my_instance->exclude &&
-            regcomp(&my_instance->exre, my_instance->exclude,
-                    REG_ICASE))
+            regcomp(&my_instance->exre, my_instance->exclude, cflags))
         {
             MXS_ERROR("qlafilter: Invalid regular expression '%s'"
                       " for the nomatch paramter.\n",

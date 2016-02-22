@@ -177,14 +177,6 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
     if ((my_instance = calloc(1, sizeof(QLA_INSTANCE))) != NULL)
     {
-        if (options)
-        {
-            my_instance->filebase = strdup(options[0]);
-        }
-        else
-        {
-            my_instance->filebase = strdup("qla");
-        }
         my_instance->source = NULL;
         my_instance->userName = NULL;
         my_instance->match = NULL;
@@ -225,9 +217,36 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 }
             }
         }
+
+        int cflags = REG_ICASE;
+
+        if (options)
+        {
+            for (i = 0; options[i]; i++)
+            {
+                if (!strcasecmp(options[i], "ignorecase"))
+                {
+                    cflags |= REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "case"))
+                {
+                    cflags &= ~REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "extended"))
+                {
+                    cflags |= REG_EXTENDED;
+                }
+                else
+                {
+                    MXS_ERROR("qlafilter: unsupported option '%s'.",
+                              options[i]);
+                }
+            }
+        }
+
         my_instance->sessions = 0;
         if (my_instance->match &&
-            regcomp(&my_instance->re, my_instance->match, REG_ICASE))
+            regcomp(&my_instance->re, my_instance->match, cflags))
         {
             MXS_ERROR("qlafilter: Invalid regular expression '%s'"
                       " for the match parameter.\n",
@@ -242,8 +261,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             return NULL;
         }
         if (my_instance->nomatch &&
-            regcomp(&my_instance->nore, my_instance->nomatch,
-                    REG_ICASE))
+            regcomp(&my_instance->nore, my_instance->nomatch, cflags))
         {
             MXS_ERROR("qlafilter: Invalid regular expression '%s'"
                       " for the nomatch paramter.",

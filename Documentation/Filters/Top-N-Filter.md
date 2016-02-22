@@ -24,7 +24,19 @@ filters=MyLogFilter
 
 ## Filter Options
 
-The top filter does not support any filter options currently.
+The top filter accepts the following options.
+
+|Option    |Description                                 |
+|----------|--------------------------------------------|
+|ignorecase|Use case-insensitive matching               |
+|case      |Use case-sensitive matching                 |
+|extended  |Use extended regular expression syntax (ERE)|
+
+To use multiple filter options, list them in a comma-separated list.
+
+```
+options=case,extended
+```
 
 ## Filter Parameters
 

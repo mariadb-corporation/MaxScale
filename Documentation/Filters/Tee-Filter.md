@@ -25,7 +25,19 @@ filters=DataMartFilter
 
 ## Filter Options
 
-The tee filter does not support any filter options.
+The tee filter accepts the following options.
+
+|Option    |Description                                 |
+|----------|--------------------------------------------|
+|ignorecase|Use case-insensitive matching               |
+|case      |Use case-sensitive matching                 |
+|extended  |Use extended regular expression syntax (ERE)|
+
+To use multiple filter options, list them in a comma-separated list.
+
+```
+options=case,extended
+```
 
 ## Filter Parameters
 
