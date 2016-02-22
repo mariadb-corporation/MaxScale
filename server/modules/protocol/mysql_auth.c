@@ -69,7 +69,7 @@ mysql_auth_authenticate(DCB *dcb, GWBUF **buffer)
     MYSQL_session *client_data = (MYSQL_session *)dcb->data;
     int auth_ret, ssl_ret;
 
-    if (0 != (ssl_ret = ssl_authenticate_client(dcb, mysql_auth_is_client_ssl_capable(dcb))))
+    if (0 != (ssl_ret = ssl_authenticate_client(dcb, client_data->user, mysql_auth_is_client_ssl_capable(dcb))))
     {
         auth_ret = (SSL_ERROR_CLIENT_NOT_SSL == ssl_ret) ? MYSQL_FAILED_AUTH_SSL : MYSQL_FAILED_AUTH;
     }
@@ -144,6 +144,7 @@ mysql_auth_authenticate(DCB *dcb, GWBUF **buffer)
  * @param buffer Pointer to pointer to buffer containing data from client
  * @return Authentication status
  * @note Authentication status codes are defined in mysql_client_server_protocol.h
+ * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
  */
 int
 mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
@@ -184,6 +185,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
      * string[23]   reserved (all [0])
      * ...
      * ...
+     * Note that the fixed elements add up to 36
      */
 
     /* Detect now if there are enough bytes to continue */
@@ -210,6 +212,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
  * @param client_auth_packet size An integer giving the size of the data
  * @return Authentication status
  * @note Authentication status codes are defined in mysql_client_server_protocol.h
+ * @see https://dev.mysql.com/doc/internals/en/client-server-protocol.html
  */
 static int
 mysql_auth_set_client_data(
@@ -218,6 +221,7 @@ mysql_auth_set_client_data(
     uint8_t *client_auth_packet,
     int client_auth_packet_size)
 {
+    /* The numbers are the fixed elements in the client handshake packet */
     int auth_packet_base_size = 4 + 4 + 4 + 1 + 23;
     int packet_length_used = 0;
 

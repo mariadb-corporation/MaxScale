@@ -2957,38 +2957,32 @@ int dcb_connect_SSL(DCB* dcb)
         case SSL_ERROR_NONE:
             MXS_DEBUG("SSL_connect done for %s", dcb->remote);
             return 1;
-            break;
 
         case SSL_ERROR_WANT_READ:
             MXS_DEBUG("SSL_connect ongoing want read for %s", dcb->remote);
             return 0;
-            break;
 
         case SSL_ERROR_WANT_WRITE:
             MXS_DEBUG("SSL_connect ongoing want write for %s", dcb->remote);
             return 0;
-            break;
 
         case SSL_ERROR_ZERO_RETURN:
             MXS_DEBUG("SSL error, shut down cleanly during SSL connect %s", dcb->remote);
             dcb_log_errors_SSL(dcb, __func__, 0);
             poll_fake_hangup_event(dcb);
             return 0;
-            break;
 
         case SSL_ERROR_SYSCALL:
             MXS_DEBUG("SSL connection shut down with SSL_ERROR_SYSCALL during SSL connect %s", dcb->remote);
             dcb_log_errors_SSL(dcb, __func__, ssl_rval);
             poll_fake_hangup_event(dcb);
             return -1;
-            break;
 
         default:
             MXS_DEBUG("SSL connection shut down with error during SSL connect %s", dcb->remote);
             dcb_log_errors_SSL(dcb, __func__, 0);
             poll_fake_hangup_event(dcb);
             return -1;
-            break;
     }
 }
 

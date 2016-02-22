@@ -46,6 +46,32 @@ static RSA *rsa_1024 = NULL;
 static RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength);
 
 /**
+ * Create a new listener structure
+ *
+ * @param protocol      The name of the protocol module
+ * @param address       The address to listen with
+ * @param port          The port to listen on
+ * @param authenticator Name of the authenticator to be used
+ * @param ssl           SSL configuration
+ * @return      New listener object or NULL if unable to allocate
+ */
+SERV_LISTENER *
+alloc_listener(char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl)
+{
+    SERV_LISTENER   *proto = NULL;
+    if ((proto = (SERV_LISTENER *)malloc(sizeof(SERV_LISTENER))) != NULL)
+    {
+        proto->listener = NULL;
+        proto->protocol = strdup(protocol);
+        proto->address = address ? strdup(address) : NULL;
+        proto->port = port;
+        proto->authenticator = authenticator ? strdup(authenticator) : NULL;
+        proto->ssl = ssl;
+    }
+    return proto;
+}
+
+/**
  * Set the maximum SSL/TLS version the listener will support
  * @param ssl_listener Listener data to configure
  * @param version SSL/TLS version string
@@ -94,31 +120,14 @@ listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
 void
 listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert)
 {
-    if (NULL != cert)
-    {
-        if (ssl_listener->ssl_cert)
-        {
-            free(ssl_listener->ssl_cert);
-        }
-        ssl_listener->ssl_cert = strdup(cert);
-    }
-    else ssl_listener->ssl_cert = NULL;
+    free(ssl_listener->ssl_cert);
+    ssl_listener->ssl_cert = cert ? strdup(cert) : NULL;
 
-    if (NULL != key)
-    {
-        if (ssl_listener->ssl_key)
-        {
-            free(ssl_listener->ssl_key);
-        }
-        ssl_listener->ssl_key = strdup(key);
-    }
-    else ssl_listener->ssl_key = NULL;
+    free(ssl_listener->ssl_key);
+    ssl_listener->ssl_key = key ? strdup(key) : NULL;
 
-    if (ssl_listener->ssl_ca_cert)
-    {
-        free(ssl_listener->ssl_ca_cert);
-    }
-    ssl_listener->ssl_ca_cert = strdup(ca_cert);
+    free(ssl_listener->ssl_ca_cert);
+    ssl_listener->ssl_ca_cert = ca_cert ? strdup(ca_cert) : NULL;
 }
 
 /**

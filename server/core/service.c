@@ -680,6 +680,8 @@ service_free(SERVICE *service)
  * @param protocol      The name of the protocol module
  * @param address       The address to listen with
  * @param port          The port to listen on
+ * @param authenticator Name of the authenticator to be used
+ * @param ssl           SSL configuration
  * @return      TRUE if the protocol/port could be added
  */
 int
@@ -687,22 +689,16 @@ serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned sho
 {
     SERV_LISTENER   *proto;
 
-    if ((proto = (SERV_LISTENER *)malloc(sizeof(SERV_LISTENER))) == NULL)
+    if ((proto = alloc_listener(protocol, address, port, authenticator, ssl)) != NULL)
     {
-        return 0;
+        spinlock_acquire(&service->spin);
+        proto->next = service->ports;
+        service->ports = proto;
+        spinlock_release(&service->spin);
+        return 1;
     }
-    proto->listener = NULL;
-    proto->protocol = strdup(protocol);
-    proto->address = address ? strdup(address) : NULL;
-    proto->port = port;
-    proto->authenticator = authenticator ? strdup(authenticator) : NULL;
-    proto->ssl = ssl;
-    spinlock_acquire(&service->spin);
-    proto->next = service->ports;
-    service->ports = proto;
-    spinlock_release(&service->spin);
 
-    return 1;
+    return 0;
 }
 
 /**

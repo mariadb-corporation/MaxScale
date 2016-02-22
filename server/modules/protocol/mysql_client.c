@@ -472,12 +472,21 @@ int gw_read_client_event(DCB* dcb)
          */
     case MYSQL_AUTH_SENT:
         {
-            MySQLProtocol *protocol;
             /* int compress = -1; */
             int auth_val, packet_number;
+            MySQLProtocol *protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
 
             packet_number = ssl_required_by_dcb(dcb) ? 3 : 2;
 
+            /**
+             * The first step in the authentication process is to extract the
+             * relevant information from the buffer supplied and place it
+             * into a data structure pointed to by the DCB.  The "success"
+             * result is not final, it implies only that the process is so
+             * far successful, not that authentication has completed.  If the
+             * data extraction succeeds, then a call is made to
+             * mysql_auth_authenticate to carry out the actual user checks.
+             */
             if (MYSQL_AUTH_SUCCEEDED == (
                 auth_val = mysql_auth_set_protocol_data(dcb, read_buffer)))
             {
@@ -489,11 +498,18 @@ int gw_read_client_event(DCB* dcb)
                 auth_val = mysql_auth_authenticate(dcb, &read_buffer);
             }
 
+            /**
+             * At this point, if the auth_val return code indicates success
+             * the user authentication has been successfully completed.
+             * But in order to have a working connection, a session has to
+             * be created.  Provided that is successful (indicated by a
+             * non-null session) then the whole process has succeeded. In all
+             * other cases an error return is made.
+             */
             if (MYSQL_AUTH_SUCCEEDED == auth_val)
             {
                 SESSION *session;
 
-                protocol = DCB_PROTOCOL(dcb, MySQLProtocol);
                 protocol->protocol_auth_state = MYSQL_AUTH_RECV;
                 /**
                  * Create session, and a router session for it.

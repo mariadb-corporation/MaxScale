@@ -53,6 +53,7 @@ typedef struct servlistener
     struct  servlistener *next; /**< Next service protocol */
 } SERV_LISTENER;
 
+SERV_LISTENER *alloc_listener(char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl);
 int listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version);
 void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);
 int listener_init_SSL(SSL_LISTENER *ssl_listener);

@@ -133,14 +133,6 @@ static char *service_params[] =
     "version_string",
     "filters",
     "weightby",
-    /* These should no longer be required
-    "ssl_cert",
-    "ssl_ca_cert",
-    "ssl",
-    "ssl_key",
-    "ssl_version",
-    "ssl_cert_verify_depth",
-     * */
     "ignore_databases",
     "ignore_databases_regex",
     "log_auth_warnings",
@@ -1094,7 +1086,13 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
                 local_errors++;
             }
         }
-        else new_ssl->ssl_cert_verify_depth = 9;
+        else
+        {
+            /**
+             * Default of 9 as per Linux man page
+             */
+            new_ssl->ssl_cert_verify_depth = 9;
+        }
 
         listener_set_certificates(new_ssl, ssl_cert, ssl_key, ssl_ca_cert);
 

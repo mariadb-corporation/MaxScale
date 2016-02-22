@@ -52,9 +52,8 @@
  * @param is_capable Indicates if the client can handle SSL
  * @return 0 if ok, >0 if a problem - see return codes defined in gw_ssl.h
  */
-int ssl_authenticate_client(DCB *dcb, bool is_capable)
+int ssl_authenticate_client(DCB *dcb, const char *user, bool is_capable)
 {
-    char *user = dcb->user ? dcb->user : "";
     char *remote = dcb->remote ? dcb->remote : "";
     char *service = (dcb->service && dcb->service->name) ? dcb->service->name : "";
 
@@ -68,7 +67,7 @@ int ssl_authenticate_client(DCB *dcb, bool is_capable)
     {
         /* Should be SSL, but client is not SSL capable */
         MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
-            user ? user : "", remote ? remote : "", service ? service : "");
+            user, remote, service);
         return SSL_ERROR_CLIENT_NOT_SSL;
     }
     /* Now we know SSL is required and client is capable */

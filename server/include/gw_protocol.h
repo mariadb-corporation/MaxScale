@@ -33,10 +33,6 @@
  */
 
 #include <buffer.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <openssl/dh.h>
 
 struct dcb;
 struct server;

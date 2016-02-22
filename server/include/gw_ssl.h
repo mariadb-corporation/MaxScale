@@ -73,7 +73,7 @@ typedef struct ssl_listener
     bool ssl_init_done;                 /*< If SSL has already been initialized for this service */
 } SSL_LISTENER;
 
-int ssl_authenticate_client(struct dcb *dcb, bool is_capable);
+int ssl_authenticate_client(struct dcb *dcb, const char *user, bool is_capable);
 bool ssl_is_connection_healthy(struct dcb *dcb);
 bool ssl_check_data_to_process(struct dcb *dcb);
 bool ssl_required_by_dcb(struct dcb *dcb);
