@@ -708,7 +708,7 @@ int TestConnections::reconfigure_maxscale(char* config_template)
     return system(cmd); 
 }
 
-int TestConnections::create_connections(int conn_N)
+int TestConnections::create_connections(int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag, bool galera_flag)
 {
     int i;
     int local_result = 0;
@@ -722,42 +722,64 @@ int TestConnections::create_connections(int conn_N)
     for (i = 0; i < conn_N; i++) {
         set_timeout(20);
         tprintf("opening %d-connection: ", i+1);
-
-        printf("RWSplit \t");
-        rwsplit_conn[i] = open_rwsplit_connection();
-        if (!rwsplit_conn[i]) { local_result++; tprintf("RWSplit connection failed\n");}
-
-        printf("ReadConn master \t");
-        master_conn[i] = open_readconn_master_connection();
-        if ( mysql_errno(master_conn[i]) != 0 ) { local_result++; tprintf("ReadConn master connection failed, error: %s\n", mysql_error(master_conn[i]) );}
-        printf("ReadConn slave \t");
-        slave_conn[i] = open_readconn_slave_connection();
-        if ( mysql_errno(slave_conn[i]) != 0 )  { local_result++; tprintf("ReadConn slave connection failed, error: %s\n", mysql_error(slave_conn[i]) );}
-        printf("galera \n");
-        galera_conn[i] = open_conn(4016, maxscale_IP, maxscale_user, maxscale_password, ssl);
-        if ( mysql_errno(galera_conn[i]) != 0)  { local_result++; tprintf("Galera connection failed, error: %s\n", mysql_error(galera_conn[i]));}
+        if (rwsplit_flag)
+        {
+            printf("RWSplit \t");
+            rwsplit_conn[i] = open_rwsplit_connection();
+            if (!rwsplit_conn[i]) { local_result++; tprintf("RWSplit connection failed\n");}
+        }
+        if (master_flag)
+        {
+            printf("ReadConn master \t");
+            master_conn[i] = open_readconn_master_connection();
+            if ( mysql_errno(master_conn[i]) != 0 ) { local_result++; tprintf("ReadConn master connection failed, error: %s\n", mysql_error(master_conn[i]) );}
+        }
+        if (slave_flag)
+        {
+            printf("ReadConn slave \t");
+            slave_conn[i] = open_readconn_slave_connection();
+            if ( mysql_errno(slave_conn[i]) != 0 )  { local_result++; tprintf("ReadConn slave connection failed, error: %s\n", mysql_error(slave_conn[i]) );}
+        }
+        if (galera_flag)
+        {
+            printf("galera \n");
+            galera_conn[i] = open_conn(4016, maxscale_IP, maxscale_user, maxscale_password, ssl);
+            if ( mysql_errno(galera_conn[i]) != 0)  { local_result++; tprintf("Galera connection failed, error: %s\n", mysql_error(galera_conn[i]));}
+        }
     }
     for (i = 0; i < conn_N; i++) {
         set_timeout(10);
         tprintf("Trying query against %d-connection: ", i+1);
-        tprintf("RWSplit \t");
-        local_result += execute_query(rwsplit_conn[i], "select 1;");
-        tprintf("ReadConn master \t");
-        local_result += execute_query(master_conn[i], "select 1;");
-        tprintf("ReadConn slave \t");
-        local_result += execute_query(slave_conn[i], "select 1;");
-        tprintf("galera \n");
-        local_result += execute_query(galera_conn[i], "select 1;");
+        if (rwsplit_flag)
+        {
+            tprintf("RWSplit \t");
+            local_result += execute_query(rwsplit_conn[i], "select 1;");
+        }
+        if (master_flag)
+        {
+            tprintf("ReadConn master \t");
+            local_result += execute_query(master_conn[i], "select 1;");
+        }
+        if (slave_flag)
+        {
+            tprintf("ReadConn slave \t");
+            local_result += execute_query(slave_conn[i], "select 1;");
+        }
+        if (galera_flag)
+        {
+            tprintf("galera \n");
+            local_result += execute_query(galera_conn[i], "select 1;");
+        }
     }
 
     //global_result += check_pers_conn(Test, pers_conn_expected);
     tprintf("Closing all connections\n");
     for (i=0; i<conn_N; i++) {
         set_timeout(10);
-        mysql_close(rwsplit_conn[i]);
-        mysql_close(master_conn[i]);
-        mysql_close(slave_conn[i]);
-        mysql_close(galera_conn[i]);
+        if (rwsplit_flag) {mysql_close(rwsplit_conn[i]);}
+        if (master_flag)  {mysql_close(master_conn[i]);}
+        if (slave_flag)   {mysql_close(slave_conn[i]);}
+        if (galera_flag)  {mysql_close(galera_conn[i]);}
     }
     stop_timeout();
     //sleep(5);

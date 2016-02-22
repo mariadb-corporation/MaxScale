@@ -137,8 +137,8 @@ int main(int argc, char *argv[])
 
     Test->restart_maxscale();
 
-    Test->add_result(Test->create_connections(70), "Error creating connections\n");
-
+    Test->add_result(Test->create_connections(70, true, true, true, true),
+                     "Error creating connections\n");
     sleep(5);
     Test->set_timeout(20);
 

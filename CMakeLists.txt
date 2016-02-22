@@ -268,6 +268,10 @@ add_test_executable_notest(check_backend.cpp check_backend check_backend)
 add_test_executable(config_test.cpp config_test replication)
 add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax)
 
+# enable after fixing MXS-419
+# add_test_executable(mxs419_lots_of_connections.cpp mxs419_lots_of_connections replication)
+add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication)
+
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)

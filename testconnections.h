@@ -432,9 +432,13 @@ public:
     /**
      * @brief Create a number of connections to all services, run simple query, close all connections
      * @param conn_N number of connections
+     * @param rwsplit_flag if true connections to RWSplit router will be created, if false - no connections to RWSplit
+     * @param master_flag if true connections to ReadConn master router will be created, if false - no connections to ReadConn master
+     * @param slave_flag if true connections to ReadConn slave router will be created, if false - no connections to ReadConn slave
+     * @param galera_flag if true connections to RWSplit router with Galera backend will be created, if false - no connections to RWSplit with Galera backend
      * @return  0 in case of success
      */
-    int create_connections(int conn_N);
+    int create_connections(int conn_N, bool rwsplit_flag, bool master_flag, bool slave_flag, bool galera_flag);
 
     /**
      * Trying to get client IP address by connection to DB via RWSplit and execution 'show processlist'
