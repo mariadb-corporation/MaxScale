@@ -2311,7 +2311,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
     }
 
     /** Parameters for rwsplit router only */
-    if (strcmp(router, "readwritesplit"))
+    if (strcmp(router, "readwritesplit") == 0)
     {
         if ((param = config_get_param(obj->parameters, "max_slave_connections")))
         {
