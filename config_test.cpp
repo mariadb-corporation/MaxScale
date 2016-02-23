@@ -22,7 +22,7 @@ int main()
 
     for (int i = 0; config[i]; i++)
     {
-        printf("Testing %s...\t", config);
+        printf("Testing %s...\t", config[i]);
         if (test_config_works(config[i], NULL))
         {
             printf("SUCCESS\n");
