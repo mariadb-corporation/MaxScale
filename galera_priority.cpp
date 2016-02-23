@@ -52,7 +52,7 @@ int simple_failover(TestConnections* test)
     do
     {
         /** Node 3 should be master */
-        test->tprintf("Expecting '%s'...\n", server_id[2]);
+        test->tprintf("Executing SELECT @@server_id, expecting '%s'...\n", server_id[2]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[2]))
         {
             test->tprintf("Test failed without any blocked nodes.\n");
