@@ -260,21 +260,21 @@ int TestConnections::close_maxscale_connections()
 
 int TestConnections::restart_maxscale()
 {
-    int res = ssh_maxscale((char *) "service maxscale restart", true);
+    int res = ssh_maxscale(true, "service maxscale restart");
     sleep(10);
     return(res);
 }
 
 int TestConnections::start_maxscale()
 {
-    int res = ssh_maxscale((char *) "service maxscale start", true);
+    int res = ssh_maxscale(true, "service maxscale start");
     sleep(10);
     return(res);
 }
 
 int TestConnections::stop_maxscale()
 {
-    int res = ssh_maxscale((char *) "service maxscale stop", true);
+    int res = ssh_maxscale(true, "service maxscale stop");
     return(res);
 }
 
@@ -352,9 +352,9 @@ int TestConnections::start_binlog()
     tprintf("Master server version %s\n", version_str);
 
     if (strstr(version_str, "5.5") != NULL) {
-        sprintf(&sys1[0], "sed -i \"s/,mariadb10-compatibility=1//\" %s", maxscale_cnf);
-        tprintf("%s\n", sys1);
-        add_result(ssh_maxscale(sys1, true), "Error editing maxscale.cnf");
+        add_result(ssh_maxscale(true,
+                                "sed -i \"s/,mariadb10-compatibility=1//\" %s",
+                                maxscale_cnf), "Error editing maxscale.cnf");
     }
 
     tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
@@ -371,24 +371,22 @@ int TestConnections::start_binlog()
     add_result(repl->stop_nodes(), "Nodes stopping failed\n");
 
     tprintf("Removing all binlog data from Maxscale node\n");
-    sprintf(&sys1[0], "rm -rf %s", maxscale_binlog_dir);
-    tprintf("%s\n", sys1);
-    add_result(ssh_maxscale(sys1, true), "Removing binlog data failed\n");
+    add_result(ssh_maxscale(true, "rm -rf %s", maxscale_binlog_dir),
+               "Removing binlog data failed\n");
 
     tprintf("Creating binlog dir\n");
-    sprintf(&sys1[0], "mkdir -p %s", maxscale_binlog_dir);
-    tprintf("%s\n", sys1);
-    add_result(ssh_maxscale(sys1, true), "Creating binlog data dir failed\n");
+    add_result(ssh_maxscale(true, "mkdir -p %s", maxscale_binlog_dir),
+               "Creating binlog data dir failed\n");
 
     tprintf("ls binlog data dir on Maxscale node\n");
-    sprintf(&sys1[0], "ls -la %s/", maxscale_binlog_dir);
-    tprintf("%s\n", sys1);
-    add_result(ssh_maxscale(sys1, true), "ls failed\n");
+    add_result(ssh_maxscale(true, "ls -la %s/", maxscale_binlog_dir), "ls failed\n");
 
     tprintf("Set 'maxscale' as a owner of binlog dir\n");
-    sprintf(&sys1[0], "%s mkdir -p %s; %s chown maxscale:maxscale -R %s", maxscale_access_sudo, maxscale_binlog_dir, maxscale_access_sudo, maxscale_binlog_dir);
-    tprintf("%s\n", sys1);
-    add_result(ssh_maxscale(sys1, false), "directory ownership change failed\n");
+    add_result(ssh_maxscale(false,
+                            "%s mkdir -p %s; %s chown maxscale:maxscale -R %s",
+                            maxscale_access_sudo, maxscale_binlog_dir,
+                            maxscale_access_sudo, maxscale_binlog_dir),
+               "directory ownership change failed\n");
 
     tprintf("Starting back Master\n");
     add_result(repl->start_node(0, cmd_opt), "Master start failed\n");
@@ -646,13 +644,24 @@ void TestConnections::generate_ssh_cmd(char * cmd, char * ssh, bool sudo)
 }
 
 
-char* TestConnections::ssh_maxscale_output(char* ssh, bool sudo)
+char* TestConnections::ssh_maxscale_output(bool sudo, const char* format, ...)
 {
-    char sys[strlen(ssh) + 1024];
+    va_list valist;
 
-    generate_ssh_cmd(sys, ssh, sudo);
+    va_start(valist, format);
+    int message_len = vsnprintf(NULL, 0, format, valist);
+    va_end(valist);
 
-    FILE *output = popen(sys, "r");
+    char *sys = (char*)malloc(message_len + 1);
+
+    va_start(valist, format);
+    vsnprintf(sys, sizeof(sys), format, valist);
+    va_end(valist);
+
+    char *cmd = (char*)malloc(message_len + 1024);
+    generate_ssh_cmd(cmd, sys, sudo);
+
+    FILE *output = popen(cmd, "r");
     char buffer[1024];
     size_t rsize = sizeof(buffer);
     char* result = (char*)calloc(rsize, sizeof(char));
@@ -663,16 +672,32 @@ char* TestConnections::ssh_maxscale_output(char* ssh, bool sudo)
         strcat(result, buffer);
     }
 
+    free(sys);
+    free(cmd);
+
     return result;
 }
 
-int  TestConnections::ssh_maxscale(char* ssh, bool sudo)
+int  TestConnections::ssh_maxscale(bool sudo, const char* format, ...)
 {
-    char sys[strlen(ssh) + 1024];
+    va_list valist;
 
-    generate_ssh_cmd(sys, ssh, sudo);
+    va_start(valist, format);
+    int message_len = vsnprintf(NULL, 0, format, valist);
+    va_end(valist);
 
-    return system(sys);
+    char *sys = (char*)malloc(message_len + 1);
+
+    va_start(valist, format);
+    vsnprintf(sys, sizeof(sys), format, valist);
+    va_end(valist);
+
+    char *cmd = (char*)malloc(message_len + 1024);
+    generate_ssh_cmd(cmd, sys, sudo);
+    int rc = system(cmd);
+    free(sys);
+    free(cmd);
+    return rc;
 }
 
 

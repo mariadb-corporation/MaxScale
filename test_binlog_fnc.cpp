@@ -18,10 +18,9 @@ int check_sha1(TestConnections* Test)
 
     Test->tprintf("ls before FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
-    sprintf(sys, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
-    Test->ssh_maxscale(sys, TRUE);
+    Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
     Test->tprintf("Master\n");
-    Test->ssh_maxscale((char *) "ls -la /var/lib/mysql/mar-bin.0000*", FALSE);
+    Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
 
     printf("FLUSH LOGS\n");fflush(stdout);
     local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
@@ -29,11 +28,10 @@ int check_sha1(TestConnections* Test)
     sleep(20);
     Test->tprintf("ls after first FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
-    sprintf(sys, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
-    Test->ssh_maxscale(sys, TRUE);
+    Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
 
     Test->tprintf("Master\n");
-    Test->ssh_maxscale((char *) "ls -la /var/lib/mysql/mar-bin.0000*", FALSE);
+    Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
 
     Test->tprintf("FLUSH LOGS\n");
     local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
@@ -43,17 +41,15 @@ int check_sha1(TestConnections* Test)
     Test->tprintf("ls before FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
 
-    sprintf(sys, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
-    Test->ssh_maxscale(sys, TRUE);
+    Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
 
     Test->tprintf("Master\n");
-    Test->ssh_maxscale((char *) "ls -la /var/lib/mysql/mar-bin.0000*", FALSE);
+    Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
 
 
     for (i = 1; i < 3; i++) {
         Test->tprintf("\nFILE: 000000%d\n", i);
-        sprintf(sys, "sha1sum %s/mar-bin.00000%d", Test->maxscale_binlog_dir, i);
-        s_maxscale = Test->ssh_maxscale_output(sys, TRUE);
+        s_maxscale = Test->ssh_maxscale_output(true, "sha1sum %s/mar-bin.00000%d", Test->maxscale_binlog_dir, i);
         if (s_maxscale != NULL) {
             x = strchr(s_maxscale, ' ');
             if (x != NULL ) { x[0] = 0; }

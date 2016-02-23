@@ -21,22 +21,20 @@
 
 void copy_rules(TestConnections* Test, char * rules_name)
 {
-    char str[4096];
     Test->set_timeout(30);
-    sprintf(str, "rm -rf %s/rules; mkdir %s/rules", Test->maxscale_access_homedir,  Test->maxscale_access_homedir);
-    Test->tprintf("Creating rules dir: %s\n", str);
-    Test->ssh_maxscale(str, TRUE);
-    system(str);
+    Test->tprintf("Creating rules dir\n");
+    Test->ssh_maxscale(true, "rm -rf %s/rules; mkdir %s/rules",
+                       Test->maxscale_access_homedir,  Test->maxscale_access_homedir);
 
     Test->set_timeout(30);
+    char str[2048];
     sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/%s %s@%s:%s/rules/rules.txt", Test->maxscale_sshkey, Test->test_dir, rules_name, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
     Test->tprintf("Copying rules to Maxscale machine: %s\n", str);
     system(str);
 
     Test->set_timeout(30);
-    sprintf(str, "chown maxscale:maxscale %s/rules -R", Test->maxscale_access_homedir);
-    Test->tprintf("Copying rules to Maxscale machine: %s\n", str);
-    Test->ssh_maxscale(str, TRUE);
+    Test->tprintf("Copying rules to Maxscale machine\n");
+    Test->ssh_maxscale(true, "chown maxscale:maxscale %s/rules -R", Test->maxscale_access_homedir);
 }
 
 int main(int argc, char *argv[])
@@ -109,11 +107,11 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying at_times clause\n");
     copy_rules(Test, (char *) "rules_at_time");
 
-    sprintf(str, "start_time=`date +%%T`; stop_time=` date --date \"now +2 mins\" +%%T`; %s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
-            Test->maxscale_access_sudo, Test->maxscale_access_homedir);
     Test->tprintf("DELETE quries without WHERE clause will be blocked during next 2 minutes\n");
     Test->tprintf("Put time to rules.txt: %s\n", str);
-    Test->ssh_maxscale(str, FALSE);
+    Test->ssh_maxscale(false, "start_time=`date +%%T`; stop_time=` date --date "
+                       "\"now +2 mins\" +%%T`; %s sed -i \"s/###time###/$start_time-$stop_time/\" %s/rules/rules.txt",
+                       Test->maxscale_access_sudo, Test->maxscale_access_homedir);
 
     Test->start_maxscale();
     Test->connect_rwsplit();
