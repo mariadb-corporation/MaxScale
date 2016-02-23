@@ -652,10 +652,15 @@ char* TestConnections::ssh_maxscale_output(bool sudo, const char* format, ...)
     int message_len = vsnprintf(NULL, 0, format, valist);
     va_end(valist);
 
+    if(message_len < 0)
+    {
+        return NULL;
+    }
+
     char *sys = (char*)malloc(message_len + 1);
 
     va_start(valist, format);
-    vsnprintf(sys, sizeof(sys), format, valist);
+    vsnprintf(sys, message_len + 1, format, valist);
     va_end(valist);
 
     char *cmd = (char*)malloc(message_len + 1024);
@@ -686,10 +691,15 @@ int  TestConnections::ssh_maxscale(bool sudo, const char* format, ...)
     int message_len = vsnprintf(NULL, 0, format, valist);
     va_end(valist);
 
+    if(message_len < 0)
+    {
+        return -1;
+    }
+
     char *sys = (char*)malloc(message_len + 1);
 
     va_start(valist, format);
-    vsnprintf(sys, sizeof(sys), format, valist);
+    vsnprintf(sys, message_len + 1, format, valist);
     va_end(valist);
 
     char *cmd = (char*)malloc(message_len + 1024);
