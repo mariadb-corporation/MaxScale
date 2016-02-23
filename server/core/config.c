@@ -172,6 +172,7 @@ static char *monitor_params[] =
     "backend_write_timeout",
     "available_when_donor",
     "disable_master_role_setting",
+    "use_priority",
     NULL
 };
 
