@@ -985,8 +985,8 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
     int router_nservers = 0; /*< # of servers in total */
     int i;
     char db[MYSQL_DATABASE_MAXLEN+1];
-    MySQLProtocol* protocol = session->client->protocol;
-    MYSQL_session* data = session->data;
+    MySQLProtocol* protocol = session->client_dcb->protocol;
+    MYSQL_session* data = session->client_dcb->data;
     bool using_db = false;
     bool have_db = false;
 
@@ -1027,12 +1027,12 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
 #endif
 
     client_rses->router = router;
-    client_rses->rses_mysql_session = (MYSQL_session*)session->data;
-    client_rses->rses_client_dcb = (DCB*)session->client;
+    client_rses->rses_mysql_session = (MYSQL_session*)session->client_dcb->data;
+    client_rses->rses_client_dcb = (DCB*)session->client_dcb;
 
     spinlock_acquire(&router->lock);
 
-    shard_map_t *map = hashtable_fetch(router->shard_maps, session->client->user);
+    shard_map_t *map = hashtable_fetch(router->shard_maps, session->client_dcb->user);
     enum shard_map_state state;
 
     if (map)
@@ -2496,7 +2496,7 @@ static void clientReply(ROUTER* instance,
     }
     /** Holding lock ensures that router session remains open */
     ss_dassert(backend_dcb->session != NULL);
-    client_dcb = backend_dcb->session->client;
+    client_dcb = backend_dcb->session->client_dcb;
 
     /** Unlock */
     rses_end_locked_router_action(router_cli_ses);
@@ -3978,7 +3978,7 @@ static void handle_error_reply_client(SESSION*           ses,
 
     spinlock_acquire(&ses->ses_lock);
     sesstate = ses->state;
-    client_dcb = ses->client;
+    client_dcb = ses->client_dcb;
     spinlock_release(&ses->ses_lock);
 
     /**
@@ -4069,7 +4069,7 @@ static bool handle_error_new_connection(ROUTER_INSTANCE*   inst,
     if (BREF_IS_WAITING_RESULT(bref))
     {
         DCB* client_dcb;
-        client_dcb = ses->client;
+        client_dcb = ses->client_dcb;
         client_dcb->func.write(client_dcb, gwbuf_clone(errmsg));
         bref_clear_state(bref, BREF_WAITING_RESULT);
     }

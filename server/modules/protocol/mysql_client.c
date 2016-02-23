@@ -542,14 +542,8 @@ int gw_read_client_event(DCB* dcb)
                 protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
                 mysql_client_auth_error_handling(dcb, auth_val);
                 /**
-                 * Release MYSQL_session since it is not used anymore.
+                 * Close DCB and which will release MYSQL_session 
                  */
-                if (!DCB_IS_CLONE(dcb))
-                {
-                    free(dcb->data);
-                }
-                dcb->data = NULL;
-
                 dcb_close(dcb);
             }
             /* One way or another, the buffer is now fully processed */

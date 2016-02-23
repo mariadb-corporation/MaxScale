@@ -56,7 +56,7 @@ static RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength);
  * @return      New listener object or NULL if unable to allocate
  */
 SERV_LISTENER *
-alloc_listener(char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl)
+listener_alloc(char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl)
 {
     SERV_LISTENER   *proto = NULL;
     if ((proto = (SERV_LISTENER *)malloc(sizeof(SERV_LISTENER))) != NULL)

@@ -689,7 +689,7 @@ serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned sho
 {
     SERV_LISTENER   *proto;
 
-    if ((proto = alloc_listener(protocol, address, port, authenticator, ssl)) != NULL)
+    if ((proto = listener_alloc(protocol, address, port, authenticator, ssl)) != NULL)
     {
         spinlock_acquire(&service->spin);
         proto->next = service->ports;

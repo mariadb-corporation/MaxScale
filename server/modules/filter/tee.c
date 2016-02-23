@@ -251,7 +251,7 @@ orphan_free(void* data)
          */
 
         if (ptr->session->state == SESSION_STATE_STOPPING &&
-            ptr->session->refcount == 0 && ptr->session->client == NULL)
+            ptr->session->refcount == 0 && ptr->session->client_dcb == NULL)
         {
             ptr->session->state = SESSION_STATE_TO_BE_FREED;
         }
@@ -485,7 +485,7 @@ newSession(FILTER *instance, SESSION *session)
         my_session->active = 1;
         my_session->residual = 0;
         my_session->tee_replybuf = NULL;
-        my_session->client_dcb = session->client;
+        my_session->client_dcb = session->client_dcb;
         my_session->instance = my_instance;
         my_session->client_multistatement = false;
         my_session->queue = NULL;
@@ -518,7 +518,7 @@ newSession(FILTER *instance, SESSION *session)
             FILTER_DEF* dummy;
             UPSTREAM* dummy_upstream;
 
-            if ((dcb = dcb_clone(session->client)) == NULL)
+            if ((dcb = dcb_clone(session->client_dcb)) == NULL)
             {
                 freeSession(instance, (void *) my_session);
                 my_session = NULL;
@@ -578,7 +578,7 @@ newSession(FILTER *instance, SESSION *session)
             }
 
             ses->tail = *dummy_upstream;
-            MySQLProtocol* protocol = (MySQLProtocol*) session->client->protocol;
+            MySQLProtocol* protocol = (MySQLProtocol*) session->client_dcb->protocol;
             my_session->use_ok = protocol->client_capabilities & (1 << 6);
             free(dummy_upstream);
         }

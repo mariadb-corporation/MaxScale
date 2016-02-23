@@ -184,7 +184,7 @@ GetModuleObject()
  * The process of creating the instance causes the router to register
  * with the master server and begin replication of the binlogs from
  * the master server to MaxScale.
- * 
+ *
  * @param service	The service this router is being create for
  * @param options	An array of options for this query router
  *
@@ -456,7 +456,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 						break;
 					}
 					inst->burst_size = size;
-					
+
 				}
 				else if (strcmp(options[i], "heartbeat") == 0)
 				{
@@ -614,7 +614,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
                                   " Fix errors in it or configure with CHANGE MASTER TO ...",
                                   inst->service->name, inst->binlogdir);
 		}
-	
+
 		/* Set service user or load db users */
 		blr_set_service_mysql_user(inst->service);
 
@@ -626,7 +626,7 @@ char		task_name[BLRM_TASK_NAME_LEN+1] = "";
 	}
 
 	/**
-	 * Initialise the binlog router 
+	 * Initialise the binlog router
 	 */
 	if (inst->master_state == BLRM_UNCONNECTED) {
 
@@ -754,7 +754,7 @@ ROUTER_SLAVE		*slave;
 	slave->uuid = NULL;
 	slave->hostname = NULL;
         spinlock_init(&slave->catch_lock);
-	slave->dcb = session->client;
+	slave->dcb = session->client_dcb;
 	slave->router = inst;
 #ifdef BLFILE_IN_SLAVE
 	slave->file = NULL;
@@ -775,7 +775,7 @@ ROUTER_SLAVE		*slave;
 	spinlock_release(&inst->lock);
 
         CHK_CLIENT_RSES(slave);
-                
+
 	return (void *)slave;
 }
 
@@ -798,10 +798,10 @@ static void freeSession(
 ROUTER_INSTANCE 	*router = (ROUTER_INSTANCE *)router_instance;
 ROUTER_SLAVE		*slave = (ROUTER_SLAVE *)router_client_ses;
 int			prev_val;
-        
+
         prev_val = atomic_add(&router->stats.n_slaves, -1);
         ss_dassert(prev_val > 0);
-        
+
 	/*
 	 * Remove the slave session form the list of slaves that are using the
 	 * router currently.
@@ -811,11 +811,11 @@ int			prev_val;
 		router->slaves = slave->next;
         } else {
 		ROUTER_SLAVE *ptr = router->slaves;
-                
+
 		while (ptr != NULL && ptr->next != slave) {
 			ptr = ptr->next;
                 }
-                
+
 		if (ptr != NULL) {
 			ptr->next = slave->next;
                 }
@@ -846,7 +846,7 @@ int			prev_val;
  * @param instance		The router instance data
  * @param router_session	The session being closed
  */
-static	void 	
+static	void
 closeSession(ROUTER *instance, void *router_session)
 {
 ROUTER_INSTANCE	 *router = (ROUTER_INSTANCE *)instance;
@@ -927,12 +927,12 @@ ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
  * @param queue			The queue of data buffers to route
  * @return The number of bytes sent
  */
-static	int	
+static	int
 routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 {
 ROUTER_INSTANCE	*router = (ROUTER_INSTANCE *)instance;
 ROUTER_SLAVE	 *slave = (ROUTER_SLAVE *)router_session;
-       
+
 	return blr_slave_request(router, slave, queue);
 }
 
@@ -1020,7 +1020,7 @@ struct tm	tm;
 	min15 /= 15.0;
 	min10 /= 10.0;
 	min5 /= 5.0;
-	
+
 	if (router_inst->master)
 		dcb_printf(dcb, "\tMaster connection DCB:  			%p\n",
 			router_inst->master);
@@ -1032,7 +1032,7 @@ struct tm	tm;
 
 	localtime_r(&router_inst->stats.lastReply, &tm);
 	asctime_r(&tm, buf);
-	
+
 	dcb_printf(dcb, "\tBinlog directory:				%s\n",
 		   router_inst->binlogdir);
 	dcb_printf(dcb, "\tHeartbeat period (seconds):			%lu\n",
@@ -1046,7 +1046,7 @@ struct tm	tm;
 	dcb_printf(dcb, "\tCurrent binlog position:	  		%lu\n",
                    router_inst->current_pos);
 	if (router_inst->trx_safe) {
-		if (router_inst->pending_transaction) {	
+		if (router_inst->pending_transaction) {
 			dcb_printf(dcb, "\tCurrent open transaction pos:	  		%lu\n",
 	                   router_inst->binlog_position);
 		}
@@ -1273,7 +1273,7 @@ struct tm	tm;
 			}
 			else if ((session->cstate & CS_UPTODATE) == 0)
 			{
-				dcb_printf(dcb, "\t\tSlave_mode:					catchup. %s%s\n", 
+				dcb_printf(dcb, "\t\tSlave_mode:					catchup. %s%s\n",
 					((session->cstate & CS_EXPECTCB) == 0 ? "" :
 					"Waiting for DCB queue to drain."),
 					((session->cstate & CS_BUSY) == 0 ? "" :
@@ -1426,35 +1426,35 @@ unsigned long	mysql_errno;
 }
 
 /** to be inline'd */
-/** 
+/**
  * @node Acquires lock to router client session if it is not closed.
  *
  * Parameters:
  * @param rses - in, use
- *          
+ *
  *
  * @return true if router session was not closed. If return value is true
  * it means that router is locked, and must be unlocked later. False, if
  * router was closed before lock was acquired.
  *
- * 
+ *
  * @details (write detailed description here)
  *
  */
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *rses)
 {
         bool succp = false;
-        
+
         CHK_CLIENT_RSES(rses);
 
         spinlock_acquire(&rses->rses_lock);
         succp = true;
-        
+
         return succp;
 }
 
 /** to be inline'd */
-/** 
+/**
  * @node Releases router client session lock.
  *
  * Parameters:
@@ -1463,7 +1463,7 @@ static bool rses_begin_locked_router_action(ROUTER_SLAVE *rses)
  *
  * @return void
  *
- * 
+ *
  * @details (write detailed description here)
  *
  */
@@ -1569,7 +1569,7 @@ GWBUF	*ret;
 	*ptr++ = 0;
 	*ptr++ = 0;
 	*ptr++ = 1;
-	*ptr = 0;		// OK 
+	*ptr = 0;		// OK
 
 	return slave->dcb->func.write(slave->dcb, ret);
 }
@@ -1591,7 +1591,7 @@ GWBUF	*ret;
  *
  */
 int
-blr_send_custom_error(DCB *dcb, int packet_number, int affected_rows, char *msg, char *statemsg, unsigned int errcode) 
+blr_send_custom_error(DCB *dcb, int packet_number, int affected_rows, char *msg, char *statemsg, unsigned int errcode)
 {
 uint8_t		*outbuf = NULL;
 uint32_t	mysql_payload_size = 0;
@@ -1604,8 +1604,8 @@ unsigned int	mysql_errno = 0;
 const char	*mysql_error_msg = NULL;
 const char	*mysql_state = NULL;
 GWBUF		*errbuf = NULL;
-       
-	if (errcode == 0) 
+
+	if (errcode == 0)
 		mysql_errno = 1064;
 	else
 		mysql_errno = errcode;
@@ -1615,52 +1615,52 @@ GWBUF		*errbuf = NULL;
         	mysql_state = "42000";
 	else
 		mysql_state = statemsg;
-        
+
         field_count = 0xff;
         gw_mysql_set_byte2(mysql_err, mysql_errno);
         mysql_statemsg[0]='#';
         memcpy(mysql_statemsg+1, mysql_state, 5);
-        
+
         if (msg != NULL) {
                 mysql_error_msg = msg;
         }
-        
-        mysql_payload_size = sizeof(field_count) + 
-                                sizeof(mysql_err) + 
-                                sizeof(mysql_statemsg) + 
+
+        mysql_payload_size = sizeof(field_count) +
+                                sizeof(mysql_err) +
+                                sizeof(mysql_statemsg) +
                                 strlen(mysql_error_msg);
-        
+
         /** allocate memory for packet header + payload */
         errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
         ss_dassert(errbuf != NULL);
-        
+
         if (errbuf == NULL)
         {
                 return 0;
         }
         outbuf = GWBUF_DATA(errbuf);
-        
+
         /** write packet header and packet number */
         gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
         mysql_packet_header[3] = packet_number;
-        
+
         /** write header */
         memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-        
+
         mysql_payload = outbuf + sizeof(mysql_packet_header);
-        
+
         /** write field */
         memcpy(mysql_payload, &field_count, sizeof(field_count));
         mysql_payload = mysql_payload + sizeof(field_count);
-        
+
         /** write errno */
         memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
         mysql_payload = mysql_payload + sizeof(mysql_err);
-        
+
         /** write sqlstate */
         memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
         mysql_payload = mysql_payload + sizeof(mysql_statemsg);
-        
+
         /** write error message */
         memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
 

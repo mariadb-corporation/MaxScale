@@ -1282,7 +1282,7 @@ int gw_send_change_user_to_backend(char          *dbname,
     int rc;
     MYSQL_session*  mses;
 
-    mses = (MYSQL_session*)conn->owner_dcb->session->client->data;
+    mses = (MYSQL_session*)conn->owner_dcb->session->client_dcb->data;
     buffer = gw_create_change_user_packet(mses, conn);
     rc = conn->owner_dcb->func.write(conn->owner_dcb, buffer);
 

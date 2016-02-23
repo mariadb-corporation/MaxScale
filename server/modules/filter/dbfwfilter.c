@@ -1429,15 +1429,15 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
     unsigned int errlen;
 
     if (session == NULL || session->session == NULL ||
-        session->session->data == NULL ||
-        session->session->client == NULL)
+        session->session->client_dcb == NULL ||
+        session->session->client_dcb->data == NULL)
     {
         MXS_ERROR("Firewall filter session missing data.");
         return NULL;
     }
 
-    dcb = session->session->client;
-    mysql_session = (MYSQL_session*) session->session->data;
+    dcb = session->session->client_dcb;
+    mysql_session = (MYSQL_session*) dcb->data;
     errlen = msg != NULL ? strlen(msg) : 0;
     errmsg = (char*) malloc((512 + errlen) * sizeof(char));
 
@@ -1955,7 +1955,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     bool accept = my_instance->def_op;
     char *msg = NULL, *fullquery = NULL, *ipaddr;
     char uname_addr[128];
-    DCB* dcb = my_session->session->client;
+    DCB* dcb = my_session->session->client_dcb;
     USER* user = NULL;
     GWBUF* forward;
     ipaddr = strdup(dcb->remote);

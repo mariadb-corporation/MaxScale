@@ -126,6 +126,8 @@ static int gw_write(DCB *dcb, bool *stop_writing);
 static int gw_write_SSL(DCB *dcb, bool *stop_writing);
 static void dcb_log_errors_SSL (DCB *dcb, const char *called_by, int ret);
 
+static void mysql_auth_free_client_data(DCB *dcb);
+
 size_t dcb_get_session_id(
     DCB *dcb)
 {
@@ -373,10 +375,10 @@ dcb_final_free(DCB *dcb)
          * won't try to call dcb_close for client DCB
          * after this call.
          */
-        if (local_session->client == dcb)
+        if (local_session->client_dcb == dcb)
         {
             spinlock_acquire(&local_session->ses_lock);
-            local_session->client = NULL;
+            local_session->client_dcb = NULL;
             spinlock_release(&local_session->ses_lock);
         }
         if (SESSION_STATE_DUMMY != local_session->state)
@@ -384,6 +386,8 @@ dcb_final_free(DCB *dcb)
             session_free(local_session);
         }
     }
+
+    mysql_auth_free_client_data(dcb);
 
     if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
     {
@@ -779,8 +783,8 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
                   server->name,
                   server->port,
                   dcb,
-                  session->client,
-                  session->client->fd);
+                  session->client_dcb,
+                  session->client_dcb->fd);
         dcb->state = DCB_STATE_DISCONNECTED;
         dcb_final_free(dcb);
         return NULL;
@@ -793,8 +797,8 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
                   server->name,
                   server->port,
                   dcb,
-                  session->client,
-                  session->client->fd);
+                  session->client_dcb,
+                  session->client_dcb->fd);
     }
     /**
      * Successfully connected to backend. Assign file descriptor to dcb
@@ -2132,9 +2136,9 @@ dcb_isclient(DCB *dcb)
 {
     if (dcb->state != DCB_STATE_LISTENING && dcb->session)
     {
-        if (dcb->session->client)
+        if (dcb->session->client_dcb)
         {
-            return (dcb->session && dcb == dcb->session->client);
+            return (dcb->session && dcb == dcb->session->client_dcb);
         }
     }
 
@@ -3019,4 +3023,22 @@ dcb_role_name(DCB *dcb)
         }
     }
     return name;
+}
+
+/**
+ * @brief Free the client data pointed to by the passed DCB.
+ *
+ * Currently all that is required is to free the storage pointed to by
+ * dcb->data.  But this is intended to be implemented as part of the
+ * authentication API at which time this code will be moved into the
+ * MySQL authenticator.  If the data structure were to become more complex
+ * the mechanism would still work and be the responsibility of the authenticator.
+ * The DCB should not know authenticator implementation details.
+ *
+ * @param dcb Request handler DCB connected to the client
+ */
+static void
+mysql_auth_free_client_data(DCB *dcb)
+{
+    free(dcb->data);
 }

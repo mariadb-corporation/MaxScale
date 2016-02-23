@@ -549,3 +549,4 @@ static int combined_auth_check(
     auth_ret = check_db_name_after_auth(dcb, database, auth_ret);
     return auth_ret;
 }
+
