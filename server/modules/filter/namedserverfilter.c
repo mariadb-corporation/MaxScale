@@ -85,7 +85,6 @@ typedef struct
     char *user; /* User name to restrict matches */
     char *match; /* Regular expression to match */
     char *server; /* Server to route to */
-    int cflags; /* Regexec compile flags */
     regex_t re; /* Compiled regex text */
 } REGEXHINT_INSTANCE;
 
@@ -147,14 +146,17 @@ static FILTER *
 createInstance(char **options, FILTER_PARAMETER **params)
 {
     REGEXHINT_INSTANCE *my_instance;
-    int i, cflags = REG_ICASE;
+    int cflags = REG_ICASE;
 
-    if ((my_instance = calloc(1, sizeof(REGEXHINT_INSTANCE))) != NULL)
+    if ((my_instance = malloc(sizeof(REGEXHINT_INSTANCE))) != NULL)
     {
         my_instance->match = NULL;
         my_instance->server = NULL;
+        my_instance->source = NULL;
+        my_instance->user = NULL;
+        bool error = false;
 
-        for (i = 0; params && params[i]; i++)
+        for (int i = 0; params && params[i]; i++)
         {
             if (!strcmp(params[i]->name, "match"))
             {
@@ -176,12 +178,13 @@ createInstance(char **options, FILTER_PARAMETER **params)
             {
                 MXS_ERROR("namedserverfilter: Unexpected parameter '%s'.",
                           params[i]->name);
+                error = true;
             }
         }
 
         if (options)
         {
-            for (i = 0; options[i]; i++)
+            for (int i = 0; options[i]; i++)
             {
                 if (!strcasecmp(options[i], "ignorecase"))
                 {
@@ -197,32 +200,48 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 }
                 else
                 {
-                    MXS_ERROR("namedserverfilter: unsupported option '%s'.",
+                    MXS_ERROR("namedserverfilter: Unsupported option '%s'.",
                               options[i]);
+                    error = true;
                 }
             }
         }
-        my_instance->cflags = cflags;
 
-        if (my_instance->match == NULL || my_instance->server == NULL)
+        if (my_instance->match == NULL)
         {
-            MXS_ERROR("namedserverfilter: Missing required configured"
-                      " option. You must specify a match and server "
-                      "option as a minimum.");
-            free(my_instance);
-            return NULL;
+            MXS_ERROR("namedserverfilter: Missing required parameters 'match'.");
+            error = true;
         }
 
-        if (regcomp(&my_instance->re, my_instance->match,
-                    my_instance->cflags))
+        if (my_instance->server == NULL)
+        {
+            MXS_ERROR("namedserverfilter: Missing required parameters 'server'.");
+            error = true;
+        }
+        if (my_instance->server && my_instance->match &&
+            regcomp(&my_instance->re, my_instance->match, cflags))
         {
             MXS_ERROR("namedserverfilter: Invalid regular expression '%s'.\n",
                       my_instance->match);
             free(my_instance->match);
-            free(my_instance->server);
-            free(my_instance);
-            return NULL;
+            my_instance->match = NULL;
+            error = true;
         }
+
+        if (error)
+        {
+            if (my_instance->match)
+            {
+                regfree(&my_instance->re);
+                free(my_instance->match);
+            }
+            free(my_instance->server);
+            free(my_instance->source);
+            free(my_instance->user);
+            free(my_instance);
+            my_instance = NULL;
+        }
+
     }
     return(FILTER *) my_instance;
 }

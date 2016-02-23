@@ -40,11 +40,11 @@ options=case,extended
 
 ## Filter Parameters
 
-The top filter accepts a number of optional parameters.
+The top filter has one mandatory parameter, `filebase`, and a number of optional parameters.
 
 ### Filebase
 
-The basename of the output file created for each session. A session index is added to the filename for each file written.
+The basename of the output file created for each session. A session index is added to the filename for each file written. This is a mandatory parameter.
 
 ```
 filebase=/tmp/SqlQueryLog

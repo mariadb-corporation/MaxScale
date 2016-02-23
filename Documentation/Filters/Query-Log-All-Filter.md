@@ -43,11 +43,11 @@ anymore and the `filebase` parameter should be used instead.
 
 ## Filter Parameters
 
-The QLA filter accepts a number of optional parameters, these were introduced in the 1.0 release of MaxScale.
+The QLA filter has one mandatory parameter, `filebase`, and a number of optional parameters. These were introduced in the 1.0 release of MaxScale.
 
 ### Filebase
 
-The basename of the output file created for each session. A session index is added to the filename for each file written.
+The basename of the output file created for each session. A session index is added to the filename for each file written. This is a mandatory parameter.
 
 ```
 filebase=/tmp/SqlQueryLog
