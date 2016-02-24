@@ -85,6 +85,11 @@
 #include <ruleparser.yy.h>
 #include <lex.yy.h>
 
+/** Older versions of Bison don't include the parsing function in the header */
+#ifndef dbfw_yyparse
+int dbfw_yyparse(void*);
+#endif
+
 MODULE_INFO info =
 {
     MODULE_API_FILTER,

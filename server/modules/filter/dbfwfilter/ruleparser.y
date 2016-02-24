@@ -28,10 +28,10 @@
 %}
 
 /** We need a reentrant scanner so no global variables are used */
-%define api.pure full
+%pure-parser
 
 /** Prefix all functions */
-%name-prefix "dbfw_yy"
+%name-prefix="dbfw_yy"
 
 /** The pure parser requires one extra parameter */
 %parse-param {void* scanner}
