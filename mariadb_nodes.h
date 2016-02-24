@@ -242,6 +242,13 @@ public:
     int unblock_all_nodes();
 
     /**
+     * @brief clean_iptables removes all itables rules connected to MariaDB port to avoid duplicates
+     * @param node Index of node to clean
+     * @return 0 in case of success
+     */
+    int clean_iptables(int node);
+
+    /**
      * @brief Check if all nodes are avaliable (via ssh) and restart nodes that are not available
      * @return 0 if everything is ok
      */

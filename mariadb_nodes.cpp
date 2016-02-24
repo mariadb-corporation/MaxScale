@@ -286,28 +286,54 @@ int Mariadb_nodes::start_galera()
     return(local_result);
 }
 
+int Mariadb_nodes::clean_iptables(int node)
+{
+    char sys1[1024];
+    int local_result = 0;
+    /*
+    char * clean_command = (char *)
+            "echo '#!/bin/bash' > clean_iptables.sh \n \
+            echo 'while [ \"$(iptables -n -L INPUT 1|grep 'mysql\\|%d')\" != \"\" ]; do iptables -D INPUT 1; done' >>  clean_iptables.sh \n \
+            chmod a+x  clean_iptables.sh \n sudo  ./clean_iptables.sh \n";
+    sprintf(&sys1[0], clean_command, port[node]);
+    printf("%s\n", sys1);
+    ssh_node(node, sys1, FALSE);*/
+    local_result += ssh_node(node, (char *) "echo \"#!/bin/bash\" > clean_iptables.sh", FALSE);
+    sprintf(sys1, "echo \"while [ \\\"\\$(iptables -n -L INPUT 1|grep '%d')\\\" != \\\"\\\" ]; do iptables -D INPUT 1; done\" >>  clean_iptables.sh", port[node]);
+    local_result += ssh_node(node, (char *) sys1, FALSE);
+    local_result += ssh_node(node, (char *) "chmod a+x clean_iptables.sh", FALSE);
+    local_result += ssh_node(node, (char *) "./clean_iptables.sh", TRUE);
+    return(local_result);
+}
+
 int Mariadb_nodes::block_node(int node)
 {
     char sys1[1024];
+    int local_result = 0;
+    local_result += clean_iptables(node);
     sprintf(&sys1[0], "iptables -I INPUT -p tcp --dport %d -j REJECT", port[node]);
     if (this->verbose)
     {
         printf("%s\n", sys1);
         fflush(stdout);
     }
-    return(ssh_node(node, sys1, TRUE));
+    local_result += ssh_node(node, sys1, TRUE);
+    return(local_result);
 }
 
 int Mariadb_nodes::unblock_node(int node)
 {
     char sys1[1024];
+    int local_result = 0;
+    local_result += clean_iptables(node);
     sprintf(&sys1[0], "iptables -I INPUT -p tcp --dport %d -j ACCEPT", port[node]);
     if (this->verbose)
     {
         printf("%s\n", sys1);
         fflush(stdout);
     }
-    return(ssh_node(node, sys1, TRUE));
+    local_result += ssh_node(node, sys1, TRUE);
+    return(local_result);
 }
 
 
