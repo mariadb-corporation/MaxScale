@@ -1253,6 +1253,9 @@ process_config_update(CONFIG_CONTEXT *context)
                         if (auth_all_servers)
                         {
                             serviceAuthAllServers(service, config_truth_value(auth_all_servers));
+                            service_set_param_value(service,
+                                                    config_get_param(obj->parameters, "auth_all_servers"),
+                                                    auth_all_servers, 0, BOOL_TYPE);
                         }
                         if (optimize_wildcard)
                         {
@@ -2167,6 +2170,9 @@ int create_new_service(CONFIG_CONTEXT *obj)
     if (auth_all_servers)
     {
         serviceAuthAllServers(obj->element, config_truth_value(auth_all_servers));
+        service_set_param_value(service,
+                                config_get_param(obj->parameters, "auth_all_servers"),
+                                auth_all_servers, 0, BOOL_TYPE);
     }
 
     char *optimize_wildcard = config_get_value(obj->parameters, "optimize_wildcard");
