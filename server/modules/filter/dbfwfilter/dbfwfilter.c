@@ -716,7 +716,7 @@ void add_users(char* rule, FW_INSTANCE* instance)
  * @param instance Filter instance
  * @param user User name
  * @param rulelist List of rules to apply
- * @param type Matching type, one of MATCH_ANY, MATCH_ALL or MATCH_STRICT_ALL
+ * @param type Matching type, one of FWTOK_MATCH_ANY, FWTOK_MATCH_ALL or FWTOK_MATCH_STRICT_ALL
  * @return True of the rules were successfully applied. False if memory allocation
  * fails
  */
@@ -724,7 +724,7 @@ static bool apply_rule_to_user(FW_INSTANCE *instance, char *username,
                                RULELIST *rulelist, enum match_type type)
 {
     USER* user;
-    ss_dassert(type == MATCH_ANY || type == MATCH_STRICT_ALL || type == MATCH_ALL);
+    ss_dassert(type == FWTOK_MATCH_ANY || type == FWTOK_MATCH_STRICT_ALL || type == FWTOK_MATCH_ALL);
     if ((user = (USER*) hashtable_fetch(instance->htable, username)) == NULL)
     {
         /**New user*/
@@ -748,15 +748,15 @@ static bool apply_rule_to_user(FW_INSTANCE *instance, char *username,
 
     switch (type)
     {
-        case MATCH_ANY:
+        case FWTOK_MATCH_ANY:
             tail->next = user->rules_or;
             user->rules_or = tl;
             break;
-        case MATCH_STRICT_ALL:
+        case FWTOK_MATCH_STRICT_ALL:
             tail->next = user->rules_and;
             user->rules_strict_and = tl;
             break;
-        case MATCH_ALL:
+        case FWTOK_MATCH_ALL:
             tail->next = user->rules_and;
             user->rules_and = tl;
             break;
@@ -816,15 +816,15 @@ bool link_rules(char* orig, FW_INSTANCE* instance)
         }
         if (strcmp(tok, "any") == 0)
         {
-            type = MATCH_ANY;
+            type = FWTOK_MATCH_ANY;
         }
         else if (strcmp(tok, "all") == 0)
         {
-            type = MATCH_ALL;
+            type = FWTOK_MATCH_ALL;
         }
         else if (strcmp(tok, "strict_all") == 0)
         {
-            type = MATCH_STRICT_ALL;
+            type = FWTOK_MATCH_STRICT_ALL;
         }
         else
         {
@@ -1562,6 +1562,13 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
                                    RULE* rules)
 {
     bool rval = true;
+
+    if (templates == NULL)
+    {
+        MXS_ERROR("No user definitions found in the rule file.");
+        rval = false;
+    }
+
     while (templates)
     {
         USER *user = hashtable_fetch(instance->htable, templates->name);
@@ -1607,17 +1614,17 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
 
             switch (templates->type)
             {
-                case MATCH_ANY:
+                case FWTOK_MATCH_ANY:
                     tail->next = user->rules_or;
                     user->rules_or = foundrules;
                     break;
 
-                case MATCH_ALL:
+                case FWTOK_MATCH_ALL:
                     tail->next = user->rules_and;
                     user->rules_and = foundrules;
                     break;
 
-                case MATCH_STRICT_ALL:
+                case FWTOK_MATCH_STRICT_ALL:
                     tail->next = user->rules_strict_and;
                     user->rules_strict_and = foundrules;
                     break;
@@ -1630,12 +1637,6 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
             break;
         }
         templates = templates->next;
-    }
-
-    if (templates == NULL)
-    {
-        MXS_ERROR("No user definitions found in the rule file.");
-        rval = false;
     }
 
     return rval;

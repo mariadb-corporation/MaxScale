@@ -30,19 +30,18 @@
 /** We need a reentrant scanner so no global variables are used */
 %define api.pure full
 
-/** Verbose errors help figure out what went wrong */
-%define parse.error verbose
+/** Prefix all functions */
+%name-prefix "dbfw_yy"
 
-%define api.token.prefix {FWTOK_}
-%define api.prefix {dbfw_yy}
 /** The pure parser requires one extra parameter */
-%param {void* scanner}
+%parse-param {void* scanner}
+%lex-param {void* scanner}
 
 /** Terminal symbols */
-%token RULE <strval>RULENAME USERS <strval>USER RULES MATCH ANY ALL STRICT_ALL DENY
-%token WILDCARD COLUMNS REGEX LIMIT_QUERIES WHERE_CLAUSE AT_TIMES ON_QUERIES
-%token <strval>SQLOP COMMENT <intval>INT <floatval>FLOAT PIPE <strval>TIME
-%token <strval>BTSTR <strval>QUOTEDSTR <strval>STR
+%token FWTOK_RULE <strval>FWTOK_RULENAME FWTOK_USERS <strval>FWTOK_USER FWTOK_RULES FWTOK_MATCH FWTOK_ANY FWTOK_ALL FWTOK_STRICT_ALL FWTOK_DENY
+%token FWTOK_WILDCARD FWTOK_COLUMNS FWTOK_REGEX FWTOK_LIMIT_QUERIES FWTOK_WHERE_CLAUSE FWTOK_AT_TIMES FWTOK_ON_QUERIES
+%token <strval>FWTOK_SQLOP FWTOK_COMMENT <intval>FWTOK_INT <floatval>FWTOK_FLOAT FWTOK_PIPE <strval>FWTOK_TIME
+%token <strval>FWTOK_BTSTR <strval>FWTOK_QUOTEDSTR <strval>FWTOK_STR
 
 /** Non-terminal symbols */
 %type <strval>rulename
@@ -60,11 +59,11 @@ line:
     '\n'
     | rule '\n'
     | user '\n'
-    | COMMENT '\n'
+    | FWTOK_COMMENT '\n'
     ;
 
 rule:
-    RULE rulename {if (!create_rule(scanner, $2)){YYERROR;}} DENY ruleparams
+    FWTOK_RULE rulename {if (!create_rule(scanner, $2)){YYERROR;}} FWTOK_DENY ruleparams
     ;
 
 ruleparams:
@@ -75,18 +74,18 @@ ruleparams:
     ;
 
 rulename:
-    RULENAME
-    | STR
+    FWTOK_RULENAME
+    | FWTOK_STR
     ;
 
 user:
-    USERS userlist MATCH cond RULES namelist
+    FWTOK_USERS userlist FWTOK_MATCH cond FWTOK_RULES namelist
         {if (!create_user_templates(scanner)){YYERROR;}}
     ;
 
 userlist:
-    USER {if (!add_active_user(scanner, $1)){YYERROR;}}
-    | userlist USER {if (!add_active_user(scanner, $2)){YYERROR;}}
+    FWTOK_USER {if (!add_active_user(scanner, $1)){YYERROR;}}
+    | userlist FWTOK_USER {if (!add_active_user(scanner, $2)){YYERROR;}}
     ;
 
 namelist:
@@ -95,38 +94,38 @@ namelist:
     ;
 
 cond:
-    ANY {set_matching_mode(scanner, MATCH_ANY);}
-    | ALL {set_matching_mode(scanner, MATCH_ALL);}
-    | STRICT_ALL {set_matching_mode(scanner, MATCH_STRICT_ALL);}
+    FWTOK_ANY {set_matching_mode(scanner, FWTOK_MATCH_ANY);}
+    | FWTOK_ALL {set_matching_mode(scanner, FWTOK_MATCH_ALL);}
+    | FWTOK_STRICT_ALL {set_matching_mode(scanner, FWTOK_MATCH_STRICT_ALL);}
     ;
 
 mandatory:
-    WILDCARD {define_wildcard_rule(scanner);}
-    | WHERE_CLAUSE {define_where_clause_rule(scanner);}
-    | LIMIT_QUERIES INT INT INT
+    FWTOK_WILDCARD {define_wildcard_rule(scanner);}
+    | FWTOK_WHERE_CLAUSE {define_where_clause_rule(scanner);}
+    | FWTOK_LIMIT_QUERIES FWTOK_INT FWTOK_INT FWTOK_INT
         {if (!define_limit_queries_rule(scanner, $2, $3, $4)){YYERROR;}}
-    | REGEX QUOTEDSTR {if (!define_regex_rule(scanner, $2)){YYERROR;}}
-    | COLUMNS columnlist
+    | FWTOK_REGEX FWTOK_QUOTEDSTR {if (!define_regex_rule(scanner, $2)){YYERROR;}}
+    | FWTOK_COLUMNS columnlist
     ;
 
 columnlist:
-    BTSTR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
-    | STR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
-    | columnlist BTSTR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
-    | columnlist STR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
+    FWTOK_BTSTR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
+    | FWTOK_STR {if (!define_columns_rule(scanner, $1)){YYERROR;}}
+    | columnlist FWTOK_BTSTR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
+    | columnlist FWTOK_STR {if (!define_columns_rule(scanner, $2)){YYERROR;}}
     ;
 
 optional:
-    AT_TIMES timelist
-    | ON_QUERIES orlist
+    FWTOK_AT_TIMES timelist
+    | FWTOK_ON_QUERIES orlist
     ;
 
 timelist:
-    TIME {if (!add_at_times_rule(scanner, $1)){YYERROR;}}
-    | timelist TIME {if (!add_at_times_rule(scanner, $2)){YYERROR;}}
+    FWTOK_TIME {if (!add_at_times_rule(scanner, $1)){YYERROR;}}
+    | timelist FWTOK_TIME {if (!add_at_times_rule(scanner, $2)){YYERROR;}}
     ;
 
 orlist:
-    SQLOP {add_on_queries_rule(scanner, $1);}
-    | orlist PIPE SQLOP {add_on_queries_rule(scanner, $3);}
+    FWTOK_SQLOP {add_on_queries_rule(scanner, $1);}
+    | orlist FWTOK_PIPE FWTOK_SQLOP {add_on_queries_rule(scanner, $3);}
     ;

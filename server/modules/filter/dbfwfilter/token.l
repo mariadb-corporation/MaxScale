@@ -19,11 +19,6 @@
 %{
 #include <ruleparser.yy.h>
 
-/** The tokenizer needs this declared in order to avoid naming conflicts */
-#ifndef YYSTYPE
-#define YYSTYPE DBFW_YYSTYPE
-#endif
-
 %}
 
 %option reentrant noyywrap bison-bridge prefix="dbfw_yy"

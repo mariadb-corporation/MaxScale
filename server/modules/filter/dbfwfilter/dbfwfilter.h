@@ -28,16 +28,12 @@
 
 #include <stdbool.h>
 
-#ifndef YYSTYPE
-#define YYSTYPE DBFW_YYSTYPE
-#endif
-
 /** Matching type */
 enum match_type
 {
-    MATCH_ANY,
-    MATCH_ALL,
-    MATCH_STRICT_ALL
+    FWTOK_MATCH_ANY,
+    FWTOK_MATCH_ALL,
+    FWTOK_MATCH_STRICT_ALL
 };
 
 /** Prototype for the parser's error handler */
