@@ -65,6 +65,8 @@ static SPINLOCK timeout_lock = SPINLOCK_INIT;
 static int session_setup_filters(SESSION *session);
 static void session_simple_free(SESSION *session, DCB *dcb);
 
+static void mysql_auth_free_client_data(DCB *dcb);
+
 /**
  * Allocate a new session for a new client of the specified service.
  *
@@ -91,23 +93,6 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                   "session object due error %d, %s.",
                   errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
-        /* Does this possibly need a lock? */
-        /*
-         * This is really not the right way to do this.  The data in a DCB is
-         * router specific and should be freed by a function in the relevant
-         * router.  This would be better achieved by placing a function reference
-         * in the DCB and having dcb_final_free call it to dispose of the data
-         * at the final destruction of the DCB.  However, this piece of code is
-         * only run following a calloc failure, so the system is probably on
-         * the point of crashing anyway.
-         *
-         */
-        if (client_dcb->data && !DCB_IS_CLONE(client_dcb))
-        {
-            void * clientdata = client_dcb->data;
-            client_dcb->data = NULL;
-            free(clientdata);
-        }
         return NULL;
     }
 #if defined(SS_DEBUG)
@@ -437,6 +422,14 @@ session_free(SESSION *session)
     spinlock_release(&session_spin);
     atomic_add(&session->service->stats.n_current, -1);
 
+    /***
+     *
+     */
+    if (session->client_dcb)
+    {
+        mysql_auth_free_client_data(session->client_dcb);
+        dcb_free_all_memory(session->client_dcb);
+    }
     /**
      * If session is not child of some other session, free router_session.
      * Otherwise let the parent free it.
@@ -1107,4 +1100,22 @@ sessionGetList(SESSIONLISTFILTER filter)
     resultset_add_column(set, "State", 15, COL_TYPE_VARCHAR);
 
     return set;
+}
+
+/**
+ * @brief Free the client data pointed to by the passed DCB.
+ *
+ * Currently all that is required is to free the storage pointed to by
+ * dcb->data.  But this is intended to be implemented as part of the
+ * authentication API at which time this code will be moved into the
+ * MySQL authenticator.  If the data structure were to become more complex
+ * the mechanism would still work and be the responsibility of the authenticator.
+ * The DCB should not know authenticator implementation details.
+ *
+ * @param dcb Request handler DCB connected to the client
+ */
+static void
+mysql_auth_free_client_data(DCB *dcb)
+{
+    free(dcb->data);
 }

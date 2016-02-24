@@ -172,7 +172,7 @@ static int gw_read_backend_event(DCB *dcb)
         goto return_rc;
     }
 
-    if (dcb->session == NULL)
+    if (dcb->dcb_is_zombie || dcb->session == NULL)
     {
         goto return_rc;
     }

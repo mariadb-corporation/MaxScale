@@ -126,8 +126,6 @@ static int gw_write(DCB *dcb, bool *stop_writing);
 static int gw_write_SSL(DCB *dcb, bool *stop_writing);
 static void dcb_log_errors_SSL (DCB *dcb, const char *called_by, int ret);
 
-static void mysql_auth_free_client_data(DCB *dcb);
-
 size_t dcb_get_session_id(
     DCB *dcb)
 {
@@ -320,8 +318,6 @@ dcb_clone(DCB *orig)
 static void
 dcb_final_free(DCB *dcb)
 {
-    DCB_CALLBACK *cb;
-
     CHK_DCB(dcb);
     ss_info_dassert(dcb->state == DCB_STATE_DISCONNECTED ||
                     dcb->state == DCB_STATE_ALLOC,
@@ -384,10 +380,24 @@ dcb_final_free(DCB *dcb)
         if (SESSION_STATE_DUMMY != local_session->state)
         {
             session_free(local_session);
+            return;
         }
     }
+    dcb_free_all_memory(dcb);
+}
 
-    mysql_auth_free_client_data(dcb);
+/**
+ * Free the memory belonging to a DCB
+ *
+ * NB The DCB is fully detached from all links except perhaps the session
+ * dcb_client link.
+ *
+ * @param dcb The DCB to free
+ */
+void
+dcb_free_all_memory(DCB *dcb)
+{
+    DCB_CALLBACK *cb_dcb;
 
     if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
     {
@@ -424,10 +434,10 @@ dcb_final_free(DCB *dcb)
     }
 
     spinlock_acquire(&dcb->cb_lock);
-    while ((cb = dcb->callbacks) != NULL)
+    while ((cb_dcb = dcb->callbacks) != NULL)
     {
-        dcb->callbacks = cb->next;
-        free(cb);
+        dcb->callbacks = cb_dcb->next;
+        free(cb_dcb);
     }
     spinlock_release(&dcb->cb_lock);
     if (dcb->ssl)
@@ -3025,20 +3035,3 @@ dcb_role_name(DCB *dcb)
     return name;
 }
 
-/**
- * @brief Free the client data pointed to by the passed DCB.
- *
- * Currently all that is required is to free the storage pointed to by
- * dcb->data.  But this is intended to be implemented as part of the
- * authentication API at which time this code will be moved into the
- * MySQL authenticator.  If the data structure were to become more complex
- * the mechanism would still work and be the responsibility of the authenticator.
- * The DCB should not know authenticator implementation details.
- *
- * @param dcb Request handler DCB connected to the client
- */
-static void
-mysql_auth_free_client_data(DCB *dcb)
-{
-    free(dcb->data);
-}

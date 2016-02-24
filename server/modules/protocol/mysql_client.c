@@ -537,12 +537,12 @@ int gw_read_client_event(DCB* dcb)
                     auth_val = MYSQL_AUTH_NO_SESSION;
                 }
             }
-            if (MYSQL_AUTH_SUCCEEDED != auth_val)
+            if (MYSQL_AUTH_SUCCEEDED != auth_val && MYSQL_AUTH_SSL_INCOMPLETE != auth_val)
             {
                 protocol->protocol_auth_state = MYSQL_AUTH_FAILED;
                 mysql_client_auth_error_handling(dcb, auth_val);
                 /**
-                 * Close DCB and which will release MYSQL_session 
+                 * Close DCB and which will release MYSQL_session
                  */
                 dcb_close(dcb);
             }
