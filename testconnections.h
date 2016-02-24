@@ -506,7 +506,7 @@ public:
      * @param expected TRUE if err_msg is expedted in the log, FALSE if err_msg should NOT be in the log
      * @return 0 if (err_msg is found AND expected is TRUE) OR (err_msg is NOT found in the log AND expected is FALSE)
      */
-    void check_log_err(char * err_msg, bool expected);
+    void check_log_err(const char * err_msg, bool expected);
 
     /**
      * @brief FindConnectedSlave Finds slave node which has connections from MaxScale
