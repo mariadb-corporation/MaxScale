@@ -366,19 +366,6 @@ dcb_final_free(DCB *dcb)
         SESSION *local_session = dcb->session;
         dcb->session = NULL;
         CHK_SESSION(local_session);
-        /**
-         * Set session's client pointer NULL so that other threads
-         * won't try to call dcb_close for client DCB
-         * after this call.
-         */
-        /*
-        if (local_session->client_dcb == dcb)
-        {
-            spinlock_acquire(&local_session->ses_lock);
-            local_session->client_dcb = NULL;
-            spinlock_release(&local_session->ses_lock);
-        }
-        */
         if (SESSION_STATE_DUMMY != local_session->state)
         {
             session_free(local_session);

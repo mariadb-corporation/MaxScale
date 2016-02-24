@@ -1166,9 +1166,7 @@ static int gw_backend_close(DCB *dcb)
                 spinlock_release(&session->ses_lock);
 
                 /** Close client DCB */
-                temp = session->client_dcb;
-                session->client_dcb = NULL;
-                dcb_close(temp);
+                dcb_close(session->client_dcb);
             }
             else
             {
