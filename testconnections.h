@@ -386,14 +386,14 @@ public:
      * @param ssh ssh command to execute on the MaxScale machine
      * @return Output of the command or NULL if the command failed to execute
      */
-    char* ssh_maxscale_output(char* ssh, bool sudo);
+    char* ssh_maxscale_output(bool sudo, const char* format, ...);
 
     /**
      * @brief Execute a command via ssh on the MaxScale machine
      * @param ssh ssh command to execute on the MaxScale machine
      * @return exit code of the command
      */
-    int ssh_maxscale(char* ssh, bool sudo);
+    int ssh_maxscale(bool sudo, const char* format, ...);
 
     /**
      * @brief Copy a local file to the MaxScale machine
