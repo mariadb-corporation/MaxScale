@@ -222,4 +222,4 @@ persistmaxtime=3660
 [QLA]
 type=filter
 module=qlafilter
-options=/tmp/QueryLog
+filebase=/tmp/QueryLog

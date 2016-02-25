@@ -150,7 +150,7 @@ port=6603
 [MyLogFilter]
 type=filter
 module=qlafilter
-options=/tmp/QueryLog
+filebase=/tmp/QueryLog
 
 
 [server1]

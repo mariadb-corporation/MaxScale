@@ -70,7 +70,7 @@ replace=from
 [qla]
 type=filter
 module=qlafilter
-options=/tmp/QueryLog
+filebase=/tmp/QueryLog
 
 [duplicate]
 type=filter 
@@ -212,4 +212,4 @@ protocol=MySQLBackend
 [QLA]
 type=filter
 module=qlafilter
-options=/tmp/QueryLog
+filebase=/tmp/QueryLog
