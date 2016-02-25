@@ -154,12 +154,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
         if (session->router_session == NULL)
         {
             session->state = SESSION_STATE_TO_BE_FREED;
-
-            MXS_ERROR("%lu [%s] Error : Failed to create %s session because router"
-                      "could not establish a new router session, see earlier error.",
-                      pthread_self(),
-                      __func__,
-                      service->name);
+            MXS_ERROR("Failed to create new router session for service '%s'. "
+                      "See previous errors for more details.", service->name);
         }
         /*
          * Pending filter chain being setup set the head of the chain to
