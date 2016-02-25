@@ -502,7 +502,7 @@ int TestConnections::start_mm()
     return(global_result);
 }
 
-void TestConnections::check_log_err(char * err_msg, bool expected)
+void TestConnections::check_log_err(const char * err_msg, bool expected)
 {
 
     char * err_log_content;
