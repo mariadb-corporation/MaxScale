@@ -1812,33 +1812,6 @@ char datadir_arg[OPTIONS_DATADIR_SIZE];
 char language_arg[OPTIONS_LANGUAGE_SIZE];
 
 
-bool create_datadir(const char* base, char* datadir)
-{
-    bool created = false;
-
-    if (snprintf(datadir, PATH_MAX, "%s/data%d", base, getpid()) < PATH_MAX)
-    {
-        int rc = mkdir(datadir, 0777);
-
-        if ((rc == 0) || (errno == EEXIST))
-        {
-            created = true;
-        }
-        else
-        {
-            char errbuf[STRERROR_BUFLEN];
-            fprintf(stderr, "MaxScale: error: Cannot create data directory '%s': %d %s\n",
-                    datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
-        }
-    }
-    else
-    {
-        fprintf(stderr, "MaxScale: error: Too long data directory: %s/data%d.", base, getpid());
-    }
-
-    return created;
-}
-
 void configure_options(const char* datadir, const char* langdir)
 {
     int rv;
@@ -1861,7 +1834,6 @@ void configure_options(const char* datadir, const char* langdir)
 bool qc_init(void)
 {
     bool inited = false;
-    char datadir[PATH_MAX];
 
     if (strlen(get_langdir()) >= PATH_MAX)
     {
@@ -1869,25 +1841,22 @@ bool qc_init(void)
     }
     else
     {
-        if (create_datadir(get_datadir(), datadir))
+        configure_options(get_process_datadir(), get_langdir());
+
+        int argc = N_OPTIONS;
+        char** argv = const_cast<char**>(server_options);
+        char** groups = const_cast<char**>(server_groups);
+
+        int rc = mysql_library_init(argc, argv, groups);
+
+        if (rc != 0)
         {
-            configure_options(datadir, get_langdir());
-
-            int argc = N_OPTIONS;
-            char** argv = const_cast<char**>(server_options);
-            char** groups = const_cast<char**>(server_groups);
-
-            int rc = mysql_library_init(argc, argv, groups);
-
-            if (rc != 0)
-            {
-                MXS_ERROR("mysql_library_init() failed. Error code: %d", rc);
-            }
-            else
-            {
-                MXS_NOTICE("Query classifier initialized.");
-                inited = true;
-            }
+            MXS_ERROR("mysql_library_init() failed. Error code: %d", rc);
+        }
+        else
+        {
+            MXS_NOTICE("Query classifier initialized.");
+            inited = true;
         }
     }
 

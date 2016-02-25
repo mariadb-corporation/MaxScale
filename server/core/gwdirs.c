@@ -86,6 +86,17 @@ void set_datadir(char* param)
 }
 
 /**
+ * Set the data directory
+ * @param str Path to directory
+ */
+void set_process_datadir(char* param)
+{
+    free(processdatadir);
+    clean_up_pathname(param);
+    processdatadir = param;
+}
+
+/**
  * Set the library directory. Modules will be loaded from here.
  * @param str Path to directory
  */
@@ -127,12 +138,21 @@ char* get_cachedir()
 }
 
 /**
- * Get the service cache directory
- * @return The path to the cache directory
+ * Get the MaxScale data directory
+ * @return The path to the data directory
  */
 char* get_datadir()
 {
     return maxscaledatadir ? maxscaledatadir : (char*) default_datadir;
+}
+
+/**
+ * Get the process specific data directory
+ * @return The path to the process specific directory
+ */
+char* get_process_datadir()
+{
+    return processdatadir ? processdatadir : (char*) default_datadir;
 }
 
 /**

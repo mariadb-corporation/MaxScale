@@ -35,7 +35,7 @@ static const char* default_configdir = "/etc";
   * uses /run for PID files.*/
 static const char* default_piddir = "@MAXSCALE_VARDIR@/run/maxscale";
 static const char* default_logdir = "@MAXSCALE_VARDIR@/log/maxscale";
-static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale/data";
+static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale";
 static const char* default_libdir = "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@";
 static const char* default_cachedir = "@MAXSCALE_VARDIR@/cache/maxscale";
 static const char* default_langdir = "@MAXSCALE_VARDIR@/lib/maxscale";
@@ -45,13 +45,15 @@ static char* configdir = NULL;
 static char* logdir = NULL;
 static char* libdir = NULL;
 static char* cachedir = NULL;
-static char* maxscaledatadir = NULL;
+static char* maxscaledatadir = NULL; /*< The data directory */
+static char* processdatadir = NULL; /*< Process specific data directory */
 static char* langdir = NULL;
 static char* piddir = NULL;
 static char* execdir = NULL;
 
 void set_libdir(char* param);
 void set_datadir(char* param);
+void set_process_datadir(char* param);
 void set_cachedir(char* param);
 void set_configdir(char* param);
 void set_logdir(char* param);
@@ -60,6 +62,7 @@ void set_piddir(char* param);
 void set_execdir(char* param);
 char* get_libdir();
 char* get_datadir();
+char* get_process_datadir();
 char* get_cachedir();
 char* get_configdir();
 char* get_piddir();

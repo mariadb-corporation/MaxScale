@@ -439,7 +439,54 @@ static int signal_set(int sig, void (*handler)(int))
     return rc;
 }
 
+/**
+ * @brief Create the data directory for this process
+ *
+ * This will prevent conflicts when multiple MaxScale instances are run on the
+ * same machine.
+ * @param base Base datadir path
+ * @param datadir The result where the process specific datadir is stored
+ * @return True if creation was successful and false on error
+ */
+static bool create_datadir(const char* base, char* datadir)
+{
+    bool created = false;
+    int len = 0;
 
+    if ((len = snprintf(datadir, PATH_MAX, "%s", base)) < PATH_MAX &&
+        (mkdir(datadir, 0777) == 0 || errno == EEXIST))
+    {
+        if ((len = snprintf(datadir, PATH_MAX, "%s/data%d", base, getpid())) < PATH_MAX)
+        {
+            if ((mkdir(datadir, 0777) == 0) || (errno == EEXIST))
+            {
+                created = true;
+            }
+            else
+            {
+                char errbuf[STRERROR_BUFLEN];
+                MXS_ERROR("Cannot create data directory '%s': %d %s\n",
+                          datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+            }
+        }
+    }
+    else
+    {
+        if (len < PATH_MAX)
+        {
+            char errbuf[STRERROR_BUFLEN];
+            fprintf(stderr, "Error: Cannot create data directory '%s': %d %s\n",
+                    datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        }
+        else
+        {
+            MXS_ERROR("Data directory pathname exceeds the maximum allowed pathname "
+                      "length: %s/data%d.", base, getpid());
+        }
+    }
+
+    return created;
+}
 
 /**
  * Cleanup the temporary data directory we created for the gateway
@@ -456,23 +503,28 @@ int ntfw_cb(const char*        filename,
         int eno = errno;
         errno = 0;
         char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Failed to remove the data directory %s of "
-                  "MaxScale due to %d, %s.",
-                  datadir,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
+                  datadir, eno, strerror_r(eno, errbuf, sizeof(errbuf)));
     }
     return rc;
 }
 
-void datadir_cleanup()
+/**
+ * @brief Clean up the data directory
+ *
+ * This removes the process specific datadir which is currently only used by
+ * the embedded library. In the future this directory could contain other
+ * temporary files and relocating this to to, for example, /tmp/ could make sense.
+ */
+void cleanup_process_datadir()
 {
     int depth = 1;
     int flags = FTW_CHDIR|FTW_DEPTH|FTW_MOUNT;
+    const char *proc_datadir = get_process_datadir();
 
-    if (datadir[0] != 0 && access(datadir, F_OK) == 0)
+    if (strcmp(proc_datadir, get_datadir()) != 0 && access(proc_datadir, F_OK) == 0)
     {
-        nftw(datadir, ntfw_cb, depth, flags);
+        nftw(proc_datadir, ntfw_cb, depth, flags);
     }
 }
 
@@ -1235,7 +1287,7 @@ int main(int argc, char **argv)
     ssize_t  log_flush_timeout_ms = 0;
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
-    void   (*exitfunp[4])(void) = { mxs_log_finish, datadir_cleanup, write_footer, NULL };
+    void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
 
     *syslog_enabled = 1;
     *maxlog_enabled = 1;
@@ -1718,23 +1770,20 @@ int main(int argc, char **argv)
     }
 
     /*
-     * Set a data directory for the mysqld library, we use
-     * a unique directory name to avoid clauses if multiple
-     * instances of the gateway are being run on the same
-     * machine.
+     * Set the data directory for the mysqld library. We use
+     * a unique directory name to avoid conflicts if multiple
+     * instances of MaxScale are being run on the same machine.
      */
-
-    snprintf(datadir, PATH_MAX, "%s", get_datadir());
-    datadir[PATH_MAX] = '\0';
-    if (mkdir(datadir, 0777) != 0){
-
-        if (errno != EEXIST){
-            char errbuf[STRERROR_BUFLEN];
-            fprintf(stderr,
-                    "Error: Cannot create data directory '%s': %d %s\n",
-                    datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
-            goto return_main;
-        }
+    if (create_datadir(get_datadir(), datadir))
+    {
+        set_process_datadir(datadir);
+    }
+    else
+    {
+        char errbuf[STRERROR_BUFLEN];
+        MXS_ERROR("Cannot create data directory '%s': %d %s\n",
+                  datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        goto return_main;
     }
 
     if (!daemon_mode)
@@ -1946,7 +1995,7 @@ int main(int argc, char **argv)
     qc_end();
 
     utils_end();
-    datadir_cleanup();
+    cleanup_process_datadir();
     MXS_NOTICE("MaxScale shutdown completed.");
 
     unload_all_modules();
