@@ -1286,41 +1286,53 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
  */
 static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
 {
+    int rc = 1;
     FILE *file = fopen(filename, "r");
-    yyscan_t scanner;
-    struct parser_stack pstack;
 
-    pstack.rule = NULL;
-    pstack.user = NULL;
-    pstack.active_rules = NULL;
-    pstack.templates = NULL;
-
-    dbfw_yylex_init(&scanner);
-    YY_BUFFER_STATE buf = dbfw_yy_create_buffer(file, YY_BUF_SIZE, scanner);
-    dbfw_yyset_extra(&pstack, scanner);
-    dbfw_yy_switch_to_buffer(buf, scanner);
-
-    /** Parse the rule file */
-    int rc = dbfw_yyparse(scanner);
-
-    dbfw_yy_delete_buffer(buf, scanner);
-    dbfw_yylex_destroy(scanner);
-    fclose(file);
-
-    if (rc == 0 && process_user_templates(instance, pstack.templates, pstack.rule))
+    if (file)
     {
-        instance->rules = pstack.rule;
+        yyscan_t scanner;
+        struct parser_stack pstack;
+
+        pstack.rule = NULL;
+        pstack.user = NULL;
+        pstack.active_rules = NULL;
+        pstack.templates = NULL;
+
+        dbfw_yylex_init(&scanner);
+        YY_BUFFER_STATE buf = dbfw_yy_create_buffer(file, YY_BUF_SIZE, scanner);
+        dbfw_yyset_extra(&pstack, scanner);
+        dbfw_yy_switch_to_buffer(buf, scanner);
+
+        /** Parse the rule file */
+        rc = dbfw_yyparse(scanner);
+
+        dbfw_yy_delete_buffer(buf, scanner);
+        dbfw_yylex_destroy(scanner);
+        fclose(file);
+
+        if (rc == 0 && process_user_templates(instance, pstack.templates, pstack.rule))
+        {
+            instance->rules = pstack.rule;
+        }
+        else
+        {
+            rc = 1;
+            free_rules(pstack.rule);
+            MXS_ERROR("Failed to process rule file '%s'.", filename);
+        }
+
+        free_user_templates(pstack.templates);
+        strlink_free(pstack.active_rules);
+        strlink_free(pstack.user);
     }
     else
     {
-        rc = 1;
-        free_rules(pstack.rule);
-        MXS_ERROR("Failed to process rule file '%s'.", filename);
-    }
+        char errbuf[STRERROR_BUFLEN];
+        MXS_ERROR("Failed to open rule file '%s': %d, %s", filename, errno,
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
 
-    free_user_templates(pstack.templates);
-    strlink_free(pstack.active_rules);
-    strlink_free(pstack.user);
+    }
 
     return rc == 0;
 }
