@@ -100,16 +100,6 @@ MODULE_INFO info =
 
 static char *version_str = "V1.1.0";
 
-static char* required_rules[] =
-{
-    "wildcard",
-    "columns",
-    "regex",
-    "limit_queries",
-    "no_where_clause",
-    NULL
-};
-
 /*
  * The filter entry points
  */
@@ -281,9 +271,8 @@ typedef struct
     STRLINK* userstrings; /*< Temporary list of raw strings of users */
     enum fw_actions action; /*< Default operation mode, defaults to deny */
     int log_match; /*< Log matching and/or non-matching queries */
-    SPINLOCK* lock; /*< Instance spinlock */
+    SPINLOCK lock; /*< Instance spinlock */
     int idgen; /*< UID generator */
-    int regflags;
 } FW_INSTANCE;
 
 /**
@@ -682,29 +671,6 @@ FILTER_OBJECT * GetModuleObject()
 }
 
 /**
- * Finds the rule with a name matching the passed string.
- *
- * @param tok Name to search for
- * @param instance A valid FW_FILTER instance
- * @return A pointer to the matching RULE if found, else returns NULL
- */
-RULE* find_rule(char* tok, FW_INSTANCE* instance)
-{
-    RULE* rlist = instance->rules;
-
-    while (rlist)
-    {
-        if (strcmp(rlist->name, tok) == 0)
-        {
-            return rlist;
-        }
-        rlist = rlist->next;
-    }
-    MXS_ERROR("Rule not found: %s", tok);
-    return NULL;
-}
-
-/**
  * Adds the given rule string to the list of strings to be parsed for users.
  * @param rule The rule string, assumed to be null-terminated
  * @param instance The FW_FILTER instance
@@ -768,174 +734,6 @@ static bool apply_rule_to_user(FW_INSTANCE *instance, char *username,
     }
     hashtable_add(instance->htable, (void *) username, (void *) user);
     return true;
-}
-
-/**
- * Parses the list of rule strings for users and links them against the listed rules.
- * Only adds those rules that are found. If the rule isn't found a message is written to the error log.
- * @param rule Rule string to parse
- * @param instance The FW_FILTER instance
- */
-bool link_rules(char* orig, FW_INSTANCE* instance)
-{
-    bool rval = true;
-    char *rule = strdup(orig);
-    char *tok, *ruleptr, *userptr, *modeptr;
-    char *saveptr = NULL;
-    enum match_type type;
-    RULELIST* rulelist = NULL;
-    userptr = strstr(rule, "users ");
-    modeptr = strstr(rule, " match ");
-    ruleptr = strstr(rule, " rules ");
-
-    if ((userptr == NULL || ruleptr == NULL || modeptr == NULL) ||
-        (userptr > modeptr || userptr > ruleptr || modeptr > ruleptr))
-    {
-        MXS_ERROR("dbfwfilter: Rule syntax incorrect, "
-                  "right keywords not found in the correct order: %s", orig);
-        rval = false;
-        goto parse_err;
-    }
-
-    *modeptr++ = '\0';
-    *ruleptr++ = '\0';
-
-    tok = strtok_r(modeptr, " ", &saveptr);
-
-    if (tok == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Rule syntax incorrect, "
-                  "right keywords not found in the correct order: %s", orig);
-        rval = false;
-        goto parse_err;
-    }
-
-    if (strcmp(tok, "match") == 0)
-    {
-        tok = strtok_r(NULL, " ", &saveptr);
-        if (tok == NULL)
-        {
-            MXS_ERROR("dbfwfilter: Rule syntax incorrect, missing keyword after 'match': %s", orig);
-            rval = false;
-            goto parse_err;
-        }
-        if (strcmp(tok, "any") == 0)
-        {
-            type = FWTOK_MATCH_ANY;
-        }
-        else if (strcmp(tok, "all") == 0)
-        {
-            type = FWTOK_MATCH_ALL;
-        }
-        else if (strcmp(tok, "strict_all") == 0)
-        {
-            type = FWTOK_MATCH_STRICT_ALL;
-        }
-        else
-        {
-            MXS_ERROR("dbfwfilter: Rule syntax incorrect, "
-                      "'match' was not followed by correct keyword: %s", orig);
-            rval = false;
-            goto parse_err;
-        }
-    }
-    else
-    {
-        MXS_ERROR("dbfwfilter: Rule syntax incorrect, bad token: %s", tok);
-        rval = false;
-        goto parse_err;
-    }
-
-    tok = strtok_r(NULL, " ", &saveptr);
-
-    if (tok != NULL)
-    {
-        MXS_ERROR("dbfwfilter: Rule syntax incorrect, extra token found after 'match' keyword: %s", orig);
-        rval = false;
-        goto parse_err;
-    }
-
-    tok = strtok_r(ruleptr, " ", &saveptr);
-
-    if (tok == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Rule syntax incorrect, no rules given: %s", orig);
-        rval = false;
-        goto parse_err;
-    }
-
-    tok = strtok_r(NULL, " ", &saveptr);
-
-    if (tok == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Rule syntax incorrect, no rules given: %s", orig);
-        rval = false;
-        goto parse_err;
-    }
-
-    while (tok)
-    {
-        RULE* rule_found = NULL;
-
-        if ((rule_found = find_rule(tok, instance)) != NULL)
-        {
-            RULELIST* tmp_rl = (RULELIST*) calloc(1, sizeof(RULELIST));
-            tmp_rl->rule = rule_found;
-            tmp_rl->next = rulelist;
-            rulelist = tmp_rl;
-
-        }
-        else
-        {
-            MXS_ERROR("dbfwfilter: Rule syntax incorrect, could not find rule '%s'.", tok);
-            rval = false;
-            goto parse_err;
-        }
-        tok = strtok_r(NULL, " ", &saveptr);
-    }
-
-    /**
-     * Apply this list of rules to all the listed users
-     */
-
-    *(ruleptr) = '\0';
-    userptr = strtok_r(rule, " ", &saveptr);
-    userptr = strtok_r(NULL, " ", &saveptr);
-
-    if (userptr == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Rule syntax incorrect, no users given: %s", orig);
-        rval = false;
-        goto parse_err;
-    }
-
-    if (rulelist == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Rule syntax incorrect, no rules found: %s", orig);
-        rval = false;
-        goto parse_err;
-    }
-
-    while (userptr)
-    {
-        if (!apply_rule_to_user(instance, userptr, rulelist, type))
-        {
-            rval = false;
-            break;
-        }
-        userptr = strtok_r(NULL, " ", &saveptr);
-    }
-parse_err:
-
-    free(rule);
-
-    while (rulelist)
-    {
-        RULELIST *tmp = rulelist;
-        rulelist = rulelist->next;
-        free(tmp);
-    }
-    return rval;
 }
 
 /**
@@ -1015,173 +813,6 @@ char* get_regex_string(char** saved)
     }
 
     return NULL;
-}
-
-bool parse_rule_definition(FW_INSTANCE* instance, RULE* ruledef, char* rule, char** saveptr)
-{
-    bool rval = true;
-    const char *tok = strtok_r(NULL, " ", saveptr);
-
-    if (tok == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Rule parsing failed, no allow or deny: %s", rule);
-        return false;
-    }
-
-    bool deny, allow;
-
-    if ((allow = (strcmp(tok, "allow") == 0)) ||
-        (deny = (strcmp(tok, "deny") == 0)))
-    {
-        bool req_defined = false, at_def = false, oq_def = false;
-        bool mode = allow ? true : false;
-        ruledef->allow = mode;
-        ruledef->type = RT_PERMISSION;
-        tok = strtok_r(NULL, " ,", saveptr);
-
-        while (tok && rval)
-        {
-            for (int i = 0; required_rules[i] != NULL; i++)
-            {
-                if (strcmp(tok, required_rules[i]) == 0)
-                {
-                    if (req_defined)
-                    {
-                        MXS_ERROR("dbfwfilter: Rule parsing failed, Multiple non-optional rules: %s", rule);
-                        rval = false;
-                    }
-                    else
-                    {
-                        req_defined = true;
-                    }
-                }
-            }
-
-            if (!rval)
-            {
-                break;
-            }
-
-            if (strcmp(tok, "wildcard") == 0)
-            {
-                ruledef->type = RT_WILDCARD;
-            }
-            else if (strcmp(tok, "columns") == 0)
-            {
-                STRLINK *tail = NULL, *current;
-                ruledef->type = RT_COLUMN;
-                tok = strtok_r(NULL, " ,", saveptr);
-                while (tok && strcmp(tok, "at_times") != 0 &&
-                       strcmp(tok, "on_queries") != 0)
-                {
-                    tail = strlink_push(tail, tok);
-                    tok = strtok_r(NULL, " ,", saveptr);
-                }
-
-                ruledef->data = (void*) tail;
-                continue;
-
-            }
-            else if (strcmp(tok, "at_times") == 0)
-            {
-                if (at_def)
-                {
-                    MXS_ERROR("dbfwfilter: Rule parsing failed, multiple "
-                              "'at_times' tokens: %s", rule);
-                    rval = false;
-                }
-                else
-                {
-                    at_def = true;
-                    tok = strtok_r(NULL, " ,", saveptr);
-                    TIMERANGE *tr = NULL;
-
-                    if (!parse_at_times(&tok, saveptr, ruledef))
-                    {
-                        rval = false;
-                    }
-                    else if (tok && strcmp(tok, "on_queries") == 0)
-                    {
-                        continue;
-                    }
-                }
-            }
-            else if (strcmp(tok, "regex") == 0)
-            {
-                pcre2_code *re;
-                int err;
-                size_t offset;
-                PCRE2_SPTR start = (PCRE2_SPTR)get_regex_string(saveptr);
-                if (start)
-                {
-                    if ((re = pcre2_compile(start, PCRE2_ZERO_TERMINATED,
-                                            0, &err, &offset, NULL)))
-                    {
-                        ruledef->type = RT_REGEX;
-                        ruledef->data = (void*) re;
-                    }
-                    else
-                    {
-                        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
-                        pcre2_get_error_message(err, errbuf, sizeof (errbuf));
-                        MXS_ERROR("dbfwfilter: Invalid regular expression '%s': %s",
-                                  start, errbuf);
-                        rval = false;
-                    }
-                }
-                else
-                {
-                    MXS_ERROR("Malformed regex string in rule: %s", rule);
-                    rval = false;
-                }
-            }
-            else if (strcmp(tok, "limit_queries") == 0)
-            {
-                if (!parse_limit_queries(instance, ruledef, rule, saveptr))
-                {
-                    rval = false;
-                }
-            }
-            else if (strcmp(tok, "no_where_clause") == 0)
-            {
-                ruledef->type = RT_CLAUSE;
-                ruledef->data = (void*) mode;
-            }
-            else if (strcmp(tok, "on_queries") == 0)
-            {
-                if (oq_def)
-                {
-                    MXS_ERROR("dbfwfilter: Rule parsing failed, multiple "
-                              "'on_queries' tokens: %s", rule);
-                    rval = false;
-                }
-                else
-                {
-                    oq_def = true;
-                    tok = strtok_r(NULL, " ", saveptr);
-
-                    if (tok == NULL)
-                    {
-                        MXS_ERROR("dbfwfilter: Missing parameter for 'on_queries'.");
-                        rval = false;
-                    }
-                    else if (!parse_querytypes(tok, ruledef))
-                    {
-                        MXS_ERROR("dbfwfilter: Invalid query type requirements: %s.", tok);
-                        rval = false;
-                    }
-                }
-            }
-            else
-            {
-                MXS_ERROR("dbfwfilter: Unknown rule type: %s", tok);
-                rval = false;
-            }
-            tok = strtok_r(NULL, " ,", saveptr);
-        }
-    }
-
-    return rval;
 }
 
 /**
@@ -1695,97 +1326,6 @@ static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
 }
 
 /**
- * Parse the configuration value either as a new rule or a list of users.
- * @param rule The string to parse
- * @param instance The FW_FILTER instance
- */
-bool parse_rule(char* rulestr, FW_INSTANCE* instance)
-{
-    ss_dassert(rulestr != NULL && instance != NULL);
-
-    char rule[strlen(rulestr) + 1];
-    strcpy(rule, rulestr);
-    char *saveptr = NULL;
-    char *tok = strtok_r(rule, " ", &saveptr);
-    bool rval = false;
-
-    if (tok)
-    {
-        if (strcmp("rule", tok) == 0)
-        {
-            /**Define a new rule*/
-            tok = strtok_r(NULL, " ", &saveptr);
-            if (tok)
-            {
-                RULELIST* rlist = (RULELIST*) calloc(1, sizeof(RULELIST));
-                RULE* ruledef = (RULE*) calloc(1, sizeof(RULE));
-
-                if (ruledef && rlist)
-                {
-                    ruledef->name = strdup(tok);
-                    ruledef->type = RT_UNDEFINED;
-                    ruledef->on_queries = QUERY_OP_UNDEFINED;
-                    rlist->rule = ruledef;
-                    /** TODO: remove old rule processing
-                    rlist->next = instance->rules;
-                    instance->rules = rlist;
-                     */
-                    rval = parse_rule_definition(instance, ruledef, rulestr, &saveptr);
-                }
-                else
-                {
-                    free(rlist);
-                    free(ruledef);
-                    MXS_ERROR("Memory allocation failed.");
-                }
-            }
-            else
-            {
-                MXS_ERROR("dbfwfilter: Rule parsing failed, incomplete rule: %s", rule);
-            }
-        }
-        else if (strcmp("users", tok) == 0)
-        {
-            /** Rules are applied to users after they have been parsed */
-            add_users(rulestr, instance);
-            rval = true;
-        }
-        else
-        {
-            MXS_ERROR("Unknown token in rule '%s': %s", rule, tok);
-        }
-    }
-    else
-    {
-        MXS_ERROR("dbfwfilter: Rule parsing failed, no rule: %s", rule);
-    }
-
-    return rval;
-}
-
-bool is_comment(char* str)
-{
-    char *ptr = str;
-
-    while (*ptr != '\0')
-    {
-        if (isspace(*ptr))
-        {
-            ptr++;
-        }
-        else if (*ptr == '#')
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
-    }
-    return true;
-}
-
-/**
  * Create an instance of the filter for a particular service
  * within MaxScale.
  *
@@ -1799,21 +1339,17 @@ createInstance(char **options, FILTER_PARAMETER **params)
     FW_INSTANCE *my_instance;
     int i;
     HASHTABLE* ht;
-    STRLINK *ptr, *tmp;
-    char *filename = NULL, *nl;
-    char buffer[2048];
-    FILE* file;
+    char *filename = NULL;
     bool err = false;
 
-    if ((my_instance = calloc(1, sizeof(FW_INSTANCE))) == NULL ||
-        (my_instance->lock = (SPINLOCK*) malloc(sizeof(SPINLOCK))) == NULL)
+    if ((my_instance = calloc(1, sizeof(FW_INSTANCE))) == NULL)
     {
         free(my_instance);
         MXS_ERROR("Memory allocation for firewall filter failed.");
         return NULL;
     }
 
-    spinlock_init(my_instance->lock);
+    spinlock_init(&my_instance->lock);
 
     if ((ht = hashtable_alloc(100, simple_str_hash, strcmp)) == NULL)
     {
@@ -1828,7 +1364,6 @@ createInstance(char **options, FILTER_PARAMETER **params)
     my_instance->action = FW_ACTION_BLOCK;
     my_instance->log_match = FW_LOG_NONE;
     my_instance->userstrings = NULL;
-    my_instance->regflags = 0;
 
     for (i = 0; params[i]; i++)
     {
@@ -1871,18 +1406,6 @@ createInstance(char **options, FILTER_PARAMETER **params)
         {
             MXS_ERROR("Unknown parameter '%s' for dbfwfilter.", params[i]->name);
             err = true;
-        }
-    }
-
-    if (options)
-    {
-        for (i = 0; options[i]; i++)
-        {
-            if (strcmp(options[i], "ignorecase") == 0)
-            {
-                my_instance->regflags |= REG_ICASE;
-                break;
-            }
         }
     }
 
@@ -2249,9 +1772,9 @@ bool rule_matches(FW_INSTANCE* my_instance,
                  * Check if this is the first time this rule is matched and if so, allocate
                  * and initialize a new QUERYSPEED struct for this session.
                  */
-                spinlock_acquire(my_instance->lock);
+                spinlock_acquire(&my_instance->lock);
                 rule_qs = (QUERYSPEED*) rulelist->rule->data;
-                spinlock_release(my_instance->lock);
+                spinlock_release(&my_instance->lock);
 
                 spinlock_acquire(&user->lock);
                 queryspeed = user->qs_limit;
@@ -2629,7 +2152,7 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 
     if (my_instance)
     {
-        spinlock_acquire(my_instance->lock);
+        spinlock_acquire(&my_instance->lock);
         rules = my_instance->rules;
 
         dcb_printf(dcb, "Firewall Filter\n");
@@ -2651,165 +2174,8 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
                        rules->times_matched);
             rules = rules->next;
         }
-        spinlock_release(my_instance->lock);
+        spinlock_release(&my_instance->lock);
     }
-}
-
-/**
- * Parse at_times rule.
- * @param tok Pointer to last token, should be a valid timerange
- * @param saveptr Pointer to the beginning of next token
- * @param ruledef The rule definition to which this at_times rule is applied
- * @return True if parsing was successful, false if an error occurred
- */
-bool parse_at_times(const char** tok, char** saveptr, RULE* ruledef)
-{
-    TIMERANGE *tr = NULL;
-    bool success = true;
-
-    while (*tok && strcmp(*tok, "on_queries") != 0)
-    {
-        if (!check_time(*tok))
-        {
-            MXS_ERROR("dbfwfilter: Rule parsing failed, malformed time definition: %s", *tok);
-            success = false;
-            break;
-        }
-
-        TIMERANGE *tmp = parse_time(*tok);
-
-        if (tmp == NULL)
-        {
-            MXS_ERROR("dbfwfilter: Rule parsing failed, unexpected characters after time definition.");
-            success = false;
-            tr_free(tr);
-            break;
-        }
-
-        if (IS_RVRS_TIME(tmp))
-        {
-            tmp = split_reverse_time(tmp);
-        }
-
-        tmp->next = tr;
-        tr = tmp;
-        *tok = strtok_r(NULL, " ", saveptr);
-    }
-
-    if (success)
-    {
-        ruledef->active = tr;
-    }
-    else
-    {
-        free(tr);
-    }
-
-    return success;
-}
-
-/**
- * Parse limit_queries rule
- * @param instance Filter instance
- * @param ruledef Rule definition
- * @param saveptr Pointer to start of next token
- * @return True if parsing was successful and false if an error occurred.
- */
-bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule, char** saveptr)
-{
-    char *errptr = NULL;
-    bool rval = false;
-    QUERYSPEED* qs = NULL;
-    const char *tok = strtok_r(NULL, " ", saveptr);
-
-    if (tok == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
-        goto retblock;
-    }
-
-    qs = (QUERYSPEED*) calloc(1, sizeof(QUERYSPEED));
-
-    if (qs == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Memory allocation failed when parsing "
-                  "'limit_queries' rule");
-        goto retblock;
-    }
-
-    qs->limit = strtol(tok, &errptr, 10);
-
-    if (errptr && *errptr != '\0')
-    {
-        MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
-        goto retblock;
-    }
-
-    if (qs->limit < 1)
-    {
-        MXS_ERROR("dbfwfilter: Bad query amount: %s", tok);
-        goto retblock;
-    }
-
-    errptr = NULL;
-    tok = strtok_r(NULL, " ", saveptr);
-
-    if (tok == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
-        goto retblock;
-    }
-
-    qs->period = strtol(tok, &errptr, 10);
-
-    if (errptr && *errptr != '\0')
-    {
-        MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
-        goto retblock;
-    }
-
-    if (qs->period < 1)
-    {
-        MXS_ERROR("dbfwfilter: Bad time period: %s", tok);
-        goto retblock;
-    }
-
-    errptr = NULL;
-    tok = strtok_r(NULL, " ", saveptr);
-
-    if (tok == NULL)
-    {
-        MXS_ERROR("dbfwfilter: Missing parameter in limit_queries: '%s'.", rule);
-        goto retblock;
-    }
-    qs->cooldown = strtol(tok, &errptr, 10);
-
-    if (errptr && *errptr != '\0')
-    {
-        MXS_ERROR("dbfwfilter: Rule parsing failed, not a number: '%s'.", tok);
-        goto retblock;
-    }
-
-    if (qs->cooldown < 1)
-    {
-        MXS_ERROR("dbfwfilter: Bad blocking period: %s", tok);
-    }
-    rval = true;
-
-retblock:
-
-    if (rval)
-    {
-        qs->id = atomic_add(&instance->idgen, 1);
-        ruledef->type = RT_THROTTLE;
-        ruledef->data = (void*) qs;
-    }
-    else
-    {
-        free(qs);
-    }
-
-    return rval;
 }
 
 #ifdef BUILD_RULE_PARSER
