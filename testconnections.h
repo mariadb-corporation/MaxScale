@@ -550,6 +550,13 @@ public:
     int execute_maxadmin_command_print(char * cmd);
     int get_maxadmin_param(char *command, char *param, char *result);
 
+    /**
+     * @brief check_maxscale_processes Check if number of running Maxscale processes is equal to 'expected'
+     * @param expected expected number of Maxscale processes
+     * @return 0 if check is done
+     */
+    int check_maxscale_processes(int expected);
+
 };
 
 /**

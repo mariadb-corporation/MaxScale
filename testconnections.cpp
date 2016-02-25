@@ -577,6 +577,18 @@ int TestConnections::find_connected_slave1()
     return(current_slave);
 }
 
+int TestConnections::check_maxscale_processes(int expected)
+{
+    char * maxscale_num = ssh_maxscale_output(false, "ps ax | grep \"maxscale\" | grep -v \"grep\" | wc -l");
+    int maxscale_num_d;
+    sscanf(maxscale_num, "%d", &maxscale_num_d);
+    if (maxscale_num_d != expected)
+    {
+        add_result(1, "Number of MaxScale processes is not %d, it is %d\n", expected, maxscale_num_d);
+    }
+    return 0;
+}
+
 int TestConnections::check_maxscale_alive()
 {
     int gr = global_result;
@@ -597,6 +609,9 @@ int TestConnections::check_maxscale_alive()
     close_maxscale_connections()    ;
     add_result(global_result-gr, "Maxscale is not alive\n");
     stop_timeout();
+
+    check_maxscale_processes(1);
+
     return(global_result-gr);
 }
 

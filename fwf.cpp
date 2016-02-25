@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
         gettimeofday(&t2, NULL);
         elapsedTime = (t2.tv_sec - t1.tv_sec);
         elapsedTime += (double) (t2.tv_usec - t1.tv_usec) / 1000000.0;
-    } while ((execute_query(Test->conn_rwsplit, "SELECT * FROM t1") != 0) && (elapsedTime < 10));
+    } while ((execute_query_silent(Test->conn_rwsplit, "SELECT * FROM t1") != 0) && (elapsedTime < 10));
 
     Test->tprintf("Quries were blocked during %f (using clock_gettime())\n", elapsedTime);
     Test->tprintf("Quries were blocked during %lu (using time())\n", time(NULL)-start_time_clock);
@@ -184,6 +184,8 @@ int main(int argc, char *argv[])
     if (execute_query(Test->conn_rwsplit, "SELECT * FROM t1") == 0) {
         Test->add_result(1, "Rule has syntax error, but query OK\n");
     }
+
+    Test->check_maxscale_processes(0);
 
     Test->copy_all_logs(); return(Test->global_result);
 }
