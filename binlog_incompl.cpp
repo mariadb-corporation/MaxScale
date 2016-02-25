@@ -1,6 +1,6 @@
 /**
  * @file setup_incompl trying to start binlog setup with incomplete Maxscale.cnf
- * exectute maxadmin command to check if there is a crash
+ * check for crash
  */
 
 #include <my_config.h>
@@ -12,10 +12,12 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int global_result = 0;
 
-    Test->print_env();
-    global_result += execute_maxadmin_command_print(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show servers");
+    Test->set_timeout(60);
+    Test->connect_maxscale();
+    Test->close_maxscale_connections();
+    sleep(10);
+    Test->check_log_err("fatal signal 11", false);
 
     Test->copy_all_logs(); return(Test->global_result);
 }

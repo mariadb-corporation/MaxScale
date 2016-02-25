@@ -108,7 +108,7 @@ void check_pers_conn(TestConnections* Test, int pers_conn_expected[], char * ser
 
     for (int i = 0; i < 4; i++) {
         sprintf(str, "show server %s%d", server, i+1);
-        get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str, (char *) "Persistent measured pool size:", result);
+        Test->get_maxadmin_param(str, (char *) "Persistent measured pool size:", result);
         Test->tprintf("%s: %s\n", str, result);
         sscanf(result, "%d", &pers_conn[i]);
         if (pers_conn[i] != pers_conn_expected[i]) {

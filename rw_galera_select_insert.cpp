@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     // connect to the MaxScale server (rwsplit)
     Test->connect_rwsplit();
 
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "shutdown monitor \"Galera Monitor\"");
+    Test->execute_maxadmin_command((char *) "shutdown monitor \"Galera Monitor\"");
 
     if (Test->conn_rwsplit == NULL ) {
         Test->add_result(1, "Can't connect to MaxScale\n");

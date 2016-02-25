@@ -202,7 +202,7 @@ int k=0;
  * @return	0 if parameter is found
  */
 int
-get_maxadmin_param(char * hostname, char *user, char *password, char * cmd, char *param, char *result)
+get_maxadmin_param_tcp(char * hostname, char *user, char *password, char * cmd, char *param, char *result)
 {
 
     char		buf[10240];
@@ -251,7 +251,7 @@ get_maxadmin_param(char * hostname, char *user, char *password, char * cmd, char
  * @return	0 if parameter is found
  */
 int
-execute_maxadmin_command(char * hostname, char *user, char *password, char * cmd)
+execute_maxadmin_command_tcp(char * hostname, char *user, char *password, char * cmd)
 {
 
     char		buf[10240];
@@ -275,7 +275,7 @@ execute_maxadmin_command(char * hostname, char *user, char *password, char * cmd
 }
 
 int
-execute_maxadmin_command_print(char * hostname, char *user, char *password, char * cmd)
+execute_maxadmin_command_print_tcp(char * hostname, char *user, char *password, char * cmd)
 {
 
     char		buf[10240];

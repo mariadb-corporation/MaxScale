@@ -60,7 +60,7 @@ void create_and_check_connections(TestConnections* test, int target)
     {
         test->set_timeout(30);
         sprintf(cmd, "show server server%d", j+1);
-        test->add_result(get_maxadmin_param(test->maxscale_IP, (char*) "admin", test->maxadmin_password, cmd, (char*) "Current no. of conns:", result), "maxadmin command %s failed\n", cmd);
+        test->add_result(test->get_maxadmin_param(cmd, (char*) "Current no. of conns:", result), "maxadmin command %s failed\n", cmd);
         result_d = 999;
         sscanf(result, "%d", &result_d);
         if (strlen(result) == 0)

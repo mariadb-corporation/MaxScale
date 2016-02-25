@@ -20,21 +20,21 @@ int main(int argc, char *argv[])
     Test->set_timeout(20);
 
     Test->tprintf("Trying show dbusers \"RW Split Router\"\n");
-    Test->add_result(get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
+    Test->add_result(Test->get_maxadmin_param((char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
     Test->tprintf("result %s\n", result);
 
     Test->tprintf("Trying show dbusers \"Read Connection Router Master\"\n");
-    Test->add_result(get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"Read Connection Router Master\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
+    Test->add_result(Test->get_maxadmin_param((char *) "show dbusers \"Read Connection Router Master\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
     Test->tprintf("result %s\n", result);
 
 
     Test->tprintf("Trying show dbusers \"Read Connection Router Slave\"\n");
-    Test->add_result(get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"Read Connection Router Slave\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
+    Test->add_result(Test->get_maxadmin_param((char *) "show dbusers \"Read Connection Router Slave\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
     Test->tprintf("result %s\n", result);
 
 
     Test->tprintf("Trying again show dbusers \"RW Split Router\" to check if MaxScale is alive\n");
-    Test->add_result(get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
+    Test->add_result(Test->get_maxadmin_param((char *) "show dbusers \"RW Split Router\"", (char *) "No. of entries:", result), "Maxadmin failed\n");
     Test->tprintf("result %s\n", result);
 
     Test->copy_all_logs(); return(Test->global_result);

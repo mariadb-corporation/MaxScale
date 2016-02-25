@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     }
 
     //sleep(5);
-    execute_maxadmin_command(Test->maxscale_IP, (char*) "admin", Test->maxadmin_password, (char*) "sync logs");
+    Test->execute_maxadmin_command((char*) "sync logs");
     Test->check_log_err((char *) "Unable to find library for module: foobar", TRUE);
     Test->check_log_err((char *) "Failed to load filter module 'foobar'", TRUE);
     Test->check_log_err((char *) "Failed to load filter 'testfilter' for service 'RW Split Router'", TRUE);

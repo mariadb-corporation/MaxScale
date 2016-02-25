@@ -17,43 +17,43 @@ int main(int argc, char *argv[])
     Test->set_timeout(10);
     char result[1024];
 
-    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers RW Split Router", (char *) "Incorrect number of arguments:", result);
+    Test->get_maxadmin_param((char *) "show dbusers RW Split Router", (char *) "Incorrect number of arguments:", result);
     Test->tprintf("result %s\n", result);
 
     if (strstr(result, "show dbusers expects 1 argument") == NULL) {
         Test->add_result(1, "there is NO \"show dbusers expects 1 argument\" message");
     }
     Test->set_timeout(10);
-    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dbusers \"RW Split Router\"", (char *) "User names:", result);
+    Test->get_maxadmin_param((char *) "show dbusers \"RW Split Router\"", (char *) "User names:", result);
     Test->tprintf("result %s\n", result);
 
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "reload dbusers 0x232fed0");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "reload dbusers Хрен");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "reload dbusers Хрен моржовый");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "Хрен моржовый");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "khren morzhovyj");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "reload dbusers 0x232fed0");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "reload dbusers Хрен");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "reload dbusers Хрен моржовый");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "Хрен моржовый");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "khren morzhovyj");
 
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show Хрен");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show Хрен моржовый");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show khren morzhovyj");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show Хрен");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show Хрен моржовый");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show khren morzhovyj");
 
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dcb Хрен");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dcb Хрен моржовый");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show dcb khren morzhovyj");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show dcb Хрен");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show dcb Хрен моржовый");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show dcb khren morzhovyj");
 
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server Хрен");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server Хрен моржовый");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server khren morzhovyj");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show server Хрен");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show server Хрен моржовый");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show server khren morzhovyj");
 
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show service Хрен");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show service Хрен моржовый");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show service khren morzhovyj");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show service Хрен");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show service Хрен моржовый");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show service khren morzhovyj");
 
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show service khren morzhovyj");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "show service khren morzhovyj");
 
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "list listeners");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "restart monitor");
-    Test->set_timeout(10);execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "restart service");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "list listeners");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "restart monitor");
+    Test->set_timeout(10);Test->execute_maxadmin_command((char *) "restart service");
 
     if (!Test->smoke) {
         int N=28;
@@ -113,11 +113,11 @@ int main(int argc, char *argv[])
                 Test->set_timeout(10);
                 sprintf(str1, "%s %s", cmd[i1], garbage[i2]);
                 Test->tprintf("Trying '%s'\n", str1);
-                execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str1);
+                Test->execute_maxadmin_command(str1);
 
                 sprintf(str1, "%s %s%s%s%s %s ", cmd[i1], garbage[i2], garbage[i2], garbage[i2], garbage[i2], garbage[i2]);
                 Test->tprintf("Trying '%s'\n", str1);
-                execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, str1);
+                Test->execute_maxadmin_command(str1);
             }
         }
     }

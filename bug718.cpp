@@ -24,15 +24,15 @@ int main(int argc, char *argv[])
     Test->set_timeout(20);
     int i;
 
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server server1 master");
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server server2 slave");
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server server3 slave");
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server server4 slave");
+    Test->execute_maxadmin_command((char *) "set server server1 master");
+    Test->execute_maxadmin_command((char *) "set server server2 slave");
+    Test->execute_maxadmin_command((char *) "set server server3 slave");
+    Test->execute_maxadmin_command((char *) "set server server4 slave");
 
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server g_server1 master");
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server g_server2 slave");
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server g_server3 slave");
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "set server g_server4 slave");
+    Test->execute_maxadmin_command((char *) "set server g_server1 master");
+    Test->execute_maxadmin_command((char *) "set server g_server2 slave");
+    Test->execute_maxadmin_command((char *) "set server g_server3 slave");
+    Test->execute_maxadmin_command((char *) "set server g_server4 slave");
 
     Test->tprintf("Connecting to all MaxScale services\n");
     Test->add_result(Test->connect_maxscale(), "Error connection to Maxscale\n");

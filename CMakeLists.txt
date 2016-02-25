@@ -81,7 +81,7 @@ function(add_test_script name template)
 endfunction()
 
 add_test_executable_notest(t.cpp t replication)
-add_test_executable_notest(maxadmin.cpp maxadmin replication)
+
 add_test_executable_notest(binlog_big_transaction.cpp binlog_big_transaction setup_binlog2)
 
 if(Java_FOUND)

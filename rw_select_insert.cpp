@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Connecting to RWSplit %s\n", Test->maxscale_IP);
     Test->connect_rwsplit();
 
-    execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "shutdown monitor \"MySQL Monitor\"");
+    Test->execute_maxadmin_command((char *) "shutdown monitor \"MySQL Monitor\"");
 
     tolerance=0;
 
@@ -182,6 +182,6 @@ int main(int argc, char *argv[])
 
     Test->close_rwsplit();
 
-    Test->galera->close_connections();
+    //Test->galera->close_connections();
     Test->copy_all_logs(); return(Test->global_result);
 }

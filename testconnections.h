@@ -538,6 +538,18 @@ public:
      * @return 0 if ok
      */
     int try_query(MYSQL *conn, const char *sql);
+
+    /**
+     * @brief find_master_maxadmin Tries to find node with 'Master' status using Maxadmin connand 'show server'
+     * @param nodes Mariadb_nodes object
+     * @return node index if one master found, -1 if no master found or several masters found
+     */
+    int find_master_maxadmin(Mariadb_nodes * nodes);
+
+    int execute_maxadmin_command(char * cmd);
+    int execute_maxadmin_command_print(char * cmd);
+    int get_maxadmin_param(char *command, char *param, char *result);
+
 };
 
 /**

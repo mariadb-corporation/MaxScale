@@ -69,13 +69,13 @@ int main(int argc, char *argv[])
     Test->start_mm(); // first node - slave, second - master
 
     Test->set_timeout(120);
-    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
+    Test->get_maxadmin_param((char *) "show server server1", (char *) "Status:", maxadmin_result);
     Test->tprintf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Slave, Running")  == NULL ) {
         Test->add_result(1, "Node0 is not slave, status is %s\n", maxadmin_result);
     }
     Test->set_timeout(120);
-    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
+    Test->get_maxadmin_param((char *) "show server server2", (char *) "Status:", maxadmin_result);
     Test->tprintf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Master, Running") == NULL ) {
         Test->add_result(1, "Node1 is not master, status is %s\n", maxadmin_result);
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
     Test->stop_timeout();
     sleep(15);
     Test->set_timeout(120);
-    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
+    Test->get_maxadmin_param((char *) "show server server1", (char *) "Status:", maxadmin_result);
     printf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Down")  == NULL ) {
         Test->add_result(1, "Node0 is not down, status is %s\n", maxadmin_result);
@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Block master\n");
     Test->repl->block_node(1);
     sleep(15);
-    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
+    Test->get_maxadmin_param((char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Down")  == NULL ) {
         Test->add_result(1, "Node1 is not down, status is %s\n", maxadmin_result);
@@ -140,13 +140,13 @@ int main(int argc, char *argv[])
     Test->add_result(check_conf(Test, 2), "Configuration broken\n");
 
     Test->set_timeout(60);
-    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server2", (char *) "Status:", maxadmin_result);
+    Test->get_maxadmin_param((char *) "show server server2", (char *) "Status:", maxadmin_result);
     printf("node1 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Slave, Running")  == NULL ) {
         Test->add_result(1, "Node1 is not slave, status is %s\n", maxadmin_result);
     }
     Test->set_timeout(60);
-    get_maxadmin_param(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char *) "show server server1", (char *) "Status:", maxadmin_result);
+    Test->get_maxadmin_param((char *) "show server server1", (char *) "Status:", maxadmin_result);
     Test->tprintf("node0 %s\n", maxadmin_result);
     if (strstr(maxadmin_result, "Master, Running")  == NULL ) {
         Test->add_result(1, "Node0 is not master, status is %s\n", maxadmin_result);

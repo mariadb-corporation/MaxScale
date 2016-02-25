@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(20);
     Test->tprintf("Checking if MaxScale is alive by connecting to MaxAdmin\n");
-    Test->add_result(execute_maxadmin_command(Test->maxscale_IP, (char *) "admin", Test->maxadmin_password, (char* ) "show servers"), "Maxadmin execution failed.\n");
+    Test->add_result(Test->execute_maxadmin_command((char* ) "show servers"), "Maxadmin execution failed.\n");
 
     for (i = 0; i < Test->repl->N; i++) {
         Test->tprintf("Setup firewall back to allow mysql on node %d\n", i);

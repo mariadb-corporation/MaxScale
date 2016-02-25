@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 
     for (i = 1; i < Test->repl->N; i++)
     {
-        Test->set_timeout(10);
+        Test->set_timeout(20);
         Test->repl->block_node(i);
     }
     Test->set_timeout(10);
@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
     Test->set_timeout(10);
     Test->close_maxscale_connections();
 
+    Test->set_timeout(30);
     Test->repl->unblock_all_nodes();
 
     Test->stop_timeout();

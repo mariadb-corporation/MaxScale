@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <time.h>
 #include <libgen.h>
+#include "maxadmin_operations.h"
 
 TestConnections::TestConnections(int argc, char *argv[])
 {
@@ -1044,4 +1045,60 @@ int TestConnections::try_query(MYSQL *conn, const char *sql)
     int res = execute_query(conn, sql);
     add_result(res, "Query '%s' failed!\n", sql);
     return(res);
+}
+
+int TestConnections::find_master_maxadmin(Mariadb_nodes * nodes)
+{
+    char show_server[32];
+    char res[256];
+    bool found = false;
+    int master = -1;
+    for (int i = 0; i < nodes->N; i++)
+    {
+        sprintf(show_server, "show server server%d", i + 1);
+        get_maxadmin_param(show_server, (char *) "Status", res);
+        if (strstr(res, "Master") != NULL)
+        {
+            if (found)
+            {
+                master = -1;
+            } else {
+                master = i;
+                found = true;
+            }
+        }
+    }
+    return(master);
+}
+
+int TestConnections::execute_maxadmin_command(char * cmd)
+{
+    return(ssh_maxscale(false, "maxadmin -uadmin -p%s %s", maxadmin_password, cmd));
+}
+int TestConnections::execute_maxadmin_command_print(char * cmd)
+{
+    printf("%s\n", ssh_maxscale_output(false, "maxadmin -uadmin -p%s %s", maxadmin_password, cmd));
+    return 0;
+}
+int TestConnections::get_maxadmin_param(char *command, char *param, char *result)
+{
+    char		* buf;
+
+    buf = ssh_maxscale_output(false, "maxadmin -uadmin -p%s %s", maxadmin_password, command);
+
+    printf("%s\n", buf);
+
+    char * x =strstr(buf, param);
+    if (x == NULL )
+        return(1);
+
+    int param_len = strlen(param);
+    int cnt = 0;
+    while (x[cnt+param_len]  != '\n') {
+        result[cnt] = x[cnt+param_len];
+        cnt++;
+    }
+    result[cnt] = '\0';
+
+    return(0);
 }

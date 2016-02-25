@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 {
 
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->set_timeout(20);
+    int master;
     long int q;
     int threads_num = 25;
 
@@ -32,43 +32,58 @@ int main(int argc, char *argv[])
     long int new_inserts[256];
     long int i1, i2;
 
-    if (Test->smoke) {threads_num = 15;}
-    Test->galera->connect();
-    for (int i = 0; i < Test->galera->N; i++) {
-        execute_query(Test->galera->nodes[i], (char *) "set global max_connections = 300;");
-        execute_query(Test->galera->nodes[i], (char *) "set global max_connect_errors = 100000;");
-    }
-    Test->galera->close_connections();
+    Test->set_timeout(20);
+    master = Test->find_master_maxadmin(Test->galera);
 
-    Test->set_timeout(1200);
-    load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], threads_num, Test, &i1, &i2, 1, TRUE, TRUE);
+    if (master >= 0)
+    {
+        Test->tprintf("Master node is %d (server%d)\n", master, master+1);
+        Test->set_timeout(20);
 
-    long int avr = (i1 + i2 ) / (Test->galera->N);
-    Test->tprintf("average number of quries per node %ld\n", avr);
-    long int min_q = avr / 3;
-    long int max_q = avr * 3;
-    Test->tprintf("Acceplable value for every node from %ld until %ld\n", min_q, max_q);
-
-    for (int i = 1; i < Test->galera->N; i++) {
-        q = new_selects[i] - selects[i];
-        if ((q > max_q) || (q < min_q)) {
-            Test->add_result(1, "number of queries for node %d is %ld\n", i+1, q);
+        if (Test->smoke) {threads_num = 15;}
+        Test->galera->connect();
+        for (int i = 0; i < Test->galera->N; i++) {
+            execute_query(Test->galera->nodes[i], (char *) "set global max_connections = 300;");
+            execute_query(Test->galera->nodes[i], (char *) "set global max_connect_errors = 100000;");
         }
-    }
+        Test->galera->close_connections();
 
-    if ((new_selects[0] - selects[0]) > avr / 3 ) {
-        Test->add_result(1, "number of queries for master greater then 30%% of averange number of queries per node\n");
-    }
+        Test->set_timeout(1200);
+        load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], threads_num, Test, &i1, &i2, 1, TRUE, TRUE);
 
-    Test->tprintf("Restoring nodes\n");
-    Test->galera->connect();
-    for (int i = 0; i < Test->galera->N; i++) {
-        execute_query(Test->galera->nodes[i], (char *) "flush hosts;");
-        execute_query(Test->galera->nodes[i], (char *) "set global max_connections = 151;");
-    }
-    Test->galera->close_connections();
+        long int avr = (i1 + i2 ) / (Test->galera->N);
+        Test->tprintf("average number of quries per node %ld\n", avr);
+        long int min_q = avr / 3;
+        long int max_q = avr * 3;
+        Test->tprintf("Acceplable value for every node from %ld until %ld\n", min_q, max_q);
 
-    Test->check_maxscale_alive();
+        for (int i = 0; i < Test->galera->N; i++) {
+            if ( i != master)
+            {
+                q = new_selects[i] - selects[i];
+                if ((q > max_q) || (q < min_q))
+                {
+                    Test->add_result(1, "number of queries for node %d is %ld\n", i+1, q);
+                }
+            }
+        }
+
+        if ((new_selects[master] - selects[master]) > avr / 3 ) {
+            Test->add_result(1, "number of queries for master greater then 30%% of averange number of queries per node\n");
+        }
+
+        Test->tprintf("Restoring nodes\n");
+        Test->galera->connect();
+        for (int i = 0; i < Test->galera->N; i++) {
+            execute_query(Test->galera->nodes[i], (char *) "flush hosts;");
+            execute_query(Test->galera->nodes[i], (char *) "set global max_connections = 151;");
+        }
+        Test->galera->close_connections();
+
+        Test->check_maxscale_alive();
+    } else {
+        Test->add_result(1, "Master is not found\n");
+    }
 
     Test->copy_all_logs(); return(Test->global_result);
 }
