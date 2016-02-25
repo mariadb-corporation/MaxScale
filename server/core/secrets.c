@@ -68,7 +68,15 @@ secrets_readKeys(const char* path)
 
     if (path != NULL)
     {
-        snprintf(secret_file, PATH_MAX, "%s/.secrets", path);
+        snprintf(secret_file, PATH_MAX, "%s", path);
+
+        char *file;
+        if ((file = strrchr(secret_file, '.')) == NULL || strcmp(file, ".secrets") != 0)
+        {
+            /** This is a possible path to a directory */
+            strncat(secret_file, "/.secrets", PATH_MAX);
+        }
+
         clean_up_pathname(secret_file);
     }
     else
@@ -201,6 +209,14 @@ secrets_readKeys(const char* path)
         return NULL;
     }
     ss_dassert(keys != NULL);
+
+    /** Successfully loaded keys, log notification */
+    if (!reported)
+    {
+        MXS_NOTICE("Using encrypted passwords. Encryption key: '%s'.", secret_file);
+        reported = 1;
+    }
+
     return keys;
 }
 

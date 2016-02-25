@@ -35,13 +35,13 @@
 
 int main(int argc, char **argv)
 {
-    char *keyfile;
+    const char *keyfile;
     int rval = 0;
 
     if (argc < 2)
     {
-        keyfile = "/var/lib/maxscale/";
-        fprintf(stderr, "Generating .secrets file in /var/lib/maxscale/ ...\n");
+        keyfile = get_datadir();
+        fprintf(stderr, "Generating .secrets file in %s ...\n", keyfile);
     }
     else
     {
