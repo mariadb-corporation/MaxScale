@@ -22,7 +22,7 @@
 %}
 
 %option reentrant noyywrap bison-bridge prefix="dbfw_yy"
-/* %option header-file="lex.yy.h" */
+%option yylineno
 
 RULENAME    [-_[:alnum:][:punct:]]+
 STR         [_[:alnum:]]+
@@ -40,7 +40,7 @@ BTSTR       `[^`]*`
 USTR        [%-_[:alnum:][:punct:]]+
 
 %%
-"\n"+           dbfw_yyset_lineno(dbfw_yyget_lineno(yyscanner) + dbfw_yyget_leng(yyscanner), yyscanner);return '\n';
+"\n"+           return '\n';
 {COMMENT}       return FWTOK_COMMENT;
 deny|allow      return FWTOK_DENY; /** This should be removed at some point */
 rule            return FWTOK_RULE;
