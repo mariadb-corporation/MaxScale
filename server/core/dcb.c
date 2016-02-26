@@ -1474,8 +1474,6 @@ dcb_log_write_failure(DCB *dcb, GWBUF *queue, int eno)
 static inline void
 dcb_write_tidy_up(DCB *dcb, bool below_water)
 {
-    spinlock_release(&dcb->writeqlock);
-
     if (dcb->high_water && dcb->writeqlen > dcb->high_water && below_water)
     {
         atomic_add(&dcb->stats.n_high_water, 1);
