@@ -41,7 +41,8 @@ aux_source_directory(. SRC_LIST)
 
 add_library(testcore SHARED testconnections.cpp mariadb_nodes.cpp config_check.cpp
   mariadb_func.cpp get_com_select_insert.cpp maxadmin_operations.cpp big_transaction.cpp
-  sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp)
+  sql_t1.cpp test_binlog_fnc.cpp get_my_ip.cpp big_load.cpp  get_com_select_insert.cpp
+  different_size.cpp)
 target_link_libraries(testcore ${MYSQL_CLIENT} z crypt nsl m pthread ssl crypto dl rt)
 install(TARGETS testcore DESTINATION system-test)
 
@@ -273,6 +274,9 @@ add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax)
 # enable after fixing MXS-419
 # add_test_executable(mxs419_lots_of_connections.cpp mxs419_lots_of_connections replication)
 add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication)
+
+add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replication)
+add_test_executable(different_size_binlog.cpp different_size_binlog setup_binlog)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)

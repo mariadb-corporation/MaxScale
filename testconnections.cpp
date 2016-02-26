@@ -276,6 +276,7 @@ int TestConnections::start_maxscale()
 int TestConnections::stop_maxscale()
 {
     int res = ssh_maxscale(true, "service maxscale stop");
+    check_maxscale_processes(0);
     return(res);
 }
 
