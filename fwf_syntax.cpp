@@ -50,21 +50,20 @@ void copy_rule(TestConnections* test)
 
 int main(int argc, char** argv)
 {
-    int rval = 0;
     TestConnections *test = new TestConnections(argc, argv);
-
+    test->stop_timeout();
     test->stop_maxscale();
 
     for (int i = 0; rules_failure[i]; i++)
     {
+        test->set_timeout(40);
         add_rule(rules_failure[i]);
         copy_rules(test, (char*) "rules_tmp.txt", (char*) "");
         if (test_config_works("fwf_syntax"))
         {
-            printf("Rule syntax error was not detected: %s\n", rules_failure[i]);
-            rval++;
+            test->add_result(1, "Rule syntax error was not detected: %s\n", rules_failure[i]);
         }
     }
-
-    return rval;
+    test->check_maxscale_processes(0);
+    test->copy_all_logs();  return test->global_result;
 }

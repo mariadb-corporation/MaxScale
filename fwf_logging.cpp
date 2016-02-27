@@ -15,6 +15,7 @@ int main(int argc, char** argv)
     char rules_dir[4096];
     TestConnections *test = new TestConnections(argc, argv);
     const int sleep_time = 15;
+    test->stop_timeout();
 
     sprintf(rules_dir, "%s/fw/", test->test_dir);
 
@@ -26,16 +27,17 @@ int main(int argc, char** argv)
     test->start_maxscale();
     test->tprintf("Waiting for %d seconds", sleep_time);
     sleep(sleep_time);
-    
+    test->set_timeout(20);
     test->connect_maxscale();
     test->tprintf("trying first: 'select 1'\n");
     test->add_result(test->try_query(test->conn_slave, "select 1"), "First query should succeed");
+    test->set_timeout(20);
     test->tprintf("trying second: 'select 2'\n");
     test->add_result(test->try_query(test->conn_slave, "select 2"), "Second query should succeed");
+    test->stop_timeout();
     sleep(10);
     test->check_log_err("matched by", true);
     test->check_log_err("was not matched", true);
     test->check_maxscale_alive();
-    test->copy_all_logs();
-    return test->global_result;
+    test->copy_all_logs();  return test->global_result;
 }

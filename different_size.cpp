@@ -61,7 +61,7 @@ void set_max_packet(TestConnections* Test, bool binlog, char * cmd)
 void different_packet_size(TestConnections* Test, bool binlog)
 {
     MYSQL * conn;
-    Test->set_timeout(40);
+    Test->set_timeout(60);
     Test->tprintf("Set big max_allowed_packet\n");
     set_max_packet(Test, binlog,  (char *) "set global max_allowed_packet = 200000000;");
 
@@ -116,14 +116,4 @@ void different_packet_size(TestConnections* Test, bool binlog)
     Test->set_timeout(40);
     Test->tprintf("Restoring max_allowed_packet\n");
     set_max_packet(Test, binlog,  (char *) "set global max_allowed_packet = 1048576;");
-}
-
-int main(int argc, char *argv[])
-{
-    TestConnections * Test = new TestConnections(argc, argv);
-
-    different_packet_size(Test, false);
-
-    Test->check_maxscale_alive();
-    Test->copy_all_logs(); return(Test->global_result);
 }
