@@ -427,7 +427,10 @@ session_free(SESSION *session)
      */
     if (session->client_dcb)
     {
-        mysql_auth_free_client_data(session->client_dcb);
+        if (!DCB_IS_CLONE(session->client_dcb))
+        {
+            mysql_auth_free_client_data(session->client_dcb);
+        }
         dcb_free_all_memory(session->client_dcb);
     }
     /**

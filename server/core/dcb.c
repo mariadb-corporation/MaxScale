@@ -369,7 +369,15 @@ dcb_final_free(DCB *dcb)
         if (SESSION_STATE_DUMMY != local_session->state)
         {
             session_free(local_session);
-            return;
+
+            if (local_session->client_dcb == dcb)
+            {
+                /** The client DCB is freed once all other DCBs that the session
+                 * uses have been freed. This will guarantee that the authentication
+                 * data will be usable for all DCBs even if the client DCB has already
+                 * been closed. */
+                return;
+            }
         }
     }
     dcb_free_all_memory(dcb);
