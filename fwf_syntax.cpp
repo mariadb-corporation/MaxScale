@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include "testconnections.h"
 #include "config_check.h"
+#include "fw_copy_rules.h"
 
 const char *temp_rules = "rules_tmp.txt";
 
@@ -57,7 +58,7 @@ int main(int argc, char** argv)
     for (int i = 0; rules_failure[i]; i++)
     {
         add_rule(rules_failure[i]);
-        copy_rule(test);
+        copy_rules(test, (char*) "rules_tmp.txt", (char*) "");
         if (test_config_works("fwf_syntax"))
         {
             printf("Rule syntax error was not detected: %s\n", rules_failure[i]);

@@ -18,24 +18,7 @@
 #include "testconnections.h"
 #include "maxadmin_operations.h"
 #include "sql_t1.h"
-
-void copy_rules(TestConnections* Test, char * rules_name)
-{
-    Test->set_timeout(30);
-    Test->tprintf("Creating rules dir\n");
-    Test->ssh_maxscale(true, "rm -rf %s/rules; mkdir %s/rules",
-                       Test->maxscale_access_homedir,  Test->maxscale_access_homedir);
-
-    Test->set_timeout(30);
-    char str[2048];
-    sprintf(str, "scp -i %s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null %s/fw/%s %s@%s:%s/rules/rules.txt", Test->maxscale_sshkey, Test->test_dir, rules_name, Test->maxscale_access_user, Test->maxscale_IP, Test->maxscale_access_homedir);
-    Test->tprintf("Copying rules to Maxscale machine: %s\n", str);
-    system(str);
-
-    Test->set_timeout(30);
-    Test->tprintf("Copying rules to Maxscale machine\n");
-    Test->ssh_maxscale(true, "chown maxscale:maxscale %s/rules -R", Test->maxscale_access_homedir);
-}
+#include "fw_copy_rules.h"
 
 int main(int argc, char *argv[])
 {
@@ -45,8 +28,10 @@ int main(int argc, char *argv[])
     char sql[4096];
     char pass_file[4096];
     char deny_file[4096];
+    char rules_dir[4096];
     FILE* file;
 
+    sprintf(rules_dir, "%s/fw/", Test->test_dir);
     int N = 9;
     int i;
 
@@ -57,7 +42,7 @@ int main(int argc, char *argv[])
         Test->stop_maxscale();
 
         sprintf(str, "rules%d", i);
-        copy_rules(Test, str);
+        copy_rules(Test, str, rules_dir);
 
         Test->start_maxscale();
         Test->connect_rwsplit();
@@ -105,7 +90,7 @@ int main(int argc, char *argv[])
 
     // Test for at_times clause
     Test->tprintf("Trying at_times clause\n");
-    copy_rules(Test, (char *) "rules_at_time");
+    copy_rules(Test, (char *) "rules_at_time", rules_dir);
 
     Test->tprintf("DELETE quries without WHERE clause will be blocked during next 2 minutes\n");
     Test->tprintf("Put time to rules.txt: %s\n", str);
@@ -132,7 +117,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Trying limit_queries clause\n");
     Test->tprintf("Copying rules to Maxscale machine: %s\n", str);
-    copy_rules(Test, (char *) "rules_limit_queries");
+    copy_rules(Test, (char *) "rules_limit_queries", rules_dir);
 
     Test->start_maxscale();
     Test->connect_rwsplit();
@@ -175,7 +160,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Trying rules with syntax error\n");
     Test->tprintf("Copying rules to Maxscale machine: %s\n", str);
-    copy_rules(Test, (char *) "rules_syntax_error");
+    copy_rules(Test, (char *) "rules_syntax_error", rules_dir);
 
     Test->start_maxscale();
     Test->connect_rwsplit();

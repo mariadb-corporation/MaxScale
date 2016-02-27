@@ -54,6 +54,23 @@ int main(int argc, char *argv[])
     int  iret1[threads_num];
 
     //Test->repl->flush_hosts();
+    int master = Test->find_master_maxadmin(Test->galera);
+    Test->tprintf(("Master is %d\n"), master);
+    int k = 0;
+    int x = 0;
+    int slaves[2];
+    while (k < 2 )
+    {
+        if (k != master)
+        {
+            slaves[k] = x;
+            k++; x++;
+        } else {
+            x++;
+        }
+    }
+    Test->tprintf(("Slave1 is %d\n"), slaves[0]);
+    Test->tprintf(("Slave2 is %d\n"), slaves[1]);
 
     Test->repl->connect();
     Test->connect_maxscale();
@@ -72,12 +89,12 @@ int main(int argc, char *argv[])
     Test->set_timeout(3*run_time + 60);
     sleep(20);
     sleep(run_time);
-    Test->galera->block_node(1);
+    Test->galera->block_node(slaves[0]);
     sleep(run_time);
-    Test->galera->block_node(2);
+    Test->galera->block_node(slaves[1]);
     sleep(run_time);
-    Test->galera->unblock_node(1);
-    Test->galera->unblock_node(2);
+    Test->galera->unblock_node(slaves[0]);
+    Test->galera->unblock_node(slaves[1]);
 
     Test->set_timeout(120);
     Test->tprintf("Waiting for all threads exit\n");
@@ -98,12 +115,12 @@ int main(int argc, char *argv[])
     Test->set_timeout(3*run_time + 60);
     sleep(20);
     sleep(run_time);
-    Test->galera->block_node(1);
+    Test->galera->block_node(slaves[0]);
     sleep(run_time);
-    Test->galera->block_node(2);
+    Test->galera->block_node(slaves[1]);
     sleep(run_time);
-    Test->galera->unblock_node(1);
-    Test->galera->unblock_node(2);
+    Test->galera->unblock_node(slaves[0]);
+    Test->galera->unblock_node(slaves[1]);
 
     Test->set_timeout(120);
     Test->tprintf("Waiting for all threads exit\n");

@@ -8,17 +8,20 @@
 #include <iostream>
 #include <unistd.h>
 #include "testconnections.h"
+#include "fw_copy_rules.h"
 
 int main(int argc, char** argv)
 {
-    int rval = 0;
+    char rules_dir[4096];
     TestConnections *test = new TestConnections(argc, argv);
     const int sleep_time = 15;
 
     test->tprintf("Creating rules\n");
     test->stop_maxscale();
-    test->ssh_maxscale(false, "echo \"rule r1 deny regex 'select'\" > %s/rules/rules.txt", test->maxscale_access_homedir);
-    test->ssh_maxscale(false, "echo \"users %%@%% match any rules r1\" >> %s/rules/rules.txt", test->maxscale_access_homedir);
+
+    sprintf(rules_dir, "%s/fw/", test->test_dir);
+    copy_rules(test, (char*) "rules_actions", rules_dir);
+
     test->start_maxscale();
     test->tprintf("Waiting for %d seconds\n", sleep_time);
     sleep(sleep_time);
