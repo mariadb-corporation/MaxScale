@@ -38,7 +38,10 @@ int main(int argc, char *argv[])
 
     int  iret1[threads_num];
 
-    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 200;");
+    Test->repl->execute_query_all_nodes((char *) "set global max_connections = 500;");
+    Test->connect_maxscale();
+    Test->try_query(Test->conn_rwsplit, (char *) "set global max_connections = 500;");
+    Test->close_maxscale_connections();
 
     /* Create independent threads each of them will execute function */
     for (i = 0; i < threads_num; i++) {
@@ -62,6 +65,9 @@ int main(int argc, char *argv[])
     sleep(5);
 
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
+    Test->connect_maxscale();
+    Test->try_query(Test->conn_rwsplit, (char *) "set global max_connections = 100;");
+    Test->close_maxscale_connections();
     Test->stop_timeout();
     Test->check_maxscale_alive();
     Test->copy_all_logs(); return(Test->global_result);

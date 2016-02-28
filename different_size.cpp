@@ -85,8 +85,8 @@ void different_packet_size(TestConnections* Test, bool binlog)
     range_max[1] = 0x0ffffff * 2 + range[1];
 
     range[2] = 10; if (Test->smoke) {range[2] = 10;}
-    range_min[2] = 0x0ffffff * 10 - range[2];
-    range_max[2] = 0x0ffffff * 10 + range[2];
+    range_min[2] = 0x0ffffff * 3 - range[2];
+    range_max[2] = 0x0ffffff * 3 + range[2];
 
     char * event;
     int i;
