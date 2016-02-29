@@ -1,7 +1,9 @@
 /**
- * Firewall filter whitelist test
+ * Firewall filter match action test
  *
- * Check if the whitelisting and ignoring of queries works
+ * Check if the blacklisting, whitelisting and ignoring  funcionality of
+ * the dbfwfilter works. This test executes a matching and a non-matching query
+ * to three services configured in block, allow and ignore modes.
  */
 
 #include <my_config.h>
@@ -27,20 +29,34 @@ int main(int argc, char** argv)
     test->start_maxscale();
     test->tprintf("Waiting for %d seconds\n", sleep_time);
     sleep(sleep_time);
-    
+
     test->set_timeout(30);
     test->connect_maxscale();
-    test->tprintf("Trying query to balcklisted RWSplit, expecting fail\n");
-    if (execute_query(test->conn_rwsplit, "select 1") == 0)
-    {
-        test->add_result(1, "Query to blacklist service should fail.\n");
-    }
-    test->tprintf("Trying query to whitelisted Conn slave\n");
+
+    /** Test blacklisting functionality */
+    test->tprintf("Trying matching query to blacklisted RWSplit, expecting failure\n");
     test->set_timeout(30);
-    test->add_result(execute_query(test->conn_slave, "select 1"), "Query to whitelist service should work.\n");
-    test->tprintf("Trying query to 'ignore' Conn master\n");
+    test->add_result(!execute_query(test->conn_rwsplit, "select 1"), "Matching query to blacklist service should fail.\n");
+    test->tprintf("Trying non-matching query to blacklisted RWSplit, expecting failure\n");
     test->set_timeout(30);
-    test->add_result(execute_query(test->conn_master, "select 1"), "Query ingore service should work.\n");
+    test->add_result(execute_query(test->conn_rwsplit, "show status"), "Non-matching query to blacklist service should succeed.\n");
+
+    /** Test whitelisting functionality */
+    test->tprintf("Trying matching query to whitelisted Conn slave\n");
+    test->set_timeout(30);
+    test->add_result(execute_query(test->conn_slave, "select 1"), "Query to whitelist service should succeed.\n");
+    test->tprintf("Trying non-matching query to whitelisted Conn slave\n");
+    test->set_timeout(30);
+    test->add_result(!execute_query(test->conn_slave, "show status"), "Non-matching query to blacklist service should fail.\n");
+
+    /** Testing NO OP mode */
+    test->tprintf("Trying matching query to ignoring Conn master\n");
+    test->set_timeout(30);
+    test->add_result(execute_query(test->conn_master, "select 1"), "Query to ignoring service should succeed.\n");
+    test->tprintf("Trying non-matching query to ignoring Conn master\n");
+    test->set_timeout(30);
+    test->add_result(execute_query(test->conn_master, "show status"), "Non-matching query to ignoring service should succeed.\n");
+
     test->check_maxscale_alive();
     test->copy_all_logs();
     return test->global_result;
