@@ -14,30 +14,40 @@ int main(int argc, char** argv)
 {
     char rules_dir[4096];
     TestConnections *test = new TestConnections(argc, argv);
-    const int sleep_time = 15;
     test->stop_timeout();
 
     sprintf(rules_dir, "%s/fw/", test->test_dir);
-
 
     test->tprintf("Creating rules\n");
     test->stop_maxscale();
     copy_rules(test, (char*) "rules_logging", rules_dir);
 
     test->start_maxscale();
-    test->tprintf("Waiting for %d seconds", sleep_time);
-    sleep(sleep_time);
     test->set_timeout(20);
     test->connect_maxscale();
+
     test->tprintf("trying first: 'select 1'\n");
-    test->add_result(test->try_query(test->conn_slave, "select 1"), "First query should succeed");
     test->set_timeout(20);
+    test->add_result(execute_query_silent(test->conn_slave, "select 1"), "First query should succeed");
+
     test->tprintf("trying second: 'select 2'\n");
-    test->add_result(test->try_query(test->conn_slave, "select 2"), "Second query should succeed");
+    test->set_timeout(20);
+    test->add_result(execute_query_silent(test->conn_slave, "select 2"), "Second query should succeed");
+
+    /** Check that MaxScale is alive */
     test->stop_timeout();
+    test->check_maxscale_processes(1);
+
+    /** Check that MaxScale was terminated successfully */
+    test->stop_maxscale();
     sleep(10);
+    test->check_maxscale_processes(0);
+
+    /** Check that the logs contains entries for both matching and
+     * non-matching queries */
     test->check_log_err("matched by", true);
     test->check_log_err("was not matched", true);
-    test->check_maxscale_alive();
-    test->copy_all_logs();  return test->global_result;
+
+    test->copy_all_logs();
+    return test->global_result;
 }
