@@ -280,10 +280,10 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 regfree(&my_instance->re);
             }
 
-            if (my_instance->match)
+            if (my_instance->nomatch)
             {
-                free(my_instance->match);
-                regfree(&my_instance->re);
+                free(my_instance->nomatch);
+                regfree(&my_instance->nore);
             }
             free(my_instance->filebase);
             free(my_instance->source);
