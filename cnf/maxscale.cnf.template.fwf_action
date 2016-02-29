@@ -1,6 +1,15 @@
 [maxscale]
 threads=###threads###
 
+[MySQL Monitor]
+type=monitor
+module=mysqlmon
+###repl51###
+servers=server1
+user=skysql
+passwd=skysql
+monitor_interval=1000
+
 [server1]
 type=server
 address=###repl_server_IP_1###
