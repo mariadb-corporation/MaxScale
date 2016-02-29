@@ -55,10 +55,11 @@ int main(int argc, char** argv)
     test->add_result(execute_query_silent(test->conn_master, "show status"), "Non-matching query to ignoring service should succeed.\n");
 
     test->stop_timeout();
+    test->tprintf("Checking if MaxScale is alive\n");
     test->check_maxscale_processes(1);
     test->stop_maxscale();
-    test->tprintf();
     sleep(10);
+    test->tprintf("Checking if MaxScale was succesfully terminated\n");
     test->check_maxscale_processes(0);
     test->copy_all_logs();
     return test->global_result;
