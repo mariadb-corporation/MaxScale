@@ -144,7 +144,7 @@ static bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
     if (dcb->session->state != SESSION_STATE_ALLOC &&
         dcb->session->state != SESSION_STATE_DUMMY)
     {
-        memcpy(session, dcb->data, sizeof(MYSQL_session));
+        memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
     }
     else
     {
