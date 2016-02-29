@@ -16,7 +16,6 @@ int main(int argc, char** argv)
 {
     char rules_dir[4096];
     TestConnections *test = new TestConnections(argc, argv);
-    const int sleep_time = 15;
     test->stop_timeout();
 
     test->tprintf("Creating rules\n");
@@ -27,8 +26,6 @@ int main(int argc, char** argv)
 
     test->set_timeout(60);
     test->start_maxscale();
-    test->tprintf("Waiting for %d seconds\n", sleep_time);
-    sleep(sleep_time);
 
     test->set_timeout(30);
     test->connect_maxscale();
@@ -57,7 +54,12 @@ int main(int argc, char** argv)
     test->set_timeout(30);
     test->add_result(execute_query_silent(test->conn_master, "show status"), "Non-matching query to ignoring service should succeed.\n");
 
-    test->check_maxscale_alive();
+    test->stop_timeout();
+    test->check_maxscale_processes(1);
+    test->stop_maxscale();
+    test->tprintf();
+    sleep(10);
+    test->check_maxscale_processes(0);
     test->copy_all_logs();
     return test->global_result;
 }
