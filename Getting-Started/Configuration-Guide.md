@@ -281,6 +281,14 @@ Configure the directory for the PID file for MaxScale. This file contains the Pr
 piddir=/tmp/maxscale_cache/
 ```
 
+#### `execdir`
+
+Configure the directory where the executable files reside. All internal processes which are launched will use this directory to look for executable files.
+
+```
+execdir=/usr/local/bin/
+```
+
 #### `language`
 
 Set the folder where the errmsg.sys file is located in. MaxScale will look for the errmsg.sys file installed with MaxScale from this folder.
@@ -773,6 +781,8 @@ and short notations
 192.%
 192.%.%
 192.168.%
+
+Note that currently wildcards are only supported in conjunction with IP-addresses, not with domain names.
 
 ## Error Reporting
 
