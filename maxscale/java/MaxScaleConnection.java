@@ -51,8 +51,8 @@ public class MaxScaleConnection {
         }
 
         System.out.println("IP: " + ip + " User: " + user + " Password: " + password);
-        System.out.println("Connection string: jdbc:mariadb://" + ip + ":" + READWRITESPLIT_PORT + "/test");
 
+        Class.forName("org.mariadb.jdbc.Driver");
         conn_rw = DriverManager.getConnection(
                 "jdbc:mariadb://" + ip + ":" + READWRITESPLIT_PORT + "/test", user, password);
 
