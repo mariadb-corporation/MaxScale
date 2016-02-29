@@ -59,13 +59,13 @@ public class MaxScaleConnection {
         System.out.println("IP: " + ip + " User: " + user + " Password: " + password);
 
         conn_rw = DriverManager.getConnection(
-                "jdbc:mariadb://" + ip + ":" + READWRITESPLIT_PORT + "/", user, password);
+                "jdbc:mariadb://" + ip + ":" + READWRITESPLIT_PORT + "/test", user, password);
 
         conn_master = DriverManager.getConnection(
-                "jdbc:mariadb://" + ip + ":" + READCONNROUTE_MASTER_PORT + "/", user, password);
+                "jdbc:mariadb://" + ip + ":" + READCONNROUTE_MASTER_PORT + "/test", user, password);
 
         conn_slave = DriverManager.getConnection(
-                "jdbc:mariadb://" + ip + ":" + READCONNROUTE_SLAVE_PORT + "/", user, password);
+                "jdbc:mariadb://" + ip + ":" + READCONNROUTE_SLAVE_PORT + "/test", user, password);
     }
 
     public boolean isSmokeTest() {
