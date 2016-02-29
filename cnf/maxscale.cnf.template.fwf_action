@@ -7,7 +7,53 @@ address=###repl_server_IP_1###
 port=###repl_server_port_1###
 protocol=MySQLBackend
 
-[readconn]
+# Service with blacklist action
+
+[readconn-blacklist]
+type=service
+router=readconnroute
+servers=server1
+user=skysql
+passwd=skysql
+filters=blacklist
+
+[readconn-blacklist-listener]
+type=listener
+service=readconn-blacklist
+protocol=MySQLClient
+port=4006
+
+[blacklist]
+type=filter
+module=dbfwfilter
+rules=/###access_homedir###/rules/rules.txt
+action=block
+
+# Service with whitelist action
+
+[readconn-whitelist]
+type=service
+router=readconnroute
+servers=server1
+user=skysql
+passwd=skysql
+filters=whitelist
+
+[readconn-whitelist-listener]
+type=listener
+service=readconn-whitelist
+protocol=MySQLClient
+port=4009
+
+[whitelist]
+type=filter
+module=dbfwfilter
+rules=/###access_homedir###/rules/rules.txt
+action=allow
+
+# Service with ignore action
+
+[readconn-ignore]
 type=service
 router=readconnroute
 servers=server1
@@ -15,15 +61,14 @@ user=skysql
 passwd=skysql
 filters=ignore
 
-[readconn-listener]
+[readconn-ignore-listener]
 type=listener
-service=readconn
+service=readconn-ignore
 protocol=MySQLClient
-port=4009
+port=4008
 
 [ignore]
 type=filter
 module=dbfwfilter
 rules=/###access_homedir###/rules/rules.txt
-log_match=true
-log_no_match=true
+action=ignore
