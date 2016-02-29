@@ -24,15 +24,27 @@ filters=MyLogFilter
 
 ## Filter Options
 
-The top filter does not support any filter options currently.
+The top filter accepts the following options.
+
+|Option    |Description                                 |
+|----------|--------------------------------------------|
+|ignorecase|Use case-insensitive matching               |
+|case      |Use case-sensitive matching                 |
+|extended  |Use extended regular expression syntax (ERE)|
+
+To use multiple filter options, list them in a comma-separated list.
+
+```
+options=case,extended
+```
 
 ## Filter Parameters
 
-The top filter accepts a number of optional parameters.
+The top filter has one mandatory parameter, `filebase`, and a number of optional parameters.
 
 ### Filebase
 
-The basename of the output file created for each session. A session index is added to the filename for each file written.
+The basename of the output file created for each session. A session index is added to the filename for each file written. This is a mandatory parameter.
 
 ```
 filebase=/tmp/SqlQueryLog

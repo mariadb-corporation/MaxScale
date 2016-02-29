@@ -23,38 +23,53 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
+#include <skygw_utils.h>
+
+EXTERN_C_BLOCK_BEGIN
+
 /** Default file locations, configured by CMake */
 static const char* default_cnf_fname = "maxscale.cnf";
 static const char* default_configdir = "/etc";
-static const char* default_piddir = "@MAXSCALE_VARDIR@/run/maxscale"; /*< This should be changed to just /run eventually, 
-                                                                        * the /var/run folder is an old standard and the newer FSH 3.0
-                                                                        * uses /run for PID files.*/
+ /*< This should be changed to just /run eventually,
+  * the /var/run folder is an old standard and the newer FSH 3.0
+  * uses /run for PID files.*/
+static const char* default_piddir = "@MAXSCALE_VARDIR@/run/maxscale";
 static const char* default_logdir = "@MAXSCALE_VARDIR@/log/maxscale";
-static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale/data";
+static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale";
 static const char* default_libdir = "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@";
 static const char* default_cachedir = "@MAXSCALE_VARDIR@/cache/maxscale";
 static const char* default_langdir = "@MAXSCALE_VARDIR@/lib/maxscale";
+static const char* default_execdir = "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@";
 
 static char* configdir = NULL;
 static char* logdir = NULL;
 static char* libdir = NULL;
 static char* cachedir = NULL;
-static char* maxscaledatadir = NULL;
+static char* maxscaledatadir = NULL; /*< The data directory */
+static char* processdatadir = NULL; /*< Process specific data directory */
 static char* langdir = NULL;
 static char* piddir = NULL;
+static char* execdir = NULL;
 
 void set_libdir(char* param);
 void set_datadir(char* param);
+void set_process_datadir(char* param);
 void set_cachedir(char* param);
 void set_configdir(char* param);
 void set_logdir(char* param);
 void set_langdir(char* param);
 void set_piddir(char* param);
+void set_execdir(char* param);
 char* get_libdir();
 char* get_datadir();
+char* get_process_datadir();
 char* get_cachedir();
 char* get_configdir();
 char* get_piddir();
 char* get_logdir();
 char* get_langdir();
+char* get_execdir();
+
+EXTERN_C_BLOCK_END
+
 #endif

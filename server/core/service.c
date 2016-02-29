@@ -68,6 +68,7 @@
 #include <gw.h>
 #include <gwdirs.h>
 #include <math.h>
+#include <version.h>
 
 /** To be used with configuration type checks */
 typedef struct typelib_st

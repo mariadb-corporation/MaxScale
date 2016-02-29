@@ -1,3 +1,10 @@
+# Include the embedded library headers
+subdirs(MYSQL_INCLUDE_DIR_ALL ${MYSQL_EMBEDDED_INCLUDE_DIR})
+foreach(DIR ${MYSQL_INCLUDE_DIR_ALL})
+  include_directories(${DIR})
+endforeach()
+include_directories(${MYSQL_EMMBEDDED_INCLUDE_DIR}/..)
+
 if(${ERRMSG} MATCHES "ERRMSG-NOTFOUND")
   message(FATAL_ERROR "The errmsg.sys file was not found, please define the path with -DERRMSG=<path>")
 else()
@@ -10,5 +17,5 @@ endif()
 
 add_subdirectory(canonical_tests)
 add_executable(classify classify.c)
-target_link_libraries(classify query_classifier maxscale-common)
+target_link_libraries(classify maxscale-common)
 add_test(Internal-TestQueryClassifier classify ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)

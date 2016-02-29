@@ -149,7 +149,7 @@ typedef struct server {
 #define SERVER_IS_MASTER(server) SRV_MASTER_STATUS((server)->status)
 
 #define SRV_MASTER_STATUS(status) ((status &                            \
-                                    (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
+                                    (SERVER_RUNNING|SERVER_MASTER|SERVER_MAINT)) == \
                                    (SERVER_RUNNING|SERVER_MASTER))
 
 /**
@@ -164,7 +164,7 @@ typedef struct server {
  * in order for the macro to return true
  */
 #define SERVER_IS_SLAVE(server)                                         \
-    (((server)->status & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_MAINT)) == \
+    (((server)->status & (SERVER_RUNNING|SERVER_SLAVE|SERVER_MAINT)) == \
      (SERVER_RUNNING|SERVER_SLAVE))
 
 /**

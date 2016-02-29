@@ -27,7 +27,8 @@
  * 24/06/2013   Massimiliano Pinto  Initial implementation
  * 08/08/2013   Massimiliano Pinto  Fixed bug for invalid memory access in row[1]+1 when row[1] is ""
  * 06/02/2014   Massimiliano Pinto  Mysql user root selected based on configuration flag
- * 26/02/2014   Massimiliano Pinto  Addd: replace_mysql_users() routine may replace users' table based on a checksum
+ * 26/02/2014   Massimiliano Pinto  Addd: replace_mysql_users() routine may replace users' table
+ *                                  based on a checksum
  * 28/02/2014   Massimiliano Pinto  Added Mysql user@host authentication
  * 29/09/2014   Massimiliano Pinto  Added Mysql user@host authentication with wildcard in IPv4 hosts:
  *                                  x.y.z.%, x.y.%.%, x.%.%.%
@@ -53,72 +54,52 @@
 #include <mysqld_error.h>
 #include <regex.h>
 
-#define USERS_QUERY_NO_ROOT " AND user NOT IN ('root')"
+/** Don't include the root user */
+#define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
 
-/** Alternate query which resolves user grants at the table level */
-#if 0
-#define LOAD_MYSQL_USERS_QUERY                      \
-    "SELECT  DISTINCT                           \
-    user.user AS user,                          \
-    user.host AS host,                          \
-    user.password AS password,                      \
-    concat(user.user,user.host,user.password,               \
-        IF((user.Select_priv+0)||find_in_set('Select',Coalesce(tp.Table_priv,0)),'Y','N') , \
-        COALESCE( db.db,tp.db, '')) AS userdata,            \
-    user.Select_priv AS anydb,                      \
-    COALESCE( db.db,tp.db, NULL)  AS db                     \
-    FROM                                    \
-    mysql.user LEFT JOIN                            \
-    mysql.db ON user.user=db.user AND user.host=db.host  LEFT JOIN      \
-    mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host     \
-    WHERE user.user IS NOT NULL AND user.user <> ''"
-
-#else
-#define LOAD_MYSQL_USERS_QUERY "SELECT \
-    user, host, password, concat(user,host,password,Select_priv) AS userdata, \
-    Select_priv AS anydb FROM mysql.user WHERE user IS NOT NULL AND user <> ''"
-
-#endif
-
+/** User count without databases */
 #define MYSQL_USERS_COUNT "SELECT COUNT(1) AS nusers FROM mysql.user"
 
-#define MYSQL_USERS_WITH_DB_ORDER " ORDER BY host DESC"
+/** Order by host name */
+#define MYSQL_USERS_ORDER_BY " ORDER BY host DESC "
 
-#define LOAD_MYSQL_USERS_WITH_DB_QUERY "SELECT \
+/** Normal password column name */
+#define MYSQL_PASSWORD "password"
+
+/** MySQL 5.7 password column name */
+#define MYSQL57_PASSWORD "authentication_string"
+
+/** Query template which resolves user grants and access to databases at the table level */
+#define MYSQL_USERS_DB_QUERY_TEMPLATE \
+    "SELECT  DISTINCT \
     user.user AS user, \
     user.host AS host, \
-    user.password AS password, \
-    concat(user.user,user.host,user.password,user.Select_priv,IFNULL(db,'')) AS userdata, \
+    user.%s AS password, \
+    concat(user.user,user.host,user.%s, \
+        IF((user.Select_priv+0)||find_in_set('Select',Coalesce(tp.Table_priv,0)),'Y','N') , \
+        COALESCE( db.db,tp.db, '')) AS userdata, \
     user.Select_priv AS anydb, \
-    db.db AS db \
-    FROM mysql.user LEFT JOIN mysql.db \
-    ON user.user=db.user AND user.host=db.host \
-    WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
+    COALESCE( db.db,tp.db, NULL)  AS db \
+    FROM \
+    mysql.user LEFT JOIN \
+    mysql.db ON user.user=db.user AND user.host=db.host  LEFT JOIN \
+    mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host \
+    WHERE user.user IS NOT NULL AND user.user <> ''"
 
-#define LOAD_MYSQL57_USERS_WITH_DB_QUERY "SELECT \
-    user.user AS user, \
-    user.host AS host, \
-    user.authentication_string AS password, \
-    concat(user.user,user.host,user.authentication_string,user.Select_priv,IFNULL(db,'')) AS userdata, \
-    user.Select_priv AS anydb, \
-    db.db AS db \
-    FROM mysql.user LEFT JOIN mysql.db \
-    ON user.user=db.user AND user.host=db.host \
-    WHERE user.user IS NOT NULL" MYSQL_USERS_WITH_DB_ORDER
+#define MYSQL_USERS_QUERY_TEMPLATE "SELECT \
+    user, host, %s, concat(user, host, %s, Select_priv) AS userdata, \
+    Select_priv AS anydb FROM mysql.user WHERE user.user IS NOT NULL AND user.user <> ''"
 
-#define MYSQL_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM \
-    (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS tbl_count"
+/** User count query split into two parts. This way the actual query used to
+ * fetch the users can be inserted as a subquery between the START and END
+ * portions of them. */
+#define MYSQL_USERS_COUNT_TEMPLATE_START "SELECT COUNT(1) AS nusers_db FROM ("
+#define MYSQL_USERS_COUNT_TEMPLATE_END ") AS tbl_count"
 
-#define MYSQL57_USERS_WITH_DB_COUNT "SELECT COUNT(1) AS nusers_db FROM \
-    (" LOAD_MYSQL57_USERS_WITH_DB_QUERY ") AS tbl_count"
-
-#define LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * \
-    FROM (" LOAD_MYSQL_USERS_WITH_DB_QUERY ") AS t1 \
-    WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
-
-#define LOAD_MYSQL57_USERS_WITH_DB_QUERY_NO_ROOT "SELECT * \
-    FROM (" LOAD_MYSQL57_USERS_WITH_DB_QUERY ") AS t1 \
-    WHERE user NOT IN ('root')" MYSQL_USERS_WITH_DB_ORDER
+/** The maximum possible length of the query */
+#define MAX_QUERY_STR_LEN strlen(MYSQL_USERS_COUNT_TEMPLATE_START \
+    MYSQL_USERS_COUNT_TEMPLATE_END MYSQL_USERS_DB_QUERY_TEMPLATE \
+    MYSQL_USERS_ORDER_BY) + strlen(MYSQL57_PASSWORD) * 2 + 1
 
 #define LOAD_MYSQL_DATABASE_NAMES "SELECT * \
     FROM ( (SELECT COUNT(1) AS ndbs \
@@ -130,58 +111,98 @@
     MaxScale authentication will proceed without including database permissions. \
     To correct this GRANT SHOW DATABASES ON *.* privilege to the user %s."
 
-static int getUsers(SERVICE *service, USERS *users);
+static int add_databases(SERVICE *service, MYSQL *con);
+static int add_wildcard_users(USERS *users, char* name, char* host,
+                              char* password, char* anydb, char* db, HASHTABLE* hash);
+static void *dbusers_keyread(int fd);
+static int dbusers_keywrite(int fd, void *key);
+static void *dbusers_valueread(int fd);
+static int dbusers_valuewrite(int fd, void *value);
+static int get_all_users(SERVICE *service, USERS *users);
+static int get_databases(SERVICE *, MYSQL *);
+static int get_users(SERVICE *service, USERS *users);
+static MYSQL *gw_mysql_init(void);
+static int gw_mysql_set_timeouts(MYSQL* handle);
+static bool host_has_singlechar_wildcard(const char *host);
+static bool host_matches_singlechar_wildcard(const char* user, const char* wild);
+static bool is_ipaddress(const char* host);
+static char *mysql_format_user_entry(void *data);
+static char *mysql_format_user_entry(void *data);
+static int normalize_hostname(const char *input_host, char *output_host);
+static int resource_add(HASHTABLE *, char *, char *);
+static HASHTABLE *resource_alloc();
+static void *resource_fetch(HASHTABLE *, char *);
+static void resource_free(HASHTABLE *resource);
 static int uh_cmpfun(void* v1, void* v2);
+static int uh_hfun(void* key);
 static void *uh_keydup(void* key);
 static void uh_keyfree(void* key);
-static int uh_hfun(void* key);
-char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
-char *mysql_format_user_entry(void *data);
-int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host,
-                                   char *passwd, char *anydb, char *db);
-static int getDatabases(SERVICE *, MYSQL *);
-HASHTABLE *resource_alloc();
-void resource_free(HASHTABLE *resource);
-void *resource_fetch(HASHTABLE *, char *);
-int resource_add(HASHTABLE *, char *, char *);
-int resource_hash(char *);
-static int normalize_hostname(char *input_host, char *output_host);
-int wildcard_db_grant(char* str);
-int add_wildcard_users(USERS *users, char* name, char* host, char* password,
-                       char* anydb, char* db, HASHTABLE* hash);
-static int gw_mysql_set_timeouts(MYSQL* handle);
+static int wildcard_db_grant(char* str);
 
 /**
- * Get the user data query.
+ * Get the user data query with databases
+ *
  * @param server_version Server version string
  * @param include_root Include root user
- * @return Users query
+ * @param buffer Destination where the query is written. Must be at least
+ * MAX_QUERY_STR_LEN bytes long
+ * @return Users query with databases included
  */
-const char* get_mysql_users_query(char* server_version, bool include_root)
+static char* get_users_db_query(const char* server_version, bool include_root, char* buffer)
 {
-    const char* rval;
-    if (strstr(server_version, "5.7."))
-    {
-        rval = include_root ? LOAD_MYSQL57_USERS_WITH_DB_QUERY :
-            LOAD_MYSQL57_USERS_WITH_DB_QUERY_NO_ROOT;
-    }
-    else
-    {
-        rval = include_root ? LOAD_MYSQL_USERS_WITH_DB_QUERY :
-            LOAD_MYSQL_USERS_WITH_DB_QUERY_NO_ROOT;
-    }
-    return rval;
+    const char* password = strstr(server_version, "5.7.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+
+    int nchars = snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_DB_QUERY_TEMPLATE
+                          "%s" MYSQL_USERS_ORDER_BY, password, password,
+                          include_root ? "" : USERS_QUERY_NO_ROOT);
+    ss_dassert(nchars < MAX_QUERY_STR_LEN);
+    (void) nchars;
+    return buffer;
 }
 
 /**
- * Get the user count query.
+ * Get the user data query
+ *
  * @param server_version Server version string
- * @return User vount query
- * */
-const char* get_mysq_users_db_count_query(char* server_version)
+ * @param include_root Include root user
+ * @param buffer Destination where the query is written. Must be at least
+ * MAX_QUERY_STR_LEN bytes long
+ * @return Users query
+ */
+static char* get_users_query(const char* server_version, bool include_root, char* buffer)
 {
-    return strstr(server_version, "5.7.") ?
-        MYSQL57_USERS_WITH_DB_COUNT : MYSQL_USERS_WITH_DB_COUNT;
+    const char* password = strstr(server_version, "5.7.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+
+    int nchars = snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_QUERY_TEMPLATE "%s"
+                          MYSQL_USERS_ORDER_BY, password, password,
+                          include_root ? "" : USERS_QUERY_NO_ROOT);
+    ss_dassert(nchars < MAX_QUERY_STR_LEN);
+    (void) nchars;
+    return buffer;
+}
+
+/**
+ * Get the user count query
+ *
+ * @param server_version Server version string
+ * @param buffer Destination where the query is written. Must be at least
+ * MAX_QUERY_STR_LEN bytes long
+ * @return User count query
+ * */
+static char* get_usercount_query(const char* server_version, bool include_root, char* buffer)
+{
+    const char* password = strstr(server_version, "5.7.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+
+    int nchars = snprintf(buffer, MAX_QUERY_STR_LEN, MYSQL_USERS_COUNT_TEMPLATE_START
+                          MYSQL_USERS_DB_QUERY_TEMPLATE "%s" MYSQL_USERS_ORDER_BY
+                          MYSQL_USERS_COUNT_TEMPLATE_END, password, password,
+                          include_root ? "" : USERS_QUERY_NO_ROOT);
+    ss_dassert(nchars < MAX_QUERY_STR_LEN);
+    (void) nchars;
+    return buffer;
 }
 
 /**
@@ -191,7 +212,7 @@ const char* get_mysq_users_db_count_query(char* server_version)
  * @param wildcardhost Host address in the grant
  * @return True if the host address matches
  */
-bool host_matches_singlechar_wildcard(const char* user, const char* wild)
+static bool host_matches_singlechar_wildcard(const char* user, const char* wild)
 {
     while (*user != '\0' && *wild != '\0')
     {
@@ -215,7 +236,7 @@ bool host_matches_singlechar_wildcard(const char* user, const char* wild)
 int
 load_mysql_users(SERVICE *service)
 {
-    return getUsers(service, service->users);
+    return get_users(service, service->users);
 }
 
 /**
@@ -239,7 +260,7 @@ reload_mysql_users(SERVICE *service)
 
     oldresources = service->resources;
 
-    i = getUsers(service, newusers);
+    i = get_users(service, newusers);
 
     spinlock_acquire(&service->spin);
     oldusers = service->users;
@@ -279,7 +300,7 @@ replace_mysql_users(SERVICE *service)
     oldresources = service->resources;
 
     /* load db users ad db grants */
-    i = getUsers(service, newusers);
+    i = get_users(service, newusers);
 
     if (i <= 0)
     {
@@ -332,7 +353,7 @@ replace_mysql_users(SERVICE *service)
  * @param host IP address to check
  * @return True if the address is a valid, MySQL type IP address
  */
-bool is_ipaddress(const char* host)
+static bool is_ipaddress(const char* host)
 {
     while (*host != '\0')
     {
@@ -351,7 +372,7 @@ bool is_ipaddress(const char* host)
  * @param host Hostname to check
  * @return True if the hostname is a valid IP address with a single character wildcard
  */
-bool host_has_singlechar_wildcard(const char *host)
+static bool host_has_singlechar_wildcard(const char *host)
 {
     const char* chrptr = host;
     bool retval = false;
@@ -388,8 +409,8 @@ bool host_has_singlechar_wildcard(const char *host)
  * @return              1 on success, 0 on failure and -1 on duplicate user
  */
 
-int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host,
-                                   char *passwd, char *anydb, char *db)
+int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *host,
+                                   char *passwd, const char *anydb, const char *db)
 {
     struct sockaddr_in serv_addr;
     MYSQL_USER_HOST key;
@@ -504,7 +525,7 @@ int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host,
  * @return          -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
-addDatabases(SERVICE *service, MYSQL *con)
+add_databases(SERVICE *service, MYSQL *con)
 {
     MYSQL_ROW row;
     MYSQL_RES *result = NULL;
@@ -609,7 +630,7 @@ addDatabases(SERVICE *service, MYSQL *con)
  * @return          -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
-getDatabases(SERVICE *service, MYSQL *con)
+get_databases(SERVICE *service, MYSQL *con)
 {
     MYSQL_ROW row;
     MYSQL_RES *result = NULL;
@@ -715,7 +736,7 @@ getDatabases(SERVICE *service, MYSQL *con)
  * @return          -1 on any error or the number of users inserted
  */
 static int
-getAllUsers(SERVICE *service, USERS *users)
+get_all_users(SERVICE *service, USERS *users)
 {
     MYSQL *con = NULL;
     MYSQL_ROW row;
@@ -725,7 +746,7 @@ getAllUsers(SERVICE *service, USERS *users)
     char *dpwd = NULL;
     int total_users = 0;
     SERVER_REF *server;
-    const char *users_query;
+    const char *userquery;
     char *tmp;
     unsigned char hash[SHA_DIGEST_LENGTH] = "";
     char *users_data = NULL;
@@ -769,31 +790,12 @@ getAllUsers(SERVICE *service, USERS *users)
 
     while (server != NULL)
     {
+        con = gw_mysql_init();
 
-        con = mysql_init(NULL);
-
-        if (con == NULL)
+        if (!con)
         {
-            MXS_ERROR("mysql_init: %s", mysql_error(con));
             goto cleanup;
         }
-
-        /** Set read, write and connect timeout values */
-        if (gw_mysql_set_timeouts(con))
-        {
-            MXS_ERROR("Failed to set timeout values for backend connection.");
-            mysql_close(con);
-            goto cleanup;
-        }
-
-        if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL))
-        {
-            MXS_ERROR("Failed to set external connection. "
-                      "It is needed for backend server connections.");
-            mysql_close(con);
-            goto cleanup;
-        }
-
 
         while (!service->svc_do_shutdown &&
                server != NULL &&
@@ -819,7 +821,7 @@ getAllUsers(SERVICE *service, USERS *users)
             goto cleanup;
         }
 
-        addDatabases(service, con);
+        add_databases(service, con);
         mysql_close(con);
         server = server->next;
     }
@@ -828,28 +830,10 @@ getAllUsers(SERVICE *service, USERS *users)
 
     while (server != NULL)
     {
+        con = gw_mysql_init();
 
-        con = mysql_init(NULL);
-
-        if (con == NULL)
+        if (!con)
         {
-            MXS_ERROR("mysql_init: %s", mysql_error(con));
-            goto cleanup;
-        }
-
-        /** Set read, write and connect timeout values */
-        if (gw_mysql_set_timeouts(con))
-        {
-            MXS_ERROR("Failed to set timeout values for backend connection.");
-            mysql_close(con);
-            goto cleanup;
-        }
-
-        if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL))
-        {
-            MXS_ERROR("Failed to set external connection. "
-                      "It is needed for backend server connections.");
-            mysql_close(con);
             goto cleanup;
         }
 
@@ -880,9 +864,12 @@ getAllUsers(SERVICE *service, USERS *users)
                 goto cleanup;
             }
         }
+
+        char querybuffer[MAX_QUERY_STR_LEN];
         /** Count users. Start with users and db grants for users */
-        const char *user_with_db_count = get_mysq_users_db_count_query(server->server->server_string);
-        if (mysql_query(con, user_with_db_count))
+        const char *usercount = get_usercount_query(server->server->server_string,
+                                                    service->enable_root, querybuffer);
+        if (mysql_query(con, usercount))
         {
             if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR)
             {
@@ -934,11 +921,11 @@ getAllUsers(SERVICE *service, USERS *users)
             goto cleanup;
         }
 
-        users_query = get_mysql_users_query(server->server->server_string,
-                                            service->enable_root);
+        userquery = get_users_db_query(server->server->server_string,
+                                      service->enable_root, querybuffer);
 
         /* send first the query that fetches users and db grants */
-        if (mysql_query(con, users_query))
+        if (mysql_query(con, userquery))
         {
             /*
              * An error occurred executing the query
@@ -969,17 +956,10 @@ getAllUsers(SERVICE *service, USERS *users)
 
                 MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
 
-                /* check for root user select */
-                if (service->enable_root)
-                {
-                    users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
-                }
-                else
-                {
-                    users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT " ORDER BY HOST DESC";
-                }
+                userquery = get_users_query(server->server->server_string,
+                                            service->enable_root, querybuffer);
 
-                if (mysql_query(con, users_query))
+                if (mysql_query(con, userquery))
                 {
                     MXS_ERROR("Loading users for service [%s] encountered "
                               "error: [%s], code %i",
@@ -1244,7 +1224,7 @@ cleanup:
  * @return          -1 on any error or the number of users inserted
  */
 static int
-getUsers(SERVICE *service, USERS *users)
+get_users(SERVICE *service, USERS *users)
 {
     MYSQL *con = NULL;
     MYSQL_ROW row;
@@ -1254,7 +1234,7 @@ getUsers(SERVICE *service, USERS *users)
     char *dpwd;
     int total_users = 0;
     SERVER_REF *server;
-    const char *users_query;
+    const char *userquery;
     unsigned char hash[SHA_DIGEST_LENGTH] = "";
     char *users_data = NULL;
     int nusers = 0;
@@ -1276,31 +1256,16 @@ getUsers(SERVICE *service, USERS *users)
 
     if (service->users_from_all)
     {
-        return getAllUsers(service, users);
+        return get_all_users(service, users);
     }
 
-    con = mysql_init(NULL);
+    con = gw_mysql_init();
 
-    if (con == NULL)
+    if (!con)
     {
-        MXS_ERROR("mysql_init: %s", mysql_error(con));
-        return -1;
-    }
-    /** Set read, write and connect timeout values */
-    if (gw_mysql_set_timeouts(con))
-    {
-        MXS_ERROR("Failed to set timeout values for backend connection.");
-        mysql_close(con);
         return -1;
     }
 
-    if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL))
-    {
-        MXS_ERROR("Failed to set external connection. "
-                  "It is needed for backend server connections.");
-        mysql_close(con);
-        return -1;
-    }
     /**
      * Attempt to connect to one of the databases database or until we run
      * out of databases
@@ -1383,9 +1348,11 @@ getUsers(SERVICE *service, USERS *users)
         }
     }
 
-    const char *user_with_db_count = get_mysq_users_db_count_query(server->server->server_string);
+    char querybuffer[MAX_QUERY_STR_LEN];
+    const char *usercount = get_usercount_query(server->server->server_string,
+                                                service->enable_root, querybuffer);
     /** Count users. Start with users and db grants for users */
-    if (mysql_query(con, user_with_db_count))
+    if (mysql_query(con, usercount))
     {
         if (mysql_errno(con) != ER_TABLEACCESS_DENIED_ERROR)
         {
@@ -1434,10 +1401,10 @@ getUsers(SERVICE *service, USERS *users)
         return -1;
     }
 
-    users_query = get_mysql_users_query(server->server->server_string,
-                                        service->enable_root);
+    userquery = get_users_db_query(server->server->server_string,
+                                  service->enable_root, querybuffer);
     /* send first the query that fetches users and db grants */
-    if (mysql_query(con, users_query))
+    if (mysql_query(con, userquery))
     {
         /*
          * An error occurred executing the query
@@ -1461,20 +1428,13 @@ getUsers(SERVICE *service, USERS *users)
             /*
              * We have got ER_TABLEACCESS_DENIED_ERROR
              * try loading users from mysql.user without DB names.
-             */
+            */
             MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
 
-            /* check for root user select */
-            if (service->enable_root)
-            {
-                users_query = LOAD_MYSQL_USERS_QUERY " ORDER BY HOST DESC";
-            }
-            else
-            {
-                users_query = LOAD_MYSQL_USERS_QUERY USERS_QUERY_NO_ROOT " ORDER BY HOST DESC";
-            }
+            userquery = get_users_query(server->server->server_string,
+                                        service->enable_root, querybuffer);
 
-            if (mysql_query(con, users_query))
+            if (mysql_query(con, userquery))
             {
                 MXS_ERROR("Loading users for service [%s] encountered error: "
                           "[%s], code %i", service->name, mysql_error(con),
@@ -1524,7 +1484,7 @@ getUsers(SERVICE *service, USERS *users)
     if (db_grants)
     {
         /* load all mysql database names */
-        dbnames = getDatabases(service, con);
+        dbnames = get_databases(service, con);
         MXS_DEBUG("Loaded %d MySQL Database Names for service [%s]",
                   dbnames, service->name);
     }
@@ -1999,7 +1959,7 @@ static void uh_keyfree(void* key)
  *  @param data     Input data
  *  @return         the MySQL user@host
  */
-char *mysql_format_user_entry(void *data)
+static char *mysql_format_user_entry(void *data)
 {
     MYSQL_USER_HOST *entry;
     char *mysql_user;
@@ -2068,7 +2028,7 @@ char *mysql_format_user_entry(void *data)
  *
  * @param resources The resources table to remove
  */
-void
+static void
 resource_free(HASHTABLE *resources)
 {
     if (resources)
@@ -2082,7 +2042,7 @@ resource_free(HASHTABLE *resources)
  *
  * @return  The database names table
  */
-HASHTABLE *
+static HASHTABLE *
 resource_alloc()
 {
     HASHTABLE *resources;
@@ -2106,7 +2066,7 @@ resource_alloc()
  * @param value     The value for resource (not used)
  * @return          The number of resources dded to the table
  */
-int
+static int
 resource_add(HASHTABLE *resources, char *key, char *value)
 {
     return hashtable_add(resources, key, value);
@@ -2119,7 +2079,7 @@ resource_add(HASHTABLE *resources, char *key, char *value)
  * @param key       The database name to fetch
  * @return          The database esists or NULL if not found
  */
-void *
+static void *
 resource_fetch(HASHTABLE *resources, char *key)
 {
     return hashtable_fetch(resources, key);
@@ -2139,7 +2099,7 @@ resource_fetch(HASHTABLE *resources, char *key)
  * @param output_host   The normalized hostname (buffer must be preallocated)
  * @return              The calculated netmask or -1 on failure
  */
-static int normalize_hostname(char *input_host, char *output_host)
+static int normalize_hostname(const char *input_host, char *output_host)
 {
     int netmask, bytes, bits = 0, found_wildcard = 0;
     char *p, *lasts, *tmp;
@@ -2213,6 +2173,47 @@ static int normalize_hostname(char *input_host, char *output_host)
     free(tmp);
 
     return netmask;
+}
+
+/**
+ * Returns a MYSQL object suitably configured.
+ *
+ * @return An object or NULL if something fails.
+ */
+MYSQL *gw_mysql_init()
+{
+    MYSQL* con = mysql_init(NULL);
+
+    if (con)
+    {
+        if (gw_mysql_set_timeouts(con) == 0)
+        {
+            // MYSQL_OPT_USE_REMOTE_CONNECTION must be set if the embedded
+            // libary is used. With Connector-C (at least 2.2.1) the call
+            // fails.
+#if !defined(LIBMARIADB)
+            if (mysql_options(con, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL) != 0)
+            {
+                MXS_ERROR("Failed to set external connection. "
+                          "It is needed for backend server connections.");
+                mysql_close(con);
+                con = NULL;
+            }
+#endif
+        }
+        else
+        {
+            MXS_ERROR("Failed to set timeout values for backend connection.");
+            mysql_close(con);
+            con = NULL;
+        }
+    }
+    else
+    {
+        MXS_ERROR("mysql_init: %s", mysql_error(NULL));
+    }
+
+    return con;
 }
 
 /**
@@ -2448,7 +2449,7 @@ dbusers_valueread(int fd)
  * @return      The number of entries saved
  */
 int
-dbusers_save(USERS *users, char *filename)
+dbusers_save(USERS *users, const char *filename)
 {
     return hashtable_save(users->data, filename, dbusers_keywrite, dbusers_valuewrite);
 }
@@ -2461,7 +2462,7 @@ dbusers_save(USERS *users, char *filename)
  * @return      The number of entries loaded
  */
 int
-dbusers_load(USERS *users, char *filename)
+dbusers_load(USERS *users, const char *filename)
 {
     return hashtable_load(users->data, filename, dbusers_keyread, dbusers_valueread);
 }
@@ -2471,7 +2472,7 @@ dbusers_load(USERS *users, char *filename)
  * @param str Database grant
  * @return 1 if the name contains the '%' wildcard character, 0 if it does not
  */
-int wildcard_db_grant(char* str)
+static int wildcard_db_grant(char* str)
 {
     char* ptr = str;
 
@@ -2498,8 +2499,8 @@ int wildcard_db_grant(char* str)
  * @param hash Hashtable with all database names
  * @return number of unique grants generated from wildcard database name
  */
-int add_wildcard_users(USERS *users, char* name, char* host, char* password,
-                       char* anydb, char* db, HASHTABLE* hash)
+static int add_wildcard_users(USERS *users, char* name, char* host, char* password,
+                              char* anydb, char* db, HASHTABLE* hash)
 {
     HASHITERATOR* iter;
     HASHTABLE* ht = hash;
@@ -2580,7 +2581,6 @@ bool check_service_permissions(SERVICE* service)
     MYSQL_RES* res;
     char *user, *password, *dpasswd;
     SERVER_REF* server;
-    int conn_timeout = 1;
     bool rval = true;
 
     if (is_internal_service(service->routerModule))
@@ -2605,15 +2605,14 @@ bool check_service_permissions(SERVICE* service)
 
     dpasswd = decryptPassword(password);
 
-    if ((mysql = mysql_init(NULL)) == NULL)
+    mysql = gw_mysql_init();
+
+    if (!mysql)
     {
-        MXS_ERROR("[%s] MySQL connection initialization failed.", __FUNCTION__);
         free(dpasswd);
         return false;
     }
 
-    mysql_options(mysql, MYSQL_OPT_USE_REMOTE_CONNECTION, NULL);
-    mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &conn_timeout);
     /** Connect to the first server. This assumes all servers have identical
      * user permissions. */
 

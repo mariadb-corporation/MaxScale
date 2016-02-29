@@ -5,6 +5,7 @@
 #include <housekeeper.h>
 #include <maxscale_test.h>
 #include <log_manager.h>
+#include <statistics.h>
 
 void init_test_env(char *path)
 {
@@ -12,6 +13,7 @@ void init_test_env(char *path)
 
     const char* logdir = path ? path : TEST_LOG_DIR;
 
+    ts_stats_init();
     mxs_log_init(NULL, logdir, MXS_LOG_TARGET_DEFAULT);
     poll_init();
     hkinit();

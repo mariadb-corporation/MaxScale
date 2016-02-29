@@ -104,7 +104,9 @@ admin_verify(char *username, char *password)
         {
             return 0;
         }
-        if (strcmp(pw, crypt(password, ADMIN_SALT)) == 0)
+        struct crypt_data cdata;
+        cdata.initialized = 0;
+        if (strcmp(pw, crypt_r(password, ADMIN_SALT, &cdata)) == 0)
         {
             return 1;
         }
@@ -191,7 +193,9 @@ admin_add_user(char *uname, char *passwd)
     {
         return ADMIN_ERR_DUPLICATE;
     }
-    cpasswd = crypt(passwd, ADMIN_SALT);
+    struct crypt_data cdata;
+    cdata.initialized = 0;
+    cpasswd = crypt_r(passwd, ADMIN_SALT, &cdata);
     users_add(users, uname, cpasswd);
     if ((fp = fopen(fname, "a")) == NULL)
     {

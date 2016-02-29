@@ -198,6 +198,12 @@ load_module(const char *module, const char *type)
                 MXS_ERROR("Module '%s' does not implement the filter API.", module);
                 fatal = 1;
             }
+            if (strcmp(type, MODULE_QUERY_CLASSIFIER) == 0
+                && mod_info->modapi != MODULE_API_QUERY_CLASSIFIER)
+            {
+                MXS_ERROR("Module '%s' does not implement the query classifier API.", module);
+                fatal = 1;
+            }
             if (fatal)
             {
                 dlclose(dlhandle);
@@ -344,6 +350,14 @@ unregister_module(const char *module)
         while (ptr && ptr->next != mod)
         {
             ptr = ptr->next;
+        }
+
+        /*<
+         * Remove the module to be be freed from the list.
+         */
+        if (ptr && (ptr->next == mod))
+        {
+            ptr->next = ptr->next->next;
         }
     }
 

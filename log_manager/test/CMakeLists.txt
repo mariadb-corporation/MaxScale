@@ -1,6 +1,0 @@
-add_executable(testlog testlog.c)
-add_executable(testorder testorder.c ../../server/core/random_jkiss.c)
-target_link_libraries(testlog pthread log_manager utils fullcore)
-target_link_libraries(testorder pthread log_manager utils fullcore)
-add_test(NAME Internal-TestLogOrder COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/logorder.sh  200 0 1000 ${CMAKE_CURRENT_BINARY_DIR}/logorder.log)
-add_test(Internal-TestLog testlog)

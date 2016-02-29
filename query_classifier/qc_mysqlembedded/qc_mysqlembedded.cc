@@ -46,6 +46,11 @@
 #include <sql_parse.h>
 #include <errmsg.h>
 #include <client_settings.h>
+// In client_settings.h mysql_server_init and mysql_server_end are defined to
+// mysql_client_plugin_init and mysql_client_plugin_deinit respectively.
+// Those must be undefined, so that we here really call mysql_server_[init|end].
+#undef mysql_server_init
+#undef mysql_server_end
 #include <set_var.h>
 #include <strfunc.h>
 #include <item_func.h>
@@ -55,6 +60,7 @@
 #include <log_manager.h>
 #include <query_classifier.h>
 #include <mysql_client_server_protocol.h>
+#include <gwdirs.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1478,14 +1484,13 @@ static parsing_info_t* parsing_info_init(void (*donefun)(void *))
 
     /** Get server handle */
     mysql = mysql_init(NULL);
-    ss_dassert(mysql != NULL);
 
     if (mysql == NULL)
     {
         MXS_ERROR("Call to mysql_real_connect failed due %d, %s.",
                   mysql_errno(mysql),
                   mysql_error(mysql));
-
+        ss_dassert(mysql != NULL);
         goto retblock;
     }
 
@@ -1769,4 +1774,166 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
     }
 
     return operation;
+}
+
+namespace
+{
+
+// Do not change the order without making corresponding changes to IDX_... below.
+const char* server_options[] =
+{
+    "MariaDB Corporation MaxScale",
+    "--no-defaults",
+    "--datadir=",
+    "--language=",
+    "--skip-innodb",
+    "--default-storage-engine=myisam",
+    NULL
+};
+
+const int IDX_DATADIR = 2;
+const int IDX_LANGUAGE = 3;
+const int N_OPTIONS = (sizeof(server_options) / sizeof(server_options[0])) - 1;
+
+const char* server_groups[] = {
+    "embedded",
+    "server",
+    "server",
+    "embedded",
+    "server",
+    "server",
+    NULL
+};
+
+const int OPTIONS_DATADIR_SIZE = 10 + PATH_MAX; // strlen("--datadir=");
+const int OPTIONS_LANGUAGE_SIZE = 11 + PATH_MAX; // strlen("--language=");
+
+char datadir_arg[OPTIONS_DATADIR_SIZE];
+char language_arg[OPTIONS_LANGUAGE_SIZE];
+
+
+void configure_options(const char* datadir, const char* langdir)
+{
+    int rv;
+
+    rv = snprintf(datadir_arg, OPTIONS_DATADIR_SIZE, "--datadir=%s", datadir);
+    ss_dassert(rv < OPTIONS_DATADIR_SIZE); // Ensured by create_datadir().
+    server_options[IDX_DATADIR] = datadir_arg;
+
+    rv = sprintf(language_arg, "--language=%s", langdir);
+    ss_dassert(rv < OPTIONS_LANGUAGE_SIZE); // Ensured by qc_init().
+    server_options[IDX_LANGUAGE] = language_arg;
+
+    // To prevent warning of unused variable when built in release mode,
+    // when ss_dassert() turns into empty statement.
+    (void)rv;
+}
+
+}
+
+bool qc_init(void)
+{
+    bool inited = false;
+
+    if (strlen(get_langdir()) >= PATH_MAX)
+    {
+        fprintf(stderr, "MaxScale: error: Language path is too long: %s.", get_langdir());
+    }
+    else
+    {
+        configure_options(get_process_datadir(), get_langdir());
+
+        int argc = N_OPTIONS;
+        char** argv = const_cast<char**>(server_options);
+        char** groups = const_cast<char**>(server_groups);
+
+        int rc = mysql_library_init(argc, argv, groups);
+
+        if (rc != 0)
+        {
+            MXS_ERROR("mysql_library_init() failed. Error code: %d", rc);
+        }
+        else
+        {
+            MXS_NOTICE("Query classifier initialized.");
+            inited = true;
+        }
+    }
+
+    return inited;
+}
+
+void qc_end(void)
+{
+    mysql_library_end();
+}
+
+bool qc_thread_init(void)
+{
+    bool inited = (mysql_thread_init() == 0);
+
+    if (!inited)
+    {
+        MXS_ERROR("mysql_thread_init() failed.");
+    }
+
+    return inited;
+}
+
+void qc_thread_end(void)
+{
+    mysql_thread_end();
+}
+
+/**
+ * EXPORTS
+ */
+
+extern "C"
+{
+
+static char version_string[] = "V1.0.0";
+
+static QUERY_CLASSIFIER qc =
+{
+    qc_init,
+    qc_end,
+    qc_thread_init,
+    qc_thread_end,
+    qc_get_type,
+    qc_get_operation,
+    qc_get_created_table_name,
+    qc_is_drop_table_query,
+    qc_is_real_query,
+    qc_get_table_names,
+    qc_get_canonical,
+    qc_query_has_clause,
+    qc_get_qtype_str,
+    qc_get_affected_fields,
+    qc_get_database_names,
+};
+
+
+MODULE_INFO info =
+{
+    MODULE_API_QUERY_CLASSIFIER,
+    MODULE_IN_DEVELOPMENT,
+    QUERY_CLASSIFIER_VERSION,
+    const_cast<char*>("Query classifier based upon MySQL Embedded"),
+};
+
+char* version()
+{
+    return const_cast<char*>(version_string);
+}
+
+void ModuleInit()
+{
+}
+
+QUERY_CLASSIFIER* GetModuleObject()
+{
+    return &qc;
+}
+
 }

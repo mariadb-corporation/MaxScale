@@ -200,7 +200,11 @@ startMonitor(void *arg, void* opt)
         memset(handle->events, true, sizeof(handle->events));
     }
 
-    handle->tid = (THREAD) thread_start(monitorMain, mon);
+    if (thread_start(&handle->thread, monitorMain, mon) == NULL)
+    {
+        MXS_ERROR("Failed to start monitor thread for monitor '%s'.", mon->name);
+    }
+
     return handle;
 }
 
@@ -216,7 +220,7 @@ stopMonitor(void *arg)
     GALERA_MONITOR *handle = (GALERA_MONITOR *) mon->handle;
 
     handle->shutdown = 1;
-    thread_wait((void *) handle->tid);
+    thread_wait(handle->thread);
 }
 
 /**

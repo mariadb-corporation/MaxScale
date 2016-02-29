@@ -79,8 +79,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-# include <skygw_utils.h>
-# include <log_manager.h>
+#include <skygw_utils.h>
+#include <log_manager.h>
+#include <query_classifier.h>
 
 #include <execinfo.h>
 
@@ -88,6 +89,7 @@
 #include <sys/wait.h>
 #include <sys/prctl.h>
 #include <sys/file.h>
+#include <statistics.h>
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -102,33 +104,6 @@ time_t  MaxScaleStarted;
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
-/*
- * Server options are passed to the mysql_server_init. Each gateway must have a unique
- * data directory that is passed to the mysql_server_init, therefore the data directory
- * is not fixed here and will be updated elsewhere.
- */
-static char* server_options[] = {
-    "MariaDB Corporation MaxScale",
-    "--no-defaults",
-    "--datadir=",
-    "--language=",
-    "--skip-innodb",
-    "--default-storage-engine=myisam",
-    NULL
-};
-
-const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
-
-static char* server_groups[] = {
-    "embedded",
-    "server",
-    "server",
-    "embedded",
-    "server",
-    "server",
-    NULL
-};
-
 /* The data directory we created for this gateway instance */
 static char     datadir[PATH_MAX + 1] = "";
 static bool     datadir_defined = false; /*< If the datadir was already set */
@@ -142,9 +117,9 @@ static int pidfd = PIDFD_CLOSED;
 static bool do_exit = FALSE;
 
 /**
- * Flag to indicate whether libmysqld is successfully initialized.
+ * Flag to indicate whether MySQL is successfully initialized.
  */
-static bool libmysqld_started = FALSE;
+static bool libmysql_initialized = FALSE;
 
 /**
  * If MaxScale is started to run in daemon process the value is true.
@@ -190,25 +165,25 @@ static bool file_write_header(FILE* outfile);
 static bool file_write_footer(FILE* outfile);
 static void write_footer(void);
 static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
-static bool file_is_readable(char* absolute_pathname);
-static bool file_is_writable(char* absolute_pathname);
+static bool file_is_readable(const char* absolute_pathname);
+static bool file_is_writable(const char* absolute_pathname);
 bool handle_path_arg(char** dest, char* path, char* arg, bool rd, bool wr);
 static void set_log_augmentation(const char* value);
 static void usage(void);
 static char* get_expanded_pathname(
     char** abs_path,
-    char* input_path,
+    const char* input_path,
     const char* fname);
 static void print_log_n_stderr(
     bool do_log,
     bool do_stderr,
-    char* logstr,
-    char*  fprstr,
+    const char* logstr,
+    const char* fprstr,
     int eno);
 static bool resolve_maxscale_conf_fname(
     char** cnf_full_path,
-    char*  home_dir,
-    char*  cnf_file_arg);
+    const char* home_dir,
+    char* cnf_file_arg);
 
 static char* check_dir_access(char* dirname, bool, bool);
 static int set_user(const char* user);
@@ -464,7 +439,54 @@ static int signal_set(int sig, void (*handler)(int))
     return rc;
 }
 
+/**
+ * @brief Create the data directory for this process
+ *
+ * This will prevent conflicts when multiple MaxScale instances are run on the
+ * same machine.
+ * @param base Base datadir path
+ * @param datadir The result where the process specific datadir is stored
+ * @return True if creation was successful and false on error
+ */
+static bool create_datadir(const char* base, char* datadir)
+{
+    bool created = false;
+    int len = 0;
 
+    if ((len = snprintf(datadir, PATH_MAX, "%s", base)) < PATH_MAX &&
+        (mkdir(datadir, 0777) == 0 || errno == EEXIST))
+    {
+        if ((len = snprintf(datadir, PATH_MAX, "%s/data%d", base, getpid())) < PATH_MAX)
+        {
+            if ((mkdir(datadir, 0777) == 0) || (errno == EEXIST))
+            {
+                created = true;
+            }
+            else
+            {
+                char errbuf[STRERROR_BUFLEN];
+                MXS_ERROR("Cannot create data directory '%s': %d %s\n",
+                          datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+            }
+        }
+    }
+    else
+    {
+        if (len < PATH_MAX)
+        {
+            char errbuf[STRERROR_BUFLEN];
+            fprintf(stderr, "Error: Cannot create data directory '%s': %d %s\n",
+                    datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        }
+        else
+        {
+            MXS_ERROR("Data directory pathname exceeds the maximum allowed pathname "
+                      "length: %s/data%d.", base, getpid());
+        }
+    }
+
+    return created;
+}
 
 /**
  * Cleanup the temporary data directory we created for the gateway
@@ -481,29 +503,34 @@ int ntfw_cb(const char*        filename,
         int eno = errno;
         errno = 0;
         char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Failed to remove the data directory %s of "
-                  "MaxScale due to %d, %s.",
-                  datadir,
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
+        MXS_ERROR("Failed to remove the data directory %s of MaxScale due to %d, %s.",
+                  datadir, eno, strerror_r(eno, errbuf, sizeof(errbuf)));
     }
     return rc;
 }
 
-void datadir_cleanup()
+/**
+ * @brief Clean up the data directory
+ *
+ * This removes the process specific datadir which is currently only used by
+ * the embedded library. In the future this directory could contain other
+ * temporary files and relocating this to to, for example, /tmp/ could make sense.
+ */
+void cleanup_process_datadir()
 {
     int depth = 1;
     int flags = FTW_CHDIR|FTW_DEPTH|FTW_MOUNT;
+    const char *proc_datadir = get_process_datadir();
 
-    if (datadir[0] != 0 && access(datadir, F_OK) == 0)
+    if (strcmp(proc_datadir, get_datadir()) != 0 && access(proc_datadir, F_OK) == 0)
     {
-        nftw(datadir, ntfw_cb, depth, flags);
+        nftw(proc_datadir, ntfw_cb, depth, flags);
     }
 }
 
 static void libmysqld_done(void)
 {
-    if (libmysqld_started)
+    if (libmysql_initialized)
     {
         mysql_library_end();
     }
@@ -578,8 +605,8 @@ static bool file_write_header(FILE* outfile)
 }
 
 static bool resolve_maxscale_conf_fname(char** cnf_full_path,
-                                        char*  home_dir,
-                                        char*  cnf_file_arg)
+                                        const char* home_dir,
+                                        char* cnf_file_arg)
 {
     bool  succp = false;
 
@@ -743,11 +770,11 @@ retblock:
  * @param eno Errno, if it is set, zero, otherwise
  */
 static void print_log_n_stderr(
-    bool     do_log,   /*< is printing to log enabled */
-    bool     do_stderr,/*< is printing to stderr enabled */
-    char*    logstr,   /*< string to be printed to log */
-    char*    fprstr,   /*< string to be printed to stderr */
-    int      eno)      /*< errno, if it is set, zero, otherwise */
+    bool        do_log,   /*< is printing to log enabled */
+    bool        do_stderr,/*< is printing to stderr enabled */
+    const char* logstr,   /*< string to be printed to log */
+    const char* fprstr,   /*< string to be printed to stderr */
+    int         eno)      /*< errno, if it is set, zero, otherwise */
 {
     char* log_err = "Error :";
     char* fpr_err = "*\n* Error :";
@@ -780,7 +807,7 @@ static void print_log_n_stderr(
  * @param absolute_pathname Path of the file or directory to check
  * @return True if file is readable
  */
-static bool file_is_readable(char* absolute_pathname)
+static bool file_is_readable(const char* absolute_pathname)
 {
     bool succp = true;
 
@@ -808,7 +835,7 @@ static bool file_is_readable(char* absolute_pathname)
  * @param absolute_pathname Path of the file or directory to check
  * @return True if file is writable
  */
-static bool file_is_writable(char* absolute_pathname)
+static bool file_is_writable(const char* absolute_pathname)
 {
     bool succp = true;
 
@@ -851,8 +878,8 @@ static bool file_is_writable(char* absolute_pathname)
  *
  */
 static char* get_expanded_pathname(char** output_path,
-                                   char*  relative_path,
-                                   const char*  fname)
+                                   const char* relative_path,
+                                   const char* fname)
 {
     char* cnf_file_buf = NULL;
     char* expanded_path;
@@ -955,31 +982,250 @@ static void usage(void)
     fprintf(stderr,
             "\nUsage : %s [OPTION]...\n\n"
             "  -d, --nodaemon             enable running in terminal process (default:disabled)\n"
-            "  -f, --config=FILE          relative|absolute pathname of MaxScale configuration file\n"
+            "  -f, --config=FILE          relative or absolute pathname of MaxScale configuration file\n"
             "                             (default:/etc/maxscale.cnf)\n"
-            "  -l, --log=[file|shm]       log to file or shared memory (default: shm)\n"
-            "  -L, --logdir=PATH          path to log file directory\n"
-            "                             (default: /var/log/maxscale)\n"
-            "  -A, --cachedir=PATH        path to cache directory\n"
-            "                             (default: /var/cache/maxscale)\n"
-            "  -B, --libdir=PATH          path to module directory\n"
-            "                             (default: /usr/lib64/maxscale)\n"
-            "  -C, --configdir=PATH       path to configuration file directory\n"
-            "                             (default: /etc/)\n"
+            "  -l, --log=[file|shm]       log to file or shared memory (default: file)\n"
+            "  -L, --logdir=PATH          path to log file directory (default: /var/log/maxscale)\n"
+            "  -A, --cachedir=PATH        path to cache directory (default: /var/cache/maxscale)\n"
+            "  -B, --libdir=PATH          path to module directory (default: /usr/lib64/maxscale)\n"
+            "  -C, --configdir=PATH       path to configuration file directory (default: /etc/)\n"
             "  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
             "                             (default: /var/cache/maxscale)\n"
-            "  -N, --language=PATH         path to errmsg.sys file\n"
-            "                             (default: /var/lib/maxscale)\n"
-            "  -P, --piddir=PATH          path to PID file directory\n"
-            "                             (default: /var/run/maxscale)\n"
+            "  -E, --execdir=PATH         path to the maxscale and other executable files\n"
+            "                             (default: /usr/bin)\n"
+            "  -N, --language=PATH         path to errmsg.sys file (default: /var/lib/maxscale)\n"
+            "  -P, --piddir=PATH          path to PID file directory (default: /var/run/maxscale)\n"
             "  -U, --user=USER            run MaxScale as another user.\n"
             "                             The user ID and group ID of this user are used to run MaxScale.\n"
             "  -s, --syslog=[yes|no]      log messages to syslog (default:yes)\n"
             "  -S, --maxlog=[yes|no]      log messages to MaxScale log (default: yes)\n"
+            "  -G, --log_augmentation=0|1 augment messages with the name of the function where\n"
+            "                             the message was logged (default: 0). Primarily for \n"
+            "                             development purposes.\n"
             "  -v, --version              print version info and exit\n"
             "  -V, --version-full         print full version info and exit\n"
             "  -?, --help                 show this help\n"
             , progname);
+}
+
+
+/**
+ * The entry point of each worker thread.
+ *
+ * @param arg The thread argument.
+ */
+void worker_thread_main(void* arg)
+{
+    if (qc_thread_init())
+    {
+        /** Init mysql thread context for use with a mysql handle and a parser */
+        if (mysql_thread_init() == 0)
+        {
+            poll_waitevents(arg);
+
+            /** Release mysql thread context */
+            mysql_thread_end();
+        }
+        else
+        {
+            MXS_ERROR("Could not perform thread initialization for MySQL. Exiting thread.");
+        }
+
+        qc_thread_end();
+    }
+    else
+    {
+        MXS_ERROR("Could not perform thread initialization for query classifier. Exiting thread.");
+    }
+}
+
+/**
+ * Deletes a particular signal from a provided signal set.
+ *
+ * @param sigset  The signal set to be manipulated.
+ * @param signum  The signal to be deleted.
+ * @param signame The name of the signal.
+ *
+ * @return True, if the signal could be deleted from the set, false otherwise.
+ */
+static bool delete_signal(sigset_t* sigset, int signum, const char* signame)
+{
+    int rc = sigdelset(sigset, signum);
+
+    if (rc != 0)
+    {
+        int e = errno;
+        errno = 0;
+
+        static const char FORMAT[] = "Failed to delete signal %s from the signal set of MaxScale. Exiting.";
+        char message[sizeof(FORMAT) + 16]; // Enough for any "SIG..." string.
+
+        sprintf(message, FORMAT, signame);
+
+        print_log_n_stderr(true, true, message, message, e);
+    }
+
+    return rc == 0;
+}
+
+/**
+ * Disables all signals.
+ *
+ * @return True, if all signals could be disabled, false otherwise.
+ */
+bool disable_signals(void)
+{
+    sigset_t sigset;
+
+    if (sigfillset(&sigset) != 0)
+    {
+        int e = errno;
+        errno = 0;
+        static const char message[] = "Failed to initialize set the signal set for MaxScale. Exiting.";
+        print_log_n_stderr(true, true, message, message, e);
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGHUP, "SIGHUP"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGUSR1, "SIGUSR1"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGTERM, "SIGTERM"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGSEGV, "SIGSEGV"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGABRT, "SIGABRT"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGILL, "SIGILL"))
+    {
+        return false;
+    }
+
+    if (!delete_signal(&sigset, SIGFPE, "SIGFPE"))
+    {
+        return false;
+    }
+
+#ifdef SIGBUS
+    if (!delete_signal(&sigset, SIGBUS, "SIGBUS"))
+    {
+        return false;
+    }
+#endif
+
+    if (sigprocmask(SIG_SETMASK, &sigset, NULL) != 0)
+    {
+        int e = errno;
+        errno = 0;
+        static const char message[] = "Failed to set the signal set for MaxScale. Exiting";
+        print_log_n_stderr(true, true, message, message, e);
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Configures the handling of a particular signal.
+ *
+ * @param signum  The signal number.
+ * @param signame The name of the signal.
+ * @param handler The handler function for the signal.
+ *
+ * @return True, if the signal could be configured, false otherwise.
+ */
+static bool configure_signal(int signum, const char* signame, void (*handler)(int))
+{
+    int rc = signal_set(signum, handler);
+
+    if (rc != 0)
+    {
+        static const char FORMAT[] = "Failed to set signal handler for %s. Exiting.";
+        char message[sizeof(FORMAT) + 16]; // Enough for any "SIG..." string.
+
+        sprintf(message, FORMAT, signame);
+
+        print_log_n_stderr(true, true, message, message, 0);
+    }
+
+    return rc == 0;
+}
+
+/**
+ * Configures signal handling of MaxScale.
+ *
+ * @return True, if all signals could be configured, false otherwise.
+ */
+bool configure_signals(void)
+{
+    if (!configure_signal(SIGHUP, "SIGHUP", sighup_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGUSR1, "SIGUSR1", sigusr1_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGTERM, "SIGTERM", sigterm_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGINT, "SIGINT", sigint_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGSEGV, "SIGSEGV", sigfatal_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGABRT, "SIGABRT", sigfatal_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGILL, "SIGILL", sigfatal_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGFPE, "SIGFPE", sigfatal_handler))
+    {
+        return false;
+    }
+
+    if (!configure_signal(SIGCHLD, "SIGCHLD", sigchld_handler))
+    {
+        return false;
+    }
+
+#ifdef SIGBUS
+    if (!configure_signal(SIGBUS, "SIGBUS", sigfatal_handler))
+    {
+        return false;
+    }
+#endif
+
+    return true;
 }
 
 /**
@@ -1027,13 +1273,11 @@ int main(int argc, char **argv)
     int      daemon_pipe[2] = {-1, -1};
     bool     parent_process;
     int      child_status;
-    void**   threads = NULL;   /*< thread list */
+    THREAD*   threads = NULL;   /*< thread list */
     char     mysql_home[PATH_MAX+1];
-    char     datadir_arg[10+PATH_MAX+1];  /*< '--datadir='  + PATH_MAX */
-    char     language_arg[11+PATH_MAX+1]; /*< '--language=' + PATH_MAX */
     char*    cnf_file_path = NULL;        /*< conf file, to be freed */
     char*    cnf_file_arg = NULL;         /*< conf filename from cmd-line arg */
-    void*    log_flush_thr = NULL;
+    THREAD    log_flush_thr;
     char*    tmp_path;
     char*    tmp_var;
     int      option_index;
@@ -1041,10 +1285,9 @@ int main(int argc, char **argv)
     int      *maxlog_enabled = &config_get_global_options()->maxlog; /** Log with MaxScale */
     int      *log_to_shm = &config_get_global_options()->log_to_shm; /** Log to shared memory */
     ssize_t  log_flush_timeout_ms = 0;
-    sigset_t sigset;
     sigset_t sigpipe_mask;
     sigset_t saved_mask;
-    void   (*exitfunp[4])(void) = { mxs_log_finish, datadir_cleanup, write_footer, NULL };
+    void   (*exitfunp[4])(void) = { mxs_log_finish, cleanup_process_datadir, write_footer, NULL };
 
     *syslog_enabled = 1;
     *maxlog_enabled = 1;
@@ -1082,7 +1325,7 @@ int main(int argc, char **argv)
         }
     }
 
-    while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:G:",
+    while ((opt = getopt_long(argc, argv, "dc:f:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:",
                               long_options, &option_index)) != -1)
     {
         bool succp = true;
@@ -1215,6 +1458,18 @@ int main(int argc, char **argv)
                 succp = false;
             }
             break;
+
+        case 'E':
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                set_execdir(tmp_path);
+            }
+            else
+            {
+                succp = false;
+            }
+            break;
+
         case 'S':
         {
             char* tok = strstr(optarg, "=");
@@ -1304,131 +1559,9 @@ int main(int argc, char **argv)
          * Maxscale must be daemonized before opening files, initializing
          * embedded MariaDB and in general, as early as possible.
          */
-        int r;
-        int eno = 0;
-        char* fprerr = "Failed to initialize set the signal "
-            "set for MaxScale. Exiting.";
-#if defined(SS_DEBUG)
-        fprintf(stderr,
-                "Info :  MaxScale will be run in a daemon process.\n\tSee "
-                "the log from the following log files : \n\n");
-#endif
-        r = sigfillset(&sigset);
 
-        if (r != 0)
+        if (!disable_signals())
         {
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, fprerr, eno);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-        r = sigdelset(&sigset, SIGHUP);
-
-        if (r != 0)
-        {
-            char* logerr = "Failed to delete signal SIGHUP from the "
-                "signal set of MaxScale. Exiting.";
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, logerr, eno);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-        r = sigdelset(&sigset, SIGUSR1);
-
-        if (r != 0)
-        {
-            char* logerr = "Failed to delete signal SIGUSR1 from the "
-                "signal set of MaxScale. Exiting.";
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, logerr, eno);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-        r = sigdelset(&sigset, SIGTERM);
-
-        if (r != 0)
-        {
-            char* logerr = "Failed to delete signal SIGTERM from the "
-                "signal set of MaxScale. Exiting.";
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, logerr, eno);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-        r = sigdelset(&sigset, SIGSEGV);
-
-        if (r != 0)
-        {
-            char* logerr = "Failed to delete signal SIGSEGV from the "
-                "signal set of MaxScale. Exiting.";
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, logerr, eno);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-        r = sigdelset(&sigset, SIGABRT);
-
-        if (r != 0)
-        {
-            char* logerr = "Failed to delete signal SIGABRT from the "
-                "signal set of MaxScale. Exiting.";
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, logerr, eno);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-        r = sigdelset(&sigset, SIGILL);
-
-        if (r != 0)
-        {
-            char* logerr = "Failed to delete signal SIGILL from the "
-                "signal set of MaxScale. Exiting.";
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, logerr, eno);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-        r = sigdelset(&sigset, SIGFPE);
-
-        if (r != 0)
-        {
-            char* logerr = "Failed to delete signal SIGFPE from the "
-                "signal set of MaxScale. Exiting.";
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, logerr, eno);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-#ifdef SIGBUS
-        r = sigdelset(&sigset, SIGBUS);
-
-        if (r != 0)
-        {
-            char* logerr = "Failed to delete signal SIGBUS from the "
-                "signal set of MaxScale. Exiting.";
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, logerr, eno);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
-#endif
-        r = sigprocmask(SIG_SETMASK, &sigset, NULL);
-
-        if (r != 0) {
-            char* logerr = "Failed to set the signal set for MaxScale."
-                " Exiting.";
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, true, fprerr, logerr, eno);
             rc = MAXSCALE_INTERNALERROR;
             goto return_main;
         }
@@ -1467,101 +1600,13 @@ int main(int argc, char **argv)
     /*<
      * Set signal handlers for SIGHUP, SIGTERM, SIGINT and critical signals like SIGSEGV.
      */
+    if (!configure_signals())
     {
-        char* fprerr = "Failed to initialize signal handlers. Exiting.";
-        char* logerr = NULL;
-        l = signal_set(SIGHUP, sighup_handler);
+        static const char* logerr = "Failed to configure signal handlers. Exiting.";
 
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGHUP. Exiting.");
-            goto sigset_err;
-        }
-        l = signal_set(SIGUSR1, sigusr1_handler);
-
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGUSR1. Exiting.");
-            goto sigset_err;
-        }
-        l = signal_set(SIGTERM, sigterm_handler);
-
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGTERM. Exiting.");
-            goto sigset_err;
-        }
-        l = signal_set(SIGINT, sigint_handler);
-
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGINT. Exiting.");
-            goto sigset_err;
-        }
-        l = signal_set(SIGSEGV, sigfatal_handler);
-
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGSEGV. Exiting.");
-            goto sigset_err;
-        }
-        l = signal_set(SIGABRT, sigfatal_handler);
-
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGABRT. Exiting.");
-            goto sigset_err;
-        }
-        l = signal_set(SIGILL, sigfatal_handler);
-
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGILL. Exiting.");
-            goto sigset_err;
-        }
-        l = signal_set(SIGFPE, sigfatal_handler);
-
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGFPE. Exiting.");
-            goto sigset_err;
-        }
-        l = signal_set(SIGCHLD, sigchld_handler);
-
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGCHLD. Exiting.");
-            goto sigset_err;
-        }
-#ifdef SIGBUS
-        l = signal_set(SIGBUS, sigfatal_handler);
-
-        if (l != 0)
-        {
-            logerr = strdup("Failed to set signal handler for "
-                            "SIGBUS. Exiting.");
-            goto sigset_err;
-        }
-#endif
-    sigset_err:
-        if (l != 0)
-        {
-            eno = errno;
-            errno = 0;
-            print_log_n_stderr(true, !daemon_mode, logerr, fprerr, eno);
-            free(logerr);
-            rc = MAXSCALE_INTERNALERROR;
-            goto return_main;
-        }
+        print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
     }
     eno = pthread_sigmask(SIG_BLOCK, &sigpipe_mask, &saved_mask);
 
@@ -1725,36 +1770,20 @@ int main(int argc, char **argv)
     }
 
     /*
-     * Set a data directory for the mysqld library, we use
-     * a unique directory name to avoid clauses if multiple
-     * instances of the gateway are being run on the same
-     * machine.
+     * Set the data directory for the mysqld library. We use
+     * a unique directory name to avoid conflicts if multiple
+     * instances of MaxScale are being run on the same machine.
      */
-
-    snprintf(datadir, PATH_MAX, "%s", get_datadir());
-    datadir[PATH_MAX] = '\0';
-    if (mkdir(datadir, 0777) != 0){
-
-        if (errno != EEXIST){
-            char errbuf[STRERROR_BUFLEN];
-            fprintf(stderr,
-                    "Error: Cannot create data directory '%s': %d %s\n",
-                    datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
-            goto return_main;
-        }
+    if (create_datadir(get_datadir(), datadir))
+    {
+        set_process_datadir(datadir);
     }
-
-    snprintf(datadir, PATH_MAX, "%s/data%d", get_datadir(), getpid());
-
-    if (mkdir(datadir, 0777) != 0){
-
-        if (errno != EEXIST){
-            char errbuf[STRERROR_BUFLEN];
-            fprintf(stderr,
-                    "Error: Cannot create data directory '%s': %d %s\n",
-                    datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
-            goto return_main;
-        }
+    else
+    {
+        char errbuf[STRERROR_BUFLEN];
+        MXS_ERROR("Cannot create data directory '%s': %d %s\n",
+                  datadir, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+        goto return_main;
     }
 
     if (!daemon_mode)
@@ -1778,25 +1807,31 @@ int main(int argc, char **argv)
     MXS_NOTICE("Module directory: %s", get_libdir());
     MXS_NOTICE("Service cache: %s", get_cachedir());
 
-    /*< Update the server options */
-    for (i = 0; server_options[i]; i++)
+    if (!config_load(cnf_file_path))
     {
-        if (!strcmp(server_options[i], "--datadir="))
-        {
-            snprintf(datadir_arg, 10+PATH_MAX+1, "--datadir=%s", datadir);
-            server_options[i] = datadir_arg;
-        }
-        else if (!strcmp(server_options[i], "--language="))
-        {
-            snprintf(language_arg,
-                     11+PATH_MAX+1,
-                     "--language=%s",
-                     get_langdir());
-            server_options[i] = language_arg;
-        }
+        char* fprerr =
+            "Failed to open, read or process the MaxScale configuration "
+            "file. Exiting. See the error log for details.";
+        print_log_n_stderr(false, !daemon_mode, fprerr, fprerr, 0);
+        MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
+                  "Exiting.",
+                  cnf_file_path);
+        rc = MAXSCALE_BADCONFIG;
+        goto return_main;
     }
 
-    if (mysql_library_init(num_elements, server_options, server_groups))
+    GATEWAY_CONF* cnf = config_get_global_options();
+    ss_dassert(cnf);
+
+    if (!qc_init(cnf->qc_name))
+    {
+        char* logerr = "Failed to initialise query classifier library.";
+        print_log_n_stderr(true, true, logerr, logerr, eno);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
+
+    if (mysql_library_init(0, NULL, NULL))
     {
         if (!daemon_mode)
         {
@@ -1835,28 +1870,14 @@ int main(int argc, char **argv)
         }
         MXS_ERROR("mysql_library_init failed. It is a "
                   "mandatory component, required by router services and "
-                  "the MaxScale core. Error %d, %s, %s : %d. Exiting.",
+                  "the MaxScale core. Error %d, %s. Exiting.",
                   mysql_errno(NULL),
-                  mysql_error(NULL),
-                  __FILE__,
-                  __LINE__);
+                  mysql_error(NULL));
         rc = MAXSCALE_NOLIBRARY;
         goto return_main;
     }
-    libmysqld_started = TRUE;
+    libmysql_initialized = TRUE;
 
-    if (!config_load(cnf_file_path))
-    {
-        char* fprerr =
-            "Failed to open, read or process the MaxScale configuration "
-            "file. Exiting. See the error log for details.";
-        print_log_n_stderr(false, !daemon_mode, fprerr, fprerr, 0);
-        MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
-                  "Exiting.",
-                  cnf_file_path);
-        rc = MAXSCALE_BADCONFIG;
-        goto return_main;
-    }
     MXS_NOTICE("MariaDB Corporation MaxScale %s (C) MariaDB Corporation Ab 2013-2015", MAXSCALE_VERSION);
     MXS_NOTICE("MaxScale is running in process %i", getpid());
 
@@ -1876,6 +1897,9 @@ int main(int argc, char **argv)
         rc = MAXSCALE_ALREADYRUNNING;
         goto return_main;
     }
+
+    /** Initialize statistics */
+    ts_stats_init();
 
     /* Init MaxScale poll system */
     poll_init();
@@ -1900,9 +1924,14 @@ int main(int argc, char **argv)
      * Start periodic log flusher thread.
      */
     log_flush_timeout_ms = 1000;
-    log_flush_thr = thread_start(
-        log_flush_cb,
-        (void *)&log_flush_timeout_ms);
+
+    if (thread_start(&log_flush_thr, log_flush_cb, (void *) &log_flush_timeout_ms) == NULL)
+    {
+        char* logerr = "Failed to start log flushing thread.";
+        print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+        rc = MAXSCALE_INTERNALERROR;
+        goto return_main;
+    }
 
     /*
      * Start the housekeeper thread
@@ -1914,14 +1943,22 @@ int main(int argc, char **argv)
      * configured as the main thread will also poll.
      */
     n_threads = config_threadcount();
-    threads = (void **)calloc(n_threads, sizeof(void *));
+    threads = calloc(n_threads, sizeof(THREAD));
     /*<
      * Start server threads.
      */
     for (thread_id = 0; thread_id < n_threads - 1; thread_id++)
     {
-        threads[thread_id] = thread_start(poll_waitevents, (void *)(thread_id + 1));
+        if (thread_start(&threads[thread_id], worker_thread_main,
+                         (void *)(thread_id + 1)) == NULL)
+        {
+            char* logerr = "Failed to start worker thread.";
+            print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+            rc = MAXSCALE_INTERNALERROR;
+            goto return_main;
+        }
     }
+
     MXS_NOTICE("MaxScale started with %d server threads.", config_threadcount());
     /**
      * Successful start, notify the parent process that it can exit.
@@ -1955,8 +1992,10 @@ int main(int argc, char **argv)
     /** Release mysql thread context*/
     mysql_thread_end();
 
+    qc_end();
+
     utils_end();
-    datadir_cleanup();
+    cleanup_process_datadir();
     MXS_NOTICE("MaxScale shutdown completed.");
 
     unload_all_modules();
@@ -2318,7 +2357,7 @@ void set_log_augmentation(const char* value)
 }
 
 /**
- * Pre-parse the MaxScale.cnf for config, log and module directories.
+ * Pre-parse the configuration file for various directory paths.
  * @param data Parameter passed by inih
  * @param section Section name
  * @param name Parameter name
@@ -2413,6 +2452,20 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
                 if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
                 {
                     set_langdir(tmp);
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+        else if (strcmp(name, "execdir") == 0)
+        {
+            if (strcmp(get_execdir(), default_execdir) == 0)
+            {
+                if (handle_path_arg((char**)&tmp, (char*)value, NULL, true, false))
+                {
+                    set_execdir(tmp);
                 }
                 else
                 {

@@ -176,7 +176,6 @@ GetModuleObject()
 {
     return &MyObject;
 }
-
 /**
  * Create an instance of the filter for a particular service
  * within MaxScale.
@@ -192,14 +191,16 @@ createInstance(char **options, FILTER_PARAMETER **params)
     int i;
     TOPN_INSTANCE *my_instance;
 
-    if ((my_instance = calloc(1, sizeof(TOPN_INSTANCE))) != NULL)
+    if ((my_instance = malloc(sizeof(TOPN_INSTANCE))) != NULL)
     {
         my_instance->topN = 10;
         my_instance->match = NULL;
         my_instance->exclude = NULL;
         my_instance->source = NULL;
         my_instance->user = NULL;
-        my_instance->filebase = strdup("top");
+        my_instance->filebase = NULL;
+        bool error = false;
+
         for (i = 0; params && params[i]; i++)
         {
             if (!strcmp(params[i]->name, "count"))
@@ -208,7 +209,6 @@ createInstance(char **options, FILTER_PARAMETER **params)
             }
             else if (!strcmp(params[i]->name, "filebase"))
             {
-                free(my_instance->filebase);
                 my_instance->filebase = strdup(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "match"))
@@ -231,41 +231,84 @@ createInstance(char **options, FILTER_PARAMETER **params)
             {
                 MXS_ERROR("topfilter: Unexpected parameter '%s'.",
                           params[i]->name);
+                error = true;
             }
         }
+
+        int cflags = REG_ICASE;
+
         if (options)
         {
-            MXS_ERROR("topfilter: Options are not supported by this "
-                      " filter. They will be ignored.");
+            for (i = 0; options[i]; i++)
+            {
+                if (!strcasecmp(options[i], "ignorecase"))
+                {
+                    cflags |= REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "case"))
+                {
+                    cflags &= ~REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "extended"))
+                {
+                    cflags |= REG_EXTENDED;
+                }
+                else
+                {
+                    MXS_ERROR("topfilter: Unsupported option '%s'.",
+                              options[i]);
+                    error = true;
+                }
+            }
         }
+
+        if (my_instance->filebase == NULL)
+        {
+            MXS_ERROR("topfilter: No 'filebase' parameter defined.");
+            error = true;
+        }
+
         my_instance->sessions = 0;
         if (my_instance->match &&
-            regcomp(&my_instance->re, my_instance->match, REG_ICASE))
+            regcomp(&my_instance->re, my_instance->match, cflags))
         {
             MXS_ERROR("topfilter: Invalid regular expression '%s'"
-                      " for the match parameter.",
-                      my_instance->match);
-            free(my_instance->match);
-            free(my_instance->source);
-            free(my_instance->user);
-            free(my_instance->filebase);
-            free(my_instance);
-            return NULL;
-        }
-        if (my_instance->exclude &&
-            regcomp(&my_instance->exre, my_instance->exclude,
-                    REG_ICASE))
-        {
-            MXS_ERROR("qlafilter: Invalid regular expression '%s'"
-                      " for the nomatch paramter.\n",
+                      " for the 'match' parameter.",
                       my_instance->match);
             regfree(&my_instance->re);
             free(my_instance->match);
+            my_instance->match = NULL;
+            error = true;
+        }
+        if (my_instance->exclude &&
+            regcomp(&my_instance->exre, my_instance->exclude, cflags))
+        {
+            MXS_ERROR("topfilter: Invalid regular expression '%s'"
+                      " for the 'nomatch' parameter.\n",
+                      my_instance->exclude);
+            regfree(&my_instance->exre);
+            free(my_instance->exclude);
+            my_instance->exclude = NULL;
+            error = true;
+        }
+
+        if (error)
+        {
+            if (my_instance->exclude)
+            {
+                regfree(&my_instance->exre);
+                free(my_instance->exclude);
+            }
+            if (my_instance->match)
+            {
+                regfree(&my_instance->re);
+                free(my_instance->match);
+            }
+            free(my_instance->filebase);
             free(my_instance->source);
             free(my_instance->user);
-            free(my_instance->filebase);
             free(my_instance);
-            return NULL;
+            my_instance = NULL;
         }
     }
     return(FILTER *) my_instance;

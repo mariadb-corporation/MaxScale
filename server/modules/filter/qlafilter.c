@@ -175,20 +175,15 @@ createInstance(char **options, FILTER_PARAMETER **params)
     QLA_INSTANCE *my_instance;
     int i;
 
-    if ((my_instance = calloc(1, sizeof(QLA_INSTANCE))) != NULL)
+    if ((my_instance = malloc(sizeof(QLA_INSTANCE))) != NULL)
     {
-        if (options)
-        {
-            my_instance->filebase = strdup(options[0]);
-        }
-        else
-        {
-            my_instance->filebase = strdup("qla");
-        }
         my_instance->source = NULL;
         my_instance->userName = NULL;
         my_instance->match = NULL;
         my_instance->nomatch = NULL;
+        my_instance->filebase = NULL;
+        bool error = false;
+
         if (params)
         {
             for (i = 0; params[i]; i++)
@@ -211,55 +206,90 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 }
                 else if (!strcmp(params[i]->name, "filebase"))
                 {
-                    if (my_instance->filebase)
-                    {
-                        free(my_instance->filebase);
-                        my_instance->filebase = NULL;
-                    }
                     my_instance->filebase = strdup(params[i]->value);
                 }
                 else if (!filter_standard_parameter(params[i]->name))
                 {
                     MXS_ERROR("qlafilter: Unexpected parameter '%s'.",
                               params[i]->name);
+                    error = true;
                 }
             }
         }
+
+        int cflags = REG_ICASE;
+
+        if (options)
+        {
+            for (i = 0; options[i]; i++)
+            {
+                if (!strcasecmp(options[i], "ignorecase"))
+                {
+                    cflags |= REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "case"))
+                {
+                    cflags &= ~REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "extended"))
+                {
+                    cflags |= REG_EXTENDED;
+                }
+                else
+                {
+                    MXS_ERROR("qlafilter: Unsupported option '%s'.",
+                              options[i]);
+                    error = true;
+                }
+            }
+        }
+
+        if (my_instance->filebase == NULL)
+        {
+            MXS_ERROR("qlafilter: No 'filebase' parameter defined.");
+            error = true;
+        }
+
         my_instance->sessions = 0;
         if (my_instance->match &&
-            regcomp(&my_instance->re, my_instance->match, REG_ICASE))
+            regcomp(&my_instance->re, my_instance->match, cflags))
         {
             MXS_ERROR("qlafilter: Invalid regular expression '%s'"
-                      " for the match parameter.\n",
+                      " for the 'match' parameter.\n",
                       my_instance->match);
             free(my_instance->match);
-            free(my_instance->source);
-            if (my_instance->filebase)
-            {
-                free(my_instance->filebase);
-            }
-            free(my_instance);
-            return NULL;
+            my_instance->match = NULL;
+            error = true;
         }
         if (my_instance->nomatch &&
-            regcomp(&my_instance->nore, my_instance->nomatch,
-                    REG_ICASE))
+            regcomp(&my_instance->nore, my_instance->nomatch, cflags))
         {
             MXS_ERROR("qlafilter: Invalid regular expression '%s'"
-                      " for the nomatch paramter.",
-                      my_instance->match);
+                      " for the 'nomatch' parameter.",
+                      my_instance->nomatch);
+            free(my_instance->nomatch);
+            my_instance->nomatch = NULL;
+            error = true;
+        }
+
+        if (error)
+        {
             if (my_instance->match)
             {
+                free(my_instance->match);
                 regfree(&my_instance->re);
             }
-            free(my_instance->match);
-            free(my_instance->source);
-            if (my_instance->filebase)
+
+            if (my_instance->match)
             {
-                free(my_instance->filebase);
+                free(my_instance->match);
+                regfree(&my_instance->re);
             }
+            free(my_instance->filebase);
+            free(my_instance->source);
+            free(my_instance->userName);
             free(my_instance);
-            return NULL;
+            my_instance = NULL;
         }
     }
     return(FILTER *) my_instance;

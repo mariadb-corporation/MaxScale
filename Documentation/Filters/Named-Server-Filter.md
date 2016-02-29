@@ -26,7 +26,19 @@ filters=NamedServerFilter
 
 ## Filter Options
 
-The named server filter accepts the options ignorecase or case. These define if the pattern text should take the case of the string it is matching against into consideration or not. 
+The named server filter accepts the following options.
+
+|Option    |Description                                 |
+|----------|--------------------------------------------|
+|ignorecase|Use case-insensitive matching               |
+|case      |Use case-sensitive matching                 |
+|extended  |Use extended regular expression syntax (ERE)|
+
+To use multiple filter options, list them in a comma-separated list.
+
+```
+options=case,extended
+```
 
 ## Filter Parameters
 

@@ -152,6 +152,7 @@ static int blr_slave_handle_status_variables(ROUTER_INSTANCE *router, ROUTER_SLA
 static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
 static void blr_send_slave_heartbeat(void *inst);
 static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -1723,6 +1724,47 @@ uint32_t	chksum;
 	strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
 	slave->binlogfile[binlognamelen] = 0;
 
+	if (router->trx_safe)
+	{
+		/**
+		 * Check for a pending transaction and possible unsafe position.
+		 * Force slave disconnection if requested position is unsafe.
+		 */
+
+		bool force_disconnect = false;
+
+		spinlock_acquire(&router->binlog_lock);
+		if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
+			(slave->binlog_pos > router->binlog_position))
+		{
+			force_disconnect = true;
+		}
+		spinlock_release(&router->binlog_lock);
+
+		if (force_disconnect)
+		{
+			MXS_ERROR("%s: Slave %s:%i, server-id %d, binlog '%s', blr_slave_binlog_dump failure: "
+				"Requested binlog position %lu. Position is unsafe so disconnecting. "
+				"Latest safe position %lu, end of binlog file %lu",
+				router->service->name,
+				slave->dcb->remote,
+				ntohs((slave->dcb->ipv4).sin_port),
+				slave->serverid,
+				slave->binlogfile,
+				(unsigned long)slave->binlog_pos,
+				router->binlog_position,
+				router->current_pos);
+
+			/*
+			 * Close the slave session and socket
+			 * The slave will try to reconnect
+			 */
+			dcb_close(slave->dcb);
+
+			return 1;
+		}
+	}
+
        	MXS_DEBUG("%s: COM_BINLOG_DUMP: binlog name '%s', length %d, "
                   "from position %lu.", router->service->name,
                   slave->binlogfile, binlognamelen,
@@ -1905,15 +1947,32 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 		burst = router->long_burst;
 	else
 		burst = router->short_burst;
+
 	burst_size = router->burst_size;
-	spinlock_acquire(&slave->catch_lock);
-	if (slave->cstate & CS_BUSY)
-	{
-		spinlock_release(&slave->catch_lock);
-		return 0;
-	}
-	slave->cstate |= CS_BUSY;
-	spinlock_release(&slave->catch_lock);
+
+        int do_return;
+
+        spinlock_acquire(&router->binlog_lock);
+
+        do_return = 0;
+
+        /* check for a pending transaction and safe position */
+        if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
+               (slave->binlog_pos > router->binlog_position)) {
+               do_return = 1;
+        }
+
+        spinlock_release(&router->binlog_lock);
+
+        if (do_return) {
+               spinlock_acquire(&slave->catch_lock);
+               slave->cstate &= ~CS_BUSY;
+               slave->cstate |= CS_EXPECTCB;
+               spinlock_release(&slave->catch_lock);
+               poll_fake_write_event(slave->dcb);
+
+               return 0;
+        }
 
         BLFILE *file;
 #ifdef BLFILE_IN_SLAVE
@@ -1957,25 +2016,17 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 			return 0;
 		}
 	}
+
 	slave->stats.n_bursts++;
 
 #ifdef BLSLAVE_IN_FILE
         slave->file = file;
 #endif
+	int events_before = slave->stats.n_events;
 
 	while (burst-- && burst_size > 0 &&
 		(record = blr_read_binlog(router, file, slave->binlog_pos, &hdr, read_errmsg)) != NULL)
 	{
-		head = gwbuf_alloc(5);
-		ptr = GWBUF_DATA(head);
-		encode_value(ptr, hdr.event_size + 1, 24);
-		ptr += 3;
-		*ptr++ = slave->seqno++;
-		*ptr++ = 0;		// OK
-		head = gwbuf_append(head, record);
-		slave->lastEventTimestamp = hdr.timestamp;
-		slave->lastEventReceived = hdr.event_type;
-
 		if (hdr.event_type == ROTATE_EVENT)
 		{
 			unsigned long beat1 = hkheartbeat;
@@ -2026,15 +2077,18 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 				MXS_ERROR("blr_open_binlog took %lu beats",
                                           hkheartbeat - beat1);
 		}
-		slave->stats.n_bytes += gwbuf_length(head);
-		written = slave->dcb->func.write(slave->dcb, head);
-		if (written && hdr.event_type != ROTATE_EVENT)
-		{
-			slave->binlog_pos = hdr.next_pos;
-		}
-		rval = written;
-		slave->stats.n_events++;
-		burst_size -= hdr.event_size;
+
+        if (blr_send_event(slave, &hdr, (uint8_t*) record->start))
+        {
+            if (hdr.event_type != ROTATE_EVENT)
+            {
+                slave->binlog_pos = hdr.next_pos;
+            }
+            slave->stats.n_events++;
+            burst_size -= hdr.event_size;
+        }
+        gwbuf_free(record);
+        record = NULL;
 
 		/* set lastReply for slave heartbeat check */
 		if (router->send_slave_heartbeat)
@@ -2103,24 +2157,16 @@ char read_errmsg[BINLOG_ERROR_MSG_LEN+1];
 
 		if (hdr.ok == SLAVE_POS_READ_UNSAFE) {
 
-			MXS_ERROR("%s: Slave %s:%i, server-id %d, binlog '%s', %s",
+			MXS_NOTICE("%s: Slave %s:%i, server-id %d, binlog '%s', read %d events, "
+				"current committed transaction event being sent: %lu, %s",
 				router->service->name,
 				slave->dcb->remote,
 				ntohs((slave->dcb->ipv4).sin_port),
 				slave->serverid,
 				slave->binlogfile,
+				slave->stats.n_events - events_before,
+				router->current_safe_event,
 				read_errmsg);
-
-			/*
-			 * Close the slave session and socket
-			 * The slave will try to reconnect
-			 */
-			dcb_close(slave->dcb);
-
-#ifndef BLFILE_IN_SLAVE
-                        blr_close_binlog(router, file);
-#endif
-			return 0;
 		}
 	}
 	spinlock_acquire(&slave->catch_lock);
@@ -2308,33 +2354,15 @@ unsigned int cstate;
 	{
 		if (slave->state == BLRS_DUMPING)
 		{
-			int do_return;
-
-			spinlock_acquire(&router->binlog_lock);
-
-			do_return = 0;
-			cstate = slave->cstate;
-
-			/* check for a pending transaction and not rotating */
-			if (router->pending_transaction && strcmp(router->binlog_name, slave->binlogfile) == 0 &&
-				(slave->binlog_pos > router->binlog_position) && !router->rotating) {
-				do_return = 1;
-			}
-
-			spinlock_release(&router->binlog_lock);
-
-			if (do_return) {
-				spinlock_acquire(&slave->catch_lock);
-				slave->cstate |= CS_EXPECTCB;
-				spinlock_release(&slave->catch_lock);
-				poll_fake_write_event(slave->dcb);
-
-				return 0;
-			}
-
 			spinlock_acquire(&slave->catch_lock);
+                        if (slave->cstate & CS_BUSY)
+                        {
+                            spinlock_release(&slave->catch_lock);
+                            return 0;
+                        }
 			cstate = slave->cstate;
 			slave->cstate &= ~(CS_UPTODATE|CS_EXPECTCB);
+			slave->cstate |= CS_BUSY;
 			spinlock_release(&slave->catch_lock);
 
 			if ((cstate & CS_UPTODATE) == CS_UPTODATE)
@@ -4575,13 +4603,14 @@ GWBUF		*resp;
 uint8_t		*ptr;
 int len = BINLOG_EVENT_HDR_LEN;
 uint32_t	chksum;
+int filename_len = strlen(slave->binlogfile);
 
 	/* Add CRC32 4 bytes */
 	if (!slave->nocrc)
 		len +=4;
 
 	/* add binlogname to data content len */
-	len += strlen(slave->binlogfile);
+	len += filename_len;
 
 	/**
 	 * Alloc buffer for network binlog stream:
@@ -4625,9 +4654,9 @@ uint32_t	chksum;
 	ptr = blr_build_header(resp, &hdr);
 
 	/* Copy binlog name */
-	memcpy(ptr, slave->binlogfile, BINLOG_FNAMELEN);
+	memcpy(ptr, slave->binlogfile, filename_len);
 
-	ptr += strlen(slave->binlogfile);
+	ptr += filename_len;
 
 	/* Add the CRC32 */
 	if (!slave->nocrc)
@@ -4640,4 +4669,3 @@ uint32_t	chksum;
 	/* Write the packet */
 	return slave->dcb->func.write(slave->dcb, resp);
 }
-

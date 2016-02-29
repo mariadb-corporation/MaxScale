@@ -80,7 +80,6 @@
 #include <query_classifier.h>
 #include <spinlock.h>
 #include <session.h>
-#include <plugin.h>
 #include <housekeeper.h>
 
 MODULE_INFO info =

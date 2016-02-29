@@ -87,7 +87,7 @@ spinlock_acquire(SPINLOCK *lock)
         }
     }
     lock->acquired++;
-    lock->owner = THREAD_SHELF();
+    lock->owner = thread_self();
     atomic_add(&(lock->waiting), -1);
 #endif
 }
@@ -112,7 +112,7 @@ spinlock_acquire_nowait(SPINLOCK *lock)
 #endif
 #if SPINLOCK_PROFILE
     lock->acquired++;
-    lock->owner = THREAD_SHELF();
+    lock->owner = thread_self();
 #endif
     return TRUE;
 }

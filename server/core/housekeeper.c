@@ -20,6 +20,7 @@
 #include <housekeeper.h>
 #include <thread.h>
 #include <spinlock.h>
+#include <log_manager.h>
 
 /**
  * @file housekeeper.c  Provide a mechanism to run periodic tasks
@@ -54,6 +55,7 @@ static SPINLOCK tasklock = SPINLOCK_INIT;
 
 static int do_shutdown = 0;
 long hkheartbeat = 0; /*< One heartbeat is 100 milliseconds */
+static THREAD hk_thr_handle;
 
 static void hkthread(void *);
 
@@ -63,7 +65,10 @@ static void hkthread(void *);
 void
 hkinit()
 {
-    thread_start(hkthread, NULL);
+    if (thread_start(&hk_thr_handle, hkthread, NULL) == NULL)
+    {
+        MXS_ERROR("Failed to start housekeeper thread.");
+    }
 }
 
 /**
@@ -84,7 +89,7 @@ hkinit()
  *                      if the task was added, otherwise 0
  */
 int
-hktask_add(char *name, void (*taskfn)(void *), void *data, int frequency)
+hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
 {
     HKTASK *task, *ptr;
 
@@ -150,7 +155,7 @@ hktask_add(char *name, void (*taskfn)(void *), void *data, int frequency)
  *
  */
 int
-hktask_oneshot(char *name, void (*taskfn)(void *), void *data, int when)
+hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
 {
     HKTASK *task, *ptr;
 
@@ -203,7 +208,7 @@ hktask_oneshot(char *name, void (*taskfn)(void *), void *data, int when)
  * @return              Returns 0 if the task could not be removed
  */
 int
-hktask_remove(char *name)
+hktask_remove(const char *name)
 {
     HKTASK *ptr, *lptr = NULL;
 

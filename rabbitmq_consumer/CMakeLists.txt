@@ -29,9 +29,9 @@ add_subdirectory(inih)
 add_executable (consumer ${CMAKE_BINARY_DIR}/consumer.c)
 
 if(MYSQLCLIENT_STATIC_FOUND)
-  target_link_libraries(consumer ${MYSQLCLIENT_STATIC_LIBRARIES} rabbitmq inih ssl  crypt crypto dl z m pthread)
+  target_link_libraries(consumer ${MARIADB_CONNECTOR_STATIC_LIB} rabbitmq inih ssl  crypt crypto dl z m pthread)
 else()
-  target_link_libraries(consumer ${MYSQLCLIENT_LIBRARIES} rabbitmq inih ssl crypt crypto dl z m pthread)
+  target_link_libraries(consumer ${MARIADB_CONNECTOR_LIB} rabbitmq inih ssl crypt crypto dl z m pthread)
 endif()
 
 install(TARGETS consumer DESTINATION ${MAXSCALE_BINDIR})

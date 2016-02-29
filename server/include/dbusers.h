@@ -65,14 +65,16 @@ typedef struct mysql_user_host_key {
     char hostname[MYSQL_HOST_MAXLEN + 1];
 } MYSQL_USER_HOST;
 
+extern int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *host,
+                                          char *passwd, const char *anydb, const char *db);
+extern bool check_service_permissions(SERVICE* service);
+extern int dbusers_load(USERS *, const char *filename);
+extern int dbusers_save(USERS *, const char *filename);
 extern int load_mysql_users(SERVICE *service);
-extern int reload_mysql_users(SERVICE *service);
 extern int mysql_users_add(USERS *users, MYSQL_USER_HOST *key, char *auth);
-extern int add_mysql_users_with_host_ipv4(USERS *users, char *user, char *host, char *passwd, char *anydb, char *db);
 extern USERS *mysql_users_alloc();
 extern char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key);
+extern int reload_mysql_users(SERVICE *service);
 extern int replace_mysql_users(SERVICE *service);
-extern int dbusers_save(USERS *, char *);
-extern int dbusers_load(USERS *, char *);
-bool check_service_permissions(SERVICE* service);
+
 #endif

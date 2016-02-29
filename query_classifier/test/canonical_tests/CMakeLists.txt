@@ -8,7 +8,7 @@ else()
   endif()
 endif()
 add_executable(canonizer canonizer.c)
-target_link_libraries(canonizer query_classifier maxscale-common)
+target_link_libraries(canonizer maxscale-common)
 add_test(NAME Internal-CanonicalQuery COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/canontest.sh
   ${CMAKE_CURRENT_BINARY_DIR}/test.log
   ${CMAKE_CURRENT_SOURCE_DIR}/input.sql

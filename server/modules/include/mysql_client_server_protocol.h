@@ -65,12 +65,14 @@
 #include <dbusers.h>
 #include <version.h>
 #include <housekeeper.h>
+#include <mysql.h>
 
-#define GW_MYSQL_VERSION "MaxScale " MAXSCALE_VERSION
+#define GW_MYSQL_VERSION "5.5.5-"MAXSCALE_VERSION"-maxscale"
 #define GW_MYSQL_LOOP_TIMEOUT 300000000
 #define GW_MYSQL_READ 0
 #define GW_MYSQL_WRITE 1
 #define MYSQL_HEADER_LEN 4L
+#define MYSQL_CHECKSUM_LEN 4L
 
 #define GW_MYSQL_PROTOCOL_VERSION 10 // version is 10
 #define GW_MYSQL_HANDSHAKE_FILLER 0x00
@@ -80,6 +82,9 @@
 #define GW_MYSQL_MAX_PACKET_LEN 0xffffffL;
 #define GW_MYSQL_SCRAMBLE_SIZE 20
 #define GW_SCRAMBLE_LENGTH_323 8
+
+/** Maximum length of a MySQL packet */
+#define MYSQL_PACKET_LENGTH_MAX 0x00ffffff
 
 #ifndef MYSQL_SCRAMBLE_LEN
 # define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
@@ -236,9 +241,15 @@ typedef enum
                                 ),
 } gw_mysql_capabilities_t;
 
+// mysql.h from Connector-C exposes this enum, while mysql.h from
+// MariaDB does not.
+// TODO: This should probably be removed as Connector-C will be
+// TODO: a pre-requisite for building MaxScale.
+#if defined(LIBMARIADB)
+typedef enum enum_server_command mysql_server_cmd_t;
+#else
 /** Copy from enum in mariadb-5.5 mysql_com.h */
 typedef enum mysql_server_cmd {
-        MYSQL_COM_UNDEFINED = -1,
         MYSQL_COM_SLEEP = 0,
         MYSQL_COM_QUIT,
         MYSQL_COM_INIT_DB,
@@ -271,7 +282,9 @@ typedef enum mysql_server_cmd {
         MYSQL_COM_DAEMON,
         MYSQL_COM_END /*< Must be the last */
 } mysql_server_cmd_t;
+#endif
 
+static const mysql_server_cmd_t MYSQL_COM_UNDEFINED = (mysql_server_cmd_t)-1;
 
 /**
  * List of server commands, and number of response packets are stored here.
@@ -335,7 +348,6 @@ typedef struct {
 
 MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd);
 void           mysql_protocol_done (DCB* dcb);
-MySQLProtocol *gw_mysql_init(MySQLProtocol *data);
 int  gw_receive_backend_auth(MySQLProtocol *protocol);
 int  gw_decode_mysql_server_handshake(MySQLProtocol *protocol, uint8_t *payload);
 int  gw_read_backend_handshake(MySQLProtocol *protocol);

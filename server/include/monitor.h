@@ -211,7 +211,7 @@ extern void monitorShowAll(DCB *);
 extern void monitorShow(DCB *, MONITOR *);
 extern void monitorList(DCB *);
 extern void monitorSetInterval (MONITOR *, unsigned long);
-extern void monitorSetNetworkTimeout(MONITOR *, int, int);
+extern bool monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
 bool check_monitor_permissions(MONITOR* monitor);
 

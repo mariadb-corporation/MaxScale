@@ -597,7 +597,9 @@ int gw_read_client_event(DCB* dcb)
         }
     }
 
-    if (stmt_input)
+    /** If the router requires statement input or we are still authenticating
+     * we need to make sure that a complete SQL packet is read before continuing */
+    if (stmt_input || protocol->protocol_auth_state == MYSQL_AUTH_SENT)
     {
 
         /**

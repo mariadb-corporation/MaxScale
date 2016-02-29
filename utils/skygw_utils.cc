@@ -37,35 +37,11 @@
 #include <random_jkiss.h>
 #include <pcre2.h>
 
-#if defined(MLIST)
-
-static mlist_node_t* mlist_node_init(void* data, mlist_cursor_t* cursor);
-//static mlist_node_t* mlist_node_get_next(mlist_node_t* curr_node);
-//static mlist_node_t* mlist_get_first(mlist_t* list);
-//static mlist_cursor_t* mlist_get_cursor(mlist_t* list);
-
-#endif /* MLIST */
-
-static slist_cursor_t* slist_cursor_init(slist_t* list);
-static slist_t* slist_init_ex(bool create_cursors);
-static slist_node_t* slist_node_init(void* data, slist_cursor_t* cursor);
-static void slist_add_node(slist_t* list, slist_node_t* node);
-
-#if defined(NOT_USED)
-static slist_node_t* slist_node_get_next(slist_node_t* curr_node);
-static slist_node_t* slist_get_first(slist_t* list);
-static slist_cursor_t* slist_get_cursor(slist_t* list);
-#endif /*< NOT_USED */
-
 static bool file_write_header(skygw_file_t* file);
 static void simple_mutex_free_memory(simple_mutex_t* sm);
-static void mlist_free_memory(mlist_t* ml, char* name);
 static void thread_free_memory(skygw_thread_t* th, char* name);
 /** End of static function declarations */
 
-/** mutexed list, mlist */
-
-#if defined(MLIST)
 
 int skygw_rwlock_rdlock(skygw_rwlock_t* rwlock)
 {
@@ -183,404 +159,6 @@ return_err:
     return err;
 }
 
-/**
- * @node Cut off nodes of the list.
- *
- * Parameters:
- * @param ml - <usage>
- *          <description>
- *
- * @return Pointer to the first of the detached nodes.
- *
- *
- * @details (write detailed description here)
- *
- */
-mlist_node_t* mlist_detach_nodes(mlist_t* ml)
-{
-    mlist_node_t* node;
-    CHK_MLIST(ml);
-
-    node = ml->mlist_first;
-    ml->mlist_first = NULL;
-    ml->mlist_last = NULL;
-    ml->mlist_nodecount = 0;
-    return node;
-}
-
-/**
- * @node Create a list with rwlock and optional read-only cursor
- *
- * Parameters:
- * @param listp - <usage>
- *          <description>
- *
- * @param cursor - <usage>
- *          <description>
- *
- * @param name - <usage>
- *          <description>
- *
- * @return Address of mlist_t struct.
- *
- *
- * @details Cursor must protect its reads with read lock, and after
- * acquiring read lock reader must check whether the list is deleted
- * (mlist_deleted).
- *
- */
-mlist_t* mlist_init(mlist_t* listp, mlist_cursor_t** cursor, char* name,
-                    void (*datadel)(void*), int maxnodes)
-{
-    mlist_cursor_t* c;
-    mlist_t* list;
-
-    if (cursor != NULL)
-    {
-        ss_dassert(*cursor == NULL);
-    }
-    /** listp is not NULL if caller wants flat list */
-    if (listp == NULL)
-    {
-        list = (mlist_t*) calloc(1, sizeof (mlist_t));
-    }
-    else
-    {
-        /** Caller wants list flat, memory won't be freed */
-        list = listp;
-        list->mlist_flat = true;
-    }
-    ss_dassert(list != NULL);
-
-    if (list == NULL)
-    {
-        fprintf(stderr, "* Allocating memory for mlist failed\n");
-        mlist_free_memory(list, name);
-        goto return_list;
-    }
-    list->mlist_chk_top = CHK_NUM_MLIST;
-    list->mlist_chk_tail = CHK_NUM_MLIST;
-    /** Set size limit for list. 0 means unlimited */
-    list->mlist_nodecount_max = maxnodes;
-    /** Set data deletion callback fun */
-    list->mlist_datadel = datadel;
-
-    if (name != NULL)
-    {
-        list->mlist_name = name;
-    }
-    /** Create mutex, return NULL if fails. */
-    if (simple_mutex_init(&list->mlist_mutex, "writebuf mutex") == NULL)
-    {
-        ss_dfprintf(stderr, "* Creating rwlock for mlist failed\n");
-        mlist_free_memory(list, name);
-        list = NULL;
-        goto return_list;
-    }
-
-    /** Create cursor for reading the list */
-    if (cursor != NULL)
-    {
-        c = mlist_cursor_init(list);
-
-        if (c == NULL)
-        {
-            simple_mutex_done(&list->mlist_mutex);
-            mlist_free_memory(list, name);
-            list = NULL;
-            goto return_list;
-        }
-        CHK_MLIST_CURSOR(c);
-        *cursor = c;
-    }
-    list->mlist_versno = 2; /*< vresno != 0 means that list is initialized */
-    CHK_MLIST(list);
-
-return_list:
-    return list;
-}
-
-/**
- * @node Free mlist memory allocations. name must be explicitly
- * set if mlist has one.
- *
- * Parameters:
- * @param ml - <usage>
- *          <description>
- *
- * @param name - <usage>
- *          <description>
- *
- * @return void
- *
- *
- * @details (write detailed description here)
- *
- */
-static void mlist_free_memory(mlist_t* ml, char* name)
-{
-    mlist_node_t* node;
-
-    /** name */
-    if (name != NULL)
-    {
-        free(name);
-    }
-    if (ml != NULL)
-    {
-        /** list data */
-        while (ml->mlist_first != NULL)
-        {
-            /** Scan list and free nodes and data inside nodes */
-            node = ml->mlist_first->mlnode_next;
-            mlist_node_done(ml->mlist_first);
-            ml->mlist_first = node;
-        }
-
-        /** list structure */
-        if (!ml->mlist_flat)
-        {
-            free(ml);
-        }
-    }
-}
-
-void mlist_node_done(mlist_node_t* n)
-{
-    CHK_MLIST_NODE(n);
-    if (n->mlnode_data != NULL)
-    {
-        if (n->mlnode_list->mlist_datadel != NULL)
-        {
-            (n->mlnode_list->mlist_datadel(n->mlnode_data));
-        }
-        free(n->mlnode_data);
-    }
-    free(n);
-}
-
-void* mlist_node_get_data(mlist_node_t* node)
-{
-    CHK_MLIST_NODE(node);
-    return node->mlnode_data;
-}
-
-mlist_cursor_t* mlist_cursor_init(mlist_t* list)
-{
-    CHK_MLIST(list);
-    mlist_cursor_t* c;
-
-    /** acquire shared lock to the list */
-    simple_mutex_lock(&list->mlist_mutex, true);
-
-    c = (mlist_cursor_t *) calloc(1, sizeof (mlist_cursor_t));
-
-    if (c == NULL)
-    {
-        simple_mutex_unlock(&list->mlist_mutex);
-        goto return_cursor;
-    }
-    c->mlcursor_chk_top = CHK_NUM_MLIST_CURSOR;
-    c->mlcursor_chk_tail = CHK_NUM_MLIST_CURSOR;
-    c->mlcursor_list = list;
-
-    /** Set cursor position if list is not empty */
-    if (list->mlist_first != NULL)
-    {
-        c->mlcursor_pos = list->mlist_first;
-    }
-    simple_mutex_unlock(&list->mlist_mutex);
-
-    CHK_MLIST_CURSOR(c);
-
-return_cursor:
-    return c;
-}
-
-/**
- * @node Mark list as deleted and free the memory.
- *
- * Parameters:
- * @param list - <usage>
- *          <description>
- *
- * @return void
- *
- *
- * @details (write detailed description here)
- *
- */
-void mlist_done(mlist_t* list)
-{
-    CHK_MLIST(list);
-    simple_mutex_lock(&list->mlist_mutex, true);
-    list->mlist_deleted = true;
-    simple_mutex_unlock(&list->mlist_mutex);
-    simple_mutex_done(&list->mlist_mutex);
-    mlist_free_memory(list, list->mlist_name);
-}
-
-void* mlist_cursor_get_data_nomutex(mlist_cursor_t* mc)
-{
-    CHK_MLIST_CURSOR(mc);
-    return (mc->mlcursor_pos->mlnode_data);
-}
-
-/**
- * @node Adds data to list by allocating node for it. Checks list size limit.
- *
- * Parameters:
- * @param list - <usage>
- *          <description>
- *
- * @param data - <usage>
- *          <description>
- *
- * @return true, if succeed, false, if list had node limit and it is full.
- *
- *
- * @details (write detailed description here)
- *
- */
-bool mlist_add_data_nomutex(mlist_t* list, void* data)
-{
-    bool succp;
-
-    succp = mlist_add_node_nomutex(list, mlist_node_init(data, NULL));
-
-    return succp;
-}
-
-static mlist_node_t* mlist_node_init(void* data, mlist_cursor_t* cursor)
-{
-    mlist_node_t* node;
-
-    node = (mlist_node_t*) calloc(1, sizeof (mlist_node_t));
-    node->mlnode_chk_top = CHK_NUM_MLIST_NODE;
-    node->mlnode_chk_tail = CHK_NUM_MLIST_NODE;
-    node->mlnode_data = data;
-    CHK_MLIST_NODE(node);
-
-    if (cursor != NULL)
-    {
-        cursor->mlcursor_pos = node;
-    }
-
-    return node;
-}
-
-mlist_node_t* mlist_detach_first(mlist_t* ml)
-{
-    mlist_node_t* node;
-
-    CHK_MLIST(ml);
-    node = ml->mlist_first;
-    CHK_MLIST_NODE(node);
-    ml->mlist_first = node->mlnode_next;
-    node->mlnode_next = NULL;
-
-    ml->mlist_nodecount -= 1;
-    if (ml->mlist_nodecount == 0)
-    {
-        ml->mlist_last = NULL;
-    }
-    else
-    {
-        CHK_MLIST_NODE(ml->mlist_first);
-    }
-    CHK_MLIST(ml);
-
-    return (node);
-}
-
-/**
- * @node Add new node to end of list if there is space for it.
- *
- * Parameters:
- * @param list - <usage>
- *          <description>
- *
- * @param newnode - <usage>
- *          <description>
- *
- * @param add_last - <usage>
- *          <description>
- *
- * @return true, if succeede, false, if list size limit was exceeded.
- *
- *
- * @details (write detailed description here)
- *
- */
-bool mlist_add_node_nomutex(mlist_t* list, mlist_node_t* newnode)
-{
-    bool succp = false;
-
-    CHK_MLIST(list);
-    CHK_MLIST_NODE(newnode);
-    ss_dassert(!list->mlist_deleted);
-
-    /** List is full already. */
-    if (list->mlist_nodecount == list->mlist_nodecount_max)
-    {
-        goto return_succp;
-    }
-    /** Find location for new node */
-    if (list->mlist_last != NULL)
-    {
-        ss_dassert(!list->mlist_last->mlnode_deleted);
-        CHK_MLIST_NODE(list->mlist_last);
-        CHK_MLIST_NODE(list->mlist_first);
-        ss_dassert(list->mlist_last->mlnode_next == NULL);
-        list->mlist_last->mlnode_next = newnode;
-    }
-    else
-    {
-        list->mlist_first = newnode;
-    }
-    list->mlist_last = newnode;
-    newnode->mlnode_list = list;
-    list->mlist_nodecount += 1;
-    succp = true;
-return_succp:
-    CHK_MLIST(list);
-    return succp;
-}
-
-bool mlist_cursor_move_to_first(mlist_cursor_t* mc)
-{
-    bool succp = false;
-    mlist_t* list;
-
-    CHK_MLIST_CURSOR(mc);
-    list = mc->mlcursor_list;
-    CHK_MLIST(list);
-    simple_mutex_lock(&list->mlist_mutex, true);
-
-    if (mc->mlcursor_list->mlist_deleted)
-    {
-        simple_mutex_unlock(&list->mlist_mutex);
-        return false;
-    }
-    /** Set position point to first node */
-    mc->mlcursor_pos = list->mlist_first;
-
-    if (mc->mlcursor_pos != NULL)
-    {
-        CHK_MLIST_NODE(mc->mlcursor_pos);
-        succp = true;
-    }
-    simple_mutex_unlock(&list->mlist_mutex);
-    return succp;
-}
-
-
-
-#endif /* MLIST */
-
-/** End of mlist */
-
-
 size_t get_timestamp_len(void)
 {
     return timestamp_len;
@@ -670,337 +248,6 @@ size_t snprint_timestamp_hp(char* p_ts, size_t tslen)
 retblock:
     return rval;
 }
-
-static slist_t* slist_init_ex(bool create_cursors)
-{
-    slist_t* list;
-
-    list = (slist_t*) calloc(1, sizeof (slist_t));
-    list->slist_chk_top = CHK_NUM_SLIST;
-    list->slist_chk_tail = CHK_NUM_SLIST;
-
-    if (create_cursors)
-    {
-        list->slist_cursors_list = slist_init_ex(false);
-    }
-
-    return list;
-}
-
-static slist_node_t* slist_node_init(void* data, slist_cursor_t* cursor)
-{
-    slist_node_t* node;
-
-    node = (slist_node_t*) calloc(1, sizeof (slist_node_t));
-    node->slnode_chk_top = CHK_NUM_SLIST_NODE;
-    node->slnode_chk_tail = CHK_NUM_SLIST_NODE;
-    node->slnode_data = data;
-    CHK_SLIST_NODE(node);
-
-    if (cursor != NULL)
-    {
-        node->slnode_cursor_refcount += 1;
-        cursor->slcursor_pos = node;
-    }
-
-    return node;
-}
-
-static void slist_add_node(slist_t* list, slist_node_t* node)
-{
-    CHK_SLIST(list);
-    CHK_SLIST_NODE(node);
-
-    if (list->slist_tail != NULL)
-    {
-        CHK_SLIST_NODE(list->slist_tail);
-        CHK_SLIST_NODE(list->slist_head);
-        ss_dassert(list->slist_tail->slnode_next == NULL);
-        list->slist_tail->slnode_next = node;
-    }
-    else
-    {
-        list->slist_head = node;
-    }
-    list->slist_tail = node;
-    node->slnode_list = list;
-    list->slist_nelems += 1;
-    CHK_SLIST(list);
-}
-
-
-#if defined(NOT_USED)
-
-static slist_node_t* slist_node_get_next(slist_node_t* curr_node)
-{
-    CHK_SLIST_NODE(curr_node);
-
-    if (curr_node->slnode_next != NULL)
-    {
-        CHK_SLIST_NODE(curr_node->slnode_next);
-        return (curr_node->slnode_next);
-    }
-
-    return NULL;
-}
-
-static slist_node_t* slist_get_first(slist_t* list)
-{
-    CHK_SLIST(list);
-
-    if (list->slist_head != NULL)
-    {
-        CHK_SLIST_NODE(list->slist_head);
-        return list->slist_head;
-    }
-    return NULL;
-}
-
-static slist_cursor_t* slist_get_cursor(slist_t* list)
-{
-    CHK_SLIST(list);
-
-    slist_cursor_t* c;
-
-    c = slist_cursor_init(list);
-    return c;
-}
-#endif /*< NOT_USED */
-
-static slist_cursor_t* slist_cursor_init(slist_t* list)
-{
-    CHK_SLIST(list);
-    slist_cursor_t* c;
-
-    c = (slist_cursor_t *) calloc(1, sizeof (slist_cursor_t));
-    c->slcursor_chk_top = CHK_NUM_SLIST_CURSOR;
-    c->slcursor_chk_tail = CHK_NUM_SLIST_CURSOR;
-    c->slcursor_list = list;
-    /** Set cursor position is list is not empty */
-    if (list->slist_head != NULL)
-    {
-        list->slist_head->slnode_cursor_refcount += 1;
-        c->slcursor_pos = list->slist_head;
-    }
-    /** Add cursor to cursor list */
-    slist_add_node(list->slist_cursors_list, slist_node_init(c, NULL));
-
-    CHK_SLIST_CURSOR(c);
-    return c;
-}
-
-/**
- * @node Create a cursor and a list with cursors supported. 19.6.2013 :
- * supports only cursor per list.
- *
- * Parameters:
- * @param void - <usage>
- *          <description>
- *
- * @return returns a pointer to cursor, which is not positioned
- * because the list is empty.
- *
- *
- * @details (write detailed description here)
- *
- */
-slist_cursor_t* slist_init(void)
-{
-    slist_t* list;
-    slist_cursor_t* slc;
-
-    list = slist_init_ex(true);
-    CHK_SLIST(list);
-    slc = slist_cursor_init(list);
-    CHK_SLIST_CURSOR(slc);
-
-    return slc;
-}
-
-/**
- * @node moves cursor to the first node of list.
- *
- * Parameters:
- * @param c - <usage>
- *          <description>
- *
- * @return true if there is first node in the list
- * false is the list is empty.
- *
- *
- * @details (write detailed description here)
- *
- */
-bool slcursor_move_to_begin(slist_cursor_t* c)
-{
-    bool succp = true;
-    slist_t* list;
-
-    CHK_SLIST_CURSOR(c);
-    list = c->slcursor_list;
-    CHK_SLIST(list);
-    c->slcursor_pos = list->slist_head;
-    if (c->slcursor_pos == NULL)
-    {
-        succp = false;
-    }
-    return succp;
-}
-
-/**
- * @node moves cursor to next node
- *
- * Parameters:
- * @param c - <usage>
- *          <description>
- *
- * @return true in success, false is there is no next node on the list.
- *
- *
- * @details (write detailed description here)
- *
- */
-bool slcursor_step_ahead(slist_cursor_t* c)
-{
-    bool succp = false;
-    slist_node_t* node;
-    CHK_SLIST_CURSOR(c);
-    CHK_SLIST_NODE(c->slcursor_pos);
-
-    node = c->slcursor_pos->slnode_next;
-
-    if (node != NULL)
-    {
-        CHK_SLIST_NODE(node);
-        c->slcursor_pos = node;
-        succp = true;
-    }
-    return succp;
-}
-
-void* slcursor_get_data(slist_cursor_t* c)
-{
-    slist_node_t* node;
-    void* data = NULL;
-
-    CHK_SLIST_CURSOR(c);
-    node = c->slcursor_pos;
-
-    if (node != NULL)
-    {
-        CHK_SLIST_NODE(node);
-        data = node->slnode_data;
-    }
-    return data;
-}
-
-/**
- * @node Add data to the list by using cursor.
- *
- * Parameters:
- * @param c - <usage>
- *          <description>
- *
- * @param data - <usage>
- *          <description>
- *
- * @return void
- *
- *
- * @details (write detailed description here)
- *
- */
-void slcursor_add_data(slist_cursor_t* c, void* data)
-{
-    slist_t* list;
-    slist_node_t* pos;
-
-    CHK_SLIST_CURSOR(c);
-    list = c->slcursor_list;
-    CHK_SLIST(list);
-    if (c->slcursor_pos != NULL)
-    {
-        CHK_SLIST_NODE(c->slcursor_pos);
-    }
-    ss_dassert(list->slist_tail->slnode_next == NULL);
-    pos = slist_node_init(data, c);
-    slist_add_node(list, pos);
-    CHK_SLIST(list);
-    CHK_SLIST_CURSOR(c);
-}
-
-/**
- * Remove the node currently pointed by the cursor from the slist. This does not delete the data in the
- * node but will delete the structure pointing to that data. This is useful when
- * the user wants to free the allocated memory. After node removal, the cursor
- * will point to the node before the removed node.
- * @param c Cursor pointing to the data node to be removed
- */
-void slcursor_remove_data(slist_cursor_t* c)
-{
-    slist_node_t* node = c->slcursor_pos;
-    int havemore = slist_size(c);
-    slcursor_move_to_begin(c);
-
-    if (node == c->slcursor_pos)
-    {
-        c->slcursor_list->slist_head = c->slcursor_list->slist_head->slnode_next;
-        slcursor_move_to_begin(c);
-        atomic_add((int*) &node->slnode_list->slist_nelems, -1);
-        atomic_add((int*) &node->slnode_cursor_refcount, -1);
-        if (node->slnode_cursor_refcount == 0)
-        {
-            free(node);
-        }
-        return;
-    }
-
-    while (havemore)
-    {
-        if (c->slcursor_pos->slnode_next == node)
-        {
-            c->slcursor_pos->slnode_next = node->slnode_next;
-            atomic_add((int*) &node->slnode_list->slist_nelems, -1);
-            atomic_add((int*) &node->slnode_cursor_refcount, -1);
-            if (node->slnode_cursor_refcount == 0)
-            {
-                free(node);
-            }
-            return;
-        }
-        havemore = slcursor_step_ahead(c);
-    }
-}
-
-/**
- * Return the size of the slist.
- * @param c slist cursor which refers to a list
- * @return nummber of elements in the list
- */
-size_t slist_size(slist_cursor_t* c)
-{
-    return c->slcursor_list->slist_nelems;
-}
-
-void slist_done(slist_cursor_t* c)
-{
-    bool succp;
-    void* data;
-
-    succp = slcursor_move_to_begin(c);
-
-    while (succp)
-    {
-        data = slcursor_get_data(c);
-        free(data);
-        succp = slcursor_step_ahead(c);
-    }
-    free(c->slcursor_list);
-    free(c);
-}
-
-
-/** End of list implementation */
 
 /**
  * @node Initialize thread data structure
@@ -1742,10 +989,10 @@ return_succp:
 /**
  * Write data to a file.
  *
- * @param file		write target
- * @param data		pointer to contiguous memory buffer
- * @param nbytes	amount of bytes to be written
- * @param flush		ensure that write is permanent
+ * @param file          write target
+ * @param data          pointer to contiguous memory buffer
+ * @param nbytes        amount of bytes to be written
+ * @param flush         ensure that write is permanent
  *
  * @return 0 if succeed, errno if failed.
  */
@@ -1909,7 +1156,7 @@ void skygw_file_close(skygw_file_t* file, bool shutdown)
 #define BUFFER_GROWTH_RATE 1.2
 static pcre2_code* remove_comments_re = NULL;
 static const PCRE2_SPTR remove_comments_pattern = (PCRE2_SPTR)
-"(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
+    "(?:`[^`]*`\\K)|(\\/[*](?!(M?!)).*?[*]\\/)|(?:#.*|--[[:space:]].*)";
 
 /**
  * Remove SQL comments from the end of a string
@@ -1945,7 +1192,7 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = len * BUFFER_GROWTH_RATE + 1));
+                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
                 if (tmp == NULL)
                 {
                     free(output);
@@ -1978,7 +1225,7 @@ char* remove_mysql_comments(const char** src, const size_t* srcsize, char** dest
 
 static pcre2_code* replace_values_re = NULL;
 static const PCRE2_SPTR replace_values_pattern = (PCRE2_SPTR) "(?i)([-=,+*/([:space:]]|\\b|[@])"
-"(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
+    "(?:[0-9.-]+|(?<=[@])[a-z_0-9]+)([-=,+*/)[:space:];]|$)";
 
 /**
  * Replace literal numbers and user variables with a question mark.
@@ -2011,7 +1258,7 @@ char* replace_values(const char** src, const size_t* srcsize, char** dest, size_
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = len * BUFFER_GROWTH_RATE + 1));
+                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
                 if (tmp == NULL)
                 {
                     free(output);
@@ -2130,7 +1377,7 @@ retblock:
 
 static pcre2_code* replace_quoted_re = NULL;
 static const PCRE2_SPTR replace_quoted_pattern = (PCRE2_SPTR)
-"(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
+    "(?>[^'\"]*)(?|(?:\"\\K(?:(?:(?<=\\\\)\")|[^\"])*(\"))|(?:'\\K(?:(?:(?<=\\\\)')|[^'])*(')))";
 
 /**
  * Replace contents of single or double quoted strings with question marks.
@@ -2163,7 +1410,7 @@ char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_
                                     replace, PCRE2_ZERO_TERMINATED,
                                     (PCRE2_UCHAR8*) output, &len) == PCRE2_ERROR_NOMEMORY)
             {
-                char* tmp = (char*) realloc(output, (len = len * BUFFER_GROWTH_RATE + 1));
+                char* tmp = (char*) realloc(output, (len = (size_t) (len * BUFFER_GROWTH_RATE + 1)));
                 if (tmp == NULL)
                 {
                     free(output);
@@ -2201,14 +1448,14 @@ char* replace_quoted(const char** src, const size_t* srcsize, char** dest, size_
 /**
  * Calculate the number of decimal numbers from a size_t value.
  *
- * @param	value	value
+ * @param       value   value
  *
- * @return	number of decimal numbers of which the value consists of
- * 		value==123 returns 3, for example.
- * @note 	Does the same as UINTLEN macro
+ * @return      number of decimal numbers of which the value consists of
+ *              value==123 returns 3, for example.
+ * @note        Does the same as UINTLEN macro
  */
 size_t get_decimal_len(
-                       size_t value)
+    size_t value)
 {
     return value > 0 ? (size_t) log10((double) value) + 1 : 1;
 }

@@ -1162,6 +1162,8 @@ static bool get_dcb(
 		for (i=0; i<rses->rses_nbackends; i++)
 		{
 			BACKEND* b = backend_ref[i].bref_backend;
+			SERVER server;
+			server.status = backend_ref[i].bref_backend->backend_server->status;
 			/**
 			 * To become chosen:
 			 * backend must be in use, name must match,
@@ -1175,9 +1177,9 @@ static bool get_dcb(
 					b->backend_server->unique_name,
 					PATH_MAX) == 0) &&
 				master_bref->bref_backend != NULL &&
-				(SERVER_IS_SLAVE(b->backend_server) ||
-					SERVER_IS_RELAY_SERVER(b->backend_server) ||
-					SERVER_IS_MASTER(b->backend_server)))
+				(SERVER_IS_SLAVE(&server) ||
+					SERVER_IS_RELAY_SERVER(&server) ||
+					SERVER_IS_MASTER(&server)))
 			{
 				*p_dcb = backend_ref[i].bref_dcb;
 				succp = true;
@@ -1202,13 +1204,16 @@ static bool get_dcb(
 		for (i=0; i<rses->rses_nbackends; i++)
 		{
 			BACKEND* b = (&backend_ref[i])->bref_backend;
+			SERVER server;
+			SERVER candidate;
+			server.status = backend_ref[i].bref_backend->backend_server->status;
 			/**
 			 * Unused backend or backend which is not master nor
 			 * slave can't be used
 			 */
 			if (!BREF_IS_IN_USE(&backend_ref[i]) ||
-				(!SERVER_IS_MASTER(b->backend_server) &&
-				!SERVER_IS_SLAVE(b->backend_server)))
+				(!SERVER_IS_MASTER(&server) &&
+				!SERVER_IS_SLAVE(&server)))
 			{
 				continue;
 			}
@@ -1222,11 +1227,12 @@ static bool get_dcb(
 				 * Ensure that master has not changed dunring
 				 * session and abort if it has.
 				 */
-				if (SERVER_IS_MASTER(b->backend_server) &&
+				if (SERVER_IS_MASTER(&server) &&
 					&backend_ref[i] == master_bref)
 				{
 					/** found master */
 					candidate_bref = &backend_ref[i];
+					candidate.status = candidate_bref->bref_backend->backend_server->status;
 					succp = true;
 				}
 				/**
@@ -1240,6 +1246,7 @@ static bool get_dcb(
 				{
 					/** found slave */
 					candidate_bref = &backend_ref[i];
+					candidate.status = candidate_bref->bref_backend->backend_server->status;
 					succp = true;
 				}
 			}
@@ -1247,8 +1254,8 @@ static bool get_dcb(
 			 * If candidate is master, any slave which doesn't break
 			 * replication lag limits replaces it.
 			 */
-			else if (SERVER_IS_MASTER(candidate_bref->bref_backend->backend_server) &&
-				SERVER_IS_SLAVE(b->backend_server) &&
+			else if (SERVER_IS_MASTER(&candidate) &&
+				SERVER_IS_SLAVE(&server) &&
 				(max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
 				b->backend_server->rlag <= max_rlag)) &&
@@ -1256,6 +1263,7 @@ static bool get_dcb(
 			{
 				/** found slave */
 				candidate_bref = &backend_ref[i];
+				candidate.status = candidate_bref->bref_backend->backend_server->status;
 				succp = true;
 			}
 			/**
@@ -1263,7 +1271,7 @@ static bool get_dcb(
 			 * backend and update assign it to new candidate if
 			 * necessary.
 			 */
-			else if (SERVER_IS_SLAVE(b->backend_server))
+			else if (SERVER_IS_SLAVE(&server))
 			{
 				if (max_rlag == MAX_RLAG_UNDEFINED ||
 				(b->backend_server->rlag != MAX_RLAG_NOT_AVAILABLE &&
@@ -1273,6 +1281,7 @@ static bool get_dcb(
 								candidate_bref,
 								&backend_ref[i],
 								rses->rses_config.rw_slave_select_criteria);
+					candidate.status = candidate_bref->bref_backend->backend_server->status;
 				}
 				else
 				{
@@ -1292,30 +1301,34 @@ static bool get_dcb(
 
 		goto return_succp;
 	} /*< if (btype == BE_SLAVE) */
-	/**
-	 * If target was originally master only then the execution jumps
-	 * directly here.
-	 */
-        if (btype == BE_MASTER)
+    /**
+     * If target was originally master only then the execution jumps
+     * directly here.
+     */
+    if (btype == BE_MASTER)
+    {
+        /** It is possible for the server status to change at any point in time
+         * so copying it locally will make possible error messages
+         * easier to understand */
+        SERVER server;
+        server.status = master_bref->bref_backend->backend_server->status;
+        if (BREF_IS_IN_USE(master_bref) && SERVER_IS_MASTER(&server))
         {
-		if (BREF_IS_IN_USE(master_bref) &&
-			SERVER_IS_MASTER(master_bref->bref_backend->backend_server))
-		{
-			*p_dcb = master_bref->bref_dcb;
-			succp = true;
-			/** if bref is in use DCB should not be closed */
-			ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
-		}
-		else
-		{
-                    MXS_ERROR("Server at %s:%d should be master but "
-                              "is %s instead and can't be chosen to master.",
-                              master_bref->bref_backend->backend_server->name,
-                              master_bref->bref_backend->backend_server->port,
-                              STRSRVSTATUS(master_bref->bref_backend->backend_server));
-			succp = false;
-		}
+            *p_dcb = master_bref->bref_dcb;
+            succp = true;
+            /** if bref is in use DCB should not be closed */
+            ss_dassert(master_bref->bref_dcb->state != DCB_STATE_ZOMBIE);
         }
+        else
+        {
+            MXS_ERROR("Server at %s:%d should be master but "
+                      "is %s instead and can't be chosen to master.",
+                      master_bref->bref_backend->backend_server->name,
+                      master_bref->bref_backend->backend_server->port,
+                      STRSRVSTATUS(&server));
+            succp = false;
+        }
+    }
 
 return_succp:
         return succp;
@@ -1566,8 +1579,6 @@ void check_drop_tmp_table(
   char** tbl = NULL;
   char *hkey,*dbname;
   MYSQL_session* data;
-
-  DCB*               master_dcb     = NULL;
   rses_property_t*   rses_prop_tmp;
 
   if(router_cli_ses == NULL || querybuf == NULL)
@@ -1577,27 +1588,14 @@ void check_drop_tmp_table(
       return;
   }
 
-  if(router_cli_ses->rses_master_ref == NULL)
+  if(router_cli_ses->client_dcb == NULL)
   {
-      MXS_ERROR("[%s] Error: Master server reference is NULL.",
-                __FUNCTION__);
+      MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
       return;
   }
 
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
-
-  if(master_dcb == NULL || master_dcb->session == NULL)
-  {
-      MXS_ERROR("[%s] Error: Master server DBC is NULL. "
-                "This means that the connection to the master server is already "
-                "closed while a query is still being routed.",__FUNCTION__);
-      return;
-  }
-
-  CHK_DCB(master_dcb);
-
-  data = (MYSQL_session*)master_dcb->session->client_dcb->data;
+  data = (MYSQL_session*)router_cli_ses->client_dcb->data;
 
   if(data == NULL)
   {
@@ -1668,32 +1666,20 @@ static qc_query_type_t is_read_tmp_table(
       return type;
   }
 
-  if(router_cli_ses->rses_master_ref == NULL)
+  if(router_cli_ses->client_dcb == NULL)
   {
-      MXS_ERROR("[%s] Error: Master server reference is NULL.",
-                __FUNCTION__);
+      MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
       return type;
   }
 
   if (BREF_IS_IN_USE(router_cli_ses->rses_master_ref))
   {
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
-
-  if(master_dcb == NULL || master_dcb->session == NULL)
-  {
-      MXS_ERROR("[%s] Error: Master server DBC is NULL. "
-                "This means that the connection to the master server is already "
-                "closed while a query is still being routed.",__FUNCTION__);
-      return qtype;
-  }
-  CHK_DCB(master_dcb);
-
-  data = (MYSQL_session*)master_dcb->session->client_dcb->data;
+  data = (MYSQL_session*)router_cli_ses->client_dcb->data;
 
   if(data == NULL)
   {
-      MXS_ERROR("[%s] Error: User data in master server DBC is NULL.",__FUNCTION__);
+      MXS_ERROR("[%s] Error: User data in client DBC is NULL.",__FUNCTION__);
       return qtype;
   }
 
@@ -1765,7 +1751,6 @@ static void check_create_tmp_table(
   int klen = 0;
   char *hkey,*dbname;
   MYSQL_session* data;
-  DCB* master_dcb = NULL;
   rses_property_t* rses_prop_tmp;
   HASHTABLE* h;
 
@@ -1776,28 +1761,15 @@ static void check_create_tmp_table(
       return;
   }
 
-  if(router_cli_ses->rses_master_ref == NULL)
+  if(router_cli_ses->client_dcb == NULL)
   {
-      MXS_ERROR("[%s] Error: Master server reference is NULL.",
-                __FUNCTION__);
+      MXS_ERROR("[%s] Error: Client DCB is NULL.", __FUNCTION__);
       return;
   }
 
   router_cli_ses->have_tmp_tables = true;
   rses_prop_tmp = router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES];
-  master_dcb = router_cli_ses->rses_master_ref->bref_dcb;
-
-  if(master_dcb == NULL || master_dcb->session == NULL)
-  {
-      MXS_ERROR("[%s] Error: Master server DCB is NULL. "
-                "This means that the connection to the master server is already "
-                "closed while a query is still being routed.",__FUNCTION__);
-      return;
-  }
-
-  CHK_DCB(master_dcb);
-
-  data = (MYSQL_session*)master_dcb->session->client_dcb->data;
+  data = (MYSQL_session*)router_cli_ses->client_dcb->data;
 
   if(data == NULL)
   {
@@ -2097,10 +2069,10 @@ static bool route_single_stmt(
 	 * Read stored master DCB pointer. If master is not set, routing must
 	 * be aborted
 	 */
-	if ((master_dcb = rses->rses_master_ref->bref_dcb) == NULL)
+	if ((master_dcb = rses->rses_master_ref->bref_dcb) == NULL ||
+		BREF_IS_CLOSED(rses->rses_master_ref))
 	{
 		char* query_str = modutil_get_query(querybuf);
-		CHK_DCB(master_dcb);
 		MXS_ERROR("Can't route %s:%s:\"%s\" to "
                           "backend server. Session doesn't have a Master "
                           "node",
@@ -2112,6 +2084,7 @@ static bool route_single_stmt(
 		goto retblock;
 	}
 
+	CHK_DCB(master_dcb);
 	packet = GWBUF_DATA(querybuf);
 	packet_len = gw_mysql_get_byte3(packet);
 
@@ -2491,7 +2464,6 @@ static bool route_single_stmt(
 #if defined(SS_EXTRA_DEBUG)
                         MXS_INFO("Found DCB for slave.");
 #endif
-
 			atomic_add(&inst->stats.n_slave, 1);
 		}
 		else
@@ -2847,21 +2819,17 @@ static void clientReply (
 			uint8_t* replybuf = (uint8_t *)GWBUF_DATA(writebuf);
 			size_t   len      = MYSQL_GET_PACKET_LEN(buf);
 			size_t   replylen = MYSQL_GET_PACKET_LEN(replybuf);
-			char*    cmdstr   = strndup(&((char *)buf)[5], len-4);
 			char*    err      = strndup(&((char *)replybuf)[8], 5);
 			char*    replystr = strndup(&((char *)replybuf)[13],
 						    replylen-4-5);
 
                         ss_dassert(len+4 == GWBUF_LENGTH(scur->scmd_cur_cmd->my_sescmd_buf));
-
-                        MXS_ERROR("Failed to execute %s in %s:%d. %s %s",
-                                  cmdstr,
+                        
+                        MXS_ERROR("Failed to execute session command in %s:%d. Error was: %s %s",
                                   bref->bref_backend->backend_server->name,
                                   bref->bref_backend->backend_server->port,
                                   err,
                                   replystr);
-
-                        free(cmdstr);
 			free(err);
 			free(replystr);
                 }
@@ -2893,11 +2861,9 @@ static void clientReply (
                  * This applies to session commands only. Counter decrement
                  * for other type of queries is done outside this block.
                  */
-                if (writebuf != NULL && client_dcb != NULL)
-                {
-                        /** Set response status as replied */
-                        bref_clear_state(bref, BREF_WAITING_RESULT);
-                }
+
+                /** Set response status as replied */
+                bref_clear_state(bref, BREF_WAITING_RESULT);
 	}
 	/**
          * Clear BREF_QUERY_ACTIVE flag and decrease waiter counter.
@@ -3815,8 +3781,8 @@ static GWBUF* sescmd_cursor_process_replies(
 
 			if(bref->reply_cmd != scmd->reply_cmd)
 			{
-			    MXS_INFO("Backend server '%s' response differs from master's response. "
-                                     "Closing connection.",
+			    MXS_ERROR("Slave server '%s': response differs from master's response. "
+                                     "Closing connection due to inconsistent session state.",
                                      bref->bref_backend->backend_server->unique_name);
 			    sescmd_cursor_set_active(scur,false);
 			     bref_clear_state(bref,BREF_QUERY_ACTIVE);

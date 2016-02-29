@@ -20,6 +20,9 @@
 #include <dcb.h>
 #include <modinfo.h>
 #include <resultset.h>
+#include <skygw_debug.h>
+
+EXTERN_C_BLOCK_BEGIN
 
 /**
  * @file modules.h	Utilities for loading modules
@@ -56,10 +59,11 @@ typedef struct modules {
 /**
  * Module types
  */
-#define	MODULE_PROTOCOL	"Protocol"	/**< A protocol module type */
-#define	MODULE_ROUTER	"Router"	/**< A router module type */
-#define	MODULE_MONITOR	"Monitor"	/**< A database monitor module type */
-#define	MODULE_FILTER	"Filter"	/**< A filter module type */
+#define MODULE_PROTOCOL         "Protocol"        /**< A protocol module type */
+#define MODULE_ROUTER           "Router"          /**< A router module type */
+#define MODULE_MONITOR          "Monitor"         /**< A database monitor module type */
+#define MODULE_FILTER           "Filter"          /**< A filter module type */
+#define MODULE_QUERY_CLASSIFIER "QueryClassifier" /**< A query classifier module type */
 
 
 extern	void 	*load_module(const char *module, const char *type);
@@ -70,5 +74,7 @@ extern	void	dprintAllModules(DCB *);
 extern 	RESULTSET	*moduleGetList();
 extern void module_feedback_send(void*);
 extern void moduleShowFeedbackReport(DCB *dcb);
+
+EXTERN_C_BLOCK_END
 
 #endif

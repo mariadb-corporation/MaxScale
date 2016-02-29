@@ -40,6 +40,7 @@
 #include <errno.h>
 #include <poll.h>
 #include <dcb.h>
+#include <test_utils.h>
 
 /**
  * test1	Allocate a service and do lots of other things
@@ -56,6 +57,7 @@ int     result;
         /* Poll tests */  
         ss_dfprintf(stderr,
                     "testpoll : Initialise the polling system."); 
+        init_test_env(NULL);
         poll_init();
         ss_dfprintf(stderr, "\t..done\nAdd a DCB");
         dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);

@@ -407,6 +407,33 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 }
             }
         }
+
+        int cflags = REG_ICASE;
+
+        if (options)
+        {
+            for (i = 0; options[i]; i++)
+            {
+                if (!strcasecmp(options[i], "ignorecase"))
+                {
+                    cflags |= REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "case"))
+                {
+                    cflags &= ~REG_ICASE;
+                }
+                else if (!strcasecmp(options[i], "extended"))
+                {
+                    cflags |= REG_EXTENDED;
+                }
+                else
+                {
+                    MXS_ERROR("tee: unsupported option '%s'.",
+                              options[i]);
+                }
+            }
+        }
+
         if (my_instance->service == NULL)
         {
             free(my_instance->match);
@@ -416,7 +443,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
         }
 
         if (my_instance->match &&
-            regcomp(&my_instance->re, my_instance->match, REG_ICASE))
+            regcomp(&my_instance->re, my_instance->match, cflags))
         {
             MXS_ERROR("tee: Invalid regular expression '%s'"
                       " for the match parameter.",
@@ -427,8 +454,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             return NULL;
         }
         if (my_instance->nomatch &&
-            regcomp(&my_instance->nore, my_instance->nomatch,
-                    REG_ICASE))
+            regcomp(&my_instance->nore, my_instance->nomatch, cflags))
         {
             MXS_ERROR("tee: Invalid regular expression '%s'"
                       " for the nomatch paramter.\n",

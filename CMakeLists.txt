@@ -33,7 +33,7 @@ check_deps()
 check_dirs()
 find_package(OpenSSL)
 find_package(Valgrind)
-find_package(MySQLClient)
+find_package(MariaDBConnector)
 find_package(MySQL)
 find_package(Pandoc)
 find_package(TCMalloc)
@@ -45,6 +45,12 @@ find_package(RabbitMQ)
 # Build PCRE2
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
 include(cmake/BuildPCRE2.cmake)
+
+# If the connector was not found, download and build it from source
+if(NOT MARIADB_CONNECTOR_FOUND)
+  message(STATUS "Building MariaDB Connector-C from source.")
+  include(cmake/BuildMariaDBConnector.cmake)
+endif()
 
 # You can find the variables set by this in the FindCURL.cmake file
 # which is a default module in CMake.
@@ -157,15 +163,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${DEBUG_FLAGS} -DSS_DEBUG -DLOG_ASSERT")
 set(CMAKE_CXX_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb")
 
-subdirs(MYSQL_DIR_ALL ${MYSQL_DIR})
-foreach(DIR ${MYSQL_DIR_ALL})
-  include_directories(${DIR})
-endforeach()
-
-include_directories(${MYSQL_DIR}/..)
 include_directories(utils)
-include_directories(log_manager)
-include_directories(query_classifier)
 include_directories(server/include)
 include_directories(server/include/maxscale)
 include_directories(server/inih)
@@ -176,6 +174,7 @@ include_directories(${CURL_INCLUDE_DIRS})
 add_subdirectory(plugins)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
+add_subdirectory(plugin_process)
 if(NOT WITHOUT_MAXADMIN)
   add_subdirectory(client)
 endif()
@@ -200,8 +199,7 @@ if(WITH_MAXSCALE_CNF)
   install(FILES server/maxscale_template.cnf DESTINATION ${MAXSCALE_CONFDIR} RENAME maxscale.cnf.template)
 endif()
 install(FILES server/maxscale_binlogserver_template.cnf DESTINATION ${MAXSCALE_SHAREDIR})
-install(FILES ${ERRMSG} DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale 
-  PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+install(PROGRAMS ${ERRMSG} DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale)
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${MAXSCALE_SHAREDIR})
@@ -222,19 +220,13 @@ if(WITH_SCRIPTS)
     message(STATUS "maxscale.conf will unpack to: /etc/ld.so.conf.d")
     message(STATUS "startup scripts will unpack to to: /etc/init.d")
     message(STATUS "systemd service files will unpack to to: /usr/lib/systemd/system")
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR} 
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION ${MAXSCALE_SHAREDIR}
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale.service DESTINATION ${MAXSCALE_SHAREDIR}
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR} )
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION ${MAXSCALE_SHAREDIR})
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.service DESTINATION ${MAXSCALE_SHAREDIR})
   else()
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION /etc/init.d 
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION /etc/ld.so.conf.d 
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale.service DESTINATION /usr/lib/systemd/system
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/maxscale DESTINATION /etc/init.d)
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION /etc/ld.so.conf.d)
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.service DESTINATION /usr/lib/systemd/system)
   message(STATUS "Installing maxscale.conf to: /etc/ld.so.conf.d")
   message(STATUS "Installing startup scripts to: /etc/init.d")
   message(STATUS "Installing systemd service files to: /usr/lib/systemd/system")
@@ -246,14 +238,10 @@ if(PACKAGE)
 
   execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPACK_PACKAGE_ARCHITECTURE)
   # Install the files copied by the postinst script into the share folder
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR}
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION ${MAXSCALE_SHAREDIR}
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/postinst DESTINATION ${MAXSCALE_SHAREDIR}
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  install(FILES ${CMAKE_BINARY_DIR}/postrm DESTINATION ${MAXSCALE_SHAREDIR}
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/maxscale DESTINATION ${MAXSCALE_SHAREDIR})
+  install(FILES ${CMAKE_BINARY_DIR}/maxscale.conf DESTINATION ${MAXSCALE_SHAREDIR})
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/postinst DESTINATION ${MAXSCALE_SHAREDIR})
+  install(PROGRAMS ${CMAKE_BINARY_DIR}/postrm DESTINATION ${MAXSCALE_SHAREDIR})
   if(${CMAKE_VERSION} VERSION_LESS 2.8.12)
     message(WARNING "CMake version is ${CMAKE_VERSION}. Building of packages requires version 2.8.12 or greater.")
   else()

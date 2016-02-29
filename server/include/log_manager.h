@@ -18,7 +18,9 @@
 #if !defined(LOG_MANAGER_H)
 #define LOG_MANAGER_H
 
+#include <stdbool.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #if defined(__cplusplus)
 extern "C" {

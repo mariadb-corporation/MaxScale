@@ -1,11 +1,11 @@
 add_library(schemarouter SHARED schemarouter.c sharding_common.c)
-target_link_libraries(schemarouter maxscale-common query_classifier)
+target_link_libraries(schemarouter maxscale-common)
 add_dependencies(schemarouter pcre2)
 set_target_properties(schemarouter PROPERTIES VERSION "1.0.0")
 install(TARGETS schemarouter DESTINATION ${MAXSCALE_LIBDIR})
 
 add_library(shardrouter SHARED shardrouter.c svcconn.c sharding_common.c)
-target_link_libraries(shardrouter maxscale-common query_classifier)
+target_link_libraries(shardrouter maxscale-common)
 add_dependencies(shardrouter pcre2)
 set_target_properties(shardrouter PROPERTIES VERSION "1.0.0")
 install(TARGETS shardrouter DESTINATION ${MAXSCALE_LIBDIR})

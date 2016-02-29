@@ -27,26 +27,7 @@ or
 ```
 It is also possible to start MaxScale by executing the maxscale command itself. Running the executable /usr/bin/maxscale will result in MaxScale running as a daemon process, unattached to the terminal in which it was started and using configuration files that it finds in the /etc directory.
 
-Options may be passed to the MaxScale binary that alter this default behavior, this options are documented in the table below.
-
-Switch|Long Option|Description
-------|-----------|-----------
-`-d`|`--nodaemon`|enable running in terminal process (default:disabled)
-`-f FILE`|`--config=FILE`|relative or absolute pathname of MaxScale configuration file (default:/etc/maxscale.cnf)
-`-l[file shm]`|`--log=[file shm]`|log to file or shared memory (default: shm)
-`-L PATH`|`--logdir=PATH`|path to log file directory (default: /var/log/maxscale)
-`-D PATH`|`--datadir=PATH`|path to data directory, stored embedded mysql tables (default: /var/cache/maxscale)
-`-C PATH`|`--configdir=PATH`|path to configuration file directory (default: /etc/)
-`-B PATH`|`--libdir=PATH`|path to module directory (default: /usr/lib64/maxscale)
-`-A PATH`|`--cachedir=PATH`|path to cache directory (default: /var/cache/maxscale)
-`P PATH`|`--piddir=PATH`|PID file directory
-`-U USER`|`--user=USER`|run MaxScale as another user. The user ID and group ID of this user are used to run MaxScale.
-`-s [yes no]`|`--syslog=[yes no]`|log messages to syslog (default:yes)
-`-S [yes no]`|`--maxscalelog=[yes no]`|log messages to MaxScale log (default: yes)
-`-G [0 1]`|`--log_augmentation=[0 1]`|augment messages with the name of the function where the message was logged (default: 0). Primarily for development purposes.
-`-v`|`--version`|print version info and exit
-`-V`|`--version-full`|print version info and the commit ID the binary was built from
-`-?`|`--help`|show this help
+Options may be passed to the MaxScale binary that alter this default behavior. For a full list of all parameters, refer to the MaxScale help output by executing `maxscale --help`.
 
 Additional command line arguments can be passed to MaxScale with a configuration file placed at `/etc/sysconfig/maxscale` on RPM installations and `/etc/default/maxscale` file on DEB installations. Set the arguments in a variable called `MAXSCALE_OPTIONS` and remember to surround the arguments with quotes. The file should only contain environment variable declarations.
 

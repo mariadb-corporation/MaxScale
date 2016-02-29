@@ -1,6 +1,6 @@
 if(MYSQLCLIENT_FOUND)
   add_executable(testconnect testconnect.c)
-  message(STATUS "Linking against: ${MYSQLCLIENT_LIBRARIES}")
-  target_link_libraries(testconnect ${MYSQLCLIENT_LIBRARIES} ssl crypto dl z m rt pthread)
+  message(STATUS "Linking against: ${MARIADB_CONNECTOR_LIB}")
+  target_link_libraries(testconnect maxscale-common)
   add_test(NAME ReadConnRouterAuthTest COMMAND $<TARGET_FILE:testconnect> 10000 ${TEST_HOST} ${MASTER_PORT} ${TEST_HOST} ${TEST_PORT} 1.10)
 endif()

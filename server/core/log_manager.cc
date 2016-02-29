@@ -15,6 +15,7 @@
  *
  * Copyright MariaDB Corporation Ab 2013-2014
  */
+#include <log_manager.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -28,10 +29,10 @@
 #include <syslog.h>
 #include <atomic.h>
 
+#include <mlist.h>
 #include <skygw_debug.h>
 #include <skygw_types.h>
 #include <skygw_utils.h>
-#include <log_manager.h>
 
 #define MAX_PREFIXLEN 250
 #define MAX_SUFFIXLEN 250

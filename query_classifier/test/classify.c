@@ -8,25 +8,6 @@
 #include <mysql.h>
 #include <unistd.h>
 
-static char* server_options[] = {
-    "MariaDB Corporation MaxScale",
-    "--no-defaults",
-    "--datadir=.",
-    "--language=.",
-    "--skip-innodb",
-    "--default-storage-engine=myisam",
-	NULL
-};
-
-const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
-
-static char* server_groups[] = {
-	"embedded",
-	"server",
-	"server",
-	NULL
-};
-
 int main(int argc, char** argv)
 {
 	if(argc < 3){
@@ -37,11 +18,8 @@ int main(int argc, char** argv)
 	char buffer[1024], *strbuff = (char*)calloc(buffsz,sizeof(char));
 	FILE *input,*expected;
 
-	if(mysql_library_init(num_elements, server_options, server_groups))
-		{
-			printf("Error: Cannot initialize Embedded Library.");
-		    return 1;
-		}
+    qc_init("qc_mysqlembedded");
+    qc_thread_init();
 
 	input = fopen(argv[1],"rb");
 
@@ -189,7 +167,8 @@ int main(int argc, char** argv)
 	}
 	fclose(input);
 	fclose(expected);
-	mysql_library_end();
+    qc_thread_end();
+    qc_end();
 	free(strbuff);
 	return ex_val;
 }

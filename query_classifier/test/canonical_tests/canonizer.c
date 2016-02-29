@@ -7,26 +7,6 @@
 #include <buffer.h>
 #include <mysql.h>
 
-static char* server_options[] =
-{
-    "MariaDB Corporation MaxScale",
-    "--datadir=./",
-    "--language=./",
-    "--skip-innodb",
-    "--default-storage-engine=myisam",
-    NULL
-};
-
-const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
-
-static char* server_groups[] =
-{
-    "embedded",
-    "server",
-    "server",
-    NULL
-};
-
 int main(int argc, char** argv)
 {
     unsigned int psize;
@@ -48,11 +28,8 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    if (mysql_library_init(num_elements, server_options, server_groups))
-    {
-        printf("Embedded server init failed.\n");
-        return 1;
-    }
+    qc_init("qc_mysqlembedded");
+    qc_thread_init();
 
     infile = fopen(argv[1],"rb");
     outfile = fopen(argv[2],"wb");
@@ -87,7 +64,7 @@ int main(int argc, char** argv)
     }
     fclose(infile);
     fclose(outfile);
-    mysql_library_end();
-
+    qc_thread_end();
+    qc_end();
     return 0;
 }
