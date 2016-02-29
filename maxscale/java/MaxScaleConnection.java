@@ -1,6 +1,7 @@
 package maxscale.java;
 
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -57,12 +58,14 @@ public class MaxScaleConnection {
 
         System.out.println("IP: " + ip + " User: " + user + " Password: " + password);
 
-        datasource_rw = new MariaDbDataSource(ip, READWRITESPLIT_PORT, "");
-        datasource_rc_master = new MariaDbDataSource(ip, READCONNROUTE_MASTER_PORT, "");
-        datasource_rc_slave = new MariaDbDataSource(ip, READCONNROUTE_SLAVE_PORT, "");
-        conn_rw = datasource_rw.getConnection(user, password);
-        conn_master = datasource_rc_master.getConnection(user, password);
-        conn_slave = datasource_rc_slave.getConnection(user, password);
+        conn_rw = DriverManager.getConnection(
+                "jdbc:mariadb://" + ip + ":" + READWRITESPLIT_PORT + "/", user, password);
+
+        conn_master = DriverManager.getConnection(
+                "jdbc:mariadb://" + ip + ":" + READCONNROUTE_MASTER_PORT + "/", user, password);
+
+        conn_slave = DriverManager.getConnection(
+                "jdbc:mariadb://" + ip + ":" + READCONNROUTE_SLAVE_PORT + "/", user, password);
     }
 
     public boolean isSmokeTest() {
