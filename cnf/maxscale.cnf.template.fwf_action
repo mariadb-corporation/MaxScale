@@ -37,6 +37,8 @@ type=filter
 module=dbfwfilter
 rules=/###access_homedir###/rules/rules.txt
 action=block
+log_match=true
+log_no_match=true
 
 # Service with whitelist action
 
@@ -59,6 +61,8 @@ type=filter
 module=dbfwfilter
 rules=/###access_homedir###/rules/rules.txt
 action=allow
+log_match=true
+log_no_match=true
 
 # Service with ignore action
 
@@ -81,3 +85,5 @@ type=filter
 module=dbfwfilter
 rules=/###access_homedir###/rules/rules.txt
 action=ignore
+log_match=true
+log_no_match=true
