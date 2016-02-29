@@ -1,2 +1,2 @@
 rule r1 deny regex 'select'
-users %%@%% match any rules r1
+users %@% match any rules r1
