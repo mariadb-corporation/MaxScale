@@ -2,11 +2,8 @@ package maxscale.java;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import org.mariadb.jdbc.MariaDbDataSource;
 
 /**
  * Simple MaxScale connection class
@@ -20,9 +17,6 @@ public class MaxScaleConnection {
     private static String user = null;
     private static String password = null;
     private static boolean smoke_test = false;
-    private MariaDbDataSource datasource_rw = null;
-    private MariaDbDataSource datasource_rc_master = null;
-    private MariaDbDataSource datasource_rc_slave = null;
     private Connection conn_rw = null, conn_master = null, conn_slave = null;
     public static final int READWRITESPLIT_PORT = 4006;
     public static final int READCONNROUTE_MASTER_PORT = 4008;
@@ -57,6 +51,7 @@ public class MaxScaleConnection {
         }
 
         System.out.println("IP: " + ip + " User: " + user + " Password: " + password);
+        System.out.println("Connection string: jdbc:mariadb://" + ip + ":" + READWRITESPLIT_PORT + "/test");
 
         conn_rw = DriverManager.getConnection(
                 "jdbc:mariadb://" + ip + ":" + READWRITESPLIT_PORT + "/test", user, password);
