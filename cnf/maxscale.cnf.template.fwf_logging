@@ -34,5 +34,6 @@ port=4009
 type=filter
 module=dbfwfilter
 rules=/###access_homedir###/rules/rules.txt
+action=ignore
 log_match=true
 log_no_match=true

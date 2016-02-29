@@ -28,11 +28,11 @@ int main(int argc, char** argv)
 
     test->tprintf("trying first: 'select 1'\n");
     test->set_timeout(20);
-    test->add_result(execute_query_silent(test->conn_slave, "select 1"), "First query should succeed");
+    test->add_result(execute_query_silent(test->conn_slave, "select 1"), "First query should succeed\n");
 
     test->tprintf("trying second: 'select 2'\n");
     test->set_timeout(20);
-    test->add_result(execute_query_silent(test->conn_slave, "select 2"), "Second query should succeed");
+    test->add_result(execute_query_silent(test->conn_slave, "select 2"), "Second query should succeed\n");
 
     /** Check that MaxScale is alive */
     test->stop_timeout();
