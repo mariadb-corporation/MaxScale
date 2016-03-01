@@ -252,6 +252,8 @@ typedef struct rwsplit_config_st
     int rw_max_sescmd_history_size;
     bool rw_disable_sescmd_hist;
     bool rw_master_reads; /*< Use master for reads */
+    bool rw_strict_multi_stmt; /*< Force non-multistatement queries to be routed
+                                * to the master after a multistatement query. */
 } rwsplit_config_t;
 
 #if defined(PREP_STMT_CACHING)

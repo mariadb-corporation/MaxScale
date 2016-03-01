@@ -696,7 +696,10 @@ createInstance(SERVICE *service, char **options)
 	 */
 	router->bitmask = 0;
 	router->bitvalue = 0;
-        
+
+    /** Enable strict multistatement handling by default */
+    router->rwsplit_config.rw_strict_multi_stmt = true;
+
         /** Call this before refreshInstance */
 	if (options)
 	{
@@ -1384,7 +1387,7 @@ static route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     target_t use_sql_variables_in = rses->rses_config.rw_use_sql_variables_in;
     route_target_t target = TARGET_UNDEFINED;
 
-    if (rses->forced_node == rses->rses_master_ref)
+    if (rses->rses_config.rw_strict_multi_stmt && rses->forced_node == rses->rses_master_ref)
     {
         target = TARGET_MASTER;
     }
@@ -4639,6 +4642,10 @@ static void rwsplit_process_router_options(
 			else if(strcmp(options[i],"master_accept_reads") == 0)
 			{
 			    router->rwsplit_config.rw_master_reads = config_truth_value(value);
+			}
+			else if(strcmp(options[i],"strict_multi_stmt") == 0)
+			{
+			    router->rwsplit_config.rw_strict_multi_stmt = config_truth_value(value);
 			}
                 }
         } /*< for */

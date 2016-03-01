@@ -143,6 +143,22 @@ disable_sescmd_history=true
 master_accept_reads=true
 ```
 
+### `strict_multi_stmt`
+
+When a client executes a multistatement query, all queries after that will be routed to
+the master to guarantee a consistent session state. This behavior can be controlled with
+the **`strict_multi_stmt`** router option. This option is enabled by default.
+
+If set to false, queries are routed normally after a multistatement query. **Warning**, this
+can cause false data to be read from the slaves if the multistatement query modifies
+the session state. Only disable the strict mode if you know that no changes to the session
+state will be made inside the multistatement queries.
+
+```
+# Disable strict multistatement mode
+strict_multi_stmt=false
+```
+
 ## Routing hints
 
 The readwritesplit router supports routing hints. For a detailed guide on hint syntax and functionality, please read [this](../Reference/Hint-Syntax.md) document.
