@@ -165,7 +165,6 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb")
 
 include_directories(utils)
 include_directories(server/include)
-include_directories(server/include/maxscale)
 include_directories(server/inih)
 include_directories(server/modules/include)
 include_directories(${CMAKE_BINARY_DIR}/server/include)

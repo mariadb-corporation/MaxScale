@@ -36,7 +36,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <router.h>
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <atomic.h>
 #include <gw.h>
 

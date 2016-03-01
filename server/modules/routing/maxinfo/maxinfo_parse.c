@@ -40,7 +40,7 @@
 #include <atomic.h>
 #include <spinlock.h>
 #include <dcb.h>
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <maxinfo.h>
 #include <skygw_utils.h>
 #include <log_manager.h>

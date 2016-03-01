@@ -39,7 +39,7 @@
 #include <dcb.h>
 #include <session.h>
 #include <openssl/sha.h>
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <secrets.h>

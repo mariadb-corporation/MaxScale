@@ -17,6 +17,7 @@
  */
 
 #include <sharding_common.h>
+#include <maxscale/poll.h>
 
 /**
  * Extract the database name from a COM_INIT_DB or literal USE ... query.

@@ -50,6 +50,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <mysql_client_server_protocol.h>
+#include <maxscale/poll.h>
 #include <gw.h>
 #include <modinfo.h>
 #include <sys/stat.h>

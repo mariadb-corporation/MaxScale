@@ -63,7 +63,7 @@
 #include <spinlock.h>
 #include <buffer.h>
 #include <dcb.h>
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <users.h>
 #include <dbusers.h>
 #include <maxconfig.h>
@@ -71,7 +71,6 @@
 #include <adminusers.h>
 #include <monitor.h>
 #include <debugcli.h>
-#include <poll.h>
 #include <housekeeper.h>
 
 #include <skygw_utils.h>

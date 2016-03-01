@@ -60,7 +60,7 @@
 #include <router.h>
 #include <dcb.h>
 #include <sys/time.h>
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <mysql_client_server_protocol.h>
 #include <housekeeper.h>
 

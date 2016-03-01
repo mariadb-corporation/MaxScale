@@ -56,7 +56,7 @@
 #include <users.h>
 #include <filter.h>
 #include <dbusers.h>
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <sys/stat.h>

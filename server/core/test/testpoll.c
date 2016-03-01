@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <dcb.h>
 #include <test_utils.h>
 

@@ -64,7 +64,7 @@
 #include <session.h>
 #include <modules.h>
 #include <maxconfig.h>
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <housekeeper.h>
 #include <service.h>
 #include <memlog.h>

@@ -1,6 +1,6 @@
 #ifndef TEST_UTILS_H
 #define TEST_UTILS_H
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <dcb.h>
 #include <housekeeper.h>
 #include <maxscale_test.h>

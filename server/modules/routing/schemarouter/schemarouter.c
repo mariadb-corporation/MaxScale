@@ -34,6 +34,7 @@
 #include <modinfo.h>
 #include <modutil.h>
 #include <mysql_client_server_protocol.h>
+#include <maxscale/poll.h>
 #include <pcre.h>
 
 #define DEFAULT_REFRESH_INTERVAL 30.0

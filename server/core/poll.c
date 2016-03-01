@@ -23,7 +23,7 @@
 #include <signal.h>
 #include <sys/epoll.h>
 #include <errno.h>
-#include <poll.h>
+#include <maxscale/poll.h>
 #include <dcb.h>
 #include <atomic.h>
 #include <gwbitmask.h>
