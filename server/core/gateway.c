@@ -151,6 +151,7 @@ static struct option long_options[] = {
 static bool syslog_configured = false;
 static bool maxlog_configured = false;
 static bool log_to_shm_configured = false;
+static int  last_signal = 0;
 
 static int cnf_preparser(void* data, const char* section, const char* name, const char* value);
 static void log_flush_shutdown(void);
@@ -188,6 +189,9 @@ static int set_user(const char* user);
 bool pid_file_exists();
 void write_child_exit_code(int fd, int code);
 static bool change_cwd();
+void shutdown_server();
+static void log_exit_status();
+
 /** SSL multi-threading functions and structures */
 
 static SPINLOCK* ssl_locks;
@@ -289,21 +293,17 @@ static void sigusr1_handler (int i)
     mxs_log_rotate();
 }
 
-static void sigterm_handler (int i) {
-    extern void shutdown_server();
-
-    MXS_ERROR("MaxScale received signal SIGTERM. Exiting.");
-    mxs_log_flush_sync();
+static void sigterm_handler(int i)
+{
+    last_signal = i;
     shutdown_server();
+    fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
 
 static void
-sigint_handler (int i)
+sigint_handler(int i)
 {
-    extern void shutdown_server();
-
-    MXS_ERROR("MaxScale received signal SIGINT. Shutting down.");
-    mxs_log_flush_sync();
+    last_signal = i;
     shutdown_server();
     fprintf(stderr, "\n\nShutting down MaxScale\n\n");
 }
@@ -1987,6 +1987,7 @@ int main(int argc, char **argv)
     /*< Stop all the monitors */
     monitorStopAll();
 
+    log_exit_status();
     MXS_NOTICE("MaxScale is shutting down.");
     /** Release mysql thread context*/
     mysql_thread_end();
@@ -2593,4 +2594,24 @@ static bool change_cwd()
     }
 
     return rval;
+}
+
+/**
+ * @brief Log a message about the last received signal
+ */
+static void log_exit_status()
+{
+    switch (last_signal)
+    {
+        case SIGTERM:
+            MXS_NOTICE("MaxScale received signal SIGTERM. Exiting.");
+            break;
+
+        case SIGINT:
+            MXS_NOTICE("MaxScale received signal SIGINT. Exiting.");
+            break;
+
+        default:
+            break;
+    }
 }
