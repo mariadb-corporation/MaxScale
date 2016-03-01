@@ -40,4 +40,8 @@
 #define MAXSCALE_ALREADYRUNNING	4	/* MaxScale is already runing */
 #define MAXSCALE_BADARG		5	/* Bad command line argument */
 #define MAXSCALE_INTERNALERROR	6	/* Internal error, see error log */
+
+void maxscale_reset_uptime(void);
+int maxscale_uptime(void);
+
 #endif

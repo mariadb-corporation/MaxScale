@@ -99,8 +99,6 @@
 #  define _GNU_SOURCE
 #endif
 
-time_t  MaxScaleStarted;
-
 extern char *program_invocation_name;
 extern char *program_invocation_short_name;
 
@@ -1293,6 +1291,8 @@ int main(int argc, char **argv)
     *maxlog_enabled = 1;
     *log_to_shm = 0;
 
+    maxscale_reset_uptime();
+
     sigemptyset(&sigpipe_mask);
     sigaddset(&sigpipe_mask, SIGPIPE);
     progname = *argv;
@@ -1967,7 +1967,6 @@ int main(int argc, char **argv)
     if (daemon_mode)
         write_child_exit_code(daemon_pipe[1], rc);
 
-    MaxScaleStarted = time(0);
     /*<
      * Serve clients.
      */
@@ -2296,12 +2295,6 @@ static int write_pid_file() {
 
     /* success */
     return 0;
-}
-
-int
-MaxScaleUptime()
-{
-    return time(0) - MaxScaleStarted;
 }
 
 bool handle_path_arg(char** dest, char* path, char* arg, bool rd, bool wr)
