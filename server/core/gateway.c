@@ -293,11 +293,13 @@ static void sigusr1_handler (int i)
     mxs_log_rotate();
 }
 
+static const char shutdown_msg[] = "\n\nShutting down MaxScale\n\n";
+
 static void sigterm_handler(int i)
 {
     last_signal = i;
     shutdown_server();
-    fprintf(stderr, "\n\nShutting down MaxScale\n\n");
+    write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg));
 }
 
 static void
@@ -305,7 +307,7 @@ sigint_handler(int i)
 {
     last_signal = i;
     shutdown_server();
-    fprintf(stderr, "\n\nShutting down MaxScale\n\n");
+    write(STDERR_FILENO, shutdown_msg, sizeof(shutdown_msg));
 }
 
 static void
