@@ -68,6 +68,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <maxscale.h>
 #include <service.h>
 #include <server.h>
 #include <router.h>
@@ -146,7 +147,6 @@ char *blr_test_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char 
 static int blr_slave_handle_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt);
 static int blr_slave_send_warning_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, char *message);
 static int blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave);
-extern int MaxScaleUptime();
 static int blr_slave_send_status_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *variable, char *value, int column_type);
 static int blr_slave_handle_status_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *stmt);
 static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *name, int type, int len, uint8_t seqno);
@@ -4402,7 +4402,7 @@ char	*sep = " 	,=";
 			return -1;
 		} else if (strcasecmp(word, "'Uptime'") == 0) {
 			char uptime[41]="";
-			snprintf(uptime, 40, "%d", MaxScaleUptime());
+			snprintf(uptime, 40, "%d", maxscale_uptime());
 			return blr_slave_send_status_variable(router, slave, "Uptime", uptime, BLR_TYPE_INT);
 		} else
 			return 0;
