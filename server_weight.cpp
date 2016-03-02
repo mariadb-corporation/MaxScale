@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Connecting to ReadConnMaster on %s\n", Test->maxscale_IP);
     for (i=0; i<maxscale_conn_num; i++) {conn_read[i] = Test->open_readconn_master_connection();}
 
-    Test->tprintf("Sleeping 5 seconds\n");  sleep(5);
+    Test->tprintf("Sleeping 15 seconds\n");  sleep(15);
 
     unsigned int conn_num;
     int Nc[4];
@@ -100,10 +100,12 @@ int main(int argc, char *argv[])
 
     for (i = 0; i < maxscale_conn_num; i++) { mysql_close(conn_read[i]);}
 
+    Test->tprintf("Sleeping 15 seconds\n");  sleep(15);
+
     Test->tprintf("Connecting to RWSplit on %s\n", Test->maxscale_IP);
     for (i = 0; i < maxscale_conn_num; i++) {conn_rwsplit[i] = Test->open_rwsplit_connection();}
 
-    Test->tprintf("Sleeping 5 seconds\n");  sleep(5);
+    Test->tprintf("Sleeping 15 seconds\n");  sleep(15);
 
     Nc[1] = maxscale_conn_num / 2;
     Nc[2] = maxscale_conn_num / 3;
@@ -111,6 +113,7 @@ int main(int argc, char *argv[])
     Nc[0] = maxscale_conn_num;
 
     check_conn_num(Test, Nc, conn_num);
+
 
     for (i=0; i<maxscale_conn_num; i++) {mysql_close(conn_rwsplit[i]);}
     Test->galera->close_connections();
