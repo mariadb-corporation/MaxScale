@@ -95,10 +95,13 @@ int main(int argc, char *argv[])
     Test->set_timeout(3*run_time + 60);
     sleep(20);
     sleep(run_time);
+    Test->tprintf("Blocking slave %d\n", slaves[0]);
     Test->galera->block_node(slaves[0]);
     sleep(run_time);
     Test->galera->block_node(slaves[1]);
+    Test->tprintf("Blocking slave %d\n", slaves[1]);
     sleep(run_time);
+    Test->tprintf("Unblocking slaves\n");
     Test->galera->unblock_node(slaves[0]);
     Test->galera->unblock_node(slaves[1]);
 
@@ -121,10 +124,13 @@ int main(int argc, char *argv[])
     Test->set_timeout(3*run_time + 60);
     sleep(20);
     sleep(run_time);
+    Test->tprintf("Blocking node %d\n", slaves[0]);
     Test->galera->block_node(slaves[0]);
     sleep(run_time);
+    Test->tprintf("Blocking node %d\n", slaves[1]);
     Test->galera->block_node(slaves[1]);
     sleep(run_time);
+    Test->tprintf("Unblocking nodes\n");
     Test->galera->unblock_node(slaves[0]);
     Test->galera->unblock_node(slaves[1]);
 
