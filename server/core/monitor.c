@@ -522,24 +522,25 @@ bool check_monitor_permissions(MONITOR* monitor)
 {
     MYSQL* mysql;
     MYSQL_RES* res;
-    char *user,*dpasswd;
+    char *user, *dpasswd;
     SERVER* server;
-    int conn_timeout = 1;
     bool rval = true;
-
-    user = monitor->user;
-    dpasswd = decryptPassword(monitor->password);
 
     if ((mysql = mysql_init(NULL)) == NULL)
     {
         MXS_ERROR("[%s] Error: MySQL connection initialization failed.", __FUNCTION__);
-        free(dpasswd);
         return false;
     }
 
+    GATEWAY_CONF* cnf = config_get_global_options();
+
+    mysql_options(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
+    mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
+    mysql_options(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
+
+    user = monitor->user;
+    dpasswd = decryptPassword(monitor->password);
     server = monitor->databases->server;
-    mysql_options(mysql,MYSQL_OPT_USE_REMOTE_CONNECTION,NULL);
-    mysql_options(mysql,MYSQL_OPT_CONNECT_TIMEOUT,&conn_timeout);
 
     /** Connect to the first server. This assumes all servers have identical
      * user permissions. */
@@ -556,17 +557,17 @@ bool check_monitor_permissions(MONITOR* monitor)
         return false;
     }
 
-    if (mysql_query(mysql,"show slave status") != 0)
+    if (mysql_query(mysql, "show slave status") != 0)
     {
         if (mysql_errno(mysql) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
         {
             MXS_ERROR("%s: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
-                      monitor->name,user,mysql_error(mysql));
+                      monitor->name, user, mysql_error(mysql));
         }
         else
         {
             MXS_ERROR("%s: Monitor failed to query for slave status. MySQL error message: %s",
-                      monitor->name,mysql_error(mysql));
+                      monitor->name, mysql_error(mysql));
         }
         rval = false;
     }
@@ -575,7 +576,7 @@ bool check_monitor_permissions(MONITOR* monitor)
         if ((res = mysql_use_result(mysql)) == NULL)
         {
             MXS_ERROR("%s: Result retrieval failed when checking for REPLICATION CLIENT permissions: %s",
-                      monitor->name,mysql_error(mysql));
+                      monitor->name, mysql_error(mysql));
             rval = false;
         }
         else
@@ -906,47 +907,46 @@ mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
         return rval;
     }
 
-    int connect_timeout = mon->connect_timeout;
-    int read_timeout = mon->read_timeout;
-    int write_timeout = mon->write_timeout;
-    char *uname = database->server->monuser ? database->server->monuser : mon->user;
-    char *passwd = database->server->monpw ? database->server->monpw : mon->password;
-    char *dpwd = decryptPassword(passwd);
-
     if (database->con)
     {
         mysql_close(database->con);
     }
-    database->con = mysql_init(NULL);
 
-    mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &connect_timeout);
-    mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *) &read_timeout);
-    mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *) &write_timeout);
-
-    time_t start = time(NULL);
-    bool result = (mysql_real_connect(database->con,
-                                      database->server->name,
-                                      uname,
-                                      dpwd,
-                                      NULL,
-                                      database->server->port,
-                                      NULL,
-                                      0) != NULL);
-    time_t end = time(NULL);
-
-    if (!result)
+    if ((database->con = mysql_init(NULL)))
     {
-        if ((int) difftime(end, start) >= connect_timeout)
+        char *uname = database->server->monuser ? database->server->monuser : mon->user;
+        char *passwd = database->server->monpw ? database->server->monpw : mon->password;
+        char *dpwd = decryptPassword(passwd);
+
+        mysql_options(database->con, MYSQL_OPT_CONNECT_TIMEOUT, (void *) &mon->connect_timeout);
+        mysql_options(database->con, MYSQL_OPT_READ_TIMEOUT, (void *) &mon->read_timeout);
+        mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *) &mon->write_timeout);
+
+        time_t start = time(NULL);
+        bool result = (mysql_real_connect(database->con, database->server->name,
+                                          uname, dpwd, NULL, database->server->port,
+                                          NULL, 0) != NULL);
+        time_t end = time(NULL);
+
+        if (!result)
         {
-            rval = MONITOR_CONN_TIMEOUT;
+            if ((int) difftime(end, start) >= mon->connect_timeout)
+            {
+                rval = MONITOR_CONN_TIMEOUT;
+            }
+            else
+            {
+                rval = MONITOR_CONN_REFUSED;
+            }
         }
-        else
-        {
-            rval = MONITOR_CONN_REFUSED;
-        }
+
+        free(dpwd);
+    }
+    else
+    {
+        rval = MONITOR_CONN_REFUSED;
     }
 
-    free(dpwd);
     return rval;
 }
 

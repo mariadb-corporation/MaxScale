@@ -387,45 +387,6 @@ config_load(char *file)
     {
         return 0;
     }
-    MYSQL *conn;
-    conn = mysql_init(NULL);
-    if (conn)
-    {
-        if (mysql_real_connect(conn, NULL, NULL, NULL, NULL, 0, NULL, 0))
-        {
-            char *ptr, *tmp;
-
-            tmp = (char *)mysql_get_server_info(conn);
-            unsigned int server_version = mysql_get_server_version(conn);
-
-            if (version_string)
-            {
-                free(version_string);
-            }
-
-            if ((version_string = malloc(strlen(tmp) + strlen("5.5.5-") + 1)) == NULL)
-            {
-                return 0;
-            }
-
-            if (server_version >= 100000)
-            {
-                strcpy(version_string, "5.5.5-");
-                strcat(version_string, tmp);
-            }
-            else
-            {
-                strcpy(version_string, tmp);
-            }
-
-            ptr = strstr(version_string, "-embedded");
-            if (ptr)
-            {
-                *ptr = '\0';
-            }
-        }
-        mysql_close(conn);
-    }
 
     global_defaults();
     feedback_defaults();

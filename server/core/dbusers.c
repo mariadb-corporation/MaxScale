@@ -790,34 +790,40 @@ get_all_users(SERVICE *service, USERS *users)
 
     while (server != NULL)
     {
-        con = gw_mysql_init();
-
-        if (!con)
+        while (!service->svc_do_shutdown && server != NULL)
         {
-            goto cleanup;
-        }
+            con = gw_mysql_init();
+            if (con)
+            {
+                if (mysql_real_connect(con, server->server->name, service_user, dpwd,
+                                       NULL, server->server->port, NULL, 0) == NULL)
+                {
+                    MXS_ERROR("Failure loading users data from backend "
+                              "[%s:%i] for service [%s]. MySQL error %i, %s",
+                              server->server->name, server->server->port,
+                              service->name, mysql_errno(con), mysql_error(con));
+                    mysql_close(con);
+                }
+                else
+                {
+                    /** Successfully connected to a server */
+                    break;
+                }
+            }
+            else
+            {
+                server = NULL;
+                break;
+            }
 
-        while (!service->svc_do_shutdown &&
-               server != NULL &&
-               (mysql_real_connect(con,
-                                   server->server->name,
-                                   service_user,
-                                   dpwd,
-                                   NULL,
-                                   server->server->port,
-                                   NULL,
-                                   0) == NULL))
-        {
             server = server->next;
         }
-
 
         if (server == NULL)
         {
             MXS_ERROR("Unable to get user data from backend database "
                       "for service [%s]. Missing server information.",
                       service->name);
-            mysql_close(con);
             goto cleanup;
         }
 
@@ -830,28 +836,40 @@ get_all_users(SERVICE *service, USERS *users)
 
     while (server != NULL)
     {
-        con = gw_mysql_init();
-
-        if (!con)
+        while (!service->svc_do_shutdown && server != NULL)
         {
-            goto cleanup;
-        }
+            con = gw_mysql_init();
+            if (con)
+            {
+                if (mysql_real_connect(con, server->server->name, service_user, dpwd,
+                                       NULL, server->server->port, NULL, 0) == NULL)
+                {
+                    MXS_ERROR("Failure loading users data from backend "
+                              "[%s:%i] for service [%s]. MySQL error %i, %s",
+                              server->server->name, server->server->port,
+                              service->name, mysql_errno(con), mysql_error(con));
+                    mysql_close(con);
+                }
+                else
+                {
+                    /** Successfully connected to a server */
+                    break;
+                }
+            }
+            else
+            {
+                server = NULL;
+                break;
+            }
 
-
-        while (!service->svc_do_shutdown && server != NULL &&
-               (mysql_real_connect(con, server->server->name, service_user, dpwd,
-                                   NULL, server->server->port, NULL, 0) == NULL))
-        {
             server = server->next;
         }
-
 
         if (server == NULL)
         {
             MXS_ERROR("Unable to get user data from backend database "
                       "for service [%s]. Missing server information.",
                       service->name);
-            mysql_close(con);
             goto cleanup;
         }
 
@@ -1300,17 +1318,36 @@ get_users(SERVICE *service, USERS *users)
     }
     else
     {
+        mysql_close(con);
         /* load data from other servers via loop */
         server = service->dbref;
 
-        while (!service->svc_do_shutdown && server != NULL &&
-               (mysql_real_connect(con, server->server->name, service_user, dpwd,
-                                   NULL, server->server->port, NULL, 0) == NULL))
+        while (!service->svc_do_shutdown && server != NULL)
         {
-            MXS_ERROR("Failure loading users data from backend "
-                      "[%s:%i] for service [%s]. MySQL error %i, %s",
-                      server->server->name, server->server->port,
-                      service->name, mysql_errno(con), mysql_error(con));
+            con = gw_mysql_init();
+            if (con)
+            {
+                if (mysql_real_connect(con, server->server->name, service_user, dpwd,
+                                       NULL, server->server->port, NULL, 0) == NULL)
+                {
+                    MXS_ERROR("Failure loading users data from backend "
+                              "[%s:%i] for service [%s]. MySQL error %i, %s",
+                              server->server->name, server->server->port,
+                              service->name, mysql_errno(con), mysql_error(con));
+                    mysql_close(con);
+                }
+                else
+                {
+                    /** Successfully connected to a server */
+                    break;
+                }
+            }
+            else
+            {
+                server = NULL;
+                break;
+            }
+
             server = server->next;
         }
 
@@ -1334,7 +1371,6 @@ get_users(SERVICE *service, USERS *users)
     {
         MXS_ERROR("Unable to get user data from backend database for service [%s]."
                   " Failed to connect to any of the backend databases.", service->name);
-        mysql_close(con);
         return -1;
     }
 
