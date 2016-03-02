@@ -589,7 +589,7 @@ int TestConnections::check_maxscale_processes(int expected)
         maxscale_num = ssh_maxscale_output(false, "ps -C maxscale | grep maxscale | wc -l");
         if (atoi(maxscale_num) != expected)
         {
-            add_result(1, "Number of MaxScale processes is not %d, it is %d\n", expected, maxscale_num_d);
+            add_result(1, "Number of MaxScale processes is not %d, it is %s\n", expected, maxscale_num);
         }
     }
 
