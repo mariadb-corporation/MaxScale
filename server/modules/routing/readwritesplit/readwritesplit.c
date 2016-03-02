@@ -1438,7 +1438,7 @@ static route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
 	/**
 	 * Hints may affect on routing of the following queries
 	 */
-	else if (!trx_active && !load_active &&
+	else if (!trx_active && !load_active && !QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) &&
 		(QUERY_IS_TYPE(qtype, QUERY_TYPE_READ) ||	/*< any SELECT */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_SHOW_TABLES) || /*< 'SHOW TABLES' */
 		QUERY_IS_TYPE(qtype, QUERY_TYPE_USERVAR_READ)||	/*< read user var */

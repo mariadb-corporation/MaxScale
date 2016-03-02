@@ -647,6 +647,7 @@ static qc_query_type_t resolve_query_type(THD* thd)
         break;
 
     default:
+        type |= QUERY_TYPE_WRITE;
         break;
     }
 
