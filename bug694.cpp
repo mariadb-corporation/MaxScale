@@ -27,7 +27,10 @@ int main(int argc, char *argv[])
     Test->try_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test");
     Test->try_query(Test->conn_rwsplit, "CREATE TABLE test (b integer)");
 
-    for (int i=0; i < Test->smoke ? 10 : 100; i++) {
+    const int iter = Test->smoke ? 10 : 100;
+    Test->tprintf("Creating and inserting %d rows into a table\n", iter);
+
+    for (int i=0; i < iter; i++) {
         Test->set_timeout(5);
         execute_query(Test->conn_rwsplit, "insert into test value(2);");
     }
