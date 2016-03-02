@@ -29,7 +29,7 @@ void *query_thread1( void *ptr );
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    Test->set_timeout(20);
+    Test->stop_timeout();
 
     int threads_num = 4;
     openclose_thread_data data[threads_num];
@@ -54,7 +54,9 @@ int main(int argc, char *argv[])
     int  iret1[threads_num];
 
     //Test->repl->flush_hosts();
+    Test->set_timeout(20);
     int master = Test->find_master_maxadmin(Test->galera);
+    Test->stop_timeout();
     Test->tprintf(("Master is %d\n"), master);
     int k = 0;
     int x = 0;
@@ -72,12 +74,16 @@ int main(int argc, char *argv[])
     Test->tprintf(("Slave1 is %d\n"), slaves[0]);
     Test->tprintf(("Slave2 is %d\n"), slaves[1]);
 
+    Test->set_timeout(20);
     Test->repl->connect();
     Test->connect_maxscale();
+    Test->set_timeout(20);
     create_t1(Test->conn_rwsplit);
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 2000;");
 
-    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1; CREATE TABLE t1 (x1 int, fl int)");
+    Test->set_timeout(20);
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1");
+    Test->try_query(Test->conn_rwsplit, (char *) "CREATE TABLE t1 (x1 int, fl int)");
 
     for (i = 0; i < threads_num; i++) { data[i].rwsplit_only = 1;}
     /* Create independent threads each of them will execute function */
