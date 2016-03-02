@@ -67,6 +67,10 @@ GWBUF*          modutil_create_mysql_err_msg(int             packet_number,
                                              const char      *msg);
 int modutil_count_signal_packets(GWBUF*,int,int,int*);
 mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char* string);
+
+/** Character and token searching functions */
 void* strnchr_esc(char* ptr, char c, int len);
+void* strnchr_esc_mysql(char* ptr, char c, int len);
+bool is_mysql_comment_start(const char* start, int len);
 
 #endif

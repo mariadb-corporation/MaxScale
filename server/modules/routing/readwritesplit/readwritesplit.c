@@ -308,6 +308,8 @@ static ROUTER_INSTANCE* instances;
 
 static int hashkeyfun(void* key);
 static int hashcmpfun (void *, void *);
+static void check_for_multi_stmt(ROUTER_CLIENT_SES* rses, GWBUF *buf,
+                                 mysql_server_cmd_t packet_type);
 
 static int hashkeyfun(
 		void* key)
@@ -2156,23 +2158,7 @@ static bool route_single_stmt(
     /** Check for multi-statement queries. We assume here that the client
      * protocol is MySQLClient.
      * TODO: add warnings when incompatible protocols are used */
-    MySQLProtocol *proto = (MySQLProtocol*)rses->client_dcb->protocol;
-    if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS &&
-        packet_type == MYSQL_COM_QUERY && rses->forced_node != rses->rses_master_ref)
-    {
-        for (GWBUF *buf = querybuf; buf != NULL; buf = buf->next)
-        {
-            if (strnchr_esc(GWBUF_DATA(buf), ';', GWBUF_LENGTH(buf)))
-            {
-                /** It is possible that the session state is modified inside
-                 * the multi-statement query which would leave any slave sessions
-                 * in an inconsistent state. Due to this, for the duration of
-                 * this session, all queries will be sent to the master. */
-                rses->forced_node = rses->rses_master_ref;
-                MXS_INFO("Multi-statement query, routing all future queries to master.");
-            }
-        }
-    }
+    check_for_multi_stmt(rses, querybuf, packet_type);
 
     /**
      * Check if the query has anything to do with temporary tables.
@@ -5357,12 +5343,35 @@ static backend_ref_t* get_root_master_bref(
 	return candidate_bref;
 }
 
+/**
+ * @brief Detect multi-statement queries
+ *
+ * It is possible that the session state is modified inside a multi-statement
+ * query which would leave any slave sessions in an inconsistent state. Due to
+ * this, for the duration of this session, all queries will be sent to the master
+ * if the current query contains a multi-statement query.
+ * @param rses Router client session
+ * @param buf Buffer containing the full query
+ */
+static void check_for_multi_stmt(ROUTER_CLIENT_SES* rses, GWBUF *buf,
+                                 mysql_server_cmd_t packet_type)
+{
+    MySQLProtocol *proto = (MySQLProtocol*) rses->client_dcb->protocol;
 
+    if (proto->client_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS &&
+        packet_type == MYSQL_COM_QUERY && rses->forced_node != rses->rses_master_ref)
+    {
+        char *ptr, *data = GWBUF_DATA(buf) + 5;
+        int buflen = GWBUF_LENGTH(buf) - 5;
 
-
-
-
-
-
-
-
+        if ((ptr = strnchr_esc_mysql(data, ';', buflen)))
+        {
+            ptr++;
+            if (ptr - data < buflen && !is_mysql_comment_start(ptr, ptr - data))
+            {
+                rses->forced_node = rses->rses_master_ref;
+                MXS_INFO("Multi-statement query, routing all future queries to master.");
+            }
+        }
+    }
+}

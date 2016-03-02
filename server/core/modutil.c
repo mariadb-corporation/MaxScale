@@ -802,6 +802,115 @@ void* strnchr_esc(char* ptr, char c, int len)
 }
 
 /**
+ * Find the first occurrence of a character in a string. This function ignores
+ * escaped characters and all characters that are enclosed in single or double quotes.
+ * Also MySQL style comment blocks are ignored.
+ * @param ptr Pointer to area of memory to inspect
+ * @param c Character to search for
+ * @param len Size of the memory area
+ * @return Pointer to the first non-escaped, non-quoted occurrence of the character.
+ * If the character is not found, NULL is returned.
+ */
+void* strnchr_esc_mysql(char* ptr, char c, int len)
+{
+    char* p = (char*) ptr;
+    char* start = p;
+    bool quoted = false, escaped = false, backtick = false;
+    char qc;
+
+    while (p < start + len)
+    {
+        if (escaped)
+        {
+            escaped = false;
+        }
+        else
+        {
+            switch (*p)
+            {
+                case '\\':
+                    escaped = true;
+                    break;
+
+                case'\'':
+                case '"':
+                    if (!quoted)
+                    {
+                        quoted = true;
+                        qc = *p;
+                    }
+                    else if (*p == qc)
+                    {
+                        quoted = false;
+                    }
+                    break;
+
+                case '`':
+                    backtick = !backtick;
+                    break;
+
+                case '#':
+                    if (!backtick)
+                    {
+                        return NULL;
+                    }
+                    break;
+
+                case '-':
+                    if (!backtick && p + 1 < start + len && *(p + 1) == '-')
+                    {
+                        return NULL;
+                    }
+                    break;
+            }
+
+            if (*p == c && !escaped && !quoted)
+            {
+                return p;
+            }
+            p++;
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Check if the start of the token is the start of a MySQL style comment block
+ * @param ptr String with at least two non-null characters in it
+ * @return True if the token starts a comment block
+ */
+bool is_mysql_comment_start(const char* start, int len)
+{
+    const char *ptr = start;
+
+    while (ptr - start < len && isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    switch (*ptr)
+    {
+        case '-':
+            if (*(ptr + 1) == '-')
+            {
+                return true;
+            }
+            break;
+
+        case '#':
+            return true;
+
+        case '/':
+            if (*(ptr + 1) == '*')
+            {
+                return true;
+            }
+            break;
+    }
+    return false;
+}
+
+/**
  * Create a COM_QUERY packet from a string.
  * @param query Query to create.
  * @return Pointer to GWBUF with the query or NULL if an error occurred.
