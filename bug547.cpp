@@ -26,9 +26,11 @@ int main(int argc, char *argv[])
         Test->set_timeout(20);
         Test->repl->block_node(i);
     }
-    Test->set_timeout(10);
-    sleep(5);
-    Test->set_timeout(10);
+
+    Test->set_timeout(30);
+    sleep(15);
+
+    Test->set_timeout(30);
     Test->tprintf("Connecting to all MaxScale services, expecting error\n");
     Test->connect_maxscale();
 
