@@ -1065,7 +1065,8 @@ int TestConnections::check_t1_table(bool presence, char * db)
 int TestConnections::try_query(MYSQL *conn, const char *sql)
 {
     int res = execute_query(conn, sql);
-    add_result(res, "Query '%s' failed!\n", sql);
+    int len = strlen(sql);
+    add_result(res, "Query '%.*s%s' failed!\n", len < 100 ? len : 100, sql, len < 100 ? "" : "...");
     return(res);
 }
 
