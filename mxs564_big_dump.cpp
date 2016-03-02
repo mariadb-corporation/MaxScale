@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     int slaves[2];
     while (k < 2 )
     {
-        if (k != master)
+        if (x != master)
         {
             slaves[k] = x;
             k++; x++;
