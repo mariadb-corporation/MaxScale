@@ -580,13 +580,19 @@ int TestConnections::find_connected_slave1()
 
 int TestConnections::check_maxscale_processes(int expected)
 {
-    char * maxscale_num = ssh_maxscale_output(false, "ps ax | grep \"maxscale\" | grep -v \"grep\" | wc -l");
-    int maxscale_num_d;
-    sscanf(maxscale_num, "%d", &maxscale_num_d);
-    if (maxscale_num_d != expected)
+    char* maxscale_num = ssh_maxscale_output(false, "ps -C maxscale | grep maxscale | wc -l");
+
+    if (atoi(maxscale_num) != expected)
     {
-        add_result(1, "Number of MaxScale processes is not %d, it is %d\n", expected, maxscale_num_d);
+        tprintf("%s maxscale processes detected, trying agin in 5 seconds\n", maxscale_num);
+        sleep(5);
+        maxscale_num = ssh_maxscale_output(false, "ps -C maxscale | grep maxscale | wc -l");
+        if (atoi(maxscale_num) != expected)
+        {
+            add_result(1, "Number of MaxScale processes is not %d, it is %d\n", expected, maxscale_num_d);
+        }
     }
+
     return 0;
 }
 
