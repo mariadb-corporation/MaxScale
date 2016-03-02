@@ -81,7 +81,7 @@ void *query_thread1( void *ptr )
     openclose_thread_data * data = (openclose_thread_data *) ptr;
     int rw_o = data->rwsplit_only;
 
-    while (data->exit_flag == 0) {
+    while (data->exit_flag == 0 && data->Test->global_result == 0) {
         conn1 = data->Test->open_rwsplit_connection();
         data->Test->add_result(mysql_errno(conn1), "Error opening RWsplit conn, thread num is %d, iteration %d, error is: %s\n", data->thread_id, data->i, mysql_error(conn1));
         if (rw_o == 0) {
