@@ -18,7 +18,8 @@ int main(int argc, char *argv[])
     Test->connect_maxscale();
 
     Test->tprintf("Creating user with old style password\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "CREATE USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' IDENTIFIED BY 'old'; GRANT ALL PRIVILEGES ON *.* TO 'user_long_hoste'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' WITH GRANT OPTION;");
+    Test->try_query(Test->conn_rwsplit, (char *) "CREATE USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' IDENTIFIED BY 'old'");
+    Test->try_query(Test->conn_rwsplit, (char *) "GRANT ALL PRIVILEGES ON *.* TO 'user_long_hoste'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' WITH GRANT OPTION");
     sleep(10);
 
     Test->tprintf("Trying to connect using user with old style password\n");

@@ -29,8 +29,9 @@ int main(int argc, char *argv[])
     conn = Test->open_rwsplit_connection();
 
     Test->tprintf("Cleaning up DB\n");
-    execute_query(conn, (char *) "DROP DATABASE IF EXISTS test;");
-    execute_query(conn, (char *) "CREATE DATABASE test; USE test;");
+    execute_query(conn, (char *) "DROP DATABASE IF EXISTS test");
+    execute_query(conn, (char *) "CREATE DATABASE test");
+    execute_query(conn, (char *) "USE test");
 
     Test->tprintf("creating table t1\n");
     create_t1(conn);

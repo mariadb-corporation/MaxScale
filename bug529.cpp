@@ -52,8 +52,9 @@ int main(int argc, char *argv[])
     Test->repl->connect();
 
     conn = Test->open_rwsplit_connection();
-    execute_query(conn, (char *) "DROP DATABASE IF EXISTS test;");
-    execute_query(conn, (char *) "CREATE DATABASE test; USE test;");
+    execute_query(conn, (char *) "DROP DATABASE IF EXISTS test");
+    execute_query(conn, (char *) "CREATE DATABASE test");
+    execute_query(conn, (char *) "USE test;");
 
     create_t1(conn);
     mysql_close(conn);

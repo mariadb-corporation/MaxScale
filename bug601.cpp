@@ -46,7 +46,8 @@ int main(int argc, char *argv[])
     Test->repl->close_connections();
 
     Test->tprintf("Creating one more user\n");
-    Test->try_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
+    Test->try_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';");
+    Test->try_query(Test->conn_rwsplit, (char *) "FLUSH PRIVILEGES;");
 
     Test->tprintf("Starting parallel thread which opens/closes session in the loop\n");
 
