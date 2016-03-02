@@ -2345,15 +2345,12 @@ int create_new_service(CONFIG_CONTEXT *obj)
 
         if ((param = config_get_param(obj->parameters, "use_sql_variables_in")))
         {
-            if (service_set_param_value(obj->element, param, param->value,
+            if (!service_set_param_value(obj->element, param, param->value,
                                         COUNT_NONE, SQLVAR_TARGET_TYPE))
             {
-                if (param)
-                {
-                    MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
-                                "type is [master|all] for use sql variables in.",
-                                service->name, param->name, param->value);
-                }
+                MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
+                    "type is [master|all] for use sql variables in.",
+                            service->name, param->name, param->value);
             }
         }
     }
