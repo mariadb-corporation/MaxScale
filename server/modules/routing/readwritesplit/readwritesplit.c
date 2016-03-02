@@ -5366,11 +5366,19 @@ static void check_for_multi_stmt(ROUTER_CLIENT_SES* rses, GWBUF *buf,
 
         if ((ptr = strnchr_esc_mysql(data, ';', buflen)))
         {
-            ptr++;
-            if (ptr - data < buflen && !is_mysql_comment_start(ptr, ptr - data))
+            /** Skip stored procedures etc. */
+            while (ptr && is_mysql_sp_end(ptr, ptr - data))
             {
-                rses->forced_node = rses->rses_master_ref;
-                MXS_INFO("Multi-statement query, routing all future queries to master.");
+                ptr = strnchr_esc_mysql(ptr + 1, ';',  ptr - data);
+            }
+
+            if (ptr)
+            {
+                if (ptr < data + buflen && !is_mysql_comment_start(ptr, ptr - data))
+                {
+                    rses->forced_node = rses->rses_master_ref;
+                    MXS_INFO("Multi-statement query, routing all future queries to master.");
+                }
             }
         }
     }
