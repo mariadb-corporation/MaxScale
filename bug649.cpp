@@ -62,16 +62,14 @@ int main(int argc, char *argv[])
     Test->repl->connect();
     Test->tprintf("Drop t1 if exists\n");
     execute_query(Test->repl->nodes[0], "DROP TABLE IF EXISTS t1;");
+    Test->tprintf("Create t1\n");
+    Test->add_result(create_t1(Test->repl->nodes[0]), "t1 creation Failed\n");
     Test->repl->close_connections();
 
     Test->stop_timeout();
     sleep(5);
 
-    Test->set_timeout(20);
-    Test->tprintf("Create t1\n");
-    Test->add_result(create_t1(Test->repl->nodes[0]), "t1 creation Failed\n");
     create_insert_string(sql, 65000, 1);
-
 
     for (int j = 0; j < threads_num; j++) {
         Test->set_timeout(20);
@@ -129,6 +127,7 @@ int main(int argc, char *argv[])
 void *parall_traffic( void *ptr )
 {
     MYSQL * conn;
+    mysql_thread_init();
     conn = Test->open_rwsplit_connection();
     if ((conn != NULL) && (mysql_errno(conn) == 0))
     {
