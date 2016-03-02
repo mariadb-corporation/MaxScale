@@ -69,11 +69,12 @@ int main(int argc, char *argv[])
 
     Test->set_timeout(20);
     Test->tprintf("Create t1\n");
-    Test->add_result(create_t1(Test->conn_rwsplit), "t1 creation Failed\n");
+    Test->add_result(create_t1(Test->repl->nodes[0]), "t1 creation Failed\n");
     create_insert_string(sql, 65000, 1);
 
-    Test->set_timeout(20);
+
     for (int j = 0; j < threads_num; j++) {
+        Test->set_timeout(20);
         check_iret[j] = pthread_create( &parall_traffic1[j], NULL, parall_traffic, NULL);
     }
     Test->stop_timeout();
