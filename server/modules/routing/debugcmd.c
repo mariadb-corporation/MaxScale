@@ -926,7 +926,7 @@ convert_arg(int mode, char *arg, int arg_type)
 int
 execute_cmd(CLI_SESSION *cli)
 {
-    DCB           *dcb = cli->session->client;
+    DCB           *dcb = cli->session->client_dcb;
     int            argc, i, j, found = 0;
     char          *args[MAXARGS + 1];
     unsigned long  arg1, arg2, arg3;

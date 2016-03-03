@@ -38,6 +38,7 @@
  */
 
 #include <httpd.h>
+#include <gw_protocol.h>
 #include <gw.h>
 #include <modinfo.h>
 #include <log_manager.h>
@@ -356,6 +357,7 @@ static int httpd_accept(DCB *dcb)
 
             if ((client = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)))
             {
+                client->listen_ssl = dcb->listen_ssl;
                 client->fd = so;
                 client->remote = strdup(inet_ntoa(addr.sin_addr));
                 memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));

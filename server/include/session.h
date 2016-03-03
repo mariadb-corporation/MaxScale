@@ -129,8 +129,7 @@ typedef struct session
     session_state_t state;            /*< Current descriptor state */
     size_t          ses_id;           /*< Unique session identifier */
     int             enabled_log_priorities; /*< Bitfield of enabled syslog priorities */
-    struct dcb      *client;          /*< The client connection */
-    void            *data;            /*< The session data */
+    struct dcb      *client_dcb;      /*< The client connection */
     void            *router_session;  /*< The router instance data */
     SESSION_STATS   stats;            /*< Session statistics */
     struct service  *service;         /*< The service this session is using */
@@ -153,7 +152,7 @@ extern bool check_timeouts;
  * hk_heartbeat.h */
 extern long next_timeout_check;
 
-#define SESSION_PROTOCOL(x, type)       DCB_PROTOCOL((x)->client, type)
+#define SESSION_PROTOCOL(x, type)       DCB_PROTOCOL((x)->client_dcb, type)
 
 /**
  * A convenience macro that can be used by the protocol modules to route

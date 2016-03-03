@@ -48,6 +48,8 @@
 #include <errno.h>
 #include <session.h>
 #include <service.h>
+#include <gw_protocol.h>
+#include <listener.h>
 #include <server.h>
 #include <router.h>
 #include <spinlock.h>
@@ -67,9 +69,6 @@
 #include <gwdirs.h>
 #include <math.h>
 #include <version.h>
-
-static RSA *rsa_512 = NULL;
-static RSA *rsa_1024 = NULL;
 
 /** To be used with configuration type checks */
 typedef struct typelib_st
@@ -219,7 +218,7 @@ service_isvalid(SERVICE *service)
  * @return              The number of listeners started
  */
 static int
-serviceStartPort(SERVICE *service, SERV_PROTOCOL *port)
+serviceStartPort(SERVICE *service, SERV_LISTENER *port)
 {
     int listeners = 0;
     char config_bind[40];
@@ -231,6 +230,13 @@ serviceStartPort(SERVICE *service, SERV_PROTOCOL *port)
     {
         MXS_ERROR("Failed to create listener for service %s.", service->name);
         goto retblock;
+    }
+
+    port->listener->listen_ssl = port->ssl;
+
+    if (port->ssl)
+    {
+        listener_init_SSL(port->ssl);
     }
 
     if (strcmp(port->protocol, "MySQLClient") == 0)
@@ -421,7 +427,7 @@ retblock:
  */
 int serviceStartAllPorts(SERVICE* service)
 {
-    SERV_PROTOCOL *port = service->ports;
+    SERV_LISTENER *port = service->ports;
     int listeners = 0;
     while (!service->svc_do_shutdown && port)
     {
@@ -468,24 +474,15 @@ serviceStart(SERVICE *service)
 
     if (check_service_permissions(service))
     {
-        if (service->ssl_mode == SSL_DISABLED ||
-            (service->ssl_mode != SSL_DISABLED && serviceInitSSL(service) == 0))
+        if ((service->router_instance = service->router->createInstance(
+                 service,service->routerOptions)))
         {
-            if ((service->router_instance = service->router->createInstance(
-                     service,service->routerOptions)))
-            {
-                listeners += serviceStartAllPorts(service);
-            }
-            else
-            {
-                MXS_ERROR("%s: Failed to create router instance for service. Service not started.",
-                          service->name);
-                service->state = SERVICE_STATE_FAILED;
-            }
+            listeners += serviceStartAllPorts(service);
         }
         else
         {
-            MXS_ERROR("%s: SSL initialization failed. Service not started.", service->name);
+            MXS_ERROR("%s: Failed to create router instance for service. Service not started.",
+                      service->name);
             service->state = SERVICE_STATE_FAILED;
         }
     }
@@ -508,7 +505,7 @@ serviceStart(SERVICE *service)
 void
 serviceStartProtocol(SERVICE *service, char *protocol, int port)
 {
-    SERV_PROTOCOL *ptr;
+    SERV_LISTENER *ptr;
 
     ptr = service->ports;
     while (ptr)
@@ -561,7 +558,7 @@ serviceStartAll()
 int
 serviceStop(SERVICE *service)
 {
-    SERV_PROTOCOL *port;
+    SERV_LISTENER *port;
     int listeners = 0;
 
     port = service->ports;
@@ -593,7 +590,7 @@ serviceStop(SERVICE *service)
 int
 serviceRestart(SERVICE *service)
 {
-    SERV_PROTOCOL *port;
+    SERV_LISTENER *port;
     int listeners = 0;
 
     port = service->ports;
@@ -684,34 +681,25 @@ service_free(SERVICE *service)
  * @param protocol      The name of the protocol module
  * @param address       The address to listen with
  * @param port          The port to listen on
+ * @param authenticator Name of the authenticator to be used
+ * @param ssl           SSL configuration
  * @return      TRUE if the protocol/port could be added
  */
 int
-serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned short port)
+serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl)
 {
-    SERV_PROTOCOL   *proto;
+    SERV_LISTENER   *proto;
 
-    if ((proto = (SERV_PROTOCOL *)malloc(sizeof(SERV_PROTOCOL))) == NULL)
+    if ((proto = listener_alloc(protocol, address, port, authenticator, ssl)) != NULL)
     {
-        return 0;
+        spinlock_acquire(&service->spin);
+        proto->next = service->ports;
+        service->ports = proto;
+        spinlock_release(&service->spin);
+        return 1;
     }
-    proto->listener = NULL;
-    proto->protocol = strdup(protocol);
-    if (address)
-    {
-        proto->address = strdup(address);
-    }
-    else
-    {
-        proto->address = NULL;
-    }
-    proto->port = port;
-    spinlock_acquire(&service->spin);
-    proto->next = service->ports;
-    service->ports = proto;
-    spinlock_release(&service->spin);
 
-    return 1;
+    return 0;
 }
 
 /**
@@ -725,7 +713,7 @@ serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned sho
 int
 serviceHasProtocol(SERVICE *service, char *protocol, unsigned short port)
 {
-    SERV_PROTOCOL *proto;
+    SERV_LISTENER *proto;
 
     spinlock_acquire(&service->spin);
     proto = service->ports;
@@ -1458,7 +1446,7 @@ void
 dListListeners(DCB *dcb)
 {
     SERVICE *service;
-    SERV_PROTOCOL *lptr;
+    SERV_LISTENER *lptr;
 
     spinlock_acquire(&service_spin);
     service = allServices;
@@ -1931,7 +1919,7 @@ serviceListenerRowCallback(RESULTSET *set, void *data)
     char buf[20];
     RESULT_ROW *row;
     SERVICE *service;
-    SERV_PROTOCOL *lptr = NULL;
+    SERV_LISTENER *lptr = NULL;
 
     spinlock_acquire(&service_spin);
     service = allServices;
@@ -2051,7 +2039,7 @@ serviceRowCallback(RESULTSET *set, void *data)
 }
 
 /**
- * Return a resultset that has the current set of services in it
+ * Return a result set that has the current set of services in it
  *
  * @return A Result set
  */
@@ -2079,167 +2067,6 @@ serviceGetList()
     return set;
 }
 
-
-/**
- * The RSA ket generation callback function for OpenSSL.
- * @param s SSL structure
- * @param is_export Not used
- * @param keylength Length of the key
- * @return Pointer to RSA structure
- */
-RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength)
-{
-    RSA *rsa_tmp=NULL;
-
-    switch (keylength) {
-    case 512:
-        if (rsa_512)
-        {
-            rsa_tmp = rsa_512;
-        }
-        else
-        {
-            /* generate on the fly, should not happen in this example */
-            rsa_tmp = RSA_generate_key(keylength,RSA_F4,NULL,NULL);
-            rsa_512 = rsa_tmp; /* Remember for later reuse */
-        }
-        break;
-    case 1024:
-        if (rsa_1024)
-        {
-            rsa_tmp=rsa_1024;
-        }
-        break;
-    default:
-        /* Generating a key on the fly is very costly, so use what is there */
-        if (rsa_1024)
-        {
-            rsa_tmp=rsa_1024;
-        }
-        else
-        {
-            rsa_tmp=rsa_512; /* Use at least a shorter key */
-        }
-    }
-    return(rsa_tmp);
-}
-
-/**
- * Initialize the service's SSL context. This sets up the generated RSA
- * encryption keys, chooses the server encryption level and configures the server
- * certificate, private key and certificate authority file.
- * @param service Service to initialize
- * @return 0 on success, -1 on error
- */
-int serviceInitSSL(SERVICE* service)
-{
-    DH* dh;
-    RSA* rsa;
-
-    if (!service->ssl_init_done)
-    {
-        switch(service->ssl_method_type)
-        {
-        case SERVICE_SSLV3:
-            service->method = (SSL_METHOD*)SSLv3_server_method();
-            break;
-        case SERVICE_TLS10:
-            service->method = (SSL_METHOD*)TLSv1_server_method();
-            break;
-#ifdef OPENSSL_1_0
-        case SERVICE_TLS11:
-            service->method = (SSL_METHOD*)TLSv1_1_server_method();
-            break;
-        case SERVICE_TLS12:
-            service->method = (SSL_METHOD*)TLSv1_2_server_method();
-            break;
-#endif
-            /** Rest of these use the maximum available SSL/TLS methods */
-        case SERVICE_SSL_MAX:
-            service->method = (SSL_METHOD*)SSLv23_server_method();
-            break;
-        case SERVICE_TLS_MAX:
-            service->method = (SSL_METHOD*)SSLv23_server_method();
-            break;
-        case SERVICE_SSL_TLS_MAX:
-            service->method = (SSL_METHOD*)SSLv23_server_method();
-            break;
-        default:
-            service->method = (SSL_METHOD*)SSLv23_server_method();
-            break;
-        }
-
-        if ((service->ctx = SSL_CTX_new(service->method)) == NULL)
-        {
-            MXS_ERROR("SSL context initialization failed.");
-            return -1;
-        }
-
-        /** Enable all OpenSSL bug fixes */
-        SSL_CTX_set_options(service->ctx,SSL_OP_ALL);
-
-        /** Generate the 512-bit and 1024-bit RSA keys */
-        if (rsa_512 == NULL)
-        {
-            rsa_512 = RSA_generate_key(512,RSA_F4,NULL,NULL);
-            if (rsa_512 == NULL)
-            {
-                MXS_ERROR("512-bit RSA key generation failed.");
-                return -1;
-            }
-        }
-        if (rsa_1024 == NULL)
-        {
-            rsa_1024 = RSA_generate_key(1024,RSA_F4,NULL,NULL);
-            if (rsa_1024 == NULL)
-            {
-                MXS_ERROR("1024-bit RSA key generation failed.");
-                return -1;
-            }
-        }
-
-        if (rsa_512 != NULL && rsa_1024 != NULL)
-        {
-            SSL_CTX_set_tmp_rsa_callback(service->ctx,tmp_rsa_callback);
-        }
-
-        /** Load the server sertificate */
-        if (SSL_CTX_use_certificate_file(service->ctx, service->ssl_cert, SSL_FILETYPE_PEM) <= 0)
-        {
-            MXS_ERROR("Failed to set server SSL certificate.");
-            return -1;
-        }
-
-        /* Load the private-key corresponding to the server certificate */
-        if (SSL_CTX_use_PrivateKey_file(service->ctx, service->ssl_key, SSL_FILETYPE_PEM) <= 0)
-        {
-            MXS_ERROR("Failed to set server SSL key.");
-            return -1;
-        }
-
-        /* Check if the server certificate and private-key matches */
-        if (!SSL_CTX_check_private_key(service->ctx))
-        {
-            MXS_ERROR("Server SSL certificate and key do not match.");
-            return -1;
-        }
-
-        /* Load the RSA CA certificate into the SSL_CTX structure */
-        if (!SSL_CTX_load_verify_locations(service->ctx, service->ssl_ca_cert, NULL))
-        {
-            MXS_ERROR("Failed to set Certificate Authority file.");
-            return -1;
-        }
-
-        /* Set to require peer (client) certificate verification */
-        SSL_CTX_set_verify(service->ctx,SSL_VERIFY_PEER,NULL);
-
-        /* Set the verification depth */
-        SSL_CTX_set_verify_depth(service->ctx,service->ssl_cert_verify_depth);
-        service->ssl_init_done = true;
-    }
-    return 0;
-}
 /**
  * Function called by the housekeeper thread to retry starting of a service
  * @param data Service to restart

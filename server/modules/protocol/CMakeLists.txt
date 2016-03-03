@@ -1,9 +1,9 @@
-add_library(MySQLClient SHARED mysql_client.c mysql_common.c)
+add_library(MySQLClient SHARED mysql_client.c mysql_common.c mysql_auth.c)
 target_link_libraries(MySQLClient maxscale-common)
 set_target_properties(MySQLClient PROPERTIES VERSION "1.0.0")
 install(TARGETS MySQLClient DESTINATION ${MAXSCALE_LIBDIR})
 
-add_library(MySQLBackend SHARED mysql_backend.c mysql_common.c)
+add_library(MySQLBackend SHARED mysql_backend.c mysql_common.c mysql_auth.c)
 target_link_libraries(MySQLBackend maxscale-common)
 set_target_properties(MySQLBackend PROPERTIES VERSION "2.0.0")
 install(TARGETS MySQLBackend DESTINATION ${MAXSCALE_LIBDIR})

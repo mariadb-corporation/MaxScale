@@ -19,13 +19,12 @@
  */
 #include <spinlock.h>
 #include <buffer.h>
+#include <gw_protocol.h>
+#include <gw_ssl.h>
 #include <modinfo.h>
 #include <gwbitmask.h>
 #include <skygw_utils.h>
 #include <netinet/in.h>
-#include <openssl/crypto.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
 
 #define ERRHANDLE
 
@@ -59,49 +58,13 @@ struct service;
  * 27/08/2014   Mark Riddoch            Addition of write event queuing
  * 23/09/2014   Mark Riddoch            New poll processing queue
  * 19/06/2015   Martin Brampton         Provision of persistent connections
+ * 20/01/2016   Martin Brampton         Moved GWPROTOCOL to gw_protocol.h
+ * 01/02/2016   Martin Brampton         Added fields for SSL and authentication
  *
  * @endverbatim
  */
 
 struct dcb;
-
-/**
- * @verbatim
- * The operations that can be performed on the descriptor
- *
- *      read            EPOLLIN handler for the socket
- *      write           MaxScale data write entry point
- *      write_ready     EPOLLOUT handler for the socket, indicates
- *                      that the socket is ready to send more data
- *      error           EPOLLERR handler for the socket
- *      hangup          EPOLLHUP handler for the socket
- *      accept          Accept handler for listener socket only
- *      connect         Create a connection to the specified server
- *                      for the session pased in
- *      close           MaxScale close entry point for the socket
- *      listen          Create a listener for the protocol
- *      auth            Authentication entry point
- *  session         Session handling entry point
- * @endverbatim
- *
- * This forms the "module object" for protocol modules within the gateway.
- *
- * @see load_module
- */
-typedef struct gw_protocol
-{
-    int (*read)(struct dcb *);
-    int (*write)(struct dcb *, GWBUF *);
-    int (*write_ready)(struct dcb *);
-    int (*error)(struct dcb *);
-    int (*hangup)(struct dcb *);
-    int (*accept)(struct dcb *);
-    int (*connect)(struct dcb *, struct server *, struct session *);
-    int (*close)(struct dcb *);
-    int (*listen)(struct dcb *, char *);
-    int (*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
-    int (*session)(struct dcb *, void *);
-} GWPROTOCOL;
 
 /**
  * The event queue structure used in the polling loop to maintain a queue
@@ -127,13 +90,6 @@ typedef struct
     unsigned long   inserted;
     unsigned long   started;
 } DCBEVENTQ;
-
-/**
- * The GWPROTOCOL version data. The following should be updated whenever
- * the GWPROTOCOL structure is changed. See the rules defined in modinfo.h
- * that define how these numbers should change.
- */
-#define GWPROTOCOL_VERSION      {1, 0, 0}
 
 #define DCBFD_CLOSED -1
 
@@ -218,6 +174,17 @@ typedef struct dcb_callback
     struct dcb_callback  *next;          /*< Next callback for this DCB */
 } DCB_CALLBACK;
 
+/**
+ * State of SSL connection
+ */
+typedef enum
+{
+    SSL_HANDSHAKE_UNKNOWN,          /*< The DCB has unknown SSL status */
+    SSL_HANDSHAKE_REQUIRED,         /*< SSL handshake is needed */
+    SSL_HANDSHAKE_DONE,             /*< The SSL handshake completed OK */
+    SSL_ESTABLISHED,                /*< The SSL connection is in use */
+    SSL_HANDSHAKE_FAILED            /*< The SSL handshake failed */
+} SSL_STATE;
 
 /**
  * Descriptor Control Block
@@ -240,6 +207,7 @@ typedef struct dcb
     DCBEVENTQ       evq;            /**< The event queue for this DCB */
     int             fd;             /**< The descriptor */
     dcb_state_t     state;          /**< Current descriptor state */
+    SSL_STATE       ssl_state;      /**< Current state of SSL if in use */
     int             flags;          /**< DCB flags */
     char            *remote;        /**< Address of remote end */
     char            *user;          /**< User name for connection */
@@ -247,6 +215,7 @@ typedef struct dcb
     char            *protoname;     /**< Name of the protocol */
     void            *protocol;      /**< The protocol specific state */
     struct session  *session;       /**< The owning session */
+    SSL_LISTENER    *listen_ssl;    /**< For a client DCB, the SSL descriptor, if any */
     GWPROTOCOL      func;           /**< The functions for this descriptor */
 
     int             writeqlen;      /**< Current number of byes in the write queue */
@@ -325,6 +294,7 @@ DCB *dcb_get_zombies(void);
 int dcb_write(DCB *, GWBUF *);
 DCB *dcb_alloc(dcb_role_t);
 void dcb_free(DCB *);
+void dcb_free_all_memory(DCB *dcb);
 DCB *dcb_connect(struct server *, struct session *, const char *);
 DCB *dcb_clone(DCB *);
 int dcb_read(DCB *, GWBUF **, int);
@@ -353,11 +323,8 @@ void dcb_hangup_foreach (struct server* server);
 size_t dcb_get_session_id(DCB* dcb);
 bool dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
 char *dcb_role_name(DCB *);                  /* Return the name of a role */
-int dcb_create_SSL(DCB* dcb);
 int dcb_accept_SSL(DCB* dcb);
 int dcb_connect_SSL(DCB* dcb);
-int dcb_read_SSL(DCB   *dcb,GWBUF **head);
-
 
 /**
  * DCB flags values

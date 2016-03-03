@@ -33,9 +33,10 @@
  * 					and repository to gw_check_mysql_scramble_data()
  * 					It's now possible to specify a different users' table than
  * 					dcb->service->users default
- * 26-02-2014	Massimiliano Pinto	Removed previouvsly added parameters to gw_check_mysql_scramble_data() and
+ * 26-02-2014	Massimiliano Pinto	Removed previously added parameters to gw_check_mysql_scramble_data() and
  * 					gw_find_mysql_user_password_sha1()
  * 28-02-2014	Massimiliano Pinto	MYSQL_DATABASE_MAXLEN,MYSQL_USER_MAXLEN moved to dbusers.h
+ * 07-02-2016   Martin Brampton     Extend MYSQL_session type; add MYSQL_AUTH_SUCCEEDED
  *
  */
 
@@ -96,18 +97,27 @@
 #define COM_QUIT_PACKET_SIZE (4+1)
 struct dcb;
 
+#define MYSQL_AUTH_SUCCEEDED 0
 #define MYSQL_FAILED_AUTH 1
 #define MYSQL_FAILED_AUTH_DB 2
 #define MYSQL_FAILED_AUTH_SSL 3
+#define MYSQL_AUTH_SSL_INCOMPLETE 4
+#define MYSQL_AUTH_NO_SESSION 5
 
 typedef enum {
-        MYSQL_ALLOC,
+        MYSQL_ALLOC,                        /* Initial state of protocol auth state */
+        /* The following are used only for backend connections */
         MYSQL_PENDING_CONNECT,
         MYSQL_CONNECTED,
+        /* The following can be used for either client or backend */
+        /* The comments have only been checked for client use at present */
         MYSQL_AUTH_SENT,
-        MYSQL_AUTH_RECV,
-        MYSQL_AUTH_FAILED,
+        MYSQL_AUTH_RECV,                    /* This is only ever a transient value */
+        MYSQL_AUTH_FAILED,                  /* Once this is set, the connection */
+                                            /* will be ended, so this is transient */
+        /* The following is used only for backend connections */
         MYSQL_HANDSHAKE_FAILED,
+        /* The following are obsolete and will be removed */
         MYSQL_AUTH_SSL_REQ, /*< client requested SSL but SSL_accept hasn't beed called */
         MYSQL_AUTH_SSL_HANDSHAKE_DONE, /*< SSL handshake has been fully completed */
         MYSQL_AUTH_SSL_HANDSHAKE_FAILED, /*< SSL handshake failed for any reason */
@@ -131,9 +141,11 @@ typedef struct mysql_session {
 #if defined(SS_DEBUG)
 	skygw_chk_t	myses_chk_top;
 #endif
-        uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /*< SHA1(passowrd) */
+        uint8_t client_sha1[MYSQL_SCRAMBLE_LEN];        /*< SHA1(password) */
         char user[MYSQL_USER_MAXLEN+1];                 /*< username       */
         char db[MYSQL_DATABASE_MAXLEN+1];               /*< database       */
+        int  auth_token_len;                            /*< token length   */
+        uint8_t *auth_token;                            /*< token          */
 #if defined(SS_DEBUG)
 	skygw_chk_t	myses_chk_tail;
 #endif
@@ -243,30 +255,30 @@ typedef enum mysql_server_cmd {
         MYSQL_COM_INIT_DB,
         MYSQL_COM_QUERY,
         MYSQL_COM_FIELD_LIST,
-        MYSQL_COM_CREATE_DB, 
+        MYSQL_COM_CREATE_DB,
         MYSQL_COM_DROP_DB,
-        MYSQL_COM_REFRESH, 
-        MYSQL_COM_SHUTDOWN, 
+        MYSQL_COM_REFRESH,
+        MYSQL_COM_SHUTDOWN,
         MYSQL_COM_STATISTICS,
-        MYSQL_COM_PROCESS_INFO, 
-        MYSQL_COM_CONNECT, 
-        MYSQL_COM_PROCESS_KILL, 
-        MYSQL_COM_DEBUG, 
+        MYSQL_COM_PROCESS_INFO,
+        MYSQL_COM_CONNECT,
+        MYSQL_COM_PROCESS_KILL,
+        MYSQL_COM_DEBUG,
         MYSQL_COM_PING,
-        MYSQL_COM_TIME, 
-        MYSQL_COM_DELAYED_INSERT, 
-        MYSQL_COM_CHANGE_USER, 
+        MYSQL_COM_TIME,
+        MYSQL_COM_DELAYED_INSERT,
+        MYSQL_COM_CHANGE_USER,
         MYSQL_COM_BINLOG_DUMP,
-        MYSQL_COM_TABLE_DUMP, 
-        MYSQL_COM_CONNECT_OUT, 
+        MYSQL_COM_TABLE_DUMP,
+        MYSQL_COM_CONNECT_OUT,
         MYSQL_COM_REGISTER_SLAVE,
-        MYSQL_COM_STMT_PREPARE, 
-        MYSQL_COM_STMT_EXECUTE, 
-        MYSQL_COM_STMT_SEND_LONG_DATA, 
+        MYSQL_COM_STMT_PREPARE,
+        MYSQL_COM_STMT_EXECUTE,
+        MYSQL_COM_STMT_SEND_LONG_DATA,
         MYSQL_COM_STMT_CLOSE,
-        MYSQL_COM_STMT_RESET, 
-        MYSQL_COM_SET_OPTION, 
-        MYSQL_COM_STMT_FETCH, 
+        MYSQL_COM_STMT_RESET,
+        MYSQL_COM_SET_OPTION,
+        MYSQL_COM_STMT_FETCH,
         MYSQL_COM_DAEMON,
         MYSQL_COM_END /*< Must be the last */
 } mysql_server_cmd_t;
@@ -274,9 +286,9 @@ typedef enum mysql_server_cmd {
 
 static const mysql_server_cmd_t MYSQL_COM_UNDEFINED = (mysql_server_cmd_t)-1;
 
-/** 
+/**
  * List of server commands, and number of response packets are stored here.
- * server_command_t is used in MySQLProtocol structure, so for each DCB there is 
+ * server_command_t is used in MySQLProtocol structure, so for each DCB there is
  * one MySQLProtocol and one server command list.
  */
 typedef struct server_command_st {
@@ -288,8 +300,8 @@ typedef struct server_command_st {
 
 /**
  * MySQL Protocol specific state data.
- * 
- * Protocol carries information from client side to backend side, such as 
+ *
+ * Protocol carries information from client side to backend side, such as
  * MySQL session command information and history of earlier session commands.
  */
 typedef struct {
@@ -299,7 +311,7 @@ typedef struct {
         int                 fd;                           /*< The socket descriptor */
         struct dcb          *owner_dcb;                   /*< The DCB of the socket
         * we are running on */
-        SPINLOCK            protocol_lock;              
+        SPINLOCK            protocol_lock;
         server_command_t    protocol_command;             /*< session command list */
         server_command_t*   protocol_cmd_history;         /*< session command history */
         mysql_auth_state_t  protocol_auth_state;          /*< Authentication status */
@@ -313,7 +325,6 @@ typedef struct {
         unsigned        long tid;                         /*< MySQL Thread ID, in
         * handshake */
         unsigned int    charset;                          /*< MySQL character set at connect time */
-        bool use_ssl;
 #if defined(SS_DEBUG)
         skygw_chk_t     protocol_chk_tail;
 #endif
@@ -358,7 +369,7 @@ int mysql_send_custom_error (
         const char* mysql_message);
 
 GWBUF* mysql_create_custom_error(
-        int packet_number, 
+        int packet_number,
         int affected_rows,
         const char* msg);
 
@@ -376,14 +387,6 @@ int gw_find_mysql_user_password_sha1(
         char *username,
         uint8_t *gateway_password,
 	DCB *dcb);
-int gw_check_mysql_scramble_data(
-        DCB *dcb,
-        uint8_t *token,
-        unsigned int token_len,
-        uint8_t *scramble,
-        unsigned int scramble_len,
-        char *username,
-        uint8_t *stage1_hash);
 int mysql_send_auth_error (
         DCB *dcb,
         int packet_number,
@@ -423,9 +426,9 @@ void protocol_archive_srv_command(MySQLProtocol* p);
 
 
 void init_response_status (
-        GWBUF* buf, 
-        mysql_server_cmd_t cmd, 
-        int* npackets, 
+        GWBUF* buf,
+        mysql_server_cmd_t cmd,
+        int* npackets,
         ssize_t* nbytes);
 
 #endif /** _MYSQL_PROTOCOL_H */

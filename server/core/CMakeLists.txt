@@ -1,4 +1,4 @@
-add_library(maxscale-common SHARED adminusers.c atomic.c buffer.c config.c dbusers.c dcb.c filter.c externcmd.c gwbitmask.c gwdirs.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c log_manager.cc maxscale_pcre2.c memlog.c misc.c mlist.c modutil.c monitor.c query_classifier.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c slist.c spinlock.c thread.c users.c utils.c ${CMAKE_SOURCE_DIR}/utils/skygw_utils.cc statistics.c)
+add_library(maxscale-common SHARED adminusers.c atomic.c buffer.c config.c dbusers.c dcb.c filter.c externcmd.c gwbitmask.c gwdirs.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c log_manager.cc maxscale_pcre2.c memlog.c misc.c mlist.c modutil.c monitor.c query_classifier.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c slist.c spinlock.c thread.c users.c utils.c ${CMAKE_SOURCE_DIR}/utils/skygw_utils.cc statistics.c listener.c gw_ssl.c)
 
 target_link_libraries(maxscale-common ${MARIADB_CONNECTOR_LIBRARIES} ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${CURL_LIBRARIES} ssl aio pthread crypt dl crypto inih z rt m stdc++)
 
