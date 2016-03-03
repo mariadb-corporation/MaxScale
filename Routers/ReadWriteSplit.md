@@ -173,6 +173,19 @@ In Master-Slave replication cluster also read-only queries are routed to master 
 
 * statement includes a stored procedure, or an UDF call
 
+* if there are multiple statements inside one query e.g. `INSERT INTO ... ; SELECT LAST_INSERT_ID();`
+
+### Limitations in multi-statement handling
+
+When a multi-statemet query is executed through the readwritesplit router, it will always
+be routed to the master. With the default configuration, all queries after a
+multi-statement query will be routed to the master to prevent possible reads of
+false data. You can override this behavior with the `strict_multi_stmt=false`
+router option. In this mode, the multi-statement queries will still be routed
+to the master but individual statements are routed normally. If you use
+multi-statements and you know they don't modify the session state in any
+relevant way, you can disable this option for better performance.
+
 ### Limitations in client session handling
 
 Some of the queries that client sends are routed to all backends instead of sending them just to one of server. These queries include `USE <db name>` and `SET autocommit=0` among many others. Readwritesplit sends a copy of these queries to each backend server and forwards the master's reply to the client. Below is a list of MySQL commands which are classified as session commands :

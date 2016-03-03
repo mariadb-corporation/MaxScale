@@ -32,6 +32,8 @@ In master-slave replication cluster also read-only queries are routed to master 
 
 * statement includes a stored procedure, or an UDF call
 
+### Multi-statement limitations
+
 If the client enables and executes multi-statements, they will be routed to
 the master. All future queries will also be routed to the master to guarantee
 a consistent session state after the multi-statement query. This behavior can
