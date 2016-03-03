@@ -884,7 +884,7 @@ handle_global_item(const char *name, const char *value)
     int i;
     if (strcmp(name, "threads") == 0)
     {
-        if (strcmp(name, "auto") == 0)
+        if (strcmp(value, "auto") == 0)
         {
             if ((gateway.n_threads = get_processor_count()) > 1)
             {
