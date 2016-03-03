@@ -37,6 +37,7 @@ set_target_properties(topfilter PROPERTIES VERSION "1.0.1")
 install(TARGETS topfilter DESTINATION ${MAXSCALE_LIBDIR})
 
 if(BUILD_LUAFILTER)
+  find_package(Lua)
   if(LUA_FOUND)
     include_directories(${LUA_INCLUDE_DIR})
     add_library(luafilter SHARED luafilter.c)
