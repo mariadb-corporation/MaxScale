@@ -138,7 +138,8 @@ int execute_query1(MYSQL *conn, const char *sql, bool silent)
     if (conn != NULL) {
         if(mysql_query(conn, sql) != 0) {
             if (!silent) {
-                printf("Error: can't execute SQL-query: %s\n", sql);
+                int len = strlen(sql);
+                printf("Error: can't execute SQL-query: %.*s\n", len < 60 ? len : 60, sql);
                 printf("%s\n\n", mysql_error(conn));
             }
             return(1);
