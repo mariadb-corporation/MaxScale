@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
     long int i1, i2;
 
     if (Test->smoke) {threads_num = 15;}
+    Test->tprintf("Increasing connection and error limits on backend nodes.\n");
     Test->repl->connect();
     for (int i = 0; i < Test->repl->N; i++) {
         execute_query(Test->repl->nodes[i], (char *) "set global max_connections = 300;");
@@ -40,6 +41,7 @@ int main(int argc, char *argv[])
     }
     Test->repl->close_connections();
 
+    Test->tprintf("Creating query load with %d threads...\n", threads_num);
     Test->set_timeout(1200);
     load(&new_inserts[0], &new_selects[0], &selects[0], &inserts[0], threads_num, Test, &i1, &i2, 1, FALSE, TRUE);
 
