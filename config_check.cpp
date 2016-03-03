@@ -34,7 +34,7 @@ bool test_config_works(const char* config, const char **expected_output = NULL)
     if (pid == 0)
     {
         TestConnections * Test = new TestConnections(1, (char**)argv);
-        Test->set_timeout(10);
+        Test->stop_timeout();
         for (int i = 0; expected_output && expected_output[i]; i++)
         {
             Test->check_log_err((char *)expected_output[i], TRUE);
