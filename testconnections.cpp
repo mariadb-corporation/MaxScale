@@ -581,10 +581,10 @@ int TestConnections::find_connected_slave1()
 int TestConnections::check_maxscale_processes(int expected)
 {
     char* maxscale_num = ssh_maxscale_output(false, "ps -C maxscale | grep maxscale | wc -l");
-
-    if (maxscale_num[strlen(maxscale_num)] == '\n')
+    char* nl = strchr(maxscale_num, '\n');
+    if (nl)
     {
-        maxscale_num[strlen(maxscale_num)] = '\0';
+        *nl = '\0';
     }
 
     if (atoi(maxscale_num) != expected)
