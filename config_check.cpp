@@ -51,8 +51,8 @@ bool test_config_works(const char* config, const char **expected_output = NULL)
     {
         int rc = 0;
         wait(&rc);
-        printf("Process exited with status %d\n", rc);
-        return rc == 0;
+        printf("Process exited with status %d\n", WEXITSTATUS(rc) ? WEXITSTATUS(rc) : -1);
+        return WEXITSTATUS(rc) && WEXITSTATUS(rc) == 0;
     }
     else
     {
