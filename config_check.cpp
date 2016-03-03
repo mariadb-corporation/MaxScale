@@ -4,6 +4,7 @@
 
 
 #include <my_config.h>
+#include <stdlib.h>
 #include <iostream>
 #include <unistd.h>
 #include "testconnections.h"
@@ -32,27 +33,24 @@ bool test_config_works(const char* config, const char **expected_output = NULL)
 
     if (pid == 0)
     {
-        char testname[1024];
-        sprintf(testname, "%s-%d-%ld.log", config, getpid(), time(NULL));
-        freopen(testname, "w", stdout);
-        freopen(testname, "w", stderr);
         TestConnections * Test = new TestConnections(1, (char**)argv);
         Test->set_timeout(10);
-        for (int i = 0; expected_output[i]; i++)
+        for (int i = 0; expected_output && expected_output[i]; i++)
         {
             Test->check_log_err((char *)expected_output[i], TRUE);
         }
+        Test->connect_maxscale();
+        Test->close_maxscale_connections();
         Test->check_maxscale_alive();
-        Test->copy_all_logs();
-        _exit(Test->global_result);
+        exit(Test->global_result);
         return false;
     }
     else if (pid > 0)
     {
         int rc = 0;
         wait(&rc);
-        printf("Process exited with status %d\n", WEXITSTATUS(rc) ? WEXITSTATUS(rc) : -1);
-        return WEXITSTATUS(rc) && WEXITSTATUS(rc) == 0;
+        printf("Process exited with status %d\n", WIFEXITED(rc) ? WEXITSTATUS(rc) : -1);
+        return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
     }
     else
     {
