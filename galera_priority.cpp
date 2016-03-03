@@ -128,7 +128,7 @@ int simple_failover(TestConnections* test)
         test->galera->unblock_all_nodes();
         blocked = false;
         sleep(15);
-        test->tprintf("Expecting '%s'...", server_id[2]);
+        test->tprintf("Expecting '%s'...\n", server_id[2]);
         if (test->connect_rwsplit() || check_server_id(test, server_id[2]))
         {
             test->tprintf("Test failed after unblocking all nodes.\n");
