@@ -50,7 +50,7 @@ bool test_config_works(const char* config, const char **expected_output = NULL)
     else if (pid > 0)
     {
         int rc = 0;
-        wait(&rc);
+        waitpid(pid, &rc, 0);
         printf("Process exited with status %d\n", WIFEXITED(rc) ? WEXITSTATUS(rc) : -1);
         return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
     }
