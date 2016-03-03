@@ -582,6 +582,11 @@ int TestConnections::check_maxscale_processes(int expected)
 {
     char* maxscale_num = ssh_maxscale_output(false, "ps -C maxscale | grep maxscale | wc -l");
 
+    if (maxscale_num[strlen(maxscale_num)] == '\n')
+    {
+        maxscale_num[strlen(maxscale_num)] = '\0';
+    }
+
     if (atoi(maxscale_num) != expected)
     {
         tprintf("%s maxscale processes detected, trying agin in 5 seconds\n", maxscale_num);
