@@ -13,6 +13,12 @@
 
 const char *temp_rules = "rules_tmp.txt";
 
+const char *users_ok[] =
+    {
+        "users %@% match any rules testrule",
+        NULL
+    };
+
 const char *rules_failure[] =
     {
         "rule testrule deny nothing",
@@ -36,16 +42,9 @@ const char *rules_failure[] =
 
 void add_rule(const char *rule)
 {
-    FILE *file = fopen(temp_rules, "a");
+    FILE *file = fopen(temp_rules, "w");
     fprintf(file, "%s\n", rule);
     fclose(file);
-}
-
-void copy_rule(TestConnections* test)
-{
-    char dest[PATH_MAX];
-    sprintf(dest, "%s/rules/rules.txt", test->maxscale_access_homedir);
-    test->copy_to_maxscale((char*)temp_rules, dest);
 }
 
 int main(int argc, char** argv)
@@ -54,11 +53,12 @@ int main(int argc, char** argv)
     test->stop_timeout();
     test->stop_maxscale();
 
+
     for (int i = 0; rules_failure[i]; i++)
     {
-        test->set_timeout(40);
         add_rule(rules_failure[i]);
-        copy_rules(test, (char*) "rules_tmp.txt", (char*) "");
+        add_rule(users_ok[0]);
+        copy_rules(test, (char*)temp_rules, (char*)test->test_dir);
         if (test_config_works("fwf_syntax"))
         {
             test->add_result(1, "Rule syntax error was not detected: %s\n", rules_failure[i]);
