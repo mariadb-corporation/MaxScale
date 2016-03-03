@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 
     create_t1(Test->conn_rwsplit);
     for (i = 0; i < 10000; i++) {
-        Test->set_timeout(150);
+        Test->set_timeout(200);
         insert_into_t1(Test->conn_rwsplit, 4);
         printf("i=%d\n", i);
     }

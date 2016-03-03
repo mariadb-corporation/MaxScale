@@ -125,7 +125,7 @@ port=4008
 
 [RW Split Listener Galera]
 type=listener
-service=RW Split Router
+service=RW Split Router Galera
 protocol=MySQLClient
 port=4016
 
