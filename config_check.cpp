@@ -39,7 +39,11 @@ bool test_config_works(const char* config, const char **expected_output = NULL)
         {
             Test->check_log_err((char *)expected_output[i], TRUE);
         }
+        sleep(5);
         Test->check_maxscale_processes(1);
+        Test->stop_maxscale();
+        sleep(5);
+        Test->check_maxscale_processes(0);
         exit(Test->global_result);
         return false;
     }
