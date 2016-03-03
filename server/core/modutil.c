@@ -893,39 +893,53 @@ char* strnchr_esc_mysql(char* ptr, char c, int len)
 }
 
 /**
- * Check if the start of the token is the start of a MySQL style comment block
- * @param ptr String with at least two non-null characters in it
- * @return True if the token starts a comment block
+ * @brief Check if the string is the final part of a valid SQL statement
+ *
+ * This function checks whether the string pointed by @p start contains any
+ * tokens that are interpreted as executable commands.
+ * @param start String containing the statement
+ * @param len Length of the string
+ * @return True if statement contains no executable parts
  */
-bool is_mysql_comment_start(const char* start, int len)
+bool is_mysql_statement_end(const char* start, int len)
 {
     const char *ptr = start;
+    bool rval = false;
 
     while (ptr < start + len && (isspace(*ptr) || *ptr == ';'))
     {
         ptr++;
     }
 
-    switch (*ptr)
+    if (ptr < start + len)
     {
-        case '-':
-            if (*(ptr + 1) == '-' && isspace(*(ptr + 2)))
-            {
-                return true;
-            }
-            break;
+        switch (*ptr)
+        {
+            case '-':
+                if (ptr < start + len - 2 && *(ptr + 1) == '-' && isspace(*(ptr + 2)))
+                {
+                    rval = true;
+                }
+                break;
 
-        case '#':
-            return true;
+            case '#':
+                rval = true;
+                break;
 
-        case '/':
-            if (*(ptr + 1) == '*')
-            {
-                return true;
-            }
-            break;
+            case '/':
+                if (ptr < start + len - 1 && *(ptr + 1) == '*')
+                {
+                    rval = true;
+                }
+                break;
+        }
     }
-    return false;
+    else
+    {
+        rval = true;
+    }
+
+    return rval;
 }
 
 /**

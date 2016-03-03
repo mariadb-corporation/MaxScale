@@ -5362,7 +5362,8 @@ static void check_for_multi_stmt(ROUTER_CLIENT_SES* rses, GWBUF *buf,
         packet_type == MYSQL_COM_QUERY && rses->forced_node != rses->rses_master_ref)
     {
         char *ptr, *data = GWBUF_DATA(buf) + 5;
-        int buflen = GWBUF_LENGTH(buf) - 5;
+        /** Payload size without command byte */
+        int buflen = gw_mysql_get_byte3((uint8_t*)GWBUF_DATA(buf)) - 1;
 
         if ((ptr = strnchr_esc_mysql(data, ';', buflen)))
         {
@@ -5374,7 +5375,7 @@ static void check_for_multi_stmt(ROUTER_CLIENT_SES* rses, GWBUF *buf,
 
             if (ptr)
             {
-                if (ptr < data + buflen && !is_mysql_comment_start(ptr, ptr - data))
+                if (ptr < data + buflen && !is_mysql_statement_end(ptr, buflen - (ptr - data)))
                 {
                     rses->forced_node = rses->rses_master_ref;
                     MXS_INFO("Multi-statement query, routing all future queries to master.");
