@@ -570,9 +570,14 @@ process_config_context(CONFIG_CONTEXT *context)
      * error_count += consistency_checks();
      */
 
+    if (!service_all_services_have_listeners())
+    {
+        error_count++;
+    }
+
     if (error_count)
     {
-        MXS_ERROR("%d errors where encountered processing the configuration "
+        MXS_ERROR("%d errors were encountered while processing the configuration "
                   "file '%s'.", error_count, config_file);
         return 0;
     }

@@ -264,5 +264,6 @@ extern void service_shutdown();
 extern int serviceSessionCountAll();
 extern RESULTSET *serviceGetList();
 extern RESULTSET *serviceGetListenerList();
+extern bool service_all_services_have_listeners();
 
 #endif
