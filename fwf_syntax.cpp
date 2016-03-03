@@ -42,7 +42,7 @@ const char *rules_failure[] =
 
 void add_rule(const char *rule)
 {
-    FILE *file = fopen(temp_rules, "w");
+    FILE *file = fopen(temp_rules, "a");
     fprintf(file, "%s\n", rule);
     fclose(file);
 }
@@ -53,9 +53,10 @@ int main(int argc, char** argv)
     test->stop_timeout();
     test->stop_maxscale();
 
-
     for (int i = 0; rules_failure[i]; i++)
     {
+        FILE *file = fopen(temp_rules, "w");
+        fclose(file);
         add_rule(rules_failure[i]);
         add_rule(users_ok[0]);
         copy_rules(test, (char*)temp_rules, (char*)test->test_dir);
@@ -64,6 +65,7 @@ int main(int argc, char** argv)
             test->add_result(1, "Rule syntax error was not detected: %s\n", rules_failure[i]);
         }
     }
-    test->check_maxscale_processes(0);
-    test->copy_all_logs();  return test->global_result;
+
+    test->copy_all_logs();
+    return test->global_result;
 }
