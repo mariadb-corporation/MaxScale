@@ -38,7 +38,7 @@ int main(int argc, char** argv)
         mysql[limit - 1] = Test->open_rwsplit_connection();
         mysql[limit] = Test->open_rwsplit_connection();
         Test->add_result(execute_query_silent(mysql[limit - 1], "select 1"), "Query should succeed");
-        Test->add_result(!execute_query_silent(mysql[limit], "select 1"), "Query should fail")
+        Test->add_result(!execute_query_silent(mysql[limit], "select 1"), "Query should fail");
         mysql_close(mysql[limit - 1]);
         mysql_close(mysql[limit]);
         sleep(2);
