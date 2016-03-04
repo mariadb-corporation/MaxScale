@@ -79,12 +79,6 @@ static struct option long_options[] = {
 
 char *binlog_check_version = "1.1.0";
 
-int
-MaxScaleUptime()
-{
-return 1;
-}
-
 int main(int argc, char **argv) {
 	ROUTER_INSTANCE *inst;
 	int fd;

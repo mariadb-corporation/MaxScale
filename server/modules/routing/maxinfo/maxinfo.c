@@ -532,7 +532,6 @@ starttime_row(RESULTSET *result, void *data)
 {
 int		*context = (int *)data;
 RESULT_ROW	*row;
-extern time_t	MaxScaleStarted;
 struct tm	tm;
 static char	buf[40];
 
