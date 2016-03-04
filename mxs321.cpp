@@ -19,6 +19,22 @@
 using namespace std;
 
 #define CONNECTIONS 200
+int check_connection_count(TestConnections* test, int server)
+{
+    char result[1024];
+    char cmd[1024];
+    test->set_timeout(30);
+    sprintf(cmd, "show server server%d", server);
+    test->add_result(test->get_maxadmin_param(cmd, (char*) "Current no. of conns:", result), "maxadmin command %s failed\n", cmd);
+    int result_d = 999;
+    sscanf(result, "%d", &result_d);
+    if (strlen(result) == 0)
+    {
+        test->add_result(1, "Empty Current no. of conns \n");
+    }
+    test->tprintf("result %s\t result_d %d\n", result, result_d);
+    return result_d;
+}
 
 void create_and_check_connections(TestConnections* test, int target)
 {
@@ -52,22 +68,17 @@ void create_and_check_connections(TestConnections* test, int target)
 
     test->stop_timeout();
     sleep(10);
-    char result[1024];
-    char cmd[1024];
     int result_d;
 
-    for (int j = 0; j < test->repl->N; j++)
+    for (int j = 1; j < test->repl->N + 1; j++)
     {
-        test->set_timeout(30);
-        sprintf(cmd, "show server server%d", j+1);
-        test->add_result(test->get_maxadmin_param(cmd, (char*) "Current no. of conns:", result), "maxadmin command %s failed\n", cmd);
-        result_d = 999;
-        sscanf(result, "%d", &result_d);
-        if (strlen(result) == 0)
+        if((result_d = check_connection_count(test, j)))
         {
-            test->add_result(1, "Empty Current no. of conns \n");
+            test->tprintf("Waiting 5 seconds and testing again.");
+            sleep(5);
+            result_d = check_connection_count(test, j);
         }
-        test->tprintf("result %s\t result_d %d\n", result, result_d);
+
         test->add_result(result_d, "Expected 0 connections, but got %d\n", result_d);
     }
 }
