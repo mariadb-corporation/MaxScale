@@ -14,20 +14,21 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < CONNECTIONS - 1; i++)
     {
-        Test->tprintf("Opening connection %d", i + 1);
+        Test->tprintf("Opening connection %d\n", i + 1);
         Test->set_timeout(30);
         mysql[i] = Test->open_rwsplit_connection();
         if(execute_query(mysql[i], "select 1"))
         {
             /** Monitors and such take up some connections so we'll set the
              * limit to the point where we know it'll start failing.*/
+            Test->stop_timeout();
             limit = i;
             mysql_close(mysql[limit]);
             mysql_close(mysql[limit - 1]);
+            Test->tprintf("Found limit, %d connections\n", limit);
         }
     }
 
-    Test->tprintf("Found limit, %d connections", limit);
     sleep(5);
 
     for (int i = 0; i < 50; i++)
