@@ -28,7 +28,7 @@ int main(int argc, char** argv)
 
     sleep(5);
     Test->tprintf("Found limit, %d connections", limit);
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 50; i++)
     {
         Test->set_timeout(30);
         mysql[limit - 1] = Test->open_rwsplit_connection();
@@ -37,6 +37,7 @@ int main(int argc, char** argv)
         Test->add_result(!execute_query(mysql[limit], "select 1"), "Query should not succeed\n");
         mysql_close(mysql[limit - 1]);
         mysql_close(mysql[limit]);
+        sleep(2);
     }
 
     Test->set_timeout(30);
