@@ -22,6 +22,11 @@ int main(int argc, char** argv)
     mysql[CONNECTIONS - 1] = Test->open_rwsplit_connection();
     Test->add_result(!execute_query(mysql[CONNECTIONS - 1], "select 1"), "Query should not succeed");
 
+    for (int i = 0; i < CONNECTIONS; i++)
+    {
+        mysql_close(mysql[i]);
+    }
+    sleep(5);
     Test->stop_timeout();
     Test->check_maxscale_alive();
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
