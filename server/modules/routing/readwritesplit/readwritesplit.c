@@ -5368,9 +5368,9 @@ static void check_for_multi_stmt(ROUTER_CLIENT_SES* rses, GWBUF *buf,
         if ((ptr = strnchr_esc_mysql(data, ';', buflen)))
         {
             /** Skip stored procedures etc. */
-            while (ptr && is_mysql_sp_end(ptr, ptr - data))
+            while (ptr && is_mysql_sp_end(ptr, buflen - (ptr - data)))
             {
-                ptr = strnchr_esc_mysql(ptr + 1, ';',  ptr - data);
+                ptr = strnchr_esc_mysql(ptr + 1, ';',  buflen - (ptr - data) - 1);
             }
 
             if (ptr)
