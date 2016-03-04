@@ -582,10 +582,12 @@ process_config_context(CONFIG_CONTEXT *context)
      * error_count += consistency_checks();
      */
 
+#ifdef REQUIRE_LISTENERS
     if (!service_all_services_have_listeners())
     {
         error_count++;
     }
+#endif
 
     if (error_count)
     {

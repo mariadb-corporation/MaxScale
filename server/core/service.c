@@ -429,30 +429,41 @@ int serviceStartAllPorts(SERVICE* service)
 {
     SERV_LISTENER *port = service->ports;
     int listeners = 0;
-    while (!service->svc_do_shutdown && port)
+
+    if (port)
     {
-        listeners += serviceStartPort(service, port);
-        port = port->next;
+        while (!service->svc_do_shutdown && port)
+        {
+            listeners += serviceStartPort(service, port);
+            port = port->next;
+        }
+
+        if (listeners)
+        {
+            service->state = SERVICE_STATE_STARTED;
+            service->stats.started = time(0);
+        }
+        else if (service->retry_start)
+        {
+            /** Service failed to start any ports. Try again later. */
+            service->stats.n_failed_starts++;
+            char taskname[strlen(service->name) + strlen("_start_retry_") +
+                (int) ceil(log10(INT_MAX)) + 1];
+            int retry_after = MIN(service->stats.n_failed_starts * 10, SERVICE_MAX_RETRY_INTERVAL);
+            snprintf(taskname, sizeof(taskname), "%s_start_retry_%d",
+                     service->name, service->stats.n_failed_starts);
+            hktask_oneshot(taskname, service_internal_restart,
+                           (void*) service, retry_after);
+            MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
+                       service->name, retry_after);
+        }
+    }
+    else
+    {
+        MXS_WARNING("Service '%s' has no listeners defined.", service->name);
+        listeners = 1; /** Set this to one to suppress errors */
     }
 
-    if (listeners)
-    {
-        service->state = SERVICE_STATE_STARTED;
-        service->stats.started = time(0);
-    }
-    else if (service->retry_start)
-    {
-        /** Service failed to start any ports. Try again later. */
-        service->stats.n_failed_starts++;
-        char taskname[strlen(service->name) + strlen("_start_retry_") + (int)ceil(log10(INT_MAX)) + 1];
-        int retry_after = MIN(service->stats.n_failed_starts * 10, SERVICE_MAX_RETRY_INTERVAL);
-        snprintf(taskname, sizeof (taskname), "%s_start_retry_%d",
-                 service->name, service->stats.n_failed_starts);
-        hktask_oneshot(taskname, service_internal_restart,
-                       (void*) service, retry_after);
-        MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
-                   service->name, retry_after);
-    }
     return listeners;
 }
 
