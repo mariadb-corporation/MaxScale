@@ -2560,6 +2560,7 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
                 {
                     MXS_ERROR("Unable to find server '%s' that is "
                               "configured as part of service '%s'.", s, obj->object);
+                    error_count++;
                 }
                 s = strtok_r(NULL, ",", &lasts);
             }
