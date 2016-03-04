@@ -230,7 +230,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         if (my_instance->nomatch)
         {
-            if (regcomp(&my_instance->nore,my_instance->nomatch,cflags))
+            if (regcomp(&my_instance->nore, my_instance->nomatch, cflags))
             {
                 MXS_ERROR("lagfilter: Failed to compile regex '%s'.", my_instance->nomatch);
             }
@@ -339,8 +339,8 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 if (my_instance->nomatch == NULL ||
                     (my_instance->nomatch && regexec(&my_instance->nore, sql, 0, NULL, 0) != 0))
                 {
-                    if (my_instance->match == NULL||
-                        (my_instance->match && regexec(&my_instance->re,sql,0,NULL,0) == 0))
+                    if (my_instance->match == NULL ||
+                        (my_instance->match && regexec(&my_instance->re, sql, 0, NULL, 0) == 0))
                     {
                         my_session->hints_left = my_instance->count;
                         my_session->last_modification = now;
@@ -357,7 +357,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
             my_session->hints_left--;
             my_instance->stats.n_add_count++;
         }
-        else if (difftime(now,my_session->last_modification) < my_instance->time)
+        else if (difftime(now, my_session->last_modification) < my_instance->time)
         {
             queue->hint = hint_create_route(queue->hint, HINT_ROUTE_TO_MASTER, NULL);
             my_instance->stats.n_add_time++;
