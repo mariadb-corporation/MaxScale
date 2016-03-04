@@ -2,6 +2,7 @@
 #include "testconnections.h"
 
 #define CONNECTIONS 21
+#define ITER 25
 
 int main(int argc, char** argv)
 {
@@ -31,8 +32,8 @@ int main(int argc, char** argv)
     }
 
     sleep(5);
-    Test->tprintf("Opening two connection. One should succeed while the other should fail. \n");
-    for (int i = 0; i < 50; i++)
+    Test->tprintf("Opening two connections for %d times. One should succeed while the other should fail.\n", ITER);
+    for (int i = 0; i < ITER; i++)
     {
         Test->set_timeout(30);
         mysql[limit - 1] = Test->open_rwsplit_connection();
