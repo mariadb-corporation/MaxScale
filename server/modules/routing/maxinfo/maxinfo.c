@@ -45,6 +45,7 @@
 #include <atomic.h>
 #include <spinlock.h>
 #include <dcb.h>
+#include <maxscale.h>
 #include <maxscale/poll.h>
 #include <maxinfo.h>
 #include <skygw_utils.h>
@@ -430,11 +431,10 @@ maxinfo_statistics(INFO_INSTANCE *router, INFO_SESSION *session, GWBUF *queue)
 char	result[1000], *ptr;
 GWBUF	*ret;
 int	len;
-extern	int	MaxScaleUptime();
 
 	snprintf(result, 1000,
 		"Uptime: %u  Threads: %u  Sessions: %u ",
-			MaxScaleUptime(),
+			maxscale_uptime(),
 			config_threadcount(),
 			serviceSessionCountAll());
 	if ((ret = gwbuf_alloc(4 + strlen(result))) == NULL)
@@ -540,7 +540,7 @@ static char	buf[40];
 	{
 		(*context)++;
 		row = resultset_make_row(result);
-		sprintf(buf, "%u", (unsigned int)MaxScaleStarted);
+		sprintf(buf, "%u", (unsigned int)maxscale_started());
 		resultset_row_set(row, 0, buf);
 		return row;
 	}
