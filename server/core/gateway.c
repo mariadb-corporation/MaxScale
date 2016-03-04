@@ -1291,7 +1291,7 @@ int main(int argc, char **argv)
     *maxlog_enabled = 1;
     *log_to_shm = 0;
 
-    maxscale_reset_uptime();
+    maxscale_reset_starttime();
 
     sigemptyset(&sigpipe_mask);
     sigaddset(&sigpipe_mask, SIGPIPE);

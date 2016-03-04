@@ -32,6 +32,9 @@
  * @endverbatim
  */
 
+#include <time.h>
+
+
 /* Exit status for MaxScale */
 #define	MAXSCALE_SHUTDOWN	0	/* Good shutdown */
 #define MAXSCALE_BADCONFIG	1	/* Configuration fiel error */
@@ -41,7 +44,8 @@
 #define MAXSCALE_BADARG		5	/* Bad command line argument */
 #define MAXSCALE_INTERNALERROR	6	/* Internal error, see error log */
 
-void maxscale_reset_uptime(void);
+void maxscale_reset_starttime(void);
+time_t maxscale_started(void);
 int maxscale_uptime(void);
 
 #endif

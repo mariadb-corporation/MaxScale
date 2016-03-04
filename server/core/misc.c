@@ -20,14 +20,22 @@
 #include <maxscale.h>
 #include <time.h>
 
-static time_t maxscale_started;
+static time_t started;
 
 /**
  * Reset the start time from which the uptime is calculated.
  */
-void maxscale_reset_uptime(void)
+void maxscale_reset_starttime(void)
 {
-    maxscale_started = time(0);
+    started = time(0);
+}
+
+/**
+ * Return the time when MaxScale was started.
+ */
+time_t maxscale_started(void)
+{
+    return started;
 }
 
 /**
@@ -37,5 +45,5 @@ void maxscale_reset_uptime(void)
  */
 int maxscale_uptime()
 {
-    return time(0) - maxscale_started;
+    return time(0) - started;
 }
