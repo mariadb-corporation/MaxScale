@@ -26,6 +26,7 @@ int main(int argc, char** argv)
             mysql_close(mysql[limit]);
             mysql_close(mysql[limit - 1]);
             Test->tprintf("Found limit, %d connections\n", limit);
+            break;
         }
     }
 
