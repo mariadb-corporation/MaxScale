@@ -73,7 +73,6 @@ void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern uint32_t extract_field(uint8_t *src, int bits);
 static void blr_format_event_size(double *event_size, char *label);
-extern int MaxScaleUptime();
 extern char *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 typedef struct binlog_event_desc {
