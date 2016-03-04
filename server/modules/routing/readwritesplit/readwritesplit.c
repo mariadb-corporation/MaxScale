@@ -2178,7 +2178,7 @@ static bool route_single_stmt(
      * Check if this is a LOAD DATA LOCAL INFILE query. If so, send all queries
      * to the master until the last, empty packet arrives.
      */
-    if (!rses->rses_load_active)
+    if (!rses->rses_load_active && packet_type == MYSQL_COM_QUERY)
     {
         qc_query_op_t queryop = qc_get_operation(querybuf);
         if (queryop == QUERY_OP_LOAD)
