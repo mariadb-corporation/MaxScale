@@ -42,6 +42,7 @@
 #include <atomic.h>
 #include <spinlock.h>
 #include <dcb.h>
+#include <maxscale.h>
 #include <maxscale/poll.h>
 #include <maxinfo.h>
 #include <skygw_utils.h>
@@ -776,8 +777,6 @@ getMaxScaleHome()
 #define	VT_STRING	1
 #define	VT_INT		2
 
-extern int MaxScaleUptime();
-
 typedef void *(*STATSFUNC)();
 /**
  * Variables that may be sent in a show variables
@@ -794,7 +793,7 @@ static struct {
 	{ "MAXSCALE_THREADS", VT_INT, (STATSFUNC)config_threadcount },
 	{ "MAXSCALE_NBPOLLS", VT_INT, (STATSFUNC)config_nbpolls },
 	{ "MAXSCALE_POLLSLEEP", VT_INT, (STATSFUNC)config_pollsleep },
-	{ "MAXSCALE_UPTIME", VT_INT, (STATSFUNC)MaxScaleUptime },
+	{ "MAXSCALE_UPTIME", VT_INT, (STATSFUNC)maxscale_uptime },
 	{ "MAXSCALE_SESSIONS", VT_INT, (STATSFUNC)serviceSessionCountAll },
 	{ NULL, 0, 	NULL }
 };
@@ -1051,8 +1050,8 @@ static struct {
 	int		type;
 	STATSFUNC	func;
 } status[] = {
-	{ "Uptime", VT_INT, (STATSFUNC)MaxScaleUptime },
-	{ "Uptime_since_flush_status", VT_INT, (STATSFUNC)MaxScaleUptime },
+	{ "Uptime", VT_INT, (STATSFUNC)maxscale_uptime },
+	{ "Uptime_since_flush_status", VT_INT, (STATSFUNC)maxscale_uptime },
 	{ "Threads_created", VT_INT, (STATSFUNC)config_threadcount },
 	{ "Threads_running", VT_INT, (STATSFUNC)config_threadcount },
 	{ "Threadpool_threads", VT_INT, (STATSFUNC)config_threadcount },
