@@ -1038,7 +1038,7 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
     ssl = config_get_value(obj->parameters, "ssl");
     if (ssl && !strcmp(ssl, "required"))
     {
-        if ((new_ssl = malloc(sizeof(SSL_LISTENER))) == NULL)
+        if ((new_ssl = calloc(1, sizeof(SSL_LISTENER))) == NULL)
         {
             return NULL;
         }
