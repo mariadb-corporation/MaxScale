@@ -277,7 +277,7 @@ add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication)
 
 add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replication)
 add_test_executable(different_size_binlog.cpp different_size_binlog setup_binlog)
-
+add_test_executable(max_connections.cpp max_connections replication)
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
 find_program(DEBBUILD dpkg-buildpackage)

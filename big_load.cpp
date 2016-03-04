@@ -35,6 +35,7 @@ void load(long int *new_inserts, long int *new_selects, long int *selects, long 
     } else {
         create_t1(Test->conn_rwsplit);
         create_insert_string(sql, sql_l, 1);
+        Test->tprintf("Waiting for the table to replicate");
         sleep(30);
         if ((execute_query(Test->conn_rwsplit, sql) != 0) && (report_errors)) {
             Test->add_result(1, "Query %s failed\n", sql);
