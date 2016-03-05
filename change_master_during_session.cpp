@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     Test->close_rwsplit();
 
     /** Sleep for at least one monitor interval */
-    Test->tprintf("Waiting for monitor to detect changes");
+    Test->tprintf("Waiting for monitor to detect changes\n");
     Test->stop_timeout();
     sleep(3);
 
