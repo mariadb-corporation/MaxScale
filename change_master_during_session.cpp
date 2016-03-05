@@ -35,6 +35,12 @@ int main(int argc, char *argv[])
     execute_query(Test->conn_rwsplit, (char *) "SELECT * FROM t1;");
 
     Test->close_rwsplit();
+
+    /** Sleep for at least one monitor interval */
+    Test->tprintf("Waiting for monitor to detect changes");
+    Test->stop_timeout();
+    sleep(3);
+
     Test->set_timeout(20);
     Test->connect_rwsplit();
     Test->tprintf("Reconnecting and executing SELECT again\n");
