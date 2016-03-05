@@ -30,6 +30,7 @@ module=galeramon
 servers=server1,server2,server3,server4
 user=skysql
 passwd=skysql
+use_priority=true
 
 # A series of service definition
 #
@@ -109,6 +110,7 @@ port=###galera_server_port_1###
 protocol=MySQLBackend
 serversize=1
 serversize_rws=1
+priority=1
 
 [server2]
 type=server
