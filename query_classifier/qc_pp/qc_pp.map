@@ -1,9 +1,0 @@
-{
-    global:
-        info;
-        version;
-        GetModuleObject;
-        ModuleInit;
-    local:
-        *;
-};
