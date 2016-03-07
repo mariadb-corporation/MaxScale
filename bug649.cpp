@@ -70,18 +70,22 @@ int main(int argc, char *argv[])
     sleep(5);
 
     create_insert_string(sql, 65000, 1);
-
+    Test->tprintf("Creating query threads\n", time_to_run);
     for (int j = 0; j < threads_num; j++) {
         Test->set_timeout(20);
         check_iret[j] = pthread_create( &parall_traffic1[j], NULL, parall_traffic, NULL);
     }
+
     Test->stop_timeout();
+    Test->tprintf("Waiting %d seconds\n", time_to_run);
     sleep(time_to_run);
+
     Test->set_timeout(30);
     Test->tprintf("Setup firewall to block mysql on master\n");
     Test->repl->block_node(0); fflush(stdout);
 
     Test->stop_timeout();
+    Test->tprintf("Waiting %d seconds\n", time_to_run);
     sleep(time_to_run);
 
     Test->set_timeout(30);
