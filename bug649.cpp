@@ -80,11 +80,9 @@ int main(int argc, char *argv[])
     Test->tprintf("Waiting %d seconds\n", time_to_run);
     sleep(time_to_run);
 
-    Test->set_timeout(30);
     Test->tprintf("Setup firewall to block mysql on master\n");
     Test->repl->block_node(0); fflush(stdout);
 
-    Test->stop_timeout();
     Test->tprintf("Waiting %d seconds\n", time_to_run);
     sleep(time_to_run);
 
@@ -98,7 +96,6 @@ int main(int argc, char *argv[])
     Test->stop_timeout();
     sleep(time_to_run);
 
-    //Test->set_timeout(20);
     Test->tprintf("Setup firewall back to allow mysql\n");
     Test->repl->unblock_node(0); fflush(stdout);
     Test->stop_timeout();
