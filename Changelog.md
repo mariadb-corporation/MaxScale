@@ -1,5 +1,8 @@
 #Changelog
 
+## MaxScale 1.4
+* Authentication now allows table level resolution of grants. MaxScale service users will now need SELECT privileges on `mysql.tables_priv` to be able to authenticate users at the database and table level.
+
 ## MaxScale 1.3
 * Added support for persistent backend connections
 * The *binlog server* is now an integral component of MaxScale.
