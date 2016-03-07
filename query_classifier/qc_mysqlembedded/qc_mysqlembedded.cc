@@ -195,6 +195,7 @@ static bool parse_query(GWBUF* querybuf)
 
     if (querybuf == NULL || query_is_parsed(querybuf))
     {
+        MXS_ERROR("Query is NULL (%p) or query is already parsed.", querybuf);
         return false;
     }
 
@@ -203,6 +204,7 @@ static bool parse_query(GWBUF* querybuf)
 
     if (pi == NULL)
     {
+        MXS_ERROR("Parsing info initialization failed.");
         succp = false;
         goto retblock;
     }
@@ -215,6 +217,8 @@ static bool parse_query(GWBUF* querybuf)
     if (len < 1 || len >= ~((size_t) 0) - 1 || (query_str = (char *) malloc(len + 1)) == NULL)
     {
         /** Free parsing info data */
+        MXS_ERROR("Length (%lu) is 0 or query string allocation failed (%p). Buffer is %lu bytes.",
+                  len, query_str, GWBUF_LENGTH(querybuf));
         parsing_info_done(pi);
         succp = false;
         goto retblock;
@@ -229,6 +233,7 @@ static bool parse_query(GWBUF* querybuf)
 
     if (thd == NULL)
     {
+        MXS_ERROR("THD creation failed.");
         /** Free parsing info data */
         parsing_info_done(pi);
         succp = false;

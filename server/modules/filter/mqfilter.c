@@ -991,7 +991,7 @@ newSession(FILTER *instance, SESSION *session)
         my_session->was_query = false;
         my_session->uid = NULL;
         my_session->session = session;
-        sessauth = my_session->session->data;
+        sessauth = my_session->session->client_dcb->data;
         if (sessauth->db && strnlen(sessauth->db, 128) > 0)
         {
             my_session->db = strdup(sessauth->db);

@@ -23,6 +23,7 @@
 #include <buffer.h>
 #include <service.h>
 #include <session.h>
+#include <gw_protocol.h>
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/socket.h>
@@ -296,6 +297,7 @@ static int telnetd_accept(DCB *dcb)
                 close(so);
                 return n_connect;
             }
+            client_dcb->listen_ssl = dcb->listen_ssl;
             client_dcb->fd = so;
             client_dcb->remote = strdup(inet_ntoa(addr.sin_addr));
             memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));

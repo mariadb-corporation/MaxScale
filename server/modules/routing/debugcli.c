@@ -121,7 +121,7 @@ GetModuleObject()
 /**
  * Create an instance of the router for a particular service
  * within the gateway.
- * 
+ *
  * @param service	The service this router is being create for
  * @param options	Any array of options for the query router
  *
@@ -202,14 +202,14 @@ CLI_SESSION	*client;
 	session->state = SESSION_STATE_READY;
 	client->mode = inst->mode;
 
-	dcb_printf(session->client, "Welcome the MariaDB Corporation MaxScale Debug Interface (%s).\n",
+	dcb_printf(session->client_dcb, "Welcome the MariaDB Corporation MaxScale Debug Interface (%s).\n",
 		version_str);
 	if (client->mode == CLIM_DEVELOPER)
 	{
-		dcb_printf(session->client, "WARNING: This interface is meant for developer usage,\n");
-		dcb_printf(session->client, "passing incorrect addresses to commands can endanger your MaxScale server.\n\n");
+		dcb_printf(session->client_dcb, "WARNING: This interface is meant for developer usage,\n");
+		dcb_printf(session->client_dcb, "passing incorrect addresses to commands can endanger your MaxScale server.\n\n");
 	}
-	dcb_printf(session->client, "Type help for a list of available commands.\n\n");
+	dcb_printf(session->client_dcb, "Type help for a list of available commands.\n\n");
 
 	return (void *)client;
 }
@@ -221,7 +221,7 @@ CLI_SESSION	*client;
  * @param instance		The router instance data
  * @param router_session	The session being closed
  */
-static	void 	
+static	void
 closeSession(ROUTER *instance, void *router_session)
 {
 CLI_INSTANCE	*inst = (CLI_INSTANCE *)instance;
@@ -270,7 +270,7 @@ static void freeSession(
  * @param queue			The queue of data buffers to route
  * @return The number of bytes sent
  */
-static	int	
+static	int
 execute(ROUTER *instance, void *router_session, GWBUF *queue)
 {
 CLI_SESSION	*session = (CLI_SESSION *)router_session;
@@ -285,9 +285,9 @@ CLI_SESSION	*session = (CLI_SESSION *)router_session;
 	if (strrchr(session->cmdbuf, '\n'))
 	{
 		if (execute_cmd(session))
-			dcb_printf(session->session->client, "MaxScale> ");
+			dcb_printf(session->session->client_dcb, "MaxScale> ");
 		else
-                        dcb_close(session->session->client);
+                        dcb_close(session->session->client_dcb);
 	}
 	return 1;
 }

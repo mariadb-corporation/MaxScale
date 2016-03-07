@@ -43,7 +43,8 @@
  * 20/02/15     Markus Mäkelä           Added connection_timeout parameter for services
  * 05/03/15     Massimiliano Pinto      Added notification_feedback support
  * 20/04/15     Guillaume Lefranc       Added available_when_donor parameter
- * 22/04/15 Martin Brampton     Added disable_master_role_setting parameter
+ * 22/04/15     Martin Brampton         Added disable_master_role_setting parameter
+ * 26/01/16     Martin Brampton         Transfer SSL processing to listener
  *
  * @endverbatim
  */
@@ -90,6 +91,8 @@ static void global_defaults();
 static void feedback_defaults();
 static void check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
+static SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count);
+
 int config_truth_value(char *str);
 int config_get_ifaddr(unsigned char *output);
 int config_get_release_string(char* release);
@@ -99,7 +102,7 @@ bool config_has_duplicate_sections(const char* config);
 int create_new_service(CONFIG_CONTEXT *obj);
 int create_new_server(CONFIG_CONTEXT *obj);
 int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* monitorhash);
-int create_new_listener(CONFIG_CONTEXT *obj);
+int create_new_listener(CONFIG_CONTEXT *obj, bool startnow);
 int create_new_filter(CONFIG_CONTEXT *obj);
 int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj);
 
@@ -130,12 +133,6 @@ static char *service_params[] =
     "version_string",
     "filters",
     "weightby",
-    "ssl_cert",
-    "ssl_ca_cert",
-    "ssl",
-    "ssl_key",
-    "ssl_version",
-    "ssl_cert_verify_depth",
     "ignore_databases",
     "ignore_databases_regex",
     "log_auth_warnings",
@@ -150,6 +147,13 @@ static char *listener_params[] =
     "port",
     "address",
     "socket",
+    "authenticator",
+    "ssl_cert",
+    "ssl_ca_cert",
+    "ssl",
+    "ssl_key",
+    "ssl_version",
+    "ssl_cert_verify_depth",
     NULL
 };
 
@@ -186,6 +190,14 @@ static char *server_params[] =
     "monitorpw",
     "persistpoolmax",
     "persistmaxtime",
+    /* The following, or something similar, will be needed for backend SSL
+    "ssl_cert",
+    "ssl_ca_cert",
+    "ssl",
+    "ssl_key",
+    "ssl_version",
+    "ssl_cert_verify_depth",
+     */
     NULL
 };
 
@@ -547,7 +559,7 @@ process_config_context(CONFIG_CONTEXT *context)
                 }
                 else if (!strcmp(type, "listener"))
                 {
-                    error_count += create_new_listener(obj);
+                    error_count += create_new_listener(obj, false);
                 }
                 else if (!strcmp(type, "monitor"))
                 {
@@ -570,10 +582,12 @@ process_config_context(CONFIG_CONTEXT *context)
      * error_count += consistency_checks();
      */
 
+#ifdef REQUIRE_LISTENERS
     if (!service_all_services_have_listeners())
     {
         error_count++;
     }
+#endif
 
     if (error_count)
     {
@@ -876,6 +890,7 @@ static struct
     { "log_info",     LOG_INFO,    NULL },
     { NULL, 0 }
 };
+
 /**
  * Configuration handler for items in the global [MaxScale] section
  *
@@ -1003,6 +1018,127 @@ handle_global_item(const char *name, const char *value)
         }
     }
     return 1;
+}
+
+/**
+ * Form an SSL structure from listener section parameters
+ *
+ * @param obj The configuration object for the item being created
+ * @param require_cert  Whether a certificate and key are required
+ * @param *error_count  An error count which may be incremented
+ * @return SSL_LISTENER structure or NULL
+ */
+static SSL_LISTENER *
+make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
+{
+    char *ssl, *ssl_version, *ssl_cert, *ssl_key, *ssl_ca_cert, *ssl_cert_verify_depth;
+    int local_errors = 0;
+    SSL_LISTENER *new_ssl;
+
+    ssl = config_get_value(obj->parameters, "ssl");
+    if (ssl && !strcmp(ssl, "required"))
+    {
+        if ((new_ssl = calloc(1, sizeof(SSL_LISTENER))) == NULL)
+        {
+            return NULL;
+        }
+        new_ssl->ssl_method_type = SERVICE_SSL_TLS_MAX;
+        ssl_cert = config_get_value(obj->parameters, "ssl_cert");
+        ssl_key = config_get_value(obj->parameters, "ssl_key");
+        ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
+        ssl_version = config_get_value(obj->parameters, "ssl_version");
+        ssl_cert_verify_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
+        new_ssl->ssl_init_done = false;
+
+        if (ssl_version)
+        {
+            if (listener_set_ssl_version(new_ssl, ssl_version) != 0)
+            {
+                MXS_ERROR("Unknown parameter value for 'ssl_version' for"
+                    " service '%s': %s", obj->object, ssl_version);
+                local_errors++;
+            }
+        }
+
+        if (ssl_cert_verify_depth)
+        {
+            new_ssl->ssl_cert_verify_depth = atoi(ssl_cert_verify_depth);
+            if (new_ssl->ssl_cert_verify_depth < 0)
+            {
+                MXS_ERROR("Invalid parameter value for 'ssl_cert_verify_depth"
+                    " for service '%s': %s", obj->object, ssl_cert_verify_depth);
+                new_ssl->ssl_cert_verify_depth = 0;
+                local_errors++;
+            }
+        }
+        else
+        {
+            /**
+             * Default of 9 as per Linux man page
+             */
+            new_ssl->ssl_cert_verify_depth = 9;
+        }
+
+        listener_set_certificates(new_ssl, ssl_cert, ssl_key, ssl_ca_cert);
+
+        if (require_cert && new_ssl->ssl_cert == NULL)
+        {
+            local_errors++;
+            MXS_ERROR("Server certificate missing for service '%s'."
+                      "Please provide the path to the server certificate by adding "
+                      "the ssl_cert=<path> parameter", obj->object);
+        }
+
+        if (new_ssl->ssl_ca_cert == NULL)
+        {
+            local_errors++;
+            MXS_ERROR("CA Certificate missing for service '%s'."
+                      "Please provide the path to the certificate authority "
+                      "certificate by adding the ssl_ca_cert=<path> parameter",
+                      obj->object);
+        }
+
+        if (require_cert && new_ssl->ssl_key == NULL)
+        {
+            local_errors++;
+            MXS_ERROR("Server private key missing for service '%s'. "
+                      "Please provide the path to the server certificate key by "
+                      "adding the ssl_key=<path> parameter",
+                      obj->object);
+        }
+
+        if (access(new_ssl->ssl_ca_cert, F_OK) != 0)
+        {
+            MXS_ERROR("Certificate authority file for service '%s' not found: %s",
+                obj->object,
+                new_ssl->ssl_ca_cert);
+            local_errors++;
+        }
+
+        if (require_cert && access(new_ssl->ssl_cert, F_OK) != 0)
+        {
+            MXS_ERROR("Server certificate file for service '%s' not found: %s",
+                      obj->object,
+                      new_ssl->ssl_cert);
+            local_errors++;
+        }
+
+        if (require_cert && access(new_ssl->ssl_key, F_OK) != 0)
+        {
+            MXS_ERROR("Server private key file for service '%s' not found: %s",
+                      obj->object,
+                      new_ssl->ssl_key);
+            local_errors++;
+        }
+
+        if (0 == local_errors)
+        {
+            return new_ssl;
+        }
+        *error_count += local_errors;
+        free(new_ssl);
+    }
+    return NULL;
 }
 
 /**
@@ -1375,52 +1511,7 @@ process_config_update(CONFIG_CONTEXT *context)
         }
         else if (!strcmp(type, "listener"))
         {
-            char *service;
-            char *port;
-            char *protocol;
-            char *address;
-            char *socket;
-
-            service = config_get_value(obj->parameters, "service");
-            address = config_get_value(obj->parameters, "address");
-            port = config_get_value(obj->parameters, "port");
-            protocol = config_get_value(obj->parameters, "protocol");
-            socket = config_get_value(obj->parameters, "socket");
-
-            if (service && socket && protocol)
-            {
-                CONFIG_CONTEXT *ptr = context;
-                while (ptr && strcmp(ptr->object, service) != 0)
-                {
-                    ptr = ptr->next;
-                }
-
-                if (ptr &&
-                    ptr->element &&
-                    serviceHasProtocol(ptr->element, protocol, 0) == 0)
-                {
-                    serviceAddProtocol(ptr->element, protocol, socket, 0);
-                    serviceStartProtocol(ptr->element, protocol, 0);
-                }
-            }
-
-            if (service && port && protocol)
-            {
-                CONFIG_CONTEXT *ptr = context;
-
-                while (ptr && strcmp(ptr->object, service) != 0)
-                {
-                    ptr = ptr->next;
-                }
-
-                if (ptr &&
-                    ptr->element &&
-                    serviceHasProtocol(ptr->element, protocol, atoi(port)) == 0)
-                {
-                    serviceAddProtocol(ptr->element, protocol, address, atoi(port));
-                    serviceStartProtocol(ptr->element, protocol, atoi(port));
-                }
-            }
+            create_new_listener(obj, true);
         }
         else if (strcmp(type, "server") != 0 &&
                  strcmp(type, "monitor") != 0 &&
@@ -2239,6 +2330,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
         }
     }
 
+    /*
     char *ssl = config_get_value(obj->parameters, "ssl");
     if (ssl)
     {
@@ -2282,6 +2374,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
             }
         }
     }
+     */
 
     /** Parameters for rwsplit router only */
     if (strcmp(router, "readwritesplit") == 0)
@@ -2414,6 +2507,8 @@ int create_new_server(CONFIG_CONTEXT *obj)
 
         CONFIG_PARAMETER *params = obj->parameters;
 
+        server->server_ssl = make_ssl_structure(obj, false, &error_count);
+
         while (params)
         {
             if (!is_normal_server_parameter(params->name))
@@ -2467,6 +2562,7 @@ int configure_new_service(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj)
                 {
                     MXS_ERROR("Unable to find server '%s' that is "
                               "configured as part of service '%s'.", s, obj->object);
+                    error_count++;
                 }
                 s = strtok_r(NULL, ",", &lasts);
             }
@@ -2634,9 +2730,10 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
 /**
  * Create a new listener for a service
  * @param obj Listener configuration context
+ * @param startnow If true, start the listener now
  * @return Number of errors
  */
-int create_new_listener(CONFIG_CONTEXT *obj)
+int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
 {
     int error_count = 0;
     char *service_name = config_get_value(obj->parameters, "service");
@@ -2644,20 +2741,52 @@ int create_new_listener(CONFIG_CONTEXT *obj)
     char *address = config_get_value(obj->parameters, "address");
     char *protocol = config_get_value(obj->parameters, "protocol");
     char *socket = config_get_value(obj->parameters, "socket");
+    char *authenticator = config_get_value(obj->parameters, "authenticator");
 
     if (service_name && protocol && (socket || port))
     {
         SERVICE *service = service_find(service_name);
         if (service)
         {
+            SSL_LISTENER *ssl_info = make_ssl_structure(obj, true, &error_count);
             if (socket)
             {
-                serviceAddProtocol(service, protocol, socket, 0);
+                if (serviceHasProtocol(service, protocol, 0))
+                {
+                    MXS_ERROR("Listener '%s', for service '%s', socket %s, already have socket.",
+                        obj->object,
+                        service_name,
+                        socket);
+                    error_count++;
+                }
+                else
+                {
+                    serviceAddProtocol(service, protocol, socket, 0, authenticator, ssl_info);
+                    if (startnow)
+                    {
+                        serviceStartProtocol(service, protocol, 0);
+                    }
+                }
             }
 
             if (port)
             {
-                serviceAddProtocol(service, protocol, address, atoi(port));
+                if (serviceHasProtocol(service, protocol, atoi(port)))
+                {
+                    MXS_ERROR("Listener '%s', for service '%s', already have port %s.",
+                        obj->object,
+                        service_name,
+                        port);
+                    error_count++;
+                }
+                else
+                {
+                    serviceAddProtocol(service, protocol, address, atoi(port), authenticator, ssl_info);
+                    if (startnow)
+                    {
+                        serviceStartProtocol(service, protocol, atoi(port));
+                    }
+                }
             }
         }
         else

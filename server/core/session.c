@@ -65,6 +65,8 @@ static SPINLOCK timeout_lock = SPINLOCK_INIT;
 static int session_setup_filters(SESSION *session);
 static void session_simple_free(SESSION *session, DCB *dcb);
 
+static void mysql_auth_free_client_data(DCB *dcb);
+
 /**
  * Allocate a new session for a new client of the specified service.
  *
@@ -91,23 +93,6 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                   "session object due error %d, %s.",
                   errno,
                   strerror_r(errno, errbuf, sizeof(errbuf)));
-        /* Does this possibly need a lock? */
-        /*
-         * This is really not the right way to do this.  The data in a DCB is
-         * router specific and should be freed by a function in the relevant
-         * router.  This would be better achieved by placing a function reference
-         * in the DCB and having dcb_final_free call it to dispose of the data
-         * at the final destruction of the DCB.  However, this piece of code is
-         * only run following a calloc failure, so the system is probably on
-         * the point of crashing anyway.
-         *
-         */
-        if (client_dcb->data && !DCB_IS_CLONE(client_dcb))
-        {
-            void * clientdata = client_dcb->data;
-            client_dcb->data = NULL;
-            free(clientdata);
-        }
         return NULL;
     }
 #if defined(SS_DEBUG)
@@ -117,7 +102,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     session->ses_is_child = (bool) DCB_IS_CLONE(client_dcb);
     spinlock_init(&session->ses_lock);
     session->service = service;
-    session->client = client_dcb;
+    session->client_dcb = client_dcb;
     session->n_filters = 0;
     memset(&session->stats, 0, sizeof(SESSION_STATS));
     session->stats.connect = time(0);
@@ -129,7 +114,6 @@ session_alloc(SERVICE *service, DCB *client_dcb)
      * session has not been made available to the other threads at this
      * point.
      */
-    session->data = client_dcb->data;
     session->refcount = 1;
     /*<
      * This indicates that session is ready to be shared with backend
@@ -190,7 +174,7 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     {
         session->state = SESSION_STATE_ROUTER_READY;
 
-        if (session->client->user == NULL)
+        if (session->client_dcb->user == NULL)
         {
             MXS_INFO("Started session [%lu] for %s service ",
                      session->ses_id,
@@ -201,8 +185,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
             MXS_INFO("Started %s client session [%lu] for '%s' from %s",
                      service->name,
                      session->ses_id,
-                     session->client->user,
-                     session->client->remote);
+                     session->client_dcb->user,
+                     session->client_dcb->remote);
         }
     }
     else
@@ -211,8 +195,8 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                  "closed as soon as all related DCBs have been closed.",
                  service->name,
                  session->ses_id,
-                 session->client->user,
-                 session->client->remote);
+                 session->client_dcb->user,
+                 session->client_dcb->remote);
     }
     spinlock_acquire(&session_spin);
     /** Assign a session id and increase, insert session into list */
@@ -249,12 +233,11 @@ session_set_dummy(DCB *client_dcb)
     session->ses_is_child = false;
     spinlock_init(&session->ses_lock);
     session->service = NULL;
-    session->client = NULL;
+    session->client_dcb = NULL;
     session->n_filters = 0;
     memset(&session->stats, 0, sizeof(SESSION_STATS));
     session->stats.connect = 0;
     session->state = SESSION_STATE_DUMMY;
-    session->data = NULL;
     session->refcount = 1;
     session->ses_id = 0;
     session->next = NULL;
@@ -268,12 +251,12 @@ session_set_dummy(DCB *client_dcb)
  * counter.
  * Generic logging setting has precedence over session-specific setting.
  *
- * @param ses      session
+ * @param session      session
  * @param priority syslog priority
  */
-void session_enable_log_priority(SESSION* ses, int priority)
+void session_enable_log_priority(SESSION* session, int priority)
 {
-    ses->enabled_log_priorities |= (1 << priority);
+    session->enabled_log_priorities |= (1 << priority);
     atomic_add((int *)&mxs_log_session_count[priority], 1);
 }
 
@@ -282,14 +265,14 @@ void session_enable_log_priority(SESSION* ses, int priority)
  * counter.
  * Generic logging setting has precedence over session-specific setting.
  *
- * @param ses   session
+ * @param session   session
  * @param priority syslog priority
  */
-void session_disable_log_priority(SESSION* ses, int priority)
+void session_disable_log_priority(SESSION* session, int priority)
 {
-    if (ses->enabled_log_priorities & (1 << priority))
+    if (session->enabled_log_priorities & (1 << priority))
     {
-        ses->enabled_log_priorities &= ~(1 << priority);
+        session->enabled_log_priorities &= ~(1 << priority);
         atomic_add((int *)&mxs_log_session_count[priority], -1);
     }
 }
@@ -341,9 +324,9 @@ int session_unlink_dcb(SESSION* session,
 
     if (dcb != NULL)
     {
-        if (session->client == dcb)
+        if (session->client_dcb == dcb)
         {
-            session->client = NULL;
+            session->client_dcb = NULL;
         }
         dcb->session = NULL;
     }
@@ -435,6 +418,17 @@ session_free(SESSION *session)
     spinlock_release(&session_spin);
     atomic_add(&session->service->stats.n_current, -1);
 
+    /***
+     *
+     */
+    if (session->client_dcb)
+    {
+        if (!DCB_IS_CLONE(session->client_dcb))
+        {
+            mysql_auth_free_client_data(session->client_dcb);
+        }
+        dcb_free_all_memory(session->client_dcb);
+    }
     /**
      * If session is not child of some other session, free router_session.
      * Otherwise let the parent free it.
@@ -477,11 +471,6 @@ session_free(SESSION *session)
     if (!session->ses_is_child)
     {
         session->state = SESSION_STATE_FREE;
-
-        if (session->data)
-        {
-            free(session->data);
-        }
         free(session);
     }
     return true;
@@ -496,19 +485,19 @@ session_free(SESSION *session)
 int
 session_isvalid(SESSION *session)
 {
-    SESSION *ptr;
+    SESSION *list_session;
     int rval = 0;
 
     spinlock_acquire(&session_spin);
-    ptr = allSessions;
-    while (ptr)
+    list_session = allSessions;
+    while (list_session)
     {
-        if (ptr == session)
+        if (list_session == session)
         {
             rval = 1;
             break;
         }
-        ptr = ptr->next;
+        list_session = list_session->next;
     }
     spinlock_release(&session_spin);
 
@@ -529,7 +518,7 @@ printSession(SESSION *session)
     printf("Session %p\n", session);
     printf("\tState:        %s\n", session_state(session->state));
     printf("\tService:      %s (%p)\n", session->service->name, session->service);
-    printf("\tClient DCB:   %p\n", session->client);
+    printf("\tClient DCB:   %p\n", session->client_dcb);
     printf("\tConnected:    %s",
            asctime_r(localtime_r(&session->stats.connect, &result), timebuf));
 }
@@ -543,14 +532,14 @@ printSession(SESSION *session)
 void
 printAllSessions()
 {
-    SESSION *ptr;
+    SESSION *list_session;
 
     spinlock_acquire(&session_spin);
-    ptr = allSessions;
-    while (ptr)
+    list_session = allSessions;
+    while (list_session)
     {
-        printSession(ptr);
-        ptr = ptr->next;
+        printSession(list_session);
+        list_session = list_session->next;
     }
     spinlock_release(&session_spin);
 }
@@ -565,29 +554,29 @@ printAllSessions()
 void
 CheckSessions()
 {
-    SESSION *ptr;
+    SESSION *list_session;
     int noclients = 0;
     int norouter = 0;
 
     spinlock_acquire(&session_spin);
-    ptr = allSessions;
-    while (ptr)
+    list_session = allSessions;
+    while (list_session)
     {
-        if (ptr->state != SESSION_STATE_LISTENER ||
-            ptr->state != SESSION_STATE_LISTENER_STOPPED)
+        if (list_session->state != SESSION_STATE_LISTENER ||
+            list_session->state != SESSION_STATE_LISTENER_STOPPED)
         {
-            if (ptr->client == NULL && ptr->refcount)
+            if (list_session->client_dcb == NULL && list_session->refcount)
             {
                 if (noclients == 0)
                 {
                     printf("Sessions without a client DCB.\n");
                     printf("==============================\n");
                 }
-                printSession(ptr);
+                printSession(list_session);
                 noclients++;
             }
         }
-        ptr = ptr->next;
+        list_session = list_session->next;
     }
     spinlock_release(&session_spin);
     if (noclients)
@@ -595,24 +584,24 @@ CheckSessions()
         printf("%d Sessions have no clients\n", noclients);
     }
     spinlock_acquire(&session_spin);
-    ptr = allSessions;
-    while (ptr)
+    list_session = allSessions;
+    while (list_session)
     {
-        if (ptr->state != SESSION_STATE_LISTENER ||
-            ptr->state != SESSION_STATE_LISTENER_STOPPED)
+        if (list_session->state != SESSION_STATE_LISTENER ||
+            list_session->state != SESSION_STATE_LISTENER_STOPPED)
         {
-            if (ptr->router_session == NULL && ptr->refcount)
+            if (list_session->router_session == NULL && list_session->refcount)
             {
                 if (norouter == 0)
                 {
                     printf("Sessions without a router session.\n");
                     printf("==================================\n");
                 }
-                printSession(ptr);
+                printSession(list_session);
                 norouter++;
             }
         }
-        ptr = ptr->next;
+        list_session = list_session->next;
     }
     spinlock_release(&session_spin);
     if (norouter)
@@ -634,36 +623,36 @@ dprintAllSessions(DCB *dcb)
 {
     struct tm result;
     char timebuf[40];
-    SESSION *ptr;
+    SESSION *list_session;
 
     spinlock_acquire(&session_spin);
-    ptr = allSessions;
-    while (ptr)
+    list_session = allSessions;
+    while (list_session)
     {
-        dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
-        dcb_printf(dcb, "\tState:               %s\n", session_state(ptr->state));
-        dcb_printf(dcb, "\tService:             %s (%p)\n", ptr->service->name, ptr->service);
-        dcb_printf(dcb, "\tClient DCB:          %p\n", ptr->client);
+        dcb_printf(dcb, "Session %d (%p)\n",list_session->ses_id, list_session);
+        dcb_printf(dcb, "\tState:               %s\n", session_state(list_session->state));
+        dcb_printf(dcb, "\tService:             %s (%p)\n", list_session->service->name, list_session->service);
+        dcb_printf(dcb, "\tClient DCB:          %p\n", list_session->client_dcb);
 
-        if (ptr->client && ptr->client->remote)
+        if (list_session->client_dcb && list_session->client_dcb->remote)
         {
             dcb_printf(dcb, "\tClient Address:              %s%s%s\n",
-                       ptr->client->user?ptr->client->user:"",
-                       ptr->client->user?"@":"",
-                       ptr->client->remote);
+                       list_session->client_dcb->user?list_session->client_dcb->user:"",
+                       list_session->client_dcb->user?"@":"",
+                       list_session->client_dcb->remote);
         }
 
         dcb_printf(dcb, "\tConnected:           %s",
-                   asctime_r(localtime_r(&ptr->stats.connect, &result), timebuf));
+                   asctime_r(localtime_r(&list_session->stats.connect, &result), timebuf));
 
-        if (ptr->client && ptr->client->state == DCB_STATE_POLLING)
+        if (list_session->client_dcb && list_session->client_dcb->state == DCB_STATE_POLLING)
         {
-            double idle = (hkheartbeat - ptr->client->last_read);
+            double idle = (hkheartbeat - list_session->client_dcb->last_read);
             idle = idle > 0 ? idle/10.0:0;
             dcb_printf(dcb, "\tIdle:                            %.0f seconds\n",idle);
         }
 
-        ptr = ptr->next;
+        list_session = list_session->next;
     }
     spinlock_release(&session_spin);
 }
@@ -675,43 +664,43 @@ dprintAllSessions(DCB *dcb)
  * to display all active sessions within the gateway
  *
  * @param dcb   The DCB to print to
- * @param ptr   The session to print
+ * @param print_session   The session to print
  */
 void
-dprintSession(DCB *dcb, SESSION *ptr)
+dprintSession(DCB *dcb, SESSION *print_session)
 {
     struct tm result;
     char buf[30];
     int i;
 
-    dcb_printf(dcb, "Session %d (%p)\n",ptr->ses_id, ptr);
-    dcb_printf(dcb, "\tState:               %s\n", session_state(ptr->state));
-    dcb_printf(dcb, "\tService:             %s (%p)\n", ptr->service->name, ptr->service);
-    dcb_printf(dcb, "\tClient DCB:          %p\n", ptr->client);
-    if (ptr->client && ptr->client->remote)
+    dcb_printf(dcb, "Session %d (%p)\n",print_session->ses_id, print_session);
+    dcb_printf(dcb, "\tState:               %s\n", session_state(print_session->state));
+    dcb_printf(dcb, "\tService:             %s (%p)\n", print_session->service->name, print_session->service);
+    dcb_printf(dcb, "\tClient DCB:          %p\n", print_session->client_dcb);
+    if (print_session->client_dcb && print_session->client_dcb->remote)
     {
-        double idle = (hkheartbeat - ptr->client->last_read);
+        double idle = (hkheartbeat - print_session->client_dcb->last_read);
         idle = idle > 0 ? idle/10.f : 0;
         dcb_printf(dcb, "\tClient Address:          %s%s%s\n",
-                   ptr->client->user?ptr->client->user:"",
-                   ptr->client->user?"@":"",
-                   ptr->client->remote);
+                   print_session->client_dcb->user?print_session->client_dcb->user:"",
+                   print_session->client_dcb->user?"@":"",
+                   print_session->client_dcb->remote);
         dcb_printf(dcb, "\tConnected:               %s\n",
-                   asctime_r(localtime_r(&ptr->stats.connect, &result), buf));
-        if (ptr->client->state == DCB_STATE_POLLING)
+                   asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
+        if (print_session->client_dcb->state == DCB_STATE_POLLING)
         {
             dcb_printf(dcb, "\tIdle:                %.0f seconds\n",idle);
         }
 
     }
-    if (ptr->n_filters)
+    if (print_session->n_filters)
     {
-        for (i = 0; i < ptr->n_filters; i++)
+        for (i = 0; i < print_session->n_filters; i++)
         {
             dcb_printf(dcb, "\tFilter: %s\n",
-                       ptr->filters[i].filter->name);
-            ptr->filters[i].filter->obj->diagnostics(ptr->filters[i].instance,
-                                                     ptr->filters[i].session,
+                       print_session->filters[i].filter->name);
+            print_session->filters[i].filter->obj->diagnostics(print_session->filters[i].instance,
+                                                     print_session->filters[i].session,
                                                      dcb);
         }
     }
@@ -728,26 +717,26 @@ dprintSession(DCB *dcb, SESSION *ptr)
 void
 dListSessions(DCB *dcb)
 {
-    SESSION *ptr;
+    SESSION *list_session;
 
     spinlock_acquire(&session_spin);
-    ptr = allSessions;
-    if (ptr)
+    list_session = allSessions;
+    if (list_session)
     {
         dcb_printf(dcb, "Sessions.\n");
         dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
         dcb_printf(dcb, "Session          | Client          | Service        | State\n");
         dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
     }
-    while (ptr)
+    while (list_session)
     {
-        dcb_printf(dcb, "%-16p | %-15s | %-14s | %s\n", ptr,
-                   ((ptr->client && ptr->client->remote)
-                    ? ptr->client->remote : ""),
-                   (ptr->service && ptr->service->name ? ptr->service->name
+        dcb_printf(dcb, "%-16p | %-15s | %-14s | %s\n", list_session,
+                   ((list_session->client_dcb && list_session->client_dcb->remote)
+                    ? list_session->client_dcb->remote : ""),
+                   (list_session->service && list_session->service->name ? list_session->service->name
                     : ""),
-                   session_state(ptr->state));
-        ptr = ptr->next;
+                   session_state(list_session->state));
+        list_session = list_session->next;
     }
     if (allSessions)
     {
@@ -901,7 +890,7 @@ session_reply(void *instance, void *session, GWBUF *data)
 {
     SESSION *the_session = (SESSION *)session;
 
-    return the_session->client->func.write(the_session->client, data);
+    return the_session->client_dcb->func.write(the_session->client_dcb, data);
 }
 
 /**
@@ -912,9 +901,9 @@ session_reply(void *instance, void *session, GWBUF *data)
 char *
 session_get_remote(SESSION *session)
 {
-    if (session && session->client)
+    if (session && session->client_dcb)
     {
-        return session->client->remote;
+        return session->client_dcb->remote;
     }
     return NULL;
 }
@@ -954,7 +943,7 @@ return_succp:
 char *
 session_getUser(SESSION *session)
 {
-    return (session && session->client) ? session->client->user : NULL;
+    return (session && session->client_dcb) ? session->client_dcb->user : NULL;
 }
 /**
  * Return the pointer to the list of all sessions.
@@ -992,17 +981,17 @@ void process_idle_sessions()
              * check for it once per second. One heartbeat is 100 milliseconds. */
             next_timeout_check = hkheartbeat + 10;
             spinlock_acquire(&session_spin);
-            SESSION *ses = get_all_sessions();
+            SESSION *all_session = get_all_sessions();
 
-            while (ses)
+            while (all_session)
             {
-                if (ses->service && ses->client && ses->client->state == DCB_STATE_POLLING &&
-                    hkheartbeat - ses->client->last_read > ses->service->conn_idle_timeout * 10)
+                if (all_session->service && all_session->client_dcb && all_session->client_dcb->state == DCB_STATE_POLLING &&
+                    hkheartbeat - all_session->client_dcb->last_read > all_session->service->conn_idle_timeout * 10)
                 {
-                    dcb_close(ses->client);
+                    dcb_close(all_session->client_dcb);
                 }
 
-                ses = ses->next;
+                all_session = all_session->next;
             }
             spinlock_release(&session_spin);
         }
@@ -1033,20 +1022,20 @@ sessionRowCallback(RESULTSET *set, void *data)
     int i = 0;
     char buf[20];
     RESULT_ROW *row;
-    SESSION *ptr;
+    SESSION *list_session;
 
     spinlock_acquire(&session_spin);
-    ptr = allSessions;
+    list_session = allSessions;
     /* Skip to the first non-listener if not showing listeners */
-    while (ptr && cbdata->filter == SESSION_LIST_CONNECTION &&
-           ptr->state == SESSION_STATE_LISTENER)
+    while (list_session && cbdata->filter == SESSION_LIST_CONNECTION &&
+           list_session->state == SESSION_STATE_LISTENER)
     {
-        ptr = ptr->next;
+        list_session = list_session->next;
     }
-    while (i < cbdata->index && ptr)
+    while (i < cbdata->index && list_session)
     {
         if (cbdata->filter == SESSION_LIST_CONNECTION &&
-            ptr->state !=  SESSION_STATE_LISTENER)
+            list_session->state !=  SESSION_STATE_LISTENER)
         {
             i++;
         }
@@ -1054,15 +1043,15 @@ sessionRowCallback(RESULTSET *set, void *data)
         {
             i++;
         }
-        ptr = ptr->next;
+        list_session = list_session->next;
     }
     /* Skip to the next non-listener if not showing listeners */
-    while (ptr && cbdata->filter == SESSION_LIST_CONNECTION &&
-           ptr->state == SESSION_STATE_LISTENER)
+    while (list_session && cbdata->filter == SESSION_LIST_CONNECTION &&
+           list_session->state == SESSION_STATE_LISTENER)
     {
-        ptr = ptr->next;
+        list_session = list_session->next;
     }
-    if (ptr == NULL)
+    if (list_session == NULL)
     {
         spinlock_release(&session_spin);
         free(data);
@@ -1070,14 +1059,14 @@ sessionRowCallback(RESULTSET *set, void *data)
     }
     cbdata->index++;
     row = resultset_make_row(set);
-    snprintf(buf,19, "%p", ptr);
+    snprintf(buf,19, "%p", list_session);
     buf[19] = '\0';
     resultset_row_set(row, 0, buf);
-    resultset_row_set(row, 1, ((ptr->client && ptr->client->remote)
-                               ? ptr->client->remote : ""));
-    resultset_row_set(row, 2, (ptr->service && ptr->service->name
-                               ? ptr->service->name : ""));
-    resultset_row_set(row, 3, session_state(ptr->state));
+    resultset_row_set(row, 1, ((list_session->client_dcb && list_session->client_dcb->remote)
+                               ? list_session->client_dcb->remote : ""));
+    resultset_row_set(row, 2, (list_session->service && list_session->service->name
+                               ? list_session->service->name : ""));
+    resultset_row_set(row, 3, session_state(list_session->state));
     spinlock_release(&session_spin);
     return row;
 }
@@ -1110,4 +1099,22 @@ sessionGetList(SESSIONLISTFILTER filter)
     resultset_add_column(set, "State", 15, COL_TYPE_VARCHAR);
 
     return set;
+}
+
+/**
+ * @brief Free the client data pointed to by the passed DCB.
+ *
+ * Currently all that is required is to free the storage pointed to by
+ * dcb->data.  But this is intended to be implemented as part of the
+ * authentication API at which time this code will be moved into the
+ * MySQL authenticator.  If the data structure were to become more complex
+ * the mechanism would still work and be the responsibility of the authenticator.
+ * The DCB should not know authenticator implementation details.
+ *
+ * @param dcb Request handler DCB connected to the client
+ */
+static void
+mysql_auth_free_client_data(DCB *dcb)
+{
+    free(dcb->data);
 }

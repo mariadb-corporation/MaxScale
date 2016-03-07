@@ -50,6 +50,8 @@
  *
  */
 #include <modinfo.h>
+#include <gw_protocol.h>
+#include <mysql_auth.h>
 
 MODULE_INFO info = {
                     MODULE_API_PROTOCOL,
@@ -142,7 +144,7 @@ static bool gw_get_shared_session_auth_info(DCB* dcb, MYSQL_session* session)
     if (dcb->session->state != SESSION_STATE_ALLOC &&
         dcb->session->state != SESSION_STATE_DUMMY)
     {
-        memcpy(session, dcb->session->data, sizeof(MYSQL_session));
+        memcpy(session, dcb->session->client_dcb->data, sizeof(MYSQL_session));
     }
     else
     {
@@ -174,7 +176,7 @@ static int gw_read_backend_event(DCB *dcb)
         goto return_rc;
     }
 
-    if (dcb->session == NULL)
+    if (dcb->dcb_is_zombie || dcb->session == NULL)
     {
         goto return_rc;
     }
@@ -554,8 +556,8 @@ static int gw_read_backend_event(DCB *dcb)
          * still listening the socket for replies.
          */
         if (dcb->session->state == SESSION_STATE_ROUTER_READY &&
-            dcb->session->client != NULL &&
-            dcb->session->client->state == DCB_STATE_POLLING &&
+            dcb->session->client_dcb != NULL &&
+            dcb->session->client_dcb->state == DCB_STATE_POLLING &&
             (session->router_session || router->getCapabilities() & RCAP_TYPE_NO_RSESSION))
         {
             client_protocol = SESSION_PROTOCOL(dcb->session,
@@ -576,7 +578,7 @@ static int gw_read_backend_event(DCB *dcb)
                 }
                 goto return_rc;
             }
-            else if (dcb->session->client->dcb_role == DCB_ROLE_INTERNAL)
+            else if (dcb->session->client_dcb->dcb_role == DCB_ROLE_INTERNAL)
             {
                 gwbuf_set_type(read_buffer, GWBUF_TYPE_MYSQL);
                 router->clientReply(router_instance, session->router_session, read_buffer, dcb);
@@ -619,14 +621,14 @@ static int gw_write_backend_event(DCB *dcb)
         {
             data = (uint8_t *) GWBUF_DATA(dcb->writeq);
 
-            if (dcb->session->client == NULL)
+            if (dcb->session->client_dcb == NULL)
             {
                 rc = 0;
             }
             else if (!(MYSQL_IS_COM_QUIT(data)))
             {
                 /*< vraa : errorHandle */
-                mysql_send_custom_error(dcb->session->client,
+                mysql_send_custom_error(dcb->session->client_dcb,
                                         1,
                                         0,
                                         "Writing to backend failed due invalid Maxscale "
@@ -942,14 +944,14 @@ static int gw_create_backend_connection(DCB *backend_dcb,
     }
 
     /** Copy client flags to backend protocol */
-    if (backend_dcb->session->client->protocol)
+    if (backend_dcb->session->client_dcb->protocol)
     {
         /** Copy client flags to backend protocol */
         protocol->client_capabilities =
-            ((MySQLProtocol *) (backend_dcb->session->client->protocol))->client_capabilities;
+            ((MySQLProtocol *)(backend_dcb->session->client_dcb->protocol))->client_capabilities;
         /** Copy client charset to backend protocol */
         protocol->charset =
-            ((MySQLProtocol *) (backend_dcb->session->client->protocol))->charset;
+            ((MySQLProtocol *)(backend_dcb->session->client_dcb->protocol))->charset;
     }
     else
     {
@@ -976,7 +978,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
                       server->name,
                       server->port,
                       protocol->fd,
-                      session->client->fd);
+                      session->client_dcb->fd);
             break;
 
         case 1:
@@ -989,7 +991,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
                       server->name,
                       server->port,
                       protocol->fd,
-                      session->client->fd);
+                      session->client_dcb->fd);
             break;
 
         default:
@@ -1001,7 +1003,7 @@ static int gw_create_backend_connection(DCB *backend_dcb,
                       server->name,
                       server->port,
                       protocol->fd,
-                      session->client->fd);
+                      session->client_dcb->fd);
             break;
     } /*< switch */
 
@@ -1152,7 +1154,7 @@ static int gw_backend_close(DCB *dcb)
         CHK_SESSION(session);
         /**
          * The lock is needed only to protect the read of session->state and
-         * session->client values. Client's state may change by other thread
+         * session->client_dcb values. Client's state may change by other thread
          * but client's close and adding client's DCB to zombies list is executed
          * only if client's DCB's state does _not_ change in parallel.
          */
@@ -1162,17 +1164,15 @@ static int gw_backend_close(DCB *dcb)
          * Otherwise only this backend connection is closed.
          */
         if (session->state == SESSION_STATE_STOPPING &&
-            session->client != NULL)
+            session->client_dcb != NULL)
         {
-            if (session->client->state == DCB_STATE_POLLING)
+            if (session->client_dcb->state == DCB_STATE_POLLING)
             {
                 DCB *temp;
                 spinlock_release(&session->ses_lock);
 
                 /** Close client DCB */
-                temp = session->client;
-                session->client = NULL;
-                dcb_close(temp);
+                dcb_close(session->client_dcb);
             }
             else
             {
@@ -1330,9 +1330,9 @@ static int gw_change_user(DCB *backend,
     int rv = -1;
     int auth_ret = 1;
 
-    current_session = (MYSQL_session *)in_session->client->data;
+    current_session = (MYSQL_session *)in_session->client_dcb->data;
     backend_protocol = backend->protocol;
-    client_protocol = in_session->client->protocol;
+    client_protocol = in_session->client_dcb->protocol;
 
     /* now get the user, after 4 bytes header and 1 byte command */
     client_auth_packet += 5;
@@ -1391,7 +1391,7 @@ static int gw_change_user(DCB *backend,
      * Decode the token and check the password.
      * Note: if auth_token_len == 0 && auth_token == NULL, user is without password
      */
-    auth_ret = gw_check_mysql_scramble_data(backend->session->client,
+    auth_ret = gw_check_mysql_scramble_data(backend->session->client_dcb,
                                             auth_token, auth_token_len,
                                             client_protocol->scramble,
                                             sizeof(client_protocol->scramble),
@@ -1401,14 +1401,14 @@ static int gw_change_user(DCB *backend,
 
     if (auth_ret != 0)
     {
-        if (service_refresh_users(backend->session->client->service) == 0)
+        if (service_refresh_users(backend->session->client_dcb->service) == 0)
         {
             /* Try authentication again with new repository data */
             /* Note: if no auth client authentication will fail */
             spinlock_acquire(&in_session->ses_lock);
             strncpy(current_session->db, "", MYSQL_DATABASE_MAXLEN);
             auth_ret = gw_check_mysql_scramble_data(
-                                                    backend->session->client,
+                                                    backend->session->client_dcb,
                                                     auth_token, auth_token_len,
                                                     client_protocol->scramble,
                                                     sizeof(client_protocol->scramble),
@@ -1447,7 +1447,7 @@ static int gw_change_user(DCB *backend,
          * reply to the client.
          */
         message = create_auth_fail_str(username,
-                                       backend->session->client->remote,
+                                       backend->session->client_dcb->remote,
                                        password_set,
                                        "",
                                        auth_ret);

@@ -33,6 +33,7 @@
 #include <modinfo.h>
 #include <dcb.h>
 #include <buffer.h>
+#include <gw_protocol.h>
 
 MODULE_INFO info =
 {

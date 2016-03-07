@@ -42,9 +42,15 @@ find_package(Git)
 find_package(CURL) 
 find_package(RabbitMQ)
 
-# Build PCRE2
+# Find or build PCRE2
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
-include(cmake/BuildPCRE2.cmake)
+find_package(PCRE2)
+if(NOT PCRE2_FOUND)
+  message(STATUS "Using bundled PCRE2 library")
+  include(cmake/BuildPCRE2.cmake)
+endif()
+
+include_directories(${PCRE2_INCLUDE_DIRS})
 
 # If the connector was not found, download and build it from source
 if(NOT MARIADB_CONNECTOR_FOUND)

@@ -19,9 +19,11 @@
  */
 
 #include <time.h>
+#include <gw_protocol.h>
 #include <spinlock.h>
 #include <dcb.h>
 #include <server.h>
+#include <listener.h>
 #include <filter.h>
 #include <hashtable.h>
 #include <resultset.h>
@@ -58,21 +60,6 @@ struct server;
 struct router;
 struct router_object;
 struct users;
-
-/**
- * The servprotocol structure is used to link a service to the protocols that
- * are used to support that service. It defines the name of the protocol module
- * that should be loaded to support the client connection and the port that the
- * protocol should use to listen for incoming client connections.
- */
-typedef struct servprotocol
-{
-    char *protocol;             /**< Protocol module to load */
-    unsigned short port;        /**< Port to listen on */
-    char *address;              /**< Address to listen with */
-    DCB *listener;              /**< The DCB for the listener */
-    struct  servprotocol *next; /**< Next service protocol */
-} SERV_PROTOCOL;
 
 /**
  * The service statistics structure
@@ -120,19 +107,6 @@ typedef enum
     SSL_REQUIRED
 } ssl_mode_t;
 
-enum
-{
-    SERVICE_SSLV3,
-    SERVICE_TLS10,
-#ifdef OPENSSL_1_0
-    SERVICE_TLS11,
-    SERVICE_TLS12,
-#endif
-    SERVICE_SSL_MAX,
-    SERVICE_TLS_MAX,
-    SERVICE_SSL_TLS_MAX
-};
-
 #define DEFAULT_SSL_CERT_VERIFY_DEPTH 100 /*< The default certificate verification depth */
 #define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */
 
@@ -156,7 +130,7 @@ typedef struct service
 {
     char *name;                        /**< The service name */
     int state;                         /**< The service state */
-    SERV_PROTOCOL *ports;              /**< Linked list of ports and protocols
+    SERV_LISTENER *ports;              /**< Linked list of ports and protocols
                                         * that this service will listen on.
                                         */
     char *routerModule;                /**< Name of router module to use */
@@ -218,7 +192,7 @@ extern SERVICE *service_alloc(const char *, const char *);
 extern int service_free(SERVICE *);
 extern SERVICE *service_find(char *);
 extern int service_isvalid(SERVICE *);
-extern int serviceAddProtocol(SERVICE *, char *, char *, unsigned short);
+extern int serviceAddProtocol(SERVICE *, char *, char *, unsigned short, char *, SSL_LISTENER *);
 extern int serviceHasProtocol(SERVICE *, char *, unsigned short);
 extern void serviceAddBackend(SERVICE *, SERVER *);
 extern int serviceHasBackend(SERVICE *, SERVER *);
@@ -233,7 +207,6 @@ extern int serviceSetUser(SERVICE *, char *, char *);
 extern int serviceGetUser(SERVICE *, char **, char **);
 extern bool serviceSetFilters(SERVICE *, char *);
 extern int serviceSetSSL(SERVICE *service, char* action);
-extern int serviceInitSSL(SERVICE* service);
 extern int serviceSetSSLVersion(SERVICE *service, char* version);
 extern int serviceSetSSLVerifyDepth(SERVICE* service, int depth);
 extern void serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert);

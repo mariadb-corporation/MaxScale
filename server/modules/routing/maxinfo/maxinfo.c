@@ -148,7 +148,7 @@ GetModuleObject()
 /**
  * Create an instance of the router for a particular service
  * within the gateway.
- * 
+ *
  * @param service	The service this router is being create for
  * @param options	Any array of options for the query router
  *
@@ -212,7 +212,7 @@ INFO_SESSION	*client;
 		return NULL;
 	}
 	client->session = session;
-	client->dcb = session->client;
+	client->dcb = session->client_dcb;
 	client->queue = NULL;
 
 	spinlock_acquire(&inst->lock);
@@ -232,7 +232,7 @@ INFO_SESSION	*client;
  * @param instance		The router instance data
  * @param router_session	The session being closed
  */
-static	void 	
+static	void
 closeSession(ROUTER *instance, void *router_session)
 {
 INFO_INSTANCE	*inst = (INFO_INSTANCE *)instance;
@@ -310,19 +310,19 @@ static void handleError(
 	}
 	spinlock_acquire(&session->ses_lock);
 	sesstate = session->state;
-	client_dcb = session->client;
-	
+	client_dcb = session->client_dcb;
+
 	if (sesstate == SESSION_STATE_ROUTER_READY)
 	{
 		CHK_DCB(client_dcb);
-		spinlock_release(&session->ses_lock);	
+		spinlock_release(&session->ses_lock);
 		client_dcb->func.write(client_dcb, gwbuf_clone(errbuf));
 	}
-	else 
+	else
 	{
 		spinlock_release(&session->ses_lock);
 	}
-	
+
 	/** false because connection is not available anymore */
         dcb_close(backend_dcb);
 	*succp = false;
@@ -337,7 +337,7 @@ static void handleError(
  * @param queue			The queue of data buffers to route
  * @return The number of bytes sent
  */
-static	int	
+static	int
 execute(ROUTER *rinstance, void *router_session, GWBUF *queue)
 {
 INFO_INSTANCE	*instance = (INFO_INSTANCE *)rinstance;
@@ -471,7 +471,7 @@ int	len;
 	*ptr++ = 0;
 	*ptr++ = 0;
 	*ptr++ = 1;
-	*ptr = 0;		// OK 
+	*ptr = 0;		// OK
 
 	return session->dcb->func.write(session->dcb, ret);
 }
@@ -501,7 +501,7 @@ RESULT_ROW	*row;
 
 /**
  * The hardwired select @@vercom response
- * 
+ *
  * @param dcb	The DCB of the client
  */
 static void
@@ -548,7 +548,7 @@ static char	buf[40];
 
 /**
  * The hardwired select ... as starttime response
- * 
+ *
  * @param dcb	The DCB of the client
  */
 static void
@@ -704,7 +704,7 @@ static struct uri_table {
  * @param queue		The queue of data buffers to route
  * @return The number of bytes sent
  */
-static	int	
+static	int
 handle_url(INFO_INSTANCE *instance, INFO_SESSION *session, GWBUF *queue)
 {
 char		*uri;
