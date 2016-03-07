@@ -42,9 +42,13 @@ MariaDB [(none)]> grant SELECT on mysql.user to '*username*'@'*maxscalehost*';
 
 **Query OK, 0 rows affected (0.03 sec)**
 ```
-Additionally, GRANT SELECT on the mysql.db table and SHOW DATABASES privileges are required in order to load databases name and grants suitable for database name authorization.
+Additionally, `SELECT` privileges on the `mysql.db` and `mysql.tables_priv` tables and `SHOW DATABASES` privileges are required in order to load databases name and grants suitable for database name authorization.
 ```
 MariaDB [(none)]> GRANT SELECT ON mysql.db TO 'username'@'maxscalehost';
+
+**Query OK, 0 rows affected (0.00 sec)**
+
+MariaDB [(none)]> GRANT SELECT ON mysql.tables_priv TO 'username'@'maxscalehost';
 
 **Query OK, 0 rows affected (0.00 sec)**
 
