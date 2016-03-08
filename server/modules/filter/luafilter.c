@@ -461,7 +461,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE *) instance;
-    DCB* dcb = my_session->session->client;
+    DCB* dcb = my_session->session->client_dcb;
     char *fullquery = NULL, *ptr;
     bool route = true;
     GWBUF* forward = queue;
