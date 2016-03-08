@@ -629,11 +629,12 @@ A string giving a file path that identifies an existing readable file. The file 
 #### `ssl_version`
 
 This parameter controls the level of encryption used. Accepted values are:
- * SSLv3
  * TLSv10
  * TLSv11
  * TLSv12
  * MAX   
+
+`MAX` is the maximum available TLS version which at the time of writing is TLSv1.2.
 
 #### `ssl_cert_verification_depth`
 
