@@ -1,5 +1,11 @@
 #include "sql_t1.h"
 
+#include <pthread.h>
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+static char** sql = NULL;
+static size_t sql_size = 0;
+
 /**
 Executes SQL query 'sql' using 'conn' connection and print results
 */
@@ -78,38 +84,71 @@ int create_t2(MYSQL * conn)
     return(result);
 }
 
-int create_insert_string(char *sql, int N, int fl)
-{
-    char *ins1 = (char *) "INSERT INTO t1 (x1, fl) VALUES ";
-    char *ins_val = (char *) "%s (%d, %d)%s";
-    int i;
+static const char ins1[] = "INSERT INTO t1 (x1, fl) VALUES ";
 
-    sprintf(&sql[0], "%s", ins1);
-    for (i = 0; i < N-1; i++) {
-        sprintf(&sql[0], ins_val, sql, i, fl, ",");
+int create_insert_string(char* sql, int N, int fl)
+{
+    char *wptr = sql;
+
+    strcpy(wptr, ins1);
+    for (int i = 0; i < N-1; i++) {
+        wptr = strchr(wptr, '\0');
+        sprintf(wptr, "(%d, %d),", i, fl);
     }
-    sprintf(&sql[0], ins_val, sql, N-1, fl, ";");
+    wptr = strrchr(wptr, ',');
+    sprintf(wptr, ";");
+
+}
+
+char* allocate_insert_string(int fl, int N)
+{
+    char* rval = NULL;
+
+    pthread_mutex_lock(&mutex);
+
+    if(sql == NULL)
+    {
+        sql = (char**)calloc(16, sizeof(char*));
+        sql_size = 16;
+    }
+
+    if (fl >= sql_size)
+    {
+        fprintf(stderr, "Insert index %d is too large, setting it to %d", fl, sql_size - 1);
+        fl = sql_size - 1;
+    }
+
+    if(sql[fl] == NULL)
+    {
+        char tmpstr[256];
+        sprintf(tmpstr, "(%d, %d),", N, fl);
+        sql[fl] = (char*)malloc(sizeof(ins1) + N * strlen(tmpstr) + 60);
+        create_insert_string(sql[fl], N, fl);
+    }
+
+    rval = sql[fl];
+    pthread_mutex_unlock(&mutex);
+
+    return rval;
+
 }
 
 int insert_into_t1(MYSQL *conn, int N)
 {
-    char sql[N][1000000];
+
     int x=16;
-    int i;
     int result = 0;
-    //char *ins1 = (char *) "INSERT INTO t1 (x1, fl) VALUES ";
-    //char *ins_val=(char *) "%s (%d, 1)%s";
 
     printf("Generating long INSERTs\n");
-    for (i=0; i<N; i++) {
+    for (int i=0; i<N; i++) {
         printf("sql %d, rows=%d\n", i, x);
-        create_insert_string(sql[i], x, i);
-        x = x*16;
+        char *sqlstr = allocate_insert_string(i, x);
         printf("INSERT: rwsplitter\n");
-        printf("Trying INSERT, len=%lu\n", strlen(sql[i]));
+        printf("Trying INSERT, len=%d\n", x);
         fflush(stdout);
-        result += execute_query(conn,  sql[i]);
+        result += execute_query(conn,  sqlstr);
         fflush(stdout);
+        x *= 16;
     }
     return(result);
 }
