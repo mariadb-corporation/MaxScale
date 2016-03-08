@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 
         test->tprintf("Testing rule: %s\n", rules_failure[i]);
         test->start_maxscale();
-        sleep(10);
+        sleep(3);
 
         /** Check that MaxScale did not start and that the log contains
          * a message about the syntax error. */
