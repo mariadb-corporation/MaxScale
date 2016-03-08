@@ -42,7 +42,6 @@ struct dcb;
 
 enum
 {
-    SERVICE_SSLV3,
     SERVICE_TLS10,
 #ifdef OPENSSL_1_0
     SERVICE_TLS11,

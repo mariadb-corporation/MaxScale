@@ -80,11 +80,7 @@ listener_alloc(char *protocol, char *address, unsigned short port, char *authent
 int
 listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
 {
-    if (strcasecmp(version,"SSLV3") == 0)
-    {
-        ssl_listener->ssl_method_type = SERVICE_SSLV3;
-    }
-    else if (strcasecmp(version,"TLSV10") == 0)
+    if (strcasecmp(version,"TLSV10") == 0)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS10;
     }
@@ -147,9 +143,6 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
     {
         switch(ssl_listener->ssl_method_type)
         {
-        case SERVICE_SSLV3:
-            ssl_listener->method = (SSL_METHOD*)SSLv3_server_method();
-            break;
         case SERVICE_TLS10:
             ssl_listener->method = (SSL_METHOD*)TLSv1_server_method();
             break;
