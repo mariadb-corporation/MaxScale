@@ -1,5 +1,0 @@
-{
-  "googleGroup": "group_name",
-  "irc": {"server": "irc.freenode.net", "channel": "#a_channel"},
-  "domain": "yoursite.com"
-}
