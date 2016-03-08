@@ -2,6 +2,8 @@
  * Firewall filter syntax error test
  *
  * Generate various syntax errors and check if they are detected.
+ * With every rule file in this test, MaxScale should not start and the error
+ * log should contain a message about a syntax error.
  */
 
 #include <my_config.h>
@@ -55,15 +57,20 @@ int main(int argc, char** argv)
 
     for (int i = 0; rules_failure[i]; i++)
     {
-        FILE *file = fopen(temp_rules, "w");
-        fclose(file);
+        /** Create rule file with syntax error */
+        truncate(temp_rules, 0);
         add_rule(rules_failure[i]);
         add_rule(users_ok[0]);
         copy_rules(test, (char*)temp_rules, (char*)test->test_dir);
-        if (test_config_works("fwf_syntax"))
-        {
-            test->add_result(1, "Rule syntax error was not detected: %s\n", rules_failure[i]);
-        }
+
+        test->tprintf("Testing rule: %s\n", rules_failure[i]);
+        test->start_maxscale();
+        sleep(10);
+
+        /** Check that MaxScale did not start and that the log contains
+         * a message about the syntax error. */
+        test->check_maxscale_processes(0);
+        test->check_log_err("syntax error", true);
     }
 
     test->copy_all_logs();
