@@ -42,6 +42,11 @@ const char *rules_failure[] =
         NULL
     };
 
+void truncate_maxscale_logs(TestConnections *test)
+{
+    test->ssh_maxscale(true, "truncate -s 0 /var/log/maxscale/*");
+}
+
 void add_rule(const char *rule)
 {
     FILE *file = fopen(temp_rules, "a");
@@ -71,6 +76,7 @@ int main(int argc, char** argv)
          * a message about the syntax error. */
         test->check_maxscale_processes(0);
         test->check_log_err("syntax error", true);
+        truncate_maxscale_logs(test);
     }
 
     test->copy_all_logs();
