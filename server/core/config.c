@@ -1036,107 +1036,115 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
     SSL_LISTENER *new_ssl;
 
     ssl = config_get_value(obj->parameters, "ssl");
-    if (ssl && !strcmp(ssl, "required"))
+
+    if (ssl)
     {
-        if ((new_ssl = calloc(1, sizeof(SSL_LISTENER))) == NULL)
+        if (!strcmp(ssl, "required"))
         {
-            return NULL;
-        }
-        new_ssl->ssl_method_type = SERVICE_SSL_TLS_MAX;
-        ssl_cert = config_get_value(obj->parameters, "ssl_cert");
-        ssl_key = config_get_value(obj->parameters, "ssl_key");
-        ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
-        ssl_version = config_get_value(obj->parameters, "ssl_version");
-        ssl_cert_verify_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
-        new_ssl->ssl_init_done = false;
-
-        if (ssl_version)
-        {
-            if (listener_set_ssl_version(new_ssl, ssl_version) != 0)
+            if ((new_ssl = calloc(1, sizeof(SSL_LISTENER))) == NULL)
             {
-                MXS_ERROR("Unknown parameter value for 'ssl_version' for"
-                    " service '%s': %s", obj->object, ssl_version);
+                return NULL;
+            }
+            new_ssl->ssl_method_type = SERVICE_SSL_TLS_MAX;
+            ssl_cert = config_get_value(obj->parameters, "ssl_cert");
+            ssl_key = config_get_value(obj->parameters, "ssl_key");
+            ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
+            ssl_version = config_get_value(obj->parameters, "ssl_version");
+            ssl_cert_verify_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
+            new_ssl->ssl_init_done = false;
+
+            if (ssl_version)
+            {
+                if (listener_set_ssl_version(new_ssl, ssl_version) != 0)
+                {
+                    MXS_ERROR("Unknown parameter value for 'ssl_version' for"
+                              " service '%s': %s", obj->object, ssl_version);
+                    local_errors++;
+                }
+            }
+
+            if (ssl_cert_verify_depth)
+            {
+                new_ssl->ssl_cert_verify_depth = atoi(ssl_cert_verify_depth);
+                if (new_ssl->ssl_cert_verify_depth < 0)
+                {
+                    MXS_ERROR("Invalid parameter value for 'ssl_cert_verify_depth"
+                              " for service '%s': %s", obj->object, ssl_cert_verify_depth);
+                    new_ssl->ssl_cert_verify_depth = 0;
+                    local_errors++;
+                }
+            }
+            else
+            {
+                /**
+                 * Default of 9 as per Linux man page
+                 */
+                new_ssl->ssl_cert_verify_depth = 9;
+            }
+
+            listener_set_certificates(new_ssl, ssl_cert, ssl_key, ssl_ca_cert);
+
+            if (require_cert && new_ssl->ssl_cert == NULL)
+            {
+                local_errors++;
+                MXS_ERROR("Server certificate missing for service '%s'."
+                          "Please provide the path to the server certificate by adding "
+                          "the ssl_cert=<path> parameter", obj->object);
+            }
+
+            if (new_ssl->ssl_ca_cert == NULL)
+            {
+                local_errors++;
+                MXS_ERROR("CA Certificate missing for service '%s'."
+                          "Please provide the path to the certificate authority "
+                          "certificate by adding the ssl_ca_cert=<path> parameter",
+                          obj->object);
+            }
+
+            if (require_cert && new_ssl->ssl_key == NULL)
+            {
+                local_errors++;
+                MXS_ERROR("Server private key missing for service '%s'. "
+                          "Please provide the path to the server certificate key by "
+                          "adding the ssl_key=<path> parameter",
+                          obj->object);
+            }
+
+            if (access(new_ssl->ssl_ca_cert, F_OK) != 0)
+            {
+                MXS_ERROR("Certificate authority file for service '%s' not found: %s",
+                          obj->object,
+                          new_ssl->ssl_ca_cert);
                 local_errors++;
             }
-        }
 
-        if (ssl_cert_verify_depth)
-        {
-            new_ssl->ssl_cert_verify_depth = atoi(ssl_cert_verify_depth);
-            if (new_ssl->ssl_cert_verify_depth < 0)
+            if (require_cert && access(new_ssl->ssl_cert, F_OK) != 0)
             {
-                MXS_ERROR("Invalid parameter value for 'ssl_cert_verify_depth"
-                    " for service '%s': %s", obj->object, ssl_cert_verify_depth);
-                new_ssl->ssl_cert_verify_depth = 0;
+                MXS_ERROR("Server certificate file for service '%s' not found: %s",
+                          obj->object,
+                          new_ssl->ssl_cert);
                 local_errors++;
             }
-        }
-        else
-        {
-            /**
-             * Default of 9 as per Linux man page
-             */
-            new_ssl->ssl_cert_verify_depth = 9;
-        }
 
-        listener_set_certificates(new_ssl, ssl_cert, ssl_key, ssl_ca_cert);
+            if (require_cert && access(new_ssl->ssl_key, F_OK) != 0)
+            {
+                MXS_ERROR("Server private key file for service '%s' not found: %s",
+                          obj->object,
+                          new_ssl->ssl_key);
+                local_errors++;
+            }
 
-        if (require_cert && new_ssl->ssl_cert == NULL)
-        {
-            local_errors++;
-            MXS_ERROR("Server certificate missing for service '%s'."
-                      "Please provide the path to the server certificate by adding "
-                      "the ssl_cert=<path> parameter", obj->object);
+            if (0 == local_errors)
+            {
+                return new_ssl;
+            }
+            *error_count += local_errors;
+            free(new_ssl);
         }
-
-        if (new_ssl->ssl_ca_cert == NULL)
+        else if (strcmp(ssl, "disabled") != 0)
         {
-            local_errors++;
-            MXS_ERROR("CA Certificate missing for service '%s'."
-                      "Please provide the path to the certificate authority "
-                      "certificate by adding the ssl_ca_cert=<path> parameter",
-                      obj->object);
+            MXS_ERROR("Unknown value for 'ssl': %s. Service will not use SSL.", ssl);
         }
-
-        if (require_cert && new_ssl->ssl_key == NULL)
-        {
-            local_errors++;
-            MXS_ERROR("Server private key missing for service '%s'. "
-                      "Please provide the path to the server certificate key by "
-                      "adding the ssl_key=<path> parameter",
-                      obj->object);
-        }
-
-        if (access(new_ssl->ssl_ca_cert, F_OK) != 0)
-        {
-            MXS_ERROR("Certificate authority file for service '%s' not found: %s",
-                obj->object,
-                new_ssl->ssl_ca_cert);
-            local_errors++;
-        }
-
-        if (require_cert && access(new_ssl->ssl_cert, F_OK) != 0)
-        {
-            MXS_ERROR("Server certificate file for service '%s' not found: %s",
-                      obj->object,
-                      new_ssl->ssl_cert);
-            local_errors++;
-        }
-
-        if (require_cert && access(new_ssl->ssl_key, F_OK) != 0)
-        {
-            MXS_ERROR("Server private key file for service '%s' not found: %s",
-                      obj->object,
-                      new_ssl->ssl_key);
-            local_errors++;
-        }
-
-        if (0 == local_errors)
-        {
-            return new_ssl;
-        }
-        *error_count += local_errors;
-        free(new_ssl);
     }
     return NULL;
 }
@@ -2139,21 +2147,21 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
     if (ssl_cert == NULL)
     {
         error_count++;
-        MXS_ERROR("Server certificate missing for service '%s'."
+        MXS_ERROR("Server certificate missing for listener '%s'."
                   "Please provide the path to the server certificate by adding "
                   "the ssl_cert=<path> parameter", obj->object);
     }
     else if (access(ssl_cert, F_OK) != 0)
     {
         error_count++;
-        MXS_ERROR("Server certificate file for service '%s' not found: %s",
+        MXS_ERROR("Server certificate file for listener '%s' not found: %s",
                   obj->object, ssl_cert);
     }
 
     if (ssl_ca_cert == NULL)
     {
         error_count++;
-        MXS_ERROR("CA Certificate missing for service '%s'."
+        MXS_ERROR("CA Certificate missing for listener '%s'."
                   "Please provide the path to the certificate authority "
                   "certificate by adding the ssl_ca_cert=<path> parameter",
                   obj->object);
@@ -2161,21 +2169,21 @@ static int validate_ssl_parameters(CONFIG_CONTEXT* obj, char *ssl_cert, char *ss
     else if (access(ssl_ca_cert, F_OK) != 0)
     {
         error_count++;
-        MXS_ERROR("Certificate authority file for service '%s' "
+        MXS_ERROR("Certificate authority file for listener '%s' "
                   "not found: %s", obj->object, ssl_ca_cert);
     }
 
     if (ssl_key == NULL)
     {
         error_count++;
-        MXS_ERROR("Server private key missing for service '%s'. "
+        MXS_ERROR("Server private key missing for listener '%s'. "
                   "Please provide the path to the server certificate key by "
                   "adding the ssl_key=<path> parameter", obj->object);
     }
     else if (access(ssl_key, F_OK) != 0)
     {
         error_count++;
-        MXS_ERROR("Server private key file for service '%s' not found: %s",
+        MXS_ERROR("Server private key file for listener '%s' not found: %s",
                   obj->object, ssl_key);
     }
     return error_count;

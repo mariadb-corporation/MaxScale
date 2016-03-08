@@ -100,14 +100,6 @@ typedef struct server_ref_t
     SERVER* server;
 }SERVER_REF;
 
-typedef enum
-{
-    SSL_DISABLED,
-    SSL_ENABLED,
-    SSL_REQUIRED
-} ssl_mode_t;
-
-#define DEFAULT_SSL_CERT_VERIFY_DEPTH 100 /*< The default certificate verification depth */
 #define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */
 
 /** Value of service timeout if timeout checks are disabled */
@@ -159,18 +151,8 @@ typedef struct service
     FILTER_DEF **filters;              /**< Ordered list of filters */
     int n_filters;                     /**< Number of filters */
     long conn_idle_timeout;            /**< Session timeout in seconds */
-    ssl_mode_t ssl_mode;               /*< one of DISABLED, ENABLED or REQUIRED */
     char *weightby;
     struct service *next;              /**< The next service in the linked list */
-    SSL_CTX *ctx;
-    SSL_METHOD *method;                /*<  SSLv3 or TLS1.0/1.1/1.2 methods
-                                        * see: https://www.openssl.org/docs/ssl/SSL_CTX_new.html */
-    int ssl_cert_verify_depth;         /*< SSL certificate verification depth */
-    int ssl_method_type;               /*< Which of the SSLv3 or TLS1.0/1.1/1.2 methods to use */
-    char* ssl_cert;                    /*< SSL certificate */
-    char* ssl_key;                     /*< SSL private key */
-    char* ssl_ca_cert;                 /*< SSL CA certificate */
-    bool ssl_init_done;                /*< If SSL has already been initialized for this service */
     bool retry_start;                  /*< If starting of the service should be retried later */
     bool log_auth_warnings;            /*< Log authentication failures and warnings */
 } SERVICE;
