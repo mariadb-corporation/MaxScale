@@ -52,25 +52,8 @@ MaxScale no longer supports SSLv3.
 
 ## Known Issues and Limitations
 
-There are some limitations within this version of MaxScale,
-the most serious of this are listed below.
-
-* MaxScale can not manage authentication that uses wildcard matching in hostnames
-  in the mysql.user table of the backend database. The only wildcards that can be
-  used are in IP address entries.
-
-* When users have different passwords based on the host from which they connect
-  MaxScale is unable to determine which password it should use to connect to the
-  backend database. This results in failed connections and unusable usernames
-  in MaxScale.
-
-* The readconnroute module does not support sending of LONGBLOB data.
-
-* Galera Cluster variables, such as @@wsrep_node_name, are not resolved by
-  the embedded MariaDB parser.
-
-* The Database Firewall filter does not support multi-statements. Using them
-  will result in an error being sent to the client.
+There are some limitations and known issues within this version of MaxScale.
+For more information, please refer to the [Limitations](../About/Limitations.md) document.
 
 ## Packaging
 

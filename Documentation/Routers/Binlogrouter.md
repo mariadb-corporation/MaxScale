@@ -102,3 +102,7 @@ A complete example of a service entry for a binlog router service would be as fo
 ```
 
 The minimum set of router options that must be given in the configuration are are server-id and master-id, default values may be used for all other options.
+
+## Examples
+
+The [Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md) tutorial will show you how to configure and administrate a binlogrouter installation.

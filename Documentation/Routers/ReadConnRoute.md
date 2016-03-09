@@ -69,6 +69,8 @@ Without the weightby parameter, each connection counts as a single connection. W
 
 If we use the previous configuration as an example, the sum of the `serv_weight` parameter is 4. Server1 would receive a weight of `3/4=75%` and server2 would get `1/4=25%`. This means that server1 would get 75% of the connections and server2 would get 25% of the connections.
 
+## Router Options
+
 **`router_options`** can contain a list of valid server roles. These roles are used as the valid types of servers the router will form connections to when new sessions are created.
 ```
 	router_options=slave
@@ -84,6 +86,10 @@ ndb|A MySQL Replication Cluster node
 running|A server that is up and running. All servers that MaxScale can connect to are labeled as running.
 
 If no `router_options` parameter is configured in the service definition, the router will use the default value of `running`. This means that it will load balance connections across all running servers defined in the `servers` parameter of the service.
+
+## Limitations
+
+For a list of readconnroute limitations, please read the [Limitations](../About/Limitations.md) document.
 
 ## Examples
 
