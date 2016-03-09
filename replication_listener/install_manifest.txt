@@ -1,4 +1,0 @@
-/usr/local/lib/libreplication.so.0.1
-/usr/local/lib/libreplication.so.1
-/usr/local/lib/libreplication.so
-/usr/local/lib/libreplication.a
