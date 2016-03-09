@@ -29,6 +29,14 @@ chmod 0755 @MAXSCALE_VARDIR@/lib/maxscale
 chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
 chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
 
+# Install ldconfig files
+if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" ]
+then
+    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf /etc/ld.so.conf.d/
+else
+    echo "Could not find ldconfig file: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" >& 2
+fi
+
 # Only copy the service files if the systemd folder and systemctl executable are found
 if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && [ -x "$(which systemctl)" ]
 then
@@ -40,6 +48,14 @@ then
     then
         cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
         systemctl daemon-reload
+    fi
+else
+    # If systemd is not present, use init.d scripts
+    if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
+    then
+        cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
+    else
+        echo "Could not find init script: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" >& 2
     fi
 fi
 
