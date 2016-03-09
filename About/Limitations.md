@@ -34,7 +34,7 @@ Read queries are routed to the master server in the following situations:
 
 ### Limitations in multi-statement handling
 
-When a multi-statemet query is executed through the readwritesplit router, it will always
+When a multi-statement query is executed through the readwritesplit router, it will always
 be routed to the master. With the default configuration, all queries after a
 multi-statement query will be routed to the master to prevent possible reads of
 false data.
@@ -133,26 +133,22 @@ and routed. Here is a list of the current limitations.
   the current database in use or to the first available database,
   if none of the previous conditions are met.
 
-* Queries without explicit databases that are not session commands
-  in them are either routed to the current or the first available
-  database. This means that, for example when creating a new database,
-  queries should be done directly on the node or the router should
-  be equipped with the hint filter and a routing hint should be used.
-
-* Temporary tables are only created on the explicit database in the query
-  or the current database in use. If no database is in use and no database
-  is explicitly stated, the behavior of the router is undefined.
+* Without a default database, queries without explicit databases that do not
+  modify the session state will be routed the first available server. This
+  means that, for example when creating a new database, queries should
+  be done directly on the node or the router should be equipped with
+  the hint filter and a routing hint should be used. Queries that
+  modify the session state e.g. `SET autocommit=1` will be routed
+  to all servers regardless of the default database.
 
 * SELECT queries that modify session variables are not currently supported
   because uniform results can not be guaranteed. If such a query is
   executed, the behavior of the router is undefined. To work around this
   limitation the query must be executed in separate parts.
 
-* Queries targeting databases not mapped by the schemarouter router but
-  still exist on the database server are not blocked but routed to
-  the first available server. This possibly returns an error about
-  database rights instead of a missing database. The behavior of
-  the router is undefined in this case.
+* If a query targets a database the schemarouter hasn't mapped to a server
+  the query will be routed to the first available server. This possibly
+  returns an error about database rights instead of a missing database.
 
 ## Dbfwfilter limitations
 
