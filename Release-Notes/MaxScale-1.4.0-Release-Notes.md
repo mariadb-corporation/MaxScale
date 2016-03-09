@@ -6,17 +6,28 @@ release 1.3.0.
 ## 1.4.0
 
 For any problems you encounter, please consider submitting a bug
-report at [Jira](https://mariadb.atlassian.net).
+report at [Jira](https://jira.mariadb.org).
 
 ## New Features
 
 ### Firewall Filter
+
+The firewall filter now supports different actions when a rule is matched.
+Currently possible actions are to either block the query, allow it or
+ignore the match and allow it.
+
+Matching and non-matching queries can now be logged and by combining this new
+logging functionality with the _ignore_ action, you can set up the filter in
+a dry-run mode.
 
 ### SSL
 
 Client-side SSL support has been in MaxScale for some time, but has
 been known to have been unstable. In 1.4.0, client side SSL is now
 believed to be stable and fully usable.
+
+The SSL configuration is now done on a per listener basis which
+allows both SSL and non-SSL connections to a service.
 
 ### POSIX Extended Regular Expression Syntax
 
