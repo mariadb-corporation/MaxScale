@@ -43,7 +43,7 @@
 #include <secrets.h>
 #include <maxscale_pcre2.h>
 #include <externcmd.h>
-#include <mysql/mysqld_error.h>
+#include <mysqld_error.h>
 
 /*
  *  Create declarations of the enum for monitor events and also the array of
