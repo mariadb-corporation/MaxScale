@@ -368,9 +368,11 @@ dcb_final_free(DCB *dcb)
         CHK_SESSION(local_session);
         if (SESSION_STATE_DUMMY != local_session->state)
         {
+            bool is_dcb_client = (local_session->client_dcb == dcb);
+
             session_free(local_session);
 
-            if (local_session->client_dcb == dcb)
+            if (is_dcb_client)
             {
                 /** The client DCB is freed once all other DCBs that the session
                  * uses have been freed. This will guarantee that the authentication
