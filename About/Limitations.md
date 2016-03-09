@@ -22,9 +22,7 @@ The default master selection is based only on MIN(wsrep_local_index). This can b
 
 ## Limitations in the Read/Write Splitter
 
-### Scale-out limitations
-
-In master-slave replication cluster also read-only queries are routed to master too in the following situations:
+Read queries are routed to the master server in the following situations:
 
 * if they are executed inside an open transaction
 
@@ -32,13 +30,27 @@ In master-slave replication cluster also read-only queries are routed to master 
 
 * statement includes a stored procedure, or an UDF call
 
-### Multi-statement limitations
+* if there are multiple statements inside one query e.g. `INSERT INTO ... ; SELECT LAST_INSERT_ID();`
 
-If the client enables and executes multi-statements, they will be routed to
-the master. All future queries will also be routed to the master to guarantee
-a consistent session state after the multi-statement query. This behavior can
-be controlled with the `strict_multi_stmt` router option. For more information,
-read the [ReadWriteSplit](../Routers/ReadWriteSplit.md) router documentation.
+### Limitations in multi-statement handling
+
+When a multi-statemet query is executed through the readwritesplit router, it will always
+be routed to the master. With the default configuration, all queries after a
+multi-statement query will be routed to the master to prevent possible reads of
+false data.
+
+You can override this behavior with the `strict_multi_stmt=false`
+router option. In this mode, the multi-statement queries will still be routed
+to the master but individual statements are routed normally. If you use
+multi-statements and you know they don't modify the session state in any
+relevant way, you can disable this option for better performance.
+
+For more information, read the [ReadWriteSplit](../Routers/ReadWriteSplit.md) router documentation.
+
+### Parsing related limitations
+
+Galera Cluster variables, such as @@wsrep_node_name, are not resolved by
+the embedded MariaDB parser. This usually means that the query will be routed to the master.
 
 ### Limitations in client session handling
 
@@ -98,4 +110,51 @@ Most imaginable reasons are related to replication lag but it could be possible 
 
 ## Authentication Related Limitations
 
-MySQL old style passwords are not supported. MySQL versions 4.1 and newer use a new authentication protocol which does not support pre-4.1 style passwords.
+* MaxScale can not manage authentication that uses wildcard matching in hostnames
+  in the mysql.user table of the backend database. The only wildcards that can be
+  used are in IP address entries.
+
+* MySQL old style passwords are not supported. MySQL versions 4.1 and newer use
+  a new authentication protocol which does not support pre-4.1 style passwords.
+
+* When users have different passwords based on the host from which they connect
+  MaxScale is unable to determine which password it should use to connect to the
+  backend database. This results in failed connections and unusable usernames
+  in MaxScale.
+
+## Schemarouter limitations
+
+The schemarouter router currently has some limitations due to the nature of
+the sharding implementation and the way the session variables are detected
+and routed. Here is a list of the current limitations.
+
+* Cross-database queries (e.g. `SELECT column FROM database1.table UNION select column FROM database2.table`)
+  are not supported and are routed either to the first explicit database in the query,
+  the current database in use or to the first available database,
+  if none of the previous conditions are met.
+
+* Queries without explicit databases that are not session commands
+  in them are either routed to the current or the first available
+  database. This means that, for example when creating a new database,
+  queries should be done directly on the node or the router should
+  be equipped with the hint filter and a routing hint should be used.
+
+* Temporary tables are only created on the explicit database in the query
+  or the current database in use. If no database is in use and no database
+  is explicitly stated, the behavior of the router is undefined.
+
+* SELECT queries that modify session variables are not currently supported
+  because uniform results can not be guaranteed. If such a query is
+  executed, the behavior of the router is undefined. To work around this
+  limitation the query must be executed in separate parts.
+
+* Queries targeting databases not mapped by the schemarouter router but
+  still exist on the database server are not blocked but routed to
+  the first available server. This possibly returns an error about
+  database rights instead of a missing database. The behavior of
+  the router is undefined in this case.
+
+## Dbfwfilter limitations
+
+The Database Firewall filter does not support multi-statements. Using them
+will result in an error being sent to the client.
