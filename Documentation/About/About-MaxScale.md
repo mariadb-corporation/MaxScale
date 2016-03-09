@@ -35,7 +35,7 @@ Send email to [maxscale@googlegroups.com](mailto:maxscale@googlegroups.com)
 	or use the [forum](http://groups.google.com/forum/#!forum/maxscale) interface
 
 Bugs can be reported in the MariaDB Jira
-	[https://mariadb.atlassian.net](https://mariadb.atlassian.net)
+	[https://jira.mariadb.org](https://mariadb.atlassian.net)
 
 ## Installing MaxScale
 Information about installing MaxScale, either from a repository or by
