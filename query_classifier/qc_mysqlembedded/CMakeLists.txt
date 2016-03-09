@@ -1,6 +1,4 @@
 # Include the embedded library headers
-message(STATUS MYSQL_INCLUDE_DIR_ALL)
-message(STATUS ${MYSQL_EMBEDDED_INCLUDE_DIR})
 subdirs(MYSQL_INCLUDE_DIR_ALL ${MYSQL_EMBEDDED_INCLUDE_DIR})
 foreach(DIR ${MYSQL_INCLUDE_DIR_ALL})
   include_directories(${DIR})
