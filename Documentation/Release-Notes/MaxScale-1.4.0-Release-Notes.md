@@ -1,6 +1,6 @@
-# MariaDB MaxScale 1.4 Release Notes
+# MariaDB MaxScale 1.4.0 Release Notes
 
-This document describes the changes in release 1.4, when compared to
+This document describes the changes in release 1.4.0, when compared to
 release 1.3.0.
 
 ## 1.4.0
@@ -27,17 +27,20 @@ been known to have been unstable. In 1.4.0, client side SSL is now
 believed to be stable and fully usable.
 
 The SSL configuration is now done on a per listener basis which
-allows both SSL and non-SSL connections to a service.
+allows both SSL and non-SSL connections to a service. For more details
+on how to configure this, please refer to the [MaxScale Configuration Guide](../Getting-Started/Configuration-Guide.md#listener-and-ssl)
 
 ### POSIX Extended Regular Expression Syntax
 
 The _qlafilter_, the _topfilter_ and the _namedserverfilter_ now
-accept _extended_ as a parameter, which enables the POSIX Extended
+accept _extended_ as a filter option, which enables the POSIX Extended
 Regular Expression syntax.
 
 ## Removed Features
 
-MaxScale no longer supports SSLv3.
+* MaxScale no longer supports SSLv3.
+
+* The `enabled` mode, which allows both SSL and non-SSL connections on the same port, has been removed.
 
 ## Bug fixes
 
