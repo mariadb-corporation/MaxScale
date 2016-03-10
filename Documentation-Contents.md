@@ -48,7 +48,7 @@ These tutorials are for specific use cases and module combinations.
  - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
  - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
 
-Here are tutorials on monitoring and managing MaxScale in cluster envoronments.
+Here are tutorials on monitoring and managing MaxScale in cluster environments.
 
  - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
  - [MaxScale HA with Corosync-Pacemaker](Tutorials/MaxScale-HA-with-Corosync-Pacemaker.md)

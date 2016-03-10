@@ -145,17 +145,17 @@ master_accept_reads=true
 
 ### `strict_multi_stmt`
 
-When a client executes a multistatement query, all queries after that will be routed to
+When a client executes a multi-statement query, all queries after that will be routed to
 the master to guarantee a consistent session state. This behavior can be controlled with
 the **`strict_multi_stmt`** router option. This option is enabled by default.
 
-If set to false, queries are routed normally after a multistatement query. **Warning**, this
-can cause false data to be read from the slaves if the multistatement query modifies
+If set to false, queries are routed normally after a multi-statement query. **Warning**, this
+can cause false data to be read from the slaves if the multi-statement query modifies
 the session state. Only disable the strict mode if you know that no changes to the session
-state will be made inside the multistatement queries.
+state will be made inside the multi-statement queries.
 
 ```
-# Disable strict multistatement mode
+# Disable strict multi-statement mode
 strict_multi_stmt=false
 ```
 
