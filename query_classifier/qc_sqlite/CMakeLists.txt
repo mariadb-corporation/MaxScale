@@ -10,6 +10,7 @@ ExternalProject_Add(sqlite
 include_directories(${CMAKE_BINARY_DIR}/sqlite/tsrc)
 
 add_library(qc_sqlite SHARED qc_sqlite.c)
+add_dependencies(qc_sqlite sqlite)
 
 target_link_libraries(qc_sqlite maxscale-common ${CMAKE_BINARY_DIR}/sqlite/.libs/libsqlite3.a)
 set_target_properties(qc_sqlite PROPERTIES VERSION "1.0.0")
