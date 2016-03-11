@@ -244,6 +244,7 @@ add_test_executable(pers_01.cpp pers_01 pers_01)
 add_test_executable(pers_02.cpp pers_02 pers_01)
 add_test_script(mxs361 mxs361)
 add_test_executable(mxs431.cpp mxs431 sharding)
+# curretly does 'USE test' in every session, should be removed when 'no all backens are authentificated' issue is resolved
 add_test_executable(open_close_connections.cpp open_close_connections replication)
 add_test_script(open_close_connections_ssl ssl)
 add_test_executable(galera_priority.cpp galera_priority galera_priority)
