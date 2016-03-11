@@ -46,16 +46,18 @@ MYSQL * connect_to_serv(TestConnections* Test, bool binlog)
 
 void set_max_packet(TestConnections* Test, bool binlog, char * cmd)
 {
+    Test->tprintf("Setting maximum packet size ...");
     if (binlog)
     {
         Test->repl->connect();
-        Test->repl->execute_query_all_nodes(cmd);
+        Test->try_query(Test->repl->nodes[0], cmd);
         Test->repl->close_connections();
     } else {
         Test->connect_maxscale();
         Test->try_query(Test->conn_rwsplit, cmd);
         Test->close_maxscale_connections();
     }
+    Test->tprintf(".. done\n");
 }
 
 void different_packet_size(TestConnections* Test, bool binlog)
