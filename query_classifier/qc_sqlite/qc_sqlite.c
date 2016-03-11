@@ -268,7 +268,6 @@ static bool qc_sqlite_is_real_query(GWBUF* query);
 static char** qc_sqlite_get_table_names(GWBUF* query, int* tblsize, bool fullnames);
 static char* qc_sqlite_get_canonical(GWBUF* query);
 static bool qc_sqlite_query_has_clause(GWBUF* query);
-static char* qc_sqlite_get_qtype_str(qc_query_type_t qtype);
 static char* qc_sqlite_get_affected_fields(GWBUF* query);
 static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep);
 
@@ -455,17 +454,6 @@ static bool qc_sqlite_query_has_clause(GWBUF* query)
     return NULL;
 }
 
-static char* qc_sqlite_get_qtype_str(qc_query_type_t qtype)
-{
-    QC_TRACE();
-    ss_dassert(this_unit.initialized);
-    ss_dassert(this_thread.initialized);
-
-    MXS_ERROR("qc_sqlite: qc_get_type_str not implemented yet.");
-
-    return NULL;
-}
-
 static char* qc_sqlite_get_affected_fields(GWBUF* query)
 {
     QC_TRACE();
@@ -508,7 +496,6 @@ static QUERY_CLASSIFIER qc =
     qc_sqlite_get_table_names,
     qc_sqlite_get_canonical,
     qc_sqlite_query_has_clause,
-    qc_sqlite_get_qtype_str,
     qc_sqlite_get_affected_fields,
     qc_sqlite_get_database_names,
 };

@@ -1588,54 +1588,6 @@ static void parsing_info_set_plain_str(void* ptr, char* str)
 }
 
 /**
- * Generate a string of query type value.
- * Caller must free the memory of the resulting string.
- *
- * @param   qtype   Query type value, combination of values listed in
- *          query_classifier.h
- *
- * @return  string representing the query type value
- */
-char* qc_get_qtype_str(qc_query_type_t qtype)
-{
-    int t1 = (int) qtype;
-    int t2 = 1;
-    qc_query_type_t t = QUERY_TYPE_UNKNOWN;
-    char* qtype_str = NULL;
-
-    /**
-     * Test values (bits) and clear matching bits from t1 one by one until
-     * t1 is completely cleared.
-     */
-    while (t1 != 0)
-    {
-        if (t1 & t2)
-        {
-            t = (qc_query_type_t) t2;
-
-            if (qtype_str == NULL)
-            {
-                qtype_str = strdup(STRQTYPE(t));
-            }
-            else
-            {
-                size_t len = strlen(STRQTYPE(t));
-                /** reallocate space for delimiter, new string and termination */
-                qtype_str = (char *) realloc(qtype_str, strlen(qtype_str) + 1 + len + 1);
-                snprintf(qtype_str + strlen(qtype_str), 1 + len + 1, "|%s", STRQTYPE(t));
-            }
-
-            /** Remove found value from t1 */
-            t1 &= ~t2;
-        }
-
-        t2 <<= 1;
-    }
-
-    return qtype_str;
-}
-
-/**
  * Returns an array of strings of databases that this query uses.
  * If the database isn't defined in the query, it is assumed that this query
  * only targets the current database.
@@ -1914,7 +1866,6 @@ static QUERY_CLASSIFIER qc =
     qc_get_table_names,
     qc_get_canonical,
     qc_query_has_clause,
-    qc_get_qtype_str,
     qc_get_affected_fields,
     qc_get_database_names,
 };

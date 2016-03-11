@@ -114,7 +114,6 @@ typedef struct query_classifier
     char** (*qc_get_table_names)(GWBUF* querybuf, int* tblsize, bool fullnames);
     char* (*qc_get_canonical)(GWBUF* querybuf);
     bool (*qc_query_has_clause)(GWBUF* buf);
-    char* (*qc_get_qtype_str)(qc_query_type_t qtype);
     char* (*qc_get_affected_fields)(GWBUF* buf);
     char** (*qc_get_database_names)(GWBUF* querybuf, int* size);
 } QUERY_CLASSIFIER;
