@@ -91,7 +91,7 @@ int create_insert_string(char* sql, int N, int fl)
     char *wptr = sql;
 
     strcpy(wptr, ins1);
-    for (int i = 0; i < N-1; i++) {
+    for (int i = 0; i < N; i++) {
         wptr = strchr(wptr, '\0');
         sprintf(wptr, "(%d, %d),", i, fl);
     }

@@ -99,6 +99,7 @@ void different_packet_size(TestConnections* Test, bool binlog)
             Test->set_timeout(120);
             event = create_event_size(j);
             Test->tprintf("Trying event app. %d bytes\t", j);
+            fflush(stdout);
             conn = connect_to_serv(Test, binlog);
             if (execute_query_silent(conn, event) == 0)
             {
