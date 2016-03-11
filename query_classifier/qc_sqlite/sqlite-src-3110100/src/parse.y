@@ -49,6 +49,8 @@
 %include {
 #include "sqliteInt.h"
 
+extern int qc_sqlite3Select(Parse*, Select*, SelectDest*);
+
 /*
 ** Disable all error recovery processing in the parser push-down
 ** automaton.
@@ -420,7 +422,7 @@ cmd ::= DROP VIEW ifexists(E) fullname(X). {
 //
 cmd ::= select(X).  {
   SelectDest dest = {SRT_Output, 0, 0, 0, 0, 0};
-  sqlite3Select(pParse, X, &dest);
+  qc_sqlite3Select(pParse, X, &dest);
   sqlite3SelectDelete(pParse->db, X);
 }
 

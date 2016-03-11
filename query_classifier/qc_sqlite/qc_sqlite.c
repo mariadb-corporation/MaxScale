@@ -49,6 +49,24 @@ static thread_local struct
 } this_thread;
 
 
+/**
+ * SQLITE
+ *
+ * These functions are called from sqlite.
+ */
+
+int qc_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
+{
+    MXS_NOTICE("qc_sqlite: qc_sqlite3Select called.");
+
+    // TODO: Collect information and return error to abort sqlite3's processing.
+
+    return -1;
+}
+
+/**
+ * API
+ */
 static bool qc_sqlite_init(void);
 static void qc_sqlite_end(void);
 static bool qc_sqlite_thread_init(void);
