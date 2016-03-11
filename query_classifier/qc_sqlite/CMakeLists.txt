@@ -11,7 +11,7 @@ include_directories(${CMAKE_BINARY_DIR}/sqlite-bld-3110100/tsrc)
 include_directories(${CMAKE_BINARY_DIR}/sqlite-bld-3110100)
 include_directories(${MARIADB_CONNECTOR_INCLUDE_DIR})
 
-add_library(qc_sqlite SHARED qc_sqlite.c ${CMAKE_BINARY_DIR}/sqlite-bld-3110100/sqlite3.c)
+add_library(qc_sqlite SHARED qc_sqlite.c qc_sqlite3.c)
 add_dependencies(qc_sqlite maxscale_sqlite)
 
 set_target_properties(qc_sqlite PROPERTIES VERSION "1.0.0")
