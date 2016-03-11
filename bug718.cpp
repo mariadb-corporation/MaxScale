@@ -1,6 +1,6 @@
 /**
- * @file bug718.cpp bug718 regression case
- *
+ * @file bug718.cpp bug718 (MXS-19) regression case REMOVED FROM TEST SUITE!! (because manuall Master setting breaks backend)
+ * trying to execute INSERTS from several paralell threads when monitors are disabled
  */
 
 
@@ -15,12 +15,15 @@ using namespace std;
 
 TestConnections * Test;
 void *thread1( void *ptr );
-void *thread2( void *ptr );
+//void *thread2( void *ptr );
+
+int iterations;
 
 int db1_num = 0;
 int main(int argc, char *argv[])
 {
     Test = new TestConnections(argc, argv);
+    iterations =  (Test->smoke) ? 20 : 100;
     Test->set_timeout(20);
     int i;
 
@@ -48,12 +51,12 @@ int main(int argc, char *argv[])
     for (i = 0; i < ThreadsNum; i ++) { iret1[i] = pthread_create( &thread_v1[i], NULL, thread1, NULL); }
 
     create_t1(Test->conn_rwsplit);
-    for (i = 0; i < 10000; i++) {
+    for (i = 0; i < iterations; i++) {
         Test->set_timeout(200);
         insert_into_t1(Test->conn_rwsplit, 4);
         printf("i=%d\n", i);
     }
-    Test->set_timeout(30);
+    Test->set_timeout(300);
     for (i = 0; i < ThreadsNum; i ++) { pthread_join( thread_v1[i], NULL); }
 
     Test->close_maxscale_connections();
@@ -75,7 +78,7 @@ void *thread1( void *ptr )
 
     create_t1(conn);
     create_t1(g_conn);
-    for (int i = 0; i < 10000; i++) {
+    for (int i = 0; i < iterations; i++) {
         insert_into_t1(conn, 4);
         insert_into_t1(g_conn, 4);
         if ((i / 100) * 100 == i) {

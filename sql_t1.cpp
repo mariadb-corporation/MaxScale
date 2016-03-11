@@ -114,7 +114,7 @@ char* allocate_insert_string(int fl, int N)
 
     if (fl >= sql_size)
     {
-        fprintf(stderr, "Insert index %d is too large, setting it to %d", fl, sql_size - 1);
+        fprintf(stderr, "Insert index %d is too large, setting it to %lu", fl, sql_size - 1);
         fl = sql_size - 1;
     }
 
