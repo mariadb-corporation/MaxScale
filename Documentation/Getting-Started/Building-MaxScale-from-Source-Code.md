@@ -151,11 +151,10 @@ This will automatically search your system for the right files and libraries and
 Here is an example of a cmake call with parameters for custom library locations, building of tests and without the installation of init scripts or the example maxscale.cnf file.
 
 ```
-$ cmake .. -DMYSQL_DIR=/usr/mariadb-5.5.41-linux-x86_64/include/mysql \
--DEMBEDDED_LIB=/usr/mariadb-5.5.41-linux-x86_64/lib/libmysqld.a \
--DMYSQLCLIENT_LIBRARIES=/usr/mariadb-5.5.41-linux-x86_64/lib/libmysqlclient.so \
+$ cmake .. -DMYSQL_EMBEDDED_INCLUDE_DIR=/usr/mariadb-5.5.41-linux-x86_64/include/mysql \
+-DMYSQL_EMBEDDED_LIBRARIES=/usr/mariadb-5.5.41-linux-x86_64/lib/libmysqld.a \
 -DERRMSG=/usr/mariadb-5.5.41-linux-x86_64/share/english/errmsg.sys \
--DCMAKE_INSTALL_PREFIX=/home/maxscale/MaxScale -DBUILD_TESTS=Y \
+-DCMAKE_INSTALL_PREFIX=/home/maxscale/MaxScale/build/ -DBUILD_TESTS=Y \
 -DWITH_SCRIPTS=N -DWITH_MAXSCALE_CNF=N
 
 <pre>
@@ -225,9 +224,9 @@ Other useful targets for Make are `documentation`, which generates the Doxygen d
 
 ## Running the MaxScale testsuite
 
-MaxScale has a core test suite for internal components and an extended suite of test for modules. To run the core tests, run `make testcore`. This will test the core maxscale executable.
+MaxScale has a core test suite for internal components and an extended suite of test for modules. To run the core tests, run `make testcore`. This will test the core maxscale executable and is the recommended test suite to run.
 
-To run `make testall`, the full test suite, you need to have four mysqld servers running on localhost. It assumes a master-slave replication setup with one master and three slaves.
+To run `make testall`, the full test suite, you need to have four mysqld servers running on localhost. It assumes a master-slave replication setup with one master and three slaves. This is an old test set which is not actively maintainted.
 
 The ports to which these servers are listening and the credentials to use for testing can be specified in the `macros.cmake` file found in the root source folder.
 
