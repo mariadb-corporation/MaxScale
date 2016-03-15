@@ -148,9 +148,9 @@ that use user variables to the master.
 
 #### Examples of session command limitations
 
-If new database "db" was created and client executes “USE db” and it is
-routed to slave before the CREATE DATABASE clause is replicated to all
-slaves there is a risk of executing query in wrong database. Similarly, if
+If a new database "db" was created and client executes “USE db” and it is
+routed to a slave before the CREATE DATABASE clause is replicated to all
+slaves, there is a risk of executing a query in the wrong database. Similarly, if
 any response that RWSplit sends back to the client differ from that of the
 master, there is a risk for misbehavior. To prevent this, any failures in
 session command execution are treated as fatal errors and all connections
@@ -158,10 +158,10 @@ by the session to that particular slave server will be closed. In
 addition, the server will not used again for routing for the duration of
 the session.
 
-Most imaginable reasons are related to replication lag but it could be
+The most likely reasons are related to replication lag but it could be
 possible that a slave fails to execute something because of some
-non-fatal, temporary failure while execution of same command succeeds in
-other backends.
+non-fatal, temporary failure, while the execution of the same command
+succeeds in other backends.
 
 ## Authentication Related Limitations
 
