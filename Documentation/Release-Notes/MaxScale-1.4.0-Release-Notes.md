@@ -52,6 +52,15 @@ GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'maxscalehost'
 For more information, refer to the configuration guide:
 [MaxScale Configuration Guide](../Getting-Started/Configuration-Guide.md#service).
 
+### Improved password encryption
+
+MaxScale 1.4.0 uses the MD5 version of the crypt function which is more secure
+than the non-MD5 version. This means that a new password file needs to be
+created with `maxkeys`. The configuration file should be updated to use the new
+passwords. This can be done with the help of the `maxpasswd` utility. For more
+details about how to do this, please refer to the installation guide:
+[MariaDB MaxScale Installation Guide](../Documentation/Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
+
 ## Removed Features
 
 * MaxScale no longer supports SSLv3.
