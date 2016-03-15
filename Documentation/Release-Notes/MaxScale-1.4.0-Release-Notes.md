@@ -39,6 +39,19 @@ The _qlafilter_, the _topfilter_ and the _namedserverfilter_ now
 accept _extended_ as a filter option, which enables the POSIX Extended
 Regular Expression syntax.
 
+
+### Improved user grant detection
+
+MaxScale now allows users with only table level access to connect with
+a default database. The service users will require SELECT privileges on
+the `mysql.tables_priv` table:
+
+```
+GRANT SELECT ON mysql.tables_priv TO 'maxscale'@'maxscalehost'
+```
+For more information, refer to the configuration guide:
+[MaxScale Configuration Guide](../Getting-Started/Configuration-Guide.md#service).
+
 ## Removed Features
 
 * MaxScale no longer supports SSLv3.
