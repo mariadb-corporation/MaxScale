@@ -72,10 +72,10 @@ int main(int argc, char *argv[])
     snprintf(query, sizeof (filename), "LOAD DATA LOCAL INFILE '%s' INTO TABLE test.dump FIELDS TERMINATED BY ','",
              filename);
     test->tprintf("Loading data\n");
-    test->set_timeout(30);
+    test->set_timeout(100);
     test->add_result(execute_query(test->conn_rwsplit, query), "Loading data failed.");
     test->tprintf("Reading data\n");
-    test->set_timeout(30);
+    test->set_timeout(100);
     test->add_result(execute_query(test->conn_rwsplit, "SELECT * FROM test.dump"),
                      "Reading data failed.");
     test->close_maxscale_connections();
