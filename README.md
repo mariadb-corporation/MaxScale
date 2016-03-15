@@ -1,3 +1,5 @@
+Status of build of Develop branch in Travis: [![Build Status](https://travis-ci.org/mariadb-corporation/MaxScale.svg?branch=develop)](https://travis-ci.org/mariadb-corporation/MaxScale)
+
 # MaxScale by MariaDB Corporation
 
 The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
