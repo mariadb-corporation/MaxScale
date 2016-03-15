@@ -100,7 +100,25 @@ use_sql_variables_in=[master|all] (default: all)
 
 Server-side session variables are called as SQL variables. If "master" is set, SQL variables are read and written in master only. Autocommit values and prepared statements are routed to all nodes always.
 
-**NOTE**: If variable is written as a part of write query, it is treated like write query and not routed to all servers. For example, `INSERT INTO test.t1 VALUES (@myvar:= 7)` will not be routed and an error in the error log will be written. Add the `use_sql_variables_in=master` to the service definition to allow these queries.
+**WARNING**
+
+If a SELECT query modifies a user variable when the `use_sql_variables_in`
+parameter is set to `all`, it will not be routed and the client will receive
+an error. A log message is written into the log further explaining the reason
+for the error. Here is an example use of a SELECT query which modifies a user
+variable and how MaxScale responds to it.
+
+```
+MySQL [(none)]> set @id=1;
+Query OK, 0 rows affected (0.00 sec)
+
+MySQL [(none)]> SELECT @id := @id + 1 FROM test.t1;
+ERROR 1064 (42000): Routing query to backend failed. See the error log for further details.
+```
+
+You allow user variable modification in SELECT queries by setting the value of
+`use_sql_variables_in` to `master`. This will route all queries that use user
+variables to the master.
 
 #### Examples of session command limitations
 
