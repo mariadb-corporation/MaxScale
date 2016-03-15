@@ -538,6 +538,12 @@ bool check_monitor_permissions(MONITOR* monitor)
     mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
     mysql_options(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
 
+    if (monitor->databases == NULL)
+    {
+        MXS_ERROR("%s: Monitor is missing the servers parameter.", monitor->name);
+        return false;
+    }
+
     user = monitor->user;
     dpasswd = decryptPassword(monitor->password);
     server = monitor->databases->server;
