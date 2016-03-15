@@ -1,3 +1,4 @@
+
 # MariaDB MaxScale 1.4.0 Release Notes
 
 This document describes the changes in release 1.4.0, when compared to
@@ -18,7 +19,8 @@ ignore the match and allow it.
 
 Matching and non-matching queries can now be logged and by combining this new
 logging functionality with the _ignore_ action, you can set up the filter in
-a dry-run mode.
+a dry-run mode. For more information about the firewall filter, please refer to
+[Database Firewall Filter](../Filters/Database-Firewall-Filter.md).
 
 ### SSL
 
@@ -28,7 +30,8 @@ believed to be stable and fully usable.
 
 The SSL configuration is now done on a per listener basis which
 allows both SSL and non-SSL connections to a service. For more details
-on how to configure this, please refer to the [MaxScale Configuration Guide](../Getting-Started/Configuration-Guide.md#listener-and-ssl)
+on how to configure this, please refer to the
+[MaxScale Configuration Guide](../Getting-Started/Configuration-Guide.md#listener-and-ssl).
 
 ### POSIX Extended Regular Expression Syntax
 
