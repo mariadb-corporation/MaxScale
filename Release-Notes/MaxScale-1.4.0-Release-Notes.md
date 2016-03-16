@@ -1,5 +1,7 @@
 
-# MariaDB MaxScale 1.4.0 Release Notes
+# MariaDB MaxScale 1.4.0 (Beta) Release Notes
+
+Release 1.4.0 is a beta release.
 
 This document describes the changes in release 1.4.0, when compared to
 release 1.3.0.
