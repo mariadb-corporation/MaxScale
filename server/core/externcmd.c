@@ -309,3 +309,22 @@ bool externcmd_can_execute(const char* argstr)
     }
     return rval;
 }
+
+/**
+ * Simple matching of string and command
+ * @param cmd Command where the match is searched from
+ * @param match String to search for
+ * @return True if the string matched
+ */
+bool externcmd_matches(const EXTERNCMD* cmd, const char* match)
+{
+    for (int i = 0; cmd->argv[i]; i++)
+    {
+        if (strstr(cmd->argv[i], match))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}

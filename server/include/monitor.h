@@ -216,7 +216,6 @@ extern RESULTSET *monitorGetList();
 extern bool check_monitor_permissions(MONITOR* monitor, const char* query);
 
 monitor_event_t mon_name_to_event(const char* tok);
-void mon_append_node_names(MONITOR_SERVERS* start, char* str, int len);
 monitor_event_t mon_get_event_type(MONITOR_SERVERS* node);
 const char* mon_get_event_name(MONITOR_SERVERS* node);
 void monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit);

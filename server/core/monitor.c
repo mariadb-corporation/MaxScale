@@ -784,17 +784,17 @@ mon_name_to_event(const char *event_name)
  * @param dest Destination where the string is appended, must be null terminated
  * @param len Length of @c dest
  */
-void
-mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len)
+static void mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len, int status)
 {
     char *separator = "";
     char arr[MAX_SERVER_NAME_LEN + 32]; // Some extra space for port
+    dest[0] = '\0';
 
     while (servers && strlen(dest) < (len - strlen(separator)))
     {
-        if (SERVER_IS_RUNNING(servers->server))
+        if (status == 0 || servers->server->status & status)
         {
-            strcat(dest, separator);
+            strncat(dest, separator, len);
             separator = ",";
             snprintf(arr, sizeof(arr), "%s:%d", servers->server->name, servers->server->port);
             strncat(dest, arr, len - strlen(dest) - 1);
@@ -838,12 +838,6 @@ mon_print_fail_status(MONITOR_SERVERS* mon_srv)
 void
 monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 {
-    char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
-    char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
-
-    snprintf(initiator, sizeof(initiator), "%s:%d", ptr->server->name, ptr->server->port);
-    mon_append_node_names(mon->databases, nodelist, PATH_MAX + MON_ARG_MAX);
-
     EXTERNCMD* cmd = externcmd_allocate(script);
 
     if (cmd == NULL)
@@ -853,9 +847,49 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
         return;
     }
 
-    externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
-    externcmd_substitute_arg(cmd, "[$]EVENT", mon_get_event_name(ptr));
-    externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
+    if (externcmd_matches(cmd, "$INITIATOR"))
+    {
+        char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
+        snprintf(initiator, sizeof(initiator), "%s:%d", ptr->server->name, ptr->server->port);
+        externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
+    }
+
+    if (externcmd_matches(cmd, "$EVENT"))
+    {
+        externcmd_substitute_arg(cmd, "[$]EVENT", mon_get_event_name(ptr));
+    }
+
+    char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
+
+    if (externcmd_matches(cmd, "$NODELIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_RUNNING);
+        externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
+    }
+
+    if (externcmd_matches(cmd, "$LIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), 0);
+        externcmd_substitute_arg(cmd, "[$]LIST", nodelist);
+    }
+
+    if (externcmd_matches(cmd, "$MASTERLIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_MASTER);
+        externcmd_substitute_arg(cmd, "[$]MASTERLIST", nodelist);
+    }
+
+    if (externcmd_matches(cmd, "$SLAVELIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_SLAVE);
+        externcmd_substitute_arg(cmd, "[$]SLAVELIST", nodelist);
+    }
+
+    if (externcmd_matches(cmd, "$SYNCEDLIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_JOINED);
+        externcmd_substitute_arg(cmd, "[$]SYNCEDLIST", nodelist);
+    }
 
     if (externcmd_execute(cmd))
     {

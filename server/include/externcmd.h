@@ -41,5 +41,6 @@ void externcmd_free(EXTERNCMD* cmd);
 int externcmd_execute(EXTERNCMD* cmd);
 bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* re, const char* replace);
 bool externcmd_can_execute(const char* argstr);
+bool externcmd_matches(const EXTERNCMD* cmd, const char* match);
 
 #endif
