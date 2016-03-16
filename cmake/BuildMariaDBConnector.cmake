@@ -10,7 +10,8 @@ include(ExternalProject)
 set(MARIADB_CONNECTOR_C_REPO "https://github.com/MariaDB/mariadb-connector-c.git"
   CACHE STRING "MariaDB Connector-C Git repository")
 
-set(MARIADB_CONNECTOR_C_TAG "connector_c_2.2"
+# Points to release 2.2.1 of the Connector-C
+set(MARIADB_CONNECTOR_C_TAG "7fd72dfe3e5b889b974453b69f99c2e6fd4217c6"
   CACHE STRING "MariaDB Connector-C Git tag")
 
 ExternalProject_Add(connector-c
