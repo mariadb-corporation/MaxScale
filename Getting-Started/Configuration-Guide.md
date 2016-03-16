@@ -390,6 +390,25 @@ MariaDB [(none)]> GRANT SHOW DATABASES ON *.* TO 'maxscale'@'maxscalehost';
 Query OK, 0 rows affected (0.00 sec)
 ```
 
+MaxScale will execute the following query to retrieve the users. If you suspect that you might have problems with grants, it is recommended to run this query and see the results it returns.
+
+```
+SELECT DISTINCT
+    user.user AS user,
+    user.host AS host,
+    user.%s AS password,
+    concat(user.user,user.host,user.%s,
+      IF((user.Select_priv+0)||find_in_set('Select',Coalesce(tp.Table_priv,0)),'Y','N') ,
+      COALESCE( db.db,tp.db, '')) AS userdata,
+    user.Select_priv AS anydb,
+    COALESCE( db.db,tp.db, NULL) AS db
+    FROM
+    mysql.user LEFT JOIN
+    mysql.db ON user.user=db.user AND user.host=db.host LEFT JOIN
+    mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host
+    WHERE user.user IS NOT NULL AND user.user <> ''"
+```
+
 #### `passwd`
 
 The passwd parameter provides the password information for the above user and may be either a plain text password or it may be an encrypted password.  See the section on encrypting passwords for use in the maxscale.cnf file. This user must be capable of connecting to the backend database and executing these SQL statements to load database names and grants from the backends:
