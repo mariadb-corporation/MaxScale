@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
 
     Test->tprintf("Creating user 'user' \n");
 
+    Test->try_query(Test->conn_rwsplit, (char *) "CREATE USER user@'%'");
     Test->try_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.* TO user@'%'  identified by 'pass2';  FLUSH PRIVILEGES;");
     Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1; CREATE TABLE t1 (x1 int, fl int)");
 
@@ -124,6 +125,7 @@ int main(int argc, char *argv[])
     Test->repl->execute_query_all_nodes((char *) "set global max_connections = 100;");
     Test->tprintf("Drop t1\n");
     Test->try_query(Test->conn_rwsplit, (char *) "DROP TABLE IF EXISTS t1;");
+    Test->try_query(Test->conn_rwsplit, (char *) "DROP USER user@'%'");
     Test->close_maxscale_connections();
     Test->set_timeout(160);
     Test->tprintf("Trying to connect Maxscale\n");
