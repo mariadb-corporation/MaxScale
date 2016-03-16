@@ -108,6 +108,7 @@ add_test_executable(namedserverfilter.cpp namedserverfilter namedserverfilter)
 add_test_executable(mxs365.cpp mxs365 replication)
 # ReadConn cases are commented out now due to Maxscale failures
 add_test_executable(longblob.cpp longblob longblob)
+set_tests_properties(longblob PROPERTIES TIMEOUT 7200)
 add_test_executable(maxscale_process_user.cpp maxscale_process_user replication)
 add_test_executable(mxs244_prepared_stmt_loop.cpp mxs244_prepared_stmt_loop galera)
 add_test_executable(mxs280_select_outfile.cpp mxs280_select_outfile replication)

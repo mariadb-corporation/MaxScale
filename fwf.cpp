@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
         if (file != NULL) {
             Test->tprintf("********** Trying queries that should FAIL ********** \n");
             while (fgets(sql, sizeof(sql), file)) {
+                Test->set_timeout(60);
                 if (strlen(sql) > 1) {
                     Test->tprintf("%s", sql);
                     execute_query(Test->conn_rwsplit, sql);

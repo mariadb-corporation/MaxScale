@@ -51,7 +51,7 @@ int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, long in
 
     Test->tprintf("Sending data in %d bytes chunks, total size is %d\n", size * sizeof(long int), (size * sizeof(long int)) * chunks);
     for (i = 0; i < chunks; i++) {
-        Test->set_timeout(60);
+        Test->set_timeout(300);
         Test->tprintf("Chunk #%d\n", i);
         if (mysql_stmt_send_long_data(stmt, 0, (char *) data, size * sizeof(long int)) != 0) {
             Test->add_result(1, "Error inserting data, iteration %d, error %s\n", i, mysql_stmt_error(stmt));
@@ -59,7 +59,7 @@ int test_longblob(TestConnections* Test, MYSQL * conn, char * blob_name, long in
         }
     }
     Test->tprintf("Executing statement\n");
-    Test->set_timeout(600);
+    Test->set_timeout(3000);
     Test->add_result(mysql_stmt_execute(stmt), "INSERT Statement with %s failed, error is %s\n", blob_name, mysql_stmt_error(stmt));
     Test->add_result(mysql_stmt_close(stmt), "Error closing stmt\n");
 

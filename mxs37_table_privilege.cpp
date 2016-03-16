@@ -26,8 +26,11 @@ int main(int argc, char *argv[])
     execute_query(Test->conn_rwsplit, (char *) "CREATE USER table_privilege");
     Test->tprintf("Create user with only SELECT priviledge\n");
     execute_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.t1 TO 'table_privilege'@'%' IDENTIFIED BY 'pass'");
+    Test->tprintf("flush privileges\n");
     execute_query(Test->conn_rwsplit, (char *) "flush privileges"); // doeas it work with Maxscale?
     // should this sleep be removed?
+    Test->tprintf("Sleep\n");
+    Test->set_timeout(20);
     sleep(5);
     Test->tprintf("Trying to connect using this user\n");
     MYSQL * conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "test", (char *) "table_privilege", (char *) "pass", Test->ssl);
@@ -39,7 +42,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying SELECT\n");
     //Test->try_query(conn, (char *) "USE test");
     Test->try_query(conn, (char *) "SELECT * FROM t1");
-
+    Test->set_timeout(20);
     Test->tprintf("DROP USER\n");
     Test->try_query(Test->conn_rwsplit, "DROP USER table_privilege");
     Test->try_query(Test->conn_rwsplit, "DROP TABLE t1");
