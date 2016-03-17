@@ -332,7 +332,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
             queue = gwbuf_make_contiguous(queue);
         }
 
-        if (query_classifier_get_operation(queue) & (QUERY_OP_DELETE | QUERY_OP_INSERT | QUERY_OP_UPDATE))
+        if (qc_get_operation(queue) & (QUERY_OP_DELETE | QUERY_OP_INSERT | QUERY_OP_UPDATE))
         {
             if ((sql = modutil_get_SQL(queue)) != NULL)
             {
