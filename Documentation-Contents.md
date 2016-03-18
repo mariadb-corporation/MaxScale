@@ -6,7 +6,7 @@
 ## About MaxScale
 
  - [About MaxScale](About/About-MaxScale.md)
- - [MaxScale 1.3.0 Release Notes](Release-Notes/MaxScale-1.3.0-Release-Notes.md)
+ - [MaxScale 1.4.0 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md)
  - [Changelog](Changelog.md)
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
@@ -20,6 +20,7 @@
 
 ## Upgrading MaxScale
 
+- [Upgrading MaxScale from 1.3 to 1.4](Upgrading/Upgrading-To-MaxScale-1.4.md)
 - [Upgrading MaxScale from 1.2 to 1.3](Upgrading/Upgrading-To-MaxScale-1.3.md)
 - [Upgrading MaxScale from 1.1.1 to 1.2](Upgrading/Upgrading-To-MaxScale-1.2.md)
 - [Upgrading MaxScale from 1.0.5 to 1.1.0](Upgrading/Upgrading-To-MaxScale-1.1.0.md)
