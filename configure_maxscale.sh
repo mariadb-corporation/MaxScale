@@ -127,3 +127,5 @@ else
 fi
 #sleep 15
 #disown
+
+printenv > test.environment
