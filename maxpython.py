@@ -43,4 +43,4 @@ class MaxScaleTest:
         # Currently only RWSplit is available
         self.rwsplit = SQLConnection(host = os.getenv("maxscale_IP"), port = "4006", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
         self.rcmaster = SQLConnection(host = os.getenv("maxscale_IP"), port = "4008", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
-        self.rcslave = SQLConnection(host = os.getenv("maxscale_IP"), "4009", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.rcslave = SQLConnection(host = os.getenv("maxscale_IP"), port = "4009", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
