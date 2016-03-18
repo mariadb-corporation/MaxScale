@@ -84,6 +84,7 @@ static int MySQLSendHandshake(DCB* dcb);
 static int route_by_statement(SESSION *, GWBUF **);
 static void mysql_client_auth_error_handling(DCB *dcb, int auth_val);
 extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
+static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -480,6 +481,14 @@ int gw_read_client_event(DCB* dcb)
 
             packet_number = ssl_required_by_dcb(dcb) ? 3 : 2;
 
+            if (!ensure_complete_packet(dcb, &read_buffer, nbytes_read))
+            {
+                return 0;
+            }
+
+            /** Currently authentication requires that the buffer is contiguous */
+            read_buffer = gwbuf_make_contiguous(read_buffer);
+
             /**
              * The first step in the authentication process is to extract the
              * relevant information from the buffer supplied and place it
@@ -603,55 +612,10 @@ int gw_read_client_event(DCB* dcb)
     if (stmt_input || protocol->protocol_auth_state == MYSQL_AUTH_SENT)
     {
 
-        /**
-         * if read queue existed appent read to it.
-         * if length of read buffer is less than 3 or less than mysql packet
-         *  then return.
-         * else copy mysql packets to separate buffers from read buffer and
-         * continue.
-         * else
-         * if read queue didn't exist, length of read is less than 3 or less
-         * than mysql packet then
-         * create read queue and append to it and return.
-         * if length read is less than mysql packet length append to read queue
-         * append to it and return.
-         * else (complete packet was read) continue.
-         */
-        if (dcb->dcb_readqueue)
+        if (!ensure_complete_packet(dcb, &read_buffer, nbytes_read))
         {
-            uint8_t* data;
-
-            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-            nbytes_read = gwbuf_length(dcb->dcb_readqueue);
-            data = (uint8_t *)GWBUF_DATA(dcb->dcb_readqueue);
-            int plen = MYSQL_GET_PACKET_LEN(data);
-            if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data) + 4)
-            {
-                rc = 0;
-                goto return_rc;
-            }
-            else
-            {
-                /**
-                 * There is at least one complete mysql packet in
-                 * read_buffer.
-                 */
-                read_buffer = dcb->dcb_readqueue;
-                dcb->dcb_readqueue = NULL;
-            }
+            return 0;
         }
-        else
-        {
-            uint8_t* data = (uint8_t *)GWBUF_DATA(read_buffer);
-
-            if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data) + 4)
-            {
-                dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, read_buffer);
-                rc = 0;
-                goto return_rc;
-            }
-        }
-
     }
 
     /**
@@ -1571,4 +1535,51 @@ static int route_by_statement(SESSION* session, GWBUF** p_readbuf)
 
 return_rc:
     return rc;
+}
+
+/**
+ * if read queue existed appent read to it. if length of read buffer is less
+ * than 3 or less than mysql packet then return.  else copy mysql packets to
+ * separate buffers from read buffer and continue. else if read queue didn't
+ * exist, length of read is less than 3 or less than mysql packet then
+ * create read queue and append to it and return. if length read is less than
+ * mysql packet length append to read queue append to it and return.
+ * else (complete packet was read) continue.
+ *
+ * @return True if we have a complete packet, otherwise false
+ */
+static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read)
+{
+    if (dcb->dcb_readqueue)
+    {
+        dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, *read_buffer);
+        nbytes_read = gwbuf_length(dcb->dcb_readqueue);
+        int plen = MYSQL_GET_PACKET_LEN((uint8_t *) GWBUF_DATA(dcb->dcb_readqueue));
+
+        if (nbytes_read < 3 || nbytes_read < plen + 4)
+        {
+            return false;
+        }
+        else
+        {
+            /**
+             * There is at least one complete mysql packet in
+             * read_buffer.
+             */
+            *read_buffer = dcb->dcb_readqueue;
+            dcb->dcb_readqueue = NULL;
+        }
+    }
+    else
+    {
+        uint8_t* data = (uint8_t *) GWBUF_DATA(*read_buffer);
+
+        if (nbytes_read < 3 || nbytes_read < MYSQL_GET_PACKET_LEN(data) + 4)
+        {
+            dcb->dcb_readqueue = gwbuf_append(dcb->dcb_readqueue, *read_buffer);
+            return false;
+        }
+    }
+
+    return true;
 }
