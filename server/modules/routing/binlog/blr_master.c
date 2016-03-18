@@ -102,7 +102,6 @@ static void blr_distribute_error_message(ROUTER_INSTANCE *router, char *message,
                                          unsigned int err_code);
 
 int blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *buf);
-bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf);
 void extract_checksum(ROUTER_INSTANCE* router, uint8_t *cksumptr, uint8_t len);
 
 static int keepalive = 1;
@@ -1955,6 +1954,9 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
 
             switch (slave_action)
             {
+                char binlog_name[BINLOG_FNAMELEN + 1];
+                uint32_t binlog_pos;
+
             case SLAVE_SEND_EVENT:
                 /*
                  * The slave should be up to date, check that the binlog
@@ -1971,12 +1973,15 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
                     slave->lastReply = time(0);
                 }
 
+                strcpy(binlog_name, slave->binlogfile);
+                binlog_pos = slave->binlog_pos;
+
                 if (hdr->event_type == ROTATE_EVENT)
                 {
                     blr_slave_rotate(router, slave, ptr);
                 }
 
-                blr_send_event(slave, hdr, ptr);
+                blr_send_event(BLR_THREAD_ROLE_MASTER, binlog_name, binlog_pos, slave, hdr, ptr);
 
                 spinlock_acquire(&slave->catch_lock);
                 if (hdr->event_type != ROTATE_EVENT)
@@ -2640,14 +2645,39 @@ bool blr_send_packet(ROUTER_SLAVE *slave, uint8_t *buf, uint32_t len, bool first
  * This sends the complete replication event to a slave. If the event size exceeds
  * the maximum size of a MySQL packet, it will be sent in multiple packets.
  *
+ * @param role  What is the role of the caller, slave or master.
+ * @param binlog_name The name of the binlogfile.
+ * @param binlog_pos The position in the binlogfile.
  * @param slave Slave where the event is sent to
- * @param hdr Replication header
- * @param buf Pointer to the replication event as it was read from the disk
+ * @param hdr   Replication header
+ * @param buf   Pointer to the replication event as it was read from the disk
  * @return True on success, false if memory allocation failed
  */
-bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf)
+bool blr_send_event(blr_thread_role_t role,
+                    const char* binlog_name,
+                    uint32_t binlog_pos,
+                    ROUTER_SLAVE *slave,
+                    REP_HEADER *hdr,
+                    uint8_t *buf)
 {
     bool rval = true;
+
+    if ((strcmp(slave->lsi_binlog_name, binlog_name) == 0) &&
+        (slave->lsi_binlog_pos == binlog_pos))
+    {
+        MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s', position %u: "
+                  "thread %lu in the role of %s could not send the event, "
+                  "the event has already been sent by thread %lu in the role of %s.",
+                  slave->dcb->remote,
+                  ntohs((slave->dcb->ipv4).sin_port),
+                  slave->serverid,
+                  binlog_name,
+                  binlog_pos,
+                  THREAD_SHELF(),
+                  role == BLR_THREAD_ROLE_MASTER ? "master" : "slave",
+                  slave->lsi_sender_tid,
+                  slave->lsi_sender_role == BLR_THREAD_ROLE_MASTER ? "master" : "slave");
+    }
 
     /** Check if the event and the OK byte fit into a single packet  */
     if (hdr->event_size + 1 < MYSQL_PACKET_LENGTH_MAX)
@@ -2688,7 +2718,14 @@ bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf)
 
     slave->stats.n_events++;
 
-    if (!rval)
+    if (rval)
+    {
+        strcpy(slave->lsi_binlog_name, binlog_name);
+        slave->lsi_binlog_pos = binlog_pos;
+        slave->lsi_sender_role = role;
+        slave->lsi_sender_tid = THREAD_SHELF();
+    }
+    else
     {
         MXS_ERROR("Failed to send an event of %u bytes to slave at %s:%d.",
                   hdr->event_size, slave->dcb->remote,

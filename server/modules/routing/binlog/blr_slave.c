@@ -160,7 +160,6 @@ static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router, 
                                                        char *name, int type, int len, uint8_t seqno);
 static void blr_send_slave_heartbeat(void *inst);
 static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
-bool blr_send_event(ROUTER_SLAVE *slave, REP_HEADER *hdr, uint8_t *buf);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -2234,6 +2233,12 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
     while (burst-- && burst_size > 0 &&
            (record = blr_read_binlog(router, file, slave->binlog_pos, &hdr, read_errmsg)) != NULL)
     {
+        char binlog_name[BINLOG_FNAMELEN + 1];
+        uint32_t binlog_pos;
+
+        strcpy(binlog_name, slave->binlogfile);
+        binlog_pos = slave->binlog_pos;
+
         if (hdr.event_type == ROTATE_EVENT)
         {
             unsigned long beat1 = hkheartbeat;
@@ -2288,7 +2293,8 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             }
         }
 
-        if (blr_send_event(slave, &hdr, (uint8_t*) record->start))
+        if (blr_send_event(BLR_THREAD_ROLE_SLAVE, binlog_name, binlog_pos,
+                           slave, &hdr, (uint8_t*) record->start))
         {
             if (hdr.event_type != ROTATE_EVENT)
             {

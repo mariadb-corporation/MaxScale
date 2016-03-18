@@ -308,6 +308,12 @@ typedef struct
     int             minavgs[BLR_NSTATS_MINUTES];
 } SLAVE_STATS;
 
+typedef enum blr_thread_role
+{
+    BLR_THREAD_ROLE_MASTER,
+    BLR_THREAD_ROLE_SLAVE
+} blr_thread_role_t;
+
 /**
  * The client session structure used within this router. This represents
  * the slaves that are replicating binlogs from MaxScale.
@@ -350,6 +356,11 @@ typedef struct router_slave
     int             heartbeat;      /*< Heartbeat in seconds */
     uint8_t         lastEventReceived; /*< Last event received */
     time_t          lastReply;      /*< Last event sent */
+    // lsi: Last Sent Information
+    blr_thread_role_t lsi_sender_role; /*< Master or slave code sent */
+    THREAD            lsi_sender_tid;  /*< Who sent */
+    char              lsi_binlog_name[BINLOG_FNAMELEN + 1]; /*< Which binlog file */
+    uint32_t          lsi_binlog_pos; /*< What position */
 #if defined(SS_DEBUG)
     skygw_chk_t     rses_chk_tail;
 #endif
@@ -605,4 +616,12 @@ extern int blr_ping(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_send_custom_error(DCB *, int, int, char *, char *, unsigned int);
 extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
 uint32_t extract_field(uint8_t *src, int bits);
+
+extern bool blr_send_event(blr_thread_role_t role,
+                           const char* binlog_name,
+                           uint32_t binlog_pos,
+                           ROUTER_SLAVE *slave,
+                           REP_HEADER *hdr,
+                           uint8_t *buf);
+
 #endif
