@@ -145,17 +145,17 @@ master_accept_reads=true
 
 ### `strict_multi_stmt`
 
-When a client executes a multistatement query, all queries after that will be routed to
+When a client executes a multi-statement query, all queries after that will be routed to
 the master to guarantee a consistent session state. This behavior can be controlled with
 the **`strict_multi_stmt`** router option. This option is enabled by default.
 
-If set to false, queries are routed normally after a multistatement query. **Warning**, this
-can cause false data to be read from the slaves if the multistatement query modifies
+If set to false, queries are routed normally after a multi-statement query. **Warning**, this
+can cause false data to be read from the slaves if the multi-statement query modifies
 the session state. Only disable the strict mode if you know that no changes to the session
-state will be made inside the multistatement queries.
+state will be made inside the multi-statement queries.
 
 ```
-# Disable strict multistatement mode
+# Disable strict multi-statement mode
 strict_multi_stmt=false
 ```
 
@@ -165,81 +165,7 @@ The readwritesplit router supports routing hints. For a detailed guide on hint s
 
 ## Limitations
 
-In Master-Slave replication cluster also read-only queries are routed to master too in the following situations:
-
-* if they are executed inside an open transaction
-
-* in case of prepared statement execution
-
-* statement includes a stored procedure, or an UDF call
-
-* if there are multiple statements inside one query e.g. `INSERT INTO ... ; SELECT LAST_INSERT_ID();`
-
-### Limitations in multi-statement handling
-
-When a multi-statemet query is executed through the readwritesplit router, it will always
-be routed to the master. With the default configuration, all queries after a
-multi-statement query will be routed to the master to prevent possible reads of
-false data. You can override this behavior with the `strict_multi_stmt=false`
-router option. In this mode, the multi-statement queries will still be routed
-to the master but individual statements are routed normally. If you use
-multi-statements and you know they don't modify the session state in any
-relevant way, you can disable this option for better performance.
-
-### Limitations in client session handling
-
-Some of the queries that client sends are routed to all backends instead of sending them just to one of server. These queries include `USE <db name>` and `SET autocommit=0` among many others. Readwritesplit sends a copy of these queries to each backend server and forwards the master's reply to the client. Below is a list of MySQL commands which are classified as session commands :
-```
-COM_INIT_DB (USE <db name> creates this)
-
-COM_CHANGE_USER
-
-COM_STMT_CLOSE
-
-COM_STMT_SEND_LONG_DATA
-
-COM_STMT_RESET
-
-COM_STMT_PREPARE
-
-COM_QUIT (no response, session is closed)
-
-COM_REFRESH
-
-COM_DEBUG
-
-COM_PING
-
-SQLCOM_CHANGE_DB (USE ... statements)
-
-SQLCOM_DEALLOCATE_PREPARE
-
-SQLCOM_PREPARE
-
-SQLCOM_SET_OPTION
-
-SELECT ..INTO variable|OUTFILE|DUMPFILE
-
-SET autocommit=1|0 
-```
-
-There is a possibility for misbehavior; if `USE mytable` was executed in one of the slaves and it failed, it may be due to replication lag rather than the fact it didn’t exist. Thus the same command may end up with different result among backend servers. The slaves which fail to execute a session command will be dropped from the active list of slaves for this session to guarantee a consistent session state across all the servers that are in use by the session.
-
-The above-mentioned behavior can be partially controller with the `use_sql_variables_in` configuration parameter.
-
-```
-use_sql_variables_in=[master|all] (master)
-```
-
-Server-side session variables are called as SQL variables. If "master" or no value is set, SQL variables are read and written in master only. Autocommit values and prepared statements are routed to all nodes always.
-
-**NOTE**: If variable is written as a part of write query, it is treated like write query and not routed to all servers. For example, `INSERT INTO test.t1 VALUES (@myvar:= 7)` will be routed to the master and an error in the error log will be written.
-
-### Examples of limitations
-
-If new database "db" was created and client executes “USE db” and it is routed to slave before the CREATE DATABASE clause is replicated to all slaves there is a risk of executing query in wrong database. Similarly, if any response that RWSplit sends back to the client differ from that of the master, there is a risk for misbehavior. To prevent this, any failures in session command execution are treated as fatal errors and all connections by the session to that particular slave server will be closed. In addition, the server will not used again for routing for the duration of the session.
-
-Most imaginable reasons are related to replication lag but it could be possible that a slave fails to execute something because of some non-fatal, temporary failure while execution of same command succeeds in other backends.
+For a list of readwritesplit limitations, please read the [Limitations](../About/Limitations.md) document.
 
 ## Examples
 

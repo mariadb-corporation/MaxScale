@@ -1,7 +1,13 @@
 #Changelog
 
 ## MaxScale 1.4
-* Authentication now allows table level resolution of grants. MaxScale service users will now need SELECT privileges on `mysql.tables_priv` to be able to authenticate users at the database and table level.
+* Authentication now allows table level resolution of grants. MaxScale service
+  users will now need SELECT privileges on `mysql.tables_priv` to be able to
+  authenticate users at the database and table level.
+* Firewall filter allows whitelisting.
+* Client side SSL works.
+
+For more details, please refer to [MaxScale 1.4 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md)
 
 ## MaxScale 1.3
 * Added support for persistent backend connections

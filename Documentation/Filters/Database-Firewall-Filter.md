@@ -36,6 +36,34 @@ The database firewall filter has one mandatory parameter that defines the locati
 
 This parameter is optional and determines what action is taken when a query matches a rule. The value can be either `allow`, which allows all matching queries to proceed but blocks those that don't match, or `block`, which blocks all matching queries, or `ignore` which allows all queries to proceed.
 
+You can have both blacklist and whitelist functionality by configuring one filter
+with `action=allow` and another one with `action=block`. You can then use
+different rule files with each filter, one for blacklisting and another one
+for whitelisting. After this you only have to add both of these filters
+to a service in the following way.
+
+```
+[my-firewall-service]
+type=service
+servers=server1
+router=readconnroute
+user=maxuser
+passwd=maxpwd
+filters=dbfw-whitelist|dbfw-blacklist
+
+[dbfw-whitelist]
+type=filter
+module=dbfwfilter
+action=allow
+rules=/home/user/whitelist-rules.txt
+
+[dbfw-blacklist]
+type=filter
+module=dbfwfilter
+action=block
+rules=/home/user/blacklist-rules.txt
+```
+
 #### `log_match`
 
 Log all queries that match a rule. For the `any` matching mode, the name of
@@ -60,7 +88,12 @@ rule NAME deny [wildcard | columns VALUE ... |
 
 Rules always define a blocking action so the basic mode for the database firewall filter is to allow all queries that do not match a given set of rules. Rules are identified by their name and have a mandatory part and optional parts. You can add comments to the rule files by adding the `#` character at the beginning of the line.
 
-The first step of defining a rule is to start with the keyword `rule` which identifies this line of text as a rule. The second token is identified as the name of the rule. After that the mandatory token `deny` is required to mark the start of the actual rule definition.
+The first step of defining a rule is to start with the keyword `rule` which
+identifies this line of text as a rule. The second token is identified as
+the name of the rule. After that one of the mandatory action tokens, `deny` or
+`allow`, is required to mark the start of the actual rule definition. Both
+`deny` and `allow` function in the same way and the actual behavior of
+the filter is determined by the `action` parameter.
 
 ### Mandatory rule parameters
 
