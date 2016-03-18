@@ -31,6 +31,8 @@
  - [How Errors are Handled in MaxScale](Reference/How-errors-are-handled-in-MaxScale.md)
  - [Debug and Diagnostic Support](Reference/Debug-And-Diagnostic-Support.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
+ - [MaxBinlogCheck](Reference/MaxBinlogCheck.md)
+ - [MaxScale and SSL](Reference/MaxScale-and-SSL.md)
 
 ## Tutorials
 
