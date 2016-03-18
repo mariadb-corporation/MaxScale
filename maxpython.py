@@ -27,9 +27,9 @@ class SQLConnection:
         self.conn.close()
 
     def query_and_close(self, query):
-        self.connect_maxscale()
+        self.connect()
         self.query(query)
-        self.disconnect_maxscale()
+        self.disconnect()
 
 # Test environment abstraction
 class MaxScaleTest:
