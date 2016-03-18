@@ -41,6 +41,6 @@ class MaxScaleTest:
             if part[0] not in os.environ:
                 os.putenv(part[0], part[2])
         # Currently only RWSplit is available
-        self.rwsplit = SQLConnection(os.getenv("maxscale_IP"), "4006", os.getenv("maxscale_user"), os.getenv("maxscale_password"))
-        self.rcmaster = SQLConnection(os.getenv("maxscale_IP"), "4008", os.getenv("maxscale_user"), os.getenv("maxscale_password"))
-        self.rcslave = SQLConnection(os.getenv("maxscale_IP"), "4009", os.getenv("maxscale_user"), os.getenv("maxscale_password"))
+        self.rwsplit = SQLConnection(host = os.getenv("maxscale_IP"), port = "4006", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.rcmaster = SQLConnection(host = os.getenv("maxscale_IP"), port = "4008", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.rcslave = SQLConnection(host = os.getenv("maxscale_IP"), "4009", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
