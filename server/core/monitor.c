@@ -974,3 +974,16 @@ mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
               database->server->port,
               mysql_error(database->con));
 }
+
+void mon_log_state_change(MONITOR_SERVERS *ptr)
+{
+    SERVER srv;
+    srv.status = ptr->mon_prev_status;
+    char *prev = server_status(&srv);
+    char *next = server_status(ptr->server);
+    MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
+               ptr->server->unique_name, ptr->server->name, ptr->server->port,
+               mon_get_event_name(ptr), prev, next);
+    free(prev);
+    free(next);
+}

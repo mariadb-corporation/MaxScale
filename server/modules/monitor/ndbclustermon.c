@@ -422,10 +422,7 @@ monitorMain(void *arg)
                 evtype = mon_get_event_type(ptr);
                 if (isNdbEvent(evtype))
                 {
-                    MXS_NOTICE("Server changed state: %s[%s:%u]: %s",
-                             ptr->server->unique_name,
-                             ptr->server->name, ptr->server->port,
-                             mon_get_event_name(ptr));
+                    mon_log_state_change(ptr);
                     if (handle->script && handle->events[evtype])
                     {
                         monitor_launch_script(mon, ptr, handle->script);

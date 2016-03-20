@@ -227,5 +227,6 @@ void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script);
 int mon_parse_event_string(bool* events, size_t count, char* string);
 connect_result_t mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database);
 void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
+void mon_log_state_change(MONITOR_SERVERS *ptr);
 
 #endif
