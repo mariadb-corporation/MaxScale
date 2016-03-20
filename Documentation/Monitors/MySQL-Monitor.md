@@ -43,13 +43,33 @@ detect_replication_lag=true
 
 ### `detect_stale_master`
 
-Allow previous master to be available even in case of stopped or misconfigured 
-replication. This allows services that depend on master and slave roles to continue functioning as long as the master server is available.
+Allow previous master to be available even in case of stopped or misconfigured
+replication. This feature is enabled by default.
 
-This is a situation which can happen if all slave servers are unreachable or the replication breaks for some reason.
+This allows services that depend on master and slave roles to continue
+functioning as long as the master server is available. This is a situation
+which can happen if all slave servers are unreachable or the replication
+breaks for some reason.
 
 ```
 detect_stale_master=true
+```
+
+### `detect_stale_slave`
+
+Treat running slaves servers without a master server as valid slave servers.
+This feature is enabled by default.
+
+If a slave server loses its master server, the replication is considered broken.
+With this parameter, slaves that have lost their master but have been slaves of
+a master server can retain their slave status even without a master. This means
+that when a slave loses its master, it can still be used for reads.
+
+If this feature is disabled, a server is considered a valid slave if and only if
+it has a running master server monitored by this monitor.
+
+```
+detect_stale_slave=true
 ```
 
 ### `mysql51_replication`

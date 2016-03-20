@@ -65,7 +65,8 @@ typedef struct
     int status; /**< Monitor status */
     unsigned long id; /**< Monitor ID */
     int replicationHeartbeat; /**< Monitor flag for MySQL replication heartbeat */
-    int detectStaleMaster; /**< Monitor flag for MySQL replication Stale Master detection */
+    bool detectStaleMaster; /**< Monitor flag for MySQL replication Stale Master detection */
+    bool detectStaleSlave; /**< Monitor flag for MySQL replication Stale Master detection */
     int disableMasterFailback; /**< Monitor flag for Galera Cluster Master failback */
     int availableWhenDonor; /**< Monitor flag for Galera Cluster Donor availability */
     int disableMasterRoleSetting; /**< Monitor flag to disable setting master role */
