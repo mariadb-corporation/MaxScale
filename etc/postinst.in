@@ -65,4 +65,11 @@ then
     cp -n @MAXSCALE_CONFDIR@/maxscale.cnf.template @MAXSCALE_CONFDIR@/maxscale.cnf
 fi
 
+# This will allow us to install the Perl scripts as executable files
+# without adding the Perl dependencies
+for i in $(find @MAXSCALE_SHAREDIR@/plugins/nagios -name '*.pl')
+do
+    chmod ug+x $i
+done
+
 /sbin/ldconfig
