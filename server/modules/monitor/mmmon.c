@@ -161,6 +161,15 @@ startMonitor(void *arg, void* opt)
         }
         params = params->next;
     }
+
+    if (!check_monitor_permissions(mon, "SHOW SLAVE STATUS"))
+    {
+        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+        free(handle->script);
+        free(handle);
+        return NULL;
+    }
+
     if (script_error)
     {
 	MXS_ERROR("Errors were found in the script configuration parameters "

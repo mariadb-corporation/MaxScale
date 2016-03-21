@@ -56,7 +56,8 @@ MariaDB [(none)]> GRANT SHOW DATABASES ON *.* TO 'username'@'maxscalehost';
 
 **Query OK, 0 rows affected (0.00 sec)**
 ```
-The second user is used to monitored the state of the cluster. This user, which may be the same username as the first, requires permissions to access the various sources of monitoring data. In order to monitor a replication cluster this user must be granted the roles REPLICATION SLAVE and REPLICATION CLIENT
+The second user is used to monitored the state of the cluster. This user, which may be the same username as the first, requires permissions to access the various sources of monitoring data. In order to monitor a replication cluster this user must be granted the roles REPLICATION SLAVE and REPLICATION CLIENT. This is only required by the MySQL monitor and Multi-Master monitor modules.
+
 ```
 MariaDB [(none)]> grant REPLICATION SLAVE on *.* to '*username*'@'*maxscalehost*';
 
@@ -66,6 +67,7 @@ MariaDB [(none)]> grant REPLICATION CLIENT on *.* to '*username*'@'*maxscalehost
 
 **Query OK, 0 rows affected (0.00 sec)**
 ```
+
 If you wish to use two different usernames for the two different roles of monitoring and collecting user information then create a different username using the first two steps from above.
 
 ## Creating additional grants for users

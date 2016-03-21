@@ -152,6 +152,16 @@ startMonitor(void *arg, void* opt)
         }
         params = params->next;
     }
+
+    /** SHOW STATUS doesn't require any special permissions */
+    if (!check_monitor_permissions(mon, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
+    {
+        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+        free(handle->script);
+        free(handle);
+        return NULL;
+    }
+
     if (script_error)
     {
 	MXS_ERROR("Errors were found in the script configuration parameters "

@@ -512,13 +512,13 @@ monitorGetList()
 }
 
 /**
- * Check if the monitor user has all required permissions to operate properly.
- * this checks for REPLICATION CLIENT permissions
+ * @brief Check if the monitor user has all required permissions to operate properly.
+ *
  * @param service Monitor to inspect
- * @return False if an error with monitor permissions was detected or if an
- * error occurred. True if permissions are correct.
+ * @param query Query to execute
+ * @return True on success, false if monitor credentials lack permissions
  */
-bool check_monitor_permissions(MONITOR* monitor)
+bool check_monitor_permissions(MONITOR* monitor, const char* query)
 {
     MYSQL* mysql;
     MYSQL_RES* res;
@@ -553,37 +553,45 @@ bool check_monitor_permissions(MONITOR* monitor)
     if (mysql_real_connect(mysql, server->name, user, dpasswd, NULL, server->port, NULL, 0) == NULL)
     {
         MXS_ERROR("%s: Failed to connect to server %s(%s:%d) when"
-                  " checking monitor user credentials and permissions.",
-                  monitor->name,
-                  server->unique_name,
-                  server->name,
-                  server->port);
+                  " checking monitor user credentials and permissions: %s",
+                  monitor->name, server->unique_name, server->name, server->port,
+                  mysql_error(mysql));
         mysql_close(mysql);
         free(dpasswd);
-        return false;
+
+        switch (mysql_errno(mysql))
+        {
+            case ER_ACCESS_DENIED_ERROR:
+            case ER_DBACCESS_DENIED_ERROR:
+            case ER_ACCESS_DENIED_NO_PASSWORD_ERROR:
+                return false;
+            default:
+                return true;
+        }
     }
 
-    if (mysql_query(mysql, "show slave status") != 0)
+    if (mysql_query(mysql, query) != 0)
     {
-        if (mysql_errno(mysql) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
+        switch (mysql_errno(mysql))
         {
-            MXS_ERROR("%s: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
-                      monitor->name, user, mysql_error(mysql));
+            case ER_TABLEACCESS_DENIED_ERROR:
+            case ER_COLUMNACCESS_DENIED_ERROR:
+            case ER_SPECIFIC_ACCESS_DENIED_ERROR:
+            case ER_PROCACCESS_DENIED_ERROR:
+            case ER_KILL_DENIED_ERROR:
+                rval = false;
+                break;
         }
-        else
-        {
-            MXS_ERROR("%s: Monitor failed to query for slave status. MySQL error message: %s",
-                      monitor->name, mysql_error(mysql));
-        }
-        rval = false;
+
+        MXS_ERROR("%s: Failed to execute query '%s' with user '%s'. MySQL error message: %s",
+                  monitor->name, query, user, mysql_error(mysql));
     }
     else
     {
         if ((res = mysql_use_result(mysql)) == NULL)
         {
-            MXS_ERROR("%s: Result retrieval failed when checking for REPLICATION CLIENT permissions: %s",
+            MXS_ERROR("%s: Result retrieval failed when checking monitor permissions: %s",
                       monitor->name, mysql_error(mysql));
-            rval = false;
         }
         else
         {

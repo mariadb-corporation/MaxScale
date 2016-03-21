@@ -213,7 +213,7 @@ extern void monitorList(DCB *);
 extern void monitorSetInterval (MONITOR *, unsigned long);
 extern bool monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
-bool check_monitor_permissions(MONITOR* monitor);
+extern bool check_monitor_permissions(MONITOR* monitor, const char* query);
 
 monitor_event_t mon_name_to_event(const char* tok);
 void mon_append_node_names(MONITOR_SERVERS* start, char* str, int len);

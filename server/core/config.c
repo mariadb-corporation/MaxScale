@@ -2722,7 +2722,6 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         if (user && passwd)
         {
             monitorAddUser(obj->element, user, passwd);
-            check_monitor_permissions(obj->element);
         }
         else if (user)
         {
