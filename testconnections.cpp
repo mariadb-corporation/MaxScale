@@ -95,6 +95,10 @@ TestConnections::TestConnections(int argc, char *argv[])
             run_flag = false;
         }
     }
+
+    repl->truncate_mariadb_logs();
+    galera->truncate_mariadb_logs();
+
     if (!no_nodes_check) {
         //  checking all nodes and restart if needed
         repl->unblock_all_nodes();
@@ -280,10 +284,41 @@ int TestConnections::stop_maxscale()
     return(res);
 }
 
+int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
+{
+    int local_result = 0;
+    char * mariadb_log;
+    FILE * f;
+    int i;
+    char str[4096];
+
+    sprintf(str, "mkdir -p LOGS/%s", test_name);
+    for (i = 0; i < repl->N; i++)
+    {
+        mariadb_log = repl->ssh_node_output(i, (char *) "cat /var/lib/mysql/*.err", TRUE);
+        sprintf(str, "LOGS/%s/%s%d_mariadb_log", test_name, prefix, i);
+        f = fopen(str, "w");
+        if (f != NULL)
+        {
+            fwrite(mariadb_log, sizeof(char), strlen(mariadb_log), f);
+            fclose(f);
+        } else {
+            printf("Error writing MariaDB log");
+            local_result = 1;
+        }
+        free(mariadb_log);
+    }
+    return local_result;
+}
+
 int TestConnections::copy_all_logs()
 {
     char str[4096];
     set_timeout(300);
+
+    copy_mariadb_logs(repl, (char *) "node");
+    copy_mariadb_logs(galera, (char *) "galera");
+
     sprintf(str, "%s/copy_logs.sh %s", test_dir, test_name);
     tprintf("Executing %s\n", str);
     if (system(str) !=0) {
@@ -702,6 +737,7 @@ char* TestConnections::ssh_maxscale_output(bool sudo, const char* format, ...)
     while(fgets(buffer, sizeof(buffer), output))
     {
         result = (char*)realloc(result, sizeof(buffer) + rsize);
+        rsize += sizeof(buffer);
         strcat(result, buffer);
     }
 

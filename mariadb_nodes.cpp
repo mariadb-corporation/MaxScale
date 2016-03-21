@@ -579,7 +579,6 @@ char * Mariadb_nodes::ssh_node_output(int node, char * ssh, bool sudo)
 {
     char sys[strlen(ssh) + 1024];
     generate_ssh_cmd(sys, node, ssh, sudo);
-
     FILE *output = popen(sys, "r");
     char buffer[1024];
     size_t rsize = sizeof(buffer);
@@ -588,9 +587,9 @@ char * Mariadb_nodes::ssh_node_output(int node, char * ssh, bool sudo)
     while(fgets(buffer, sizeof(buffer), output))
     {
         result = (char*)realloc(result, sizeof(buffer) + rsize);
+        rsize += sizeof(buffer);
         strcat(result, buffer);
     }
-
     return result;
 }
 
@@ -647,4 +646,14 @@ int Mariadb_nodes::get_versions()
         }
     }
     return(local_result);
+}
+
+int Mariadb_nodes::truncate_mariadb_logs()
+{
+    int local_result = 0;
+    for (int i = 0; i < N; i++)
+    {
+        local_result += ssh_node(i, (char *) "truncate  /var/lib/mysql/*.err --size 0", TRUE);
+    }
+    return local_result;
 }

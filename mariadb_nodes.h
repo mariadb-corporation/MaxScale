@@ -372,6 +372,12 @@ public:
      * @return 0 in case of success
      */
     int get_versions();
+
+    /**
+     * @brief truncate_mariadb_logs clean ups MariaDB logs on backend nodes
+     * @return 0 if success
+     */
+    int truncate_mariadb_logs();
 };
 
 #endif // MARIADB_NODES_H

@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
     Test->tprintf("Create user with only SELECT priviledge\n");
     execute_query(Test->conn_rwsplit, (char *) "GRANT SELECT ON test.t1 TO 'table_privilege'@'%' IDENTIFIED BY 'pass'");
     Test->tprintf("flush privileges\n");
-    execute_query(Test->conn_rwsplit, (char *) "flush privileges"); // doeas it work with Maxscale?
+    execute_query(Test->conn_rwsplit, (char *) "flush privileges"); // does it work with Maxscale?
     // should this sleep be removed?
     Test->tprintf("Sleep\n");
     Test->set_timeout(20);

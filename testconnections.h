@@ -179,6 +179,14 @@ public:
     char maxscale_access_sudo[64];
 
     /**
+     * @brief copy_mariadb_logs copies MariaDB logs from backend
+     * @param repl Mariadb_nodes object
+     * @param prefix file name prefix
+     * @return 0 if success
+     */
+    int copy_mariadb_logs(Mariadb_nodes *repl, char * prefix);
+
+    /**
      * @brief no_maxscale_stop if true copy_all_logs() does not stop Maxscale
      */
     bool no_maxscale_stop;

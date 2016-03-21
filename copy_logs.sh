@@ -11,7 +11,7 @@ else
 	else
 		logs_dir="LOGS/$1/$2"
 	fi
-	rm -rf $logs_dir
+#	rm -rf $logs_dir
 fi
 
 
