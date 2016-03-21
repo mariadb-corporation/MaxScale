@@ -9,6 +9,16 @@ For more detailed information, please refer to the [release notes](../Release-No
 Before starting the upgrade, we **strongly** recommend you back up your current
 configuration file.
 
+## Service user permissions
+
+The service users now also need SELECT privileges on mysql.tables_priv. This is
+required for the resolution of table level grants. To grant SELECT privileges
+for the service user, replace the user and hostname in the following example.
+
+```
+GRANT SELECT ON mysql.tables_priv TO 'username'@'maxscalehost';
+```
+
 ## Password encryption
 
 MaxScale 1.4.0 upgrades the used password encryption algorithms to more secure ones.
