@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
     Test->add_result(Test->connect_maxscale(), "error connection to Maxscale\n");
     Test->tprintf("Trying simple operations with t1 \n");
     Test->try_query(Test->conn_rwsplit, (char *) "INSERT INTO t1 (x1, fl) VALUES(0, 1);");
+    Test->set_timeout(240);
     Test->add_result(execute_select_query_and_check(Test->conn_rwsplit, (char *) "SELECT * FROM t1;", 1), "Error execution SELECT * FROM t1;\n");
 
     Test->close_maxscale_connections();

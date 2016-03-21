@@ -26,7 +26,7 @@ int execute_select_query_and_check(MYSQL *conn, char *sql, unsigned long long in
     if (conn != NULL) {
         rows_from_select=0;
         wait_i=0;
-        while ((rows_from_select != rows) && (wait_i < 10)) {
+        while ((rows_from_select != rows) && (wait_i < 100)) {
             if(mysql_query(conn, sql) != 0)
                 printf("Error: can't execute SQL-query: %s\n", mysql_error(conn));
 
