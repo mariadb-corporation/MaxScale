@@ -2906,7 +2906,7 @@ static void clientReply (
                      bref->bref_backend->backend_server->port);
 
                 succp = execute_sescmd_in_backend(bref);
-		ss_dassert(succp);
+
 		if(!succp)
 		{
 		    MXS_INFO("Backend %s:%d failed to execute session command.",
