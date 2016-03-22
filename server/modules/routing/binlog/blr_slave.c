@@ -87,7 +87,6 @@
 
 extern int load_mysql_users(SERVICE *service);
 extern void blr_master_close(ROUTER_INSTANCE* router);
-extern void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern char *blr_extract_column(GWBUF *buf, int col);
@@ -3408,7 +3407,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         else
         {
             /* use existing one */
-            blr_file_use_binlog(router, router->binlog_name);
+            blr_file_append(router, router->binlog_name);
         }
     }
 

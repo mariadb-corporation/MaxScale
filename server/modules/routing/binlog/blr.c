@@ -111,7 +111,6 @@ int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 char * blr_last_event_description(ROUTER_INSTANCE *router);
 extern int MaxScaleUptime();
-char    *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =

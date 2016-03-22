@@ -64,17 +64,14 @@
 #include <log_manager.h>
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
-static void blr_file_append(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(int priority, char *msg, uint8_t *ptr);
 void blr_cache_read_master_data(ROUTER_INSTANCE *router);
 int blr_file_get_next_binlogname(ROUTER_INSTANCE *router);
 int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
-void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
 extern uint32_t extract_field(uint8_t *src, int bits);
 static void blr_format_event_size(double *event_size, char *label);
 extern int MaxScaleUptime();
-extern char *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 typedef struct binlog_event_desc
 {
@@ -98,7 +95,6 @@ static void blr_print_binlog_details(ROUTER_INSTANCE *router,
 int
 blr_file_init(ROUTER_INSTANCE *router)
 {
-    char *ptr;
     char path[PATH_MAX + 1] = "";
     char filename[PATH_MAX + 1] = "";
     int file_found, n = 1;
@@ -109,8 +105,8 @@ blr_file_init(ROUTER_INSTANCE *router)
     if (router->binlogdir == NULL)
     {
         strncpy(path, get_datadir(), PATH_MAX);
-        strncat(path, "/", PATH_MAX);
-        strncat(path, router->service->name, PATH_MAX);
+        strncat(path, "/", PATH_MAX - strlen(path));
+        strncat(path, router->service->name, PATH_MAX - strlen(path));
 
         if (access(path, R_OK) == -1)
         {
@@ -281,12 +277,12 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
 }
 
 /**
- * Prepare an existing binlog file to be appened to.
+ * Prepare an existing binlog file to be appended to.
  *
  * @param router    The router instance
  * @param file      The binlog file name
  */
-static void
+void
 blr_file_append(ROUTER_INSTANCE *router, char *file)
 {
     char path[PATH_MAX + 1] = "";
@@ -428,8 +424,8 @@ blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
     spinlock_init(&file->lock);
 
     strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/", PATH_MAX);
-    strncat(path, binlog, PATH_MAX);
+    strncat(path, "/", PATH_MAX - strlen(path));
+    strncat(path, binlog, PATH_MAX - strlen(path));
 
     if ((file->fd = open(path, O_RDONLY, 0666)) == -1)
     {
@@ -466,7 +462,7 @@ blr_read_binlog(ROUTER_INSTANCE *router, BLFILE *file, unsigned long pos, REP_HE
     unsigned long filelen = 0;
     struct stat statb;
 
-    memset(&hdbuf, '\0', BINLOG_EVENT_HDR_LEN);
+    memset(hdbuf, '\0', BINLOG_EVENT_HDR_LEN);
 
     /* set error indicator */
     hdr->ok = SLAVE_POS_READ_ERR;
@@ -847,19 +843,18 @@ void
 blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 {
     char path[PATH_MAX + 1] = "";
-    char *ptr;
     int fd;
 
     strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX);
+    strncat(path, "/cache", PATH_MAX - strlen(path));
 
     if (access(path, R_OK) == -1)
     {
         mkdir(path, 0700);
     }
 
-    strncat(path, "/", PATH_MAX);
-    strncat(path, response, PATH_MAX);
+    strncat(path, "/", PATH_MAX - strlen(path));
+    strncat(path, response, PATH_MAX - strlen(path));
 
     if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666)) == -1)
     {
@@ -886,14 +881,13 @@ blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
 {
     struct stat statb;
     char path[PATH_MAX + 1] = "";
-    char *ptr;
     int fd;
     GWBUF *buf;
 
     strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX);
-    strncat(path, "/", PATH_MAX);
-    strncat(path, response, PATH_MAX);
+    strncat(path, "/cache", PATH_MAX - strlen(path));
+    strncat(path, "/", PATH_MAX - strlen(path));
+    strncat(path, response, PATH_MAX - strlen(path));
 
     if ((fd = open(path, O_RDONLY)) == -1)
     {
@@ -967,9 +961,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
     int pending_transaction = 0;
     int n;
     int db_name_len;
-    char *statement_sql;
     uint8_t *ptr;
-    int len;
     int var_block_len;
     int statement_len;
     int found_chksum = 0;
@@ -1113,7 +1105,6 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 router->current_safe_event = last_known_commit;
                 router->current_pos = pos;
                 router->pending_transaction = 1;
-                pending_transaction = 0;
 
                 MXS_ERROR("Binlog '%s' ends at position %lu and has an incomplete transaction at %lu. ",
                           router->binlog_name, router->current_pos, router->binlog_position);
@@ -1537,53 +1528,62 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 (4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len);
 
             statement_sql = calloc(1, statement_len + 1);
-            strncpy(statement_sql,
+            if (statement_sql)
+            {
+                strncpy(statement_sql,
                     (char *)ptr + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len,
                     statement_len);
 
-            /* A transaction starts with this event */
-            if (strncmp(statement_sql, "BEGIN", 5) == 0)
-            {
-                if (pending_transaction > 0)
+                /* A transaction starts with this event */
+                if (strncmp(statement_sql, "BEGIN", 5) == 0)
                 {
-                    MXS_ERROR("Transaction cannot be @ pos %llu: "
+                    if (pending_transaction > 0)
+                    {
+                        MXS_ERROR("Transaction cannot be @ pos %llu: "
                               "Another transaction was opened at %llu",
                               pos, last_known_commit);
 
-                    free(statement_sql);
-                    gwbuf_free(result);
+                        free(statement_sql);
+                        gwbuf_free(result);
 
-                    break;
-                }
-                else
-                {
-                    pending_transaction = 1;
-
-                    transaction_events = 0;
-                    event_bytes = 0;
-
-                    if (debug)
+                        break;
+                    }
+                    else
                     {
+                        pending_transaction = 1;
+
+                        transaction_events = 0;
+                        event_bytes = 0;
+
+                        if (debug)
+                        {
                         MXS_DEBUG("> Transaction starts @ pos %llu", pos);
+                        }
                     }
                 }
-            }
 
-            /* Commit received for non transactional tables, i.e. MyISAM */
-            if (strncmp(statement_sql, "COMMIT", 6) == 0)
-            {
-                if (pending_transaction > 0)
+                /* Commit received for non transactional tables, i.e. MyISAM */
+                if (strncmp(statement_sql, "COMMIT", 6) == 0)
                 {
-                    pending_transaction = 3;
-
-                    if (debug)
+                    if (pending_transaction > 0)
                     {
-                        MXS_DEBUG("       Transaction @ pos %llu, closing @ %llu",
-                                  last_known_commit, pos);
+                        pending_transaction = 3;
+
+                        if (debug)
+                        {
+                            MXS_DEBUG("       Transaction @ pos %llu, closing @ %llu",
+                                      last_known_commit, pos);
+                        }
                     }
                 }
+                free(statement_sql);
             }
-            free(statement_sql);
+            else
+            {
+                MXS_ERROR("Unable to allocate memory for statement SQL in blr_file.c ");
+                gwbuf_free(result);
+                break;
+            }
 
         }
 
@@ -1829,17 +1829,6 @@ int
 blr_file_new_binlog(ROUTER_INSTANCE *router, char *file)
 {
     return blr_file_create(router, file);
-}
-
-/**
- * Use current binlog file
- * @param router    The router instance
- * @param file      The binlog file
- */
-void
-blr_file_use_binlog(ROUTER_INSTANCE *router, char *file)
-{
-    return blr_file_append(router, file);
 }
 
 /**
