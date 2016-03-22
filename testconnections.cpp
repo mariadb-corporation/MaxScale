@@ -293,6 +293,7 @@ int TestConnections::copy_mariadb_logs(Mariadb_nodes * repl, char * prefix)
     char str[4096];
 
     sprintf(str, "mkdir -p LOGS/%s", test_name);
+    system(str);
     for (i = 0; i < repl->N; i++)
     {
         mariadb_log = repl->ssh_node_output(i, (char *) "cat /var/lib/mysql/*.err", TRUE);
