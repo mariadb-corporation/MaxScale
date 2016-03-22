@@ -605,4 +605,7 @@ extern int blr_ping(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_send_custom_error(DCB *, int, int, char *, char *, unsigned int);
 extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
 uint32_t extract_field(uint8_t *src, int bits);
+void blr_cache_read_master_data(ROUTER_INSTANCE *router);
+int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
+
 #endif

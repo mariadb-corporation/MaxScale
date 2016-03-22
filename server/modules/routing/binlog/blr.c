@@ -62,6 +62,8 @@
 #include <server.h>
 #include <router.h>
 #include <atomic.h>
+#include <utils.h>
+#include <secrets.h>
 #include <spinlock.h>
 #include <blr.h>
 #include <dcb.h>
@@ -74,6 +76,7 @@
 #include <log_manager.h>
 
 #include <mysql_client_server_protocol.h>
+#include <my_sys.h>
 #include <ini.h>
 #include <sys/stat.h>
 
@@ -104,10 +107,7 @@ static int blr_set_service_mysql_user(SERVICE *service);
 int blr_load_dbusers(ROUTER_INSTANCE *router);
 int blr_save_dbusers(ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
-extern void blr_cache_read_master_data(ROUTER_INSTANCE *router);
-extern char *decryptPassword(char *crypt);
-extern char *create_hex_sha1_sha1_passwd(char *passwd);
-extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
+int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
 char * blr_last_event_description(ROUTER_INSTANCE *router);
 extern int MaxScaleUptime();
@@ -287,7 +287,7 @@ createInstance(SERVICE *service, char **options)
 
     inst->serverid = 0;
 
-    my_uuid_init((ulong)rand() * 12345, 12345);
+    my_uuid_init((long)rand() * 12345, 12345);
     if ((defuuid = (unsigned char *)malloc(20)) != NULL)
     {
         my_uuid(defuuid);
@@ -304,6 +304,7 @@ createInstance(SERVICE *service, char **options)
                     defuuid[8], defuuid[9], defuuid[10], defuuid[11],
                     defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
         }
+        free(defuuid);
     }
 
     /*
@@ -572,24 +573,23 @@ createInstance(SERVICE *service, char **options)
     /* Dynamically allocate master_host server struct, not written in anyfile */
     if (service->dbref == NULL)
     {
-        SERVICE *service = inst->service;
         SERVER *server;
         server = server_alloc("_none_", "MySQLBackend", (int)3306);
         if (server == NULL)
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",
                       inst->service->name);
-            if (service->users)
+            if (inst->service->users)
             {
-                users_free(service->users);
-                service->users = NULL;
+                users_free(inst->service->users);
+                inst->service->users = NULL;
             }
 
             free(inst);
             return NULL;
         }
         server_set_unique_name(server, "binlog_router_master_host");
-        serviceAddBackend(service, server);
+        serviceAddBackend(inst->service, server);
     }
 
     /*
@@ -1011,11 +1011,13 @@ static char *event_names_mariadb10[] =
  * @param   desc    Description of the statistic
  * @param   value   The statistic value
  */
+#if SPINLOCK_PROFILE
 static void
 spin_reporter(void *dcb, char *desc, int value)
 {
     dcb_printf((DCB *)dcb, "\t\t%-35s	%d\n", desc, value);
 }
+#endif
 
 /**
  * Display router diagnostics
@@ -1048,12 +1050,12 @@ diagnostics(ROUTER *router, DCB *dcb)
     min15 = 0.0;
     min10 = 0.0;
     min5 = 0.0;
-    for (j = 0; j < 30; j++)
+    for (j = 0; j < BLR_NSTATS_MINUTES; j++)
     {
         minno--;
         if (minno < 0)
         {
-            minno += 30;
+            minno += BLR_NSTATS_MINUTES;
         }
         min30 += router_inst->stats.minavgs[minno];
         if (j < 15)
@@ -1121,7 +1123,7 @@ diagnostics(ROUTER *router, DCB *dcb)
     minno = router_inst->stats.minno - 1;
     if (minno == -1)
     {
-        minno = 30;
+        minno += BLR_NSTATS_MINUTES;
     }
     dcb_printf(dcb, "\tNumber of binlog events per minute\n");
     dcb_printf(dcb, "\tCurrent        5        10       15       30 Min Avg\n");
@@ -1159,14 +1161,14 @@ diagnostics(ROUTER *router, DCB *dcb)
         {
             dcb_printf(dcb, "\tLast event from master:                      0x%x, %s\n",
                        router_inst->lastEventReceived,
-                       (router_inst->lastEventReceived >= 0 &&
+                       (router_inst->lastEventReceived > 0 &&
                         router_inst->lastEventReceived <= MAX_EVENT_TYPE) ?
                        event_names[router_inst->lastEventReceived] : "unknown");
         }
         else
         {
             char *ptr = NULL;
-            if (router_inst->lastEventReceived >= 0 && router_inst->lastEventReceived <= MAX_EVENT_TYPE)
+            if (router_inst->lastEventReceived > 0 && router_inst->lastEventReceived <= MAX_EVENT_TYPE)
             {
                 ptr = event_names[router_inst->lastEventReceived];
             }
@@ -1250,12 +1252,12 @@ diagnostics(ROUTER *router, DCB *dcb)
             min15 = 0.0;
             min10 = 0.0;
             min5 = 0.0;
-            for (j = 0; j < 30; j++)
+            for (j = 0; j < BLR_NSTATS_MINUTES; j++)
             {
                 minno--;
                 if (minno < 0)
                 {
-                    minno += 30;
+                    minno += BLR_NSTATS_MINUTES;
                 }
                 min30 += session->stats.minavgs[minno];
                 if (j < 15)
@@ -1338,7 +1340,7 @@ diagnostics(ROUTER *router, DCB *dcb)
             minno = session->stats.minno - 1;
             if (minno == -1)
             {
-                minno = 30;
+                minno += BLR_NSTATS_MINUTES;
             }
             dcb_printf(dcb, "\t\tNumber of binlog events per minute\n");
             dcb_printf(dcb, "\t\tCurrent        5        10       15       30 Min Avg\n");
@@ -1518,7 +1520,7 @@ errorReply(ROUTER *instance,
         strcpy(msg, "");
     }
 
-    mysql_errno = (unsigned long) extract_field((uint8_t *)(GWBUF_DATA(message) + 5), 16);
+    mysql_errno = (unsigned long) extract_field(((uint8_t *)GWBUF_DATA(message) + 5), 16);
     errmsg = extract_message(message);
 
     if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED)
@@ -1614,7 +1616,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 
 static int getCapabilities()
 {
-    return RCAP_TYPE_NO_RSESSION;
+    return (int)RCAP_TYPE_NO_RSESSION;
 }
 
 /**
@@ -1983,8 +1985,8 @@ blr_load_dbusers(ROUTER_INSTANCE *router)
 
     /* File path for router cached authentication data */
     strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX);
-    strncat(path, "/dbusers", PATH_MAX);
+    strncat(path, "/cache", PATH_MAX - strlen(path));
+    strncat(path, "/dbusers", PATH_MAX - strlen(path));
 
     /* Try loading dbusers from configured backends */
     loaded = load_mysql_users(service);
@@ -2055,7 +2057,7 @@ blr_save_dbusers(ROUTER_INSTANCE *router)
 
     /* File path for router cached authentication data */
     strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX);
+    strncat(path, "/cache", PATH_MAX - strlen(path));
 
     /* check and create dir */
     if (access(path, R_OK) == -1)
@@ -2076,7 +2078,7 @@ blr_save_dbusers(ROUTER_INSTANCE *router)
     }
 
     /* set cache file name */
-    strncat(path, "/dbusers", PATH_MAX);
+    strncat(path, "/dbusers", PATH_MAX - strlen(path));
 
     return dbusers_save(service->users, path);
 }
@@ -2174,7 +2176,7 @@ blr_last_event_description(ROUTER_INSTANCE *router)
 
     if (!router->mariadb10_compat)
     {
-        if (router->lastEventReceived >= 0 &&
+        if (router->lastEventReceived > 0 &&
             router->lastEventReceived <= MAX_EVENT_TYPE)
         {
             event_desc = event_names[router->lastEventReceived];
@@ -2182,7 +2184,7 @@ blr_last_event_description(ROUTER_INSTANCE *router)
     }
     else
     {
-        if (router->lastEventReceived >= 0 &&
+        if (router->lastEventReceived > 0 &&
             router->lastEventReceived <= MAX_EVENT_TYPE)
         {
             event_desc = event_names[router->lastEventReceived];
@@ -2215,7 +2217,7 @@ blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event)
 
     if (!router->mariadb10_compat)
     {
-        if (event >= 0 &&
+        if (event > 0 &&
             event <= MAX_EVENT_TYPE)
         {
             event_desc = event_names[event];
@@ -2223,7 +2225,7 @@ blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event)
     }
     else
     {
-        if (event >= 0 &&
+        if (event > 0 &&
             event <= MAX_EVENT_TYPE)
         {
             event_desc = event_names[event];

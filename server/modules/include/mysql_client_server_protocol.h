@@ -236,38 +236,38 @@ typedef enum mysql_server_cmd {
         MYSQL_COM_INIT_DB,
         MYSQL_COM_QUERY,
         MYSQL_COM_FIELD_LIST,
-        MYSQL_COM_CREATE_DB, 
+        MYSQL_COM_CREATE_DB,
         MYSQL_COM_DROP_DB,
-        MYSQL_COM_REFRESH, 
-        MYSQL_COM_SHUTDOWN, 
+        MYSQL_COM_REFRESH,
+        MYSQL_COM_SHUTDOWN,
         MYSQL_COM_STATISTICS,
-        MYSQL_COM_PROCESS_INFO, 
-        MYSQL_COM_CONNECT, 
-        MYSQL_COM_PROCESS_KILL, 
-        MYSQL_COM_DEBUG, 
+        MYSQL_COM_PROCESS_INFO,
+        MYSQL_COM_CONNECT,
+        MYSQL_COM_PROCESS_KILL,
+        MYSQL_COM_DEBUG,
         MYSQL_COM_PING,
-        MYSQL_COM_TIME, 
-        MYSQL_COM_DELAYED_INSERT, 
-        MYSQL_COM_CHANGE_USER, 
+        MYSQL_COM_TIME,
+        MYSQL_COM_DELAYED_INSERT,
+        MYSQL_COM_CHANGE_USER,
         MYSQL_COM_BINLOG_DUMP,
-        MYSQL_COM_TABLE_DUMP, 
-        MYSQL_COM_CONNECT_OUT, 
+        MYSQL_COM_TABLE_DUMP,
+        MYSQL_COM_CONNECT_OUT,
         MYSQL_COM_REGISTER_SLAVE,
-        MYSQL_COM_STMT_PREPARE, 
-        MYSQL_COM_STMT_EXECUTE, 
-        MYSQL_COM_STMT_SEND_LONG_DATA, 
+        MYSQL_COM_STMT_PREPARE,
+        MYSQL_COM_STMT_EXECUTE,
+        MYSQL_COM_STMT_SEND_LONG_DATA,
         MYSQL_COM_STMT_CLOSE,
-        MYSQL_COM_STMT_RESET, 
-        MYSQL_COM_SET_OPTION, 
-        MYSQL_COM_STMT_FETCH, 
+        MYSQL_COM_STMT_RESET,
+        MYSQL_COM_SET_OPTION,
+        MYSQL_COM_STMT_FETCH,
         MYSQL_COM_DAEMON,
         MYSQL_COM_END /*< Must be the last */
 } mysql_server_cmd_t;
 
 
-/** 
+/**
  * List of server commands, and number of response packets are stored here.
- * server_command_t is used in MySQLProtocol structure, so for each DCB there is 
+ * server_command_t is used in MySQLProtocol structure, so for each DCB there is
  * one MySQLProtocol and one server command list.
  */
 typedef struct server_command_st {
@@ -279,8 +279,8 @@ typedef struct server_command_st {
 
 /**
  * MySQL Protocol specific state data.
- * 
- * Protocol carries information from client side to backend side, such as 
+ *
+ * Protocol carries information from client side to backend side, such as
  * MySQL session command information and history of earlier session commands.
  */
 typedef struct {
@@ -290,7 +290,7 @@ typedef struct {
         int                 fd;                           /*< The socket descriptor */
         struct dcb          *owner_dcb;                   /*< The DCB of the socket
         * we are running on */
-        SPINLOCK            protocol_lock;              
+        SPINLOCK            protocol_lock;
         server_command_t    protocol_command;             /*< session command list */
         server_command_t*   protocol_cmd_history;         /*< session command history */
         mysql_auth_state_t  protocol_auth_state;          /*< Authentication status */
@@ -350,7 +350,7 @@ int mysql_send_custom_error (
         const char* mysql_message);
 
 GWBUF* mysql_create_custom_error(
-        int packet_number, 
+        int packet_number,
         int affected_rows,
         const char* msg);
 
@@ -398,7 +398,6 @@ void gw_str_xor(
 char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
 int    gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
 int    gw_generate_random_str(char *output, int len);
-char  *gw_strend(register const char *s);
 int    setnonblocking(int fd);
 int    setipaddress(struct in_addr *a, char *p);
 GWBUF* gw_MySQL_get_next_packet(GWBUF** p_readbuf);
@@ -415,9 +414,9 @@ void protocol_archive_srv_command(MySQLProtocol* p);
 
 
 void init_response_status (
-        GWBUF* buf, 
-        mysql_server_cmd_t cmd, 
-        int* npackets, 
+        GWBUF* buf,
+        mysql_server_cmd_t cmd,
+        int* npackets,
         ssize_t* nbytes);
 
 #endif /** _MYSQL_PROTOCOL_H */

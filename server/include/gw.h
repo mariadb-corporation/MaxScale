@@ -78,7 +78,6 @@ bool gw_daemonize(void);
 int  do_read_dcb(DCB *dcb);
 void MySQLListener(int epfd, char *config_bind);
 int  MySQLAccept(DCB *listener);
-char *gw_strend(register const char *s);
 int  do_read_dcb(DCB *dcb);
 int  do_read_10(DCB *dcb, uint8_t *buffer);
 int  MySQLWrite(DCB *dcb, GWBUF *queue);
