@@ -86,7 +86,6 @@
 #include <zlib.h>
 
 extern int load_mysql_users(SERVICE *service);
-extern int blr_save_dbusers(ROUTER_INSTANCE *router);
 extern void blr_master_close(ROUTER_INSTANCE* router);
 extern void blr_file_use_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
