@@ -84,6 +84,7 @@ static char *version_str = "V2.0.0";
 
 /* The router entry points */
 static  ROUTER  *createInstance(SERVICE *service, char **options);
+static void free_instance(ROUTER_INSTANCE *instance);
 static  void    *newSession(ROUTER *instance, SESSION *session);
 static  void    closeSession(ROUTER *instance, void *router_session);
 static  void    freeSession(ROUTER *instance, void *router_session);
@@ -104,8 +105,7 @@ static  int getCapabilities();
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
 static int blr_set_service_mysql_user(SERVICE *service);
-int blr_load_dbusers(ROUTER_INSTANCE *router);
-int blr_save_dbusers(ROUTER_INSTANCE *router);
+static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
@@ -233,7 +233,7 @@ createInstance(SERVICE *service, char **options)
         service->dbref = NULL;
     }
 
-    if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if ((inst = (ROUTER_INSTANCE *)calloc(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
         MXS_ERROR("%s: Error: failed to allocate memory for router instance.",
                   service->name);
@@ -336,6 +336,7 @@ createInstance(SERVICE *service, char **options)
                 value++;
                 if (strcmp(options[i], "uuid") == 0)
                 {
+                    free(inst->uuid);
                     inst->uuid = strdup(value);
                 }
                 else if ((strcmp(options[i], "server_id") == 0) || (strcmp(options[i], "server-id") == 0))
@@ -355,20 +356,23 @@ createInstance(SERVICE *service, char **options)
                                   "Please configure it with a unique positive integer value (1..2^32-1)",
                                   service->name, value);
 
-                        free(inst);
+                        free_instance(inst);
                         return NULL;
                     }
                 }
                 else if (strcmp(options[i], "user") == 0)
                 {
+                    free(inst->user);
                     inst->user = strdup(value);
                 }
                 else if (strcmp(options[i], "password") == 0)
                 {
+                    free(inst->password);
                     inst->password = strdup(value);
                 }
                 else if (strcmp(options[i], "passwd") == 0)
                 {
+                    free(inst->password);
                     inst->password = strdup(value);
                 }
                 else if ((strcmp(options[i], "master_id") == 0) || (strcmp(options[i], "master-id") == 0))
@@ -521,7 +525,7 @@ createInstance(SERVICE *service, char **options)
     {
         MXS_ERROR("Service %s, binlog directory is not specified",
                   service->name);
-        free(inst);
+        free_instance(inst);
         return NULL;
     }
 
@@ -530,7 +534,7 @@ createInstance(SERVICE *service, char **options)
         MXS_ERROR("Service %s, server-id is not configured. "
                   "Please configure it with a unique positive integer value (1..2^32-1)",
                   service->name);
-        free(inst);
+        free_instance(inst);
         return NULL;
     }
 
@@ -551,7 +555,7 @@ createInstance(SERVICE *service, char **options)
                       errno,
                       strerror_r(errno, err_msg, sizeof(err_msg)));
 
-            free(inst);
+            free_instance(inst);
             return NULL;
         }
     }
@@ -565,7 +569,7 @@ createInstance(SERVICE *service, char **options)
             MXS_ERROR("%s: Error allocating dbusers in createInstance",
                       inst->service->name);
 
-            free(inst);
+            free_instance(inst);
             return NULL;
         }
     }
@@ -585,7 +589,7 @@ createInstance(SERVICE *service, char **options)
                 inst->service->users = NULL;
             }
 
-            free(inst);
+            free_instance(inst);
             return NULL;
         }
         server_set_unique_name(server, "binlog_router_master_host");
@@ -673,7 +677,7 @@ createInstance(SERVICE *service, char **options)
                 free(service->dbref);
             }
 
-            free(inst);
+            free_instance(inst);
             return NULL;
         }
     }
@@ -737,6 +741,21 @@ createInstance(SERVICE *service, char **options)
     }
 
     return (ROUTER *)inst;
+}
+
+static void
+free_instance(ROUTER_INSTANCE *instance)
+{
+    free(instance->uuid);
+    free(instance->user);
+    free(instance->password);
+    free(instance->set_master_server_id);
+    free(instance->set_master_uuid);
+    free(instance->set_master_version);
+    free(instance->set_master_hostname);
+    free(instance->fileroot);
+    free(instance->binlogdir);
+    free(instance);
 }
 
 /**
@@ -944,7 +963,7 @@ closeSession(ROUTER *instance, void *router_session)
          */
         slave->state = BLRS_UNREGISTERED;
 
-#if BLFILE_IN_SLAVE
+#ifdef BLFILE_IN_SLAVE
         // TODO: Is it really certain the file can be closed here? If other
         // TODO: threads are using the slave instance, bag things will happen. [JWi].
         if (slave->file)
@@ -1356,7 +1375,7 @@ diagnostics(ROUTER *router, DCB *dcb)
             dcb_printf(dcb, "\t\tNo. of failed reads                      %u\n",
                        session->stats.n_failed_read);
 
-#if DETAILED_DIAG
+#ifdef DETAILED_DIAG
             dcb_printf(dcb, "\t\tNo. of nested distribute events          %u\n",
                        session->stats.n_overrun);
             dcb_printf(dcb, "\t\tNo. of distribute action 1               %u\n",
@@ -1975,8 +1994,8 @@ blr_set_service_mysql_user(SERVICE *service)
  * @param router    The router instance
  * @return              -1 on failure, 0 for no users found, > 0 for found users
  */
-int
-blr_load_dbusers(ROUTER_INSTANCE *router)
+static int
+blr_load_dbusers(const ROUTER_INSTANCE *router)
 {
     int loaded = -1;
     char    path[PATH_MAX + 1] = "";
@@ -2047,7 +2066,7 @@ blr_load_dbusers(ROUTER_INSTANCE *router)
  * @return              -1 on failure, >= 0 on success
  */
 int
-blr_save_dbusers(ROUTER_INSTANCE *router)
+blr_save_dbusers(const ROUTER_INSTANCE *router)
 {
     SERVICE *service;
     char    path[PATH_MAX + 1] = "";
