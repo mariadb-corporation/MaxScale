@@ -1,3 +1,6 @@
+/*lint -e662 */
+/*lint -e661 */
+
 /*
  * This file is distributed as part of MaxScale.  It is free
  * software: you can redistribute it and/or modify it under the terms of the
@@ -90,13 +93,11 @@ void blr_extract_header(uint8_t *pkt, REP_HEADER *hdr);
 static void blr_log_packet(int priority, char *msg, uint8_t *ptr, int len);
 void blr_master_close(ROUTER_INSTANCE *);
 char *blr_extract_column(GWBUF *buf, int col);
-void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
 void poll_fake_write_event(DCB *dcb);
 GWBUF *blr_read_events_from_pos(ROUTER_INSTANCE *router, unsigned long long pos, REP_HEADER *hdr,
                                 unsigned long long pos_end);
 static void blr_check_last_master_event(void *inst);
 extern int blr_check_heartbeat(ROUTER_INSTANCE *router);
-extern char * blr_last_event_description(ROUTER_INSTANCE *router);
 static void blr_log_identity(ROUTER_INSTANCE *router);
 static void blr_distribute_error_message(ROUTER_INSTANCE *router, char *message, char *state,
                                          unsigned int err_code);
@@ -346,7 +347,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
     spinlock_acquire(&router->lock);
     router->active_logs = 1;
     spinlock_release(&router->lock);
-    if (router->master_state < 0 || router->master_state > BLRM_MAXSTATE)
+    if (router->master_state > BLRM_MAXSTATE)
     {
         MXS_ERROR("Invalid master state machine state (%d) for binlog router.",
                   router->master_state);
@@ -391,16 +392,20 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         msg_len = len - 7 - 6; // +7 is where msg starts, 6 is skipped the status message (#42000)
         msg_err = (char *)malloc(msg_len + 1);
 
-        // skip status message only as MYSQL_RESPONSE_ERR(buf) points to GWBUF_DATA(buf) +7
-        strncpy(msg_err, (char *)(MYSQL_ERROR_MSG(buf) + 6), msg_len);
+        if (msg_err)
+        {
+            // skip status message only as MYSQL_RESPONSE_ERR(buf) points to GWBUF_DATA(buf) +7
+            strncpy(msg_err, (char *)(MYSQL_ERROR_MSG(buf) + 6), msg_len);
 
-        /* NULL terminated error string */
-        *(msg_err + msg_len) = '\0';
+            /* NULL terminated error string */
+            *(msg_err + msg_len) = '\0';
+        }
 
         MXS_ERROR("%s: Received error: %lu, '%s' from master during '%s' phase "
                   "of the master state machine.",
                   router->service->name,
-                  mysql_errno, msg_err,
+                  mysql_errno,
+                  msg_err ? msg_err : "(memory failure)",
                   blrm_states[router->master_state]);
         gwbuf_consume(buf, gwbuf_length(buf));
 
@@ -414,7 +419,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         {
             free(router->m_errmsg);
         }
-        router->m_errmsg = msg_err;
+        router->m_errmsg = msg_err ? msg_err : "(memory failure)";
 
         router->active_logs = 0;
         if (router->reconnect_pending)
@@ -914,7 +919,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
              * Allocate a contiguous buffer for the binlog message
              * and copy the complete message into this buffer.
              */
-            int remainder = len;
+            int msg_remainder = len;
             GWBUF *p = pkt;
 
             if ((msg = malloc(len)) == NULL)
@@ -928,20 +933,20 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
             n_bufs = 0;
             ptr = msg;
-            while (p && remainder > 0)
+            while (p && msg_remainder > 0)
             {
                 int plen = GWBUF_LENGTH(p);
-                int n = (remainder > plen ? plen : remainder);
+                int n = (msg_remainder > plen ? plen : msg_remainder);
                 memcpy(ptr, GWBUF_DATA(p), n);
-                remainder -= n;
+                msg_remainder -= n;
                 ptr += n;
-                if (remainder > 0)
+                if (msg_remainder > 0)
                 {
                     p = p->next;
                 }
                 n_bufs++;
             }
-            if (remainder)
+            if (msg_remainder)
             {
                 MXS_ERROR("Expected entire message in buffer "
                           "chain, but failed to create complete "
@@ -949,7 +954,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                           router->binlog_name,
                           router->current_pos);
                 free(msg);
-                msg = NULL;
+                /* msg = NULL; Not needed unless msg will be referred to again */
                 break;
             }
 
@@ -986,18 +991,18 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
         if (len < BINLOG_EVENT_HDR_LEN && router->master_event_state != BLR_EVENT_ONGOING)
         {
-            char *msg = "";
+            char *event_msg = "";
 
             /* Packet is too small to be a binlog event */
             if (ptr[4] == 0xfe) /* EOF Packet */
             {
-                msg = "end of file";
+                event_msg = "end of file";
             }
             else if (ptr[4] == 0xff)    /* EOF Packet */
             {
-                msg = "error";
+                event_msg = "error";
             }
-            MXS_NOTICE("Non-event message (%s) from master.", msg);
+            MXS_NOTICE("Non-event message (%s) from master.", event_msg);
         }
         else
         {
@@ -1034,7 +1039,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         if (msg)
                         {
                             free(msg);
-                            msg = NULL;
+                            /* msg = NULL; Not needed unless msg will be referred to again */
                         }
 
                         break;
@@ -1107,7 +1112,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                     if (router->master_chksum)
                     {
-                        uint32_t size = MIN(len - extra_bytes, router->checksum_size);
+                        uint32_t size = (len - extra_bytes) < router->checksum_size ?
+                            len - extra_bytes : router->checksum_size;
                         router->stored_checksum = crc32(router->stored_checksum,
                                                         ptr + offset,
                                                         size);
@@ -1171,12 +1177,12 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                 if (router->partial_checksum_bytes == MYSQL_CHECKSUM_LEN)
                 {
-                    pktsum = EXTRACT32(&router->partial_checksum);
+                    pktsum = EXTRACT32(router->partial_checksum);
                     if (pktsum != router->stored_checksum)
                     {
                         router->stats.n_badcrc++;
                         free(msg);
-                        msg = NULL;
+                        /* msg = NULL; Not needed unless msg will be referred to again */
                         MXS_ERROR("%s: Checksum error in event from master, "
                                   "binlog %s @ %lu. Closing master connection.",
                                   router->service->name, router->binlog_name,
@@ -1327,7 +1333,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 int event_limit = router->mariadb10_compat ?
                                   MAX_EVENT_TYPE_MARIADB10 : MAX_EVENT_TYPE;
 
-                if (hdr.event_type >= 0 && hdr.event_type <= event_limit)
+                if (hdr.event_type > 0 && hdr.event_type <= event_limit)
                 {
                     router->stats.events[hdr.event_type]++;
                 }
@@ -1517,7 +1523,6 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                 GWBUF *record;
                                 uint8_t *raw_data;
                                 REP_HEADER new_hdr;
-                                int i = 0;
 
                                 pos = router->binlog_position;
                                 end_pos = router->current_pos;
@@ -1529,7 +1534,6 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                                                           &new_hdr,
                                                                           end_pos)) != NULL)
                                 {
-                                    i++;
                                     raw_data = GWBUF_DATA(record);
 
                                     /* distribute event */
@@ -1650,26 +1654,19 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
             else
             {
                 unsigned long mysql_errno = extract_field(ptr + 5, 16);
-                char *msg_err = NULL;
-                int msg_len = 0;
-                msg_err = (char *)ptr + 7 + 6; // err msg starts after 7 bytes + 6 of status message
-                msg_len = len - 7 - 6; // msg len is decreased by 7 and 6
-                msg_err = (char *)malloc(msg_len + 1);
-                strncpy(msg_err, (char *)ptr + 7 + 6, msg_len);
-                /* NULL terminate error string */
-                *(msg_err + msg_len) = '\0';
-
+                int msg_len = len - 7 - 6; // msg len is decreased by 7 and 6
                 spinlock_acquire(&router->lock);
+                free(router->m_errmsg);
+                router->m_errmsg = (char *)malloc(msg_len + 1);
+                if (router->m_errmsg)
+                {
+                    strncpy(router->m_errmsg, (char *)ptr + 7 + 6, msg_len);
+                    /* NULL terminate error string */
+                    *(router->m_errmsg + msg_len) = '\0';
+                }
 
                 /* set mysql_errno */
                 router->m_errno = mysql_errno;
-
-                /* set io error message */
-                if (router->m_errmsg)
-                {
-                    free(router->m_errmsg);
-                }
-                router->m_errmsg = msg_err;
 
                 /* Force stopped state */
                 router->master_state = BLRM_SLAVE_STOPPED;
@@ -1687,12 +1684,12 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
         if (msg)
         {
             free(msg);
-            msg = NULL;
+            /* msg = NULL; Only needed if msg is to be referenced again */
         }
         prev_length = len;
         while (len > 0)
         {
-            int n, plen;
+            unsigned int n, plen;
             plen = GWBUF_LENGTH(pkt);
             n = (plen < len ? plen : len);
             pkt = gwbuf_consume(pkt, n);
@@ -1845,9 +1842,7 @@ typedef enum
 void
 blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *ptr)
 {
-    GWBUF *pkt;
-    uint8_t *buf;
-    ROUTER_SLAVE *slave, *nextslave;
+    ROUTER_SLAVE *slave;
     int action;
     unsigned int cstate;
 
@@ -2187,7 +2182,6 @@ GWBUF
                           unsigned long long pos_end)
 {
     unsigned long long end_pos = 0;
-    struct  stat statb;
     uint8_t hdbuf[19];
     uint8_t *data;
     GWBUF *result;

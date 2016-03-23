@@ -610,5 +610,7 @@ int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 int blr_save_dbusers(const ROUTER_INSTANCE *router);
 char    *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 void blr_file_append(ROUTER_INSTANCE *router, char *file);
+void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
+char * blr_last_event_description(ROUTER_INSTANCE *router);
 
 #endif

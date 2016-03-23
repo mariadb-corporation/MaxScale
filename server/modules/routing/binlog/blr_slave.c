@@ -195,8 +195,8 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     case COM_QUERY:
         slave->stats.n_queries++;
         return blr_slave_query(router, slave, queue);
-        break;
-    case COM_REGISTER_SLAVE:
+
+        case COM_REGISTER_SLAVE:
         if (router->master_state == BLRM_UNCONFIGURED)
         {
             slave->state = BLRS_ERRORED;
@@ -234,8 +234,8 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             /* Master and Slave version OK: continue with slave registration */
             return blr_slave_register(router, slave, queue);
         }
-        break;
-    case COM_BINLOG_DUMP:
+
+        case COM_BINLOG_DUMP:
         {
             char task_name[BLRM_TASK_NAME_LEN + 1] = "";
             int rc = 0;
@@ -252,13 +252,13 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
             return rc;
         }
-        break;
+
     case COM_STATISTICS:
         return blr_statistics(router, slave, queue);
-        break;
+
     case COM_PING:
         return blr_ping(router, slave, queue);
-        break;
+
     case COM_QUIT:
         MXS_DEBUG("COM_QUIT received from slave with server_id %d",
                   slave->serverid);
@@ -352,7 +352,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         int trucate_at  = (ptr - query_text);
         if (trucate_at > 0)
         {
-            if ( (trucate_at + 3) <= strlen(new_text))
+            if ( (trucate_at + 3) <= (int)strlen(new_text))
             {
                 int i;
                 for (i = 0; i < 3; i++)
@@ -695,7 +695,6 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if (strcasecmp(word, "@master_heartbeat_period") == 0)
         {
-            int slave_heartbeat;
             int v_len = 0;
             word = strtok_r(NULL, sep, &brkb);
             if (word)
@@ -839,7 +838,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                 /* remove master.ini */
                 strncpy(path, router->binlogdir, PATH_MAX);
 
-                strncat(path, "/master.ini", PATH_MAX);
+                strncat(path, "/master.ini", PATH_MAX - strlen(path));
 
                 /* remove master.ini */
                 removed_cfg = unlink(path);
@@ -1232,7 +1231,7 @@ blr_slave_send_maxscale_version(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     *ptr++ = 0x04;                                 // Sequence number in response
     *ptr++ = vers_len;                             // Length of result string
     strncpy((char *)ptr, version, vers_len);       // Result string
-    ptr += vers_len;
+    /*  ptr += vers_len;  Not required unless more data is to be added */
     slave->dcb->func.write(slave->dcb, pkt);
     return blr_slave_send_eof(router, slave, 5);
 }
@@ -1269,7 +1268,7 @@ blr_slave_send_server_id(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     *ptr++ = 0x04;                            // Sequence number in response
     *ptr++ = id_len;                          // Length of result string
     strncpy((char *)ptr, server_id, id_len);  // Result string
-    ptr += id_len;
+    /* ptr += id_len; Not required unless more data is to be added */
     slave->dcb->func.write(slave->dcb, pkt);
     return blr_slave_send_eof(router, slave, 5);
 }
@@ -1313,7 +1312,7 @@ blr_slave_send_maxscale_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     ptr += strlen(name);
     *ptr++ = vers_len;                                  // Length of result string
     strncpy((char *)ptr, version, vers_len);            // Result string
-    ptr += vers_len;
+    /* ptr += vers_len; Not required unless more data is to be added */
     slave->dcb->func.write(slave->dcb, pkt);
 
     return blr_slave_send_eof(router, slave, seqno++);
@@ -1813,7 +1812,6 @@ blr_slave_send_slave_hosts(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 static int
 blr_slave_register(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 {
-    GWBUF *resp;
     uint8_t *ptr;
     int slen;
 
@@ -2132,12 +2130,11 @@ blr_build_header(GWBUF  *pkt, REP_HEADER *hdr)
 int
 blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
 {
-    GWBUF *head, *record;
+    GWBUF *record;
     REP_HEADER hdr;
-    int written, rval = 1, burst;
+    int rval = 1, burst;
     int rotating = 0;
     long burst_size;
-    uint8_t *ptr;
     char read_errmsg[BINLOG_ERROR_MSG_LEN + 1];
 
     read_errmsg[BINLOG_ERROR_MSG_LEN] = '\0';
@@ -2958,7 +2955,7 @@ blr_slave_send_disconnected_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave,
 
     *ptr++ = strlen(state);                 // Length of result string
     strncpy((char *)ptr, state, strlen(state));     // Result string
-    ptr += strlen(state);
+    /* ptr += strlen(state); Not required unless more data is to be added */
 
     slave->dcb->func.write(slave->dcb, pkt);
 
@@ -2978,7 +2975,6 @@ blr_slave_send_disconnected_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave,
 static int
 blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int server_id)
 {
-    ROUTER_OBJECT *router_obj = router->service->router;
     ROUTER_SLAVE *sptr;
     int n;
     int server_found = 0;
@@ -3049,7 +3045,6 @@ blr_slave_disconnect_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, int se
 static int
 blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
-    ROUTER_OBJECT *router_obj = router->service->router;
     ROUTER_SLAVE *sptr;
     char server_id[40];
     char state[40];
@@ -3135,7 +3130,6 @@ static int
 blr_slave_send_ok(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
     GWBUF *pkt;
-    uint8_t *ptr;
     uint8_t ok_packet[] = {
         7, 0, 0, // Payload length
         1, // Seqno,
@@ -3466,7 +3460,6 @@ blr_slave_send_error_packet(ROUTER_SLAVE *slave, char *msg, unsigned int err_num
     int len;
     unsigned int mysql_errno = 0;
     char *mysql_state;
-    uint8_t mysql_err[2];
 
     if ((pkt = gwbuf_alloc(strlen(msg) + 13)) == NULL)
     {
@@ -4469,7 +4462,7 @@ blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *var
     *ptr++ = 0x04;                  // Sequence number in response
     *ptr++ = vers_len;              // Length of result string
     strncpy((char *)ptr, value, vers_len);      // Result string
-    ptr += vers_len;
+    /* ptr += vers_len; Not required unless more data is added */
     slave->dcb->func.write(slave->dcb, pkt);
 
     return blr_slave_send_eof(router, slave, 5);
@@ -4544,7 +4537,7 @@ blr_slave_send_variable(ROUTER_INSTANCE *router,
     ptr += var_len;
     *ptr++ = vers_len;              // Length of result string
     strncpy((char *)ptr, value, vers_len);      // Result string with var value
-    ptr += vers_len;
+    /* ptr += vers_len; Not required unless more data is added */
     slave->dcb->func.write(slave->dcb, pkt);
 
     free(old_ptr);
@@ -4884,7 +4877,7 @@ blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         if (msg_len)
         {
             strncpy((char *)ptr, msg_ptr, msg_len); // Result string
-            ptr += msg_len;
+            /* ptr += msg_len; Not required unless more data is added */
         }
 
         slave->dcb->func.write(slave->dcb, pkt);
@@ -5006,7 +4999,7 @@ blr_slave_send_status_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, cha
     ptr += var_len;
     *ptr++ = vers_len;              // Length of result string
     strncpy((char *)ptr, value, vers_len);      // Result string with var value
-    ptr += vers_len;
+    /* ptr += vers_len; Not required unless more data is added */
     slave->dcb->func.write(slave->dcb, pkt);
 
     free(old_ptr);

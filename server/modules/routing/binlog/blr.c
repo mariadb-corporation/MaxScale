@@ -109,7 +109,6 @@ static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
-char * blr_last_event_description(ROUTER_INSTANCE *router);
 extern int MaxScaleUptime();
 
 /** The module object definition */
@@ -1564,7 +1563,8 @@ errorReply(ROUTER *instance,
     {
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
                   "%sattempting reconnect to master %s:%d",
-                  router->service->name, router->m_errno, router->m_errmsg,
+                  router->service->name, router->m_errno,
+                  router->m_errmsg ? router->m_errmsg : "(memory failure)",
                   blrm_states[router->master_state], msg,
                   router->service->dbref->server->name,
                   router->service->dbref->server->port);
