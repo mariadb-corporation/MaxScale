@@ -2,7 +2,10 @@
 
 This document describes upgrading MaxScale from version 1.3 to 1.4.
 
-For more detailed information, please refer to the [release notes](../Release-Notes/MaxScale-1.4.0-Release-Notes.md).
+For more detailed information about MaxScale 1.4, please refer to the
+[MaxScale 1.4.1 release notes](../Release-Notes/MaxScale-1.4.1-Release-Notes.md)
+and
+[MaxScale 1.4.0 release notes](../Release-Notes/MaxScale-1.4.0-Release-Notes.md).
 
 ## Installation
 
@@ -21,7 +24,7 @@ GRANT SELECT ON mysql.tables_priv TO 'username'@'maxscalehost';
 
 ## Password encryption
 
-MaxScale 1.4.0 upgrades the used password encryption algorithms to more secure ones.
+MaxScale 1.4 upgrades the used password encryption algorithms to more secure ones.
 This requires that the password files are recreated with the `maxkeys` tool.
 For more information about how to do this, please read the installation guide:
 [MariaDB MaxScale Installation Guide](../Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
@@ -54,7 +57,7 @@ protocol=MySQLClient
 port=3306
 ```
 
-And here is the new, 1.4.0 compatible configuration style.
+And here is the new, 1.4 compatible configuration style.
 
 ```
 [RW Split Router]
