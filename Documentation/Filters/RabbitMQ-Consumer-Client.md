@@ -14,7 +14,37 @@ The **RabbitMQ Consumer Client** only has one command line argument.
 
 ## Installation
 
-To install the RabbitMQ Consumer Client you ca either use the provided packages or you can compile it from source code. The source code is included as a part of the MaxScale source code and can be found in the `rabbitmq_consumer` folder. Please refer to the [README](../../rabbitmq_consumer/README) in the folder for more detailed instructions about installation and configuration.
+To install the RabbitMQ Consumer Client you ca either use the provided packages or you can compile it from source code. The source code is included as a part of the MaxScale source code and can be found in the `rabbitmq_consumer` folder.
+
+## Building from source
+
+This program requires the librabbitmq and libmysqlclient libraries.
+
+* [librabbitmq-c] (https://github.com/alanxz/rabbitmq-c)
+* [MariaDB Client Library for C 2.0 Series](https://mariadb.com/kb/en/mariadb/client-libraries/client-library-for-c/)
+
+Building with CMake:
+
+```
+cmake .
+```
+
+Variables to pass for CMake:
+
+Path to headers		-DCMAKE_INCLUDE_PATH=<path to headers>
+Path to libraries	-DCMAKE_LIBRARY_PATH=<path to libraries>
+Install prefix		-DCMAKE_INSTALL_PREFIX=<prefix>
+
+
+Separate multiple folders with colons, for example:
+```
+path1:path2:path3
+```
+
+After running CMake run `make` to build the binaries and `make package` to build RPMs.
+
+To build without CMake, use the provided makefile and update the
+include and library directories 'in buildvars.inc'
 
 ## Configuration
 

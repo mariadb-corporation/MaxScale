@@ -24,7 +24,7 @@ GRANT SELECT ON mysql.tables_priv TO 'username'@'maxscalehost';
 MaxScale 1.4.0 upgrades the used password encryption algorithms to more secure ones.
 This requires that the password files are recreated with the `maxkeys` tool.
 For more information about how to do this, please read the installation guide:
-[MariaDB MaxScale Installation Guide](../Documentation/Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
+[MariaDB MaxScale Installation Guide](../Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
 
 ## SSL
 
