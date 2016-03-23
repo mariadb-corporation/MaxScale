@@ -332,8 +332,8 @@ typedef struct {
 
 
 
-#define MYSQL_GET_COMMAND(payload)              (payload[4])
-#define MYSQL_GET_PACKET_NO(payload)            (payload[3])
+#define MYSQL_GET_COMMAND(payload)              (((uint8_t*)payload)[4])
+#define MYSQL_GET_PACKET_NO(payload)            (((uint8_t*)payload)[3])
 #define MYSQL_GET_PACKET_LEN(payload)           (gw_mysql_get_byte3(payload))
 #define MYSQL_GET_ERRCODE(payload)              (gw_mysql_get_byte2(&payload[5]))
 #define MYSQL_GET_STMTOK_NPARAM(payload)        (gw_mysql_get_byte2(&payload[9]))

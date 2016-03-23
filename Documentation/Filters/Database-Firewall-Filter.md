@@ -83,7 +83,7 @@ The rules are defined by using the following syntax:
 ```
 rule NAME deny [wildcard | columns VALUE ... |
      regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF |
-      no_where_clause] [at_times VALUE...] [on_queries [select|update|insert|delete]]
+      no_where_clause] [at_times VALUE...] [on_queries [select|update|insert|delete|grant|revoke|drop|create|alter|use|load]]
 ```
 
 Rules always define a blocking action so the basic mode for the database firewall filter is to allow all queries that do not match a given set of rules. Rules are identified by their name and have a mandatory part and optional parts. You can add comments to the rule files by adding the `#` character at the beginning of the line.
@@ -129,7 +129,21 @@ This rule expects a list of time ranges that define the times when the rule in q
 
 #### `on_queries`
 
-This limits the rule to be active only on certain types of queries.
+This limits the rule to be active only on certain types of queries. The possible values are:
+
+|Keyword|Matching operations           |
+|-------|------------------------------|
+|select |SELECT statements             |
+|insert |INSERT statements             |
+|update |UPDATE statements             |
+|delete |DELETE statements             |
+|grant  |All grant operations          |
+|revoke |All revoke operations         |
+|create |All create operations         |
+|alter  |All alter operations          |
+|drop   |All drop operations           |
+|use    |USE operations                |
+|load   |LOAD DATA operations          |
 
 ### Applying rules to users
 

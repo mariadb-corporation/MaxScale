@@ -508,6 +508,34 @@ bool parse_querytypes(const char* str, RULE* rule)
             {
                 rule->on_queries |= QUERY_OP_DELETE;
             }
+            else if (strcmp(buffer, "use") == 0)
+            {
+                rule->on_queries |= QUERY_OP_CHANGE_DB;
+            }
+            else if (strcmp(buffer, "grant") == 0)
+            {
+                rule->on_queries |= QUERY_OP_GRANT;
+            }
+            else if (strcmp(buffer, "revoke") == 0)
+            {
+                rule->on_queries |= QUERY_OP_REVOKE;
+            }
+            else if (strcmp(buffer, "drop") == 0)
+            {
+                rule->on_queries |= QUERY_OP_DROP;
+            }
+            else if (strcmp(buffer, "create") == 0)
+            {
+                rule->on_queries |= QUERY_OP_CREATE;
+            }
+            else if (strcmp(buffer, "alter") == 0)
+            {
+                rule->on_queries |= QUERY_OP_ALTER;
+            }
+            else if (strcmp(buffer, "load") == 0)
+            {
+                rule->on_queries |= QUERY_OP_LOAD;
+            }
 
             if (done)
             {
@@ -1662,7 +1690,8 @@ bool rule_matches(FW_INSTANCE* my_instance,
         is_real = qc_is_real_query(queue);
     }
 
-    if (rulelist->rule->on_queries == QUERY_OP_UNDEFINED || rulelist->rule->on_queries & optype)
+    if (rulelist->rule->on_queries == QUERY_OP_UNDEFINED || rulelist->rule->on_queries & optype ||
+        (MYSQL_IS_COM_INIT_DB(queue) && rulelist->rule->on_queries & QUERY_OP_CHANGE_DB))
     {
         switch (rulelist->rule->type)
         {
@@ -1917,7 +1946,8 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
     bool rval = false;
 
     if ((rulelist = user->rules_or) &&
-        (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue)))
+        (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue) ||
+         MYSQL_IS_COM_INIT_DB(queue)))
     {
         char *fullquery = modutil_get_SQL(queue);
         while (rulelist)

@@ -32,7 +32,7 @@ SPACE       [[:space:]]*
 COMMENT     ^[[:space:]]*#.*
 INT         [0-9]+
 FLOAT       [0-9]+[.][0-9]+
-SQL         select|insert|update|delete
+SQL         select|insert|update|delete|grant|revoke|drop|create|alter|use|load
 PIPE        [|]
 USER        [^[:space:]]*[@]
 IP          [0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}

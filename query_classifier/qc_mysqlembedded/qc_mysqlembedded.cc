@@ -1676,16 +1676,29 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
                     operation = QUERY_OP_SELECT;
                     break;
 
-                case SQLCOM_CREATE_TABLE:
-                    operation = QUERY_OP_CREATE_TABLE;
-                    break;
-
+                case SQLCOM_CREATE_DB:
+                case SQLCOM_CREATE_EVENT:
+                case SQLCOM_CREATE_FUNCTION:
                 case SQLCOM_CREATE_INDEX:
-                    operation = QUERY_OP_CREATE_INDEX;
+                case SQLCOM_CREATE_PROCEDURE:
+                case SQLCOM_CREATE_SERVER:
+                case SQLCOM_CREATE_SPFUNCTION:
+                case SQLCOM_CREATE_TABLE:
+                case SQLCOM_CREATE_TRIGGER:
+                case SQLCOM_CREATE_USER:
+                case SQLCOM_CREATE_VIEW:
+                    operation = QUERY_OP_CREATE;
                     break;
 
+                case SQLCOM_ALTER_DB:
+                case SQLCOM_ALTER_DB_UPGRADE:
+                case SQLCOM_ALTER_EVENT:
+                case SQLCOM_ALTER_FUNCTION:
+                case SQLCOM_ALTER_PROCEDURE:
+                case SQLCOM_ALTER_SERVER:
                 case SQLCOM_ALTER_TABLE:
-                    operation = QUERY_OP_ALTER_TABLE;
+                case SQLCOM_ALTER_TABLESPACE:
+                    operation = QUERY_OP_ALTER;
                     break;
 
                 case SQLCOM_UPDATE:
@@ -1693,11 +1706,8 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
                     break;
 
                 case SQLCOM_INSERT:
-                    operation = QUERY_OP_INSERT;
-                    break;
-
                 case SQLCOM_INSERT_SELECT:
-                    operation = QUERY_OP_INSERT_SELECT;
+                    operation = QUERY_OP_INSERT;
                     break;
 
                 case SQLCOM_DELETE:
@@ -1708,12 +1718,17 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
                     operation = QUERY_OP_TRUNCATE;
                     break;
 
-                case SQLCOM_DROP_TABLE:
-                    operation = QUERY_OP_DROP_TABLE;
-                    break;
-
+                case SQLCOM_DROP_DB:
+                case SQLCOM_DROP_EVENT:
+                case SQLCOM_DROP_FUNCTION:
                 case SQLCOM_DROP_INDEX:
-                    operation = QUERY_OP_DROP_INDEX;
+                case SQLCOM_DROP_PROCEDURE:
+                case SQLCOM_DROP_SERVER:
+                case SQLCOM_DROP_TABLE:
+                case SQLCOM_DROP_TRIGGER:
+                case SQLCOM_DROP_USER:
+                case SQLCOM_DROP_VIEW:
+                    operation = QUERY_OP_DROP;
                     break;
 
                 case SQLCOM_CHANGE_DB:
@@ -1723,6 +1738,15 @@ qc_query_op_t qc_get_operation(GWBUF* querybuf)
                 case SQLCOM_LOAD:
                     operation = QUERY_OP_LOAD;
                     break;
+
+                case SQLCOM_GRANT:
+                    operation = QUERY_OP_GRANT;
+                        break;
+
+                case SQLCOM_REVOKE:
+                case SQLCOM_REVOKE_ALL:
+                    operation = QUERY_OP_REVOKE;
+                        break;
 
                 default:
                     operation = QUERY_OP_UNDEFINED;

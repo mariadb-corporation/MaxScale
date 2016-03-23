@@ -280,36 +280,36 @@ modutil_get_SQL(GWBUF *buf)
     unsigned char *ptr;
     char *dptr, *rval = NULL;
 
-    if (!modutil_is_SQL(buf) && !modutil_is_SQL_prepare(buf))
+    if (modutil_is_SQL(buf) || modutil_is_SQL_prepare(buf) || MYSQL_IS_COM_INIT_DB(buf))
     {
-        return rval;
-    }
-    ptr = GWBUF_DATA(buf);
-    length = *ptr++;
-    length += (*ptr++ << 8);
-    length += (*ptr++ << 16);
+        ptr = GWBUF_DATA(buf);
+        length = *ptr++;
+        length += (*ptr++ << 8);
+        length += (*ptr++ << 16);
 
-    if ((rval = (char *)malloc(length + 1)) == NULL)
-    {
-        return NULL;
-    }
-    dptr = rval;
-    ptr += 2;  // Skip sequence id  and COM_QUERY byte
-    len = GWBUF_LENGTH(buf) - 5;
-    while (buf && length > 0)
-    {
-        int clen = length > len ? len : length;
-        memcpy(dptr, ptr, clen);
-        dptr += clen;
-        length -= clen;
-        buf = buf->next;
-        if (buf)
+        if ((rval = (char *) malloc(length + 1)))
         {
-            ptr = GWBUF_DATA(buf);
-            len = GWBUF_LENGTH(buf);
+            dptr = rval;
+            ptr += 2; // Skip sequence id  and COM_QUERY byte
+            len = GWBUF_LENGTH(buf) - 5;
+
+            while (buf && length > 0)
+            {
+                int clen = length > len ? len : length;
+                memcpy(dptr, ptr, clen);
+                dptr += clen;
+                length -= clen;
+                buf = buf->next;
+
+                if (buf)
+                {
+                    ptr = GWBUF_DATA(buf);
+                    len = GWBUF_LENGTH(buf);
+                }
+            }
+            *dptr = 0;
         }
     }
-    *dptr = 0;
     return rval;
 }
 
