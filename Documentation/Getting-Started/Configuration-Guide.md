@@ -396,8 +396,8 @@ MaxScale will execute the following query to retrieve the users. If you suspect 
 SELECT DISTINCT
     user.user AS user,
     user.host AS host,
-    user.%s AS password,
-    concat(user.user,user.host,user.%s,
+    user.password AS password,
+    concat(user.user,user.host,user.password,
       IF((user.Select_priv+0)||find_in_set('Select',Coalesce(tp.Table_priv,0)),'Y','N') ,
       COALESCE( db.db,tp.db, '')) AS userdata,
     user.Select_priv AS anydb,
@@ -406,8 +406,11 @@ SELECT DISTINCT
     mysql.user LEFT JOIN
     mysql.db ON user.user=db.user AND user.host=db.host LEFT JOIN
     mysql.tables_priv tp ON user.user=tp.user AND user.host=tp.host
-    WHERE user.user IS NOT NULL AND user.user <> ''"
+    WHERE user.user IS NOT NULL AND user.user <> ''
 ```
+
+In verions of MySQL 5.7.6 and later, the `Password` column was replaced by `authentication_string`. Change `user.password` above with `user.authentication_string`.
+
 
 #### `passwd`
 
