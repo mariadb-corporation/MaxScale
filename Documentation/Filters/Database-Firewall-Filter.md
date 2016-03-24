@@ -22,15 +22,13 @@ passwd=mypasswd
 filters=DatabaseFirewall
 ```
 
-### Filter Options
-
-The database firewall filter supports a single option, `ignorecase`. This will set the regular expression matching to case-insensitive mode.
-
 ### Filter Parameters
+
+The database firewall filter has one mandatory parameter, `rules`.
 
 #### `rules`
 
-The database firewall filter has one mandatory parameter that defines the location of the rule file. It expects an absolute path to the rule file.
+Absolute path to a file with the rule definitions in it. The file should be readable by the user MaxScale is run with.
 
 #### `action`
 
@@ -110,6 +108,8 @@ This rule expects a list of values after the `columns` keyword. These values are
 #### `regex`
 
 This rule blocks all queries matching a regex enclosed in single or double quotes.
+The regex string expects a PCRE2 syntax regular expression. For more information
+about the PCRE2 syntax, read the [PCRE2 documentation](http://www.pcre.org/current/doc/html/pcre2syntax.html).
 
 #### `limit_queries`
 
