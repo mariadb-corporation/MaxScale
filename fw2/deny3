@@ -1,0 +1,2 @@
+use test;
+load data local infile 'test.csv' into table test.t1;

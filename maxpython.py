@@ -1,3 +1,4 @@
+import sys
 import subprocess
 import os
 import time
@@ -11,17 +12,32 @@ class SQLConnection:
         self.user = user
         self.password = password
 
+    # Connect to a server
     def connect(self):
         self.conn = jaydebeapi.connect("org.mariadb.jdbc.Driver", ["jdbc:mariadb://" + self.host + ":" + self.port, self.user, self.password],"./maxscale/java/mariadb-java-client-1.3.3.jar")
 
-# The result is discarded
-    def query(self, query):
-        try:
-            curs = self.conn.cursor()
-            curs.execute(query)
-            data = curs.fetchall()
-        except Error as err:
-            print(err)
+    # Start a transaction
+    def begin(self):
+        curs = self.conn.cursor()
+        curs.execute("BEGIN")
+        curs.close()
+    # Commit a transaction
+    def commit(self):
+        curs = self.conn.cursor()
+        curs.execute("COMMIT")
+        curs.close()
+
+    # Query and test if the result matches the expected value if one is provided
+    def query(self, query, compare = None, column = 0):
+        curs = self.conn.cursor()
+        curs.execute(query)
+        data = curs.fetchall()
+        if compare:
+            for row in data:
+                if str(row[column]) == compare:
+                    return True
+            return False
+        return True
 
     def disconnect(self):
         self.conn.close()
@@ -36,10 +52,12 @@ class MaxScaleTest:
     def __init__(self, testname = "python_test"):
         subprocess.call(os.getcwd() + "/non_native_setup " + str(testname), shell=True)
         envfile = open("test.environment")
+
         for var in envfile.readlines():
             part = var.partition("=")
             if part[0] not in os.environ:
                 os.putenv(part[0], part[2])
+
         # Currently only RWSplit is available
         self.rwsplit = SQLConnection(host = os.getenv("maxscale_IP"), port = "4006", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
         self.rcmaster = SQLConnection(host = os.getenv("maxscale_IP"), port = "4008", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
