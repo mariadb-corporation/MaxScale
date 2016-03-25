@@ -10,16 +10,16 @@
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    char sql[1024];
+    char sql[10240];
 
     Test->connect_maxscale();
     create_t1(Test->conn_rwsplit);
 
     Test->tprintf("INSERTing data\n");
-    for (int i = 0; i < 200000; i++)
+    for (int i = 0; i < 2000; i++)
     {
         Test->set_timeout(10);
-        sprintf(sql, "INSERT INTO t1 (x1, fl) VALUES (%d, 1)", i);
+        create_insert_string(sql, 100, i);
         Test->try_query(Test->conn_rwsplit, sql);
     }
     Test->tprintf("done, sleeping\n");
