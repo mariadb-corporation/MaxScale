@@ -278,8 +278,12 @@ add_test_executable(fwf_syntax.cpp fwf_syntax fwf_syntax)
 add_test_executable(mxs37_table_privilege.cpp mxs37_table_privilege replication)
 
 add_test_executable(different_size_rwsplit.cpp different_size_rwsplit replication)
+set_tests_properties(different_size_rwsplit PROPERTIES TIMEOUT 3600)
 add_test_executable(different_size_binlog.cpp different_size_binlog setup_binlog)
+set_tests_properties(different_size_binlog PROPERTIES TIMEOUT 3600)
 add_test_executable(max_connections.cpp max_connections replication)
+set_tests_properties(max_connections PROPERTIES TIMEOUT 3600)
+add_test_executable(lots_of_rows.cpp lots_of_rows galera)
 
 # Python based tests
 add_test_script(mxs585.py replication)
