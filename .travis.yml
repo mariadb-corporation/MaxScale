@@ -35,6 +35,7 @@ addons:
     project:
       name: "mariadb-corporation/MaxScale"
       description: "Build submitted via Travis CI"
+      notification_email: coverity-maxscale@mariadb.com
     build_command_prepend: "make install; ./postinst"
     build_command:   "make -j 4"
     branch_pattern: coverity_scan
