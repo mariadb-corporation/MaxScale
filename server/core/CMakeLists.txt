@@ -8,7 +8,7 @@ elseif(WITH_TCMALLOC)
   target_link_libraries(maxscale-common ${TCMALLOC_LIBRARIES})
 endif()
 
-add_dependencies(maxscale-common pcre2)
+add_dependencies(maxscale-common pcre2 connector-c)
 install(TARGETS maxscale-common DESTINATION ${MAXSCALE_LIBDIR})
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 
