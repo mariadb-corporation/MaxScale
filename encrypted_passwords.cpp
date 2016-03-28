@@ -52,8 +52,8 @@ int main(int argc, char *argv[])
 {
     TestConnections * test = new TestConnections(argc, argv);
 
-    Test->global_result += create_key(test);
-    Test->global_result += hash_password(test);
+    test->global_result += create_key(test);
+    test->global_result += hash_password(test);
 
     test->copy_all_logs();
     return test->global_result;
