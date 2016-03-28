@@ -287,6 +287,7 @@ set_tests_properties(different_size_binlog PROPERTIES TIMEOUT 3600)
 add_test_executable(max_connections.cpp max_connections replication)
 set_tests_properties(max_connections PROPERTIES TIMEOUT 3600)
 add_test_executable(lots_of_rows.cpp lots_of_rows galera)
+add_test_executable(encrypted_passwords.cpp encrypted_passwords replication)
 
 # Python based tests
 add_test_script(mxs585.py replication)
