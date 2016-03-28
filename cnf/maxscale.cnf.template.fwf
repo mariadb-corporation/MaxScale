@@ -163,3 +163,5 @@ filebase=/tmp/QueryLog
 type=filter
 module=dbfwfilter
 rules=/###access_homedir###/rules/rules.txt
+log_match=true
+log_no_match=true
