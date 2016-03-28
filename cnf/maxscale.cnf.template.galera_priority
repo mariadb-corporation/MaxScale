@@ -11,7 +11,7 @@ servers=server1,server2,server3,server4
 user=skysql
 passwd=skysql
 use_priority=true
-monitor=interval=1000
+monitor_interval=1000
 
 [RW Split Router]
 type=service
