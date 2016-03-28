@@ -26,5 +26,9 @@ int main(int argc, char *argv[])
     Test->close_maxscale_connections();
     Test->check_maxscale_alive();
 
+    Test->tprintf("Maxscale_full_version_start:");
+    Test->ssh_maxscale(FALSE, "maxscale --version-full");
+    Test->tprintf("Maxscale_full_version_end:");
+
     Test->copy_all_logs(); return(Test->global_result);
 }
