@@ -35,7 +35,8 @@ int hash_password(TestConnections *test)
     int res = 0;
     test->tprintf("Creating a new encrypted password\n");
     char *enc_pw = test->ssh_maxscale_output(true, "maxpasswd /var/lib/maxscale/ skysql");
-    test->ssh_maxscale(true, "sed -i 's/passwd=skysql/passwd=%s/' /etc/maxscale.cnf", enc_pw);
+    test->tprintf("Encrypted password is: %s\n", enc_pw);
+    test->ssh_maxscale(true, "sed -i -e 's/passwd=skysql/passwd=%s/' /etc/maxscale.cnf", enc_pw);
     free(enc_pw);
 
     test->tprintf("Starting MaxScale and waiting 15 seconds\n");
