@@ -11,14 +11,18 @@ int create_key(TestConnections *test)
     int res = 0;
     test->set_timeout(120);
     test->tprintf("Creating new encryption keys\n");
-    test->ssh_maxscale(true, "test -f /var/lib/maxscale/.secrets && rm /var/lib/maxscale/.secrets");
+    test->ssh_maxscale(true, "test -f /var/lib/maxscale/.secrets && sudo rm /var/lib/maxscale/.secrets");
     test->ssh_maxscale(true, "maxkeys");
-    char *result = test->ssh_maxscale_output(false, "test -f /var/lib/maxscale/.secrets && echo SUCCESS");
+    char *result = test->ssh_maxscale_output(false, "sudo test -f /var/lib/maxscale/.secrets && echo SUCCESS");
 
-    if (strcmp(result, "SUCCESS") != 0)
+    if (strncmp(result, "SUCCESS", 7) != 0)
     {
-        test->tprintf("FAILURE: /var/lib/maxscale/.secrets was not created\n");
-        res = 1;
+	test->tprintf("FAILURE: /var/lib/maxscale/.secrets was not created\n");
+	res = 1;
+    }
+    else
+    {
+	test->ssh_maxscale(true, "sudo chown maxscale:maxscale /var/lib/maxscale/.secrets");
     }
 
     free(result);
@@ -35,8 +39,15 @@ int hash_password(TestConnections *test)
     int res = 0;
     test->tprintf("Creating a new encrypted password\n");
     char *enc_pw = test->ssh_maxscale_output(true, "maxpasswd /var/lib/maxscale/ skysql");
+
+    char *ptr = strchr(enc_pw, '\n');
+    if (ptr)
+    {
+	*ptr = '\0';
+    }
+
     test->tprintf("Encrypted password is: %s\n", enc_pw);
-    test->ssh_maxscale(true, "sed -i -e 's/passwd=skysql/passwd=%s/' /etc/maxscale.cnf", enc_pw);
+    test->ssh_maxscale(true, "sed -i -e 's/ *passwd *= *skysql/passwd=%s/' /etc/maxscale.cnf", enc_pw);
     free(enc_pw);
 
     test->tprintf("Starting MaxScale and waiting 15 seconds\n");
