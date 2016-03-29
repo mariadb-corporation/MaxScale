@@ -60,13 +60,6 @@ if(BUILD_SLAVELAG)
   install(TARGETS slavelag DESTINATION ${MAXSCALE_LIBDIR})
 endif()
 
-if(BUILD_TOOLS)
-  add_executable(ruleparser dbfwfilter.c)
-  target_compile_definitions(ruleparser PUBLIC "BUILD_RULE_PARSER")
-  target_link_libraries(ruleparser maxscale-common)
-  install(TARGETS ruleparser DESTINATION ${MAXSCALE_BINDIR})
-endif()
-
 add_subdirectory(hint)
 add_subdirectory(dbfwfilter)
 
