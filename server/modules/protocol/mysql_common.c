@@ -47,6 +47,7 @@
  */
 
 #include <gw.h>
+#include <utils.h>
 #include "mysql_client_server_protocol.h"
 #include <skygw_types.h>
 #include <skygw_utils.h>

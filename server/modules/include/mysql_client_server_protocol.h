@@ -409,7 +409,6 @@ void gw_str_xor(
 char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
 int    gw_hex2bin(uint8_t *out, const char *in, unsigned int len);
 int    gw_generate_random_str(char *output, int len);
-char  *gw_strend(register const char *s);
 int    setnonblocking(int fd);
 int    setipaddress(struct in_addr *a, char *p);
 GWBUF* gw_MySQL_get_next_packet(GWBUF** p_readbuf);
