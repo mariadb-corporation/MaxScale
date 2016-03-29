@@ -50,9 +50,8 @@ int hash_password(TestConnections *test)
     test->ssh_maxscale(true, "sed -i -e 's/passwd[[:space:]]*=[[:space:]]*skysql/passwd=%s/' /etc/maxscale.cnf", enc_pw);
     free(enc_pw);
 
-    test->tprintf("Starting MaxScale and waiting 15 seconds\n");
+    test->tprintf("Starting MaxScale\n");
     test->start_maxscale();
-    sleep(15);
 
     test->tprintf("Checking if MaxScale is alive\n");
     return test->check_maxscale_alive();
