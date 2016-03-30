@@ -61,7 +61,7 @@ than the non-MD5 version. This means that a new password file needs to be
 created with `maxkeys`. The configuration file should be updated to use the new
 passwords. This can be done with the help of the `maxpasswd` utility. For more
 details about how to do this, please refer to the installation guide:
-[MariaDB MaxScale Installation Guide](../Documentation/Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
+[MariaDB MaxScale Installation Guide](../Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
 
 ## Removed Features
 

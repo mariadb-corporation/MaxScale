@@ -108,8 +108,8 @@
     WHERE privilege_type='SHOW DATABASES' AND REPLACE(GRANTEE, \'\\'\',\'\')=CURRENT_USER()) AS tbl2)"
 
 #define ERROR_NO_SHOW_DATABASES "%s: Unable to load database grant information, \
-    MaxScale authentication will proceed without including database permissions. \
-    To correct this GRANT SHOW DATABASES ON *.* privilege to the user %s."
+MaxScale authentication will proceed without including database permissions. \
+See earlier error messages for user '%s' for more information."
 
 static int add_databases(SERVICE *service, MYSQL *con);
 static int add_wildcard_users(USERS *users, char* name, char* host,
@@ -573,6 +573,7 @@ add_databases(SERVICE *service, MYSQL *con)
     {
         ndbs = 0;
 
+        MXS_ERROR("Failed to retrieve database names: %s", mysql_error(con));
         MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
     }
 
@@ -678,6 +679,7 @@ get_databases(SERVICE *service, MYSQL *con)
     {
         ndbs = 0;
 
+        MXS_ERROR("Failed to retrieve database names: %s", mysql_error(con));
         MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
     }
 
@@ -972,6 +974,7 @@ get_all_users(SERVICE *service, USERS *users)
                  * try loading users from mysql.user without DB names.
                  */
 
+                MXS_ERROR("Failed to retrieve users: %s", mysql_error(con));
                 MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
 
                 userquery = get_users_query(server->server->server_string,
@@ -1465,6 +1468,7 @@ get_users(SERVICE *service, USERS *users)
              * We have got ER_TABLEACCESS_DENIED_ERROR
              * try loading users from mysql.user without DB names.
             */
+            MXS_ERROR("Failed to retrieve users: %s", mysql_error(con));
             MXS_ERROR(ERROR_NO_SHOW_DATABASES, service->name, service_user);
 
             userquery = get_users_query(server->server->server_string,
@@ -2724,6 +2728,34 @@ bool check_service_permissions(SERVICE* service)
             mysql_free_result(res);
         }
     }
+
+    if (mysql_query(mysql, "SELECT user, host, db FROM mysql.tables_priv limit 1") != 0)
+    {
+        if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
+        {
+            MXS_WARNING("%s: User '%s' is missing SELECT privileges on mysql.tables_priv table. "
+                        "Database name will be ignored in authentication. MySQL error message: %s",
+                        service->name, user, mysql_error(mysql));
+        }
+        else
+        {
+            MXS_ERROR("%s: Failed to query from mysql.db table. MySQL error message: %s",
+                      service->name, mysql_error(mysql));
+        }
+    }
+    else
+    {
+        if ((res = mysql_use_result(mysql)) == NULL)
+        {
+            MXS_ERROR("%s: Result retrieval failed when checking for permissions "
+                      "to the mysql.db table: %s", service->name, mysql_error(mysql));
+        }
+        else
+        {
+            mysql_free_result(res);
+        }
+    }
+
     mysql_close(mysql);
     free(dpasswd);
     return rval;

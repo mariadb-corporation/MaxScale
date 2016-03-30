@@ -59,6 +59,8 @@ passwd=<password>
 ### `max_slave_replication_lag`
 **`max_slave_replication_lag`** specifies how many seconds a slave is allowed to be behind the master. If the lag is bigger than configured value a slave can't be used for routing.
 
+This feature is disabled by default.
+
 	max_slave_replication_lag=<allowed lag in seconds>
 
 This applies to Master/Slave replication with MySQL monitor and `detect_replication_lag=1` options set.
@@ -69,7 +71,9 @@ Please note max_slave_replication_lag must be greater than monitor interval.
 
 **`use_sql_variables_in`** specifies where should queries, which read session variable, be routed. The syntax for `use_sql_variable_in` is:
 
-    use_sql_variables_in=[master|all] (default: all)
+    use_sql_variables_in=[master|all]
+
+The default is to use SQL variables in all servers.
 
 When value all is used, queries reading session variables can be routed to any available slave (depending on selection criteria). Note, that queries modifying session variables are routed to all backend servers by default, excluding write queries with embedded session variable modifications, such as:
 
@@ -85,6 +89,8 @@ server definitions and it should exist in all the servers used by this router.
 For more information, see the description of the `weightby` parameter in
 the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
+No weighting is used by default.
+
 ## Router options
 
 **`router_options`** may include multiple **readwritesplit**-specific options. All the options are parameter-value pairs. All parameters listed in this section must be configured as a value in `router_options`.
@@ -97,7 +103,7 @@ router_options=<option>,<option>
 
 ### `slave_selection_criteria`
 
-This option controls how the readwritesplit router chooses the slaves it connects to and how the load balancing is done. The default behavior is to route read queries to the slave server with the lowest amount of ongoing queries.
+This option controls how the readwritesplit router chooses the slaves it connects to and how the load balancing is done. The default behavior is to route read queries to the slave server with the lowest amount of ongoing queries i.e. `LEAST_CURRENT_OPERATIONS`.
 
 The option syntax:
 
@@ -127,7 +133,7 @@ When a limitation is set, it effectively creates a cap on the session's memory c
 
 ### `disable_sescmd_history`
 
-**`disable_sescmd_history`** disables the session command history. This way no history is stored and if a slave server fails, the router will not try to replace the failed slave. Disabling session command history will allow connection pooling without causing a constant growth in the memory consumption.
+**`disable_sescmd_history`** disables the session command history. This way no history is stored and if a slave server fails, the router will not try to replace the failed slave. Disabling session command history will allow connection pooling without causing a constant growth in the memory consumption. The session command history is enabled by default.
 
 ```
 # Disable the session command history
@@ -137,6 +143,8 @@ disable_sescmd_history=true
 ### `master_accept_reads`
 
 **`master_accept_reads`** allows the master server to be used for reads. This is a useful option to enable if you are using a small number of servers and wish to use the master for reads as well.
+
+By default, no reads are sent to the master.
 
 ```
 # Use the master for reads
