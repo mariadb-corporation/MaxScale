@@ -6,6 +6,7 @@
 #include <query_classifier.h>
 #include <buffer.h>
 #include <mysql.h>
+#include <gwdirs.h>
 
 int main(int argc, char** argv)
 {
@@ -27,6 +28,11 @@ int main(int argc, char** argv)
         printf("Utils library init failed.\n");
         return 1;
     }
+
+    set_libdir(strdup("../../qc_mysqlembedded/"));
+    set_datadir(strdup("/tmp"));
+    set_langdir(strdup("."));
+    set_process_datadir(strdup("/tmp"));
 
     qc_init("qc_mysqlembedded");
     qc_thread_init();

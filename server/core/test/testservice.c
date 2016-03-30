@@ -40,6 +40,7 @@
 #include <maxscale_test.h>
 #include <test_utils.h>
 #include <service.h>
+#include <gwdirs.h>
 
 /**
  * test1	Allocate a service and do lots of other things
@@ -64,6 +65,7 @@ init_test_env(NULL);
         ss_info_dassert(NULL == service, "New service with invalid router should be null");
         ss_info_dassert(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
         ss_dfprintf(stderr, "\t..done\nValid service creation, router testroute.");
+        set_libdir(strdup("../../modules/routing/"));
         service = service_alloc("MyService", "testroute");
         mxs_log_flush_sync();
         ss_info_dassert(NULL != service, "New service with valid router must not be null");
@@ -72,6 +74,7 @@ init_test_env(NULL);
         ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
         ss_info_dassert(0 != serviceAddProtocol(service, "testprotocol", "localhost", 9876, "MySQL", NULL), "Add Protocol should succeed");
         ss_info_dassert(0 != serviceHasProtocol(service, "testprotocol", 9876), "Service should have new protocol as requested");
+        set_libdir(strdup("../../modules/protocol/"));
         serviceStartProtocol(service, "testprotocol", 9876);
         mxs_log_flush_sync();
         ss_dfprintf(stderr, "\t..done\nStarting Service.");

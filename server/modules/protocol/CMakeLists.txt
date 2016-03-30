@@ -22,7 +22,6 @@ if(BUILD_TESTS)
   add_library(testprotocol SHARED testprotocol.c)
   set_target_properties(testprotocol PROPERTIES VERSION "1.0.0")
   install(TARGETS testprotocol DESTINATION ${MAXSCALE_LIBDIR})
-  add_subdirectory(test)
 endif()
 
 add_library(maxscaled SHARED maxscaled.c)

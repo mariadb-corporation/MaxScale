@@ -275,8 +275,10 @@ main(int argc, char **argv)
 int	result = 0;
 char	*home, buf[1024];
 
+    /** Set datadir to /tmp */
+    set_datadir(strdup("/tmp"));
+
 	/* Unlink any existing password file before running this test */
-	
 	sprintf(buf, "%s/passwd", get_datadir());
     if(!is_valid_posix_path(buf))
         exit(1);

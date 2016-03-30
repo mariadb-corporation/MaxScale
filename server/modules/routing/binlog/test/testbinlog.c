@@ -90,6 +90,7 @@ int main(int argc, char **argv) {
 	mxs_log_set_priority_enabled(LOG_NOTICE, false);
 	mxs_log_set_priority_enabled(LOG_ERR, false);
 
+    set_libdir(strdup(".."));
 	service = service_alloc("test_service", "binlogrouter");
 	service->credentials.name = strdup("foo");
 	service->credentials.authdata = strdup("bar");

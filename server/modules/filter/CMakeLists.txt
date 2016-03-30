@@ -62,7 +62,3 @@ endif()
 
 add_subdirectory(hint)
 add_subdirectory(dbfwfilter)
-
-if(BUILD_TESTS)
-  add_subdirectory(test)
-endif()

@@ -81,7 +81,7 @@ macro(set_variables)
   set(WITH_JEMALLOC FALSE CACHE BOOL "Use jemalloc as the memory allocator")
 
   # Build tests
-  set(BUILD_TESTS FALSE CACHE BOOL "Build tests")
+  set(BUILD_TESTS TRUE CACHE BOOL "Build tests")
 
   # Build packages
   set(PACKAGE FALSE CACHE BOOL "Enable package building (this disables local installation of system files)")

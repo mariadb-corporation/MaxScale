@@ -7,6 +7,7 @@
 #include <buffer.h>
 #include <mysql.h>
 #include <unistd.h>
+#include <gwdirs.h>
 
 int main(int argc, char** argv)
 {
@@ -17,6 +18,11 @@ int main(int argc, char** argv)
 	int rd = 0,buffsz = getpagesize(),strsz = 0,ex_val = 0;
 	char buffer[1024], *strbuff = (char*)calloc(buffsz,sizeof(char));
 	FILE *input,*expected;
+
+    set_libdir(strdup("../qc_mysqlembedded/"));
+    set_datadir(strdup("/tmp"));
+    set_langdir(strdup("."));
+    set_process_datadir(strdup("/tmp"));
 
     qc_init("qc_mysqlembedded");
     qc_thread_init();
