@@ -1981,24 +1981,37 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
                     blr_slave_rotate(router, slave, ptr);
                 }
 
-                blr_send_event(BLR_THREAD_ROLE_MASTER, binlog_name, binlog_pos, slave, hdr, ptr);
-
-                spinlock_acquire(&slave->catch_lock);
-                if (hdr->event_type != ROTATE_EVENT)
+                if (blr_send_event(BLR_THREAD_ROLE_MASTER, binlog_name, binlog_pos, slave, hdr, ptr))
                 {
-                    slave->binlog_pos = hdr->next_pos;
-                }
-                if (slave->overrun)
-                {
-                    slave->stats.n_overrun++;
-                    slave->overrun = 0;
-                    poll_fake_write_event(slave->dcb);
+                    spinlock_acquire(&slave->catch_lock);
+                    if (hdr->event_type != ROTATE_EVENT)
+                    {
+                        slave->binlog_pos = hdr->next_pos;
+                    }
+                    if (slave->overrun)
+                    {
+                        slave->stats.n_overrun++;
+                        slave->overrun = 0;
+                        poll_fake_write_event(slave->dcb);
+                    }
+                    else
+                    {
+                        slave->cstate &= ~CS_BUSY;
+                    }
+                    spinlock_release(&slave->catch_lock);
                 }
                 else
                 {
-                    slave->cstate &= ~CS_BUSY;
+                    MXS_WARNING("Slave %s:%i, server-id %d, binlog '%s, position %u: "
+                                "Master-thread could not send event to slave, closing connection.",
+                                slave->dcb->remote,
+                                ntohs((slave->dcb->ipv4).sin_port),
+                                slave->serverid,
+                                binlog_name,
+                                binlog_pos);
+                    slave->state = BLRS_ERRORED;
+                    dcb_close(slave->dcb);
                 }
-                spinlock_release(&slave->catch_lock);
                 break;
 
             case SLAVE_EVENT_ALREADY_SENT:
@@ -2677,6 +2690,7 @@ bool blr_send_event(blr_thread_role_t role,
                   role == BLR_THREAD_ROLE_MASTER ? "master" : "slave",
                   slave->lsi_sender_tid,
                   slave->lsi_sender_role == BLR_THREAD_ROLE_MASTER ? "master" : "slave");
+        return false;
     }
 
     /** Check if the event and the OK byte fit into a single packet  */

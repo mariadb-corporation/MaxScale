@@ -2303,6 +2303,23 @@ blr_slave_catchup(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, bool large)
             slave->stats.n_events++;
             burst_size -= hdr.event_size;
         }
+        else
+        {
+            MXS_WARNING("Slave %s:%i, server-id %d, binlog '%s, position %u: "
+                        "Slave-thread could not send event to slave, closing connection.",
+                        slave->dcb->remote,
+                        ntohs((slave->dcb->ipv4).sin_port),
+                        slave->serverid,
+                        binlog_name,
+                        binlog_pos);
+#ifndef BLFILE_IN_SLAVE
+            blr_close_binlog(router, file);
+#endif
+            slave->state = BLRS_ERRORED;
+            dcb_close(slave->dcb);
+            return 0;
+        }
+
         gwbuf_free(record);
         record = NULL;
 
