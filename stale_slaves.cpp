@@ -79,6 +79,28 @@ int main(int argc, char **argv)
 		      "Server IDs don't match when they should: %s - %s",
 		      first_slave, second_slave);
 
+    test->tprintf("Stopping replication on node %d\n", found + 1);
+    execute_query(test->repl->nodes[found], "stop slave");
+    sleep(15);
+
+    test->tprintf("Stopped replication, expecting a different slave\n");
+    test->connect_readconn_slave();
+    find_field(test->conn_slave, "SELECT @@server_id", "@@server_id", second_slave);
+    test->add_result(strcmp(first_slave, second_slave) == 0,
+		      "Server IDs match when they shouldn't: %s - %s",
+		      first_slave, second_slave);
+
+    test->tprintf("Starting replication on node %d\n", found + 1);
+    execute_query(test->repl->nodes[found], "start slave");
+    sleep(15);
+
+    test->tprintf("Started replication, expecting the server ID of the first slave server\n");
+    test->connect_readconn_slave();
+    find_field(test->conn_slave, "SELECT @@server_id", "@@server_id", second_slave);
+    test->add_result(strcmp(first_slave, second_slave) != 0,
+		      "Server IDs don't match when they should: %s - %s",
+		      first_slave, second_slave);
+
     test->copy_all_logs();
     return rval;
 }
