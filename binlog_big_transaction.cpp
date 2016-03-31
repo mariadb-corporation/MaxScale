@@ -53,7 +53,7 @@ void *query_thread( void *ptr )
     while (exit_flag == 0) {
         sprintf(cmd, "DISCONNECT SERVER %d", i);
         execute_query(conn, cmd);
-        i++; if (i > Test->repl->N) {i = 3; sleep(5); execute_query(conn, (char *) "DISCONNECT SERVER ALL");}
+        i++; if (i > Test->repl->N) {i = 3; sleep(30); execute_query(conn, (char *) "DISCONNECT SERVER ALL");}
         sleep(5);
     }
     return NULL;

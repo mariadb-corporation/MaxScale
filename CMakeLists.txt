@@ -287,6 +287,8 @@ set_tests_properties(max_connections PROPERTIES TIMEOUT 3600)
 add_test_executable(lots_of_rows.cpp lots_of_rows galera)
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication)
 add_test_executable(test_hints.cpp test_hints hints2)
+add_test_executable(mxs652_bad_ssl.cpp mxs652_bad_ssl bad_ssl)
+
 
 if(STALE_SLAVES)
   add_test_executable(stale_slaves.cpp stale_slaves replication)
