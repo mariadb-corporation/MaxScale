@@ -43,6 +43,12 @@ int main(int argc, char** argv)
     set_langdir(strdup("."));
     set_process_datadir(strdup("/tmp"));
 
+    if (!mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+    {
+        fprintf(stderr, "%s: Could not initialize log.\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
     qc_init("qc_mysqlembedded");
     qc_thread_init();
 
