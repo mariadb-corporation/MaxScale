@@ -76,8 +76,6 @@
 #include <log_manager.h>
 
 #include <mysql_client_server_protocol.h>
-#include <my_global.h>
-#include <my_sys.h>
 #include <ini.h>
 #include <sys/stat.h>
 
