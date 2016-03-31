@@ -53,6 +53,10 @@ main(int argc, char **argv)
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 
+    mxs_log_set_priority_enabled(LOG_NOTICE, false);
+    mxs_log_set_priority_enabled(LOG_INFO, false);
+    mxs_log_set_priority_enabled(LOG_DEBUG, false);
+
     pw = calloc(81, sizeof(char));
 
     if (pw == NULL)
