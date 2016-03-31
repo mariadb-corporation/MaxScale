@@ -27,47 +27,29 @@
 #include <unistd.h>
 #include <gwdirs.h>
 
-int main(int argc, char** argv)
+int run(const char* input_filename, const char* expected_filename)
 {
-    if (argc < 3)
-    {
-        fprintf(stderr, "Usage: classify <input> <expected output>");
-        return 1;
-    }
-    int rd = 0, buffsz = getpagesize(), strsz = 0, ex_val = 0;
+    int buffsz = getpagesize(), strsz = 0, ex_val = 0;
     char buffer[1024], *strbuff = (char*)calloc(buffsz, sizeof(char));
-    FILE *input, *expected;
 
-    set_libdir(strdup("../qc_mysqlembedded/"));
-    set_datadir(strdup("/tmp"));
-    set_langdir(strdup("."));
-    set_process_datadir(strdup("/tmp"));
-
-    if (!mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
-    {
-        fprintf(stderr, "%s: Could not initialize log.\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-
-    qc_init("qc_mysqlembedded");
-    qc_thread_init();
-
-    input = fopen(argv[1], "rb");
+    FILE *input = fopen(input_filename, "rb");
 
     if (input == NULL)
     {
-        printf("Error: Failed to open input file %s", argv[1]);
+        printf("Error: Failed to open input file %s", input_filename);
         return 1;
     }
 
-    expected = fopen(argv[2], "rb");
+    FILE *expected = fopen(expected_filename, "rb");
 
     if (expected == NULL)
     {
         fclose(input);
-        printf("Error: Failed to open expected output file %s", argv[2]);
+        printf("Error: Failed to open expected output file %s", expected_filename);
         return 1;
     }
+
+    int rd;
 
     while ((rd = fread(buffer, sizeof(char), 1023, input)))
     {
@@ -225,8 +207,44 @@ int main(int argc, char** argv)
     }
     fclose(input);
     fclose(expected);
-    qc_thread_end();
-    qc_end();
     free(strbuff);
     return ex_val;
+}
+
+int main(int argc, char** argv)
+{
+    int rc = EXIT_FAILURE;
+
+    if (argc == 3)
+    {
+        set_libdir(strdup("../qc_mysqlembedded/"));
+        set_datadir(strdup("/tmp"));
+        set_langdir(strdup("."));
+        set_process_datadir(strdup("/tmp"));
+
+        if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
+        {
+            if (qc_init("qc_mysqlembedded"))
+            {
+                rc = run(argv[1], argv[2]);
+                qc_end();
+            }
+            else
+            {
+                fprintf(stderr, "error: %s: Could not initialize query classifier library.\n", argv[0]);
+            }
+
+            mxs_log_finish();
+        }
+        else
+        {
+            fprintf(stderr, "error: %s: Could not initialize log.\n", argv[0]);
+        }
+    }
+    else
+    {
+        fprintf(stderr, "Usage: classify <input> <expected output>\n");
+    }
+
+    return rc;
 }
