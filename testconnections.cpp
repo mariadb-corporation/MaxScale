@@ -120,9 +120,12 @@ TestConnections::TestConnections(int argc, char *argv[])
     repl->flush_hosts();
     galera->flush_hosts();
 
-    if ((repl->check_replication(0) != 0) || (galera->check_galera() != 0)) {
-        printf("****** BACKEND IS STILL BROKEN! Exiting\n *****");
-        exit(200);
+    if (!no_nodes_check)
+    {
+        if ((repl->check_replication(0) != 0) || (galera->check_galera() != 0)) {
+            printf("****** BACKEND IS STILL BROKEN! Exiting\n *****");
+            exit(200);
+        }
     }
     //repl->start_replication();
     if (!no_maxscale_start) {init_maxscale();}
