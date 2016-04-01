@@ -26,6 +26,7 @@
 #include <mysql.h>
 #include <unistd.h>
 #include <gwdirs.h>
+#include <log_manager.h>
 
 int run(const char* input_filename, const char* expected_filename)
 {
