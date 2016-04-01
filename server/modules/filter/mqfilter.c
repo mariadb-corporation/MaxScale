@@ -624,6 +624,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
                         free(arr[x]);
                     }
                     free(arr);
+                    arr = NULL;
                 }
                 arrsize = 0;
 
@@ -791,11 +792,14 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         snprintf(taskname, 511, "mqtask%d", atomic_add(&hktask_id, 1));
         hktask_add(taskname, sendMessage, (void*) my_instance, 5);
-        for (int x = 0; x < arrsize; x++)
+        if (arr)
         {
-            free(arr[x]);
+            for (int x = 0; x < arrsize; x++)
+            {
+                free(arr[x]);
+            }
+            free(arr);
         }
-        free(arr);
     }
     return(FILTER *) my_instance;
 }

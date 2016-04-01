@@ -1040,6 +1040,9 @@ bool create_user_templates(void* scanner)
                 free(newtemp->name);
                 free(newtemp);
             }
+            free(templates->name);
+            strlink_free(templates->rulenames);
+            free(templates);
             MXS_ERROR("Memory allocation failed when processing rule file users definitions.");
             return false;
         }
@@ -1768,6 +1771,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                                         MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
                                                  rulelist->rule->name, strln->value);
                                         msg = strdup(emsg);
+                                        free(where);
                                         goto queryresolved;
                                     }
                                     else
@@ -1801,6 +1805,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                             msg = strdup("Usage of wildcard denied.");
                             MXS_INFO("dbfwfilter: rule '%s': query contains a wildcard.",
                                      rulelist->rule->name);
+                            free(where);
                             goto queryresolved;
                         }
                         free(where);

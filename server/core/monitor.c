@@ -541,6 +541,7 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
     if (monitor->databases == NULL)
     {
         MXS_ERROR("%s: Monitor is missing the servers parameter.", monitor->name);
+        mysql_close(mysql);
         return false;
     }
 
@@ -556,7 +557,6 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
                   " checking monitor user credentials and permissions: %s",
                   monitor->name, server->unique_name, server->name, server->port,
                   mysql_error(mysql));
-        mysql_close(mysql);
         free(dpasswd);
 
         switch (mysql_errno(mysql))
@@ -564,10 +564,15 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
             case ER_ACCESS_DENIED_ERROR:
             case ER_DBACCESS_DENIED_ERROR:
             case ER_ACCESS_DENIED_NO_PASSWORD_ERROR:
-                return false;
+                rval = false;
+                break;
             default:
-                return true;
+                rval = true;
+                break;
         }
+
+        mysql_close(mysql);
+        return rval;
     }
 
     if (mysql_query(mysql, query) != 0)

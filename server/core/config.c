@@ -1021,6 +1021,24 @@ handle_global_item(const char *name, const char *value)
 }
 
 /**
+ * Free an SSL structure
+ *
+ * @param ssl SSL structure to free
+ */
+static void
+free_ssl_structure(SSL_LISTENER *ssl)
+{
+    if (ssl)
+    {
+        SSL_CTX_free(ssl->ctx);
+        free(ssl->ssl_key);
+        free(ssl->ssl_cert);
+        free(ssl->ssl_ca_cert);
+        free(ssl);
+    }
+}
+
+/**
  * Form an SSL structure from listener section parameters
  *
  * @param obj The configuration object for the item being created
@@ -2794,6 +2812,11 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
                         serviceStartProtocol(service, protocol, atoi(port));
                     }
                 }
+            }
+
+            if (ssl_info && error_count)
+            {
+                free_ssl_structure(ssl_info);
             }
         }
         else
