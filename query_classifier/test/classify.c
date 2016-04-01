@@ -178,7 +178,7 @@ int test(FILE* input, FILE* expected)
 
             if (strcmp(qtypestr, expbuff) != 0)
             {
-                printf("Error in output: '%s' was expected but got '%s'", expbuff, qtypestr);
+                printf("Error in output: '%s' was expected but got '%s'\n", expbuff, qtypestr);
                 rc = 1;
             }
 
@@ -224,23 +224,49 @@ int main(int argc, char** argv)
 {
     int rc = EXIT_FAILURE;
 
-    if (argc == 3)
+    if ((argc == 3) || (argc == 4))
     {
-        set_libdir(strdup("../qc_mysqlembedded/"));
+        const char* lib;
+        char* libdir;
+        const char* input_name;
+        const char* expected_name;
+
+        if (argc == 3)
+        {
+            lib = "qc_mysqlembedded";
+            libdir = strdup("../qc_mysqlembedded");
+            input_name = argv[1];
+            expected_name = argv[2];
+        }
+        else
+        {
+            lib = argv[1];
+            input_name = argv[2];
+            expected_name = argv[3];
+
+            size_t sz = strlen(lib);
+            char buffer[sz + 3 + 1]; // "../" and terminating NULL.
+            sprintf(buffer, "../%s", lib);
+
+            libdir = strdup(buffer);
+        }
+
+        set_libdir(libdir);
         set_datadir(strdup("/tmp"));
         set_langdir(strdup("."));
         set_process_datadir(strdup("/tmp"));
 
         if (mxs_log_init(NULL, ".", MXS_LOG_TARGET_DEFAULT))
         {
-            if (qc_init("qc_mysqlembedded"))
+            if (qc_init(lib))
             {
-                rc = run(argv[1], argv[2]);
+                rc = run(input_name, expected_name);
                 qc_end();
             }
             else
             {
-                fprintf(stderr, "error: %s: Could not initialize query classifier library.\n", argv[0]);
+                fprintf(stderr, "error: %s: Could not initialize query classifier library %s.\n",
+                        argv[0], lib);
             }
 
             mxs_log_finish();
