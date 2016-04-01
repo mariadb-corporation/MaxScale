@@ -28,46 +28,26 @@
 #include <gwdirs.h>
 #include <log_manager.h>
 
-int run(const char* input_filename, const char* expected_filename)
+int test(FILE* input, FILE* expected)
 {
-    int buffsz = getpagesize(), strsz = 0, ex_val = 0;
+    int rc = EXIT_SUCCESS;
+
+    int buffsz = getpagesize(), strsz = 0;
     char buffer[1024], *strbuff = (char*)calloc(buffsz, sizeof(char));
-
-    FILE *input = fopen(input_filename, "rb");
-
-    if (input == NULL)
-    {
-        printf("Error: Failed to open input file %s", input_filename);
-        return 1;
-    }
-
-    FILE *expected = fopen(expected_filename, "rb");
-
-    if (expected == NULL)
-    {
-        fclose(input);
-        printf("Error: Failed to open expected output file %s", expected_filename);
-        return 1;
-    }
 
     int rd;
 
     while ((rd = fread(buffer, sizeof(char), 1023, input)))
     {
-
         /**Fill the read buffer*/
 
         if (strsz + rd >= buffsz)
         {
-
             char* tmp = realloc(strbuff, (buffsz * 2) * sizeof(char));
 
             if (tmp == NULL)
             {
                 free(strbuff);
-                fclose(input);
-                fclose(expected);
-                mysql_library_end();
                 fprintf(stderr, "Error: Memory allocation failed.");
                 return 1;
             }
@@ -87,7 +67,6 @@ int run(const char* input_filename, const char* expected_filename)
             memmove(nlptr, nlptr + 1, strsz - (nlptr + 1 - strbuff));
             strsz -= 1;
         }
-
 
         /**Parse read buffer for full queries*/
 
@@ -200,16 +179,45 @@ int run(const char* input_filename, const char* expected_filename)
             if (strcmp(qtypestr, expbuff) != 0)
             {
                 printf("Error in output: '%s' was expected but got '%s'", expbuff, qtypestr);
-                ex_val = 1;
+                rc = 1;
             }
 
             gwbuf_free(buff);
         }
     }
-    fclose(input);
-    fclose(expected);
+
     free(strbuff);
-    return ex_val;
+    return rc;
+}
+
+int run(const char* input_filename, const char* expected_filename)
+{
+    int rc = EXIT_FAILURE;
+
+    FILE *input = fopen(input_filename, "rb");
+
+    if (input)
+    {
+        FILE *expected = fopen(expected_filename, "rb");
+
+        if (expected)
+        {
+            rc = test(input, expected);
+            fclose(expected);
+        }
+        else
+        {
+            fprintf(stderr, "error: Failed to open file %s.", expected_filename);
+        }
+
+        fclose(input);
+    }
+    else
+    {
+        fprintf(stderr, "error: Failed to open file %s", input_filename);
+    }
+
+    return rc;
 }
 
 int main(int argc, char** argv)
