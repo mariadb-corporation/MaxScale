@@ -392,7 +392,13 @@ int TestConnections::start_binlog()
 
     tprintf("Master server version %s\n", version_str);
 
-    if (strstr(version_str, "5.5") != NULL) {
+    if ((strstr(version_str, "10.0") != NULL) ||
+            (strstr(version_str, "10.1") != NULL) ||
+            (strstr(version_str, "10.2") != NULL))
+    {
+        tprintf("10.0!\n");
+    }
+    else {
         add_result(ssh_maxscale(true,
                                 "sed -i \"s/,mariadb10-compatibility=1//\" %s",
                                 maxscale_cnf), "Error editing maxscale.cnf");
