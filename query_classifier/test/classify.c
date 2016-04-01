@@ -75,12 +75,12 @@ int test(FILE* input, FILE* expected)
             tok = strpbrk(strbuff, ";");
             unsigned int qlen = tok - strbuff + 1;
             GWBUF* buff = gwbuf_alloc(qlen + 6);
-            *((unsigned char*)(buff->start)) = qlen;
-            *((unsigned char*)(buff->start + 1)) = (qlen >> 8);
-            *((unsigned char*)(buff->start + 2)) = (qlen >> 16);
-            *((unsigned char*)(buff->start + 3)) = 0x00;
-            *((unsigned char*)(buff->start + 4)) = 0x03;
-            memcpy(buff->start + 5, strbuff, qlen);
+            *((unsigned char*)(GWBUF_DATA(buff))) = qlen;
+            *((unsigned char*)(GWBUF_DATA(buff) + 1)) = (qlen >> 8);
+            *((unsigned char*)(GWBUF_DATA(buff) + 2)) = (qlen >> 16);
+            *((unsigned char*)(GWBUF_DATA(buff) + 3)) = 0x00;
+            *((unsigned char*)(GWBUF_DATA(buff) + 4)) = 0x03;
+            memcpy(GWBUF_DATA(buff) + 5, strbuff, qlen);
             memmove(strbuff, tok + 1, strsz - qlen);
             strsz -= qlen;
             memset(strbuff + strsz, 0, buffsz - strsz);
@@ -178,6 +178,9 @@ int test(FILE* input, FILE* expected)
 
             if (strcmp(qtypestr, expbuff) != 0)
             {
+                const char* q = (const char*) GWBUF_DATA(buff) + 5;
+
+                printf("%.*s\n", qlen, q);
                 printf("Error in output: '%s' was expected but got '%s'\n", expbuff, qtypestr);
                 rc = 1;
             }
