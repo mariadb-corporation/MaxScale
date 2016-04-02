@@ -88,8 +88,8 @@ int main(int argc, char** argv)
         find_field(test->conn_rwsplit, queries[i].query, "@@server_id", str);
         if (strcmp(server_id[queries[i].reply], str) != 0)
         {
-            test->add_result(1, "Expected %s but got %s.\n",
-                             server_id[queries[i].reply], str);
+            test->add_result(1, "%s: Expected %s but got %s.\n",
+                             queries[i].query, server_id[queries[i].reply], str);
         }
     }
     test->copy_all_logs();
