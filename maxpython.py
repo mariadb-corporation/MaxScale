@@ -31,13 +31,14 @@ class SQLConnection:
     def query(self, query, compare = None, column = 0):
         curs = self.conn.cursor()
         curs.execute(query)
-        data = curs.fetchall()
-        if compare:
-            for row in data:
-                if str(row[column]) == compare:
-                    return True
-            return False
-        return True
+        return curs.fetchall()
+
+    def query_and_compare(self, query, column):
+        data = self.query(query)
+        for row in data:
+            if str(row[column]) == compare:
+                return True
+        return False
 
     def disconnect(self):
         self.conn.close()
@@ -58,7 +59,19 @@ class MaxScaleTest:
             if part[0] not in os.environ:
                 os.putenv(part[0], part[2])
 
-        # Currently only RWSplit is available
-        self.rwsplit = SQLConnection(host = os.getenv("maxscale_IP"), port = "4006", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
-        self.rcmaster = SQLConnection(host = os.getenv("maxscale_IP"), port = "4008", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
-        self.rcslave = SQLConnection(host = os.getenv("maxscale_IP"), port = "4009", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        # MaxScale connections
+        self.maxscale['rwsplit'] = SQLConnection(host = os.getenv("maxscale_IP"), port = "4006", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.maxscale['rcmaster'] = SQLConnection(host = os.getenv("maxscale_IP"), port = "4008", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.maxscale['rcslave'] = SQLConnection(host = os.getenv("maxscale_IP"), port = "4009", user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+
+        # Master-Slave nodes
+        self.repl['node0'] = SQLConnection(host = os.getenv("repl_000"), port = os.getenv("repl_port_000"), user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.repl['node1'] = SQLConnection(host = os.getenv("repl_001"), port = os.getenv("repl_port_001"), user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.repl['node2'] = SQLConnection(host = os.getenv("repl_002"), port = os.getenv("repl_port_002"), user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.repl['node3'] = SQLConnection(host = os.getenv("repl_003"), port = os.getenv("repl_port_003"), user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+
+        # Galera nodes
+        self.galera['node0'] = SQLConnection(host = os.getenv("galera_000"), port = os.getenv("galera_port_000"), user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.galera['node1'] = SQLConnection(host = os.getenv("galera_001"), port = os.getenv("galera_port_001"), user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.galera['node2'] = SQLConnection(host = os.getenv("galera_002"), port = os.getenv("galera_port_002"), user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
+        self.galera['node3'] = SQLConnection(host = os.getenv("galera_003"), port = os.getenv("galera_port_003"), user = os.getenv("maxscale_user"), password = os.getenv("maxscale_password"))
