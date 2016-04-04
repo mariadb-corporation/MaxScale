@@ -1956,6 +1956,8 @@ static int routeQuery(ROUTER* instance,
         goto retblock;
     }
 
+    qc_query_op_t op = QUERY_OP_UNDEFINED;
+
     switch(packet_type)
     {
     case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
@@ -1977,6 +1979,7 @@ static int routeQuery(ROUTER* instance,
 
     case MYSQL_COM_QUERY:
         qtype = qc_get_type(querybuf);
+        op = qc_get_operation(querybuf);
         break;
 
     case MYSQL_COM_STMT_PREPARE:
@@ -2027,8 +2030,6 @@ static int routeQuery(ROUTER* instance,
      * Find out whether the query should be routed to single server or to
      * all of them.
      */
-
-    qc_query_op_t op = qc_get_operation(querybuf);
 
     if (packet_type == MYSQL_COM_INIT_DB || op == QUERY_OP_CHANGE_DB)
     {
