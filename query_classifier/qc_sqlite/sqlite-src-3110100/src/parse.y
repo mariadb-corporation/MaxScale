@@ -49,8 +49,11 @@
 %include {
 #include "sqliteInt.h"
 
-extern int qc_sqlite3Select(Parse*, Select*, SelectDest*);
+extern void qc_sqlite3BeginTransaction(Parse*, int);
+extern void qc_sqlite3CommitTransaction(Parse*);
 extern void qc_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int);
+extern void qc_sqlite3RollbackTransaction(Parse*);
+extern int  qc_sqlite3Select(Parse*, Select*, SelectDest*);
 extern void qc_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
 
 /*
@@ -137,7 +140,7 @@ cmdx ::= cmd.           { sqlite3FinishCoding(pParse); }
 ///////////////////// Begin and end transactions. ////////////////////////////
 //
 
-cmd ::= BEGIN transtype(Y) trans_opt.  {sqlite3BeginTransaction(pParse, Y);}
+cmd ::= BEGIN transtype(Y) trans_opt.  {qc_sqlite3BeginTransaction(pParse, Y);}
 trans_opt ::= .
 trans_opt ::= TRANSACTION.
 trans_opt ::= TRANSACTION nm.
@@ -146,9 +149,9 @@ transtype(A) ::= .             {A = TK_DEFERRED;}
 transtype(A) ::= DEFERRED(X).  {A = @X;}
 transtype(A) ::= IMMEDIATE(X). {A = @X;}
 transtype(A) ::= EXCLUSIVE(X). {A = @X;}
-cmd ::= COMMIT trans_opt.      {sqlite3CommitTransaction(pParse);}
-cmd ::= END trans_opt.         {sqlite3CommitTransaction(pParse);}
-cmd ::= ROLLBACK trans_opt.    {sqlite3RollbackTransaction(pParse);}
+cmd ::= COMMIT trans_opt.      {qc_sqlite3CommitTransaction(pParse);}
+cmd ::= END trans_opt.         {qc_sqlite3CommitTransaction(pParse);}
+cmd ::= ROLLBACK trans_opt.    {qc_sqlite3RollbackTransaction(pParse);}
 
 savepoint_opt ::= SAVEPOINT.
 savepoint_opt ::= .

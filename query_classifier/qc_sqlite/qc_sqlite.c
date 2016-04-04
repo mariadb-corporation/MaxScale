@@ -265,6 +265,51 @@ static bool is_submitted_query(const QC_SQLITE_INFO* info, const char* query)
  * These functions are called from sqlite.
  */
 
+void qc_sqlite3BeginTransaction(Parse* pParse, int type)
+{
+    MXS_NOTICE("qc_sqlite: qc_sqlite3BeginTransaction called.");
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    info->status = QC_INFO_OK;
+    info->type = QUERY_TYPE_BEGIN_TRX;
+}
+
+void qc_sqlite3CommitTransaction(Parse* pParse)
+{
+    MXS_NOTICE("qc_sqlite: qc_sqlite3CommitTransaction called.");
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    info->status = QC_INFO_OK;
+    info->type = QUERY_TYPE_COMMIT;
+}
+
+void qc_sqlite3Insert(Parse* pParse, SrcList* pTabList, Select* pSelect, IdList* pColumn, int onError)
+{
+    MXS_NOTICE("qc_sqlite: qc_sqlite3Insert called.");
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    info->status = QC_INFO_OK;
+    info->type = QUERY_TYPE_WRITE;
+    info->operation = QUERY_OP_INSERT;
+}
+
+void qc_sqlite3RollbackTransaction(Parse* pParse)
+{
+    MXS_NOTICE("qc_sqlite: qc_sqlite3CommitTransaction called.");
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    info->status = QC_INFO_OK;
+    info->type = QUERY_TYPE_ROLLBACK;
+}
+
 int qc_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
 {
     MXS_NOTICE("qc_sqlite: qc_sqlite3Select called.");
@@ -283,18 +328,6 @@ int qc_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     }
 
     return -1;
-}
-
-void qc_sqlite3Insert(Parse* pParse, SrcList* pTabList, Select* pSelect, IdList* pColumn, int onError)
-{
-    MXS_NOTICE("qc_sqlite: qc_sqlite3Insert called.");
-
-    QC_SQLITE_INFO* info = this_thread.info;
-    ss_dassert(info);
-
-    info->status = QC_INFO_OK;
-    info->type = QUERY_TYPE_WRITE;
-    info->operation = QUERY_OP_INSERT;
 }
 
 void qc_sqlite3Update(Parse* pParse, SrcList* pTablist, ExprList* pChanges, Expr* pWhere, int onError)
