@@ -1,3 +1,4 @@
+cmake_policy(SET CMP0046 OLD)
 include(ExternalProject)
 
 ExternalProject_Add(maxscale_sqlite
