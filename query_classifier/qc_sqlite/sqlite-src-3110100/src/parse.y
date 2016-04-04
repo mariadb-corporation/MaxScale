@@ -51,6 +51,7 @@
 
 extern void qc_sqlite3BeginTransaction(Parse*, int);
 extern void qc_sqlite3CommitTransaction(Parse*);
+extern void qc_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*);
 extern void qc_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int);
 extern void qc_sqlite3RollbackTransaction(Parse*);
 extern int  qc_sqlite3Select(Parse*, Select*, SelectDest*);
@@ -184,10 +185,10 @@ temp(A) ::= TEMP.  {A = 1;}
 %endif  SQLITE_OMIT_TEMPDB
 temp(A) ::= .      {A = 0;}
 create_table_args ::= LP columnlist conslist_opt(X) RP(E) table_options(F). {
-  sqlite3EndTable(pParse,&X,&E,F,0);
+  qc_sqlite3EndTable(pParse,&X,&E,F,0);
 }
 create_table_args ::= AS select(S). {
-  sqlite3EndTable(pParse,0,0,0,S);
+  qc_sqlite3EndTable(pParse,0,0,0,S);
   sqlite3SelectDelete(pParse->db, S);
 }
 %type table_options {int}

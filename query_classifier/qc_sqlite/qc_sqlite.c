@@ -287,6 +287,37 @@ void qc_sqlite3CommitTransaction(Parse* pParse)
     info->type = QUERY_TYPE_COMMIT;
 }
 
+void qc_sqlite3EndTable(Parse *pParse,   /* Parse context */
+                        Token *pCons,    /* The ',' token after the last column defn. */
+                        Token *pEnd,     /* The ')' before options in the CREATE TABLE */
+                        u8 tabOpts,      /* Extra table options. Usually 0. */
+                        Select *pSelect) /* Select from a "CREATE ... AS SELECT" */
+{
+    MXS_NOTICE("qc_sqlite: qc_sqlite3EndTable called.");
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    if (is_submitted_query(info, pParse->zTail))
+    {
+        info->status = QC_INFO_OK;
+
+        // From sqlite:
+        /* The cookie mask contains one bit for each database file open.
+        ** (Bit 0 is for main, bit 1 is for temp, and so forth.)  Bits are
+        ** set for each database that is used.
+        */
+        if (pParse->cookieMask & (1 << 1))
+        {
+            info->type = QUERY_TYPE_CREATE_TMP_TABLE;
+        }
+        else
+        {
+            info->type = QUERY_TYPE_COMMIT;
+        }
+    }
+}
+
 void qc_sqlite3Insert(Parse* pParse, SrcList* pTabList, Select* pSelect, IdList* pColumn, int onError)
 {
     MXS_NOTICE("qc_sqlite: qc_sqlite3Insert called.");
