@@ -297,6 +297,18 @@ void qc_sqlite3Insert(Parse* pParse, SrcList* pTabList, Select* pSelect, IdList*
     info->operation = QUERY_OP_INSERT;
 }
 
+void qc_sqlite3Update(Parse* pParse, SrcList* pTablist, ExprList* pChanges, Expr* pWhere, int onError)
+{
+    MXS_NOTICE("qc_sqlite: qc_sqlite3Update called.");
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    info->status = QC_INFO_OK;
+    info->type = QUERY_TYPE_WRITE;
+    info->operation = QUERY_OP_UPDATE;
+}
+
 /**
  * API
  */

@@ -51,6 +51,7 @@
 
 extern int qc_sqlite3Select(Parse*, Select*, SelectDest*);
 extern void qc_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int);
+extern void qc_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
 
 /*
 ** Disable all error recovery processing in the parser push-down
@@ -786,7 +787,7 @@ cmd ::= with(C) UPDATE orconf(R) fullname(X) indexed_opt(I) SET setlist(Y)
   sqlite3SrcListIndexedBy(pParse, X, &I);
   sqlite3ExprListCheckLength(pParse,Y,"set list"); 
   W = sqlite3LimitWhere(pParse, X, W, O, L.pLimit, L.pOffset, "UPDATE");
-  sqlite3Update(pParse,X,Y,W,R);
+  qc_sqlite3Update(pParse,X,Y,W,R);
 }
 %endif
 %ifndef SQLITE_ENABLE_UPDATE_DELETE_LIMIT
@@ -795,7 +796,7 @@ cmd ::= with(C) UPDATE orconf(R) fullname(X) indexed_opt(I) SET setlist(Y)
   sqlite3WithPush(pParse, C, 1);
   sqlite3SrcListIndexedBy(pParse, X, &I);
   sqlite3ExprListCheckLength(pParse,Y,"set list"); 
-  sqlite3Update(pParse,X,Y,W,R);
+  qc_sqlite3Update(pParse,X,Y,W,R);
 }
 %endif
 
