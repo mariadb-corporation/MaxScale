@@ -54,6 +54,7 @@ typedef struct qc_sqlite_info
 {
     qc_info_status_t status;  // The validity of the information in this structure.
     // TODO: More to be added.
+    qc_query_type_t type;
     qc_query_op_t operation;
 } QC_SQLITE_INFO;
 
@@ -158,6 +159,8 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
     memset(info, 0, sizeof(*info));
 
     info->status = QC_INFO_INVALID;
+
+    info->type = (qc_query_type_t) -1;
     info->operation = (qc_query_op_t) -1;
 
     return info;
@@ -233,7 +236,6 @@ static bool query_is_parsed(GWBUF* query)
     return query && GWBUF_IS_PARSED(query);
 }
 
-
 /**
  * SQLITE
  *
@@ -248,6 +250,7 @@ int qc_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     ss_dassert(info);
 
     info->status = QC_INFO_OK;
+    info->type = QUERY_TYPE_READ;
     info->operation = QUERY_OP_SELECT;
 
     return -1;
@@ -355,9 +358,26 @@ static qc_query_type_t qc_sqlite_get_type(GWBUF* query)
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    MXS_ERROR("qc_sqlite: qc_get_type not implemented yet.");
+    qc_query_type_t type = QUERY_TYPE_UNKNOWN;
+    QC_SQLITE_INFO* info = get_query_info(query);
 
-    return QUERY_TYPE_UNKNOWN;
+    if (info)
+    {
+        if (info->status == QC_INFO_OK)
+        {
+            type = info->type;
+        }
+        else
+        {
+            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+        }
+    }
+    else
+    {
+        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+    }
+
+    return type;
 }
 
 static qc_query_op_t qc_sqlite_get_operation(GWBUF* query)
