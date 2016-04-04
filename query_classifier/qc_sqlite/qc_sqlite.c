@@ -354,8 +354,46 @@ int qc_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     if (is_submitted_query(info, pParse->zTail))
     {
         info->status = QC_INFO_OK;
-        info->type = QUERY_TYPE_READ;
         info->operation = QUERY_OP_SELECT;
+        info->type = QUERY_TYPE_READ;
+
+        ExprList* pEList = p->pEList; // List of columns to extract
+
+        if (pEList)
+        {
+            if (pEList->nExpr > 0) // Nothing to compare unless there is at least one.
+            {
+                int i = 0;
+
+                // In the loop it is assumed that QUERY_TYPE_SYSVAR_READ carries more
+                // weight than QUERY_TYPE_USERVAR_READ, which carries more weight than
+                // QUERY_TYPE_READ. I.e. we loop until all columns have been checked
+                // or a system variable has been found.
+                do
+                {
+                    const char* column = pEList->a[i].zSpan;
+
+                    if (column)
+                    {
+                        if (column[0] == '@')
+                        {
+                            if (column[1] == '@')
+                            {
+                                // TODO: Should only specific @@-variables be recognized?
+                                info->type = QUERY_TYPE_SYSVAR_READ;
+                            }
+                            else
+                            {
+                                info->type = QUERY_TYPE_USERVAR_READ;
+                            }
+                        }
+                    }
+
+                    ++i;
+                }
+                while ((info->type != QUERY_TYPE_SYSVAR_READ) && (i < pEList->nExpr));
+            }
+        }
     }
 
     return -1;
