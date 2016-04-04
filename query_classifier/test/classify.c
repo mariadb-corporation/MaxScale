@@ -176,12 +176,16 @@ int test(FILE* input, FILE* expected)
                 sprintf(qtypestr, "QUERY_TYPE_READ_TMP_TABLE");
             }
 
-            if (strcmp(qtypestr, expbuff) != 0)
-            {
-                const char* q = (const char*) GWBUF_DATA(buff) + 5;
+            const char* q = (const char*) GWBUF_DATA(buff) + 5;
 
-                printf("%.*s\n", qlen, q);
-                printf("Error in output: '%s' was expected but got '%s'\n", expbuff, qtypestr);
+            if (strcmp(qtypestr, expbuff) == 0)
+            {
+                printf("OK   : %.*s\n", qlen, q);
+            }
+            else
+            {
+                printf("ERROR: %.*s\n", qlen, q);
+                printf("'%s' was expected but got '%s'\n\n", expbuff, qtypestr);
                 rc = 1;
             }
 
