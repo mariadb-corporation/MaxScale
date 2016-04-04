@@ -400,7 +400,10 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
       testcase( z[0]==':' );  testcase( z[0]=='#' );
       *tokenType = TK_VARIABLE;
       for(i=1; (c=z[i])!=0; i++){
-        if( IdChar(c) ){
+        if ( (i == 1) && (aiClass[*z] == CC_VARALPHA) ) {
+          // @@-variables
+          continue;
+        }else if( IdChar(c) ){
           n++;
 #ifndef SQLITE_OMIT_TCL_VARIABLE
         }else if( c=='(' && n>0 ){
