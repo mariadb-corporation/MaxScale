@@ -52,10 +52,11 @@ typedef enum qc_info_status
  */
 typedef struct qc_sqlite_info
 {
-    qc_info_status_t status;  // The validity of the information in this structure.
+    qc_info_status_t status;    // The validity of the information in this structure.
+    const char* query;          // The query passed to sqlite.
     // TODO: More to be added.
-    qc_query_type_t type;
-    qc_query_op_t operation;
+    qc_query_type_t type;       // The type of the query.
+    qc_query_op_t operation;    // The operation in question.
 } QC_SQLITE_INFO;
 
 /**
@@ -88,6 +89,7 @@ static QC_SQLITE_INFO* info_alloc(void);
 static void info_finish(QC_SQLITE_INFO* info);
 static void info_free(QC_SQLITE_INFO* info);
 static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info);
+static bool is_submitted_query(const QC_SQLITE_INFO* info, const char* query);
 static bool parse_query(GWBUF* query);
 static void parse_query_string(const char* query, size_t len);
 static bool query_is_parsed(GWBUF* query);
@@ -204,7 +206,9 @@ static bool parse_query(GWBUF* query)
 
         const char* s = (const char*) &data[5]; // TODO: Are there symbolic constants somewhere?
 
+        this_thread.info->query = s;
         parse_query_string(s, len);
+        this_thread.info->query = NULL;
 
         if (this_thread.info->status == QC_INFO_OK)
         {
@@ -236,6 +240,25 @@ static bool query_is_parsed(GWBUF* query)
     return query && GWBUF_IS_PARSED(query);
 }
 
+static bool is_submitted_query(const QC_SQLITE_INFO* info, const char* query)
+{
+    const char* i = info->query; // The query as passed to parse_query_string, may contain a trailing ';'
+    const char* j = query;       // The query as handled by sqlite, won't contain a trailing ';'
+
+    // Walk forward as long as the characters are the same and neither is NULL.
+    while ((*i == *j) && (*i != 0))
+    {
+        ++i;
+        ++j;
+    }
+
+    // If the characters are the same (i.e. NULL) or the original points
+    // at ';' and the sqlite string at NULL, then we are parsing the provided
+    // string. sqlite may at times parse some selects of its own, when parsing
+    // an insert.
+    return (*i == *j) || ((*i == ';') || (*j == 0));
+}
+
 /**
  * SQLITE
  *
@@ -249,9 +272,15 @@ int qc_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
 
-    info->status = QC_INFO_OK;
-    info->type = QUERY_TYPE_READ;
-    info->operation = QUERY_OP_SELECT;
+    // Check whether the statement being parsed is the one that was passed
+    // to sqlite3_prepare in parse_query_string(). During inserts, sqlite may
+    // parse selects of its own.
+    if (is_submitted_query(info, pParse->zTail))
+    {
+        info->status = QC_INFO_OK;
+        info->type = QUERY_TYPE_READ;
+        info->operation = QUERY_OP_SELECT;
+    }
 
     return -1;
 }
