@@ -50,6 +50,7 @@
 #include "sqliteInt.h"
 
 extern int qc_sqlite3Select(Parse*, Select*, SelectDest*);
+extern void qc_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int);
 
 /*
 ** Disable all error recovery processing in the parser push-down
@@ -814,12 +815,12 @@ setlist(A) ::= nm(X) EQ expr(Y). {
 //
 cmd ::= with(W) insert_cmd(R) INTO fullname(X) idlist_opt(F) select(S). {
   sqlite3WithPush(pParse, W, 1);
-  sqlite3Insert(pParse, X, S, F, R);
+  qc_sqlite3Insert(pParse, X, S, F, R);
 }
 cmd ::= with(W) insert_cmd(R) INTO fullname(X) idlist_opt(F) DEFAULT VALUES.
 {
   sqlite3WithPush(pParse, W, 1);
-  sqlite3Insert(pParse, X, 0, F, R);
+  qc_sqlite3Insert(pParse, X, 0, F, R);
 }
 
 %type insert_cmd {int}

@@ -285,6 +285,18 @@ int qc_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     return -1;
 }
 
+void qc_sqlite3Insert(Parse* pParse, SrcList* pTabList, Select* pSelect, IdList* pColumn, int onError)
+{
+    MXS_NOTICE("qc_sqlite: qc_sqlite3Insert called.");
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    info->status = QC_INFO_OK;
+    info->type = QUERY_TYPE_WRITE;
+    info->operation = QUERY_OP_INSERT;
+}
+
 /**
  * API
  */
