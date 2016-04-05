@@ -2680,7 +2680,8 @@ bool blr_send_event(blr_thread_role_t role,
     {
         MXS_ERROR("Slave %s:%i, server-id %d, binlog '%s', position %u: "
                   "thread %lu in the role of %s could not send the event, "
-                  "the event has already been sent by thread %lu in the role of %s.",
+                  "the event has already been sent by thread %lu in the role of %s. "
+                  "%u bytes buffered for writing in DCB %p.",
                   slave->dcb->remote,
                   ntohs((slave->dcb->ipv4).sin_port),
                   slave->serverid,
@@ -2689,7 +2690,8 @@ bool blr_send_event(blr_thread_role_t role,
                   THREAD_SHELF(),
                   role == BLR_THREAD_ROLE_MASTER ? "master" : "slave",
                   slave->lsi_sender_tid,
-                  slave->lsi_sender_role == BLR_THREAD_ROLE_MASTER ? "master" : "slave");
+                  slave->lsi_sender_role == BLR_THREAD_ROLE_MASTER ? "master" : "slave",
+                  gwbuf_length(slave->dcb->writeq), slave->dcb);
         return false;
     }
 
