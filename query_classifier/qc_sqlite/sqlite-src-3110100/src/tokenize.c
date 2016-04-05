@@ -400,8 +400,9 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
       testcase( z[0]==':' );  testcase( z[0]=='#' );
       *tokenType = TK_VARIABLE;
       for(i=1; (c=z[i])!=0; i++){
-        if ( (i == 1) && (aiClass[*z] == CC_VARALPHA) ) {
-          // @@-variables
+          if ( (i == 1) && (z[0] == '@') && (c == '@') ) {
+          // If the first char is '@' then if the second char is a '@'
+          // it is a system variable (@@xyz).
           continue;
         }else if( IdChar(c) ){
           n++;
