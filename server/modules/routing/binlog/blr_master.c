@@ -1542,6 +1542,16 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                     {
                                         router->current_safe_event = new_hdr.next_pos;
                                     }
+                                    else
+                                    {
+                                        MXS_ERROR("Current safe event (%lu) does"
+                                                  " not point at the event we "
+                                                  "just sent (%llu) from binlog file %s. "
+                                                  "Last commit at %lu, last write at %lu.",
+                                                  router->current_safe_event, pos,
+                                                  router->binlog_name, router->last_safe_pos,
+                                                  router->last_written);
+                                    }
 
                                     pos = new_hdr.next_pos;
 
