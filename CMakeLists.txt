@@ -288,7 +288,7 @@ add_test_executable(lots_of_rows.cpp lots_of_rows galera)
 add_test_executable(encrypted_passwords.cpp encrypted_passwords replication)
 add_test_executable(test_hints.cpp test_hints hints2)
 add_test_executable(mxs652_bad_ssl.cpp mxs652_bad_ssl bad_ssl)
-
+add_test_executable(mxs657_restart_service.cpp mxs657_restart_service replication)
 
 if(STALE_SLAVES)
   add_test_executable(stale_slaves.cpp stale_slaves replication)
