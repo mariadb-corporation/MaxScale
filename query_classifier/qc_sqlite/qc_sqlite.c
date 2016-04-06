@@ -302,6 +302,7 @@ void mxs_sqlite3EndTable(Parse *pParse,   /* Parse context */
     if (is_submitted_query(info, pParse->zTail))
     {
         info->status = QC_INFO_OK;
+        info->types |= QUERY_TYPE_WRITE;
 
         // From sqlite:
         /* The cookie mask contains one bit for each database file open.
@@ -429,12 +430,16 @@ void maxscaleSet(Parse* pParse, ExprList* pList)
         {
             if (pItem->pExpr->op == TK_INTEGER)
             {
+                info->types |= QUERY_TYPE_GSYSVAR_WRITE;
+
                 if (pItem->pExpr->u.iValue == 0)
                 {
+                    info->types |= QUERY_TYPE_BEGIN_TRX;
                     info->types |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
                 }
                 else
                 {
+                    info->types |= QUERY_TYPE_ENABLE_AUTOCOMMIT;
                     info->types |= QUERY_TYPE_COMMIT;
                 }
             }
