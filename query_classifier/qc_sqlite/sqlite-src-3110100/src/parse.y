@@ -49,13 +49,20 @@
 %include {
 #include "sqliteInt.h"
 
-extern void qc_sqlite3BeginTransaction(Parse*, int);
-extern void qc_sqlite3CommitTransaction(Parse*);
-extern void qc_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*);
-extern void qc_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int);
-extern void qc_sqlite3RollbackTransaction(Parse*);
-extern int  qc_sqlite3Select(Parse*, Select*, SelectDest*);
-extern void qc_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
+// MaxScale naming convention:
+//
+// - A function that "overloads" a sqlite3 function has the same name
+//   as the function it overloads, prefixed with "mxs_".
+// - A function that is new for MaxScale has the name "maxscaleXYZ"
+//   where "XYZ" reflects the statement the function handles.
+//
+extern void mxs_sqlite3BeginTransaction(Parse*, int);
+extern void mxs_sqlite3CommitTransaction(Parse*);
+extern void mxs_sqlite3EndTable(Parse*, Token*, Token*, u8, Select*);
+extern void mxs_sqlite3Insert(Parse*, SrcList*, Select*, IdList*, int);
+extern void mxs_sqlite3RollbackTransaction(Parse*);
+extern int  mxs_sqlite3Select(Parse*, Select*, SelectDest*);
+extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
 
 /*
 ** Disable all error recovery processing in the parser push-down
@@ -141,7 +148,7 @@ cmdx ::= cmd.           { sqlite3FinishCoding(pParse); }
 ///////////////////// Begin and end transactions. ////////////////////////////
 //
 
-cmd ::= BEGIN transtype(Y) trans_opt.  {qc_sqlite3BeginTransaction(pParse, Y);}
+cmd ::= BEGIN transtype(Y) trans_opt.  {mxs_sqlite3BeginTransaction(pParse, Y);}
 trans_opt ::= .
 trans_opt ::= TRANSACTION.
 trans_opt ::= TRANSACTION nm.
@@ -150,9 +157,9 @@ transtype(A) ::= .             {A = TK_DEFERRED;}
 transtype(A) ::= DEFERRED(X).  {A = @X;}
 transtype(A) ::= IMMEDIATE(X). {A = @X;}
 transtype(A) ::= EXCLUSIVE(X). {A = @X;}
-cmd ::= COMMIT trans_opt.      {qc_sqlite3CommitTransaction(pParse);}
-cmd ::= END trans_opt.         {qc_sqlite3CommitTransaction(pParse);}
-cmd ::= ROLLBACK trans_opt.    {qc_sqlite3RollbackTransaction(pParse);}
+cmd ::= COMMIT trans_opt.      {mxs_sqlite3CommitTransaction(pParse);}
+cmd ::= END trans_opt.         {mxs_sqlite3CommitTransaction(pParse);}
+cmd ::= ROLLBACK trans_opt.    {mxs_sqlite3RollbackTransaction(pParse);}
 
 savepoint_opt ::= SAVEPOINT.
 savepoint_opt ::= .
@@ -185,10 +192,10 @@ temp(A) ::= TEMP.  {A = 1;}
 %endif  SQLITE_OMIT_TEMPDB
 temp(A) ::= .      {A = 0;}
 create_table_args ::= LP columnlist conslist_opt(X) RP(E) table_options(F). {
-  qc_sqlite3EndTable(pParse,&X,&E,F,0);
+  mxs_sqlite3EndTable(pParse,&X,&E,F,0);
 }
 create_table_args ::= AS select(S). {
-  qc_sqlite3EndTable(pParse,0,0,0,S);
+  mxs_sqlite3EndTable(pParse,0,0,0,S);
   sqlite3SelectDelete(pParse->db, S);
 }
 %type table_options {int}
@@ -428,7 +435,7 @@ cmd ::= DROP VIEW ifexists(E) fullname(X). {
 //
 cmd ::= select(X).  {
   SelectDest dest = {SRT_Output, 0, 0, 0, 0, 0};
-  qc_sqlite3Select(pParse, X, &dest);
+  mxs_sqlite3Select(pParse, X, &dest);
   sqlite3SelectDelete(pParse->db, X);
 }
 
@@ -791,7 +798,7 @@ cmd ::= with(C) UPDATE orconf(R) fullname(X) indexed_opt(I) SET setlist(Y)
   sqlite3SrcListIndexedBy(pParse, X, &I);
   sqlite3ExprListCheckLength(pParse,Y,"set list"); 
   W = sqlite3LimitWhere(pParse, X, W, O, L.pLimit, L.pOffset, "UPDATE");
-  qc_sqlite3Update(pParse,X,Y,W,R);
+  mxs_sqlite3Update(pParse,X,Y,W,R);
 }
 %endif
 %ifndef SQLITE_ENABLE_UPDATE_DELETE_LIMIT
@@ -800,7 +807,7 @@ cmd ::= with(C) UPDATE orconf(R) fullname(X) indexed_opt(I) SET setlist(Y)
   sqlite3WithPush(pParse, C, 1);
   sqlite3SrcListIndexedBy(pParse, X, &I);
   sqlite3ExprListCheckLength(pParse,Y,"set list"); 
-  qc_sqlite3Update(pParse,X,Y,W,R);
+  mxs_sqlite3Update(pParse,X,Y,W,R);
 }
 %endif
 
@@ -820,12 +827,12 @@ setlist(A) ::= nm(X) EQ expr(Y). {
 //
 cmd ::= with(W) insert_cmd(R) INTO fullname(X) idlist_opt(F) select(S). {
   sqlite3WithPush(pParse, W, 1);
-  qc_sqlite3Insert(pParse, X, S, F, R);
+  mxs_sqlite3Insert(pParse, X, S, F, R);
 }
 cmd ::= with(W) insert_cmd(R) INTO fullname(X) idlist_opt(F) DEFAULT VALUES.
 {
   sqlite3WithPush(pParse, W, 1);
-  qc_sqlite3Insert(pParse, X, 0, F, R);
+  mxs_sqlite3Insert(pParse, X, 0, F, R);
 }
 
 %type insert_cmd {int}

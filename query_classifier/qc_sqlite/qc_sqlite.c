@@ -260,14 +260,15 @@ static bool is_submitted_query(const QC_SQLITE_INFO* info, const char* query)
 }
 
 /**
+ *
  * SQLITE
  *
  * These functions are called from sqlite.
  */
 
-void qc_sqlite3BeginTransaction(Parse* pParse, int type)
+void mxs_sqlite3BeginTransaction(Parse* pParse, int type)
 {
-    MXS_NOTICE("qc_sqlite: qc_sqlite3BeginTransaction called.");
+    MXS_NOTICE("qc_sqlite: mxs_sqlite3BeginTransaction called.");
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
@@ -276,9 +277,9 @@ void qc_sqlite3BeginTransaction(Parse* pParse, int type)
     info->type = QUERY_TYPE_BEGIN_TRX;
 }
 
-void qc_sqlite3CommitTransaction(Parse* pParse)
+void mxs_sqlite3CommitTransaction(Parse* pParse)
 {
-    MXS_NOTICE("qc_sqlite: qc_sqlite3CommitTransaction called.");
+    MXS_NOTICE("qc_sqlite: mxs_sqlite3CommitTransaction called.");
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
@@ -287,13 +288,13 @@ void qc_sqlite3CommitTransaction(Parse* pParse)
     info->type = QUERY_TYPE_COMMIT;
 }
 
-void qc_sqlite3EndTable(Parse *pParse,   /* Parse context */
-                        Token *pCons,    /* The ',' token after the last column defn. */
-                        Token *pEnd,     /* The ')' before options in the CREATE TABLE */
-                        u8 tabOpts,      /* Extra table options. Usually 0. */
-                        Select *pSelect) /* Select from a "CREATE ... AS SELECT" */
+void mxs_sqlite3EndTable(Parse *pParse,   /* Parse context */
+                         Token *pCons,    /* The ',' token after the last column defn. */
+                         Token *pEnd,     /* The ')' before options in the CREATE TABLE */
+                         u8 tabOpts,      /* Extra table options. Usually 0. */
+                         Select *pSelect) /* Select from a "CREATE ... AS SELECT" */
 {
-    MXS_NOTICE("qc_sqlite: qc_sqlite3EndTable called.");
+    MXS_NOTICE("qc_sqlite: mxs_sqlite3EndTable called.");
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
@@ -318,9 +319,9 @@ void qc_sqlite3EndTable(Parse *pParse,   /* Parse context */
     }
 }
 
-void qc_sqlite3Insert(Parse* pParse, SrcList* pTabList, Select* pSelect, IdList* pColumn, int onError)
+void mxs_sqlite3Insert(Parse* pParse, SrcList* pTabList, Select* pSelect, IdList* pColumn, int onError)
 {
-    MXS_NOTICE("qc_sqlite: qc_sqlite3Insert called.");
+    MXS_NOTICE("qc_sqlite: mxs_sqlite3Insert called.");
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
@@ -330,9 +331,9 @@ void qc_sqlite3Insert(Parse* pParse, SrcList* pTabList, Select* pSelect, IdList*
     info->operation = QUERY_OP_INSERT;
 }
 
-void qc_sqlite3RollbackTransaction(Parse* pParse)
+void mxs_sqlite3RollbackTransaction(Parse* pParse)
 {
-    MXS_NOTICE("qc_sqlite: qc_sqlite3CommitTransaction called.");
+    MXS_NOTICE("qc_sqlite: mxs_sqlite3CommitTransaction called.");
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
@@ -341,9 +342,9 @@ void qc_sqlite3RollbackTransaction(Parse* pParse)
     info->type = QUERY_TYPE_ROLLBACK;
 }
 
-int qc_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
+int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
 {
-    MXS_NOTICE("qc_sqlite: qc_sqlite3Select called.");
+    MXS_NOTICE("qc_sqlite: mxs_sqlite3Select called.");
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
@@ -399,9 +400,9 @@ int qc_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     return -1;
 }
 
-void qc_sqlite3Update(Parse* pParse, SrcList* pTablist, ExprList* pChanges, Expr* pWhere, int onError)
+void mxs_sqlite3Update(Parse* pParse, SrcList* pTablist, ExprList* pChanges, Expr* pWhere, int onError)
 {
-    MXS_NOTICE("qc_sqlite: qc_sqlite3Update called.");
+    MXS_NOTICE("qc_sqlite: mxs_sqlite3Update called.");
 
     QC_SQLITE_INFO* info = this_thread.info;
     ss_dassert(info);
