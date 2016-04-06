@@ -87,7 +87,7 @@ typedef struct parsing_info_st
 static THD* get_or_create_thd_for_parsing(MYSQL* mysql, char* query_str);
 static unsigned long set_client_flags(MYSQL* mysql);
 static bool create_parse_tree(THD* thd);
-static qc_query_type_t resolve_query_type(THD* thd);
+static uint32_t resolve_query_type(THD* thd);
 static bool skygw_stmt_causes_implicit_commit(LEX* lex, int* autocommit_stmt);
 
 static int is_autocommit_stmt(LEX* lex);
@@ -124,18 +124,10 @@ bool ensure_query_is_parsed(GWBUF* query)
     return parsed;
 }
 
-/**
- * Calls parser for the query includede in the buffer. Creates and adds parsing
- * information to buffer if it doesn't exist already. Resolves the query type.
- *
- * @param querybuf buffer including the query and possibly the parsing information
- *
- * @return query type
- */
-qc_query_type_t qc_get_type(GWBUF* querybuf)
+uint32_t qc_get_type(GWBUF* querybuf)
 {
     MYSQL* mysql;
-    qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
+    uint32_t qtype = QUERY_TYPE_UNKNOWN;
     bool succp;
 
     ss_info_dassert(querybuf != NULL, ("querybuf is NULL"));
@@ -445,10 +437,10 @@ return_here:
  * the resulting type may be different.
  *
  */
-static qc_query_type_t resolve_query_type(THD* thd)
+static uint32_t resolve_query_type(THD* thd)
 {
     qc_query_type_t qtype = QUERY_TYPE_UNKNOWN;
-    u_int32_t type = QUERY_TYPE_UNKNOWN;
+    uint32_t type = QUERY_TYPE_UNKNOWN;
     int set_autocommit_stmt = -1; /*< -1 no, 0 disable, 1 enable */
     LEX* lex;
     Item* item;

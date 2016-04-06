@@ -83,7 +83,7 @@ void qc_thread_end(void);
  * Create THD and use it for creating parse tree. Examine parse tree and
  * classify the query.
  */
-qc_query_type_t qc_get_type(GWBUF* querybuf);
+uint32_t qc_get_type(GWBUF* querybuf);
 qc_query_op_t qc_get_operation(GWBUF* querybuf);
 
 char* qc_get_created_table_name(GWBUF* querybuf);
@@ -104,7 +104,7 @@ typedef struct query_classifier
     bool (*qc_thread_init)(void);
     void (*qc_thread_end)(void);
 
-    qc_query_type_t (*qc_get_type)(GWBUF* querybuf);
+    uint32_t (*qc_get_type)(GWBUF* querybuf);
     qc_query_op_t (*qc_get_operation)(GWBUF* querybuf);
 
     char* (*qc_get_created_table_name)(GWBUF* querybuf);

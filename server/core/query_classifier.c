@@ -94,7 +94,16 @@ void qc_thread_end(void)
     return classifier->qc_thread_end();
 }
 
-qc_query_type_t qc_get_type(GWBUF* query)
+/**
+ * Returns a bitmask specifying the type(s) of the query.
+ * The result should be tested against specific qc_query_type_t values
+ * using the bitwise & operator, never using the == operator.
+ *
+ * @param query A buffer containing a query.
+ *
+ * @return A bitmask of type bits.
+ */
+uint32_t qc_get_type(GWBUF* query)
 {
     QC_TRACE();
     ss_dassert(classifier);

@@ -55,7 +55,7 @@ typedef struct qc_sqlite_info
     qc_info_status_t status;    // The validity of the information in this structure.
     const char* query;          // The query passed to sqlite.
     // TODO: More to be added.
-    qc_query_type_t type;       // The type of the query.
+    uint32_t types;             // The types of the query.
     qc_query_op_t operation;    // The operation in question.
 } QC_SQLITE_INFO;
 
@@ -162,8 +162,8 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
 
     info->status = QC_INFO_INVALID;
 
-    info->type = (qc_query_type_t) -1;
-    info->operation = (qc_query_op_t) -1;
+    info->types = QUERY_TYPE_UNKNOWN;
+    info->operation = QUERY_OP_UNDEFINED;
 
     return info;
 }
@@ -274,7 +274,7 @@ void mxs_sqlite3BeginTransaction(Parse* pParse, int type)
     ss_dassert(info);
 
     info->status = QC_INFO_OK;
-    info->type = QUERY_TYPE_BEGIN_TRX;
+    info->types |= QUERY_TYPE_BEGIN_TRX;
 }
 
 void mxs_sqlite3CommitTransaction(Parse* pParse)
@@ -285,7 +285,7 @@ void mxs_sqlite3CommitTransaction(Parse* pParse)
     ss_dassert(info);
 
     info->status = QC_INFO_OK;
-    info->type = QUERY_TYPE_COMMIT;
+    info->types |= QUERY_TYPE_COMMIT;
 }
 
 void mxs_sqlite3EndTable(Parse *pParse,   /* Parse context */
@@ -310,11 +310,11 @@ void mxs_sqlite3EndTable(Parse *pParse,   /* Parse context */
         */
         if (pParse->cookieMask & (1 << 1))
         {
-            info->type = QUERY_TYPE_CREATE_TMP_TABLE;
+            info->types |= QUERY_TYPE_CREATE_TMP_TABLE;
         }
         else
         {
-            info->type = QUERY_TYPE_COMMIT;
+            info->types |= QUERY_TYPE_COMMIT;
         }
     }
 }
@@ -327,7 +327,7 @@ void mxs_sqlite3Insert(Parse* pParse, SrcList* pTabList, Select* pSelect, IdList
     ss_dassert(info);
 
     info->status = QC_INFO_OK;
-    info->type = QUERY_TYPE_WRITE;
+    info->types |= QUERY_TYPE_WRITE;
     info->operation = QUERY_OP_INSERT;
 }
 
@@ -339,7 +339,7 @@ void mxs_sqlite3RollbackTransaction(Parse* pParse)
     ss_dassert(info);
 
     info->status = QC_INFO_OK;
-    info->type = QUERY_TYPE_ROLLBACK;
+    info->types |= QUERY_TYPE_ROLLBACK;
 }
 
 int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
@@ -356,7 +356,7 @@ int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
     {
         info->status = QC_INFO_OK;
         info->operation = QUERY_OP_SELECT;
-        info->type = QUERY_TYPE_READ;
+        info->types |= QUERY_TYPE_READ;
 
         ExprList* pEList = p->pEList; // List of columns to extract
 
@@ -366,10 +366,6 @@ int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
             {
                 int i = 0;
 
-                // In the loop it is assumed that QUERY_TYPE_SYSVAR_READ carries more
-                // weight than QUERY_TYPE_USERVAR_READ, which carries more weight than
-                // QUERY_TYPE_READ. I.e. we loop until all columns have been checked
-                // or a system variable has been found.
                 do
                 {
                     const char* column = pEList->a[i].zSpan;
@@ -381,18 +377,18 @@ int mxs_sqlite3Select(Parse* pParse, Select* p, SelectDest* pDest)
                             if (column[1] == '@')
                             {
                                 // TODO: Should only specific @@-variables be recognized?
-                                info->type = QUERY_TYPE_SYSVAR_READ;
+                                info->types |= QUERY_TYPE_SYSVAR_READ;
                             }
                             else
                             {
-                                info->type = QUERY_TYPE_USERVAR_READ;
+                                info->types |= QUERY_TYPE_USERVAR_READ;
                             }
                         }
                     }
 
                     ++i;
                 }
-                while ((info->type != QUERY_TYPE_SYSVAR_READ) && (i < pEList->nExpr));
+                while (i < pEList->nExpr);
             }
         }
     }
@@ -408,7 +404,7 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTablist, ExprList* pChanges, Exp
     ss_dassert(info);
 
     info->status = QC_INFO_OK;
-    info->type = QUERY_TYPE_WRITE;
+    info->types |= QUERY_TYPE_WRITE;
     info->operation = QUERY_OP_UPDATE;
 }
 
@@ -435,11 +431,11 @@ void maxscaleSet(Parse* pParse, ExprList* pList)
             {
                 if (pItem->pExpr->u.iValue == 0)
                 {
-                    info->type = QUERY_TYPE_DISABLE_AUTOCOMMIT;
+                    info->types |= QUERY_TYPE_DISABLE_AUTOCOMMIT;
                 }
                 else
                 {
-                    info->type = QUERY_TYPE_COMMIT;
+                    info->types |= QUERY_TYPE_COMMIT;
                 }
             }
         }
@@ -453,7 +449,7 @@ static bool qc_sqlite_init(void);
 static void qc_sqlite_end(void);
 static bool qc_sqlite_thread_init(void);
 static void qc_sqlite_thread_end(void);
-static qc_query_type_t qc_sqlite_get_type(GWBUF* query);
+static uint32_t qc_sqlite_get_type(GWBUF* query);
 static qc_query_op_t qc_sqlite_get_operation(GWBUF* query);
 static char* qc_sqlite_get_created_table_name(GWBUF* query);
 static bool qc_sqlite_is_drop_table_query(GWBUF* query);
@@ -542,20 +538,20 @@ static void qc_sqlite_thread_end(void)
     this_thread.initialized = false;
 }
 
-static qc_query_type_t qc_sqlite_get_type(GWBUF* query)
+static uint32_t qc_sqlite_get_type(GWBUF* query)
 {
     QC_TRACE();
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    qc_query_type_t type = QUERY_TYPE_UNKNOWN;
+    uint32_t types = QUERY_TYPE_UNKNOWN;
     QC_SQLITE_INFO* info = get_query_info(query);
 
     if (info)
     {
         if (info->status == QC_INFO_OK)
         {
-            type = info->type;
+            types = info->types;
         }
         else
         {
@@ -567,7 +563,7 @@ static qc_query_type_t qc_sqlite_get_type(GWBUF* query)
         MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
     }
 
-    return type;
+    return types;
 }
 
 static qc_query_op_t qc_sqlite_get_operation(GWBUF* query)
