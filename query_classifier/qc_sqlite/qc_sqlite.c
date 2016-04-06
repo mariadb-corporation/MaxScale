@@ -412,6 +412,40 @@ void mxs_sqlite3Update(Parse* pParse, SrcList* pTablist, ExprList* pChanges, Exp
     info->operation = QUERY_OP_UPDATE;
 }
 
+void maxscaleSet(Parse* pParse, ExprList* pList)
+{
+    MXS_NOTICE("qc_sqlite: maxscaleSet called.");
+
+    QC_SQLITE_INFO* info = this_thread.info;
+    ss_dassert(info);
+
+    info->status = QC_INFO_OK;
+
+    for (int i = 0; i < pList->nExpr; ++i)
+    {
+        struct ExprList_item* pItem = &pList->a[i];
+
+        // TODO: Get the list of things to look for from somewhere.
+        // FIXME: This does not really work with multiple statements.
+        // FIXME: What do you set the type to then?
+
+        if (strcmp(pItem->zName, "autocommit") == 0)
+        {
+            if (pItem->pExpr->op == TK_INTEGER)
+            {
+                if (pItem->pExpr->u.iValue == 0)
+                {
+                    info->type = QUERY_TYPE_DISABLE_AUTOCOMMIT;
+                }
+                else
+                {
+                    info->type = QUERY_TYPE_COMMIT;
+                }
+            }
+        }
+    }
+}
+
 /**
  * API
  */

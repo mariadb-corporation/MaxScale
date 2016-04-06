@@ -64,6 +64,8 @@ extern void mxs_sqlite3RollbackTransaction(Parse*);
 extern int  mxs_sqlite3Select(Parse*, Select*, SelectDest*);
 extern void mxs_sqlite3Update(Parse*, SrcList*, ExprList*, Expr*, int);
 
+extern void maxscaleSet(Parse*, ExprList*);
+
 /*
 ** Disable all error recovery processing in the parser push-down
 ** automaton.
@@ -1577,3 +1579,27 @@ wqlist(A) ::= wqlist(W) COMMA nm(X) eidlist_opt(Y) AS LP select(Z) RP. {
   A = sqlite3WithAdd(pParse, W, &X, Y, Z);
 }
 %endif  SQLITE_OMIT_CTE
+
+/*
+** MaxScale additions.
+**
+** New grammar rules made for MaxScale follow here.
+**
+*/
+
+//////////////////////// The SET statement ////////////////////////////////////
+//
+cmd ::= set(X). {
+  maxscaleSet(pParse, X);
+}
+
+%type set {ExprList*}
+
+// TODO: Handles only "SET var = expr", but not:
+// TODO: - SET GLOBAL var = expr
+// TODO: - SET SESSION var = expr
+// TODO: - SET @@global.var = expr
+// TODO: - SET @@session.var = expr
+set(A) ::= SET setlist(X). {
+  A = X;
+}
