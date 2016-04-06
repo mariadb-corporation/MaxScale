@@ -310,9 +310,15 @@ typedef struct
 
 typedef enum blr_thread_role
 {
-    BLR_THREAD_ROLE_MASTER,
+    BLR_THREAD_ROLE_MASTER_LARGE_NOTRX,
+    BLR_THREAD_ROLE_MASTER_NOTRX,
+    BLR_THREAD_ROLE_MASTER_TRX,
     BLR_THREAD_ROLE_SLAVE
 } blr_thread_role_t;
+
+#define ROLETOSTR(r) r == BLR_THREAD_ROLE_MASTER_LARGE_NOTRX ? "master (large event, no trx)" : \
+r == BLR_THREAD_ROLE_MASTER_NOTRX ? "master (no trx)" : \
+r == BLR_THREAD_ROLE_MASTER_TRX ? "master (trx)" : "slave"
 
 /**
  * The client session structure used within this router. This represents
