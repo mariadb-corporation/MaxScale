@@ -28,6 +28,133 @@
 #include <gwdirs.h>
 #include <log_manager.h>
 
+char* append(char* types, const char* type_name, size_t* lenp)
+{
+    size_t len = strlen(type_name) + 1;
+
+    if (types)
+    {
+        len += 1;
+    }
+
+    *lenp += len;
+
+    char* tmp = realloc(types, *lenp);
+
+    if (types)
+    {
+        types = tmp;
+        strcat(types, "|");
+        strcat(types, type_name);
+    }
+    else
+    {
+        types = tmp;
+        strcpy(types, type_name);
+    }
+
+
+    return types;
+}
+
+char* get_types_as_string(uint32_t types)
+{
+    char* s = NULL;
+    size_t len = 0;
+
+    if (types & QUERY_TYPE_LOCAL_READ)
+    {
+        s = append(s, "QUERY_TYPE_LOCAL_READ", &len);
+    }
+    if (types & QUERY_TYPE_READ)
+    {
+        s = append(s, "QUERY_TYPE_READ", &len);
+    }
+    if (types & QUERY_TYPE_WRITE)
+    {
+        s = append(s, "QUERY_TYPE_WRITE", &len);
+    }
+    if (types & QUERY_TYPE_MASTER_READ)
+    {
+        s = append(s, "QUERY_TYPE_MASTER_READ", &len);
+    }
+    if (types & QUERY_TYPE_SESSION_WRITE)
+    {
+        s = append(s, "QUERY_TYPE_SESSION_WRITE", &len);
+    }
+    if (types & QUERY_TYPE_USERVAR_READ)
+    {
+        s = append(s, "QUERY_TYPE_USERVAR_READ", &len);
+    }
+    if (types & QUERY_TYPE_SYSVAR_READ)
+    {
+        s = append(s, "QUERY_TYPE_SYSVAR_READ", &len);
+    }
+    if (types & QUERY_TYPE_GSYSVAR_READ)
+    {
+        s = append(s, "QUERY_TYPE_GSYSVAR_READ", &len);
+    }
+    if (types & QUERY_TYPE_GSYSVAR_WRITE)
+    {
+        s = append(s, "QUERY_TYPE_GSYSVAR_WRITE", &len);
+    }
+    if (types & QUERY_TYPE_BEGIN_TRX)
+    {
+        s = append(s, "QUERY_TYPE_BEGIN_TRX", &len);
+    }
+    if (types & QUERY_TYPE_ENABLE_AUTOCOMMIT)
+    {
+        s = append(s, "QUERY_TYPE_ENABLE_AUTOCOMMIT", &len);
+    }
+    if (types & QUERY_TYPE_DISABLE_AUTOCOMMIT)
+    {
+        s = append(s, "QUERY_TYPE_DISABLE_AUTOCOMMIT", &len);
+    }
+    if (types & QUERY_TYPE_ROLLBACK)
+    {
+        s = append(s, "QUERY_TYPE_ROLLBACK", &len);
+    }
+    if (types & QUERY_TYPE_COMMIT)
+    {
+        s = append(s, "QUERY_TYPE_COMMIT", &len);
+    }
+    if (types & QUERY_TYPE_PREPARE_NAMED_STMT)
+    {
+        s = append(s, "QUERY_TYPE_PREPARE_NAMED_STMT", &len);
+    }
+    if (types & QUERY_TYPE_PREPARE_STMT)
+    {
+        s = append(s, "QUERY_TYPE_PREPARE_STMT", &len);
+    }
+    if (types & QUERY_TYPE_EXEC_STMT)
+    {
+        s = append(s, "QUERY_TYPE_EXEC_STMT", &len);
+    }
+    if (types & QUERY_TYPE_CREATE_TMP_TABLE)
+    {
+        s = append(s, "QUERY_TYPE_CREATE_TMP_TABLE", &len);
+    }
+    if (types & QUERY_TYPE_READ_TMP_TABLE)
+    {
+        s = append(s, "QUERY_TYPE_READ_TMP_TABLE", &len);
+    }
+    if (types & QUERY_TYPE_SHOW_DATABASES)
+    {
+        s = append(s, "QUERY_TYPE_SHOW_DATABASES", &len);
+    }
+    if (types & QUERY_TYPE_SHOW_TABLES)
+    {
+        s = append(s, "QUERY_TYPE_SHOW_TABLES", &len);
+    }
+
+    if (!s)
+    {
+        s = append(s, "QUERY_TYPE_UNKNOWN", &len);
+    }
+
+    return s;
+}
+
 int test(FILE* input, FILE* expected)
 {
     int rc = EXIT_SUCCESS;
@@ -85,7 +212,6 @@ int test(FILE* input, FILE* expected)
             strsz -= qlen;
             memset(strbuff + strsz, 0, buffsz - strsz);
             qc_query_type_t type = qc_get_type(buff);
-            char qtypestr[64];
             char expbuff[256];
             int expos = 0;
 
@@ -95,99 +221,25 @@ int test(FILE* input, FILE* expected)
             }
             expbuff[expos] = '\0';
 
-            if (type == QUERY_TYPE_UNKNOWN)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_UNKNOWN");
-            }
-            if (type & QUERY_TYPE_LOCAL_READ)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_LOCAL_READ");
-            }
-            if (type & QUERY_TYPE_READ)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_READ");
-            }
-            if (type & QUERY_TYPE_WRITE)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_WRITE");
-            }
-            if (type & QUERY_TYPE_MASTER_READ)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_MASTER_READ");
-            }
-            if (type & QUERY_TYPE_SESSION_WRITE)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_SESSION_WRITE");
-            }
-            if (type & QUERY_TYPE_USERVAR_READ)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_USERVAR_READ");
-            }
-            if (type & QUERY_TYPE_SYSVAR_READ)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_SYSVAR_READ");
-            }
-            if (type & QUERY_TYPE_GSYSVAR_READ)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_GSYSVAR_READ");
-            }
-            if (type & QUERY_TYPE_GSYSVAR_WRITE)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_GSYSVAR_WRITE");
-            }
-            if (type & QUERY_TYPE_BEGIN_TRX)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_BEGIN_TRX");
-            }
-            if (type & QUERY_TYPE_ENABLE_AUTOCOMMIT)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_ENABLE_AUTOCOMMIT");
-            }
-            if (type & QUERY_TYPE_DISABLE_AUTOCOMMIT)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_DISABLE_AUTOCOMMIT");
-            }
-            if (type & QUERY_TYPE_ROLLBACK)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_ROLLBACK");
-            }
-            if (type & QUERY_TYPE_COMMIT)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_COMMIT");
-            }
-            if (type & QUERY_TYPE_PREPARE_NAMED_STMT)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_PREPARE_NAMED_STMT");
-            }
-            if (type & QUERY_TYPE_PREPARE_STMT)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_PREPARE_STMT");
-            }
-            if (type & QUERY_TYPE_EXEC_STMT)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_EXEC_STMT");
-            }
-            if (type & QUERY_TYPE_CREATE_TMP_TABLE)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_CREATE_TMP_TABLE");
-            }
-            if (type & QUERY_TYPE_READ_TMP_TABLE)
-            {
-                sprintf(qtypestr, "QUERY_TYPE_READ_TMP_TABLE");
-            }
-
+            char *qtypestr = get_types_as_string(type);
             const char* q = (const char*) GWBUF_DATA(buff) + 5;
+
+            printf("Query   : %.*s\n", qlen, q);
+            printf("Reported: %s\n", qtypestr);
 
             if (strcmp(qtypestr, expbuff) == 0)
             {
-                printf("OK   : %.*s\n", qlen, q);
+                printf("OK\n");
             }
             else
             {
-                printf("ERROR: %.*s\n", qlen, q);
-                printf("'%s' was expected but got '%s'\n\n", expbuff, qtypestr);
+                printf("ERROR   : %s\n", expbuff);
                 rc = 1;
             }
+
+            printf("\n");
+
+            free(qtypestr);
 
             gwbuf_free(buff);
         }
