@@ -1931,6 +1931,15 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
                       (hdr->event_type == ROTATE_EVENT &&
                        strcmp(slave->binlogfile, router->prevbinlog))))
             {
+                if (router->trx_safe)
+                {
+                    MXS_ERROR("Slave %s:%d, server ID %u: Sending event from an "
+                              "incomplete transaction from file %s. Slave position: %u "
+                              "Caller role: %s Current safe event: %lu Event type: %x",
+                              slave->dcb->remote, ntohs((slave->dcb->ipv4).sin_port),
+                              slave->serverid, slave->binlogfile, slave->binlog_pos,
+                              ROLETOSTR(role), router->current_safe_event, hdr->event_type);
+                }
                 /**
                  * Transaction safety is off or there are no pending transactions
                  */
