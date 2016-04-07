@@ -12,6 +12,10 @@ int big_transaction(MYSQL * conn, int N)
     {
         create_insert_string(sql, 10000, i);
         local_result += execute_query(conn, sql);
+        local_result += execute_query(conn, "CREATE TABLE t2(id int);");
+        local_result += execute_query(conn, sql);
+        local_result += execute_query(conn, "DROP TABLE t2(id int);");
+        local_result += execute_query(conn, sql);
     }
 
     local_result += execute_query(conn, (char *) "COMMIT");
