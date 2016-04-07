@@ -417,21 +417,19 @@ void maxscaleSet(Parse* pParse, ExprList* pList)
     ss_dassert(info);
 
     info->status = QC_INFO_OK;
+    // TODO: qc_mysqlembedded sets this bit on, without checking what
+    // TODO: kind of variable it is.
+    info->types |= QUERY_TYPE_GSYSVAR_WRITE;
 
     for (int i = 0; i < pList->nExpr; ++i)
     {
         struct ExprList_item* pItem = &pList->a[i];
 
         // TODO: Get the list of things to look for from somewhere.
-        // FIXME: This does not really work with multiple statements.
-        // FIXME: What do you set the type to then?
-
         if (strcmp(pItem->zName, "autocommit") == 0)
         {
             if (pItem->pExpr->op == TK_INTEGER)
             {
-                info->types |= QUERY_TYPE_GSYSVAR_WRITE;
-
                 if (pItem->pExpr->u.iValue == 0)
                 {
                     info->types |= QUERY_TYPE_BEGIN_TRX;

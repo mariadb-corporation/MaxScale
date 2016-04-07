@@ -284,6 +284,10 @@ columnid(A) ::= nm(X). {
 %type nm {Token}
 nm(A) ::= id(X).         {A = X;}
 nm(A) ::= STRING(X).     {A = X;}
+// MXS: nm(A) ::= VARIABLE(X) was added to enable statements like
+// MXS: "set @USER_VAR=@@SYSTEM_VAR", but since nm is used in other rules
+// MXS: as well, this may be enable too much.
+nm(A) ::= VARIABLE(X).   {A = X;}
 nm(A) ::= JOIN_KW(X).    {A = X;}
 
 // A typetoken is really one or more tokens that form a type name such
