@@ -242,8 +242,20 @@ int sqlite3GetToken(const unsigned char *z, int *tokenType){
         *tokenType = TK_SLASH;
         return 1;
       }
-      for(i=3, c=z[2]; (c!='*' || z[i]!='/') && (c=z[i])!=0; i++){}
-      if( c ) i++;
+      if ( z[2] == '!' ){
+        // MySQL-specific code
+        for (i=3, c=z[2]; (c!='*' || z[i]!='/') && (c=z[i])!=0; i++){}
+        if (c=='*' && z[i]=='/'){
+          char* znc = (char*) z;
+          znc[0]=znc[1]=znc[2]=znc[i-1]=znc[i]=' '; // Remove comment chars, i.e. "/*!" and "*/".
+          for (i=3; sqlite3Isdigit(z[i]); ++i){} // Jump over the MySQL version number.
+          for (; sqlite3Isspace(z[i]); ++i){} // Jump over any space.
+        }
+      } else {
+        for(i=3, c=z[2]; (c!='*' || z[i]!='/') && (c=z[i])!=0; i++){}
+
+        if( c ) i++;
+      }
       *tokenType = TK_SPACE;   /* IMP: R-22934-25134 */
       return i;
     }
