@@ -1914,59 +1914,69 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
             spinlock_acquire(&router->binlog_lock);
 
             slave_event_action_t slave_action = SLAVE_FORCE_CATCHUP;
+            const bool same_file = strcmp(slave->binlogfile, router->binlog_name) == 0;
+            const bool rotate = hdr->event_type == ROTATE_EVENT &&
+                strcmp(slave->binlogfile, router->prevbinlog);
 
-            if (router->trx_safe && slave->binlog_pos == router->current_safe_event &&
-                (strcmp(slave->binlogfile, router->binlog_name) == 0 ||
-                 (hdr->event_type == ROTATE_EVENT &&
-                  strcmp(slave->binlogfile, router->prevbinlog))))
+            if (router->trx_safe && (same_file || rotate) &&
+                slave->binlog_pos == router->current_safe_event)
             {
-                /**
-                 * Slave needs the current event being distributed
-                 */
+                /** Slave needs the current event being distributed */
                 slave_action = SLAVE_SEND_EVENT;
             }
-            else if (slave->binlog_pos == router->last_event_pos &&
-                     (strcmp(slave->binlogfile, router->binlog_name) == 0 ||
-                      (hdr->event_type == ROTATE_EVENT &&
-                       strcmp(slave->binlogfile, router->prevbinlog))))
+            else if (!router->trx_safe && (same_file || rotate) &&
+                     slave->binlog_pos == router->last_event_pos)
             {
-                if (router->trx_safe)
+                /** Transaction safety is off */
+                slave_action = SLAVE_SEND_EVENT;
+            }
+            else if (same_file)
+            {
+                if (slave->binlog_pos == hdr->next_pos)
                 {
-                    MXS_ERROR("Slave %s:%d, server ID %u: Sending event from an "
-                              "incomplete transaction from file %s. Slave position: %u "
-                              "Caller role: %s Current safe event: %lu Event type: %x",
-                              slave->dcb->remote, ntohs((slave->dcb->ipv4).sin_port),
-                              slave->serverid, slave->binlogfile, slave->binlog_pos,
-                              ROLETOSTR(role), router->current_safe_event, hdr->event_type);
+                    /*
+                     * Slave has already read record from file, no
+                     * need to distrbute this event
+                     */
+                    slave_action = SLAVE_EVENT_ALREADY_SENT;
                 }
-                /**
-                 * Transaction safety is off or there are no pending transactions
-                 */
-
-                slave_action = SLAVE_SEND_EVENT;
+                else if ((slave->binlog_pos > hdr->next_pos - hdr->event_size))
+                {
+                    /*
+                     * The slave is ahead of the master, this should never
+                     * happen. Force the slave to catchup mode in order to
+                     * try to resolve the issue.
+                     */
+                    MXS_ERROR("Slave %s:%d server ID %d is ahead of expected position %s@%u. "
+                              "Expected position %d", slave->dcb->remote,
+                              ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
+                              slave->binlogfile, slave->binlog_pos,
+                              hdr->next_pos - hdr->event_size);
+                }
+                else
+                {
+                    MXS_ERROR("Slave %s:%d server ID %d is at position %u when "
+                              "it should be at %u.", slave->dcb->remote,
+                              ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
+                              slave->binlog_pos, hdr->next_pos - hdr->event_size);
+                }
             }
-            else if (slave->binlog_pos == hdr->next_pos
-                     && strcmp(slave->binlogfile, router->binlog_name) == 0)
+            else if (rotate)
             {
-                /*
-                 * Slave has already read record from file, no
-                 * need to distrbute this event
-                 */
-                slave_action = SLAVE_EVENT_ALREADY_SENT;
+                /** Slave is more than one binlog file behind */
+                MXS_ERROR("Slave %s:%d server ID %d is behind more than one binlog file "
+                          "from the master. Slave is using '%s' with position %d "
+                          "when master binlog file is '%s'.", slave->dcb->remote,
+                          ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
+                          slave->binlogfile, slave->binlog_pos, router->binlog_name);
             }
-            else if ((slave->binlog_pos > hdr->next_pos - hdr->event_size)
-                     && strcmp(slave->binlogfile, router->binlog_name) == 0)
+            else
             {
-                /*
-                 * The slave is ahead of the master, this should never
-                 * happen. Force the slave to catchup mode in order to
-                 * try to resolve the issue.
-                 */
-                MXS_ERROR("Slave %d is ahead of expected position %s@%lu. "
-                          "Expected position %d",
-                          slave->serverid, slave->binlogfile,
-                          (unsigned long)slave->binlog_pos,
-                          hdr->next_pos - hdr->event_size);
+                /** Slave is using unexpected binlog file */
+                MXS_ERROR("Slave %s:%d server ID %d is using an unexpected binlog file '%s' with "
+                          "position %d. Master binlog file is '%s'.", slave->dcb->remote,
+                          ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
+                          slave->binlogfile, slave->binlog_pos, router->binlog_name);
             }
 
             spinlock_release(&router->binlog_lock);
