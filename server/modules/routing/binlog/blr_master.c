@@ -1466,9 +1466,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0))
                         {
-
                             router->binlog_position = router->current_pos;
-                            router->current_safe_event = router->current_pos;
+                            router->current_safe_event = router->last_event_pos;
 
                             spinlock_release(&router->binlog_lock);
 
