@@ -76,6 +76,11 @@ typedef enum
 bool qc_init(const char* plugin_name);
 void qc_end(void);
 
+typedef struct query_classifier QUERY_CLASSIFIER;
+
+QUERY_CLASSIFIER* qc_load(const char* plugin_name);
+void qc_unload(QUERY_CLASSIFIER* classifier);
+
 bool qc_thread_init(void);
 void qc_thread_end(void);
 
@@ -96,7 +101,7 @@ char* qc_get_qtype_str(qc_query_type_t qtype);
 char* qc_get_affected_fields(GWBUF* buf);
 char** qc_get_database_names(GWBUF* querybuf, int* size);
 
-typedef struct query_classifier
+struct query_classifier
 {
     bool (*qc_init)(void);
     void (*qc_end)(void);
@@ -115,7 +120,7 @@ typedef struct query_classifier
     bool (*qc_query_has_clause)(GWBUF* buf);
     char* (*qc_get_affected_fields)(GWBUF* buf);
     char** (*qc_get_database_names)(GWBUF* querybuf, int* size);
-} QUERY_CLASSIFIER;
+};
 
 #define QUERY_CLASSIFIER_VERSION {1, 0, 0}
 

@@ -52,18 +52,11 @@ bool qc_init(const char* plugin_name)
     }
 
     bool success = false;
-    void* module = load_module(plugin_name, MODULE_QUERY_CLASSIFIER);
+    classifier = qc_load(plugin_name);
 
-    if (module)
+    if (classifier)
     {
-        classifier = (QUERY_CLASSIFIER*) module;
-        MXS_NOTICE("%s loaded.", plugin_name);
-
         success = classifier->qc_init();
-    }
-    else
-    {
-        MXS_ERROR("Could not load %s.", plugin_name);
     }
 
     return success;
@@ -76,6 +69,28 @@ void qc_end(void)
 
     classifier->qc_end();
     classifier = NULL;
+}
+
+QUERY_CLASSIFIER* qc_load(const char* plugin_name)
+{
+    void* module = load_module(plugin_name, MODULE_QUERY_CLASSIFIER);
+
+    if (module)
+    {
+        MXS_INFO("%s loaded.", plugin_name);
+    }
+    else
+    {
+        MXS_ERROR("Could not load %s.", plugin_name);
+    }
+
+    return (QUERY_CLASSIFIER*) module;
+}
+
+void qc_unload(QUERY_CLASSIFIER* classifier)
+{
+    // TODO: The module loading/unloading needs an overhaul before we
+    // TODO: actually can unload something.
 }
 
 bool qc_thread_init(void)
