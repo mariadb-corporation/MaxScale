@@ -57,6 +57,7 @@ typedef struct qc_sqlite_info
     // TODO: More to be added.
     uint32_t types;             // The types of the query.
     qc_query_op_t operation;    // The operation in question.
+    char* affected_fields;      // The affected fields.
 } QC_SQLITE_INFO;
 
 /**
@@ -164,6 +165,7 @@ static QC_SQLITE_INFO* info_init(QC_SQLITE_INFO* info)
 
     info->types = QUERY_TYPE_UNKNOWN;
     info->operation = QUERY_OP_UNDEFINED;
+    info->affected_fields = NULL;
 
     return info;
 }
@@ -670,9 +672,31 @@ static char* qc_sqlite_get_affected_fields(GWBUF* query)
     ss_dassert(this_unit.initialized);
     ss_dassert(this_thread.initialized);
 
-    MXS_ERROR("qc_sqlite: qc_get_affected_files not implemented yet.");
+    char* affected_fields = NULL;
+    QC_SQLITE_INFO* info = get_query_info(query);
 
-    return NULL;
+    if (info)
+    {
+        if (info->status == QC_INFO_OK)
+        {
+            affected_fields = info->affected_fields;
+        }
+        else
+        {
+            MXS_ERROR("qc_sqlite: The query operation was not resolved. Response not valid.");
+        }
+    }
+    else
+    {
+        MXS_ERROR("qc_sqlite: The query could not be parsed. Response not valid.");
+    }
+
+    if (!affected_fields)
+    {
+        affected_fields = "";
+    }
+
+    return strdup(affected_fields);
 }
 
 static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)
