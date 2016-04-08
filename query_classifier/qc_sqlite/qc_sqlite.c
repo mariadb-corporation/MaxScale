@@ -302,6 +302,7 @@ void mxs_sqlite3EndTable(Parse *pParse,   /* Parse context */
     if (is_submitted_query(info, pParse->zTail))
     {
         info->status = QC_INFO_OK;
+        info->operation = QUERY_OP_CREATE;
         info->types |= QUERY_TYPE_WRITE;
 
         // From sqlite:
