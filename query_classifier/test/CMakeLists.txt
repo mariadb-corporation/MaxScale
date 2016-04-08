@@ -17,6 +17,8 @@ endif()
 
 add_subdirectory(canonical_tests)
 add_executable(classify classify.c)
+add_executable(compare compare.cc)
 target_link_libraries(classify maxscale-common)
+target_link_libraries(compare maxscale-common)
 add_test(TestQC_MySQLEmbedded classify qc_mysqlembedded ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
 add_test(TestQC_SqLite classify qc_sqlite ${CMAKE_CURRENT_SOURCE_DIR}/input.sql ${CMAKE_CURRENT_SOURCE_DIR}/expected.sql)
