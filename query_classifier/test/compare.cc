@@ -24,6 +24,7 @@
 #include <string>
 #include <gwdirs.h>
 #include <query_classifier.h>
+#include <log_manager.h>
 using std::cerr;
 using std::cin;
 using std::cout;
