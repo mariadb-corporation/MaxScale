@@ -1972,12 +1972,13 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
             }
             else
             {
-                /** Slave is using unexpected binlog file */
-                MXS_ERROR("Slave %s:%d server ID %d is using an unexpected binlog file '%s' with "
-                          "position %d. Master binlog file is '%s' at pos %lu.", slave->dcb->remote,
+                /** Slave is lagging behind */
+                MXS_ERROR("Slave %s:%d server ID %d is using binlog file '%s' with "
+                          "position %d. Master binlog file is '%s' at position %lu "
+                          "with last safe event at %lu.", slave->dcb->remote,
                           ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
                           slave->binlogfile, slave->binlog_pos, router->binlog_name,
-                          (unsigned long)router->current_pos);
+                          router->current_pos, router->current_safe_event);
             }
 
             spinlock_release(&router->binlog_lock);
