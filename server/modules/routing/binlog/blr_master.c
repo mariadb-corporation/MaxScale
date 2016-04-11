@@ -1956,9 +1956,10 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
                 else
                 {
                     MXS_ERROR("Slave %s:%d server ID %d is at position %u when "
-                              "it should be at %u.", slave->dcb->remote,
+                              "it should be at %u. Binlog file is '%s'.", slave->dcb->remote,
                               ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
-                              slave->binlog_pos, hdr->next_pos - hdr->event_size);
+                              slave->binlog_pos, hdr->next_pos - hdr->event_size,
+                              slave->binlogfile);
                 }
             }
             else if (rotate)
