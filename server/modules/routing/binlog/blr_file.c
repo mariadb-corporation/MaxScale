@@ -253,7 +253,6 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
             router->binlog_position = BINLOG_MAGIC_SIZE;
             router->current_safe_event = BINLOG_MAGIC_SIZE;
             router->last_written = BINLOG_MAGIC_SIZE;
-            router->last_event_pos = 0;
             spinlock_release(&router->binlog_lock);
 
             created = 1;
@@ -317,7 +316,6 @@ blr_file_append(ROUTER_INSTANCE *router, char *file)
                 router->binlog_position = BINLOG_MAGIC_SIZE;
                 router->current_safe_event = BINLOG_MAGIC_SIZE;
                 router->last_written = BINLOG_MAGIC_SIZE;
-                router->last_event_pos = 0;
             }
             else
             {

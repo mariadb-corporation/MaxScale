@@ -278,6 +278,7 @@ createInstance(SERVICE *service, char **options)
     inst->trx_safe = 1;
     inst->pending_transaction = 0;
     inst->last_safe_pos = 0;
+    inst->last_event_pos = 0;
 
     inst->set_master_version = NULL;
     inst->set_master_hostname = NULL;

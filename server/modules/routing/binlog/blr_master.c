@@ -1916,7 +1916,7 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
             slave_event_action_t slave_action = SLAVE_FORCE_CATCHUP;
             const bool same_file = strcmp(slave->binlogfile, router->binlog_name) == 0;
             const bool rotate = hdr->event_type == ROTATE_EVENT &&
-                strcmp(slave->binlogfile, router->prevbinlog);
+                strcmp(slave->binlogfile, router->prevbinlog) == 0;
 
             if (router->trx_safe && (same_file || rotate) &&
                 slave->binlog_pos == router->current_safe_event)
