@@ -31,8 +31,8 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 07/04/2014	Mark Riddoch		Initial implementation
+ * Date     Who     Description
+ * 07/04/2014   Mark Riddoch        Initial implementation
  *
  * @endverbatim
  */
@@ -58,7 +58,7 @@
  * effect also determine the binlog file to read and the position to read
  * from.
  *
- * @param	router		The router instance
+ * @param   router      The router instance
  */
 void
 blr_init_cache(ROUTER_INSTANCE *router)
