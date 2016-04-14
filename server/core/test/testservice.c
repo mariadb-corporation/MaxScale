@@ -71,7 +71,7 @@ init_test_env(NULL);
         ss_info_dassert(0 == strcmp("MyService", service_get_name(service)), "Service must have given name");
         ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
         ss_info_dassert(0 != serviceAddProtocol(service, "testprotocol", "localhost", 9876, "MySQL", NULL), "Add Protocol should succeed");
-        ss_info_dassert(0 != serviceHasProtocol(service, "testprotocol", 9876), "Service should have new protocol as requested");
+        ss_info_dassert(0 != serviceHasProtocol(service, "testprotocol", "localhost", 9876), "Service should have new protocol as requested");
         serviceStartProtocol(service, "testprotocol", 9876);
         mxs_log_flush_sync();
         ss_dfprintf(stderr, "\t..done\nStarting Service.");
