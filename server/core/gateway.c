@@ -782,6 +782,7 @@ static void print_log_n_stderr(
 
     if (do_log)
     {
+        mxs_log_init(NULL, get_logdir(), MXS_LOG_TARGET_FS);
         char errbuf[STRERROR_BUFLEN];
         MXS_ERROR("%s %s %s %s",
                   log_err,
