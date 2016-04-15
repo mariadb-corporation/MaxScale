@@ -1927,6 +1927,10 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
                               slave->binlogfile, slave->binlog_pos,
                               hdr->next_pos - hdr->event_size);
                 }
+                /* If none of the above conditions were met, a slave in catchup
+                 * mode transitioned into up-to-date mode while we were
+                 * distributing events. The slave needs to be forced into
+                 * catchup mode since it isn't up to date anymore. */
             }
             else if (rotate)
             {
