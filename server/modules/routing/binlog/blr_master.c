@@ -1927,11 +1927,15 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
                               slave->binlogfile, slave->binlog_pos,
                               hdr->next_pos - hdr->event_size);
                 }
+                /* If none of the above conditions were met, a slave in catchup
+                 * mode transitioned into up-to-date mode while we were
+                 * distributing events. The slave needs to be forced into
+                 * catchup mode since it isn't up to date anymore. */
             }
             else if (rotate)
             {
                 /** Slave is more than one binlog file behind */
-                MXS_ERROR("Slave %s:%d server ID %d is behind more than one binlog file "
+                MXS_WARNING("Slave %s:%d server ID %d is behind more than one binlog file "
                           "from the master. Slave is using '%s' with position %d "
                           "when master binlog file is '%s'.", slave->dcb->remote,
                           ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
@@ -1940,7 +1944,7 @@ blr_distribute_binlog_record(ROUTER_INSTANCE *router, REP_HEADER *hdr, uint8_t *
             else
             {
                 /** Slave is lagging behind */
-                MXS_ERROR("Slave %s:%d server ID %d is using binlog file '%s' with "
+                MXS_WARNING("Slave %s:%d server ID %d is using binlog file '%s' with "
                           "position %d. Master binlog file is '%s' at position %lu "
                           "with last safe event at %lu.", slave->dcb->remote,
                           ntohs((slave->dcb->ipv4).sin_port), slave->serverid,
