@@ -298,6 +298,7 @@ endif()
 
 # Python based tests
 add_test_script(mxs585.py replication)
+add_test_script(mxs598.py ssl)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
