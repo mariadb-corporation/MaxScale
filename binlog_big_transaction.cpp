@@ -10,13 +10,14 @@
 #include "test_binlog_fnc.h"
 #include "big_transaction.h"
 
-void *query_thread( void *ptr );
+void *disconnect_thread( void *ptr );
 TestConnections * Test ;
 int exit_flag;
 int main(int argc, char *argv[])
 {
-     Test = new TestConnections(argc, argv);
+    Test = new TestConnections(argc, argv);
     Test->set_timeout(3000);
+    Test->set_log_copy_interval(300);
 
     Test->repl->connect();
     execute_query(Test->repl->nodes[0], (char *) "DROP TABLE IF EXISTS t1;");
@@ -28,7 +29,7 @@ int main(int argc, char *argv[])
     pthread_t threads;
     int  iret;
     exit_flag=0;
-    iret = pthread_create( &threads, NULL, query_thread, NULL);
+    iret = pthread_create( &threads, NULL, disconnect_thread, NULL);
 
     Test->repl->connect();
     for (int i = 0; i < 100000; i++)
@@ -42,7 +43,7 @@ int main(int argc, char *argv[])
     Test->copy_all_logs(); return(Test->global_result);
 }
 
-void *query_thread( void *ptr )
+void *disconnect_thread( void *ptr )
 {
     MYSQL * conn;
     char cmd[256];

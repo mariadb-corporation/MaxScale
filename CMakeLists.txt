@@ -290,6 +290,8 @@ add_test_executable(test_hints.cpp test_hints hints2)
 add_test_executable(mxs652_bad_ssl.cpp mxs652_bad_ssl bad_ssl)
 add_test_executable(mxs657_restart_service.cpp mxs657_restart_service replication)
 
+add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog)
+
 if(STALE_SLAVES)
   add_test_executable(stale_slaves.cpp stale_slaves replication)
 endif()

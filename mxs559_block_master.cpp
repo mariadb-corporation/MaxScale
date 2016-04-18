@@ -26,7 +26,7 @@ typedef struct  {
     MYSQL * conn3;
 } openclose_thread_data;
 
-void *query_thread( void *ptr );
+void *disconnect_thread( void *ptr );
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < load_threads_num; i++) { data_master[i].rwsplit_only = 1;}
     /* Create independent threads each of them will create some load on Mastet */
     for (i = 0; i < load_threads_num; i++) {
-        iret_master[i] = pthread_create( &thread_master[i], NULL, query_thread, &data_master[i]);
+        iret_master[i] = pthread_create( &thread_master[i], NULL, disconnect_thread, &data_master[i]);
     }
 
     for (int j = 0; j < t_iterations; j++)
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 }
 
 
-void *query_thread( void *ptr )
+void *disconnect_thread( void *ptr )
 {
     openclose_thread_data * data = (openclose_thread_data *) ptr;
     char sql[1000000];
