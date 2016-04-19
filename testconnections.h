@@ -565,6 +565,12 @@ public:
      */
     int check_maxscale_processes(int expected);
 
+    /**
+     * @brief list_dirs Execute 'ls' on binlog directory on all repl nodes and on Maxscale node
+     * @return 0
+     */
+    int list_dirs();
+
 };
 
 /**

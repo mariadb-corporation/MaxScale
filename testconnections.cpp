@@ -381,12 +381,30 @@ int TestConnections::start_binlog()
         sprintf(cmd_opt, " ");
     }
 
+    repl->stop_nodes();
+
+    binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
+    execute_query(binlog, (char *) "stop slave");
+    execute_query(binlog, (char *) "reset slave all");
+    execute_query(binlog, (char *) "reset master");
+    mysql_close(binlog);
+
+    tprintf("Stopping maxscale\n");
+    add_result(stop_maxscale(), "Maxscale stopping failed\n");
+
+    for (i = 0; i < repl->N; i++)
+    {
+        repl->start_node(i, cmd_opt);
+    }
+    sleep(5);
+
     repl->connect();
     find_field(repl->nodes[0], "SELECT @@VERSION", "@@version", version_str);
-    /*execute_query(repl->nodes[0], "reset master");*/
+
     for (i = 0; i < repl->N; i++) {
         execute_query(repl->nodes[i], "stop slave");
-        execute_query(repl->nodes[i], "reset slave");
+        execute_query(repl->nodes[i], "reset slave all");
+        execute_query(repl->nodes[i], "reset master");
     }
     repl->close_connections();
 
@@ -406,17 +424,6 @@ int TestConnections::start_binlog()
 
     tprintf("Testing binlog when MariaDB is started with '%s' option\n", cmd_opt);
 
-    binlog = open_conn_no_db(binlog_port, maxscale_IP, repl->user_name, repl->password, ssl);
-    execute_query(binlog, (char *) "stop slave");
-    execute_query(binlog, (char *) "reset slave");
-    mysql_close(binlog);
-
-    tprintf("Stopping maxscale\n");
-    add_result(stop_maxscale(), "Maxscale stopping failed\n");
-
-    tprintf("Stopping all backend nodes\n");
-    add_result(repl->stop_nodes(), "Nodes stopping failed\n");
-
     tprintf("Removing all binlog data from Maxscale node\n");
     add_result(ssh_maxscale(true, "rm -rf %s", maxscale_binlog_dir),
                "Removing binlog data failed\n");
@@ -435,28 +442,8 @@ int TestConnections::start_binlog()
                             maxscale_access_sudo, maxscale_binlog_dir),
                "directory ownership change failed\n");
 
-    tprintf("Starting back Master\n");
-    add_result(repl->start_node(0, cmd_opt), "Master start failed\n");
-
-    MYSQL * master = open_conn_no_db(repl->port[0], repl->IP[0], repl->user_name, repl->password, ssl);
-    execute_query(master, (char*) "reset master");
-    mysql_close(master);
-
-    for (i = 1; i < repl->N; i++) {
-        tprintf("Starting node %d\n", i);
-        add_result(repl->start_node(i, cmd_opt), "Node %d start failed\n", i+1);
-    }
-    sleep(5);
-
     tprintf("Connecting to all backend nodes\n");
     add_result(repl->connect(), "Connecting to backed failed\n");
-    tprintf("Dropping t1 table on all backend nodes\n");
-    for (i = 0; i < repl->N; i++)
-    {
-        execute_query(repl->nodes[i], (char *) "DROP TABLE IF EXISTS t1;");
-    }
-    tprintf("'reset master' query to node 0\n");fflush(stdout);
-    execute_query(repl->nodes[0], (char *) "reset master;");
 
     tprintf("show master status\n");
     find_field(repl->nodes[0], (char *) "show master status", (char *) "File", &log_file[0]);
@@ -1175,4 +1162,16 @@ int TestConnections::get_maxadmin_param(char *command, char *param, char *result
     result[cnt] = '\0';
 
     return(0);
+}
+
+int TestConnections::list_dirs()
+{
+    for (int i = 0; i < repl->N; i++)
+    {
+        tprintf("ls on node %d\n", i);
+        repl->ssh_node(i, (char *) "ls -la /var/lib/mysql", TRUE); fflush(stdout);
+    }
+    tprintf("ls maxscale \n");
+    ssh_maxscale(TRUE, "ls -la /var/lib/maxscale/"); fflush(stdout);
+    return 0;
 }

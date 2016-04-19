@@ -29,6 +29,7 @@
 
 
 MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * Password, unsigned long flag, bool ssl);
+MYSQL * open_conn_db_timeout(int port, char * ip, char * db, char * User, char * Password, unsigned long timeout, bool ssl);
 MYSQL * open_conn_db(int port, char * ip, char * db, char * User, char * Password, bool ssl);
 MYSQL * open_conn(int port, char * ip, char *User, char *Password, bool ssl);
 MYSQL * open_conn_no_db(int port, char * ip, char *User, char *Password, bool ssl);

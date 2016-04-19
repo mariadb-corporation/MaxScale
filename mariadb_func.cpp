@@ -54,6 +54,55 @@ MYSQL * open_conn_db_flags(int port, char * ip, char * db, char * User, char * P
     return(conn);
 }
 
+
+/**
+ * Opens connection to DB: wropper over mysql_real_connect
+ *
+ * @param port	DB server port
+ * @param ip	DB server IP address
+ * @param db    name of DB to connect
+ * @param User  User name
+ * @param Password  Password
+ * @param timeout  timeout on seconds
+ * @param ssl   true if ssl should be used
+ * @return MYSQL struct or NULL in case of error
+ */
+MYSQL * open_conn_db_timeout(int port, char * ip, char * db, char * User, char * Password, unsigned long timeout, bool ssl)
+{
+    MYSQL * conn = mysql_init(NULL);
+
+    if(conn == NULL)
+    {
+        fprintf(stdout, "Error: can't create MySQL-descriptor\n");
+        return(NULL);
+    }
+
+    unsigned int conn_timeout=timeout;
+    unsigned int read_timeout=timeout;
+    unsigned int write_timeout=timeout;
+    mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &conn_timeout);
+    mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &read_timeout);
+    mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &write_timeout);
+
+    if (ssl) {mysql_ssl_set(conn, "client-key.pem", "client-cert.pem", "ca.pem", NULL, NULL);}
+
+    if(!mysql_real_connect(conn,
+                           ip,
+                           User,
+                           Password,
+                           db,
+                           port,
+                           NULL,
+                           CLIENT_MULTI_STATEMENTS
+                           ))
+    {
+        //printf("Error: can't connect to database, error is %s:\n", mysql_error(conn));
+        return(conn);
+    }
+
+    return(conn);
+}
+
 /**
  * Opens connection to DB with default flags
  *
