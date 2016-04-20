@@ -1175,3 +1175,12 @@ int TestConnections::list_dirs()
     ssh_maxscale(TRUE, "ls -la /var/lib/maxscale/"); fflush(stdout);
     return 0;
 }
+
+long unsigned TestConnections::get_maxscale_memsize()
+{
+    char * ps_out = ssh_maxscale_output(FALSE, "ps -e -o pid,vsz,comm= | grep maxscale");
+    long unsigned mem = 0;
+    pid_t pid;
+    sscanf(ps_out, "%d %lu", &pid, &mem);
+    return mem;
+}
