@@ -119,6 +119,7 @@ int main(int argc, char *argv[])
         sprintf(str1, "table%d", i);
         Test->tprintf("Table should be %s\n", str1);
         Test->add_result(execute_query_check_one(conn, str, str1), "check failed\n");
+        mysql_ping(conn);
         mysql_close(conn);
     }
 
@@ -138,6 +139,14 @@ int main(int argc, char *argv[])
     Test->tprintf("Trying to connect with empty database name\n");
     conn = open_conn_db(Test->rwsplit_port, Test->maxscale_IP, (char *) "", user_str, pass_str, Test->ssl);
     mysql_close(conn);
+
+    Test->stop_timeout();
+    Test->check_log_err((char *) "Length (0) is 0", FALSE);
+    Test->check_log_err((char *) "Unable to parse query", FALSE);
+    Test->check_log_err((char *) "query string allocation failed", FALSE);
+
+    sleep(10);
+
 
     Test->copy_all_logs(); return(Test->global_result);
 }

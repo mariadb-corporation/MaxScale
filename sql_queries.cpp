@@ -50,7 +50,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {
     TestConnections * Test = new TestConnections(argc, argv);
-    int i;
+    int i, j;
     int N = 4;
     int iterations = 4;
 
@@ -88,21 +88,22 @@ int main(int argc, char *argv[])
         Test->add_result(Test->check_t1_table(TRUE, (char *) "test1"), "t1 is not found in 'test1'\n");
 
         Test->tprintf("Trying queries with syntax errors\n");
-        execute_query(Test->conn_rwsplit, "DROP DATABASE I EXISTS test1;");
-        execute_query(Test->conn_rwsplit, "CREATE TABLE ");
-
-        execute_query(Test->conn_master, "DROP DATABASE I EXISTS test1;");
-        execute_query(Test->conn_master, "CREATE TABLE ");
-
-        execute_query(Test->conn_slave, "DROP DATABASE I EXISTS test1;");
-        execute_query(Test->conn_slave, "CREATE TABLE ");
-
+        for (j = 0; j < 3; j++)
+        {
+            execute_query(Test->routers[j], "DROP DATABASE I EXISTS test1;");
+            execute_query(Test->routers[j], "CREATE TABLE ");
+        }
         // close connections
         Test->close_maxscale_connections();
         Test->repl->close_connections();
         Test->stop_timeout();
 
     }
+
+    Test->stop_timeout();
+    Test->check_log_err((char *) "Length (0) is 0", FALSE);
+    Test->check_log_err((char *) "Unable to parse query", FALSE);
+    Test->check_log_err((char *) "query string allocation failed", FALSE);
 
     Test->set_timeout(5);
     Test->check_maxscale_alive();
