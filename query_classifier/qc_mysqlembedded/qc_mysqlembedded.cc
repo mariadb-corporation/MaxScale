@@ -1320,6 +1320,48 @@ inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
 
 }
 
+static void collect_where(Item* item, char** bufp, int* buflenp, int* bufsizep)
+{
+    switch (item->type())
+    {
+    case Item::COND_ITEM:
+        {
+            Item_cond* cond_item = static_cast<Item_cond*>(item);
+            List_iterator<Item> ilist(*cond_item->argument_list());
+            item = (Item*) ilist.next();
+
+            for (; item != NULL; item = (Item*) ilist.next())
+            {
+                collect_where(item, bufp, buflenp, bufsizep);
+            }
+        }
+        break;
+
+    case Item::FIELD_ITEM:
+        if (item->name)
+        {
+            add_str(bufp, buflenp, bufsizep, item->name);
+        }
+        break;
+
+    case Item::FUNC_ITEM:
+        {
+            Item_func* func_item = static_cast<Item_func*>(item);
+            Item** items = func_item->arguments();
+            size_t n_items = func_item->argument_count();
+
+            for (size_t i = 0; i < n_items; ++i)
+            {
+                collect_where(items[i], bufp, buflenp, bufsizep);
+            }
+        }
+        break;
+
+    default:
+        break;
+    }
+}
+
 /**
  * Returns all the fields that the query affects.
  * @param buf Buffer to parse
@@ -1375,19 +1417,9 @@ char* qc_get_affected_fields(GWBUF* buf)
             }
         }
 
-
         if (lex->current_select->where)
         {
-            for (item = lex->current_select->where; item != NULL; item = item->next)
-            {
-
-                itype = item->type();
-
-                if (item->name && itype == Item::FIELD_ITEM)
-                {
-                    add_str(&where, &buffsz, &bufflen, item->name);
-                }
-            }
+            collect_where(lex->current_select->where, &where, &buffsz, &bufflen);
         }
 
         if (lex->current_select->having)
