@@ -293,6 +293,11 @@ add_test_executable(mxs657_restart_service.cpp mxs657_restart_service replicatio
 add_test_executable(binlog_change_master.cpp binlog_change_master setup_binlog)
 add_test_executable(ses_bigmem.cpp ses_bigmem no_ses_cmd_store)
 
+add_test_executable(binlog_semisync.cpp binlog_semisync setup_binlog_semisync)
+add_test_executable(binlog_semisync.cpp binlog_semisync_txs0_ss0 setup_binlog_semisync_txs0_ss0)
+add_test_executable(binlog_semisync.cpp binlog_semisync_txs0_ss1 setup_binlog_semisync_txs0_ss1)
+add_test_executable(binlog_semisync.cpp binlog_semisync_txs1_ss0 setup_binlog_semisync_txs1_ss0)
+
 if(STALE_SLAVES)
   add_test_executable(stale_slaves.cpp stale_slaves replication)
 endif()
