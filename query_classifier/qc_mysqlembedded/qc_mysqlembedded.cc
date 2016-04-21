@@ -1320,7 +1320,7 @@ inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
 
 }
 
-static void collect_where(Item* item, char** bufp, int* buflenp, int* bufsizep)
+static void collect_affected_fields(Item* item, char** bufp, int* buflenp, int* bufsizep)
 {
     switch (item->type())
     {
@@ -1332,7 +1332,7 @@ static void collect_where(Item* item, char** bufp, int* buflenp, int* bufsizep)
 
             for (; item != NULL; item = (Item*) ilist.next())
             {
-                collect_where(item, bufp, buflenp, bufsizep);
+                collect_affected_fields(item, bufp, buflenp, bufsizep);
             }
         }
         break;
@@ -1352,7 +1352,7 @@ static void collect_where(Item* item, char** bufp, int* buflenp, int* bufsizep)
 
             for (size_t i = 0; i < n_items; ++i)
             {
-                collect_where(items[i], bufp, buflenp, bufsizep);
+                collect_affected_fields(items[i], bufp, buflenp, bufsizep);
             }
         }
         break;
@@ -1408,32 +1408,17 @@ char* qc_get_affected_fields(GWBUF* buf)
 
         for (; item != NULL; item = (Item*) ilist.next())
         {
-
-            itype = item->type();
-
-            if (item->name && itype == Item::FIELD_ITEM)
-            {
-                add_str(&where, &buffsz, &bufflen, item->name);
-            }
+            collect_affected_fields(item, &where, &buffsz, &bufflen);
         }
 
         if (lex->current_select->where)
         {
-            collect_where(lex->current_select->where, &where, &buffsz, &bufflen);
+            collect_affected_fields(lex->current_select->where, &where, &buffsz, &bufflen);
         }
 
         if (lex->current_select->having)
         {
-            for (item = lex->current_select->having; item != NULL; item = item->next)
-            {
-
-                itype = item->type();
-
-                if (item->name && itype == Item::FIELD_ITEM)
-                {
-                    add_str(&where, &buffsz, &bufflen, item->name);
-                }
-            }
+            collect_affected_fields(lex->current_select->having, &where, &buffsz, &bufflen);
         }
 
         lex->current_select = lex->current_select->next_select_in_list();
