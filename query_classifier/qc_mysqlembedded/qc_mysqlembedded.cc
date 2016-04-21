@@ -1283,7 +1283,7 @@ bool qc_is_drop_table_query(GWBUF* querybuf)
     return answer;
 }
 
-inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
+inline void add_str(char** buf, int* buflen, int* bufsize, const char* str)
 {
     int isize = strlen(str) + 1;
 
@@ -1338,9 +1338,22 @@ static void collect_affected_fields(Item* item, char** bufp, int* buflenp, int* 
         break;
 
     case Item::FIELD_ITEM:
-        if (item->name)
         {
-            add_str(bufp, buflenp, bufsizep, item->name);
+            const char* full_name = item->full_name();
+            const char* name = strchr(full_name, '.');
+
+            if (!name)
+            {
+                // No dot found.
+                name = full_name;
+            }
+            else
+            {
+                // Dot found, advance beyond it.
+                ++name;
+            }
+
+            add_str(bufp, buflenp, bufsizep, name);
         }
         break;
 
