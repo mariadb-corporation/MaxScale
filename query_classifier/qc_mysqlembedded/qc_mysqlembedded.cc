@@ -1345,6 +1345,7 @@ static void collect_affected_fields(Item* item, char** bufp, int* buflenp, int* 
         break;
 
     case Item::FUNC_ITEM:
+    case Item::SUM_FUNC_ITEM:
         {
             Item_func* func_item = static_cast<Item_func*>(item);
             Item** items = func_item->arguments();
