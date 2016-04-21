@@ -13,7 +13,7 @@
  * this program; if not, write to the Free Software Foundation, Inc., 51
  * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
- * Copyright MariaDB Corporation Ab 2014-2015
+ * Copyright MariaDB Corporation Ab 2014-2016
  */
 
 /**
@@ -271,7 +271,7 @@ createInstance(SERVICE *service, char **options)
     inst->m_errno = 0;
     inst->m_errmsg = NULL;
 
-    inst->trx_safe = 1;
+    inst->trx_safe = 0;
     inst->pending_transaction = 0;
     inst->last_safe_pos = 0;
 
