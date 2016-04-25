@@ -79,19 +79,27 @@ logged. The log messages are logged at the notice level.
 The rules are defined by using the following syntax:
 
 ```
-rule NAME deny [wildcard | columns VALUE ... |
+rule NAME deny { wildcard | columns VALUE... |
      regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF |
-      no_where_clause] [at_times VALUE...] [on_queries [select|update|insert|delete]]
+      no_where_clause } [at_times VALUE...] [on_queries [select | update | insert | delete]]
 ```
 
-Rules always define a blocking action so the basic mode for the database firewall filter is to allow all queries that do not match a given set of rules. Rules are identified by their name and have a mandatory part and optional parts. You can add comments to the rule files by adding the `#` character at the beginning of the line.
+Rules are identified by their name and have mandatory parts and optional parts.
+You can add comments to the rule files by adding the `#` character at
+the beginning of the line. Trailing comments are not supported.
 
 The first step of defining a rule is to start with the keyword `rule` which
 identifies this line of text as a rule. The second token is identified as
-the name of the rule. After that one of the mandatory action tokens, `deny` or
-`allow`, is required to mark the start of the actual rule definition. Both
-`deny` and `allow` function in the same way and the actual behavior of
-the filter is determined by the `action` parameter.
+the name of the rule. After that the mandatory action token `deny` is required
+to mark the start of the actual rule definition.
+
+The rule definition must contain exactly one mandatory rule parameter. It can
+also contain one of each type of optional rule parameter.
+
+**NOTE**
+Even though the rules use the `deny` token, the action taken by the filter when
+a query matches a rule is controlled _solely_ by the value of the `action`
+parameter (_allow_,  _block_ or _ignore_).
 
 ### Mandatory rule parameters
 

@@ -6,7 +6,7 @@
 ## About MaxScale
 
  - [About MaxScale](About/About-MaxScale.md)
- - [MaxScale 1.4.0 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md)
+ - [MaxScale 1.4.1 Release Notes](Release-Notes/MaxScale-1.4.1-Release-Notes.md)
  - [Changelog](Changelog.md)
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
@@ -112,13 +112,15 @@ Module specific documentation.
 
 ## Earlier Release Notes
 
- - [MaxScale 0.5 Release Notes](Release-Notes/MaxScale-0.5-Release-Notes.md)
- - [MaxScale 0.6 Release Notes](Release-Notes/MaxScale-0.6-Release-Notes.md)
- - [MaxScale 0.7 Release Notes](Release-Notes/MaxScale-0.7-Release-Notes.md)
- - [MaxScale 1.0 Release Notes](Release-Notes/MaxScale-1.0-Release-Notes.md)
- - [MaxScale 1.0.1 Release Notes](Release-Notes/MaxScale-1.0.1-Release-Notes.md)
- - [MaxScale 1.0.3 Release Notes](Release-Notes/MaxScale-1.0.3-Release-Notes.md)
- - [MaxScale 1.1.0 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
- - [MaxScale 1.1.1 Release Notes](Release-Notes/MaxScale-1.1.1-Release-Notes.md)
+ - [MaxScale 1.4.0 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md)
+ - [MaxScale 1.3.0 Release Notes](Release-Notes/MaxScale-1.3.0-Release-Notes.md)
  - [MaxScale 1.2.0 Release Notes](Release-Notes/MaxScale-1.2.0-Release-Notes.md)
+ - [MaxScale 1.1.1 Release Notes](Release-Notes/MaxScale-1.1.1-Release-Notes.md)
+ - [MaxScale 1.1.0 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
+ - [MaxScale 1.0.3 Release Notes](Release-Notes/MaxScale-1.0.3-Release-Notes.md)
+ - [MaxScale 1.0.1 Release Notes](Release-Notes/MaxScale-1.0.1-Release-Notes.md)
+ - [MaxScale 1.0 Release Notes](Release-Notes/MaxScale-1.0-Release-Notes.md)
+ - [MaxScale 0.7 Release Notes](Release-Notes/MaxScale-0.7-Release-Notes.md)
+ - [MaxScale 0.6 Release Notes](Release-Notes/MaxScale-0.6-Release-Notes.md)
+ - [MaxScale 0.5 Release Notes](Release-Notes/MaxScale-0.5-Release-Notes.md)
 
