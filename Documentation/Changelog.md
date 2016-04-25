@@ -7,7 +7,10 @@
 * Firewall filter allows whitelisting.
 * Client side SSL works.
 
-For more details, please refer to [MaxScale 1.4.1 Release Notes](Release-Notes/MaxScale-1.4.1-Release-Notes.md) and [MaxScale 1.4.0 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md).
+For more details, please refer to
+* [MaxScale 1.4.2 Release Notes](Release-Notes/MaxScale-1.4.2-Release-Notes.md)
+* [MaxScale 1.4.1 Release Notes](Release-Notes/MaxScale-1.4.1-Release-Notes.md)
+* [MaxScale 1.4.0 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md).
 
 ## MaxScale 1.3
 * Added support for persistent backend connections
