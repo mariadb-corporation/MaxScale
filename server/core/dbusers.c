@@ -2673,7 +2673,13 @@ bool check_service_permissions(SERVICE* service)
         return my_errno != ER_ACCESS_DENIED_ERROR;
     }
 
-    if (mysql_query(mysql, "SELECT user, host, password,Select_priv FROM mysql.user limit 1") != 0)
+    char query[MAX_QUERY_STR_LEN];
+    const char* query_pw = strstr(server->server->server_string, "5.7.") ?
+        MYSQL57_PASSWORD : MYSQL_PASSWORD;
+
+    snprintf(query, sizeof(query), "SELECT user, host, %s, Select_priv FROM mysql.user limit 1", query_pw);
+
+    if (mysql_query(mysql, query) != 0)
     {
         if (mysql_errno(mysql) == ER_TABLEACCESS_DENIED_ERROR)
         {
