@@ -1607,7 +1607,7 @@ int main(int argc, char **argv)
     {
         static const char* logerr = "Failed to configure signal handlers. Exiting.";
 
-        print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+        print_log_n_stderr(true, true, logerr, logerr, 0);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -1815,7 +1815,7 @@ int main(int argc, char **argv)
         char* fprerr =
             "Failed to open, read or process the MaxScale configuration "
             "file. Exiting. See the error log for details.";
-        print_log_n_stderr(false, !daemon_mode, fprerr, fprerr, 0);
+        print_log_n_stderr(false, true, fprerr, fprerr, 0);
         MXS_ERROR("Failed to open, read or process the MaxScale configuration file %s. "
                   "Exiting.",
                   cnf_file_path);
@@ -1919,7 +1919,7 @@ int main(int argc, char **argv)
     if (n_services == 0)
     {
         char* logerr = "Failed to start any MaxScale services. Exiting.";
-        print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+        print_log_n_stderr(true, true, logerr, logerr, 0);
         rc = MAXSCALE_NOSERVICES;
         goto return_main;
     }
@@ -1931,7 +1931,7 @@ int main(int argc, char **argv)
     if (thread_start(&log_flush_thr, log_flush_cb, (void *) &log_flush_timeout_ms) == NULL)
     {
         char* logerr = "Failed to start log flushing thread.";
-        print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+        print_log_n_stderr(true, true, logerr, logerr, 0);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -1956,7 +1956,7 @@ int main(int argc, char **argv)
                          (void *)(thread_id + 1)) == NULL)
         {
             char* logerr = "Failed to start worker thread.";
-            print_log_n_stderr(true, !daemon_mode, logerr, logerr, 0);
+            print_log_n_stderr(true, true, logerr, logerr, 0);
             rc = MAXSCALE_INTERNALERROR;
             goto return_main;
         }
