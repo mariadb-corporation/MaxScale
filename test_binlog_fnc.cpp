@@ -16,39 +16,50 @@ int check_sha1(TestConnections* Test)
     char *s_maxscale;
     char *s;
 
+    Test->set_timeout(50);
     Test->tprintf("ls before FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
     Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
     Test->tprintf("Master\n");
+    Test->set_timeout(50);
     Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
 
-    printf("FLUSH LOGS\n");fflush(stdout);
+    Test->tprintf("FLUSH LOGS\n");
+    Test->set_timeout(100);
     local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
     Test->tprintf("Logs flushed\n");
+    Test->set_timeout(100);
     sleep(20);
     Test->tprintf("ls after first FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
+    Test->set_timeout(50);
     Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
 
     Test->tprintf("Master\n");
+    Test->set_timeout(50);
     Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
 
+    Test->set_timeout(100);
     Test->tprintf("FLUSH LOGS\n");
     local_result += execute_query(Test->repl->nodes[0], (char *) "FLUSH LOGS");
     Test->tprintf("Logs flushed\n");
 
-    sleep(19);
+    Test->set_timeout(50);
+    sleep(20);
+    Test->set_timeout(50);
     Test->tprintf("ls before FLUSH LOGS\n");
     Test->tprintf("Maxscale\n");
 
     Test->ssh_maxscale(true, "ls -la %s/mar-bin.0000*", Test->maxscale_binlog_dir);
 
     Test->tprintf("Master\n");
+    Test->set_timeout(50);
     Test->ssh_maxscale(false, "ls -la /var/lib/mysql/mar-bin.0000*");
 
 
     for (i = 1; i < 3; i++) {
         Test->tprintf("\nFILE: 000000%d\n", i);
+        Test->set_timeout(50);
         s_maxscale = Test->ssh_maxscale_output(true, "sha1sum %s/mar-bin.00000%d", Test->maxscale_binlog_dir, i);
         if (s_maxscale != NULL) {
             x = strchr(s_maxscale, ' ');
@@ -57,6 +68,7 @@ int check_sha1(TestConnections* Test)
         }
 
         sprintf(sys, "sha1sum /var/lib/mysql/mar-bin.00000%d", i);
+        Test->set_timeout(50);
         s = Test->repl->ssh_node_output(0, sys, TRUE);
         if (s != NULL) {
             x = strchr(s, ' ');
