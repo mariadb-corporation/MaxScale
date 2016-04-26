@@ -7,10 +7,10 @@ import jaydebeapi
 # Abstract SQL connection
 class SQLConnection:
     def __init__(self, port = '3306', host = '127.0.0.1', user = 'root', password = ''):
-        self.host = host
-        self.port = port
-        self.user = user
-        self.password = password
+        self.host = str(host)
+        self.port = str(port)
+        self.user = str(user)
+        self.password = str(password)
 
     # Connect to a server
     def connect(self):
