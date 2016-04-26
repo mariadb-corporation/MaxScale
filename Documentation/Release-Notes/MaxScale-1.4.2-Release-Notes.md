@@ -21,8 +21,7 @@ report at [Jira](https://jira.mariadb.org).
  * [MXS-662](https://jira.mariadb.org/browse/MXS-662): No Listener on different IPs but same port since 1.4.0
  * [MXS-661](https://jira.mariadb.org/browse/MXS-661): Log fills with 'Length (0) is 0 or query string allocation failed'
  * [MXS-656](https://jira.mariadb.org/browse/MXS-656): after upgrade from 1.3 to 1.4, selecting master isn't working as expected
- * [MXS-621](https://jira.mariadb.org/browse/MXS-621): MaxScale fails to start silently if config file is not readable
- * [MXS-616](https://jira.mariadb.org/browse/MXS-616): Duplicated binlog event under head load.
+ * [MXS-616](https://jira.mariadb.org/browse/MXS-616): Duplicated binlog event under heavy load.
 
 ## Known Issues and Limitations
 
