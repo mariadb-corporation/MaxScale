@@ -302,9 +302,8 @@ set_tests_properties(binlog_semisync_txs1_ss0 PROPERTIES TIMEOUT 3600)
 set_tests_properties(binlog_semisync_txs0_ss1 PROPERTIES TIMEOUT 3600)
 set_tests_properties(binlog_semisync_txs0_ss0 PROPERTIES TIMEOUT 3600)
 
-if(STALE_SLAVES)
-  add_test_executable(stale_slaves.cpp stale_slaves replication)
-endif()
+add_test_executable(stale_slaves.cpp stale_slaves replication)
+add_test_executable(rwsplit_readonly.cpp rwsplit_readonly rwsplit_readonly)
 
 # Python based tests
 add_test_script(mxs585.py replication)
