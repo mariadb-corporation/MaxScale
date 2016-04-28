@@ -14,23 +14,23 @@ void test_all_ok(TestConnections *Test)
 {
    /** Insert should work */
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_rwsplit, "INSERT INTO test.readonly VALUES (1)"),
-                     "Query to service with 'fail_instantly' should succeed");
+    Test->add_result(execute_query(Test->conn_rwsplit, "INSERT INTO test.readonly VALUES (1)\n"),
+                     "Query to service with 'fail_instantly' should succeed\n");
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_master, "INSERT INTO test.readonly VALUES (1)"),
-                     "Query to service with 'fail_on_write' should succeed");
+    Test->add_result(execute_query(Test->conn_master, "INSERT INTO test.readonly VALUES (1)\n"),
+                     "Query to service with 'fail_on_write' should succeed\n");
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_slave, "INSERT INTO test.readonly VALUES (1)"),
-                     "Query to service with 'error_on_write' should succeed");
+    Test->add_result(execute_query(Test->conn_slave, "INSERT INTO test.readonly VALUES (1)\n"),
+                     "Query to service with 'error_on_write' should succeed\n");
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_rwsplit, "SELECT * FROM test.readonly"),
-                     "Query to service with 'fail_instantly' should succeed");
+    Test->add_result(execute_query(Test->conn_rwsplit, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'fail_instantly' should succeed\n");
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_master, "SELECT * FROM test.readonly"),
-                     "Query to service with 'fail_on_write' should succeed");
+    Test->add_result(execute_query(Test->conn_master, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'fail_on_write' should succeed\n");
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_slave, "SELECT * FROM test.readonly"),
-                     "Query to service with 'error_on_write' should succeed");
+    Test->add_result(execute_query(Test->conn_slave, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'error_on_write' should succeed\n");
 }
 
 int main(int argc, char *argv[])
@@ -41,8 +41,8 @@ int main(int argc, char *argv[])
     /** Prepare for tests */
     Test->stop_timeout();
     Test->connect_maxscale();
-    execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test.readonly");
-    execute_query(Test->conn_rwsplit, "CREATE TABLE test.readonly(id int)");
+    execute_query(Test->conn_rwsplit, "DROP TABLE IF EXISTS test.readonly\n");
+    execute_query(Test->conn_rwsplit, "CREATE TABLE test.readonly(id int)\n");
 
     /** Check that everything is OK before blocking the master */
     test_all_ok(Test);
@@ -54,47 +54,47 @@ int main(int argc, char *argv[])
 
     /** Select to service with 'fail_instantly' should close the connection */
     Test->set_timeout(30);
-    Test->add_result(!execute_query(Test->conn_rwsplit, "SELECT * FROM test.readonly"),
-                     "Query to service with 'fail_instantly' should fail");
+    Test->add_result(!execute_query(Test->conn_rwsplit, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'fail_instantly' should fail\n");
 
     /** Other services should still work */
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_master, "SELECT * FROM test.readonly"),
-                     "Query to service with 'fail_on_write' should succeed");
+    Test->add_result(execute_query(Test->conn_master, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'fail_on_write' should succeed\n");
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_slave, "SELECT * FROM test.readonly"),
-                     "Query to service with 'error_on_write' should succeed");
+    Test->add_result(execute_query(Test->conn_slave, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'error_on_write' should succeed\n");
 
     /** Insert to 'fail_on_write' should fail and close the connection */
     Test->set_timeout(30);
-    Test->add_result(!execute_query(Test->conn_master, "INSERT INTO test.readonly VALUES (1)"),
-                     "Query to service with 'fail_on_write' should succeed");
+    Test->add_result(!execute_query(Test->conn_master, "INSERT INTO test.readonly VALUES (1)\n"),
+                     "Query to service with 'fail_on_write' should succeed\n");
     Test->set_timeout(30);
-    Test->add_result(!execute_query(Test->conn_master, "SELECT * FROM test.readonly"),
-                     "Query to service with 'fail_on_write' should succeed");
+    Test->add_result(!execute_query(Test->conn_master, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'fail_on_write' should succeed\n");
 
     /** Insert to 'error_on_write' should fail but subsequent SELECTs should work */
     Test->set_timeout(30);
-    Test->add_result(!execute_query(Test->conn_slave, "INSERT INTO test.readonly VALUES (1)"),
-                     "Query to service with 'error_on_write' should succeed");
-    Test->add_result(execute_query(Test->conn_slave, "SELECT * FROM test.readonly"),
-                     "Query to service with 'fail_on_write' should succeed");
+    Test->add_result(!execute_query(Test->conn_slave, "INSERT INTO test.readonly VALUES (1)\n"),
+                     "Query to service with 'error_on_write' should succeed\n");
+    Test->add_result(execute_query(Test->conn_slave, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'fail_on_write' should succeed\n");
 
     /** Close connections and try to create new ones */
     Test->set_timeout(30);
     Test->close_maxscale_connections();
-    Test->add_result(Test->connect_rwsplit() != 0, "Connection to 'fail_instantly' service should fail");
-    Test->add_result(Test->connect_readconn_master() == 0, "Connection to 'fail_on_write' service should succeed");
-    Test->add_result(Test->connect_readconn_slave() == 0, "Connection to 'error_on_write' service should succeed");
+    Test->add_result(Test->connect_rwsplit() != 0, "Connection to 'fail_instantly' service should fail\n");
+    Test->add_result(Test->connect_readconn_master() == 0, "Connection to 'fail_on_write' service should succeed\n");
+    Test->add_result(Test->connect_readconn_slave() == 0, "Connection to 'error_on_write' service should succeed\n");
 
 
     /** The {fail|error}_on_write services should work and allow reads */
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_master, "SELECT * FROM test.readonly"),
-                     "Query to service with 'fail_on_write' should succeed");
+    Test->add_result(execute_query(Test->conn_master, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'fail_on_write' should succeed\n");
     Test->set_timeout(30);
-    Test->add_result(execute_query(Test->conn_slave, "SELECT * FROM test.readonly"),
-                     "Query to service with 'error_on_write' should succeed");
+    Test->add_result(execute_query(Test->conn_slave, "SELECT * FROM test.readonly\n"),
+                     "Query to service with 'error_on_write' should succeed\n");
 
     Test->close_maxscale_connections();
     Test->stop_timeout();
