@@ -1357,6 +1357,18 @@ static void collect_affected_fields(Item* item, char** bufp, int* buflenp, int* 
         }
         break;
 
+    case Item::ROW_ITEM:
+        {
+            Item_row* row_item = static_cast<Item_row*>(item);
+            size_t n_items = row_item->cols();
+
+            for (size_t i = 0; i < n_items; ++i)
+            {
+                collect_affected_fields(row_item->element_index(i), bufp, buflenp, bufsizep);
+            }
+        }
+        break;
+
     case Item::FUNC_ITEM:
     case Item::SUM_FUNC_ITEM:
         {
