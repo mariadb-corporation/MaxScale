@@ -42,16 +42,42 @@ GRANT SELECT,USAGE ON shard.* TO 'john'@'%';
 
 This would in effect allow the user 'john' to only see the database 'shard' on this server. Take notice that these grants are matched against MaxScale's hostname instead of the client's hostname. Only user authentication uses the client's hostname and all other grants use MaxScale's hostname.
 
-The schemarouter supports the following router options:
+## Router options
 
-|option				|parameter	|description|
-|-------------------|-----------|-----------|
-|max_sescmd_history	|integer		|Set a limit on the number of session modifying commands a session can execute. This sets an effective cap on the memory consumption of the session.|
-|disable_sescmd_history|true, false|Disable the session command history. This will prevent growing memory consumption of a long-running session and allows pooled connections to MaxScale to be used. The drawback of this is the fact that if a server goes down, the session state will not be consistent anymore.|
-|refresh_databases|true, false|Enable database map refreshing mid-session. These are triggered by a failure to change the database i.e. `USE ...``queries.|
-|refresh_interval|float|The minimum interval between database map refreshes in seconds.|
-|ignore_databases|string|List of databases to ignore when checking for duplicate databases.|
-|ignore_databases_regex|string|Regular expression that is matched against database names when checking for duplicate databases.|
+The following options are options for the `router_options` parameter of the
+service. Multiple router options are given as a comma separated list of key
+value pairs.
+
+### `ignore_databases`
+
+List of databases to ignore when checking for duplicate databases.
+
+### `ignore_databases_regex`
+
+Regular expression that is matched against database names when checking for duplicate databases.
+
+## Router options
+
+### `max_sescmd_history`
+
+Set a limit on the number of session modifying commands a session can execute.
+This sets an effective cap on the memory consumption of the session.
+
+### `disable_sescmd_history`
+
+Disable the session command history. This will prevent growing memory consumption
+of a long-running session and allows pooled connections to MaxScale to be used.
+The drawback of this is the fact that if a server goes down, the session state
+will not be consistent anymore.
+
+### `refresh_databases`
+
+Enable database map refreshing mid-session. These are triggered by a failure to
+change the database i.e. `USE ...``queries.
+
+### `refresh_interval`
+
+The minimum interval between database map refreshes in seconds.
 
 ## Limitations
 

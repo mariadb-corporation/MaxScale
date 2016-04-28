@@ -708,8 +708,8 @@ serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned sho
  * @param port          The port to listen on
  * @return      TRUE if the protocol/port is already part of the service
  */
-int
-serviceHasProtocol(SERVICE *service, char *protocol, unsigned short port)
+int serviceHasProtocol(SERVICE *service, const char *protocol,
+                       const char* address, unsigned short port)
 {
     SERV_LISTENER *proto;
 
@@ -717,7 +717,9 @@ serviceHasProtocol(SERVICE *service, char *protocol, unsigned short port)
     proto = service->ports;
     while (proto)
     {
-        if (strcmp(proto->protocol, protocol) == 0 && proto->port == port)
+        if (strcmp(proto->protocol, protocol) == 0 && proto->port == port &&
+            ((address && proto->address && strcmp(proto->address, address) == 0) ||
+             (address == NULL && proto->address == NULL)))
         {
             break;
         }

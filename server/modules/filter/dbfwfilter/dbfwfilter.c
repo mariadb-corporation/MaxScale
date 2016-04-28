@@ -2243,7 +2243,7 @@ int main(int argc, char** argv)
                      NULL
     };
 
-    mxs_log_init(argc_, argv_);
+    mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 
 
     init_test_env(home);

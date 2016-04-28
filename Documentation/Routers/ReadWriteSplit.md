@@ -12,41 +12,7 @@ The router is designed to be used with a traditional Master-Slave replication cl
 
 Readwritesplit router-specific settings are specified in the configuration file of MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section.
 
-The configuration consists of mandatory and optional parameters.
-
-## Mandatory parameters
-
-### `type`
-
-**`type`** specifies the type of service. For **readwritesplit** module the type is `router`:
-
-    type=router
-
-### `router`
-
-**`router`** specifies the router module to be used. For **readwritesplit** the value is `readwritesplit`:
-
-    router=readwritesplit
-
-### `servers`
-
-**`servers`** provides a list of servers, which must include one master and available slaves:
-
-    servers=server1,server2,server3
-
-**NOTE: Each server on the list must have its own section in the configuration file where it is defined.**
-
-### `user`
-**`user`** is the username the router session uses for accessing backends in order to load the content of the `mysql.user` table (and `mysql.db` and database names as well) and optionally for creating, and using `maxscale_schema.replication_heartbeat` table.
-
-### `passwd`
-
-**`passwd`** specifies corresponding password for the user. Syntax for user and passwd is:
-
-```
-user=<username>
-passwd=<password>
-```
+For more details about the standard service parameters, refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
 ## Optional parameters
 
@@ -80,16 +46,6 @@ When value all is used, queries reading session variables can be routed to any a
     INSERT INTO test.t1 VALUES (@myid:=@myid+1)
 
 In above-mentioned case the user-defined variable would only be updated in the master where query would be routed due to `INSERT` statement.
-
-### `weightby`
-
-This parameter defines the name of the value which is used to calculate the
-weights of the servers. The value should be the name of a parameter in the
-server definitions and it should exist in all the servers used by this router.
-For more information, see the description of the `weightby` parameter in
-the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
-
-No weighting is used by default.
 
 ## Router options
 

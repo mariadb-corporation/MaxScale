@@ -4,7 +4,7 @@
 Release 1.4.1 is a GA release.
 
 This document describes the changes in release 1.4.1, when compared to
-release 1.4.0.
+release [1.4.0](MaxScale-1.4.0-Release-Notes.md).
 
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).

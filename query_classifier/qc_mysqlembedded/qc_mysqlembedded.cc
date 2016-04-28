@@ -1283,7 +1283,7 @@ bool qc_is_drop_table_query(GWBUF* querybuf)
     return answer;
 }
 
-inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
+inline void add_str(char** buf, int* buflen, int* bufsize, const char* str)
 {
     int isize = strlen(str) + 1;
 
@@ -1318,6 +1318,62 @@ inline void add_str(char** buf, int* buflen, int* bufsize, char* str)
 
     *buflen += isize;
 
+}
+
+static void collect_affected_fields(Item* item, char** bufp, int* buflenp, int* bufsizep)
+{
+    switch (item->type())
+    {
+    case Item::COND_ITEM:
+        {
+            Item_cond* cond_item = static_cast<Item_cond*>(item);
+            List_iterator<Item> ilist(*cond_item->argument_list());
+            item = (Item*) ilist.next();
+
+            for (; item != NULL; item = (Item*) ilist.next())
+            {
+                collect_affected_fields(item, bufp, buflenp, bufsizep);
+            }
+        }
+        break;
+
+    case Item::FIELD_ITEM:
+        {
+            const char* full_name = item->full_name();
+            const char* name = strchr(full_name, '.');
+
+            if (!name)
+            {
+                // No dot found.
+                name = full_name;
+            }
+            else
+            {
+                // Dot found, advance beyond it.
+                ++name;
+            }
+
+            add_str(bufp, buflenp, bufsizep, name);
+        }
+        break;
+
+    case Item::FUNC_ITEM:
+    case Item::SUM_FUNC_ITEM:
+        {
+            Item_func* func_item = static_cast<Item_func*>(item);
+            Item** items = func_item->arguments();
+            size_t n_items = func_item->argument_count();
+
+            for (size_t i = 0; i < n_items; ++i)
+            {
+                collect_affected_fields(items[i], bufp, buflenp, bufsizep);
+            }
+        }
+        break;
+
+    default:
+        break;
+    }
 }
 
 /**
@@ -1366,42 +1422,17 @@ char* qc_get_affected_fields(GWBUF* buf)
 
         for (; item != NULL; item = (Item*) ilist.next())
         {
-
-            itype = item->type();
-
-            if (item->name && itype == Item::FIELD_ITEM)
-            {
-                add_str(&where, &buffsz, &bufflen, item->name);
-            }
+            collect_affected_fields(item, &where, &buffsz, &bufflen);
         }
-
 
         if (lex->current_select->where)
         {
-            for (item = lex->current_select->where; item != NULL; item = item->next)
-            {
-
-                itype = item->type();
-
-                if (item->name && itype == Item::FIELD_ITEM)
-                {
-                    add_str(&where, &buffsz, &bufflen, item->name);
-                }
-            }
+            collect_affected_fields(lex->current_select->where, &where, &buffsz, &bufflen);
         }
 
         if (lex->current_select->having)
         {
-            for (item = lex->current_select->having; item != NULL; item = item->next)
-            {
-
-                itype = item->type();
-
-                if (item->name && itype == Item::FIELD_ITEM)
-                {
-                    add_str(&where, &buffsz, &bufflen, item->name);
-                }
-            }
+            collect_affected_fields(lex->current_select->having, &where, &buffsz, &bufflen);
         }
 
         lex->current_select = lex->current_select->next_select_in_list();

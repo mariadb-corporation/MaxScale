@@ -397,10 +397,12 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 
         while ((row = mysql_fetch_row(result)))
         {
-            local_index = strtol(row[1], NULL, 10);
-            if ((errno == ERANGE && (local_index == LONG_MAX
-                                     || local_index == LONG_MIN)) || (errno != 0 && local_index == 0))
+            char* endchar;
+            local_index = strtol(row[1], &endchar, 10);
+            if (*endchar != '\0' ||
+                (errno == ERANGE && (local_index == LONG_MAX || local_index == LONG_MIN)))
             {
+                ss_dassert(false);
                 local_index = -1;
             }
             database->server->node_id = local_index;

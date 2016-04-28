@@ -175,7 +175,8 @@ extern int service_free(SERVICE *);
 extern SERVICE *service_find(char *);
 extern int service_isvalid(SERVICE *);
 extern int serviceAddProtocol(SERVICE *, char *, char *, unsigned short, char *, SSL_LISTENER *);
-extern int serviceHasProtocol(SERVICE *, char *, unsigned short);
+extern int serviceHasProtocol(SERVICE *service, const char *protocol,
+                              const char* address, unsigned short port);
 extern void serviceAddBackend(SERVICE *, SERVER *);
 extern int serviceHasBackend(SERVICE *, SERVER *);
 extern void serviceAddRouterOption(SERVICE *, char *);
