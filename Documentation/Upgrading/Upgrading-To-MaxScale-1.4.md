@@ -3,6 +3,7 @@
 This document describes upgrading MaxScale from version 1.3 to 1.4.
 
 For more detailed information about MaxScale 1.4, please refer to:
+* [MaxScale 1.4.3 release notes](../Release-Notes/MaxScale-1.4.3-Release-Notes.md)
 * [MaxScale 1.4.2 release notes](../Release-Notes/MaxScale-1.4.2-Release-Notes.md)
 * [MaxScale 1.4.1 release notes](../Release-Notes/MaxScale-1.4.1-Release-Notes.md)
 * [MaxScale 1.4.0 release notes](../Release-Notes/MaxScale-1.4.0-Release-Notes.md)
