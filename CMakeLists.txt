@@ -309,6 +309,7 @@ add_test_executable(rwsplit_readonly_stress.cpp rwsplit_readonly_stress rwsplit_
 # Python based tests
 add_test_script(mxs585.py replication)
 add_test_script(mxs598.py ssl)
+add_test_script(maxinfo.py maxinfo)
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)
