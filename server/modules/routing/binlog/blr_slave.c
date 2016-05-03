@@ -311,12 +311,13 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *  SHOW WARNINGS
  *  SHOW [GLOBAL] STATUS LIKE 'Uptime'
  *
- * Six set commands are supported:
+ * Seven set commands are supported:
  *  SET @master_binlog_checksum = @@global.binlog_checksum
  *  SET @master_heartbeat_period=...
  *  SET @slave_slave_uuid=...
  *  SET NAMES latin1
  *  SET NAMES utf8
+ *  SET NAMES XXX
  *  SET mariadb_slave_capability=...
  *
  * Four administrative commands are supported:
@@ -791,6 +792,11 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             {
                 free(query_text);
                 return blr_slave_replay(router, slave, router->saved_master.utf8);
+            }
+            else
+            {
+                free(query_text);
+                return blr_slave_send_ok(router, slave);
             }
         }
     } /* RESET current configured master */
