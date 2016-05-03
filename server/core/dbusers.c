@@ -2673,6 +2673,12 @@ bool check_service_permissions(SERVICE* service)
         return my_errno != ER_ACCESS_DENIED_ERROR;
     }
 
+    if (server->server->server_string == NULL)
+    {
+        const char *server_string = mysql_get_server_info(mysql);
+        server_set_version_string(server->server, server_string);
+    }
+
     char query[MAX_QUERY_STR_LEN];
     const char* query_pw = strstr(server->server->server_string, "5.7.") ?
         MYSQL57_PASSWORD : MYSQL_PASSWORD;
