@@ -437,7 +437,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             char user_host[MYSQL_USER_MAXLEN + 1 + MYSQL_HOSTNAME_MAXLEN + 1] = "";
 
             free(query_text);
-            snprintf(user_host, MYSQL_USER_MAXLEN + 1 + MYSQL_HOSTNAME_MAXLEN,
+            snprintf(user_host, sizeof(user_host),
                      "%s@%s", slave->dcb->user, slave->dcb->remote);
 
             return blr_slave_send_var_value(router, slave, "USER()",
