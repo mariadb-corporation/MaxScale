@@ -709,6 +709,12 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         {
             MXS_ERROR("%s: Incomplete set command.", router->service->name);
         }
+        else if (strcasecmp(word, "autocommit") == 0)
+        {
+            /* return OK */
+            free(query_text);
+            return blr_slave_send_ok(router, slave);
+        }
         else if (strcasecmp(word, "@master_heartbeat_period") == 0)
         {
             int slave_heartbeat;
