@@ -90,6 +90,8 @@
 # define MYSQL_SCRAMBLE_LEN GW_MYSQL_SCRAMBLE_SIZE
 #endif
 
+#define MYSQL_HOSTNAME_MAXLEN  60
+
 #define GW_NOINTR_CALL(A)       do { errno = 0; A; } while (errno == EINTR)
 #define SMALL_CHUNK 1024
 #define MAX_CHUNK SMALL_CHUNK * 8 * 4

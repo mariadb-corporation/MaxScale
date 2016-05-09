@@ -60,7 +60,8 @@
  *                                  the period set during registration is checked
  *                                  and heartbeat event might be sent to the affected slave.
  * 25/09/2015   Martin Brampton     Block callback processing when no router session in the DCB
- * 23/10/15 Markus Makela           Added current_safe_event
+ * 23/10/2015   Markus Makela       Added current_safe_event
+ * 09/05/2016   Massimiliano Pinto  Added SELECT USER()
  *
  * @endverbatim
  */
@@ -287,7 +288,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  * order to support some commands that are useful for monitoring the binlog
  * router.
  *
- * Twelve select statements are currently supported:
+ * Thirteen select statements are currently supported:
  *  SELECT UNIX_TIMESTAMP();
  *  SELECT @master_binlog_checksum
  *  SELECT @@GLOBAL.GTID_MODE
@@ -300,6 +301,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *  SELECT @@[GLOBAL.]server_id
  *  SELECT @@version
  *  SELECT @@[GLOBAL.]server_uuid
+ *  SELECT USER()
  *
  * Eight show commands are supported:
  *  SHOW [GLOBAL] VARIABLES LIKE 'SERVER_ID'
@@ -428,6 +430,18 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             {
                 return blr_slave_replay(router, slave, router->saved_master.selectver);
             }
+        }
+        else if (strcasecmp(word, "USER()") == 0)
+        {
+            /* Return user@host */
+            char user_host[MYSQL_USER_MAXLEN + 1 + MYSQL_HOSTNAME_MAXLEN + 1] = "";
+
+            free(query_text);
+            snprintf(user_host, MYSQL_USER_MAXLEN + 1 + MYSQL_HOSTNAME_MAXLEN,
+                     "%s@%s", slave->dcb->user, slave->dcb->remote);
+
+            return blr_slave_send_var_value(router, slave, "USER()",
+                                            user_host, BLR_TYPE_STRING);
         }
         else if (strcasecmp(word, "@@version") == 0)
         {
