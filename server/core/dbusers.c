@@ -35,6 +35,7 @@
  * 03/10/14     Massimiliano Pinto  Added netmask to user@host authentication for wildcard in IPv4 hosts
  * 13/10/14     Massimiliano Pinto  Added (user@host)@db authentication
  * 04/12/14     Massimiliano Pinto  Added support for IPv$ wildcard hosts: a.%, a.%.% and a.b.%
+ * 25/05/16     Massimiliano Pinto  Removed log message for duplicate entry while adding an user
  *
  * @endverbatim
  */
@@ -1171,20 +1172,10 @@ get_all_users(SERVICE *service, USERS *users)
                 strncat(users_data, row[3], users_data_row_len);
                 total_users++;
             }
-            else if (rc == -1)
-            {
-                /** Duplicate user*/
-                if (service->log_auth_warnings)
-                {
-                    MXS_NOTICE("Duplicate MySQL user found for service"
-                               " [%s]: %s@%s%s%s", service->name, row[0],
-                               row[1], havedb ? " for database: " : "",
-                               havedb ? dbnm : "");
-                }
-            }
             else
             {
-                if (service->log_auth_warnings)
+                /** Log errors and not the duplicate user */
+                if (service->log_auth_warnings && rc != -1)
                 {
                     MXS_NOTICE("Warning: Failed to add user %s@%s for service [%s]."
                                " This user will be unavailable via MaxScale.",
@@ -1671,20 +1662,10 @@ get_users(SERVICE *service, USERS *users)
             strncat(users_data, row[3], users_data_row_len);
             total_users++;
         }
-        else if (rc == -1)
-        {
-            /** Duplicate user*/
-            if (service->log_auth_warnings)
-            {
-                MXS_WARNING("Duplicate MySQL user found for "
-                            "service [%s]: %s@%s%s%s", service->name, row[0],
-                            row[1], db_grants ? " for database: " : "",
-                            db_grants ? row[5] : "");
-            }
-        }
         else
         {
-            if (service->log_auth_warnings)
+            /** Log errors and not the duplicate user */
+            if (service->log_auth_warnings && rc != -1)
             {
                 MXS_WARNING("Failed to add user %s@%s for"
                             " service [%s]. This user will be unavailable"
