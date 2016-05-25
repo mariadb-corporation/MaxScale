@@ -38,7 +38,7 @@ else
 fi
 
 # Only copy the service files if the systemd folder and systemctl executable are found
-if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && [ -x "$(which systemctl)" ]
+if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && [ -x "$(which systemctl 2>/dev/null)" ]
 then
     if [ -d "/lib/systemd/system"  ]
     then
