@@ -1177,7 +1177,7 @@ get_all_users(SERVICE *service, USERS *users)
                 /** Log errors and not the duplicate user */
                 if (service->log_auth_warnings && rc != -1)
                 {
-                    MXS_NOTICE("Warning: Failed to add user %s@%s for service [%s]."
+                    MXS_WARNING("Failed to add user %s@%s for service [%s]."
                                " This user will be unavailable via MaxScale.",
                                row[0], row[1], service->name);
                 }
