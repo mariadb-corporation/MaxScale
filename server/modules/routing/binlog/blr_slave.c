@@ -709,7 +709,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         {
             MXS_ERROR("%s: Incomplete set command.", router->service->name);
         }
-        else if (strcasecmp(word, "autocommit") == 0)
+        else if ((strcasecmp(word, "autocommit") == 0) || (strcasecmp(word, "@@session.autocommit") == 0))
         {
             /* return OK */
             free(query_text);
