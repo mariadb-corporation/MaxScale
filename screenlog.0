@@ -1,0 +1,6 @@
+[K[maxscale@localhost MaxScale]$ ls
+astylerc  [0m[01;34mclient[0m  CMakeLists.txt  [01;34mDocumentation[0m  [01;34metc[0m      maxscale.conf.in  [01;34mplugins[0m           [01;34mrabbitmq_consumer[0m  screenlog.0  [01;34mserver[0m  VERSION
+[01;34mbuild[0m     [01;34mcmake[0m   COPYRIGHT       doxygate.in    LICENSE  [01;34mpcre2[0m             [01;34mquery_classifier[0m  README             [01;34mscript[0m       [01;34mutils[0m
+kmaxscale@localhost:~/Desktop/MaxScale\[maxscale@localhost MaxScale]$ clear
+[H[Jkmaxscale@localhost:~/Desktop/MaxScale\[maxscale@localhost MaxScale]$ exit
+exit
