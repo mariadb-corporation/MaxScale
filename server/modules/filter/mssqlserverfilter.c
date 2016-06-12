@@ -55,7 +55,14 @@ static FILTER_OBJECT MyObject =
 
 typedef struct
 {
-    
+	char *source; /*< Source address to restrict matches */
+    char *user; /*< User name to restrict matches */
+    char *match; /*< Regular expression to match */
+    char *replace; /*< Replacement text */
+    pcre2_code *re; /*< Compiled regex text */
+    pcre2_match_data *match_data; /*< Matching data used by the compiled regex */
+    FILE* logfile; /*< Log file */
+    bool log_trace; /*< Whether messages should be printed to tracelog */    
 }MSSQLSERVER_INSTANCE;
 
 /**
@@ -63,8 +70,17 @@ typedef struct
  */
 typedef struct
 {
-
+	DOWNSTREAM down; /* The downstream filter */
+    SPINLOCK lock;
+    int no_change; /* No. of unchanged requests */
+    int replacements; /* No. of changed requests */
+    int active; /* Is filter active */
 } MSSQLSERVER_SESSION;
+
+void log_match(MSSQLSERVER_INSTANCE* inst, char* re, char* old, char* new);
+void log_nomatch(MSSQLSERVER_INSTANCE* inst, char* re, char* old);
+static char *
+mssqlserver_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, const char *replace);
 
 /**
  * Implementation of the mandatory version entry point
@@ -107,7 +123,24 @@ GetModuleObject()
  */
 void free_instance(MSSQLSERVER_INSTANCE *instance)
 {
-    
+   if (instance)
+    {
+        if (instance->re)
+        {
+            pcre2_code_free(instance->re);
+        }
+
+        if (instance->match_data)
+        {
+            pcre2_match_data_free(instance->match_data);
+        }
+
+        free(instance->match);
+        free(instance->replace);
+        free(instance->source);
+        free(instance->user);
+        free(instance);
+    } 
 }
 
 /**
@@ -122,7 +155,120 @@ void free_instance(MSSQLSERVER_INSTANCE *instance)
 static FILTER *
 createInstance(char **options, FILTER_PARAMETER **params)
 {
-   return NULL; 
+    MSSQLSERVER_INSTANCE *my_instance;
+    int i, errnumber, cflags = PCRE2_CASELESS;
+    PCRE2_SIZE erroffset;
+    char *logfile = NULL;
+    const char *errmsg;
+
+    if ((my_instance = calloc(1, sizeof(MSSQLSERVER_INSTANCE))) != NULL)
+    {
+        my_instance->match = NULL;
+        my_instance->replace = NULL;
+
+        for (i = 0; params && params[i]; i++)
+        {
+            if (!strcmp(params[i]->name, "match"))
+            {
+                my_instance->match = strdup(params[i]->value);
+            }
+            else if (!strcmp(params[i]->name, "replace"))
+            {
+                my_instance->replace = strdup(params[i]->value);
+            }
+            else if (!strcmp(params[i]->name, "source"))
+            {
+                my_instance->source = strdup(params[i]->value);
+            }
+            else if (!strcmp(params[i]->name, "user"))
+            {
+                my_instance->user = strdup(params[i]->value);
+            }
+            else if (!strcmp(params[i]->name, "log_trace"))
+            {
+                my_instance->log_trace = config_truth_value(params[i]->value);
+            }
+            else if (!strcmp(params[i]->name, "log_file"))
+            {
+                if (logfile)
+                {
+                    free(logfile);
+                }
+                logfile = strdup(params[i]->value);
+            }
+            else if (!filter_standard_parameter(params[i]->name))
+            {
+                MXS_ERROR("regexfilter: Unexpected parameter '%s'.",
+                          params[i]->name);
+            }
+        }
+
+        if (options)
+        {
+            for (i = 0; options[i]; i++)
+            {
+                if (!strcasecmp(options[i], "ignorecase"))
+                {
+                    cflags |= PCRE2_CASELESS;
+                }
+                else if (!strcasecmp(options[i], "case"))
+                {
+                    cflags &= ~PCRE2_CASELESS;
+                }
+                else
+                {
+                    MXS_ERROR("regexfilter: unsupported option '%s'.",
+                              options[i]);
+                }
+            }
+        }
+
+        if (logfile != NULL)
+        {
+            if ((my_instance->logfile = fopen(logfile, "a")) == NULL)
+            {
+                MXS_ERROR("regexfilter: Failed to open file '%s'.", logfile);
+                free_instance(my_instance);
+                free(logfile);
+                return NULL;
+            }
+
+            fprintf(my_instance->logfile, "\nOpened regex filter log\n");
+            fflush(my_instance->logfile);
+        }
+        free(logfile);
+
+        if (my_instance->match == NULL || my_instance->replace == NULL)
+        {
+            free_instance(my_instance);
+            return NULL;
+        }
+
+        if ((my_instance->re = pcre2_compile((PCRE2_SPTR) my_instance->match,
+                                             PCRE2_ZERO_TERMINATED,
+                                             cflags,
+                                             &errnumber,
+                                             &erroffset,
+                                             NULL)) == NULL)
+        {
+            char errbuffer[1024];
+            pcre2_get_error_message(errnumber, (PCRE2_UCHAR*) & errbuffer, sizeof(errbuffer));
+            MXS_ERROR("regexfilter: Compiling regular expression '%s' failed at %lu: %s",
+                      my_instance->match, erroffset, errbuffer);
+            free_instance(my_instance);
+            return NULL;
+        }
+
+        if ((my_instance->match_data =
+             pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
+        {
+            MXS_ERROR("regexfilter: Failure to create PCRE2 matching data. "
+                      "This is most likely caused by a lack of available memory.");
+            free_instance(my_instance);
+            return NULL;
+        }
+    }
+    return(FILTER *) my_instance; 
 }
 
 /**
@@ -135,7 +281,32 @@ createInstance(char **options, FILTER_PARAMETER **params)
 static void *
 newSession(FILTER *instance, SESSION *session)
 {
-   return NULL;
+   MSSQLSERVER_INSTANCE *my_instance = (MSSQLSERVER_INSTANCE *) instance;
+    MSSQLSERVER_SESSION *my_session;
+    char *remote, *user;
+
+    if ((my_session = calloc(1, sizeof(MSSQLSERVER_SESSION))) != NULL)
+    {
+        my_session->no_change = 0;
+        my_session->replacements = 0;
+        my_session->active = 1;
+        if (my_instance->source
+            && (remote = session_get_remote(session)) != NULL)
+        {
+            if (strcmp(remote, my_instance->source))
+            {
+                my_session->active = 0;
+            }
+        }
+
+        if (my_instance->user && (user = session_getUser(session))
+            && strcmp(user, my_instance->user))
+        {
+            my_session->active = 0;
+        }
+    }
+
+    return my_session;
 }
 
 /**
@@ -173,7 +344,8 @@ freeSession(FILTER *instance, void *session)
 static void
 setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
-    
+     MSSQLSERVER_SESSION *my_session = (MSSQLSERVER_SESSION *) session;
+    my_session->down = *downstream;
 }
 
 /**
@@ -189,7 +361,45 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 static int
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
-   return 0; 
+   MSSQLSERVER_INSTANCE *my_instance = (MSSQLSERVER_INSTANCE *) instance;
+    MSSQLSERVER_SESSION *my_session = (MSSQLSERVER_SESSION *) session;
+    char *sql, *newsql;
+
+    if (my_session->active && modutil_is_SQL(queue))
+    {
+        if (queue->next != NULL)
+        {
+            queue = gwbuf_make_contiguous(queue);
+        }
+        if ((sql = modutil_get_SQL(queue)) != NULL)
+        {
+            newsql = mssqlserver_replace(sql,
+                                   my_instance->re,
+                                   my_instance->match_data,
+                                   my_instance->replace);
+            if (newsql)
+            {
+                queue = modutil_replace_SQL(queue, newsql);
+                queue = gwbuf_make_contiguous(queue);
+                spinlock_acquire(&my_session->lock);
+                log_match(my_instance, my_instance->match, sql, newsql);
+                spinlock_release(&my_session->lock);
+                free(newsql);
+                my_session->replacements++;
+            }
+            else
+            {
+                spinlock_acquire(&my_session->lock);
+                log_nomatch(my_instance, my_instance->match, sql);
+                spinlock_release(&my_session->lock);
+                my_session->no_change++;
+            }
+            free(sql);
+        }
+
+    }
+    return my_session->down.routeQuery(my_session->down.instance,
+                                       my_session->down.session, queue);
 }
 
 /**
@@ -207,4 +417,83 @@ static void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
    
+}
+
+/**
+ * Perform a regular expression match and substitution on the SQL
+ *
+ * @param   sql The original SQL text
+ * @param   re  The compiled regular expression
+ * @param   match_data The PCRE2 matching data buffer
+ * @param   replace The replacement text
+ * @return  The replaced text or NULL if no replacement was done.
+ */
+static char *
+mssqlserver_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, const char *replace)
+{
+    char *result = NULL;
+    size_t result_size;
+
+    /** This should never fail with rc == 0 because we used pcre2_match_data_create_from_pattern() */
+    if (pcre2_match(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL))
+    {
+        result_size = strlen(sql) + strlen(replace);
+        result = malloc(result_size);
+
+        while (result &&
+               pcre2_substitute(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0,
+                                PCRE2_SUBSTITUTE_GLOBAL, match_data, NULL,
+                                (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
+                                (PCRE2_UCHAR*) result, (PCRE2_SIZE*) & result_size) == PCRE2_ERROR_NOMEMORY)
+        {
+            char *tmp;
+            if ((tmp = realloc(result, (result_size *= 1.5))) == NULL)
+            {
+                free(result);
+                result = NULL;
+            }
+            result = tmp;
+        }
+    }
+    return result;
+}
+
+/**
+ * Log a matching query to either MaxScale's trace log or a separate log file.
+ * The old SQL and the new SQL statements are printed in the log.
+ * @param inst Regex filter instance
+ * @param re Regular expression
+ * @param old Old SQL statement
+ * @param new New SQL statement
+ */
+void log_match(MSSQLSERVER_INSTANCE* inst, char* re, char* old, char* new)
+{
+    if (inst->logfile)
+    {
+        fprintf(inst->logfile, "Matched %s: [%s] -> [%s]\n", re, old, new);
+        fflush(inst->logfile);
+    }
+    if (inst->log_trace)
+    {
+        MXS_INFO("Match %s: [%s] -> [%s]", re, old, new);
+    }
+}
+
+/**
+ * Log a non-matching query to either MaxScale's trace log or a separate log file.
+ * @param inst Regex filter instance
+ * @param re Regular expression
+ * @param old SQL statement
+ */
+void log_nomatch(MSSQLSERVER_INSTANCE* inst, char* re, char* old)
+{
+    if (inst->logfile)
+    {
+        fprintf(inst->logfile, "No match %s: [%s]\n", re, old);
+        fflush(inst->logfile);
+    }
+    if (inst->log_trace)
+    {
+        MXS_INFO("No match %s: [%s]", re, old);
+    }
 }

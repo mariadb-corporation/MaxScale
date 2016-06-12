@@ -36,13 +36,11 @@ target_link_libraries(topfilter maxscale-common)
 set_target_properties(topfilter PROPERTIES VERSION "1.0.1")
 install(TARGETS topfilter DESTINATION ${MAXSCALE_LIBDIR})
 
-
 add_library(mssqlserverfilter SHARED mssqlserverfilter.c)
 target_link_libraries(mssqlserverfilter maxscale-common)
 add_dependencies(mssqlserverfilter pcre2)
 set_target_properties(mssqlserverfilter PROPERTIES VERSION "1.0.0")
 install(TARGETS mssqlserverfilter DESTINATION ${MAXSCALE_LIBDIR})
-
 
 if(BUILD_LUAFILTER)
   find_package(Lua)
