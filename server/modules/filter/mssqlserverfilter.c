@@ -416,7 +416,30 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 static void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {
-   
+    MSSQLSERVER_INSTANCE *my_instance = (MSSQLSERVER_INSTANCE *) instance;
+    MSSQLSERVER_SESSION *my_session = (MSSQLSERVER_SESSION *) fsession;
+
+    dcb_printf(dcb, "\t\tSearch and replace:            s/%s/%s/\n",
+               my_instance->match, my_instance->replace);
+    if (my_session)
+    {
+        dcb_printf(dcb, "\t\tNo. of queries unaltered by filter:    %d\n",
+                   my_session->no_change);
+        dcb_printf(dcb, "\t\tNo. of queries altered by filter:      %d\n",
+                   my_session->replacements);
+    }
+    if (my_instance->source)
+    {
+        dcb_printf(dcb,
+                   "\t\tReplacement limited to connections from     %s\n",
+                   my_instance->source);
+    }
+    if (my_instance->user)
+    {
+        dcb_printf(dcb,
+                   "\t\tReplacement limit to user           %s\n",
+                   my_instance->user);
+    }
 }
 
 /**
