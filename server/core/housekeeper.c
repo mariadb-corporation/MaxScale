@@ -178,13 +178,6 @@ hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
     ptr = tasks;
     while (ptr && ptr->next)
     {
-        if (strcmp(ptr->name, name) == 0)
-        {
-            spinlock_release(&tasklock);
-            free(task->name);
-            free(task);
-            return 0;
-        }
         ptr = ptr->next;
     }
     if (ptr)
