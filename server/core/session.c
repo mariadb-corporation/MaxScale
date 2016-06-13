@@ -769,14 +769,12 @@ session_state(int state)
         return "Listener Session";
     case SESSION_STATE_LISTENER_STOPPED:
         return "Stopped Listener Session";
-#ifdef SS_DEBUG
     case SESSION_STATE_STOPPING:
         return "Stopping session";
     case SESSION_STATE_TO_BE_FREED:
         return "Session to be freed";
     case SESSION_STATE_FREE:
         return "Freed session";
-#endif
     default:
         return "Invalid State";
     }
