@@ -3489,7 +3489,7 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
         MXS_NOTICE("Service %s: user credentials could not be refreshed. "
                     "Will use existing cached credentials (%s) if possible.",
-                    router->service->name
+                    router->service->name,
                     path);
     }
 
