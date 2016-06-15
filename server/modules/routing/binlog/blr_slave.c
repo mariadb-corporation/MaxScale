@@ -3363,7 +3363,6 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 static int
 blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 {
-    char path[PATH_MAX + 1] = "";
     int loaded;
 
     /* if unconfigured return an error */
@@ -3473,27 +3472,25 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
                router->binlog_name,
                router->current_pos, router->binlog_position);
 
-    /* File path for router cached authentication data */
-    strcpy(path, router->binlogdir);
-    strncat(path, "/cache", PATH_MAX);
+    /* Try reloading new users and update cached credentials */
+    loaded = service_refresh_users(router->service);
 
-    strncat(path, "/dbusers", PATH_MAX);
-
-    /* Try loading dbusers from configured backends */
-    loaded = load_mysql_users(router->service);
-
-    if (loaded < 0)
+    if (loaded ==  0)
     {
-        MXS_ERROR("Unable to load users for service %s",
-                  router->service->name);
+        blr_save_dbusers(router);
     }
     else
     {
-        /* update cached data */
-        if (loaded > 0)
-        {
-            blr_save_dbusers(router);
-        }
+        char path[PATH_MAX + 1] = "";
+        /* File path for router cached authentication data */
+        strcpy(path, router->binlogdir);
+        strncat(path, "/cache", PATH_MAX);
+        strncat(path, "/dbusers", PATH_MAX);
+
+        MXS_NOTICE("Service %s: user credentials could not be refreshed. "
+                    "Will use existing cached credentials (%s) if possible.",
+                    router->service->name
+                    path);
     }
 
     return blr_slave_send_ok(router, slave);
