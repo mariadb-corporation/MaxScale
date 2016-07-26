@@ -31,6 +31,7 @@
  - [Debug and Diagnostic Support](Reference/Debug-And-Diagnostic-Support.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
  - [MaxBinlogCheck](Reference/MaxBinlogCheck.md)
+ - [MaxScale REST API](REST-API/API.md)
 
 ## Tutorials
 
