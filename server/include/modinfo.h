@@ -1,21 +1,16 @@
 #ifndef _MODINFO_H
 #define _MODINFO_H
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -24,8 +19,8 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 02/06/14	Mark Riddoch	Initial implementation
+ * Date     Who             Description
+ * 02/06/14 Mark Riddoch    Initial implementation
  *
  * @endverbatim
  */
@@ -34,24 +29,26 @@
  * The status of the module. This gives some idea of the module
  * maturity.
  */
-typedef enum {
-	MODULE_IN_DEVELOPMENT = 0,
-	MODULE_ALPHA_RELEASE,
-	MODULE_BETA_RELEASE,
-	MODULE_GA,
-	MODULE_EXPERIMENTAL
+typedef enum
+{
+    MODULE_IN_DEVELOPMENT = 0,
+    MODULE_ALPHA_RELEASE,
+    MODULE_BETA_RELEASE,
+    MODULE_GA,
+    MODULE_EXPERIMENTAL
 } MODULE_STATUS;
 
 /**
  * The API implemented by the module
  */
-typedef enum {
-	MODULE_API_PROTOCOL = 0,
-	MODULE_API_ROUTER,
-	MODULE_API_MONITOR,
-	MODULE_API_FILTER,
-	MODULE_API_AUTHENTICATION,
-	MODULE_API_QUERY_CLASSIFIER,
+typedef enum
+{
+    MODULE_API_PROTOCOL = 0,
+    MODULE_API_ROUTER,
+    MODULE_API_MONITOR,
+    MODULE_API_FILTER,
+    MODULE_API_AUTHENTICATOR,
+    MODULE_API_QUERY_CLASSIFIER,
 } MODULE_API;
 
 /**
@@ -69,19 +66,21 @@ typedef enum {
  * Any change that is purely cosmetic and does not affect the calling
  * conventions of the API must increment only the patch version number.
  */
-typedef struct {
-	int		major;
-	int		minor;
-	int		patch;
+typedef struct
+{
+    int     major;
+    int     minor;
+    int     patch;
 } MODULE_VERSION;
 
 /**
  * The module information structure
  */
-typedef struct {
-	MODULE_API	modapi;
-	MODULE_STATUS	status;
-	MODULE_VERSION	api_version;
-	char		*description;
+typedef struct
+{
+    MODULE_API  modapi;
+    MODULE_STATUS   status;
+    MODULE_VERSION  api_version;
+    char        *description;
 } MODULE_INFO;
 #endif

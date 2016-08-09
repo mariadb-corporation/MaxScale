@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **namedserverfilter** is a filter module for MaxScale which is able to route queries to servers based on regular expression matches.
+The **namedserverfilter** is a filter module for MariaDB MaxScale which is able to route queries to servers based on regular expression matches.
 
 ## Configuration
 
@@ -64,7 +64,7 @@ server=server2
 
 ### `source`
 
-The optional source parameter defines an address that is used to match against the address from which the client connection to MaxScale originates. Only sessions that originate from this address will have the match and replacement applied to them.
+The optional source parameter defines an address that is used to match against the address from which the client connection to MariaDB MaxScale originates. Only sessions that originate from this address will have the match and replacement applied to them.
 
 ```
 source=127.0.0.1
@@ -72,7 +72,7 @@ source=127.0.0.1
 
 ### `user`
 
-The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username will have the match and replacement applied to them.
+The optional user parameter defines a user name that is used to match against the user from which the client connection to MariaDB MaxScale originates. Only sessions that are connected using this username will have the match and replacement applied to them.
 
 ```
 user=john

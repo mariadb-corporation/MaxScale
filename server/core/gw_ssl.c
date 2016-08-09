@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -52,12 +47,13 @@
  * @param is_capable Indicates if the client can handle SSL
  * @return 0 if ok, >0 if a problem - see return codes defined in gw_ssl.h
  */
-int ssl_authenticate_client(DCB *dcb, const char *user, bool is_capable)
+int ssl_authenticate_client(DCB *dcb, bool is_capable)
 {
+    char *user = dcb->user ? dcb->user : "";
     char *remote = dcb->remote ? dcb->remote : "";
     char *service = (dcb->service && dcb->service->name) ? dcb->service->name : "";
 
-    if (NULL == dcb->listen_ssl)
+    if (NULL == dcb->listener || NULL == dcb->listener->ssl)
     {
         /* Not an SSL connection on account of listener configuration */
         return SSL_AUTH_CHECKS_OK;
@@ -67,7 +63,7 @@ int ssl_authenticate_client(DCB *dcb, const char *user, bool is_capable)
     {
         /* Should be SSL, but client is not SSL capable */
         MXS_INFO("User %s@%s connected to service '%s' without SSL when SSL was required.",
-            user, remote, service);
+                 user, remote, service);
         return SSL_ERROR_CLIENT_NOT_SSL;
     }
     /* Now we know SSL is required and client is capable */
@@ -91,7 +87,7 @@ int ssl_authenticate_client(DCB *dcb, const char *user, bool is_capable)
         if (return_code < 0)
         {
             MXS_INFO("User %s@%s failed to connect to service '%s' with SSL.",
-                user, remote, service);
+                     user, remote, service);
             return SSL_ERROR_ACCEPT_FAILED;
         }
         else if (MXS_LOG_PRIORITY_IS_ENABLED(LOG_INFO))
@@ -99,12 +95,12 @@ int ssl_authenticate_client(DCB *dcb, const char *user, bool is_capable)
             if (1 == return_code)
             {
                 MXS_INFO("User %s@%s connected to service '%s' with SSL.",
-                    user, remote, service);
+                         user, remote, service);
             }
             else
             {
                 MXS_INFO("User %s@%s connect to service '%s' with SSL in progress.",
-                    user, remote, service);
+                         user, remote, service);
             }
         }
     }
@@ -129,7 +125,9 @@ ssl_is_connection_healthy(DCB *dcb)
      * then everything is as we wish. Otherwise, either there is a problem or
      * more to be done.
      */
-    return (NULL == dcb->listen_ssl || dcb->ssl_state == SSL_ESTABLISHED);
+    return (NULL == dcb->listener ||
+            NULL == dcb->listener->ssl ||
+            dcb->ssl_state == SSL_ESTABLISHED);
 }
 
 /* Looks to be redundant - can remove include for ioctl too */
@@ -141,7 +139,7 @@ ssl_check_data_to_process(DCB *dcb)
     if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED && 1 == dcb_accept_SSL(dcb))
     {
         int b = 0;
-        ioctl(dcb->fd,FIONREAD,&b);
+        ioctl(dcb->fd, FIONREAD, &b);
         if (b != 0)
         {
             return true;
@@ -167,7 +165,7 @@ ssl_check_data_to_process(DCB *dcb)
 bool
 ssl_required_by_dcb(DCB *dcb)
 {
-    return NULL != dcb->listen_ssl;
+    return NULL != dcb->listener && NULL != dcb->listener->ssl;
 }
 
 /**
@@ -183,5 +181,36 @@ ssl_required_by_dcb(DCB *dcb)
 bool
 ssl_required_but_not_negotiated(DCB *dcb)
 {
-    return (NULL != dcb->listen_ssl && SSL_HANDSHAKE_UNKNOWN == dcb->ssl_state);
+    return (NULL != dcb->listener &&
+            NULL != dcb->listener->ssl &&
+            SSL_HANDSHAKE_UNKNOWN == dcb->ssl_state);
+}
+
+/**
+ * Returns an enum ssl_method_type value as string.
+ *
+ * @param method A method type.
+ * @return The method type expressed as a string.
+ */
+const char* ssl_method_type_to_string(ssl_method_type_t method_type)
+{
+    switch (method_type)
+    {
+    case SERVICE_TLS10:
+        return "TLS10";
+#ifdef OPENSSL_1_0
+    case SERVICE_TLS11:
+        return "TLS11";
+    case SERVICE_TLS12:
+        return "TLS12";
+#endif
+    case SERVICE_SSL_MAX:
+        return "SSL_MAX";
+    case SERVICE_TLS_MAX:
+        return "TLS_MAX";
+    case SERVICE_SSL_TLS_MAX:
+        return "SSL_TLS_MAX";
+    default:
+        return "Unknown";
+    }
 }

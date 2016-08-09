@@ -4,6 +4,10 @@
 
 The Galera Monitor is a monitoring module for MaxScale that monitors a Galera cluster. It detects whether nodes are a part of the cluster and if they are in sync with the rest of the cluster. It can also assign master and slave roles inside MaxScale, allowing Galera clusters to be used with modules designed for traditional master-slave clusters.
 
+By default, the Galera Monitor will choose the node with the lowest `wsrep_local_index`
+value as the master. This will mean that two MaxScales running on different
+servers will choose the same server as the master.
+
 ## Configuration
 
 A minimal configuration for a  monitor requires a set of servers for monitoring and a username and a password to connect to these servers. The user requires the REPLICATION CLIENT privilege to successfully monitor the state of the servers.

@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2016
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 %union{
@@ -25,6 +20,7 @@
 %{
 #include <lex.yy.h>
 #include <dbfwfilter.h>
+#include <log_manager.h>
 %}
 
 /** We need a reentrant scanner so no global variables are used */
@@ -52,15 +48,26 @@
 %%
 
 input:
-    | input line
+    line_input
+    | line_input command { MXS_WARNING("Firewall rules file lacks a trailing newline."); }
+    ;
+
+line_input:
+
+    | line_input line
     ;
 
 line:
     '\n'
-    | rule '\n'
-    | user '\n'
-    | FWTOK_COMMENT '\n'
+    | command '\n'
     ;
+
+command:
+    rule
+    | user
+    | FWTOK_COMMENT
+    ;
+
 
 rule:
     FWTOK_RULE rulename {if (!create_rule(scanner, $2)){YYERROR;}} FWTOK_DENY ruleparams

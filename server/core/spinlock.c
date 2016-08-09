@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -31,6 +26,7 @@
 #include <spinlock.h>
 #include <atomic.h>
 #include <time.h>
+#include <skygw_debug.h>
 
 /**
  * Initialise a spinlock.
@@ -66,15 +62,16 @@ spinlock_acquire(SPINLOCK *lock)
 
 #ifdef __GNUC__
     while (__sync_lock_test_and_set(&(lock->lock), 1))
-        while (lock->lock) {
+        while (lock->lock)
+        {
 #else
     while (atomic_add(&(lock->lock), 1) != 0)
     {
         atomic_add(&(lock->lock), -1);
 #endif
 #if SPINLOCK_PROFILE
-        atomic_add(&(lock->spins), 1);
-        spins++;
+            atomic_add(&(lock->spins), 1);
+            spins++;
 #endif
         }
 #if SPINLOCK_PROFILE
@@ -102,7 +99,10 @@ int
 spinlock_acquire_nowait(SPINLOCK *lock)
 {
 #ifdef __GNUC__
-    if (__sync_lock_test_and_set(&(lock->lock), 1)) return FALSE;
+    if (__sync_lock_test_and_set(&(lock->lock), 1))
+    {
+        return FALSE;
+    }
 #else
     if (atomic_add(&(lock->lock), 1) != 0)
     {
@@ -125,7 +125,8 @@ spinlock_acquire_nowait(SPINLOCK *lock)
 void
 spinlock_release(SPINLOCK *lock)
 {
- #if SPINLOCK_PROFILE
+    ss_dassert(lock->lock != 0);
+#if SPINLOCK_PROFILE
     if (lock->waiting > lock->max_waiting)
     {
         lock->max_waiting = lock->waiting;

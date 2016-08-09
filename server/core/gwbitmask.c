@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <stdlib.h>
 #include <string.h>
@@ -58,10 +53,12 @@
 static int bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit);
 static int bitmask_count_bits_set(GWBITMASK *bitmask);
 
-static const unsigned char bitmapclear[8] = {
-    255-1, 255-2, 255-4, 255-8, 255-16, 255-32, 255-64, 255-128
+static const unsigned char bitmapclear[8] =
+{
+    255 - 1, 255 - 2, 255 - 4, 255 - 8, 255 - 16, 255 - 32, 255 - 64, 255 - 128
 };
-static const unsigned char bitmapset[8] = {
+static const unsigned char bitmapset[8] =
+{
     1, 2, 4, 8, 16, 32, 64, 128
 };
 
@@ -119,9 +116,9 @@ bitmask_set(GWBITMASK *bitmask, int bit)
         while (bit >= bitmask->length)
         {
             bitmask->bits = realloc(bitmask->bits,
-                                (bitmask->size + (BIT_LENGTH_INC / 8)));
+                                    (bitmask->size + (BIT_LENGTH_INC / 8)));
             memset(bitmask->bits + (bitmask->size), 0,
-               BIT_LENGTH_INC / 8);
+                   BIT_LENGTH_INC / 8);
             bitmask->length += BIT_LENGTH_INC;
             bitmask->size += (BIT_LENGTH_INC / 8);
         }
@@ -164,7 +161,7 @@ bitmask_clear_without_spinlock(GWBITMASK *bitmask, int bit)
     ptr = bitmask->bits;
     for (i = 0; i < bitmask->size; i++)
     {
-        if (*(ptr+i) != 0)
+        if (*(ptr + i) != 0)
         {
             return 0;
         }
@@ -257,7 +254,7 @@ bitmask_isallclear(GWBITMASK *bitmask)
     spinlock_acquire(&bitmask->lock);
     for (i = 0; i < bitmask->size; i++)
     {
-        if (*(ptr+i) != 0)
+        if (*(ptr + i) != 0)
         {
             result = 0;
             break;
@@ -338,7 +335,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
             if (result)
             {
                 result[0] = 0;
-                for (int i = 0; i<bitmask->length; i++)
+                for (int i = 0; i < bitmask->length; i++)
                 {
                     if (bitmask_isset_without_spinlock(bitmask, i))
                     {
@@ -346,7 +343,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
                         strcat(result, onebit);
                     }
                 }
-                result[strlen(result)-1] = 0;
+                result[strlen(result) - 1] = 0;
             }
         }
         else
@@ -372,7 +369,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
 static int
 bitmask_count_bits_set(GWBITMASK *bitmask)
 {
-    const unsigned char oneBits[] = {0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4};
+    const unsigned char oneBits[] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4};
     unsigned char partresults;
     int result = 0;
     unsigned char *ptr, *eptr;
@@ -381,8 +378,8 @@ bitmask_count_bits_set(GWBITMASK *bitmask)
     eptr = ptr + (bitmask->length / 8);
     while (ptr < eptr)
     {
-        partresults = oneBits[*ptr&0x0f];
-        partresults += oneBits[*ptr>>4];
+        partresults = oneBits[*ptr & 0x0f];
+        partresults += oneBits[*ptr >> 4];
         result += partresults;
         ptr++;
     }

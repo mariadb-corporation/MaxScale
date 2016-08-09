@@ -1,4 +1,4 @@
-# MySQL Cluster setup and MaxScale configuration
+# MySQL Cluster setup and MariaDB MaxScale configuration
 
 Massimiliano Pinto
 
@@ -24,7 +24,7 @@ Last Updated: 1st August 2014
 
 ## Overview
 
-The document covers the MySQL Cluster 7.2.17 setup and MaxScale configuration in order to load balancing the SQL nodes access.
+The document covers the MySQL Cluster 7.2.17 setup and MariaDB MaxScale configuration in order to load balancing the SQL nodes access.
 
 ## MySQL Cluster setup
 
@@ -211,7 +211,7 @@ mysql> select count(1) from test.t1;
 
 1 row in set (0.08 sec)
 ```
-## Configuring MaxScale for connection load balancing of SQL nodes
+## Configuring MariaDB MaxScale for connection load balancing of SQL nodes
 
 Add these sections in maxscale.cnf config file:
 ```
@@ -253,7 +253,7 @@ address=162.243.90.81
 port=3306
 protocol=MySQLBackend
 ```
-Assuming MaxScale is installed in server1, start it
+Assuming MariaDB MaxScale is installed in server1, start it
 ```
 [root@server1 ~]# cd /usr/bin
 
@@ -320,7 +320,7 @@ It’s now possible to run basic tests with  the read connection load balancing 
 | Ndb_cluster_node_id | 22    |
 +---------------------+-------+
 ```
-The MaxScale connection load balancing is working.
+The MariaDB MaxScale connection load balancing is working.
 
 (2)  test a select statement on an NBDBCLUSTER table, database test and table t1 created before:
 ```

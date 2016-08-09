@@ -1,21 +1,16 @@
 #ifndef _READCONNECTION_H
 #define _READCONNECTION_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -24,9 +19,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 14/06/13	Mark Riddoch	Initial implementation
- * 27/06/14	Mark Riddoch	Addition of server weight percentage
+ * Date     Who     Description
+ * 14/06/13 Mark Riddoch    Initial implementation
+ * 27/06/14 Mark Riddoch    Addition of server weight percentage
  *
  * @endverbatim
  */
@@ -57,6 +52,7 @@ typedef struct router_client_session
     bool rses_closed; /*< true when closeSession is called   */
     BACKEND *backend; /*< Backend used by the client session */
     DCB *backend_dcb; /*< DCB Connection to the backend      */
+    DCB *client_dcb; /**< Client DCB */
     struct router_client_session *next;
     int rses_capabilities; /*< input type, for example */
 #if defined(SS_DEBUG)
@@ -86,6 +82,6 @@ typedef struct router_instance
     unsigned int bitvalue; /*< Required value of server->status         */
     ROUTER_STATS stats; /*< Statistics for this router               */
     struct router_instance
-    *next;
+        *next;
 } ROUTER_INSTANCE;
 #endif

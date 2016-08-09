@@ -1,21 +1,16 @@
 #ifndef _SERVER_H
 #define _SERVER_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <dcb.h>
 #include <resultset.h>
@@ -80,7 +75,8 @@ typedef struct
  * the name of a protocol module that is loaded to implement the protocol
  * between the gateway and the server.
  */
-typedef struct server {
+typedef struct server
+{
 #if defined(SS_DEBUG)
     skygw_chk_t     server_chk_top;
 #endif
@@ -130,7 +126,8 @@ typedef struct server {
                                                    the provided replication topology */
 #define SERVER_STALE_STATUS      0x0080  /**<< Server stale status, monitor didn't update it */
 #define SERVER_MASTER_STICKINESS 0x0100  /**<< Server Master stickiness */
-#define SERVER_AUTH_ERROR        0x1000  /**<< Authentication erorr from monitor */
+#define SERVER_AUTH_ERROR        0x1000  /**<< Authentication error from monitor */
+#define SERVER_STALE_SLAVE       0x2000  /**<< Slave status is possible even without a master */
 
 /**
  * Is the server running - the macro returns true if the server is marked as running

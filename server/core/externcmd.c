@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 #include <externcmd.h>
@@ -30,7 +25,7 @@ int tokenize_arguments(char* argstr, char** argv)
     bool quoted = false;
     bool read = false;
     bool escaped = false;
-    char *ptr,*start;
+    char *ptr, *start;
     char args[strlen(argstr) + 1];
     char qc;
 
@@ -40,53 +35,53 @@ int tokenize_arguments(char* argstr, char** argv)
 
     while (*ptr != '\0' && i < MAXSCALE_EXTCMD_ARG_MAX)
     {
-	if (escaped)
-	{
-	    escaped = false;
-	}
-	else
-	{
-	    if (*ptr == '\\')
-	    {
-		escaped = true;
-	    }
-	    else if (quoted && !escaped && *ptr == qc) /** End of quoted string */
-	    {
-		*ptr = '\0';
-		argv[i++] = strdup(start);
-		read = false;
-		quoted = false;
-	    }
-	    else if (!quoted)
-	    {
-		if (isspace(*ptr))
-		{
-		    *ptr = '\0';
-		    if (read) /** New token */
-		    {
-			argv[i++] = strdup(start);
-			read = false;
-		    }
-		}
-		else if (*ptr == '\"' || *ptr == '\'')
-		{
-		    /** New quoted token, strip quotes */
-		    quoted = true;
-		    qc = *ptr;
-		    start = ptr + 1;
-		}
-		else if (!read)
-		{
-		    start = ptr;
-		    read = true;
-		}
-	    }
-	}
-	ptr++;
+        if (escaped)
+        {
+            escaped = false;
+        }
+        else
+        {
+            if (*ptr == '\\')
+            {
+                escaped = true;
+            }
+            else if (quoted && !escaped && *ptr == qc) /** End of quoted string */
+            {
+                *ptr = '\0';
+                argv[i++] = strdup(start);
+                read = false;
+                quoted = false;
+            }
+            else if (!quoted)
+            {
+                if (isspace(*ptr))
+                {
+                    *ptr = '\0';
+                    if (read) /** New token */
+                    {
+                        argv[i++] = strdup(start);
+                        read = false;
+                    }
+                }
+                else if (*ptr == '\"' || *ptr == '\'')
+                {
+                    /** New quoted token, strip quotes */
+                    quoted = true;
+                    qc = *ptr;
+                    start = ptr + 1;
+                }
+                else if (!read)
+                {
+                    start = ptr;
+                    read = true;
+                }
+            }
+        }
+        ptr++;
     }
     if (read)
     {
-	argv[i++] = strdup(start);
+        argv[i++] = strdup(start);
     }
 
     argv[i] = NULL;
@@ -308,4 +303,23 @@ bool externcmd_can_execute(const char* argstr)
         free(command);
     }
     return rval;
+}
+
+/**
+ * Simple matching of string and command
+ * @param cmd Command where the match is searched from
+ * @param match String to search for
+ * @return True if the string matched
+ */
+bool externcmd_matches(const EXTERNCMD* cmd, const char* match)
+{
+    for (int i = 0; cmd->argv[i]; i++)
+    {
+        if (strstr(cmd->argv[i], match))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }

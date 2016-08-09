@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -277,11 +272,14 @@ version()
 /**
  * The module initialisation routine, called when the module
  * is first loaded.
+ * @see function load_module in load_utils.c for explanation of lint
  */
+/*lint -e14 */
 void
 ModuleInit()
 {
 }
+/*lint +e14 */
 
 /**
  * The module entry point routine. It is this routine that
@@ -517,7 +515,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
         spinlock_init(&my_instance->rconn_lock);
         spinlock_init(&my_instance->msg_lock);
         uid_gen = 0;
-        paramlist = malloc(sizeof(FILTER_PARAMETER*)*64);
+        paramlist = malloc(sizeof(FILTER_PARAMETER*) * 64);
 
         if ((my_instance->conn = amqp_new_connection()) == NULL)
         {
@@ -624,6 +622,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
                         free(arr[x]);
                     }
                     free(arr);
+                    arr = NULL;
                 }
                 arrsize = 0;
 
@@ -791,13 +790,16 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         snprintf(taskname, 511, "mqtask%d", atomic_add(&hktask_id, 1));
         hktask_add(taskname, sendMessage, (void*) my_instance, 5);
-        for (int x = 0; x < arrsize; x++)
+        if (arr)
         {
-            free(arr[x]);
+            for (int x = 0; x < arrsize; x++)
+            {
+                free(arr[x]);
+            }
+            free(arr);
         }
-        free(arr);
     }
-    return(FILTER *) my_instance;
+    return (FILTER *) my_instance;
 }
 
 /**
@@ -1014,7 +1016,7 @@ newSession(FILTER *instance, SESSION *session)
  * @param session       The session being closed
  */
 static void
-closeSession(FILTER *instance, void *session){ }
+closeSession(FILTER *instance, void *session) { }
 
 /**
  * Free the memory associated with the session
@@ -1323,7 +1325,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
         }
 
 
-validate_triggers:
+    validate_triggers:
 
         if (src_ok && schema_ok && obj_ok)
         {
@@ -1368,9 +1370,9 @@ validate_triggers:
                 if ((prop = malloc(sizeof(amqp_basic_properties_t))))
                 {
                     prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG |
-                        AMQP_BASIC_DELIVERY_MODE_FLAG |
-                        AMQP_BASIC_MESSAGE_ID_FLAG |
-                        AMQP_BASIC_CORRELATION_ID_FLAG;
+                                   AMQP_BASIC_DELIVERY_MODE_FLAG |
+                                   AMQP_BASIC_MESSAGE_ID_FLAG |
+                                   AMQP_BASIC_CORRELATION_ID_FLAG;
                     prop->content_type = amqp_cstring_bytes("text/plain");
                     prop->delivery_mode = AMQP_DELIVERY_PERSISTENT;
                     prop->correlation_id = amqp_cstring_bytes(my_session->uid);
@@ -1424,7 +1426,10 @@ unsigned int leitoi(unsigned char* c)
 {
     unsigned char* ptr = c;
     unsigned int sz = *ptr;
-    if (*ptr < 0xfb) return sz;
+    if (*ptr < 0xfb)
+    {
+        return sz;
+    }
     if (*ptr == 0xfc)
     {
         sz = *++ptr;
@@ -1543,9 +1548,9 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
             if ((prop = malloc(sizeof(amqp_basic_properties_t))))
             {
                 prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG |
-                    AMQP_BASIC_DELIVERY_MODE_FLAG |
-                    AMQP_BASIC_MESSAGE_ID_FLAG |
-                    AMQP_BASIC_CORRELATION_ID_FLAG;
+                               AMQP_BASIC_DELIVERY_MODE_FLAG |
+                               AMQP_BASIC_MESSAGE_ID_FLAG |
+                               AMQP_BASIC_CORRELATION_ID_FLAG;
                 prop->content_type = amqp_cstring_bytes("text/plain");
                 prop->delivery_mode = AMQP_DELIVERY_PERSISTENT;
                 prop->correlation_id = amqp_cstring_bytes(my_session->uid);
@@ -1564,7 +1569,8 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
             offset += strnlen(t_buf, 40);
 
             if (*(reply->sbuf->data + 4) == 0x00)
-            { /**OK packet*/
+            {
+                /**OK packet*/
                 unsigned int aff_rows = 0, l_id = 0, s_flg = 0, wrn = 0;
                 unsigned char *ptr = (unsigned char*) (reply->sbuf->data + 5);
                 pkt_len = pktlen(reply->sbuf->data);
@@ -1595,8 +1601,8 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
             }
             else if (*(reply->sbuf->data + 4) == 0xff)
-            { /**ERR packet*/
-
+            {
+                /**ERR packet*/
                 sprintf(combined + offset, "ERROR - message: %.*s",
                         (int) (reply->end - ((void*) (reply->sbuf->data + 13))),
                         (char *) reply->sbuf->data + 13);
@@ -1605,8 +1611,8 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
             }
             else if (*(reply->sbuf->data + 4) == 0xfb)
-            { /**LOCAL_INFILE request packet*/
-
+            {
+                /**LOCAL_INFILE request packet*/
                 unsigned char *rset = (unsigned char*) reply->sbuf->data;
                 strcpy(combined + offset, "LOCAL_INFILE: ");
                 strncat(combined + offset, (const char*) rset + 5, pktlen(rset));
@@ -1615,8 +1621,8 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
             }
             else
-            { /**Result set*/
-
+            {
+                /**Result set*/
                 unsigned char *rset = (unsigned char*) (reply->sbuf->data + 4);
                 char *tmp;
                 unsigned int col_cnt = consume_leitoi(&rset);
@@ -1678,7 +1684,7 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
                    my_instance->username,
                    my_instance->vhost, my_instance->exchange,
                    my_instance->key, my_instance->queue
-                   );
+                  );
         dcb_printf(dcb, "%-16s%-16s%-16s\n",
                    "Messages", "Queued", "Sent");
         dcb_printf(dcb, "%-16d%-16d%-16d\n",

@@ -1,21 +1,16 @@
 #ifndef _EXTERN_CMD_HG
 #define _EXTERN_CMD_HG
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 #include <unistd.h>
@@ -29,11 +24,11 @@
 
 typedef struct extern_cmd_t
 {
-  char** argv; /*< Argument vector for the command, first being the actual command
+    char** argv; /*< Argument vector for the command, first being the actual command
                 * being executed. */
-  int n_exec; /*< Number of times executed */
-  pid_t child; /*< PID of the child process */
-}EXTERNCMD;
+    int n_exec; /*< Number of times executed */
+    pid_t child; /*< PID of the child process */
+} EXTERNCMD;
 
 char* externcmd_extract_command(const char* argstr);
 EXTERNCMD* externcmd_allocate(char* argstr);
@@ -41,5 +36,6 @@ void externcmd_free(EXTERNCMD* cmd);
 int externcmd_execute(EXTERNCMD* cmd);
 bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* re, const char* replace);
 bool externcmd_can_execute(const char* argstr);
+bool externcmd_matches(const EXTERNCMD* cmd, const char* match);
 
 #endif

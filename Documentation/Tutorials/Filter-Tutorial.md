@@ -2,7 +2,7 @@
 
 ## What Are Filters?
 
-The filter mechanism in MaxScale is a means by which processing can be inserted into the flow of requests and responses between the client connection to MaxScale and the MaxScale connection to the backend database servers. The path from the client side of MaxScale out to the actual database servers can be considered a pipeline, filters can then be placed in that pipeline to monitor, modify, copy or block the content that flows through that pipeline. 
+The filter mechanism in MariaDB MaxScale is a means by which processing can be inserted into the flow of requests and responses between the client connection to MariaDB MaxScale and the MariaDB MaxScale connection to the backend database servers. The path from the client side of MariaDB MaxScale out to the actual database servers can be considered a pipeline, filters can then be placed in that pipeline to monitor, modify, copy or block the content that flows through that pipeline.
 
 ## Types Of Filter
 
@@ -10,51 +10,41 @@ Filters can be divided into a number of categories
 
 ### Logging filters
 
-Logging filters do not in any way alter the statement or results of the statements that are passed through MaxScale. They merely log some information about some or all of the statements and/or result sets.
+Logging filters do not in any way alter the statement or results of the statements that are passed through MariaDB MaxScale. They merely log some information about some or all of the statements and/or result sets.
 
-Two examples of logging filters are contained within the MaxScale GA, a filter that will log all statements and another that will log only a number of statements, based on the duration of the execution of the query.
+Two examples of logging filters are contained within the MariaDB MaxScale, a filter that will log all statements and another that will log only a number of statements, based on the duration of the execution of the query.
 
 ### Statement rewriting filters
 
 Statement rewriting filters modify the statements that are passed through the filter. This allows a filter to be used as a mechanism to alter the statements that are seen by the database, an example of the use of this might be to allow an application to remain unchanged when the underlying database changes or to compensate for the migration from one database schema to another.
 
-The MaxScale GA includes a filter that can modify statements by use of regular expressions to match statements and replaced that matched text.
-
 ### Result set manipulation filters
 
 A result set manipulation filter is very similar to a statement rewriting but applies to the result set returned rather than the statement executed. An example of this may be obfuscating the values in a column.
 
-The MaxScale 1.0 GA release does not contain any result set manipulation filters.
-
 ### Routing hint filters
 
-Routing hint filters are filters that embed hints in the request that can be used by the router onto which the query is passed. These hints include suggested destinations as well as metric that may be used by the routing process. 
-
-The MaxScale 1.0 GA release does not contain any hint filters.
+Routing hint filters are filters that embed hints in the request that can be used by the router onto which the query is passed. These hints include suggested destinations as well as metric that may be used by the routing process.
 
 ### Firewall filters
 
-A firewall filter is a mechanism that allows queries to be blocked within MaxScale before they are sent on to the database server for execution. They allow constructs or individual queries to be intercepted and give a level of access control that is more flexible than the traditional database grant mechanism.
-
-The 1.0 GA release of MaxScale does not include any firewall filters.
+A firewall filter is a mechanism that allows queries to be blocked within MariaDB MaxScale before they are sent on to the database server for execution. They allow constructs or individual queries to be intercepted and give a level of access control that is more flexible than the traditional database grant mechanism.
 
 ### Pipeline control filters
 
-A pipeline filter is one that has an affect on how the requests are routed within the internal MaxScale components. The most obvious version of this is the ability to add a "tee" connector in the pipeline, duplicating the request and sending it to a second MaxScale service for processing.
-
-The MaxScale 1.0 GA release contains an implementation of a tee filter that allows statements to be matched using a regular expression and passed to a second service within MaxScale.
+A pipeline filter is one that has an affect on how the requests are routed within the internal MariaDB MaxScale components. The most obvious version of this is the ability to add a "tee" connector in the pipeline, duplicating the request and sending it to a second MariaDB MaxScale service for processing.
 
 ## Filter Definition
 
-Filters are defined in the configuration file, MaxScale.ini, using a section for each filter instance. The content of the filter sections in the configuration file various from filter to filter, however there are always to entries present for every filter, the type and module.
+Filters are defined in the configuration file, typically maxscale.cnf, using a section for each filter instance. The content of the filter sections in the configuration file various from filter to filter, however there are always to entries present for every filter, the type and module.
 ```
 [MyFilter]
 type=filter
 module=xxxfilter
 ```
-The type is used by the configuration manager within MaxScale to determine what this section is defining and the module is the name of the plugin that implements the filter.
+The type is used by the configuration manager within MariaDB MaxScale to determine what this section is defining and the module is the name of the plugin that implements the filter.
 
-When a filter is used within a service in MaxScale the entry filters= is added to the service definition in the ini file section for the service. Multiple filters can be defined using a syntax akin to the Linux shell pipe syntax.
+When a filter is used within a service in MariaDB MaxScale the entry filters= is added to the service definition in the ini file section for the service. Multiple filters can be defined using a syntax akin to the Linux shell pipe syntax.
 ```
 [Split Service]
 type=service
@@ -68,7 +58,7 @@ The names used in the filters= parameter are the names of the filter definition 
 
 ## Filter Examples
 
-The filters that are bundled with the MaxScale 1.0 GA release are documented separately, in this section a short overview of how these might be used for some simple tasks will be discussed. These are just examples of how these filters might be used, other filters may also be easily added that will enhance the MaxScale functionality still further.
+The filters that are bundled with the MariaDB MaxScale are documented separately, in this section a short overview of how these might be used for some simple tasks will be discussed. These are just examples of how these filters might be used, other filters may also be easily added that will enhance the MariaDB MaxScale functionality still further.
 
 ### Log The 30 Longest Running Queries
 
@@ -131,7 +121,7 @@ When the session ends a report will be written for the session into the logfile 
 
 ### Duplicate Data From Your Application Into Cassandra
 
-The scenario we are using in this example is one in which you have an online gaming application that is designed to work with a MariaDB/MySQL database. The database schema includes a high score table which you would like to have access to in a Cassandra cluster. The application is already using MaxScale to connect to a MariaDB Galera cluster, using a service names BubbleGame. The definition of that service is as follows
+The scenario we are using in this example is one in which you have an online gaming application that is designed to work with a MariaDB/MySQL database. The database schema includes a high score table which you would like to have access to in a Cassandra cluster. The application is already using MariaDB MaxScale to connect to a MariaDB Galera cluster, using a service names BubbleGame. The definition of that service is as follows
 ```
 [BubbleGame]
 type=service
@@ -140,7 +130,7 @@ servers=dbbubble1,dbbubble2,dbbubble3,dbbubble4,dbbubble5
 user=maxscale
 passwd=6628C50E07CCE1F0392EDEEB9D1203F3
 ```
-The table you wish to store in Cassandra in called HighScore and will contain the same columns in both the MariaDB table and the Cassandra table. The first step is to install a MariaDB instance with the Cassandra storage engine to act as a bridge server between the relational database and Cassandra. In this bridge server add a table definition for the HighScore table with the engine type set to cassandra. Add this server into the MaxScale configuration and create a service that will connect to this server.
+The table you wish to store in Cassandra in called HighScore and will contain the same columns in both the MariaDB table and the Cassandra table. The first step is to install a MariaDB instance with the Cassandra storage engine to act as a bridge server between the relational database and Cassandra. In this bridge server add a table definition for the HighScore table with the engine type set to cassandra. Add this server into the MariaDB MaxScale configuration and create a service that will connect to this server.
 ```
 [CassandraDB]
 type=server

@@ -8,7 +8,7 @@ The readconnroute router provides simple and lightweight load balancing across a
 
 ## Configuration
 
-Readconnroute router-specific settings are specified in the configuration file of MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section.
+Readconnroute router-specific settings are specified in the configuration file of MariaDB MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section.
 
 For more details about the standard service parameters, refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
@@ -22,11 +22,11 @@ Here is a list of all possible values for the `router_options`.
 
 Role|Description
 ------|---------
-master|A server assigned as a master by one of MaxScale monitors. Depending on the monitor implementation, this could be a master server of a Master-Slave replication cluster or a Write-Master of a Galera cluster.
+master|A server assigned as a master by one of MariaDB MaxScale monitors. Depending on the monitor implementation, this could be a master server of a Master-Slave replication cluster or a Write-Master of a Galera cluster.
 slave|A server assigned as a slave of a master.
 synced| A Galera cluster node which is in a synced state with the cluster.
 ndb|A MySQL Replication Cluster node
-running|A server that is up and running. All servers that MaxScale can connect to are labeled as running.
+running|A server that is up and running. All servers that MariaDB MaxScale can connect to are labeled as running.
 
 If no `router_options` parameter is configured in the service definition, the router will use the default value of `running`. This means that it will load balance connections across all running servers defined in the `servers` parameter of the service.
 

@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -157,11 +152,14 @@ version()
 /**
  * The module initialisation routine, called when the module
  * is first loaded.
+ * @see function load_module in load_utils.c for explanation of lint
  */
+/*lint -e14 */
 void
 ModuleInit()
 {
 }
+/*lint +e14 */
 
 /**
  * The module entry point routine. It is this routine that
@@ -311,7 +309,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             my_instance = NULL;
         }
     }
-    return(FILTER *) my_instance;
+    return (FILTER *) my_instance;
 }
 
 /**
@@ -334,7 +332,7 @@ newSession(FILTER *instance, SESSION *session)
     if ((my_session = calloc(1, sizeof(TOPN_SESSION))) != NULL)
     {
         if ((my_session->filename =
-             (char *) malloc(strlen(my_instance->filebase) + 20))
+                 (char *) malloc(strlen(my_instance->filebase) + 20))
             == NULL)
         {
             free(my_session);
@@ -565,9 +563,9 @@ cmp_topn(const void *va, const void *vb)
 
     if ((*b)->duration.tv_sec == (*a)->duration.tv_sec)
     {
-        return(*b)->duration.tv_usec - (*a)->duration.tv_usec;
+        return (*b)->duration.tv_usec - (*a)->duration.tv_usec;
     }
-    return(*b)->duration.tv_sec - (*a)->duration.tv_sec;
+    return (*b)->duration.tv_sec - (*a)->duration.tv_sec;
 }
 
 static int
@@ -597,7 +595,9 @@ clientReply(FILTER *instance, void *session, GWBUF *reply)
             }
         }
 
-        if (inserted == 0 && ((diff.tv_sec > my_session->top[my_instance->topN - 1]->duration.tv_sec) || (diff.tv_sec == my_session->top[my_instance->topN - 1]->duration.tv_sec && diff.tv_usec > my_session->top[my_instance->topN - 1]->duration.tv_usec)))
+        if (inserted == 0 && ((diff.tv_sec > my_session->top[my_instance->topN - 1]->duration.tv_sec) ||
+                              (diff.tv_sec == my_session->top[my_instance->topN - 1]->duration.tv_sec &&
+                               diff.tv_usec > my_session->top[my_instance->topN - 1]->duration.tv_usec)))
         {
             free(my_session->top[my_instance->topN - 1]->sql);
             my_session->top[my_instance->topN - 1]->sql = my_session->current;

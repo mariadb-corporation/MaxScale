@@ -1,23 +1,18 @@
 /*
- * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
- * @file tee.c	A filter that splits the processing pipeline in two
+ * @file tee.c  A filter that splits the processing pipeline in two
  * @verbatim
  *
  * Conditionally duplicate requests and send the duplicates to another service
@@ -26,22 +21,22 @@
  * Parameters
  * ==========
  *
- * service	The service to send the duplicates to
- * source	The source address to match in order to duplicate (optional)
- * match	A regular expression to match in order to perform duplication
- *		of the request (optional)
- * nomatch	A regular expression to match in order to prevent duplication
- *		of the request (optional)
- * user		A user name to match against. If present only requests that
- *		originate from this user will be duplciated (optional)
+ * service  The service to send the duplicates to
+ * source   The source address to match in order to duplicate (optional)
+ * match    A regular expression to match in order to perform duplication
+ *          of the request (optional)
+ * nomatch  A regular expression to match in order to prevent duplication
+ *          of the request (optional)
+ * user     A user name to match against. If present only requests that
+ *          originate from this user will be duplciated (optional)
  *
  * Revision History
  * ================
  *
- * Date		Who		Description
- * 20/06/2014	Mark Riddoch	Initial implementation
- * 24/06/2014	Mark Riddoch	Addition of support for multi-packet queries
- * 12/12/2014	Mark Riddoch	Add support for otehr packet types
+ * Date         Who             Description
+ * 20/06/2014   Mark Riddoch    Initial implementation
+ * 24/06/2014   Mark Riddoch    Addition of support for multi-packet queries
+ * 12/12/2014   Mark Riddoch    Add support for otehr packet types
  *
  * @endverbatim
  */
@@ -70,7 +65,7 @@
 #define MYSQL_COM_CHANGE_USER           0x11
 #define MYSQL_COM_STMT_PREPARE          0x16
 #define MYSQL_COM_STMT_EXECUTE          0x17
-#define MYSQL_COM_STMT_SEND_LONG_DATA	0x18
+#define MYSQL_COM_STMT_SEND_LONG_DATA   0x18
 #define MYSQL_COM_STMT_CLOSE            0x19
 #define MYSQL_COM_STMT_RESET            0x1a
 #define MYSQL_COM_CONNECT               0x1b
@@ -191,7 +186,7 @@ typedef struct
 typedef struct orphan_session_tt
 {
     SESSION* session; /*< The child branch session whose parent was freed before
-		       * the child session was in a suitable state. */
+               * the child session was in a suitable state. */
     struct orphan_session_tt* next;
 } orphan_session_t;
 
@@ -294,8 +289,8 @@ orphan_free(void* data)
         finished = finished->next;
 
         tmp->session->service->router->freeSession(
-                                                   tmp->session->service->router_instance,
-                                                   tmp->session->router_session);
+            tmp->session->service->router_instance,
+            tmp->session->router_session);
 
         tmp->session->state = SESSION_STATE_FREE;
         free(tmp->session);
@@ -321,7 +316,9 @@ version()
 /**
  * The module initialisation routine, called when the module
  * is first loaded.
+ * @see function load_module in load_utils.c for explanation of lint
  */
+/*lint -e14 */
 void
 ModuleInit()
 {
@@ -330,6 +327,7 @@ ModuleInit()
     spinlock_init(&debug_lock);
 #endif
 }
+/*lint +e14 */
 
 /**
  * The module entry point routine. It is this routine that
@@ -349,8 +347,8 @@ GetModuleObject()
  * Create an instance of the filter for a particular service
  * within MaxScale.
  *
- * @param options	The options for this filter
- * @param params	The array of name/value pair parameters for the filter
+ * @param options   The options for this filter
+ * @param params    The array of name/value pair parameters for the filter
  *
  * @return The instance data for this new instance
  */
@@ -471,7 +469,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             return NULL;
         }
     }
-    return(FILTER *) my_instance;
+    return (FILTER *) my_instance;
 }
 
 /**
@@ -479,8 +477,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
  *
  * Create the file to log to and open it.
  *
- * @param instance	The filter instance data
- * @param session	The session itself
+ * @param instance  The filter instance data
+ * @param session   The session itself
  * @return Session specific data for this session
  */
 static void *
@@ -594,7 +592,7 @@ newSession(FILTER *instance, SESSION *session)
             my_session->dummy_filterdef = dummy;
 
             if ((dummy_upstream = filterUpstream(
-                                                 dummy, my_session, &ses->tail)) == NULL)
+                                      dummy, my_session, &ses->tail)) == NULL)
             {
                 filter_free(dummy);
                 closeSession(instance, (void*) my_session);
@@ -623,8 +621,8 @@ retblock:
  * In the case of the tee filter we need to close down the
  * "branch" session.
  *
- * @param instance	The filter instance data
- * @param session	The session being closed
+ * @param instance  The filter instance data
+ * @param session   The session being closed
  */
 static void
 closeSession(FILTER *instance, void *session)
@@ -681,8 +679,8 @@ closeSession(FILTER *instance, void *session)
 /**
  * Free the memory associated with the session
  *
- * @param instance	The filter instance
- * @param session	The filter session
+ * @param instance  The filter instance
+ * @param session   The filter session
  */
 static void
 freeSession(FILTER *instance, void *session)
@@ -705,8 +703,8 @@ freeSession(FILTER *instance, void *session)
         {
             /** Free branch router session */
             ses->service->router->freeSession(
-                                              ses->service->router_instance,
-                                              ses->router_session);
+                ses->service->router_instance,
+                ses->router_session);
             /** Free memory of branch client session */
             ses->state = SESSION_STATE_FREE;
             free(ses);
@@ -737,9 +735,9 @@ freeSession(FILTER *instance, void *session)
  * Set the downstream filter or router to which queries will be
  * passed from this filter.
  *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param downstream	The downstream filter or router.
+ * @param instance  The filter instance data
+ * @param session   The filter session
+ * @param downstream    The downstream filter or router.
  */
 static void
 setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
@@ -752,9 +750,9 @@ setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
  * Set the downstream filter or router to which queries will be
  * passed from this filter.
  *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param downstream	The downstream filter or router.
+ * @param instance  The filter instance data
+ * @param session   The filter session
+ * @param downstream    The downstream filter or router.
  */
 static void
 setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
@@ -777,9 +775,9 @@ setUpstream(FILTER *instance, void *session, UPSTREAM *upstream)
  * the request. If the requets is not contained witin the packet we have
  * then set my_session->residual to the number of outstanding bytes
  *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param queue		The query data
+ * @param instance  The filter instance data
+ * @param session   The filter session
+ * @param queue     The query data
  */
 static int
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
@@ -790,7 +788,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     int rval;
     GWBUF *buffer = NULL, *clone = NULL;
     unsigned char command = gwbuf_length(queue) >= 5 ?
-        *((unsigned char*) queue->start + 4) : 1;
+                            *((unsigned char*) queue->start + 4) : 1;
 
 #ifdef SS_DEBUG
     int prev_debug_seq = atomic_add(&debug_seq, 1);
@@ -863,7 +861,10 @@ int count_replies(GWBUF* buffer)
             while (ptr < end && eof < 2)
             {
                 pktlen = MYSQL_GET_PACKET_LEN(ptr) + 4;
-                if (PTR_IS_EOF(ptr) || PTR_IS_ERR(ptr)) eof++;
+                if (PTR_IS_EOF(ptr) || PTR_IS_ERR(ptr))
+                {
+                    eof++;
+                }
                 ptr += pktlen;
             }
             if (eof == 2)
@@ -910,13 +911,13 @@ uint16_t get_response_flags(uint8_t* datastart, bool ok_packet)
     {
         ptr += lenenc_length(ptr);
         ptr += lenenc_length(ptr);
-        memcpy(&rval, ptr, sizeof(uint8_t)*2);
+        memcpy(&rval, ptr, sizeof(uint8_t) * 2);
     }
     else
     {
         /** This is an EOF packet*/
         ptr += 2;
-        memcpy(&rval, ptr, sizeof(uint8_t)*2);
+        memcpy(&rval, ptr, sizeof(uint8_t) * 2);
     }
 
     return rval;
@@ -928,9 +929,9 @@ uint16_t get_response_flags(uint8_t* datastart, bool ok_packet)
  * query is passed to the upstream component
  * (filter or router) in the filter chain.
  *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param reply		The response data
+ * @param instance  The filter instance data
+ * @param session   The filter session
+ * @param reply     The response data
  */
 static int
 clientReply(FILTER* instance, void *session, GWBUF *reply)
@@ -1078,9 +1079,9 @@ clientReply(FILTER* instance, void *session, GWBUF *reply)
  * instance as a whole, otherwise print diagnostics for the
  * particular session.
  *
- * @param	instance	The filter instance
- * @param	fsession	Filter session, may be NULL
- * @param	dcb		The DCB for diagnostic output
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ * @param   dcb     The DCB for diagnostic output
  */
 static void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
@@ -1124,8 +1125,8 @@ diagnostic(FILTER *instance, void *fsession, DCB *dcb)
  * to maintain the session consistancy. These are COM_INIT_DB,
  * COM_CHANGE_USER and COM_QUIT packets.
  *
- * @param queue		The buffer to check
- * @return 		non-zero if the packet should be sent to the branch
+ * @param queue     The buffer to check
+ * @return      non-zero if the packet should be sent to the branch
  */
 static int
 packet_is_required(GWBUF *queue)

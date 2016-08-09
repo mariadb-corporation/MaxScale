@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014-2016
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -71,7 +66,7 @@ static const char *version_str = "V1.0.0";
 char *
 version()
 {
-    return(char*) version_str;
+    return (char*) version_str;
 }
 
 /*
@@ -154,11 +149,14 @@ typedef struct
 /**
  * The module initialisation routine, called when the module
  * is first loaded.
+ * @see function load_module in load_utils.c for explanation of lint
  */
+/*lint -e14 */
 void
 ModuleInit()
 {
 }
+/*lint +e14 */
 
 /**
  * Create a new instance of the Lua filter.
@@ -241,7 +239,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
         }
     }
 
-    return(FILTER *) my_instance;
+    return (FILTER *) my_instance;
 }
 
 /**
@@ -256,8 +254,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
  * There is a single C function exported as a global variable for the session
  * script named id_gen. The id_gen function returns an integer that is unique for
  * this service only. This function is only accessible to the session level scripts.
- * @param instance	The filter instance data
- * @param session	The session itself
+ * @param instance The filter instance data
+ * @param session The session itself
  * @return Session specific data for this session
  */
 static void * newSession(FILTER *instance, SESSION *session)
@@ -296,8 +294,8 @@ static void * newSession(FILTER *instance, SESSION *session)
             if (lua_pcall(my_session->lua_state, 0, 0, 0))
             {
                 MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
-                          " The newSession entry point will not be called.",
-                          lua_tostring(my_session->lua_state, -1));
+                            " The newSession entry point will not be called.",
+                            lua_tostring(my_session->lua_state, -1));
             }
         }
     }
@@ -309,8 +307,8 @@ static void * newSession(FILTER *instance, SESSION *session)
         if (lua_pcall(my_instance->global_lua_state, 0, 0, 0))
         {
             MXS_WARNING("luafilter: Failed to get global variable 'newSession': '%s'."
-                      " The newSession entry point will not be called for the global script.",
-                      lua_tostring(my_instance->global_lua_state, -1));
+                        " The newSession entry point will not be called for the global script.",
+                        lua_tostring(my_instance->global_lua_state, -1));
         }
         spinlock_release(&my_instance->lock);
     }
@@ -323,8 +321,8 @@ static void * newSession(FILTER *instance, SESSION *session)
  * by which a filter may cleanup data structure etc.
  *
  * The closeSession function in the Lua scripts will be called.
- * @param instance	The filter instance data
- * @param session	The session being closed
+ * @param instance The filter instance data
+ * @param session The session being closed
  */
 static void closeSession(FILTER *instance, void *session)
 {
@@ -340,7 +338,7 @@ static void closeSession(FILTER *instance, void *session)
         {
             MXS_WARNING("luafilter: Failed to get global variable 'closeSession': '%s'."
                         " The closeSession entry point will not be called.",
-                      lua_tostring(my_session->lua_state, -1));
+                        lua_tostring(my_session->lua_state, -1));
         }
         spinlock_release(&my_session->lock);
     }
@@ -362,8 +360,8 @@ static void closeSession(FILTER *instance, void *session)
 /**
  * Free the memory associated with the session
  *
- * @param instance	The filter instance
- * @param session	The filter session
+ * @param instance The filter instance
+ * @param session The filter session
  */
 static void freeSession(FILTER *instance, void *session)
 {
@@ -376,9 +374,9 @@ static void freeSession(FILTER *instance, void *session)
  * Set the downstream filter or router to which queries will be
  * passed from this filter.
  *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param downstream	The downstream filter or router.
+ * @param instance The filter instance data
+ * @param session The filter session
+ * @param downstream The downstream filter or router.
  */
 static void setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
 {
@@ -453,9 +451,9 @@ static int clientReply(FILTER *instance, void *session, GWBUF *queue)
  * If it is a string, the current query is replaced with the return value and
  * the query will be routed. If nil is returned, the query is routed normally.
  *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param queue		The query data
+ * @param instance The filter instance data
+ * @param session The filter session
+ * @param queue  The query data
  */
 static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
 {
@@ -551,9 +549,9 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
  *
  * This will call the matching diagnostics entry point in the Lua script. If the
  * Lua function returns a string, it will be printed to the client DCB.
- * @param	instance	The filter instance
- * @param	fsession	Filter session, may be NULL
- * @param	dcb		The DCB for diagnostic output
+ * @param instance The filter instance
+ * @param fsession Filter session, may be NULL
+ * @param dcb  The DCB for diagnostic output
  */
 static void diagnostic(FILTER *instance, void *fsession, DCB *dcb)
 {

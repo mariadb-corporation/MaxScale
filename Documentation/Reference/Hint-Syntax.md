@@ -100,7 +100,7 @@ You can also push anonymous hints onto the stack which are only used as long as 
 
 ### Example 1 - Routing SELECT queries to master
 
-In this example, MaxScale is configured with the readwritesplit router and the hint filter.
+In this example, MariaDB MaxScale is configured with the readwritesplit router and the hint filter.
 
 ```
 [ReadWriteService]
@@ -116,7 +116,7 @@ type=filter
 module=hintfilter
 ```
 
-Behind MaxScale is a master server and a slave server. If there is replication lag between the master and the slave, read queries sent to the slave might return old data. To guarantee up-to-date data, we can add a routing hint to the query.
+Behind MariaDB MaxScale is a master server and a slave server. If there is replication lag between the master and the slave, read queries sent to the slave might return old data. To guarantee up-to-date data, we can add a routing hint to the query.
 
 ```
 INSERT INTO table1 VALUES ("John","Doe",1);

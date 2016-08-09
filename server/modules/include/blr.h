@@ -1,21 +1,16 @@
 #ifndef _BLR_H
 #define _BLR_H
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014-2015
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -35,6 +30,7 @@
  * 24/06/15     Massimiliano Pinto      Added BLRM_UNCONFIGURED state
  * 05/08/15     Massimiliano Pinto      Initial implementation of transaction safety
  * 23/10/15     Markus Makela           Added current_safe_event
+ * 26/04/16     Massimiliano Pinto      Added MariaDB 10.0 and 10.1 GTID event flags detection
  *
  * @endverbatim
  */
@@ -189,6 +185,10 @@
 #define SLAVE_POS_BAD_FD                        0xfd
 #define SLAVE_POS_BEYOND_EOF                    0xfc
 
+/* MariadDB 10 GTID event flags */
+#define MARIADB_FL_DDL                 32
+#define MARIADB_FL_STANDALONE           1
+
 /**
  * Some useful macros for examining the MySQL Response packets
  */
@@ -215,7 +215,7 @@ typedef struct master_server_config
 {
     char *host;
     unsigned short port;
-    char logfile[BINLOG_FNAMELEN+1];
+    char logfile[BINLOG_FNAMELEN + 1];
     uint64_t pos;
     uint64_t safe_pos;
     char *user;
@@ -275,7 +275,7 @@ typedef struct
 
 typedef struct blfile
 {
-    char            binlogname[BINLOG_FNAMELEN+1];  /*< Name of the binlog file */
+    char            binlogname[BINLOG_FNAMELEN + 1]; /*< Name of the binlog file */
     int             fd;                             /*< Actual file descriptor */
     int             refcnt;                         /*< Reference count for file */
     BLCACHE         *cache;                         /*< Record cache for this file */
@@ -332,7 +332,7 @@ typedef struct router_slave
     DCB             *dcb;           /*< The slave server DCB */
     int             state;          /*< The state of this slave */
     uint32_t        binlog_pos;     /*< Binlog position for this slave */
-    char            binlogfile[BINLOG_FNAMELEN+1];
+    char            binlogfile[BINLOG_FNAMELEN + 1];
     /*< Current binlog file for this slave */
     char            *uuid;          /*< Slave UUID */
 #ifdef BLFILE_IN_SLAVE
@@ -354,7 +354,7 @@ typedef struct router_slave
     SPINLOCK        rses_lock;      /*< Protects rses_deleted */
     pthread_t       pthread;
     struct router_instance
-    *router;        /*< Pointer to the owning router */
+        *router;        /*< Pointer to the owning router */
     struct router_slave *next;
     SLAVE_STATS     stats;          /*< Slave statistics */
     time_t          connect_time;   /*< Connect time of slave */
@@ -463,7 +463,7 @@ typedef struct router_instance
     uint64_t                checksum_size; /*< Data size for the checksum */
     REP_HEADER              stored_header; /*< Relication header of the event the master is sending */
     uint64_t                last_safe_pos; /* last committed transaction */
-    char                    binlog_name[BINLOG_FNAMELEN+1];
+    char                    binlog_name[BINLOG_FNAMELEN + 1];
     /*< Name of the current binlog file */
     uint64_t                binlog_position;
     /*< last committed transaction position */
@@ -476,7 +476,7 @@ typedef struct router_instance
     uint64_t          last_event_pos;       /*< Position of last event written */
     uint64_t          current_safe_event;
     /*< Position of the latest safe event being sent to slaves */
-    char              prevbinlog[BINLOG_FNAMELEN+1];
+    char              prevbinlog[BINLOG_FNAMELEN + 1];
     int               rotating;     /*< Rotation in progress flag */
     BLFILE            *files;       /*< Files used by the slaves */
     SPINLOCK          fileslock;    /*< Lock for the files queue above */
@@ -622,6 +622,13 @@ extern int blr_ping(ROUTER_INSTANCE *, ROUTER_SLAVE *, GWBUF *);
 extern int blr_send_custom_error(DCB *, int, int, char *, char *, unsigned int);
 extern int blr_file_next_exists(ROUTER_INSTANCE *, ROUTER_SLAVE *);
 uint32_t extract_field(uint8_t *src, int bits);
+void blr_cache_read_master_data(ROUTER_INSTANCE *router);
+int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
+int blr_save_dbusers(const ROUTER_INSTANCE *router);
+char    *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
+void blr_file_append(ROUTER_INSTANCE *router, char *file);
+void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
+char * blr_last_event_description(ROUTER_INSTANCE *router);
 
 extern bool blr_send_event(blr_thread_role_t role,
                            const char* binlog_name,

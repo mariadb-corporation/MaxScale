@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -112,8 +107,6 @@ users_add(USERS *users, char *user, char *auth)
 /**
  * Delete a user from the user table.
  *
- * The last user in the table can not be deleted
- *
  * @param users         The users table
  * @param user          The user name
  * @return      The number of users deleted from the table
@@ -123,10 +116,6 @@ users_delete(USERS *users, char *user)
 {
     int del;
 
-    if (users->stats.n_entries == 1)
-    {
-        return 0;
-    }
     atomic_add(&users->stats.n_deletes, 1);
     del = hashtable_delete(users->data, user);
     atomic_add(&users->stats.n_entries, -del);
@@ -187,24 +176,19 @@ usersPrint(USERS *users)
 void
 dcb_usersPrint(DCB *dcb, USERS *users)
 {
-    HASHITERATOR *iter;
-    char *sep;
-    void *user;
-
-    dcb_printf(dcb, "Users table data\n");
-
     if (users == NULL || users->data == NULL)
     {
         dcb_printf(dcb, "Users table is empty\n");
     }
     else
     {
-        dcb_hashtable_stats(dcb, users->data);
+        HASHITERATOR *iter;
 
         if ((iter = hashtable_iterator(users->data)) != NULL)
         {
             dcb_printf(dcb, "User names: ");
-            sep = "";
+            char *sep = "";
+            void *user;
 
             if (users->usersCustomUserFormat != NULL)
             {

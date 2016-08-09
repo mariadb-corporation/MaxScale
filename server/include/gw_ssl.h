@@ -1,21 +1,16 @@
 #ifndef _GW_SSL_H
 #define _GW_SSL_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -40,7 +35,7 @@
 
 struct dcb;
 
-enum
+typedef enum ssl_method_type
 {
     SERVICE_TLS10,
 #ifdef OPENSSL_1_0
@@ -50,7 +45,7 @@ enum
     SERVICE_SSL_MAX,
     SERVICE_TLS_MAX,
     SERVICE_SSL_TLS_MAX
-};
+} ssl_method_type_t;
 
 /**
  * Return codes for SSL authentication checks
@@ -76,10 +71,11 @@ typedef struct ssl_listener
     bool ssl_init_done;                 /*< If SSL has already been initialized for this service */
 } SSL_LISTENER;
 
-int ssl_authenticate_client(struct dcb *dcb, const char *user, bool is_capable);
+int ssl_authenticate_client(struct dcb *dcb, bool is_capable);
 bool ssl_is_connection_healthy(struct dcb *dcb);
 bool ssl_check_data_to_process(struct dcb *dcb);
 bool ssl_required_by_dcb(struct dcb *dcb);
 bool ssl_required_but_not_negotiated(struct dcb *dcb);
+const char* ssl_method_type_to_string(ssl_method_type_t method_type);
 
 #endif /* _GW_SSL_H */

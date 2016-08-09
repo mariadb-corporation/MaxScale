@@ -1,21 +1,16 @@
 #ifndef _MYSQL_AUTH_H
 #define _MYSQL_AUTH_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /*
@@ -33,9 +28,6 @@
 #include <stdint.h>
 #include <mysql_client_server_protocol.h>
 
-int mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
-bool mysql_auth_is_client_ssl_capable (DCB *dcb);
-int mysql_auth_authenticate(DCB *dcb, GWBUF **buf);
 int gw_check_mysql_scramble_data(DCB *dcb,
                                  uint8_t *token,
                                  unsigned int token_len,
@@ -44,5 +36,9 @@ int gw_check_mysql_scramble_data(DCB *dcb,
                                  char *username,
                                  uint8_t *stage1_hash);
 int check_db_name_after_auth(DCB *dcb, char *database, int auth_ret);
+int gw_find_mysql_user_password_sha1(
+    char *username,
+    uint8_t *gateway_password,
+    DCB *dcb);
 
 #endif /** _MYSQL_AUTH_H */

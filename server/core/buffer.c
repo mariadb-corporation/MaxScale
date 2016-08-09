@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -46,6 +41,7 @@
 #include <buffer.h>
 #include <atomic.h>
 #include <skygw_debug.h>
+#include <skygw_utils.h>
 #include <spinlock.h>
 #include <hint.h>
 #include <log_manager.h>
@@ -111,7 +107,7 @@ gwbuf_alloc(unsigned int size)
     }
     spinlock_init(&rval->gwbuf_lock);
     rval->start = sbuf->data;
-    rval->end = (void *)((char *)rval->start+size);
+    rval->end = (void *)((char *)rval->start + size);
     sbuf->refcount = 1;
     rval->sbuf = sbuf;
     rval->next = NULL;
@@ -333,7 +329,7 @@ gwbuf_clone(GWBUF *buf)
 {
     GWBUF *rval;
 
-    if ((rval = (GWBUF *)calloc(1,sizeof(GWBUF))) == NULL)
+    if ((rval = (GWBUF *)calloc(1, sizeof(GWBUF))) == NULL)
     {
         ss_dassert(rval != NULL);
         char errbuf[STRERROR_BUFLEN];
@@ -395,7 +391,7 @@ GWBUF *gwbuf_clone_portion(GWBUF *buf,
     GWBUF* clonebuf;
 
     CHK_GWBUF(buf);
-    ss_dassert(start_offset+length <= GWBUF_LENGTH(buf));
+    ss_dassert(start_offset + length <= GWBUF_LENGTH(buf));
 
     if ((clonebuf = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
     {
@@ -408,8 +404,8 @@ GWBUF *gwbuf_clone_portion(GWBUF *buf,
     atomic_add(&buf->sbuf->refcount, 1);
     clonebuf->sbuf = buf->sbuf;
     clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone info bits too */
-    clonebuf->start = (void *)((char*)buf->start+start_offset);
-    clonebuf->end = (void *)((char *)clonebuf->start+length);
+    clonebuf->start = (void *)((char*)buf->start + start_offset);
+    clonebuf->end = (void *)((char *)clonebuf->start + length);
     clonebuf->gwbuf_type = buf->gwbuf_type; /*< clone the type for now */
     clonebuf->properties = NULL;
     clonebuf->hint = NULL;
@@ -422,6 +418,68 @@ GWBUF *gwbuf_clone_portion(GWBUF *buf,
     gwbuf_add_to_hashtable(clonebuf);
 #endif
     return clonebuf;
+}
+
+/**
+ * @brief Split a buffer in two
+ *
+ * The returned value will be @c length bytes long. If the length of @c buf
+ * exceeds @c length, the remaining buffers are stored in @buf.
+ *
+ * @param buf Buffer chain to split
+ * @param length Number of bytes that the returned buffer should contain
+ * @return Head of the buffer chain.
+ */
+GWBUF* gwbuf_split(GWBUF **buf, size_t length)
+{
+    GWBUF* head = NULL;
+
+    if (length > 0 && buf && *buf)
+    {
+        GWBUF* buffer = *buf;
+        GWBUF* orig_tail = buffer->tail;
+        head = buffer;
+
+        /** Handle complete buffers */
+        while (buffer && length && length >= GWBUF_LENGTH(buffer))
+        {
+            length -= GWBUF_LENGTH(buffer);
+            head->tail = buffer;
+            buffer = buffer->next;
+        }
+
+        /** Some data is left in the original buffer */
+        if (buffer)
+        {
+            /** We're splitting a chain of buffers */
+            if (head->tail != orig_tail)
+            {
+                /** Make sure the original buffer's tail points to the right place */
+                buffer->tail = orig_tail;
+
+                /** Remove the pointer to the original buffer */
+                head->tail->next = NULL;
+            }
+
+            if (length > 0)
+            {
+                ss_dassert(GWBUF_LENGTH(buffer) > length);
+                GWBUF* partial = gwbuf_clone_portion(buffer, 0, length);
+
+                /** If the head points to the original head of the buffer chain
+                 * and we are splitting a contiguous buffer, we only need to return
+                 * the partial clone of the first buffer. If we are splitting multiple
+                 * buffers, we need to append them to the full buffers. */
+                head = head == buffer ? partial : gwbuf_append(head, partial);
+
+                buffer = gwbuf_consume(buffer, length);
+            }
+        }
+
+        *buf = buffer;
+    }
+
+    return head;
 }
 
 /**
@@ -503,43 +561,42 @@ gwbuf_append(GWBUF *head, GWBUF *tail)
 }
 
 /**
- * Consume data from a buffer in the linked list. The assumption is to consume
- * n bytes from the buffer chain.
+ * @brief Consume data from buffer chain
  *
- * If after consuming the bytes from the first buffer that buffer becomes
- * empty it will be freed and the linked list updated.
+ * Data is consumed from @p head until either @p length bytes have been
+ * processed or @p head is empty. If @p head points to a chain of buffers,
+ * those buffers are counted as a part of @p head and will also be consumed if
+ * @p length exceeds the size of the first buffer.
  *
- * The return value is the new head of the linked list.
- *
- * This call should be made with the caller holding the lock for the linked
- * list.
- *
- * @param head          The head of the linked list
- * @param length        The amount of data to consume
- * @return The head of the linked list
+ * @param head   The head of the linked list
+ * @param length Number of bytes to consume
+ * @return       The head of the linked list or NULL if everything was consumed
  */
 GWBUF *
 gwbuf_consume(GWBUF *head, unsigned int length)
 {
-    GWBUF *rval = head;
-
-    CHK_GWBUF(head);
-    GWBUF_CONSUME(head, length);
-    CHK_GWBUF(head);
-
-    if (GWBUF_EMPTY(head))
+    while (head && length > 0)
     {
-        rval = head->next;
-        if (head->next)
-        {
-            head->next->tail = head->tail;
-        }
+        CHK_GWBUF(head);
+        unsigned int buflen = GWBUF_LENGTH(head);
 
-        gwbuf_free_one(head);
+        GWBUF_CONSUME(head, length);
+        length = buflen < length ? length - buflen : 0;
+
+        if (GWBUF_EMPTY(head))
+        {
+            if (head->next)
+            {
+                head->next->tail = head->tail;
+            }
+            GWBUF* tmp = head;
+            head = head->next;
+            gwbuf_free_one(tmp);
+        }
     }
 
-    ss_dassert(rval == NULL || (rval->end > rval->start));
-    return rval;
+    ss_dassert(head == NULL || (head->end >= head->start));
+    return head;
 }
 
 /**
@@ -651,7 +708,7 @@ void gwbuf_set_type(
     {
         CHK_GWBUF(buf);
         buf->gwbuf_type |= type;
-        buf=buf->next;
+        buf = buf->next;
     }
 }
 
@@ -724,7 +781,8 @@ void* gwbuf_get_buffer_object_data(GWBUF* buf, bufobj_id_t id)
     }
     /** Unlock */
     spinlock_release(&buf->gwbuf_lock);
-    if(bo){
+    if (bo)
+    {
         return bo->bo_data;
     }
     return NULL;
@@ -867,4 +925,64 @@ gwbuf_add_hint(GWBUF *buf, HINT *hint)
     }
     spinlock_release(&buf->gwbuf_lock);
     return 1;
+}
+
+/**
+ * @brief Copy bytes from a buffer
+ *
+ * Copy bytes from a chain of buffers. Supports copying data from buffers where
+ * the data is spread across multiple buffers.
+ *
+ * @param buffer Buffer to copy from
+ * @param offset Offset into the buffer
+ * @param bytes Number of bytes to copy
+ * @param dest Destination where the bytes are copied
+ * @return Number of bytes copied
+ */
+size_t gwbuf_copy_data(GWBUF *buffer, size_t offset, size_t bytes, uint8_t* dest)
+{
+    uint32_t buflen;
+
+    /** Skip unrelated buffers */
+    while (buffer && offset && offset >= (buflen = GWBUF_LENGTH(buffer)))
+    {
+        offset -= buflen;
+        buffer = buffer->next;
+    }
+
+    size_t bytes_read = 0;
+
+    if (buffer)
+    {
+        uint8_t *ptr = (uint8_t*) GWBUF_DATA(buffer) + offset;
+        uint32_t bytes_left = GWBUF_LENGTH(buffer) - offset;
+
+        /** Data is in one buffer */
+        if (bytes_left >= bytes)
+        {
+            memcpy(dest, ptr, bytes);
+            bytes_read = bytes;
+        }
+        else
+        {
+            /** Data is spread across multiple buffers */
+            do
+            {
+                memcpy(dest, ptr, bytes_left);
+                bytes -= bytes_left;
+                dest += bytes_left;
+                bytes_read += bytes_left;
+                buffer = buffer->next;
+
+                if (buffer)
+                {
+                    bytes_left = MIN(GWBUF_LENGTH(buffer), bytes);
+                    ptr = (uint8_t*) GWBUF_DATA(buffer);
+                }
+            }
+            while (bytes > 0 && buffer);
+        }
+    }
+
+    return bytes_read;
 }

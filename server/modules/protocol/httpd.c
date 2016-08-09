@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -44,17 +39,22 @@
 #include <log_manager.h>
 #include <resultset.h>
 
+ /* @see function load_module in load_utils.c for explanation of the following
+  * lint directives.
+ */
+/*lint -e14 */
 MODULE_INFO info =
 {
     MODULE_API_PROTOCOL,
     MODULE_IN_DEVELOPMENT,
     GWPROTOCOL_VERSION,
-    "An experimental HTTPD implementation for use in admnistration"
+    "An experimental HTTPD implementation for use in administration"
 };
+/*lint +e14 */
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
-static char *version_str = "V1.0.1";
+static char *version_str = "V1.1.1";
 
 static int httpd_read_event(DCB* dcb);
 static int httpd_write_event(DCB *dcb);
@@ -66,6 +66,7 @@ static int httpd_close(DCB *dcb);
 static int httpd_listen(DCB *dcb, char *config);
 static int httpd_get_line(int sock, char *buf, int size);
 static void httpd_send_headers(DCB *dcb, int final);
+static char *httpd_default_auth();
 
 /**
  * The "module object" for the httpd protocol module.
@@ -82,14 +83,20 @@ static GWPROTOCOL MyObject =
     httpd_close,        /**< Close                         */
     httpd_listen,       /**< Create a listener             */
     NULL,               /**< Authentication                */
-    NULL                /**< Session                       */
+    NULL,               /**< Session                       */
+    httpd_default_auth, /**< Default authenticator         */
+    NULL                /**< Connection limit reached      */
 };
 
 /**
  * Implementation of the mandatory version entry point
  *
  * @return version string of the module
+ *
+ * @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
  */
+/*lint -e14 */
 char* version()
 {
     return version_str;
@@ -115,6 +122,17 @@ GWPROTOCOL* GetModuleObject()
 {
     return &MyObject;
 }
+/*lint +e14 */
+
+/**
+ * The default authenticator name for this protocol
+ *
+ * @return name of authenticator
+ */
+static char *httpd_default_auth()
+{
+    return "NullAuth";
+}
 
 /**
  * Read event for EPOLLIN on the httpd protocol module.
@@ -125,9 +143,6 @@ GWPROTOCOL* GetModuleObject()
 static int httpd_read_event(DCB* dcb)
 {
     SESSION *session = dcb->session;
-    ROUTER_OBJECT *router = session->service->router;
-    ROUTER *router_instance = session->service->router_instance;
-    void *rsession = session->router_session;
 
     int numchars = 1;
     char buf[HTTPD_REQUESTLINE_MAXLEN-1] = "";
@@ -194,7 +209,6 @@ static int httpd_read_event(DCB* dcb)
         if (*query_string == '?')
         {
             *query_string = '\0';
-            query_string++;
         }
     }
 
@@ -333,54 +347,32 @@ static int httpd_hangup(DCB *dcb)
  * Handler for the EPOLLIN event when the DCB refers to the listening
  * socket for the protocol.
  *
- * @param dcb   The descriptor control block
+ * @param listener   The descriptor control block
  */
-static int httpd_accept(DCB *dcb)
+static int httpd_accept(DCB *listener)
 {
     int n_connect = 0;
+    DCB *client_dcb;
 
-    while (1)
+    while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
     {
-        int so = -1;
-        struct sockaddr_in addr;
-        socklen_t addrlen;
-        DCB *client = NULL;
         HTTPD_session *client_data = NULL;
 
-        if ((so = accept(dcb->fd, (struct sockaddr *)&addr, &addrlen)) == -1)
+        /* create the session data for HTTPD */
+        if ((client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session))) == NULL)
         {
-            return n_connect;
+            dcb_close(client_dcb);
+            continue;
         }
-        else
+        client_dcb->data = client_data;
+
+        client_dcb->session = session_alloc(listener->session->service, client_dcb);
+        if (NULL == client_dcb->session || poll_add_dcb(client_dcb) == -1)
         {
-            atomic_add(&dcb->stats.n_accepts, 1);
-
-            if ((client = dcb_alloc(DCB_ROLE_REQUEST_HANDLER)))
-            {
-                client->listen_ssl = dcb->listen_ssl;
-                client->fd = so;
-                client->remote = strdup(inet_ntoa(addr.sin_addr));
-                memcpy(&client->func, &MyObject, sizeof(GWPROTOCOL));
-
-                /* create the session data for HTTPD */
-                client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session));
-                client->data = client_data;
-
-                client->session = session_alloc(dcb->session->service, client);
-
-                if (NULL == client->session || poll_add_dcb(client) == -1)
-                {
-                    close(so);
-                    dcb_close(client);
-                    return n_connect;
-                }
-                n_connect++;
-            }
-            else
-            {
-                close(so);
-            }
+            dcb_close(client_dcb);
+            continue;
         }
+        n_connect++;
     }
 
     return n_connect;
@@ -406,68 +398,7 @@ static int httpd_close(DCB *dcb)
  */
 static int httpd_listen(DCB *listener, char *config)
 {
-    struct sockaddr_in addr;
-    int one = 1;
-    int rc;
-    int syseno = 0;
-
-    memcpy(&listener->func, &MyObject, sizeof(GWPROTOCOL));
-    if (!parse_bindconfig(config, 6442, &addr))
-    {
-        return 0;
-    }
-
-    if ((listener->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        return 0;
-    }
-
-    /* socket options */
-    syseno = setsockopt(listener->fd,
-                        SOL_SOCKET,
-                        SO_REUSEADDR,
-                        (char *)&one,
-                        sizeof(one));
-
-    if (syseno != 0)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options. Error %d: %s",
-                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
-        return 0;
-    }
-    /* set NONBLOCKING mode */
-    setnonblocking(listener->fd);
-
-    /* bind address and port */
-    if (bind(listener->fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-    {
-        return 0;
-    }
-
-    rc = listen(listener->fd, SOMAXCONN);
-
-    if (rc == 0)
-    {
-        MXS_NOTICE("Listening httpd connections at %s", config);
-    }
-    else
-    {
-        int eno = errno;
-        errno = 0;
-        char errbuf[STRERROR_BUFLEN];
-        fprintf(stderr,
-                "\n* Failed to start listening http due error %d, %s\n\n",
-                eno,
-                strerror_r(eno, errbuf, sizeof(errbuf)));
-        return 0;
-    }
-
-    if (poll_add_dcb(listener) == -1)
-    {
-        return 0;
-    }
-    return 1;
+    return (dcb_listen(listener, config, "HTTPD") < 0) ? 0 : 1;
 }
 
 /**

@@ -1,21 +1,16 @@
 #ifndef _MAXSCALED_H
 #define _MAXSCALED_H
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -24,8 +19,8 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 13/06/14	Mark Riddoch	Initial implementation
+ * Date     Who     Description
+ * 13/06/14 Mark Riddoch    Initial implementation
  *
  * @endverbatim
  */
@@ -35,14 +30,14 @@
 /**
  * The telnetd specific protocol structure to put in the DCB.
  */
-typedef struct	maxscaled {
-	SPINLOCK	lock;		/**< Protocol structure lock */
-	int		state;		/**< The connection state */
-	char		*username;	/**< The login name of the user */
+typedef struct  maxscaled
+{
+    SPINLOCK    lock;       /**< Protocol structure lock */
+    int     state;      /**< The connection state */
+    char        *username;  /**< The login name of the user */
 } MAXSCALED;
 
-#define	MAXSCALED_STATE_LOGIN	1	/**< Issued login prompt */
-#define MAXSCALED_STATE_PASSWD	2	/**< Issued password prompt */
-#define MAXSCALED_STATE_DATA	3	/**< User logged in */
+#define MAXSCALED_STATE_LOGIN   1   /**< Waiting for credentials */
+#define MAXSCALED_STATE_DATA    2   /**< User logged in */
 
 #endif

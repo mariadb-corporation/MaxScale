@@ -1,10 +1,10 @@
-# How to make MaxScale High Available
+# How to make MariaDB MaxScale High Available
 
-The document shows an example of a Pacemaker / Corosync setup with MaxScale based on Linux Centos 6.5, using three virtual servers and unicast heartbeat mode with the following minimum requirements:
+The document shows an example of a Pacemaker / Corosync setup with MariaDB MaxScale based on Linux Centos 6.5, using three virtual servers and unicast heartbeat mode with the following minimum requirements:
 
-- MaxScale process is started/stopped  and monitored via /etc/init.d/maxscale script that is LSB compatible in order to be managed by Pacemaker resource manager
+- MariaDB MaxScale process is started/stopped  and monitored via /etc/init.d/maxscale script that is LSB compatible in order to be managed by Pacemaker resource manager
 
-- A Virtual IP is set providing the access to the MaxScale process that could be set to one of the cluster nodes
+- A Virtual IP is set providing the access to the MariaDB MaxScale process that could be set to one of the cluster nodes
 
 - Pacemaker/Corosync and crmsh command line tool basic knowledge
 
@@ -260,9 +260,9 @@ property cib-bootstrap-options: \
 
 The Corosync / Pacemaker cluster is ready to be configured to manage resources.
 
-## MaxScale init script /etc/init.d/maxscale
+## MariaDB MaxScale init script /etc/init.d/maxscale
 
-The MaxScale /etc/init.d./maxscale script allows to start/stop/restart and monitor MaxScale process running in the system.
+The MariaDB MaxScale /etc/init.d./maxscale script allows to start/stop/restart and monitor MariaDB MaxScale process running in the system.
 
 ```
 [root@node1 ~]# /etc/init.d/maxscale 
@@ -316,15 +316,15 @@ Checking MaxScale status: MaxScale (pid  25953) is running.[  OK  ]
 The script exit code for "status" is 0
 
 
-Note: the MaxScale script is LSB compatible and returns the proper exit code for each action:
+Note: the MariaDB MaxScale script is LSB compatible and returns the proper exit code for each action:
 
 For additional information;
 
 [http://www.linux-ha.org/wiki/LSB_Resource_Agents](http://www.linux-ha.org/wiki/LSB_Resource_Agents)
 
-After checking MaxScale is well managed by the /etc/init.d/script is possible to configure the MaxScale HA via Pacemaker.
+After checking MariaDB MaxScale is well managed by the /etc/init.d/script is possible to configure the MariaDB MaxScale HA via Pacemaker.
 
-# Configure MaxScale for HA with Pacemaker
+# Configure MariaDB MaxScale for HA with Pacemaker
 
 ```
 [root@node2 ~]# crm configure primitive MaxScale lsb:maxscale \
@@ -355,7 +355,7 @@ Online: [ node1 node2 node3 ]
 
 ### 1. Resource restarted after a failure:
 
-In the example MaxScale PID is 26114, kill the process immediately:
+In the example MariaDB MaxScale PID is 26114, kill the process immediately:
 
 ```
 [root@node2 ~]# kill -9 26114
@@ -469,7 +469,7 @@ Online: [ node1 node2 node3 ]
 
 It’s possible to add a virtual IP to the cluster:
 
-MaxScale process will be only contacted with this IP, that mat move across nodes with maxscale process as well.
+MariaDB MaxScale process will be only contacted with this IP, that mat move across nodes with maxscale process as well.
 
 Setup is very easy:
 
@@ -479,7 +479,7 @@ assuming an addition IP address is available and can be added to one of the node
 [root@node2 ~]# crm configure primitive maxscale_vip ocf:heartbeat:IPaddr2 params ip=192.168.122.125 op monitor interval=10s
 ```
 
-MaxScale process and the VIP must be run in the same node, so it’s mandatory to add to the configuration the group ‘maxscale_service’.
+MariaDB MaxScale process and the VIP must be run in the same node, so it’s mandatory to add to the configuration the group ‘maxscale_service’.
 
 ```
 [root@node2 ~]# crm configure group maxscale_service maxscale_vip MaxScale
@@ -533,5 +533,5 @@ Online: [ node1 node2 node3 ]
      MaxScale	(lsb:maxscale):	Started node2 
 ```
 
-With both resources on node2, now MaxScale service will be reachable via the configured VIP address 192.168.122.125
+With both resources on node2, now MariaDB MaxScale service will be reachable via the configured VIP address 192.168.122.125
 

@@ -2,9 +2,9 @@
 
 This tutorial gives a quick look into how you can combine various filters to create 
 systems for archiving data for analysis. The aim of this tutorial is to show
-what can be done with MaxScale's filters rather than demonstrate a proven method
+what can be done with MariaDB MaxScale's filters rather than demonstrate a proven method
 of archiving data. For this tutorial you will need two MariaDB/MySQL servers, one for
-archiving the data and one for actual use, a RabbitMQ server and a MaxScale server.
+archiving the data and one for actual use, a RabbitMQ server and a MariaDB MaxScale server.
 For testing purposes some of these can locate on the same server but for actual
 use, an HA solution is recommended.
 
@@ -17,9 +17,9 @@ format and sent to a RabbitMQ broker for analysis. This setup allows us to contr
 send to the server and could possibly allow us to filter out DELETE statements completely,
 making the archive server a true archive of all data.
 
-## Setting up MaxScale
+## Setting up MariaDB MaxScale
 
-The installation of MaxScale is covered in the Installation chapter of the [MaxScale Tutorial](MaxScale-Tutorial.md).
+The installation of MariaDB MaxScale is covered in the Installation chapter of the [MariaDB MaxScale Tutorial](MaxScale-Tutorial.md).
 
 ## Setting up the MariaDB/MySQL servers
 
@@ -27,8 +27,8 @@ Since the archive server will not replicate from the main server, we don't need 
 set up replication between the two. The only thing we need to do is to create the
 users we will use for monitoring and authentication.
 
-The process of creating monitoring and authentication users for MaxScale is described 
-in the Creating Database Users section of the [MaxScale Tutorial](MaxScale-Tutorial.md).
+The process of creating monitoring and authentication users for MariaDB MaxScale is described 
+in the Creating Database Users section of the [MariaDB MaxScale Tutorial](MaxScale-Tutorial.md).
 
 ## Setting up RabbitMQ server
 
@@ -90,7 +90,7 @@ protocol=MySQLBackend
 
 After we have defined the `production-1` and `archive-1` servers, we need a monitor
 module for those servers. This module will detect if connectivity to the servers
-is lost and notify MaxScale of the changed server states.
+is lost and notify MariaDB MaxScale of the changed server states.
 
 ```
 [MySQL Monitor]
@@ -105,7 +105,7 @@ monitor_interval=5000
 The monitor will use the user `maxuser` with the password `maxpwd` to connect to
 the servers and query them for their state. In the `servers` parameter we have
 listed both of the `production-1` and `archive-1` servers. All objects in the
-MaxScale configuration file are referred by their section names. Here the section
+MariaDB MaxScale configuration file are referred by their section names. Here the section
 names of the servers are used in the `servers` parameter. The `monitor_interval`
 parameter controls how often the monitor will poll the servers for status. For
 this tutorial, we've set it to 5000 milliseconds.
@@ -211,8 +211,8 @@ protocol=maxscaled
 port=6603
 ```
 
-Now we have created the MaxScale configuration file and all we need to do is to save
-it in `/etc/maxscale.cnf`, start MaxScale and test that it works. The testing will
+Now we have created the MariaDB MaxScale configuration file and all we need to do is to save
+it in `/etc/maxscale.cnf`, start MariaDB MaxScale and test that it works. The testing will
 be done in the next section.
 
 Here is the complete configuration file.
@@ -308,7 +308,7 @@ port=6603
 
 Now that we have created the configuration file, prepared the RabbitMQ server
 and the database servers we can start testing the setup. We do that by starting
-MaxScale:
+MariaDB MaxScale:
 
 ```
 sudo systemctl start maxscale
@@ -375,5 +375,5 @@ MariaDB [(none)]> select * from test.t1;
 ```
 
 To read the data from the RabbitMQ, we can use the RabbitMQ Consumer tool
-included in the MaxScale source. For a tutorial on how to use this tool,
+included in the MariaDB MaxScale source. For a tutorial on how to use this tool,
 please read [RabbitMQ Consumer Client](../Filters/RabbitMQ-Consumer-Client.md).

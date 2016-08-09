@@ -1,0 +1,22 @@
+#
+# This file contains statements qc_sqlite is known not to parse.
+#
+
+(SELECT a, b AS c FROM t1) ORDER BY c+1;
+# Problem: SELECT in parenthesis.
+
+SELECT 1 FROM t2 WHERE pk > ANY (SELECT 1 FROM t2);
+# Problem: The second SELECT.
+
+SELECT table3 .`date_key` field1
+  FROM
+    B table1 LEFT JOIN B table3 JOIN
+      (BB table6 JOIN A table7 ON table6 .`varchar_nokey`)
+       ON table6 .`int_nokey` ON table6 .`date_key`
+  WHERE  NOT ( table1 .`varchar_key`  AND table7 .`pk`) GROUP  BY field1;
+# Problem: Fails to parse some ON.
+
+SET @x:= (SELECT h FROM t1 WHERE (a,b,c,d,e,f,g)=(1,2,3,4,5,6,7));
+# REMOVE: expr(A) ::= LP(B) expr(X) RP(E). {A.pExpr = X.pExpr; spanSet(&A,&B,&E);}
+# REMOVE: expr(A) ::= LP expr(X) COMMA(OP) expr(Y) RP. {spanBinaryExpr(&A,pParse,@OP,&X,&Y);}
+# ADD   : expr(A) ::= LP exprlist RP. { ... }

@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 
@@ -53,7 +48,7 @@ static void* thr_run_morelog(void* data);
 #define TEST3
 #define TEST4
 
-const char USAGE[]=
+const char USAGE[] =
     "usage: %s [-t <#threads>]\n"
     "\n"
     "-t: Number of threads. Default is %d.\n";
@@ -90,18 +85,19 @@ int main(int argc, char* argv[])
 
     while ((c = getopt(argc, argv, "t:")) != -1)
     {
-        switch (c) {
-        case 't':
-            nthr = atoi(optarg);
-            if (nthr <= 0)
-            {
-                err = 1;
-            }
-            break;
+        switch (c)
+        {
+            case 't':
+                nthr = atoi(optarg);
+                if (nthr <= 0)
+                {
+                    err = 1;
+                }
+                break;
 
-        default:
-            err = 1;
-            break;
+            default:
+                err = 1;
+                break;
         }
     }
 
@@ -114,7 +110,7 @@ int main(int argc, char* argv[])
 
     printf("Using %d threads.\n", nthr);
 
-    thr = (thread_t **)calloc(1, nthr*sizeof(thread_t*));
+    thr = (thread_t **)calloc(1, nthr * sizeof(thread_t*));
 
     if (thr == NULL)
     {
@@ -141,8 +137,8 @@ int main(int argc, char* argv[])
     t = time(NULL);
     localtime_r(&t, &tm);
     err = MXS_ERROR("%04d %02d/%02d %02d.%02d.%02d",
-                    tm.tm_year+1900,
-                    tm.tm_mon+1,
+                    tm.tm_year + 1900,
+                    tm.tm_mon + 1,
                     tm.tm_mday,
                     tm.tm_hour,
                     tm.tm_min,
@@ -254,7 +250,8 @@ int main(int argc, char* argv[])
             continue;
         }
         break;
-    } while(true);
+    }
+    while (true);
 
     for (i = 0; i < nthr; i++)
     {
@@ -311,7 +308,8 @@ int main(int argc, char* argv[])
             continue;
         }
         break;
-    } while(true);
+    }
+    while (true);
 
     for (i = 0; i < nthr; i++)
     {
@@ -343,7 +341,7 @@ int main(int argc, char* argv[])
     skygw_log_enable(LOG_INFO);
 #endif
     succp = mxs_log_init(NULL, "/tmp", MXS_LOG_TARGET_FS);
-    ss_dassert(succp); 
+    ss_dassert(succp);
 
     logstr = ("\tTEST 3 - test enabling and disabling logs.");
     err = MXS_ERROR("%s", logstr);
@@ -670,7 +668,8 @@ static int nstr(char** str_arr)
     return i;
 }
 
-char* logs[] = {
+char* logs[] =
+{
     "foo",
     "bar",
     "done",
@@ -700,7 +699,7 @@ static void* thr_run_morelog(void* data)
     for (i = 0; i < NITER; i++)
     {
         char* str = logs[rand() % nmsg];
-        err = MXS_LOG_MESSAGE((int)(rand() % (LOG_DEBUG+1)),
+        err = MXS_LOG_MESSAGE((int)(rand() % (LOG_DEBUG + 1)),
                               "%s - iteration # %d",
                               str,
                               i);

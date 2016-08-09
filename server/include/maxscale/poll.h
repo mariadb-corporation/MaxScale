@@ -1,25 +1,21 @@
 #ifndef _POLL_H
 #define _POLL_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <dcb.h>
 #include <gwbitmask.h>
 #include <resultset.h>
+#include <sys/epoll.h>
 
 /**
  * @file poll.h     The poll related functionality
@@ -67,7 +63,7 @@ extern  void            dShowEventQ(DCB *dcb);
 extern  void            dShowEventStats(DCB *dcb);
 extern  int             poll_get_stat(POLL_STAT stat);
 extern  RESULTSET       *eventTimesGetList();
-extern  void            poll_fake_event(DCB *dcb, uint32_t ev);
+extern  void            poll_fake_event(DCB *dcb, enum EPOLL_EVENTS ev);
 extern  void            poll_fake_hangup_event(DCB *dcb);
 extern  void            poll_fake_write_event(DCB *dcb);
 extern  void            poll_fake_read_event(DCB *dcb);

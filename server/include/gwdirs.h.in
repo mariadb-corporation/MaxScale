@@ -1,22 +1,16 @@
 #ifndef _GW_DIRS_HG
 #define _GW_DIRS_HG
-
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2015
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
@@ -30,9 +24,9 @@ EXTERN_C_BLOCK_BEGIN
 /** Default file locations, configured by CMake */
 static const char* default_cnf_fname = "maxscale.cnf";
 static const char* default_configdir = "/etc";
- /*< This should be changed to just /run eventually,
-  * the /var/run folder is an old standard and the newer FSH 3.0
-  * uses /run for PID files.*/
+/*< This should be changed to just /run eventually,
+ * the /var/run folder is an old standard and the newer FSH 3.0
+ * uses /run for PID files.*/
 static const char* default_piddir = "@MAXSCALE_VARDIR@/run/maxscale";
 static const char* default_logdir = "@MAXSCALE_VARDIR@/log/maxscale";
 static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale";

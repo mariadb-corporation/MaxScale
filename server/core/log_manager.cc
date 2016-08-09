@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <log_manager.h>
 #include <sys/types.h>
@@ -389,6 +384,12 @@ static bool logmanager_init_nomutex(const char* ident,
     // not be made until a call to syslog is made.
     openlog(ident, LOG_PID | LOG_ODELAY, LOG_USER);
 
+    // This will disable logging to actual files but they are still created
+    if (target == MXS_LOG_TARGET_STDOUT)
+    {
+        logdir = NULL;
+    }
+
     /** Initialize configuration including log file naming info */
     if (!fnames_conf_init(fn, logdir))
     {
@@ -738,7 +739,7 @@ static int logmanager_write_log(int            priority,
      * of the timestamp string.
      */
     snprintf(wp + timestamp_len + sesid_str_len,
-             safe_str_len-timestamp_len-sesid_str_len,
+             safe_str_len - timestamp_len - sesid_str_len,
              "%s",
              str);
 
@@ -755,18 +756,18 @@ static int logmanager_write_log(int            priority,
 
         switch (priority)
         {
-        case LOG_EMERG:
-        case LOG_ALERT:
-        case LOG_CRIT:
-        case LOG_ERR:
-        case LOG_WARNING:
-        case LOG_NOTICE:
-            syslog(priority, "%s", message);
-            break;
+            case LOG_EMERG:
+            case LOG_ALERT:
+            case LOG_CRIT:
+            case LOG_ERR:
+            case LOG_WARNING:
+            case LOG_NOTICE:
+                syslog(priority, "%s", message);
+                break;
 
-        default:
-            // LOG_INFO and LOG_DEBUG messages are never written to syslog.
-            break;
+            default:
+                // LOG_INFO and LOG_DEBUG messages are never written to syslog.
+                break;
         }
     }
     /** remove double line feed */
@@ -940,7 +941,7 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
                     bb_list->mlist_versno += 1;
                     ss_dassert(bb_list->mlist_versno % 2 == 1);
 
-                    ss_debug(succ =) mlist_add_data_nomutex(bb_list, bb);
+                    ss_debug(succ = ) mlist_add_data_nomutex(bb_list, bb);
                     ss_dassert(succ);
 
                     /**
@@ -1041,7 +1042,7 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
         bb_list->mlist_versno += 1;
         ss_dassert(bb_list->mlist_versno % 2 == 1);
 
-        ss_debug(succ =) mlist_add_data_nomutex(bb_list, bb);
+        ss_debug(succ = ) mlist_add_data_nomutex(bb_list, bb);
         ss_dassert(succ);
 
         /**
@@ -1074,7 +1075,7 @@ static char* blockbuf_get_writepos(blockbuf_t** p_bb,
     bb->bb_buf_used += str_len;
     bb->bb_buf_left -= str_len;
 
-    ss_dassert((pos >= &bb->bb_buf[0]) && (pos <= &bb->bb_buf[MAX_LOGSTRLEN-str_len]));
+    ss_dassert((pos >= &bb->bb_buf[0]) && (pos <= &bb->bb_buf[MAX_LOGSTRLEN - str_len]));
 
     /** read checkmark */
     /** TODO: add buffer overflow checkmark
@@ -1871,8 +1872,8 @@ static bool logfile_init(logfile_t*    logfile,
         char* c;
         pid_t pid = getpid();
         int   len = strlen(shm_pathname_prefix)
-            + strlen("maxscale.") +
-            get_decimal_len((size_t)pid) + 1;
+                    + strlen("maxscale.") +
+                    get_decimal_len((size_t)pid) + 1;
 
         c = (char *)calloc(len, sizeof(char));
 
@@ -1956,32 +1957,44 @@ static void logfile_done(logfile_t* lf)
 {
     switch (lf->lf_state)
     {
-    case RUN:
-        CHK_LOGFILE(lf);
-        ss_dassert(lf->lf_npending_writes == 0);
+        case RUN:
+            CHK_LOGFILE(lf);
+            ss_dassert(lf->lf_npending_writes == 0);
         /** fallthrough */
-    case INIT:
-        /** Test if list is initialized before freeing it */
-        if (lf->lf_blockbuf_list.mlist_versno != 0)
-        {
-            mlist_done(&lf->lf_blockbuf_list);
-        }
-        logfile_free_memory(lf);
-        lf->lf_state = DONE;
+        case INIT:
+            /** Test if list is initialized before freeing it */
+            if (lf->lf_blockbuf_list.mlist_versno != 0)
+            {
+                mlist_done(&lf->lf_blockbuf_list);
+            }
+            logfile_free_memory(lf);
+            lf->lf_state = DONE;
         /** fallthrough */
-    case DONE:
-    case UNINIT:
-    default:
-        break;
+        case DONE:
+        case UNINIT:
+        default:
+            break;
     }
 }
 
 static void logfile_free_memory(logfile_t* lf)
 {
-    if (lf->lf_filepath != NULL)       free(lf->lf_filepath);
-    if (lf->lf_linkpath != NULL)       free(lf->lf_linkpath);
-    if (lf->lf_full_link_name != NULL) free(lf->lf_full_link_name);
-    if (lf->lf_full_file_name != NULL) free(lf->lf_full_file_name);
+    if (lf->lf_filepath != NULL)
+    {
+        free(lf->lf_filepath);
+    }
+    if (lf->lf_linkpath != NULL)
+    {
+        free(lf->lf_linkpath);
+    }
+    if (lf->lf_full_link_name != NULL)
+    {
+        free(lf->lf_full_link_name);
+    }
+    if (lf->lf_full_file_name != NULL)
+    {
+        free(lf->lf_full_file_name);
+    }
 }
 
 /**
@@ -2037,24 +2050,24 @@ static void filewriter_done(filewriter_t* fw)
 {
     switch (fw->fwr_state)
     {
-    case RUN:
-        CHK_FILEWRITER(fw);
-    case INIT:
-        fw->fwr_logmes = NULL;
-        fw->fwr_clientmes = NULL;
-        if (log_config.use_stdout)
-        {
-            skygw_file_free(fw->fwr_file);
-        }
-        else
-        {
-            skygw_file_close(fw->fwr_file, true);
-        }
-        fw->fwr_state = DONE;
-    case DONE:
-    case UNINIT:
-    default:
-        break;
+        case RUN:
+            CHK_FILEWRITER(fw);
+        case INIT:
+            fw->fwr_logmes = NULL;
+            fw->fwr_clientmes = NULL;
+            if (log_config.use_stdout)
+            {
+                skygw_file_free(fw->fwr_file);
+            }
+            else
+            {
+                skygw_file_close(fw->fwr_file, true);
+            }
+            fw->fwr_state = DONE;
+        case DONE:
+        case UNINIT:
+        default:
+            break;
     }
 }
 
@@ -2174,7 +2187,7 @@ static bool thr_flush_file(logmanager_t *lm, filewriter_t *fwr)
             memset(bb->bb_buf, 0, bb->bb_buf_size);
             bb->bb_state = BB_CLEARED;
 #if defined(SS_LOG_DEBUG)
-            sprintf(bb->bb_buf,"[block:%d]", atomic_add(&block_start_index, 1));
+            sprintf(bb->bb_buf, "[block:%d]", atomic_add(&block_start_index, 1));
             bb->bb_buf_used += strlen(bb->bb_buf);
             bb->bb_buf_left -= strlen(bb->bb_buf);
 #endif
@@ -2318,15 +2331,15 @@ static void fnames_conf_done(fnames_conf_t* fn)
 {
     switch (fn->fn_state)
     {
-    case RUN:
-        CHK_FNAMES_CONF(fn);
-    case INIT:
-        fnames_conf_free_memory(fn);
-        fn->fn_state = DONE;
-    case DONE:
-    case UNINIT:
-    default:
-        break;
+        case RUN:
+            CHK_FNAMES_CONF(fn);
+        case INIT:
+            fnames_conf_free_memory(fn);
+            fn->fn_state = DONE;
+        case DONE:
+        case UNINIT:
+        default:
+            break;
     }
 }
 
@@ -2566,25 +2579,25 @@ static const char* priority_name(int priority)
 {
     switch (priority)
     {
-    case LOG_EMERG:
-        return "emercency";
-    case LOG_ALERT:
-        return "alert";
-    case LOG_CRIT:
-        return "critical";
-    case LOG_ERR:
-        return "error";
-    case LOG_WARNING:
-        return "warning";
-    case LOG_NOTICE:
-        return "notice";
-    case LOG_INFO:
-        return "informational";
-    case LOG_DEBUG:
-        return "debug";
-    default:
-        assert(!true);
-        return "unknown";
+        case LOG_EMERG:
+            return "emercency";
+        case LOG_ALERT:
+            return "alert";
+        case LOG_CRIT:
+            return "critical";
+        case LOG_ERR:
+            return "error";
+        case LOG_WARNING:
+            return "warning";
+        case LOG_NOTICE:
+            return "notice";
+        case LOG_INFO:
+            return "informational";
+        case LOG_DEBUG:
+            return "debug";
+        default:
+            assert(!true);
+            return "unknown";
     }
 }
 
@@ -2648,51 +2661,51 @@ static log_prefix_t priority_to_prefix(int priority)
 
     switch (priority)
     {
-    case LOG_EMERG:
-        prefix.text = PREFIX_EMERG;
-        prefix.len = sizeof(PREFIX_EMERG);
-        break;
+        case LOG_EMERG:
+            prefix.text = PREFIX_EMERG;
+            prefix.len = sizeof(PREFIX_EMERG);
+            break;
 
-    case LOG_ALERT:
-        prefix.text = PREFIX_ALERT;
-        prefix.len = sizeof(PREFIX_ALERT);
-        break;
+        case LOG_ALERT:
+            prefix.text = PREFIX_ALERT;
+            prefix.len = sizeof(PREFIX_ALERT);
+            break;
 
-    case LOG_CRIT:
-        prefix.text = PREFIX_CRIT;
-        prefix.len = sizeof(PREFIX_CRIT);
-        break;
+        case LOG_CRIT:
+            prefix.text = PREFIX_CRIT;
+            prefix.len = sizeof(PREFIX_CRIT);
+            break;
 
-    case LOG_ERR:
-        prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
-        break;
+        case LOG_ERR:
+            prefix.text = PREFIX_ERROR;
+            prefix.len = sizeof(PREFIX_ERROR);
+            break;
 
-    case LOG_WARNING:
-        prefix.text = PREFIX_WARNING;
-        prefix.len = sizeof(PREFIX_WARNING);
-        break;
+        case LOG_WARNING:
+            prefix.text = PREFIX_WARNING;
+            prefix.len = sizeof(PREFIX_WARNING);
+            break;
 
-    case LOG_NOTICE:
-        prefix.text = PREFIX_NOTICE;
-        prefix.len = sizeof(PREFIX_NOTICE);
-        break;
+        case LOG_NOTICE:
+            prefix.text = PREFIX_NOTICE;
+            prefix.len = sizeof(PREFIX_NOTICE);
+            break;
 
-    case LOG_INFO:
-        prefix.text = PREFIX_INFO;
-        prefix.len = sizeof(PREFIX_INFO);
-        break;
+        case LOG_INFO:
+            prefix.text = PREFIX_INFO;
+            prefix.len = sizeof(PREFIX_INFO);
+            break;
 
-    case LOG_DEBUG:
-        prefix.text = PREFIX_DEBUG;
-        prefix.len = sizeof(PREFIX_DEBUG);
-        break;
+        case LOG_DEBUG:
+            prefix.text = PREFIX_DEBUG;
+            prefix.len = sizeof(PREFIX_DEBUG);
+            break;
 
-    default:
-        assert(!true);
-        prefix.text = PREFIX_ERROR;
-        prefix.len = sizeof(PREFIX_ERROR);
-        break;
+        default:
+            assert(!true);
+            prefix.text = PREFIX_ERROR;
+            prefix.len = sizeof(PREFIX_ERROR);
+            break;
     }
 
     --prefix.len; // Remove trailing NULL.
@@ -2706,19 +2719,19 @@ static enum log_flush priority_to_flush(int priority)
 
     switch (priority)
     {
-    case LOG_EMERG:
-    case LOG_ALERT:
-    case LOG_CRIT:
-    case LOG_ERR:
-        return LOG_FLUSH_YES;
+        case LOG_EMERG:
+        case LOG_ALERT:
+        case LOG_CRIT:
+        case LOG_ERR:
+            return LOG_FLUSH_YES;
 
-    default:
-        assert(!true);
-    case LOG_WARNING:
-    case LOG_NOTICE:
-    case LOG_INFO:
-    case LOG_DEBUG:
-        return LOG_FLUSH_NO;
+        default:
+            assert(!true);
+        case LOG_WARNING:
+        case LOG_NOTICE:
+        case LOG_INFO:
+        case LOG_DEBUG:
+            return LOG_FLUSH_NO;
     }
 }
 
@@ -2765,14 +2778,14 @@ int mxs_log_message(int priority,
 
                 switch (augmentation)
                 {
-                case MXS_LOG_AUGMENT_WITH_FUNCTION:
-                    augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
-                    augmentation_len -= 2; // Remove the %s
-                    augmentation_len += strlen(function);
-                    break;
+                    case MXS_LOG_AUGMENT_WITH_FUNCTION:
+                        augmentation_len = sizeof(FORMAT_FUNCTION) - 1; // Remove trailing 0
+                        augmentation_len -= 2; // Remove the %s
+                        augmentation_len += strlen(function);
+                        break;
 
-                default:
-                    break;
+                    default:
+                        break;
                 }
 
                 int buffer_len = prefix.len + augmentation_len + message_len + 1; // Trailing NULL
@@ -2799,12 +2812,12 @@ int mxs_log_message(int priority,
 
                     switch (augmentation)
                     {
-                    case MXS_LOG_AUGMENT_WITH_FUNCTION:
-                        len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
-                        break;
+                        case MXS_LOG_AUGMENT_WITH_FUNCTION:
+                            len = sprintf(augmentation_text, FORMAT_FUNCTION, function);
+                            break;
 
-                    default:
-                        assert(!true);
+                        default:
+                            assert(!true);
                     }
 
                     assert(len == augmentation_len);

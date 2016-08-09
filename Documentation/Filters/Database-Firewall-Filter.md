@@ -28,7 +28,7 @@ The database firewall filter has one mandatory parameter, `rules`.
 
 #### `rules`
 
-Absolute path to a file with the rule definitions in it. The file should be readable by the user MaxScale is run with.
+Absolute path to a file with the rule definitions in it. The file should be readable by the user MariaDB MaxScale is run with.
 
 #### `action`
 
@@ -81,7 +81,7 @@ The rules are defined by using the following syntax:
 ```
 rule NAME deny { wildcard | columns VALUE... |
      regex REGEX | limit_queries COUNT TIMEPERIOD HOLDOFF |
-      no_where_clause } [at_times VALUE...] [on_queries [select | update | insert | delete]]
+      no_where_clause} [at_times VALUE...] [on_queries [select|update|insert|delete|grant|revoke|drop|create|alter|use|load]]
 ```
 
 Rules are identified by their name and have mandatory parts and optional parts.
@@ -137,7 +137,21 @@ This rule expects a list of time ranges that define the times when the rule in q
 
 #### `on_queries`
 
-This limits the rule to be active only on certain types of queries.
+This limits the rule to be active only on certain types of queries. The possible values are:
+
+|Keyword|Matching operations           |
+|-------|------------------------------|
+|select |SELECT statements             |
+|insert |INSERT statements             |
+|update |UPDATE statements             |
+|delete |DELETE statements             |
+|grant  |All grant operations          |
+|revoke |All revoke operations         |
+|create |All create operations         |
+|alter  |All alter operations          |
+|drop   |All drop operations           |
+|use    |USE operations                |
+|load   |LOAD DATA operations          |
 
 ### Applying rules to users
 

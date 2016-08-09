@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -22,11 +17,12 @@
  * @verbatim
  * Revision History
  *
- * Date        Who             Description
- * 13/06/14    Mark Riddoch    Initial implementation
- * 15/06/14    Mark Riddoch    Addition of source command
- * 26/06/14    Mark Riddoch    Fix issue with final OK split across
- *                             multiple reads
+ * Date        Who                   Description
+ * 13/06/14    Mark Riddoch          Initial implementation
+ * 15/06/14    Mark Riddoch          Addition of source command
+ * 26/06/14    Mark Riddoch          Fix issue with final OK split across
+ *                                   multiple reads
+ * 17/05/16    Massimiliano Pinto    Addition of UNIX socket support
  *
  * @endverbatim
  */
@@ -37,6 +33,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -55,6 +52,7 @@
 #include <histedit.h>
 #endif
 
+#include <maxadmin.h>
 /*
  * We need a common.h file that is included by every component.
  */
@@ -62,15 +60,15 @@
 #define STRERROR_BUFLEN 512
 #endif
 
-static int connectMaxScale(char *hostname, char *port);
+static int connectMaxScale(char *socket);
 static int setipaddress(struct in_addr *a, char *p);
-static int authMaxScale(int so, char *user, char *password);
+static int authMaxScale(int so);
 static int sendCommand(int so, char *cmd);
 static void DoSource(int so, char *cmd);
 static void DoUsage(const char*);
 static int isquit(char *buf);
 static void PrintVersion(const char *progname);
-static void read_inifile(char **hostname, char **port, char **user, char **passwd, int*);
+static void read_inifile(char **, int*);
 
 #ifdef HISTORY
 
@@ -85,10 +83,7 @@ prompt(EditLine *el __attribute__((__unused__)))
 
 static struct option long_options[] =
 {
-    {"host", required_argument, 0, 'h'},
-    {"user", required_argument, 0, 'u'},
-    {"password", required_argument, 0, 'p'},
-    {"port", required_argument, 0, 'P'},
+    {"socket", required_argument, 0, 'S'},
     {"version", no_argument, 0, 'v'},
     {"help", no_argument, 0, '?'},
     {"emacs", no_argument, 0, 'e'},
@@ -117,37 +112,21 @@ main(int argc, char **argv)
 #else
     char buf[1024];
 #endif
-    char *hostname = "localhost";
-    char *port = "6603";
-    char *user = "admin";
-    char *passwd = NULL;
+    char *conn_socket = MAXADMIN_DEFAULT_SOCKET;
     int use_emacs = 0;
     int so;
     int option_index = 0;
     char c;
 
-    read_inifile(&hostname, &port, &user, &passwd, &use_emacs);
+    read_inifile(&conn_socket, &use_emacs);
 
-    while ((c = getopt_long(argc, argv, "h:p:P:u:v?e",
+    while ((c = getopt_long(argc, argv, "S:v?e",
                             long_options, &option_index)) >= 0)
     {
         switch (c)
         {
-            case 'h':
-                hostname = strdup(optarg);
-                break;
-
-            case 'p':
-                passwd = strdup(optarg);
-                memset(optarg, '\0', strlen(optarg));
-                break;
-
-            case 'P':
-                port = strdup(optarg);
-                break;
-
-            case 'u':
-                user = strdup(optarg);
+            case 'S':
+                conn_socket = strdup(optarg);
                 break;
 
             case 'v':
@@ -164,55 +143,16 @@ main(int argc, char **argv)
         }
     }
 
-    if (passwd == NULL)
-    {
-        struct termios tty_attr;
-        tcflag_t c_lflag;
-
-        if (tcgetattr(STDIN_FILENO, &tty_attr) < 0)
-        {
-            return -1;
-        }
-
-        c_lflag = tty_attr.c_lflag;
-        tty_attr.c_lflag &= ~ICANON;
-        tty_attr.c_lflag &= ~ECHO;
-
-        if (tcsetattr(STDIN_FILENO, 0, &tty_attr) < 0)
-        {
-            return -1;
-        }
-
-        printf("Password: ");
-        passwd = malloc(80);
-        fgets(passwd, 80, stdin);
-
-        tty_attr.c_lflag = c_lflag;
-
-        if (tcsetattr(STDIN_FILENO, 0, &tty_attr) < 0)
-        {
-            return -1;
-        }
-
-        i = strlen(passwd);
-
-        if (i > 1)
-        {
-            passwd[i - 1] = '\0';
-        }
-
-        printf("\n");
-    }
-
-    if ((so = connectMaxScale(hostname, port)) == -1)
+    /* Connet to MaxScale using UNIX domain socket */
+    if ((so = connectMaxScale(conn_socket)) == -1)
     {
         exit(1);
     }
 
-    if (!authMaxScale(so, user, passwd))
+    /* Check for successful authentication */
+    if (!authMaxScale(so))
     {
-        fprintf(stderr, "Failed to connect to MaxScale. "
-                "Incorrect username or password.\n");
+        fprintf(stderr, "Failed to connect to MaxScale, incorrect username.\n");
         exit(1);
     }
 
@@ -365,34 +305,34 @@ main(int argc, char **argv)
 /**
  * Connect to the MaxScale server
  *
- * @param hostname  The hostname to connect to
- * @param port      The port to use for the connection
- * @return      The connected socket or -1 on error
+ * @param conn_socket The UNIX socket to connect to
+ * @return       The connected socket or -1 on error
  */
 static int
-connectMaxScale(char *hostname, char *port)
+connectMaxScale(char *conn_socket)
 {
-    struct sockaddr_in addr;
+    struct sockaddr_un local_addr;
     int so;
     int keepalive = 1;
+    int optval = 1;
 
-    if ((so = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    if ((so = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
         fprintf(stderr, "Unable to create socket: %s\n",
                 strerror_r(errno, errbuf, sizeof(errbuf)));
         return -1;
     }
-    memset(&addr, 0, sizeof addr);
-    addr.sin_family = AF_INET;
-    setipaddress(&addr.sin_addr, hostname);
-    addr.sin_port = htons(atoi(port));
 
-    if (connect(so, (struct sockaddr *) &addr, sizeof(addr)) < 0)
+    memset(&local_addr, 0, sizeof local_addr);
+    local_addr.sun_family = AF_UNIX;
+    strncpy(local_addr.sun_path, conn_socket, sizeof(local_addr.sun_path)-1);
+
+    if (connect(so, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0)
     {
         char errbuf[STRERROR_BUFLEN];
-        fprintf(stderr, "Unable to connect to MaxScale at %s, %s: %s\n",
-                hostname, port, strerror_r(errno, errbuf, sizeof(errbuf)));
+        fprintf(stderr, "Unable to connect to MaxScale at %s: %s\n",
+                conn_socket, strerror_r(errno, errbuf, sizeof(errbuf)));
         close(so);
         return -1;
     }
@@ -400,6 +340,13 @@ connectMaxScale(char *hostname, char *port)
     if (setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)))
     {
         perror("setsockopt");
+    }
+
+    /* Client is sending connection credentials (Pid, User, Group) */
+    if (setsockopt(so, SOL_SOCKET, SO_PASSCRED, &optval, sizeof(optval)) != 0)
+    {
+        fprintf(stderr, "SO_PASSCRED failed\n");
+        return -1;
     }
 
     return so;
@@ -468,36 +415,20 @@ setipaddress(struct in_addr *a, char *p)
 /**
  * Perform authentication using the maxscaled protocol conventions
  *
- * @param so        The socket connected to MaxScale
- * @param user      The username to authenticate
- * @param password  The password to authenticate with
+ * @param so    The socket connected to MaxScale
  * @return      Non-zero of succesful authentication
  */
 static int
-authMaxScale(int so, char *user, char *password)
+authMaxScale(int so)
 {
-    char buf[20];
+    char buf[MAXADMIN_AUTH_REPLY_LEN];
 
-    if (read(so, buf, 4) != 4)
+    if (read(so, buf, MAXADMIN_AUTH_REPLY_LEN) != MAXADMIN_AUTH_REPLY_LEN)
     {
         return 0;
     }
 
-    write(so, user, strlen(user));
-
-    if (read(so, buf, 8) != 8)
-    {
-        return 0;
-    }
-
-    write(so, password, strlen(password));
-
-    if (read(so, buf, 6) != 6)
-    {
-        return 0;
-    }
-
-    return strncmp(buf, "FAILED", 6);
+    return strncmp(buf, MAXADMIN_FAILED_AUTH_MESSAGE, MAXADMIN_AUTH_REPLY_LEN);
 }
 
 /**
@@ -619,16 +550,9 @@ DoUsage(const char *progname)
 {
     PrintVersion(progname);
     printf("The MaxScale administrative and monitor client.\n\n");
-    printf("Usage: %s [-u user] [-p password] [-h hostname] [-P port] "
-        "[<command file> | <command>]\n\n", progname);
-    printf("  -u|--user=...         The user name to use for the connection, default\n");
-    printf("            is admin.\n");
-    printf("  -p|--password=... The user password, if not given the password will\n");
-    printf("            be prompted for interactively\n");
-    printf("  -h|--hostname=... The maxscale host to connecto to. The default is\n");
-    printf("            localhost\n");
-    printf("  -P|--port=...         The port to use for the connection, the default\n");
-    printf("            port is 6603.\n");
+    printf("Usage: %s [-S socket] [<command file> | <command>]\n\n", progname);
+    printf("  -S|--socket=...        The UNIX socket to connect to, The default is\n");
+    printf("            /tmp/maxadmin.sock\n");
     printf("  -v|--version          print version information and exit\n");
     printf("  -?|--help     Print this help text.\n");
     printf("Any remaining arguments are treated as MaxScale commands or a file\n");
@@ -695,7 +619,7 @@ rtrim(char *str)
  * @param passwd    Pointer to the password to be updated
  */
 static void
-read_inifile(char **hostname, char **port, char **user, char **passwd, int* editor)
+read_inifile(char **conn_socket, int* editor)
 {
     char pathname[400];
     char *home, *brkt;
@@ -727,21 +651,9 @@ read_inifile(char **hostname, char **port, char **user, char **passwd, int* edit
 
         if (name && value)
         {
-            if (strcmp(name, "hostname") == 0)
+            if (strcmp(name, "socket") == 0)
             {
-                *hostname = strdup(value);
-            }
-            else if (strcmp(name, "port") == 0)
-            {
-                *port = strdup(value);
-            }
-            else if (strcmp(name, "user") == 0)
-            {
-                *user = strdup(value);
-            }
-            else if (strcmp(name, "passwd") == 0)
-            {
-                *passwd = strdup(value);
+                *conn_socket = strdup(value);
             }
             else if (strcmp(name, "editor") == 0)
             {

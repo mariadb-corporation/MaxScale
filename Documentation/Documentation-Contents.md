@@ -1,12 +1,12 @@
 
-[Search page for MaxScale Documentation](http://mariadb-corporation.github.io/MaxScale/Search/)
+[Search page for MariaDB MaxScale Documentation](http://mariadb-corporation.github.io/MaxScale/Search/)
 
 # Contents
 
-## About MaxScale
+## About MariaDB MaxScale
 
- - [About MaxScale](About/About-MaxScale.md)
- - [MaxScale 1.4.3 Release Notes](Release-Notes/MaxScale-1.4.3-Release-Notes.md)
+ - [About MariaDB MaxScale](About/About-MaxScale.md)
+ - [Release Notes](Release-Notes/MaxScale-2.0.0-Release-Notes.md)
  - [Changelog](Changelog.md)
  - [Limitations](About/Limitations.md)
  - [COPYRIGHT](About/COPYRIGHT.md)
@@ -15,51 +15,51 @@
 ## Getting Started
 
  - [MariaDB MaxScale Installation Guide](Getting-Started/MariaDB-MaxScale-Installation-Guide.md)
- - [Building MaxScale from Source Code](Getting-Started/Building-MaxScale-from-Source-Code.md)
+ - [Building MariaDB MaxScale from Source Code](Getting-Started/Building-MaxScale-from-Source-Code.md)
  - [Configuration Guide](Getting-Started/Configuration-Guide.md)
 
-## Upgrading MaxScale
+## Upgrading MariaDB MaxScale
 
-- [Upgrading MaxScale from 1.3 to 1.4](Upgrading/Upgrading-To-MaxScale-1.4.md)
-- [Upgrading MaxScale from 1.2 to 1.3](Upgrading/Upgrading-To-MaxScale-1.3.md)
-- [Upgrading MaxScale from 1.1.1 to 1.2](Upgrading/Upgrading-To-MaxScale-1.2.md)
-- [Upgrading MaxScale from 1.0.5 to 1.1.0](Upgrading/Upgrading-To-MaxScale-1.1.0.md)
+- [Upgrading MariaDB MaxScale from 1.4 to 2.0](Upgrading/Upgrading-To-MaxScale-2.0.md)
+- [Upgrading MariaDB MaxScale from 1.3 to 1.4](Upgrading/Upgrading-To-MaxScale-1.4.md)
+- [Upgrading MariaDB MaxScale from 1.2 to 1.3](Upgrading/Upgrading-To-MaxScale-1.3.md)
+- [Upgrading MariaDB MaxScale from 1.1.1 to 1.2](Upgrading/Upgrading-To-MaxScale-1.2.md)
+- [Upgrading MariaDB MaxScale from 1.0.5 to 1.1.0](Upgrading/Upgrading-To-MaxScale-1.1.0.md)
 
 ## Reference
 
  - [MaxAdmin](Reference/MaxAdmin.md)
- - [How Errors are Handled in MaxScale](Reference/How-errors-are-handled-in-MaxScale.md)
+ - [How Errors are Handled in MariaDB MaxScale](Reference/How-errors-are-handled-in-MaxScale.md)
  - [Debug and Diagnostic Support](Reference/Debug-And-Diagnostic-Support.md)
  - [Routing Hints](Reference/Hint-Syntax.md)
  - [MaxBinlogCheck](Reference/MaxBinlogCheck.md)
- - [MaxScale and SSL](Reference/MaxScale-and-SSL.md)
 
 ## Tutorials
 
-The main tutorial for MaxScale consist of setting up MaxScale for the environment you are using with either a connection-based or a read/write-based configuration.
+The main tutorial for MariaDB MaxScale consist of setting up MariaDB MaxScale for the environment you are using with either a connection-based or a read/write-based configuration.
 
- - [MaxScale Tutorial](Tutorials/MaxScale-Tutorial.md)
+ - [MariaDB MaxScale Tutorial](Tutorials/MaxScale-Tutorial.md)
 
 These tutorials are for specific use cases and module combinations.
 
  - [Administration Tutorial](Tutorials/Administration-Tutorial.md)
  - [Filter Tutorial](Tutorials/Filter-Tutorial.md)
- - [MaxScale Information Schema Tutorial](Tutorials/MaxScale-Information-Schema.md)
+ - [MariaDB MaxScale Information Schema Tutorial](Tutorials/MaxScale-Information-Schema.md)
  - [MySQL Cluster Setup](Tutorials/MySQL-Cluster-Setup.md)
  - [Replication Proxy with the Binlog Router Tutorial](Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md)
- - [RabbitMQ Setup and MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
+ - [RabbitMQ Setup and MariaDB MaxScale Integration Tutorial](Tutorials/RabbitMQ-Setup-And-MaxScale-Integration.md)
  - [RabbitMQ and Tee Filter Data Archiving Tutorial](Tutorials/RabbitMQ-And-Tee-Archiving.md)
  - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
 
-Here are tutorials on monitoring and managing MaxScale in cluster environments.
+Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 
- - [Nagios Plugins for MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
- - [MaxScale HA with Corosync-Pacemaker](Tutorials/MaxScale-HA-with-Corosync-Pacemaker.md)
- - [MaxScale HA with Lsyncd](Tutorials/MaxScale-HA-with-lsyncd.md)
+ - [Nagios Plugins for MariaDB MaxScale Tutorial](Tutorials/Nagios-Plugins.md)
+ - [MariaDB MaxScale HA with Corosync-Pacemaker](Tutorials/MaxScale-HA-with-Corosync-Pacemaker.md)
+ - [MariaDB MaxScale HA with Lsyncd](Tutorials/MaxScale-HA-with-lsyncd.md)
 
 ## Routers
 
-The routing module is the core of a MaxScale service. The router documentation
+The routing module is the core of a MariaDB MaxScale service. The router documentation
 contains all module specific configuration options and detailed explanations
 of their use.
 
@@ -67,6 +67,7 @@ of their use.
  - [Read Connection Router](Routers/ReadConnRoute.md)
  - [Schemarouter](Routers/SchemaRouter.md)
  - [Binlogrouter](Routers/Binlogrouter.md)
+ - [Avrorouter](Routers/Avrorouter.md)
 
 There are also two diagnostic routing modules. The CLI is for MaxAdmin and
 the Debug CLI client for Telnet.
@@ -76,7 +77,7 @@ the Debug CLI client for Telnet.
 
 ## Filters
 
-Here are detailed documents about the filters MaxScale offers. They contain configuration guides and example use cases. Before reading these, you should have read the filter tutorial so that you know how they work and how to configure them.
+Here are detailed documents about the filters MariaDB MaxScale offers. They contain configuration guides and example use cases. Before reading these, you should have read the filter tutorial so that you know how they work and how to configure them.
 
  - [Query Log All](Filters/Query-Log-All-Filter.md)
  - [Regex Filter](Filters/Regex-Filter.md)
@@ -112,15 +113,18 @@ Module specific documentation.
 
 ## Earlier Release Notes
 
- - [MaxScale 1.4.0 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md)
- - [MaxScale 1.3.0 Release Notes](Release-Notes/MaxScale-1.3.0-Release-Notes.md)
- - [MaxScale 1.2.0 Release Notes](Release-Notes/MaxScale-1.2.0-Release-Notes.md)
- - [MaxScale 1.1.1 Release Notes](Release-Notes/MaxScale-1.1.1-Release-Notes.md)
- - [MaxScale 1.1.0 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
- - [MaxScale 1.0.3 Release Notes](Release-Notes/MaxScale-1.0.3-Release-Notes.md)
- - [MaxScale 1.0.1 Release Notes](Release-Notes/MaxScale-1.0.1-Release-Notes.md)
- - [MaxScale 1.0 Release Notes](Release-Notes/MaxScale-1.0-Release-Notes.md)
- - [MaxScale 0.7 Release Notes](Release-Notes/MaxScale-0.7-Release-Notes.md)
- - [MaxScale 0.6 Release Notes](Release-Notes/MaxScale-0.6-Release-Notes.md)
- - [MaxScale 0.5 Release Notes](Release-Notes/MaxScale-0.5-Release-Notes.md)
+ - [MariaDB MaxScale 1.4.3 Release Notes](Release-Notes/MaxScale-1.4.3-Release-Notes.md)
+ - [MariaDB MaxScale 1.4.2 Release Notes](Release-Notes/MaxScale-1.4.2-Release-Notes.md)
+ - [MariaDB MaxScale 1.4.1 Release Notes](Release-Notes/MaxScale-1.4.1-Release-Notes.md)
+ - [MariaDB MaxScale 1.4.0 Release Notes](Release-Notes/MaxScale-1.4.0-Release-Notes.md)
+ - [MariaDB MaxScale 1.3.0 Release Notes](Release-Notes/MaxScale-1.3.0-Release-Notes.md)
+ - [MariaDB MaxScale 1.2.0 Release Notes](Release-Notes/MaxScale-1.2.0-Release-Notes.md)
+ - [MariaDB MaxScale 1.1.1 Release Notes](Release-Notes/MaxScale-1.1.1-Release-Notes.md)
+ - [MariaDB MaxScale 1.1.0 Release Notes](Release-Notes/MaxScale-1.1-Release-Notes.md)
+ - [MariaDB MaxScale 1.0.3 Release Notes](Release-Notes/MaxScale-1.0.3-Release-Notes.md)
+ - [MariaDB MaxScale 1.0.1 Release Notes](Release-Notes/MaxScale-1.0.1-Release-Notes.md)
+ - [MariaDB MaxScale 1.0 Release Notes](Release-Notes/MaxScale-1.0-Release-Notes.md)
+ - [MariaDB MaxScale 0.7 Release Notes](Release-Notes/MaxScale-0.7-Release-Notes.md)
+ - [MariaDB MaxScale 0.6 Release Notes](Release-Notes/MaxScale-0.6-Release-Notes.md)
+ - [MariaDB MaxScale 0.5 Release Notes](Release-Notes/MaxScale-0.5-Release-Notes.md)
 

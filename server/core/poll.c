@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 #include <stdio.h>
@@ -74,7 +69,7 @@ int max_poll_sleep;
  * 07/07/15     Martin Brampton Simplified add and remove DCB, improve error handling.
  * 23/08/15     Martin Brampton Added test so only DCB with a session link can be added to the poll list
  * 07/02/16     Martin Brampton Added a small piece of SSL logic to EPOLLIN
- * 
+ *
  * @endverbatim
  */
 
@@ -181,8 +176,8 @@ static struct
  */
 static struct
 {
-    unsigned int qtimes[N_QUEUE_TIMES+1];
-    unsigned int exectimes[N_QUEUE_TIMES+1];
+    unsigned int qtimes[N_QUEUE_TIMES + 1];
+    unsigned int exectimes[N_QUEUE_TIMES + 1];
     unsigned long maxqtime;
     unsigned long maxexectime;
 } queueStats;
@@ -301,7 +296,7 @@ poll_add_dcb(DCB *dcb)
      * Choose new state according to the role of dcb.
      */
     spinlock_acquire(&dcb->dcb_initlock);
-    if (dcb->dcb_role == DCB_ROLE_REQUEST_HANDLER)
+    if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER || dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
     {
         new_state = DCB_STATE_POLLING;
     }
@@ -352,7 +347,10 @@ poll_add_dcb(DCB *dcb)
                   dcb,
                   STRDCBSTATE(dcb->state));
     }
-    else dcb->state = old_state;
+    else
+    {
+        dcb->state = old_state;
+    }
     return rc;
 }
 
@@ -361,7 +359,7 @@ poll_add_dcb(DCB *dcb)
  * polling environment.
  *
  * @param dcb   The descriptor to remove
- * @return      -1 on error or 0 on success
+ * @return      -1 on error or 0 on success; actually always 0
  */
 int
 poll_remove_dcb(DCB *dcb)
@@ -992,7 +990,9 @@ process_pollq(int thread_id)
                  * until it return 1 for success or -1 for error */
                 if (dcb->ssl_state == SSL_HANDSHAKE_REQUIRED)
                 {
-                    return_code = dcb_accept_SSL(dcb);
+                    return_code = (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role) ?
+                                  dcb_accept_SSL(dcb) :
+                                  dcb_connect_SSL(dcb);
                 }
                 if (1 == return_code)
                 {
@@ -1136,7 +1136,9 @@ process_pollq(int thread_id)
             dcb->evq.prev->evq.next = dcb->evq.next;
             dcb->evq.next->evq.prev = dcb->evq.prev;
             if (eventq == dcb)
+            {
                 eventq = dcb->evq.next;
+            }
         }
         else
         {
@@ -1158,7 +1160,9 @@ process_pollq(int thread_id)
         if (dcb->evq.prev != dcb)
         {
             if (eventq == dcb)
+            {
                 eventq = dcb->evq.next;
+            }
             else
             {
                 dcb->evq.prev->evq.next = dcb->evq.next;
@@ -1286,7 +1290,7 @@ dprintPollStats(DCB *dcb)
         dcb_printf(dcb, "\t%2d\t\t\t%d\n", i + 1, pollStats.n_fds[i]);
     }
     dcb_printf(dcb, "\t>= %d\t\t\t%d\n", MAXNFDS,
-               pollStats.n_fds[MAXNFDS-1]);
+               pollStats.n_fds[MAXNFDS - 1]);
 
 #if SPINLOCK_PROFILE
     dcb_printf(dcb, "Event queue lock statistics:\n");
@@ -1318,7 +1322,9 @@ event_to_string(uint32_t event)
     if (event & EPOLLOUT)
     {
         if (*str)
+        {
             strcat(str, "|");
+        }
         strcat(str, "OUT");
     }
     if (event & EPOLLERR)
@@ -1466,7 +1472,7 @@ dShowThreads(DCB *dcb)
                 from_heap = true;
             }
             dcb_printf(dcb,
-                       " %2d | %-10s | %6d | %-16p | <%3d00ms | %s\n",
+                       " %2d | %-10s | %6d | %-16p | <%3lu00ms | %s\n",
                        i, state, thread_data[i].n_fds,
                        thread_data[i].cur_dcb, 1 + hkheartbeat - dcb->evq.started,
                        event_string);
@@ -1612,7 +1618,7 @@ poll_fake_write_event(DCB *dcb)
  * to the tail of the event queue, in the same way that real events
  * are, so maintain the "fairness" of processing.
  *
- * @param dcb	DCB to emulate an EPOLLIN event for
+ * @param dcb   DCB to emulate an EPOLLIN event for
  */
 void
 poll_fake_read_event(DCB *dcb)
@@ -1630,11 +1636,11 @@ poll_fake_read_event(DCB *dcb)
  * to the tail of the event queue, in the same way that real events
  * are, so maintain the "fairness" of processing.
  *
- * @param dcb	DCB to emulate an event for
+ * @param dcb   DCB to emulate an event for
  * @param ev    Event to emulate
  */
 void
-poll_fake_event(DCB *dcb, uint32_t ev)
+poll_fake_event(DCB *dcb, enum EPOLL_EVENTS ev)
 {
 
     spinlock_acquire(&pollqlock);
@@ -1794,10 +1800,10 @@ dShowEventStats(DCB *pdcb)
     int i;
 
     dcb_printf(pdcb, "\nEvent statistics.\n");
-    dcb_printf(pdcb, "Maximum queue time:           %3d00ms\n", queueStats.maxqtime);
-    dcb_printf(pdcb, "Maximum execution time:               %3d00ms\n", queueStats.maxexectime);
-    dcb_printf(pdcb, "Maximum event queue length:     %3d\n", pollStats.evq_max);
-    dcb_printf(pdcb, "Current event queue length:     %3d\n", pollStats.evq_length);
+    dcb_printf(pdcb, "Maximum queue time:           %3lu00ms\n", queueStats.maxqtime);
+    dcb_printf(pdcb, "Maximum execution time:       %3lu00ms\n", queueStats.maxexectime);
+    dcb_printf(pdcb, "Maximum event queue length:   %3d\n", pollStats.evq_max);
+    dcb_printf(pdcb, "Current event queue length:   %3d\n", pollStats.evq_length);
     dcb_printf(pdcb, "\n");
     dcb_printf(pdcb, "               |    Number of events\n");
     dcb_printf(pdcb, "Duration       | Queued     | Executed\n");
@@ -1874,20 +1880,20 @@ eventTimesRowCallback(RESULTSET *set, void *data)
     }
     else if (*rowno == N_QUEUE_TIMES - 1)
     {
-        snprintf(buf,39, "> %2d00ms", N_QUEUE_TIMES);
+        snprintf(buf, 39, "> %2d00ms", N_QUEUE_TIMES);
         buf[39] = '\0';
         resultset_row_set(row, 0, buf);
     }
     else
     {
-        snprintf(buf,39, "%2d00 - %2d00ms", *rowno, (*rowno) + 1);
+        snprintf(buf, 39, "%2d00 - %2d00ms", *rowno, (*rowno) + 1);
         buf[39] = '\0';
         resultset_row_set(row, 0, buf);
     }
-    snprintf(buf,39, "%u", queueStats.qtimes[*rowno]);
+    snprintf(buf, 39, "%u", queueStats.qtimes[*rowno]);
     buf[39] = '\0';
     resultset_row_set(row, 1, buf);
-    snprintf(buf,39, "%u", queueStats.exectimes[*rowno]);
+    snprintf(buf, 39, "%u", queueStats.exectimes[*rowno]);
     buf[39] = '\0';
     resultset_row_set(row, 2, buf);
     (*rowno)++;

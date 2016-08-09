@@ -11,7 +11,3 @@ if(BUILD_SHARDROUTER)
   set_target_properties(shardrouter PROPERTIES VERSION "1.0.0")
   install(TARGETS shardrouter DESTINATION ${MAXSCALE_LIBDIR})
 endif()
-
-if(BUILD_TESTS)
-  add_subdirectory(test)
-endif()

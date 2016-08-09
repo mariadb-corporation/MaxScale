@@ -49,5 +49,5 @@ CMakeFiles/*
 */*/CMakeFiles/*
 */*/*/CMakeFiles/*
 */*/*/*/CMakeFiles/*
-*.cmake
 Makefile
+/.DS_Store

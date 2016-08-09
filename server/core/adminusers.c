@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,9 +32,11 @@
  * @verbatim
  * Revision History
  *
- * Date         Who             Description
- * 18/07/13     Mark Riddoch    Initial implementation
- * 23/07/13     Mark Riddoch    Addition of error mechanism to add user
+ * Date         Who                  Description
+ * 18/07/13     Mark Riddoch         Initial implementation
+ * 23/07/13     Mark Riddoch         Addition of error mechanism to add user
+ * 23/05/16     Massimiliano Pinto   admin_add_user and admin_remove_user
+ *                                   no longer accept password parameter
  *
  * @endverbatim
  */
@@ -59,9 +56,12 @@ static char *ADMIN_ERR_PWDFILEOPEN      = "Failed to open password file";
 static char *ADMIN_ERR_TMPFILEOPEN      = "Failed to open temporary password file";
 static char *ADMIN_ERR_PWDFILEACCESS    = "Failed to access password file";
 static char *ADMIN_ERR_DELLASTUSER      = "Deleting the last user is forbidden";
+static char *ADMIN_ERR_DELROOT          = "Deleting the default admin user is forbidden";
 static char *ADMIN_SUCCESS              = NULL;
 
-static const int LINELEN=80;
+static const int LINELEN = 80;
+
+static const char USERS_FILE_NAME[] = "maxadmin-users";
 
 /**
  * Admin Users initialisation
@@ -125,12 +125,12 @@ loadUsers()
 {
     USERS *rval;
     FILE  *fp;
-    char  fname[1024], *home;
-    char  uname[80], passwd[80];
+    char  fname[PATH_MAX], *home;
+    char  uname[80];
+    int added_users = 0;
 
     initialise();
-    snprintf(fname,1023, "%s/passwd", get_datadir());
-    fname[1023] = '\0';
+    snprintf(fname, sizeof(fname), "%s/%s", get_datadir(), USERS_FILE_NAME);
     if ((fp = fopen(fname, "r")) == NULL)
     {
         return NULL;
@@ -140,11 +140,43 @@ loadUsers()
         fclose(fp);
         return NULL;
     }
-    while (fscanf(fp, "%[^:]:%s\n", uname, passwd) == 2)
+    while (fgets(uname, sizeof(uname), fp))
     {
-        users_add(rval, uname, passwd);
+        char *nl = strchr(uname, '\n');
+
+        if (nl)
+        {
+            *nl = '\0';
+        }
+        else if (!feof(fp))
+        {
+            MXS_ERROR("Line length exceeds %d characters, possible corrupted "
+                      "'passwd' file in: %s", LINELEN, fname);
+            users_free(rval);
+            rval = NULL;
+            break;
+        }
+
+        char *tmp_ptr = strchr(uname, ':');
+        if (tmp_ptr)
+        {
+            *tmp_ptr = '\0';
+            MXS_WARNING("Found user '%s' with password. "
+                        "This user might not be compatible with new maxadmin in MaxScale 2.0. "
+                        "Remove it with \"remove user %s\" through MaxAdmin", uname, uname);
+        }
+        if (users_add(rval, uname, ""))
+        {
+            added_users++;
+        }
     }
     fclose(fp);
+
+    if (!added_users)
+    {
+        users_free(rval);
+        rval = NULL;
+    }
 
     return rval;
 }
@@ -153,14 +185,13 @@ loadUsers()
  * Add user
  *
  * @param uname         Name of the new user
- * @param passwd        Password for the new user
  * @return      NULL on success or an error string on failure
  */
 char *
-admin_add_user(char *uname, char *passwd)
+admin_add_user(char *uname)
 {
     FILE *fp;
-    char fname[1024], *home, *cpasswd;
+    char fname[PATH_MAX], *home;
 
     initialise();
 
@@ -172,8 +203,7 @@ admin_add_user(char *uname, char *passwd)
         }
     }
 
-    snprintf(fname,1023, "%s/passwd", get_datadir());
-    fname[1023] = '\0';
+    snprintf(fname, sizeof(fname), "%s/%s", get_datadir(), USERS_FILE_NAME);
     if (users == NULL)
     {
         MXS_NOTICE("Create initial password file.");
@@ -193,16 +223,13 @@ admin_add_user(char *uname, char *passwd)
     {
         return ADMIN_ERR_DUPLICATE;
     }
-    struct crypt_data cdata;
-    cdata.initialized = 0;
-    cpasswd = crypt_r(passwd, ADMIN_SALT, &cdata);
-    users_add(users, uname, cpasswd);
+    users_add(users, uname, "");
     if ((fp = fopen(fname, "a")) == NULL)
     {
         MXS_ERROR("Unable to append to password file %s.", fname);
         return ADMIN_ERR_FILEAPPEND;
     }
-    fprintf(fp, "%s:%s\n", uname, cpasswd);
+    fprintf(fp, "%s\n", uname);
     fclose(fp);
     return ADMIN_SUCCESS;
 }
@@ -212,23 +239,26 @@ admin_add_user(char *uname, char *passwd)
  * Remove maxscale user from in-memory structure and from password file
  *
  * @param uname         Name of the new user
- * @param passwd        Password for the new user
  * @return      NULL on success or an error string on failure
  */
 char* admin_remove_user(
-    char* uname,
-    char* passwd)
+    char* uname)
 {
     FILE*  fp;
     FILE*  fp_tmp;
-    char   fname[1024];
-    char   fname_tmp[1024];
+    char   fname[PATH_MAX];
+    char   fname_tmp[PATH_MAX];
     char*  home;
     char   fusr[LINELEN];
     char   fpwd[LINELEN];
     char   line[LINELEN];
     fpos_t rpos;
-    int    n_deleted;
+
+    if (strcmp(uname, DEFAULT_ADMIN_USER) == 0)
+    {
+        MXS_WARNING("Attempt to delete the default admin user '%s'.", uname);
+        return ADMIN_ERR_DELROOT;
+    }
 
     if (!admin_search_user(uname))
     {
@@ -236,30 +266,14 @@ char* admin_remove_user(
         return ADMIN_ERR_USERNOTFOUND;
     }
 
-    if (admin_verify(uname, passwd) == 0)
-    {
-        MXS_ERROR("Authentication failed, wrong user/password "
-                  "combination. Removing user failed.");
-        return ADMIN_ERR_AUTHENTICATION;
-    }
-
-
     /** Remove user from in-memory structure */
-    n_deleted = users_delete(users, uname);
+    users_delete(users, uname);
 
-    if (n_deleted == 0)
-    {
-        MXS_ERROR("Deleting the only user is forbidden. Add new "
-                  "user before deleting the one.");
-        return ADMIN_ERR_DELLASTUSER;
-    }
     /**
      * Open passwd file and remove user from the file.
      */
-    snprintf(fname, 1023, "%s/passwd", get_datadir());
-    snprintf(fname_tmp, 1023, "%s/passwd_tmp", get_datadir());
-    fname[1023] = '\0';
-    fname_tmp[1023] = '\0';
+    snprintf(fname, sizeof(fname), "%s/%s", get_datadir(), USERS_FILE_NAME);
+    snprintf(fname_tmp, sizeof(fname_tmp), "%s/%s_tmp", get_datadir(), USERS_FILE_NAME);
     /**
      * Rewrite passwd file from memory.
      */
@@ -305,16 +319,32 @@ char* admin_remove_user(
         return ADMIN_ERR_PWDFILEACCESS;
     }
 
-    while (fscanf(fp, "%[^:]:%s\n", fusr, fpwd) == 2)
+    while (fgets(fusr, sizeof(fusr), fp))
     {
+        char *nl = strchr(fusr, '\n');
+
+        if (nl)
+        {
+            *nl = '\0';
+        }
+        else if (!feof(fp))
+        {
+            MXS_ERROR("Line length exceeds %d characters, possible corrupted "
+                      "'passwd' file in: %s", LINELEN, fname);
+            fclose(fp);
+            fclose(fp_tmp);
+            return ADMIN_ERR_PWDFILEACCESS;
+        }
+
         /**
          * Compare username what was found from passwd file.
          * Unmatching lines are copied to tmp file.
          */
-        if (strncmp(uname, fusr, strlen(uname)+1) != 0)
+        if (strncmp(uname, fusr, strlen(uname) + 1) != 0)
         {
-            if(fsetpos(fp, &rpos) != 0)
-            { /** one step back */
+            if (fsetpos(fp, &rpos) != 0)
+            {
+                /** one step back */
                 MXS_ERROR("Unable to set stream position. ");
             }
             fgets(line, LINELEN, fp);
@@ -369,11 +399,19 @@ int
 admin_search_user(char *user)
 {
     initialise();
-    if (users == NULL)
+
+    int rv = 0;
+
+    if (strcmp(user, DEFAULT_ADMIN_USER) == 0)
     {
-        return 0;
+        rv = 1;
     }
-    return users_fetch(users, user) != NULL;
+    else if (users)
+    {
+        rv = (users_fetch(users, user) != NULL);
+    }
+
+    return rv;
 }
 
 /**

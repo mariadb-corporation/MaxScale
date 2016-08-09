@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -21,14 +16,13 @@
  * @author Markus Mäkelä
  * @date 13.2.2015
  * @version 1.0.0
- * @copyright GPLv2
  * @section secDesc Firewall Filter
  *
  * A filter that acts as a firewall, denying queries that do not meet a set of rules.
  *
  * Filter configuration parameters:
  *@code{.unparsed}
- *		rules=<path to file>			Location of the rule file
+ *      rules=<path to file>            Location of the rule file
  *@endcode
  * Rules are defined in a separate rule file that lists all the rules and the users to whom the
  * rules are applied.
@@ -36,14 +30,14 @@
  * For example, to define a rule denying users from accessing the column 'salary' between
  * the times 15:00 and 17:00, the following rule is to be configured into the configuration file:
  *@code{.unparsed}
- *		rule block_salary deny columns salary at_times 15:00:00-17:00:00
+ *      rule block_salary deny columns salary at_times 15:00:00-17:00:00
  *@endcode
  * The users are matched by username and network address. Wildcard values can be provided by
  * using the '%' character.
  * For example, to apply this rule to users John, connecting from any address
  * that starts with the octets 198.168.%, and Jane, connecting from the address 192.168.0.1:
  *@code{.unparsed}
- *		users John@192.168.% Jane@192.168.0.1 match any rules block_salary
+ *      users John@192.168.% Jane@192.168.0.1 match any rules block_salary
  *@endcode
  *
  * The 'match' keyword controls the way rules are matched. If it is set to
@@ -84,6 +78,7 @@
 #include <dbfwfilter.h>
 #include <ruleparser.yy.h>
 #include <lex.yy.h>
+#include <stdlib.h>
 
 /** Older versions of Bison don't include the parsing function in the header */
 #ifndef dbfw_yyparse
@@ -98,7 +93,7 @@ MODULE_INFO info =
     "Firewall Filter"
 };
 
-static char *version_str = "V1.1.0";
+static char *version_str = "V1.2.0";
 
 /*
  * The filter entry points
@@ -196,7 +191,6 @@ typedef struct rule_t
     char* name; /*< Name of the rule */
     ruletype_t type; /*< Type of the rule */
     qc_query_op_t on_queries; /*< Types of queries to inspect */
-    bool allow; /*< Allow or deny the query if this rule matches */
     int times_matched; /*< Number of times this rule has been matched */
     TIMERANGE* active; /*< List of times when this rule is active */
     struct rule_t *next;
@@ -227,7 +221,7 @@ typedef struct user_t
     RULELIST* rules_or; /*< If any of these rules match the action is triggered */
     RULELIST* rules_and; /*< All of these rules must match for the action to trigger */
     RULELIST* rules_strict_and; /*< rules that skip the rest of the rules if one of them
-				 * fails. This is only for rules paired with 'match strict_all'. */
+                 * fails. This is only for rules paired with 'match strict_all'. */
 
 } USER;
 
@@ -386,7 +380,7 @@ static void* rulelist_clone(void* fval)
 {
 
     RULELIST *rule = NULL,
-        *ptr = (RULELIST*) fval;
+              *ptr = (RULELIST*) fval;
 
 
     while (ptr)
@@ -398,7 +392,7 @@ static void* rulelist_clone(void* fval)
         ptr = ptr->next;
     }
 
-    return(void*) rule;
+    return (void*) rule;
 }
 
 static void* rulelist_free(void* fval)
@@ -507,6 +501,34 @@ bool parse_querytypes(const char* str, RULE* rule)
             else if (strcmp(buffer, "delete") == 0)
             {
                 rule->on_queries |= QUERY_OP_DELETE;
+            }
+            else if (strcmp(buffer, "use") == 0)
+            {
+                rule->on_queries |= QUERY_OP_CHANGE_DB;
+            }
+            else if (strcmp(buffer, "grant") == 0)
+            {
+                rule->on_queries |= QUERY_OP_GRANT;
+            }
+            else if (strcmp(buffer, "revoke") == 0)
+            {
+                rule->on_queries |= QUERY_OP_REVOKE;
+            }
+            else if (strcmp(buffer, "drop") == 0)
+            {
+                rule->on_queries |= QUERY_OP_DROP;
+            }
+            else if (strcmp(buffer, "create") == 0)
+            {
+                rule->on_queries |= QUERY_OP_CREATE;
+            }
+            else if (strcmp(buffer, "alter") == 0)
+            {
+                rule->on_queries |= QUERY_OP_ALTER;
+            }
+            else if (strcmp(buffer, "load") == 0)
+            {
+                rule->on_queries |= QUERY_OP_LOAD;
             }
 
             if (done)
@@ -652,10 +674,13 @@ char * version()
 /**
  * The module initialisation routine, called when the module
  * is first loaded.
+ * @see function load_module in load_utils.c for explanation of lint
  */
+/*lint -e14 */
 void ModuleInit()
 {
 }
+/*lint +e14 */
 
 /**
  * The module entry point routine. It is this routine that
@@ -1012,6 +1037,9 @@ bool create_user_templates(void* scanner)
                 free(newtemp->name);
                 free(newtemp);
             }
+            free(templates->name);
+            strlink_free(templates->rulenames);
+            free(templates);
             MXS_ERROR("Memory allocation failed when processing rule file users definitions.");
             return false;
         }
@@ -1211,7 +1239,7 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
 
         if (user == NULL)
         {
-            if ((user = malloc(sizeof(USER)))&& (user->name = strdup(templates->name)))
+            if ((user = malloc(sizeof(USER))) && (user->name = strdup(templates->name)))
             {
                 user->rules_and = NULL;
                 user->rules_or = NULL;
@@ -1341,7 +1369,7 @@ static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
  * Create an instance of the filter for a particular service
  * within MaxScale.
  *
- * @param options	The options for this filter
+ * @param options   The options for this filter
  *
  * @return The instance data for this new instance
  */
@@ -1435,14 +1463,14 @@ createInstance(char **options, FILTER_PARAMETER **params)
         my_instance = NULL;
     }
 
-    return(FILTER *) my_instance;
+    return (FILTER *) my_instance;
 }
 
 /**
  * Associate a new session with this instance of the filter.
  *
- * @param instance	The filter instance data
- * @param session	The session itself
+ * @param instance  The filter instance data
+ * @param session   The session itself
  * @return Session specific data for this session
  */
 static void *
@@ -1462,8 +1490,8 @@ newSession(FILTER *instance, SESSION *session)
  * Close a session with the filter, this is the mechanism
  * by which a filter may cleanup data structure etc.
  *
- * @param instance	The filter instance data
- * @param session	The session being closed
+ * @param instance  The filter instance data
+ * @param session   The session being closed
  */
 static void
 closeSession(FILTER *instance, void *session)
@@ -1473,8 +1501,8 @@ closeSession(FILTER *instance, void *session)
 /**
  * Free the memory associated with the session
  *
- * @param instance	The filter instance
- * @param session	The filter session
+ * @param instance  The filter instance
+ * @param session   The filter session
  */
 static void
 freeSession(FILTER *instance, void *session)
@@ -1491,9 +1519,9 @@ freeSession(FILTER *instance, void *session)
  * Set the downstream filter or router to which queries will be
  * passed from this filter.
  *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param downstream	The downstream filter or router.
+ * @param instance  The filter instance data
+ * @param session   The filter session
+ * @param downstream    The downstream filter or router.
  */
 static void
 setDownstream(FILTER *instance, void *session, DOWNSTREAM *downstream)
@@ -1623,6 +1651,50 @@ bool rule_is_active(RULE* rule)
 }
 
 /**
+ * Log and create an error message when a query could not be fully parsed.
+ * @param my_instance The FwFilter instance.
+ * @param reason The reason the query was rejected.
+ * @param query The query that could not be parsed.
+ * @param matchesp Pointer to variable that will receive the value indicating
+ *                 whether the query was parsed or not.
+ *
+ * Note that the value of *matchesp depends on the the mode of the filter,
+ * i.e., whether it is in whitelist or blacklist mode. The point is that
+ * irrespective of the mode, the query must be rejected.
+ */
+static char* create_parse_error(FW_INSTANCE* my_instance,
+                                const char* reason,
+                                const char* query,
+                                bool* matchesp)
+{
+    char *msg = NULL;
+
+    char format[] = "dbfwfilter: Query could not be %s and will hence be rejected";
+    size_t len = sizeof(format) + strlen(reason); // sizeof includes the trailing NULL as well.
+    char message[len];
+    sprintf(message, format, reason);
+    MXS_WARNING("%s: %s", message, query);
+
+    if ((my_instance->action == FW_ACTION_ALLOW) || (my_instance->action == FW_ACTION_BLOCK))
+    {
+        char msgbuf[len + 1]; // +1 for the "."
+        sprintf(msgbuf, "%s.", message);
+        msg = strdup(msgbuf);
+
+        if (my_instance->action == FW_ACTION_ALLOW)
+        {
+            *matchesp = false;
+        }
+        else
+        {
+            *matchesp = true;
+        }
+    }
+
+    return msg;
+}
+
+/**
  * Check if a query matches a single rule
  * @param my_instance Fwfilter instance
  * @param my_session Fwfilter session
@@ -1658,11 +1730,51 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
     if (is_sql)
     {
-        optype = qc_get_operation(queue);
-        is_real = qc_is_real_query(queue);
+        qc_parse_result_t parse_result = qc_parse(queue);
+
+        if (parse_result == QC_QUERY_INVALID)
+        {
+            msg = create_parse_error(my_instance, "tokenized", query, &matches);
+            goto queryresolved;
+        }
+        else
+        {
+            optype = qc_get_operation(queue);
+            is_real = qc_is_real_query(queue);
+
+            if (parse_result != QC_QUERY_PARSED)
+            {
+                if ((rulelist->rule->type == RT_COLUMN) ||
+                    (rulelist->rule->type == RT_WILDCARD) ||
+                    (rulelist->rule->type == RT_CLAUSE))
+                {
+                    switch (optype)
+                    {
+                    case QUERY_OP_SELECT:
+                    case QUERY_OP_UPDATE:
+                    case QUERY_OP_INSERT:
+                    case QUERY_OP_DELETE:
+                        // In these cases, we have to be able to trust what qc_get_affected_fields
+                        // returns. Unless the query was parsed completely, we cannot do that.
+                        msg = create_parse_error(my_instance, "parsed completely", query, &matches);
+                        goto queryresolved;
+
+                    default:
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        is_real = false;
     }
 
-    if (rulelist->rule->on_queries == QUERY_OP_UNDEFINED || rulelist->rule->on_queries & optype)
+    if (rulelist->rule->on_queries == QUERY_OP_UNDEFINED ||
+        rulelist->rule->on_queries & optype ||
+        (MYSQL_IS_COM_INIT_DB((uint8_t*)GWBUF_DATA(queue)) &&
+         rulelist->rule->on_queries & QUERY_OP_CHANGE_DB))
     {
         switch (rulelist->rule->type)
         {
@@ -1674,7 +1786,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 if (query)
                 {
                     pcre2_match_data *mdata = pcre2_match_data_create_from_pattern(
-                                                                                   rulelist->rule->data, NULL);
+                                                  rulelist->rule->data, NULL);
 
                     if (mdata)
                     {
@@ -1685,7 +1797,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                             matches = true;
                         }
                         pcre2_match_data_free(mdata);
-                        if (matches && !rulelist->rule->allow)
+                        if (matches)
                         {
                             msg = strdup("Permission denied, query matched regular expression.");
                             MXS_INFO("dbfwfilter: rule '%s': regex matched on query", rulelist->rule->name);
@@ -1701,7 +1813,6 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 break;
 
             case RT_PERMISSION:
-                if (!rulelist->rule->allow)
                 {
                     matches = true;
                     msg = strdup("Permission denied at this time.");
@@ -1709,10 +1820,6 @@ bool rule_matches(FW_INSTANCE* my_instance,
                     asctime_r(&tm_now, buffer);
                     MXS_INFO("dbfwfilter: rule '%s': query denied at: %s", rulelist->rule->name, buffer);
                     goto queryresolved;
-                }
-                else
-                {
-                    break;
                 }
                 break;
 
@@ -1733,18 +1840,12 @@ bool rule_matches(FW_INSTANCE* my_instance,
                                 {
                                     matches = true;
 
-                                    if (!rulelist->rule->allow)
-                                    {
-                                        sprintf(emsg, "Permission denied to column '%s'.", strln->value);
-                                        MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
-                                                 rulelist->rule->name, strln->value);
-                                        msg = strdup(emsg);
-                                        goto queryresolved;
-                                    }
-                                    else
-                                    {
-                                        break;
-                                    }
+                                    sprintf(emsg, "Permission denied to column '%s'.", strln->value);
+                                    MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
+                                             rulelist->rule->name, strln->value);
+                                    msg = strdup(emsg);
+                                    free(where);
+                                    goto queryresolved;
                                 }
                                 strln = strln->next;
                             }
@@ -1767,11 +1868,11 @@ bool rule_matches(FW_INSTANCE* my_instance,
 
                         if (strchr(strptr, '*'))
                         {
-
                             matches = true;
                             msg = strdup("Usage of wildcard denied.");
                             MXS_INFO("dbfwfilter: rule '%s': query contains a wildcard.",
                                      rulelist->rule->name);
+                            free(where);
                             goto queryresolved;
                         }
                         free(where);
@@ -1917,7 +2018,8 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
     bool rval = false;
 
     if ((rulelist = user->rules_or) &&
-        (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue)))
+        (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue) ||
+         MYSQL_IS_COM_INIT_DB((uint8_t*)GWBUF_DATA(queue))))
     {
         char *fullquery = modutil_get_SQL(queue);
         while (rulelist)
@@ -1929,7 +2031,7 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
             }
             if (rule_matches(my_instance, my_session, queue, user, rulelist, fullquery))
             {
-                *rulename = rulelist->rule->name;
+                *rulename = strdup(rulelist->rule->name);
                 rval = true;
                 break;
             }
@@ -1939,6 +2041,42 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
         free(fullquery);
     }
     return rval;
+}
+
+/**
+ * Append and possibly reallocate string
+ * @param dest Destination where the string is appended or NULL if nothing has
+ * been allocated yet
+ * @param size Size of @c dest
+ * @param src String to append to @c dest
+ */
+void append_string(char** dest, size_t* size, const char* src)
+{
+    if (*dest == NULL)
+    {
+        *dest = strdup(src);
+        *size = strlen(src);
+    }
+    else
+    {
+        if (*size < strlen(*dest) + strlen(src) + 3)
+        {
+            size_t newsize = strlen(*dest) + strlen(src) + 3;
+            char* tmp = realloc(*dest, newsize);
+            if (tmp)
+            {
+                *size = newsize;
+                *dest = tmp;
+            }
+            else
+            {
+                MXS_ERROR("Memory allocation failed");
+                return;
+            }
+        }
+        strcat(*dest, ", ");
+        strcat(*dest, src);
+    }
 }
 
 /**
@@ -1955,6 +2093,8 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
     bool rval = false;
     bool have_active_rule = false;
     RULELIST* rulelist = strict_all ? user->rules_strict_and : user->rules_and;
+    char *matched_rules = NULL;
+    size_t size = 0;
 
     if (rulelist && (modutil_is_SQL(queue) || modutil_is_SQL_prepare(queue)))
     {
@@ -1970,15 +2110,19 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
 
             have_active_rule = true;
 
-            if (!rule_matches(my_instance, my_session, queue, user, rulelist, fullquery))
+            if (rule_matches(my_instance, my_session, queue, user, rulelist, fullquery))
             {
-                *rulename = rulelist->rule->name;
+                append_string(&matched_rules, &size, rulelist->rule->name);
+            }
+            else
+            {
                 rval = false;
                 if (strict_all)
                 {
                     break;
                 }
             }
+
             rulelist = rulelist->next;
         }
 
@@ -1989,6 +2133,9 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
         }
         free(fullquery);
     }
+
+    /** Set the list of matched rule names */
+    *rulename = matched_rules;
 
     return rval;
 }
@@ -2033,9 +2180,9 @@ USER* find_user_data(HASHTABLE *hash, const char *name, const char *remote)
  * query is passed to the downstream component
  * (filter or router) in the filter chain.
  *
- * @param instance	The filter instance data
- * @param session	The filter session
- * @param queue		The query data
+ * @param instance  The filter instance data
+ * @param session   The filter session
+ * @param queue     The query data
  */
 static int
 routeQuery(FILTER *instance, void *session, GWBUF *queue)
@@ -2063,7 +2210,8 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
         if (user)
         {
             bool match = false;
-            char* rname;
+            char* rname = NULL;
+
             if (check_match_any(my_instance, my_session, queue, user, &rname) ||
                 check_match_all(my_instance, my_session, queue, user, false, &rname) ||
                 check_match_all(my_instance, my_session, queue, user, true, &rname))
@@ -2106,6 +2254,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                     len = MIN(len, FW_MAX_SQL_LEN);
                     if (match && my_instance->log_match & FW_LOG_MATCH)
                     {
+                        ss_dassert(rname);
                         MXS_NOTICE("[%s] Rule '%s' for '%s' matched by %s@%s: %.*s",
                                    dcb->service->name, rname, user->name,
                                    dcb->user, dcb->remote, len, sql);
@@ -2118,9 +2267,11 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                     }
                 }
             }
+
+            free(rname);
         }
-            /** If the instance is in whitelist mode, only users that have a rule
-             * defined for them are allowed */
+        /** If the instance is in whitelist mode, only users that have a rule
+         * defined for them are allowed */
         else if (my_instance->action != FW_ACTION_ALLOW)
         {
             query_ok = true;
@@ -2149,9 +2300,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
  * Prints the connection details and the names of the exchange,
  * queue and the routing key.
  *
- * @param	instance	The filter instance
- * @param	fsession	Filter session, may be NULL
- * @param	dcb		The DCB for diagnostic output
+ * @param   instance    The filter instance
+ * @param   fsession    Filter session, may be NULL
+ * @param   dcb     The DCB for diagnostic output
  */
 static void
 diagnostic(FILTER *instance, void *fsession, DCB *dcb)
@@ -2227,7 +2378,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    home = malloc(sizeof(char)*(PATH_MAX + 1));
+    home = malloc(sizeof(char) * (PATH_MAX + 1));
     if (getcwd(home, PATH_MAX) == NULL)
     {
         free(home);
@@ -2237,10 +2388,11 @@ int main(int argc, char** argv)
     printf("Log files written to: %s\n", home ? home : "/tpm");
 
     int argc_ = 2;
-    char* argv_[] ={
-                     "log_manager",
-                     "-o",
-                     NULL
+    char* argv_[] =
+    {
+        "log_manager",
+        "-o",
+        NULL
     };
 
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);

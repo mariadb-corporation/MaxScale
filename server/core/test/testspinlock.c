@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -21,8 +16,8 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 18/08-2014	Mark Riddoch		Initial implementation
+ * Date         Who                 Description
+ * 18/08-2014   Mark Riddoch        Initial implementation
  *
  * @endverbatim
  */
@@ -43,7 +38,7 @@
 
 
 /**
- * test1	spinlock_acquire_nowait tests
+ * test1    spinlock_acquire_nowait tests
  *
  * Test that spinlock_acquire_nowait returns false if the spinlock
  * is already taken.
@@ -56,29 +51,29 @@
 static int
 test1()
 {
-SPINLOCK	lck;
+    SPINLOCK    lck;
 
-	spinlock_init(&lck);
-	spinlock_acquire(&lck);
-	if (spinlock_acquire_nowait(&lck))
-	{
-		fprintf(stderr, "spinlock_acquire_nowait: test 1.1 failed.\n");
-		return 1;
-	}
-	spinlock_release(&lck);
-	if (!spinlock_acquire_nowait(&lck))
-	{
-		fprintf(stderr, "spinlock_acquire_nowait: test 1.2 failed.\n");
-		return 1;
-	}
-	if (spinlock_acquire_nowait(&lck))
-	{
-		fprintf(stderr, "spinlock_acquire_nowait: test 1.3 failed.\n");
-		return 1;
-	}
-	spinlock_release(&lck);
+    spinlock_init(&lck);
+    spinlock_acquire(&lck);
+    if (spinlock_acquire_nowait(&lck))
+    {
+        fprintf(stderr, "spinlock_acquire_nowait: test 1.1 failed.\n");
+        return 1;
+    }
+    spinlock_release(&lck);
+    if (!spinlock_acquire_nowait(&lck))
+    {
+        fprintf(stderr, "spinlock_acquire_nowait: test 1.2 failed.\n");
+        return 1;
+    }
+    if (spinlock_acquire_nowait(&lck))
+    {
+        fprintf(stderr, "spinlock_acquire_nowait: test 1.3 failed.\n");
+        return 1;
+    }
+    spinlock_release(&lck);
 
-	return 0;
+    return 0;
 }
 
 static int acquire_time;
@@ -86,17 +81,17 @@ static int acquire_time;
 static void
 test2_helper(void *data)
 {
-SPINLOCK   *lck = (SPINLOCK *)data;
-unsigned long	t1 = time(0);
+    SPINLOCK   *lck = (SPINLOCK *)data;
+    unsigned long   t1 = time(0);
 
-	spinlock_acquire(lck);
-	acquire_time = time(0) - t1;
-	spinlock_release(lck);
-	return;
+    spinlock_acquire(lck);
+    acquire_time = time(0) - t1;
+    spinlock_release(lck);
+    return;
 }
 
 /**
- * test2	spinlock_acquire tests
+ * test2    spinlock_acquire tests
  *
  * Check that spinlock correctly blocks another thread whilst the spinlock
  * is held.
@@ -110,31 +105,31 @@ unsigned long	t1 = time(0);
 static int
 test2()
 {
-SPINLOCK	lck;
-THREAD		handle;
-struct timespec sleeptime;
+    SPINLOCK    lck;
+    THREAD      handle;
+    struct timespec sleeptime;
 
     sleeptime.tv_sec = 10;
     sleeptime.tv_nsec = 0;
 
-	acquire_time = 0;
-	spinlock_init(&lck);
-	spinlock_acquire(&lck);
-	thread_start(&handle, test2_helper, (void *)&lck);
-	nanosleep(&sleeptime, NULL);
-	spinlock_release(&lck);
-	thread_wait(handle);
+    acquire_time = 0;
+    spinlock_init(&lck);
+    spinlock_acquire(&lck);
+    thread_start(&handle, test2_helper, (void *)&lck);
+    nanosleep(&sleeptime, NULL);
+    spinlock_release(&lck);
+    thread_wait(handle);
 
-	if (acquire_time < 8)
-	{
-		fprintf(stderr, "spinlock: test 2 failed.\n");
-		return 1;
-	}
-	return 0;
+    if (acquire_time < 8)
+    {
+        fprintf(stderr, "spinlock: test 2 failed.\n");
+        return 1;
+    }
+    return 0;
 }
 
 /**
- * test3	spinlock_acquire tests process bound threads
+ * test3    spinlock_acquire tests process bound threads
  *
  * Check that spinlock correctly blocks all other threads whilst the spinlock
  * is held.
@@ -156,25 +151,29 @@ static void
 test3_helper(void *data)
 {
 // SPINLOCK   *lck = (SPINLOCK *)data;
-int         i;
-int         n = *(int *)data;
-time_t          rawtime;
+    int         i;
+    int         n = *(int *)data;
+    time_t          rawtime;
 
 #if defined(ADD_SOME_NANOSLEEP)
-struct timespec sleeptime;
+    struct timespec sleeptime;
 
     sleeptime.tv_sec = 0;
     sleeptime.tv_nsec = 1;
 #endif
 
-    while (1) {
-        if (spinlock_acquire_nowait(&lck)) {
+    while (1)
+    {
+        if (spinlock_acquire_nowait(&lck))
+        {
             nowait[n]++;
         }
-        else {
+        else
+        {
             spinlock_acquire(&lck);
         }
-        if (times_run++ > ITERATIONS) {
+        if (times_run++ > ITERATIONS)
+        {
             break;
         }
         threadrun[n]++;
@@ -184,17 +183,19 @@ struct timespec sleeptime;
             fprintf(stderr, "%s Done %d iterations of test, in thread %d.\n", asctime (localtime ( &rawtime )), times_run, n);
         }
          */
-        if (0 != active) {
+        if (0 != active)
+        {
             fprintf(stderr, "spinlock: test 3 failed with active non-zero after lock obtained.\n");
             failures++;
         }
-        else {
+        else
+        {
             active = 1;
-            for (i=0; i<PROCESS_LOOP; i++);
+            for (i = 0; i < PROCESS_LOOP; i++);
         }
         active = 0;
         spinlock_release(&lck);
-        for (i=0; i<(4*PROCESS_LOOP); i++);
+        for (i = 0; i < (4 * PROCESS_LOOP); i++);
 #if defined(ADD_SOME_NANOSLEEP)
         nanosleep(&sleeptime, NULL);
 #endif
@@ -205,11 +206,11 @@ struct timespec sleeptime;
 static int
 test3()
 {
-// SPINLOCK	lck;
-THREAD          handle[THREADS];
-int             i;
-int             tnum[THREADS];
-time_t          rawtime;
+// SPINLOCK lck;
+    THREAD          handle[THREADS];
+    int             i;
+    int             tnum[THREADS];
+    time_t          rawtime;
 
     times_run = 0;
     active = 0;
@@ -217,35 +218,41 @@ time_t          rawtime;
     spinlock_init(&lck);
     time ( &rawtime );
     fprintf(stderr, "%s Starting %d threads.\n", asctime (localtime ( &rawtime )), THREADS);
-    for (i = 0; i<THREADS; i++) {
+    for (i = 0; i < THREADS; i++)
+    {
         threadrun[i] = 0;
         tnum[i] = i;
         thread_start(&handle[i], test3_helper, &tnum[i]);
     }
-    for (i = 0; i<THREADS; i++) {
-        fprintf(stderr, "spinlock_test 3 thread %d ran %d times, no wait %d times before waits.\n", i, threadrun[i], nowait[i]);
+    for (i = 0; i < THREADS; i++)
+    {
+        fprintf(stderr, "spinlock_test 3 thread %d ran %d times, no wait %d times before waits.\n", i, threadrun[i],
+                nowait[i]);
     }
-    for (i = 0; i<THREADS; i++) {
+    for (i = 0; i < THREADS; i++)
+    {
         time ( &rawtime );
-        fprintf(stderr, "%s spinlock_test 3 finished sleeps, about to wait for thread %d.\n", asctime (localtime ( &rawtime )), i);
+        fprintf(stderr, "%s spinlock_test 3 finished sleeps, about to wait for thread %d.\n",
+                asctime (localtime ( &rawtime )), i);
         thread_wait(handle[i]);
     }
-    for (i = 0; i<THREADS; i++) {
+    for (i = 0; i < THREADS; i++)
+    {
         fprintf(stderr, "spinlock_test 3 thread %d ran %d times, no wait %d times.\n", i, threadrun[i], nowait[i]);
     }
     time ( &rawtime );
     fprintf(stderr, "%s spinlock_test 3 completed, %d failures.\n", asctime (localtime ( &rawtime )), failures);
-    return 0 == failures ? 0: 1;
+    return 0 == failures ? 0 : 1;
 }
 
 int main(int argc, char **argv)
 {
-int	result = 0;
+    int result = 0;
 
-	result += test1();
-	result += test2();
-        result += test3();
+    result += test1();
+    result += test2();
+    result += test3();
 
-	exit(result);
+    exit(result);
 }
 

@@ -35,21 +35,57 @@ These are optional parameters specific to the MySQL Monitor.
 
 ### `detect_replication_lag`
 
-Detect replication lag between the master and the slaves. This allows the routers to route read queries to only slaves that are up to date.
+A truth value which controls if replication lag between the master and the
+slaves is monitored. This allows the routers to route read queries to only
+slaves that are up to date. Default value for this parameter is false.
 
-```
-detect_replication_lag=true
-```
+To detect the replication lag, MaxScale uses the _maxscale_schema.replication_heartbeat_
+table. This table is created on the master server and it is updated at every heartbeat
+with the current timestamp. The updates are then replicated to the slave servers
+and when the replicated timestamp is read from the slave servers, the lag between
+the slave and the master can be calculated.
+
+The monitor user requires INSERT, UPDATE, DELETE and SELECT permissions on the
+maxscale_schema.replication_heartbeat table and CREATE permissions on the
+maxscale_schema database. The monitor user will always try to create the database
+and the table if they do not exist.
 
 ### `detect_stale_master`
 
-Allow previous master to be available even in case of stopped or misconfigured 
-replication. This allows services that depend on master and slave roles to continue functioning as long as the master server is available.
+Allow previous master to be available even in case of stopped or misconfigured
+replication.
 
-This is a situation which can happen if all slave servers are unreachable or the replication breaks for some reason.
+This feature is enabled by default.
+
+This allows services that depend on master and slave roles to continue
+functioning as long as the master server is available. This is a situation
+which can happen if all slave servers are unreachable or the replication
+breaks for some reason.
 
 ```
 detect_stale_master=true
+```
+
+### `detect_stale_slave`
+
+Treat running slaves servers without a master server as valid slave servers.
+
+This feature is enabled by default.
+
+If a slave server loses its master server, the replication is considered broken.
+With this parameter, slaves that have lost their master but have been slaves of
+a master server can retain their slave status even without a master. This means
+that when a slave loses its master, it can still be used for reads.
+
+If MaxScale loses the connection to the slave, the slave will lose the stale
+slave state because MaxScale doesn't know if the slave has had recent contact
+with the master server.
+
+If this feature is disabled, a server is considered a valid slave if and only if
+it has a running master server monitored by this monitor.
+
+```
+detect_stale_slave=true
 ```
 
 ### `mysql51_replication`

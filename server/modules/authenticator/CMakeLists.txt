@@ -1,0 +1,28 @@
+add_library(MySQLAuth SHARED mysql_auth.c)
+target_link_libraries(MySQLAuth maxscale-common)
+set_target_properties(MySQLAuth PROPERTIES VERSION "1.0.0")
+install(TARGETS MySQLAuth DESTINATION ${MAXSCALE_LIBDIR})
+
+add_library(NullAuth SHARED null_auth.c)
+target_link_libraries(NullAuth maxscale-common)
+set_target_properties(NullAuth PROPERTIES VERSION "1.0.0")
+install(TARGETS NullAuth DESTINATION ${MAXSCALE_LIBDIR})
+
+add_library(MaxAdminAuth SHARED max_admin_auth.c)
+target_link_libraries(MaxAdminAuth maxscale-common)
+set_target_properties(MaxAdminAuth PROPERTIES VERSION "1.0.0")
+install(TARGETS MaxAdminAuth DESTINATION ${MAXSCALE_LIBDIR})
+
+# if(BUILD_TESTS)
+#   add_library(testprotocol SHARED testprotocol.c)
+#   set_target_properties(testprotocol PROPERTIES VERSION "1.0.0")
+#   target_link_libraries(testprotocol maxscale-common)
+#   install(TARGETS testprotocol DESTINATION ${MAXSCALE_LIBDIR})
+# endif()
+if(BUILD_CDC)
+  add_library(CDCPlainAuth SHARED cdc_plain_auth.c)
+  target_link_libraries(CDCPlainAuth maxscale-common)
+  set_target_properties(CDCPlainAuth PROPERTIES VERSION "1.0.0")
+  install(TARGETS CDCPlainAuth DESTINATION ${MAXSCALE_LIBDIR})
+endif()
+

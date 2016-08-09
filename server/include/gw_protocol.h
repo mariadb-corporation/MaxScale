@@ -1,21 +1,16 @@
 #ifndef GW_PROTOCOL_H
 #define GW_PROTOCOL_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -28,6 +23,7 @@
  *
  * Date         Who                     Description
  * 22/01/16     Martin Brampton         Initial implementation
+ * 31/05/16     Martin Brampton         Add API entry for connection limit
  *
  * @endverbatim
  */
@@ -74,6 +70,8 @@ typedef struct gw_protocol
     int (*listen)(struct dcb *, char *);
     int (*auth)(struct dcb *, struct server *, struct session *, GWBUF *);
     int (*session)(struct dcb *, void *);
+    char *(*auth_default)();
+    int (*connlimit)(struct dcb *, int limit);
 } GWPROTOCOL;
 
 /**
@@ -81,7 +79,7 @@ typedef struct gw_protocol
  * the GWPROTOCOL structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define GWPROTOCOL_VERSION      {1, 0, 0}
+#define GWPROTOCOL_VERSION      {1, 1, 0}
 
 
 #endif /* GW_PROTOCOL_H */

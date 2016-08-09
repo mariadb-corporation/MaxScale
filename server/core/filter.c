@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale from MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -305,7 +300,7 @@ filterAddOption(FILTER_DEF *filter, char *option)
         }
         filter->options = (char **)realloc(filter->options, (i + 2) * sizeof(char *));
         filter->options[i] = strdup(option);
-        filter->options[i+1] = NULL;
+        filter->options[i + 1] = NULL;
     }
     spinlock_release(&filter->spin);
 }
@@ -340,7 +335,7 @@ filterAddParameter(FILTER_DEF *filter, char *name, char *value)
     filter->parameters[i] = (FILTER_PARAMETER *)calloc(1, sizeof(FILTER_PARAMETER));
     filter->parameters[i]->name = strdup(name);
     filter->parameters[i]->value = strdup(value);
-    filter->parameters[i+1] = NULL;
+    filter->parameters[i + 1] = NULL;
     spinlock_release(&filter->spin);
 }
 
@@ -425,7 +420,7 @@ filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
     me->instance = filter->filter;
     me->routeQuery = (void *)(filter->obj->routeQuery);
 
-    if ((me->session=filter->obj->newSession(me->instance, session)) == NULL)
+    if ((me->session = filter->obj->newSession(me->instance, session)) == NULL)
     {
         free(me);
         return NULL;

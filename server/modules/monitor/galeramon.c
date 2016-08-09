@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -22,19 +17,17 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 22/07/13	Mark Riddoch		Initial implementation
- * 21/05/14	Massimiliano Pinto	Monitor sets a master server
- *					that has the lowest value of wsrep_local_index
- * 23/05/14	Massimiliano Pinto	Added 1 configuration option (setInterval).
- * 					Interval is printed in diagnostics.
- * 03/06/14	Mark Riddoch		Add support for maintenance mode
- * 24/06/14	Massimiliano Pinto	Added depth level 0 for each node
- * 30/10/14	Massimiliano Pinto	Added disableMasterFailback feature
- * 10/11/14	Massimiliano Pinto	Added setNetworkTimeout for connect,read,write
- * 20/04/15	Guillaume Lefranc	Added availableWhenDonor feature
- * 22/04/15     Martin Brampton         Addition of disableMasterRoleSetting
- * 08/05/15     Markus Makela           Addition of launchable scripts
+ * Date     Who                 Description
+ * 22/07/13 Mark Riddoch        Initial implementation
+ * 21/05/14 Massimiliano Pinto  Monitor sets a master server that has the lowest value of wsrep_local_index
+ * 23/05/14 Massimiliano Pinto  Added 1 configuration option (setInterval). Interval is printed in diagnostics.
+ * 03/06/14 Mark Riddoch        Add support for maintenance mode
+ * 24/06/14 Massimiliano Pinto  Added depth level 0 for each node
+ * 30/10/14 Massimiliano Pinto  Added disableMasterFailback feature
+ * 10/11/14 Massimiliano Pinto  Added setNetworkTimeout for connect,read,write
+ * 20/04/15 Guillaume Lefranc   Added availableWhenDonor feature
+ * 22/04/15 Martin Brampton     Addition of disableMasterRoleSetting
+ * 08/05/15 Markus Makela       Addition of launchable scripts
  * 17/10/15 Martin Brampton     Change DCB callback to hangup
  *
  * @endverbatim
@@ -48,6 +41,13 @@ static void monitorMain(void *);
 
 static char *version_str = "V2.0.0";
 
+/** Log a warning when a bad 'wsrep_local_index' is found */
+static bool warn_erange_on_local_index = true;
+
+/* @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
+ */
+/*lint -e14 */
 MODULE_INFO info =
 {
     MODULE_API_MONITOR,
@@ -55,6 +55,7 @@ MODULE_INFO info =
     MONITOR_VERSION,
     "A Galera cluster monitor"
 };
+/*lint +e14 */
 
 static void *startMonitor(void *, void*);
 static void stopMonitor(void *);
@@ -75,7 +76,11 @@ static MONITOR_OBJECT MyObject =
  * Implementation of the mandatory version entry point
  *
  * @return version string of the module
+ *
+ * @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
  */
+/*lint -e14 */
 char *
 version()
 {
@@ -85,12 +90,15 @@ version()
 /**
  * The module initialisation routine, called when the module
  * is first loaded.
+ * @see function load_module in load_utils.c for explanation of lint
  */
+/*lint -e14 */
 void
 ModuleInit()
 {
     MXS_NOTICE("Initialise the MySQL Galera Monitor module %s.", version_str);
 }
+/*lint +e14 */
 
 /**
  * The module entry point routine. It is this routine that
@@ -105,6 +113,7 @@ GetModuleObject()
 {
     return &MyObject;
 }
+/*lint +e14 */
 
 /**
  * Start the instance of the monitor, returning a handle on the monitor.
@@ -175,7 +184,7 @@ startMonitor(void *arg, void* opt)
         }
         else if (!strcmp(params->name, "events"))
         {
-            if (mon_parse_event_string((bool*) & handle->events,
+            if (mon_parse_event_string((bool *) handle->events,
                                        sizeof(handle->events), params->value) != 0)
             {
                 script_error = true;
@@ -187,6 +196,16 @@ startMonitor(void *arg, void* opt)
         }
         params = params->next;
     }
+
+    /** SHOW STATUS doesn't require any special permissions */
+    if (!check_monitor_permissions(mon, "SHOW STATUS LIKE 'wsrep_local_state'"))
+    {
+        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+        free(handle->script);
+        free(handle);
+        return NULL;
+    }
+
     if (script_error)
     {
         MXS_ERROR("Errors were found in the script configuration parameters "
@@ -211,7 +230,7 @@ startMonitor(void *arg, void* opt)
 /**
  * Stop a running monitor
  *
- * @param arg	Handle on thr running monior
+ * @param arg   Handle on thr running monior
  */
 static void
 stopMonitor(void *arg)
@@ -226,8 +245,8 @@ stopMonitor(void *arg)
 /**
  * Diagnostic interface
  *
- * @param dcb	DCB to send output
- * @param arg	The monitor handle
+ * @param dcb   DCB to send output
+ * @param arg   The monitor handle
  */
 static void
 diagnostics(DCB *dcb, void *arg)
@@ -253,7 +272,8 @@ diagnostics(DCB *dcb, void *arg)
     dcb_printf(dcb, "\tSampling interval:\t%lu milliseconds\n", mon->interval);
     dcb_printf(dcb, "\tMaster Failback:\t%s\n", (handle->disableMasterFailback == 1) ? "off" : "on");
     dcb_printf(dcb, "\tAvailable when Donor:\t%s\n", (handle->availableWhenDonor == 1) ? "on" : "off");
-    dcb_printf(dcb, "\tMaster Role Setting Disabled:\t%s\n", (handle->disableMasterRoleSetting == 1) ? "on" : "off");
+    dcb_printf(dcb, "\tMaster Role Setting Disabled:\t%s\n",
+               (handle->disableMasterRoleSetting == 1) ? "on" : "off");
     dcb_printf(dcb, "\tConnect Timeout:\t%i seconds\n", mon->connect_timeout);
     dcb_printf(dcb, "\tRead Timeout:\t\t%i seconds\n", mon->read_timeout);
     dcb_printf(dcb, "\tWrite Timeout:\t\t%i seconds\n", mon->write_timeout);
@@ -285,13 +305,14 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     MYSQL_ROW row;
     MYSQL_RES *result, *result2;
     int isjoined = 0;
-    unsigned long int server_version = 0;
     char *server_string;
     SERVER temp_server;
 
     /* Don't even probe server flagged as in maintenance */
     if (SERVER_IN_MAINT(database->server))
+    {
         return;
+    }
 
     /** Store previous status */
     database->mon_prev_status = database->server->status;
@@ -343,17 +364,18 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         {
             mysql_free_result(result);
             MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_state'\". "
-                      "Expected 2 columns."
-                      " MySQL Version: %s", version_str);
+                      "Expected 2 columns. MySQL Version: %s", version_str);
             return;
         }
 
         while ((row = mysql_fetch_row(result)))
         {
             if (strcmp(row[1], "4") == 0)
+            {
                 isjoined = 1;
+            }
 
-                /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
+            /* Check if the node is a donor and is using xtrabackup, in this case it can stay alive */
             else if (strcmp(row[1], "2") == 0 && handle->availableWhenDonor == 1)
             {
                 if (mysql_query(database->con, "SHOW VARIABLES LIKE 'wsrep_sst_method'") == 0
@@ -371,7 +393,9 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
                     while ((row = mysql_fetch_row(result2)))
                     {
                         if (strncmp(row[1], "xtrabackup", 10) == 0)
+                        {
                             isjoined = 1;
+                        }
                     }
                     mysql_free_result(result2);
                 }
@@ -380,38 +404,41 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         mysql_free_result(result);
     }
 
-    /* Check the the Galera node index in the cluster */
-    if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_index'") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
-    {
-        long local_index = -1;
-
-        if (mysql_field_count(database->con) < 2)
-        {
-            mysql_free_result(result);
-            MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_index'\". "
-                      "Expected 2 columns."
-                      " MySQL Version: %s", version_str);
-            return;
-        }
-
-        while ((row = mysql_fetch_row(result)))
-        {
-            char* endchar;
-            local_index = strtol(row[1], &endchar, 10);
-            if (*endchar != '\0' ||
-                (errno == ERANGE && (local_index == LONG_MAX || local_index == LONG_MIN)))
-            {
-                ss_dassert(false);
-                local_index = -1;
-            }
-            database->server->node_id = local_index;
-        }
-        mysql_free_result(result);
-    }
-
     if (isjoined)
     {
+        /* Check the the Galera node index in the cluster */
+        if (mysql_query(database->con, "SHOW STATUS LIKE 'wsrep_local_index'") == 0
+            && (result = mysql_store_result(database->con)) != NULL)
+        {
+            if (mysql_field_count(database->con) < 2)
+            {
+                mysql_free_result(result);
+                MXS_ERROR("Unexpected result for \"SHOW STATUS LIKE 'wsrep_local_index'\". "
+                          "Expected 2 columns. MySQL Version: %s", version_str);
+                return;
+            }
+
+            while ((row = mysql_fetch_row(result)))
+            {
+                char* endchar;
+                long local_index = strtol(row[1], &endchar, 10);
+                if (*endchar != '\0' ||
+                    (errno == ERANGE && (local_index == LONG_MAX || local_index == LONG_MIN)))
+                {
+                    /** TODO: Create a mechanism to log warnings on a per server basis */
+                    if (warn_erange_on_local_index)
+                    {
+                        MXS_WARNING("Invalid 'wsrep_local_index' on server '%s': %s",
+                                    database->server->unique_name, row[1]);
+                        warn_erange_on_local_index = false;
+                    }
+                    local_index = -1;
+                }
+                database->server->node_id = local_index;
+            }
+            mysql_free_result(result);
+        }
+
         server_set_status(&temp_server, SERVER_JOINED);
     }
     else
@@ -438,7 +465,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 /**
  * The entry point for the monitoring module thread
  *
- * @param arg	The handle of the monitor
+ * @param arg   The handle of the monitor
  */
 static void
 monitorMain(void *arg)
@@ -473,15 +500,16 @@ monitorMain(void *arg)
             handle->status = MONITOR_STOPPED;
             return;
         }
+
         /** Wait base interval */
         thread_millisleep(MON_BASE_INTERVAL_MS);
+
         /**
          * Calculate how far away the monitor interval is from its full
          * cycle and if monitor interval time further than the base
          * interval, then skip monitoring checks. Excluding the first
          * round.
          */
-
         if (nrounds != 0 && ((nrounds * MON_BASE_INTERVAL_MS) % mon->interval) >= MON_BASE_INTERVAL_MS)
         {
             nrounds += 1;
@@ -605,7 +633,6 @@ monitorMain(void *arg)
             }
         }
 
-
         ptr = mon->databases;
 
         while (ptr)
@@ -617,10 +644,7 @@ monitorMain(void *arg)
                 evtype = mon_get_event_type(ptr);
                 if (isGaleraEvent(evtype))
                 {
-                    MXS_NOTICE("Server changed state: %s[%s:%u]: %s",
-                             ptr->server->unique_name,
-                             ptr->server->name, ptr->server->port,
-                             mon_get_event_name(ptr));
+                    mon_log_state_change(ptr);
                     if (handle->script && handle->events[evtype])
                     {
                         monitor_launch_script(mon, ptr, handle->script);
@@ -638,8 +662,8 @@ monitorMain(void *arg)
  * The current available rule: get the server with MIN(node_id)
  * node_id comes from 'wsrep_local_index' variable
  *
- * @param	servers The monitored servers list
- * @return	The candidate master on success, NULL on failure
+ * @param   servers The monitored servers list
+ * @return  The candidate master on success, NULL on failure
  */
 static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
 {
@@ -695,11 +719,12 @@ static MONITOR_SERVERS *get_candidate_master(MONITOR* mon)
  * 'wsrep_local_index' value change in the Galera Cluster
  * Enabling master_stickiness will avoid master change unless a failure is spotted
  *
- * @param	current_master Previous master server
- * @param	candidate_master The candidate master server accordingly to the selection rule
- * @return	The  master node pointer (could be NULL)
+ * @param   current_master Previous master server
+ * @param   candidate_master The candidate master server accordingly to the selection rule
+ * @return  The  master node pointer (could be NULL)
  */
-static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONITOR_SERVERS *candidate_master, int master_stickiness)
+static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONITOR_SERVERS *candidate_master,
+                                           int master_stickiness)
 {
     /*
      * if current master is not set or master_stickiness is not enable
@@ -736,13 +761,15 @@ static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *current_master, MONI
  *
  * @param arg           The handle allocated by startMonitor
  * @param disable       To disable it use 1, 0 keeps failback
- */
+ *
+ * NOT USED
 static void
 disableMasterFailback(void *arg, int disable)
 {
     GALERA_MONITOR *handle = (GALERA_MONITOR *) arg;
     memcpy(&handle->disableMasterFailback, &disable, sizeof(int));
 }
+*/
 
 /**
  * Allow a Galera node to be in sync when Donor.
@@ -750,15 +777,16 @@ disableMasterFailback(void *arg, int disable)
  * When enabled, the monitor will check if the node is using xtrabackup or xtrabackup-v2
  * as SST method. In that case, node will stay as synced.
  *
- * @param arg		The handle allocated by startMonitor
- * @param disable	To allow sync status use 1, 0 for traditional behavior
- */
+ * @param arg       The handle allocated by startMonitor
+ * @param disable   To allow sync status use 1, 0 for traditional behavior
+ * NOT USED
 static void
 availableWhenDonor(void *arg, int disable)
 {
     GALERA_MONITOR *handle = (GALERA_MONITOR *) arg;
     memcpy(&handle->availableWhenDonor, &disable, sizeof(int));
 }
+*/
 
 static monitor_event_t galera_events[] =
 {

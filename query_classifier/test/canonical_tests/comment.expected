@@ -1,6 +1,6 @@
 select ?;
 select ?;
-select  ?;
+select ?;
 select /*! ? + */ ?;
 select /*!? ? + */ ?;
 select /*!? ? + */ ?;

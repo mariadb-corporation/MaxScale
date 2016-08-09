@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale from MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -280,36 +275,37 @@ modutil_get_SQL(GWBUF *buf)
     unsigned char *ptr;
     char *dptr, *rval = NULL;
 
-    if (!modutil_is_SQL(buf) && !modutil_is_SQL_prepare(buf))
+    if (modutil_is_SQL(buf) || modutil_is_SQL_prepare(buf) ||
+        MYSQL_IS_COM_INIT_DB((uint8_t*)GWBUF_DATA(buf)))
     {
-        return rval;
-    }
-    ptr = GWBUF_DATA(buf);
-    length = *ptr++;
-    length += (*ptr++ << 8);
-    length += (*ptr++ << 16);
+        ptr = GWBUF_DATA(buf);
+        length = *ptr++;
+        length += (*ptr++ << 8);
+        length += (*ptr++ << 16);
 
-    if ((rval = (char *)malloc(length + 1)) == NULL)
-    {
-        return NULL;
-    }
-    dptr = rval;
-    ptr += 2;  // Skip sequence id  and COM_QUERY byte
-    len = GWBUF_LENGTH(buf) - 5;
-    while (buf && length > 0)
-    {
-        int clen = length > len ? len : length;
-        memcpy(dptr, ptr, clen);
-        dptr += clen;
-        length -= clen;
-        buf = buf->next;
-        if (buf)
+        if ((rval = (char *) malloc(length + 1)))
         {
-            ptr = GWBUF_DATA(buf);
-            len = GWBUF_LENGTH(buf);
+            dptr = rval;
+            ptr += 2; // Skip sequence id  and COM_QUERY byte
+            len = GWBUF_LENGTH(buf) - 5;
+
+            while (buf && length > 0)
+            {
+                int clen = length > len ? len : length;
+                memcpy(dptr, ptr, clen);
+                dptr += clen;
+                length -= clen;
+                buf = buf->next;
+
+                if (buf)
+                {
+                    ptr = GWBUF_DATA(buf);
+                    len = GWBUF_LENGTH(buf);
+                }
+            }
+            *dptr = 0;
         }
     }
-    *dptr = 0;
     return rval;
 }
 
@@ -409,13 +405,13 @@ GWBUF *modutil_create_mysql_err_msg(int        packet_number,
 
     gw_mysql_set_byte2(mysql_err, mysql_errno);
 
-    mysql_statemsg[0]='#';
+    mysql_statemsg[0] = '#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
     mysql_payload_size = sizeof(field_count) +
-        sizeof(mysql_err) +
-        sizeof(mysql_statemsg) +
-        strlen(mysql_error_msg);
+                         sizeof(mysql_err) +
+                         sizeof(mysql_statemsg) +
+                         strlen(mysql_error_msg);
 
     /* allocate memory for packet header + payload */
     errbuf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
@@ -539,9 +535,9 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
         size_t   bytestocopy;
 
         buflen = GWBUF_LENGTH((*p_readbuf));
-        bytestocopy = MIN(buflen,packetlen-nbytes_copied);
+        bytestocopy = MIN(buflen, packetlen - nbytes_copied);
 
-        memcpy(target+nbytes_copied, src, bytestocopy);
+        memcpy(target + nbytes_copied, src, bytestocopy);
         *p_readbuf = gwbuf_consume((*p_readbuf), bytestocopy);
         totalbuflen = gwbuf_length((*p_readbuf));
         nbytes_copied += bytestocopy;
@@ -553,70 +549,97 @@ return_packetbuf:
 }
 
 /**
- * Parse the buffer and split complete packets into individual buffers.
- * Any partial packets are left in the old buffer.
- * @param p_readbuf Buffer to split, set to NULL if no partial packets are left
- * @return Head of the chain of complete packets, all in a single, contiguous buffer
+ * @brief Calculate the length of the complete MySQL packets in the buffer
+ *
+ * @param buffer Buffer to inspect
+ * @return Length of the complete MySQL packets in bytes
  */
-GWBUF* modutil_get_complete_packets(GWBUF** p_readbuf)
+static size_t get_complete_packets_length(GWBUF *buffer)
 {
-    GWBUF *buff = NULL, *packet;
-    uint8_t *ptr;
-    uint32_t len,blen,total = 0;
+    uint8_t packet_len[3];
+    uint32_t buflen = GWBUF_LENGTH(buffer);
+    size_t offset = 0;
+    size_t total = 0;
 
-    if (p_readbuf == NULL || (*p_readbuf) == NULL ||
-       gwbuf_length(*p_readbuf) < 3)
+    while (buffer && gwbuf_copy_data(buffer, offset, 3, packet_len) == 3)
     {
-        return NULL;
-    }
+        uint32_t len = gw_mysql_get_byte3(packet_len) + MYSQL_HEADER_LEN;
 
-    packet = gwbuf_make_contiguous(*p_readbuf);
-    packet->next = NULL;
-    *p_readbuf = packet;
-    ptr = (uint8_t*)packet->start;
-    len = gw_mysql_get_byte3(ptr) + 4;
-    blen = gwbuf_length(packet);
-
-    if (len == blen)
-    {
-        *p_readbuf = NULL;
-        return packet;
-    }
-    else if (len > blen)
-    {
-        return NULL;
-    }
-
-    while (total + len < blen)
-    {
-        ptr += len;
-        total += len;
-
-        /** We need at least 3 bytes of the packet header to know how long the whole
-         * packet is going to be. */
-        if (total + 3 >= blen)
+        if (len < buflen)
         {
-            break;
+            offset += len;
+            total += len;
+            buflen -= len;
         }
+        /** The packet is spread across multiple buffers or a buffer ends with
+         * a complete packet. */
+        else
+        {
+            uint32_t read_len = len;
 
-        len = gw_mysql_get_byte3(ptr) + 4;
+            while (read_len >= buflen && buffer)
+            {
+                read_len -= buflen;
+                buffer = buffer->next;
+                buflen = buffer ? GWBUF_LENGTH(buffer) : 0;
+            }
+
+            /** Either the buffer ended with a complete packet or the buffer
+             * contains more data than is required. */
+            if (read_len == 0 || (buffer && read_len < buflen))
+            {
+                total += len;
+                offset = read_len;
+                buflen -= read_len;
+            }
+            /** The buffer chain contains at least one incomplete packet */
+            else
+            {
+                ss_dassert(!buffer);
+                break;
+            }
+        }
     }
 
-    /** Full packets only, return original */
-    if (total + len == blen)
-    {
-        *p_readbuf = NULL;
-        return packet;
-    }
+    return total;
+}
 
-    /** The next packet is a partial, split into complete and partial packets */
-    if ((buff = gwbuf_clone_portion(packet, 0, total)) == NULL)
+/**
+ * @brief Split the buffer into complete and partial packets
+ *
+ * @param p_readbuf Buffer to split, set to NULL if no partial packets are left
+ * @return Head of the chain of complete packets or NULL if no complete packets
+ * are available
+ */
+GWBUF* modutil_get_complete_packets(GWBUF **p_readbuf)
+{
+    size_t buflen;
+    /** At least 3 bytes are needed to calculate the packet length. */
+    if (p_readbuf == NULL || (*p_readbuf) == NULL || (buflen = gwbuf_length(*p_readbuf)) < 3)
     {
-        MXS_ERROR("Failed to partially clone buffer.");
         return NULL;
     }
-    gwbuf_consume(packet,total);
-    return buff;
+
+    size_t total = get_complete_packets_length(*p_readbuf);
+    GWBUF* complete = NULL;
+
+    if (buflen == total)
+    {
+        complete = *p_readbuf;
+        *p_readbuf = NULL;
+    }
+    else if (total > 0)
+    {
+#ifdef SS_DEBUG
+        size_t before = gwbuf_length(*p_readbuf);
+#endif
+        complete = gwbuf_split(p_readbuf, total);
+#ifdef SS_DEBUG
+        ss_dassert(gwbuf_length(complete) == total);
+        ss_dassert(*p_readbuf == NULL || before - total == gwbuf_length(*p_readbuf));
+#endif
+    }
+    return complete;
 }
 
 /**
@@ -695,7 +718,7 @@ modutil_count_signal_packets(GWBUF *reply, int use_ok,  int n_found, int* more)
 
     *more = moreresults;
 
-    return(eof + err);
+    return (eof + err);
 }
 
 /**
@@ -990,12 +1013,12 @@ GWBUF* modutil_create_query(char* query)
     {
         ptr = (unsigned char*)rval->start;
         *ptr++ = (pktlen);
-        *ptr++ = (pktlen)>>8;
-        *ptr++ = (pktlen)>>16;
+        *ptr++ = (pktlen) >> 8;
+        *ptr++ = (pktlen) >> 16;
         *ptr++ = 0x0;
         *ptr++ = 0x03;
-        memcpy(ptr,query,strlen(query));
-        gwbuf_set_type(rval,GWBUF_TYPE_MYSQL);
+        memcpy(ptr, query, strlen(query));
+        gwbuf_set_type(rval, GWBUF_TYPE_MYSQL);
     }
 
     return rval;
@@ -1145,4 +1168,57 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
     free(matchstr);
     free(tempstr);
     return rval;
+}
+
+/*
+ * Replace user-provided literals with question marks.
+ *
+ * TODO: Make the canonicalization allocate only one buffer of memory
+ *
+ * @param querybuf GWBUF with a COM_QUERY statement
+ * @return A copy of the query in its canonical form or NULL if an error occurred.
+ */
+char* modutil_get_canonical(GWBUF* querybuf)
+{
+    char *querystr = NULL;
+
+    if (GWBUF_LENGTH(querybuf) > MYSQL_HEADER_LEN + 1 && GWBUF_IS_SQL(querybuf))
+    {
+        size_t srcsize = GWBUF_LENGTH(querybuf) - MYSQL_HEADER_LEN - 1;
+        char *src = (char*)GWBUF_DATA(querybuf) + MYSQL_HEADER_LEN + 1;
+        size_t destsize = 0;
+        char *dest = NULL;
+
+        if (replace_quoted((const char**)&src, &srcsize, &dest, &destsize))
+        {
+            /** Reset the buffers so that the old result is reused and a new
+             * result is created.*/
+            src = dest;
+            srcsize = destsize;
+            dest = NULL;
+            destsize = 0;
+
+            if (remove_mysql_comments((const char**)&src, &srcsize, &dest, &destsize))
+            {
+                /** Both buffers now contain allocated memory so all we need
+                 * to do is to swap them */
+                if (replace_values((const char**)&dest, &destsize, &src, &srcsize))
+                {
+                    querystr = squeeze_whitespace(src);
+                    free(dest);
+                }
+                else
+                {
+                    free(src);
+                    free(dest);
+                }
+            }
+            else
+            {
+                free(src);
+            }
+        }
+    }
+
+    return querystr;
 }

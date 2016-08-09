@@ -1,20 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale. It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
- *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -35,6 +29,7 @@
  * 06-02-2014   Mark Riddoch            Added parse_bindconfig
  * 10-02-2014   Massimiliano Pinto      Added return code to setipaddress
  * 02-09-2014   Martin Brampton         Replace C++ comment with C comment
+ * 02-03-2016   Martin Brampton         Remove default from parse_bindconfig
  *
  *@endverbatim
  */
@@ -171,18 +166,16 @@ bool gw_daemonize(void)
 /**
  * Parse the bind config data. This is passed in a string as address:port.
  *
- * The address may be either a . seperated IP address or a hostname to
+ * The address may be either a . separated IP address or a hostname to
  * lookup. The address 0.0.0.0 is the wildcard address for SOCKADR_ANY.
- * The ':' and port may be omitted, in which case the default port is
- * used.
+ * The ':' and port are required.
  *
- * @param config        The bind address and port seperated by a ':'
- * @param def_port      The default port to use
+ * @param config        The bind address and port separated by a ':'
  * @param addr          The sockaddr_in in which the data is written
  * @return              0 on failure
  */
 int
-parse_bindconfig(char *config, unsigned short def_port, struct sockaddr_in *addr)
+parse_bindconfig(const char *config, struct sockaddr_in *addr)
 {
     char *port, buf[1024 + 1];
     short pnum;
@@ -198,7 +191,7 @@ parse_bindconfig(char *config, unsigned short def_port, struct sockaddr_in *addr
     }
     else
     {
-        pnum = def_port;
+        return 0;
     }
 
     if (!strcmp(buf, "0.0.0.0"))

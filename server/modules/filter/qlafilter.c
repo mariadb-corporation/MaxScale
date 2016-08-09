@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -62,6 +57,9 @@ MODULE_INFO info =
 };
 
 static char *version_str = "V1.1.1";
+
+/** Formatting buffer size */
+#define QLA_STRING_BUFFER_SIZE 1024
 
 /*
  * The filter entry points
@@ -140,11 +138,14 @@ version()
 /**
  * The module initialisation routine, called when the module
  * is first loaded.
+ * @see function load_module in load_utils.c for explanation of lint
  */
+/*lint -e14 */
 void
 ModuleInit()
 {
 }
+/*lint +e14 */
 
 /**
  * The module entry point routine. It is this routine that
@@ -292,7 +293,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             my_instance = NULL;
         }
     }
-    return(FILTER *) my_instance;
+    return (FILTER *) my_instance;
 }
 
 /**
@@ -313,9 +314,7 @@ newSession(FILTER *instance, SESSION *session)
 
     if ((my_session = calloc(1, sizeof(QLA_SESSION))) != NULL)
     {
-        if ((my_session->filename =
-             (char *) malloc(strlen(my_instance->filebase) + 20))
-            == NULL)
+        if ((my_session->filename = (char *)malloc(strlen(my_instance->filebase) + 20)) == NULL)
         {
             char errbuf[STRERROR_BUFLEN];
             MXS_ERROR("Memory allocation for qla filter "
@@ -461,15 +460,12 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 (my_instance->nomatch == NULL ||
                  regexec(&my_instance->nore, ptr, 0, NULL, 0) != 0))
             {
+                char buffer[QLA_STRING_BUFFER_SIZE];
                 gettimeofday(&tv, NULL);
                 localtime_r(&tv.tv_sec, &t);
-                fprintf(my_session->fp,
-                        "%02d:%02d:%02d.%-3d %d/%02d/%d, ",
-                        t.tm_hour, t.tm_min, t.tm_sec, (int) (tv.tv_usec / 1000),
-                        t.tm_mday, t.tm_mon + 1, 1900 + t.tm_year);
-                fprintf(my_session->fp, "%s@%s, ", my_session->user, my_session->remote);
-                fprintf(my_session->fp, "%s\n", ptr);
-
+                strftime(buffer, sizeof(buffer), "%F %T", &t);
+                fprintf(my_session->fp, "%s,%s@%s,%s\n", buffer, my_session->user,
+                        my_session->remote, trim(squeeze_whitespace(ptr)));
             }
             free(ptr);
         }

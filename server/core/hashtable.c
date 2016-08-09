@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -461,7 +456,9 @@ hashtable_stats(HASHTABLE *table)
         }
         total += j;
         if (j > longest)
+        {
             longest = j;
+        }
     }
     hashtable_read_unlock(table);
     printf("\tNo. of entries:       %d\n", total);
@@ -678,7 +675,9 @@ hashtable_next(HASHITERATOR *iter)
             }
             hashtable_read_unlock(iter->table);
             if (entries)
+            {
                 return entries->key;
+            }
         }
         else
         {
@@ -719,7 +718,7 @@ hashtable_save(HASHTABLE *table, const char *filename,
     HASHITERATOR *iter;
     void *key, *value;
 
-    if ((fd = open(filename, O_WRONLY|O_CREAT|O_TRUNC, 0666)) == -1)
+    if ((fd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0666)) == -1)
     {
         return -1;
     }

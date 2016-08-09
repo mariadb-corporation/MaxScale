@@ -1,21 +1,16 @@
 #ifndef _MONITOR_H
 #define _MONITOR_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <mysql.h>
 #include <server.h>
@@ -213,10 +208,9 @@ extern void monitorList(DCB *);
 extern void monitorSetInterval (MONITOR *, unsigned long);
 extern bool monitorSetNetworkTimeout(MONITOR *, int, int);
 extern RESULTSET *monitorGetList();
-bool check_monitor_permissions(MONITOR* monitor);
+extern bool check_monitor_permissions(MONITOR* monitor, const char* query);
 
 monitor_event_t mon_name_to_event(const char* tok);
-void mon_append_node_names(MONITOR_SERVERS* start, char* str, int len);
 monitor_event_t mon_get_event_type(MONITOR_SERVERS* node);
 const char* mon_get_event_name(MONITOR_SERVERS* node);
 void monitor_clear_pending_status(MONITOR_SERVERS *ptr, int bit);
@@ -227,5 +221,6 @@ void monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script);
 int mon_parse_event_string(bool* events, size_t count, char* string);
 connect_result_t mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database);
 void mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval);
+void mon_log_state_change(MONITOR_SERVERS *ptr);
 
 #endif

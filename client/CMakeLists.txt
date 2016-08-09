@@ -8,7 +8,3 @@ else()
   message(STATUS "Could not find editline library. MaxAdmin will be built without it.")
 endif()
 install(TARGETS maxadmin DESTINATION ${MAXSCALE_BINDIR})
-
-if(BUILD_TESTS)
-  add_subdirectory(test)
-endif()

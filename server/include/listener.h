@@ -1,21 +1,16 @@
 #ifndef _LISTENER_H
 #define _LISTENER_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -34,7 +29,8 @@
 
 #include <gw_protocol.h>
 #include <gw_ssl.h>
-#include <dcb.h>
+
+struct dcb;
 
 /**
  * The servlistener structure is used to link a service to the protocols that
@@ -49,11 +45,12 @@ typedef struct servlistener
     char *address;              /**< Address to listen with */
     char *authenticator;        /**< Name of authenticator */
     SSL_LISTENER *ssl;          /**< Structure of SSL data or NULL */
-    DCB *listener;              /**< The DCB for the listener */
+    struct dcb *listener;       /**< The DCB for the listener */
     struct  servlistener *next; /**< Next service protocol */
 } SERV_LISTENER;
 
-SERV_LISTENER *listener_alloc(char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl);
+SERV_LISTENER *listener_alloc(char *protocol, char *address, unsigned short port, char *authenticator,
+                              SSL_LISTENER *ssl);
 int listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version);
 void listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert);
 int listener_init_SSL(SSL_LISTENER *ssl_listener);

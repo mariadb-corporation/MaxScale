@@ -1,22 +1,16 @@
 #ifndef QUERY_CLASSIFIER_HG
 #define QUERY_CLASSIFIER_HG
 /*
-This file is distributed as part of the MariaDB Corporation MaxScale. It is free
-software: you can redistribute it and/or modify it under the terms of the
-GNU General Public License as published by the Free Software Foundation,
-version 2.
-
-This program is distributed in the hope that it will be useful, but WITHOUT
-ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-details.
-
-You should have received a copy of the GNU General Public License along with
-this program; if not, write to the Free Software Foundation, Inc., 51
-Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
-Copyright MariaDB Corporation Ab
-
+ * Copyright (c) 2016 MariaDB Corporation Ab
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
+ *
+ * Change Date: 2019-01-01
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 #include <skygw_utils.h>
@@ -61,30 +55,40 @@ typedef enum
     QUERY_OP_UPDATE        = (1 << 1),
     QUERY_OP_INSERT        = (1 << 2),
     QUERY_OP_DELETE        = (1 << 3),
-    QUERY_OP_INSERT_SELECT = (1 << 4),
-    QUERY_OP_TRUNCATE      = (1 << 5),
-    QUERY_OP_ALTER_TABLE   = (1 << 6),
-    QUERY_OP_CREATE_TABLE  = (1 << 7),
-    QUERY_OP_CREATE_INDEX  = (1 << 8),
-    QUERY_OP_DROP_TABLE    = (1 << 9),
-    QUERY_OP_DROP_INDEX    = (1 << 10),
-    QUERY_OP_CHANGE_DB     = (1 << 11),
-    QUERY_OP_LOAD          = (1 << 12)
+    QUERY_OP_TRUNCATE      = (1 << 4),
+    QUERY_OP_ALTER         = (1 << 5),
+    QUERY_OP_CREATE        = (1 << 6),
+    QUERY_OP_DROP          = (1 << 7),
+    QUERY_OP_CHANGE_DB     = (1 << 8),
+    QUERY_OP_LOAD          = (1 << 9),
+    QUERY_OP_GRANT         = (1 << 10),
+    QUERY_OP_REVOKE        = (1 << 11)
 } qc_query_op_t;
+
+typedef enum qc_parse_result
+{
+    QC_QUERY_INVALID          = 0, /*< The query was not recognized or could not be parsed. */
+    QC_QUERY_TOKENIZED        = 1, /*< The query was classified based on tokens; incompletely classified. */
+    QC_QUERY_PARTIALLY_PARSED = 2, /*< The query was only partially parsed; incompletely classified. */
+    QC_QUERY_PARSED           = 3  /*< The query was fully parsed; completely classified. */
+} qc_parse_result_t;
 
 #define QUERY_IS_TYPE(mask,type) ((mask & type) == type)
 
-bool qc_init(const char* plugin_name);
+bool qc_init(const char* plugin_name, const char* plugin_args);
 void qc_end(void);
+
+typedef struct query_classifier QUERY_CLASSIFIER;
+
+QUERY_CLASSIFIER* qc_load(const char* plugin_name);
+void qc_unload(QUERY_CLASSIFIER* classifier);
 
 bool qc_thread_init(void);
 void qc_thread_end(void);
 
-/**
- * Create THD and use it for creating parse tree. Examine parse tree and
- * classify the query.
- */
-qc_query_type_t qc_get_type(GWBUF* querybuf);
+qc_parse_result_t qc_parse(GWBUF* querybuf);
+
+uint32_t qc_get_type(GWBUF* querybuf);
 qc_query_op_t qc_get_operation(GWBUF* querybuf);
 
 char* qc_get_created_table_name(GWBUF* querybuf);
@@ -97,15 +101,21 @@ char* qc_get_qtype_str(qc_query_type_t qtype);
 char* qc_get_affected_fields(GWBUF* buf);
 char** qc_get_database_names(GWBUF* querybuf, int* size);
 
-typedef struct query_classifier
+const char* qc_op_to_string(qc_query_op_t op);
+const char* qc_type_to_string(qc_query_type_t type);
+char* qc_types_to_string(uint32_t types);
+
+struct query_classifier
 {
-    bool (*qc_init)(void);
+    bool (*qc_init)(const char* args);
     void (*qc_end)(void);
 
     bool (*qc_thread_init)(void);
     void (*qc_thread_end)(void);
 
-    qc_query_type_t (*qc_get_type)(GWBUF* querybuf);
+    qc_parse_result_t (*qc_parse)(GWBUF* querybuf);
+
+    uint32_t (*qc_get_type)(GWBUF* querybuf);
     qc_query_op_t (*qc_get_operation)(GWBUF* querybuf);
 
     char* (*qc_get_created_table_name)(GWBUF* querybuf);
@@ -114,10 +124,9 @@ typedef struct query_classifier
     char** (*qc_get_table_names)(GWBUF* querybuf, int* tblsize, bool fullnames);
     char* (*qc_get_canonical)(GWBUF* querybuf);
     bool (*qc_query_has_clause)(GWBUF* buf);
-    char* (*qc_get_qtype_str)(qc_query_type_t qtype);
     char* (*qc_get_affected_fields)(GWBUF* buf);
     char** (*qc_get_database_names)(GWBUF* querybuf, int* size);
-} QUERY_CLASSIFIER;
+};
 
 #define QUERY_CLASSIFIER_VERSION {1, 0, 0}
 

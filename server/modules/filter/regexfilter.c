@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 #define PCRE2_CODE_UNIT_WIDTH 8
@@ -123,11 +118,14 @@ version()
 /**
  * The module initialisation routine, called when the module
  * is first loaded.
+ * @see function load_module in load_utils.c for explanation of lint
  */
+/*lint -e14 */
 void
 ModuleInit()
 {
 }
+/*lint +e14 */
 
 /**
  * The module entry point routine. It is this routine that
@@ -286,7 +284,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
         }
 
         if ((my_instance->match_data =
-             pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
+                 pcre2_match_data_create_from_pattern(my_instance->re, NULL)) == NULL)
         {
             MXS_ERROR("regexfilter: Failure to create PCRE2 matching data. "
                       "This is most likely caused by a lack of available memory.");
@@ -294,7 +292,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             return NULL;
         }
     }
-    return(FILTER *) my_instance;
+    return (FILTER *) my_instance;
 }
 
 /**

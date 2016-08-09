@@ -1,21 +1,16 @@
 #ifndef _BUFFER_H
 #define _BUFFER_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -197,7 +192,10 @@ extern GWBUF            *gwbuf_trim(GWBUF *head, unsigned int length);
 extern GWBUF            *gwbuf_rtrim(GWBUF *head, unsigned int length);
 extern unsigned int     gwbuf_length(GWBUF *head);
 extern int              gwbuf_count(GWBUF *head);
+extern size_t           gwbuf_copy_data(GWBUF *buffer, size_t offset, size_t bytes,
+                                        uint8_t* dest);
 extern GWBUF            *gwbuf_clone_portion(GWBUF *head, size_t offset, size_t len);
+extern GWBUF            *gwbuf_split(GWBUF **buf, size_t length);
 extern GWBUF            *gwbuf_clone_transform(GWBUF *head, gwbuf_type_t type);
 extern GWBUF            *gwbuf_clone_all(GWBUF* head);
 extern void             gwbuf_set_type(GWBUF *head, gwbuf_type_t type);

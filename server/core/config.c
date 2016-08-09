@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -45,6 +40,7 @@
  * 20/04/15     Guillaume Lefranc       Added available_when_donor parameter
  * 22/04/15     Martin Brampton         Added disable_master_role_setting parameter
  * 26/01/16     Martin Brampton         Transfer SSL processing to listener
+ * 31/05/16     Martin Brampton         Implement connection throttling, initially no queue
  *
  * @endverbatim
  */
@@ -80,7 +76,7 @@
 #include <pcre2.h>
 
 extern int setipaddress(struct in_addr *, char *);
-static int process_config_context(CONFIG_CONTEXT   *);
+static bool process_config_context(CONFIG_CONTEXT   *);
 static int process_config_update(CONFIG_CONTEXT *);
 static void free_config_context(CONFIG_CONTEXT      *);
 static char *config_get_value(CONFIG_PARAMETER *, const char *);
@@ -89,7 +85,7 @@ static int handle_global_item(const char *, const char *);
 static int handle_feedback_item(const char *, const char *);
 static void global_defaults();
 static void feedback_defaults();
-static void check_config_objects(CONFIG_CONTEXT *context);
+static bool check_config_objects(CONFIG_CONTEXT *context);
 static int maxscale_getline(char** dest, int* size, FILE* file);
 static SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, int *error_count);
 
@@ -121,9 +117,11 @@ static char *service_params[] =
     "user",
     "passwd",
     "enable_root_user",
+    "max_connections",
+    /* "max_queued_connections", */
+    /* "queued_connection_timeout", */
     "connection_timeout",
     "auth_all_servers",
-    "optimize_wildcard",
     "strip_db_esc",
     "localhost_match_wildcard_host",
     "max_slave_connections",
@@ -136,6 +134,7 @@ static char *service_params[] =
     "ignore_databases",
     "ignore_databases_regex",
     "log_auth_warnings",
+    "source", /**< Avrorouter only */
     NULL
 };
 
@@ -190,42 +189,14 @@ static char *server_params[] =
     "monitorpw",
     "persistpoolmax",
     "persistmaxtime",
-    /* The following, or something similar, will be needed for backend SSL
     "ssl_cert",
     "ssl_ca_cert",
     "ssl",
     "ssl_key",
     "ssl_version",
     "ssl_cert_verify_depth",
-     */
     NULL
 };
-
-/**
- * Trim whitespace from the front and rear of a string
- *
- * @param str           String to trim
- * @return      Trimmed string, changes are done in situ
- */
-static char *
-trim(char *str)
-{
-    char *ptr;
-
-    while (isspace(*str))
-    {
-        str++;
-    }
-
-    /* Point to last character of the string */
-    ptr = str + strlen(str) - 1;
-    while (ptr > str && isspace(*ptr))
-    {
-        *ptr-- = 0;
-    }
-
-    return str;
-}
 
 /**
  * Remove extra commas and whitespace from a string. This string is interpreted
@@ -244,8 +215,8 @@ char* config_clean_string_list(char* str)
         int re_err;
         size_t err_offset;
 
-        if ((re = pcre2_compile((PCRE2_SPTR) "[[:space:],]*([^,]*[^[:space:],])[[:space:],]*", PCRE2_ZERO_TERMINATED, 0,
-                                &re_err, &err_offset, NULL)) == NULL ||
+        if ((re = pcre2_compile((PCRE2_SPTR) "[[:space:],]*([^,]*[^[:space:],])[[:space:],]*",
+                                PCRE2_ZERO_TERMINATED, 0, &re_err, &err_offset, NULL)) == NULL ||
             (data = pcre2_match_data_create_from_pattern(re, NULL)) == NULL)
         {
             PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
@@ -312,10 +283,14 @@ handler(void *userdata, const char *section, const char *name, const char *value
     {
         return handle_global_item(name, value);
     }
-
-    if (strcasecmp(section, "feedback") == 0)
+    else if (strcasecmp(section, "feedback") == 0)
     {
         return handle_feedback_item(name, value);
+    }
+    else if (strlen(section) == 0)
+    {
+        MXS_ERROR("Parameter '%s=%s' declared outside a section.", name, value);
+        return 0;
     }
 
     /*
@@ -384,27 +359,28 @@ handler(void *userdata, const char *section, const char *name, const char *value
 }
 
 /**
- * Load the configuration file for the MaxScale
+ * @brief Load the configuration file for the MaxScale
  *
- * @param file  The filename of the configuration file
- * @return A zero return indicates a fatal error reading the configuration
+ * This function will parse the configuration file, check for duplicate sections,
+ * validate the module parameters and finally turn it into a set of objects.
+ *
+ * @param file The filename of the configuration file
+ * @return True on success, false on fatal error
  */
-int
+bool
 config_load(char *file)
 {
-    CONFIG_CONTEXT config;
-    int            rval, ini_rval;
+    CONFIG_CONTEXT config = {.object = ""};
+    int ini_rval;
+    bool rval = false;
 
     if (config_has_duplicate_sections(file))
     {
-        return 0;
+        return false;
     }
 
     global_defaults();
     feedback_defaults();
-
-    config.object = "";
-    config.next = NULL;
 
     if ((ini_rval = ini_parse(file, handler, &config)) != 0)
     {
@@ -415,7 +391,7 @@ config_load(char *file)
             snprintf(errorbuffer, sizeof(errorbuffer),
                      "Error: Failed to parse configuration file. Error on line %d.", ini_rval);
         }
-        else if(ini_rval == -1)
+        else if (ini_rval == -1)
         {
             snprintf(errorbuffer, sizeof(errorbuffer),
                      "Error: Failed to parse configuration file. Failed to open file.");
@@ -432,16 +408,12 @@ config_load(char *file)
 
     config_file = file;
 
-    check_config_objects(config.next);
-    rval = process_config_context(config.next);
-    free_config_context(config.next);
-
-    /** Start all monitors */
-    if (rval)
+    if (check_config_objects(config.next) && process_config_context(config.next))
     {
-        monitorStartAll();
+        rval = true;
     }
 
+    free_config_context(config.next);
     return rval;
 }
 
@@ -488,13 +460,12 @@ config_reload()
 }
 
 /**
- * Process a configuration context and turn it into the set of object
- * we need.
+ * @brief Process a configuration context and turn it into the set of objects
  *
- * @param context       The configuration data
- * @return A zero result indicates a fatal error
+ * @param context The parsed configuration context
+ * @return False on fatal error, true on success
  */
-static int
+static bool
 process_config_context(CONFIG_CONTEXT *context)
 {
     CONFIG_CONTEXT  *obj;
@@ -593,10 +564,9 @@ process_config_context(CONFIG_CONTEXT *context)
     {
         MXS_ERROR("%d errors were encountered while processing the configuration "
                   "file '%s'.", error_count, config_file);
-        return 0;
     }
 
-    return 1;
+    return error_count == 0;
 }
 
 /**
@@ -680,19 +650,20 @@ bool config_get_valint(
     {
         if (name == NULL || !strncmp(param->name, name, MAX_PARAM_LEN))
         {
-            switch (ptype) {
-            case COUNT_TYPE:
-                *val = param->qfd.valcount;
-                succp = true;
-                goto return_succp;
+            switch (ptype)
+            {
+                case COUNT_TYPE:
+                    *val = param->qfd.valcount;
+                    succp = true;
+                    goto return_succp;
 
-            case PERCENT_TYPE:
-                *val = param->qfd.valpercent;
-                succp  =true;
-                goto return_succp;
+                case PERCENT_TYPE:
+                    *val = param->qfd.valpercent;
+                    succp  = true;
+                    goto return_succp;
 
-            default:
-                goto return_succp;
+                default:
+                    goto return_succp;
             }
         }
         param = param->next;
@@ -881,7 +852,8 @@ static struct
     char* name;
     int   priority;
     char* replacement;
-} lognames[] = {
+} lognames[] =
+{
     { "log_messages", LOG_NOTICE,  "log_notice" }, // Deprecated
     { "log_trace",    LOG_INFO,    "log_info" },   // Deprecated
     { "log_debug",    LOG_DEBUG,   NULL },
@@ -1000,6 +972,10 @@ handle_global_item(const char *name, const char *value)
             return 0;
         }
     }
+    else if (strcmp(name, "query_classifier_args") == 0)
+    {
+        gateway.qc_args = strdup(value);
+    }
     else
     {
         for (i = 0; lognames[i].name; i++)
@@ -1018,6 +994,24 @@ handle_global_item(const char *name, const char *value)
         }
     }
     return 1;
+}
+
+/**
+ * Free an SSL structure
+ *
+ * @param ssl SSL structure to free
+ */
+static void
+free_ssl_structure(SSL_LISTENER *ssl)
+{
+    if (ssl)
+    {
+        SSL_CTX_free(ssl->ctx);
+        free(ssl->ssl_key);
+        free(ssl->ssl_cert);
+        free(ssl->ssl_ca_cert);
+        free(ssl);
+    }
 }
 
 /**
@@ -1092,7 +1086,7 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
                           "the ssl_cert=<path> parameter", obj->object);
             }
 
-            if (new_ssl->ssl_ca_cert == NULL)
+            if (require_cert && new_ssl->ssl_ca_cert == NULL)
             {
                 local_errors++;
                 MXS_ERROR("CA Certificate missing for service '%s'."
@@ -1110,7 +1104,7 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
                           obj->object);
             }
 
-            if (access(new_ssl->ssl_ca_cert, F_OK) != 0)
+            if (require_cert && access(new_ssl->ssl_ca_cert, F_OK) != 0)
             {
                 MXS_ERROR("Certificate authority file for service '%s' not found: %s",
                           obj->object,
@@ -1193,7 +1187,7 @@ handle_feedback_item(const char *name, const char *value)
 static void
 global_defaults()
 {
-    uint8_t mac_addr[6]="";
+    uint8_t mac_addr[6] = "";
     struct utsname uname_data;
     gateway.n_threads = DEFAULT_NTHREADS;
     gateway.n_nbpoll = DEFAULT_NBPOLLS;
@@ -1209,7 +1203,7 @@ global_defaults()
     {
         gateway.version_string = NULL;
     }
-    gateway.id=0;
+    gateway.id = 0;
 
     /* get release string */
     if (!config_get_release_string(gateway.release_string))
@@ -1296,10 +1290,12 @@ process_config_update(CONFIG_CONTEXT *context)
                     char *auth;
                     char *enable_root_user;
 
+                    const char *max_connections;
+                    const char *max_queued_connections;
+                    const char *queued_connection_timeout;
                     char *connection_timeout;
 
                     char* auth_all_servers;
-                    char* optimize_wildcard;
                     char* strip_db_esc;
                     char* max_slave_conn_str;
                     char* max_slave_rlag_str;
@@ -1309,11 +1305,13 @@ process_config_update(CONFIG_CONTEXT *context)
                     enable_root_user = config_get_value(obj->parameters, "enable_root_user");
 
                     connection_timeout = config_get_value(obj->parameters, "connection_timeout");
+                    max_connections = config_get_value_string(obj->parameters, "max_connections");
+                    max_queued_connections = config_get_value_string(obj->parameters, "max_queued_connections");
+                    queued_connection_timeout = config_get_value_string(obj->parameters, "queued_connection_timeout");
                     user = config_get_value(obj->parameters, "user");
                     auth = config_get_value(obj->parameters, "passwd");
 
                     auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
-                    optimize_wildcard = config_get_value(obj->parameters, "optimize_wildcard");
                     strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
                     version_string = config_get_value(obj->parameters, "version_string");
                     allow_localhost_match_wildcard_host =
@@ -1360,16 +1358,20 @@ process_config_update(CONFIG_CONTEXT *context)
                             serviceSetTimeout(service, config_truth_value(connection_timeout));
                         }
 
+                        if (strlen(max_connections))
+                        {
+                            serviceSetConnectionLimits(service,
+                                                       atoi(max_connections),
+                                                       atoi(max_queued_connections),
+                                                       atoi(queued_connection_timeout));
+                        }
+
                         if (auth_all_servers)
                         {
                             serviceAuthAllServers(service, config_truth_value(auth_all_servers));
                             service_set_param_value(service,
                                                     config_get_param(obj->parameters, "auth_all_servers"),
                                                     auth_all_servers, 0, BOOL_TYPE);
-                        }
-                        if (optimize_wildcard)
-                        {
-                            serviceOptimizeWildcard(service, config_truth_value(optimize_wildcard));
                         }
 
                         if (strip_db_esc)
@@ -1400,12 +1402,10 @@ process_config_update(CONFIG_CONTEXT *context)
                             }
                             else
                             {
-                                succp = service_set_param_value(
-                                    service,
-                                    param,
-                                    max_slave_conn_str,
-                                    COUNT_ATMOST,
-                                    (PERCENT_TYPE|COUNT_TYPE));
+                                succp = service_set_param_value(service, param,
+                                                                max_slave_conn_str,
+                                                                COUNT_ATMOST,
+                                                                (PERCENT_TYPE | COUNT_TYPE));
                             }
 
                             if (!succp && param != NULL)
@@ -1470,7 +1470,8 @@ process_config_update(CONFIG_CONTEXT *context)
                 }
                 else
                 {
-                    create_new_service(obj);
+                    MXS_NOTICE("New services can't be started while MaxScale is running."
+                               " Please restart MaxScale to start the new services.");
                 }
             }
             else
@@ -1501,53 +1502,23 @@ process_config_update(CONFIG_CONTEXT *context)
         obj = obj->next;
     }
 
-    /*
-     * Now we have the services we can add the servers to the services
-     * add the protocols to the services
-     */
-    obj = context;
-    while (obj)
-    {
-        char *type = config_get_value(obj->parameters, "type");
-        if (type == NULL)
-        {
-            ;
-        }
-        else if (!strcmp(type, "service"))
-        {
-            configure_new_service(context, obj);
-        }
-        else if (!strcmp(type, "listener"))
-        {
-            create_new_listener(obj, true);
-        }
-        else if (strcmp(type, "server") != 0 &&
-                 strcmp(type, "monitor") != 0 &&
-                 strcmp(type, "filter") != 0)
-        {
-            MXS_ERROR("Configuration object %s has an invalid type specified.", obj->object);
-        }
-        obj = obj->next;
-    }
-
     return 1;
 }
 
 /**
- * Check the configuration objects have valid parameters
+ * @brief Check that the configuration objects have valid parameters
+ *
+ * @param context Configuration context
+ * @return True if the configuration is OK, false if errors were detected
  */
-static void
+static bool
 check_config_objects(CONFIG_CONTEXT *context)
 {
     CONFIG_CONTEXT   *obj;
     CONFIG_PARAMETER *params;
     char             *type, **param_set;
-    int              i;
+    bool              rval = true;
 
-    /**
-     * Process the data and create the services and servers defined
-     * in the data.
-     */
     obj = context;
     while (obj)
     {
@@ -1574,7 +1545,7 @@ check_config_objects(CONFIG_CONTEXT *context)
             while (params)
             {
                 int found = 0;
-                for (i = 0; param_set[i]; i++)
+                for (int i = 0; param_set[i]; i++)
                 {
                     if (!strcmp(params->name, param_set[i]))
                     {
@@ -1584,18 +1555,17 @@ check_config_objects(CONFIG_CONTEXT *context)
 
                 if (found == 0)
                 {
-                    MXS_ERROR("Unexpected parameter "
-                              "'%s' for object '%s' of type "
-                              "'%s'.",
-                              params->name,
-                              obj->object,
-                              type);
+                    MXS_ERROR("Unexpected parameter '%s' for object '%s' of type '%s'.",
+                              params->name, obj->object, type);
+                    rval = false;
                 }
                 params = params->next;
             }
         }
         obj = obj->next;
     }
+
+    return rval;
 }
 
 /**
@@ -1609,33 +1579,33 @@ bool config_set_qualified_param(CONFIG_PARAMETER* param,
 
     switch (type)
     {
-    case STRING_TYPE:
-        param->qfd.valstr = strndup((const char *)val, MAX_PARAM_LEN);
-        succp = true;
-        break;
+        case STRING_TYPE:
+            param->qfd.valstr = strndup((const char *)val, MAX_PARAM_LEN);
+            succp = true;
+            break;
 
-    case COUNT_TYPE:
-        param->qfd.valcount = *(int *)val;
-        succp = true;
-        break;
+        case COUNT_TYPE:
+            param->qfd.valcount = *(int *)val;
+            succp = true;
+            break;
 
-    case PERCENT_TYPE:
-        param->qfd.valpercent = *(int *)val;
-        succp = true;
-        break;
+        case PERCENT_TYPE:
+            param->qfd.valpercent = *(int *)val;
+            succp = true;
+            break;
 
-    case BOOL_TYPE:
-        param->qfd.valbool = *(bool *)val;
-        succp = true;
-        break;
+        case BOOL_TYPE:
+            param->qfd.valbool = *(bool *)val;
+            succp = true;
+            break;
 
-    case SQLVAR_TARGET_TYPE:
-        param->qfd.valtarget = *(target_t *)val;
-        succp = true;
-        break;
-    default:
-        succp = false;
-        break;
+        case SQLVAR_TARGET_TYPE:
+            param->qfd.valtarget = *(target_t *)val;
+            succp = true;
+            break;
+        default:
+            succp = false;
+            break;
     }
 
     if (succp)
@@ -1661,7 +1631,7 @@ config_truth_value(char *str)
         return 1;
     }
     if (strcasecmp(str, "false") == 0 || strcasecmp(str, "off") == 0 ||
-        strcasecmp(str, "no") == 0|| strcasecmp(str, "0") == 0)
+        strcasecmp(str, "no") == 0 || strcasecmp(str, "0") == 0)
     {
         return 0;
     }
@@ -1697,6 +1667,7 @@ static char *InternalRouters[] =
     "maxinfo",
     "binlogrouter",
     "testroute",
+    "avrorouter",
     NULL
 };
 
@@ -1763,7 +1734,8 @@ config_get_ifaddr(unsigned char *output)
         if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0)
         {
             if (!(ifr.ifr_flags & IFF_LOOPBACK))
-            { /* don't count loopback */
+            {
+                /* don't count loopback */
                 if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0)
                 {
                     success = 1;
@@ -1799,18 +1771,18 @@ int
 config_get_release_string(char* release)
 {
     const char *masks[] =
-        {
-            "/etc/*-version", "/etc/*-release",
-            "/etc/*_version", "/etc/*_release"
-        };
+    {
+        "/etc/*-version", "/etc/*-release",
+        "/etc/*_version", "/etc/*_release"
+    };
 
     bool have_distribution;
-    char distribution[_RELEASE_STR_LENGTH]="";
+    char distribution[_RELEASE_STR_LENGTH] = "";
     int fd;
     int i;
     char *to;
 
-    have_distribution= false;
+    have_distribution = false;
 
     /* get data from lsb-release first */
     if ((fd = open("/etc/lsb-release", O_RDONLY)) != -1)
@@ -1819,11 +1791,11 @@ config_get_release_string(char* release)
         size_t len = read(fd, (char*)distribution, sizeof(distribution) - 1);
         close(fd);
 
-        if (len != (size_t)-1)
+        if (len != (size_t) - 1)
         {
-            distribution[len]= 0;
+            distribution[len] = 0;
 
-            char *found= strstr(distribution, "DISTRIB_DESCRIPTION=");
+            char *found = strstr(distribution, "DISTRIB_DESCRIPTION=");
 
             if (found)
             {
@@ -1865,7 +1837,7 @@ config_get_release_string(char* release)
             int skipindex = 0;
             int startindex = 0;
 
-            for (k = 0; k< found.gl_pathc; k++)
+            for (k = 0; k < found.gl_pathc; k++)
             {
                 if (strcmp(found.gl_pathv[k], "/etc/lsb-release") == 0)
                 {
@@ -1874,7 +1846,9 @@ config_get_release_string(char* release)
             }
 
             if (skipindex == 0)
+            {
                 startindex++;
+            }
 
             if ((fd = open(found.gl_pathv[startindex], O_RDONLY)) != -1)
             {
@@ -1892,16 +1866,16 @@ config_get_release_string(char* release)
 
                 close(fd);
 
-                if (len != (size_t)-1)
+                if (len != (size_t) - 1)
                 {
-                    new_to[len]= 0;
-                    char *end= strstr(new_to, "\n");
+                    new_to[len] = 0;
+                    char *end = strstr(new_to, "\n");
                     if (end)
                     {
-                        *end= 0;
+                        *end = 0;
                     }
 
-                    have_distribution= true;
+                    have_distribution = true;
                     strncpy(release, new_to, _RELEASE_STR_LENGTH);
                 }
             }
@@ -2231,6 +2205,15 @@ int create_new_service(CONFIG_CONTEXT *obj)
         serviceSetTimeout(obj->element, atoi(connection_timeout));
     }
 
+    const char *max_connections = config_get_value_string(obj->parameters, "max_connections");
+    const char *max_queued_connections = config_get_value_string(obj->parameters, "max_queued_connections");
+    const char *queued_connection_timeout = config_get_value_string(obj->parameters, "queued_connection_timeout");
+    if (strlen(max_connections))
+    {
+        serviceSetConnectionLimits(obj->element, atoi(max_connections),
+                                   atoi(max_queued_connections), atoi(queued_connection_timeout));
+    }
+
     char *auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
     if (auth_all_servers)
     {
@@ -2238,12 +2221,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
         service_set_param_value(service,
                                 config_get_param(obj->parameters, "auth_all_servers"),
                                 auth_all_servers, 0, BOOL_TYPE);
-    }
-
-    char *optimize_wildcard = config_get_value(obj->parameters, "optimize_wildcard");
-    if (optimize_wildcard)
-    {
-        serviceOptimizeWildcard(obj->element, config_truth_value(optimize_wildcard));
     }
 
     char *strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
@@ -2271,7 +2248,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
     {
         serviceSetUser(obj->element, user, auth);
     }
-    else if(!is_internal_service(router))
+    else if (!is_internal_service(router))
     {
         error_count++;
         MXS_ERROR("Service '%s' is missing %s%s%s.",
@@ -2285,6 +2262,12 @@ int create_new_service(CONFIG_CONTEXT *obj)
     if (subservices)
     {
         service_set_param_value(obj->element, obj->parameters, subservices, 1, STRING_TYPE);
+    }
+
+    CONFIG_PARAMETER *src = config_get_param(obj->parameters, "source");
+    if (src)
+    {
+        service_set_param_value(obj->element, src, src->value, 1, STRING_TYPE);
     }
 
     char *log_auth_warnings = config_get_value(obj->parameters, "log_auth_warnings");
@@ -2338,52 +2321,6 @@ int create_new_service(CONFIG_CONTEXT *obj)
         }
     }
 
-    /*
-    char *ssl = config_get_value(obj->parameters, "ssl");
-    if (ssl)
-    {
-        char *ssl_cert = config_get_value(obj->parameters, "ssl_cert");
-        char *ssl_key = config_get_value(obj->parameters, "ssl_key");
-        char *ssl_ca_cert = config_get_value(obj->parameters, "ssl_ca_cert");
-        error_count += validate_ssl_parameters(obj, ssl_cert, ssl_ca_cert, ssl_key);
-
-        if (error_count == 0)
-        {
-            if (serviceSetSSL(obj->element, ssl) == 0)
-            {
-                serviceSetCertificates(obj->element, ssl_cert, ssl_key, ssl_ca_cert);
-
-                char *ssl_version = config_get_value(obj->parameters, "ssl_version");
-                if (ssl_version)
-                {
-                    if (serviceSetSSLVersion(obj->element, ssl_version) != 0)
-                    {
-                        MXS_ERROR("Unknown parameter value for 'ssl_version' for"
-                                  " service '%s': %s", obj->object, ssl_version);
-                        error_count++;
-                    }
-                }
-
-                char *cert_depth = config_get_value(obj->parameters, "ssl_cert_verify_depth");
-                if (cert_depth)
-                {
-                    if (serviceSetSSLVerifyDepth(obj->element, atoi(cert_depth)) != 0)
-                    {
-                        MXS_ERROR("Invalid parameter value for 'ssl_cert_verify_depth'"
-                                  " for service '%s': %s", obj->object, cert_depth);
-                        error_count++;
-                    }
-                }
-            }
-            else
-            {
-                MXS_ERROR("Unknown parameter for service '%s': %s", obj->object, ssl);
-                error_count++;
-            }
-        }
-    }
-     */
-
     /** Parameters for rwsplit router only */
     if (strcmp(router, "readwritesplit") == 0)
     {
@@ -2413,10 +2350,10 @@ int create_new_service(CONFIG_CONTEXT *obj)
         if ((param = config_get_param(obj->parameters, "use_sql_variables_in")))
         {
             if (!service_set_param_value(obj->element, param, param->value,
-                                        COUNT_NONE, SQLVAR_TARGET_TYPE))
+                                         COUNT_NONE, SQLVAR_TARGET_TYPE))
             {
                 MXS_WARNING("Invalid value type for parameter \'%s.%s = %s\'\n\tExpected "
-                    "type is [master|all] for use sql variables in.",
+                            "type is [master|all] for use sql variables in.",
                             service->name, param->name, param->value);
             }
         }
@@ -2516,6 +2453,10 @@ int create_new_server(CONFIG_CONTEXT *obj)
         CONFIG_PARAMETER *params = obj->parameters;
 
         server->server_ssl = make_ssl_structure(obj, false, &error_count);
+        if (server->server_ssl && listener_init_SSL(server->server_ssl) != 0)
+        {
+            MXS_ERROR("Unable to initialize server SSL");
+        }
 
         while (params)
         {
@@ -2628,7 +2569,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
     else
     {
         obj->element = NULL;
-        MXS_ERROR("Monitor '%s' is missing a require module parameter.", obj->object);
+        MXS_ERROR("Monitor '%s' is missing the require 'module' parameter.", obj->object);
         error_count++;
     }
 
@@ -2651,8 +2592,8 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         }
         else
         {
-            MXS_WARNING("Monitor '%s' is missing the 'monitor_interval' parameter, "
-                        "using default value of 10000 milliseconds.", obj->object);
+            MXS_NOTICE("Monitor '%s' is missing the 'monitor_interval' parameter, "
+                       "using default value of 10000 milliseconds.", obj->object);
         }
 
         char *connect_timeout = config_get_value(obj->parameters, "backend_connect_timeout");
@@ -2722,7 +2663,6 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         if (user && passwd)
         {
             monitorAddUser(obj->element, user, passwd);
-            check_monitor_permissions(obj->element);
         }
         else if (user)
         {
@@ -2761,10 +2701,8 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
             {
                 if (serviceHasProtocol(service, protocol, address, 0))
                 {
-                    MXS_ERROR("Listener '%s', for service '%s', socket %s, already have socket.",
-                        obj->object,
-                        service_name,
-                        socket);
+                    MXS_ERROR("Listener '%s' for service '%s' already has a socket at '%s.",
+                              obj->object, service_name, socket);
                     error_count++;
                 }
                 else
@@ -2782,9 +2720,9 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
                 if (serviceHasProtocol(service, protocol, address, atoi(port)))
                 {
                     MXS_ERROR("Listener '%s', for service '%s', already have port %s.",
-                        obj->object,
-                        service_name,
-                        port);
+                              obj->object,
+                              service_name,
+                              port);
                     error_count++;
                 }
                 else
@@ -2795,6 +2733,11 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
                         serviceStartProtocol(service, protocol, atoi(port));
                     }
                 }
+            }
+
+            if (ssl_info && error_count)
+            {
+                free_ssl_structure(ssl_info);
             }
         }
         else
@@ -2859,7 +2802,7 @@ int create_new_filter(CONFIG_CONTEXT *obj)
     }
     else
     {
-        MXS_ERROR("Filter '%s' has no module defined defined to load.", obj->object);
+        MXS_ERROR("Filter '%s' has no module defined to load.", obj->object);
         error_count++;
     }
 

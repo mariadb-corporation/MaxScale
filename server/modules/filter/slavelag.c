@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale by MariaDB Corporation.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <stdio.h>
 #include <filter.h>
@@ -131,11 +126,14 @@ version()
 /**
  * The module initialization routine, called when the module
  * is first loaded.
+ * @see function load_module in load_utils.c for explanation of lint
  */
+/*lint -e14 */
 void
 ModuleInit()
 {
 }
+/*lint +e14 */
 
 /**
  * The module entry point routine. It is this routine that
@@ -332,7 +330,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
             queue = gwbuf_make_contiguous(queue);
         }
 
-        if (query_classifier_get_operation(queue) & (QUERY_OP_DELETE | QUERY_OP_INSERT | QUERY_OP_UPDATE))
+        if (qc_get_operation(queue) & (QUERY_OP_DELETE | QUERY_OP_INSERT | QUERY_OP_UPDATE))
         {
             if ((sql = modutil_get_SQL(queue)) != NULL)
             {

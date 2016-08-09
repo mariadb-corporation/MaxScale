@@ -1,23 +1,15 @@
 #!/usr/bin/perl
 #
+# Copyright (c) 2016 MariaDB Corporation Ab
 #
+# Use of this software is governed by the Business Source License included
+# in the LICENSE.TXT file and at www.mariadb.com/bsl.
 #
-# This file is distributed as part of the MariaDB Corporation MaxScale. It is free
-# software: you can redistribute it and/or modify it under the terms of the
-# GNU General Public License as published by the Free Software Foundation,
-# version 2.
+# Change Date: 2019-01-01
 #
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
-# details.
-#
-# You should have received a copy of the GNU General Public License along with
-# this program; if not, write to the Free Software Foundation, Inc., 51
-# Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-#
-# Copyright MariaDB Corporation Ab 2013-2015
-#
+# On the date above, in accordance with the Business Source License, use
+# of this software will be governed by version 2 or later of the General
+# Public License.
 #
 
 #
@@ -27,6 +19,9 @@
 #
 # Date         Who                     Description
 # 06-03-2015   Massimiliano Pinto      Initial implementation
+# 20-05-2016   Massimiliano Pinto      Maxadmin can connect with UNIX domain socket
+#                                      in maxscale server only.
+#                                      Commands changed with "ssh -i /somepath/id_rsa user@maxscalehost maxadmin ...."
 #
 
 #use strict;
@@ -49,44 +44,51 @@ sub usage {
 	print <<"EOF";
 MaxScale monitor checker plugin for Nagios
 
-Usage: $curr_script [-r <resource>] [-H <host>] [-P <port>] [-u <user>] [-p <pass>] [-m <maxadmin>] [-h]
+Usage: $curr_script [-r <resource>] [-H <host>] [-u <user>] [-S <socket>] [-m <maxadmin>] [-h]
 
 Options:
        -r <resource>	= monitors
        -h		= provide this usage message
-       -H <host>	= which host to connect to
-       -P <port>	= port to use
-       -u <user>	= username to connect as
-       -p <pass>	= password to use for <user> at <host>
+       -H <host>	= which host to connect to with SSH
+       -u <user>	= username to connect to maxscale host via SSH (same user is used for maxadmin authentication)
+       -i <identity>	= identity file to use for <user> at <host>
        -m <maxadmin>	= /path/to/maxadmin
+       -S <socket>      = UNIX socket path between maxadmin and maxscale (default is /tmp/maxadmin.sock)
 EOF
 	exit $rc;
 }
 
 %opts =(
-	'r' => 'monitors',         	# default maxscale resource to show
-	'h' => '',                      # give help
-	'H' => 'localhost',		# host
-	'u' => 'root',			# username
-	'p' => '',			# password
-	'P' => 6603,			# port
-	'm' => '/usr/local/mariadb-maxscale/bin/maxadmin',	# maxadmin
-	);
+    'r' => 'monitors',         # default maxscale resource to show
+    'h' => '',                 # give help
+    'H' => 'localhost',        # host
+    'u' => 'root',             # username
+    'm' => '/usr/local/mariadb-maxscale/bin/maxadmin',    # maxadmin
+);
 
 my $MAXADMIN_DEFAULT = $opts{'m'};
 
-getopts('r:hH:u:p:P:m:', \%opts)
+getopts('r:hH:u:i:S:m:', \%opts)
     or usage( $ERRORS{"UNKNOWN"} );
 usage( $ERRORS{'OK'} ) if $opts{'h'};
 
 my $MAXADMIN_RESOURCE =  $opts{'r'};
 my $MAXADMIN = $opts{'m'};
+my $MAXADMIN_SOCKET = $opts{'S'};
+my $MAXSCALE_HOST_IDENTITY_FILE = $opts{'i'};
+
+if (!defined $MAXSCALE_HOST_IDENTITY_FILE || length($MAXSCALE_HOST_IDENTITY_FILE) == 0) {
+   die "$curr_script: ssh identity file for user $opts{'u'} is required";
+}
+
 if (!defined $MAXADMIN || length($MAXADMIN) == 0) {
         $MAXADMIN = $MAXADMIN_DEFAULT;
 }
--x $MAXADMIN or
-    die "$curr_script: Failed to find required tool: $MAXADMIN. Please install it or use the -m option to point to another location.";
-
+if (defined $MAXADMIN_SOCKET && length($MAXADMIN_SOCKET) > 0) {
+        $MAXADMIN_SOCKET = ' -S $MAXADMIN_SOCKET';
+} else {
+        $MAXADMIN_SOCKET = '';
+}
 # Just in case of problems, let's not hang Nagios
 $SIG{'ALRM'} = sub {
      print ("UNKNOWN: No response from MaxScale server (alarm)\n");
@@ -94,7 +96,7 @@ $SIG{'ALRM'} = sub {
 };
 alarm($TIMEOUT);
 
-my $command = $MAXADMIN . ' -h ' . $opts{'H'} . ' -u ' . $opts{'u'} . ' -p "' . $opts{'p'} . '" -P ' . $opts{'P'} . ' ' . "show " . $MAXADMIN_RESOURCE;
+my $command = "ssh -i " . $MAXSCALE_HOST_IDENTITY_FILE . ' ' . $opts{'u'} . '@' . $opts{'H'} . ' ' . $MAXADMIN . $MAXADMIN_SOCKET . ' ' . " show " . $MAXADMIN_RESOURCE;
 
 #
 # print "maxadmin command: $command\n";

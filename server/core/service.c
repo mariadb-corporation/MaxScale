@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -38,7 +33,8 @@
  * 18/02/15     Mark Riddoch            Added result set management
  * 03/03/15     Massimiliano Pinto      Added config_enable_feedback_task() call in serviceStartAll
  * 19/06/15     Martin Brampton         More meaningful names for temp variables
-
+ * 31/05/16     Martin Brampton         Implement connection throttling
+ *
  * @endverbatim
  */
 #include <stdio.h>
@@ -69,6 +65,7 @@
 #include <gwdirs.h>
 #include <math.h>
 #include <version.h>
+#include <queuemanager.h>
 
 /** To be used with configuration type checks */
 typedef struct typelib_st
@@ -80,7 +77,7 @@ typedef struct typelib_st
 
 /** Set of subsequent false,true pairs */
 static const char* bool_strings[11]  = {"FALSE", "TRUE", "OFF", "ON", "N", "Y", "0", "1", "NO", "YES", 0};
-typelib_t bool_type  = {array_nelems(bool_strings)-1, "bool_type", bool_strings};
+typelib_t bool_type  = {array_nelems(bool_strings) - 1, "bool_type", bool_strings};
 
 /** List of valid values */
 static const char* sqlvar_target_strings[4] = {"MASTER", "ALL", 0};
@@ -131,14 +128,16 @@ service_alloc(const char *servname, const char *router)
                   router,
                   router,
                   home,
-                  ldpath?"\t\t\t      - ":"",
-                  ldpath?ldpath:"");
+                  ldpath ? "\t\t\t      - " : "",
+                  ldpath ? ldpath : "");
         free(service);
         return NULL;
     }
+    service->client_count = 0;
     service->name = strdup(servname);
     service->routerModule = strdup(router);
     service->users_from_all = false;
+    service->queued_connections = NULL;
     service->resources = NULL;
     service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
     service->retry_start = true;
@@ -151,6 +150,7 @@ service_alloc(const char *servname, const char *router)
     service->users = NULL;
     service->routerOptions = NULL;
     service->log_auth_warnings = true;
+    service->strip_db_esc = true;
     if (service->name == NULL || service->routerModule == NULL)
     {
         if (service->name)
@@ -215,15 +215,20 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     char config_bind[40];
     GWPROTOCOL *funcs;
 
-    port->listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER);
+    if (service == NULL || service->router == NULL || service->router_instance == NULL)
+    {
+        /* Should never happen, this guarantees it can't */
+        MXS_ERROR("Attempt to start port with null or incomplete service");
+        goto retblock;
+    }
+
+    port->listener = dcb_alloc(DCB_ROLE_SERVICE_LISTENER, port);
 
     if (port->listener == NULL)
     {
         MXS_ERROR("Failed to create listener for service %s.", service->name);
         goto retblock;
     }
-
-    port->listener->listen_ssl = port->ssl;
 
     if (port->ssl)
     {
@@ -330,8 +335,8 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
             /* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
              * This way MaxScale could try reloading users' just after startup
              */
-            service->rate_limit.last=time(NULL) - USERS_REFRESH_TIME;
-            service->rate_limit.nloads=1;
+            service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
+            service->rate_limit.nloads = 1;
 
             MXS_NOTICE("Loaded %d MySQL Users for service [%s].",
                        loaded, service->name);
@@ -346,7 +351,7 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         }
     }
 
-    if ((funcs=(GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
+    if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
     {
         users_free(service->users);
         service->users = NULL;
@@ -439,7 +444,7 @@ int serviceStartAllPorts(SERVICE* service)
             /** Service failed to start any ports. Try again later. */
             service->stats.n_failed_starts++;
             char taskname[strlen(service->name) + strlen("_start_retry_") +
-                (int) ceil(log10(INT_MAX)) + 1];
+                          (int) ceil(log10(INT_MAX)) + 1];
             int retry_after = MIN(service->stats.n_failed_starts * 10, SERVICE_MAX_RETRY_INTERVAL);
             snprintf(taskname, sizeof(taskname), "%s_start_retry_%d",
                      service->name, service->stats.n_failed_starts);
@@ -456,6 +461,47 @@ int serviceStartAllPorts(SERVICE* service)
     }
 
     return listeners;
+}
+
+/** Helper function for copying an array of strings */
+static char** copy_string_array(char** original)
+{
+    char **array = NULL;
+
+    if (original)
+    {
+        int values = 0;
+
+        while (original[values])
+        {
+            values++;
+        }
+
+        array = malloc(sizeof(char*) * (values + 1));
+
+        if (array)
+        {
+            for (int i = 0; i < values; i++)
+            {
+                array[i] = strdup(original[i]);
+            }
+            array[values] = NULL;
+        }
+    }
+    return array;
+}
+
+/** Helper function for freeing an array of strings */
+static void free_string_array(char** array)
+{
+    if (array)
+    {
+        for (int i = 0; array[i]; i++)
+        {
+            free(array[i]);
+        }
+        free(array);
+    }
 }
 
 /**
@@ -476,8 +522,9 @@ serviceStart(SERVICE *service)
 
     if (check_service_permissions(service))
     {
+        char **router_options = copy_string_array(service->routerOptions);
         if ((service->router_instance = service->router->createInstance(
-                 service,service->routerOptions)))
+                                            service, router_options)))
         {
             listeners += serviceStartAllPorts(service);
         }
@@ -487,6 +534,7 @@ serviceStart(SERVICE *service)
                       service->name);
             service->state = SERVICE_STATE_FAILED;
         }
+        free_string_array(router_options);
     }
     else
     {
@@ -530,7 +578,8 @@ int
 serviceStartAll()
 {
     SERVICE *ptr;
-    int n = 0,i;
+    int n = 0, i;
+    bool error = false;
 
     config_enable_feedback_task();
 
@@ -542,11 +591,12 @@ serviceStartAll()
         if (i == 0)
         {
             MXS_ERROR("Failed to start service '%s'.", ptr->name);
+            error = true;
         }
 
         ptr = ptr->next;
     }
-    return n;
+    return error ? 0 : n;
 }
 
 /**
@@ -684,7 +734,8 @@ service_free(SERVICE *service)
  * @return      TRUE if the protocol/port could be added
  */
 int
-serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl)
+serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned short port, char *authenticator,
+                   SSL_LISTENER *ssl)
 {
     SERV_LISTENER   *proto;
 
@@ -705,6 +756,7 @@ serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned sho
  *
  * @param service       The service
  * @param protocol      The name of the protocol module
+ * @param address       The address to listen on
  * @param port          The port to listen on
  * @return      TRUE if the protocol/port is already part of the service
  */
@@ -739,15 +791,29 @@ int serviceHasProtocol(SERVICE *service, const char *protocol,
 void
 serviceAddBackend(SERVICE *service, SERVER *server)
 {
-    spinlock_acquire(&service->spin);
-    SERVER_REF *sref;
-    if ((sref = calloc(1,sizeof(SERVER_REF))) != NULL)
+    SERVER_REF *sref = malloc(sizeof(SERVER_REF));
+
+    if (sref)
     {
-        sref->next = service->dbref;
+        sref->next = NULL;
         sref->server = server;
-        service->dbref = sref;
+
+        spinlock_acquire(&service->spin);
+        if (service->dbref)
+        {
+            SERVER_REF *ref = service->dbref;
+            while (ref->next)
+            {
+                ref = ref->next;
+            }
+            ref->next = sref;
+        }
+        else
+        {
+            service->dbref = sref;
+        }
+        spinlock_release(&service->spin);
     }
-    spinlock_release(&service->spin);
 }
 
 /**
@@ -800,7 +866,7 @@ serviceAddRouterOption(SERVICE *service, char *option)
         service->routerOptions = (char **)realloc(service->routerOptions,
                                                   (i + 2) * sizeof(char *));
         service->routerOptions[i] = strdup(option);
-        service->routerOptions[i+1] = NULL;
+        service->routerOptions[i + 1] = NULL;
     }
     spinlock_release(&service->spin);
 }
@@ -923,30 +989,6 @@ serviceAuthAllServers(SERVICE *service, int action)
 }
 
 /**
- * Enable/Disable optimization of wildcard database grats
- *
- * @param service       The service we are setting the data for
- * @param action        1 for optimized, 0 for normal grants
- * @return              0 on failure
- */
-
-int
-serviceOptimizeWildcard(SERVICE *service, int action)
-{
-    if (action != 0 && action != 1)
-    {
-        return 0;
-    }
-
-    service->optimize_wildcard = action;
-    if (action)
-    {
-        MXS_NOTICE("[%s] Optimizing wildcard database grants.",service->name);
-    }
-    return 1;
-}
-
-/**
  * Whether to strip escape characters from the name of the database the client
  * is connecting to.
  * @param service Service to configure
@@ -985,7 +1027,34 @@ serviceSetTimeout(SERVICE *service, int val)
      * configured with a idle timeout. */
     if ((service->conn_idle_timeout = val))
     {
-       enable_session_timeouts();
+        enable_session_timeouts();
+    }
+
+    return 1;
+}
+
+/**
+ * Sets the connection limits, if any, for the service.
+ * @param service Service to configure
+ * @param max The maximum number of client connections at any one time
+ * @param queued    The maximum number of connections to queue up when
+ *                  max_connections clients are already connected
+ * @return 1 on success, 0 when the values are invalid
+ */
+int
+serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout)
+{
+
+    if (max < 0 || queued < 0)
+    {
+        return 0;
+    }
+
+    service->max_connections = max;
+    if (queued && timeout)
+    {
+        /* If memory allocation fails, result will be null so no queue */
+        service->queued_connections = mxs_queue_alloc(queued, timeout);
     }
 
     return 1;
@@ -1002,32 +1071,6 @@ void serviceSetRetryOnFailure(SERVICE *service, char* value)
     {
         service->retry_start = config_truth_value(value);
     }
-}
-
-/**
- * Trim whitespace from the from an rear of a string
- *
- * @param str           String to trim
- * @return      Trimmed string, chanesg are done in situ
- */
-static char *
-trim(char *str)
-{
-    char *ptr;
-
-    while (isspace(*str))
-    {
-        str++;
-    }
-
-    /* Point to last character of the string */
-    ptr = str + strlen(str) - 1;
-    while (ptr > str && isspace(*ptr))
-    {
-        *ptr-- = 0;
-    }
-
-    return str;
 }
 
 /**
@@ -1227,21 +1270,23 @@ void dprintService(DCB *dcb, SERVICE *service)
                service->routerModule, service->router);
     switch (service->state)
     {
-    case SERVICE_STATE_STARTED:
-        dcb_printf(dcb, "\tState:                                       Started\n");
-        break;
-    case SERVICE_STATE_STOPPED:
-        dcb_printf(dcb, "\tState:                                       Stopped\n");
-        break;
-    case SERVICE_STATE_FAILED:
-        dcb_printf(dcb, "\tState:                                       Failed\n");
-        break;
-    case SERVICE_STATE_ALLOC:
-        dcb_printf(dcb, "\tState:                                       Allocated\n");
-        break;
+        case SERVICE_STATE_STARTED:
+            dcb_printf(dcb, "\tState:                               Started\n");
+            break;
+        case SERVICE_STATE_STOPPED:
+            dcb_printf(dcb, "\tState:                               Stopped\n");
+            break;
+        case SERVICE_STATE_FAILED:
+            dcb_printf(dcb, "\tState:                               Failed\n");
+            break;
+        case SERVICE_STATE_ALLOC:
+            dcb_printf(dcb, "\tState:                               Allocated\n");
+            break;
     }
     if (service->router && service->router_instance)
+    {
         service->router->diagnostics(service->router_instance, dcb);
+    }
     dcb_printf(dcb, "\tStarted:                             %s",
                asctime_r(localtime_r(&service->stats.started, &result), timebuf));
     dcb_printf(dcb, "\tRoot user access:                    %s\n",
@@ -1256,7 +1301,7 @@ void dprintService(DCB *dcb, SERVICE *service)
         }
         dcb_printf(dcb, "\n");
     }
-    dcb_printf(dcb, "\tBackend databases\n");
+    dcb_printf(dcb, "\tBackend databases:\n");
     while (server)
     {
         dcb_printf(dcb, "\t\t%s:%d  Protocol: %s\n", server->server->name, server->server->port,
@@ -1466,7 +1511,7 @@ bool service_set_param_value(SERVICE*            service,
     target_t valtarget;
     bool succp = true;
 
-    if (PARAM_IS_TYPE(type,PERCENT_TYPE) ||PARAM_IS_TYPE(type,COUNT_TYPE))
+    if (PARAM_IS_TYPE(type, PERCENT_TYPE) || PARAM_IS_TYPE(type, COUNT_TYPE))
     {
         /**
          * Find out whether the value is numeric and ends with '%' or '\0'
@@ -1495,7 +1540,7 @@ bool service_set_param_value(SERVICE*            service,
                 {
                     succp = false;
                 }
-                else if (PARAM_IS_TYPE(type,PERCENT_TYPE))
+                else if (PARAM_IS_TYPE(type, PERCENT_TYPE))
                 {
                     succp = true;
                     config_set_qualified_param(param, (void *)&valint, PERCENT_TYPE);
@@ -1518,7 +1563,7 @@ bool service_set_param_value(SERVICE*            service,
             {
                 succp = false;
             }
-            else if (PARAM_IS_TYPE(type,COUNT_TYPE))
+            else if (PARAM_IS_TYPE(type, COUNT_TYPE))
             {
                 succp = true;
                 config_set_qualified_param(param, (void *)&valint, COUNT_TYPE);
@@ -1533,7 +1578,7 @@ bool service_set_param_value(SERVICE*            service,
     {
         unsigned int rc;
 
-        rc = find_type(&bool_type, valstr, strlen(valstr)+1);
+        rc = find_type(&bool_type, valstr, strlen(valstr) + 1);
 
         if (rc > 0)
         {
@@ -1558,7 +1603,7 @@ bool service_set_param_value(SERVICE*            service,
     {
         unsigned int rc;
 
-        rc = find_type(&sqlvar_target_type, valstr, strlen(valstr)+1);
+        rc = find_type(&sqlvar_target_type, valstr, strlen(valstr) + 1);
 
         if (rc > 0 && rc < 3)
         {
@@ -1616,7 +1661,7 @@ static int find_type(typelib_t*  tl,
     {
         if (strncasecmp(tl->tl_p_elems[i], needle, maxlen) == 0)
         {
-            return i+1;
+            return i + 1;
         }
     }
     return 0;

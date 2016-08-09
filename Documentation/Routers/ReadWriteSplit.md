@@ -10,7 +10,7 @@ The router is designed to be used with a traditional Master-Slave replication cl
 
 ## Configuration
 
-Readwritesplit router-specific settings are specified in the configuration file of MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section.
+Readwritesplit router-specific settings are specified in the configuration file of MariaDB MaxScale in its specific section. The section can be freely named but the name is used later as a reference from listener section.
 
 For more details about the standard service parameters, refer to the [Configuration Guide](../Getting-Started/Configuration-Guide.md).
 
@@ -69,12 +69,14 @@ router_options=slave_selection_criteria=<criteria>
 
 Where `<criteria>` is one of the following values.
 
-* `LEAST_GLOBAL_CONNECTIONS`, the slave with least connections from MaxScale
+* `LEAST_GLOBAL_CONNECTIONS`, the slave with least connections from MariaDB MaxScale
 * `LEAST_ROUTER_CONNECTIONS`, the slave with least connections from this service
 * `LEAST_BEHIND_MASTER`, the slave with smallest replication lag
 * `LEAST_CURRENT_OPERATIONS` (default), the slave with least active operations
 
-The `LEAST_GLOBAL_CONNECTIONS` and `LEAST_ROUTER_CONNECTIONS` use the connections from MaxScale to the server, not the amount of connections reported by the server itself.
+The `LEAST_GLOBAL_CONNECTIONS` and `LEAST_ROUTER_CONNECTIONS` use the connections from MariaDB MaxScale to the server, not the amount of connections reported by the server itself.
+
+`LEAST_BEHIND_MASTER` does not take server weights into account when choosing a server.
 
 ### `max_sescmd_history`
 
@@ -113,8 +115,9 @@ When a client executes a multi-statement query, all queries after that will be r
 the master to guarantee a consistent session state. This behavior can be controlled with
 the **`strict_multi_stmt`** router option. This option is enabled by default.
 
-If set to false, queries are routed normally after a multi-statement query. **Warning**, this
-can cause false data to be read from the slaves if the multi-statement query modifies
+If set to false, queries are routed normally after a multi-statement query.
+
+**Warning:** this can cause false data to be read from the slaves if the multi-statement query modifies
 the session state. Only disable the strict mode if you know that no changes to the session
 state will be made inside the multi-statement queries.
 
@@ -122,6 +125,28 @@ state will be made inside the multi-statement queries.
 # Disable strict multi-statement mode
 strict_multi_stmt=false
 ```
+
+### `master_failure_mode`
+
+This option controls how the failure of a master server is handled. By default,
+the router will close the client connection as soon as the master is lost.
+
+The following table describes the values for this option and how they treat
+the loss of a master server.
+
+|Value         |Description|
+|--------------|-----------|
+|fail_instantly|When the failure of the master server is detected, the connection will be closed immediately.|
+|fail_on_write |The client connection is closed if a write query is received when no master is available.|
+|error_on_write|If no master is available and a write query is received, an error is returned stating that the connection is in read-only mode.|
+
+These also apply to new sessions created after the master has failed. This means
+that in _fail_on_write_ or _error_on_write_ mode, connections are accepted as long
+as slave servers are available.
+
+**Note:** If _master_failure_mode_ is set to _error_on_write_ and the connection
+to the master is lost, clients will not be able to execute write queries without
+reconnecting to MariaDB MaxScale once a new master is available.
 
 ## Routing hints
 
@@ -180,4 +205,4 @@ Session commands include for example:
 
 **NOTE: if variable assignment is embedded in a write statement it is routed to _Master_ only. For example, `INSERT INTO t1 values(@myvar:=5, 7)` would be routed to _Master_ only.**
 
-The router stores all of the executed session commands so that in case of a slave failure, a replacement slave can be chosen and the session command history can be repeated on that new slave. This means that the router stores each executed session command for the duration of the session. Applications that use long-running sessions might cause MaxScale to consume a growing amount of memory unless the sessions are closed. This can be solved by setting a connection timeout on the application side.
+The router stores all of the executed session commands so that in case of a slave failure, a replacement slave can be chosen and the session command history can be repeated on that new slave. This means that the router stores each executed session command for the duration of the session. Applications that use long-running sessions might cause MariaDB MaxScale to consume a growing amount of memory unless the sessions are closed. This can be solved by setting a connection timeout on the application side.

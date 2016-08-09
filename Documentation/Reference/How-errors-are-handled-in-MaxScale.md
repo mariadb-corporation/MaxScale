@@ -1,6 +1,6 @@
-# How errors are handled in MaxScale
+# How errors are handled in MariaDB MaxScale
 
-This document describes how errors are handled in MaxScale, its protocol modules and routers. 
+This document describes how errors are handled in MariaDB MaxScale, its protocol modules and routers. 
 
 Assume a client, maxscale, and master/slave replication cluster. 
 
@@ -8,7 +8,7 @@ An "error" can be due to failed authentication, routing error (unsupported query
 
 ## Authentication error
 
-Authentication is relatively complex phase in the beginning of session creation. Roughly speaking, client protocol has loaded user information from backend so that it can authenticate client without consulting backend. When client sends authentication data to MaxScale data is compared against backend’s user data in the client protocol module. If authentication fails client protocol module refreshes backend data just in case it had became obsolete after last refresh. If authentication still fails after refresh, authentication error occurs.
+Authentication is relatively complex phase in the beginning of session creation. Roughly speaking, client protocol has loaded user information from backend so that it can authenticate client without consulting backend. When client sends authentication data to MariaDB MaxScale data is compared against backend’s user data in the client protocol module. If authentication fails client protocol module refreshes backend data just in case it had became obsolete after last refresh. If authentication still fails after refresh, authentication error occurs.
 
 Close sequence starts from mysql_client.c:gw_read_client_event where
 

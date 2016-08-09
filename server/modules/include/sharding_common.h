@@ -11,7 +11,7 @@
 #include <query_classifier.h>
 
 bool extract_database(GWBUF* buf, char* str);
-void create_error_reply(char* fail_str,DCB* dcb);
+void create_error_reply(char* fail_str, DCB* dcb);
 bool change_current_db(char* dest, HASHTABLE* dbhash, GWBUF* buf);
 
 #endif

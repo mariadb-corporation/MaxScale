@@ -1,20 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale. It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
- *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -127,7 +121,7 @@ int gw_generate_random_str(char *output, int len)
  *****************************************/
 int gw_hex2bin(uint8_t *out, const char *in, unsigned int len)
 {
-    const char *in_end= in + len;
+    const char *in_end = in + len;
 
     if (len == 0 || in == NULL)
     {
@@ -162,10 +156,10 @@ char *gw_bin2hex(char *out, const uint8_t *in, unsigned int len)
 
     for (; in != in_end; ++in)
     {
-        *out++ = hex_upper[((uint8_t) *in) >> 4];
-        *out++ = hex_upper[((uint8_t) *in) & 0x0F];
+        *out++ = hex_upper[((uint8_t) * in) >> 4];
+        *out++ = hex_upper[((uint8_t) * in) & 0x0F];
     }
-    *out= '\0';
+    *out = '\0';
 
     return out;
 }

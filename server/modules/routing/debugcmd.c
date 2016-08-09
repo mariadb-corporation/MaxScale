@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -45,6 +40,8 @@
  * 05/03/15     Massimiliano Pinto      Added enable/disable feedback
  * 27/05/15     Martin Brampton         Add show persistent [server]
  * 06/11/15     Martin Brampton         Add show buffers (conditional compilation)
+ * 23/05/16     Massimiliano Pinto      'add user' and 'remove user'
+ *                                      no longer accept password parameter
  *
  * @endverbatim
  */
@@ -669,32 +666,32 @@ struct subcommand failoptions[] = {
 };
 #endif /* FAKE_CODE */
 
-static void telnetdAddUser(DCB *, char *, char *);
+static void telnetdAddUser(DCB *, char *);
 /**
  * The subcommands of the add command
  */
 struct subcommand addoptions[] = {
-    { "user", 2, telnetdAddUser,
-      "Add a new user for the debug interface. E.g. add user john today",
-      "Add a new user for the debug interface. E.g. add user john today",
-      {ARG_TYPE_STRING, ARG_TYPE_STRING, 0} },
+    { "user", 1, telnetdAddUser,
+      "Add a new user for the debug interface. E.g. add user john",
+      "Add a new user for the debug interface. E.g. add user john",
+      {ARG_TYPE_STRING, 0, 0} },
     { NULL, 0, NULL, NULL, NULL,
       {0, 0, 0} }
 };
 
 
-static void telnetdRemoveUser(DCB *, char *, char *);
+static void telnetdRemoveUser(DCB *, char *);
 /**
  * The subcommands of the remove command
  */
 struct subcommand removeoptions[] = {
     {
         "user",
-        2,
+        1,
         telnetdRemoveUser,
-        "Remove existing maxscale user. Example : remove user john johnpwd",
-        "Remove existing maxscale user. Example : remove user john johnpwd",
-        {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
+        "Remove existing maxscale user. Example : remove user john",
+        "Remove existing maxscale user. Example : remove user john",
+        {ARG_TYPE_STRING, 0, 0}
     },
     {
         NULL, 0, NULL, NULL, NULL, {0, 0, 0}
@@ -1281,10 +1278,9 @@ reload_config(DCB *dcb)
  *
  * @param dcb           The DCB for messages
  * @param user          The user name
- * @param passwd        The Password of the user
  */
 static void
-telnetdAddUser(DCB *dcb, char *user, char *passwd)
+telnetdAddUser(DCB *dcb, char *user)
 {
     char    *err;
 
@@ -1294,7 +1290,7 @@ telnetdAddUser(DCB *dcb, char *user, char *passwd)
         return;
     }
 
-    if ((err = admin_add_user(user, passwd)) == NULL)
+    if ((err = admin_add_user(user)) == NULL)
     {
         dcb_printf(dcb, "User %s has been successfully added.\n", user);
     }
@@ -1310,12 +1306,10 @@ telnetdAddUser(DCB *dcb, char *user, char *passwd)
  *
  * @param dcb           The DCB for messages
  * @param user          The user name
- * @param passwd        The Password of the user
  */
 static void telnetdRemoveUser(
     DCB*  dcb,
-    char* user,
-    char* passwd)
+    char* user)
 {
     char* err;
 
@@ -1325,7 +1319,7 @@ static void telnetdRemoveUser(
         return;
     }
 
-    if ((err = admin_remove_user(user, passwd)) == NULL)
+    if ((err = admin_remove_user(user)) == NULL)
     {
         dcb_printf(dcb, "User %s has been successfully removed.\n", user);
     }
@@ -1488,6 +1482,10 @@ static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 
         while (session)
         {
+            if (false == session->ses_is_in_use)
+            {
+                continue;
+            }
             if (session->ses_id == id)
             {
                 session_enable_log_priority(session, entry.priority);
@@ -1526,6 +1524,10 @@ static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
 
         while (session)
         {
+            if (false == session->ses_is_in_use)
+            {
+                continue;
+            }
             if (session->ses_id == id)
             {
                 session_disable_log_priority(session, entry.priority);
@@ -1601,6 +1603,10 @@ static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
 
         while (session)
         {
+            if (false == session->ses_is_in_use)
+            {
+                continue;
+            }
             if (session->ses_id == id)
             {
                 session_enable_log_priority(session, priority);
@@ -1639,6 +1645,10 @@ static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
 
         while (session)
         {
+            if (false == session->ses_is_in_use)
+            {
+                continue;
+            }
             if (session->ses_id == id)
             {
                 session_disable_log_priority(session, priority);

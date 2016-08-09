@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <my_config.h>
 #include <stdio.h>
@@ -323,6 +318,8 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
         return SHOWDB_FATAL_ERROR;
     }
 
+    /** TODO: Don't make the buffer contiguous but process it as a buffer chain */
+    *buffer = gwbuf_make_contiguous(*buffer);
     buf = modutil_get_complete_packets(buffer);
 
     if (buf == NULL)
@@ -1061,13 +1058,13 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
     }
 
     client_rses->shardmap = map;
-    client_rses->dcb_reply = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+    client_rses->dcb_reply = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
     client_rses->dcb_reply->func.read = internalReply;
     client_rses->dcb_reply->state = DCB_STATE_POLLING;
     client_rses->dcb_reply->session = session;
     memcpy(&client_rses->rses_config, &router->schemarouter_config, sizeof(schemarouter_config_t));
     client_rses->n_sescmd = 0;
-    client_rses->dcb_route = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+    client_rses->dcb_route = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
     client_rses->dcb_route->func.read = internalRoute;
     client_rses->dcb_route->state = DCB_STATE_POLLING;
     client_rses->dcb_route->session = session;
@@ -1384,6 +1381,11 @@ static void freeSession(ROUTER* router_instance, void* router_client_session)
      * all the memory and other resources associated
      * to the client session.
      */
+    if (router_cli_ses->shardmap)
+    {
+        hashtable_free(router_cli_ses->shardmap->hash);
+        free(router_cli_ses->shardmap);
+    }
     free(router_cli_ses->rses_backend_ref);
     free(router_cli_ses);
     return;
@@ -3915,7 +3917,7 @@ static void handleError(ROUTER*        instance,
     {
         *succp = false;
     }
-    else if (dcb_isclient(problem_dcb))
+    else if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
     {
         *succp = false;
     }

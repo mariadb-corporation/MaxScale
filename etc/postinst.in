@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 # Create directories
 mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
 mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@
@@ -16,7 +15,8 @@ mkdir -p @MAXSCALE_VARDIR@/run/maxscale
 # Create MaxScale user
 if [ -f "/etc/passwd" ] && [ "$(grep -c 'maxscale' /etc/passwd)" -eq 0 ]
 then
-    useradd -r -U -s /bin/false maxscale
+    groupadd -r maxscale
+    useradd -r -s /bin/false -g maxscale maxscale
 fi
 
 # Change the owner of the directories to maxscale:maxscale
@@ -38,7 +38,7 @@ else
 fi
 
 # Only copy the service files if the systemd folder and systemctl executable are found
-if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && [ -x "$(which systemctl)" ]
+if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && command -v systemctl >/dev/null
 then
     if [ -d "/lib/systemd/system"  ]
     then
@@ -62,14 +62,11 @@ fi
 # If no maxscale.cnf file is found in /etc, copy the template file there
 if [ ! -f "@MAXSCALE_CONFDIR@/maxscale.cnf" ]
 then
-    cp -n @MAXSCALE_CONFDIR@/maxscale.cnf.template @MAXSCALE_CONFDIR@/maxscale.cnf
+    cp @MAXSCALE_CONFDIR@/maxscale.cnf.template @MAXSCALE_CONFDIR@/maxscale.cnf
 fi
 
 # This will allow us to install the Perl scripts as executable files
 # without adding the Perl dependencies
-for i in $(find @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/plugins/nagios -name '*.pl')
-do
-    chmod ug+x $i
-done
+find @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/plugins/nagios -name '*.pl' -exec chmod ug+x {} \;
 
 /sbin/ldconfig

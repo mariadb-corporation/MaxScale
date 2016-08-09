@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /*
@@ -43,26 +38,19 @@
  * 10/11/2014   Massimiliano Pinto      Charset at connect is passed to backend during authentication
  * 07/07/2015   Martin Brampton         Fix problem recognising null password
  * 07/02/2016   Martin Brampton         Remove authentication functions to mysql_auth.c
+ * 31/05/2016   Martin Brampton         Add mysql_create_standard_error function
  *
  */
 
 #include <gw.h>
+#include <utils.h>
 #include "mysql_client_server_protocol.h"
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <netinet/tcp.h>
 
-/* The following can be compared using memcmp to detect a null password */
-uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN]="";
-
-extern int gw_read_backend_event(DCB* dcb);
-extern int gw_write_backend_event(DCB *dcb);
-extern int gw_MySQLWrite_backend(DCB *dcb, GWBUF *queue);
-extern int gw_error_backend_event(DCB *dcb);
-
 static server_command_t* server_command_init(server_command_t* srvcmd, mysql_server_cmd_t cmd);
-
 
 /**
  * Creates MySQL protocol structure
@@ -98,6 +86,7 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
     }
     p->protocol_state = MYSQL_PROTOCOL_ALLOC;
     p->protocol_auth_state = MYSQL_ALLOC;
+    p->current_command = MYSQL_COM_UNDEFINED;
     p->protocol_command.scom_cmd = MYSQL_COM_UNDEFINED;
     p->protocol_command.scom_nresponse_packets = 0;
     p->protocol_command.scom_nbytes_to_read = 0;
@@ -113,7 +102,6 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
 return_p:
     return p;
 }
-
 
 /**
  * mysql_protocol_done
@@ -149,728 +137,6 @@ void mysql_protocol_done(DCB* dcb)
 
 retblock:
     spinlock_release(&p->protocol_lock);
-}
-
-
-/**
- * Read the backend server MySQL handshake
- *
- * @param conn  MySQL protocol structure
- * @return 0 on success, 1 on failure
- */
-int gw_read_backend_handshake(MySQLProtocol *conn)
-{
-    GWBUF *head = NULL;
-    DCB *dcb = conn->owner_dcb;
-    int n = -1;
-    uint8_t *payload = NULL;
-    int h_len = 0;
-    int  success = 0;
-    int packet_len = 0;
-
-    if ((n = dcb_read(dcb, &head, 0)) != -1)
-    {
-        dcb->last_read = hkheartbeat;
-
-        if (head)
-        {
-            payload = GWBUF_DATA(head);
-            h_len = gwbuf_length(head);
-
-            /**
-             * The mysql packets content starts at byte fifth
-             * just return with less bytes
-             */
-
-            if (h_len <= 4)
-            {
-                /* log error this exit point */
-                conn->protocol_auth_state = MYSQL_HANDSHAKE_FAILED;
-                MXS_DEBUG("%lu [gw_read_backend_handshake] after "
-                          "dcb_read, fd %d, "
-                          "state = MYSQL_HANDSHAKE_FAILED.",
-                          pthread_self(),
-                          dcb->fd);
-
-                return 1;
-            }
-
-            if (payload[4] == 0xff)
-            {
-                size_t len = MYSQL_GET_PACKET_LEN(payload);
-                uint16_t errcode = MYSQL_GET_ERRCODE(payload);
-                char* bufstr = strndup(&((char *)payload)[7], len - 3);
-
-                conn->protocol_auth_state = MYSQL_HANDSHAKE_FAILED;
-
-                MXS_DEBUG("%lu [gw_receive_backend_auth] Invalid "
-                          "authentication message from backend dcb %p "
-                          "fd %d, ptr[4] = %d, error code %d, msg %s.",
-                          pthread_self(),
-                          dcb,
-                          dcb->fd,
-                          payload[4],
-                          errcode,
-                          bufstr);
-
-                MXS_ERROR("Invalid authentication message "
-                          "from backend. Error code: %d, Msg : %s",
-                          errcode,
-                          bufstr);
-
-                /**
-                 * If ER_HOST_IS_BLOCKED is found
-                 * the related server is put in maintenace mode
-                 * This will avoid filling the error log.
-                 */
-
-                if (errcode == 1129)
-                {
-                    MXS_ERROR("Server %s has been put into maintenance mode due "
-                              "to the server blocking connections from MaxScale. "
-                              "Run 'mysqladmin -h %s -P %d flush-hosts' on this "
-                              "server before taking this server out of maintenance "
-                              "mode.",
-                              dcb->server->unique_name,
-                              dcb->server->name,
-                              dcb->server->port);
-
-                    server_set_status(dcb->server, SERVER_MAINT);
-                }
-
-                free(bufstr);
-            }
-            //get mysql packet size, 3 bytes
-            packet_len = gw_mysql_get_byte3(payload);
-
-            if (h_len < (packet_len + 4))
-            {
-                /*
-                 * data in buffer less than expected in the
-                 * packet. Log error this exit point
-                 */
-
-                conn->protocol_auth_state = MYSQL_HANDSHAKE_FAILED;
-
-                MXS_DEBUG("%lu [gw_read_backend_handshake] after "
-                          "gw_mysql_get_byte3, fd %d, "
-                          "state = MYSQL_HANDSHAKE_FAILED.",
-                          pthread_self(),
-                          dcb->fd);
-
-                return 1;
-            }
-
-            // skip the 4 bytes header
-            payload += 4;
-
-            //Now decode mysql handshake
-            success = gw_decode_mysql_server_handshake(conn, payload);
-
-            if (success < 0)
-            {
-                /* MySQL handshake has not been properly decoded
-                 * we cannot continue
-                 * log error this exit point
-                 */
-                conn->protocol_auth_state = MYSQL_HANDSHAKE_FAILED;
-
-                MXS_DEBUG("%lu [gw_read_backend_handshake] after "
-                          "gw_decode_mysql_server_handshake, fd %d, "
-                          "state = MYSQL_HANDSHAKE_FAILED.",
-                          pthread_self(),
-                          conn->owner_dcb->fd);
-                while ((head = gwbuf_consume(head, GWBUF_LENGTH(head))))
-                {
-                    ;
-                }
-                return 1;
-            }
-
-            conn->protocol_auth_state = MYSQL_AUTH_SENT;
-
-            // consume all the data here
-            head = gwbuf_consume(head, GWBUF_LENGTH(head));
-
-            return 0;
-        }
-    }
-
-    // Nothing done here, log error this
-    return 1;
-}
-
-/**
- * gw_decode_mysql_server_handshake
- *
- * Decode mysql server handshake
- *
- * @param conn The MySQLProtocol structure
- * @param payload The bytes just read from the net
- * @return 0 on success, < 0 on failure
- *
- */
-int gw_decode_mysql_server_handshake(MySQLProtocol *conn, uint8_t *payload)
-{
-    uint8_t *server_version_end = NULL;
-    uint16_t mysql_server_capabilities_one = 0;
-    uint16_t mysql_server_capabilities_two = 0;
-    unsigned long tid = 0;
-    uint8_t scramble_data_1[GW_SCRAMBLE_LENGTH_323] = "";
-    uint8_t scramble_data_2[GW_MYSQL_SCRAMBLE_SIZE - GW_SCRAMBLE_LENGTH_323] = "";
-    uint8_t capab_ptr[4] = "";
-    int scramble_len = 0;
-    uint8_t scramble[GW_MYSQL_SCRAMBLE_SIZE] = "";
-    int protocol_version = 0;
-
-    protocol_version = payload[0];
-
-    if (protocol_version != GW_MYSQL_PROTOCOL_VERSION)
-    {
-        return -1;
-    }
-
-    payload++;
-
-    // Get server version (string)
-    server_version_end = (uint8_t *) gw_strend((char*) payload);
-
-    payload = server_version_end + 1;
-
-    // get ThreadID: 4 bytes
-    tid = gw_mysql_get_byte4(payload);
-    memcpy(&conn->tid, &tid, 4);
-
-    payload += 4;
-
-    // scramble_part 1
-    memcpy(scramble_data_1, payload, GW_SCRAMBLE_LENGTH_323);
-    payload += GW_SCRAMBLE_LENGTH_323;
-
-    // 1 filler
-    payload++;
-
-    mysql_server_capabilities_one = gw_mysql_get_byte2(payload);
-
-    //Get capabilities_part 1 (2 bytes) + 1 language + 2 server_status
-    payload += 5;
-
-    mysql_server_capabilities_two = gw_mysql_get_byte2(payload);
-
-    memcpy(&capab_ptr, &mysql_server_capabilities_one, 2);
-
-    // get capabilities part 2 (2 bytes)
-    memcpy(&(capab_ptr[2]), &mysql_server_capabilities_two, 2);
-
-    // 2 bytes shift
-    payload += 2;
-
-    // get scramble len
-    if (payload[0] > 0)
-    {
-        scramble_len = payload[0] -1;
-        ss_dassert(scramble_len > GW_SCRAMBLE_LENGTH_323);
-        ss_dassert(scramble_len <= GW_MYSQL_SCRAMBLE_SIZE);
-
-        if ((scramble_len < GW_SCRAMBLE_LENGTH_323) ||
-            scramble_len > GW_MYSQL_SCRAMBLE_SIZE)
-        {
-            /* log this */
-            return -2;
-        }
-    }
-    else
-    {
-        scramble_len = GW_MYSQL_SCRAMBLE_SIZE;
-    }
-    // skip 10 zero bytes
-    payload += 11;
-
-    // copy the second part of the scramble
-    memcpy(scramble_data_2, payload, scramble_len - GW_SCRAMBLE_LENGTH_323);
-
-    memcpy(scramble, scramble_data_1, GW_SCRAMBLE_LENGTH_323);
-    memcpy(scramble + GW_SCRAMBLE_LENGTH_323, scramble_data_2, scramble_len - GW_SCRAMBLE_LENGTH_323);
-
-    // full 20 bytes scramble is ready
-    memcpy(conn->scramble, scramble, GW_MYSQL_SCRAMBLE_SIZE);
-
-    return 0;
-}
-
-
-/**
- * Receive the MySQL authentication packet from backend, packet # is 2
- *
- * @param protocol The MySQL protocol structure
- * @return -1 in case of failure, 0 if there was nothing to read, 1 if read
- * was successful.
- */
-int gw_receive_backend_auth(MySQLProtocol *protocol)
-{
-    int n = -1;
-    GWBUF *head = NULL;
-    DCB *dcb = protocol->owner_dcb;
-    uint8_t *ptr = NULL;
-    int rc = 0;
-
-    n = dcb_read(dcb, &head, 0);
-
-    dcb->last_read = hkheartbeat;
-
-    /*<
-     * Read didn't fail and there is enough data for mysql packet.
-     */
-    if (n != -1 &&
-        head != NULL &&
-        GWBUF_LENGTH(head) >= 5)
-    {
-        ptr = GWBUF_DATA(head);
-        /*<
-         * 5th byte is 0x0 if successful.
-         */
-        if (ptr[4] == 0x00)
-        {
-            rc = 1;
-        }
-        else if (ptr[4] == 0xff)
-        {
-            size_t len = MYSQL_GET_PACKET_LEN(ptr);
-            char* err = strndup(&((char *)ptr)[8], 5);
-            char* bufstr = strndup(&((char *)ptr)[13], len - 4 - 5);
-
-            MXS_DEBUG("%lu [gw_receive_backend_auth] Invalid "
-                      "authentication message from backend dcb %p "
-                      "fd %d, ptr[4] = %d, error %s, msg %s.",
-                      pthread_self(),
-                      dcb,
-                      dcb->fd,
-                      ptr[4],
-                      err,
-                      bufstr);
-
-            MXS_ERROR("Invalid authentication message "
-                      "from backend. Error : %s, Msg : %s",
-                      err,
-                      bufstr);
-
-            free(bufstr);
-            free(err);
-            rc = -1;
-        }
-        else
-        {
-            MXS_DEBUG("%lu [gw_receive_backend_auth] Invalid "
-                      "authentication message from backend dcb %p "
-                      "fd %d, ptr[4] = %d",
-                      pthread_self(),
-                      dcb,
-                      dcb->fd,
-                      ptr[4]);
-
-            MXS_ERROR("Invalid authentication message "
-                      "from backend. Packet type : %d",
-                      ptr[4]);
-        }
-        /*<
-         * Remove data from buffer.
-         */
-        while ((head = gwbuf_consume(head, GWBUF_LENGTH(head))) != NULL)
-        {
-            ;
-        }
-    }
-    else if (n == 0)
-    {
-        /*<
-         * This is considered as success because call didn't fail,
-         * although no bytes was read.
-         */
-        rc = 0;
-        MXS_DEBUG("%lu [gw_receive_backend_auth] Read zero bytes from "
-                  "backend dcb %p fd %d in state %s. n %d, head %p, len %ld",
-                  pthread_self(),
-                  dcb,
-                  dcb->fd,
-                  STRDCBSTATE(dcb->state),
-                  n,
-                  head,
-                  (head == NULL) ? 0 : GWBUF_LENGTH(head));
-    }
-    else
-    {
-        ss_dassert(n < 0 && head == NULL);
-        rc = -1;
-        MXS_DEBUG("%lu [gw_receive_backend_auth] Reading from backend dcb %p "
-                  "fd %d in state %s failed. n %d, head %p, len %ld",
-                  pthread_self(),
-                  dcb,
-                  dcb->fd,
-                  STRDCBSTATE(dcb->state),
-                  n,
-                  head,
-                  (head == NULL) ? 0 : GWBUF_LENGTH(head));
-    }
-
-    return rc;
-}
-
-/**
- * Write MySQL authentication packet to backend server
- *
- * @param conn  MySQL protocol structure
- * @param dbname The selected database
- * @param user The selected user
- * @param passwd The SHA1(real_password): Note real_password is unknown
- * @return 0 on success, 1 on failure
- */
-int gw_send_authentication_to_backend(char *dbname,
-                                      char *user,
-                                      uint8_t *passwd,
-                                      MySQLProtocol *conn)
-{
-    int compress = 0;
-    int rv;
-    uint8_t *payload = NULL;
-    uint8_t *payload_start = NULL;
-    long bytes;
-    uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
-    uint8_t client_capabilities[4];
-    uint32_t server_capabilities = 0;
-    uint32_t final_capabilities  = 0;
-    char dbpass[MYSQL_USER_MAXLEN + 1]="";
-    GWBUF *buffer;
-    DCB *dcb;
-
-    char *curr_db = NULL;
-    uint8_t *curr_passwd = NULL;
-    unsigned int charset;
-
-    /**
-     * If session is stopping return with error.
-     */
-    if (conn->owner_dcb->session == NULL ||
-        (conn->owner_dcb->session->state != SESSION_STATE_READY &&
-         conn->owner_dcb->session->state != SESSION_STATE_ROUTER_READY))
-    {
-        return 1;
-    }
-
-    if (strlen(dbname))
-    {
-        curr_db = dbname;
-    }
-
-    if (memcmp(passwd, null_client_sha1, MYSQL_SCRAMBLE_LEN))
-    {
-        curr_passwd = passwd;
-    }
-
-    dcb = conn->owner_dcb;
-    final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
-
-    /** Copy client's flags to backend but with the known capabilities mask */
-    final_capabilities |= (conn->client_capabilities & GW_MYSQL_CAPABILITIES_CLIENT);
-
-    /* get charset the client sent and use it for connection auth */
-    charset = conn->charset;
-
-    if (compress)
-    {
-        final_capabilities |= GW_MYSQL_CAPABILITIES_COMPRESS;
-#ifdef DEBUG_MYSQL_CONN
-        fprintf(stderr, ">>>> Backend Connection with compression\n");
-#endif
-    }
-
-    if (curr_passwd != NULL)
-    {
-        uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE]="";
-        uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE]="";
-        uint8_t new_sha[GW_MYSQL_SCRAMBLE_SIZE]="";
-
-        // hash1 is the function input, SHA1(real_password)
-        memcpy(hash1, passwd, GW_MYSQL_SCRAMBLE_SIZE);
-
-        // hash2 is the SHA1(input data), where input_data = SHA1(real_password)
-        gw_sha1_str(hash1, GW_MYSQL_SCRAMBLE_SIZE, hash2);
-
-        // dbpass is the HEX form of SHA1(SHA1(real_password))
-        gw_bin2hex(dbpass, hash2, GW_MYSQL_SCRAMBLE_SIZE);
-
-        // new_sha is the SHA1(CONCAT(scramble, hash2)
-        gw_sha1_2_str(conn->scramble, GW_MYSQL_SCRAMBLE_SIZE, hash2, GW_MYSQL_SCRAMBLE_SIZE, new_sha);
-
-        // compute the xor in client_scramble
-        gw_str_xor(client_scramble, new_sha, hash1, GW_MYSQL_SCRAMBLE_SIZE);
-
-    }
-
-    if (curr_db == NULL)
-    {
-        // without db
-        final_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-    }
-    else
-    {
-        final_capabilities |= GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-    }
-
-    final_capabilities |= GW_MYSQL_CAPABILITIES_PLUGIN_AUTH;
-
-    gw_mysql_set_byte4(client_capabilities, final_capabilities);
-
-    // Protocol MySQL HandshakeResponse for CLIENT_PROTOCOL_41
-    // 4 bytes capabilities + 4 bytes max packet size + 1 byte charset + 23 '\0' bytes
-    // 4 + 4 + 1 + 23  = 32
-    bytes = 32;
-
-    bytes += strlen(user);
-    // the NULL
-    bytes++;
-
-    // next will be + 1 (scramble_len) + 20 (fixed_scramble) + 1 (user NULL term) + 1 (db NULL term)
-
-    if (curr_passwd != NULL)
-    {
-        bytes++;
-        bytes += GW_MYSQL_SCRAMBLE_SIZE;
-    }
-    else
-    {
-        bytes++;
-    }
-
-    if (curr_db != NULL)
-    {
-        bytes += strlen(curr_db);
-        bytes++;
-    }
-
-    bytes += strlen("mysql_native_password");
-    bytes++;
-
-    // the packet header
-    bytes += 4;
-
-    // allocating the GWBUF
-    buffer = gwbuf_alloc(bytes);
-    payload = GWBUF_DATA(buffer);
-
-    // clearing data
-    memset(payload, '\0', bytes);
-
-    // save the start pointer
-    payload_start = payload;
-
-    // set packet # = 1
-    payload[3] = '\x01';
-    payload += 4;
-
-    // set client capabilities
-    memcpy(payload, client_capabilities, 4);
-
-    // set now the max-packet size
-    payload += 4;
-    gw_mysql_set_byte4(payload, 16777216);
-
-    // set the charset
-    payload += 4;
-    *payload = charset;
-
-    payload++;
-
-    // 23 bytes of 0
-    payload += 23;
-
-    // 4 + 4 + 4 + 1 + 23 = 36, this includes the 4 bytes packet header
-
-    memcpy(payload, user, strlen(user));
-    payload += strlen(user);
-    payload++;
-
-    if (curr_passwd != NULL)
-    {
-        // set the auth-length
-        *payload = GW_MYSQL_SCRAMBLE_SIZE;
-        payload++;
-
-        //copy the 20 bytes scramble data after packet_buffer + 36 + user + NULL + 1 (byte of auth-length)
-        memcpy(payload, client_scramble, GW_MYSQL_SCRAMBLE_SIZE);
-
-        payload += GW_MYSQL_SCRAMBLE_SIZE;
-
-    }
-    else
-    {
-        // skip the auth-length and write a NULL
-        payload++;
-    }
-
-    // if the db is not NULL append it
-    if (curr_db != NULL)
-    {
-        memcpy(payload, curr_db, strlen(curr_db));
-        payload += strlen(curr_db);
-        payload++;
-    }
-
-    memcpy(payload,
-           "mysql_native_password",
-           strlen("mysql_native_password"));
-    payload += strlen("mysql_native_password");
-    payload++;
-
-    // put here the paylod size: bytes to write - 4 bytes packet header
-    gw_mysql_set_byte3(payload_start, (bytes - 4));
-
-    rv = dcb_write(dcb, buffer);
-
-    if (rv == 0)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
-}
-
-/**
- * gw_do_connect_to_backend
- *
- * This routine creates socket and connects to a backend server.
- * Connect it non-blocking operation. If connect fails, socket is closed.
- *
- * @param host The host to connect to
- * @param port The host TCP/IP port
- * @param *fd where connected fd is copied
- * @return 0/1 on success and -1 on failure
- * If succesful, fd has file descriptor to socket which is connected to
- * backend server. In failure, fd == -1 and socket is closed.
- *
- */
-int gw_do_connect_to_backend(char *host, int port, int *fd)
-{
-    struct sockaddr_in serv_addr;
-    int rv;
-    int so = 0;
-    int bufsize;
-
-    memset(&serv_addr, 0, sizeof serv_addr);
-    serv_addr.sin_family = AF_INET;
-    so = socket(AF_INET,SOCK_STREAM,0);
-
-    if (so < 0)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Establishing connection to backend server "
-                  "%s:%d failed.\n\t\t             Socket creation failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
-        goto return_rv;
-    }
-    /* prepare for connect */
-    setipaddress(&serv_addr.sin_addr, host);
-    serv_addr.sin_port = htons(port);
-    bufsize = GW_BACKEND_SO_SNDBUF;
-
-    if (setsockopt(so, SOL_SOCKET, SO_SNDBUF, &bufsize, sizeof(bufsize)) != 0)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options "
-                  "%s:%d failed.\n\t\t             Socket configuration failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
-        /** Close socket */
-        goto close_so;
-    }
-    bufsize = GW_BACKEND_SO_RCVBUF;
-
-    if (setsockopt(so, SOL_SOCKET, SO_RCVBUF, &bufsize, sizeof(bufsize)) != 0)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options "
-                  "%s:%d failed.\n\t\t             Socket configuration failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
-        /** Close socket */
-        goto close_so;
-    }
-
-    int one = 1;
-    if (setsockopt(so, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one)) != 0)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options "
-                  "%s:%d failed.\n\t\t             Socket configuration failed "
-                  "due %d, %s.",
-                  host,
-                  port,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        rv = -1;
-        /** Close socket */
-        goto close_so;
-    }
-
-    /* set socket to as non-blocking here */
-    setnonblocking(so);
-    rv = connect(so, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-
-    if (rv != 0)
-    {
-        if (errno == EINPROGRESS)
-        {
-            rv = 1;
-        }
-        else
-        {
-            char errbuf[STRERROR_BUFLEN];
-            MXS_ERROR("Failed to connect backend server %s:%d, "
-                      "due %d, %s.",
-                      host,
-                      port,
-                      errno,
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
-            /** Close socket */
-            goto close_so;
-        }
-    }
-    *fd = so;
-    MXS_DEBUG("%lu [gw_do_connect_to_backend] Connected to backend server "
-              "%s:%d, fd %d.",
-              pthread_self(), host, port, so);
-#if defined(FAKE_CODE)
-    conn_open[so] = true;
-#endif /* FAKE_CODE */
-
-return_rv:
-    return rv;
-
-close_so:
-    /*< Close newly created socket. */
-    if (close(so) != 0)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Failed to close socket %d due %d, %s.",
-                  so,
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-    }
-    goto return_rv;
 }
 
 /**
@@ -987,18 +253,16 @@ GWBUF* mysql_create_custom_error(int         packet_number,
     uint8_t field_count = 0;
     uint8_t mysql_err[2];
     uint8_t mysql_statemsg[6];
-    unsigned int mysql_errno = 0;
     const char* mysql_error_msg = NULL;
     const char* mysql_state = NULL;
 
     GWBUF* errbuf = NULL;
 
-    mysql_errno = 2003;
     mysql_error_msg = "An errorr occurred ...";
     mysql_state = "HY000";
 
     field_count = 0xff;
-    gw_mysql_set_byte2(mysql_err, mysql_errno);
+    gw_mysql_set_byte2(mysql_err, /* mysql_errno */ 2003);
     mysql_statemsg[0]='#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
@@ -1049,6 +313,90 @@ GWBUF* mysql_create_custom_error(int         packet_number,
 
     return errbuf;
 }
+
+/**
+ * @brief Create a standard MariaDB error message, emulating real server
+ *
+ * Supports the sending to a client of a standard database error, for
+ * circumstances where the error is generated within MaxScale but should
+ * appear like a backend server error. First introduced to support connection
+ * throttling, to send "Too many connections" error.
+ *
+ * @param packet_number Packet number for header
+ * @param error_number  Standard error number as for MariaDB
+ * @param error_message Text message to be included
+ * @return GWBUF        A buffer containing the error message, ready to send
+ */
+GWBUF *
+mysql_create_standard_error(int packet_number,
+        int error_number,
+        const char *error_message)
+{
+    uint8_t *outbuf = NULL;
+    uint32_t mysql_payload_size = 0;
+    uint8_t mysql_packet_header[4];
+    uint8_t mysql_error_number[2];
+    uint8_t *mysql_handshake_payload = NULL;
+    GWBUF *buf;
+
+    mysql_payload_size = 1 + sizeof(mysql_error_number) + strlen(error_message);
+
+    // allocate memory for packet header + payload
+    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
+    {
+        return NULL;
+    }
+    outbuf = GWBUF_DATA(buf);
+
+    // write packet header with mysql_payload_size
+    gw_mysql_set_byte3(mysql_packet_header, mysql_payload_size);
+
+    // write packet number, now is 0
+    mysql_packet_header[3]= 0;
+    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
+
+    // current buffer pointer
+    mysql_handshake_payload = outbuf + sizeof(mysql_packet_header);
+
+    // write 0xff which is the error indicator
+    *mysql_handshake_payload = 0xff;
+    mysql_handshake_payload++;
+
+    // write error number
+    gw_mysql_set_byte2(mysql_handshake_payload, error_number);
+    mysql_handshake_payload += 2;
+
+    // write error message
+    memcpy(mysql_handshake_payload, error_message, strlen(error_message));
+
+    return buf;
+}
+
+/**
+ * @brief Send a standard MariaDB error message, emulating real server
+ *
+ * Supports the sending to a client of a standard database error, for
+ * circumstances where the error is generated within MaxScale but should
+ * appear like a backend server error. First introduced to support connection
+ * throttling, to send "Too many connections" error.
+ *
+ * @param dcb           The client DCB to which error is to be sent
+ * @param packet_number Packet number for header
+ * @param error_number  Standard error number as for MariaDB
+ * @param error_message Text message to be included
+ * @return      0 on failure, 1 on success
+ */
+int
+mysql_send_standard_error(DCB *dcb,
+        int packet_number,
+        int error_number,
+        const char *error_message)
+{
+    GWBUF *buf;
+    buf = mysql_create_standard_error(packet_number, error_number, error_message);
+    return buf ? dcb->func.write(dcb, buf) : 0;
+}
+
 /**
  * mysql_send_custom_error
  *
@@ -1075,389 +423,7 @@ int mysql_send_custom_error(DCB       *dcb,
 }
 
 /**
- * Create COM_CHANGE_USER packet and store it to GWBUF
- *
- * @param mses          MySQL session
- * @param protocol      protocol structure of the backend
- *
- * @return GWBUF buffer consisting of COM_CHANGE_USER packet
- *
- * @note the function doesn't fail
- */
-GWBUF* gw_create_change_user_packet(MYSQL_session*  mses,
-                                    MySQLProtocol*  protocol)
-{
-    char* db;
-    char* user;
-    uint8_t* pwd;
-    GWBUF* buffer;
-    int compress = 0;
-    uint8_t* payload = NULL;
-    uint8_t* payload_start = NULL;
-    long bytes;
-    uint8_t client_scramble[GW_MYSQL_SCRAMBLE_SIZE];
-    uint32_t server_capabilities = 0;
-    uint32_t final_capabilities  = 0;
-    char dbpass[MYSQL_USER_MAXLEN + 1]="";
-    char* curr_db = NULL;
-    uint8_t* curr_passwd = NULL;
-    unsigned int charset;
-
-    db = mses->db;
-    user = mses->user;
-    pwd = mses->client_sha1;
-
-    if (strlen(db) > 0)
-    {
-        curr_db = db;
-    }
-
-    if (memcmp(pwd, null_client_sha1, MYSQL_SCRAMBLE_LEN))
-    {
-        curr_passwd = pwd;
-    }
-    final_capabilities = gw_mysql_get_byte4((uint8_t *)&server_capabilities);
-
-    /** Copy client's flags to backend */
-    final_capabilities |= protocol->client_capabilities;
-
-    /* get charset the client sent and use it for connection auth */
-    charset = protocol->charset;
-
-    if (compress)
-    {
-        final_capabilities |= GW_MYSQL_CAPABILITIES_COMPRESS;
-#ifdef DEBUG_MYSQL_CONN
-        fprintf(stderr, ">>>> Backend Connection with compression\n");
-#endif
-    }
-
-    if (curr_passwd != NULL)
-    {
-        uint8_t hash1[GW_MYSQL_SCRAMBLE_SIZE]="";
-        uint8_t hash2[GW_MYSQL_SCRAMBLE_SIZE]="";
-        uint8_t new_sha[GW_MYSQL_SCRAMBLE_SIZE]="";
-
-        /** hash1 is the function input, SHA1(real_password) */
-        memcpy(hash1, pwd, GW_MYSQL_SCRAMBLE_SIZE);
-
-        /**
-         * hash2 is the SHA1(input data), where
-         * input_data = SHA1(real_password)
-         */
-        gw_sha1_str(hash1, GW_MYSQL_SCRAMBLE_SIZE, hash2);
-
-        /** dbpass is the HEX form of SHA1(SHA1(real_password)) */
-        gw_bin2hex(dbpass, hash2, GW_MYSQL_SCRAMBLE_SIZE);
-
-        /** new_sha is the SHA1(CONCAT(scramble, hash2) */
-        gw_sha1_2_str(protocol->scramble,
-                      GW_MYSQL_SCRAMBLE_SIZE,
-                      hash2,
-                      GW_MYSQL_SCRAMBLE_SIZE,
-                      new_sha);
-
-        /** compute the xor in client_scramble */
-        gw_str_xor(client_scramble,
-                   new_sha, hash1,
-                   GW_MYSQL_SCRAMBLE_SIZE);
-    }
-    if (curr_db == NULL)
-    {
-        final_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-    }
-    else
-    {
-        final_capabilities |= GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-    }
-    final_capabilities |= GW_MYSQL_CAPABILITIES_PLUGIN_AUTH;
-    /**
-     * Protocol MySQL COM_CHANGE_USER for CLIENT_PROTOCOL_41
-     * 1 byte COMMAND
-     */
-    bytes = 1;
-
-    /** add the user and a terminating char */
-    bytes += strlen(user);
-    bytes++;
-    /**
-     * next will be + 1 (scramble_len) + 20 (fixed_scramble) +
-     * (db + NULL term) + 2 bytes charset
-     */
-    if (curr_passwd != NULL)
-    {
-        bytes += GW_MYSQL_SCRAMBLE_SIZE;
-    }
-    /** 1 byte for scramble_len */
-    bytes++;
-    /** db name and terminating char */
-    if (curr_db != NULL)
-    {
-        bytes += strlen(curr_db);
-    }
-    bytes++;
-
-    /** the charset */
-    bytes += 2;
-    bytes += strlen("mysql_native_password");
-    bytes++;
-
-    /** the packet header */
-    bytes += 4;
-
-    buffer = gwbuf_alloc(bytes);
-    /**
-     * Set correct type to GWBUF so that it will be handled like session
-     * commands
-     */
-    buffer->gwbuf_type = GWBUF_TYPE_MYSQL|GWBUF_TYPE_SINGLE_STMT|GWBUF_TYPE_SESCMD;
-    payload = GWBUF_DATA(buffer);
-    memset(payload, '\0', bytes);
-    payload_start = payload;
-
-    /** set packet number to 0 */
-    payload[3] = 0x00;
-    payload += 4;
-
-    /** set the command COM_CHANGE_USER 0x11 */
-    payload[0] = 0x11;
-    payload++;
-    memcpy(payload, user, strlen(user));
-    payload += strlen(user);
-    payload++;
-
-    if (curr_passwd != NULL)
-    {
-        /** set the auth-length */
-        *payload = GW_MYSQL_SCRAMBLE_SIZE;
-        payload++;
-        /**
-         * copy the 20 bytes scramble data after
-         * packet_buffer + 36 + user + NULL + 1 (byte of auth-length)
-         */
-        memcpy(payload, client_scramble, GW_MYSQL_SCRAMBLE_SIZE);
-        payload += GW_MYSQL_SCRAMBLE_SIZE;
-    }
-    else
-    {
-        /** skip the auth-length and write a NULL */
-        payload++;
-    }
-    /** if the db is not NULL append it */
-    if (curr_db != NULL)
-    {
-        memcpy(payload, curr_db, strlen(curr_db));
-        payload += strlen(curr_db);
-    }
-    payload++;
-    /** set the charset, 2 bytes */
-    *payload = charset;
-    payload++;
-    *payload = '\x00';
-    payload++;
-    memcpy(payload, "mysql_native_password", strlen("mysql_native_password"));
-    payload += strlen("mysql_native_password");
-    payload++;
-    /** put here the paylod size: bytes to write - 4 bytes packet header */
-    gw_mysql_set_byte3(payload_start, (bytes-4));
-
-    return buffer;
-}
-
-/**
- * Write a MySQL CHANGE_USER packet to backend server
- *
- * @param conn  MySQL protocol structure
- * @param dbname The selected database
- * @param user The selected user
- * @param passwd The SHA1(real_password)
- * @return 1 on success, 0 on failure
- */
-int gw_send_change_user_to_backend(char          *dbname,
-                                   char          *user,
-                                   uint8_t       *passwd,
-                                   MySQLProtocol *conn)
-{
-    GWBUF *buffer;
-    int rc;
-    MYSQL_session*  mses;
-
-    mses = (MYSQL_session*)conn->owner_dcb->session->client_dcb->data;
-    buffer = gw_create_change_user_packet(mses, conn);
-    rc = conn->owner_dcb->func.write(conn->owner_dcb, buffer);
-
-    if (rc != 0)
-    {
-        rc = 1;
-    }
-    return rc;
-}
-
-
-/**
- * gw_find_mysql_user_password_sha1
- *
- * The routine fetches an user from the MaxScale users' table
- * The users' table is dcb->service->users or a different one specified with void *repository
- * The user lookup uses username,host and db name (if passed in connection or change user)
- *
- * If found the HEX password, representing sha1(sha1(password)), is converted in binary data and
- * copied into gateway_password
- *
- * @param username              The user to look for
- * @param gateway_password      The related SHA1(SHA1(password)), the pointer must be preallocated
- * @param dcb                   Current DCB
- * @return 1 if user is not found or 0 if the user exists
- *
- */
-
-int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, DCB *dcb)
-{
-    SERVICE *service = NULL;
-    struct sockaddr_in *client;
-    char *user_password = NULL;
-    MYSQL_USER_HOST key;
-    MYSQL_session *client_data = NULL;
-
-    client_data = (MYSQL_session *) dcb->data;
-    service = (SERVICE *) dcb->service;
-    client = (struct sockaddr_in *) &dcb->ipv4;
-
-    key.user = username;
-    memcpy(&key.ipv4, client, sizeof(struct sockaddr_in));
-    key.netmask = 32;
-    key.resource = client_data->db;
-    if (strlen(dcb->remote) < MYSQL_HOST_MAXLEN)
-    {
-        strcpy(key.hostname, dcb->remote);
-    }
-
-    MXS_DEBUG("%lu [MySQL Client Auth], checking user [%s@%s]%s%s",
-              pthread_self(),
-              key.user,
-              dcb->remote,
-              key.resource != NULL ?" db: " :"",
-              key.resource != NULL ?key.resource :"");
-
-    /* look for user@current_ipv4 now */
-    user_password = mysql_users_fetch(service->users, &key);
-
-    if (!user_password)
-    {
-        /* The user is not authenticated @ current IPv4 */
-
-        while (1)
-        {
-            /*
-             * (1) Check for localhost first: 127.0.0.1 (IPv4 only)
-             */
-
-            if ((key.ipv4.sin_addr.s_addr == 0x0100007F) &&
-                !dcb->service->localhost_match_wildcard_host)
-            {
-                /* Skip the wildcard check and return 1 */
-                break;
-            }
-
-            /*
-             * (2) check for possible IPv4 class C,B,A networks
-             */
-
-            /* Class C check */
-            key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
-            key.netmask -= 8;
-
-            user_password = mysql_users_fetch(service->users, &key);
-
-            if (user_password)
-            {
-                break;
-            }
-
-            /* Class B check */
-            key.ipv4.sin_addr.s_addr &= 0x0000FFFF;
-            key.netmask -= 8;
-
-            user_password = mysql_users_fetch(service->users, &key);
-
-            if (user_password)
-            {
-                break;
-            }
-
-            /* Class A check */
-            key.ipv4.sin_addr.s_addr &= 0x000000FF;
-            key.netmask -= 8;
-
-            user_password = mysql_users_fetch(service->users, &key);
-
-            if (user_password)
-            {
-                break;
-            }
-
-            /*
-             * (3) Continue check for wildcard host, user@%
-             */
-
-            memset(&key.ipv4, 0, sizeof(struct sockaddr_in));
-            key.netmask = 0;
-
-            MXS_DEBUG("%lu [MySQL Client Auth], checking user [%s@%s] with "
-                      "wildcard host [%%]",
-                      pthread_self(),
-                      key.user,
-                      dcb->remote);
-
-            user_password = mysql_users_fetch(service->users, &key);
-
-            if (user_password)
-            {
-                break;
-            }
-
-            if (!user_password)
-            {
-                /*
-                 * user@% not found.
-                 */
-
-                MXS_DEBUG("%lu [MySQL Client Auth], user [%s@%s] not existent",
-                          pthread_self(),
-                          key.user,
-                          dcb->remote);
-
-                MXS_INFO("Authentication Failed: user [%s@%s] not found.",
-                         key.user,
-                         dcb->remote);
-                break;
-            }
-
-        }
-    }
-
-    /* If user@host has been found we get the the password in binary format*/
-    if (user_password)
-    {
-        /*
-         * Convert the hex data (40 bytes) to binary (20 bytes).
-         * The gateway_password represents the SHA1(SHA1(real_password)).
-         * Please note: the real_password is unknown and SHA1(real_password) is unknown as well
-         */
-        int passwd_len=strlen(user_password);
-        if (passwd_len)
-        {
-            passwd_len = (passwd_len <= (SHA_DIGEST_LENGTH * 2)) ? passwd_len : (SHA_DIGEST_LENGTH * 2);
-            gw_hex2bin(gateway_password, user_password, passwd_len);
-        }
-
-        return 0;
-    } else {
-        return 1;
-    }
-}
-
-/**
+>>>>>>> origin/develop
  * mysql_send_auth_error
  *
  * Send a MySQL protocol ERR message, for gateway authentication error to the dcb
@@ -1481,7 +447,6 @@ int mysql_send_auth_error(DCB        *dcb,
     uint8_t field_count = 0;
     uint8_t mysql_err[2];
     uint8_t mysql_statemsg[6];
-    unsigned int mysql_errno = 0;
     const char *mysql_error_msg = NULL;
     const char *mysql_state = NULL;
 
@@ -1496,12 +461,11 @@ int mysql_send_auth_error(DCB        *dcb,
                   STRDCBSTATE(dcb->state));
         return 0;
     }
-    mysql_errno = 1045;
     mysql_error_msg = "Access denied!";
     mysql_state = "28000";
 
     field_count = 0xff;
-    gw_mysql_set_byte2(mysql_err, mysql_errno);
+    gw_mysql_set_byte2(mysql_err, /*mysql_errno */ 1045);
     mysql_statemsg[0]='#';
     memcpy(mysql_statemsg + 1, mysql_state, 5);
 
@@ -1609,7 +573,7 @@ GWBUF* gw_MySQL_get_next_packet(GWBUF** p_readbuf)
         size_t   bytestocopy;
 
         buflen = GWBUF_LENGTH((*p_readbuf));
-        bytestocopy = MIN(buflen, packetlen - nbytes_copied);
+        bytestocopy = buflen < (packetlen - nbytes_copied) ? buflen : packetlen - nbytes_copied;
 
         memcpy(target + nbytes_copied, src, bytestocopy);
         *p_readbuf = gwbuf_consume((*p_readbuf), bytestocopy);
@@ -1624,6 +588,7 @@ return_packetbuf:
 
 /**
  * Move <npackets> from buffer pointed to by <*p_readbuf>.
+ * Appears to be unused 11 May 2016 (Martin)
  */
 GWBUF* gw_MySQL_get_packets(GWBUF** p_srcbuf,
                             int*    npackets)
@@ -1656,10 +621,13 @@ static server_command_t* server_command_init(server_command_t* srvcmd,
     {
         c = (server_command_t *)malloc(sizeof(server_command_t));
     }
-    c->scom_cmd = cmd;
-    c->scom_nresponse_packets = -1;
-    c->scom_nbytes_to_read = 0;
-    c->scom_next = NULL;
+    if (c != NULL)
+    {
+        c->scom_cmd = cmd;
+        c->scom_nresponse_packets = -1;
+        c->scom_nbytes_to_read = 0;
+        c->scom_next = NULL;
+    }
 
     return c;
 }
@@ -1667,7 +635,14 @@ static server_command_t* server_command_init(server_command_t* srvcmd,
 static server_command_t* server_command_copy(server_command_t* srvcmd)
 {
     server_command_t* c = (server_command_t *)malloc(sizeof(server_command_t));
-    *c = *srvcmd;
+    if (NULL == c)
+    {
+        MXS_ERROR("Memory failure while attempting server_command_copy");
+    }
+    else
+    {
+        *c = *srvcmd;
+    }
 
     return c;
 }
@@ -1845,16 +820,17 @@ void init_response_status(GWBUF*             buf,
                           int*               npackets,
                           ssize_t*           nbytes_left)
 {
-    uint8_t* packet;
-    int nparam;
-    int nattr;
+    uint8_t readbuf[3];
+    int nparam = 0;
+    int nattr = 0;
     uint8_t* data;
 
     ss_dassert(gwbuf_length(buf) >= 3);
 
-    data = (uint8_t *)buf->start;
+    /** Read command byte */
+    gwbuf_copy_data(buf, 4, 1, readbuf);
 
-    if (data[4] == 0xff) /*< error */
+    if (readbuf[0] == 0xff) /*< error */
     {
         *npackets = 1;
     }
@@ -1863,13 +839,11 @@ void init_response_status(GWBUF*             buf,
         switch (cmd)
         {
         case MYSQL_COM_STMT_PREPARE:
-            packet = (uint8_t *)GWBUF_DATA(buf);
-            /** ok + nparam + eof + nattr + eof */
-            nparam = MYSQL_GET_STMTOK_NPARAM(packet);
-            nattr  = MYSQL_GET_STMTOK_NATTR(packet);
-
-            *npackets = 1 + nparam + MIN(1, nparam) +
-                nattr + MIN(nattr, 1);
+            gwbuf_copy_data(buf, 9, 2, readbuf);
+            nparam = gw_mysql_get_byte2(readbuf);
+            gwbuf_copy_data(buf, 11, 2, readbuf);
+            nattr = gw_mysql_get_byte2(readbuf);
+            *npackets = 1 + nparam + MIN(1, nparam) + nattr + MIN(nattr, 1);
             break;
 
         case MYSQL_COM_QUIT:
@@ -1887,7 +861,9 @@ void init_response_status(GWBUF*             buf,
             break;
         }
     }
-    *nbytes_left = MYSQL_GET_PACKET_LEN(data) + MYSQL_HEADER_LEN;
+
+    gwbuf_copy_data(buf, 0, 3, readbuf);
+    *nbytes_left = gw_mysql_get_byte3(readbuf) + MYSQL_HEADER_LEN;
     /**
      * There is at least one complete packet in the buffer so buffer is bigger
      * than packet

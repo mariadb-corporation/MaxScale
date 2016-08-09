@@ -2,7 +2,7 @@
 
 ## Overview
 
-The top filter is a filter module for MaxScale that monitors every SQL statement that passes through the filter. It measures the duration of that statement, the time between the statement being sent and the first result being returned. The top N times are kept, along with the SQL text itself and a list sorted on the execution times of the query is written to a file upon closure of the client session.
+The top filter is a filter module for MariaDB MaxScale that monitors every SQL statement that passes through the filter. It measures the duration of that statement, the time between the statement being sent and the first result being returned. The top N times are kept, along with the SQL text itself and a list sorted on the execution times of the query is written to a file upon closure of the client session.
 
 ## Configuration
 
@@ -84,7 +84,7 @@ All regular expressions are evaluated with the option to ignore the case of the 
 
 ### Source
 
-The optional source parameter defines an address that is used to match against the address from which the client connection to MaxScale originates. Only sessions that originate from this address will be logged.
+The optional source parameter defines an address that is used to match against the address from which the client connection to MariaDB MaxScale originates. Only sessions that originate from this address will be logged.
 
 ```
 source=127.0.0.1
@@ -92,7 +92,7 @@ source=127.0.0.1
 
 ### User
 
-The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username will result in results being generated.
+The optional user parameter defines a user name that is used to match against the user from which the client connection to MariaDB MaxScale originates. Only sessions that are connected using this username will result in results being generated.
 
 ```
 user=john

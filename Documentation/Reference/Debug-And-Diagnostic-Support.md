@@ -1,4 +1,4 @@
-MaxScale
+MariaDB MaxScale
 
 Debug & Diagnostic Support
 
@@ -21,7 +21,7 @@ Last Updated: 24th November 2014
   </tr>
   <tr>
     <td>22nd July 2013</td>
-    <td>Updated with new naming MaxScale
+    <td>Updated with new naming MariaDB MaxScale
 Addition of description of login process for the debug CLI
 Updates debug CLI output examples
 Addition of show users, shutdown maxscale, shutdown service, restart service, set server, clear server, reload users, reload config and add user commands.</td>
@@ -66,23 +66,23 @@ Added the new show server command.</td>
 
 # Introduction
 
-MaxScale is a complex application and as such is bound to have bugs and support issues that occur from time to time. There are a number of things we need to consider for the development stages and long term supportability of MaxScale
+MariaDB MaxScale is a complex application and as such is bound to have bugs and support issues that occur from time to time. There are a number of things we need to consider for the development stages and long term supportability of MariaDB MaxScale
 
-* Flexible logging of MaxScale activity
+* Flexible logging of MariaDB MaxScale activity
 
-* Support for connecting a debugger to MaxScale
+* Support for connecting a debugger to MariaDB MaxScale
 
-* A diagnostic interface to MaxScale
+* A diagnostic interface to MariaDB MaxScale
 
-The topic of logging has already been discussed in another document in this series of documents about MaxScale and will not be covered further here.
+The topic of logging has already been discussed in another document in this series of documents about MariaDB MaxScale and will not be covered further here.
 
 # Debugger Support
 
-Beyond the language support for debugging using tools such as gdb, MaxScale will also offer convenience functions for the debugger to call and a command line argument that is useful to run MaxScale under the debugger.
+Beyond the language support for debugging using tools such as gdb, MariaDB MaxScale will also offer convenience functions for the debugger to call and a command line argument that is useful to run MariaDB MaxScale under the debugger.
 
 ## Command Line Option
 
-Normally when MaxScale starts it will place itself in the background and setup the signal masks so that it is immune to the normal set of signals that will cause the process to exit, SIGINT and SIGQUIT. This behavior is normally what is required, however if you wish to run MaxScale under the control of a debugger it is useful to suppress this behavior.  A command line option, -d is provided to turn off this behavior.
+Normally when MariaDB MaxScale starts it will place itself in the background and setup the signal masks so that it is immune to the normal set of signals that will cause the process to exit, SIGINT and SIGQUIT. This behavior is normally what is required, however if you wish to run MariaDB MaxScale under the control of a debugger it is useful to suppress this behavior.  A command line option, -d is provided to turn off this behavior.
 
 % gdb maxscale
 
@@ -90,13 +90,13 @@ Normally when MaxScale starts it will place itself in the background and setup t
 
 ## Convenience Functions
 
-A set of convenience functions is provided that may be used within the debugger session to extract information from MaxScale.
+A set of convenience functions is provided that may be used within the debugger session to extract information from MariaDB MaxScale.
 
 ### Printing Services
 
-A service within MaxScale provides the encapsulation of the port MaxScale listen on, the protocol it uses, the set of servers it may route to and the routing method to use. Two functions exists that allow you to display the details of the services and may be executed from within a debugger session.
+A service within MariaDB MaxScale provides the encapsulation of the port MariaDB MaxScale listen on, the protocol it uses, the set of servers it may route to and the routing method to use. Two functions exists that allow you to display the details of the services and may be executed from within a debugger session.
 
-The printAllServices() function will print all the defined services within MaxScale and is invoked using the call syntax of the debugger.
+The printAllServices() function will print all the defined services within MariaDB MaxScale and is invoked using the call syntax of the debugger.
 
 (gdb) call printAllServices()
 
@@ -158,7 +158,7 @@ Service 0x60da20
 
 ### Printing Sessions
 
-Sessions represent the data for a client that is connecting through MaxScale, there will be a session for each client and one for each listener for a specific port/protocol combination. Similarly there are two calls to print all or a particular session.
+Sessions represent the data for a client that is connecting through MariaDB MaxScale, there will be a session for each client and one for each listener for a specific port/protocol combination. Similarly there are two calls to print all or a particular session.
 
 (gdb) call printAllSessions()
 
@@ -192,7 +192,7 @@ Session 0x60fdf0
 
 ### Printing Servers
 
-Servers are a representation of the backend database to which MaxScale may route SQL statements. Similarly two calls exist to print server details.
+Servers are a representation of the backend database to which MariaDB MaxScale may route SQL statements. Similarly two calls exist to print server details.
 
 (gdb) call printAllServers()
 
@@ -234,7 +234,7 @@ Server 0x60d920
 
 ### Modules
 
-MaxScale makes significant use of modules, shared objects, that are loaded on demand based on the configuration. A routine exists that will print the currently loaded modules.
+MariaDB MaxScale makes significant use of modules, shared objects, that are loaded on demand based on the configuration. A routine exists that will print the currently loaded modules.
 
 (gdb) call printModules()
 
@@ -256,7 +256,7 @@ readconnroute   | Router      | V1.0.0
 
 ### Descriptor Control Blocks
 
-The Descriptor Control Block (DCB) is an important concept within MaxScale since it is this block that is passed to the polling system, when an event occurs it is that structure that is available and from this structure it must be possible to navigate to all other structures that contain state regarding the session and protocol in use.
+The Descriptor Control Block (DCB) is an important concept within MariaDB MaxScale since it is this block that is passed to the polling system, when an event occurs it is that structure that is available and from this structure it must be possible to navigate to all other structures that contain state regarding the session and protocol in use.
 
 ![image alt text](images/image_0.png)
 
@@ -318,7 +318,7 @@ DCB: 0x60ead0
 
 # Diagnostic Interface
 
-It is possible to configure a service to run within MaxScale that will allow a user to telnet to a port on the machine and be connected to MaxScale. This is configured by creating a service that uses the debugcli routing module and the telnetd protocol with an associated listener.  The service does not require any backend databases to be configured since the router never forwards any data, it merely accepts commands and executes them, returning data to the user.
+It is possible to configure a service to run within MariaDB MaxScale that will allow a user to telnet to a port on the machine and be connected to MariaDB MaxScale. This is configured by creating a service that uses the debugcli routing module and the telnetd protocol with an associated listener.  The service does not require any backend databases to be configured since the router never forwards any data, it merely accepts commands and executes them, returning data to the user.
 
 The example below shows the configuration that is required to set-up a debug interface that listens for incoming telnet connections on port 4442.
 
@@ -344,7 +344,7 @@ The debugcli accepts router options of either developer or user, these are used 
 
 The Debug Listener section setups the protocol and port combination and links that to the service.
 
-Assuming a configuration that includes the debug service, with the listening port set to 4442, to connect from the machine that runs MaxScale you must first install telnet and then simply call telnet to connect.
+Assuming a configuration that includes the debug service, with the listening port set to 4442, to connect from the machine that runs MariaDB MaxScale you must first install telnet and then simply call telnet to connect.
 
 -bash-4.1$ telnet localhost 4442
 
@@ -364,9 +364,9 @@ Password:
 
 MaxScale> 
 
-As delivered MaxScale uses a default login name of admin with the password of mariadb for connections to the debug interface. Users may be added to the CLI by use of the add user command.
+As delivered MariaDB MaxScale uses a default login name of admin with the password of mariadb for connections to the debug interface. Users may be added to the CLI by use of the add user command.
 
-This places you in the debug command line interface of MaxScale, there is a help system that will display the commands available to you
+This places you in the debug command line interface of MariaDB MaxScale, there is a help system that will display the commands available to you
 
 **MaxScale> **help
 
@@ -496,7 +496,7 @@ This provides a useful mechanism to see what is configured and provide the servi
 
 ## Listing Listeners
 
-The list listeners command outputs a table that provides the current set of listeners within the MaxScale instance and shows the status of each listener.
+The list listeners command outputs a table that provides the current set of listeners within the MariaDB MaxScale instance and shows the status of each listener.
 
 **MaxScale>** list listeners
 
@@ -514,7 +514,7 @@ Debug Service        | telnetd            | localhost       |  4242 | Running
 
 ## Listing Servers
 
-The list servers command will display a table that contains a row for every server defined in the configuration file. The row contains the server name that can be passed to the show server command, the address and port of the server, its current status and the number of connections to that server from MaxScale.
+The list servers command will display a table that contains a row for every server defined in the configuration file. The row contains the server name that can be passed to the show server command, the address and port of the server, its current status and the number of connections to that server from MariaDB MaxScale.
 
 **MaxScale>** list servers
 
@@ -534,7 +534,7 @@ server4            | 127.0.0.1       |  3309 | Slave, Running     |    0
 
 ## Listing Modules
 
-The list modules command displays a table of all the modules loaded within MaxScale.
+The list modules command displays a table of all the modules loaded within MariaDB MaxScale.
 
 **MaxScale> **list modules
 
@@ -846,7 +846,7 @@ Note, the Master Root Server used for routing decision is the server with master
 
 * Last Repl Heartbeat is the MaxScale timestamp read or inserted (if current server is master)
 
-The Replication Heartbeat table is updated by MySQL replication, starting MaxScale when there is a significant slave delay may result that Slave Delay and  Last Repl Heartbeat are not available for some time in the slave server details
+The Replication Heartbeat table is updated by MySQL replication, starting MariaDB MaxScale when there is a significant slave delay may result that Slave Delay and  Last Repl Heartbeat are not available for some time in the slave server details
 
 ## There may be other status description such us:
 
@@ -1160,7 +1160,7 @@ Number of accept events:	4
 
 The show dbuser command allows data regarding the table that holds the database users for a service to be displayed. It does not give the actual user data, but rather details of the hashtable distribution.
 
-The show dbuser command takes different arguments in the two modes of MaxScale, in user mode it may be passed the name of a service rather than an address, whilst in developer mode it needs the address of a user structure that has been extracted from a service.
+The show dbuser command takes different arguments in the two modes of MariaDB MaxScale, in user mode it may be passed the name of a service rather than an address, whilst in developer mode it needs the address of a user structure that has been extracted from a service.
 
 In developer mode the show users commands must be passed the address of the user table, this can be extracted from the output of a show services command.
 
@@ -1313,9 +1313,9 @@ Monitor timeouts used in monitors follow the rules of mysql_real_connect C API:
 
 * Write Timeout is the timeout in seconds for each attempt to write to the server. There is a retry if necessary, so the total effective timeout value is two times the option value.
 
-## Shutdown maxscale
+## Shutdown MariaDB MaxScale
 
-The CLI can be used to shutdown the MaxScale server by use of the shutdown command, it may be called with the argument either maxscale or gateway.
+The CLI can be used to shutdown the MariaDB MaxScale server by use of the shutdown command, it may be called with the argument either maxscale or gateway.
 
 **MaxScale>** shutdown maxscale
 
@@ -1679,7 +1679,7 @@ Loaded 34 users.
 
 ## Reload config
 
-The reload config command can be used to force MaxScale to re-read the maxscale.cnf and update itself to the latest configuration defined in that configuration file. It is also possible to force the reading of the configuration file by sending a HangUp signal (SIGHUP) to the maxscale process.
+The reload config command can be used to force MariaDB MaxScale to re-read the maxscale.cnf and update itself to the latest configuration defined in that configuration file. It is also possible to force the reading of the configuration file by sending a HangUp signal (SIGHUP) to the maxscale process.
 
 **MaxScale>** reload config
 
@@ -1691,7 +1691,7 @@ Note, not all configuration elements can be changed dynamically currently. This 
 
 ## Add user
 
-The add user command is used to add new users to the debug CLI of MaxScale. The default behavior of the CLI for MaxScale is to have a login name of admin and a fixed password of mariadb. Adding new users will disable this default behavior and limit the login access to the users that are added.
+The add user command is used to add new users to the debug CLI of MariaDB MaxScale. The default behavior of the CLI for MariaDB MaxScale is to have a login name of admin and a fixed password of mariadb. Adding new users will disable this default behavior and limit the login access to the users that are added.
 
 **MaxScale>** add user admin july2013
 
@@ -1715,7 +1715,7 @@ If you should forget or lose the the account details you may simply remove the p
 
 ## Enable/disable log
 
-The enable/disable log command is used to enable/disable the log facility of MaxScale. The default behavior for MaxScale is to have all logs enabled in DEBUG version, and only error log in production release.
+The enable/disable log command is used to enable/disable the log facility of MariaDB MaxScale. The default behavior for MariaDB MaxScale is to have all logs enabled in DEBUG version, and only error log in production release.
 
 Examples:
 
@@ -1741,7 +1741,7 @@ No output for these commands in the debug interface, but in the affected logs th
 
 # Logging facility
 
-MaxScale generates output of its behavior to four distinct logs, error, messages, trace and debug log. Error and message logs are enabled by default but all logs can be dynamically enabled and disabled by using maxadmin utility, debug client interface (telnet) or optionally by using your own application through the client API.
+MariaDB MaxScale generates output of its behavior to four distinct logs, error, messages, trace and debug log. Error and message logs are enabled by default but all logs can be dynamically enabled and disabled by using maxadmin utility, debug client interface (telnet) or optionally by using your own application through the client API.
 
 ## Log contents
 
@@ -1843,7 +1843,7 @@ Individual trace log entry looks similar to those in other logs but there is som
 
 2014-12-09 14:52:36   [6]  Session write, routing to all servers.
 
-Writing trace log for each client may produce so much data that it seriously affects on the performance of MaxScale. It may also be difficult to follow a specific session if the log is flooded with data from other sessions. While it is possible to dynamically enable and disable trace log as a whole, one can also choose to explicitly enable trace logging for a specific session by first enabling trace log, finding out the session id of the interesting session, disabling trace log and finally enabling trace log only for a given session:
+Writing trace log for each client may produce so much data that it seriously affects on the performance of MariaDB MaxScale. It may also be difficult to follow a specific session if the log is flooded with data from other sessions. While it is possible to dynamically enable and disable trace log as a whole, one can also choose to explicitly enable trace logging for a specific session by first enabling trace log, finding out the session id of the interesting session, disabling trace log and finally enabling trace log only for a given session:
 
 1. enable log trace (and examine the session id)
 
@@ -1925,7 +1925,7 @@ The log files are located in
 
 /var/log/maxscale
 
-by default. If, however, trace and debug logs are enabled, only a soft link is created there. MaxScale process creates a directory under 
+by default. If, however, trace and debug logs are enabled, only a soft link is created there. MariaDB MaxScale process creates a directory under 
 
 /dev/shm/maxscale.<pid> 
 
@@ -1941,7 +1941,7 @@ Specific log file can be rotated by executing
 
 flush log [error|message|trace|debug]
 
-The commands above can be executed either by using maxadmin utility or via debug client API with telnet. The sequence number included in the log filename is used to separate files from each other. The logic behind sequence numbering is such that if the log directory is empty when MaxScale is started, new log files will be created with sequence number 1 in their names, skygw_err1.log, for example. If files of the same type already exist, the new MaxScale process opens the file with largest sequence number and applies into it. If existing log file isn’t writable for the user that MaxScale runs on, new log file will be created with bigger sequence number.
+The commands above can be executed either by using maxadmin utility or via debug client API with telnet. The sequence number included in the log filename is used to separate files from each other. The logic behind sequence numbering is such that if the log directory is empty when MariaDB MaxScale is started, new log files will be created with sequence number 1 in their names, skygw_err1.log, for example. If files of the same type already exist, the new MariaDB MaxScale process opens the file with largest sequence number and applies into it. If existing log file isn’t writable for the user that MariaDB MaxScale runs on, new log file will be created with bigger sequence number.
 
 More information about log files and administering them can be found from **MaxScale Administration Tutorial**.
 

@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -80,21 +75,21 @@ listener_alloc(char *protocol, char *address, unsigned short port, char *authent
 int
 listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
 {
-    if (strcasecmp(version,"TLSV10") == 0)
+    if (strcasecmp(version, "TLSV10") == 0)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS10;
     }
 #ifdef OPENSSL_1_0
-    else if (strcasecmp(version,"TLSV11") == 0)
+    else if (strcasecmp(version, "TLSV11") == 0)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS11;
     }
-    else if (strcasecmp(version,"TLSV12") == 0)
+    else if (strcasecmp(version, "TLSV12") == 0)
     {
         ssl_listener->ssl_method_type = SERVICE_TLS12;
     }
 #endif
-    else if (strcasecmp(version,"MAX") == 0)
+    else if (strcasecmp(version, "MAX") == 0)
     {
         ssl_listener->ssl_method_type = SERVICE_SSL_TLS_MAX;
     }
@@ -144,28 +139,28 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
         switch(ssl_listener->ssl_method_type)
         {
         case SERVICE_TLS10:
-            ssl_listener->method = (SSL_METHOD*)TLSv1_server_method();
+            ssl_listener->method = (SSL_METHOD*)TLSv1_method();
             break;
 #ifdef OPENSSL_1_0
         case SERVICE_TLS11:
-            ssl_listener->method = (SSL_METHOD*)TLSv1_1_server_method();
+            ssl_listener->method = (SSL_METHOD*)TLSv1_1_method();
             break;
         case SERVICE_TLS12:
-            ssl_listener->method = (SSL_METHOD*)TLSv1_2_server_method();
+            ssl_listener->method = (SSL_METHOD*)TLSv1_2_method();
             break;
 #endif
             /** Rest of these use the maximum available SSL/TLS methods */
         case SERVICE_SSL_MAX:
-            ssl_listener->method = (SSL_METHOD*)SSLv23_server_method();
+            ssl_listener->method = (SSL_METHOD*)SSLv23_method();
             break;
         case SERVICE_TLS_MAX:
-            ssl_listener->method = (SSL_METHOD*)SSLv23_server_method();
+            ssl_listener->method = (SSL_METHOD*)SSLv23_method();
             break;
         case SERVICE_SSL_TLS_MAX:
-            ssl_listener->method = (SSL_METHOD*)SSLv23_server_method();
+            ssl_listener->method = (SSL_METHOD*)SSLv23_method();
             break;
         default:
-            ssl_listener->method = (SSL_METHOD*)SSLv23_server_method();
+            ssl_listener->method = (SSL_METHOD*)SSLv23_method();
             break;
         }
 
@@ -175,13 +170,18 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
             return -1;
         }
 
+        SSL_CTX_set_default_read_ahead(ssl_listener->ctx, 0);
+
         /** Enable all OpenSSL bug fixes */
-        SSL_CTX_set_options(ssl_listener->ctx,SSL_OP_ALL);
+        SSL_CTX_set_options(ssl_listener->ctx, SSL_OP_ALL);
+
+        /** Disable SSLv3 */
+        SSL_CTX_set_options(ssl_listener->ctx, SSL_OP_NO_SSLv3);
 
         /** Generate the 512-bit and 1024-bit RSA keys */
         if (rsa_512 == NULL)
         {
-            rsa_512 = RSA_generate_key(512,RSA_F4,NULL,NULL);
+            rsa_512 = RSA_generate_key(512, RSA_F4, NULL, NULL);
             if (rsa_512 == NULL)
             {
                 MXS_ERROR("512-bit RSA key generation failed.");
@@ -190,7 +190,7 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
         }
         if (rsa_1024 == NULL)
         {
-            rsa_1024 = RSA_generate_key(1024,RSA_F4,NULL,NULL);
+            rsa_1024 = RSA_generate_key(1024, RSA_F4, NULL, NULL);
             if (rsa_1024 == NULL)
             {
                 MXS_ERROR("1024-bit RSA key generation failed.");
@@ -200,42 +200,48 @@ listener_init_SSL(SSL_LISTENER *ssl_listener)
 
         if (rsa_512 != NULL && rsa_1024 != NULL)
         {
-            SSL_CTX_set_tmp_rsa_callback(ssl_listener->ctx,tmp_rsa_callback);
+            SSL_CTX_set_tmp_rsa_callback(ssl_listener->ctx, tmp_rsa_callback);
         }
 
-        /** Load the server certificate */
-        if (SSL_CTX_use_certificate_file(ssl_listener->ctx, ssl_listener->ssl_cert, SSL_FILETYPE_PEM) <= 0)
+        if (ssl_listener->ssl_cert && ssl_listener->ssl_key)
         {
-            MXS_ERROR("Failed to set server SSL certificate.");
-            return -1;
-        }
+            /** Load the server certificate */
+            if (SSL_CTX_use_certificate_file(ssl_listener->ctx, ssl_listener->ssl_cert, SSL_FILETYPE_PEM) <= 0)
+            {
+                MXS_ERROR("Failed to set server SSL certificate.");
+                return -1;
+            }
 
-        /* Load the private-key corresponding to the server certificate */
-        if (SSL_CTX_use_PrivateKey_file(ssl_listener->ctx, ssl_listener->ssl_key, SSL_FILETYPE_PEM) <= 0)
-        {
-            MXS_ERROR("Failed to set server SSL key.");
-            return -1;
-        }
+            /* Load the private-key corresponding to the server certificate */
+            if (SSL_CTX_use_PrivateKey_file(ssl_listener->ctx, ssl_listener->ssl_key, SSL_FILETYPE_PEM) <= 0)
+            {
+                MXS_ERROR("Failed to set server SSL key.");
+                return -1;
+            }
 
-        /* Check if the server certificate and private-key matches */
-        if (!SSL_CTX_check_private_key(ssl_listener->ctx))
-        {
-            MXS_ERROR("Server SSL certificate and key do not match.");
-            return -1;
-        }
+            /* Check if the server certificate and private-key matches */
+            if (!SSL_CTX_check_private_key(ssl_listener->ctx))
+            {
+                MXS_ERROR("Server SSL certificate and key do not match.");
+                return -1;
+            }
 
-        /* Load the RSA CA certificate into the SSL_CTX structure */
-        if (!SSL_CTX_load_verify_locations(ssl_listener->ctx, ssl_listener->ssl_ca_cert, NULL))
-        {
-            MXS_ERROR("Failed to set Certificate Authority file.");
-            return -1;
+            /* Load the RSA CA certificate into the SSL_CTX structure */
+            if (!SSL_CTX_load_verify_locations(ssl_listener->ctx, ssl_listener->ssl_ca_cert, NULL))
+            {
+                MXS_ERROR("Failed to set Certificate Authority file.");
+                return -1;
+            }
         }
 
         /* Set to require peer (client) certificate verification */
-        SSL_CTX_set_verify(ssl_listener->ctx,SSL_VERIFY_PEER,NULL);
+        if (ssl_listener->ssl_cert_verify_depth)
+        {
+            SSL_CTX_set_verify(ssl_listener->ctx, SSL_VERIFY_PEER, NULL);
+        }
 
         /* Set the verification depth */
-        SSL_CTX_set_verify_depth(ssl_listener->ctx,ssl_listener->ssl_cert_verify_depth);
+        SSL_CTX_set_verify_depth(ssl_listener->ctx, ssl_listener->ssl_cert_verify_depth);
         ssl_listener->ssl_init_done = true;
     }
     return 0;

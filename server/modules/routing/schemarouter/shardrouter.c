@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2015
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 #include <my_config.h>
@@ -1023,12 +1018,12 @@ newSession(
     client_rses->rses_autocommit_enabled = true;
     client_rses->rses_transaction_active = false;
     client_rses->session = session;
-    client_rses->replydcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+    client_rses->replydcb = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
     client_rses->replydcb->func.read = fakeReply;
     client_rses->replydcb->state = DCB_STATE_POLLING;
     client_rses->replydcb->session = session;
 
-    client_rses->routedcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+    client_rses->routedcb = dcb_alloc(DCB_ROLE_INTERNAL, NULL);
     client_rses->routedcb->func.read = fakeQuery;
     client_rses->routedcb->state = DCB_STATE_POLLING;
     client_rses->routedcb->session = session;

@@ -15,8 +15,8 @@ if(PACKAGE)
 endif()
 
 # Set default values for cache entries and set the MaxScale version
-set_variables() 
-set_maxscale_version()
+include(cmake/defaults.cmake)
+include(VERSION.cmake)
 
 set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: None(CMAKE_CXX_FLAGS or CMAKE_C_FLAGS used) Debug Release RelWithDebInfo MinSizeRel.")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
@@ -34,13 +34,14 @@ check_dirs()
 find_package(OpenSSL)
 find_package(Valgrind)
 find_package(MariaDBConnector)
-find_package(MySQL)
 find_package(Pandoc)
 find_package(TCMalloc)
 find_package(Jemalloc)
 find_package(Git)
 find_package(CURL) 
 find_package(RabbitMQ)
+find_package(LibUUID)
+find_package(Avro)
 
 # Find or build PCRE2
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
@@ -109,6 +110,7 @@ endif()
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/server/include/version.h.in ${CMAKE_BINARY_DIR}/server/include/version.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/server/include/gwdirs.h.in ${CMAKE_BINARY_DIR}/server/include/gwdirs.h @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/server/include/adminusers.h.in ${CMAKE_BINARY_DIR}/server/include/adminusers.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/server/include/maxscale_test.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postrm.in ${CMAKE_BINARY_DIR}/postrm @ONLY)
@@ -170,12 +172,16 @@ set(CMAKE_CXX_FLAGS_RELEASE "")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb")
 
 include_directories(utils)
+include_directories(avro)
 include_directories(server/include)
 include_directories(server/inih)
 include_directories(server/modules/include)
 include_directories(${CMAKE_BINARY_DIR}/server/include)
 include_directories(${CURL_INCLUDE_DIRS})
 
+if (BUILD_AVRO)
+  add_subdirectory(avro)
+endif()
 add_subdirectory(plugins)
 add_subdirectory(query_classifier)
 add_subdirectory(server)
@@ -206,7 +212,7 @@ install(FILES server/maxscale_binlogserver_template.cnf DESTINATION ${MAXSCALE_S
 install(PROGRAMS ${ERRMSG} DESTINATION ${MAXSCALE_VARDIR}/lib/maxscale)
 install(FILES ${CMAKE_SOURCE_DIR}/COPYRIGHT DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES ${CMAKE_SOURCE_DIR}/README DESTINATION ${MAXSCALE_SHAREDIR})
-install(FILES ${CMAKE_SOURCE_DIR}/LICENSE DESTINATION ${MAXSCALE_SHAREDIR})
+install(FILES ${CMAKE_SOURCE_DIR}/LICENSE.TXT DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES etc/lsyncd_example.conf DESTINATION ${MAXSCALE_SHAREDIR})
 install(FILES Documentation/maxscale.1 DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man1)
 
@@ -285,24 +291,6 @@ if(PACKAGE)
     include(CPack)
   endif()
 endif()
-
-add_custom_target(buildtests
-  COMMAND ${CMAKE_COMMAND} -DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DWITH_SCRIPTS=N ${CMAKE_SOURCE_DIR}
-  COMMAND make
-  COMMENT "Building test suite..." VERBATIM
-) 
-
-add_custom_target(testall 
-  COMMAND ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} -DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DWITH_SCRIPTS=N -DWITH_MAXSCALE_CNF=N -DMAXSCALE_VARDIR=${CMAKE_BINARY_DIR}
-  COMMAND make install
-  COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/cmake/testall.cmake
-  COMMENT "Running full test suite..." VERBATIM)
-
-add_custom_target(testcore
-  COMMAND ${CMAKE_COMMAND} ${CMAKE_SOURCE_DIR} -DBUILD_TESTS=Y -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR} -DWITH_SCRIPTS=N -DWITH_MAXSCALE_CNF=N -DMAXSCALE_VARDIR=${CMAKE_BINARY_DIR}
-  COMMAND make install
-  COMMAND ctest -R Internal
-  COMMENT "Running core test suite..." VERBATIM)
 
 # uninstall target
 # see http://www.cmake.org/Wiki/CMake_FAQ#Can_I_do_.22make_uninstall.22_with_CMake.3F

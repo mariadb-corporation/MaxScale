@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -44,6 +39,7 @@
 #include <maxscale_pcre2.h>
 #include <externcmd.h>
 #include <mysqld_error.h>
+#include <mysql_utils.h>
 
 /*
  *  Create declarations of the enum for monitor events and also the array of
@@ -148,7 +144,7 @@ monitor_free(MONITOR *mon)
 
 
 /**
- * Start an individual monitor that has previoulsy been stopped.
+ * Start an individual monitor that has previously been stopped.
  *
  * @param monitor The Monitor that should be started
  */
@@ -156,8 +152,16 @@ void
 monitorStart(MONITOR *monitor, void* params)
 {
     spinlock_acquire(&monitor->lock);
-    monitor->handle = (*monitor->module->startMonitor)(monitor,params);
-    monitor->state = MONITOR_STATE_RUNNING;
+
+    if ((monitor->handle = (*monitor->module->startMonitor)(monitor, params)))
+    {
+        monitor->state = MONITOR_STATE_RUNNING;
+    }
+    else
+    {
+        MXS_ERROR("Failed to start monitor '%s'.", monitor->name);
+    }
+
     spinlock_release(&monitor->lock);
 }
 
@@ -187,7 +191,9 @@ void
 monitorStop(MONITOR *monitor)
 {
     spinlock_acquire(&monitor->lock);
-    if (monitor->state != MONITOR_STATE_STOPPED)
+
+    /** Only stop the monitor if it is running */
+    if (monitor->state == MONITOR_STATE_RUNNING)
     {
         monitor->state = MONITOR_STATE_STOPPING;
         monitor->module->stopMonitor(monitor);
@@ -196,11 +202,13 @@ monitorStop(MONITOR *monitor)
         MONITOR_SERVERS* db = monitor->databases;
         while (db)
         {
+            // TODO: Create a generic entry point for this or move it inside stopMonitor
             mysql_close(db->con);
             db->con = NULL;
             db = db->next;
         }
     }
+
     spinlock_release(&monitor->lock);
 }
 
@@ -313,12 +321,7 @@ monitorShowAll(DCB *dcb)
     ptr = allMonitors;
     while (ptr)
     {
-        dcb_printf(dcb, "Monitor: %p\n", ptr);
-        dcb_printf(dcb, "\tName:                %s\n", ptr->name);
-        if (ptr->module->diagnostics)
-        {
-            ptr->module->diagnostics(dcb, ptr);
-        }
+        monitorShow(dcb, ptr);
         ptr = ptr->next;
     }
     spinlock_release(&monLock);
@@ -334,10 +337,21 @@ monitorShow(DCB *dcb, MONITOR *monitor)
 {
 
     dcb_printf(dcb, "Monitor: %p\n", monitor);
-    dcb_printf(dcb, "\tName:                %s\n", monitor->name);
-    if (monitor->module->diagnostics)
+    dcb_printf(dcb, "\tName:                   %s\n", monitor->name);
+    if (monitor->handle)
     {
-        monitor->module->diagnostics(dcb, monitor);
+        if (monitor->module->diagnostics)
+        {
+            monitor->module->diagnostics(dcb, monitor);
+        }
+        else
+        {
+            dcb_printf(dcb, "\t(no diagnostics)\n");
+        }
+    }
+    else
+    {
+        dcb_printf(dcb, "\tMonitor failed\n");
     }
 }
 
@@ -512,85 +526,93 @@ monitorGetList()
 }
 
 /**
- * Check if the monitor user has all required permissions to operate properly.
- * this checks for REPLICATION CLIENT permissions
+ * @brief Check if the monitor user has all required permissions to operate properly.
+ *
  * @param service Monitor to inspect
- * @return False if an error with monitor permissions was detected or if an
- * error occurred. True if permissions are correct.
+ * @param query Query to execute
+ * @return True on success, false if monitor credentials lack permissions
  */
-bool check_monitor_permissions(MONITOR* monitor)
+bool check_monitor_permissions(MONITOR* monitor, const char* query)
 {
-    MYSQL* mysql;
-    MYSQL_RES* res;
-    char *user, *dpasswd;
-    SERVER* server;
-    bool rval = true;
-
-    if ((mysql = mysql_init(NULL)) == NULL)
-    {
-        MXS_ERROR("[%s] Error: MySQL connection initialization failed.", __FUNCTION__);
-        return false;
-    }
-
-    GATEWAY_CONF* cnf = config_get_global_options();
-
-    mysql_options(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
-    mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
-    mysql_options(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
-
     if (monitor->databases == NULL)
     {
-        MXS_ERROR("%s: Monitor is missing the servers parameter.", monitor->name);
+        MXS_ERROR("[%s] Monitor is missing the servers parameter.", monitor->name);
         return false;
     }
 
-    user = monitor->user;
-    dpasswd = decryptPassword(monitor->password);
-    server = monitor->databases->server;
+    char *user = monitor->user;
+    char *dpasswd = decryptPassword(monitor->password);
+    GATEWAY_CONF* cnf = config_get_global_options();
+    bool rval = false;
 
-    /** Connect to the first server. This assumes all servers have identical
-     * user permissions. */
-    if (mysql_real_connect(mysql, server->name, user, dpasswd, NULL, server->port, NULL, 0) == NULL)
+    for (MONITOR_SERVERS *mondb = monitor->databases; mondb; mondb = mondb->next)
     {
-        MXS_ERROR("%s: Failed to connect to server %s(%s:%d) when"
-                  " checking monitor user credentials and permissions.",
-                  monitor->name,
-                  server->unique_name,
-                  server->name,
-                  server->port);
+        MYSQL *mysql = mysql_init(NULL);
+
+        if (mysql == NULL)
+        {
+            MXS_ERROR("[%s] Error: MySQL connection initialization failed.", __FUNCTION__);
+            break;
+        }
+
+        mysql_options(mysql, MYSQL_OPT_READ_TIMEOUT, &cnf->auth_read_timeout);
+        mysql_options(mysql, MYSQL_OPT_CONNECT_TIMEOUT, &cnf->auth_conn_timeout);
+        mysql_options(mysql, MYSQL_OPT_WRITE_TIMEOUT, &cnf->auth_write_timeout);
+
+        if (mxs_mysql_real_connect(mysql, mondb->server, user, dpasswd) == NULL)
+        {
+            MXS_ERROR("[%s] Failed to connect to server '%s' (%s:%d) when"
+                      " checking monitor user credentials and permissions: %s",
+                      monitor->name, mondb->server->unique_name, mondb->server->name,
+                      mondb->server->port, mysql_error(mysql));
+            switch (mysql_errno(mysql))
+            {
+                case ER_ACCESS_DENIED_ERROR:
+                case ER_DBACCESS_DENIED_ERROR:
+                case ER_ACCESS_DENIED_NO_PASSWORD_ERROR:
+                    break;
+                default:
+                    rval = true;
+                    break;
+            }
+        }
+        else if (mysql_query(mysql, query) != 0)
+        {
+            switch (mysql_errno(mysql))
+            {
+                case ER_TABLEACCESS_DENIED_ERROR:
+                case ER_COLUMNACCESS_DENIED_ERROR:
+                case ER_SPECIFIC_ACCESS_DENIED_ERROR:
+                case ER_PROCACCESS_DENIED_ERROR:
+                case ER_KILL_DENIED_ERROR:
+                    rval = false;
+                    break;
+
+                default:
+                    rval = true;
+                    break;
+            }
+
+            MXS_ERROR("[%s] Failed to execute query '%s' with user '%s'. MySQL error message: %s",
+                      monitor->name, query, user, mysql_error(mysql));
+        }
+        else
+        {
+            rval = true;
+            MYSQL_RES *res = mysql_use_result(mysql);
+            if (res == NULL)
+            {
+                MXS_ERROR("[%s] Result retrieval failed when checking monitor permissions: %s",
+                          monitor->name, mysql_error(mysql));
+            }
+            else
+            {
+                mysql_free_result(res);
+            }
+        }
         mysql_close(mysql);
-        free(dpasswd);
-        return false;
     }
 
-    if (mysql_query(mysql, "show slave status") != 0)
-    {
-        if (mysql_errno(mysql) == ER_SPECIFIC_ACCESS_DENIED_ERROR)
-        {
-            MXS_ERROR("%s: User '%s' is missing REPLICATION CLIENT privileges. MySQL error message: %s",
-                      monitor->name, user, mysql_error(mysql));
-        }
-        else
-        {
-            MXS_ERROR("%s: Monitor failed to query for slave status. MySQL error message: %s",
-                      monitor->name, mysql_error(mysql));
-        }
-        rval = false;
-    }
-    else
-    {
-        if ((res = mysql_use_result(mysql)) == NULL)
-        {
-            MXS_ERROR("%s: Result retrieval failed when checking for REPLICATION CLIENT permissions: %s",
-                      monitor->name, mysql_error(mysql));
-            rval = false;
-        }
-        else
-        {
-            mysql_free_result(res);
-        }
-    }
-    mysql_close(mysql);
     free(dpasswd);
     return rval;
 }
@@ -660,9 +682,9 @@ mon_get_event_type(MONITOR_SERVERS* node)
     general_event_type event_type = UNSUPPORTED_EVENT;
 
     unsigned int prev = node->mon_prev_status
-        & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB);
+                        & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB);
     unsigned int present = node->server->status
-        & (SERVER_RUNNING|SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB);
+                           & (SERVER_RUNNING | SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB);
 
     if (prev == present)
     {
@@ -690,7 +712,7 @@ mon_get_event_type(MONITOR_SERVERS* node)
         else
         {
             /* Was running and still is */
-            if (prev & (SERVER_MASTER|SERVER_SLAVE|SERVER_JOINED|SERVER_NDB))
+            if (prev & (SERVER_MASTER | SERVER_SLAVE | SERVER_JOINED | SERVER_NDB))
             {
                 /* We used to know what kind of server it was */
                 event_type = LOSS_EVENT;
@@ -705,30 +727,30 @@ mon_get_event_type(MONITOR_SERVERS* node)
 
     switch (event_type)
     {
-    case UP_EVENT:
-        return (present & SERVER_MASTER) ? MASTER_UP_EVENT :
-            (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
-                (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
-                    (present & SERVER_NDB) ? NDB_UP_EVENT :
-                        SERVER_UP_EVENT;
-    case DOWN_EVENT:
-        return (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
-            (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
-                (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
-                    (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
-                        SERVER_DOWN_EVENT;
-    case LOSS_EVENT:
-        return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
-            (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
-                (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
-                    LOST_NDB_EVENT;
-    case NEW_EVENT:
-        return (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
-            (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
-                (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
-                    NEW_NDB_EVENT;
-    default:
-        return UNDEFINED_MONITOR_EVENT;
+        case UP_EVENT:
+            return (present & SERVER_MASTER) ? MASTER_UP_EVENT :
+                   (present & SERVER_SLAVE) ? SLAVE_UP_EVENT :
+                   (present & SERVER_JOINED) ? SYNCED_UP_EVENT :
+                   (present & SERVER_NDB) ? NDB_UP_EVENT :
+                   SERVER_UP_EVENT;
+        case DOWN_EVENT:
+            return (prev & SERVER_MASTER) ? MASTER_DOWN_EVENT :
+                   (prev & SERVER_SLAVE) ? SLAVE_DOWN_EVENT :
+                   (prev & SERVER_JOINED) ? SYNCED_DOWN_EVENT :
+                   (prev & SERVER_NDB) ? NDB_DOWN_EVENT :
+                   SERVER_DOWN_EVENT;
+        case LOSS_EVENT:
+            return (prev & SERVER_MASTER) ? LOST_MASTER_EVENT :
+                   (prev & SERVER_SLAVE) ? LOST_SLAVE_EVENT :
+                   (prev & SERVER_JOINED) ? LOST_SYNCED_EVENT :
+                   LOST_NDB_EVENT;
+        case NEW_EVENT:
+            return (present & SERVER_MASTER) ? NEW_MASTER_EVENT :
+                   (present & SERVER_SLAVE) ? NEW_SLAVE_EVENT :
+                   (present & SERVER_JOINED) ? NEW_SYNCED_EVENT :
+                   NEW_NDB_EVENT;
+        default:
+            return UNDEFINED_MONITOR_EVENT;
     }
 }
 
@@ -771,17 +793,17 @@ mon_name_to_event(const char *event_name)
  * @param dest Destination where the string is appended, must be null terminated
  * @param len Length of @c dest
  */
-void
-mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len)
+static void mon_append_node_names(MONITOR_SERVERS* servers, char* dest, int len, int status)
 {
     char *separator = "";
     char arr[MAX_SERVER_NAME_LEN + 32]; // Some extra space for port
+    dest[0] = '\0';
 
     while (servers && strlen(dest) < (len - strlen(separator)))
     {
-        if (SERVER_IS_RUNNING(servers->server))
+        if (status == 0 || servers->server->status & status)
         {
-            strcat(dest, separator);
+            strncat(dest, separator, len);
             separator = ",";
             snprintf(arr, sizeof(arr), "%s:%d", servers->server->name, servers->server->port);
             strncat(dest, arr, len - strlen(dest) - 1);
@@ -825,12 +847,6 @@ mon_print_fail_status(MONITOR_SERVERS* mon_srv)
 void
 monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 {
-    char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
-    char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
-
-    snprintf(initiator, sizeof(initiator), "%s:%d", ptr->server->name, ptr->server->port);
-    mon_append_node_names(mon->databases, nodelist, PATH_MAX + MON_ARG_MAX);
-
     EXTERNCMD* cmd = externcmd_allocate(script);
 
     if (cmd == NULL)
@@ -840,15 +856,61 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
         return;
     }
 
-    externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
-    externcmd_substitute_arg(cmd, "[$]EVENT", mon_get_event_name(ptr));
-    externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
+    if (externcmd_matches(cmd, "$INITIATOR"))
+    {
+        char initiator[strlen(ptr->server->name) + 24]; // Extra space for port
+        snprintf(initiator, sizeof(initiator), "%s:%d", ptr->server->name, ptr->server->port);
+        externcmd_substitute_arg(cmd, "[$]INITIATOR", initiator);
+    }
+
+    if (externcmd_matches(cmd, "$EVENT"))
+    {
+        externcmd_substitute_arg(cmd, "[$]EVENT", mon_get_event_name(ptr));
+    }
+
+    char nodelist[PATH_MAX + MON_ARG_MAX + 1] = {'\0'};
+
+    if (externcmd_matches(cmd, "$NODELIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_RUNNING);
+        externcmd_substitute_arg(cmd, "[$]NODELIST", nodelist);
+    }
+
+    if (externcmd_matches(cmd, "$LIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), 0);
+        externcmd_substitute_arg(cmd, "[$]LIST", nodelist);
+    }
+
+    if (externcmd_matches(cmd, "$MASTERLIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_MASTER);
+        externcmd_substitute_arg(cmd, "[$]MASTERLIST", nodelist);
+    }
+
+    if (externcmd_matches(cmd, "$SLAVELIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_SLAVE);
+        externcmd_substitute_arg(cmd, "[$]SLAVELIST", nodelist);
+    }
+
+    if (externcmd_matches(cmd, "$SYNCEDLIST"))
+    {
+        mon_append_node_names(mon->databases, nodelist, sizeof(nodelist), SERVER_JOINED);
+        externcmd_substitute_arg(cmd, "[$]SYNCEDLIST", nodelist);
+    }
 
     if (externcmd_execute(cmd))
     {
-        MXS_ERROR("Failed to execute script '%s' on server state change event %s.",
+        MXS_ERROR("Failed to execute script '%s' on server state change event '%s'.",
                   script, mon_get_event_name(ptr));
     }
+    else
+    {
+        MXS_NOTICE("Executed monitor script '%s' on event '%s'.",
+                   script, mon_get_event_name(ptr));
+    }
+
     externcmd_free(cmd);
 }
 
@@ -929,9 +991,7 @@ mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
         mysql_options(database->con, MYSQL_OPT_WRITE_TIMEOUT, (void *) &mon->write_timeout);
 
         time_t start = time(NULL);
-        bool result = (mysql_real_connect(database->con, database->server->name,
-                                          uname, dpwd, NULL, database->server->port,
-                                          NULL, 0) != NULL);
+        bool result = (mxs_mysql_real_connect(database->con, database->server, uname, dpwd) != NULL);
         time_t end = time(NULL);
 
         if (!result)
@@ -973,4 +1033,17 @@ mon_log_connect_error(MONITOR_SERVERS* database, connect_result_t rval)
               database->server->name,
               database->server->port,
               mysql_error(database->con));
+}
+
+void mon_log_state_change(MONITOR_SERVERS *ptr)
+{
+    SERVER srv;
+    srv.status = ptr->mon_prev_status;
+    char *prev = server_status(&srv);
+    char *next = server_status(ptr->server);
+    MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
+               ptr->server->unique_name, ptr->server->name, ptr->server->port,
+               mon_get_event_name(ptr), prev, next);
+    free(prev);
+    free(next);
 }

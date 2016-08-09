@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -51,6 +46,9 @@ static size_t session_id;
 
 static SPINLOCK session_spin = SPINLOCK_INIT;
 static SESSION *allSessions = NULL;
+static SESSION *lastSession = NULL;
+static SESSION *wasfreeSession = NULL;
+static int freeSessionCount = 0;
 
 static struct session session_dummy_struct;
 
@@ -64,8 +62,9 @@ static SPINLOCK timeout_lock = SPINLOCK_INIT;
 
 static int session_setup_filters(SESSION *session);
 static void session_simple_free(SESSION *session, DCB *dcb);
-
-static void mysql_auth_free_client_data(DCB *dcb);
+static void session_add_to_all_list(SESSION *session);
+static SESSION *session_find_free();
+static void session_final_free(SESSION *session);
 
 /**
  * Allocate a new session for a new client of the specified service.
@@ -83,7 +82,9 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 {
     SESSION *session;
 
-    session = (SESSION *)calloc(1, sizeof(SESSION));
+    spinlock_acquire(&session_spin);
+    session = session_find_free();
+    spinlock_release(&session_spin);
     ss_info_dassert(session != NULL, "Allocating memory for session failed.");
 
     if (session == NULL)
@@ -201,8 +202,6 @@ session_alloc(SERVICE *service, DCB *client_dcb)
     spinlock_acquire(&session_spin);
     /** Assign a session id and increase, insert session into list */
     session->ses_id = ++session_id;
-    session->next = allSessions;
-    allSessions = session;
     spinlock_release(&session_spin);
     atomic_add(&service->stats.n_sessions, 1);
     atomic_add(&service->stats.n_current, 1);
@@ -210,6 +209,94 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 
     client_dcb->session = session;
     return SESSION_STATE_TO_BE_FREED == session->state ? NULL : session;
+}
+
+/**
+ * Add a new session to the list of all sessions.
+ *
+ * Must be called with the general session lock held.
+ *
+ * A pointer, lastSession, is held to find the end of the list, and the new session
+ * is linked to the end of the list.  The pointer, wasfreeSession, that is used to
+ * search for a free session is initialised if not already set. There cannot be
+ * any free sessions (or any at all) until this routine has been called at least
+ * once. Hence it will not be referred to until after it is initialised.
+ *
+ * @param session       The session to be added to the list
+ */
+static void
+session_add_to_all_list(SESSION *session)
+{
+    if (allSessions == NULL)
+    {
+        allSessions = session;
+    }
+    else
+    {
+        lastSession->next = session;
+    }
+    lastSession = session;
+    if (NULL == wasfreeSession)
+    {
+        wasfreeSession = session;
+    }
+}
+
+/**
+ * Find a free session or allocate memory for a new one.
+ *
+ * This routine looks to see whether there are free session memory areas.
+ * If not, new memory is allocated, if possible, and the new session is added to
+ * the list of all sessions.
+ *
+ * Must be called with the general session lock held.
+ *
+ * @return An available session or NULL if none could be allocated.
+ */
+static SESSION *
+session_find_free()
+{
+    SESSION *nextsession;
+
+    if (freeSessionCount <= 0)
+    {
+        SESSION *newsession;
+        if ((newsession = calloc(1, sizeof(SESSION))) == NULL)
+        {
+            return NULL;
+        }
+        newsession->next = NULL;
+        session_add_to_all_list(newsession);
+        newsession->ses_is_in_use = true;
+        return newsession;
+    }
+    /* Starting at the last place a free session was found, loop through the */
+    /* list of sessions searching for one that is not in use. */
+    while (wasfreeSession->ses_is_in_use)
+    {
+        int loopcount = 0;
+        wasfreeSession = wasfreeSession->next;
+        if (NULL == wasfreeSession)
+        {
+            loopcount++;
+            if (loopcount > 1)
+            {
+                /* Shouldn't need to loop round more than once */
+                MXS_ERROR("Find free session failed to find a session even"
+                          " though free count was positive");
+                return NULL;
+            }
+            wasfreeSession = allSessions;
+        }
+    }
+    /* Dropping out of the loop means we have found a session that is not in use */
+    freeSessionCount--;
+    /* Clear the old data, then reset the list forward link */
+    nextsession = wasfreeSession->next;
+    memset(wasfreeSession, 0, sizeof(SESSION));
+    wasfreeSession->next = nextsession;
+    wasfreeSession->ses_is_in_use = true;
+    return wasfreeSession;
 }
 
 /**
@@ -302,39 +389,6 @@ session_link_dcb(SESSION *session, DCB *dcb)
     return true;
 }
 
-int session_unlink_dcb(SESSION* session,
-                       DCB*     dcb)
-{
-    int nlink;
-
-    CHK_SESSION(session);
-
-    spinlock_acquire(&session->ses_lock);
-    ss_dassert(session->refcount > 0);
-    /*<
-     * Remove dcb from session's router_client_session.
-     */
-    nlink = atomic_add(&session->refcount, -1);
-    nlink -= 1;
-
-    if (nlink == 0)
-    {
-        session->state = SESSION_STATE_TO_BE_FREED;
-    }
-
-    if (dcb != NULL)
-    {
-        if (session->client_dcb == dcb)
-        {
-            session->client_dcb = NULL;
-        }
-        dcb->session = NULL;
-    }
-    spinlock_release(&session->ses_lock);
-
-    return nlink;
-}
-
 /**
  * Deallocate the specified session, minimal actions during session_alloc
  * Since changes to keep new session in existence until all related DCBs
@@ -368,7 +422,7 @@ session_simple_free(SESSION *session, DCB *dcb)
         session->state = SESSION_STATE_STOPPING;
     }
 
-    free(session);
+    session_final_free(session);
 }
 
 /**
@@ -379,7 +433,7 @@ session_simple_free(SESSION *session, DCB *dcb)
 bool
 session_free(SESSION *session)
 {
-    if (session && SESSION_STATE_DUMMY == session->state)
+    if (NULL == session || SESSION_STATE_DUMMY == session->state)
     {
         return true;
     }
@@ -396,26 +450,6 @@ session_free(SESSION *session)
     }
     session->state = SESSION_STATE_TO_BE_FREED;
 
-    /* First of all remove from the linked list */
-    spinlock_acquire(&session_spin);
-    if (allSessions == session)
-    {
-        allSessions = session->next;
-    }
-    else
-    {
-        SESSION *chksession;
-        chksession = allSessions;
-        while (chksession && chksession->next != session)
-        {
-            chksession = chksession->next;
-        }
-        if (chksession)
-        {
-            chksession->next = session->next;
-        }
-    }
-    spinlock_release(&session_spin);
     atomic_add(&session->service->stats.n_current, -1);
 
     /***
@@ -423,10 +457,6 @@ session_free(SESSION *session)
      */
     if (session->client_dcb)
     {
-        if (!DCB_IS_CLONE(session->client_dcb))
-        {
-            mysql_auth_free_client_data(session->client_dcb);
-        }
         dcb_free_all_memory(session->client_dcb);
     }
     /**
@@ -471,9 +501,19 @@ session_free(SESSION *session)
     if (!session->ses_is_child)
     {
         session->state = SESSION_STATE_FREE;
-        free(session);
+        session_final_free(session);
     }
     return true;
+}
+
+static void
+session_final_free(SESSION *session)
+{
+    /* We never free the actual session, it is available for reuse*/
+    spinlock_acquire(&session_spin);
+    session->ses_is_in_use = false;
+    freeSessionCount++;
+    spinlock_release(&session_spin);
 }
 
 /**
@@ -492,7 +532,7 @@ session_isvalid(SESSION *session)
     list_session = allSessions;
     while (list_session)
     {
-        if (list_session == session)
+        if (list_session->ses_is_in_use && list_session == session)
         {
             rval = 1;
             break;
@@ -538,7 +578,10 @@ printAllSessions()
     list_session = allSessions;
     while (list_session)
     {
-        printSession(list_session);
+        if (list_session->ses_is_in_use)
+        {
+            printSession(list_session);
+        }
         list_session = list_session->next;
     }
     spinlock_release(&session_spin);
@@ -562,6 +605,11 @@ CheckSessions()
     list_session = allSessions;
     while (list_session)
     {
+        if (false == list_session->ses_is_in_use)
+        {
+            list_session = list_session->next;
+            continue;
+        }
         if (list_session->state != SESSION_STATE_LISTENER ||
             list_session->state != SESSION_STATE_LISTENER_STOPPED)
         {
@@ -587,6 +635,11 @@ CheckSessions()
     list_session = allSessions;
     while (list_session)
     {
+        if (false == list_session->ses_is_in_use)
+        {
+            list_session = list_session->next;
+            continue;
+        }
         if (list_session->state != SESSION_STATE_LISTENER ||
             list_session->state != SESSION_STATE_LISTENER_STOPPED)
         {
@@ -621,36 +674,19 @@ CheckSessions()
 void
 dprintAllSessions(DCB *dcb)
 {
-    struct tm result;
-    char timebuf[40];
     SESSION *list_session;
 
     spinlock_acquire(&session_spin);
     list_session = allSessions;
     while (list_session)
     {
-        dcb_printf(dcb, "Session %d (%p)\n",list_session->ses_id, list_session);
-        dcb_printf(dcb, "\tState:               %s\n", session_state(list_session->state));
-        dcb_printf(dcb, "\tService:             %s (%p)\n", list_session->service->name, list_session->service);
-        dcb_printf(dcb, "\tClient DCB:          %p\n", list_session->client_dcb);
-
-        if (list_session->client_dcb && list_session->client_dcb->remote)
+        if (false == list_session->ses_is_in_use)
         {
-            dcb_printf(dcb, "\tClient Address:              %s%s%s\n",
-                       list_session->client_dcb->user?list_session->client_dcb->user:"",
-                       list_session->client_dcb->user?"@":"",
-                       list_session->client_dcb->remote);
+            list_session = list_session->next;
+            continue;
         }
 
-        dcb_printf(dcb, "\tConnected:           %s",
-                   asctime_r(localtime_r(&list_session->stats.connect, &result), timebuf));
-
-        if (list_session->client_dcb && list_session->client_dcb->state == DCB_STATE_POLLING)
-        {
-            double idle = (hkheartbeat - list_session->client_dcb->last_read);
-            idle = idle > 0 ? idle/10.0:0;
-            dcb_printf(dcb, "\tIdle:                            %.0f seconds\n",idle);
-        }
+        dprintSession(dcb, list_session);
 
         list_session = list_session->next;
     }
@@ -669,39 +705,41 @@ dprintAllSessions(DCB *dcb)
 void
 dprintSession(DCB *dcb, SESSION *print_session)
 {
-    struct tm result;
-    char buf[30];
-    int i;
-
-    dcb_printf(dcb, "Session %d (%p)\n",print_session->ses_id, print_session);
+    dcb_printf(dcb, "Session %lu (%p)\n", print_session->ses_id, print_session);
     dcb_printf(dcb, "\tState:               %s\n", session_state(print_session->state));
     dcb_printf(dcb, "\tService:             %s (%p)\n", print_session->service->name, print_session->service);
     dcb_printf(dcb, "\tClient DCB:          %p\n", print_session->client_dcb);
+
     if (print_session->client_dcb && print_session->client_dcb->remote)
     {
-        double idle = (hkheartbeat - print_session->client_dcb->last_read);
-        idle = idle > 0 ? idle/10.f : 0;
-        dcb_printf(dcb, "\tClient Address:          %s%s%s\n",
-                   print_session->client_dcb->user?print_session->client_dcb->user:"",
-                   print_session->client_dcb->user?"@":"",
+        dcb_printf(dcb, "\tClient Address:      %s%s%s\n",
+                   print_session->client_dcb->user ? print_session->client_dcb->user : "",
+                   print_session->client_dcb->user ? "@" : "",
                    print_session->client_dcb->remote);
-        dcb_printf(dcb, "\tConnected:               %s\n",
-                   asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
-        if (print_session->client_dcb->state == DCB_STATE_POLLING)
-        {
-            dcb_printf(dcb, "\tIdle:                %.0f seconds\n",idle);
-        }
-
     }
+
+    struct tm result;
+    char buf[30];
+
+    dcb_printf(dcb, "\tConnected:           %s", // asctime inserts newline.
+               asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
+
+    if (print_session->client_dcb && print_session->client_dcb->state == DCB_STATE_POLLING)
+    {
+        double idle = (hkheartbeat - print_session->client_dcb->last_read);
+        idle = idle > 0 ? idle / 10.f : 0;
+        dcb_printf(dcb, "\tIdle:                %.0f seconds\n", idle);
+    }
+
     if (print_session->n_filters)
     {
-        for (i = 0; i < print_session->n_filters; i++)
+        for (int i = 0; i < print_session->n_filters; i++)
         {
             dcb_printf(dcb, "\tFilter: %s\n",
                        print_session->filters[i].filter->name);
             print_session->filters[i].filter->obj->diagnostics(print_session->filters[i].instance,
-                                                     print_session->filters[i].session,
-                                                     dcb);
+                                                               print_session->filters[i].session,
+                                                               dcb);
         }
     }
 }
@@ -730,12 +768,15 @@ dListSessions(DCB *dcb)
     }
     while (list_session)
     {
-        dcb_printf(dcb, "%-16p | %-15s | %-14s | %s\n", list_session,
-                   ((list_session->client_dcb && list_session->client_dcb->remote)
-                    ? list_session->client_dcb->remote : ""),
-                   (list_session->service && list_session->service->name ? list_session->service->name
-                    : ""),
-                   session_state(list_session->state));
+        if (list_session->ses_is_in_use)
+        {
+            dcb_printf(dcb, "%-16p | %-15s | %-14s | %s\n", list_session,
+                       ((list_session->client_dcb && list_session->client_dcb->remote)
+                        ? list_session->client_dcb->remote : ""),
+                       (list_session->service && list_session->service->name ? list_session->service->name
+                        : ""),
+                       session_state(list_session->state));
+        }
         list_session = list_session->next;
     }
     if (allSessions)
@@ -753,7 +794,7 @@ dListSessions(DCB *dcb)
  * @return A string representation of the session state
  */
 char *
-session_state(int state)
+session_state(session_state_t state)
 {
     switch (state)
     {
@@ -769,14 +810,12 @@ session_state(int state)
         return "Listener Session";
     case SESSION_STATE_LISTENER_STOPPED:
         return "Stopped Listener Session";
-#ifdef SS_DEBUG
     case SESSION_STATE_STOPPING:
         return "Stopping session";
     case SESSION_STATE_TO_BE_FREED:
         return "Session to be freed";
     case SESSION_STATE_FREE:
         return "Freed session";
-#endif
     default:
         return "Invalid State";
     }
@@ -786,12 +825,12 @@ SESSION* get_session_by_router_ses(void* rses)
 {
     SESSION* ses = allSessions;
 
-    while (ses->router_session != rses && ses->next != NULL)
+    while (((ses->ses_is_in_use == false) || (ses->router_session != rses)) && ses->next != NULL)
     {
         ses = ses->next;
     }
 
-    if (ses->router_session != rses)
+    if (ses->ses_is_in_use == false || ses->router_session != rses)
     {
         ses = NULL;
     }
@@ -981,11 +1020,12 @@ void process_idle_sessions()
              * check for it once per second. One heartbeat is 100 milliseconds. */
             next_timeout_check = hkheartbeat + 10;
             spinlock_acquire(&session_spin);
-            SESSION *all_session = get_all_sessions();
+            SESSION *all_session = allSessions;
 
             while (all_session)
             {
-                if (all_session->service && all_session->client_dcb && all_session->client_dcb->state == DCB_STATE_POLLING &&
+                if (all_session->ses_is_in_use &&
+                    all_session->service && all_session->client_dcb && all_session->client_dcb->state == DCB_STATE_POLLING &&
                     hkheartbeat - all_session->client_dcb->last_read > all_session->service->conn_idle_timeout * 10)
                 {
                     dcb_close(all_session->client_dcb);
@@ -1027,27 +1067,32 @@ sessionRowCallback(RESULTSET *set, void *data)
     spinlock_acquire(&session_spin);
     list_session = allSessions;
     /* Skip to the first non-listener if not showing listeners */
-    while (list_session && cbdata->filter == SESSION_LIST_CONNECTION &&
-           list_session->state == SESSION_STATE_LISTENER)
+    while (false == list_session->ses_is_in_use ||
+           (list_session && cbdata->filter == SESSION_LIST_CONNECTION &&
+            list_session->state == SESSION_STATE_LISTENER))
     {
         list_session = list_session->next;
     }
     while (i < cbdata->index && list_session)
     {
-        if (cbdata->filter == SESSION_LIST_CONNECTION &&
-            list_session->state !=  SESSION_STATE_LISTENER)
+        if (list_session->ses_is_in_use)
         {
-            i++;
-        }
-        else if (cbdata->filter == SESSION_LIST_ALL)
-        {
-            i++;
+            if (cbdata->filter == SESSION_LIST_CONNECTION &&
+                list_session->state !=  SESSION_STATE_LISTENER)
+            {
+                i++;
+            }
+            else if (cbdata->filter == SESSION_LIST_ALL)
+            {
+                i++;
+            }
         }
         list_session = list_session->next;
     }
     /* Skip to the next non-listener if not showing listeners */
-    while (list_session && cbdata->filter == SESSION_LIST_CONNECTION &&
-           list_session->state == SESSION_STATE_LISTENER)
+    while (list_session && (false == list_session->ses_is_in_use ||
+                            (cbdata->filter == SESSION_LIST_CONNECTION &&
+                             list_session->state == SESSION_STATE_LISTENER)))
     {
         list_session = list_session->next;
     }
@@ -1076,6 +1121,12 @@ sessionRowCallback(RESULTSET *set, void *data)
  *
  * @return A Result set
  */
+/* Lint is not convinced that the new memory for data is always tracked
+ * because it does not see what happens within the resultset_create function,
+ * so we suppress the warning. In fact, the function call results in return
+ * of the set structure which includes a pointer to data
+ */
+/*lint -e429 */
 RESULTSET *
 sessionGetList(SESSIONLISTFILTER filter)
 {
@@ -1100,21 +1151,5 @@ sessionGetList(SESSIONLISTFILTER filter)
 
     return set;
 }
+/*lint +e429 */
 
-/**
- * @brief Free the client data pointed to by the passed DCB.
- *
- * Currently all that is required is to free the storage pointed to by
- * dcb->data.  But this is intended to be implemented as part of the
- * authentication API at which time this code will be moved into the
- * MySQL authenticator.  If the data structure were to become more complex
- * the mechanism would still work and be the responsibility of the authenticator.
- * The DCB should not know authenticator implementation details.
- *
- * @param dcb Request handler DCB connected to the client
- */
-static void
-mysql_auth_free_client_data(DCB *dcb)
-{
-    free(dcb->data);
-}

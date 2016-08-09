@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,6 +34,10 @@
 #include <log_manager.h>
 #include <modinfo.h>
 
+/* @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
+ */
+/*lint -e14 */
 MODULE_INFO info =
 {
     MODULE_API_PROTOCOL,
@@ -46,6 +45,7 @@ MODULE_INFO info =
     GWPROTOCOL_VERSION,
     "A telnet deamon protocol for simple administration interface"
 };
+/*lint +e14 */
 
 /**
  * @file telnetd.c - telnet daemon protocol module
@@ -69,7 +69,7 @@ MODULE_INFO info =
  * @endverbatim
  */
 
-static char *version_str = "V1.0.1";
+static char *version_str = "V1.1.1";
 
 static int telnetd_read_event(DCB* dcb);
 static int telnetd_write_event(DCB *dcb);
@@ -79,6 +79,7 @@ static int telnetd_hangup(DCB *dcb);
 static int telnetd_accept(DCB *dcb);
 static int telnetd_close(DCB *dcb);
 static int telnetd_listen(DCB *dcb, char *config);
+static char *telnetd_default_auth();
 
 /**
  * The "module object" for the telnetd protocol module.
@@ -95,7 +96,9 @@ static GWPROTOCOL MyObject =
     telnetd_close,                  /**< Close                         */
     telnetd_listen,                 /**< Create a listener             */
     NULL,                           /**< Authentication                */
-    NULL                            /**< Session                       */
+    NULL,                           /**< Session                       */
+    telnetd_default_auth,           /**< Default authenticator         */
+    NULL                            /**< Connection limit reached      */
 };
 
 static void telnetd_command(DCB *, unsigned char *cmd);
@@ -105,7 +108,11 @@ static void telnetd_echo(DCB *dcb, int enable);
  * Implementation of the mandatory version entry point
  *
  * @return version string of the module
+ *
+ * @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
  */
+/*lint -e14 */
 char* version()
 {
     return version_str;
@@ -131,6 +138,17 @@ void ModuleInit()
 GWPROTOCOL* GetModuleObject()
 {
     return &MyObject;
+}
+/*lint +e14 */
+
+/**
+ * The default authenticator name for this protocol
+ *
+ * @return name of authenticator
+ */
+static char *telnetd_default_auth()
+{
+    return "NullAuth";
 }
 
 /**
@@ -266,67 +284,38 @@ static int telnetd_hangup(DCB *dcb)
  * Handler for the EPOLLIN event when the DCB refers to the listening
  * socket for the protocol.
  *
- * @param dcb   The descriptor control block
+ * @param listener   The descriptor control block
  * @return The number of new connections created
  */
-static int telnetd_accept(DCB *dcb)
+static int telnetd_accept(DCB *listener)
 {
     int n_connect = 0;
+    DCB *client_dcb;
 
-    while (1)
+    while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
     {
-        int so;
-        struct sockaddr_in addr;
-        socklen_t addrlen = sizeof(struct sockaddr);
-        DCB *client_dcb;
-        TELNETD* telnetd_pr = NULL;
+        TELNETD* telnetd_protocol = NULL;
 
-        so = accept(dcb->fd, (struct sockaddr *)&addr, &addrlen);
-
-        if (so == -1)
+        if ((telnetd_protocol = (TELNETD *)calloc(1, sizeof(TELNETD))) == NULL)
         {
-            return n_connect;
+            dcb_close(client_dcb);
+            continue;
         }
-        else
+        telnetd_protocol->state = TELNETD_STATE_LOGIN;
+        telnetd_protocol->username = NULL;
+        client_dcb->protocol = (void *)telnetd_protocol;
+
+        client_dcb->session = session_alloc(listener->session->service, client_dcb);
+        if (NULL == client_dcb->session || poll_add_dcb(client_dcb))
         {
-            atomic_add(&dcb->stats.n_accepts, 1);
-            client_dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
-
-            if (client_dcb == NULL)
-            {
-                close(so);
-                return n_connect;
-            }
-            client_dcb->listen_ssl = dcb->listen_ssl;
-            client_dcb->fd = so;
-            client_dcb->remote = strdup(inet_ntoa(addr.sin_addr));
-            memcpy(&client_dcb->func, &MyObject, sizeof(GWPROTOCOL));
-            client_dcb->session = session_alloc(dcb->session->service, client_dcb);
-
-            if (NULL == client_dcb->session)
-            {
-                dcb_close(client_dcb);
-                return n_connect;
-            }
-            telnetd_pr = (TELNETD *)malloc(sizeof(TELNETD));
-            client_dcb->protocol = (void *)telnetd_pr;
-
-            if (telnetd_pr == NULL)
-            {
-                dcb_close(client_dcb);
-                return n_connect;
-            }
-
-            if (poll_add_dcb(client_dcb))
-            {
-                dcb_close(dcb);
-                return n_connect;
-            }
-            n_connect++;
-            telnetd_pr->state = TELNETD_STATE_LOGIN;
-            telnetd_pr->username = NULL;
-            dcb_printf(client_dcb, "MaxScale login: ");
+            dcb_close(client_dcb);
+            continue;
         }
+
+        ssl_authenticate_client(client_dcb, client_dcb->authfunc.connectssl(client_dcb));
+
+        n_connect++;
+        dcb_printf(client_dcb, "MaxScale login: ");
     }
     return n_connect;
 }
@@ -358,64 +347,7 @@ static int telnetd_close(DCB *dcb)
  */
 static int telnetd_listen(DCB *listener, char *config)
 {
-    struct sockaddr_in addr;
-    int one = 1;
-    int rc;
-    int syseno = 0;
-
-    memcpy(&listener->func, &MyObject, sizeof(GWPROTOCOL));
-
-    if (!parse_bindconfig(config, 4442, &addr))
-    {
-        return 0;
-    }
-
-    if ((listener->fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        return 0;
-    }
-
-    // socket options
-    syseno = setsockopt(listener->fd, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
-
-    if (syseno != 0)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Failed to set socket options. Error %d: %s",
-                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
-        return 0;
-    }
-    // set NONBLOCKING mode
-    setnonblocking(listener->fd);
-    // bind address and port
-    if (bind(listener->fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-    {
-        return 0;
-    }
-
-    rc = listen(listener->fd, SOMAXCONN);
-
-    if (rc == 0)
-    {
-        MXS_NOTICE("Listening telnet connections at %s", config);
-    }
-    else
-    {
-        int eno = errno;
-        errno = 0;
-        char errbuf[STRERROR_BUFLEN];
-        fprintf(stderr,
-                "\n* Failed to start listening telnet due error %d, %s\n\n",
-                eno,
-                strerror_r(eno, errbuf, sizeof(errbuf)));
-        return 0;
-    }
-
-    if (poll_add_dcb(listener) == -1)
-    {
-        return 0;
-    }
-    return 1;
+    return (dcb_listen(listener, config, "telnet") < 0) ? 0 : 1;
 }
 
 /**
@@ -441,7 +373,7 @@ static void telnetd_command(DCB *dcb, unsigned char *cmd)
 static void telnetd_echo(DCB *dcb, int enable)
 {
     GWBUF *gwbuf;
-    char *buf;
+    unsigned char *buf;
 
     if ((gwbuf = gwbuf_alloc(3)) == NULL)
     {

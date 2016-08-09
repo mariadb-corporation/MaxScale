@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014-2015
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -50,6 +45,7 @@
  * 30/09/2015   Massimiliano Pinto  Addition of send_slave_heartbeat option
  * 23/10/2015   Markus Makela       Added current_safe_event
  * 27/10/2015   Martin Brampton     Amend getCapabilities to return RCAP_TYPE_NO_RSESSION
+ * 19/04/2016   Massimiliano Pinto  UUID generation now comes from libuuid
  *
  * @endverbatim
  */
@@ -62,6 +58,8 @@
 #include <server.h>
 #include <router.h>
 #include <atomic.h>
+#include <utils.h>
+#include <secrets.h>
 #include <spinlock.h>
 #include <blr.h>
 #include <dcb.h>
@@ -76,11 +74,13 @@
 #include <mysql_client_server_protocol.h>
 #include <ini.h>
 #include <sys/stat.h>
+#include <uuid/uuid.h>
 
 static char *version_str = "V2.0.0";
 
 /* The router entry points */
 static  ROUTER  *createInstance(SERVICE *service, char **options);
+static void free_instance(ROUTER_INSTANCE *instance);
 static  void    *newSession(ROUTER *instance, SESSION *session);
 static  void    closeSession(ROUTER *instance, void *router_session);
 static  void    freeSession(ROUTER *instance, void *router_session);
@@ -101,17 +101,10 @@ static  int getCapabilities();
 static int blr_handler_config(void *userdata, const char *section, const char *name, const char *value);
 static int blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst);
 static int blr_set_service_mysql_user(SERVICE *service);
-int blr_load_dbusers(ROUTER_INSTANCE *router);
-int blr_save_dbusers(ROUTER_INSTANCE *router);
+static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
-extern void blr_cache_read_master_data(ROUTER_INSTANCE *router);
-extern char *decryptPassword(char *crypt);
-extern char *create_hex_sha1_sha1_passwd(char *passwd);
-extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
+int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
-char * blr_last_event_description(ROUTER_INSTANCE *router);
-extern int MaxScaleUptime();
-char    *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =
@@ -131,8 +124,6 @@ static void stats_func(void *);
 
 static bool rses_begin_locked_router_action(ROUTER_SLAVE *);
 static void rses_end_locked_router_action(ROUTER_SLAVE *);
-void my_uuid_init(ulong seed1, ulong seed2);
-void my_uuid(unsigned char *guid);
 GWBUF *blr_cache_read_response(ROUTER_INSTANCE *router, char *response);
 
 static SPINLOCK instlock;
@@ -194,7 +185,7 @@ createInstance(SERVICE *service, char **options)
     ROUTER_INSTANCE *inst;
     char *value;
     int i;
-    unsigned char *defuuid;
+    uuid_t defuuid;
     char path[PATH_MAX + 1] = "";
     char filename[PATH_MAX + 1] = "";
     int rc = 0;
@@ -233,7 +224,7 @@ createInstance(SERVICE *service, char **options)
         service->dbref = NULL;
     }
 
-    if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if ((inst = (ROUTER_INSTANCE *)calloc(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
         MXS_ERROR("%s: Error: failed to allocate memory for router instance.",
                   service->name);
@@ -288,23 +279,21 @@ createInstance(SERVICE *service, char **options)
 
     inst->serverid = 0;
 
-    my_uuid_init((ulong)rand() * 12345, 12345);
-    if ((defuuid = (unsigned char *)malloc(20)) != NULL)
+    /* Generate UUID for the router instance */
+    uuid_generate_time(defuuid);
+
+    if ((inst->uuid = (char *)calloc(38, 1)) != NULL)
     {
-        my_uuid(defuuid);
-        if ((inst->uuid = (char *)malloc(38)) != NULL)
-        {
-            sprintf(inst->uuid,
-                    "%02hhx%02hhx%02hhx%02hhx-"
-                    "%02hhx%02hhx-"
-                    "%02hhx%02hhx-"
-                    "%02hhx%02hhx-"
-                    "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
-                    defuuid[0], defuuid[1], defuuid[2], defuuid[3],
-                    defuuid[4], defuuid[5], defuuid[6], defuuid[7],
-                    defuuid[8], defuuid[9], defuuid[10], defuuid[11],
-                    defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
-        }
+        sprintf(inst->uuid,
+                "%02hhx%02hhx%02hhx%02hhx-"
+                "%02hhx%02hhx-"
+                "%02hhx%02hhx-"
+                "%02hhx%02hhx-"
+                "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx",
+                defuuid[0], defuuid[1], defuuid[2], defuuid[3],
+                defuuid[4], defuuid[5], defuuid[6], defuuid[7],
+                defuuid[8], defuuid[9], defuuid[10], defuuid[11],
+                defuuid[12], defuuid[13], defuuid[14], defuuid[15]);
     }
 
     /*
@@ -336,6 +325,7 @@ createInstance(SERVICE *service, char **options)
                 value++;
                 if (strcmp(options[i], "uuid") == 0)
                 {
+                    free(inst->uuid);
                     inst->uuid = strdup(value);
                 }
                 else if ((strcmp(options[i], "server_id") == 0) || (strcmp(options[i], "server-id") == 0))
@@ -355,20 +345,23 @@ createInstance(SERVICE *service, char **options)
                                   "Please configure it with a unique positive integer value (1..2^32-1)",
                                   service->name, value);
 
-                        free(inst);
+                        free_instance(inst);
                         return NULL;
                     }
                 }
                 else if (strcmp(options[i], "user") == 0)
                 {
+                    free(inst->user);
                     inst->user = strdup(value);
                 }
                 else if (strcmp(options[i], "password") == 0)
                 {
+                    free(inst->password);
                     inst->password = strdup(value);
                 }
                 else if (strcmp(options[i], "passwd") == 0)
                 {
+                    free(inst->password);
                     inst->password = strdup(value);
                 }
                 else if ((strcmp(options[i], "master_id") == 0) || (strcmp(options[i], "master-id") == 0))
@@ -521,7 +514,7 @@ createInstance(SERVICE *service, char **options)
     {
         MXS_ERROR("Service %s, binlog directory is not specified",
                   service->name);
-        free(inst);
+        free_instance(inst);
         return NULL;
     }
 
@@ -530,7 +523,7 @@ createInstance(SERVICE *service, char **options)
         MXS_ERROR("Service %s, server-id is not configured. "
                   "Please configure it with a unique positive integer value (1..2^32-1)",
                   service->name);
-        free(inst);
+        free_instance(inst);
         return NULL;
     }
 
@@ -551,7 +544,7 @@ createInstance(SERVICE *service, char **options)
                       errno,
                       strerror_r(errno, err_msg, sizeof(err_msg)));
 
-            free(inst);
+            free_instance(inst);
             return NULL;
         }
     }
@@ -565,7 +558,7 @@ createInstance(SERVICE *service, char **options)
             MXS_ERROR("%s: Error allocating dbusers in createInstance",
                       inst->service->name);
 
-            free(inst);
+            free_instance(inst);
             return NULL;
         }
     }
@@ -573,24 +566,23 @@ createInstance(SERVICE *service, char **options)
     /* Dynamically allocate master_host server struct, not written in anyfile */
     if (service->dbref == NULL)
     {
-        SERVICE *service = inst->service;
         SERVER *server;
         server = server_alloc("_none_", "MySQLBackend", (int)3306);
         if (server == NULL)
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",
                       inst->service->name);
-            if (service->users)
+            if (inst->service->users)
             {
-                users_free(service->users);
-                service->users = NULL;
+                users_free(inst->service->users);
+                inst->service->users = NULL;
             }
 
-            free(inst);
+            free_instance(inst);
             return NULL;
         }
         server_set_unique_name(server, "binlog_router_master_host");
-        serviceAddBackend(service, server);
+        serviceAddBackend(inst->service, server);
     }
 
     /*
@@ -674,7 +666,7 @@ createInstance(SERVICE *service, char **options)
                 free(service->dbref);
             }
 
-            free(inst);
+            free_instance(inst);
             return NULL;
         }
     }
@@ -738,6 +730,21 @@ createInstance(SERVICE *service, char **options)
     }
 
     return (ROUTER *)inst;
+}
+
+static void
+free_instance(ROUTER_INSTANCE *instance)
+{
+    free(instance->uuid);
+    free(instance->user);
+    free(instance->password);
+    free(instance->set_master_server_id);
+    free(instance->set_master_uuid);
+    free(instance->set_master_version);
+    free(instance->set_master_hostname);
+    free(instance->fileroot);
+    free(instance->binlogdir);
+    free(instance);
 }
 
 /**
@@ -945,7 +952,7 @@ closeSession(ROUTER *instance, void *router_session)
          */
         slave->state = BLRS_UNREGISTERED;
 
-#if BLFILE_IN_SLAVE
+#ifdef BLFILE_IN_SLAVE
         // TODO: Is it really certain the file can be closed here? If other
         // TODO: threads are using the slave instance, bag things will happen. [JWi].
         if (slave->file)
@@ -1012,11 +1019,13 @@ static char *event_names_mariadb10[] =
  * @param   desc    Description of the statistic
  * @param   value   The statistic value
  */
+#if SPINLOCK_PROFILE
 static void
 spin_reporter(void *dcb, char *desc, int value)
 {
     dcb_printf((DCB *)dcb, "\t\t%-35s	%d\n", desc, value);
 }
+#endif
 
 /**
  * Display router diagnostics
@@ -1049,12 +1058,12 @@ diagnostics(ROUTER *router, DCB *dcb)
     min15 = 0.0;
     min10 = 0.0;
     min5 = 0.0;
-    for (j = 0; j < 30; j++)
+    for (j = 0; j < BLR_NSTATS_MINUTES; j++)
     {
         minno--;
         if (minno < 0)
         {
-            minno += 30;
+            minno += BLR_NSTATS_MINUTES;
         }
         min30 += router_inst->stats.minavgs[minno];
         if (j < 15)
@@ -1113,28 +1122,28 @@ diagnostics(ROUTER *router, DCB *dcb)
     }
     dcb_printf(dcb, "\tNumber of slave servers:                     %u\n",
                router_inst->stats.n_slaves);
-    dcb_printf(dcb, "\tNo. of binlog events received this session:  %u\n",
+    dcb_printf(dcb, "\tNo. of binlog events received this session:  %lu\n",
                router_inst->stats.n_binlogs_ses);
-    dcb_printf(dcb, "\tTotal no. of binlog events received:         %u\n",
+    dcb_printf(dcb, "\tTotal no. of binlog events received:         %lu\n",
                router_inst->stats.n_binlogs);
     dcb_printf(dcb, "\tNo. of bad CRC received from master:         %u\n",
                router_inst->stats.n_badcrc);
     minno = router_inst->stats.minno - 1;
     if (minno == -1)
     {
-        minno = 30;
+        minno += BLR_NSTATS_MINUTES;
     }
     dcb_printf(dcb, "\tNumber of binlog events per minute\n");
     dcb_printf(dcb, "\tCurrent        5        10       15       30 Min Avg\n");
     dcb_printf(dcb, "\t %6d  %8.1f %8.1f %8.1f %8.1f\n",
                router_inst->stats.minavgs[minno], min5, min10, min15, min30);
-    dcb_printf(dcb, "\tNumber of fake binlog events:                %u\n",
+    dcb_printf(dcb, "\tNumber of fake binlog events:                %lu\n",
                router_inst->stats.n_fakeevents);
-    dcb_printf(dcb, "\tNumber of artificial binlog events:          %u\n",
+    dcb_printf(dcb, "\tNumber of artificial binlog events:          %lu\n",
                router_inst->stats.n_artificial);
-    dcb_printf(dcb, "\tNumber of binlog events in error:            %u\n",
+    dcb_printf(dcb, "\tNumber of binlog events in error:            %lu\n",
                router_inst->stats.n_binlog_errors);
-    dcb_printf(dcb, "\tNumber of binlog rotate events:              %u\n",
+    dcb_printf(dcb, "\tNumber of binlog rotate events:              %lu\n",
                router_inst->stats.n_rotates);
     dcb_printf(dcb, "\tNumber of heartbeat events:                  %u\n",
                router_inst->stats.n_heartbeats);
@@ -1153,7 +1162,7 @@ diagnostics(ROUTER *router, DCB *dcb)
         {
             buf[strlen(buf) - 1] = '\0';
         }
-        dcb_printf(dcb, "\tLast event from master at:                   %s (%d seconds ago)\n",
+        dcb_printf(dcb, "\tLast event from master at:                   %s (%ld seconds ago)\n",
                    buf, time(0) - router_inst->stats.lastReply);
 
         if (!router_inst->mariadb10_compat)
@@ -1193,7 +1202,7 @@ diagnostics(ROUTER *router, DCB *dcb)
             {
                 buf[strlen(buf) - 1] = '\0';
             }
-            dcb_printf(dcb, "\tLast binlog event timestamp:                 %ld (%s)\n",
+            dcb_printf(dcb, "\tLast binlog event timestamp:                 %u (%s)\n",
                        router_inst->lastEventTimestamp, buf);
         }
     }
@@ -1214,7 +1223,7 @@ diagnostics(ROUTER *router, DCB *dcb)
     dcb_printf(dcb, "\tEvents received:\n");
     for (i = 0; i <= MAX_EVENT_TYPE; i++)
     {
-        dcb_printf(dcb, "\t\t%-38s   %u\n", event_names[i], router_inst->stats.events[i]);
+        dcb_printf(dcb, "\t\t%-38s   %lu\n", event_names[i], router_inst->stats.events[i]);
     }
 
     if (router_inst->mariadb10_compat)
@@ -1222,7 +1231,7 @@ diagnostics(ROUTER *router, DCB *dcb)
         /* Display MariaDB 10 new events */
         for (i = MARIADB_NEW_EVENTS_BEGIN; i <= MAX_EVENT_TYPE_MARIADB10; i++)
         {
-            dcb_printf(dcb, "\t\tMariaDB 10 %-38s   %u\n",
+            dcb_printf(dcb, "\t\tMariaDB 10 %-38s   %lu\n",
                        event_names_mariadb10[(i - MARIADB_NEW_EVENTS_BEGIN)],
                        router_inst->stats.events[i]);
         }
@@ -1250,12 +1259,12 @@ diagnostics(ROUTER *router, DCB *dcb)
             min15 = 0.0;
             min10 = 0.0;
             min5 = 0.0;
-            for (j = 0; j < 30; j++)
+            for (j = 0; j < BLR_NSTATS_MINUTES; j++)
             {
                 minno--;
                 if (minno < 0)
                 {
-                    minno += 30;
+                    minno += BLR_NSTATS_MINUTES;
                 }
                 min30 += session->stats.minavgs[minno];
                 if (j < 15)
@@ -1320,7 +1329,7 @@ diagnostics(ROUTER *router, DCB *dcb)
                        "\t\tNo. events sent:                         %u\n",
                        session->stats.n_events);
             dcb_printf(dcb,
-                       "\t\tNo. bytes sent:                          %u\n",
+                       "\t\tNo. bytes sent:                          %lu\n",
                        session->stats.n_bytes);
             dcb_printf(dcb,
                        "\t\tNo. bursts sent:                         %u\n",
@@ -1331,14 +1340,14 @@ diagnostics(ROUTER *router, DCB *dcb)
             if (router_inst->send_slave_heartbeat)
             {
                 dcb_printf(dcb,
-                           "\t\tHeartbeat period (seconds):              %lu\n",
+                           "\t\tHeartbeat period (seconds):              %d\n",
                            session->heartbeat);
             }
 
             minno = session->stats.minno - 1;
             if (minno == -1)
             {
-                minno = 30;
+                minno += BLR_NSTATS_MINUTES;
             }
             dcb_printf(dcb, "\t\tNumber of binlog events per minute\n");
             dcb_printf(dcb, "\t\tCurrent        5        10       15       30 Min Avg\n");
@@ -1354,7 +1363,7 @@ diagnostics(ROUTER *router, DCB *dcb)
             dcb_printf(dcb, "\t\tNo. of failed reads                      %u\n",
                        session->stats.n_failed_read);
 
-#if DETAILED_DIAG
+#ifdef DETAILED_DIAG
             dcb_printf(dcb, "\t\tNo. of nested distribute events          %u\n",
                        session->stats.n_overrun);
             dcb_printf(dcb, "\t\tNo. of distribute action 1               %u\n",
@@ -1518,7 +1527,7 @@ errorReply(ROUTER *instance,
         strcpy(msg, "");
     }
 
-    mysql_errno = (unsigned long) extract_field((uint8_t *)(GWBUF_DATA(message) + 5), 16);
+    mysql_errno = (unsigned long) extract_field(((uint8_t *)GWBUF_DATA(message) + 5), 16);
     errmsg = extract_message(message);
 
     if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED)
@@ -1544,7 +1553,8 @@ errorReply(ROUTER *instance,
     {
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
                   "%sattempting reconnect to master %s:%d",
-                  router->service->name, router->m_errno, router->m_errmsg,
+                  router->service->name, router->m_errno,
+                  router->m_errmsg ? router->m_errmsg : "(memory failure)",
                   blrm_states[router->master_state], msg,
                   router->service->dbref->server->name,
                   router->service->dbref->server->port);
@@ -1614,7 +1624,7 @@ static void rses_end_locked_router_action(ROUTER_SLAVE *rses)
 
 static int getCapabilities()
 {
-    return RCAP_TYPE_NO_RSESSION;
+    return (int)RCAP_TYPE_NO_RSESSION;
 }
 
 /**
@@ -1973,8 +1983,8 @@ blr_set_service_mysql_user(SERVICE *service)
  * @param router    The router instance
  * @return              -1 on failure, 0 for no users found, > 0 for found users
  */
-int
-blr_load_dbusers(ROUTER_INSTANCE *router)
+static int
+blr_load_dbusers(const ROUTER_INSTANCE *router)
 {
     int loaded = -1;
     char    path[PATH_MAX + 1] = "";
@@ -1983,8 +1993,8 @@ blr_load_dbusers(ROUTER_INSTANCE *router)
 
     /* File path for router cached authentication data */
     strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX);
-    strncat(path, "/dbusers", PATH_MAX);
+    strncat(path, "/cache", PATH_MAX - strlen(path));
+    strncat(path, "/dbusers", PATH_MAX - strlen(path));
 
     /* Try loading dbusers from configured backends */
     loaded = load_mysql_users(service);
@@ -2045,7 +2055,7 @@ blr_load_dbusers(ROUTER_INSTANCE *router)
  * @return              -1 on failure, >= 0 on success
  */
 int
-blr_save_dbusers(ROUTER_INSTANCE *router)
+blr_save_dbusers(const ROUTER_INSTANCE *router)
 {
     SERVICE *service;
     char    path[PATH_MAX + 1] = "";
@@ -2055,7 +2065,7 @@ blr_save_dbusers(ROUTER_INSTANCE *router)
 
     /* File path for router cached authentication data */
     strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX);
+    strncat(path, "/cache", PATH_MAX - strlen(path));
 
     /* check and create dir */
     if (access(path, R_OK) == -1)
@@ -2076,7 +2086,7 @@ blr_save_dbusers(ROUTER_INSTANCE *router)
     }
 
     /* set cache file name */
-    strncat(path, "/dbusers", PATH_MAX);
+    strncat(path, "/dbusers", PATH_MAX - strlen(path));
 
     return dbusers_save(service->users, path);
 }

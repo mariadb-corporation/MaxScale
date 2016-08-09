@@ -1,26 +1,21 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /*
  * Revision History
  *
- * Date		Who			Description
- * 08-07-2013	Massimiliano Pinto	Added HTTPD protocol header file 
+ * Date         Who                 Description
+ * 08-07-2013   Massimiliano Pinto  Added HTTPD protocol header file
  */
 
 #include <stdio.h>
@@ -52,14 +47,15 @@
  * HTTPD session specific data
  *
  */
-typedef struct httpd_session {
-        char user[HTTPD_USER_MAXLEN];			/*< username for authentication*/
-        char *cookies;					/*< all input cookies */
-        char hostname[HTTPD_HOSTNAME_MAXLEN];		/*< The hostname */
-        char useragent[HTTPD_USERAGENT_MAXLEN];		/*< The useragent */
-        char method[HTTPD_METHOD_MAXLEN];		/*< The HTTPD Method */
-	char *url;					/*< the URL in the request */
-	char *path_info;				/*< the Pathinfo, starts with /, is the extra path segments after the document name */
-	char *query_string;				/*< the Query string, starts with ?, after path_info and document name */
-	int headers_received;				/*< All the headers has been received, if 1 */
+typedef struct httpd_session
+{
+    char user[HTTPD_USER_MAXLEN];           /*< username for authentication*/
+    char *cookies;                  /*< all input cookies */
+    char hostname[HTTPD_HOSTNAME_MAXLEN];       /*< The hostname */
+    char useragent[HTTPD_USERAGENT_MAXLEN];     /*< The useragent */
+    char method[HTTPD_METHOD_MAXLEN];       /*< The HTTPD Method */
+    char *url;                  /*< the URL in the request */
+    char *path_info;                /*< the Pathinfo, starts with /, is the extra path segments after the document name */
+    char *query_string;             /*< the Query string, starts with ?, after path_info and document name */
+    int headers_received;               /*< All the headers has been received, if 1 */
 } HTTPD_session;

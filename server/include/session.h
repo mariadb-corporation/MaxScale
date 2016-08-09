@@ -1,21 +1,16 @@
 #ifndef _SESSION_H
 #define _SESSION_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -125,6 +120,7 @@ typedef struct session
 #if defined(SS_DEBUG)
     skygw_chk_t     ses_chk_top;
 #endif
+    bool            ses_is_in_use;    /**< Whether session is in use or for later reuse */
     SPINLOCK        ses_lock;
     session_state_t state;            /*< Current descriptor state */
     size_t          ses_id;           /*< Unique session identifier */
@@ -184,9 +180,8 @@ void printSession(SESSION *);
 void dprintAllSessions(struct dcb *);
 void dprintSession(struct dcb *, SESSION *);
 void dListSessions(struct dcb *);
-char *session_state(int);
+char *session_state(session_state_t);
 bool session_link_dcb(SESSION *, struct dcb *);
-int session_unlink_dcb(SESSION*, DCB*);
 SESSION* get_session_by_router_ses(void* rses);
 void session_enable_log_priority(SESSION* ses, int priority);
 void session_disable_log_priority(SESSION* ses, int priority);

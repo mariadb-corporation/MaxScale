@@ -1,21 +1,16 @@
 #ifndef _SERVICE_H
 #define _SERVICE_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 #include <time.h>
@@ -28,6 +23,7 @@
 #include <hashtable.h>
 #include <resultset.h>
 #include <maxconfig.h>
+#include <queuemanager.h>
 #include <openssl/crypto.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -53,6 +49,7 @@
  * 26/06/14     Mark Riddoch            Added WeightBy support
  * 09/09/14     Massimiliano Pinto      Added service option for localhost authentication
  * 09/10/14     Massimiliano Pinto      Added service resources via hashtable
+ * 31/05/16     Martin Brampton         Add fields to support connection throttling
  *
  * @endverbatim
  */
@@ -98,7 +95,7 @@ typedef struct server_ref_t
 {
     struct server_ref_t *next;
     SERVER* server;
-}SERVER_REF;
+} SERVER_REF;
 
 #define SERVICE_MAX_RETRY_INTERVAL 3600 /*< The maximum interval between service start retries */
 
@@ -122,6 +119,9 @@ typedef struct service
 {
     char *name;                        /**< The service name */
     int state;                         /**< The service state */
+    int client_count;                  /**< Number of connected clients */
+    int max_connections;               /**< Maximum client connections */
+    QUEUE_CONFIG *queued_connections;  /**< Queued connections, if set */
     SERV_LISTENER *ports;              /**< Linked list of ports and protocols
                                         * that this service will listen on.
                                         */
@@ -145,7 +145,6 @@ typedef struct service
     bool strip_db_esc;                 /*< Remove the '\' characters from database names
                                         * when querying them from the server. MySQL Workbench seems
                                         * to escape at least the underscore character. */
-    bool optimize_wildcard;            /*< Convert wildcard grants to individual database grants */
     SPINLOCK users_table_spin;         /**< The spinlock for users data refresh */
     SERVICE_REFRESH_RATE rate_limit;   /**< The refresh rate limit for users table */
     FILTER_DEF **filters;              /**< Ordered list of filters */
@@ -192,16 +191,16 @@ extern bool serviceSetFilters(SERVICE *, char *);
 extern int serviceSetSSL(SERVICE *service, char* action);
 extern int serviceSetSSLVersion(SERVICE *service, char* version);
 extern int serviceSetSSLVerifyDepth(SERVICE* service, int depth);
-extern void serviceSetCertificates(SERVICE *service, char* cert,char* key, char* ca_cert);
+extern void serviceSetCertificates(SERVICE *service, char* cert, char* key, char* ca_cert);
 extern int serviceEnableRootUser(SERVICE *, int );
 extern int serviceSetTimeout(SERVICE *, int );
+extern int serviceSetConnectionLimits(SERVICE *, int, int, int);
 extern void serviceSetRetryOnFailure(SERVICE *service, char* value);
 extern void serviceWeightBy(SERVICE *, char *);
 extern char *serviceGetWeightingParameter(SERVICE *);
 extern int serviceEnableLocalhostMatchWildcardHost(SERVICE *, int);
 extern int serviceStripDbEsc(SERVICE* service, int action);
 extern int serviceAuthAllServers(SERVICE *service, int action);
-extern int serviceOptimizeWildcard(SERVICE *service, int action);
 extern void service_update(SERVICE *, char *, char *, char *);
 extern int service_refresh_users(SERVICE *);
 extern void printService(SERVICE *);

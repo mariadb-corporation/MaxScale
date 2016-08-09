@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -180,6 +175,22 @@ GetModuleObject()
     return &MyObject;
 }
 
+static inline void free_readconn_instance(ROUTER_INSTANCE *router)
+{
+    if (router)
+    {
+        if (router->servers)
+        {
+            for (int i = 0; router->servers[i]; i++)
+            {
+                free(router->servers[i]);
+            }
+        }
+        free(router->servers);
+        free(router);
+    }
+}
+
 /**
  * Create an instance of the router for a particular service
  * within the gateway.
@@ -220,7 +231,7 @@ createInstance(SERVICE *service, char **options)
     inst->servers = (BACKEND **) calloc(n + 1, sizeof(BACKEND *));
     if (!inst->servers)
     {
-        free(inst);
+        free_readconn_instance(inst);
         return NULL;
     }
 
@@ -228,12 +239,7 @@ createInstance(SERVICE *service, char **options)
     {
         if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL)
         {
-            for (i = 0; i < n; i++)
-            {
-                free(inst->servers[i]);
-            }
-            free(inst->servers);
-            free(inst);
+            free_readconn_instance(inst);
             return NULL;
         }
         inst->servers[n]->server = sref->server;
@@ -312,6 +318,7 @@ createInstance(SERVICE *service, char **options)
     /*
      * Process the options
      */
+    bool error = false;
     inst->bitmask = 0;
     inst->bitvalue = 0;
     if (options)
@@ -348,11 +355,19 @@ createInstance(SERVICE *service, char **options)
                 MXS_WARNING("Unsupported router "
                             "option \'%s\' for readconnroute. "
                             "Expected router options are "
-                            "[slave|master|synced|ndb]",
+                            "[slave|master|synced|ndb|running]",
                             options[i]);
+                error = true;
             }
         }
     }
+
+    if (error)
+    {
+        free_readconn_instance(inst);
+        return NULL;
+    }
+
     if (inst->bitmask == 0 && inst->bitvalue == 0)
     {
         /** No parameters given, use RUNNING as a valid server */
@@ -406,6 +421,7 @@ newSession(ROUTER *instance, SESSION *session)
     client_rses->rses_chk_top = CHK_NUM_ROUTER_SES;
     client_rses->rses_chk_tail = CHK_NUM_ROUTER_SES;
 #endif
+    client_rses->client_dcb = session->client_dcb;
 
     /**
      * Find the Master host from available servers
@@ -711,14 +727,13 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
 {
     ROUTER_INSTANCE *inst = (ROUTER_INSTANCE *) instance;
     ROUTER_CLIENT_SES *router_cli_ses = (ROUTER_CLIENT_SES *) router_session;
-    uint8_t *payload = GWBUF_DATA(queue);
-    int mysql_command;
     int rc;
     DCB* backend_dcb;
+    MySQLProtocol *proto = (MySQLProtocol*)router_cli_ses->client_dcb->protocol;
+    mysql_server_cmd_t mysql_command = proto->current_command;
     bool rses_is_closed;
 
     inst->stats.n_queries++;
-    mysql_command = MYSQL_GET_COMMAND(payload);
 
     /** Dirty read for quick check if router is closed. */
     if (router_cli_ses->rses_closed)
@@ -899,7 +914,7 @@ static void handleError(ROUTER *instance, void *router_session, GWBUF *errbuf,
         spinlock_release(&session->ses_lock);
     }
 
-    if (dcb_isclient(problem_dcb))
+    if (DCB_ROLE_CLIENT_HANDLER == problem_dcb->dcb_role)
     {
         dcb_close(problem_dcb);
     }

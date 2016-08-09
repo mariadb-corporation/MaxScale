@@ -1,16 +1,30 @@
-# Limitations and Known Issues within MaxScale
+# Limitations and Known Issues within MariaDB MaxScale
 
 The purpose of this documentation is to provide a central location that
-will document known issues and limitations within the MaxScale product and
+will document known issues and limitations within the MariaDB MaxScale product and
 the plugins that form part of that product. Since limitations may related
-to specific plugins or to MaxScale as a whole this document is divided
+to specific plugins or to MariaDB MaxScale as a whole this document is divided
 into a number of sections, the purpose of which are to isolate the
 limitations to the components which illustrate them.
 
-## Limitations in the MaxScale core
+## Limitations in the MariaDB MaxScale core
 
 This section describes the limitations that are common to all
-configuration of plugins with MaxScale.
+configuration of plugins with MariaDB MaxScale.
+
+### Crash if one of several listeners for a Service fails as startup
+
+If a service has multiple listeners and one of those listeners fails
+at startup, MariaDB MaxScale will crash.
+
+A typical reason for a listener to fail is that it has been configured
+with a non-existing socket path or a port that MariaDB MaxScale is not allowed
+to use.
+
+Workaround: Ensure that socket paths and ports are valid.
+
+Issues [MXS-710](https://jira.mariadb.org/browse/MXS-710) and
+[MXS-711](https://jira.mariadb.org/browse/MXS-711) relate to this.
 
 ## Limitations with MySQL Protocol support
 
@@ -27,7 +41,7 @@ can be influenced with the server priority mechanic described in the
 * If Master changes (ie. new Master promotion) during current connection
   the router cannot check the change.
 
-* Sending of LONGBLOB data is not supported
+* Sending of binary data with LOAD DATA LOCAL INFILE is not supported
 
 ## Limitations in the Read/Write Splitter
 
@@ -132,7 +146,7 @@ If a SELECT query modifies a user variable when the `use_sql_variables_in`
 parameter is set to `all`, it will not be routed and the client will receive
 an error. A log message is written into the log further explaining the reason
 for the error. Here is an example use of a SELECT query which modifies a user
-variable and how MaxScale responds to it.
+variable and how MariaDB MaxScale responds to it.
 
 ```
 MySQL [(none)]> set @id=1;
@@ -165,7 +179,7 @@ succeeds in other backends.
 
 ## Authentication Related Limitations
 
-* MaxScale can not manage authentication that uses wildcard matching in hostnames
+* MariaDB MaxScale can not manage authentication that uses wildcard matching in hostnames
   in the mysql.user table of the backend database. The only wildcards that can be
   used are in IP address entries.
 
@@ -173,9 +187,9 @@ succeeds in other backends.
   a new authentication protocol which does not support pre-4.1 style passwords.
 
 * When users have different passwords based on the host from which they connect
-  MaxScale is unable to determine which password it should use to connect to the
+  MariaDB MaxScale is unable to determine which password it should use to connect to the
   backend database. This results in failed connections and unusable usernames
-  in MaxScale.
+  in MariaDB MaxScale.
 
 ## Schemarouter limitations
 
@@ -210,3 +224,14 @@ and routed. Here is a list of the current limitations.
 
 The Database Firewall filter does not support multi-statements. Using them
 will result in an error being sent to the client.
+
+## Avrorouter limitations
+
+The avrorouter does not support the following data types and conversions.
+
+* DECIMAL
+* BIT
+* Fields CAST from integer types to string types
+
+The avrorouter does not do any crash recovery. This means that the avro files
+need to be truncated to valid block lengths before starting the avrorouter.

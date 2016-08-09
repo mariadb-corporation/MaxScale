@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -22,10 +17,10 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 25/07/14	Massimiliano Pinto	Initial implementation
- * 10/11/14	Massimiliano Pinto	Added setNetworkTimeout for connect,read,write
- * 08/05/15     Markus Makela           Addition of launchable scripts
+ * Date     Who                 Description
+ * 25/07/14 Massimiliano Pinto  Initial implementation
+ * 10/11/14 Massimiliano Pinto  Added setNetworkTimeout for connect,read,write
+ * 08/05/15 Markus Makela       Addition of launchable scripts
  *
  * @endverbatim
  */
@@ -37,6 +32,10 @@ static void monitorMain(void *);
 
 static char *version_str = "V2.1.0";
 
+/* @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
+ */
+/*lint -e14 */
 MODULE_INFO info =
 {
     MODULE_API_MONITOR,
@@ -44,6 +43,7 @@ MODULE_INFO info =
     MONITOR_VERSION,
     "A MySQL cluster SQL node monitor"
 };
+/*lint +e14 */
 
 static void *startMonitor(void *, void*);
 static void stopMonitor(void *);
@@ -61,7 +61,11 @@ static MONITOR_OBJECT MyObject =
  * Implementation of the mandatory version entry point
  *
  * @return version string of the module
+ *
+ * @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
  */
+/*lint -e14 */
 char *
 version()
 {
@@ -91,6 +95,7 @@ GetModuleObject()
 {
     return &MyObject;
 }
+/*lint +e14 */
 
 /**
  * Start the instance of the monitor, returning a handle on the monitor.
@@ -140,7 +145,7 @@ startMonitor(void *arg, void* opt)
         }
         else if (!strcmp(params->name, "events"))
         {
-            if (mon_parse_event_string((bool*) &handle->events,
+            if (mon_parse_event_string((bool *)handle->events,
                                        sizeof(handle->events), params->value) != 0)
             {
                 script_error = true;
@@ -152,12 +157,22 @@ startMonitor(void *arg, void* opt)
         }
         params = params->next;
     }
+
+    /** SHOW STATUS doesn't require any special permissions */
+    if (!check_monitor_permissions(mon, "SHOW STATUS LIKE 'Ndb_number_of_ready_data_nodes'"))
+    {
+        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+        free(handle->script);
+        free(handle);
+        return NULL;
+    }
+
     if (script_error)
     {
-	MXS_ERROR("Errors were found in the script configuration parameters "
-                  "for the monitor '%s'. The script will not be used.",mon->name);
-	free(handle->script);
-	handle->script = NULL;
+        MXS_ERROR("Errors were found in the script configuration parameters "
+                  "for the monitor '%s'. The script will not be used.", mon->name);
+        free(handle->script);
+        handle->script = NULL;
     }
     /** If no specific events are given, enable them all */
     if (!have_events)
@@ -176,7 +191,7 @@ startMonitor(void *arg, void* opt)
 /**
  * Stop a running monitor
  *
- * @param arg	Handle on thr running monior
+ * @param arg   Handle on thr running monior
  */
 static void
 stopMonitor(void *arg)
@@ -191,8 +206,8 @@ stopMonitor(void *arg)
 /**
  * Diagnostic interface
  *
- * @param dcb	DCB to send output
- * @param arg	The monitor handle
+ * @param dcb   DCB to send output
+ * @param arg   The monitor handle
  */
 static void
 diagnostics(DCB *dcb, void *arg)
@@ -235,7 +250,7 @@ diagnostics(DCB *dcb, void *arg)
 /**
  * Monitor an individual server
  *
- * @param database	The database to probe
+ * @param database  The database to probe
  */
 static void
 monitorDatabase(MONITOR_SERVERS *database, char *defaultUser, char *defaultPasswd, MONITOR *mon)
@@ -297,7 +312,9 @@ monitorDatabase(MONITOR_SERVERS *database, char *defaultUser, char *defaultPassw
         while ((row = mysql_fetch_row(result)))
         {
             if (atoi(row[1]) > 0)
+            {
                 isjoined = 1;
+            }
         }
         mysql_free_result(result);
     }
@@ -344,7 +361,7 @@ monitorDatabase(MONITOR_SERVERS *database, char *defaultUser, char *defaultPassw
 /**
  * The entry point for the monitoring module thread
  *
- * @param arg	The handle of the monitor
+ * @param arg   The handle of the monitor
  */
 static void
 monitorMain(void *arg)
@@ -360,8 +377,7 @@ monitorMain(void *arg)
 
     if (mysql_thread_init())
     {
-        MXS_ERROR("Fatal : mysql_thread_init failed in monitor "
-                  "module. Exiting.");
+        MXS_ERROR("Fatal : mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
     handle->status = MONITOR_RUNNING;
@@ -378,9 +394,9 @@ monitorMain(void *arg)
 
         /** Wait base interval */
         thread_millisleep(MON_BASE_INTERVAL_MS);
-        /** 
-         * Calculate how far away the monitor interval is from its full 
-         * cycle and if monitor interval time further than the base 
+        /**
+         * Calculate how far away the monitor interval is from its full
+         * cycle and if monitor interval time further than the base
          * interval, then skip monitoring checks. Excluding the first
          * round.
          */
@@ -422,10 +438,7 @@ monitorMain(void *arg)
                 evtype = mon_get_event_type(ptr);
                 if (isNdbEvent(evtype))
                 {
-                    MXS_NOTICE("Server changed state: %s[%s:%u]: %s",
-                             ptr->server->unique_name,
-                             ptr->server->name, ptr->server->port,
-                             mon_get_event_name(ptr));
+                    mon_log_state_change(ptr);
                     if (handle->script && handle->events[evtype])
                     {
                         monitor_launch_script(mon, ptr, handle->script);

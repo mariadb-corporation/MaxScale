@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -21,8 +16,8 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 11-09-2014	Martin Brampton		Initial implementation
+ * Date         Who                 Description
+ * 11-09-2014   Martin Brampton     Initial implementation
  *
  * @endverbatim
  */
@@ -41,73 +36,81 @@
 #include <maxscale/poll.h>
 #include <dcb.h>
 #include <test_utils.h>
+#include <listener.h>
 
 /**
- * test1	Allocate a service and do lots of other things
+ * test1    Allocate a service and do lots of other things
  *
   */
 
 static int
 test1()
 {
-DCB     *dcb;
-int     result;
-	int eno = 0;
+    DCB     *dcb;
+    int     result;
+    int eno = 0;
+    SERV_LISTENER dummy;
 
-        /* Poll tests */  
-        ss_dfprintf(stderr,
-                    "testpoll : Initialise the polling system."); 
-        init_test_env(NULL);
-        poll_init();
-        ss_dfprintf(stderr, "\t..done\nAdd a DCB");
-        dcb = dcb_alloc(DCB_ROLE_REQUEST_HANDLER);
+    /* Poll tests */
+    ss_dfprintf(stderr,
+                "testpoll : Initialise the polling system.");
+    init_test_env(NULL);
+    poll_init();
+    ss_dfprintf(stderr, "\t..done\nAdd a DCB");
+    dcb = dcb_alloc(DCB_ROLE_CLIENT_HANDLER, &dummy);
 
-		if(dcb == NULL){
-			ss_dfprintf(stderr, "\nError on function call: dcb_alloc() returned NULL.\n");
-			return 1;
-		}
+    if (dcb == NULL)
+    {
+        ss_dfprintf(stderr, "\nError on function call: dcb_alloc() returned NULL.\n");
+        return 1;
+    }
 
-        dcb->fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    dcb->fd = socket(AF_UNIX, SOCK_STREAM, 0);
 
-        if(dcb->fd < 0){
-                        char errbuf[STRERROR_BUFLEN];
-			ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n",errno,strerror_r(errno,errbuf,sizeof(errbuf)));
-				    return 1;
-		}
+    if (dcb->fd < 0)
+    {
+        char errbuf[STRERROR_BUFLEN];
+        ss_dfprintf(stderr, "\nError on function call: socket() returned %d: %s\n", errno, strerror_r(errno, errbuf,
+                                                                                                      sizeof(errbuf)));
+        return 1;
+    }
 
 
-        if((eno = poll_add_dcb(dcb)) != 0){
-			ss_dfprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n",eno);
-				    return 1;
-		}
+    if ((eno = poll_add_dcb(dcb)) != 0)
+    {
+        ss_dfprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n", eno);
+        return 1;
+    }
 
-        if((eno = poll_remove_dcb(dcb)) != 0){
-			ss_dfprintf(stderr, "\nError on function call: poll_remove_dcb() returned %d.\n",eno);
-				    return 1;
-		}
+    if ((eno = poll_remove_dcb(dcb)) != 0)
+    {
+        ss_dfprintf(stderr, "\nError on function call: poll_remove_dcb() returned %d.\n", eno);
+        return 1;
+    }
 
-        if((eno = poll_add_dcb(dcb)) != 0){
-			ss_dfprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n",eno);
-				    return 1;
-		}
+    if ((eno = poll_add_dcb(dcb)) != 0)
+    {
+        ss_dfprintf(stderr, "\nError on function call: poll_add_dcb() returned %d.\n", eno);
+        return 1;
+    }
 
-        ss_dfprintf(stderr, "\t..done\nStart wait for events.");
-        sleep(10);
-        poll_shutdown();
-        ss_dfprintf(stderr, "\t..done\nTidy up.");
-        dcb_close(dcb);
-        ss_dfprintf(stderr, "\t..done\n");
-		
-	return 0;
-        
+    ss_dfprintf(stderr, "\t..done\nStart wait for events.");
+    sleep(10);
+    poll_shutdown();
+    ss_dfprintf(stderr, "\t..done\nTidy up.");
+    dcb_close(dcb);
+    ss_dfprintf(stderr, "\t..done\n");
+
+    return 0;
+
 }
 
 int main(int argc, char **argv)
 {
-int	result = 0;
+    int result = 0;
 
-	result += test1();
+    result += test1();
 
-	exit(result);
+    exit(result);
 }
 

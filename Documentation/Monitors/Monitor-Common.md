@@ -48,7 +48,11 @@ The following substitutions will be made to the parameter value:
 
 * `$INITIATOR` will be replaced with the IP and port of the server who initiated the event
 * `$EVENT` will be replaced with the name of the event
+* `$LIST` will be replaced with a list of server IPs and ports
 * `$NODELIST` will be replaced with a list of server IPs and ports that are running
+* `$SLAVELIST` will be replaced with a list of server IPs and ports that are slaves
+* `$MASTERLIST` will be replaced with a list of server IPs and ports that are masters
+* `$SYNCEDLIST` will be replaced with a list of server IPs and ports that are synced Galera nodes
 
 For example, the previous example will be executed as:
 

@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -317,7 +312,7 @@ mysql_send_columndef(DCB *dcb, char *name, int type, int len, uint8_t seqno)
     plen = 22 + strlen(name);
     *ptr++ = plen & 0xff;
     *ptr++ = (plen >> 8) & 0xff;
-    *ptr++ = (plen >> 16)& 0xff;
+    *ptr++ = (plen >> 16) & 0xff;
     *ptr++ = seqno;                         // Sequence number in response
     *ptr++ = 3;                             // Catalog is always def
     *ptr++ = 'd';
@@ -349,9 +344,9 @@ mysql_send_columndef(DCB *dcb, char *name, int type, int len, uint8_t seqno)
     {
         *ptr++ = 0x00;
     }
-    *ptr++= 0;
-    *ptr++= 0;
-    *ptr++= 0;
+    *ptr++ = 0;
+    *ptr++ = 0;
+    *ptr++ = 0;
     return dcb->func.write(dcb, pkt);
 }
 
@@ -449,15 +444,22 @@ mysql_send_row(DCB *dcb, RESULT_ROW *row, int seqno)
 static int
 value_is_numeric(char *value)
 {
-    while (*value)
+    int rval = 0;
+
+    if (*value)
     {
-        if (!isdigit(*value))
+        rval = 1;
+        while (*value)
         {
-            return 0;
+            if (!isdigit(*value))
+            {
+                return 0;
+            }
+            value++;
         }
-        value++;
     }
-    return 1;
+
+    return rval;
 }
 
 /**
@@ -488,17 +490,20 @@ resultset_stream_json(RESULTSET *set, DCB *dcb)
         while (col)
         {
             dcb_printf(dcb, "\"%s\" : ", col->name);
-            if (row->cols[i] && value_is_numeric(row->cols[i]))
+            if (row->cols[i])
             {
-                dcb_printf(dcb, "%s", row->cols[i]);
-            }
-            else if (row->cols[i])
-            {
-                dcb_printf(dcb, "\"%s\"", row->cols[i]);
+                if (value_is_numeric(row->cols[i]))
+                {
+                    dcb_printf(dcb, "%s", row->cols[i]);
+                }
+                else
+                {
+                    dcb_printf(dcb, "\"%s\"", row->cols[i]);
+                }
             }
             else
             {
-                dcb_printf(dcb, "NULL");
+                dcb_printf(dcb, "null");
             }
             i++;
             col = col->next;

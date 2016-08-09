@@ -90,6 +90,7 @@ start() {
     chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
     chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
 
+    ulimit -HSn 65535
     daemon --pidfile $MAXSCALE_PIDFILE @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@/maxscale --user=maxscale $MAXSCALE_OPTIONS >& /dev/null
 
     RETVAL=$?

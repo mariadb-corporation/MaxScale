@@ -1,6 +1,6 @@
-select  md5("?") =?, sleep(?), rand(?);
+select md5("?") =?, sleep(?), rand(?);
 select * from my1 where md5("?") =?;
-select  md5("?") =?;
+select md5("?") =?;
 select * from my1 where md5("?") =?;
 select sleep(?);
 select * from tst where lname='?';
@@ -69,7 +69,7 @@ SELECT COUNT(*) FROM myCity;
 select count(*) from t1;
 select count(*) from t1;
 select count(*) from user where user='?';
-    SELECT COUNT(*) INTO param1 FROM t;
+SELECT COUNT(*) INTO param1 FROM t;
 SELECT IF(@? <> @?,'?','?') AS result;
 SELECT IF(id <> @?,'?','?') AS result FROM T2;
 SELECT IF(@@? <> @?,'?','?') AS result;

@@ -1,16 +1,16 @@
 .TH maxscale 1
 .SH NAME
-maxscale - The intelligent proxy
+maxscale - The Dynamic Data Routing Platform
 .SH SYNOPSIS
 .B maxscale
 [\fIOPTIONS...\fR]
 .SH DESCRIPTION
-The MariaDB Corporation MaxScale is an intelligent proxy that allows forwarding of
-database statements to one or more database servers using complex rules,
-a semantic understanding of the database statements and the roles of
-the various servers within the backend cluster of databases.
+MariaDB MaxScale is a dynamic data routing platform that allows the forwarding
+of database statements to one or more database servers using complex rules, a
+semantic understanding of the database statements and the roles of the various
+servers within the backend cluster of databases.
 
-MaxScale is designed to provide load balancing and high availability
+MariaDB MaxScale is designed to provide load balancing and high availability
 functionality transparently to the applications. In addition it provides
 a highly scalable and flexible architecture, with plugin components to
 support different protocols and routing decisions.
@@ -23,8 +23,8 @@ Run MaxScale in the terminal process
 .BR -f " \fIFILE\fB, --config=\fIFILE\fR"
 Relative or absolute pathname of MaxScale configuration file to load.
 .TP
-.BR -l "[\fIfile|shm\fB], --log=[\fIfile|shm\fB]"
-Log to file or shared memory. The default is to log to file.
+.BR -l "[\fIfile|shm|stdout\fB], --log=[\fIfile|shm|stdout\fB]"
+Log to file, shared memory or standard output. The default is to log to file.
 .TP
 .BR -L " \fIPATH\fB, --logdir=\fIPATH\fB"
 Path to log file directory.
@@ -71,13 +71,13 @@ Tutorials on GitHub:
 .I https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md#tutorials
 .RE
 .SH SEE ALSO
-The MaxScale documentation on the MariaDB Knowledge Base:
+The MariaDB MaxScale documentation on the MariaDB Knowledge Base:
 
 .RS
 .I https://mariadb.com/kb/en/mariadb-enterprise/mariadb-maxscale/
 .RE
 
-The MaxScale documentation on GitHub:
+The MariaDB MaxScale documentation on GitHub:
 
 .RS
 .I https://github.com/mariadb-corporation/MaxScale/blob/master/Documentation/Documentation-Contents.md

@@ -1,6 +1,6 @@
-# Rabbit MQ setup and MaxScale Integration
+# Rabbit MQ setup and MariaDB MaxScale Integration
 ## Introduction
-A step by step guide helps installing a RabbitMQ server and testing it before MaxScale integration.
+A step by step guide helps installing a RabbitMQ server and testing it before MariaDB MaxScale integration.
 
 New plugin filter and a message consumer application need to be compiled and linked with an external C library, RabbitMQ-c, that provides AMQP protocol integration.
 Custom configuration, with TCP/IP and Queue parameters, is also detailed here.
@@ -72,7 +72,7 @@ rabbitmqctl start_app
 
 ## Step 3 - Install and test the client libraries
 
-The selected library for MaxScale integration of RabbitMQ is:
+The selected library for MariaDB MaxScale integration of RabbitMQ is:
 [https://github.com/alanxz/rabbitmq-c](https://github.com/alanxz/rabbitmq-c RabbitMQ-C)
 
 ### Manual software compilation
@@ -232,7 +232,7 @@ SELECT NOW(), SELECT MD5(“xyz)” are not logged
 
 Please note that if we want to log only the user ‘maxtest’ accessing the schema ‘test’ with target ‘my1’  the option logging_strict must be set to TRUE and if we want to include those selects without schema name the option logging_log_all must be set to TRUE.
 
-The mqfilter logs into the MaxScale TRACE log information about the matched logging triggers and the message delivering:
+The mqfilter logs into the MariaDB MaxScale TRACE log information about the matched logging triggers and the message delivering:
 
 ```
 2014 09/03 06:22:04   Trigger is TRG_SOURCE: user: testuser = testuser
@@ -294,11 +294,11 @@ If the consumer.cnf file is not in the same directory as the binary file is, you
 # ./consumer -c path/to/file
 ```
 
-and start MaxScale as well
+and start MariaDB MaxScale as well
 
 ## Step 5 - Test the filter and check collected data
 
-Assuming that MaxScale and the message consumer are successfully running let’s connect to the service with an active mqfilter:
+Assuming that MariaDB MaxScale and the message consumer are successfully running let’s connect to the service with an active mqfilter:
 
 ```
 [root@maxscale-02 MaxScale]#  mysql -h 127.0.0.1 -P 4506 -uxxx -pyyy

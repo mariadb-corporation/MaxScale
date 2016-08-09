@@ -1,20 +1,14 @@
-
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 #ifndef PCRE2_CODE_UNIT_WIDTH
@@ -1534,6 +1528,89 @@ int simple_str_hash(char* key)
     }
 
     return hash;
+}
+
+/**
+ * Trim leading and trailing whitespace from a string
+ *
+ * @param str String to trim
+ * @return    Trimmed string
+ */
+char* trim(char *str)
+{
+    char* ptr = strchr(str, '\0') - 1;
+
+    while (ptr > str && isspace(*ptr))
+    {
+        ptr--;
+    }
+
+    if (isspace(*(ptr + 1)))
+    {
+        *(ptr + 1) = '\0';
+    }
+
+    ptr = str;
+
+    while (isspace(*ptr))
+    {
+        ptr++;
+    }
+
+    if (ptr != str)
+    {
+        memmove(str, ptr, strlen(ptr) + 1);
+    }
+
+    return str;
+}
+
+/**
+ * Replace all whitespace with spaces and squeeze repeating whitespace characters
+ *
+ * @param str String to squeeze
+ * @return Squeezed string
+ */
+char* squeeze_whitespace(char* str)
+{
+    char* store = str;
+    char* ptr = str;
+
+    /** Remove leading whitespace */
+    while (isspace(*ptr) && *ptr != '\0')
+    {
+        ptr++;
+    }
+
+    /** Squeeze all repeating whitespace */
+    while (*ptr != '\0')
+    {
+        while (isspace(*ptr) && isspace(*(ptr + 1)))
+        {
+            ptr++;
+        }
+
+        if (isspace(*ptr))
+        {
+            *store++ = ' ';
+            ptr++;
+        }
+        else
+        {
+            *store++ = *ptr++;
+        }
+    }
+
+    *store = '\0';
+
+    /** Remove trailing whitespace */
+    while (store > str && isspace(*(store - 1)))
+    {
+        store--;
+        *store = '\0';
+    }
+
+    return str;
 }
 
 /**

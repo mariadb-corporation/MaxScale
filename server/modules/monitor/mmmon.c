@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -22,9 +17,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 08/09/14	Massimiliano Pinto	Initial implementation
- * 08/05/15     Markus Makela           Addition of launchable scripts
+ * Date     Who                 Description
+ * 08/09/14 Massimiliano Pinto  Initial implementation
+ * 08/05/15 Markus Makela       Addition of launchable scripts
  * 17/10/15 Martin Brampton     Change DCB callback to hangup
  *
  * @endverbatim
@@ -37,6 +32,10 @@ static void monitorMain(void *);
 
 static char *version_str = "V1.1.1";
 
+/* @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
+ */
+/*lint -e14 */
 MODULE_INFO info =
 {
     MODULE_API_MONITOR,
@@ -44,13 +43,14 @@ MODULE_INFO info =
     MONITOR_VERSION,
     "A Multi-Master Multi Master monitor"
 };
+/*lint +e14 */
 
 static void *startMonitor(void *, void*);
 static void stopMonitor(void *);
 static void diagnostics(DCB *, void *);
 static void detectStaleMaster(void *, int);
 static MONITOR_SERVERS *get_current_master(MONITOR *);
-bool isMySQLEvent(monitor_event_t event);
+static bool isMySQLEvent(monitor_event_t event);
 
 static MONITOR_OBJECT MyObject =
 {
@@ -63,7 +63,11 @@ static MONITOR_OBJECT MyObject =
  * Implementation of the mandatory version entry point
  *
  * @return version string of the module
+ *
+ * @see function load_module in load_utils.c for explanation of the following
+ * lint directives.
  */
+/*lint -e14 */
 char *
 version()
 {
@@ -93,13 +97,14 @@ GetModuleObject()
 {
     return &MyObject;
 }
+/*lint +e14 */
 
 /**
  * Start the instance of the monitor, returning a handle on the monitor.
  *
  * This function creates a thread to execute the actual monitoring.
  *
- * @param arg	The current handle - NULL if first start
+ * @param arg   The current handle - NULL if first start
  * @return A handle to use when interacting with the monitor
  */
 static void *
@@ -149,7 +154,7 @@ startMonitor(void *arg, void* opt)
         }
         else if (!strcmp(params->name, "events"))
         {
-            if (mon_parse_event_string((bool*) & handle->events,
+            if (mon_parse_event_string((bool *)handle->events,
                                        sizeof(handle->events), params->value) != 0)
             {
                 script_error = true;
@@ -161,12 +166,21 @@ startMonitor(void *arg, void* opt)
         }
         params = params->next;
     }
+
+    if (!check_monitor_permissions(mon, "SHOW SLAVE STATUS"))
+    {
+        MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
+        free(handle->script);
+        free(handle);
+        return NULL;
+    }
+
     if (script_error)
     {
-	MXS_ERROR("Errors were found in the script configuration parameters "
-                  "for the monitor '%s'. The script will not be used.",mon->name);
-	free(handle->script);
-	handle->script = NULL;
+        MXS_ERROR("Errors were found in the script configuration parameters "
+                  "for the monitor '%s'. The script will not be used.", mon->name);
+        free(handle->script);
+        handle->script = NULL;
     }
     /** If no specific events are given, enable them all */
     if (!have_events)
@@ -185,7 +199,7 @@ startMonitor(void *arg, void* opt)
 /**
  * Stop a running monitor
  *
- * @param arg	Handle on thr running monior
+ * @param arg   Handle on thr running monior
  */
 static void
 stopMonitor(void *arg)
@@ -200,8 +214,8 @@ stopMonitor(void *arg)
 /**
  * Daignostic interface
  *
- * @param dcb	DCB to print diagnostics
- * @param arg	The monitor handle
+ * @param dcb   DCB to print diagnostics
+ * @param arg   The monitor handle
  */
 static void diagnostics(DCB *dcb, void *arg)
 {
@@ -231,11 +245,7 @@ static void diagnostics(DCB *dcb, void *arg)
     sep = "";
     while (db)
     {
-        dcb_printf(dcb,
-                   "%s%s:%d",
-                   sep,
-                   db->server->name,
-                   db->server->port);
+        dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
         sep = ", ";
         db = db->next;
     }
@@ -246,7 +256,7 @@ static void diagnostics(DCB *dcb, void *arg)
  * Monitor an individual server
  *
  * @param handle        The MySQL Monitor object
- * @param database	The database to probe
+ * @param database  The database to probe
  */
 static void
 monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
@@ -358,9 +368,9 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
             if (mysql_field_count(database->con) < 42)
             {
                 mysql_free_result(result);
-                MXS_ERROR("\"SHOW ALL SLAVES STATUS\" "
-                          "returned less than the expected amount of columns. Expected 42 columns"
-                          " MySQL Version: %s", version_str);
+                MXS_ERROR("\"SHOW ALL SLAVES STATUS\" returned less than the expected"
+                          " amount of columns. Expected 42 columns MySQL Version: %s",
+                          version_str);
                 return;
             }
 
@@ -373,8 +383,8 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
                     isslave += 1;
                 }
 
-                /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building 
-                 * the replication tree, slaves ids will be added to master(s) and we will have at least the 
+                /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
+                 * the replication tree, slaves ids will be added to master(s) and we will have at least the
                  * root master server.
                  * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
                  */
@@ -432,8 +442,7 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
                 {
                     MXS_ERROR("\"SHOW SLAVE STATUS\" "
                               "returned less than the expected amount of columns. "
-                              "Expected 40 columns."
-                              " MySQL Version: %s", version_str);
+                              "Expected 40 columns. MySQL Version: %s", version_str);
                 }
                 return;
             }
@@ -447,8 +456,8 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
                     isslave = 1;
                 }
 
-                /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building 
-                 * the replication tree, slaves ids will be added to master(s) and we will have at least the 
+                /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
+                 * the replication tree, slaves ids will be added to master(s) and we will have at least the
                  * root master server.
                  * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
                  */
@@ -499,22 +508,6 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
     monitor_clear_pending_status(database, SERVER_STALE_STATUS);
 
     /* Set the Slave Role */
-    if (isslave)
-    {
-        monitor_set_pending_status(database, SERVER_SLAVE);
-        /* Avoid any possible stale Master state */
-        monitor_clear_pending_status(database, SERVER_MASTER);
-
-        /* Set replication depth to 1 */
-        database->server->depth = 1;
-    }
-    else
-    {
-        /* Avoid any possible Master/Slave stale state */
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-
     /* Set the Master role */
     if (ismaster)
     {
@@ -524,13 +517,27 @@ monitorDatabase(MONITOR* mon, MONITOR_SERVERS *database)
         /* Set replication depth to 0 */
         database->server->depth = 0;
     }
+    else if (isslave)
+    {
+        monitor_set_pending_status(database, SERVER_SLAVE);
+        /* Avoid any possible stale Master state */
+        monitor_clear_pending_status(database, SERVER_MASTER);
 
+        /* Set replication depth to 1 */
+        database->server->depth = 1;
+    }
+    /* Avoid any possible Master/Slave stale state */
+    else
+    {
+        monitor_clear_pending_status(database, SERVER_SLAVE);
+        monitor_clear_pending_status(database, SERVER_MASTER);
+    }
 }
 
 /**
  * The entry point for the monitoring module thread
  *
- * @param arg	The handle of the monitor
+ * @param arg   The handle of the monitor
  */
 static void
 monitorMain(void *arg)
@@ -549,8 +556,7 @@ monitorMain(void *arg)
 
     if (mysql_thread_init())
     {
-        MXS_ERROR("Fatal : mysql_thread_init failed in monitor "
-                  "module. Exiting.");
+        MXS_ERROR("Fatal : mysql_thread_init failed in monitor module. Exiting.");
         return;
     }
 
@@ -595,7 +601,11 @@ monitorMain(void *arg)
 
             if (mon_status_changed(ptr))
             {
-                dcb_hangup_foreach(ptr->server);
+                if (!(SERVER_IS_RUNNING(ptr->server)) ||
+                    !(SERVER_IS_IN_CLUSTER(ptr->server)))
+                {
+                    dcb_hangup_foreach(ptr->server);
+                }
             }
 
             if (mon_status_changed(ptr) ||
@@ -631,7 +641,10 @@ monitorMain(void *arg)
             if (!SERVER_IN_MAINT(ptr->server))
             {
                 /* If "detect_stale_master" option is On, let's use the previus master */
-                if (detect_stale_master && root_master && (!strcmp(ptr->server->name, root_master->server->name) && ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) && !(ptr->pending_status & SERVER_MASTER))
+                if (detect_stale_master && root_master &&
+                    (!strcmp(ptr->server->name, root_master->server->name) &&
+                     ptr->server->port == root_master->server->port) && (ptr->server->status & SERVER_MASTER) &&
+                    !(ptr->pending_status & SERVER_MASTER))
                 {
                     /* in this case server->status will not be updated from pending_status */
                     MXS_NOTICE("[mysql_mon]: root server [%s:%i] is no longer Master, let's "
@@ -657,10 +670,7 @@ monitorMain(void *arg)
                 evtype = mon_get_event_type(ptr);
                 if (isMySQLEvent(evtype))
                 {
-                    MXS_NOTICE("Server changed state: %s[%s:%u]: %s",
-                             ptr->server->unique_name,
-                             ptr->server->name, ptr->server->port,
-                             mon_get_event_name(ptr));
+                    mon_log_state_change(ptr);
                     if (handle->script && handle->events[evtype])
                     {
                         monitor_launch_script(mon, ptr, handle->script);
@@ -677,9 +687,10 @@ monitorMain(void *arg)
  * This option must be enabled in order to keep the Master when the replication is stopped or removed from slaves.
  * If the replication is still stopped when MaxSclale is restarted no Master will be available.
  *
- * @param arg		The handle allocated by startMonitor
- * @param enable	To enable it 1, disable it with 0
+ * @param arg       The handle allocated by startMonitor
+ * @param enable    To enable it 1, disable it with 0
  */
+/* Not used
 static void
 detectStaleMaster(void *arg, int enable)
 {
@@ -687,6 +698,7 @@ detectStaleMaster(void *arg, int enable)
     MM_MONITOR *handle = (MM_MONITOR *) mon->handle;
     memcpy(&handle->detectStaleMaster, &enable, sizeof(int));
 }
+*/
 
 /*******
  * This function returns the master server

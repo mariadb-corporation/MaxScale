@@ -2,7 +2,7 @@
 
 ## Overview
 
-The tee filter is a filter module for MaxScale is a "plumbing" fitting in the MaxScale filter toolkit. It can be used in a filter pipeline of a service to make a copy of requests from the client and dispatch a copy of the request to another service within MaxScale. 
+The tee filter is a filter module for MariaDB MaxScale is a "plumbing" fitting in the MariaDB MaxScale filter toolkit. It can be used in a filter pipeline of a service to make a copy of requests from the client and dispatch a copy of the request to another service within MariaDB MaxScale.
 
 ## Configuration
 
@@ -65,7 +65,7 @@ All regular expressions are evaluated with the option to ignore the case of the 
 
 ### Source
 
-The optional source parameter defines an address that is used to match against the address from which the client connection to MaxScale originates. Only sessions that originate from this address will be replicated.
+The optional source parameter defines an address that is used to match against the address from which the client connection to MariaDB MaxScale originates. Only sessions that originate from this address will be replicated.
 
 ```
 source=127.0.0.1
@@ -73,7 +73,7 @@ source=127.0.0.1
 
 ### User
 
-The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username are replicated.
+The optional user parameter defines a user name that is used to match against the user from which the client connection to MariaDB MaxScale originates. Only sessions that are connected using this username are replicated.
 
 ```
 user=john
@@ -85,7 +85,7 @@ user=john
 
 Assume an order processing system that has a table called orders. You also have another database server, the datamart server, that requires all inserts into orders to be replicated to it. Deletes and updates are not however required.
 
-Set up a service in MaxScale, called Orders, to communicate with the order processing system with the tee filter applied to it. Also set up a service to talk the datamart server, using the DataMart service. The tee filter would have as it’s service entry the DataMart service, by adding a match parameter of "insert into orders" would then result in all requests being sent to the order processing system, and insert statements that include the orders table being additionally sent to the datamart server.
+Set up a service in MariaDB MaxScale, called Orders, to communicate with the order processing system with the tee filter applied to it. Also set up a service to talk the datamart server, using the DataMart service. The tee filter would have as it’s service entry the DataMart service, by adding a match parameter of "insert into orders" would then result in all requests being sent to the order processing system, and insert statements that include the orders table being additionally sent to the datamart server.
 
 ```
 [Orders]

@@ -1,25 +1,21 @@
 #ifndef _DCB_H
 #define _DCB_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <spinlock.h>
 #include <buffer.h>
 #include <gw_protocol.h>
+#include <gw_authenticator.h>
 #include <gw_ssl.h>
 #include <modinfo.h>
 #include <gwbitmask.h>
@@ -31,6 +27,7 @@
 struct session;
 struct server;
 struct service;
+struct servlistener;
 
 /**
  * @file dcb.h  The Descriptor Control Block
@@ -145,7 +142,8 @@ typedef enum
 typedef enum
 {
     DCB_ROLE_SERVICE_LISTENER,      /*< Receives initial connect requests from clients */
-    DCB_ROLE_REQUEST_HANDLER,       /*< Serves dedicated client */
+    DCB_ROLE_CLIENT_HANDLER,        /*< Serves dedicated client */
+    DCB_ROLE_BACKEND_HANDLER,       /*< Serves back end connection */
     DCB_ROLE_INTERNAL               /*< Internal DCB not connected to the outside */
 } dcb_role_t;
 
@@ -200,8 +198,11 @@ typedef enum
 typedef struct dcb
 {
     skygw_chk_t     dcb_chk_top;
+    bool            dcb_is_in_use;  /**< Whether DCB is in use or for later reuse */
     bool            dcb_errhandle_called; /*< this can be called only once */
     bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
+    bool            draining_flag;  /**< Set while write queue is drained */
+    bool            drain_called_while_busy; /**< Set as described */
     dcb_role_t      dcb_role;
     SPINLOCK        dcb_initlock;
     DCBEVENTQ       evq;            /**< The event queue for this DCB */
@@ -214,9 +215,12 @@ typedef struct dcb
     struct sockaddr_in ipv4;        /**< remote end IPv4 address */
     char            *protoname;     /**< Name of the protocol */
     void            *protocol;      /**< The protocol specific state */
+    size_t           protocol_packet_length; /**< How long the protocol specific packet is */
+    size_t           protocol_bytes_processed; /**< How many bytes of a packet have been read */
     struct session  *session;       /**< The owning session */
-    SSL_LISTENER    *listen_ssl;    /**< For a client DCB, the SSL descriptor, if any */
-    GWPROTOCOL      func;           /**< The functions for this descriptor */
+    struct servlistener *listener;  /**< For a client DCB, the listener data */
+    GWPROTOCOL      func;           /**< The protocol functions for this descriptor */
+    GWAUTHENTICATOR authfunc;       /**< The authenticator functions for this descriptor */
 
     int             writeqlen;      /**< Current number of byes in the write queue */
     SPINLOCK        writeqlock;     /**< Write Queue spinlock */
@@ -243,9 +247,9 @@ typedef struct dcb
     SPINLOCK        polloutlock;
     int             polloutbusy;
     int             writecheck;
-    unsigned long   last_read;      /*< Last time the DCB received data */
-    unsigned int    high_water;     /**< High water mark */
-    unsigned int    low_water;      /**< Low water mark */
+    long            last_read;      /*< Last time the DCB received data */
+    int             high_water;     /**< High water mark */
+    int             low_water;      /**< Low water mark */
     struct server   *server;        /**< The associated backend server */
     SSL*            ssl;            /*< SSL struct for connection */
     bool            ssl_read_want_read;    /*< Flag */
@@ -292,7 +296,8 @@ int           fail_accept_errno;
 
 DCB *dcb_get_zombies(void);
 int dcb_write(DCB *, GWBUF *);
-DCB *dcb_alloc(dcb_role_t);
+DCB *dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs);
+DCB *dcb_alloc(dcb_role_t, struct servlistener *);
 void dcb_free(DCB *);
 void dcb_free_all_memory(DCB *dcb);
 DCB *dcb_connect(struct server *, struct session *, const char *);
@@ -308,9 +313,8 @@ void dprintOneDCB(DCB *, DCB *);             /* Debug to print one DCB */
 void dprintDCB(DCB *, DCB *);                /* Debug to print a DCB in the system */
 void dListDCBs(DCB *);                       /* List all DCBs in the system */
 void dListClients(DCB *);                    /* List al the client DCBs */
-const char *gw_dcb_state2string(int);              /* DCB state to string */
-void dcb_printf(DCB *, const char *, ...);   /* DCB version of printf */
-int dcb_isclient(DCB *);                    /* the DCB is the client of the session */
+const char *gw_dcb_state2string(dcb_state_t);              /* DCB state to string */
+void dcb_printf(DCB *, const char *, ...) __attribute__((format(printf, 2, 3))); /* DCB version of printf */
 void dcb_hashtable_stats(DCB *, void *);     /**< Print statisitics */
 int dcb_add_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *), void *);
 int dcb_remove_callback(DCB *, DCB_REASON, int (*)(struct dcb *, DCB_REASON, void *), void *);
@@ -325,6 +329,8 @@ bool dcb_get_ses_log_info(DCB* dcb, size_t* sesid, int* enabled_logs);
 char *dcb_role_name(DCB *);                  /* Return the name of a role */
 int dcb_accept_SSL(DCB* dcb);
 int dcb_connect_SSL(DCB* dcb);
+int dcb_listen(DCB *listener, const char *config, const char *protocol_name);
+void dcb_append_readqueue(DCB *dcb, GWBUF *buffer);
 
 /**
  * DCB flags values

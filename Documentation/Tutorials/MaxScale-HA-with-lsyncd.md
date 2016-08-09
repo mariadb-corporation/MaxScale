@@ -1,20 +1,20 @@
-# MaxScale HA with Lsyncd
+# MariaDB MaxScale HA with Lsyncd
 
 ***This guide was written for lsyncd 2.1.5.***
 
-This document guides you in setting up multiple MaxScale instances and synchronizing the configuration files with lsyncd. Lsyncd is a rsync wrapper which can synchronize files across the network. The lsyncd daemon uses a configuration file to control the files to synchronize and the remote targets where these files are synchronized to. 
+This document guides you in setting up multiple MariaDB MaxScale instances and synchronizing the configuration files with lsyncd. Lsyncd is a rsync wrapper which can synchronize files across the network. The lsyncd daemon uses a configuration file to control the files to synchronize and the remote targets where these files are synchronized to.
 
-Copying the configuration file and running the lsyncd daemon on all the hosts keeps all the configuration files in sync. Modifications in the configuration file on one of the hosts will be copied on the other hosts. This allows administrators to easily provide a highly available, disaster resistant MaxScale installation with up-to-date configuration files on all the hosts.
+Copying the configuration file and running the lsyncd daemon on all the hosts keeps all the configuration files in sync. Modifications in the configuration file on one of the hosts will be copied on the other hosts. This allows administrators to easily provide a highly available, disaster resistant MariaDB MaxScale installation with up-to-date configuration files on all the hosts.
 
 ### Requirements
 You will need:
 
 *  Access to the remote hosts.
-*  MaxScale installed on all systems
+*  MariaDB MaxScale installed on all systems
 *  Configured maxscale.cnf file in /etc
 *  SSH daemon and clients installed on all hosts
 
-The installation and configuration of MaxScale is covered in other documents.
+The installation and configuration of MariaDB MaxScale is covered in other documents.
 
 ## Creating SSH keys
 
@@ -57,7 +57,7 @@ The keys will be generated in the .ssh folder and will automatically be used by 
 
 To copy the SSH keys to the remote host we will use `ssh-copy-id`.
 
-Use the username and host of the remote server you wish to synchronize MaxScale's configuration files to. For example, if the server's address is 192.168.122.100 and the user we use for synchronization us `user` we can use the following command.
+Use the username and host of the remote server you wish to synchronize MariaDB MaxScale's configuration files to. For example, if the server's address is 192.168.122.100 and the user we use for synchronization us `user` we can use the following command.
 
 ```
 ssh-copy-id user@192.168.122.100
@@ -129,7 +129,7 @@ The `source` parameter tells lsyncd where to read the files from. This should be
 
 The optional `ssh` parameter and its sub-parameter `port`define a custom port for the SSH connection. Most users do not need this parameter. The `rsycn` parameter contains an array of options that are passed to the rsycn executable. These should not be changed unless you specifically know what you are doing. For more information on the options passed to rsync read the rsync(1) manpage.
 
-You can add multiple remote targets by defining multiple `sync` sections. Here is an example with two sync sections defining different hosts that have MaxScale installed and whose configuration files should be kept in sync.
+You can add multiple remote targets by defining multiple `sync` sections. Here is an example with two sync sections defining different hosts that have MariaDB MaxScale installed and whose configuration files should be kept in sync.
 
 ```
 settings{

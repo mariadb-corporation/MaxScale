@@ -1,21 +1,16 @@
 #ifndef _MAXSCALE_CONFIG_H
 #define _MAXSCALE_CONFIG_H
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 #include <skygw_utils.h>
 #include <stdint.h>
@@ -83,7 +78,8 @@ typedef struct config_parameter
     char                    *name;          /**< The name of the parameter */
     char                    *value;         /**< The value of the parameter */
     union
-    {                        /*< qualified parameter value by type */
+    {
+        /*< qualified parameter value by type */
         char*    valstr;     /*< terminated char* array */
         int      valcount;   /*< int */
         int      valpercent; /*< int */
@@ -126,6 +122,7 @@ typedef struct
     unsigned int  auth_read_timeout;                   /**< Read timeout for the user authentication */
     unsigned int  auth_write_timeout;                  /**< Write timeout for the user authentication */
     char          qc_name[PATH_MAX];                   /**< The name of the query classifier to load */
+    char*         qc_args;                             /**< Arguments for the query classifier */
 } GATEWAY_CONF;
 
 
@@ -149,7 +146,7 @@ bool                config_get_valtarget(target_t*           val,
                                          CONFIG_PARAMETER*   param,
                                          const char*         name, /*< if NULL examine current param only */
                                          config_param_type_t ptype);
-int                 config_load(char *);
+bool                config_load(char *);
 unsigned int        config_nbpolls();
 double              config_percentage_value(char *str);
 unsigned int        config_pollsleep();

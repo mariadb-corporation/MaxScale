@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -106,6 +101,13 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
  * will look for library files in the current directory,
  * the configured folder and /usr/lib64/maxscale.
  *
+ * Note that a number of entry points are standard for any module, as is
+ * the data structure named "info".  They are only accessed by explicit
+ * reference to the module, and so the fact that they are duplicated in
+ * every module is not a problem.  The declarations are protected from
+ * lint by suppressing error 14, since the duplication is a feature and
+ * not an error.
+ *
  * @param module        Name of the module to load
  * @param type          Type of module, used purely for registration
  * @return              The module specific entry point structure or NULL
@@ -114,12 +116,17 @@ void *
 load_module(const char *module, const char *type)
 {
     char *home, *version;
-    char fname[MAXPATHLEN+1];
+    char fname[MAXPATHLEN + 1];
     void *dlhandle, *sym;
     char *(*ver)();
     void *(*ep)(), *modobj;
     MODULES *mod;
     MODULE_INFO *mod_info = NULL;
+
+    if (NULL == module || NULL == type)
+    {
+        return NULL;
+    }
 
     if ((mod = find_module(module)) == NULL)
     {
@@ -129,7 +136,7 @@ load_module(const char *module, const char *type)
          * Search of the shared object.
          */
 
-        snprintf(fname, MAXPATHLEN+1,"%s/lib%s.so", get_libdir(), module);
+        snprintf(fname, MAXPATHLEN + 1, "%s/lib%s.so", get_libdir(), module);
 
         if (access(fname, F_OK) == -1)
         {
@@ -139,7 +146,7 @@ load_module(const char *module, const char *type)
             return NULL;
         }
 
-        if ((dlhandle = dlopen(fname, RTLD_NOW|RTLD_LOCAL)) == NULL)
+        if ((dlhandle = dlopen(fname, RTLD_NOW | RTLD_LOCAL)) == NULL)
         {
             MXS_ERROR("Unable to load library for module: "
                       "%s\n\n\t\t      %s."
@@ -178,6 +185,12 @@ load_module(const char *module, const char *type)
                 && mod_info->modapi != MODULE_API_PROTOCOL)
             {
                 MXS_ERROR("Module '%s' does not implement the protocol API.", module);
+                fatal = 1;
+            }
+            if (strcmp(type, MODULE_AUTHENTICATOR) == 0
+                && mod_info->modapi != MODULE_API_AUTHENTICATOR)
+            {
+                MXS_ERROR("Module '%s' does not implement the authenticator API.", module);
                 fatal = 1;
             }
             if (strcmp(type, MODULE_ROUTER) == 0
@@ -276,15 +289,18 @@ find_module(const char *module)
 {
     MODULES *mod = registered;
 
-    while (mod)
+    if (module)
     {
-        if (strcmp(mod->module, module) == 0)
+        while (mod)
         {
-            return mod;
-        }
-        else
-        {
-            mod = mod->next;
+            if (strcmp(mod->module, module) == 0)
+            {
+                return mod;
+            }
+            else
+            {
+                mod = mod->next;
+            }
         }
     }
     return NULL;
@@ -417,12 +433,12 @@ dprintAllModules(DCB *dcb)
     MODULES *ptr = registered;
 
     dcb_printf(dcb, "Modules.\n");
-    dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n");
-    dcb_printf(dcb, "%-15s | %-11s | Version | API   | Status\n", "Module Name", "Module Type");
-    dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n");
+    dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n");
+    dcb_printf(dcb, "%-15s | %-15s | Version | API   | Status\n", "Module Name", "Module Type");
+    dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n");
     while (ptr)
     {
-        dcb_printf(dcb, "%-15s | %-11s | %-7s ", ptr->module, ptr->type, ptr->version);
+        dcb_printf(dcb, "%-15s | %-15s | %-7s ", ptr->module, ptr->type, ptr->version);
         if (ptr->info)
             dcb_printf(dcb, "| %d.%d.%d | %s",
                        ptr->info->api_version.major,
@@ -441,7 +457,7 @@ dprintAllModules(DCB *dcb)
         dcb_printf(dcb, "\n");
         ptr = ptr->next;
     }
-    dcb_printf(dcb, "----------------+-------------+---------+-------+-------------------------\n\n");
+    dcb_printf(dcb, "----------------+-----------------+---------+-------+-------------------------\n\n");
 }
 
 /**
@@ -462,7 +478,7 @@ moduleShowFeedbackReport(DCB *dcb)
 
         return;
     }
-    dcb_printf(dcb, (char *)GWBUF_DATA(buffer));
+    dcb_printf(dcb, "%s", (char *)GWBUF_DATA(buffer));
     gwbuf_free(buffer);
 }
 
@@ -498,7 +514,7 @@ moduleRowCallback(RESULTSET *set, void *data)
     resultset_row_set(row, 0, ptr->module);
     resultset_row_set(row, 1, ptr->type);
     resultset_row_set(row, 2, ptr->version);
-    snprintf(buf,19, "%d.%d.%d", ptr->info->api_version.major,
+    snprintf(buf, 19, "%d.%d.%d", ptr->info->api_version.major,
              ptr->info->api_version.minor,
              ptr->info->api_version.patch);
     buf[19] = '\0';
@@ -557,17 +573,17 @@ module_feedback_send(void* data)
     MODULES *modules_list = registered;
     CURL *curl = NULL;
     CURLcode res;
-    struct curl_httppost *formpost=NULL;
-    struct curl_httppost *lastptr=NULL;
+    struct curl_httppost *formpost = NULL;
+    struct curl_httppost *lastptr = NULL;
     GWBUF *buffer = NULL;
-    void *data_ptr=NULL;
+    void *data_ptr = NULL;
     long http_code = 0;
     int last_action = _NOTIFICATION_SEND_PENDING;
     time_t now;
     struct tm *now_tm;
     int hour;
-    int n_mod=0;
-    char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1]="";
+    int n_mod = 0;
+    char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1] = "";
     int http_send = 0;
 
     now = time(NULL);
@@ -676,11 +692,11 @@ module_create_feedback_report(GWBUF **buffer, MODULES *modules, FEEDBACK_CONF *c
 {
     MODULES *ptr = modules;
     int n_mod = 0;
-    char *data_ptr=NULL;
-    char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1]="";
+    char *data_ptr = NULL;
+    char hex_setup_info[2 * SHA_DIGEST_LENGTH + 1] = "";
     time_t now;
     struct tm *now_tm;
-    int report_max_bytes=0;
+    int report_max_bytes = 0;
 
     if (buffer == NULL)
     {
@@ -782,8 +798,8 @@ do_http_post(GWBUF *buffer, void *cfg)
 {
     CURL *curl = NULL;
     CURLcode res;
-    struct curl_httppost *formpost=NULL;
-    struct curl_httppost *lastptr=NULL;
+    struct curl_httppost *formpost = NULL;
+    struct curl_httppost *lastptr = NULL;
     long http_code = 0;
     struct MemoryStruct chunk;
     int ret_code = 1;
@@ -799,8 +815,9 @@ do_http_post(GWBUF *buffer, void *cfg)
 
     curl = curl_easy_init();
 
-    if (curl) {
-        char error_message[CURL_ERROR_SIZE]="";
+    if (curl)
+    {
+        char error_message[CURL_ERROR_SIZE] = "";
 
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, error_message);
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);

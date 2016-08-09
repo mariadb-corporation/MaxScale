@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of the MariaDB Corporation MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2013-2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -47,6 +42,7 @@
 #include <maxscale/poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <gw_ssl.h>
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
@@ -330,79 +326,12 @@ void
 dprintAllServers(DCB *dcb)
 {
     SERVER *server;
-    char *stat;
 
     spinlock_acquire(&server_spin);
     server = allServers;
     while (server)
     {
-        dcb_printf(dcb, "Server %p (%s)\n", server, server->unique_name);
-        dcb_printf(dcb, "\tServer:                              %s\n",
-                   server->name);
-        stat = server_status(server);
-        dcb_printf(dcb, "\tStatus:                              %s\n",
-                   stat);
-        free(stat);
-        dcb_printf(dcb, "\tProtocol:                    %s\n",
-                   server->protocol);
-        dcb_printf(dcb, "\tPort:                                %d\n",
-                   server->port);
-        if (server->server_string)
-            dcb_printf(dcb, "\tServer Version:\t\t\t%s\n",
-                       server->server_string);
-        dcb_printf(dcb, "\tNode Id:                     %d\n",
-                   server->node_id);
-        dcb_printf(dcb, "\tMaster Id:                   %d\n",
-                   server->master_id);
-        if (server->slaves)
-        {
-            int i;
-            dcb_printf(dcb, "\tSlave Ids:                   ");
-            for (i = 0; server->slaves[i]; i++)
-            {
-                if (i == 0)
-                {
-                    dcb_printf(dcb, "%li", server->slaves[i]);
-                }
-                else
-                {
-                    dcb_printf(dcb, ", %li ", server->slaves[i]);
-                }
-            }
-            dcb_printf(dcb, "\n");
-        }
-        dcb_printf(dcb, "\tRepl Depth:                  %d\n",
-                   server->depth);
-        if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server))
-        {
-            if (server->rlag >= 0)
-            {
-                dcb_printf(dcb, "\tSlave delay:\t\t%d\n", server->rlag);
-            }
-        }
-        if (server->node_ts > 0)
-        {
-            dcb_printf(dcb, "\tLast Repl Heartbeat:\t%lu\n", server->node_ts);
-        }
-        dcb_printf(dcb, "\tNumber of connections:               %d\n",
-                   server->stats.n_connections);
-        dcb_printf(dcb, "\tCurrent no. of conns:                %d\n",
-                   server->stats.n_current);
-        dcb_printf(dcb, "\tCurrent no. of operations:   %d\n",
-                   server->stats.n_current_ops);
-        if (server->persistpoolmax)
-        {
-            dcb_printf(dcb, "\tPersistent pool size:            %d\n",
-                       server->stats.n_persistent);
-            dcb_printf(dcb, "\tPersistent measured pool size:   %d\n",
-                       dcb_persistent_clean_count(server->persistent, false));
-            dcb_printf(dcb, "\tPersistent max size achieved:    %d\n",
-                       server->persistmax);
-            dcb_printf(dcb, "\tPersistent pool size limit:      %d\n",
-                       server->persistpoolmax);
-            dcb_printf(dcb, "\tPersistent max time (secs):          %d\n",
-                       server->persistmaxtime);
-        }
+        dprintServer(dcb, server);
         server = server->next;
     }
     spinlock_release(&server_spin);
@@ -448,9 +377,9 @@ dprintAllServersJson(DCB *dcb)
             dcb_printf(dcb, "    \"version\": \"%s\",\n",
                        server->server_string);
         }
-        dcb_printf(dcb, "    \"nodeId\": \"%d\",\n",
+        dcb_printf(dcb, "    \"nodeId\": \"%ld\",\n",
                    server->node_id);
-        dcb_printf(dcb, "    \"masterId\": \"%d\",\n",
+        dcb_printf(dcb, "    \"masterId\": \"%ld\",\n",
                    server->master_id);
         if (server->slaves)
         {
@@ -513,26 +442,23 @@ dprintAllServersJson(DCB *dcb)
 void
 dprintServer(DCB *dcb, SERVER *server)
 {
-    char *stat;
-    SERVER_PARAM *param;
-
     dcb_printf(dcb, "Server %p (%s)\n", server, server->unique_name);
     dcb_printf(dcb, "\tServer:                              %s\n", server->name);
-    stat = server_status(server);
+    char* stat = server_status(server);
     dcb_printf(dcb, "\tStatus:                              %s\n", stat);
     free(stat);
-    dcb_printf(dcb, "\tProtocol:                    %s\n", server->protocol);
+    dcb_printf(dcb, "\tProtocol:                            %s\n", server->protocol);
     dcb_printf(dcb, "\tPort:                                %d\n", server->port);
     if (server->server_string)
     {
-        dcb_printf(dcb, "\tServer Version:\t\t\t%s\n", server->server_string);
+        dcb_printf(dcb, "\tServer Version:                      %s\n", server->server_string);
     }
-    dcb_printf(dcb, "\tNode Id:                     %d\n", server->node_id);
-    dcb_printf(dcb, "\tMaster Id:                   %d\n", server->master_id);
+    dcb_printf(dcb, "\tNode Id:                             %ld\n", server->node_id);
+    dcb_printf(dcb, "\tMaster Id:                           %ld\n", server->master_id);
     if (server->slaves)
     {
         int i;
-        dcb_printf(dcb, "\tSlave Ids:                   ");
+        dcb_printf(dcb, "\tSlave Ids:                           ");
         for (i = 0; server->slaves[i]; i++)
         {
             if (i == 0)
@@ -546,48 +472,57 @@ dprintServer(DCB *dcb, SERVER *server)
         }
         dcb_printf(dcb, "\n");
     }
-    dcb_printf(dcb, "\tRepl Depth:                  %d\n", server->depth);
+    dcb_printf(dcb, "\tRepl Depth:                          %d\n", server->depth);
     if (SERVER_IS_SLAVE(server) || SERVER_IS_RELAY_SERVER(server))
     {
         if (server->rlag >= 0)
         {
-            dcb_printf(dcb, "\tSlave delay:\t\t%d\n", server->rlag);
+            dcb_printf(dcb, "\tSlave delay:                         %d\n", server->rlag);
         }
     }
     if (server->node_ts > 0)
     {
         struct tm result;
         char buf[40];
-        dcb_printf(dcb, "\tLast Repl Heartbeat:\t%s",
+        dcb_printf(dcb, "\tLast Repl Heartbeat:                 %s",
                    asctime_r(localtime_r((time_t *)(&server->node_ts), &result), buf));
     }
-    if ((param = server->parameters) != NULL)
+    SERVER_PARAM *param;
+    if ((param = server->parameters))
     {
         dcb_printf(dcb, "\tServer Parameters:\n");
         while (param)
         {
-            dcb_printf(dcb, "\t\t%-20s\t%s\n", param->name,
-                       param->value);
+            dcb_printf(dcb, "\t                                       %s\t%s\n", param->name, param->value);
             param = param->next;
         }
     }
-    dcb_printf(dcb, "\tNumber of connections:               %d\n",
-               server->stats.n_connections);
-    dcb_printf(dcb, "\tCurrent no. of conns:                %d\n",
-               server->stats.n_current);
-    dcb_printf(dcb, "\tCurrent no. of operations:   %d\n", server->stats.n_current_ops);
+    dcb_printf(dcb, "\tNumber of connections:               %d\n", server->stats.n_connections);
+    dcb_printf(dcb, "\tCurrent no. of conns:                %d\n", server->stats.n_current);
+    dcb_printf(dcb, "\tCurrent no. of operations:           %d\n", server->stats.n_current_ops);
     if (server->persistpoolmax)
     {
-        dcb_printf(dcb, "\tPersistent pool size:            %d\n",
-                   server->stats.n_persistent);
-        dcb_printf(dcb, "\tPersistent measured pool size:   %d\n",
+        dcb_printf(dcb, "\tPersistent pool size:                %d\n", server->stats.n_persistent);
+        dcb_printf(dcb, "\tPersistent measured pool size:       %d\n",
                    dcb_persistent_clean_count(server->persistent, false));
-        dcb_printf(dcb, "\tPersistent actual size max:            %d\n",
-                   server->persistmax);
-        dcb_printf(dcb, "\tPersistent pool size limit:            %d\n",
-                   server->persistpoolmax);
-        dcb_printf(dcb, "\tPersistent max time (secs):          %d\n",
-                   server->persistmaxtime);
+        dcb_printf(dcb, "\tPersistent actual size max:          %d\n", server->persistmax);
+        dcb_printf(dcb, "\tPersistent pool size limit:          %ld\n", server->persistpoolmax);
+        dcb_printf(dcb, "\tPersistent max time (secs):          %ld\n", server->persistmaxtime);
+    }
+    if (server->server_ssl)
+    {
+        SSL_LISTENER *l = server->server_ssl;
+        dcb_printf(dcb, "\tSSL initialized:                     %s\n",
+                   l->ssl_init_done ? "yes" : "no");
+        dcb_printf(dcb, "\tSSL method type:                     %s\n",
+                   ssl_method_type_to_string(l->ssl_method_type));
+        dcb_printf(dcb, "\tSSL certificate verification depth:  %d\n", l->ssl_cert_verify_depth);
+        dcb_printf(dcb, "\tSSL certificate:                     %s\n",
+                   l->ssl_cert ? l->ssl_cert : "null");
+        dcb_printf(dcb, "\tSSL key:                             %s\n",
+                   l->ssl_key ? l->ssl_key : "null");
+        dcb_printf(dcb, "\tSSL CA certificate:                  %s\n",
+                   l->ssl_ca_cert ? l->ssl_ca_cert : "null");
     }
 }
 
@@ -1043,7 +978,8 @@ static struct
 {
     char            *str;
     unsigned int    bit;
-} ServerBits[] = {
+} ServerBits[] =
+{
     { "running",     SERVER_RUNNING },
     { "master",      SERVER_MASTER },
     { "slave",       SERVER_SLAVE },

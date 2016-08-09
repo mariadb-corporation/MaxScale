@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -22,7 +17,7 @@
  * Revision History
  *
  * Date         Who                     Description
- * 09-03-2015   Markus Mäkelä         Initial implementation
+ * 09-03-2015   Markus Mäkelä           Initial implementation
  * 10-03-2015   Massimiliano Pinto      Added http_check
  *
  * @endverbatim
@@ -50,7 +45,8 @@
 #include <modules.h>
 #include <maxscale_test.h>
 
-static char* server_options[] = {
+static char* server_options[] =
+{
     "MariaDB Corporation MaxScale",
     "--no-defaults",
     "--datadir=.",
@@ -62,7 +58,8 @@ static char* server_options[] = {
 
 const int num_elements = (sizeof(server_options) / sizeof(char *)) - 1;
 
-static char* server_groups[] = {
+static char* server_groups[] =
+{
     "embedded",
     "server",
     "server",
@@ -90,13 +87,13 @@ int main(int argc, char** argv)
     cnf = malloc(sizeof(char) * (strlen(TEST_DIR) + strlen("/maxscale.cnf") + 1));
     sprintf(cnf, "%s/maxscale.cnf", TEST_DIR);
 
-    printf("Config: %s\n",cnf);
+    printf("Config: %s\n", cnf);
 
 
-       if(mysql_library_init(num_elements, server_options, server_groups))
-       {
-	   FAILTEST("Failed to initialize embedded library.");
-       }
+    if (mysql_library_init(num_elements, server_options, server_groups))
+    {
+        FAILTEST("Failed to initialize embedded library.");
+    }
 
     config_load(cnf);
     config_enable_feedback_task();
@@ -106,19 +103,19 @@ int main(int argc, char** argv)
     }
 
 
-    regcomp(&re,fc->feedback_user_info,0);
+    regcomp(&re, fc->feedback_user_info, 0);
 
-    module_create_feedback_report(&buf,NULL,fc);
+    module_create_feedback_report(&buf, NULL, fc);
 
-    if(regexec(&re,(char*)buf->start,0,NULL,0))
+    if (regexec(&re, (char*)buf->start, 0, NULL, 0))
     {
         FAILTEST("Regex match of 'user_info' failed.");
     }
 
-        if (do_http_post(buf, fc) != 0)
-        {
-                FAILTEST("Http send failed\n");
-        }
+    if (do_http_post(buf, fc) != 0)
+    {
+        FAILTEST("Http send failed\n");
+    }
     mysql_library_end();
     return 0;
 }

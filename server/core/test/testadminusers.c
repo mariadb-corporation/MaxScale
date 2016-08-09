@@ -1,19 +1,14 @@
 /*
- * This file is distributed as part of MaxScale.  It is free
- * software: you can redistribute it and/or modify it under the terms of the
- * GNU General Public License as published by the Free Software Foundation,
- * version 2.
+ * Copyright (c) 2016 MariaDB Corporation Ab
  *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
- * details.
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc., 51
- * Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ * Change Date: 2019-01-01
  *
- * Copyright MariaDB Corporation Ab 2014
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
  */
 
 /**
@@ -21,8 +16,10 @@
  * @verbatim
  * Revision History
  *
- * Date		Who			Description
- * 20-08-2014	Mark Riddoch		Initial implementation
+ * Date         Who                 Description
+ * 20-08-2014   Mark Riddoch        Initial implementation
+ * 23-05-2016   Massimiliano Pinto  admin_add_user and admin_remove_user
+ *                                  no longer accept password parameter
  *
  * @endverbatim
  */
@@ -42,7 +39,7 @@
 
 
 /**
- * test1	default user
+ * test1    default user
  *
  * Test that the username password admin/mariadb is accepted if no users
  * have been created and that no other users are accepted
@@ -52,57 +49,66 @@
 static int
 test1()
 {
-	if (admin_verify("admin", "mariadb") == 0)
-	{
-		fprintf(stderr, "admin_verify: test 1.1 (default user) failed.\n");
-		return 1;
-	}
-	if (admin_verify("bad", "user"))
-	{
-		fprintf(stderr, "admin_verify: test 1.2 (wrong user) failed.\n");
-		return 1;
-	}
+    if (admin_verify("admin", "mariadb") == 0)
+    {
+        fprintf(stderr, "admin_verify: test 1.1 (default user) failed.\n");
+        return 1;
+    }
+    if (admin_verify("bad", "user"))
+    {
+        fprintf(stderr, "admin_verify: test 1.2 (wrong user) failed.\n");
+        return 1;
+    }
 
-	return 0;
+    return 0;
 }
 
 /**
- * test2	creating users
+ * test2    creating users
  *
  * Create a user
  * Try to create a duplicate user - expects a failure
- * Remove that user - expected to fail as one user must always remain
+ * Remove that user - expected to succeed as no user need to remain.
  */
 static int
 test2()
 {
-char	*err;
+    char *err;
 
-	if ((err = admin_add_user("user0", "passwd0")) != NULL)
-	{
-		fprintf(stderr, "admin_add_user: test 2.1 (add user) failed, %s.\n", err);
+    if ((err = admin_add_user("user0")) != NULL)
+    {
+        fprintf(stderr, "admin_add_user: test 2.1 (add user) failed, %s.\n", err);
 
-		return 1;
-	}
-	if (admin_add_user("user0", "passwd0") == NULL)
-	{
-		fprintf(stderr, "admin_add_user: test 2.2 (add user) failed, du;plicate.\n");
+        return 1;
+    }
+    if (admin_add_user("user0") == NULL)
+    {
+        fprintf(stderr, "admin_add_user: test 2.2 (add user) failed, duplicate.\n");
 
-		return 1;
-	}
+        return 1;
+    }
 
-	/* Deleting the last user is forbidden so we expect this to fail */
-	if ((err = admin_remove_user("user0", "passwd0")) == NULL)
-	{
-		fprintf(stderr, "admin_remove_user: test 2.3 (add user) failed, %s.\n", err);
+    /* Deleting the last user is not forbidden so we expect this to succeed */
+    if ((err = admin_remove_user("user0")) != NULL)
+    {
+        fprintf(stderr, "admin_remove_user: test 2.3 (add user) failed, %s.\n", err);
 
-		return 1;
-	}
-	return 0;
+        return 1;
+    }
+
+    /* Add the user back, for test5. */
+    if ((err = admin_add_user("user0")) != NULL)
+    {
+        fprintf(stderr, "admin_add_user: test 2.4 (add user) failed, %s.\n", err);
+
+        return 1;
+    }
+
+    return 0;
 }
 
 /**
- * test3	search/verify users
+ * test3    search/verify users
  *
  * Create a user
  * Search for that user
@@ -113,46 +119,48 @@ char	*err;
 static int
 test3()
 {
-char	*err;
+    char *err;
 
-	if ((err = admin_add_user("user1", "passwd1")) != NULL)
-	{
-		fprintf(stderr, "admin_add_user: test 3.1 (add user) failed, %s.\n", err);
+    if ((err = admin_add_user("user1")) != NULL)
+    {
+        fprintf(stderr, "admin_add_user: test 3.1 (add user) failed, %s.\n", err);
 
-		return 1;
-	}
+        return 1;
+    }
 
-	if (admin_search_user("user1") == 0)
-	{
-		fprintf(stderr, "admin_search_user: test 3.2 (search user) failed.\n");
+    if (admin_search_user("user1") == 0)
+    {
+        fprintf(stderr, "admin_search_user: test 3.2 (search user) failed.\n");
 
-		return 1;
-	}
-	if (admin_search_user("user2") != 0)
-	{
-		fprintf(stderr, "admin_search_user: test 3.3 (search user) failed, unexpeted user found.\n");
+        return 1;
+    }
 
-		return 1;
-	}
+    if (admin_search_user("user2") != 0)
+    {
+        fprintf(stderr, "admin_search_user: test 3.3 (search user) failed, unexpeted user found.\n");
 
-	if ((err = admin_remove_user("user1", "passwd1")) != NULL)
-	{
-		fprintf(stderr, "admin_remove_user: test 3.4 (add user) failed, %s.\n", err);
+        return 1;
+    }
 
-		return 1;
-	}
+    if ((err = admin_remove_user("user1")) != NULL)
+    {
+        fprintf(stderr, "admin_remove_user: test 3.4 (add user) failed, %s.\n", err);
 
-	if (admin_search_user("user1"))
-	{
-		fprintf(stderr, "admin_search_user: test 3.5 (search user) failed - user was deleted.\n");
+        return 1;
+    }
 
-		return 1;
-	}
-	return 0;
+    if (admin_search_user("user1"))
+    {
+        fprintf(stderr, "admin_search_user: test 3.5 (search user) failed - user was deleted.\n");
+
+        return 1;
+    }
+
+    return 0;
 }
 
 /**
- * test4	verify users
+ * test4    verify users
  *
  * Create a numebr of users
  * search for each user in turn
@@ -164,87 +172,47 @@ char	*err;
 static int
 test4()
 {
-char	*err, user[40], passwd[40];
-int	i, n_users = 50;
+    char *err, user[40], passwd[40];
+    int i, n_users = 50;
 
-	for (i = 1; i < n_users; i++)
-	{
-		sprintf(user, "user%d", i);
-		sprintf(passwd, "passwd%d", i);
-		if ((err = admin_add_user(user, passwd)) != NULL)
-		{
-			fprintf(stderr, "admin_add_user: test 4.1 (add user) failed, %s.\n", err);
+    for (i = 1; i < n_users; i++)
+    {
+        sprintf(user, "user%d", i);
+        if ((err = admin_add_user(user)) != NULL)
+        {
+            fprintf(stderr, "admin_add_user: test 4.1 (add user) failed, %s.\n", err);
 
-			return 1;
-		}
-	}
+            return 1;
+        }
+    }
 
-	for (i = 1; i < n_users; i++)
-	{
-		sprintf(user, "user%d", i);
-		if (admin_search_user(user) == 0)
-		{
-			fprintf(stderr, "admin_search_user: test 4.2 (search user) failed.\n");
+    for (i = 1; i < n_users; i++)
+    {
+        sprintf(user, "user%d", i);
+        if (admin_search_user(user) == 0)
+        {
+            fprintf(stderr, "admin_search_user: test 4.2 (search user) failed.\n");
 
-			return 1;
-		}
-	}
-	for (i = 1; i < n_users; i++)
-	{
-		sprintf(user, "user%d", i);
-		sprintf(passwd, "passwd%d", i);
-		if (admin_verify(user, passwd) == 0)
-		{
-			fprintf(stderr, "admin_verify: test 4.3 (search user) failed.\n");
+            return 1;
+        }
+    }
 
-			return 1;
-		}
-	}
+    for (i = 1; i < n_users; i++)
+    {
+        sprintf(user, "user%d", i);
+        if ((err = admin_remove_user(user)) != NULL)
+        {
+            fprintf(stderr, "admin_remove_user: test 4.3 (add user) failed, %s.\n", err);
 
-	for (i = 1; i < n_users; i++)
-	{
-		sprintf(user, "user%d", i);
-		sprintf(passwd, "badpasswd%d", i);
-		if (admin_verify(user, passwd) != 0)
-		{
-			fprintf(stderr, "admin_verify: test 4.4 (search user) failed.\n");
+            return 1;
+        }
+    }
 
-			return 1;
-		}
-	}
-	srand(time(0));
-	for (i = 1; i < 1000; i++)
-	{
-		int j;
-		j = rand() % n_users;
-		if (j == 0)
-			j = 1;
-		sprintf(user, "user%d", j);
-		sprintf(passwd, "passwd%d", j);
-		if (admin_verify(user, passwd) == 0)
-		{
-			fprintf(stderr, "admin_verify: test 4.5 (random) failed.\n");
-
-			return 1;
-		}
-	}
-
-	for (i = 1; i < n_users; i++)
-	{
-		sprintf(user, "user%d", i);
-		sprintf(passwd, "passwd%d", i);
-		if ((err = admin_remove_user(user, passwd)) != NULL)
-		{
-			fprintf(stderr, "admin_remove_user: test 4.6 (add user) failed, %s.\n", err);
-
-			return 1;
-		}
-	}
-	return 0;
+    return 0;
 }
 
 /**
- * test5	remove first user
+ * test5    remove first user
  *
  * Create a user so that user0 may be removed
  * Remove the first user created (user0)
@@ -252,46 +220,53 @@ int	i, n_users = 50;
 static int
 test5()
 {
-char	*err;
+    char *err;
 
-	if ((err = admin_add_user("user", "passwd")) != NULL)
-	{
-		fprintf(stderr, "admin_add_user: test 5.1 (add user) failed, %s.\n", err);
+    if ((err = admin_add_user("user")) != NULL)
+    {
+        fprintf(stderr, "admin_add_user: test 5.1 (add user) failed, %s.\n", err);
 
-		return 1;
-	}
-	if ((err = admin_remove_user("user0", "passwd0")) != NULL)
-	{
-		fprintf(stderr, "admin_remove_user: test 5.2 (add user) failed, %s.\n", err);
+        return 1;
+    }
 
-		return 1;
-	}
-	return 0;
+    if ((err = admin_remove_user("user0")) != NULL)
+    {
+        fprintf(stderr, "admin_remove_user: test 5.2 (add user) failed, %s.\n", err);
+
+        return 1;
+    }
+
+    return 0;
 }
 
 int
 main(int argc, char **argv)
 {
-int	result = 0;
-char	*home, buf[1024];
+    int result = 0;
+    char    *home, buf[1024];
 
-	/* Unlink any existing password file before running this test */
-	
-	sprintf(buf, "%s/passwd", get_datadir());
-    if(!is_valid_posix_path(buf))
+    /** Set datadir to /tmp */
+    set_datadir(strdup("/tmp"));
+
+    /* Unlink any existing password file before running this test */
+    sprintf(buf, "%s/maxadmin-users", get_datadir());
+    if (!is_valid_posix_path(buf))
+    {
         exit(1);
-	if (strcmp(buf, "/etc/passwd") != 0)
-		unlink(buf);
+    }
 
-	result += test1();
-	result += test2();
-	result += test3();
-	result += test4();
-	result += test5();
+    unlink(buf);
 
-    /* Add the default user back so other tests can use it */
-    admin_add_user("admin", "mariadb");
+    // admin_verify() should be removed, since the maxadmin authentication has
+    // been changed completely. However, telnetd still uses that admin_verify()
+    // so I'll leave the function there for now. But telnetd should be dropped,
+    // since it cannot use the same user file as maxadmin does.
+    // result += test1();
+    result += test2();
+    result += test3();
+    result += test4();
+    result += test5();
 
-	exit(result);
+    exit(result);
 }
 

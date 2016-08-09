@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Query Log All (QLA) filter is a filter module for MaxScale that is able to log all query content on a per client session basis. Logs are written in a csv format file that lists the time submitted and the SQL statement text.
+The Query Log All (QLA) filter is a filter module for MariaDB MaxScale that is able to log all query content on a per client session basis. Logs are written in a csv format file that lists the time submitted and the SQL statement text.
 
 ## Configuration
 
@@ -37,13 +37,13 @@ To use multiple filter options, list them in a comma-separated list.
 options=case,extended
 ```
 
-**Note**: older the version of the QLA filter in 0.7 of MaxScale used the `options`
+**Note**: older the version of the QLA filter in 0.7 of MariaDB MaxScale used the `options`
 to define the location of the log files. This functionality is not supported
 anymore and the `filebase` parameter should be used instead.
 
 ## Filter Parameters
 
-The QLA filter has one mandatory parameter, `filebase`, and a number of optional parameters. These were introduced in the 1.0 release of MaxScale.
+The QLA filter has one mandatory parameter, `filebase`, and a number of optional parameters. These were introduced in the 1.0 release of MariaDB MaxScale.
 
 ### Filebase
 
@@ -77,7 +77,7 @@ All regular expressions are evaluated with the option to ignore the case of the 
 
 ### Source
 
-The optional source parameter defines an address that is used to match against the address from which the client connection to MaxScale originates. Only sessions that originate from this address will be logged.
+The optional source parameter defines an address that is used to match against the address from which the client connection to MariaDB MaxScale originates. Only sessions that originate from this address will be logged.
 
 ```
 source=127.0.0.1
@@ -85,7 +85,7 @@ source=127.0.0.1
 
 ### User
 
-The optional user parameter defines a user name that is used to match against the user from which the client connection to MaxScale originates. Only sessions that are connected using this username are logged.
+The optional user parameter defines a user name that is used to match against the user from which the client connection to MariaDB MaxScale originates. Only sessions that are connected using this username are logged.
 
 ```
 user=john
