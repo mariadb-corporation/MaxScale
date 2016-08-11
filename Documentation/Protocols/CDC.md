@@ -1,4 +1,4 @@
-#CDC Protocol
+# Change Data Capture (CDC) Protocol
 
 CDC is a new protocol that allows compatible clients to authenticate and
 register for Change Data Capture events. The new protocol must be use in
@@ -22,6 +22,8 @@ passwd=maxpwd
 ```
 
 If the `cdcusers` file cannot be found, the service user (_maxuser:maxpwd_ in the example) can be used to connect through the CDC protocol.
+
+For more details, refer to the [CDC users documentation](CDC_users.md).
 
 ## Protocol Phases
 

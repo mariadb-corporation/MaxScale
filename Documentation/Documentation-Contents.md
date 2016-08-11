@@ -98,6 +98,13 @@ Module specific documentation.
  - [Multi-Master Monitor](Monitors/MM-Monitor.md)
  - [MySQL Cluster Monitor](Monitors/NDB-Cluster-Monitor.md)
 
+## Protocols
+
+Documentation for MaxScale protocol modules.
+
+ - [Change Data Capture (CDC) Protocol](Protocols/CDC.md)
+ - [Change Data Capture (CDC) Users](Protocols/CDC_users.md)
+
 ## Utilities
 
  - [RabbitMQ Consumer Client](Filters/RabbitMQ-Consumer-Client.md)

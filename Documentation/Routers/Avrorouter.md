@@ -159,7 +159,7 @@ avrorouter.
 Before using this client, you will need to install the Python 3 interpreter and
 add users to the service with the _cdc_users_ script. Fore more details about
 the user creation, please refer to the [CDC Protocol](../Protocols/CDC.md)
-documentation.
+and [CDC Users](../Protocols/CDC_users.md) documentation.
 
 Read the output of `cdc --help` for a full list of supported options
 and a short usage description of the client program.
