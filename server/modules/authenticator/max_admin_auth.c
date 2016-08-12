@@ -32,6 +32,7 @@
 #include <dcb.h>
 #include <buffer.h>
 #include <adminusers.h>
+#include <users.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
@@ -46,7 +47,7 @@ MODULE_INFO info =
 };
 /*lint +e14 */
 
-static char *version_str = "V2.0.0";
+static char *version_str = "V2.1.0";
 
 static int max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool max_admin_auth_is_client_ssl_capable(DCB *dcb);
@@ -62,6 +63,7 @@ static GWAUTHENTICATOR MyObject =
     max_admin_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
     max_admin_auth_authenticate,                /* Authenticate user credentials */
     max_admin_auth_free_client_data,            /* Free the client data held in DCB */
+    users_default_loadusers
 };
 
 /**

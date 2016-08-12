@@ -46,8 +46,7 @@ MODULE_INFO info =
     "The CDC client to MaxScale authenticator implementation"
 };
 
-static char *version_str = "V1.0.0";
-static int   cdc_load_users_init = 0;
+static char *version_str = "V1.1.0";
 
 static int  cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool cdc_auth_is_client_ssl_capable(DCB *dcb);
@@ -55,9 +54,6 @@ static int  cdc_auth_authenticate(DCB *dcb);
 static void cdc_auth_free_client_data(DCB *dcb);
 
 static int cdc_set_service_user(SERV_LISTENER *listener);
-static int cdc_read_users(USERS *users, char *usersfile);
-static int cdc_load_users(SERV_LISTENER *listener);
-static int cdc_refresh_users(SERV_LISTENER *listener);
 static int cdc_replace_users(SERV_LISTENER *listener);
 
 extern char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
@@ -75,6 +71,7 @@ static GWAUTHENTICATOR MyObject =
     cdc_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
     cdc_auth_authenticate,                /* Authenticate user credentials */
     cdc_auth_free_client_data,            /* Free the client data held in DCB */
+    cdc_replace_users
 };
 
 static int cdc_auth_check(
@@ -136,26 +133,9 @@ GWAUTHENTICATOR* GetModuleObject()
 static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username, uint8_t *auth_data,
                           unsigned int *flags)
 {
-    char *user_password;
+    char *user_password = users_fetch(dcb->listener->users, username);
 
-    if (!cdc_load_users_init)
-    {
-        /* Load db users or set service user */
-        if (cdc_load_users(dcb->listener) < 1)
-        {
-            cdc_set_service_user(dcb->listener);
-        }
-
-        cdc_load_users_init = 1;
-    }
-
-    user_password = users_fetch(dcb->listener->users, username);
-
-    if (!user_password)
-    {
-        return CDC_STATE_AUTH_FAILED;
-    }
-    else
+    if (user_password)
     {
         /* compute SHA1 of auth_data */
         uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
@@ -173,6 +153,8 @@ static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username, uint
             return CDC_STATE_AUTH_FAILED;
         }
     }
+
+    return CDC_STATE_AUTH_FAILED;
 }
 
 /**
@@ -200,10 +182,9 @@ cdc_auth_authenticate(DCB *dcb)
 
         auth_ret = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
 
-        /* On failed authentication try to reload user table */
-        if (CDC_STATE_AUTH_OK != auth_ret && 0 == cdc_refresh_users(dcb->listener))
+        /* On failed authentication try to reload users and authenticate again */
+        if (CDC_STATE_AUTH_OK != auth_ret && cdc_replace_users(dcb->listener) == AUTH_LOADUSERS_OK)
         {
-            /* Call protocol authentication */
             auth_ret = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
         }
 
@@ -415,48 +396,6 @@ cdc_set_service_user(SERV_LISTENER *listener)
     return 0;
 }
 
-/*
- * Load AVRO users into (service->users)
- *
- * @param service    The current service
- * @return          -1 on failure, 0 for no users found, > 0 for found users
- */
-static int
-cdc_load_users(SERV_LISTENER *listener)
-{
-    SERVICE *service = listener->service;
-    int loaded = -1;
-    char path[PATH_MAX + 1] = "";
-
-    /* File path for router cached authentication data */
-    snprintf(path, PATH_MAX, "%s/%s/cdcusers", get_datadir(), service->name);
-
-    /* Allocate users table */
-    if (listener->users == NULL)
-    {
-        listener->users = users_alloc();
-    }
-
-    /* Try loading authentication data from file cache */
-    loaded = cdc_read_users(listener->users, path);
-
-    if (loaded == -1)
-    {
-        MXS_ERROR("Service %s, Unable to read AVRO users information from %s."
-                  " No AVRO user added to service users table. Service user is still allowed to connect.",
-                  service->name,
-                  path);
-    }
-
-    /* At service start last update is set to CDC_USERS_REFRESH_TIME seconds
-     * earlier. This way MaxScale could try reloading users just after startup.
-     */
-    service->rate_limit.last = time(NULL) - CDC_USERS_REFRESH_TIME;
-    service->rate_limit.nloads = 1;
-
-    return loaded;
-}
-
 /**
  * Load the AVRO users
  *
@@ -539,127 +478,47 @@ cdc_read_users(USERS *users, char *usersfile)
     return loaded;
 }
 
-
 /**
- *  * Refresh the database users for the service
- *   * This function replaces the MySQL users used by the service with the latest
- *    * version found on the backend servers. There is a limit on how often the users
- *     * can be reloaded and if this limit is exceeded, the reload will fail.
- *      * @param service Service to reload
- *       * @return 0 on success and 1 on error
- *        */
-static int
-cdc_refresh_users(SERV_LISTENER *listener)
-{
-    int ret = 1;
-    SERVICE *service = listener->service;
-
-    /* check for another running getUsers request */
-    if (!spinlock_acquire_nowait(&service->users_table_spin))
-    {
-        MXS_DEBUG("%s: [service_refresh_users] failed to get get lock for "
-                  "loading new users' table: another thread is loading users",
-                  service->name);
-
-        return 1;
-    }
-
-    /* check if refresh rate limit has exceeded */
-    if ((time(NULL) < (service->rate_limit.last + CDC_USERS_REFRESH_TIME)) ||
-        (service->rate_limit.nloads > CDC_USERS_REFRESH_MAX_PER_TIME))
-    {
-        spinlock_release(&service->users_table_spin);
-        MXS_ERROR("%s: Refresh rate limit exceeded for load of users' table.",
-                  service->name);
-
-        return 1;
-    }
-
-    service->rate_limit.nloads++;
-
-    /* update time and counter */
-    if (service->rate_limit.nloads > CDC_USERS_REFRESH_MAX_PER_TIME)
-    {
-        service->rate_limit.nloads = 1;
-        service->rate_limit.last = time(NULL);
-    }
-
-    ret = cdc_replace_users(listener);
-
-    /* remove lock */
-    spinlock_release(&service->users_table_spin);
-
-    if (ret >= 0)
-    {
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
-}
-
-/* Replace the user/passwd in the servicei users tbale from a db file.
- * The replacement is succesful only if the users' table checksums differ
+ * @brief Replace the user/passwd in the servicei users tbale from a db file
  *
- * @param service   The current service
- * @return      -1 on any error or the number of users inserted (0 means no users at all)
- *      */
-static int
-cdc_replace_users(SERV_LISTENER *listener)
+ * @param service The current service
+ */
+int cdc_replace_users(SERV_LISTENER *listener)
 {
-    SERVICE *service = listener->service;
-    int i;
-    USERS *newusers, *oldusers;
-    char path[PATH_MAX + 1] = "";
+    int rc = AUTH_LOADUSERS_OK;
+    USERS *newusers = users_alloc();
 
-    /* File path for router cached authentication data */
-    snprintf(path, PATH_MAX, "%s/%s/cdcusers", get_datadir(), service->name);
-
-    if ((newusers = users_alloc()) == NULL)
+    if (newusers)
     {
-        return -1;
+        char path[PATH_MAX + 1];
+        snprintf(path, PATH_MAX, "%s/%s/cdcusers", get_datadir(), listener->service->name);
+
+        int i = cdc_read_users(newusers, path);
+
+        if (i <= 0)
+        {
+            /** Failed to read users or no users loaded */
+            users_free(newusers);
+
+            if (i < 0)
+            {
+                rc = AUTH_LOADUSERS_ERROR;
+            }
+        }
+        else
+        {
+            spinlock_acquire(&listener->lock);
+
+            USERS *oldusers = listener->users;
+            listener->users = newusers;
+
+            spinlock_release(&listener->lock);
+
+            if (oldusers)
+            {
+                users_free(oldusers);
+            }
+        }
     }
-
-
-    /* load users */
-    i = cdc_read_users(newusers, path);
-
-    if (i <= 0)
-    {
-        users_free(newusers);
-        return i;
-    }
-
-    spinlock_acquire(&listener->lock);
-    oldusers = listener->users;
-
-    /* digest compare */
-    if (oldusers != NULL && memcmp(oldusers->cksum, newusers->cksum,
-                                   SHA_DIGEST_LENGTH) == 0)
-    {
-        /* same data, nothing to do */
-        MXS_DEBUG("%lu [cdc_replace_users] users' tables not switched, checksum is the same",
-                  pthread_self());
-
-        /* free the new table */
-        users_free(newusers);
-        i = 0;
-    }
-    else
-    {
-        /* replace the service with effective new data */
-        MXS_DEBUG("%lu [cdc_replace_users] users' tables replaced, checksum differs",
-                  pthread_self());
-        listener->users = newusers;
-    }
-
-    spinlock_release(&listener->lock);
-
-    if (i && oldusers)
-    {
-        /* free the old table */
-        users_free(oldusers);
-    }
-    return i;
+    return rc;
 }

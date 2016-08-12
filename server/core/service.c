@@ -247,97 +247,6 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         listener_init_SSL(port->ssl);
     }
 
-    /**
-     * The following code should be located inside the authenticator modules.
-     *
-     * The authentication of users is done against the data being gathered here
-     * but the actual authentication happens inside the authenticator module.
-     * Since not all authenticators use the same data for authentication, it
-     * should be up to the authenticator to decide where the user data is retrieved
-     * and how it is stored.
-     *
-     * One way to do it would be to add a @c dcb->authfunc.loadusers(dcb)
-     * entry point which loads the users and a @c dcb->authfunc.freeusers(dcb)
-     * which in turn frees the users. It would also make sense to have a
-     * @c dcb->authfunc.reloadusers(dcb) entry point which would allow for a more
-     * optimized user reloading process instead of freeing and loading the users
-     * again.
-     */
-
-    if (strcmp(port->protocol, "MySQLClient") == 0)
-    {
-        int loaded;
-
-        if (port->users == NULL)
-        {
-            /*
-             * Allocate specific data for MySQL users
-             * including hosts and db names
-             */
-            port->users = mysql_users_alloc();
-            const char* cachedir = get_cachedir();
-
-            if ((loaded = load_mysql_users(port)) < 0)
-            {
-                MXS_ERROR("Unable to load users for service %s listening at %s:%d.",
-                          service->name, port->address ? port->address : "0.0.0.0",
-                          port->port);
-
-                /* Try loading authentication data from file cache */
-                char path[PATH_MAX];
-                sprintf(path, "%s/%s/%s/%s/%s", cachedir, service->name, port->name,
-                        DBUSERS_DIR, DBUSERS_FILE);
-
-                if ((loaded = dbusers_load(port->users, path)) == -1)
-                {
-                    MXS_ERROR("Failed to load cached users from '%s'.", path);
-                    users_free(port->users);
-                    dcb_close(port->listener);
-                    goto retblock;
-                }
-                else
-                {
-                    MXS_WARNING("Using cached credential information.");
-                }
-            }
-            else
-            {
-                /* Save authentication data to file cache */
-                char path[PATH_MAX];
-                sprintf(path, "%s/%s/%s/%s/", cachedir, service->name, port->name, DBUSERS_DIR);
-
-                if (mxs_mkdir_all(path, 0777))
-                {
-                    strcat(path, DBUSERS_FILE);
-                    dbusers_save(port->users, path);
-                }
-            }
-
-            if (loaded == 0)
-            {
-                MXS_ERROR("[%s]: failed to load any user information. Authentication"
-                          " will probably fail as a result.", service->name);
-            }
-
-            /* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
-             * This way MaxScale could try reloading users' just after startup
-             */
-            service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
-            service->rate_limit.nloads = 1;
-
-            MXS_NOTICE("Loaded %d MySQL Users for service [%s].",
-                       loaded, service->name);
-        }
-    }
-    else
-    {
-        if (port->users == NULL)
-        {
-            /* Generic users table */
-            port->users = users_alloc();
-        }
-    }
-
     if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
     {
         dcb_close(port->listener);
@@ -348,7 +257,32 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
                   service->name);
         goto retblock;
     }
+
     memcpy(&(port->listener->func), funcs, sizeof(GWPROTOCOL));
+
+    const char *authenticator_name = "NullAuth";
+
+    if (port->authenticator)
+    {
+        authenticator_name = port->authenticator;
+    }
+    else if (port->listener->func.auth_default)
+    {
+        authenticator_name = port->listener->func.auth_default();
+    }
+
+    GWAUTHENTICATOR *authfuncs = (GWAUTHENTICATOR *)load_module(authenticator_name, MODULE_AUTHENTICATOR);
+
+    if (authfuncs == NULL)
+    {
+        MXS_ERROR("Failed to load authenticator module '%s' for listener '%s'",
+                  authenticator_name, port->name);
+        dcb_close(port->listener);
+        port->listener = NULL;
+        return 0;
+    }
+
+    memcpy(&port->listener->authfunc, authfuncs, sizeof(GWAUTHENTICATOR));
 
     if (port->address)
     {
@@ -358,6 +292,21 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     {
         sprintf(config_bind, "0.0.0.0:%d", port->port);
     }
+
+    /** Load the authentication users before before starting the listener */
+    if (port->listener->authfunc.loadusers &&
+        port->listener->authfunc.loadusers(port) != AUTH_LOADUSERS_OK)
+    {
+        MXS_ERROR("[%s] Failed to load users for listener '%s', authentication might not work.",
+                  service->name, port->name);
+    }
+
+    /**
+     * At service start last update is set to USERS_REFRESH_TIME seconds earlier. This way MaxScale
+     * could try reloading users just after startup.
+     */
+    service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
+    service->rate_limit.nloads = 1;
 
     if (port->listener->func.listen(port->listener, config_bind))
     {
@@ -1129,7 +1078,7 @@ serviceSetFilters(SERVICE *service, char *filters)
         }
         else
         {
-            MXS_ERROR("Unable to find filter '%s' for service '%s'\n",
+            MXS_ERROR("Unable to find filter '%s' for service '%s'",
                       filter_name, service->name);
             rval = false;
             break;
@@ -1474,59 +1423,45 @@ service_update(SERVICE *service, char *router, char *user, char *auth)
 int service_refresh_users(SERVICE *service)
 {
     int ret = 1;
-    /* check for another running getUsers request */
-    if (!spinlock_acquire_nowait(&service->users_table_spin))
+
+    if (spinlock_acquire_nowait(&service->users_table_spin))
     {
-        MXS_DEBUG("%s: [service_refresh_users] failed to get get lock for "
-                  "loading new users' table: another thread is loading users",
-                  service->name);
+        time_t now = time(NULL);
 
-        return 1;
-    }
-
-    /* check if refresh rate limit has exceeded */
-    if ((time(NULL) < (service->rate_limit.last + USERS_REFRESH_TIME)) ||
-        (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME))
-    {
-        spinlock_release(&service->users_table_spin);
-        MXS_ERROR("%s: Refresh rate limit exceeded for load of users' table.",
-                  service->name);
-
-        return 1;
-    }
-
-    service->rate_limit.nloads++;
-
-    /* update time and counter */
-    if (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)
-    {
-        service->rate_limit.nloads = 1;
-        service->rate_limit.last = time(NULL);
-    }
-
-    SERV_LISTENER *port = service->ports;
-    while (port)
-    {
-        if (replace_mysql_users(port) < 0)
+        /* Check if refresh rate limit has been exceeded */
+        if ((now < service->rate_limit.last + USERS_REFRESH_TIME) ||
+            (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME))
         {
-            ret = -1;
-            break;
+            MXS_ERROR("[%s] Refresh rate limit exceeded for load of users' table.", service->name);
         }
-        ret++;
-        port = port->next;
+        else
+        {
+            service->rate_limit.nloads++;
+
+            /** If we have reached the limit on users refreshes, reset refresh time and count */
+            if (service->rate_limit.nloads > USERS_REFRESH_MAX_PER_TIME)
+            {
+                service->rate_limit.nloads = 1;
+                service->rate_limit.last = now;
+            }
+
+            ret = 0;
+
+            for (SERV_LISTENER *port = service->ports; port; port = port->next)
+            {
+                if (port->listener->authfunc.loadusers(port) != AUTH_LOADUSERS_OK)
+                {
+                    MXS_ERROR("[%s] Failed to load users for listener '%s', authentication might not work.",
+                              service->name, port->name);
+                    ret = 1;
+                }
+            }
+        }
+
+        spinlock_release(&service->users_table_spin);
     }
 
-    /* remove lock */
-    spinlock_release(&service->users_table_spin);
-
-    if (ret >= 0)
-    {
-        return 0;
-    }
-    else
-    {
-        return 1;
-    }
+    return ret;
 }
 
 bool service_set_param_value(SERVICE*            service,

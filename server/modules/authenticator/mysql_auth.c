@@ -30,6 +30,11 @@
 #include <gw_authenticator.h>
 #include <maxscale/alloc.h>
 #include <maxscale/poll.h>
+#include <dbusers.h>
+#include <gwdirs.h>
+#include <gw.h>
+#include <secrets.h>
+#include <utils.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
@@ -44,12 +49,13 @@ MODULE_INFO info =
 };
 /*lint +e14 */
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.1.0";
 
 static int mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool mysql_auth_is_client_ssl_capable(DCB *dcb);
 static int mysql_auth_authenticate(DCB *dcb);
 static void mysql_auth_free_client_data(DCB *dcb);
+static int mysql_auth_load_users(SERV_LISTENER *port);
 
 /*
  * The "module object" for mysql client authenticator module.
@@ -60,6 +66,7 @@ static GWAUTHENTICATOR MyObject =
     mysql_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
     mysql_auth_authenticate,                /* Authenticate user credentials */
     mysql_auth_free_client_data,            /* Free the client data held in DCB */
+    mysql_auth_load_users                   /* Load users from backend databases */
 };
 
 static int combined_auth_check(
@@ -810,4 +817,63 @@ static void
 mysql_auth_free_client_data(DCB *dcb)
 {
     MXS_FREE(dcb->data);
+}
+
+/**
+ * @brief Load MySQL authentication users
+ *
+ * This function loads MySQL users from the backend database.
+ *
+ * @param port Listener definition
+ * @return AUTH_LOADUSERS_OK on success, AUTH_LOADUSERS_ERROR on error
+ */
+static int mysql_auth_load_users(SERV_LISTENER *port)
+{
+    int rc = AUTH_LOADUSERS_OK;
+    SERVICE *service = port->listener->service;
+    int loaded = replace_mysql_users(port);
+
+    if (loaded < 0)
+    {
+        MXS_ERROR("[%s] Unable to load users for listener %s listening at %s:%d.", service->name,
+                  port->name, port->address ? port->address : "0.0.0.0", port->port);
+
+        /* Try loading authentication data from file cache */
+        char path[PATH_MAX];
+        sprintf(path, "%s/%s/%s/%s/%s", get_cachedir(), service->name, port->name,
+                DBUSERS_DIR, DBUSERS_FILE);
+
+        if ((loaded = dbusers_load(port->users, path)) == -1)
+        {
+            MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);
+            users_free(port->users);
+            port->users = NULL;
+            rc = AUTH_LOADUSERS_ERROR;
+        }
+        else
+        {
+            MXS_WARNING("Using cached credential information.");
+        }
+    }
+    else
+    {
+        /* Users loaded successfully, save authentication data to file cache */
+        char path[PATH_MAX];
+        sprintf(path, "%s/%s/%s/%s/", get_cachedir(), service->name, port->name, DBUSERS_DIR);
+
+        if (mxs_mkdir_all(path, 0777))
+        {
+            strcat(path, DBUSERS_FILE);
+            dbusers_save(port->users, path);
+        }
+    }
+
+    if (loaded == 0)
+    {
+        MXS_ERROR("[%s]: failed to load any user information. Authentication"
+                  " will probably fail as a result.", service->name);
+    }
+
+    MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name);
+    return rc;
 }

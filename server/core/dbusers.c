@@ -250,40 +250,6 @@ load_mysql_users(SERV_LISTENER *listener)
 }
 
 /**
- * Reload the user/passwd form mysql.user table into the service users' hashtable
- * environment.
- *
- * @param service   The current service
- * @return      -1 on any error or the number of users inserted (0 means no users at all)
- */
-int
-reload_mysql_users(SERV_LISTENER *listener)
-{
-    int i;
-    USERS *newusers, *oldusers;
-    HASHTABLE *oldresources;
-
-    if ((newusers = mysql_users_alloc()) == NULL)
-    {
-        return 0;
-    }
-
-    spinlock_acquire(&listener->lock);
-
-    oldresources = listener->resources;
-    i = get_users(listener, newusers);
-    oldusers = listener->users;
-    listener->users = newusers;
-
-    spinlock_release(&listener->lock);
-
-    users_free(oldusers);
-    resource_free(oldresources);
-
-    return i;
-}
-
-/**
  * Replace the user/passwd form mysql.user table into the service users' hashtable
  * environment.
  * The replacement is succesful only if the users' table checksums differ
@@ -294,33 +260,44 @@ reload_mysql_users(SERV_LISTENER *listener)
 int
 replace_mysql_users(SERV_LISTENER *listener)
 {
-    int i;
-    USERS *newusers, *oldusers;
-    HASHTABLE *oldresources;
+    USERS *newusers = mysql_users_alloc();
 
-    if ((newusers = mysql_users_alloc()) == NULL)
+    if (newusers == NULL)
     {
         return -1;
     }
 
     spinlock_acquire(&listener->lock);
-    oldresources = listener->resources;
 
-    /* load db users ad db grants */
-    i = get_users(listener, newusers);
+    /** TODO: Make the listener resource a part of the USERS struct */
+    HASHTABLE *oldresources = listener->resources;
+
+    /* load users and grants from the backend database */
+    int i = get_users(listener, newusers);
 
     if (i <= 0)
     {
         users_free(newusers);
-        /* restore resources */
+        /* Failed to load users, restore old users and resources */
         listener->resources = oldresources;
         spinlock_release(&listener->lock);
         return i;
     }
 
-    oldusers = listener->users;
+     USERS *oldusers = listener->users;
 
-    /* digest compare */
+    /**
+     * TODO: Comparing the checksum after loading users is not necessary. We
+     * have already queried the server, allocated memory and done the processing
+     * so comparing if a change was made is pointless since the end result is
+     * always the same. We end up with either the same users or a new set of
+     * users. If the new users would always be taken into use, we'd avoid
+     * the costly task of calculating the diff.
+     *
+     * An improvement to the diff calculation would be to push the calculation
+     * to the backend server. This way the bandwidth usage would be minimized
+     * and the backend server would tell us if we need to query for more data.
+     */
     if (oldusers != NULL && memcmp(oldusers->cksum, newusers->cksum,
                                    SHA_DIGEST_LENGTH) == 0)
     {

@@ -1279,8 +1279,14 @@ clear_server(DCB *dcb, SERVER *server, char *bit)
 static void
 reload_dbusers(DCB *dcb, SERVICE *service)
 {
-    dcb_printf(dcb, "Loaded %d database users for service %s.\n",
-               reload_mysql_users(service->ports), service->name);
+    if (service_refresh_users(service) == 0)
+    {
+        dcb_printf(dcb, "Reloaded database users for service %s.\n", service->name);
+    }
+    else
+    {
+        dcb_printf(dcb, "Error: Failed to reloaded database users for service %s.\n", service->name);
+    }
 }
 
 /**

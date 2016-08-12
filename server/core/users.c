@@ -71,17 +71,11 @@ users_alloc()
 void
 users_free(USERS *users)
 {
-    if (users == NULL)
-    {
-        MXS_ERROR("[%s:%d]: NULL parameter.", __FUNCTION__, __LINE__);
-        return;
-    }
-
-    if (users->data)
+    if (users)
     {
         hashtable_free(users->data);
+        MXS_FREE(users);
     }
-    MXS_FREE(users);
 }
 
 /**
@@ -216,4 +210,19 @@ dcb_usersPrint(DCB *dcb, USERS *users)
         }
     }
     dcb_printf(dcb, "\n");
+}
+
+/**
+ * @brief Default user loading function
+ *
+ * A generic key-value user table is allocated for the service.
+ *
+ * @param port Listener configuration
+ * @return Always AUTH_LOADUSERS_OK
+ */
+int users_default_loadusers(SERV_LISTENER *port)
+{
+    users_free(port->users);
+    port->users = users_alloc();
+    return AUTH_LOADUSERS_OK;
 }
