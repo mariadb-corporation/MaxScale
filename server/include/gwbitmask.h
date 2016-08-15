@@ -27,27 +27,25 @@
  * @endverbatim
  */
 
-/* Both these numbers MUST be exact multiples of 8 */
-#define BIT_LENGTH_INITIAL      256      /**< Initial number of bits in the bitmask */
-#define BIT_LENGTH_INC          256      /**< Number of bits to add on each increment */
+/* This number MUST an be exact multiple of 8 */
+#define MXS_BITMASK_LENGTH      256      /**< Number of bits in the bitmask */
+
+#define MXS_BITMASK_SIZE       (MXS_BITMASK_LENGTH / 8) /**< Number of bytes in the bitmask */
 
 /**
- * The bitmask structure used to store an arbitrary large bitmask
+ * The bitmask structure used to store a fixed size bitmask
  */
 typedef struct
 {
-    SPINLOCK lock;          /**< Lock to protect the bitmask */
-    unsigned char *bits;    /**< Pointer to the bits themselves */
-    int length;          /**< The number of bits in the bitmask */
-    int size;            /**< The number of bytes in the bitmask */
-
+    SPINLOCK lock;                        /**< Lock to protect the bitmask */
+    unsigned char bits[MXS_BITMASK_SIZE]; /**< The bits themselves */
 } GWBITMASK;
 
 #define GWBITMASK_INIT {SPINLOCK_INIT}
 
 extern void bitmask_init(GWBITMASK *);
 extern void bitmask_free(GWBITMASK *);
-extern void bitmask_set(GWBITMASK *, int);
+extern int  bitmask_set(GWBITMASK *, int);
 extern int  bitmask_clear(GWBITMASK *, int);
 extern int  bitmask_clear_without_spinlock(GWBITMASK *, int);
 extern int  bitmask_isset(GWBITMASK *, int);

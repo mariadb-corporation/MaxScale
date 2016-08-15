@@ -38,10 +38,9 @@
 #include <skygw_debug.h>
 
 /**
- * test1    Allocate table of users and mess around with it
+ * test1    Create a bitmap and mess around with it
  *
-  */
-
+ */
 static int
 test1()
 {
@@ -52,8 +51,7 @@ test1()
     ss_dfprintf(stderr,
                 "testgwbitmask : Initialise a bitmask");
     bitmask_init(&bitmask);
-    ss_info_dassert(BIT_LENGTH_INITIAL == bitmask.length, "Length should be initial length.");
-    for (i = 0; i < BIT_LENGTH_INITIAL; i++)
+    for (i = 0; i < MXS_BITMASK_LENGTH; i++)
     {
         ss_info_dassert(0 == bitmask_isset(&bitmask, i), "All bits should initially be zero");
     }
@@ -64,14 +62,11 @@ test1()
     ss_info_dassert(0 != bitmask_isset(&another, 17), "Test bit should be set");
     ss_dfprintf(stderr, "\t..done\nClear the arbitrary bit.");
     bitmask_clear(&bitmask, 17);
-    ss_info_dassert(0 == bitmask_isset(&bitmask, 17), "Test bit should be clear");
     ss_info_dassert(0 != bitmask_isallclear(&bitmask), "Should be all clear");
-    // Testing the allocation mechanism, for use with valgrind.
-    bitmask_set(&bitmask, BIT_LENGTH_INC + 1);
-    bitmask_set(&bitmask, 2 * BIT_LENGTH_INC + 1);
+    ss_info_dassert(0 == bitmask_isset(&bitmask, 17), "Test bit should be clear");
+
     ss_dfprintf(stderr, "\t..done\nFree the bitmask.");
     bitmask_free(&bitmask);
-    ss_info_dassert(0 == bitmask.length, "Length should be zero after bit mask freed.");
     ss_dfprintf(stderr, "\t..done\n");
 
     return 0;

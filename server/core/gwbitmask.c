@@ -19,24 +19,7 @@
 /**
  * @file gwbitmask.c  Implementation of bitmask operations for the gateway
  *
- * We provide basic bitmask manipulation routines, the size of
- * the bitmask will grow dynamically based on the highest bit
- * number that is set or cleared within the bitmask.
- *
- * Bitmask growth happens in increments rather than via a single bit as
- * a time.
- *
- * Please note limitations to these mechanisms:
- *
- * 1. The initial size and increment size MUST be exact multiples of 8
- * 2. Only suitable for a compact set of bit numbers i.e. the numbering
- * needs to start near to 0 and grow without sizeable gaps
- * 3. It is assumed that a bit number bigger than the current size can
- * be accommodated by adding a single extra block of bits
- * 4. During copy, if memory cannot be allocated, a zero length bitmap is
- * created as the destination. This will test true for all bits clear, which
- * may be a serious error. However, the memory requirement is very small and
- * is only likely to fail in circumstances where a lot else is going wrong.
+ * GWBITMASK is a fixed size bitmask with space for 256 bits.
  *
  * @verbatim
  * Revision History
@@ -67,18 +50,12 @@ static const unsigned char bitmapset[8] =
  * Initialise a bitmask
  *
  * @param bitmask       Pointer the bitmask
- * @return              The value of *variable before the add occurred
  */
 void
 bitmask_init(GWBITMASK *bitmask)
 {
-    bitmask->length = BIT_LENGTH_INITIAL;
-    bitmask->size = bitmask->length / 8;
-    if ((bitmask->bits = MXS_CALLOC(bitmask->size, 1)) == NULL)
-    {
-        bitmask->length = bitmask->size = 0;
-    }
     spinlock_init(&bitmask->lock);
+    memset(bitmask->bits, 0, MXS_BITMASK_SIZE);
 }
 
 /**
@@ -89,52 +66,40 @@ bitmask_init(GWBITMASK *bitmask)
 void
 bitmask_free(GWBITMASK *bitmask)
 {
-    if (bitmask->length)
-    {
-        MXS_FREE(bitmask->bits);
-        bitmask->length = bitmask->size = 0;
-    }
 }
 
 /**
  * Set the bit at the specified bit position in the bitmask.
- * The bitmask will automatically be extended if the bit is
- * beyond the current bitmask length. Note that growth is only
- * by a single increment - the bit numbers used need to be a
- * fairly dense set.
  *
  * @param bitmask       Pointer the bitmask
  * @param bit           Bit to set
+ * @return              1 if the bit could be set, 0 otherwise.
+ *                      Setting a bit may fail only if the bit exceeds
+ *                      the maximum length of the bitmask.
  */
-void
+int
 bitmask_set(GWBITMASK *bitmask, int bit)
 {
-    unsigned char *ptr;
+    ss_dassert(bit >= 0);
 
     spinlock_acquire(&bitmask->lock);
-    if (bit >= 8)
+
+    if (bit < MXS_BITMASK_LENGTH)
     {
-        while (bit >= bitmask->length)
+        unsigned char *ptr = bitmask->bits;
+
+        if (bit >= 8)
         {
-            bitmask->bits = MXS_REALLOC(bitmask->bits, (bitmask->size + (BIT_LENGTH_INC / 8)));
-            MXS_ABORT_IF_NULL(bitmask->bits);
-            memset(bitmask->bits + (bitmask->size), 0,
-                   BIT_LENGTH_INC / 8);
-            bitmask->length += BIT_LENGTH_INC;
-            bitmask->size += (BIT_LENGTH_INC / 8);
+            ptr += (bit / 8);
+            bit = bit % 8;
         }
 
-        ptr = bitmask->bits;
-        ptr += (bit / 8);
-        bit = bit % 8;
-    }
-    else
-    {
-        ptr = bitmask->bits;
+        *ptr |= bitmapset[bit];
     }
 
-    *ptr |= bitmapset[bit];
     spinlock_release(&bitmask->lock);
+
+    return bit < MXS_BITMASK_LENGTH;
 }
 
 /**
@@ -153,10 +118,11 @@ bitmask_set(GWBITMASK *bitmask, int bit)
 int
 bitmask_clear_without_spinlock(GWBITMASK *bitmask, int bit)
 {
-    unsigned char *ptr = bitmask->bits;
-    int i;
+    ss_dassert(bit >= 0);
 
-    if (bit < bitmask->length)
+    unsigned char *ptr = bitmask->bits;
+
+    if (bit < MXS_BITMASK_LENGTH)
     {
         if (bit >= 8)
         {
@@ -166,7 +132,7 @@ bitmask_clear_without_spinlock(GWBITMASK *bitmask, int bit)
         *ptr &= bitmapclear[bit];
     }
     ptr = bitmask->bits;
-    for (i = 0; i < bitmask->size; i++)
+    for (int i = 0; i < MXS_BITMASK_SIZE; i++)
     {
         if (*(ptr + i) != 0)
         {
@@ -228,12 +194,15 @@ bitmask_isset(GWBITMASK *bitmask, int bit)
 static int
 bitmask_isset_without_spinlock(GWBITMASK *bitmask, int bit)
 {
-    unsigned char *ptr = bitmask->bits;
+    ss_dassert(bit >= 0);
 
-    if (bit >= bitmask->length)
+    if (bit >= MXS_BITMASK_LENGTH)
     {
         return 0;
     }
+
+    unsigned char *ptr = bitmask->bits;
+
     if (bit >= 8)
     {
         ptr += (bit / 8);
@@ -255,11 +224,10 @@ int
 bitmask_isallclear(GWBITMASK *bitmask)
 {
     unsigned char *ptr = bitmask->bits;
-    int i;
     int result = 1;
 
     spinlock_acquire(&bitmask->lock);
-    for (i = 0; i < bitmask->size; i++)
+    for (int i = 0; i < MXS_BITMASK_SIZE; i++)
     {
         if (*(ptr + i) != 0)
         {
@@ -275,10 +243,6 @@ bitmask_isallclear(GWBITMASK *bitmask)
 /**
  * Copy the contents of one bitmap to another.
  *
- * On memory failure, a zero length bitmask is created in the destination,
- * which could seriously undermine the logic.  Given the small size of the
- * bitmask, this is unlikely to happen.
- *
  * @param dest  Bitmap tp update
  * @param src   Bitmap to copy
  */
@@ -287,28 +251,14 @@ bitmask_copy(GWBITMASK *dest, GWBITMASK *src)
 {
     spinlock_acquire(&src->lock);
     spinlock_acquire(&dest->lock);
-    if (dest->length)
-    {
-        MXS_FREE(dest->bits);
-    }
-    if ((dest->bits = MXS_MALLOC(src->size)) == NULL)
-    {
-        dest->length = 0;
-    }
-    else
-    {
-        dest->length = src->length;
-        dest->size = src->size;
-        memcpy(dest->bits, src->bits, src->size);
-    }
+    memcpy(dest->bits, src->bits, MXS_BITMASK_SIZE);
     spinlock_release(&dest->lock);
     spinlock_release(&src->lock);
 }
 
 /**
  * Return a comma separated list of the numbers of the bits that are set in
- * a bitmask, numbering starting at zero. Constrained to reject requests that
- * could require more than three digit numbers.  The returned string must be
+ * a bitmask, numbering starting at zero. The returned string must be
  * freed by the caller (unless it is null on account of memory allocation
  * failure).
  *
@@ -318,48 +268,35 @@ bitmask_copy(GWBITMASK *dest, GWBITMASK *src)
 char *
 bitmask_render_readable(GWBITMASK *bitmask)
 {
-    static const char toobig[] = "Bitmask is too large to render readable";
     static const char empty[] = "No bits are set";
-    char onebit[5];
     char *result;
-    int count_set = 0;
 
     spinlock_acquire(&bitmask->lock);
-    if (999 < bitmask->length)
+    int count_set = bitmask_count_bits_set(bitmask);
+    if (count_set)
     {
-        result = MXS_MALLOC(sizeof(toobig));
+        result = MXS_MALLOC(1 + (4 * count_set));
         if (result)
         {
-            strcpy(result, toobig);
+            result[0] = 0;
+            for (int i = 0; i < MXS_BITMASK_LENGTH; i++)
+            {
+                if (bitmask_isset_without_spinlock(bitmask, i))
+                {
+                    char onebit[5];
+                    sprintf(onebit, "%d,", i);
+                    strcat(result, onebit);
+                }
+            }
+            result[strlen(result) - 1] = 0;
         }
     }
     else
     {
-        count_set = bitmask_count_bits_set(bitmask);
-        if (count_set)
+        result = MXS_MALLOC(sizeof(empty));
+        if (result)
         {
-            result = MXS_MALLOC(1 + (4 * count_set));
-            if (result)
-            {
-                result[0] = 0;
-                for (int i = 0; i < bitmask->length; i++)
-                {
-                    if (bitmask_isset_without_spinlock(bitmask, i))
-                    {
-                        sprintf(onebit, "%d,", i);
-                        strcat(result, onebit);
-                    }
-                }
-                result[strlen(result) - 1] = 0;
-            }
-        }
-        else
-        {
-            result = MXS_MALLOC(sizeof(empty));
-            if (result)
-            {
-                strcpy(result, empty);
-            }
+            strcpy(result, empty);
         }
     }
     spinlock_release(&bitmask->lock);
@@ -376,13 +313,13 @@ bitmask_render_readable(GWBITMASK *bitmask)
 static int
 bitmask_count_bits_set(GWBITMASK *bitmask)
 {
-    const unsigned char oneBits[] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4};
+    static const unsigned char oneBits[] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4};
     unsigned char partresults;
     int result = 0;
     unsigned char *ptr, *eptr;
 
     ptr = bitmask->bits;
-    eptr = ptr + (bitmask->length / 8);
+    eptr = ptr + MXS_BITMASK_SIZE;
     while (ptr < eptr)
     {
         partresults = oneBits[*ptr & 0x0f];
