@@ -1,0 +1,5 @@
+add_library(regexfilter SHARED regexfilter.c)
+target_link_libraries(regexfilter maxscale-common)
+add_dependencies(regexfilter pcre2)
+set_target_properties(regexfilter PROPERTIES VERSION "1.1.0")
+install_module(regexfilter core)
