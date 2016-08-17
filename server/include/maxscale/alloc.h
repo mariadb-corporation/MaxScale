@@ -64,10 +64,18 @@ char *mxs_strndup_a(const char *s, size_t n/*, const char *caller*/);
 /**
  * @brief Abort the process if the provided value is non-zero.
  *
- * To be used in circumstances where a memory allocation failure
- * cannot - currently - be dealt with properly.
+ * To be used in circumstances where a memory allocation or other
+ * fatal error cannot - currently - be dealt with properly.
  */
 #define MXS_ABORT_IF_TRUE(b) do { if (b) { abort(); } } while (false)
+
+/**
+ * @brief Abort the process if the provided value is zero.
+ *
+ * To be used in circumstances where a memory allocation or other
+ * fatal error cannot - currently - be dealt with properly.
+ */
+#define MXS_ABORT_IF_FALSE(b) do { if (!b) { abort(); } } while (false)
 
 EXTERN_C_BLOCK_END
 
