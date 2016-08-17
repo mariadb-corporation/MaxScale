@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -59,6 +59,7 @@
  * 25/09/2015   Martin Brampton     Block callback processing when no router session in the DCB
  * 23/10/2015   Markus Makela       Added current_safe_event
  * 09/05/2016   Massimiliano Pinto  Added SELECT USER()
+ * 11/07/2016   Massimiliano Pinto  Added SSL backend support
  *
  * @endverbatim
  */
@@ -83,8 +84,10 @@
 #include <log_manager.h>
 #include <version.h>
 #include <zlib.h>
+#include <maxscale/alloc.h>
+#include <gw.h>
 
-extern int load_mysql_users(SERVICE *service);
+extern int load_mysql_users(SERV_LISTENER *listener);
 extern void blr_master_close(ROUTER_INSTANCE* router);
 extern int blr_file_new_binlog(ROUTER_INSTANCE *router, char *file);
 extern int blr_file_write_master_config(ROUTER_INSTANCE *router, char *error);
@@ -156,6 +159,7 @@ static int blr_slave_send_columndef_with_status_schema(ROUTER_INSTANCE *router, 
                                                        char *name, int type, int len, uint8_t seqno);
 static void blr_send_slave_heartbeat(void *inst);
 static int blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave);
+static int blr_set_master_ssl(ROUTER_INSTANCE *router, CHANGE_MASTER_OPTIONS config, char *error_message);
 
 void poll_fake_write_event(DCB *dcb);
 
@@ -308,7 +312,7 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *  SHOW WARNINGS
  *  SHOW [GLOBAL] STATUS LIKE 'Uptime'
  *
- * Seven set commands are supported:
+ * Nine set commands are supported:
  *  SET @master_binlog_checksum = @@global.binlog_checksum
  *  SET @master_heartbeat_period=...
  *  SET @slave_slave_uuid=...
@@ -316,6 +320,8 @@ blr_slave_request(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
  *  SET NAMES utf8
  *  SET NAMES XXX
  *  SET mariadb_slave_capability=...
+ *  SET autocommit=
+ *  SET @@session.autocommit=
  *
  * Four administrative commands are supported:
  *  STOP SLAVE
@@ -347,7 +353,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     ptr = strcasestr(query_text, "password");
     if (ptr != NULL)
     {
-        char *new_text = strdup(query_text);
+        char *new_text = MXS_STRDUP_A(query_text);
         int trucate_at  = (ptr - query_text);
         if (trucate_at > 0)
         {
@@ -368,7 +374,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
         MXS_INFO("Execute statement (truncated, it contains password)"
                  " from the slave '%s'", new_text);
-        free(new_text);
+        MXS_FREE(new_text);
     }
     else
     {
@@ -395,27 +401,27 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if (strcasecmp(word, "UNIX_TIMESTAMP()") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_send_timestamp(router, slave);
         }
         else if (strcasecmp(word, "@master_binlog_checksum") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.chksum2);
         }
         else if (strcasecmp(word, "@@GLOBAL.GTID_MODE") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.gtid_mode);
         }
         else if (strcasecmp(word, "1") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.select1);
         }
         else if (strcasecmp(word, "VERSION()") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             if (router->set_master_version)
             {
                 return blr_slave_send_var_value(router, slave, "VERSION()",
@@ -431,7 +437,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             /* Return user@host */
             char user_host[MYSQL_USER_MAXLEN + 1 + MYSQL_HOSTNAME_MAXLEN + 1] = "";
 
-            free(query_text);
+            MXS_FREE(query_text);
             snprintf(user_host, sizeof(user_host),
                      "%s@%s", slave->dcb->user, slave->dcb->remote);
 
@@ -440,7 +446,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if (strcasecmp(word, "@@version") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             if (router->set_master_version)
             {
                 return blr_slave_send_var_value(router, slave, "@@version",
@@ -452,13 +458,13 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
                 blr_slave_send_var_value(router, slave, "@@version",
                                          version == NULL ? "" : version, BLR_TYPE_STRING);
-                free(version);
+                MXS_FREE(version);
                 return 1;
             }
         }
         else if (strcasecmp(word, "@@version_comment") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             if (!router->saved_master.selectvercom)
                 /* This will allow mysql client to get in when @@version_comment is not available */
             {
@@ -471,7 +477,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if (strcasecmp(word, "@@hostname") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             if (router->set_master_hostname)
             {
                 return blr_slave_send_var_value(router, slave, "@@hostname",
@@ -487,7 +493,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             char    heading[40]; /* to ensure we match the case in query and response */
             strcpy(heading, word);
 
-            free(query_text);
+            MXS_FREE(query_text);
             if (router->set_master_uuid)
             {
                 return blr_slave_send_var_value(router, slave, heading, router->master_uuid, BLR_TYPE_STRING);
@@ -497,18 +503,18 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                 char *master_uuid = blr_extract_column(router->saved_master.uuid, 2);
                 blr_slave_send_var_value(router, slave, heading,
                                          master_uuid == NULL ? "" : master_uuid, BLR_TYPE_STRING);
-                free(master_uuid);
+                MXS_FREE(master_uuid);
                 return 1;
             }
         }
         else if (strcasecmp(word, "@@max_allowed_packet") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.map);
         }
         else if (strcasecmp(word, "@@maxscale_version") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_send_maxscale_version(router, slave);
         }
         else if ((strcasecmp(word, "@@server_id") == 0) || (strcasecmp(word, "@@global.server_id") == 0))
@@ -519,7 +525,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             sprintf(server_id, "%d", router->masterid);
             strcpy(heading, word);
 
-            free(query_text);
+            MXS_FREE(query_text);
 
             return blr_slave_send_var_value(router, slave, heading, server_id, BLR_TYPE_INT);
         }
@@ -533,14 +539,14 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if (strcasecmp(word, "WARNINGS") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_show_warnings(router, slave);
         }
         else if (strcasecmp(word, "GLOBAL") == 0)
         {
             if (router->master_state == BLRM_UNCONFIGURED)
             {
-                free(query_text);
+                MXS_FREE(query_text);
                 return blr_slave_send_ok(router, slave);
             }
 
@@ -561,7 +567,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
                 if (rc >= 0)
                 {
-                    free(query_text);
+                    MXS_FREE(query_text);
 
                     return 1;
                 }
@@ -581,7 +587,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
                 if (rc >= 0)
                 {
-                    free(query_text);
+                    MXS_FREE(query_text);
 
                     return 1;
                 }
@@ -597,7 +603,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             int rc;
             if (router->master_state == BLRM_UNCONFIGURED)
             {
-                free(query_text);
+                MXS_FREE(query_text);
                 return blr_slave_send_ok(router, slave);
             }
 
@@ -611,7 +617,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
             if (rc >= 0)
             {
-                free(query_text);
+                MXS_FREE(query_text);
 
                 return 1;
             }
@@ -628,7 +634,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             }
             else if (strcasecmp(word, "STATUS") == 0)
             {
-                free(query_text);
+                MXS_FREE(query_text);
 
                 /* if state is BLRM_UNCONFIGURED return empty result */
 
@@ -651,7 +657,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             }
             else if (strcasecmp(word, "STATUS") == 0)
             {
-                free(query_text);
+                MXS_FREE(query_text);
                 /* if state is BLRM_UNCONFIGURED return empty result */
                 if (router->master_state > BLRM_UNCONFIGURED)
                 {
@@ -664,7 +670,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             }
             else if (strcasecmp(word, "HOSTS") == 0)
             {
-                free(query_text);
+                MXS_FREE(query_text);
                 /* if state is BLRM_UNCONFIGURED return empty result */
                 if (router->master_state > BLRM_UNCONFIGURED)
                 {
@@ -688,7 +694,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
             if (rc >= 0)
             {
-                free(query_text);
+                MXS_FREE(query_text);
 
                 return 1;
             }
@@ -707,7 +713,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         else if ((strcasecmp(word, "autocommit") == 0) || (strcasecmp(word, "@@session.autocommit") == 0))
         {
             /* return OK */
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_send_ok(router, slave);
         }
         else if (strcasecmp(word, "@master_heartbeat_period") == 0)
@@ -729,9 +735,9 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                     slave->heartbeat = atoi(new_val) / 1000000;
                 }
 
-                free(new_val);
+                MXS_FREE(new_val);
             }
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.heartbeat);
         }
         else if (strcasecmp(word, "@mariadb_slave_capability") == 0)
@@ -739,7 +745,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             /* mariadb10 compatibility is set for the slave */
             slave->mariadb10_compat = true;
 
-            free(query_text);
+            MXS_FREE(query_text);
             if (router->mariadb10_compat)
             {
                 return blr_slave_replay(router, slave, router->saved_master.mariadb10);
@@ -765,7 +771,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                 slave->nocrc = 0;
             }
 
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.chksum1);
         }
         else if (strcasecmp(word, "@slave_uuid") == 0)
@@ -786,9 +792,9 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                         word_ptr++;
                     }
                 }
-                slave->uuid = strdup(word_ptr);
+                slave->uuid = MXS_STRDUP_A(word_ptr);
             }
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_replay(router, slave, router->saved_master.setslaveuuid);
         }
         else if (strcasecmp(word, "NAMES") == 0)
@@ -799,17 +805,17 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             }
             else if (strcasecmp(word, "latin1") == 0)
             {
-                free(query_text);
+                MXS_FREE(query_text);
                 return blr_slave_replay(router, slave, router->saved_master.setnames);
             }
             else if (strcasecmp(word, "utf8") == 0)
             {
-                free(query_text);
+                MXS_FREE(query_text);
                 return blr_slave_replay(router, slave, router->saved_master.utf8);
             }
             else
             {
-                 free(query_text);
+                 MXS_FREE(query_text);
                  return blr_slave_send_ok(router, slave);
             }
         }
@@ -822,17 +828,17 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if (strcasecmp(word, "SLAVE") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
 
             if (router->master_state == BLRM_SLAVE_STOPPED)
             {
-                char path[PATH_MAX + 1] = "";
                 char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
                 MASTER_SERVER_CFG *current_master = NULL;
                 int removed_cfg = 0;
 
                 /* save current replication parameters */
-                current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
+                current_master = (MASTER_SERVER_CFG *)MXS_CALLOC(1, sizeof(MASTER_SERVER_CFG));
+                MXS_ABORT_IF_NULL(current_master);
 
                 if (!current_master)
                 {
@@ -858,9 +864,11 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                            current_master->user);
 
                 /* remove master.ini */
-                strncpy(path, router->binlogdir, PATH_MAX);
+                static const char MASTER_INI[] = "/master.ini";
+                char path[strlen(router->binlogdir) + sizeof(MASTER_INI)];
 
-                strncat(path, "/master.ini", PATH_MAX - strlen(path));
+                strcpy(path, router->binlogdir);
+                strcat(path, MASTER_INI);
 
                 /* remove master.ini */
                 removed_cfg = unlink(path);
@@ -919,7 +927,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if (strcasecmp(word, "SLAVE") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_start_slave(router, slave);
         }
     }
@@ -932,7 +940,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if (strcasecmp(word, "SLAVE") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_stop_slave(router, slave);
         }
     }
@@ -947,7 +955,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         {
             if (router->master_state != BLRM_SLAVE_STOPPED && router->master_state != BLRM_UNCONFIGURED)
             {
-                free(query_text);
+                MXS_FREE(query_text);
                 blr_slave_send_error_packet(slave, "Cannot change master with a running slave; "
                                             "run STOP SLAVE first",
                                             (unsigned int)1198, NULL);
@@ -959,14 +967,11 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
                 char error_string[BINLOG_ERROR_MSG_LEN + 1] = "";
                 MASTER_SERVER_CFG *current_master = NULL;
 
-                current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
+                current_master = (MASTER_SERVER_CFG *)MXS_CALLOC(1, sizeof(MASTER_SERVER_CFG));
 
                 if (!current_master)
                 {
-                    free(query_text);
-                    strcpy(error_string, "Error allocating memory for blr_master_get_config");
-                    MXS_ERROR("%s: %s", router->service->name, error_string);
-
+                    MXS_FREE(query_text);
                     blr_slave_send_error_packet(slave, error_string, (unsigned int)1201, NULL);
 
                     return 1;
@@ -976,7 +981,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
 
                 rc = blr_handle_change_master(router, brkb, error_string);
 
-                free(query_text);
+                MXS_FREE(query_text);
 
                 if (rc < 0)
                 {
@@ -1069,7 +1074,7 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
         }
         else if (strcasecmp(word, "ALL") == 0)
         {
-            free(query_text);
+            MXS_FREE(query_text);
             return blr_slave_disconnect_all(router, slave);
         }
         else if (strcasecmp(word, "SERVER") == 0)
@@ -1082,17 +1087,17 @@ blr_slave_query(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
             else
             {
                 int serverid = atoi(word);
-                free(query_text);
+                MXS_FREE(query_text);
                 return blr_slave_disconnect_server(router, slave, serverid);
             }
         }
     }
 
-    free(query_text);
+    MXS_FREE(query_text);
 
     query_text = strndup(qtext, query_len);
     MXS_ERROR("Unexpected query from '%s'@'%s': %s", slave->dcb->user, slave->dcb->remote, query_text);
-    free(query_text);
+    MXS_FREE(query_text);
     blr_slave_send_error(router, slave,
                          "You have an error in your SQL syntax; Check the syntax "
                          "the MaxScale binlog router accepts.");
@@ -1161,7 +1166,7 @@ blr_slave_send_error(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char  *msg)
     // Payload
     data[4] = 0xff;             // Error indicator
     encode_value(&data[5], 1064, 16);// Error Code
-    strncpy((char *)&data[7], "#42000", 6);
+    memcpy((char *)&data[7], "#42000", 6);
     memcpy(&data[13], msg, strlen(msg));    // Error Message
     slave->dcb->func.write(slave->dcb, pkt);
 }
@@ -1215,7 +1220,7 @@ blr_slave_send_timestamp(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     ptr += 3;
     *ptr++ = 0x04;                      // Sequence number in response
     *ptr++ = ts_len;                    // Length of result string
-    strncpy((char *)ptr, timestamp, ts_len);        // Result string
+    memcpy((char *)ptr, timestamp, ts_len);        // Result string
     ptr += ts_len;
     memcpy(ptr, timestamp_eof, sizeof(timestamp_eof));  // EOF packet to terminate result
     return slave->dcb->func.write(slave->dcb, pkt);
@@ -1252,7 +1257,7 @@ blr_slave_send_maxscale_version(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     ptr += 3;
     *ptr++ = 0x04;                                 // Sequence number in response
     *ptr++ = vers_len;                             // Length of result string
-    strncpy((char *)ptr, version, vers_len);       // Result string
+    memcpy((char *)ptr, version, vers_len);       // Result string
     /*  ptr += vers_len;  Not required unless more data is to be added */
     slave->dcb->func.write(slave->dcb, pkt);
     return blr_slave_send_eof(router, slave, 5);
@@ -1289,7 +1294,7 @@ blr_slave_send_server_id(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     ptr += 3;
     *ptr++ = 0x04;                            // Sequence number in response
     *ptr++ = id_len;                          // Length of result string
-    strncpy((char *)ptr, server_id, id_len);  // Result string
+    memcpy((char *)ptr, server_id, id_len);  // Result string
     /* ptr += id_len; Not required unless more data is to be added */
     slave->dcb->func.write(slave->dcb, pkt);
     return blr_slave_send_eof(router, slave, 5);
@@ -1330,10 +1335,10 @@ blr_slave_send_maxscale_variables(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     ptr += 3;
     *ptr++ = seqno++;                                   // Sequence number in response
     *ptr++ = strlen(name);                              // Length of result string
-    strncpy((char *)ptr, name, strlen(name));           // Result string
+    memcpy((char *)ptr, name, strlen(name));           // Result string
     ptr += strlen(name);
     *ptr++ = vers_len;                                  // Length of result string
-    strncpy((char *)ptr, version, vers_len);            // Result string
+    memcpy((char *)ptr, version, vers_len);            // Result string
     /* ptr += vers_len; Not required unless more data is to be added */
     slave->dcb->func.write(slave->dcb, pkt);
 
@@ -1380,10 +1385,10 @@ blr_slave_send_master_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     ptr += 3;
     *ptr++ = 0x08;                                     // Sequence number in response
     *ptr++ = strlen(file);                             // Length of result string
-    strncpy((char *)ptr, file, strlen(file));          // Result string
+    memcpy((char *)ptr, file, strlen(file));          // Result string
     ptr += strlen(file);
     *ptr++ = strlen(position);                         // Length of result string
-    strncpy((char *)ptr, position, strlen(position));  // Result string
+    memcpy((char *)ptr, position, strlen(position));  // Result string
     ptr += strlen(position);
     *ptr++ = 0; // Send 3 empty values
     *ptr++ = 0;
@@ -1425,7 +1430,7 @@ static int
 blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 {
     GWBUF *pkt;
-    char column[251];
+    char column[251] = "";
     uint8_t *ptr;
     int len, actual_len, col_len, seqno, ncols, i;
     char *dyn_column = NULL;
@@ -1456,37 +1461,37 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     snprintf(column, max_column_size, "%s", blrm_states[router->master_state]);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     snprintf(column, max_column_size, "%s", router->service->dbref->server->name ? router->service->dbref->server->name : "");
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     snprintf(column, max_column_size, "%s", router->user ? router->user : "");
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     sprintf(column, "%d", router->service->dbref->server->port);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     sprintf(column, "%d", 60);          // Connect retry
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     snprintf(column, max_column_size, "%s", router->binlog_name);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* if router->trx_safe report current_pos*/
@@ -1501,27 +1506,27 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* We have no relay log, we relay the binlog, so we will send the same data */
     snprintf(column, max_column_size, "%s", router->binlog_name);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     sprintf(column, "%ld", router->binlog_position);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* We have no relay log, we relay the binlog, so we will send the same data */
     snprintf(column, max_column_size, "%s", router->binlog_name);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     if (router->master_state != BLRM_SLAVE_STOPPED)
@@ -1541,7 +1546,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     }
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     if (router->master_state != BLRM_SLAVE_STOPPED)
@@ -1554,7 +1559,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     }
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     *ptr++ = 0;                 // Send 6 empty values
@@ -1568,7 +1573,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     sprintf(column, "%lu", router->m_errno);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* Last error message */
@@ -1585,7 +1590,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
             col_len = 250;
         }
         *ptr++ = col_len;                                       // Length of result string
-        strncpy((char *)ptr, dyn_column, col_len);              // Result string
+        memcpy((char *)ptr, dyn_column, col_len);              // Result string
         ptr += col_len;
     }
 
@@ -1593,25 +1598,25 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     sprintf(column, "%d", 0);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     sprintf(column, "%ld", router->binlog_position);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     sprintf(column, "%ld", router->binlog_position);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     strcpy(column, "None");
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     *ptr++ = 0;
@@ -1620,41 +1625,81 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     sprintf(column, "%d", 0);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* Master_SSL_Allowed */
-    strcpy(column, "No");
+    if (router->ssl_enabled)
+    {
+        strcpy(column, "Yes");
+    }
+    else
+    {
+        strcpy(column, "No");
+    }
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
-    *ptr++ = 0;                 // Empty SSL columns
-    *ptr++ = 0;
-    *ptr++ = 0;
-    *ptr++ = 0;
-    *ptr++ = 0;
+    /* Check whether to report SSL master connection details */
+    if (router->ssl_ca && router->ssl_cert && router->ssl_key)
+    {
+        char big_column[250 + 1] = "";
+
+        // set Master_SSL_Cert
+        strncpy(big_column, router->ssl_ca, 250);
+        col_len = strlen(big_column);
+        *ptr++ = col_len;                   // Length of result string
+        memcpy((char *)ptr, big_column, col_len);      // Result string
+        ptr += col_len;
+
+        *ptr++ = 0;                 // Empty Master_SSL_CA_Path column
+
+        // set Master_SSL_Cert
+        strncpy(big_column, router->ssl_cert, 250);
+        col_len = strlen(big_column);
+        *ptr++ = col_len;                   // Length of result string
+        memcpy((char *)ptr, big_column, col_len);      // Result string
+        ptr += col_len;
+
+        *ptr++ = 0;                 // Empty Master_SSL_Cipher column
+
+        // set Master_SSL_Key
+        strncpy(big_column, router->ssl_key, 250);
+        col_len = strlen(big_column);
+        *ptr++ = col_len;                   // Length of result string
+        memcpy((char *)ptr, big_column, col_len);      // Result string
+        ptr += col_len;
+    }
+    else
+    {
+        *ptr++ = 0;                 // Empty SSL columns
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 0;
+        *ptr++ = 0;
+    }
 
     /* Seconds_Behind_Master */
     sprintf(column, "%d", 0);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* Master_SSL_Verify_Server_Cert */
     strcpy(column, "No");
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* Last_IO_Error */
     sprintf(column, "%d", 0);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     *ptr++ = 0;
@@ -1663,7 +1708,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     sprintf(column, "%d", 0);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     *ptr++ = 0;
@@ -1673,7 +1718,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     sprintf(column, "%d", router->masterid);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* Master_server_UUID */
@@ -1681,7 +1726,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
              router->master_uuid : router->uuid);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* Master_info_file */
@@ -1695,7 +1740,7 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     sprintf(column, "%d", 0);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     *ptr++ = 0xfb;              // NULL value
@@ -1722,14 +1767,14 @@ blr_slave_send_slave_status(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
     }
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     /* Master_Retry_Count */
     sprintf(column, "%d", 1000);
     col_len = strlen(column);
     *ptr++ = col_len;                   // Length of result string
-    strncpy((char *)ptr, column, col_len);      // Result string
+    memcpy((char *)ptr, column, col_len);      // Result string
     ptr += col_len;
 
     *ptr++ = 0;         // Send 5 empty values
@@ -1805,19 +1850,19 @@ blr_slave_send_slave_hosts(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
             ptr += 3;
             *ptr++ = seqno++;                       // Sequence number in response
             *ptr++ = strlen(server_id);                 // Length of result string
-            strncpy((char *)ptr, server_id, strlen(server_id));     // Result string
+            memcpy((char *)ptr, server_id, strlen(server_id));     // Result string
             ptr += strlen(server_id);
             *ptr++ = strlen(host);                  // Length of result string
-            strncpy((char *)ptr, host, strlen(host));       // Result string
+            memcpy((char *)ptr, host, strlen(host));       // Result string
             ptr += strlen(host);
             *ptr++ = strlen(port);                  // Length of result string
-            strncpy((char *)ptr, port, strlen(port));       // Result string
+            memcpy((char *)ptr, port, strlen(port));       // Result string
             ptr += strlen(port);
             *ptr++ = strlen(master_id);                 // Length of result string
-            strncpy((char *)ptr, master_id, strlen(master_id));     // Result string
+            memcpy((char *)ptr, master_id, strlen(master_id));     // Result string
             ptr += strlen(master_id);
             *ptr++ = strlen(slave_uuid);                    // Length of result string
-            strncpy((char *)ptr, slave_uuid, strlen(slave_uuid));       // Result string
+            memcpy((char *)ptr, slave_uuid, strlen(slave_uuid));       // Result string
             ptr += strlen(slave_uuid);
             slave->dcb->func.write(slave->dcb, pkt);
         }
@@ -1939,7 +1984,7 @@ blr_slave_binlog_dump(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue
     ptr += 4;
     ptr += 2;
     ptr += 4;
-    strncpy(slave->binlogfile, (char *)ptr, binlognamelen);
+    memcpy(slave->binlogfile, (char *)ptr, binlognamelen);
     slave->binlogfile[binlognamelen] = 0;
 
     if (router->trx_safe)
@@ -3002,11 +3047,11 @@ blr_slave_send_disconnected_server(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave,
     *ptr++ = seqno++;                   // Sequence number in response
 
     *ptr++ = id_len;                    // Length of result string
-    strncpy((char *)ptr, serverid, id_len);         // Result string
+    memcpy((char *)ptr, serverid, id_len);         // Result string
     ptr += id_len;
 
     *ptr++ = strlen(state);                 // Length of result string
-    strncpy((char *)ptr, state, strlen(state));     // Result string
+    memcpy((char *)ptr, state, strlen(state));     // Result string
     /* ptr += strlen(state); Not required unless more data is to be added */
 
     slave->dcb->func.write(slave->dcb, pkt);
@@ -3147,10 +3192,10 @@ blr_slave_disconnect_all(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
             ptr += 3;
             *ptr++ = seqno++;                                       // Sequence number in response
             *ptr++ = strlen(server_id);                             // Length of result string
-            strncpy((char *)ptr, server_id, strlen(server_id));     // Result string
+            memcpy((char *)ptr, server_id, strlen(server_id));     // Result string
             ptr += strlen(server_id);
             *ptr++ = strlen(state);                                 // Length of result string
-            strncpy((char *)ptr, state, strlen(state));             // Result string
+            memcpy((char *)ptr, state, strlen(state));             // Result string
             ptr += strlen(state);
 
             slave->dcb->func.write(slave->dcb, pkt);
@@ -3297,7 +3342,7 @@ blr_stop_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     if (strcmp(router->binlog_name, router->prevbinlog) != 0)
     {
-        strncpy(router->prevbinlog, router->binlog_name, BINLOG_FNAMELEN);
+        strcpy(router->prevbinlog, router->binlog_name); // Same size
     }
 
     if (router->client)
@@ -3456,6 +3501,27 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         }
     }
 
+    /** Initialise SSL: exit on error */
+    if (router->ssl_enabled && router->service->dbref->server->server_ssl)
+    {
+        if (listener_init_SSL(router->service->dbref->server->server_ssl) != 0)
+        {
+            MXS_ERROR("%s: Unable to initialise SSL with backend server", router->service->name);
+
+            blr_slave_send_error_packet(slave,
+                                        "Unable to initialise SSL with backend server",
+                                        (unsigned int)1210, "HY000");
+            spinlock_acquire(&router->lock);
+
+            router->master_state = BLRM_SLAVE_STOPPED;
+
+            spinlock_release(&router->lock);
+
+            return 1;
+        }
+    }
+
+     /** Start replication from master */
     blr_start_master(router);
 
     MXS_NOTICE("%s: START SLAVE executed by %s@%s. Trying connection to master %s:%d, "
@@ -3473,20 +3539,23 @@ blr_start_slave(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
 
     if (loaded == 0)
     {
-        blr_save_dbusers(router);
+        for (SERV_LISTENER *port = router->service->ports; port; port = port->next)
+        {
+            char path[PATH_MAX];
+            sprintf(path, "%s/%s/%s/", router->binlogdir, BLR_DBUSERS_DIR, port->name);
+
+            if (mxs_mkdir_all(path, 0775))
+            {
+                strcat(path, BLR_DBUSERS_FILE);
+                dbusers_save(port->users, path);
+            }
+        }
     }
     else
     {
-        char path[PATH_MAX + 1] = "";
-        /* File path for router cached authentication data */
-        strcpy(path, router->binlogdir);
-        strncat(path, "/cache", PATH_MAX);
-        strncat(path, "/dbusers", PATH_MAX);
-
         MXS_NOTICE("Service %s: user credentials could not be refreshed. "
-                    "Will use existing cached credentials (%s) if possible.",
-                    router->service->name,
-                    path);
+                   "Will use existing cached credentials (%s/%s) if possible.",
+                   router->service->name, router->binlogdir, BLR_DBUSERS_DIR);
     }
 
     return blr_slave_send_ok(router, slave);
@@ -3545,7 +3614,7 @@ blr_slave_send_error_packet(ROUTER_SLAVE *slave, char *msg, unsigned int err_num
     encode_value(&data[5], mysql_errno, 16);// Error Code
 
     data[7] = '#';              // Status message first char
-    strncpy((char *)&data[8], mysql_state, 5); // Status message
+    memcpy((char *)&data[8], mysql_state, 5); // Status message
 
     memcpy(&data[13], msg, strlen(msg));    // Error Message
 
@@ -3575,13 +3644,18 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
     if ((cmd_ptr = strcasestr(command, "TO")) == NULL)
     {
-        strncpy(error, "statement doesn't have the CHANGE MASTER TO syntax", BINLOG_ERROR_MSG_LEN);
+        static const char MESSAGE[] = "statement doesn't have the CHANGE MASTER TO syntax";
+        ss_dassert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
+        strcpy(error, MESSAGE);
         return -1;
     }
 
-    if ((cmd_string = strdup(cmd_ptr + 2)) == NULL)
+    if ((cmd_string = MXS_STRDUP(cmd_ptr + 2)) == NULL)
     {
-        strncpy(error, "error allocating memory for statement parsing", BINLOG_ERROR_MSG_LEN);
+        static const char MESSAGE[] ="error allocating memory for statement parsing";
+        ss_dassert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
+        strcpy(error, MESSAGE);
+
         MXS_ERROR("%s: %s", router->service->name, error);
 
         return -1;
@@ -3592,7 +3666,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
     parse_ret = blr_parse_change_master_command(cmd_string, error, &change_master);
 
-    free(cmd_string);
+    MXS_FREE(cmd_string);
 
     if (parse_ret)
     {
@@ -3604,11 +3678,13 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
     }
 
     /* allocate struct for current replication parameters */
-    current_master = (MASTER_SERVER_CFG *)calloc(1, sizeof(MASTER_SERVER_CFG));
+    current_master = (MASTER_SERVER_CFG *)MXS_CALLOC(1, sizeof(MASTER_SERVER_CFG));
 
     if (!current_master)
     {
-        strncpy(error, "error allocating memory for blr_master_get_config", BINLOG_ERROR_MSG_LEN);
+        static const char MESSAGE[] = "error allocating memory for blr_master_get_config";
+        ss_dassert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
+        strcpy(error, MESSAGE);
         MXS_ERROR("%s: %s", router->service->name, error);
 
         blr_master_free_parsed_options(&change_master);
@@ -3616,10 +3692,10 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
         return -1;
     }
 
-    /* save data */
-    blr_master_get_config(router, current_master);
-
     spinlock_acquire(&router->lock);
+
+    /* save current config option data */
+    blr_master_get_config(router, current_master);
 
     /*
      * Change values in the router->service->dbref->server structure
@@ -3649,43 +3725,21 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
     /* Change the master port */
     blr_set_master_port(router, change_master.port);
 
-    /**
-     * Change the binlog filename to request from master
-     * New binlog file could be the next one or current one
-     */
-    master_logfile = blr_set_master_logfile(router, change_master.binlog_file, error);
+    /* Handle SSL options */
+    int ssl_error;
+    ssl_error = blr_set_master_ssl(router, change_master, error);
 
-    if (master_logfile == NULL && router->master_state == BLRM_UNCONFIGURED)
+    if (ssl_error != -1 && (!change_master.ssl_cert || !change_master.ssl_ca || !change_master.ssl_key))
     {
-        /* if there is another error message keep it */
-        if (!strlen(error))
+        if (change_master.ssl_enabled && atoi(change_master.ssl_enabled))
         {
-            strcpy(error, "Router is not configured for master connection, MASTER_LOG_FILE is required");
+            snprintf(error, BINLOG_ERROR_MSG_LEN, "MASTER_SSL=1 but some required options are missing: check MASTER_SSL_CERT, MASTER_SSL_KEY, MASTER_SSL_CA");
+            ssl_error = -1;
         }
-
-        MXS_ERROR("%s: %s", router->service->name, error);
-
-        /* restore previous master_host and master_port */
-        blr_master_restore_config(router, current_master);
-
-        blr_master_free_parsed_options(&change_master);
-
-        spinlock_release(&router->lock);
-
-        return -1;
     }
 
-    /**
-     * If MASTER_LOG_FILE is not set
-     * and master connection is configured
-     * set master_logfile to current binlog_name
-     */
-    if (master_logfile == NULL)
+    if (ssl_error == -1)
     {
-        /* if errors returned */
-        if (strlen(error))
-        {
-
             MXS_ERROR("%s: %s", router->service->name, error);
 
             /* restore previous master_host and master_port */
@@ -3696,14 +3750,60 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
             spinlock_release(&router->lock);
 
             return -1;
+    }
+
+    /**
+     * Change the binlog filename as from MASTER_LOG_FILE
+     * New binlog file could be the next one or current one
+     */
+    master_logfile = blr_set_master_logfile(router, change_master.binlog_file, error);
+
+    /**
+      * If MASTER_LOG_FILE is not set
+      * and master connection is configured
+      * set master_logfile to current binlog_name
+      * Otherwise return an error.
+      */
+    if (master_logfile == NULL)
+    {
+        int change_binlog_error = 0;
+        /* Replication is not configured yet */
+        if (router->master_state == BLRM_UNCONFIGURED)
+        {
+            /* if there is another error message keep it */
+            if (!strlen(error))
+            {
+                snprintf(error, BINLOG_ERROR_MSG_LEN,
+                         "Router is not configured for master connection, MASTER_LOG_FILE is required");
+            }
+            change_binlog_error = 1;
         }
         else
         {
-            /* If not set by CHANGE MASTER, use current binlog if configured */
-            if (router->master_state != BLRM_UNCONFIGURED)
+            /* if errors returned set error */
+            if (strlen(error))
             {
-                master_logfile = strdup(router->binlog_name);
+                change_binlog_error = 1;
             }
+            else
+            {
+                /* Use current binlog file */
+                master_logfile = MXS_STRDUP_A(router->binlog_name);
+            }
+        }
+
+        if (change_binlog_error)
+        {
+            MXS_ERROR("%s: %s", router->service->name, error);
+
+            /* restore previous master_host and master_port */
+            blr_master_restore_config(router, current_master);
+
+            blr_master_free_parsed_options(&change_master);
+
+            spinlock_release(&router->lock);
+
+            return -1;
         }
     }
 
@@ -3755,7 +3855,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
             blr_master_free_parsed_options(&change_master);
 
-            free(master_logfile);
+            MXS_FREE(master_logfile);
 
             spinlock_release(&router->lock);
 
@@ -3765,8 +3865,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
         else
         {
             /* set new filename at pos 4 */
-            memset(router->binlog_name, '\0', sizeof(router->binlog_name));
-            strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
+            strcpy(router->binlog_name, master_logfile);
 
             router->current_pos = 4;
             router->binlog_position = 4;
@@ -3828,7 +3927,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
             blr_master_free_parsed_options(&change_master);
 
-            free(master_logfile);
+            MXS_FREE(master_logfile);
 
             spinlock_release(&router->lock);
 
@@ -3845,8 +3944,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
                 router->current_pos = 4;
                 router->binlog_position = 4;
                 router->current_safe_event = 4;
-                memset(router->binlog_name, '\0', sizeof(router->binlog_name));
-                strncpy(router->binlog_name, master_logfile, BINLOG_FNAMELEN);
+                strcpy(router->binlog_name, master_logfile);
 
                 MXS_INFO("%s: New MASTER_LOG_FILE is [%s]",
                          router->service->name,
@@ -3878,7 +3976,7 @@ int blr_handle_change_master(ROUTER_INSTANCE* router, char *command, char *error
 
     blr_master_free_parsed_options(&change_master);
 
-    free(master_logfile);
+    MXS_FREE(master_logfile);
 
     if (router->master_state == BLRM_UNCONFIGURED)
     {
@@ -4005,9 +4103,8 @@ blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error)
 
         if (!end)
         {
-            snprintf(error, BINLOG_ERROR_MSG_LEN, "%s: selected binlog [%s] is not in the format"
+            snprintf(error, BINLOG_ERROR_MSG_LEN, "Selected binlog [%s] is not in the format"
                      " '%s.yyyyyy'",
-                     router->service->name,
                      file_ptr,
                      router->fileroot);
 
@@ -4025,63 +4122,64 @@ blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error)
             {
                 if (router->fileroot)
                 {
-                    free(router->fileroot);
+                    MXS_FREE(router->fileroot);
                 }
                 router->fileroot = strndup(file_ptr, stem_end - file_ptr);
             }
-
-            /* return new filename */
-            new_binlog_file = strdup(file_ptr);
-
-            return new_binlog_file;
-        }
-
-        /* get next binlog file name, assuming filestem is the same */
-        next_binlog_seqname = blr_file_get_next_binlogname(router);
-
-        if (!next_binlog_seqname)
-        {
-
-            snprintf(error, BINLOG_ERROR_MSG_LEN,
-                     "%s: cannot get the next MASTER_LOG_FILE name from current binlog [%s]",
-                     router->service->name,
-                     router->binlog_name);
-
-            return NULL;
-        }
-
-        /* Compare binlog file name with current one */
-        if (strcmp(router->binlog_name, file_ptr) == 0)
-        {
-            /* No binlog name change, eventually new position will be checked later */
         }
         else
         {
-            /*
-             * This is a new binlog file request
-             * If file is not the next one return an error
-             */
-            if (atoi(end) != next_binlog_seqname)
+            /* get next binlog file name, assuming filestem is the same */
+            next_binlog_seqname = blr_file_get_next_binlogname(router);
+
+            if (!next_binlog_seqname)
             {
                 snprintf(error, BINLOG_ERROR_MSG_LEN,
-                         "Can not set MASTER_LOG_FILE to %s: Permitted binlog file names are "
-                         "%s or %s.%06li. Current master_log_file=%s, master_log_pos=%lu",
-                         file_ptr,
-                         router->binlog_name,
-                         router->fileroot,
-                         next_binlog_seqname,
-                         router->binlog_name,
-                         router->current_pos);
+                         "Cannot get the next MASTER_LOG_FILE name from current binlog [%s]",
+                         router->binlog_name);
 
                 return NULL;
             }
 
-            /* Binlog file name succesfully changed */
+            /* Compare binlog file name with current one */
+            if (strcmp(router->binlog_name, file_ptr) == 0)
+            {
+                /* No binlog name change, eventually new position will be checked later */
+            }
+            else
+            {
+                /*
+                 * This is a new binlog file request
+                 * If file is not the next one return an error
+                 */
+                if (atoi(end) != next_binlog_seqname)
+                {
+                    snprintf(error, BINLOG_ERROR_MSG_LEN,
+                             "Can not set MASTER_LOG_FILE to %s: Permitted binlog file names are "
+                             "%s or %s.%06li. Current master_log_file=%s, master_log_pos=%lu",
+                             file_ptr,
+                             router->binlog_name,
+                             router->fileroot,
+                             next_binlog_seqname,
+                             router->binlog_name,
+                             router->current_pos);
+
+                    return NULL;
+                }
+
+                /* Binlog file name succesfully changed */
+            }
         }
 
-        /* allocate new filename */
-        new_binlog_file = strdup(file_ptr);
-
+        if (strlen(file_ptr) <= BINLOG_FNAMELEN)
+        {
+            new_binlog_file = MXS_STRDUP(file_ptr);
+        }
+        else
+        {
+            snprintf(error, BINLOG_ERROR_MSG_LEN,
+                     "Can not set MASTER_LOG_FILE to %s: Maximum length is %d.", file_ptr, BINLOG_FNAMELEN);
+        }
     }
 
     return new_binlog_file;
@@ -4096,14 +4194,38 @@ blr_set_master_logfile(ROUTER_INSTANCE *router, char *filename, char *error)
 static void
 blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master)
 {
+    SSL_LISTENER *server_ssl;
+
     curr_master->port = router->service->dbref->server->port;
-    curr_master->host = strdup(router->service->dbref->server->name);
+    curr_master->host = MXS_STRDUP_A(router->service->dbref->server->name);
     curr_master->pos = router->current_pos;
     curr_master->safe_pos = router->binlog_position;
-    strncpy(curr_master->logfile, router->binlog_name, BINLOG_FNAMELEN);
-    curr_master->user = strdup(router->user);
-    curr_master->password = strdup(router->password);
-    curr_master->filestem = strdup(router->fileroot);
+    strcpy(curr_master->logfile, router->binlog_name); // Same size
+    curr_master->user = MXS_STRDUP_A(router->user);
+    curr_master->password = MXS_STRDUP_A(router->password);
+    curr_master->filestem = MXS_STRDUP_A(router->fileroot);
+    /* SSL options */
+    if (router->service->dbref->server->server_ssl)
+    {
+        server_ssl = router->service->dbref->server->server_ssl;
+        curr_master->ssl_enabled = router->ssl_enabled;
+        if (router->ssl_version)
+        {
+            curr_master->ssl_version = MXS_STRDUP_A(router->ssl_version);
+        }
+        if (server_ssl->ssl_key)
+        {
+            curr_master->ssl_key = MXS_STRDUP_A(server_ssl->ssl_key);
+        }
+        if (server_ssl->ssl_cert)
+        {
+            curr_master->ssl_cert = MXS_STRDUP_A(server_ssl->ssl_cert);
+        }
+        if (server_ssl->ssl_ca_cert)
+        {
+            curr_master->ssl_ca = MXS_STRDUP_A(server_ssl->ssl_ca_cert);
+        }
+    }
 }
 
 /**
@@ -4114,12 +4236,17 @@ blr_master_get_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *curr_master)
 static void
 blr_master_free_config(MASTER_SERVER_CFG *master_cfg)
 {
-    free(master_cfg->host);
-    free(master_cfg->user);
-    free(master_cfg->password);
-    free(master_cfg->filestem);
+    MXS_FREE(master_cfg->host);
+    MXS_FREE(master_cfg->user);
+    MXS_FREE(master_cfg->password);
+    MXS_FREE(master_cfg->filestem);
+    /* SSL options */
+    MXS_FREE(master_cfg->ssl_key);
+    MXS_FREE(master_cfg->ssl_cert);
+    MXS_FREE(master_cfg->ssl_ca);
+    MXS_FREE(master_cfg->ssl_version);
 
-    free(master_cfg);
+    MXS_FREE(master_cfg);
 }
 
 /**
@@ -4133,6 +4260,13 @@ blr_master_restore_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_maste
 {
     server_update_address(router->service->dbref->server, prev_master->host);
     server_update_port(router->service->dbref->server, prev_master->port);
+
+    router->ssl_enabled = prev_master->ssl_enabled;
+    if (prev_master->ssl_version)
+    {
+        MXS_FREE(router->ssl_version);
+        router->ssl_version  = MXS_STRDUP_A(prev_master->ssl_version);
+    }
 
     blr_master_free_config(prev_master);
 }
@@ -4171,18 +4305,18 @@ blr_master_apply_config(ROUTER_INSTANCE *router, MASTER_SERVER_CFG *prev_master)
     strcpy(router->binlog_name, prev_master->logfile);
     if (router->user)
     {
-        free(router->user);
-        router->user = strdup(prev_master->user);
+        MXS_FREE(router->user);
+        router->user = MXS_STRDUP_A(prev_master->user);
     }
     if (router->password)
     {
-        free(router->password);
-        router->password = strdup(prev_master->password);
+        MXS_FREE(router->password);
+        router->password = MXS_STRDUP_A(prev_master->password);
     }
     if (router->fileroot)
     {
-        free(router->fileroot);
-        router->fileroot = strdup(prev_master->filestem);
+        MXS_FREE(router->fileroot);
+        router->fileroot = MXS_STRDUP_A(prev_master->filestem);
     }
 }
 
@@ -4218,9 +4352,9 @@ blr_set_master_user(ROUTER_INSTANCE *router, char *user)
 
         if (router->user)
         {
-            free(router->user);
+            MXS_FREE(router->user);
         }
-        router->user = strdup(ptr);
+        router->user = MXS_STRDUP_A(ptr);
 
         MXS_INFO("%s: New MASTER_USER is [%s]",
                  router->service->name,
@@ -4264,9 +4398,9 @@ blr_set_master_password(ROUTER_INSTANCE *router, char *password)
 
         if (router->password)
         {
-            free(router->password);
+            MXS_FREE(router->password);
         }
-        router->password = strdup(ptr);
+        router->password = MXS_STRDUP_A(ptr);
 
         /* don't log new password */
 
@@ -4292,7 +4426,7 @@ blr_parse_change_master_command(char *input, char *error_string, CHANGE_MASTER_O
 
     if ((word = strtok_r(input, sep, &brkb)) == NULL)
     {
-        sprintf(error_string, "Unable to parse query [%s]", input);
+        snprintf(error_string, BINLOG_ERROR_MSG_LEN, "Unable to parse query [%s]", input);
         return 1;
     }
     else
@@ -4335,14 +4469,14 @@ blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *
 
     if ((word = strtok_r(input, sep, &brkb)) == NULL)
     {
-        sprintf(error, "error parsing %s", brkb);
+        snprintf(error, BINLOG_ERROR_MSG_LEN, "error parsing %s", brkb);
         return 1;
     }
     else
     {
         if ((option_field = blr_validate_change_master_option(word, config)) == NULL)
         {
-            sprintf(error, "option '%s' is not supported", word);
+            snprintf(error, BINLOG_ERROR_MSG_LEN, "option '%s' is not supported", word);
 
             return 1;
         }
@@ -4350,7 +4484,7 @@ blr_handle_change_master_token(char *input, char *error, CHANGE_MASTER_OPTIONS *
         /* value must be freed after usage */
         if ((value = blr_get_parsed_command_value(brkb)) == NULL)
         {
-            sprintf(error, "missing value for '%s'", word);
+            snprintf(error, BINLOG_ERROR_MSG_LEN, "missing value for '%s'", word);
             return 1;
         }
         else
@@ -4379,7 +4513,7 @@ blr_get_parsed_command_value(char *input)
 
     if (strlen(input))
     {
-        value = strdup(input);
+        value = MXS_STRDUP_A(input);
     }
     else
     {
@@ -4397,9 +4531,9 @@ blr_get_parsed_command_value(char *input)
             *ptr-- = 0;
         }
 
-        ret = strdup(strstr(value, word));
+        ret = MXS_STRDUP_A(strstr(value, word));
 
-        free(value);
+        MXS_FREE(value);
     }
 
     return ret;
@@ -4439,6 +4573,26 @@ static char
     {
         return &config->password;
     }
+    else if (strcasecmp(option, "master_ssl") == 0)
+    {
+        return &config->ssl_enabled;
+    }
+    else if (strcasecmp(option, "master_ssl_key") == 0)
+    {
+        return &config->ssl_key;
+    }
+    else if (strcasecmp(option, "master_ssl_cert") == 0)
+    {
+        return &config->ssl_cert;
+    }
+    else if (strcasecmp(option, "master_ssl_ca") == 0)
+    {
+        return &config->ssl_ca;
+    }
+    else if (strcasecmp(option, "master_ssl_version") == 0 || strcasecmp(option, "master_tls_version") == 0)
+    {
+        return &config->ssl_version;
+    }
     else
     {
         return NULL;
@@ -4453,23 +4607,39 @@ static char
 static void
 blr_master_free_parsed_options(CHANGE_MASTER_OPTIONS *options)
 {
-    free(options->host);
+    MXS_FREE(options->host);
     options->host = NULL;
 
-    free(options->port);
+    MXS_FREE(options->port);
     options->port = NULL;
 
-    free(options->user);
+    MXS_FREE(options->user);
     options->user = NULL;
 
-    free(options->password);
+    MXS_FREE(options->password);
     options->password = NULL;
 
-    free(options->binlog_file);
+    MXS_FREE(options->binlog_file);
     options->binlog_file = NULL;
 
-    free(options->binlog_pos);
+    MXS_FREE(options->binlog_pos);
     options->binlog_pos = NULL;
+
+    /* SSL options */
+    MXS_FREE(options->ssl_enabled);
+    options->ssl_enabled = NULL;
+
+    MXS_FREE(options->ssl_key);
+    options->ssl_key = NULL;
+
+    MXS_FREE(options->ssl_ca);
+    options->ssl_ca = NULL;
+
+    MXS_FREE(options->ssl_cert);
+    options->ssl_cert = NULL;
+
+    MXS_FREE(options->ssl_version);
+    options->ssl_version = NULL;
 }
 
 /**
@@ -4510,7 +4680,7 @@ blr_slave_send_var_value(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, char *var
     ptr += 3;
     *ptr++ = 0x04;                  // Sequence number in response
     *ptr++ = vers_len;              // Length of result string
-    strncpy((char *)ptr, value, vers_len);      // Result string
+    memcpy((char *)ptr, value, vers_len);      // Result string
     /* ptr += vers_len; Not required unless more data is added */
     slave->dcb->func.write(slave->dcb, pkt);
 
@@ -4537,7 +4707,7 @@ blr_slave_send_variable(ROUTER_INSTANCE *router,
     GWBUF *pkt;
     uint8_t *ptr;
     int len, vers_len, seqno = 2;
-    char *p = strdup(variable);
+    char *p = MXS_STRDUP_A(variable);
     int var_len;
     char *old_ptr = p;
 
@@ -4582,14 +4752,14 @@ blr_slave_send_variable(ROUTER_INSTANCE *router,
     ptr += 3;
     *ptr++ = seqno++;               // Sequence number in response
     *ptr++ = var_len;               // Length of result string
-    strncpy((char *)ptr, p, var_len);       // Result string with var name
+    memcpy((char *)ptr, p, var_len);       // Result string with var name
     ptr += var_len;
     *ptr++ = vers_len;              // Length of result string
-    strncpy((char *)ptr, value, vers_len);      // Result string with var value
+    memcpy((char *)ptr, value, vers_len);      // Result string with var value
     /* ptr += vers_len; Not required unless more data is added */
     slave->dcb->func.write(slave->dcb, pkt);
 
-    free(old_ptr);
+    MXS_FREE(old_ptr);
 
     return blr_slave_send_eof(router, slave, seqno++);
 }
@@ -4837,9 +5007,9 @@ blr_slave_send_warning_message(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave, cha
     /* set the new warning in this slave connection */
     if (slave->warning_msg)
     {
-        free(slave->warning_msg);
+        MXS_FREE(slave->warning_msg);
     }
-    slave->warning_msg = strdup(message);
+    slave->warning_msg = MXS_STRDUP_A(message);
 
     return slave->dcb->func.write(slave->dcb, pkt);
 }
@@ -4875,8 +5045,9 @@ blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         msg_ptr = strchr(slave->warning_msg, ':');
         if (msg_ptr)
         {
-            strncpy(err_code, slave->warning_msg,
-                    (msg_ptr - slave->warning_msg > 16) ? 16 : (msg_ptr - slave->warning_msg));
+            size_t len = (msg_ptr - slave->warning_msg > 16) ? 16 : (msg_ptr - slave->warning_msg);
+            memcpy(err_code, slave->warning_msg, len);
+            err_code[len] = 0;
             code_len = strlen(err_code);
 
             msg_ptr++;
@@ -4912,20 +5083,20 @@ blr_slave_show_warnings(ROUTER_INSTANCE* router, ROUTER_SLAVE* slave)
         *ptr++ = 0x06;                  // Sequence number in response
 
         *ptr++ = level_len;         // Length of result string
-        strncpy((char *)ptr, level, level_len); // Result string
+        memcpy((char *)ptr, level, level_len); // Result string
         ptr += level_len;
 
         *ptr++ = code_len;      // Length of result string
         if (code_len)
         {
-            strncpy((char *)ptr, err_code, code_len); // Result string
+            memcpy((char *)ptr, err_code, code_len); // Result string
             ptr += code_len;
         }
 
         *ptr++ = msg_len;       // Length of result string
         if (msg_len)
         {
-            strncpy((char *)ptr, msg_ptr, msg_len); // Result string
+            memcpy((char *)ptr, msg_ptr, msg_len); // Result string
             /* ptr += msg_len; Not required unless more data is added */
         }
 
@@ -5001,7 +5172,7 @@ blr_slave_send_status_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, cha
     GWBUF *pkt;
     uint8_t *ptr;
     int len, vers_len, seqno = 2;
-    char *p = strdup(variable);
+    char *p = MXS_STRDUP_A(variable);
     int var_len;
     char *old_ptr = p;
 
@@ -5044,14 +5215,14 @@ blr_slave_send_status_variable(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, cha
     ptr += 3;
     *ptr++ = seqno++;               // Sequence number in response
     *ptr++ = var_len;               // Length of result string
-    strncpy((char *)ptr, p, var_len);       // Result string with var name
+    memcpy((char *)ptr, p, var_len);       // Result string with var name
     ptr += var_len;
     *ptr++ = vers_len;              // Length of result string
-    strncpy((char *)ptr, value, vers_len);      // Result string with var value
+    memcpy((char *)ptr, value, vers_len);      // Result string with var value
     /* ptr += vers_len; Not required unless more data is added */
     slave->dcb->func.write(slave->dcb, pkt);
 
-    free(old_ptr);
+    MXS_FREE(old_ptr);
 
     return blr_slave_send_eof(router, slave, seqno++);
 }
@@ -5198,6 +5369,10 @@ blr_send_slave_heartbeat(void *inst)
 
 /**
  * Create and send an hearbeat packet to be sent to a registered slave server
+ *
+ * @param router The current route rinstance
+ * @param slave  The current slave connection
+ * @return       Number of bytes sent
  */
 static int
 blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
@@ -5274,4 +5449,163 @@ blr_slave_send_heartbeat(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave)
 
     /* Write the packet */
     return slave->dcb->func.write(slave->dcb, resp);
+}
+
+/**
+ * Skip the ' char and return pointer to new start position.
+ * The last ' char is removed.
+ *
+ * @param input The input string
+ * @return      Position after first '
+ */
+char *
+blr_escape_config_string(char *input)
+{
+    char *ptr;
+    char *end;
+
+    ptr = strchr(input, '\'');
+    if (!ptr)
+    {
+        return input;
+    }
+    else
+    {
+        if (ptr+1)
+        {
+            ptr++;
+        }
+        else
+        {
+            *ptr = '\0';
+        }
+    }
+
+    end = strchr(ptr, '\'');
+    if (end)
+    {
+        *end = '\0';
+    }
+
+    return ptr;
+}
+
+/**
+ *  Change the replication SSL options
+ *
+ * @param router         Current router instance
+ * @param config         The current config
+ * @param error_message  Pre-allocated string for error message, BINLOG_ERROR_MSG_LEN + 1 bytes
+ * @return          1 for applied change, 0 no changes and -1 for errors
+ */
+static int
+blr_set_master_ssl(ROUTER_INSTANCE *router, CHANGE_MASTER_OPTIONS config, char *error_message)
+{
+    SSL_LISTENER *server_ssl = NULL;
+    int updated = 0;
+
+    if (config.ssl_enabled)
+    {
+        router->ssl_enabled = atoi(config.ssl_enabled);
+        updated++;
+    }
+
+    if (router->ssl_enabled == false)
+    {
+        /* Free SSL struct */
+        blr_free_ssl_data(router);
+    }
+    else
+    {
+        /* Check for existing SSL struct */
+        if (router->service->dbref->server->server_ssl)
+        {
+            server_ssl = router->service->dbref->server->server_ssl;
+            server_ssl->ssl_init_done = false;
+        }
+        else
+        {
+            /* Allocate SSL struct for backend connection */
+            if ((server_ssl = MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
+            {
+                router->ssl_enabled = false;
+
+                /* Report back the error */
+                snprintf(error_message, BINLOG_ERROR_MSG_LEN,
+                         "CHANGE MASTER TO: Error allocating memory for SSL struct"
+                         " in blr_set_master_ssl");
+
+                return -1;
+            }
+
+            /* Set some SSL defaults */
+            server_ssl->ssl_init_done = false;
+            server_ssl->ssl_method_type = SERVICE_SSL_TLS_MAX;
+            server_ssl->ssl_cert_verify_depth = 9;
+
+            /* Set the pointer */
+            router->service->dbref->server->server_ssl = server_ssl;
+        }
+    }
+
+    /* Update options in router fields and in server_ssl struct, if present */
+    if (config.ssl_key)
+    {
+        if (server_ssl)
+        {
+            MXS_FREE(server_ssl->ssl_key);
+            server_ssl->ssl_key = MXS_STRDUP_A(blr_escape_config_string(config.ssl_key));
+        }
+        MXS_FREE(router->ssl_key);
+        router->ssl_key = MXS_STRDUP_A(blr_escape_config_string(config.ssl_key));
+        updated++;
+    }
+    if (config.ssl_ca)
+    {
+        if (server_ssl)
+        {
+            MXS_FREE(server_ssl->ssl_ca_cert);
+            server_ssl->ssl_ca_cert = MXS_STRDUP_A(blr_escape_config_string(config.ssl_ca));
+        }
+        MXS_FREE(router->ssl_ca);
+        router->ssl_ca = MXS_STRDUP_A(blr_escape_config_string(config.ssl_ca));
+        updated++;
+    }
+    if (config.ssl_cert)
+    {
+        if (server_ssl)
+        {
+            MXS_FREE(server_ssl->ssl_cert);
+            server_ssl->ssl_cert = MXS_STRDUP_A(blr_escape_config_string(config.ssl_cert));
+        }
+        MXS_FREE(router->ssl_cert);
+        router->ssl_cert = MXS_STRDUP_A(blr_escape_config_string(config.ssl_cert));
+        updated++;
+    }
+
+    if (config.ssl_version && server_ssl)
+    {
+        char *ssl_version = blr_escape_config_string(config.ssl_version);
+
+        if (ssl_version && strlen(ssl_version))
+        {
+            if (listener_set_ssl_version(server_ssl, ssl_version) != 0)
+            {
+                /* Report back the error */
+                snprintf(error_message, BINLOG_ERROR_MSG_LEN,
+                         "Unknown parameter value for 'ssl_version': %s",
+                         ssl_version);
+                return -1;
+            }
+            /* Set provided ssl_version in router SSL cfg anyway */
+            MXS_FREE(router->ssl_version);
+            router->ssl_version = MXS_STRDUP_A(ssl_version);
+            updated++;
+        }
+    }
+
+    if (updated)
+        return 1;
+    else
+        return 0;
 }

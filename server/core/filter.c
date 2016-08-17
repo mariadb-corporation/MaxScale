@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -32,6 +32,7 @@
 #include <spinlock.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <maxscale/alloc.h>
 
 static SPINLOCK filter_spin = SPINLOCK_INIT;    /**< Protects the list of all filters */
 static FILTER_DEF *allFilters = NULL;           /**< The list of all filters */
@@ -50,14 +51,20 @@ static void filter_free_parameters(FILTER_DEF *filter);
 FILTER_DEF *
 filter_alloc(char *name, char *module)
 {
-    FILTER_DEF *filter;
+    name = MXS_STRDUP(name);
+    module = MXS_STRDUP(module);
 
-    if ((filter = (FILTER_DEF *)malloc(sizeof(FILTER_DEF))) == NULL)
+    FILTER_DEF *filter = (FILTER_DEF *)MXS_MALLOC(sizeof(FILTER_DEF));
+
+    if (!name || !module || !filter)
     {
+        MXS_FREE(name);
+        MXS_FREE(module);
+        MXS_FREE(filter);
         return NULL;
     }
-    filter->name = strdup(name);
-    filter->module = strdup(module);
+    filter->name = name;
+    filter->module = module;
     filter->filter = NULL;
     filter->options = NULL;
     filter->obj = NULL;
@@ -108,21 +115,21 @@ filter_free(FILTER_DEF *filter)
         spinlock_release(&filter_spin);
 
         /* Clean up session and free the memory */
-        free(filter->name);
-        free(filter->module);
+        MXS_FREE(filter->name);
+        MXS_FREE(filter->module);
 
         if (filter->options)
         {
             for (int i = 0; filter->options[i]; i++)
             {
-                free(filter->options[i]);
+                MXS_FREE(filter->options[i]);
             }
-            free(filter->options);
+            MXS_FREE(filter->options);
         }
 
         filter_free_parameters(filter);
 
-        free(filter);
+        MXS_FREE(filter);
     }
 }
 
@@ -288,8 +295,9 @@ filterAddOption(FILTER_DEF *filter, char *option)
     spinlock_acquire(&filter->spin);
     if (filter->options == NULL)
     {
-        filter->options = (char **)calloc(2, sizeof(char *));
-        filter->options[0] = strdup(option);
+        filter->options = (char **)MXS_CALLOC(2, sizeof(char *));
+        MXS_ABORT_IF_NULL(filter->options);
+        filter->options[0] = MXS_STRDUP_A(option);
         filter->options[1] = NULL;
     }
     else
@@ -298,8 +306,11 @@ filterAddOption(FILTER_DEF *filter, char *option)
         {
             ;
         }
-        filter->options = (char **)realloc(filter->options, (i + 2) * sizeof(char *));
-        filter->options[i] = strdup(option);
+
+        filter->options = (char **)MXS_REALLOC(filter->options, (i + 2) * sizeof(char *));
+        MXS_ABORT_IF_NULL(filter->options);
+        filter->options[i] = MXS_STRDUP_A(option);
+        MXS_ABORT_IF_NULL(filter->options[i]);
         filter->options[i + 1] = NULL;
     }
     spinlock_release(&filter->spin);
@@ -318,9 +329,10 @@ filterAddParameter(FILTER_DEF *filter, char *name, char *value)
     int i;
 
     spinlock_acquire(&filter->spin);
+    FILTER_PARAMETER **parameters;
     if (filter->parameters == NULL)
     {
-        filter->parameters = (FILTER_PARAMETER **)calloc(2, sizeof(FILTER_PARAMETER *));
+        parameters = (FILTER_PARAMETER **)MXS_CALLOC(2, sizeof(FILTER_PARAMETER *));
         i = 0;
     }
     else
@@ -329,13 +341,20 @@ filterAddParameter(FILTER_DEF *filter, char *name, char *value)
         {
             ;
         }
-        filter->parameters = (FILTER_PARAMETER **)realloc(filter->parameters,
-                                                          (i + 2) * sizeof(FILTER_PARAMETER *));
+        parameters = (FILTER_PARAMETER **)MXS_REALLOC(filter->parameters,
+                                                      (i + 2) * sizeof(FILTER_PARAMETER *));
     }
-    filter->parameters[i] = (FILTER_PARAMETER *)calloc(1, sizeof(FILTER_PARAMETER));
-    filter->parameters[i]->name = strdup(name);
-    filter->parameters[i]->value = strdup(value);
-    filter->parameters[i + 1] = NULL;
+    FILTER_PARAMETER *parameter = MXS_CALLOC(1, sizeof(FILTER_PARAMETER));
+    name = MXS_STRDUP(name);
+    value = MXS_STRDUP(value);
+
+    MXS_ABORT_IF_TRUE(!parameters || !parameter || !name || !value);
+
+    parameter->name = name;
+    parameter->value = value;
+    parameters[i] = parameter;
+    parameters[i + 1] = NULL;
+    filter->parameters = parameters;
     spinlock_release(&filter->spin);
 }
 
@@ -349,10 +368,10 @@ static void filter_free_parameters(FILTER_DEF *filter)
     {
         for (int i = 0; filter->parameters[i]; i++)
         {
-            free(filter->parameters[i]->name);
-            free(filter->parameters[i]->value);
+            MXS_FREE(filter->parameters[i]->name);
+            MXS_FREE(filter->parameters[i]->value);
         }
-        free(filter->parameters);
+        MXS_FREE(filter->parameters);
     }
 }
 
@@ -407,14 +426,8 @@ filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
 {
     DOWNSTREAM *me;
 
-    if ((me = (DOWNSTREAM *)calloc(1, sizeof(DOWNSTREAM))) == NULL)
+    if ((me = (DOWNSTREAM *)MXS_CALLOC(1, sizeof(DOWNSTREAM))) == NULL)
     {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation for filter session failed "
-                  "due to %d,%s.",
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-
         return NULL;
     }
     me->instance = filter->filter;
@@ -422,7 +435,7 @@ filterApply(FILTER_DEF *filter, SESSION *session, DOWNSTREAM *downstream)
 
     if ((me->session = filter->obj->newSession(me->instance, session)) == NULL)
     {
-        free(me);
+        MXS_FREE(me);
         return NULL;
     }
     filter->obj->setDownstream(me->instance, me->session, downstream);
@@ -459,7 +472,7 @@ filterUpstream(FILTER_DEF *filter, void *fsession, UPSTREAM *upstream)
 
     if (filter->obj->clientReply != NULL)
     {
-        if ((me = (UPSTREAM *)calloc(1, sizeof(UPSTREAM))) == NULL)
+        if ((me = (UPSTREAM *)MXS_CALLOC(1, sizeof(UPSTREAM))) == NULL)
         {
             return NULL;
         }

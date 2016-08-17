@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -29,6 +29,7 @@
 #include <modinfo.h>
 #include <modutil.h>
 #include <mysql_client_server_protocol.h>
+#include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <pcre.h>
 
@@ -167,8 +168,8 @@ static ROUTER_INSTANCE* instances;
 
 bool detect_show_shards(GWBUF* query);
 int process_show_shards(ROUTER_CLIENT_SES* rses);
-static int hashkeyfun(void* key);
-static int hashcmpfun (void *, void *);
+static int hashkeyfun(const void* key);
+static int hashcmpfun(const void *, const void *);
 
 void write_error_to_client(DCB* dcb, int errnum, const char* mysqlstate, const char* errmsg);
 int inspect_backend_mapping_states(ROUTER_CLIENT_SES *router_cli_ses,
@@ -178,14 +179,14 @@ bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses);
 void route_queued_query(ROUTER_CLIENT_SES *router_cli_ses);
 void synchronize_shard_map(ROUTER_CLIENT_SES *client);
 
-static int hashkeyfun(void* key)
+static int hashkeyfun(const void* key)
 {
     if (key == NULL)
     {
         return 0;
     }
     int hash = 0, c = 0;
-    char* ptr = (char*)key;
+    const char* ptr = (const char*)key;
     while ((c = *ptr++))
     {
         hash = c + (hash << 6) + (hash << 16) - hash;
@@ -194,18 +195,17 @@ static int hashkeyfun(void* key)
     return hash;
 }
 
-static int hashcmpfun(void* v1, void* v2)
+static int hashcmpfun(const void* v1, const void* v2)
 {
-    char* i1 = (char*) v1;
-    char* i2 = (char*) v2;
+    const char* i1 = (const char*) v1;
+    const char* i2 = (const char*) v2;
 
     return strcmp(i1, i2);
 }
 
-void* keyfreefun(void* data)
+void keyfreefun(void* data)
 {
-    free(data);
-    return NULL;
+    MXS_FREE(data);
 }
 
 /**
@@ -214,22 +214,21 @@ void* keyfreefun(void* data)
  */
 shard_map_t* shard_map_alloc()
 {
-    shard_map_t *rval;
+    shard_map_t *rval = (shard_map_t*) MXS_MALLOC(sizeof(shard_map_t));
 
-    if ((rval = (shard_map_t*) malloc(sizeof(shard_map_t))))
+    if (rval)
     {
         if ((rval->hash = hashtable_alloc(SCHEMAROUTER_HASHSIZE, hashkeyfun, hashcmpfun)))
         {
-            HASHMEMORYFN kcopy = (HASHMEMORYFN)strdup;
-            HASHMEMORYFN kfree = (HASHMEMORYFN)keyfreefun;
-            hashtable_memory_fns(rval->hash, kcopy, kcopy, kfree, kfree);
+            HASHCOPYFN kcopy = (HASHCOPYFN)strdup;
+            hashtable_memory_fns(rval->hash, kcopy, kcopy, keyfreefun, keyfreefun);
             spinlock_init(&rval->lock);
             rval->last_updated = 0;
             rval->state = SHMAP_UNINIT;
         }
         else
         {
-            free(rval);
+            MXS_FREE(rval);
             rval = NULL;
         }
     }
@@ -255,37 +254,37 @@ char* get_lenenc_str(void* data)
 
     if (*ptr < 251)
     {
-        size = (uintptr_t)*ptr;
+        size = (uintptr_t) * ptr;
         offset = 1;
     }
     else
     {
         switch (*(ptr))
         {
-        case 0xfb:
-            return NULL;
-        case 0xfc:
-            size = *(ptr + 1) + (*(ptr + 2) << 8);
-            offset = 2;
-            break;
-        case 0xfd:
-            size = *ptr + (*(ptr + 2) << 8) + (*(ptr + 3) << 16);
-            offset = 3;
-            break;
-        case 0xfe:
-            size = *ptr + ((*(ptr + 2) << 8)) + (*(ptr + 3) << 16) +
-                (*(ptr + 4) << 24) + ((uintptr_t)*(ptr + 5) << 32) + ((uintptr_t)*(ptr + 6) << 40) +
-                ((uintptr_t)*(ptr + 7) << 48) + ((uintptr_t)*(ptr + 8) << 56);
-            offset = 8;
-            break;
-        default:
-
-            return NULL;
+            case 0xfb:
+                return NULL;
+            case 0xfc:
+                size = *(ptr + 1) + (*(ptr + 2) << 8);
+                offset = 2;
+                break;
+            case 0xfd:
+                size = *ptr + (*(ptr + 2) << 8) + (*(ptr + 3) << 16);
+                offset = 3;
+                break;
+            case 0xfe:
+                size = *ptr + ((*(ptr + 2) << 8)) + (*(ptr + 3) << 16) +
+                       (*(ptr + 4) << 24) + ((uintptr_t) * (ptr + 5) << 32) +
+                       ((uintptr_t) * (ptr + 6) << 40) +
+                       ((uintptr_t) * (ptr + 7) << 48) + ((uintptr_t) * (ptr + 8) << 56);
+                offset = 8;
+                break;
+            default:
+                return NULL;
         }
     }
 
-    rval = malloc(sizeof(char)*(size+1));
-    if(rval)
+    rval = MXS_MALLOC(sizeof(char) * (size + 1));
+    if (rval)
     {
         memcpy(rval, ptr + offset, size);
         memset(rval + size, 0, 1);
@@ -385,7 +384,7 @@ showdb_response_t parse_showdb_response(ROUTER_CLIENT_SES* rses, backend_ref_t* 
                               rses->rses_client_dcb->remote);
                 }
             }
-            free(data);
+            MXS_FREE(data);
         }
         ptr += packetlen;
     }
@@ -451,7 +450,7 @@ int gen_databaselist(ROUTER_INSTANCE* inst, ROUTER_CLIENT_SES* session)
     *((unsigned char*)buffer->start + 4) = 0x03;
     memcpy(buffer->start + 5, query, strlen(query));
 
-    for (i = 0; i<session->rses_nbackends; i++)
+    for (i = 0; i < session->rses_nbackends; i++)
     {
         if (BREF_IS_IN_USE(&session->rses_backend_ref[i]) &&
             !BREF_IS_CLOSED(&session->rses_backend_ref[i]) &
@@ -519,9 +518,9 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
                     }
                 }
             }
-            free(dbnms[i]);
+            MXS_FREE(dbnms[i]);
         }
-        free(dbnms);
+        MXS_FREE(dbnms);
     }
 
     /* Check if the query is a show tables query with a specific database */
@@ -541,7 +540,7 @@ char* get_shard_target_name(ROUTER_INSTANCE* router,
                 MXS_INFO("schemarouter: SHOW TABLES with specific database '%s' on server '%s'", tok, tmp);
             }
         }
-        free(query);
+        MXS_FREE(query);
 
         if (tmp == NULL)
         {
@@ -702,34 +701,30 @@ static ROUTER* createInstance(SERVICE *service, char **options)
     int i;
     CONFIG_PARAMETER* param;
 
-    if ((router = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if ((router = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
         return NULL;
     }
     if ((router->ignored_dbs = hashtable_alloc(SCHEMAROUTER_HASHSIZE, hashkeyfun, hashcmpfun)) == NULL)
     {
         MXS_ERROR("Memory allocation failed when allocating schemarouter database ignore list.");
-        free(router);
+        MXS_FREE(router);
         return NULL;
     }
-    hashtable_memory_fns(router->ignored_dbs, (HASHMEMORYFN)strdup,
-                         NULL,
-                         (HASHMEMORYFN)free,
-                         NULL);
+    hashtable_memory_fns(router->ignored_dbs, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
 
     if ((router->shard_maps = hashtable_alloc(SCHEMAROUTER_USERHASH_SIZE, hashkeyfun, hashcmpfun)) == NULL)
     {
         MXS_ERROR("Memory allocation failed when allocating schemarouter database ignore list.");
         hashtable_free(router->ignored_dbs);
-        free(router);
+        MXS_FREE(router);
         return NULL;
     }
 
-    hashtable_memory_fns(router->shard_maps, (HASHMEMORYFN)strdup,
-                         NULL, (HASHMEMORYFN)keyfreefun, NULL);
+    hashtable_memory_fns(router->shard_maps, hashtable_item_strdup, NULL, keyfreefun, NULL);
 
     /** Add default system databases to ignore */
-    hashtable_add(router->ignored_dbs, "mysql","");
+    hashtable_add(router->ignored_dbs, "mysql", "");
     hashtable_add(router->ignored_dbs, "information_schema", "");
     hashtable_add(router->ignored_dbs, "performance_schema", "");
     router->service = service;
@@ -771,7 +766,7 @@ static ROUTER* createInstance(SERVICE *service, char **options)
             MXS_ERROR("Regex compilation failed at %d for regex '%s': %s",
                       (int)erroffset, param->value, errbuf);
             hashtable_free(router->ignored_dbs);
-            free(router);
+            MXS_FREE(router);
             return NULL;
         }
 
@@ -783,7 +778,7 @@ static ROUTER* createInstance(SERVICE *service, char **options)
                       " is most likely caused by a lack of available memory.");
             pcre2_code_free(re);
             hashtable_free(router->ignored_dbs);
-            free(router);
+            MXS_FREE(router);
             return NULL;
         }
 
@@ -853,20 +848,20 @@ static ROUTER* createInstance(SERVICE *service, char **options)
 
     if (failure)
     {
-        free(router);
+        MXS_FREE(router);
         return NULL;
     }
 
     while (server != NULL)
     {
         nservers++;
-        server=server->next;
+        server = server->next;
     }
-    router->servers = (BACKEND **)calloc(nservers + 1, sizeof(BACKEND *));
+    router->servers = (BACKEND **)MXS_CALLOC(nservers + 1, sizeof(BACKEND *));
 
     if (router->servers == NULL)
     {
-        free(router);
+        MXS_FREE(router);
         return NULL;
     }
     /**
@@ -875,11 +870,11 @@ static ROUTER* createInstance(SERVICE *service, char **options)
      * backend server.
      */
     server = service->dbref;
-    nservers= 0;
+    nservers = 0;
 
     while (server != NULL)
     {
-        if ((router->servers[nservers] = malloc(sizeof(BACKEND))) == NULL)
+        if ((router->servers[nservers] = MXS_MALLOC(sizeof(BACKEND))) == NULL)
         {
             goto clean_up;
         }
@@ -891,12 +886,12 @@ static ROUTER* createInstance(SERVICE *service, char **options)
         if (server->server->monuser == NULL && service->credentials.name != NULL)
         {
             router->servers[nservers]->backend_server->monuser =
-                strdup(service->credentials.name);
+                MXS_STRDUP_A(service->credentials.name);
         }
         if (server->server->monpw == NULL && service->credentials.authdata != NULL)
         {
             router->servers[nservers]->backend_server->monpw =
-                strdup(service->credentials.authdata);
+                MXS_STRDUP_A(service->credentials.authdata);
         }
 #if defined(SS_DEBUG)
         router->servers[nservers]->be_chk_top = CHK_NUM_BACKEND;
@@ -935,10 +930,10 @@ clean_up:
     /** clean up */
     for (i = 0; i < nservers; i++)
     {
-        free(router->servers[i]);
+        MXS_FREE(router->servers[i]);
     }
-    free(router->servers);
-    free(router);
+    MXS_FREE(router->servers);
+    MXS_FREE(router);
     router = NULL;
     /** Fallthrough */
 retblock:
@@ -982,13 +977,13 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
     bool succp;
     int router_nservers = 0; /*< # of servers in total */
     int i;
-    char db[MYSQL_DATABASE_MAXLEN+1];
+    char db[MYSQL_DATABASE_MAXLEN + 1];
     MySQLProtocol* protocol = session->client_dcb->protocol;
     MYSQL_session* data = session->client_dcb->data;
     bool using_db = false;
     bool have_db = false;
 
-    memset(db, 0, MYSQL_DATABASE_MAXLEN+1);
+    *db = 0;
 
     spinlock_acquire(&session->ses_lock);
 
@@ -998,8 +993,8 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
         (have_db = strnlen(data->db, MYSQL_DATABASE_MAXLEN) > 0))
     {
         protocol->client_capabilities &= ~GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
-        strncpy(db, data->db, MYSQL_DATABASE_MAXLEN);
-        memset(data->db, 0, MYSQL_DATABASE_MAXLEN + 1);
+        strcpy(db, data->db);
+        *data->db = 0;
         using_db = true;
         MXS_INFO("schemarouter: Client logging in directly to a database '%s', "
                  "postponing until databases have been mapped.", db);
@@ -1012,7 +1007,7 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
 
     spinlock_release(&session->ses_lock);
 
-    client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
+    client_rses = (ROUTER_CLIENT_SES *)MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
 
     if (client_rses == NULL)
     {
@@ -1046,7 +1041,7 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
         {
             MXS_ERROR("Failed to allocate enough memory to create"
                       "new shard mapping. Session will be closed.");
-            free(client_rses);
+            MXS_FREE(client_rses);
             return NULL;
         }
         client_rses->init = INIT_UNINT;
@@ -1090,13 +1085,13 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
     /**
      * Create backend reference objects for this session.
      */
-    backend_ref = (backend_ref_t *)calloc(1, router_nservers*sizeof(backend_ref_t));
+    backend_ref = (backend_ref_t *)MXS_CALLOC(1, router_nservers * sizeof(backend_ref_t));
 
     if (backend_ref == NULL)
     {
         /** log this */
-        free(client_rses);
-        free(backend_ref);
+        MXS_FREE(client_rses);
+        MXS_FREE(backend_ref);
         client_rses = NULL;
         goto return_rses;
     }
@@ -1133,8 +1128,8 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
      */
     if (!(succp = rses_begin_locked_router_action(client_rses)))
     {
-        free(client_rses->rses_backend_ref);
-        free(client_rses);
+        MXS_FREE(client_rses->rses_backend_ref);
+        MXS_FREE(client_rses);
         client_rses = NULL;
         goto return_rses;
     }
@@ -1151,9 +1146,10 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
     /**
      * Master and at least <min_nslaves> slaves must be found
      */
-    if (!succp) {
-        free(client_rses->rses_backend_ref);
-        free(client_rses);
+    if (!succp)
+    {
+        MXS_FREE(client_rses->rses_backend_ref);
+        MXS_FREE(client_rses);
         client_rses = NULL;
         goto return_rses;
     }
@@ -1163,8 +1159,8 @@ static void* newSession(ROUTER* router_inst, SESSION* session)
 
     if (!(succp = rses_begin_locked_router_action(client_rses)))
     {
-        free(client_rses->rses_backend_ref);
-        free(client_rses);
+        MXS_FREE(client_rses->rses_backend_ref);
+        MXS_FREE(client_rses);
 
         client_rses = NULL;
         goto return_rses;
@@ -1287,7 +1283,7 @@ static void closeSession(ROUTER* instance, void* router_session)
 
         while (router_cli_ses->queue &&
                (router_cli_ses->queue = gwbuf_consume(
-                   router_cli_ses->queue, gwbuf_length(router_cli_ses->queue))))
+                                            router_cli_ses->queue, gwbuf_length(router_cli_ses->queue))))
         {
             ;
         }
@@ -1328,12 +1324,12 @@ static void freeSession(ROUTER* router_instance, void* router_client_session)
     router_cli_ses = (ROUTER_CLIENT_SES *)router_client_session;
     router = (ROUTER_INSTANCE *)router_instance;
 
-    for (i = 0; i<router_cli_ses->rses_nbackends; i++)
+    for (i = 0; i < router_cli_ses->rses_nbackends; i++)
     {
         bref = &router_cli_ses->rses_backend_ref[i];
-        while(bref->bref_pending_cmd &&
-              (bref->bref_pending_cmd = gwbuf_consume(
-                  bref->bref_pending_cmd, gwbuf_length(bref->bref_pending_cmd))))
+        while (bref->bref_pending_cmd &&
+               (bref->bref_pending_cmd = gwbuf_consume(
+                                             bref->bref_pending_cmd, gwbuf_length(bref->bref_pending_cmd))))
         {
             ;
         }
@@ -1381,13 +1377,8 @@ static void freeSession(ROUTER* router_instance, void* router_client_session)
      * all the memory and other resources associated
      * to the client session.
      */
-    if (router_cli_ses->shardmap)
-    {
-        hashtable_free(router_cli_ses->shardmap->hash);
-        free(router_cli_ses->shardmap);
-    }
-    free(router_cli_ses->rses_backend_ref);
-    free(router_cli_ses);
+    MXS_FREE(router_cli_ses->rses_backend_ref);
+    MXS_FREE(router_cli_ses);
     return;
 }
 
@@ -1520,7 +1511,8 @@ void check_drop_tmp_table(ROUTER* instance,
             for (i = 0; i < tsize; i++)
             {
                 klen = strlen(dbname) + strlen(tbl[i]) + 2;
-                hkey = calloc(klen, sizeof(char));
+                hkey = MXS_CALLOC(klen, sizeof(char));
+                MXS_ABORT_IF_NULL(hkey);
                 strcpy(hkey, dbname);
                 strcat(hkey, ".");
                 strcat(hkey, tbl[i]);
@@ -1533,11 +1525,11 @@ void check_drop_tmp_table(ROUTER* instance,
                         MXS_INFO("Temporary table dropped: %s", hkey);
                     }
                 }
-                free(tbl[i]);
-                free(hkey);
+                MXS_FREE(tbl[i]);
+                MXS_FREE(hkey);
             }
 
-            free(tbl);
+            MXS_FREE(tbl);
         }
     }
 }
@@ -1582,7 +1574,8 @@ qc_query_type_t is_read_tmp_table(ROUTER* instance,
             for (i = 0; i < tsize && !target_tmp_table && tbl[i]; i++)
             {
                 klen = strlen(dbname) + strlen(tbl[i]) + 2;
-                hkey = calloc(klen, sizeof(char));
+                hkey = MXS_CALLOC(klen, sizeof(char));
+                MXS_ABORT_IF_NULL(hkey);
                 strcpy(hkey, dbname);
                 strcat(hkey, ".");
                 strcat(hkey, tbl[i]);
@@ -1591,7 +1584,7 @@ qc_query_type_t is_read_tmp_table(ROUTER* instance,
                 {
 
                     if ((target_tmp_table =
-                         (bool)hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey)))
+                             (bool)hashtable_fetch(rses_prop_tmp->rses_prop_data.temp_tables, (void *)hkey)))
                     {
                         /**Query target is a temporary table*/
                         qtype = QUERY_TYPE_READ_TMP_TABLE;
@@ -1599,7 +1592,7 @@ qc_query_type_t is_read_tmp_table(ROUTER* instance,
                     }
                 }
 
-                free(hkey);
+                MXS_FREE(hkey);
             }
         }
     }
@@ -1608,9 +1601,9 @@ qc_query_type_t is_read_tmp_table(ROUTER* instance,
     {
         for (i = 0; i < tsize; i++)
         {
-            free(tbl[i]);
+            MXS_FREE(tbl[i]);
         }
-        free(tbl);
+        MXS_FREE(tbl);
     }
 
     return qtype;
@@ -1651,7 +1644,8 @@ void check_create_tmp_table(ROUTER* instance,
         if (tblname && strlen(tblname) > 0)
         {
             klen = strlen(dbname) + strlen(tblname) + 2;
-            hkey = calloc(klen, sizeof(char));
+            hkey = MXS_CALLOC(klen, sizeof(char));
+            MXS_ABORT_IF_NULL(hkey);
             strcpy(hkey, dbname);
             strcat(hkey, ".");
             strcat(hkey, tblname);
@@ -1664,7 +1658,7 @@ void check_create_tmp_table(ROUTER* instance,
         if (rses_prop_tmp == NULL)
         {
             if ((rses_prop_tmp =
-                 (rses_property_t*)calloc(1, sizeof(rses_property_t))))
+                     (rses_property_t*)MXS_CALLOC(1, sizeof(rses_property_t))))
             {
 #if defined(SS_DEBUG)
                 rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
@@ -1676,17 +1670,15 @@ void check_create_tmp_table(ROUTER* instance,
                 rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
                 router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
             }
-            else
-            {
-                MXS_ERROR("Call to malloc() failed.");
-            }
         }
-        if (rses_prop_tmp){
+        if (rses_prop_tmp)
+        {
             if (rses_prop_tmp->rses_prop_data.temp_tables == NULL)
             {
                 h = hashtable_alloc(SCHEMAROUTER_HASHSIZE, hashkeyfun, hashcmpfun);
-                hashtable_memory_fns(h, (HASHMEMORYFN)strdup,
-                                     (HASHMEMORYFN)strdup, (HASHMEMORYFN)free, (HASHMEMORYFN)free);
+                hashtable_memory_fns(h,
+                                     hashtable_item_strdup, hashtable_item_strdup,
+                                     hashtable_item_free, hashtable_item_free);
                 if (h != NULL)
                 {
                     rses_prop_tmp->rses_prop_data.temp_tables = h;
@@ -1716,8 +1708,8 @@ void check_create_tmp_table(ROUTER* instance,
 #endif
         }
 
-        free(hkey);
-        free(tblname);
+        MXS_FREE(hkey);
+        MXS_FREE(tblname);
     }
 }
 
@@ -1774,7 +1766,8 @@ bool send_database_list(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
     {
         struct string_array strarray;
         const int size = hashtable_size(client->shardmap->hash);
-        strarray.array = malloc(size * sizeof(char*));
+        strarray.array = MXS_MALLOC(size * sizeof(char*));
+        MXS_ABORT_IF_NULL(strarray.array);
         strarray.position = 0;
         HASHITERATOR *iter = hashtable_iterator(client->shardmap->hash);
         RESULTSET* resultset = resultset_create(result_set_cb, &strarray);
@@ -1803,7 +1796,7 @@ bool send_database_list(ROUTER_INSTANCE* router, ROUTER_CLIENT_SES* client)
         }
         resultset_free(resultset);
         hashtable_iterator_free(iter);
-        free(strarray.array);
+        MXS_FREE(strarray.array);
     }
     spinlock_release(&client->shardmap->lock);
     return rval;
@@ -1849,10 +1842,10 @@ static int routeQuery(ROUTER* instance,
     char* targetserver = NULL;
     GWBUF* querybuf = qbuf;
     char db[MYSQL_DATABASE_MAXLEN + 1];
-    char errbuf[26+MYSQL_DATABASE_MAXLEN];
+    char errbuf[26 + MYSQL_DATABASE_MAXLEN];
     CHK_CLIENT_RSES(router_cli_ses);
 
-        ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
+    ss_dassert(!GWBUF_IS_TYPE_UNDEFINED(querybuf));
 
     if (!rses_begin_locked_router_action(router_cli_ses))
     {
@@ -1883,11 +1876,11 @@ static int routeQuery(ROUTER* instance,
             MXS_INFO("schemarouter: Storing query for session %p: %s",
                      router_cli_ses->rses_client_dcb->session,
                      querystr);
-            free(querystr);
+            MXS_FREE(querystr);
             querybuf = gwbuf_make_contiguous(querybuf);
             GWBUF* ptr = router_cli_ses->queue;
 
-            while(ptr && ptr->next)
+            while (ptr && ptr->next)
             {
                 ptr = ptr->next;
             }
@@ -1939,7 +1932,7 @@ static int routeQuery(ROUTER* instance,
                       STRPACKETTYPE(packet_type),
                       STRQTYPE(qtype),
                       (query_str == NULL ? "(empty)" : query_str));
-            free(query_str);
+            MXS_FREE(query_str);
         }
         ret = 0;
         goto retblock;
@@ -1960,50 +1953,50 @@ static int routeQuery(ROUTER* instance,
 
     qc_query_op_t op = QUERY_OP_UNDEFINED;
 
-    switch(packet_type)
+    switch (packet_type)
     {
-    case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
-    case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
-    case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
-    case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
-    case MYSQL_COM_PING:        /*< 0e all servers are pinged */
-    case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
-    case MYSQL_COM_STMT_CLOSE:  /*< free prepared statement */
-    case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
-    case MYSQL_COM_STMT_RESET:  /*< resets the data of a prepared statement */
-        qtype = QUERY_TYPE_SESSION_WRITE;
-        break;
+        case MYSQL_COM_QUIT:        /*< 1 QUIT will close all sessions */
+        case MYSQL_COM_INIT_DB:     /*< 2 DDL must go to the master */
+        case MYSQL_COM_REFRESH:     /*< 7 - I guess this is session but not sure */
+        case MYSQL_COM_DEBUG:       /*< 0d all servers dump debug info to stdout */
+        case MYSQL_COM_PING:        /*< 0e all servers are pinged */
+        case MYSQL_COM_CHANGE_USER: /*< 11 all servers change it accordingly */
+        case MYSQL_COM_STMT_CLOSE:  /*< free prepared statement */
+        case MYSQL_COM_STMT_SEND_LONG_DATA: /*< send data to column */
+        case MYSQL_COM_STMT_RESET:  /*< resets the data of a prepared statement */
+            qtype = QUERY_TYPE_SESSION_WRITE;
+            break;
 
-    case MYSQL_COM_CREATE_DB:   /**< 5 DDL must go to the master */
-    case MYSQL_COM_DROP_DB:     /**< 6 DDL must go to the master */
-        qtype = QUERY_TYPE_WRITE;
-        break;
+        case MYSQL_COM_CREATE_DB:   /**< 5 DDL must go to the master */
+        case MYSQL_COM_DROP_DB:     /**< 6 DDL must go to the master */
+            qtype = QUERY_TYPE_WRITE;
+            break;
 
-    case MYSQL_COM_QUERY:
-        qtype = qc_get_type(querybuf);
-        op = qc_get_operation(querybuf);
-        break;
+        case MYSQL_COM_QUERY:
+            qtype = qc_get_type(querybuf);
+            op = qc_get_operation(querybuf);
+            break;
 
-    case MYSQL_COM_STMT_PREPARE:
-        qtype = qc_get_type(querybuf);
-        qtype |= QUERY_TYPE_PREPARE_STMT;
-        break;
+        case MYSQL_COM_STMT_PREPARE:
+            qtype = qc_get_type(querybuf);
+            qtype |= QUERY_TYPE_PREPARE_STMT;
+            break;
 
-    case MYSQL_COM_STMT_EXECUTE:
-        /** Parsing is not needed for this type of packet */
-        qtype = QUERY_TYPE_EXEC_STMT;
-        break;
+        case MYSQL_COM_STMT_EXECUTE:
+            /** Parsing is not needed for this type of packet */
+            qtype = QUERY_TYPE_EXEC_STMT;
+            break;
 
-    case MYSQL_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
-    case MYSQL_COM_STATISTICS:     /**< 9 ? */
-    case MYSQL_COM_PROCESS_INFO:   /**< 0a ? */
-    case MYSQL_COM_CONNECT:        /**< 0b ? */
-    case MYSQL_COM_PROCESS_KILL:   /**< 0c ? */
-    case MYSQL_COM_TIME:           /**< 0f should this be run in gateway ? */
-    case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
-    case MYSQL_COM_DAEMON:         /**< 1d ? */
-    default:
-        break;
+        case MYSQL_COM_SHUTDOWN:       /**< 8 where should shutdown be routed ? */
+        case MYSQL_COM_STATISTICS:     /**< 9 ? */
+        case MYSQL_COM_PROCESS_INFO:   /**< 0a ? */
+        case MYSQL_COM_CONNECT:        /**< 0b ? */
+        case MYSQL_COM_PROCESS_KILL:   /**< 0c ? */
+        case MYSQL_COM_TIME:           /**< 0f should this be run in gateway ? */
+        case MYSQL_COM_DELAYED_INSERT: /**< 10 ? */
+        case MYSQL_COM_DAEMON:         /**< 1d ? */
+        default:
+            break;
     } /**< switch by packet type */
 
 
@@ -2012,7 +2005,7 @@ static int routeQuery(ROUTER* instance,
         uint8_t* packet = GWBUF_DATA(querybuf);
         unsigned char ptype = packet[4];
         size_t len = MIN(GWBUF_LENGTH(querybuf),
-                         MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start)-1);
+                         MYSQL_GET_PACKET_LEN((unsigned char *)querybuf->start) - 1);
         char* data = (char*)&packet[5];
         char* contentstr = strndup(data, len);
         char* qtypestr = qc_get_qtype_str(qtype);
@@ -2020,13 +2013,13 @@ static int routeQuery(ROUTER* instance,
         MXS_INFO("> Cmd: %s, type: %s, "
                  "stmt: %s%s %s",
                  STRPACKETTYPE(ptype),
-                 (qtypestr==NULL ? "N/A" : qtypestr),
+                 (qtypestr == NULL ? "N/A" : qtypestr),
                  contentstr,
                  (querybuf->hint == NULL ? "" : ", Hint:"),
                  (querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));
 
-        free(contentstr);
-        free(qtypestr);
+        MXS_FREE(contentstr);
+        MXS_FREE(qtypestr);
     }
     /**
      * Find out whether the query should be routed to single server or to
@@ -2115,7 +2108,7 @@ static int routeQuery(ROUTER* instance,
             MXS_INFO("schemarouter: INIT_DB for database '%s' on server '%s'",
                      router_cli_ses->current_db, tname);
             route_target = TARGET_NAMED_SERVER;
-            targetserver = strdup(tname);
+            targetserver = MXS_STRDUP_A(tname);
         }
         else
         {
@@ -2138,7 +2131,7 @@ static int routeQuery(ROUTER* instance,
             if (shard_ok)
             {
                 route_target = TARGET_NAMED_SERVER;
-                targetserver = strdup(tname);
+                targetserver = MXS_STRDUP_A(tname);
             }
             else
             {
@@ -2178,7 +2171,7 @@ static int routeQuery(ROUTER* instance,
         {
             if (tname)
             {
-                targetserver = strdup(tname);
+                targetserver = MXS_STRDUP_A(tname);
             }
             if (!change_successful)
             {
@@ -2240,7 +2233,7 @@ static int routeQuery(ROUTER* instance,
             if (SERVER_IS_RUNNING(inst->servers[z]->backend_server))
             {
                 route_target = TARGET_NAMED_SERVER;
-                targetserver = strdup(inst->servers[z]->backend_server->unique_name);
+                targetserver = MXS_STRDUP_A(inst->servers[z]->backend_server->unique_name);
                 break;
             }
         }
@@ -2327,7 +2320,7 @@ static int routeQuery(ROUTER* instance,
     }
     rses_end_locked_router_action(router_cli_ses);
 retblock:
-    free(targetserver);
+    MXS_FREE(targetserver);
     gwbuf_free(querybuf);
 
     return ret;
@@ -2360,7 +2353,8 @@ static bool rses_begin_locked_router_action(
         goto return_succp;
     }
     spinlock_acquire(&rses->rses_lock);
-    if (rses->rses_closed) {
+    if (rses->rses_closed)
+    {
         spinlock_release(&rses->rses_lock);
         goto return_succp;
     }
@@ -2404,8 +2398,8 @@ static void diagnostic(ROUTER *instance, DCB *dcb)
     int i = 0;
 
     double sescmd_pct = router->stats.n_sescmd != 0 ?
-        100.0*((double)router->stats.n_sescmd / (double)router->stats.n_queries) :
-        0.0;
+                        100.0 * ((double)router->stats.n_sescmd / (double)router->stats.n_queries) :
+                        0.0;
 
     dcb_printf(dcb, "\33[1;4m%-16s%-16s%-16s\33[0m\n", "Server", "Queries", "State");
     for (i = 0; router->servers[i]; i++)
@@ -2414,7 +2408,7 @@ static void diagnostic(ROUTER *instance, DCB *dcb)
                    router->servers[i]->backend_server->unique_name,
                    router->servers[i]->stats.queries,
                    SERVER_IS_RUNNING(router->servers[i]->backend_server) ?
-                   "\33[30;42mRUNNING\33[0m":
+                   "\33[30;42mRUNNING\33[0m" :
                    "\33[30;41mDOWN\33[0m");
     }
 
@@ -2653,9 +2647,9 @@ static void clientReply(ROUTER* instance,
                       err,
                       replystr);
 
-            free(cmdstr);
-            free(err);
-            free(replystr);
+            MXS_FREE(cmdstr);
+            MXS_FREE(err);
+            MXS_FREE(replystr);
         }
 
         if (GWBUF_IS_TYPE_SESCMD_RESPONSE(writebuf))
@@ -2745,7 +2739,7 @@ static void clientReply(ROUTER* instance,
             if (sql)
             {
                 MXS_ERROR("Routing query \"%s\" failed.", sql);
-                free(sql);
+                MXS_FREE(sql);
             }
             else
             {
@@ -2768,7 +2762,7 @@ int bref_cmp_router_conn(const void* bref1, const void* bref2)
     BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
 
     return ((1000 * b1->backend_conn_count) / b1->weight)
-        - ((1000 * b2->backend_conn_count) / b2->weight);
+           - ((1000 * b2->backend_conn_count) / b2->weight);
 }
 
 /** Compare number of global connections in backend servers */
@@ -2778,7 +2772,7 @@ int bref_cmp_global_conn(const void* bref1, const void* bref2)
     BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
 
     return ((1000 * b1->backend_server->stats.n_current) / b1->weight)
-        - ((1000 * b2->backend_server->stats.n_current) / b2->weight);
+           - ((1000 * b2->backend_server->stats.n_current) / b2->weight);
 }
 
 
@@ -2801,7 +2795,7 @@ int bref_cmp_current_load(const void* bref1, const void* bref2)
     BACKEND* b2 = ((backend_ref_t *)bref2)->bref_backend;
 
     return ((1000 * s1->stats.n_current_ops) - b1->weight)
-        - ((1000 * s2->stats.n_current_ops) - b2->weight);
+           - ((1000 * s2->stats.n_current_ops) - b2->weight);
 }
 
 static void bref_clear_state(backend_ref_t* bref, bref_state_t state)
@@ -2929,7 +2923,7 @@ static bool connect_backend_servers(backend_ref_t*   backend_ref,
 #if defined(EXTRA_SS_DEBUG)
     MXS_INFO("Servers and conns before ordering:");
 
-    for (i = 0; i<router_nservers; i++)
+    for (i = 0; i < router_nservers; i++)
     {
         BACKEND* b = backend_ref[i].bref_backend;
 
@@ -3077,7 +3071,7 @@ static rses_property_t* rses_property_init(rses_property_type_t prop_type)
 {
     rses_property_t* prop;
 
-    prop = (rses_property_t*)calloc(1, sizeof(rses_property_t));
+    prop = (rses_property_t*)MXS_CALLOC(1, sizeof(rses_property_t));
     if (prop == NULL)
     {
         goto return_prop;
@@ -3102,24 +3096,24 @@ static void rses_property_done(rses_property_t* prop)
 
     switch (prop->rses_prop_type)
     {
-    case RSES_PROP_TYPE_SESCMD:
-        mysql_sescmd_done(&prop->rses_prop_data.sescmd);
-        break;
+        case RSES_PROP_TYPE_SESCMD:
+            mysql_sescmd_done(&prop->rses_prop_data.sescmd);
+            break;
 
-    case RSES_PROP_TYPE_TMPTABLES:
-        hashtable_free(prop->rses_prop_data.temp_tables);
-        break;
+        case RSES_PROP_TYPE_TMPTABLES:
+            hashtable_free(prop->rses_prop_data.temp_tables);
+            break;
 
-    default:
-        MXS_DEBUG("%lu [rses_property_done] Unknown property type %d "
-                  "in property %p",
-                  pthread_self(),
-                  prop->rses_prop_type,
-                  prop);
-        ss_dassert(false);
-        break;
+        default:
+            MXS_DEBUG("%lu [rses_property_done] Unknown property type %d "
+                      "in property %p",
+                      pthread_self(),
+                      prop->rses_prop_type,
+                      prop);
+            ss_dassert(false);
+            break;
     }
-    free(prop);
+    MXS_FREE(prop);
 }
 
 /**
@@ -3468,24 +3462,24 @@ static bool execute_sescmd_in_backend(backend_ref_t* backend_ref)
 #endif /*< SS_DEBUG */
     switch (scur->scmd_cur_cmd->my_sescmd_packet_type)
     {
-    case MYSQL_COM_CHANGE_USER:
-        /** This makes it possible to handle replies correctly */
-        gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
-        rc = dcb->func.auth(dcb,
-                            NULL,
-                            dcb->session,
-                            sescmd_cursor_clone_querybuf(scur));
-        break;
+        case MYSQL_COM_CHANGE_USER:
+            /** This makes it possible to handle replies correctly */
+            gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
+            rc = dcb->func.auth(dcb,
+                                NULL,
+                                dcb->session,
+                                sescmd_cursor_clone_querybuf(scur));
+            break;
 
-    case MYSQL_COM_QUERY:
-    default:
-        /**
-         * Mark session command buffer, it triggers writing
-         * MySQL command to protocol
-         */
-        gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
-        rc = dcb->func.write(dcb, sescmd_cursor_clone_querybuf(scur));
-        break;
+        case MYSQL_COM_QUERY:
+        default:
+            /**
+             * Mark session command buffer, it triggers writing
+             * MySQL command to protocol
+             */
+            gwbuf_set_type(scur->scmd_cur_cmd->my_sescmd_buf, GWBUF_TYPE_SESCMD);
+            rc = dcb->func.write(dcb, sescmd_cursor_clone_querybuf(scur));
+            break;
     }
 
     if (rc == 1)
@@ -3600,14 +3594,15 @@ static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
     if (GWBUF_IS_TYPE_MYSQL(buf))
     {
         len  = packet[0];
-        len += 256*packet[1];
-        len += 256*256*packet[2];
+        len += 256 * packet[1];
+        len += 256 * 256 * packet[2];
 
         if (packet_type == '\x03')
         {
-            querystr = (char *)malloc(len);
-            memcpy(querystr, startpos, len-1);
-            querystr[len-1] = '\0';
+            querystr = (char *)MXS_MALLOC(len);
+            MXS_ABORT_IF_NULL(querystr);
+            memcpy(querystr, startpos, len - 1);
+            querystr[len - 1] = '\0';
             MXS_DEBUG("%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                       pthread_self(),
                       funcname,
@@ -3617,7 +3612,7 @@ static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
                       b->backend_server->port,
                       STRBETYPE(be_type),
                       dcb);
-            free(querystr);
+            MXS_FREE(querystr);
         }
         else if (packet_type == '\x22' ||
                  packet_type == 0x22 ||
@@ -3625,9 +3620,10 @@ static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
                  packet_type == 0x26 ||
                  true)
         {
-            querystr = (char *)malloc(len);
-            memcpy(querystr, startpos, len-1);
-            querystr[len-1] = '\0';
+            querystr = (char *)MXS_MALLOC(len);
+            MXS_ABORT_IF_NULL(querystr);
+            memcpy(querystr, startpos, len - 1);
+            querystr[len - 1] = '\0';
             MXS_DEBUG("%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                       pthread_self(),
                       funcname,
@@ -3637,7 +3633,7 @@ static void tracelog_routed_query(ROUTER_CLIENT_SES* rses,
                       b->backend_server->port,
                       STRBETYPE(be_type),
                       dcb);
-            free(querystr);
+            MXS_FREE(querystr);
         }
     }
     gwbuf_free(buf);
@@ -3711,7 +3707,7 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
                           "master" : "slave"),
                          backend_ref[i].bref_backend->backend_server->name,
                          backend_ref[i].bref_backend->backend_server->port,
-                         (i+1==router_cli_ses->rses_nbackends ? " <" : ""));
+                         (i + 1 == router_cli_ses->rses_nbackends ? " <" : ""));
             }
 
             if (BREF_IS_IN_USE((&backend_ref[i])))
@@ -3762,7 +3758,7 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
         bool conflict;
 
         prop = router_cli_ses->rses_properties[RSES_PROP_TYPE_SESCMD];
-        while(prop)
+        while (prop)
         {
             conflict = false;
 
@@ -3819,7 +3815,7 @@ static bool route_session_write(ROUTER_CLIENT_SES* router_cli_ses,
                           "master" : "slave"),
                          backend_ref[i].bref_backend->backend_server->name,
                          backend_ref[i].bref_backend->backend_server->port,
-                         (i+1==router_cli_ses->rses_nbackends ? " <" : ""));
+                         (i + 1 == router_cli_ses->rses_nbackends ? " <" : ""));
             }
 
             scur = backend_ref_get_sescmd_cursor(&backend_ref[i]);
@@ -3928,38 +3924,38 @@ static void handleError(ROUTER*        instance,
 
         switch (action)
         {
-        case ERRACT_NEW_CONNECTION:
-        {
-            if (!rses_begin_locked_router_action(rses))
+            case ERRACT_NEW_CONNECTION:
             {
-                *succp = false;
+                if (!rses_begin_locked_router_action(rses))
+                {
+                    *succp = false;
+                    break;
+                }
+                /**
+                 * This is called in hope of getting replacement for
+                 * failed slave(s).
+                 */
+                *succp = handle_error_new_connection(inst,
+                                                     rses,
+                                                     problem_dcb,
+                                                     errmsgbuf);
+                rses_end_locked_router_action(rses);
                 break;
             }
-            /**
-             * This is called in hope of getting replacement for
-             * failed slave(s).
-             */
-            *succp = handle_error_new_connection(inst,
-                                                 rses,
-                                                 problem_dcb,
-                                                 errmsgbuf);
-            rses_end_locked_router_action(rses);
-            break;
-        }
 
-        case ERRACT_REPLY_CLIENT:
-        {
-            handle_error_reply_client(session,
-                                      rses,
-                                      problem_dcb,
-                                      errmsgbuf);
-            *succp = false; /*< no new backend servers were made available */
-            break;
-        }
+            case ERRACT_REPLY_CLIENT:
+            {
+                handle_error_reply_client(session,
+                                          rses,
+                                          problem_dcb,
+                                          errmsgbuf);
+                *succp = false; /*< no new backend servers were made available */
+                break;
+            }
 
-        default:
-            *succp = false;
-            break;
+            default:
+                *succp = false;
+                break;
         }
     }
     dcb_close(problem_dcb);
@@ -4207,14 +4203,14 @@ static int router_handle_state_switch(DCB* dcb,
 
     switch (reason)
     {
-    case DCB_REASON_NOT_RESPONDING:
-        atomic_add(&bref->bref_backend->backend_conn_count, -1);
-        MXS_INFO("schemarouter: server %s not responding", srv->unique_name);
-        dcb->func.hangup(dcb);
-        break;
+        case DCB_REASON_NOT_RESPONDING:
+            atomic_add(&bref->bref_backend->backend_conn_count, -1);
+            MXS_INFO("schemarouter: server %s not responding", srv->unique_name);
+            dcb->func.hangup(dcb);
+            break;
 
-    default:
-        break;
+        default:
+            break;
     }
 
 return_rc:
@@ -4270,7 +4266,7 @@ bool detect_show_shards(GWBUF* query)
         }
     }
 
-    free(querystr);
+    MXS_FREE(querystr);
     return rval;
 }
 
@@ -4312,7 +4308,7 @@ int process_show_shards(ROUTER_CLIENT_SES* rses)
     int rval = 0;
 
     spinlock_acquire(&rses->shardmap->lock);
-    if(rses->shardmap->state != SHMAP_UNINIT)
+    if (rses->shardmap->state != SHMAP_UNINIT)
     {
         HASHITERATOR* iter = hashtable_iterator(rses->shardmap->hash);
         struct shard_list sl;
@@ -4379,7 +4375,7 @@ bool handle_default_db(ROUTER_CLIENT_SES *router_cli_ses)
     char* target = NULL;
 
     spinlock_acquire(&router_cli_ses->shardmap->lock);
-    if(router_cli_ses->shardmap->state != SHMAP_UNINIT)
+    if (router_cli_ses->shardmap->state != SHMAP_UNINIT)
     {
         target = hashtable_fetch(router_cli_ses->shardmap->hash, router_cli_ses->connect_db);
     }
@@ -4452,7 +4448,7 @@ void route_queued_query(ROUTER_CLIENT_SES *router_cli_ses)
     MXS_DEBUG("schemarouter: Sending queued buffer for session %p: %s",
               router_cli_ses->rses_client_dcb->session,
               querystr);
-    free(querystr);
+    MXS_FREE(querystr);
 #endif
     poll_add_epollin_event_to_dcb(router_cli_ses->dcb_route, tmp);
 }
@@ -4569,7 +4565,7 @@ void replace_shard_map(shard_map_t **target, shard_map_t **source)
     tgt->state = src->state;
     hashtable_free(tgt->hash);
     tgt->hash = src->hash;
-    free(src);
+    MXS_FREE(src);
     *source = NULL;
 }
 
@@ -4611,7 +4607,7 @@ void synchronize_shard_map(ROUTER_CLIENT_SES *client)
              * Another thread has already updated the shard map for this user
              */
             hashtable_free(client->shardmap->hash);
-            free(client->shardmap);
+            MXS_FREE(client->shardmap);
         }
         spinlock_release(&map->lock);
         client->shardmap = map;

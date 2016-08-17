@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <maxscale/alloc.h>
 #include <server.h>
 #include <log_manager.h>
 /**
@@ -73,21 +74,21 @@ test1()
     ss_info_dassert(0 == strcmp("Running", status), "Status of Server should be Running by default.");
     if (NULL != status)
     {
-        free(status);
+        MXS_FREE(status);
     }
     server_set_status(server, SERVER_MASTER);
     status = server_status(server);
     mxs_log_flush_sync();
     ss_info_dassert(0 == strcmp("Master, Running", status), "Should find correct status.");
     server_clear_status(server, SERVER_MASTER);
-    free(status);
+    MXS_FREE(status);
     status = server_status(server);
     mxs_log_flush_sync();
     ss_info_dassert(0 == strcmp("Running", status),
                     "Status of Server should be Running after master status cleared.");
     if (NULL != status)
     {
-        free(status);
+        MXS_FREE(status);
     }
     ss_dfprintf(stderr, "\t..done\nRun Prints for Server and all Servers.");
     printServer(server);

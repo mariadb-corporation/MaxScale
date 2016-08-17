@@ -7,7 +7,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -49,11 +49,11 @@ typedef struct cli_instance
  * The CLI_SESSION structure. As CLI_SESSION is created for each user that logs into
  * the DEBUG CLI.
  */
-enum { cmdbuflen = 80 };
+enum { CMDBUFLEN = 80 };
 
 typedef struct cli_session
 {
-    char        cmdbuf[cmdbuflen]; /*< The command buffer used to build up user commands */
+    char        cmdbuf[CMDBUFLEN]; /*< The command buffer used to build up user commands */
     int     mode;          /*< The CLI Mode for this session */
     SESSION     *session;      /*< The gateway session */
     struct cli_session

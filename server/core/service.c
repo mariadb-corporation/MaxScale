@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -66,6 +66,7 @@
 #include <math.h>
 #include <version.h>
 #include <queuemanager.h>
+#include <maxscale/alloc.h>
 
 /** To be used with configuration type checks */
 typedef struct typelib_st
@@ -96,6 +97,7 @@ static int find_type(typelib_t* tl, const char* needle, int maxlen);
 static void service_add_qualified_param(SERVICE*          svc,
                                         CONFIG_PARAMETER* param);
 static void service_internal_restart(void *data);
+static void service_queue_check(void *data);
 
 /**
  * Allocate a new service for the gateway to support
@@ -109,12 +111,19 @@ static void service_internal_restart(void *data);
 SERVICE *
 service_alloc(const char *servname, const char *router)
 {
-    SERVICE *service;
+    servname = MXS_STRDUP(servname);
+    router = MXS_STRDUP(router);
 
-    if ((service = (SERVICE *)calloc(1, sizeof(SERVICE))) == NULL)
+    SERVICE *service = (SERVICE *)MXS_CALLOC(1, sizeof(*service));
+
+    if (!servname || !router || !service)
     {
+        MXS_FREE((void*)servname);
+        MXS_FREE((void*)router);
+        MXS_FREE(service);
         return NULL;
     }
+
     if ((service->router = load_module(router, MODULE_ROUTER)) == NULL)
     {
         char* home = get_libdir();
@@ -130,15 +139,17 @@ service_alloc(const char *servname, const char *router)
                   home,
                   ldpath ? "\t\t\t      - " : "",
                   ldpath ? ldpath : "");
-        free(service);
+        MXS_FREE((void*)servname);
+        MXS_FREE((void*)router);
+        MXS_FREE(service);
         return NULL;
     }
+
     service->client_count = 0;
-    service->name = strdup(servname);
-    service->routerModule = strdup(router);
+    service->name = (char*)servname;
+    service->routerModule = (char*)router;
     service->users_from_all = false;
     service->queued_connections = NULL;
-    service->resources = NULL;
     service->localhost_match_wildcard_host = SERVICE_PARAM_UNINIT;
     service->retry_start = true;
     service->conn_idle_timeout = SERVICE_NO_SESSION_TIMEOUT;
@@ -147,7 +158,6 @@ service_alloc(const char *servname, const char *router)
     service->credentials.name = NULL;
     service->version_string = NULL;
     service->svc_config_param = NULL;
-    service->users = NULL;
     service->routerOptions = NULL;
     service->log_auth_warnings = true;
     service->strip_db_esc = true;
@@ -155,9 +165,9 @@ service_alloc(const char *servname, const char *router)
     {
         if (service->name)
         {
-            free(service->name);
+            MXS_FREE(service->name);
         }
-        free(service);
+        MXS_FREE(service);
         return NULL;
     }
     service->stats.started = time(0);
@@ -230,106 +240,83 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         goto retblock;
     }
 
+    port->listener->service = service;
+
     if (port->ssl)
     {
         listener_init_SSL(port->ssl);
     }
 
+    /**
+     * The following code should be located inside the authenticator modules.
+     *
+     * The authentication of users is done against the data being gathered here
+     * but the actual authentication happens inside the authenticator module.
+     * Since not all authenticators use the same data for authentication, it
+     * should be up to the authenticator to decide where the user data is retrieved
+     * and how it is stored.
+     *
+     * One way to do it would be to add a @c dcb->authfunc.loadusers(dcb)
+     * entry point which loads the users and a @c dcb->authfunc.freeusers(dcb)
+     * which in turn frees the users. It would also make sense to have a
+     * @c dcb->authfunc.reloadusers(dcb) entry point which would allow for a more
+     * optimized user reloading process instead of freeing and loading the users
+     * again.
+     */
+
     if (strcmp(port->protocol, "MySQLClient") == 0)
     {
         int loaded;
 
-        if (service->users == NULL)
+        if (port->users == NULL)
         {
             /*
              * Allocate specific data for MySQL users
              * including hosts and db names
              */
-            service->users = mysql_users_alloc();
+            port->users = mysql_users_alloc();
+            const char* cachedir = get_cachedir();
 
-            if ((loaded = load_mysql_users(service)) < 0)
+            if ((loaded = load_mysql_users(port)) < 0)
             {
-                MXS_ERROR("Unable to load users for "
-                          "service %s listening at %s:%d.",
-                          service->name,
-                          (port->address == NULL ? "0.0.0.0" : port->address),
+                MXS_ERROR("Unable to load users for service %s listening at %s:%d.",
+                          service->name, port->address ? port->address : "0.0.0.0",
                           port->port);
 
+                /* Try loading authentication data from file cache */
+                char path[PATH_MAX];
+                sprintf(path, "%s/%s/%s/%s/%s", cachedir, service->name, port->name,
+                        DBUSERS_DIR, DBUSERS_FILE);
+
+                if ((loaded = dbusers_load(port->users, path)) == -1)
                 {
-                    /* Try loading authentication data from file cache */
-                    char *ptr, path[PATH_MAX + 1];
-                    strncpy(path, get_cachedir(), sizeof(path) - 1);
-                    strncat(path, "/", sizeof(path) - 1);
-                    strncat(path, service->name, sizeof(path) - 1);
-                    strncat(path, "/.cache/dbusers", sizeof(path) - 1);
-                    loaded = dbusers_load(service->users, path);
-                    if (loaded != -1)
-                    {
-                        MXS_ERROR("Using cached credential information.");
-                    }
-                }
-                if (loaded == -1)
-                {
-                    users_free(service->users);
-                    service->users = NULL;
+                    MXS_ERROR("Failed to load cached users from '%s'.", path);
+                    users_free(port->users);
                     dcb_close(port->listener);
-                    port->listener = NULL;
                     goto retblock;
+                }
+                else
+                {
+                    MXS_WARNING("Using cached credential information.");
                 }
             }
             else
             {
                 /* Save authentication data to file cache */
-                char *ptr, path[PATH_MAX + 1];
-                int mkdir_rval = 0;
-                strncpy(path, get_cachedir(), PATH_MAX);
-                strncat(path, "/", 4096);
-                strncat(path, service->name, PATH_MAX);
-                if (access(path, R_OK) == -1)
-                {
-                    mkdir_rval = mkdir(path, 0777);
-                }
+                char path[PATH_MAX];
+                sprintf(path, "%s/%s/%s/%s/", cachedir, service->name, port->name, DBUSERS_DIR);
 
-                if (mkdir_rval)
+                if (mxs_mkdir_all(path, 0777))
                 {
-                    if (errno != EEXIST)
-                    {
-                        char errbuf[STRERROR_BUFLEN];
-                        MXS_ERROR("Failed to create directory '%s': [%d] %s",
-                                  path,
-                                  errno,
-                                  strerror_r(errno, errbuf, sizeof(errbuf)));
-                    }
-                    mkdir_rval = 0;
+                    strcat(path, DBUSERS_FILE);
+                    dbusers_save(port->users, path);
                 }
-
-                strncat(path, "/.cache", PATH_MAX);
-                if (access(path, R_OK) == -1)
-                {
-                    mkdir_rval = mkdir(path, 0777);
-                }
-
-                if (mkdir_rval)
-                {
-                    if (errno != EEXIST)
-                    {
-                        char errbuf[STRERROR_BUFLEN];
-                        MXS_ERROR("Failed to create directory '%s': [%d] %s",
-                                  path,
-                                  errno,
-                                  strerror_r(errno, errbuf, sizeof(errbuf)));
-                    }
-                    mkdir_rval = 0;
-                }
-                strncat(path, "/dbusers", PATH_MAX);
-                dbusers_save(service->users, path);
             }
+
             if (loaded == 0)
             {
-                MXS_ERROR("Service %s: failed to load any user "
-                          "information. Authentication will "
-                          "probably fail as a result.",
-                          service->name);
+                MXS_ERROR("[%s]: failed to load any user information. Authentication"
+                          " will probably fail as a result.", service->name);
             }
 
             /* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
@@ -344,19 +331,16 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
     }
     else
     {
-        if (service->users == NULL)
+        if (port->users == NULL)
         {
             /* Generic users table */
-            service->users = users_alloc();
+            port->users = users_alloc();
         }
     }
 
     if ((funcs = (GWPROTOCOL *)load_module(port->protocol, MODULE_PROTOCOL)) == NULL)
     {
-        users_free(service->users);
-        service->users = NULL;
         dcb_close(port->listener);
-        service->users = NULL;
         port->listener = NULL;
         MXS_ERROR("Unable to load protocol module %s. Listener "
                   "for service %s not started.",
@@ -388,12 +372,8 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
         {
             MXS_ERROR("Failed to create session to service %s.",
                       service->name);
-
-            users_free(service->users);
-            service->users = NULL;
             dcb_close(port->listener);
             port->listener = NULL;
-            service->users = NULL;
             goto retblock;
         }
     }
@@ -403,8 +383,6 @@ serviceStartPort(SERVICE *service, SERV_LISTENER *port)
                   port->port,
                   port->protocol,
                   service->name);
-        users_free(service->users);
-        service->users = NULL;
         dcb_close(port->listener);
         port->listener = NULL;
     }
@@ -477,13 +455,13 @@ static char** copy_string_array(char** original)
             values++;
         }
 
-        array = malloc(sizeof(char*) * (values + 1));
+        array = MXS_MALLOC(sizeof(char*) * (values + 1));
 
         if (array)
         {
             for (int i = 0; i < values; i++)
             {
-                array[i] = strdup(original[i]);
+                array[i] = MXS_STRDUP_A(original[i]);
             }
             array[values] = NULL;
         }
@@ -498,9 +476,9 @@ static void free_string_array(char** array)
     {
         for (int i = 0; array[i]; i++)
         {
-            free(array[i]);
+            MXS_FREE(array[i]);
         }
-        free(array);
+        MXS_FREE(array);
     }
 }
 
@@ -703,22 +681,20 @@ service_free(SERVICE *service)
     {
         srv = service->dbref;
         service->dbref = service->dbref->next;
-        free(srv);
+        MXS_FREE(srv);
     }
 
-    free(service->name);
-    free(service->routerModule);
-    free(service->weightby);
-    free(service->version_string);
-    free(service->credentials.name);
-    free(service->credentials.authdata);
+    MXS_FREE(service->name);
+    MXS_FREE(service->routerModule);
+    MXS_FREE(service->weightby);
+    MXS_FREE(service->version_string);
+    MXS_FREE(service->credentials.name);
+    MXS_FREE(service->credentials.authdata);
 
     free_config_parameter(service->svc_config_param);
-    users_free(service->users);
-    hashtable_free(service->resources);
     serviceClearRouterOptions(service);
 
-    free(service);
+    MXS_FREE(service);
     return 1;
 }
 
@@ -734,12 +710,13 @@ service_free(SERVICE *service)
  * @return      TRUE if the protocol/port could be added
  */
 int
-serviceAddProtocol(SERVICE *service, char *protocol, char *address, unsigned short port, char *authenticator,
+serviceAddProtocol(SERVICE *service, char *name, char *protocol, char *address, unsigned short port, char *authenticator,
                    SSL_LISTENER *ssl)
 {
-    SERV_LISTENER   *proto;
+    SERV_LISTENER *proto = listener_alloc(service, name, protocol, address,
+                                          port, authenticator, ssl);
 
-    if ((proto = listener_alloc(protocol, address, port, authenticator, ssl)) != NULL)
+    if (proto)
     {
         spinlock_acquire(&service->spin);
         proto->next = service->ports;
@@ -791,7 +768,7 @@ int serviceHasProtocol(SERVICE *service, const char *protocol,
 void
 serviceAddBackend(SERVICE *service, SERVER *server)
 {
-    SERVER_REF *sref = malloc(sizeof(SERVER_REF));
+    SERVER_REF *sref = MXS_MALLOC(sizeof(SERVER_REF));
 
     if (sref)
     {
@@ -853,8 +830,9 @@ serviceAddRouterOption(SERVICE *service, char *option)
     spinlock_acquire(&service->spin);
     if (service->routerOptions == NULL)
     {
-        service->routerOptions = (char **)calloc(2, sizeof(char *));
-        service->routerOptions[0] = strdup(option);
+        service->routerOptions = (char **)MXS_CALLOC(2, sizeof(char *));
+        MXS_ABORT_IF_NULL(service->routerOptions);
+        service->routerOptions[0] = MXS_STRDUP_A(option);
         service->routerOptions[1] = NULL;
     }
     else
@@ -863,9 +841,9 @@ serviceAddRouterOption(SERVICE *service, char *option)
         {
             ;
         }
-        service->routerOptions = (char **)realloc(service->routerOptions,
-                                                  (i + 2) * sizeof(char *));
-        service->routerOptions[i] = strdup(option);
+        service->routerOptions = (char **)MXS_REALLOC(service->routerOptions, (i + 2) * sizeof(char *));
+        MXS_ABORT_IF_NULL(service->routerOptions);
+        service->routerOptions[i] = MXS_STRDUP_A(option);
         service->routerOptions[i + 1] = NULL;
     }
     spinlock_release(&service->spin);
@@ -886,9 +864,9 @@ serviceClearRouterOptions(SERVICE *service)
     {
         for (i = 0; service->routerOptions[i]; i++)
         {
-            free(service->routerOptions[i]);
+            MXS_FREE(service->routerOptions[i]);
         }
-        free(service->routerOptions);
+        MXS_FREE(service->routerOptions);
         service->routerOptions = NULL;
     }
     spinlock_release(&service->spin);
@@ -905,21 +883,22 @@ serviceClearRouterOptions(SERVICE *service)
 int
 serviceSetUser(SERVICE *service, char *user, char *auth)
 {
-    if (service->credentials.name)
-    {
-        free(service->credentials.name);
-    }
-    if (service->credentials.authdata)
-    {
-        free(service->credentials.authdata);
-    }
-    service->credentials.name = strdup(user);
-    service->credentials.authdata = strdup(auth);
+    user = MXS_STRDUP(user);
+    auth = MXS_STRDUP(auth);
 
-    if (service->credentials.name == NULL || service->credentials.authdata == NULL)
+    if (!user || !auth)
     {
+        MXS_FREE(user);
+        MXS_FREE(auth);
         return 0;
     }
+
+    MXS_FREE(service->credentials.name);
+    MXS_FREE(service->credentials.authdata);
+
+    service->credentials.name = user;
+    service->credentials.authdata = auth;
+
     return 1;
 }
 
@@ -1053,11 +1032,41 @@ serviceSetConnectionLimits(SERVICE *service, int max, int queued, int timeout)
     service->max_connections = max;
     if (queued && timeout)
     {
+        char callback_name[100];
+        sprintf(callback_name, "Check queued connections %p", service);
         /* If memory allocation fails, result will be null so no queue */
         service->queued_connections = mxs_queue_alloc(queued, timeout);
+        if (service->queued_connections)
+        {
+            hktask_add(callback_name, service_queue_check, (void *)service->queued_connections, 1);
+        }
     }
 
     return 1;
+}
+
+/*
+ * @brief The callback function triggered by housekeeping every second
+ *
+ * This function removes any expired connection requests from the queue, and
+ * sends an error message "too many connections" for them.
+ *
+ * @param   The parameter provided by the callback is the queue config
+ */
+static void
+service_queue_check(void *data)
+{
+    QUEUE_ENTRY expired;
+    QUEUE_CONFIG *queue_config = (QUEUE_CONFIG *)data;
+    /* The queued connections are in a FIFO queue, so we only look at the */
+    /* start of the queue, and remove any expired entries. As soon as this */
+    /* returns nothing, we stop. */
+    while ((mxs_dequeue_if_expired(queue_config, &expired)))
+    {
+        DCB *dcb = (DCB *)expired.queued_object;
+        dcb->func.connlimit(dcb, queue_config->queue_limit);
+        dcb_close(dcb);
+    }
 }
 
 /**
@@ -1089,9 +1098,8 @@ serviceSetFilters(SERVICE *service, char *filters)
     int n = 0;
     bool rval = true;
 
-    if ((flist = (FILTER_DEF **) malloc(sizeof(FILTER_DEF *))) == NULL)
+    if ((flist = (FILTER_DEF **) MXS_MALLOC(sizeof(FILTER_DEF *))) == NULL)
     {
-        MXS_ERROR("Out of memory adding filters to service.\n");
         return false;
     }
     ptr = strtok_r(filters, "|", &brkt);
@@ -1099,10 +1107,9 @@ serviceSetFilters(SERVICE *service, char *filters)
     {
         n++;
         FILTER_DEF **tmp;
-        if ((tmp = (FILTER_DEF **) realloc(flist,
-                                           (n + 1) * sizeof(FILTER_DEF *))) == NULL)
+        if ((tmp = (FILTER_DEF **) MXS_REALLOC(flist,
+                                               (n + 1) * sizeof(FILTER_DEF *))) == NULL)
         {
-            MXS_ERROR("Out of memory adding filters to service.");
             rval = false;
             break;
         }
@@ -1139,7 +1146,7 @@ serviceSetFilters(SERVICE *service, char *filters)
     }
     else
     {
-        free(flist);
+        MXS_FREE(flist);
     }
 
     return rval;
@@ -1203,7 +1210,14 @@ printService(SERVICE *service)
         }
         printf("\n");
     }
-    printf("\tUsers data:           %p\n", (void *)service->users);
+
+    SERV_LISTENER *port = service->ports;
+    while (port)
+    {
+        printf("\tUsers data:           %p\n", (void *)port->users);
+        port = port->next;
+    }
+
     printf("\tTotal connections:    %d\n", service->stats.n_sessions);
     printf("\tCurrently connected:  %d\n", service->stats.n_current);
 }
@@ -1313,8 +1327,14 @@ void dprintService(DCB *dcb, SERVICE *service)
         dcb_printf(dcb, "\tRouting weight parameter:            %s\n",
                    service->weightby);
     }
-    dcb_printf(dcb, "\tUsers data:                          %p\n",
-               service->users);
+
+    SERV_LISTENER *port = service->ports;
+    while (port)
+    {
+        dcb_printf(dcb, "\tUsers data:                          %p\n", port->users);
+        port = port->next;
+    }
+
     dcb_printf(dcb, "\tTotal connections:                   %d\n",
                service->stats.n_sessions);
     dcb_printf(dcb, "\tCurrently connected:                 %d\n",
@@ -1429,8 +1449,8 @@ service_update(SERVICE *service, char *router, char *user, char *auth)
             MXS_NOTICE("Update router for service %s to %s.",
                        service->name,
                        router);
-            free(service->routerModule);
-            service->routerModule = strdup(router);
+            MXS_FREE(service->routerModule);
+            service->routerModule = MXS_STRDUP_A(router);
             service->router = router_obj;
         }
     }
@@ -1484,7 +1504,17 @@ int service_refresh_users(SERVICE *service)
         service->rate_limit.last = time(NULL);
     }
 
-    ret = replace_mysql_users(service);
+    SERV_LISTENER *port = service->ports;
+    while (port)
+    {
+        if (replace_mysql_users(port) < 0)
+        {
+            ret = -1;
+            break;
+        }
+        ret++;
+        port = port->next;
+    }
 
     /* remove lock */
     spinlock_release(&service->users_table_spin);
@@ -1706,7 +1736,7 @@ static void service_add_qualified_param(SERVICE*          svc,
                 {
                     svc->svc_config_param = p;
                 }
-                free(old);
+                MXS_FREE(old);
                 break;
             }
             prev = p;
@@ -1749,9 +1779,9 @@ serviceWeightBy(SERVICE *service, char *weightby)
 {
     if (service->weightby)
     {
-        free(service->weightby);
+        MXS_FREE(service->weightby);
     }
-    service->weightby = strdup(weightby);
+    service->weightby = MXS_STRDUP_A(weightby);
 }
 
 /**
@@ -1868,7 +1898,7 @@ serviceListenerRowCallback(RESULTSET *set, void *data)
     if (lptr == NULL)
     {
         spinlock_release(&service_spin);
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     (*rowno)++;
@@ -1897,14 +1927,14 @@ serviceGetListenerList()
     RESULTSET *set;
     int *data;
 
-    if ((data = (int *)malloc(sizeof(int))) == NULL)
+    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
     {
         return NULL;
     }
     *data = 0;
     if ((set = resultset_create(serviceListenerRowCallback, data)) == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     resultset_add_column(set, "Service Name", 25, COL_TYPE_VARCHAR);
@@ -1942,7 +1972,7 @@ serviceRowCallback(RESULTSET *set, void *data)
     if (service == NULL)
     {
         spinlock_release(&service_spin);
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     (*rowno)++;
@@ -1968,14 +1998,14 @@ serviceGetList()
     RESULTSET *set;
     int *data;
 
-    if ((data = (int *)malloc(sizeof(int))) == NULL)
+    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
     {
         return NULL;
     }
     *data = 0;
     if ((set = resultset_create(serviceRowCallback, data)) == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     resultset_add_column(set, "Service Name", 25, COL_TYPE_VARCHAR);

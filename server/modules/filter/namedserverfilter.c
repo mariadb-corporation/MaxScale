@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -12,6 +12,7 @@
  */
 
 #include <stdio.h>
+#include <maxscale/alloc.h>
 #include <filter.h>
 #include <modinfo.h>
 #include <modutil.h>
@@ -20,6 +21,7 @@
 #include <string.h>
 #include <regex.h>
 #include <hint.h>
+#include <maxscale/alloc.h>
 
 /**
  * @file namedserverfilter.c - a very simple regular expression based filter
@@ -143,10 +145,9 @@ GetModuleObject()
 static FILTER *
 createInstance(char **options, FILTER_PARAMETER **params)
 {
-    REGEXHINT_INSTANCE *my_instance;
-    int cflags = REG_ICASE;
+    REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE*)MXS_MALLOC(sizeof(REGEXHINT_INSTANCE));
 
-    if ((my_instance = malloc(sizeof(REGEXHINT_INSTANCE))) != NULL)
+    if (my_instance)
     {
         my_instance->match = NULL;
         my_instance->server = NULL;
@@ -158,19 +159,19 @@ createInstance(char **options, FILTER_PARAMETER **params)
         {
             if (!strcmp(params[i]->name, "match"))
             {
-                my_instance->match = strdup(params[i]->value);
+                my_instance->match = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "server"))
             {
-                my_instance->server = strdup(params[i]->value);
+                my_instance->server = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "source"))
             {
-                my_instance->source = strdup(params[i]->value);
+                my_instance->source = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "user"))
             {
-                my_instance->user = strdup(params[i]->value);
+                my_instance->user = MXS_STRDUP_A(params[i]->value);
             }
             else if (!filter_standard_parameter(params[i]->name))
             {
@@ -179,6 +180,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 error = true;
             }
         }
+
+        int cflags = REG_ICASE;
 
         if (options)
         {
@@ -221,7 +224,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
         {
             MXS_ERROR("namedserverfilter: Invalid regular expression '%s'.\n",
                       my_instance->match);
-            free(my_instance->match);
+            MXS_FREE(my_instance->match);
             my_instance->match = NULL;
             error = true;
         }
@@ -231,12 +234,12 @@ createInstance(char **options, FILTER_PARAMETER **params)
             if (my_instance->match)
             {
                 regfree(&my_instance->re);
-                free(my_instance->match);
+                MXS_FREE(my_instance->match);
             }
-            free(my_instance->server);
-            free(my_instance->source);
-            free(my_instance->user);
-            free(my_instance);
+            MXS_FREE(my_instance->server);
+            MXS_FREE(my_instance->source);
+            MXS_FREE(my_instance->user);
+            MXS_FREE(my_instance);
             my_instance = NULL;
         }
 
@@ -258,7 +261,7 @@ newSession(FILTER *instance, SESSION *session)
     REGEXHINT_SESSION *my_session;
     char *remote, *user;
 
-    if ((my_session = calloc(1, sizeof(REGEXHINT_SESSION))) != NULL)
+    if ((my_session = MXS_CALLOC(1, sizeof(REGEXHINT_SESSION))) != NULL)
     {
         my_session->n_diverted = 0;
         my_session->n_undiverted = 0;
@@ -303,7 +306,7 @@ closeSession(FILTER *instance, void *session)
 static void
 freeSession(FILTER *instance, void *session)
 {
-    free(session);
+    MXS_FREE(session);
     return;
 }
 
@@ -361,7 +364,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
             {
                 my_session->n_undiverted++;
             }
-            free(sql);
+            MXS_FREE(sql);
         }
     }
     return my_session->down.routeQuery(my_session->down.instance,

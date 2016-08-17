@@ -6,7 +6,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -29,12 +29,14 @@
  * 29-05-2014   Mark Riddoch            Support for filter mechanism
  *                                      added
  * 20-02-2015   Markus Mäkelä           Added session timeouts
+ * 27/06/2016   Martin Brampton         Modify session struct for list manager
  *
  * @endverbatim
  */
 #include <time.h>
 #include <atomic.h>
 #include <buffer.h>
+#include <listmanager.h>
 #include <spinlock.h>
 #include <resultset.h>
 #include <skygw_utils.h>
@@ -51,6 +53,8 @@ typedef struct
 {
     time_t          connect;        /**< Time when the session was started */
 } SESSION_STATS;
+
+#define SESSION_STATS_INIT {0}
 
 typedef enum
 {
@@ -76,6 +80,8 @@ typedef struct
     int (*routeQuery)(void *instance, void *session, GWBUF *request);
 } DOWNSTREAM;
 
+#define DOWNSTREAM_INIT {0}
+
 /**
  * The upstream element in the filter chain. This may refer to
  * another filter or to the protocol implementation.
@@ -88,6 +94,8 @@ typedef struct
     int (*error)(void *instance, void *session, void *);
 } UPSTREAM;
 
+#define UPSTREAM_INIT {0}
+
 /**
  * Structure used to track the filter instances and sessions of the filters
  * that are in use within a session.
@@ -98,6 +106,8 @@ typedef struct
     void *instance;
     void *session;
 } SESSION_FILTER;
+
+#define SESSION_FILTER_INIT {0}
 
 /**
  * Filter type for the sessionGetList call
@@ -114,13 +124,14 @@ typedef enum
  * A session status block is created for each user (client) connection
  * to the database, it links the descriptors, routing implementation
  * and originating service together for the client session.
+ * 
+ * Note that the first few fields (up to and including "entry_is_ready") must
+ * precisely match the LIST_ENTRY structure defined in the list manager.
  */
 typedef struct session
 {
-#if defined(SS_DEBUG)
+    LIST_ENTRY_FIELDS
     skygw_chk_t     ses_chk_top;
-#endif
-    bool            ses_is_in_use;    /**< Whether session is in use or for later reuse */
     SPINLOCK        ses_lock;
     session_state_t state;            /*< Current descriptor state */
     size_t          ses_id;           /*< Unique session identifier */
@@ -133,13 +144,14 @@ typedef struct session
     SESSION_FILTER  *filters;         /*< The filters in use within this session */
     DOWNSTREAM      head;             /*< Head of the filter chain */
     UPSTREAM        tail;             /*< The tail of the filter chain */
-    struct session  *next;            /*< Linked list of all sessions */
     int             refcount;         /*< Reference count on the session */
     bool            ses_is_child;     /*< this is a child session */
-#if defined(SS_DEBUG)
     skygw_chk_t     ses_chk_tail;
-#endif
 } SESSION;
+
+#define SESSION_INIT {.ses_chk_top = CHK_NUM_SESSION, .ses_lock = SPINLOCK_INIT, \
+    .stats = SESSION_STATS_INIT, .head = DOWNSTREAM_INIT, .tail = UPSTREAM_INIT, \
+    .state = SESSION_STATE_ALLOC, .ses_chk_tail = CHK_NUM_SESSION}
 
 /** Whether to do session timeout checks */
 extern bool check_timeouts;
@@ -167,8 +179,8 @@ extern long next_timeout_check;
     ((sess)->tail.clientReply)((sess)->tail.instance,           \
                                (sess)->tail.session, (buf))
 
-SESSION *get_all_sessions();
 SESSION *session_alloc(struct service *, struct dcb *);
+bool session_pre_alloc(int number);
 SESSION *session_set_dummy(struct dcb *);
 bool session_free(SESSION *);
 int session_isvalid(SESSION *);
@@ -177,6 +189,7 @@ char *session_get_remote(SESSION *);
 char *session_getUser(SESSION *);
 void printAllSessions();
 void printSession(SESSION *);
+void dprintSessionList(DCB *pdcb);
 void dprintAllSessions(struct dcb *);
 void dprintSession(struct dcb *, SESSION *);
 void dListSessions(struct dcb *);

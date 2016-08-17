@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -27,6 +27,7 @@
 #include <buffer.h>
 #include <string.h>
 #include <mysql_client_server_protocol.h>
+#include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <modutil.h>
 #include <strings.h>
@@ -283,7 +284,9 @@ modutil_get_SQL(GWBUF *buf)
         length += (*ptr++ << 8);
         length += (*ptr++ << 16);
 
-        if ((rval = (char *) malloc(length + 1)))
+        rval = (char *) MXS_MALLOC(length + 1);
+
+        if (rval)
         {
             dptr = rval;
             ptr += 2; // Skip sequence id  and COM_QUERY byte
@@ -332,7 +335,7 @@ modutil_get_query(GWBUF *buf)
     {
     case MYSQL_COM_QUIT:
         len = strlen("[Quit msg]") + 1;
-        if ((query_str = (char *)malloc(len + 1)) == NULL)
+        if ((query_str = (char *)MXS_MALLOC(len + 1)) == NULL)
         {
             goto retblock;
         }
@@ -342,8 +345,12 @@ modutil_get_query(GWBUF *buf)
 
     case MYSQL_COM_QUERY:
         len = MYSQL_GET_PACKET_LEN(packet) - 1; /*< distract 1 for packet type byte */
-        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)malloc(len + 1)) == NULL)
+        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)MXS_MALLOC(len + 1)) == NULL)
         {
+            if (len >= 1 && len <= ~(size_t)0 - 1)
+            {
+                ss_dassert(!query_str);
+            }
             goto retblock;
         }
         memcpy(query_str, &packet[5], len);
@@ -352,8 +359,12 @@ modutil_get_query(GWBUF *buf)
 
     default:
         len = strlen(STRPACKETTYPE(packet_type)) + 1;
-        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)malloc(len + 1)) == NULL)
+        if (len < 1 || len > ~(size_t)0 - 1 || (query_str = (char *)MXS_MALLOC(len + 1)) == NULL)
         {
+            if (len >= 1 && len <= ~(size_t)0 - 1)
+            {
+                ss_dassert(!query_str);
+            }
             goto retblock;
         }
         memcpy(query_str, STRPACKETTYPE(packet_type), len);
@@ -777,7 +788,7 @@ static void modutil_reply_routing_error(DCB*     backend_dcb,
     CHK_DCB(backend_dcb);
 
     buf = modutil_create_mysql_err_msg(1, 0, error, state, errstr);
-    free(errstr);
+    MXS_FREE(errstr);
 
     if (buf == NULL)
     {
@@ -1117,56 +1128,61 @@ mxs_pcre2_result_t modutil_mysql_wildcard_match(const char* pattern, const char*
     bool err = false;
     PCRE2_SIZE matchsize = strlen(string) + 1;
     PCRE2_SIZE tempsize = matchsize;
-    char* matchstr = (char*) malloc(matchsize);
-    char* tempstr = (char*) malloc(tempsize);
+    char* matchstr = (char*) MXS_MALLOC(matchsize);
+    char* tempstr = (char*) MXS_MALLOC(tempsize);
 
-    pcre2_match_data *mdata_percent = pcre2_match_data_create_from_pattern(re_percent, NULL);
-    pcre2_match_data *mdata_single = pcre2_match_data_create_from_pattern(re_single, NULL);
-    pcre2_match_data *mdata_escape = pcre2_match_data_create_from_pattern(re_escape, NULL);
-
-    if (matchstr && tempstr && mdata_percent && mdata_single && mdata_escape)
+    if (matchstr && tempstr)
     {
-        if (mxs_pcre2_substitute(re_escape, pattern, sub_escape,
-                                 &matchstr, &matchsize) == MXS_PCRE2_ERROR ||
-            mxs_pcre2_substitute(re_single, matchstr, sub_single,
-                                 &tempstr, &tempsize) == MXS_PCRE2_ERROR ||
-            mxs_pcre2_substitute(re_percent, tempstr, sub_percent,
-                                 &matchstr, &matchsize) == MXS_PCRE2_ERROR)
+        pcre2_match_data *mdata_percent = pcre2_match_data_create_from_pattern(re_percent, NULL);
+        pcre2_match_data *mdata_single = pcre2_match_data_create_from_pattern(re_single, NULL);
+        pcre2_match_data *mdata_escape = pcre2_match_data_create_from_pattern(re_escape, NULL);
+
+        if (mdata_percent && mdata_single && mdata_escape)
+        {
+            if (mxs_pcre2_substitute(re_escape, pattern, sub_escape,
+                                     &matchstr, &matchsize) == MXS_PCRE2_ERROR ||
+                mxs_pcre2_substitute(re_single, matchstr, sub_single,
+                                     &tempstr, &tempsize) == MXS_PCRE2_ERROR ||
+                mxs_pcre2_substitute(re_percent, tempstr, sub_percent,
+                                     &matchstr, &matchsize) == MXS_PCRE2_ERROR)
+            {
+                err = true;
+            }
+
+            if (!err)
+            {
+                int errcode;
+                rval = mxs_pcre2_simple_match(matchstr, string, PCRE2_CASELESS, &errcode);
+                if (rval == MXS_PCRE2_ERROR)
+                {
+                    if (errcode != 0)
+                    {
+                        PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
+                        pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
+                        MXS_ERROR("Failed to match pattern: %s", errbuf);
+                    }
+                    err = true;
+                }
+            }
+        }
+        else
         {
             err = true;
         }
 
-        if (!err)
+        if (err)
         {
-            int errcode;
-            rval = mxs_pcre2_simple_match(matchstr, string, PCRE2_CASELESS, &errcode);
-            if (rval == MXS_PCRE2_ERROR)
-            {
-                if (errcode != 0)
-                {
-                    PCRE2_UCHAR errbuf[STRERROR_BUFLEN];
-                    pcre2_get_error_message(errcode, errbuf, sizeof(errbuf));
-                    MXS_ERROR("Failed to match pattern: %s", errbuf);
-                }
-                err = true;
-            }
+            MXS_ERROR("Fatal error when matching wildcard patterns.");
         }
-    }
-    else
-    {
-        err = true;
+
+        pcre2_match_data_free(mdata_percent);
+        pcre2_match_data_free(mdata_single);
+        pcre2_match_data_free(mdata_escape);
     }
 
-    if (err)
-    {
-        MXS_ERROR("Fatal error when matching wildcard patterns.");
-    }
+    MXS_FREE(matchstr);
+    MXS_FREE(tempstr);
 
-    pcre2_match_data_free(mdata_percent);
-    pcre2_match_data_free(mdata_single);
-    pcre2_match_data_free(mdata_escape);
-    free(matchstr);
-    free(tempstr);
     return rval;
 }
 
@@ -1205,17 +1221,17 @@ char* modutil_get_canonical(GWBUF* querybuf)
                 if (replace_values((const char**)&dest, &destsize, &src, &srcsize))
                 {
                     querystr = squeeze_whitespace(src);
-                    free(dest);
+                    MXS_FREE(dest);
                 }
                 else
                 {
-                    free(src);
-                    free(dest);
+                    MXS_FREE(src);
+                    MXS_FREE(dest);
                 }
             }
             else
             {
-                free(src);
+                MXS_FREE(src);
             }
         }
     }

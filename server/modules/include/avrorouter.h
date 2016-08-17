@@ -267,9 +267,9 @@ typedef struct avro_instance
 extern void read_table_info(uint8_t *ptr, uint8_t post_header_len, uint64_t *table_id,
                             char* dest, size_t len);
 extern TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create);
-extern void* table_map_free(TABLE_MAP *map);
+extern void table_map_free(TABLE_MAP *map);
 extern TABLE_CREATE* table_create_alloc(const char* sql, const char* db);
-extern void* table_create_free(TABLE_CREATE* value);
+extern void table_create_free(TABLE_CREATE* value);
 extern bool table_create_save(TABLE_CREATE *create, const char *filename);
 extern bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end);
 extern void read_alter_identifier(const char *sql, const char *end, char *dest, int size);
@@ -279,7 +279,7 @@ extern bool avro_open_binlog(const char *binlogdir, const char *file, int *fd);
 extern void avro_close_binlog(int fd);
 extern avro_binlog_end_t avro_read_all_events(AVRO_INSTANCE *router);
 extern AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema);
-extern void* avro_table_free(AVRO_TABLE *table);
+extern void avro_table_free(AVRO_TABLE *table);
 extern void avro_flush_all_tables(AVRO_INSTANCE *router);
 extern char* json_new_schema_from_table(TABLE_MAP *map);
 extern void save_avro_schema(const char *path, const char* schema, TABLE_MAP *map);

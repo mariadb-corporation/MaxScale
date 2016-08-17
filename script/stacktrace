@@ -24,7 +24,7 @@ function parse_stack_trace {
     local prefix=$1
     local file=$2
 
-    cat $file | egrep "$STACK_LINE" | sed "s/$DATE_TIME//" | \
+    egrep "$STACK_LINE" < "$file" | sed "s/$DATE_TIME//" | \
     while read line
     do
 	local path=${line%%(*}
@@ -34,7 +34,7 @@ function parse_stack_trace {
 
 	if [ -e "${path}" ]
 	then
-	    file ${path} | fgrep -q executable
+	    file "${path}" | fgrep -q executable
 	    let rc=$?
 	    local address;
 	    
@@ -47,9 +47,9 @@ function parse_stack_trace {
 		address=${address%\)*}
 	    fi
 
-	    addr2line -e ${path} ${address}
+	    addr2line -e "${path}" "${address}"
         else
-	    echo ${line}
+	    echo "${line}"
 	fi
     done
 }
@@ -58,7 +58,7 @@ function main {
     local prefix
     local key
     
-    while [[ $# > 1 ]]
+    while [[ $# -gt 1 ]]
     do
 	key="$1"
 	
@@ -84,4 +84,4 @@ function main {
     parse_stack_trace "$prefix" "$file"
 }
 
-main $*
+main "$@"

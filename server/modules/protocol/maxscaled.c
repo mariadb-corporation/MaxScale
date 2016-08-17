@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -35,6 +35,7 @@
 #include <modinfo.h>
 #include <maxscaled.h>
 #include <maxadmin.h>
+#include <maxscale/alloc.h>
 
  /* @see function load_module in load_utils.c for explanation of the following
   * lint directives.
@@ -242,7 +243,7 @@ static int maxscaled_accept(DCB *listener)
     {
         MAXSCALED *maxscaled_protocol = NULL;
 
-        if ((maxscaled_protocol = (MAXSCALED *)calloc(1, sizeof(MAXSCALED))) == NULL)
+        if ((maxscaled_protocol = (MAXSCALED *)MXS_CALLOC(1, sizeof(MAXSCALED))) == NULL)
         {
             dcb_close(client_dcb);
             continue;
@@ -270,7 +271,7 @@ static int maxscaled_accept(DCB *listener)
                   GWBUF *username;
 
                   /* Set user in protocol */
-                  maxscaled_protocol->username = strdup(pw_entry.pw_name);
+                  maxscaled_protocol->username = MXS_STRDUP_A(pw_entry.pw_name);
 
                   username = gwbuf_alloc(strlen(maxscaled_protocol->username) + 1);
 
@@ -282,7 +283,7 @@ static int maxscaled_accept(DCB *listener)
                   {
                       dcb_printf(client_dcb, "OK----");
                       maxscaled_protocol->state = MAXSCALED_STATE_DATA;
-                      client_dcb->user = strdup(maxscaled_protocol->username);
+                      client_dcb->user = MXS_STRDUP_A(maxscaled_protocol->username);
                   }
                   else
                   {
@@ -332,7 +333,7 @@ static int maxscaled_close(DCB *dcb)
     spinlock_acquire(&maxscaled->lock);
     if (maxscaled->username)
     {
-        free(maxscaled->username);
+        MXS_FREE(maxscaled->username);
         maxscaled->username = NULL;
     }
     spinlock_release(&maxscaled->lock);

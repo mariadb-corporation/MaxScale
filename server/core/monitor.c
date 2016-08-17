@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -40,6 +40,7 @@
 #include <externcmd.h>
 #include <mysqld_error.h>
 #include <mysql_utils.h>
+#include <maxscale/alloc.h>
 
 /*
  *  Create declarations of the enum for monitor events and also the array of
@@ -71,21 +72,26 @@ static void monitor_servers_free(MONITOR_SERVERS *servers);
 MONITOR *
 monitor_alloc(char *name, char *module)
 {
-    MONITOR *mon;
+    name = MXS_STRDUP(name);
 
-    if ((mon = (MONITOR *)malloc(sizeof(MONITOR))) == NULL)
+    MONITOR *mon = (MONITOR *)MXS_MALLOC(sizeof(MONITOR));
+
+    if (!name || !mon)
     {
+        MXS_FREE(name);
+        MXS_FREE(mon);
         return NULL;
     }
 
     if ((mon->module = load_module(module, MODULE_MONITOR)) == NULL)
     {
         MXS_ERROR("Unable to load monitor module '%s'.", name);
-        free(mon);
+        MXS_FREE(name);
+        MXS_FREE(mon);
         return NULL;
     }
     mon->state = MONITOR_STATE_ALLOC;
-    mon->name = strdup(name);
+    mon->name = name;
     mon->handle = NULL;
     mon->databases = NULL;
     mon->password = NULL;
@@ -138,8 +144,8 @@ monitor_free(MONITOR *mon)
     spinlock_release(&monLock);
     free_config_parameter(mon->parameters);
     monitor_servers_free(mon->databases);
-    free(mon->name);
-    free(mon);
+    MXS_FREE(mon->name);
+    MXS_FREE(mon);
 }
 
 
@@ -240,12 +246,9 @@ monitorStopAll()
 void
 monitorAddServer(MONITOR *mon, SERVER *server)
 {
-    MONITOR_SERVERS     *ptr, *db;
+    MONITOR_SERVERS *db = (MONITOR_SERVERS *)MXS_MALLOC(sizeof(MONITOR_SERVERS));
+    MXS_ABORT_IF_NULL(db);
 
-    if ((db = (MONITOR_SERVERS *)malloc(sizeof(MONITOR_SERVERS))) == NULL)
-    {
-        return;
-    }
     db->server = server;
     db->con = NULL;
     db->next = NULL;
@@ -264,7 +267,7 @@ monitorAddServer(MONITOR *mon, SERVER *server)
     }
     else
     {
-        ptr = mon->databases;
+        MONITOR_SERVERS *ptr = mon->databases;
         while (ptr->next != NULL)
         {
             ptr = ptr->next;
@@ -288,7 +291,7 @@ static void monitor_servers_free(MONITOR_SERVERS *servers)
         {
             mysql_close(tofree->con);
         }
-        free(tofree);
+        MXS_FREE(tofree);
     }
 }
 
@@ -303,8 +306,8 @@ static void monitor_servers_free(MONITOR_SERVERS *servers)
 void
 monitorAddUser(MONITOR *mon, char *user, char *passwd)
 {
-    mon->user = strdup(user);
-    mon->password = strdup(passwd);
+    mon->user = MXS_STRDUP_A(user);
+    mon->password = MXS_STRDUP_A(passwd);
 }
 
 /**
@@ -486,7 +489,7 @@ monitorRowCallback(RESULTSET *set, void *data)
     if (ptr == NULL)
     {
         spinlock_release(&monLock);
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     (*rowno)++;
@@ -509,14 +512,14 @@ monitorGetList()
     RESULTSET *set;
     int *data;
 
-    if ((data = (int *)malloc(sizeof(int))) == NULL)
+    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
     {
         return NULL;
     }
     *data = 0;
     if ((set = resultset_create(monitorRowCallback, data)) == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     resultset_add_column(set, "Monitor", 20, COL_TYPE_VARCHAR);
@@ -613,7 +616,7 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
         mysql_close(mysql);
     }
 
-    free(dpasswd);
+    MXS_FREE(dpasswd);
     return rval;
 }
 
@@ -925,14 +928,15 @@ monitor_launch_script(MONITOR* mon, MONITOR_SERVERS* ptr, char* script)
 int
 mon_parse_event_string(bool* events, size_t count, char* given_string)
 {
-    char *tok, *saved, *string = strdup(given_string);
+    char *tok, *saved, *string = MXS_STRDUP(given_string);
+    MXS_ABORT_IF_NULL(string);
     monitor_event_t event;
 
     tok = strtok_r(string, ",| ", &saved);
 
     if (tok == NULL)
     {
-        free(string);
+        MXS_FREE(string);
         return -1;
     }
 
@@ -942,7 +946,7 @@ mon_parse_event_string(bool* events, size_t count, char* given_string)
         if (event == UNDEFINED_MONITOR_EVENT)
         {
             MXS_ERROR("Invalid event name %s", tok);
-            free(string);
+            MXS_FREE(string);
             return -1;
         }
         if (event < count)
@@ -952,7 +956,7 @@ mon_parse_event_string(bool* events, size_t count, char* given_string)
         }
     }
 
-    free(string);
+    MXS_FREE(string);
     return 0;
 }
 
@@ -1006,7 +1010,7 @@ mon_connect_to_db(MONITOR* mon, MONITOR_SERVERS *database)
             }
         }
 
-        free(dpwd);
+        MXS_FREE(dpwd);
     }
     else
     {
@@ -1044,6 +1048,6 @@ void mon_log_state_change(MONITOR_SERVERS *ptr)
     MXS_NOTICE("Server changed state: %s[%s:%u]: %s. [%s] -> [%s]",
                ptr->server->unique_name, ptr->server->name, ptr->server->port,
                mon_get_event_name(ptr), prev, next);
-    free(prev);
-    free(next);
+    MXS_FREE(prev);
+    MXS_FREE(next);
 }

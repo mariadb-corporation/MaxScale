@@ -6,7 +6,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -30,8 +30,8 @@
  */
 #include <skygw_debug.h>
 #include <spinlock.h>
-#include <atomic.h>
-#include <dcb.h>
+
+EXTERN_C_BLOCK_BEGIN
 
 /**
  * The entries within a hashtable.
@@ -58,9 +58,24 @@ typedef struct hashiterator
 } HASHITERATOR;
 
 /**
- * The type definition for the memory allocation functions
+ * The type definition for the hash function
  */
-typedef void *(*HASHMEMORYFN)(void *);
+typedef int (*HASHHASHFN)(const void *);
+
+/**
+ * The type definition for the comparison function
+ */
+typedef int (*HASHCMPFN)(const void *, const void *);
+
+/**
+ * The type definition for the key/value copying functions
+ */
+typedef void *(*HASHCOPYFN)(const void *);
+
+/**
+ * The type definition for the key/value freeing functions
+ */
+typedef void (*HASHFREEFN)(void *);
 
 /**
  * The general purpose hashtable struct.
@@ -72,12 +87,12 @@ typedef struct hashtable
 #endif
     int hashsize;                 /**< The number of HASHENTRIES */
     HASHENTRIES **entries;        /**< The entries themselves */
-    int (*hashfn)(void *);        /**< The hash function */
-    int (*cmpfn)(void *, void *); /**< The key comparison function */
-    HASHMEMORYFN kcopyfn;         /**< Optional key copy function */
-    HASHMEMORYFN vcopyfn;         /**< Optional value copy function */
-    HASHMEMORYFN kfreefn;         /**< Optional key free function */
-    HASHMEMORYFN vfreefn;         /**< Optional value free function */
+    HASHHASHFN hashfn;            /**< The hash function */
+    HASHCMPFN cmpfn;              /**< The key comparison function */
+    HASHCOPYFN kcopyfn;           /**< Optional key copy function */
+    HASHCOPYFN vcopyfn;           /**< Optional value copy function */
+    HASHFREEFN kfreefn;           /**< Optional key free function */
+    HASHFREEFN vfreefn;           /**< Optional value free function */
     SPINLOCK spin;                /**< Internal spinlock for the hashtable */
     int n_readers;                /**< Number of clients reading the table */
     int writelock;                /**< The table is locked by a writer */
@@ -88,17 +103,17 @@ typedef struct hashtable
 #endif
 } HASHTABLE;
 
-extern HASHTABLE *hashtable_alloc(int, int (*hashfn)(), int (*cmpfn)());
+extern HASHTABLE *hashtable_alloc(int, HASHHASHFN hashfn, HASHCMPFN cmpfn);
 HASHTABLE *hashtable_alloc_flat(HASHTABLE* target,
                                 int size,
-                                int (*hashfn)(),
-                                int (*cmpfn)());
+                                HASHHASHFN hashfn,
+                                HASHCMPFN cmpfn);
 /**< Allocate a hashtable */
 extern void hashtable_memory_fns(HASHTABLE   *table,
-                                 HASHMEMORYFN kcopyfn,
-                                 HASHMEMORYFN vcopyfn,
-                                 HASHMEMORYFN kfreefn,
-                                 HASHMEMORYFN vfreefn);
+                                 HASHCOPYFN kcopyfn,
+                                 HASHCOPYFN vcopyfn,
+                                 HASHFREEFN kfreefn,
+                                 HASHFREEFN vfreefn);
 /**< Provide an interface to control key/value memory
  * manipulation
  */
@@ -128,4 +143,13 @@ extern void *hashtable_next(HASHITERATOR *);
 /**< Return the key of the hash table iterator */
 extern void hashtable_iterator_free(HASHITERATOR *);
 extern int hashtable_size(HASHTABLE *table);
+
+extern void hashtable_item_free(void *data);
+extern int hashtable_item_strcasecmp(const void* str1, const void* str2);
+extern int hashtable_item_strcmp(const void* str1, const void* str2);
+extern void* hashtable_item_strdup(const void *str);
+extern int hashtable_item_strhash(const void *str);
+
+EXTERN_C_BLOCK_END
+
 #endif

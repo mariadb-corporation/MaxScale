@@ -6,7 +6,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -23,8 +23,9 @@
  * for the lock to be released. However they are useful in that they do not involve
  * system calls and are light weight when the expected wait time for a lock is low.
  */
-#include <thread.h>
-#include <stdbool.h>
+#include <skygw_debug.h>
+
+EXTERN_C_BLOCK_BEGIN
 
 #define SPINLOCK_PROFILE 0
 
@@ -68,9 +69,11 @@ typedef struct spinlock
 #define SPINLOCK_IS_LOCKED(l) ((l)->lock != 0 ? true : false)
 
 extern void spinlock_init(SPINLOCK *lock);
-extern void spinlock_acquire(SPINLOCK *lock);
-extern int spinlock_acquire_nowait(SPINLOCK *lock);
-extern void spinlock_release(SPINLOCK *lock);
-extern void spinlock_stats(SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl);
+extern void spinlock_acquire(const SPINLOCK *lock);
+extern int spinlock_acquire_nowait(const SPINLOCK *lock);
+extern void spinlock_release(const SPINLOCK *lock);
+extern void spinlock_stats(const SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl);
+
+EXTERN_C_BLOCK_END
 
 #endif

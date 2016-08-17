@@ -4,5 +4,5 @@ target_link_libraries(maxavro maxscale-common jansson)
 
 add_executable(maxavrocheck maxavrocheck.c)
 target_link_libraries(maxavrocheck maxavro)
-install(TARGETS maxavrocheck DESTINATION ${MAXSCALE_BINDIR})
+install_executable(maxavrocheck core)
 add_subdirectory(test)

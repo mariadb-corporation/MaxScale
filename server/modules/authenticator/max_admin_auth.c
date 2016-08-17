@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -27,6 +27,7 @@
  */
 
 #include <gw_authenticator.h>
+#include <maxscale/alloc.h>
 #include <modinfo.h>
 #include <dcb.h>
 #include <buffer.h>
@@ -130,7 +131,7 @@ max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
 
     max_admin_auth_free_client_data(dcb);
 
-    if ((session_data = (ADMIN_session *)calloc(1, sizeof(ADMIN_session))) != NULL)
+    if ((session_data = (ADMIN_session *)MXS_CALLOC(1, sizeof(ADMIN_session))) != NULL)
     {
         int user_len = (GWBUF_LENGTH(buf) > ADMIN_USER_MAXLEN) ? ADMIN_USER_MAXLEN : GWBUF_LENGTH(buf);
 #if defined(SS_DEBUG)
@@ -170,12 +171,12 @@ max_admin_auth_is_client_ssl_capable(DCB *dcb)
  * @brief Free the client data pointed to by the passed DCB.
  *
  * The max_admin authenticator uses a simple structure that can be freed with
- * a single call to free().
+ * a single call to MXS_FREE().
  *
  * @param dcb Request handler DCB connected to the client
  */
 static void
 max_admin_auth_free_client_data(DCB *dcb)
 {
-    free(dcb->data);
+    MXS_FREE(dcb->data);
 }

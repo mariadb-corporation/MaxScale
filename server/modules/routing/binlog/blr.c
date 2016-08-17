@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -46,6 +46,10 @@
  * 23/10/2015   Markus Makela       Added current_safe_event
  * 27/10/2015   Martin Brampton     Amend getCapabilities to return RCAP_TYPE_NO_RSESSION
  * 19/04/2016   Massimiliano Pinto  UUID generation now comes from libuuid
+ * 05/07/2016   Massimiliano Pinto  errorReply now handles error message in SHOW SLAVE STATUS
+ *                                  for connection error and authentication failure.
+ * 11/07/2016   Massimiliano Pinto  Added SSL backend support
+ * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
  *
  * @endverbatim
  */
@@ -75,8 +79,10 @@
 #include <ini.h>
 #include <sys/stat.h>
 #include <uuid/uuid.h>
+#include <maxscale/alloc.h>
+#include <gw.h>
 
-static char *version_str = "V2.0.0";
+static char *version_str = "V2.1.0";
 
 /* The router entry points */
 static  ROUTER  *createInstance(SERVICE *service, char **options);
@@ -105,6 +111,7 @@ static int blr_load_dbusers(const ROUTER_INSTANCE *router);
 static int blr_check_binlog(ROUTER_INSTANCE *router);
 int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
 void blr_master_close(ROUTER_INSTANCE *);
+void blr_free_ssl_data(ROUTER_INSTANCE *inst);
 
 /** The module object definition */
 static ROUTER_OBJECT MyObject =
@@ -186,8 +193,6 @@ createInstance(SERVICE *service, char **options)
     char *value;
     int i;
     uuid_t defuuid;
-    char path[PATH_MAX + 1] = "";
-    char filename[PATH_MAX + 1] = "";
     int rc = 0;
     char task_name[BLRM_TASK_NAME_LEN + 1] = "";
 
@@ -220,15 +225,12 @@ createInstance(SERVICE *service, char **options)
                     service->name);
 
         server_free(service->dbref->server);
-        free(service->dbref);
+        MXS_FREE(service->dbref);
         service->dbref = NULL;
     }
 
-    if ((inst = (ROUTER_INSTANCE *)calloc(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if ((inst = (ROUTER_INSTANCE *)MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
-        MXS_ERROR("%s: Error: failed to allocate memory for router instance.",
-                  service->name);
-
         return NULL;
     }
 
@@ -260,8 +262,8 @@ createInstance(SERVICE *service, char **options)
     inst->heartbeat = BLR_HEARTBEAT_DEFAULT_INTERVAL;
     inst->mariadb10_compat = false;
 
-    inst->user = strdup(service->credentials.name);
-    inst->password = strdup(service->credentials.authdata);
+    inst->user = MXS_STRDUP_A(service->credentials.name);
+    inst->password = MXS_STRDUP_A(service->credentials.authdata);
 
     inst->m_errno = 0;
     inst->m_errmsg = NULL;
@@ -279,10 +281,22 @@ createInstance(SERVICE *service, char **options)
 
     inst->serverid = 0;
 
+    /* SSL replication is disabled by default */
+    inst->ssl_enabled = 0;
+    /* SSL config options */
+    inst->ssl_ca = NULL;
+    inst->ssl_cert = NULL;
+    inst->ssl_key = NULL;
+    inst->ssl_version = NULL;
+
+    /* Semi-Sync support */
+    inst->request_semi_sync = false;
+    inst->master_semi_sync = 0;
+
     /* Generate UUID for the router instance */
     uuid_generate_time(defuuid);
 
-    if ((inst->uuid = (char *)calloc(38, 1)) != NULL)
+    if ((inst->uuid = (char *)MXS_CALLOC(38, 1)) != NULL)
     {
         sprintf(inst->uuid,
                 "%02hhx%02hhx%02hhx%02hhx-"
@@ -325,8 +339,8 @@ createInstance(SERVICE *service, char **options)
                 value++;
                 if (strcmp(options[i], "uuid") == 0)
                 {
-                    free(inst->uuid);
-                    inst->uuid = strdup(value);
+                    MXS_FREE(inst->uuid);
+                    inst->uuid = MXS_STRDUP_A(value);
                 }
                 else if ((strcmp(options[i], "server_id") == 0) || (strcmp(options[i], "server-id") == 0))
                 {
@@ -351,18 +365,18 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "user") == 0)
                 {
-                    free(inst->user);
-                    inst->user = strdup(value);
+                    MXS_FREE(inst->user);
+                    inst->user = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "password") == 0)
                 {
-                    free(inst->password);
-                    inst->password = strdup(value);
+                    MXS_FREE(inst->password);
+                    inst->password = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "passwd") == 0)
                 {
-                    free(inst->password);
-                    inst->password = strdup(value);
+                    MXS_FREE(inst->password);
+                    inst->password = MXS_STRDUP_A(value);
                 }
                 else if ((strcmp(options[i], "master_id") == 0) || (strcmp(options[i], "master-id") == 0))
                 {
@@ -370,7 +384,7 @@ createInstance(SERVICE *service, char **options)
                     if (master_id > 0)
                     {
                         inst->masterid = master_id;
-                        inst->set_master_server_id = strdup(value);
+                        inst->set_master_server_id = MXS_STRDUP_A(value);
                     }
                     if (strcmp(options[i], "master-id") == 0)
                     {
@@ -382,16 +396,16 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "master_uuid") == 0)
                 {
-                    inst->set_master_uuid = strdup(value);
+                    inst->set_master_uuid = MXS_STRDUP_A(value);
                     inst->master_uuid = inst->set_master_uuid;
                 }
                 else if (strcmp(options[i], "master_version") == 0)
                 {
-                    inst->set_master_version = strdup(value);
+                    inst->set_master_version = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "master_hostname") == 0)
                 {
-                    inst->set_master_hostname = strdup(value);
+                    inst->set_master_hostname = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "mariadb10-compatibility") == 0)
                 {
@@ -399,7 +413,7 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "filestem") == 0)
                 {
-                    inst->fileroot = strdup(value);
+                    inst->fileroot = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "file") == 0)
                 {
@@ -408,6 +422,10 @@ createInstance(SERVICE *service, char **options)
                 else if (strcmp(options[i], "transaction_safety") == 0)
                 {
                     inst->trx_safe = config_truth_value(value);
+                }
+                else if (strcmp(options[i], "semisync") == 0)
+                {
+                    inst->request_semi_sync = config_truth_value(value);
                 }
                 else if (strcmp(options[i], "lowwater") == 0)
                 {
@@ -472,7 +490,21 @@ createInstance(SERVICE *service, char **options)
                 }
                 else if (strcmp(options[i], "binlogdir") == 0)
                 {
-                    inst->binlogdir = strdup(value);
+                    inst->binlogdir = MXS_STRDUP_A(value);
+                }
+                else if (strcmp(options[i], "ssl_cert_verification_depth") == 0)
+                {
+                    int new_depth =  atoi(value);
+                    if (new_depth > 0)
+                    {
+                        inst->ssl_cert_verification_depth = new_depth;
+                    }
+                    else
+                    {
+                        MXS_WARNING("Invalid Master ssl_cert_verification_depth %s."
+                                    " Setting it to default value %i.",
+                                    value, inst->ssl_cert_verification_depth);
+                    }
                 }
                 else
                 {
@@ -491,7 +523,7 @@ createInstance(SERVICE *service, char **options)
 
     if (inst->fileroot == NULL)
     {
-        inst->fileroot = strdup(BINLOG_NAME_ROOT);
+        inst->fileroot = MXS_STRDUP_A(BINLOG_NAME_ROOT);
     }
     inst->active_logs = 0;
     inst->reconnect_pending = 0;
@@ -550,38 +582,56 @@ createInstance(SERVICE *service, char **options)
     }
 
     /* Allocate dbusers for this router here instead of serviceStartPort() */
-    if (service->users == NULL)
+    for (SERV_LISTENER *port = service->ports; port; port = port->next)
     {
-        service->users = (void *)mysql_users_alloc();
-        if (service->users == NULL)
+        if ((port->users = mysql_users_alloc()) == NULL)
         {
             MXS_ERROR("%s: Error allocating dbusers in createInstance",
                       inst->service->name);
-
             free_instance(inst);
             return NULL;
         }
     }
 
-    /* Dynamically allocate master_host server struct, not written in anyfile */
+    /* Dynamically allocate master_host server struct, not written in any cnf file */
     if (service->dbref == NULL)
     {
         SERVER *server;
+        SSL_LISTENER *ssl_cfg;
         server = server_alloc("_none_", "MySQLBackend", (int)3306);
         if (server == NULL)
         {
             MXS_ERROR("%s: Error for server_alloc in createInstance",
                       inst->service->name);
-            if (inst->service->users)
-            {
-                users_free(inst->service->users);
-                inst->service->users = NULL;
-            }
 
             free_instance(inst);
             return NULL;
         }
+
+        /* Allocate SSL struct for backend connection */
+        if ((ssl_cfg = MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
+        {
+            MXS_ERROR("%s: Error allocating memory for SSL struct in createInstance",
+                      inst->service->name);
+
+            server_free(service->dbref->server);
+            MXS_FREE(service->dbref);
+
+            free_instance(inst);
+            return NULL;
+        }
+
+        /* Set some SSL defaults */
+        ssl_cfg->ssl_init_done = false;
+        ssl_cfg->ssl_method_type = SERVICE_SSL_TLS_MAX;
+        ssl_cfg->ssl_cert_verify_depth = 9;
+
+        /** Set SSL pointer in in server struct */
+        server->server_ssl = ssl_cfg;
+
+        /* Set server unique name */
         server_set_unique_name(server, "binlog_router_master_host");
+        /* Add server to service backend list */
         serviceAddBackend(inst->service, server);
     }
 
@@ -594,8 +644,9 @@ createInstance(SERVICE *service, char **options)
      * automatic master replication start phase
      */
 
-    strncpy(path, inst->binlogdir, PATH_MAX);
-    snprintf(filename, PATH_MAX, "%s/master.ini", path);
+    static const char MASTER_INI[] = "/master.ini";
+    char filename[strlen(inst->binlogdir) + sizeof(MASTER_INI)]; // sizeof includes the NULL
+    sprintf(filename, "%s%s", inst->binlogdir, MASTER_INI);
 
     rc = ini_parse(filename, blr_handler_config, inst);
 
@@ -635,12 +686,60 @@ createInstance(SERVICE *service, char **options)
         inst->master_state = BLRM_UNCONNECTED;
 
         /* Try loading dbusers */
-        blr_load_dbusers(inst);
+        if (inst->service->ports)
+        {
+            blr_load_dbusers(inst);
+        }
     }
 
     /**
+     *******************************
      * Initialise the binlog router
+     *******************************
      */
+
+    /**
+     * Check first for SSL enabled replication.
+     * If not remove the SSL struct from server
+     */
+
+    if (inst->ssl_enabled)
+    {
+        if (service->dbref && service->dbref->server && service->dbref->server->server_ssl)
+        {
+            /* Initialise SSL: exit on error */
+            if (listener_init_SSL(service->dbref->server->server_ssl) != 0)
+            {
+                MXS_ERROR("%s: Unable to initialize SSL with backend server", service->name);
+                /* Free SSL struct */
+                /* Note: SSL struct in server should be freed by server_free() */
+                blr_free_ssl_data(inst);
+
+                server_free(service->dbref->server);
+                MXS_FREE(service->dbref);
+                service->dbref = NULL;
+
+                free_instance(inst);
+                return NULL;
+            }
+        }
+        MXS_INFO("%s: Replicating from master with SSL", service->name);
+    }
+    else
+    {
+        MXS_DEBUG("%s: Replicating from master without SSL", service->name);
+        /* Free the SSL struct because is not needed if MASTER_SSL = 0
+         * Provided options, if any, are kept in inst->ssl_* vars
+         * SHOW SLAVE STATUS can display those values
+         */
+
+        /* Note: SSL struct in server should be freed by server_free() */
+        if (service->dbref && service->dbref->server)
+        {
+            blr_free_ssl_data(inst);
+        }
+    }
+
     if (inst->master_state == BLRM_UNCONNECTED)
     {
 
@@ -654,16 +753,14 @@ createInstance(SERVICE *service, char **options)
                       service->name,
                       inst->binlogdir);
 
-            if (service->users)
-            {
-                users_free(service->users);
-                service->users = NULL;
-            }
-
             if (service->dbref && service->dbref->server)
             {
+                /* Free SSL data */
+                blr_free_ssl_data(inst);
+
                 server_free(service->dbref->server);
-                free(service->dbref);
+                MXS_FREE(service->dbref);
+                service->dbref = NULL;
             }
 
             free_instance(inst);
@@ -735,16 +832,27 @@ createInstance(SERVICE *service, char **options)
 static void
 free_instance(ROUTER_INSTANCE *instance)
 {
-    free(instance->uuid);
-    free(instance->user);
-    free(instance->password);
-    free(instance->set_master_server_id);
-    free(instance->set_master_uuid);
-    free(instance->set_master_version);
-    free(instance->set_master_hostname);
-    free(instance->fileroot);
-    free(instance->binlogdir);
-    free(instance);
+    for (SERV_LISTENER *port = instance->service->ports; port; port = port->next)
+    {
+        users_free(port->users);
+    }
+
+    MXS_FREE(instance->uuid);
+    MXS_FREE(instance->user);
+    MXS_FREE(instance->password);
+    MXS_FREE(instance->set_master_server_id);
+    MXS_FREE(instance->set_master_uuid);
+    MXS_FREE(instance->set_master_version);
+    MXS_FREE(instance->set_master_hostname);
+    MXS_FREE(instance->fileroot);
+    MXS_FREE(instance->binlogdir);
+    /* SSL options */
+    MXS_FREE(instance->ssl_ca);
+    MXS_FREE(instance->ssl_cert);
+    MXS_FREE(instance->ssl_key);
+    MXS_FREE(instance->ssl_version);
+
+    MXS_FREE(instance);
 }
 
 /**
@@ -770,9 +878,8 @@ newSession(ROUTER *instance, SESSION *session)
               session,
               inst);
 
-    if ((slave = (ROUTER_SLAVE *)calloc(1, sizeof(ROUTER_SLAVE))) == NULL)
+    if ((slave = (ROUTER_SLAVE *)MXS_CALLOC(1, sizeof(ROUTER_SLAVE))) == NULL)
     {
-        MXS_ERROR("Insufficient memory to create new slave session for binlog router");
         return NULL;
     }
 
@@ -871,17 +978,17 @@ static void freeSession(ROUTER* router_instance,
 
     if (slave->hostname)
     {
-        free(slave->hostname);
+        MXS_FREE(slave->hostname);
     }
     if (slave->user)
     {
-        free(slave->user);
+        MXS_FREE(slave->user);
     }
     if (slave->passwd)
     {
-        free(slave->passwd);
+        MXS_FREE(slave->passwd);
     }
-    free(slave);
+    MXS_FREE(slave);
 }
 
 
@@ -1086,12 +1193,29 @@ diagnostics(ROUTER *router, DCB *dcb)
 
     if (router_inst->master)
     {
-        dcb_printf(dcb, "\tMaster connection DCB:                       %p\n",
+        dcb_printf(dcb, "\tMaster connection DCB:               %p\n",
                    router_inst->master);
     }
     else
     {
-        dcb_printf(dcb, "\tMaster connection DCB:                       0x0\n");
+        dcb_printf(dcb, "\tMaster connection DCB:               0x0\n");
+    }
+
+    /* SSL options */
+    if (router_inst->ssl_enabled)
+    {
+        dcb_printf(dcb, "\tMaster SSL is ON:\n");
+        if (router_inst->service->dbref->server && router_inst->service->dbref->server->server_ssl)
+        {
+            dcb_printf(dcb, "\t\tMaster SSL CA cert: %s\n",
+                       router_inst->service->dbref->server->server_ssl->ssl_ca_cert);
+            dcb_printf(dcb, "\t\tMaster SSL Cert:    %s\n",
+                       router_inst->service->dbref->server->server_ssl->ssl_cert);
+            dcb_printf(dcb, "\t\tMaster SSL Key:     %s\n",
+                       router_inst->service->dbref->server->server_ssl->ssl_key);
+            dcb_printf(dcb, "\t\tMaster SSL tls_ver: %s\n",
+                       router_inst->ssl_version ? router_inst->ssl_version : "MAX");
+        }
     }
 
     dcb_printf(dcb, "\tMaster connection state:                     %s\n",
@@ -1305,6 +1429,13 @@ diagnostics(ROUTER *router, DCB *dcb)
             dcb_printf(dcb,
                        "\t\tSlave DCB:                               %p\n",
                        session->dcb);
+            if (session->dcb->ssl)
+            {
+                dcb_printf(dcb,
+                           "\t\tSlave connected with SSL:                %s\n",
+                           session->dcb->ssl_state == SSL_ESTABLISHED ?
+                           "Established" : "Not connected yet");
+            }
             dcb_printf(dcb,
                        "\t\tNext Sequence No:                        %d\n",
                        session->seqno);
@@ -1459,7 +1590,7 @@ extract_message(GWBUF *errpkt)
     int len;
 
     len = EXTRACT24(errpkt->start);
-    if ((rval = (char *)malloc(len)) == NULL)
+    if ((rval = (char *)MXS_MALLOC(len)) == NULL)
     {
         return NULL;
     }
@@ -1502,9 +1633,48 @@ errorReply(ROUTER *instance,
     char *errmsg;
     unsigned long mysql_errno;
 
+    mysql_errno = (unsigned long) extract_field(((uint8_t *)GWBUF_DATA(message) + 5), 16);
+    errmsg = extract_message(message);
+
     /** Don't handle same error twice on same DCB */
     if (backend_dcb->dcb_errhandle_called)
     {
+        /** Check router state and set errno an message */
+        if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED)
+        {
+            /* Authentication failed */
+            if (router->master_state == BLRM_TIMESTAMP)
+            {
+                spinlock_acquire(&router->lock);
+                /* set io error message */
+                if (router->m_errmsg)
+                {
+                    free(router->m_errmsg);
+                }
+                router->m_errmsg = mxs_strdup("#28000 Authentication with master server failed");
+                /* set mysql_errno */
+                router->m_errno = 1045;
+
+                /* Stop replication */
+                router->master_state = BLRM_SLAVE_STOPPED;
+                spinlock_release(&router->lock);
+
+                /* Force backend DCB close */
+                dcb_close(backend_dcb);
+
+                MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
+                          "%s while connecting to master %s:%d",
+                          router->service->name, router->m_errno, router->m_errmsg,
+                          blrm_states[BLRM_TIMESTAMP], msg,
+                          router->service->dbref->server->name,
+                          router->service->dbref->server->port);
+            }
+        }
+        if (errmsg)
+        {
+            free(errmsg);
+        }
+
         /** we optimistically assume that previous call succeed */
         *succp = true;
         return;
@@ -1527,23 +1697,22 @@ errorReply(ROUTER *instance,
         strcpy(msg, "");
     }
 
-    mysql_errno = (unsigned long) extract_field(((uint8_t *)GWBUF_DATA(message) + 5), 16);
-    errmsg = extract_message(message);
-
     if (router->master_state < BLRM_BINLOGDUMP || router->master_state != BLRM_SLAVE_STOPPED)
     {
+        spinlock_acquire(&router->lock);
         /* set mysql_errno */
         router->m_errno = mysql_errno;
 
         /* set io error message */
         if (router->m_errmsg)
         {
-            free(router->m_errmsg);
+            MXS_FREE(router->m_errmsg);
         }
-        router->m_errmsg = strdup(errmsg);
+        router->m_errmsg = MXS_STRDUP_A(errmsg);
+        spinlock_release(&router->lock);
 
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                  "%sattempting reconnect to master %s:%d",
+                  "%s attempting reconnect to master %s:%d",
                   router->service->name, mysql_errno, errmsg,
                   blrm_states[router->master_state], msg,
                   router->service->dbref->server->name,
@@ -1552,7 +1721,7 @@ errorReply(ROUTER *instance,
     else
     {
         MXS_ERROR("%s: Master connection error %lu '%s' in state '%s', "
-                  "%sattempting reconnect to master %s:%d",
+                  "%s attempting reconnect to master %s:%d",
                   router->service->name, router->m_errno,
                   router->m_errmsg ? router->m_errmsg : "(memory failure)",
                   blrm_states[router->master_state], msg,
@@ -1562,7 +1731,7 @@ errorReply(ROUTER *instance,
 
     if (errmsg)
     {
-        free(errmsg);
+        MXS_FREE(errmsg);
     }
     *succp = true;
     dcb_close(backend_dcb);
@@ -1696,7 +1865,7 @@ blr_statistics(ROUTER_INSTANCE *router, ROUTER_SLAVE *slave, GWBUF *queue)
     *ptr++ = (len & 0xff00) >> 8;
     *ptr++ = (len & 0xff0000) >> 16;
     *ptr++ = 1;
-    strncpy(ptr, result, len);
+    memcpy(ptr, result, len);
 
     return slave->dcb->func.write(slave->dcb, ret);
 }
@@ -1879,8 +2048,14 @@ static  int
 blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *inst)
 {
     SERVICE *service;
+    char *ssl_cert;
+    char *ssl_key;
+    char *ssl_ca_cert;
+    SERVER *backend_server;
 
     service = inst->service;
+
+    backend_server = service->dbref->server;
 
     if (strcmp(name, "master_host") == 0)
     {
@@ -1892,24 +2067,67 @@ blr_handle_config_item(const char *name, const char *value, ROUTER_INSTANCE *ins
     }
     else if (strcmp(name, "filestem") == 0)
     {
-        free(inst->fileroot);
-        inst->fileroot = strdup(value);
+        MXS_FREE(inst->fileroot);
+        inst->fileroot = MXS_STRDUP_A(value);
     }
     else if (strcmp(name, "master_user") == 0)
     {
         if (inst->user)
         {
-            free(inst->user);
+            MXS_FREE(inst->user);
         }
-        inst->user = strdup(value);
+        inst->user = MXS_STRDUP_A(value);
     }
     else if (strcmp(name, "master_password") == 0)
     {
         if (inst->password)
         {
-            free(inst->password);
+            MXS_FREE(inst->password);
         }
-        inst->password = strdup(value);
+        inst->password = MXS_STRDUP_A(value);
+    }
+    /** Checl for SSL options */
+    else if (strcmp(name, "master_ssl") == 0)
+    {
+        inst->ssl_enabled = config_truth_value((char*)value);
+    }
+    else if (strcmp(name, "master_ssl_ca") == 0)
+    {
+        MXS_FREE(backend_server->server_ssl->ssl_ca_cert);
+        backend_server->server_ssl->ssl_ca_cert = value ? MXS_STRDUP_A(value) : NULL;
+        MXS_FREE(inst->ssl_ca);
+        inst->ssl_ca = value ? MXS_STRDUP_A(value) : NULL;
+    }
+    else if (strcmp(name, "master_ssl_cert") == 0)
+    {
+        MXS_FREE(backend_server->server_ssl->ssl_cert);
+        backend_server->server_ssl->ssl_cert = value ? MXS_STRDUP_A(value) : NULL;
+        MXS_FREE(inst->ssl_cert);
+        inst->ssl_cert = value ? MXS_STRDUP_A(value) : NULL;
+    }
+    else if (strcmp(name, "master_ssl_key") == 0)
+    {
+        MXS_FREE(backend_server->server_ssl->ssl_key);
+        backend_server->server_ssl->ssl_key = value ? MXS_STRDUP_A(value) : NULL;
+        MXS_FREE(inst->ssl_key);
+        inst->ssl_key = value ? MXS_STRDUP_A(value) : NULL;
+    }
+    else if (strcmp(name, "master_ssl_version") == 0 || strcmp(name, "master_tls_version") == 0)
+    {
+        if (value)
+        {
+            if (listener_set_ssl_version(backend_server->server_ssl, (char *)value) != 0)
+            {
+                MXS_ERROR("Unknown parameter value for 'ssl_version' for"
+                          " service '%s': %s",
+                          inst->service->name,
+                          value);
+            }
+            else
+            {
+                inst->ssl_version = MXS_STRDUP_A(value);
+            }
+        }
     }
     else
     {
@@ -1961,18 +2179,22 @@ blr_set_service_mysql_user(SERVICE *service)
         MXS_ERROR("create hex_sha1_sha1_password failed for service user %s",
                   service_user);
 
-        free(dpwd);
+        MXS_FREE(dpwd);
         return 1;
     }
 
-    /* add service user for % and localhost */
-    (void)add_mysql_users_with_host_ipv4(service->users, service->credentials.name,
-                                         "%", newpasswd, "Y", "");
-    (void)add_mysql_users_with_host_ipv4(service->users, service->credentials.name,
-                                         "localhost", newpasswd, "Y", "");
+    /** Add the service user for % and localhost to all listeners so that
+     * it can always be used. */
+    for (SERV_LISTENER *port = service->ports; port; port = port->next)
+    {
+        add_mysql_users_with_host_ipv4(port->users, service->credentials.name,
+                                       "%", newpasswd, "Y", "");
+        add_mysql_users_with_host_ipv4(port->users, service->credentials.name,
+                                       "localhost", newpasswd, "Y", "");
+    }
 
-    free(newpasswd);
-    free(dpwd);
+    MXS_FREE(newpasswd);
+    MXS_FREE(dpwd);
 
     return 0;
 }
@@ -1986,57 +2208,58 @@ blr_set_service_mysql_user(SERVICE *service)
 static int
 blr_load_dbusers(const ROUTER_INSTANCE *router)
 {
-    int loaded = -1;
-    char    path[PATH_MAX + 1] = "";
+    int loaded_total = 0;
     SERVICE *service;
+    char path[PATH_MAX];
     service = router->service;
 
-    /* File path for router cached authentication data */
-    strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX - strlen(path));
-    strncat(path, "/dbusers", PATH_MAX - strlen(path));
-
-    /* Try loading dbusers from configured backends */
-    loaded = load_mysql_users(service);
-
-    if (loaded < 0)
+    for (SERV_LISTENER *port = service->ports; port; port = port->next)
     {
-        MXS_ERROR("Unable to load users for service %s",
-                  service->name);
+        sprintf(path, "%s/%s/%s/", router->binlogdir, BLR_DBUSERS_DIR, port->name);
 
-        /* Try loading authentication data from file cache */
-
-        loaded = dbusers_load(router->service->users, path);
-
-        if (loaded != -1)
+        if (mxs_mkdir_all(path, 0775))
         {
-            MXS_ERROR("Service %s, Using cached credential information file %s.",
-                      service->name,
-                      path);
+            strcat(path, BLR_DBUSERS_FILE);
+        }
+
+        /* Try loading dbusers from configured backends */
+        int loaded = load_mysql_users(port);
+
+        if (loaded < 0)
+        {
+            MXS_ERROR("Unable to load users for service %s", service->name);
+
+            /* Try loading authentication data from file cache */
+            loaded = dbusers_load(port->users, path);
+
+            if (loaded != -1)
+            {
+                MXS_ERROR("Service %s, Listener %s, Using cached credential information file %s.",
+                          service->name, port->name, path);
+            }
+            else
+            {
+                MXS_ERROR("Service %s, Listener %s, Unable to read cache credential"
+                          " information from %s. No database user added to service users table.",
+                          service->name, port->name, path);
+            }
         }
         else
         {
-            MXS_ERROR("Service %s, Unable to read cache credential information from %s."
-                      " No database user added to service users table.",
-                      service->name,
-                      path);
+            /* don't update cache if no user was loaded */
+            if (loaded == 0)
+            {
+                MXS_ERROR("Service %s, Listener %s: failed to load any user information."
+                          " Authentication will probably fail as a result.",
+                          service->name, port->name);
+            }
+            else
+            {
+                /* update cached data */
+                dbusers_save(port->users, path);
+            }
         }
-    }
-    else
-    {
-        /* don't update cache if no user was loaded */
-        if (loaded == 0)
-        {
-            MXS_ERROR("Service %s: failed to load any user "
-                      "information. Authentication will "
-                      "probably fail as a result.",
-                      service->name);
-        }
-        else
-        {
-            /* update cached data */
-            blr_save_dbusers(router);
-        }
+        loaded_total += loaded;
     }
 
     /* At service start last update is set to USERS_REFRESH_TIME seconds earlier.
@@ -2045,50 +2268,7 @@ blr_load_dbusers(const ROUTER_INSTANCE *router)
     service->rate_limit.last = time(NULL) - USERS_REFRESH_TIME;
     service->rate_limit.nloads = 1;
 
-    return loaded;
-}
-
-/**
- * Save dbusers to cache file
- *
- * @param router    The router instance
- * @return              -1 on failure, >= 0 on success
- */
-int
-blr_save_dbusers(const ROUTER_INSTANCE *router)
-{
-    SERVICE *service;
-    char    path[PATH_MAX + 1] = "";
-    int mkdir_rval = 0;
-
-    service = router->service;
-
-    /* File path for router cached authentication data */
-    strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX - strlen(path));
-
-    /* check and create dir */
-    if (access(path, R_OK) == -1)
-    {
-        mkdir_rval = mkdir(path, 0700);
-    }
-
-    if (mkdir_rval == -1)
-    {
-        char err_msg[STRERROR_BUFLEN];
-        MXS_ERROR("Service %s, Failed to create directory '%s': [%d] %s",
-                  service->name,
-                  path,
-                  errno,
-                  strerror_r(errno, err_msg, sizeof(err_msg)));
-
-        return -1;
-    }
-
-    /* set cache file name */
-    strncat(path, "/dbusers", PATH_MAX - strlen(path));
-
-    return dbusers_save(service->users, path);
+    return loaded_total;
 }
 
 /**
@@ -2153,7 +2333,7 @@ static int blr_check_binlog(ROUTER_INSTANCE *router)
         router->m_errno = 2032;
 
         /* set io error message */
-        router->m_errmsg = strdup(msg_err);
+        router->m_errmsg = MXS_STRDUP_A(msg_err);
 
         /* set last_safe_pos */
         router->last_safe_pos = router->binlog_position;
@@ -2248,3 +2428,26 @@ blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event)
     return event_desc;
 }
 
+/**
+ * Free SSL struct in server struct
+ *
+ * @param inst   The router instance
+ */
+void
+blr_free_ssl_data(ROUTER_INSTANCE *inst)
+{
+    SSL_LISTENER *server_ssl;
+
+    if (inst->service->dbref->server->server_ssl)
+    {
+        server_ssl = inst->service->dbref->server->server_ssl;
+
+        /* Free SSL struct */
+        /* Note: SSL struct in server should be freed by server_free() */
+        MXS_FREE(server_ssl->ssl_key);
+        MXS_FREE(server_ssl->ssl_ca_cert);
+        MXS_FREE(server_ssl->ssl_cert);
+        MXS_FREE(inst->service->dbref->server->server_ssl);
+        inst->service->dbref->server->server_ssl = NULL;
+    }
+}

@@ -5,8 +5,6 @@
 # sets the variables set by FindMariaDBConnector.cmake so that it appears that
 # the system has the connector.
 
-include(ExternalProject)
-
 set(MARIADB_CONNECTOR_C_REPO "https://github.com/MariaDB/mariadb-connector-c.git"
   CACHE STRING "MariaDB Connector-C Git repository")
 

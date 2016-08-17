@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -41,8 +41,9 @@
 #include <version.h>
 #include <avrorouter.h>
 #include <maxavro.h>
+#include <maxscale/alloc.h>
+#include <dbusers.h>
 
-extern int load_mysql_users(SERVICE *service);
 extern char *blr_extract_column(GWBUF *buf, int col);
 extern uint32_t extract_field(uint8_t *src, int bits);
 
@@ -140,8 +141,8 @@ avro_client_do_registration(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *d
         char *sep_ptr;
         int uuid_len = (data_len > CDC_UUID_LEN) ? CDC_UUID_LEN : data_len;
         /* 36 +1 */
-        char uuid[CDC_UUID_LEN + 1];
-        strncpy(uuid, request + reg_uuid_len, uuid_len);
+        char uuid[uuid_len + 1];
+        memcpy(uuid, request + reg_uuid_len, uuid_len);
         uuid[uuid_len] = '\0';
 
         if ((sep_ptr = strchr(uuid, ',')) != NULL)
@@ -164,7 +165,7 @@ avro_client_do_registration(AVRO_INSTANCE *router, AVRO_CLIENT *client, GWBUF *d
 
         uuid_len = strlen(uuid);
 
-        client->uuid = strdup(uuid);
+        client->uuid = MXS_STRDUP_A(uuid);
 
         if (data_len > 0)
         {
@@ -412,7 +413,7 @@ void send_gtid_info(AVRO_INSTANCE *router, gtid_pos_t *gtid_pos, DCB *dcb)
         char *js = json_dumps(obj, 0);
         size_t size = strlen(js);
         GWBUF *buffer = gwbuf_alloc_and_load(size, js);
-        free(js);
+        MXS_FREE(js);
         dcb->func.write(dcb, buffer);
     }
 }
@@ -567,7 +568,7 @@ static int send_row(DCB *dcb, json_t* row)
         MXS_ERROR("Failed to dump JSON value.");
         rc = 0;
     }
-    free(json);
+    MXS_FREE(json);
     return rc;
 }
 
@@ -890,7 +891,19 @@ GWBUF* read_avro_binary_schema(const char *avrofile, const char* dir)
 static void rotate_avro_file(AVRO_CLIENT *client, char *fullname)
 {
     char *filename = strrchr(fullname, '/') + 1;
-    strncpy(client->avro_binfile, filename, sizeof(client->avro_binfile));
+    size_t len = strlen(filename);
+    if (len > AVRO_MAX_FILENAME_LEN)
+    {
+        // TODO: This function is in need of a return value. It would
+        // TODO: be better to abort if the name is too long and also
+        // TODO: if the opening of the file fails.
+        MXS_ERROR("Filename %s of length %lu is longer than maximum allowed "
+                  "length %d. Trailing data will be cut.",
+                  filename, len, AVRO_MAX_FILENAME_LEN);
+        len = AVRO_MAX_FILENAME_LEN;
+    }
+    strncpy(client->avro_binfile, filename, len);
+    client->avro_binfile[len] = 0;
     client->last_sent_pos = 0;
 
     spinlock_acquire(&client->file_lock);
@@ -919,7 +932,7 @@ static void rotate_avro_file(AVRO_CLIENT *client, char *fullname)
 static void print_next_filename(const char *file, const char *dir, char *dest, size_t len)
 {
     char buffer[strlen(file) + 1];
-    strncpy(buffer, file, sizeof(buffer));
+    strcpy(buffer, file);
     char *ptr = strrchr(buffer, '.');
 
     if (ptr)

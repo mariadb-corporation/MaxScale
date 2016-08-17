@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -50,6 +50,7 @@
 #include <mysqld_error.h>
 #include <regex.h>
 #include <mysql_utils.h>
+#include <maxscale/alloc.h>
 
 /** Don't include the root user */
 #define USERS_QUERY_NO_ROOT " AND user.user NOT IN ('root')"
@@ -121,16 +122,16 @@
 MaxScale authentication will proceed without including database permissions. \
 See earlier error messages for user '%s' for more information."
 
-static int add_databases(SERVICE *service, MYSQL *con);
+static int add_databases(SERV_LISTENER *listener, MYSQL *con);
 static int add_wildcard_users(USERS *users, char* name, char* host,
                               char* password, char* anydb, char* db, HASHTABLE* hash);
 static void *dbusers_keyread(int fd);
 static int dbusers_keywrite(int fd, void *key);
 static void *dbusers_valueread(int fd);
 static int dbusers_valuewrite(int fd, void *value);
-static int get_all_users(SERVICE *service, USERS *users);
-static int get_databases(SERVICE *, MYSQL *);
-static int get_users(SERVICE *service, USERS *users);
+static int get_all_users(SERV_LISTENER *listener, USERS *users);
+static int get_databases(SERV_LISTENER *listener, MYSQL *users);
+static int get_users(SERV_LISTENER *listener, USERS *users);
 static MYSQL *gw_mysql_init(void);
 static int gw_mysql_set_timeouts(MYSQL* handle);
 static bool host_has_singlechar_wildcard(const char *host);
@@ -143,10 +144,10 @@ static int resource_add(HASHTABLE *, char *, char *);
 static HASHTABLE *resource_alloc();
 static void *resource_fetch(HASHTABLE *, char *);
 static void resource_free(HASHTABLE *resource);
-static int uh_cmpfun(void* v1, void* v2);
-static int uh_hfun(void* key);
-static void *uh_keydup(void* key);
-static void uh_keyfree(void* key);
+static int uh_cmpfun(const void* v1, const void* v2);
+static int uh_hfun(const void* key);
+static MYSQL_USER_HOST *uh_keydup(const MYSQL_USER_HOST* key);
+static void uh_keyfree(MYSQL_USER_HOST* key);
 static int wildcard_db_grant(char* str);
 
 /**
@@ -243,9 +244,9 @@ static bool host_matches_singlechar_wildcard(const char* user, const char* wild)
  * @return      -1 on any error or the number of users inserted (0 means no users at all)
  */
 int
-load_mysql_users(SERVICE *service)
+load_mysql_users(SERV_LISTENER *listener)
 {
-    return get_users(service, service->users);
+    return get_users(listener, listener->users);
 }
 
 /**
@@ -256,7 +257,7 @@ load_mysql_users(SERVICE *service)
  * @return      -1 on any error or the number of users inserted (0 means no users at all)
  */
 int
-reload_mysql_users(SERVICE *service)
+reload_mysql_users(SERV_LISTENER *listener)
 {
     int i;
     USERS *newusers, *oldusers;
@@ -267,20 +268,16 @@ reload_mysql_users(SERVICE *service)
         return 0;
     }
 
-    oldresources = service->resources;
+    spinlock_acquire(&listener->lock);
 
-    i = get_users(service, newusers);
+    oldresources = listener->resources;
+    i = get_users(listener, newusers);
+    oldusers = listener->users;
+    listener->users = newusers;
 
-    spinlock_acquire(&service->spin);
-    oldusers = service->users;
+    spinlock_release(&listener->lock);
 
-    service->users = newusers;
-
-    spinlock_release(&service->spin);
-
-    /* free the old table */
     users_free(oldusers);
-    /* free old resources */
     resource_free(oldresources);
 
     return i;
@@ -295,7 +292,7 @@ reload_mysql_users(SERVICE *service)
  * @return      -1 on any error or the number of users inserted (0 means no users at all)
  */
 int
-replace_mysql_users(SERVICE *service)
+replace_mysql_users(SERV_LISTENER *listener)
 {
     int i;
     USERS *newusers, *oldusers;
@@ -306,21 +303,22 @@ replace_mysql_users(SERVICE *service)
         return -1;
     }
 
-    oldresources = service->resources;
+    spinlock_acquire(&listener->lock);
+    oldresources = listener->resources;
 
     /* load db users ad db grants */
-    i = get_users(service, newusers);
+    i = get_users(listener, newusers);
 
     if (i <= 0)
     {
         users_free(newusers);
         /* restore resources */
-        service->resources = oldresources;
+        listener->resources = oldresources;
+        spinlock_release(&listener->lock);
         return i;
     }
 
-    spinlock_acquire(&service->spin);
-    oldusers = service->users;
+    oldusers = listener->users;
 
     /* digest compare */
     if (oldusers != NULL && memcmp(oldusers->cksum, newusers->cksum,
@@ -339,13 +337,13 @@ replace_mysql_users(SERVICE *service)
         /* replace the service with effective new data */
         MXS_DEBUG("%lu [replace_mysql_users] users' tables replaced, checksum differs",
                   pthread_self());
-        service->users = newusers;
+        listener->users = newusers;
     }
+
+    spinlock_release(&listener->lock);
 
     /* free old resources */
     resource_free(oldresources);
-
-    spinlock_release(&service->spin);
 
     if (i && oldusers)
     {
@@ -433,10 +431,10 @@ int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *h
 
     /* prepare the user@host data struct */
     memset(&serv_addr, 0, sizeof(serv_addr));
-    memset(&key, '\0', sizeof(key));
+    memset(&key, 0, sizeof(key));
 
     /* set user */
-    key.user = strdup(user);
+    key.user = MXS_STRDUP(user);
 
     if (key.user == NULL)
     {
@@ -454,7 +452,8 @@ int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *h
         {
             if (db != NULL)
             {
-                key.resource = strdup(db);
+                key.resource = MXS_STRDUP(db);
+                MXS_ABORT_IF_NULL(key.resource);
             }
             else
             {
@@ -463,7 +462,8 @@ int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *h
         }
         else
         {
-            key.resource = strdup("");
+            key.resource = MXS_STRDUP("");
+            MXS_ABORT_IF_NULL(key.resource);
         }
     }
 
@@ -519,8 +519,8 @@ int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *h
         }
     }
 
-    free(key.user);
-    free(key.resource);
+    MXS_FREE(key.user);
+    MXS_FREE(key.resource);
 
     return ret;
 }
@@ -534,8 +534,9 @@ int add_mysql_users_with_host_ipv4(USERS *users, const char *user, const char *h
  * @return          -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
-add_databases(SERVICE *service, MYSQL *con)
+add_databases(SERV_LISTENER *listener, MYSQL *con)
 {
+    SERVICE *service = listener->service;
     MYSQL_ROW row;
     MYSQL_RES *result = NULL;
     char *service_user = NULL;
@@ -620,7 +621,7 @@ add_databases(SERVICE *service, MYSQL *con)
     /* insert key and value "" */
     while ((row = mysql_fetch_row(result)))
     {
-        if (resource_add(service->resources, row[0], ""))
+        if (resource_add(listener->resources, row[0], ""))
         {
             MXS_DEBUG("%s: Adding database %s to the resouce hash.", service->name, row[0]);
         }
@@ -640,8 +641,9 @@ add_databases(SERVICE *service, MYSQL *con)
  * @return          -1 on any error or the number of users inserted (0 means no users at all)
  */
 static int
-get_databases(SERVICE *service, MYSQL *con)
+get_databases(SERV_LISTENER *listener, MYSQL *con)
 {
+    SERVICE *service = listener->service;
     MYSQL_ROW row;
     MYSQL_RES *result = NULL;
     char *service_user = NULL;
@@ -724,13 +726,13 @@ get_databases(SERVICE *service, MYSQL *con)
     }
 
     /* Now populate service->resources hashatable with db names */
-    service->resources = resource_alloc();
+    listener->resources = resource_alloc();
 
     /* insert key and value "" */
     while ((row = mysql_fetch_row(result)))
     {
         MXS_DEBUG("%s: Adding database %s to the resouce hash.", service->name, row[0]);
-        resource_add(service->resources, row[0], "");
+        resource_add(listener->resources, row[0], "");
     }
 
     mysql_free_result(result);
@@ -747,8 +749,9 @@ get_databases(SERVICE *service, MYSQL *con)
  * @return          -1 on any error or the number of users inserted
  */
 static int
-get_all_users(SERVICE *service, USERS *users)
+get_all_users(SERV_LISTENER *listener, USERS *users)
 {
+    SERVICE *service = listener->service;
     MYSQL *con = NULL;
     MYSQL_ROW row;
     MYSQL_RES *result = NULL;
@@ -782,7 +785,8 @@ get_all_users(SERVICE *service, USERS *users)
     }
 
     dpwd = decryptPassword(service_passwd);
-    final_data = (char*) malloc(sizeof(char));
+    final_data = (char*) MXS_MALLOC(sizeof(char));
+    MXS_ABORT_IF_NULL(final_data);
     *final_data = '\0';
 
     /**
@@ -797,7 +801,7 @@ get_all_users(SERVICE *service, USERS *users)
         goto cleanup;
     }
 
-    service->resources = resource_alloc();
+    listener->resources = resource_alloc();
 
     while (server != NULL)
     {
@@ -837,7 +841,7 @@ get_all_users(SERVICE *service, USERS *users)
             goto cleanup;
         }
 
-        add_databases(service, con);
+        add_databases(listener, con);
         mysql_close(con);
         server = server->next;
     }
@@ -1031,14 +1035,10 @@ get_all_users(SERVICE *service, USERS *users)
             goto cleanup;
         }
 
-        users_data = (char *) calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
+        users_data = (char *) MXS_CALLOC(nusers, (users_data_row_len * sizeof(char)) + 1);
 
         if (users_data == NULL)
         {
-            char errbuf[STRERROR_BUFLEN];
-            MXS_ERROR("Memory allocation for user data failed due to %d, %s.",
-                      errno,
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
             mysql_free_result(result);
             mysql_close(con);
 
@@ -1145,6 +1145,7 @@ get_all_users(SERVICE *service, USERS *users)
                         else if (row[5])
                         {
                             strncpy(dbgrant, row[5], MYSQL_DATABASE_MAXLEN);
+                            dbgrant[MYSQL_DATABASE_MAXLEN] = 0;
                         }
                     }
 
@@ -1183,17 +1184,17 @@ get_all_users(SERVICE *service, USERS *users)
         mysql_free_result(result);
         mysql_close(con);
 
-        if ((tmp = realloc(final_data, (strlen(final_data) + strlen(users_data)
-                                        + 1) * sizeof(char))) == NULL)
+        if ((tmp = MXS_REALLOC(final_data, (strlen(final_data) + strlen(users_data)
+                                            + 1) * sizeof(char))) == NULL)
         {
-            free(users_data);
+            MXS_FREE(users_data);
             goto cleanup;
         }
 
         final_data = tmp;
 
         strcat(final_data, users_data);
-        free(users_data);
+        MXS_FREE(users_data);
 
         if (service->users_from_all)
         {
@@ -1217,8 +1218,8 @@ get_all_users(SERVICE *service, USERS *users)
     }
 cleanup:
 
-    free(dpwd);
-    free(final_data);
+    MXS_FREE(dpwd);
+    MXS_FREE(final_data);
 
     return total_users;
 }
@@ -1232,8 +1233,9 @@ cleanup:
  * @return          -1 on any error or the number of users inserted
  */
 static int
-get_users(SERVICE *service, USERS *users)
+get_users(SERV_LISTENER *listener, USERS *users)
 {
+    SERVICE *service = listener->service;
     MYSQL *con = NULL;
     MYSQL_ROW row;
     MYSQL_RES *result = NULL;
@@ -1264,7 +1266,7 @@ get_users(SERVICE *service, USERS *users)
 
     if (service->users_from_all)
     {
-        return get_all_users(service, users);
+        return get_all_users(listener, users);
     }
 
     con = gw_mysql_init();
@@ -1290,7 +1292,7 @@ get_users(SERVICE *service, USERS *users)
 
     if (service->svc_do_shutdown)
     {
-        free(dpwd);
+        MXS_FREE(dpwd);
         mysql_close(con);
         return -1;
     }
@@ -1341,7 +1343,7 @@ get_users(SERVICE *service, USERS *users)
 
         if (service->svc_do_shutdown)
         {
-            free(dpwd);
+            MXS_FREE(dpwd);
             mysql_close(con);
             return -1;
         }
@@ -1353,7 +1355,7 @@ get_users(SERVICE *service, USERS *users)
         }
     }
 
-    free(dpwd);
+    MXS_FREE(dpwd);
 
     if (server == NULL)
     {
@@ -1494,13 +1496,10 @@ get_users(SERVICE *service, USERS *users)
         return -1;
     }
 
-    users_data = (char *) calloc(nusers, (users_data_row_len * sizeof(char)) + 1);
+    users_data = (char *) MXS_CALLOC(nusers, (users_data_row_len * sizeof(char)) + 1);
 
     if (users_data == NULL)
     {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation for user data failed due to %d, %s.",
-                  errno, strerror_r(errno, errbuf, sizeof(errbuf)));
         mysql_free_result(result);
         mysql_close(con);
         return -1;
@@ -1509,13 +1508,13 @@ get_users(SERVICE *service, USERS *users)
     if (db_grants)
     {
         /* load all mysql database names */
-        dbnames = get_databases(service, con);
+        dbnames = get_databases(listener, con);
         MXS_DEBUG("Loaded %d MySQL Database Names for service [%s]",
                   dbnames, service->name);
     }
     else
     {
-        service->resources = NULL;
+        listener->resources = NULL;
     }
 
     while ((row = mysql_fetch_row(result)))
@@ -1617,6 +1616,7 @@ get_users(SERVICE *service, USERS *users)
                     else if (row[5])
                     {
                         strncpy(dbgrant, row[5], MYSQL_DATABASE_MAXLEN);
+                        dbgrant[MYSQL_DATABASE_MAXLEN] = 0;
                     }
                 }
 
@@ -1669,7 +1669,7 @@ get_users(SERVICE *service, USERS *users)
         service->localhost_match_wildcard_host = anon_user ? 0 : 1;
     }
 
-    free(users_data);
+    MXS_FREE(users_data);
     mysql_free_result(result);
     mysql_close(con);
 
@@ -1686,7 +1686,7 @@ mysql_users_alloc()
 {
     USERS *rval;
 
-    if ((rval = calloc(1, sizeof(USERS))) == NULL)
+    if ((rval = MXS_CALLOC(1, sizeof(USERS))) == NULL)
     {
         return NULL;
     }
@@ -1694,7 +1694,7 @@ mysql_users_alloc()
     if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE, uh_hfun,
                                       uh_cmpfun)) == NULL)
     {
-        free(rval);
+        MXS_FREE(rval);
         return NULL;
     }
 
@@ -1704,9 +1704,9 @@ mysql_users_alloc()
     /* the key is handled by uh_keydup/uh_keyfree.
      * the value is a (char *): it's handled by strdup/free
      */
-    hashtable_memory_fns(rval->data, (HASHMEMORYFN) uh_keydup,
-                         (HASHMEMORYFN) strdup, (HASHMEMORYFN) uh_keyfree,
-                         (HASHMEMORYFN) free);
+    hashtable_memory_fns(rval->data,
+                         (HASHCOPYFN) uh_keydup, hashtable_item_strdup,
+                         (HASHFREEFN) uh_keyfree, hashtable_item_free);
 
     return rval;
 }
@@ -1761,9 +1761,9 @@ char *mysql_users_fetch(USERS *users, MYSQL_USER_HOST *key)
  * @return      The hash key
  */
 
-static int uh_hfun(void* key)
+static int uh_hfun(const void* key)
 {
-    MYSQL_USER_HOST *hu = (MYSQL_USER_HOST *) key;
+    const MYSQL_USER_HOST *hu = (const MYSQL_USER_HOST *) key;
 
     if (key == NULL || hu == NULL || hu->user == NULL)
     {
@@ -1785,10 +1785,10 @@ static int uh_hfun(void* key)
  * @return      The compare value
  */
 
-static int uh_cmpfun(void* v1, void* v2)
+static int uh_cmpfun(const void* v1, const void* v2)
 {
-    MYSQL_USER_HOST *hu1 = (MYSQL_USER_HOST *) v1;
-    MYSQL_USER_HOST *hu2 = (MYSQL_USER_HOST *) v2;
+    const MYSQL_USER_HOST *hu1 = (const MYSQL_USER_HOST *) v1;
+    const MYSQL_USER_HOST *hu2 = (const MYSQL_USER_HOST *) v2;
 
     if (v1 == NULL || v2 == NULL)
     {
@@ -1888,44 +1888,30 @@ static int uh_cmpfun(void* v1, void* v2)
  * @param key   The key value, i.e. username@host ip4/ip6 data
  */
 
-static void *uh_keydup(void* key)
+static MYSQL_USER_HOST *uh_keydup(const MYSQL_USER_HOST* key)
 {
-    MYSQL_USER_HOST *rval = (MYSQL_USER_HOST *) calloc(1, sizeof(MYSQL_USER_HOST));
-    MYSQL_USER_HOST *current_key = (MYSQL_USER_HOST *) key;
-
-    if (key == NULL || rval == NULL || current_key == NULL || current_key->user == NULL)
+    if ((key == NULL) || (key->user == NULL))
     {
-        if (rval)
-        {
-            free(rval);
-        }
-
         return NULL;
     }
 
-    rval->user = strdup(current_key->user);
+    MYSQL_USER_HOST *rval = (MYSQL_USER_HOST *) MXS_CALLOC(1, sizeof(MYSQL_USER_HOST));
+    char* user = MXS_STRDUP(key->user);
+    char* resource = key->resource ? MXS_STRDUP(key->resource) : NULL;
 
-    if (rval->user == NULL)
+    if (!user || !rval || (key->resource && !resource))
     {
-        free(rval);
+        MXS_FREE(rval);
+        MXS_FREE(user);
+        MXS_FREE(resource);
         return NULL;
     }
 
-    ss_dassert(strnlen(rval->hostname, MYSQL_HOST_MAXLEN + 1) <= MYSQL_HOST_MAXLEN);
-    strncpy(rval->hostname, current_key->hostname, MYSQL_HOST_MAXLEN);
-    rval->hostname[MYSQL_HOST_MAXLEN] = '\0';
-
-    memcpy(&rval->ipv4, &current_key->ipv4, sizeof(struct sockaddr_in));
-    memcpy(&rval->netmask, &current_key->netmask, sizeof(int));
-
-    if (current_key->resource)
-    {
-        rval->resource = strdup(current_key->resource);
-    }
-    else
-    {
-        rval->resource = NULL;
-    }
+    rval->user = user;
+    rval->ipv4 = key->ipv4;
+    rval->netmask = key->netmask;
+    rval->resource = resource;
+    strcpy(rval->hostname, key->hostname);
 
     return (void *) rval;
 }
@@ -1935,26 +1921,14 @@ static void *uh_keydup(void* key)
  *
  * @param key   The key value, i.e. username@host ip4 data
  */
-static void uh_keyfree(void* key)
+static void uh_keyfree(MYSQL_USER_HOST* key)
 {
-    MYSQL_USER_HOST *current_key = (MYSQL_USER_HOST *) key;
-
-    if (key == NULL)
+    if (key)
     {
-        return;
+        MXS_FREE(key->user);
+        MXS_FREE(key->resource);
+        MXS_FREE(key);
     }
-
-    if (current_key && current_key->user)
-    {
-        free(current_key->user);
-    }
-
-    if (current_key && current_key->resource)
-    {
-        free(current_key->resource);
-    }
-
-    free(key);
 }
 
 /**
@@ -1979,7 +1953,7 @@ static char *mysql_format_user_entry(void *data)
 
     entry = (MYSQL_USER_HOST *) data;
 
-    mysql_user = (char *) calloc(mysql_user_len, sizeof(char));
+    mysql_user = (char *) MXS_CALLOC(mysql_user_len, sizeof(char));
 
     if (mysql_user == NULL)
     {
@@ -2012,7 +1986,7 @@ static char *mysql_format_user_entry(void *data)
     }
     else if (entry->netmask == 32)
     {
-        strncpy(mysql_user, entry->user, MYSQL_USER_MAXLEN);
+        strcpy(mysql_user, entry->user);
         strcat(mysql_user, "@");
         inet_ntop(AF_INET, &(entry->ipv4).sin_addr, mysql_user + strlen(mysql_user),
                   INET_ADDRSTRLEN);
@@ -2052,13 +2026,14 @@ resource_alloc()
 {
     HASHTABLE *resources;
 
-    if ((resources = hashtable_alloc(10, simple_str_hash, strcmp)) == NULL)
+    if ((resources = hashtable_alloc(10, hashtable_item_strhash, hashtable_item_strcmp)) == NULL)
     {
         return NULL;
     }
 
-    hashtable_memory_fns(resources, (HASHMEMORYFN) strdup, (HASHMEMORYFN) strdup,
-                         (HASHMEMORYFN) free, (HASHMEMORYFN) free);
+    hashtable_memory_fns(resources,
+                         hashtable_item_strdup, hashtable_item_strdup,
+                         hashtable_item_free, hashtable_item_free);
 
     return resources;
 }
@@ -2113,7 +2088,7 @@ static int normalize_hostname(const char *input_host, char *output_host)
     output_host[0] = 0;
     bytes = 0;
 
-    tmp = strdup(input_host);
+    tmp = MXS_STRDUP(input_host);
 
     if (tmp == NULL)
     {
@@ -2177,7 +2152,7 @@ static int normalize_hostname(const char *input_host, char *output_host)
         strcpy(output_host, input_host);
     }
 
-    free(tmp);
+    MXS_FREE(tmp);
 
     return netmask;
 }
@@ -2352,7 +2327,7 @@ dbusers_keyread(int fd)
 {
     MYSQL_USER_HOST *dbkey;
 
-    if ((dbkey = (MYSQL_USER_HOST *) malloc(sizeof(MYSQL_USER_HOST))) == NULL)
+    if ((dbkey = (MYSQL_USER_HOST *) MXS_MALLOC(sizeof(MYSQL_USER_HOST))) == NULL)
     {
         return NULL;
     }
@@ -2362,54 +2337,54 @@ dbusers_keyread(int fd)
     int user_size;
     if (read(fd, &user_size, sizeof(user_size)) != sizeof(user_size))
     {
-        free(dbkey);
+        MXS_FREE(dbkey);
         return NULL;
     }
-    if ((dbkey->user = (char *) malloc(user_size + 1)) == NULL)
+    if ((dbkey->user = (char *) MXS_MALLOC(user_size + 1)) == NULL)
     {
-        free(dbkey);
+        MXS_FREE(dbkey);
         return NULL;
     }
     if (read(fd, dbkey->user, user_size) != user_size)
     {
-        free(dbkey->user);
-        free(dbkey);
+        MXS_FREE(dbkey->user);
+        MXS_FREE(dbkey);
         return NULL;
     }
     dbkey->user[user_size] = 0; // NULL Terminate
     if (read(fd, &dbkey->ipv4, sizeof(dbkey->ipv4)) != sizeof(dbkey->ipv4))
     {
-        free(dbkey->user);
-        free(dbkey);
+        MXS_FREE(dbkey->user);
+        MXS_FREE(dbkey);
         return NULL;
     }
     if (read(fd, &dbkey->netmask, sizeof(dbkey->netmask)) != sizeof(dbkey->netmask))
     {
-        free(dbkey->user);
-        free(dbkey);
+        MXS_FREE(dbkey->user);
+        MXS_FREE(dbkey);
         return NULL;
     }
 
     int res_size;
     if (read(fd, &res_size, sizeof(res_size)) != sizeof(res_size))
     {
-        free(dbkey->user);
-        free(dbkey);
+        MXS_FREE(dbkey->user);
+        MXS_FREE(dbkey);
         return NULL;
     }
     else if (res_size != -1)
     {
-        if ((dbkey->resource = (char *) malloc(res_size + 1)) == NULL)
+        if ((dbkey->resource = (char *) MXS_MALLOC(res_size + 1)) == NULL)
         {
-            free(dbkey->user);
-            free(dbkey);
+            MXS_FREE(dbkey->user);
+            MXS_FREE(dbkey);
             return NULL;
         }
         if (read(fd, dbkey->resource, res_size) != res_size)
         {
-            free(dbkey->resource);
-            free(dbkey->user);
-            free(dbkey);
+            MXS_FREE(dbkey->resource);
+            MXS_FREE(dbkey->user);
+            MXS_FREE(dbkey);
             return NULL;
         }
         dbkey->resource[res_size] = 0; // NULL Terminate
@@ -2437,13 +2412,13 @@ dbusers_valueread(int fd)
     {
         return NULL;
     }
-    if ((value = (char *) malloc(tmp + 1)) == NULL)
+    if ((value = (char *) MXS_MALLOC(tmp + 1)) == NULL)
     {
         return NULL;
     }
     if (read(fd, value, tmp) != tmp)
     {
-        free(value);
+        MXS_FREE(value);
         return NULL;
     }
     value[tmp] = 0;
@@ -2523,7 +2498,7 @@ static int add_wildcard_users(USERS *users, char* name, char* host, char* passwo
         return 0;
     }
 
-    if ((restr = malloc(sizeof(char) * strlen(db) * 2)) == NULL)
+    if ((restr = MXS_MALLOC(sizeof(char) * strlen(db) * 2)) == NULL)
     {
         return 0;
     }
@@ -2535,7 +2510,7 @@ static int add_wildcard_users(USERS *users, char* name, char* host, char* passwo
 
     if (ptr == NULL)
     {
-        free(restr);
+        MXS_FREE(restr);
         return 0;
     }
 
@@ -2553,7 +2528,7 @@ static int add_wildcard_users(USERS *users, char* name, char* host, char* passwo
         regerror(err, &re, errbuf, 1024);
         MXS_ERROR("Failed to compile regex when resolving wildcard database grants: %s",
                   errbuf);
-        free(restr);
+        MXS_FREE(restr);
         return 0;
     }
 
@@ -2570,7 +2545,7 @@ static int add_wildcard_users(USERS *users, char* name, char* host, char* passwo
 
     hashtable_iterator_free(iter);
     regfree(&re);
-    free(restr);
+    MXS_FREE(restr);
 
     return rval;
 }

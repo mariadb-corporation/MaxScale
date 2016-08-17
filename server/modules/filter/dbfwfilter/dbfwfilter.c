@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -79,6 +79,7 @@
 #include <ruleparser.yy.h>
 #include <lex.yy.h>
 #include <stdlib.h>
+#include <maxscale/alloc.h>
 
 /** Older versions of Bison don't include the parsing function in the header */
 #ifndef dbfw_yyparse
@@ -291,17 +292,16 @@ bool parse_limit_queries(FW_INSTANCE* instance, RULE* ruledef, const char* rule,
  */
 static STRLINK* strlink_push(STRLINK* head, const char* value)
 {
-    STRLINK* link = malloc(sizeof(STRLINK));
+    STRLINK* link = MXS_MALLOC(sizeof(STRLINK));
 
-    if (link && (link->value = strdup(value)))
+    if (link && (link->value = MXS_STRDUP(value)))
     {
         link->next = head;
     }
     else
     {
-        free(link);
+        MXS_FREE(link);
         link = NULL;
-        MXS_ERROR("dbfwfilter: Memory allocation failed.");
     }
     return link;
 }
@@ -316,8 +316,8 @@ static STRLINK* strlink_pop(STRLINK* head)
     if (head)
     {
         STRLINK* next = head->next;
-        free(head->value);
-        free(head);
+        MXS_FREE(head->value);
+        MXS_FREE(head);
         return next;
     }
     return NULL;
@@ -333,8 +333,8 @@ static void strlink_free(STRLINK* head)
     {
         STRLINK* tmp = head;
         head = head->next;
-        free(tmp->value);
-        free(tmp);
+        MXS_FREE(tmp->value);
+        MXS_FREE(tmp);
     }
 }
 
@@ -366,7 +366,7 @@ static STRLINK* strlink_reverse_clone(STRLINK* head)
 
 static RULELIST* rulelist_push(RULELIST *head, RULE *rule)
 {
-    RULELIST *rval = malloc(sizeof(RULELIST));
+    RULELIST *rval = MXS_MALLOC(sizeof(RULELIST));
 
     if (rval)
     {
@@ -385,7 +385,8 @@ static void* rulelist_clone(void* fval)
 
     while (ptr)
     {
-        RULELIST* tmp = (RULELIST*) malloc(sizeof(RULELIST));
+        RULELIST* tmp = (RULELIST*) MXS_MALLOC(sizeof(RULELIST));
+        MXS_ABORT_IF_NULL(tmp);
         tmp->next = rule;
         tmp->rule = ptr->rule;
         rule = tmp;
@@ -402,22 +403,21 @@ static void* rulelist_free(void* fval)
     {
         RULELIST *tmp = ptr;
         ptr = ptr->next;
-        free(tmp);
+        MXS_FREE(tmp);
     }
     return NULL;
 }
 
-static void* huserfree(void* fval)
+static void huserfree(void* fval)
 {
     USER* value = (USER*) fval;
 
     rulelist_free(value->rules_and);
     rulelist_free(value->rules_or);
     rulelist_free(value->rules_strict_and);
-    free(value->qs_limit);
-    free(value->name);
-    free(value);
-    return NULL;
+    MXS_FREE(value->qs_limit);
+    MXS_FREE(value->name);
+    MXS_FREE(value);
 }
 
 /**
@@ -622,17 +622,13 @@ static TIMERANGE* parse_time(const char* str)
             CHK_TIMES((&start));
             CHK_TIMES((&end));
 
-            tr = (TIMERANGE*) malloc(sizeof(TIMERANGE));
+            tr = (TIMERANGE*) MXS_MALLOC(sizeof(TIMERANGE));
 
             if (tr)
             {
                 tr->start = start;
                 tr->end = end;
                 tr->next = NULL;
-            }
-            else
-            {
-                MXS_ERROR("dbfwfilter: malloc returned NULL.");
             }
         }
     }
@@ -649,7 +645,8 @@ TIMERANGE* split_reverse_time(TIMERANGE* tr)
 {
     TIMERANGE* tmp = NULL;
 
-    tmp = (TIMERANGE*) calloc(1, sizeof(TIMERANGE));
+    tmp = (TIMERANGE*) MXS_CALLOC(1, sizeof(TIMERANGE));
+    MXS_ABORT_IF_NULL(tmp);
     tmp->next = tr;
     tmp->start.tm_hour = 0;
     tmp->start.tm_min = 0;
@@ -724,15 +721,14 @@ static bool apply_rule_to_user(FW_INSTANCE *instance, char *username,
     if ((user = (USER*) hashtable_fetch(instance->htable, username)) == NULL)
     {
         /**New user*/
-        if ((user = (USER*) calloc(1, sizeof(USER))) == NULL)
+        if ((user = (USER*) MXS_CALLOC(1, sizeof(USER))) == NULL)
         {
-            MXS_ERROR("dbfwfilter: failed to allocate memory when parsing rules.");
             return false;
         }
         spinlock_init(&user->lock);
     }
 
-    user->name = (char*) strdup(username);
+    user->name = (char*) MXS_STRDUP_A(username);
     user->qs_limit = NULL;
     RULELIST *tl = (RULELIST*) rulelist_clone(rulelist);
     RULELIST *tail = tl;
@@ -775,7 +771,7 @@ void tr_free(TIMERANGE* tr)
     {
         tmp = node;
         node = node->next;
-        free(tmp);
+        MXS_FREE(tmp);
     }
 }
 
@@ -874,9 +870,9 @@ void dbfw_yyerror(void* scanner, const char* error)
 bool create_rule(void* scanner, const char* name)
 {
     bool rval = true;
-    RULE *ruledef = malloc(sizeof(RULE));
+    RULE *ruledef = MXS_MALLOC(sizeof(RULE));
 
-    if (ruledef && (ruledef->name = strdup(name)))
+    if (ruledef && (ruledef->name = MXS_STRDUP(name)))
     {
         ruledef->type = RT_UNDEFINED;
         ruledef->on_queries = QUERY_OP_UNDEFINED;
@@ -890,8 +886,7 @@ bool create_rule(void* scanner, const char* name)
     }
     else
     {
-        MXS_ERROR("Memory allocation failed when creating rule '%s'.", name);
-        free(ruledef);
+        MXS_FREE(ruledef);
         rval = false;
     }
 
@@ -911,7 +906,7 @@ static void free_rules(RULE* rule)
         {
             TIMERANGE *tr = rule->active;
             rule->active = rule->active->next;
-            free(tr);
+            MXS_FREE(tr);
         }
 
         switch (rule->type)
@@ -921,7 +916,7 @@ static void free_rules(RULE* rule)
                 break;
 
             case RT_THROTTLE:
-                free(rule->data);
+                MXS_FREE(rule->data);
                 break;
 
             case RT_REGEX:
@@ -932,7 +927,7 @@ static void free_rules(RULE* rule)
                 break;
         }
 
-        free(rule->name);
+        MXS_FREE(rule->name);
         rule = tmp;
     }
 }
@@ -1021,9 +1016,9 @@ bool create_user_templates(void* scanner)
 
     while (user)
     {
-        user_template_t* newtemp = malloc(sizeof(user_template_t));
+        user_template_t* newtemp = MXS_MALLOC(sizeof(user_template_t));
         STRLINK* tmp;
-        if (newtemp && (newtemp->name = strdup(user->value)) &&
+        if (newtemp && (newtemp->name = MXS_STRDUP(user->value)) &&
             (newtemp->rulenames = strlink_reverse_clone(rstack->active_rules)))
         {
             newtemp->type = rstack->active_mode;
@@ -1034,13 +1029,12 @@ bool create_user_templates(void* scanner)
         {
             if (newtemp)
             {
-                free(newtemp->name);
-                free(newtemp);
+                MXS_FREE(newtemp->name);
+                MXS_FREE(newtemp);
             }
-            free(templates->name);
+            MXS_FREE(templates->name);
             strlink_free(templates->rulenames);
-            free(templates);
-            MXS_ERROR("Memory allocation failed when processing rule file users definitions.");
+            MXS_FREE(templates);
             return false;
         }
         user = user->next;
@@ -1063,8 +1057,8 @@ void free_user_templates(user_template_t *templates)
         user_template_t *tmp = templates;
         templates = templates->next;
         strlink_free(tmp->rulenames);
-        free(tmp->name);
-        free(tmp);
+        MXS_FREE(tmp->name);
+        MXS_FREE(tmp);
     }
 }
 
@@ -1143,7 +1137,7 @@ bool define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdo
 {
     struct parser_stack* rstack = dbfw_yyget_extra((yyscan_t) scanner);
     ss_dassert(rstack);
-    QUERYSPEED* qs = malloc(sizeof(QUERYSPEED));
+    QUERYSPEED* qs = MXS_MALLOC(sizeof(QUERYSPEED));
 
     if (qs)
     {
@@ -1152,10 +1146,6 @@ bool define_limit_queries_rule(void* scanner, int max, int timeperiod, int holdo
         qs->cooldown = holdoff;
         rstack->rule->type = RT_THROTTLE;
         rstack->rule->data = qs;
-    }
-    else
-    {
-        MXS_ERROR("dbfwfilter: Memory allocation failed when adding limit_queries rule.");
     }
 
     return qs != NULL;
@@ -1239,7 +1229,7 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
 
         if (user == NULL)
         {
-            if ((user = malloc(sizeof(USER))) && (user->name = strdup(templates->name)))
+            if ((user = MXS_MALLOC(sizeof(USER))) && (user->name = MXS_STRDUP(templates->name)))
             {
                 user->rules_and = NULL;
                 user->rules_or = NULL;
@@ -1249,11 +1239,9 @@ static bool process_user_templates(FW_INSTANCE *instance, user_template_t *templ
             }
             else
             {
-                free(user);
+                MXS_FREE(user);
                 rval = false;
                 break;
-                MXS_ERROR("Memory allocation failed when creating user '%s'.",
-                          templates->name);
             }
         }
 
@@ -1382,23 +1370,22 @@ createInstance(char **options, FILTER_PARAMETER **params)
     char *filename = NULL;
     bool err = false;
 
-    if ((my_instance = calloc(1, sizeof(FW_INSTANCE))) == NULL)
+    if ((my_instance = MXS_CALLOC(1, sizeof(FW_INSTANCE))) == NULL)
     {
-        free(my_instance);
-        MXS_ERROR("Memory allocation for firewall filter failed.");
+        MXS_FREE(my_instance);
         return NULL;
     }
 
     spinlock_init(&my_instance->lock);
 
-    if ((ht = hashtable_alloc(100, simple_str_hash, strcmp)) == NULL)
+    if ((ht = hashtable_alloc(100, hashtable_item_strhash, hashtable_item_strcmp)) == NULL)
     {
         MXS_ERROR("Unable to allocate hashtable.");
-        free(my_instance);
+        MXS_FREE(my_instance);
         return NULL;
     }
 
-    hashtable_memory_fns(ht, (HASHMEMORYFN) strdup, NULL, (HASHMEMORYFN) free, huserfree);
+    hashtable_memory_fns(ht, hashtable_item_strdup, NULL, hashtable_item_free, huserfree);
 
     my_instance->htable = ht;
     my_instance->action = FW_ACTION_BLOCK;
@@ -1459,7 +1446,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
     if (err || !process_rule_file(filename, my_instance))
     {
         hashtable_free(my_instance->htable);
-        free(my_instance);
+        MXS_FREE(my_instance);
         my_instance = NULL;
     }
 
@@ -1478,7 +1465,7 @@ newSession(FILTER *instance, SESSION *session)
 {
     FW_SESSION *my_session;
 
-    if ((my_session = calloc(1, sizeof(FW_SESSION))) == NULL)
+    if ((my_session = MXS_CALLOC(1, sizeof(FW_SESSION))) == NULL)
     {
         return NULL;
     }
@@ -1510,9 +1497,9 @@ freeSession(FILTER *instance, void *session)
     FW_SESSION *my_session = (FW_SESSION *) session;
     if (my_session->errmsg)
     {
-        free(my_session->errmsg);
+        MXS_FREE(my_session->errmsg);
     }
-    free(my_session);
+    MXS_FREE(my_session);
 }
 
 /**
@@ -1555,11 +1542,10 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
     dcb = session->session->client_dcb;
     mysql_session = (MYSQL_session*) dcb->data;
     errlen = msg != NULL ? strlen(msg) : 0;
-    errmsg = (char*) malloc((512 + errlen) * sizeof(char));
+    errmsg = (char*) MXS_MALLOC((512 + errlen) * sizeof(char));
 
     if (errmsg == NULL)
     {
-        MXS_ERROR("Memory allocation failed.");
         return NULL;
     }
 
@@ -1582,7 +1568,7 @@ GWBUF* gen_dummy_error(FW_SESSION* session, char* msg)
     }
 
     buf = modutil_create_mysql_err_msg(1, 0, 1141, "HY000", (const char*) errmsg);
-    free(errmsg);
+    MXS_FREE(errmsg);
 
     return buf;
 }
@@ -1679,7 +1665,7 @@ static char* create_parse_error(FW_INSTANCE* my_instance,
     {
         char msgbuf[len + 1]; // +1 for the "."
         sprintf(msgbuf, "%s.", message);
-        msg = strdup(msgbuf);
+        msg = MXS_STRDUP_A(msgbuf);
 
         if (my_instance->action == FW_ACTION_ALLOW)
         {
@@ -1799,7 +1785,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                         pcre2_match_data_free(mdata);
                         if (matches)
                         {
-                            msg = strdup("Permission denied, query matched regular expression.");
+                            msg = MXS_STRDUP_A("Permission denied, query matched regular expression.");
                             MXS_INFO("dbfwfilter: rule '%s': regex matched on query", rulelist->rule->name);
                             goto queryresolved;
                         }
@@ -1815,7 +1801,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
             case RT_PERMISSION:
                 {
                     matches = true;
-                    msg = strdup("Permission denied at this time.");
+                    msg = MXS_STRDUP_A("Permission denied at this time.");
                     char buffer[32]; // asctime documentation requires 26
                     asctime_r(&tm_now, buffer);
                     MXS_INFO("dbfwfilter: rule '%s': query denied at: %s", rulelist->rule->name, buffer);
@@ -1843,15 +1829,15 @@ bool rule_matches(FW_INSTANCE* my_instance,
                                     sprintf(emsg, "Permission denied to column '%s'.", strln->value);
                                     MXS_INFO("dbfwfilter: rule '%s': query targets forbidden column: %s",
                                              rulelist->rule->name, strln->value);
-                                    msg = strdup(emsg);
-                                    free(where);
+                                    msg = MXS_STRDUP_A(emsg);
+                                    MXS_FREE(where);
                                     goto queryresolved;
                                 }
                                 strln = strln->next;
                             }
                             tok = strtok_r(NULL, ",", &saveptr);
                         }
-                        free(where);
+                        MXS_FREE(where);
                     }
                 }
                 break;
@@ -1869,13 +1855,13 @@ bool rule_matches(FW_INSTANCE* my_instance,
                         if (strchr(strptr, '*'))
                         {
                             matches = true;
-                            msg = strdup("Usage of wildcard denied.");
+                            msg = MXS_STRDUP_A("Usage of wildcard denied.");
                             MXS_INFO("dbfwfilter: rule '%s': query contains a wildcard.",
                                      rulelist->rule->name);
-                            free(where);
+                            MXS_FREE(where);
                             goto queryresolved;
                         }
-                        free(where);
+                        MXS_FREE(where);
                     }
                 }
                 break;
@@ -1906,7 +1892,8 @@ bool rule_matches(FW_INSTANCE* my_instance,
                 {
 
                     /**No match found*/
-                    queryspeed = (QUERYSPEED*) calloc(1, sizeof(QUERYSPEED));
+                    queryspeed = (QUERYSPEED*) MXS_CALLOC(1, sizeof(QUERYSPEED));
+                    MXS_ABORT_IF_NULL(queryspeed);
                     queryspeed->period = rule_qs->period;
                     queryspeed->cooldown = rule_qs->cooldown;
                     queryspeed->limit = rule_qs->limit;
@@ -1926,7 +1913,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                         sprintf(emsg, "Queries denied for %f seconds", blocked_for);
                         MXS_INFO("dbfwfilter: rule '%s': user denied for %f seconds",
                                  rulelist->rule->name, blocked_for);
-                        msg = strdup(emsg);
+                        msg = MXS_STRDUP_A(emsg);
                         matches = true;
                     }
                     else
@@ -1952,7 +1939,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                         double blocked_for =
                             queryspeed->cooldown - difftime(time_now, queryspeed->triggered);
                         sprintf(emsg, "Queries denied for %f seconds", blocked_for);
-                        msg = strdup(emsg);
+                        msg = MXS_STRDUP_A(emsg);
                     }
                     else if (queryspeed->count > 0 &&
                              difftime(time_now, queryspeed->first_query) <= queryspeed->period)
@@ -1972,7 +1959,7 @@ bool rule_matches(FW_INSTANCE* my_instance,
                     !qc_query_has_clause(queue))
                 {
                     matches = true;
-                    msg = strdup("Required WHERE/HAVING clause is missing.");
+                    msg = MXS_STRDUP_A("Required WHERE/HAVING clause is missing.");
                     MXS_INFO("dbfwfilter: rule '%s': query has no where/having "
                              "clause, query is denied.", rulelist->rule->name);
                 }
@@ -1989,7 +1976,7 @@ queryresolved:
     {
         if (my_session->errmsg)
         {
-            free(my_session->errmsg);
+            MXS_FREE(my_session->errmsg);
         }
 
         my_session->errmsg = msg;
@@ -2031,14 +2018,14 @@ bool check_match_any(FW_INSTANCE* my_instance, FW_SESSION* my_session,
             }
             if (rule_matches(my_instance, my_session, queue, user, rulelist, fullquery))
             {
-                *rulename = strdup(rulelist->rule->name);
+                *rulename = MXS_STRDUP_A(rulelist->rule->name);
                 rval = true;
                 break;
             }
             rulelist = rulelist->next;
         }
 
-        free(fullquery);
+        MXS_FREE(fullquery);
     }
     return rval;
 }
@@ -2054,7 +2041,7 @@ void append_string(char** dest, size_t* size, const char* src)
 {
     if (*dest == NULL)
     {
-        *dest = strdup(src);
+        *dest = MXS_STRDUP_A(src);
         *size = strlen(src);
     }
     else
@@ -2062,7 +2049,7 @@ void append_string(char** dest, size_t* size, const char* src)
         if (*size < strlen(*dest) + strlen(src) + 3)
         {
             size_t newsize = strlen(*dest) + strlen(src) + 3;
-            char* tmp = realloc(*dest, newsize);
+            char* tmp = MXS_REALLOC(*dest, newsize);
             if (tmp)
             {
                 *size = newsize;
@@ -2070,7 +2057,6 @@ void append_string(char** dest, size_t* size, const char* src)
             }
             else
             {
-                MXS_ERROR("Memory allocation failed");
                 return;
             }
         }
@@ -2131,7 +2117,7 @@ bool check_match_all(FW_INSTANCE* my_instance, FW_SESSION* my_session,
             /** No active rules */
             rval = false;
         }
-        free(fullquery);
+        MXS_FREE(fullquery);
     }
 
     /** Set the list of matched rule names */
@@ -2198,7 +2184,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
         GWBUF* err = gen_dummy_error(my_session, "This filter does not support "
                                      "multi-statements.");
         gwbuf_free(queue);
-        free(my_session->errmsg);
+        MXS_FREE(my_session->errmsg);
         my_session->errmsg = NULL;
         rval = dcb->func.write(dcb, err);
     }
@@ -2268,7 +2254,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 }
             }
 
-            free(rname);
+            MXS_FREE(rname);
         }
         /** If the instance is in whitelist mode, only users that have a rule
          * defined for them are allowed */
@@ -2286,7 +2272,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
         {
             GWBUF* forward = gen_dummy_error(my_session, my_session->errmsg);
             gwbuf_free(queue);
-            free(my_session->errmsg);
+            MXS_FREE(my_session->errmsg);
             my_session->errmsg = NULL;
             rval = dcb->func.write(dcb, forward);
         }
@@ -2378,10 +2364,11 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    home = malloc(sizeof(char) * (PATH_MAX + 1));
+    home = MXS_MALLOC(sizeof(char) * (PATH_MAX + 1));
+    MXS_ABORT_IF_NULL(home);
     if (getcwd(home, PATH_MAX) == NULL)
     {
-        free(home);
+        MXS_FREE(home);
         home = NULL;
     }
 
@@ -2399,8 +2386,8 @@ int main(int argc, char** argv)
 
 
     init_test_env(home);
-    ruleparam.name = strdup("rules");
-    ruleparam.value = strdup(argv[1]);
+    ruleparam.name = MXS_STRDUP_A("rules");
+    ruleparam.value = MXS_STRDUP_A(argv[1]);
     paramlist[0] = &ruleparam;
     paramlist[1] = NULL;
 

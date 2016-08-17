@@ -91,6 +91,21 @@ The default value is off, set transaction_safety=on to enable the incomplete tra
 
 This defines whether (on | off) MariaDB MaxScale sends to the slave the heartbeat packet when there are no real binlog events to send. The default value if 'off', no heartbeat event is sent to slave server. If value is 'on' the interval value (requested by the slave during registration) is reported in the diagnostic output and the packet is send after the time interval without any event to send.
 
+### `semisync`
+
+This parameter controls whether binlog server could ask Master server to start the Semi-Synchronous replication.
+In order to get semi-sync working the Master server must have the *rpl_semi_sync_master* plugin installed.
+The available plugin and the value of GLOBAL VARIABLE *rpl_semi_sync_master_enabled* are checked in the Master registration phase: if plugin is installed in the Master database the binlog server then requests the semi-sync option.
+Note:
+ - the network replication stream from Master has two additional bytes before each binlog event.
+ - the Semi-Sync protocol requires an acknoledge packet to be sent back to Master only when requested: the semi-sync flag will have value of 1.
+   This flag is set only if *rpl_semi_sync_master_enabled=1* in the Master, otherwise it will always have value of 0 and no ack packet is sent back.
+
+Please note that semi-sync replication is only related to binlog server to Master communication.
+### `ssl_cert_verification_depth`
+
+This parameter sets the maximum length of the certificate authority chain that will be accepted. Legal values are positive integers. This applies to SSL connection to master server that could be acivated either by writing options in master.ini or later via CHANGE MASTER TO. This parameter cannot be modified at runtime, default is 9.
+
 A complete example of a service entry for a binlog router service would be as follows.
 ```
     [Replication]
@@ -100,7 +115,7 @@ A complete example of a service entry for a binlog router service would be as fo
     version_string=5.6.17-log
     user=maxscale
     passwd=Mhu87p2D
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1,send_slave_heartbeat=1
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1,send_slave_heartbeat=1,ssl_cert_verification_depth=9,semisync=1
 ```
 
 The minimum set of router options that must be given in the configuration are are server-id and master-id, default values may be used for all other options.
@@ -108,3 +123,6 @@ The minimum set of router options that must be given in the configuration are ar
 ## Examples
 
 The [Replication Proxy](../Tutorials/Replication-Proxy-Binlog-Router-Tutorial.md) tutorial will show you how to configure and administrate a binlogrouter installation.
+
+
+Tutorial also includes SSL communication setup to the master server and SSL client connections setup to MaxScale Binlog Server

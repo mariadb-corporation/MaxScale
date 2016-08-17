@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -36,6 +36,7 @@
 #include <test_utils.h>
 #include <service.h>
 #include <gwdirs.h>
+#include <maxscale/alloc.h>
 
 /**
  * test1    Allocate a service and do lots of other things
@@ -60,18 +61,19 @@ test1()
     ss_info_dassert(NULL == service, "New service with invalid router should be null");
     ss_info_dassert(0 == service_isvalid(service), "Service must not be valid after incorrect creation");
     ss_dfprintf(stderr, "\t..done\nValid service creation, router testroute.");
-    set_libdir(strdup("../../modules/routing/"));
+    set_libdir(MXS_STRDUP_A("../../modules/routing/"));
     service = service_alloc("MyService", "testroute");
     mxs_log_flush_sync();
     ss_info_dassert(NULL != service, "New service with valid router must not be null");
     ss_info_dassert(0 != service_isvalid(service), "Service must be valid after creation");
     ss_info_dassert(0 == strcmp("MyService", service_get_name(service)), "Service must have given name");
     ss_dfprintf(stderr, "\t..done\nAdding protocol testprotocol.");
-    ss_info_dassert(0 != serviceAddProtocol(service, "testprotocol", "localhost", 9876, "MySQL", NULL),
+    ss_info_dassert(0 != serviceAddProtocol(service, "TestProtocol", "testprotocol",
+                                            "localhost", 9876, "MySQL", NULL),
                     "Add Protocol should succeed");
     ss_info_dassert(0 != serviceHasProtocol(service, "testprotocol", "localhost", 9876),
                     "Service should have new protocol as requested");
-    set_libdir(strdup("../../modules/protocol/"));
+    set_libdir(MXS_STRDUP_A("../../modules/protocol/"));
     serviceStartProtocol(service, "testprotocol", 9876);
     mxs_log_flush_sync();
     ss_dfprintf(stderr, "\t..done\nStarting Service.");

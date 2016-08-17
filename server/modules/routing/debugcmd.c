@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -42,6 +42,7 @@
  * 06/11/15     Martin Brampton         Add show buffers (conditional compilation)
  * 23/05/16     Massimiliano Pinto      'add user' and 'remove user'
  *                                      no longer accept password parameter
+ * 27/06/16     Martin Brampton         Modify to work with list manager sessions
  *
  * @endverbatim
  */
@@ -69,12 +70,13 @@
 #include <monitor.h>
 #include <debugcli.h>
 #include <housekeeper.h>
+#include <listmanager.h>
 
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <sys/syslog.h>
 
-#define MAXARGS 5
+#define MAXARGS 6
 
 #define ARG_TYPE_ADDRESS        1
 #define ARG_TYPE_STRING         2
@@ -86,6 +88,8 @@
 #define ARG_TYPE_MONITOR        8
 #define ARG_TYPE_FILTER         9
 #define ARG_TYPE_NUMERIC        10
+
+extern LIST_CONFIG SESSIONlist;
 
 /**
  * The subcommand structure
@@ -101,7 +105,9 @@ struct subcommand {
     int     arg_types[3];
 };
 
-static  void    telnetdShowUsers(DCB *);
+static void telnetdShowUsers(DCB *);
+static void show_log_throttling(DCB *);
+
 /**
  * The subcommands of the show command
  */
@@ -112,6 +118,10 @@ struct subcommand showoptions[] = {
       "Show all buffers with backtrace",
       {0, 0, 0} },
 #endif
+    { "dcblist", 0, dprintDCBList,
+      "Show statistics for the list of all descriptor control blocks",    
+      "Show statistics for the list of all descriptor control blocks",    
+      {0, 0, 0} },
     { "dcbs", 0, dprintAllDCBs,
       "Show all descriptor control blocks (network connections)",
       "Show all descriptor control blocks (network connections)",
@@ -149,6 +159,10 @@ struct subcommand showoptions[] = {
     { "filters", 0, dprintAllFilters,
       "Show all filters",
       "Show all filters",
+      {0, 0, 0} },
+    { "log_throttling", 0, show_log_throttling,
+      "Show the current log throttling setting (count, window (ms), suppression (ms))",
+      "Show the current log throttling setting (count, window (ms), suppression (ms))",
       {0, 0, 0} },
     { "modules", 0, dprintAllModules,
       "Show all currently loaded modules",
@@ -192,6 +206,10 @@ struct subcommand showoptions[] = {
       "Show a single session in MaxScale, e.g. show session 0x284830",
       "Show a single session in MaxScale, e.g. show session 0x284830",
       {ARG_TYPE_SESSION, 0, 0} },
+    { "sessionlist", 0, dprintSessionList,
+      "Show statistics for the list of all sessions",    
+      "Show statistics for the list of all sessions",    
+      {0, 0, 0} },
     { "sessions", 0, dprintAllSessions,
       "Show all active sessions in MaxScale",
       "Show all active sessions in MaxScale",
@@ -356,6 +374,7 @@ struct subcommand restartoptions[] = {
 static void set_server(DCB *dcb, SERVER *server, char *bit);
 static void set_pollsleep(DCB *dcb, int);
 static void set_nbpoll(DCB *dcb, int);
+static void set_log_throttling(DCB *dcb, int count, int window_ms, int suppress_ms);
 /**
  * The subcommands of the set command
  */
@@ -372,7 +391,10 @@ struct subcommand setoptions[] = {
       "Set the number of non-blocking polls",
       "Set the number of non-blocking polls",
       {ARG_TYPE_NUMERIC, 0, 0} },
-
+    { "log_throttling", 3, set_log_throttling,
+      "Set the log throttling configuration",
+      "Set the log throttling configuration",
+      {ARG_TYPE_NUMERIC, ARG_TYPE_NUMERIC, ARG_TYPE_NUMERIC} },
     { NULL, 0, NULL, NULL, NULL,
       {0, 0, 0} }
 };
@@ -856,7 +878,7 @@ convert_arg(int mode, char *arg, int arg_type)
             service = service_find(arg);
             if (service)
             {
-                return (unsigned long)(service->users);
+                return (unsigned long)(service->ports->users);
             }
             else
             {
@@ -1174,7 +1196,7 @@ execute_cmd(CLI_SESSION *cli)
                    "Command '%s' not known, type help for a list of available commands\n", args[0]);
     }
 
-    memset(cli->cmdbuf, 0, cmdbuflen);
+    memset(cli->cmdbuf, 0, CMDBUFLEN);
 
     return 1;
 }
@@ -1258,7 +1280,7 @@ static void
 reload_dbusers(DCB *dcb, SERVICE *service)
 {
     dcb_printf(dcb, "Loaded %d database users for service %s.\n",
-               reload_mysql_users(service), service->name);
+               reload_mysql_users(service->ports), service->name);
 }
 
 /**
@@ -1341,6 +1363,20 @@ telnetdShowUsers(DCB *dcb)
 {
     dcb_printf(dcb, "Administration interface users:\n");
     dcb_PrintAdminUsers(dcb);
+}
+
+/**
+ * Print the log throttling state
+ *
+ * @param dcb The DCB to print the state to.
+ */
+static void
+show_log_throttling(DCB *dcb)
+{
+    MXS_LOG_THROTTLING t;
+    mxs_log_get_throttling(&t);
+
+    dcb_printf(dcb, "%lu %lu %lu\n", t.count, t.window_ms, t.suppress_ms);
 }
 
 /**
@@ -1476,25 +1512,20 @@ static void enable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
     if (get_log_action(arg1, &entry))
     {
         size_t id = (size_t) strtol(arg2, 0, 0);
-
-        // TODO: This is totally non thread-safe.
-        SESSION* session = get_all_sessions();
-
-        while (session)
+        list_entry_t *current = list_start_iteration(&SESSIONlist);
+        while (current)
         {
-            if (false == session->ses_is_in_use)
-            {
-                continue;
-            }
+            SESSION *session = (SESSION *)current;
             if (session->ses_id == id)
             {
                 session_enable_log_priority(session, entry.priority);
+                list_terminate_iteration_early(&SESSIONlist, current);
                 break;
             }
-            session = session->next;
+            current = list_iterate(&SESSIONlist, current);
         }
 
-        if (!session)
+        if (!current)
         {
             dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
@@ -1518,25 +1549,20 @@ static void disable_sess_log_action(DCB *dcb, char *arg1, char *arg2)
     if (get_log_action(arg1, &entry))
     {
         size_t id = (size_t) strtol(arg2, 0, 0);
-
-        // TODO: This is totally non thread-safe.
-        SESSION* session = get_all_sessions();
-
-        while (session)
+        list_entry_t *current = list_start_iteration(&SESSIONlist);
+        while (current)
         {
-            if (false == session->ses_is_in_use)
-            {
-                continue;
-            }
+            SESSION *session = (SESSION *)current;
             if (session->ses_id == id)
             {
                 session_disable_log_priority(session, entry.priority);
+                list_terminate_iteration_early(&SESSIONlist, current);
                 break;
             }
-            session = session->next;
+            current = list_iterate(&SESSIONlist, current);
         }
 
-        if (!session)
+        if (!current)
         {
             dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
@@ -1597,25 +1623,20 @@ static void enable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
     if (priority != -1)
     {
         size_t id = (size_t) strtol(arg2, 0, 0);
-
-        // TODO: This is totally non thread-safe.
-        SESSION* session = get_all_sessions();
-
-        while (session)
+        list_entry_t *current = list_start_iteration(&SESSIONlist);
+        while (current)
         {
-            if (false == session->ses_is_in_use)
-            {
-                continue;
-            }
+            SESSION *session = (SESSION *)current;
             if (session->ses_id == id)
             {
                 session_enable_log_priority(session, priority);
+                list_terminate_iteration_early(&SESSIONlist, current);
                 break;
             }
-            session = session->next;
+            current = list_iterate(&SESSIONlist, current);
         }
 
-        if (!session)
+        if (!current)
         {
             dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
@@ -1639,25 +1660,20 @@ static void disable_sess_log_priority(DCB *dcb, char *arg1, char *arg2)
     if (priority != -1)
     {
         size_t id = (size_t) strtol(arg2, 0, 0);
-
-        // TODO: This is totally non thread-safe.
-        SESSION* session = get_all_sessions();
-
-        while (session)
+        list_entry_t *current = list_start_iteration(&SESSIONlist);
+        while (current)
         {
-            if (false == session->ses_is_in_use)
-            {
-                continue;
-            }
+            SESSION *session = (SESSION *)current;
             if (session->ses_id == id)
             {
                 session_disable_log_priority(session, priority);
+                list_terminate_iteration_early(&SESSIONlist, current);
                 break;
             }
-            session = session->next;
+            current = list_iterate(&SESSIONlist, current);
         }
 
-        if (!session)
+        if (!current)
         {
             dcb_printf(dcb, "Session not found: %s.\n", arg2);
         }
@@ -1768,6 +1784,24 @@ static void
 set_nbpoll(DCB *dcb, int nb)
 {
     poll_set_nonblocking_polls(nb);
+}
+
+static void
+set_log_throttling(DCB *dcb, int count, int window_ms, int suppress_ms)
+{
+    if ((count >= 0) || (window_ms >= 0) || (suppress_ms >= 0))
+    {
+        MXS_LOG_THROTTLING t = { count, window_ms, suppress_ms };
+
+        mxs_log_set_throttling(&t);
+    }
+    else
+    {
+        dcb_printf(dcb,
+                   "set log_throttling expect 3 integers X Y Z, equal to or larger than 0, "
+                   "where the X denotes how many times particular message may be logged "
+                   "during a period of Y milliseconds before it is suppressed for Z milliseconds.");
+    }
 }
 
 /**

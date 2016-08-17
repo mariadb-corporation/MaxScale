@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -18,9 +18,9 @@
  * @verbatim
  * Revision History
  *
- * Date		Who		Description
- * 18/06/13	Mark Riddoch	Initial implementation
- * 13/06/14	Mark Riddoch	Creted from the debugcli
+ * Date     Who             Description
+ * 18/06/13 Mark Riddoch    Initial implementation
+ * 13/06/14 Mark Riddoch    Creted from the debugcli
  *
  * @endverbatim
  */
@@ -35,32 +35,35 @@
 #include <atomic.h>
 #include <spinlock.h>
 #include <dcb.h>
+#include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <debugcli.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 
 
-MODULE_INFO 	info = {
-	MODULE_API_ROUTER,
-	MODULE_GA,
-	ROUTER_VERSION,
-	"The admin user interface"
+MODULE_INFO     info =
+{
+    MODULE_API_ROUTER,
+    MODULE_GA,
+    ROUTER_VERSION,
+    "The admin user interface"
 };
 
 static char *version_str = "V1.0.0";
 
 /* The router entry points */
-static	ROUTER	*createInstance(SERVICE *service, char **options);
-static	void	*newSession(ROUTER *instance, SESSION *session);
-static	void 	closeSession(ROUTER *instance, void *router_session);
-static	void 	freeSession(ROUTER *instance, void *router_session);
-static	int	execute(ROUTER *instance, void *router_session, GWBUF *queue);
-static	void	diagnostics(ROUTER *instance, DCB *dcb);
-static  int getCapabilities ();
+static  ROUTER *createInstance(SERVICE *service, char **options);
+static  void   *newSession(ROUTER *instance, SESSION *session);
+static  void   closeSession(ROUTER *instance, void *router_session);
+static  void   freeSession(ROUTER *instance, void *router_session);
+static  int    execute(ROUTER *instance, void *router_session, GWBUF *queue);
+static  void   diagnostics(ROUTER *instance, DCB *dcb);
+static  int    getCapabilities();
 
 /** The module object definition */
-static ROUTER_OBJECT MyObject = {
+static ROUTER_OBJECT MyObject =
+{
     createInstance,
     newSession,
     closeSession,
@@ -74,8 +77,8 @@ static ROUTER_OBJECT MyObject = {
 
 extern int execute_cmd(CLI_SESSION *cli);
 
-static SPINLOCK		instlock;
-static CLI_INSTANCE	*instances;
+static SPINLOCK     instlock;
+static CLI_INSTANCE *instances;
 
 /**
  * Implementation of the mandatory version entry point
@@ -85,7 +88,7 @@ static CLI_INSTANCE	*instances;
 char *
 version()
 {
-	return version_str;
+    return version_str;
 }
 
 /**
@@ -95,9 +98,9 @@ version()
 void
 ModuleInit()
 {
-	MXS_NOTICE("Initialise CLI router module %s.", version_str);
-	spinlock_init(&instlock);
-	instances = NULL;
+    MXS_NOTICE("Initialise CLI router module %s.", version_str);
+    spinlock_init(&instlock);
+    instances = NULL;
 }
 
 /**
@@ -111,129 +114,137 @@ ModuleInit()
 ROUTER_OBJECT *
 GetModuleObject()
 {
-	return &MyObject;
+    return &MyObject;
 }
 
 /**
  * Create an instance of the router for a particular service
  * within the gateway.
- * 
- * @param service	The service this router is being create for
- * @param options	Any array of options for the query router
+ *
+ * @param service   The service this router is being create for
+ * @param options   Any array of options for the query router
  *
  * @return The instance data for this new instance
  */
-static	ROUTER	*
+static  ROUTER  *
 createInstance(SERVICE *service, char **options)
 {
-CLI_INSTANCE	*inst;
-int		i;
+    CLI_INSTANCE    *inst;
+    int     i;
 
-	if ((inst = malloc(sizeof(CLI_INSTANCE))) == NULL)
-		return NULL;
+    if ((inst = MXS_MALLOC(sizeof(CLI_INSTANCE))) == NULL)
+    {
+        return NULL;
+    }
 
-	inst->service = service;
-	spinlock_init(&inst->lock);
-	inst->sessions = NULL;
-	inst->mode = CLIM_USER;
+    inst->service = service;
+    spinlock_init(&inst->lock);
+    inst->sessions = NULL;
+    inst->mode = CLIM_USER;
 
-	if (options)
-	{
-		for (i = 0; options[i]; i++)
-		{
-                    MXS_ERROR("Unknown option for CLI '%s'", options[i]);
-		}
-	}
+    if (options)
+    {
+        for (i = 0; options[i]; i++)
+        {
+            MXS_ERROR("Unknown option for CLI '%s'", options[i]);
+        }
+    }
 
-	/*
-	 * We have completed the creation of the instance data, so now
-	 * insert this router instance into the linked list of routers
-	 * that have been created with this module.
-	 */
-	spinlock_acquire(&instlock);
-	inst->next = instances;
-	instances = inst;
-	spinlock_release(&instlock);
+    /*
+     * We have completed the creation of the instance data, so now
+     * insert this router instance into the linked list of routers
+     * that have been created with this module.
+     */
+    spinlock_acquire(&instlock);
+    inst->next = instances;
+    instances = inst;
+    spinlock_release(&instlock);
 
-	return (ROUTER *)inst;
+    return (ROUTER *)inst;
 }
 
 /**
  * Associate a new session with this instance of the router.
  *
- * @param instance	The router instance data
- * @param session	The session itself
+ * @param instance  The router instance data
+ * @param session   The session itself
  * @return Session specific data for this session
  */
-static	void	*
+static  void    *
 newSession(ROUTER *instance, SESSION *session)
 {
-CLI_INSTANCE	*inst = (CLI_INSTANCE *)instance;
-CLI_SESSION	*client;
+    CLI_INSTANCE    *inst = (CLI_INSTANCE *)instance;
+    CLI_SESSION *client;
 
-	if ((client = (CLI_SESSION *)malloc(sizeof(CLI_SESSION))) == NULL)
-	{
-		return NULL;
-	}
-	client->session = session;
+    if ((client = (CLI_SESSION *)MXS_MALLOC(sizeof(CLI_SESSION))) == NULL)
+    {
+        return NULL;
+    }
+    client->session = session;
 
-	memset(client->cmdbuf, 0, 80);
+    memset(client->cmdbuf, 0, 80);
 
-	spinlock_acquire(&inst->lock);
-	client->next = inst->sessions;
-	inst->sessions = client;
-	spinlock_release(&inst->lock);
+    spinlock_acquire(&inst->lock);
+    client->next = inst->sessions;
+    inst->sessions = client;
+    spinlock_release(&inst->lock);
 
-	session->state = SESSION_STATE_READY;
-	client->mode = inst->mode;
+    session->state = SESSION_STATE_READY;
+    client->mode = inst->mode;
 
-	return (void *)client;
+    return (void *)client;
 }
 
 /**
  * Close a session with the router, this is the mechanism
  * by which a router may cleanup data structure etc.
  *
- * @param instance		The router instance data
- * @param router_session	The session being closed
+ * @param instance      The router instance data
+ * @param router_session    The session being closed
  */
-static	void 	
+static  void
 closeSession(ROUTER *instance, void *router_session)
 {
-CLI_INSTANCE	*inst = (CLI_INSTANCE *)instance;
-CLI_SESSION	*session = (CLI_SESSION *)router_session;
+    CLI_INSTANCE    *inst = (CLI_INSTANCE *)instance;
+    CLI_SESSION *session = (CLI_SESSION *)router_session;
 
 
-	spinlock_acquire(&inst->lock);
-	if (inst->sessions == session)
-		inst->sessions = session->next;
-	else
-	{
-		CLI_SESSION *ptr = inst->sessions;
-		while (ptr && ptr->next != session)
-			ptr = ptr->next;
-		if (ptr)
-			ptr->next = session->next;
-	}
-	spinlock_release(&inst->lock);
-        /**
-         * Router session is freed in session.c:session_close, when session who
-         * owns it, is freed.
-         */
+    spinlock_acquire(&inst->lock);
+    if (inst->sessions == session)
+    {
+        inst->sessions = session->next;
+    }
+    else
+    {
+        CLI_SESSION *ptr = inst->sessions;
+        while (ptr && ptr->next != session)
+        {
+            ptr = ptr->next;
+        }
+        if (ptr)
+        {
+            ptr->next = session->next;
+        }
+    }
+    spinlock_release(&inst->lock);
+    /**
+     * Router session is freed in session.c:session_close, when session who
+     * owns it, is freed.
+     */
 }
 
 /**
  * Free a debugcli session
  *
- * @param router_instance	The router session
- * @param router_client_session	The router session as returned from newSession
+ * @param router_instance   The router session
+ * @param router_client_session The router session as returned from newSession
  */
 static void freeSession(
-        ROUTER* router_instance,
-        void*   router_client_session)
+    ROUTER* router_instance,
+    void*   router_client_session)
 {
-	free(router_client_session);
-        return;
+    MXS_FREE(router_client_session);
+    return;
 }
 
 /**
@@ -241,40 +252,58 @@ static void freeSession(
  * This is simply a case of sending it to the connection that was
  * chosen when we started the client session.
  *
- * @param instance		The router instance
- * @param router_session	The router session returned from the newSession call
- * @param queue			The queue of data buffers to route
+ * @param instance      The router instance
+ * @param router_session    The router session returned from the newSession call
+ * @param queue         The queue of data buffers to route
  * @return The number of bytes sent
  */
-static	int	
+static  int
 execute(ROUTER *instance, void *router_session, GWBUF *queue)
 {
-CLI_SESSION	*session = (CLI_SESSION *)router_session;
+    CLI_SESSION *session = (CLI_SESSION *)router_session;
 
-	/* Extract the characters */
-	while (queue)
-	{
-		strncat(session->cmdbuf, GWBUF_DATA(queue), MIN(GWBUF_LENGTH(queue),cmdbuflen-1));
-		queue = gwbuf_consume(queue, GWBUF_LENGTH(queue));
-	}
+    char *cmdbuf = session->cmdbuf;
+    int cmdlen = 0;
 
-	execute_cmd(session);
-	return 1;
+    *cmdbuf = 0;
+
+    /* Extract the characters */
+    while (queue && (cmdlen < CMDBUFLEN - 1))
+    {
+        const char* data = GWBUF_DATA(queue);
+        int len = GWBUF_LENGTH(queue);
+        int n = MIN(len, CMDBUFLEN - cmdlen - 1);
+
+        if (n != len)
+        {
+            MXS_WARNING("Too long user command truncated.");
+        }
+
+        strncat(cmdbuf, data, n);
+
+        cmdlen += n;
+        cmdbuf += n;
+
+        queue = gwbuf_consume(queue, GWBUF_LENGTH(queue));
+    }
+
+    execute_cmd(session);
+    return 1;
 }
 
 /**
  * Display router diagnostics
  *
- * @param instance	Instance of the router
- * @param dcb		DCB to send diagnostics to
+ * @param instance  Instance of the router
+ * @param dcb       DCB to send diagnostics to
  */
-static	void
+static  void
 diagnostics(ROUTER *instance, DCB *dcb)
 {
-	return;	/* Nothing to do currently */
+    return; /* Nothing to do currently */
 }
 
 static int getCapabilities()
 {
-        return 0;
+    return 0;
 }

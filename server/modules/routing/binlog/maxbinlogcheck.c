@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -21,57 +21,37 @@
  * @verbatim
  * Revision History
  *
- * Date     Who         Description
+ * Date         Who                 Description
  * 24/07/2015   Massimiliano Pinto  Initial implementation
  * 26/08/2015   Massimiliano Pinto  Added mariadb10 option
- *                  for MariaDB 10 binlog compatibility
- *                  Currently MariadDB 10 starting transactions
- *                  are detected checking GTID event
- *                  with flags = 0
- *
+ *                                  for MariaDB 10 binlog compatibility
+ *                                  Currently MariadDB 10 starting transactions
+ *                                  are detected checking GTID event
+ *                                  with flags = 0
  * @endverbatim
  */
 
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <time.h>
-#include <service.h>
-#include <server.h>
-#include <router.h>
-#include <atomic.h>
-#include <spinlock.h>
-#include <blr.h>
-#include <dcb.h>
-#include <spinlock.h>
-#include <housekeeper.h>
-#include <time.h>
-
-#include <skygw_types.h>
-#include <skygw_utils.h>
-#include <log_manager.h>
-
-#include <mysql_client_server_protocol.h>
-#include <ini.h>
 #include <sys/stat.h>
-#include <getopt.h>
 
-#include <version.h>
-#include <gwdirs.h>
+#include <maxscale/alloc.h>
+#include <log_manager.h>
+#include <blr.h>
 
-extern int blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug);
-extern uint32_t extract_field(uint8_t *src, int bits);
+
 static void printVersion(const char *progname);
 static void printUsage(const char *progname);
 
 static struct option long_options[] =
 {
-    {"debug", no_argument,        0,  'd'},
-    {"version",   no_argument,        0,  'V'},
-    {"fix",   no_argument,        0,  'f'},
-    {"mariadb10", no_argument,        0,  'M'},
-    {"help",  no_argument,        0,  '?'},
+    {"debug",     no_argument, 0, 'd'},
+    {"version",   no_argument, 0, 'V'},
+    {"fix",       no_argument, 0, 'f'},
+    {"mariadb10", no_argument, 0, 'M'},
+    {"help",      no_argument, 0, '?'},
     {0, 0, 0, 0}
 };
 
@@ -85,20 +65,12 @@ maxscale_uptime()
 
 int main(int argc, char **argv)
 {
-    ROUTER_INSTANCE *inst;
-    int fd;
-    int ret;
-    char *ptr;
-    char path[PATH_MAX + 1] = "";
-    unsigned long filelen = 0;
-    struct  stat statb;
-    char c;
     int option_index = 0;
-    int num_args = 0;
     int debug_out = 0;
     int fix_file = 0;
     int mariadb10_compat = 0;
 
+    char c;
     while ((c = getopt_long(argc, argv, "dVfM?", long_options, &option_index)) >= 0)
     {
         switch (c)
@@ -122,71 +94,70 @@ int main(int argc, char **argv)
         }
     }
 
-    num_args = optind;
+    int num_args = optind;
 
+    if (argv[num_args] == NULL)
+    {
+        printf("ERROR: No binlog file was specified.\n");
+        exit(EXIT_FAILURE);
+    }
+
+    size_t len = strlen(argv[num_args]);
+    if (len > PATH_MAX)
+    {
+        printf("ERROR: The length of the provided path exceeds %d characters.\n", PATH_MAX);
+        exit(EXIT_FAILURE);
+    }
+
+    char path[PATH_MAX + 1];
+    strcpy(path, argv[num_args]);
+
+    char *name = strrchr(path, '/');
+    if (name)
+    {
+        ++name;
+        len = strlen(name);
+    }
+    else
+    {
+        name = path;
+    }
+
+    if ((len == 0) || (len > BINLOG_FNAMELEN))
+    {
+        printf("ERROR: The length of the binlog filename is 0 or exceeds %d characters.\n",
+               BINLOG_FNAMELEN);
+        exit(EXIT_FAILURE);
+    }
+
+    ROUTER_INSTANCE *inst = (ROUTER_INSTANCE*)MXS_CALLOC(1, sizeof(ROUTER_INSTANCE));
+    if (!inst)
+    {
+        exit(EXIT_FAILURE);
+    }
+
+    int fd = open(path, fix_file ? O_RDWR : O_RDONLY, 0666);
+    if (fd == -1)
+    {
+        printf("ERROR: Failed to open binlog file %s: %s.\n",
+               path, strerror(errno));
+        MXS_FREE(inst);
+        exit(EXIT_FAILURE);
+    }
+
+    inst->binlog_fd = fd;
+    inst->mariadb10_compat = mariadb10_compat;
+    strcpy(inst->binlog_name, name);
+
+    // We ignore potential errors.
     mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
     mxs_log_set_augmentation(0);
     mxs_log_set_priority_enabled(LOG_DEBUG, debug_out);
 
-    if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL)
-    {
-        MXS_ERROR("Memory allocation failed for ROUTER_INSTANCE");
-
-        mxs_log_flush_sync();
-        mxs_log_finish();
-
-        return 1;
-    }
-
-    if (argv[num_args] == NULL)
-    {
-        printf("ERROR: No binlog file was specified\n");
-        exit(EXIT_FAILURE);
-    }
-
-    strncpy(path, argv[num_args], PATH_MAX);
-
-    if (fix_file)
-    {
-        fd = open(path, O_RDWR, 0666);
-    }
-    else
-    {
-        fd = open(path, O_RDONLY, 0666);
-    }
-
-    if (fd == -1)
-    {
-        MXS_ERROR("Failed to open binlog file %s: %s",
-                  path, strerror(errno));
-
-        mxs_log_flush_sync();
-        mxs_log_finish();
-
-        free(inst);
-
-        return 1;
-    }
-
-    inst->binlog_fd = fd;
-
-    if (mariadb10_compat == 1)
-    {
-        inst->mariadb10_compat = 1;
-    }
-
-    ptr = strrchr(path, '/');
-    if (ptr)
-    {
-        strncpy(inst->binlog_name, ptr + 1, BINLOG_FNAMELEN);
-    }
-    else
-    {
-        strncpy(inst->binlog_name, path, BINLOG_FNAMELEN);
-    }
-
     MXS_NOTICE("maxbinlogcheck %s", binlog_check_version);
 
+    unsigned long filelen = 0;
+    struct stat statb;
     if (fstat(inst->binlog_fd, &statb) == 0)
     {
         filelen = statb.st_size;
@@ -195,18 +166,17 @@ int main(int argc, char **argv)
     MXS_NOTICE("Checking %s (%s), size %lu bytes", path, inst->binlog_name, filelen);
 
     /* read binary log */
-    ret = blr_read_events_all_events(inst, fix_file, debug_out);
-
-    close(inst->binlog_fd);
+    int ret = blr_read_events_all_events(inst, fix_file, debug_out);
 
     mxs_log_flush_sync();
 
     MXS_NOTICE("Check retcode: %i, Binlog Pos = %lu", ret, inst->binlog_position);
 
+    close(inst->binlog_fd);
+    MXS_FREE(inst);
+
     mxs_log_flush_sync();
     mxs_log_finish();
-
-    free(inst);
 
     return 0;
 }
@@ -230,10 +200,10 @@ printUsage(const char *progname)
 
     printf("The MaxScale binlog check utility.\n\n");
     printf("Usage: %s [-f] [-d] [-v] [<binlog file>]\n\n", progname);
-    printf("  -f|--fix		Fix binlog file, require write permissions (truncate)\n");
-    printf("  -d|--debug		Print debug messages\n");
-    printf("  -M|--mariadb10	MariaDB 10 binlog compatibility\n");
-    printf("  -V|--version          print version information and exit\n");
-    printf("  -?|--help             Print this help text\n");
+    printf("  -f|--fix          Fix binlog file, require write permissions (truncate)\n");
+    printf("  -d|--debug        Print debug messages\n");
+    printf("  -M|--mariadb10    MariaDB 10 binlog compatibility\n");
+    printf("  -V|--version      print version information and exit\n");
+    printf("  -?|--help         Print this help text\n");
 }
 

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
+#include <maxscale/alloc.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 
@@ -110,12 +111,10 @@ int main(int argc, char* argv[])
 
     printf("Using %d threads.\n", nthr);
 
-    thr = (thread_t **)calloc(1, nthr * sizeof(thread_t*));
+    thr = (thread_t **)MXS_CALLOC(1, nthr * sizeof(thread_t*));
 
     if (thr == NULL)
     {
-        fprintf(stderr, "Failed to allocate memory for thread "
-                "structure. Exiting.\n");
         err = 1;
         goto return_err;
     }
@@ -226,7 +225,8 @@ int main(int argc, char* argv[])
     /** 1 */
     for (i = 0; i < nthr; i++)
     {
-        thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
+        thr[i] = (thread_t*)MXS_CALLOC(1, sizeof(thread_t));
+        MXS_ABORT_IF_NULL(thr[i]);
         thr[i]->mes = mes;
         thr[i]->mtx = mtx;
         thr[i]->nactive = &nactive;
@@ -264,7 +264,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < nthr; i++)
     {
-        free(thr[i]);
+        MXS_FREE(thr[i]);
     }
 #endif
 
@@ -275,7 +275,8 @@ int main(int argc, char* argv[])
     /** 2 */
     for (i = 0; i < nthr; i++)
     {
-        thr[i] = (thread_t*)calloc(1, sizeof(thread_t));
+        thr[i] = (thread_t*)MXS_CALLOC(1, sizeof(thread_t));
+        MXS_ABORT_IF_NULL(thr[i]);
         thr[i]->mes = mes;
         thr[i]->mtx = mtx;
         thr[i]->nactive = &nactive;
@@ -324,7 +325,7 @@ int main(int argc, char* argv[])
 
     for (i = 0; i < nthr; i++)
     {
-        free(thr[i]);
+        MXS_FREE(thr[i]);
     }
 
     /** Test ended here */
@@ -499,7 +500,7 @@ int main(int argc, char* argv[])
 return_err:
     if (thr != NULL)
     {
-        free(thr);
+        MXS_FREE(thr);
     }
     return err;
 }

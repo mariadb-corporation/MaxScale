@@ -6,7 +6,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -20,18 +20,19 @@
  * 01-06-2013   Mark Riddoch            Initial implementation
  * 14-06-2013   Massimiliano Pinto      Added specific data
  *                                      for MySQL session
- * 04-07-2013   Massimiliano Pinto  Added new MySQL protocol status for asynchronous connection
- *                  Added authentication reply status
- * 12-07-2013   Massimiliano Pinto  Added routines for change_user
- * 14-02-2014   Massimiliano Pinto  setipaddress returns int
- * 25-02-2014   Massimiliano Pinto  Added dcb parameter to gw_find_mysql_user_password_sha1()
- *                  and repository to gw_check_mysql_scramble_data()
- *                  It's now possible to specify a different users' table than
- *                  dcb->service->users default
- * 26-02-2014   Massimiliano Pinto  Removed previously added parameters to gw_check_mysql_scramble_data() and
- *                  gw_find_mysql_user_password_sha1()
- * 28-02-2014   Massimiliano Pinto  MYSQL_DATABASE_MAXLEN,MYSQL_USER_MAXLEN moved to dbusers.h
- * 07-02-2016   Martin Brampton     Extend MYSQL_session type; add MYSQL_AUTH_SUCCEEDED
+ * 04-07-2013   Massimiliano Pinto      Added new MySQL protocol status for asynchronous connection
+ *                                      Added authentication reply status
+ * 12-07-2013   Massimiliano Pinto      Added routines for change_user
+ * 14-02-2014   Massimiliano Pinto      setipaddress returns int
+ * 25-02-2014   Massimiliano Pinto      Added dcb parameter to gw_find_mysql_user_password_sha1()
+ *                                      and repository to gw_check_mysql_scramble_data()
+ *                                      It's now possible to specify a different users' table than
+ *                                      dcb->service->users default
+ * 26-02-2014   Massimiliano Pinto      Removed previously added parameters to gw_check_mysql_scramble_data() and
+ *                                      gw_find_mysql_user_password_sha1()
+ * 28-02-2014   Massimiliano Pinto      MYSQL_DATABASE_MAXLEN,MYSQL_USER_MAXLEN moved to dbusers.h
+ * 07-02-2016   Martin Brampton         Extend MYSQL_session type; add MYSQL_AUTH_SUCCEEDED
+ * 17-05-2016   Martin Brampton         Moved gw_find_mysql_user_password_sha1 to mysql_auth.c
  *
  */
 
@@ -343,11 +344,6 @@ int mysql_send_standard_error(DCB *dcb,
                               int packet_number,
                               int error_number,
                               const char *error_message);
-
-int gw_find_mysql_user_password_sha1(
-    char *username,
-    uint8_t *gateway_password,
-    DCB *dcb);
 
 int mysql_send_auth_error (
     DCB *dcb,

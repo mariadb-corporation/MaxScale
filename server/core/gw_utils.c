@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -177,12 +177,11 @@ bool gw_daemonize(void)
 int
 parse_bindconfig(const char *config, struct sockaddr_in *addr)
 {
-    char *port, buf[1024 + 1];
-    short pnum;
-    struct hostent *hp;
+    char buf[strlen(config) + 1];
+    strcpy(buf, config);
 
-    strncpy(buf, config, 1024);
-    port = strrchr(buf, ':');
+    char *port = strrchr(buf, ':');
+    short pnum;
     if (port)
     {
         *port = 0;
@@ -202,7 +201,9 @@ parse_bindconfig(const char *config, struct sockaddr_in *addr)
     {
         if (!inet_aton(buf, &addr->sin_addr))
         {
-            if ((hp = gethostbyname(buf)) != NULL)
+            struct hostent *hp = gethostbyname(buf);
+
+            if (hp)
             {
                 bcopy(hp->h_addr, &(addr->sin_addr.s_addr), hp->h_length);
             }

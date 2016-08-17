@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -76,6 +76,7 @@
 #include <spinlock.h>
 #include <session.h>
 #include <housekeeper.h>
+#include <maxscale/alloc.h>
 
 MODULE_INFO info =
 {
@@ -474,11 +475,10 @@ char** parse_optstr(char* str, char* tok, int* szstore)
         size++;
     }
 
-    arr = malloc(sizeof(char*)*size);
+    arr = MXS_MALLOC(sizeof(char*)*size);
 
     if (arr == NULL)
     {
-        MXS_ERROR("Cannot allocate enough memory.");
         *szstore = 0;
         return NULL;
     }
@@ -487,7 +487,7 @@ char** parse_optstr(char* str, char* tok, int* szstore)
     tk = strtok_r(str, tok, &lasts);
     while (tk && i < size)
     {
-        arr[i++] = strdup(tk);
+        arr[i++] = MXS_STRDUP_A(tk);
         tk = strtok_r(NULL, tok, &lasts);
     }
     return arr;
@@ -510,17 +510,18 @@ createInstance(char **options, FILTER_PARAMETER **params)
     char** arr = NULL;
     char taskname[512];
 
-    if ((my_instance = calloc(1, sizeof(MQ_INSTANCE))))
+    if ((my_instance = MXS_CALLOC(1, sizeof(MQ_INSTANCE))))
     {
         spinlock_init(&my_instance->rconn_lock);
         spinlock_init(&my_instance->msg_lock);
         uid_gen = 0;
-        paramlist = malloc(sizeof(FILTER_PARAMETER*) * 64);
+        paramlist = MXS_MALLOC(sizeof(FILTER_PARAMETER*) * 64);
+        MXS_ABORT_IF_NULL(paramlist);
 
         if ((my_instance->conn = amqp_new_connection()) == NULL)
         {
-            free(paramlist);
-            free(my_instance);
+            MXS_FREE(paramlist);
+            MXS_FREE(my_instance);
             return NULL;
         }
         my_instance->channel = 1;
@@ -536,19 +537,19 @@ createInstance(char **options, FILTER_PARAMETER **params)
         {
             if (!strcmp(params[i]->name, "hostname"))
             {
-                my_instance->hostname = strdup(params[i]->value);
+                my_instance->hostname = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "username"))
             {
-                my_instance->username = strdup(params[i]->value);
+                my_instance->username = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "password"))
             {
-                my_instance->password = strdup(params[i]->value);
+                my_instance->password = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "vhost"))
             {
-                my_instance->vhost = strdup(params[i]->value);
+                my_instance->vhost = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "port"))
             {
@@ -556,35 +557,34 @@ createInstance(char **options, FILTER_PARAMETER **params)
             }
             else if (!strcmp(params[i]->name, "exchange"))
             {
-                my_instance->exchange = strdup(params[i]->value);
+                my_instance->exchange = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "key"))
             {
-                my_instance->key = strdup(params[i]->value);
+                my_instance->key = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "queue"))
             {
-                my_instance->queue = strdup(params[i]->value);
+                my_instance->queue = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "ssl_client_certificate"))
             {
-
-                my_instance->ssl_client_cert = strdup(params[i]->value);
+                my_instance->ssl_client_cert = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "ssl_client_key"))
             {
 
-                my_instance->ssl_client_key = strdup(params[i]->value);
+                my_instance->ssl_client_key = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "ssl_CA_cert"))
             {
 
-                my_instance->ssl_CA_cert = strdup(params[i]->value);
+                my_instance->ssl_CA_cert = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "exchange_type"))
             {
 
-                my_instance->exchange_type = strdup(params[i]->value);
+                my_instance->exchange_type = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "logging_trigger"))
             {
@@ -619,9 +619,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 {
                     for (int x = 0; x < arrsize; x++)
                     {
-                        free(arr[x]);
+                        MXS_FREE(arr[x]);
                     }
-                    free(arr);
+                    MXS_FREE(arr);
                     arr = NULL;
                 }
                 arrsize = 0;
@@ -634,9 +634,10 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
                 if (paramcount < parammax)
                 {
-                    paramlist[paramcount] = malloc(sizeof(FILTER_PARAMETER));
-                    paramlist[paramcount]->name = strdup(params[i]->name);
-                    paramlist[paramcount]->value = strdup(params[i]->value);
+                    paramlist[paramcount] = MXS_MALLOC(sizeof(FILTER_PARAMETER));
+                    MXS_ABORT_IF_NULL(paramlist[paramcount]);
+                    paramlist[paramcount]->name = MXS_STRDUP_A(params[i]->name);
+                    paramlist[paramcount]->value = MXS_STRDUP_A(params[i]->value);
                     paramcount++;
                 }
             }
@@ -645,7 +646,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
         if (my_instance->trgtype & TRG_SOURCE)
         {
 
-            my_instance->src_trg = (SRC_TRIG*) malloc(sizeof(SRC_TRIG));
+            my_instance->src_trg = (SRC_TRIG*) MXS_MALLOC(sizeof(SRC_TRIG));
+            MXS_ABORT_IF_NULL(my_instance->src_trg);
             my_instance->src_trg->user = NULL;
             my_instance->src_trg->host = NULL;
             my_instance->src_trg->usize = 0;
@@ -656,7 +658,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
         if (my_instance->trgtype & TRG_SCHEMA)
         {
 
-            my_instance->shm_trg = (SHM_TRIG*) malloc(sizeof(SHM_TRIG));
+            my_instance->shm_trg = (SHM_TRIG*) MXS_MALLOC(sizeof(SHM_TRIG));
+            MXS_ABORT_IF_NULL(my_instance->shm_trg);
             my_instance->shm_trg->objects = NULL;
             my_instance->shm_trg->size = 0;
 
@@ -665,7 +668,8 @@ createInstance(char **options, FILTER_PARAMETER **params)
         if (my_instance->trgtype & TRG_OBJECT)
         {
 
-            my_instance->obj_trg = (OBJ_TRIG*) malloc(sizeof(OBJ_TRIG));
+            my_instance->obj_trg = (OBJ_TRIG*) MXS_MALLOC(sizeof(OBJ_TRIG));
+            MXS_ABORT_IF_NULL(my_instance->obj_trg);
             my_instance->obj_trg->objects = NULL;
             my_instance->obj_trg->size = 0;
 
@@ -732,40 +736,40 @@ createInstance(char **options, FILTER_PARAMETER **params)
                     my_instance->strict_logging = false;
                 }
             }
-            free(paramlist[i]->name);
-            free(paramlist[i]->value);
-            free(paramlist[i]);
+            MXS_FREE(paramlist[i]->name);
+            MXS_FREE(paramlist[i]->value);
+            MXS_FREE(paramlist[i]);
         }
 
-        free(paramlist);
+        MXS_FREE(paramlist);
 
         if (my_instance->hostname == NULL)
         {
-            my_instance->hostname = strdup("localhost");
+            my_instance->hostname = MXS_STRDUP_A("localhost");
         }
         if (my_instance->username == NULL)
         {
-            my_instance->username = strdup("guest");
+            my_instance->username = MXS_STRDUP_A("guest");
         }
         if (my_instance->password == NULL)
         {
-            my_instance->password = strdup("guest");
+            my_instance->password = MXS_STRDUP_A("guest");
         }
         if (my_instance->vhost == NULL)
         {
-            my_instance->vhost = strdup("/");
+            my_instance->vhost = MXS_STRDUP_A("/");
         }
         if (my_instance->exchange == NULL)
         {
-            my_instance->exchange = strdup("default_exchange");
+            my_instance->exchange = MXS_STRDUP_A("default_exchange");
         }
         if (my_instance->key == NULL)
         {
-            my_instance->key = strdup("key");
+            my_instance->key = MXS_STRDUP_A("key");
         }
         if (my_instance->exchange_type == NULL)
         {
-            my_instance->exchange_type = strdup("direct");
+            my_instance->exchange_type = MXS_STRDUP_A("direct");
         }
 
         if (my_instance->ssl_client_cert != NULL &&
@@ -794,9 +798,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
         {
             for (int x = 0; x < arrsize; x++)
             {
-                free(arr[x]);
+                MXS_FREE(arr[x]);
             }
-            free(arr);
+            MXS_FREE(arr);
         }
     }
     return (FILTER *) my_instance;
@@ -910,9 +914,9 @@ void sendMessage(void* data)
         if (err_num == AMQP_STATUS_OK)
         {
             /**Message was sent successfully*/
-            free(tmp->prop);
-            free(tmp->msg);
-            free(tmp);
+            MXS_FREE(tmp->prop);
+            MXS_FREE(tmp->msg);
+            MXS_FREE(tmp);
 
             atomic_add(&instance->stats.n_sent, 1);
             atomic_add(&instance->stats.n_queued, -1);
@@ -948,7 +952,7 @@ void sendMessage(void* data)
 void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg)
 {
 
-    mqmessage* newmsg = calloc(1, sizeof(mqmessage));
+    mqmessage* newmsg = MXS_CALLOC(1, sizeof(mqmessage));
     if (newmsg)
     {
         newmsg->msg = msg;
@@ -956,9 +960,8 @@ void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg
     }
     else
     {
-        MXS_ERROR("Cannot allocate enough memory.");
-        free(prop);
-        free(msg);
+        MXS_FREE(prop);
+        MXS_FREE(msg);
         return;
     }
 
@@ -985,23 +988,36 @@ void pushMessage(MQ_INSTANCE *instance, amqp_basic_properties_t* prop, char* msg
 static void *
 newSession(FILTER *instance, SESSION *session)
 {
-    MQ_SESSION *my_session;
-    MYSQL_session* sessauth;
+    MYSQL_session *sessauth = session->client_dcb->data;
+    char *db = sessauth->db;
+    if (db)
+    {
+        if (strnlen(db, 128) > 0)
+        {
+            db = MXS_STRDUP(db);
+            if (!db)
+            {
+                return NULL;
+            }
+        }
+        else
+        {
+            db = NULL;
+        }
+    }
 
-    if ((my_session = calloc(1, sizeof(MQ_SESSION))) != NULL)
+    MQ_SESSION *my_session;
+
+    if ((my_session = MXS_CALLOC(1, sizeof(MQ_SESSION))) != NULL)
     {
         my_session->was_query = false;
         my_session->uid = NULL;
         my_session->session = session;
-        sessauth = my_session->session->client_dcb->data;
-        if (sessauth->db && strnlen(sessauth->db, 128) > 0)
-        {
-            my_session->db = strdup(sessauth->db);
-        }
-        else
-        {
-            my_session->db = NULL;
-        }
+        my_session->db = db;
+    }
+    else
+    {
+        MXS_FREE(db);
     }
 
     return my_session;
@@ -1028,9 +1044,9 @@ static void
 freeSession(FILTER *instance, void *session)
 {
     MQ_SESSION *my_session = (MQ_SESSION *) session;
-    free(my_session->uid);
-    free(my_session->db);
-    free(my_session);
+    MXS_FREE(my_session->uid);
+    MXS_FREE(my_session->db);
+    MXS_FREE(my_session);
     return;
 }
 
@@ -1117,10 +1133,11 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
     {
         if (my_session->db)
         {
-            free(my_session->db);
+            MXS_FREE(my_session->db);
         }
         plen = pktlen(queue->start);
-        my_session->db = calloc(plen, sizeof(char));
+        my_session->db = MXS_CALLOC(plen, sizeof(char));
+        MXS_ABORT_IF_NULL(my_session->db);
         memcpy(my_session->db, queue->start + 5, plen - 1);
     }
 
@@ -1229,9 +1246,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 {
                     all_remotes = false;
                 }
-                free(tblnames[z]);
+                MXS_FREE(tblnames[z]);
             }
-            free(tblnames);
+            MXS_FREE(tblnames);
 
             if (!schema_ok && !all_remotes && my_session->db && strlen(my_session->db) > 0)
             {
@@ -1305,9 +1322,9 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
             {
                 for (j = 0; j < dbcount; j++)
                 {
-                    free(sesstbls[j]);
+                    MXS_FREE(sesstbls[j]);
                 }
-                free(sesstbls);
+                MXS_FREE(sesstbls);
                 dbcount = 0;
             }
 
@@ -1344,17 +1361,12 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
             if (my_session->uid == NULL)
             {
 
-                my_session->uid = calloc(33, sizeof(char));
+                my_session->uid = MXS_CALLOC(33, sizeof(char));
 
-                if (!my_session->uid)
-                {
-                    MXS_ERROR("Out of memory.");
-                }
-                else
+                if (my_session->uid)
                 {
                     genkey(my_session->uid, 32);
                 }
-
             }
 
             if (queue->next != NULL)
@@ -1367,7 +1379,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
 
                 my_session->was_query = true;
 
-                if ((prop = malloc(sizeof(amqp_basic_properties_t))))
+                if ((prop = MXS_MALLOC(sizeof(amqp_basic_properties_t))))
                 {
                     prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG |
                                    AMQP_BASIC_DELIVERY_MODE_FLAG |
@@ -1378,8 +1390,6 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                     prop->correlation_id = amqp_cstring_bytes(my_session->uid);
                     prop->message_id = amqp_cstring_bytes("query");
                 }
-
-
 
                 if (success)
                 {
@@ -1396,15 +1406,13 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 sprintf(t_buf, "%lu|", (unsigned long) time(NULL));
 
                 int qlen = strnlen(canon_q, length) + strnlen(t_buf, 128);
-                if ((combined = malloc((qlen + 1) * sizeof(char))) == NULL)
-                {
-                    MXS_ERROR("Out of memory");
-                }
+                combined = MXS_MALLOC((qlen + 1) * sizeof(char));
+                MXS_ABORT_IF_NULL(combined);
                 strcpy(combined, t_buf);
                 strncat(combined, canon_q, length);
 
                 pushMessage(my_instance, prop, combined);
-                free(canon_q);
+                MXS_FREE(canon_q);
             }
 
         }
@@ -1494,7 +1502,7 @@ unsigned int consume_leitoi(unsigned char** c)
 char* consume_lestr(unsigned char** c)
 {
     unsigned int slen = consume_leitoi(c);
-    char *str = calloc((slen + 1), sizeof(char));
+    char *str = MXS_CALLOC((slen + 1), sizeof(char));
     if (str)
     {
         memcpy(str, *c, slen);
@@ -1545,7 +1553,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
         if (pkt_len > 0)
         {
-            if ((prop = malloc(sizeof(amqp_basic_properties_t))))
+            if ((prop = MXS_MALLOC(sizeof(amqp_basic_properties_t))))
             {
                 prop->_flags = AMQP_BASIC_CONTENT_TYPE_FLAG |
                                AMQP_BASIC_DELIVERY_MODE_FLAG |
@@ -1556,10 +1564,9 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
                 prop->correlation_id = amqp_cstring_bytes(my_session->uid);
                 prop->message_id = amqp_cstring_bytes("reply");
             }
-            if (!(combined = calloc(GWBUF_LENGTH(reply) + 256, sizeof(char))))
-            {
-                MXS_ERROR("Out of memory");
-            }
+
+            combined = MXS_CALLOC(GWBUF_LENGTH(reply) + 256, sizeof(char));
+            MXS_ABORT_IF_NULL(combined);
 
             memset(t_buf, 0, 128);
             sprintf(t_buf, "%lu|", (unsigned long) time(NULL));
@@ -1627,13 +1634,14 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
                 char *tmp;
                 unsigned int col_cnt = consume_leitoi(&rset);
 
-                tmp = calloc(256, sizeof(char));
+                tmp = MXS_CALLOC(256, sizeof(char));
+                MXS_ABORT_IF_NULL(tmp);
                 sprintf(tmp, "Columns: %d", col_cnt);
                 memcpy(combined + offset, tmp, strnlen(tmp, 256));
                 offset += strnlen(tmp, 256);
                 memcpy(combined + offset, "\n", 1);
                 offset++;
-                free(tmp);
+                MXS_FREE(tmp);
 
                 packet_ok = 1;
                 was_last = 1;
@@ -1649,7 +1657,7 @@ static int clientReply(FILTER* instance, void *session, GWBUF *reply)
 
                     /**Successful reply received and sent, releasing uid*/
 
-                    free(my_session->uid);
+                    MXS_FREE(my_session->uid);
                     my_session->uid = NULL;
 
                 }

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -34,6 +34,8 @@
 #include <gw_ssl.h>
 #include <gw_protocol.h>
 #include <log_manager.h>
+#include <maxscale/alloc.h>
+#include <users.h>
 
 static RSA *rsa_512 = NULL;
 static RSA *rsa_1024 = NULL;
@@ -51,19 +53,79 @@ static RSA *tmp_rsa_callback(SSL *s, int is_export, int keylength);
  * @return      New listener object or NULL if unable to allocate
  */
 SERV_LISTENER *
-listener_alloc(char *protocol, char *address, unsigned short port, char *authenticator, SSL_LISTENER *ssl)
+listener_alloc(struct service* service, char* name, char *protocol, char *address,
+               unsigned short port, char *authenticator, SSL_LISTENER *ssl)
 {
-    SERV_LISTENER   *proto = NULL;
-    if ((proto = (SERV_LISTENER *)malloc(sizeof(SERV_LISTENER))) != NULL)
+    if (address)
     {
-        proto->listener = NULL;
-        proto->protocol = strdup(protocol);
-        proto->address = address ? strdup(address) : NULL;
-        proto->port = port;
-        proto->authenticator = authenticator ? strdup(authenticator) : NULL;
-        proto->ssl = ssl;
+        address = MXS_STRDUP(address);
+        if (!address)
+        {
+            return NULL;
+        }
     }
+
+    if (authenticator)
+    {
+        authenticator = MXS_STRDUP(authenticator);
+        if (!authenticator)
+        {
+            MXS_FREE(address);
+            return NULL;
+        }
+    }
+
+    protocol = MXS_STRDUP(protocol);
+    name = MXS_STRDUP(name);
+    SERV_LISTENER *proto = (SERV_LISTENER*)MXS_MALLOC(sizeof(SERV_LISTENER));
+
+    if (!protocol || !proto || !name)
+    {
+        MXS_FREE(protocol);
+        MXS_FREE(proto);
+        MXS_FREE(name);
+        return NULL;
+    }
+
+    proto->name = name;
+    proto->listener = NULL;
+    proto->service = service;
+    proto->protocol = protocol;
+    proto->address = address;
+    proto->port = port;
+    proto->authenticator = authenticator;
+    proto->ssl = ssl;
+    proto->users = NULL;
+    proto->resources = NULL;
+    proto->next = NULL;
+    spinlock_init(&proto->lock);
+
     return proto;
+}
+
+/**
+ * @brief Free a listener
+ *
+ * @param listener Listener to free
+ */
+void listener_free(SERV_LISTENER* listener)
+{
+    if (listener)
+    {
+        if (listener->resources)
+        {
+            hashtable_free(listener->resources);
+        }
+        if (listener->users)
+        {
+            users_free(listener->users);
+        }
+
+        MXS_FREE(listener->address);
+        MXS_FREE(listener->authenticator);
+        MXS_FREE(listener->protocol);
+        MXS_FREE(listener);
+    }
 }
 
 /**
@@ -111,14 +173,14 @@ listener_set_ssl_version(SSL_LISTENER *ssl_listener, char* version)
 void
 listener_set_certificates(SSL_LISTENER *ssl_listener, char* cert, char* key, char* ca_cert)
 {
-    free(ssl_listener->ssl_cert);
-    ssl_listener->ssl_cert = cert ? strdup(cert) : NULL;
+    MXS_FREE(ssl_listener->ssl_cert);
+    ssl_listener->ssl_cert = cert ? MXS_STRDUP_A(cert) : NULL;
 
-    free(ssl_listener->ssl_key);
-    ssl_listener->ssl_key = key ? strdup(key) : NULL;
+    MXS_FREE(ssl_listener->ssl_key);
+    ssl_listener->ssl_key = key ? MXS_STRDUP_A(key) : NULL;
 
-    free(ssl_listener->ssl_ca_cert);
-    ssl_listener->ssl_ca_cert = ca_cert ? strdup(ca_cert) : NULL;
+    MXS_FREE(ssl_listener->ssl_ca_cert);
+    ssl_listener->ssl_ca_cert = ca_cert ? MXS_STRDUP_A(ca_cert) : NULL;
 }
 
 /**

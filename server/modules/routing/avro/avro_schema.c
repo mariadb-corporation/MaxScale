@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -31,6 +31,7 @@
 #include <skygw_debug.h>
 #include <string.h>
 #include <strings.h>
+#include <maxscale/alloc.h>
 
 /**
  * @brief Convert the MySQL column type to a compatible Avro type
@@ -173,7 +174,7 @@ bool json_extract_field_names(const char* filename, TABLE_CREATE *table)
         if (json_is_array(arr))
         {
             int array_size = json_array_size(arr);
-            table->column_names = (char**)malloc(sizeof(char*) * (array_size));
+            table->column_names = (char**)MXS_MALLOC(sizeof(char*) * (array_size));
 
             if (table->column_names)
             {
@@ -192,7 +193,7 @@ bool json_extract_field_names(const char* filename, TABLE_CREATE *table)
                             const char *name_str = json_string_value(name);
                             if (not_generated_field(name_str))
                             {
-                                table->column_names[columns++] = strdup(name_str);
+                                table->column_names[columns++] = MXS_STRDUP_A(name_str);
                             }
                         }
                         else
@@ -505,12 +506,10 @@ static int process_column_definition(const char *nameptr, char*** dest)
     size_t chunks = 1;
     const size_t chunk_size = 8;
     int i = 0;
-    char **names = malloc(sizeof(char*) * (chunks * chunk_size + 1));
+    char **names = MXS_MALLOC(sizeof(char*) * (chunks * chunk_size + 1));
 
     if (names == NULL)
     {
-        MXS_ERROR("Memory allocation failed when trying allocate %ld bytes of memory.",
-                  sizeof(char*) * chunks);
         return -1;
     }
 
@@ -520,30 +519,26 @@ static int process_column_definition(const char *nameptr, char*** dest)
     {
         if (i >= chunks * chunk_size)
         {
-            char **tmp = realloc(names, (++chunks * chunk_size + 1) * sizeof(char*));
+            char **tmp = MXS_REALLOC(names, (++chunks * chunk_size + 1) * sizeof(char*));
             if (tmp == NULL)
             {
                 for (int x = 0; x < i; x++)
                 {
-                    free(names[x]);
+                    MXS_FREE(names[x]);
                 }
-                free(names);
-                MXS_ERROR("Memory allocation failed when trying allocate %ld bytes of memory.",
-                          sizeof(char*) * chunks);
+                MXS_FREE(names);
                 return -1;
             }
             names = tmp;
         }
 
-        if ((names[i++] = strdup(colname)) == NULL)
+        if ((names[i++] = MXS_STRDUP(colname)) == NULL)
         {
             for (int x = 0; x < i; x++)
             {
-                free(names[x]);
+                MXS_FREE(names[x]);
             }
-            free(names);
-            MXS_ERROR("Memory allocation failed when trying allocate %lu bytes "
-                      "of memory.", strlen(colname));
+            MXS_FREE(names);
             return -1;
         }
     }
@@ -556,22 +551,31 @@ static int process_column_definition(const char *nameptr, char*** dest)
 TABLE_CREATE* table_create_from_schema(const char* file, const char* db,
                                        const char* table, int version)
 {
-    TABLE_CREATE* newtable = NULL;
+    db = MXS_STRDUP(db);
+    table = MXS_STRDUP(table);
 
-    if ((newtable = malloc(sizeof(TABLE_CREATE))))
+    TABLE_CREATE* newtable = (TABLE_CREATE*)MXS_MALLOC(sizeof(TABLE_CREATE));
+
+    if (!db || !table || !newtable)
     {
-        newtable->table = strdup(table);
-        newtable->database = strdup(db);
-        newtable->version = version;
-        newtable->was_used = true;
+        MXS_FREE((void*)db);
+        MXS_FREE((void*)table);
+        MXS_FREE(newtable);
 
-        if (!newtable->table || !newtable->database || !json_extract_field_names(file, newtable))
-        {
-            free(newtable->table);
-            free(newtable->database);
-            free(newtable);
-            newtable = NULL;
-        }
+        return NULL;
+    }
+
+    newtable->table = (char*)table;
+    newtable->database = (char*)db;
+    newtable->version = version;
+    newtable->was_used = true;
+
+    if (!json_extract_field_names(file, newtable))
+    {
+        MXS_FREE(newtable->table);
+        MXS_FREE(newtable->database);
+        MXS_FREE(newtable);
+        newtable = NULL;
     }
 
     return newtable;
@@ -621,32 +625,31 @@ TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
     TABLE_CREATE *rval = NULL;
     if (n_columns > 0)
     {
-        if ((rval = malloc(sizeof(TABLE_CREATE))))
+        if ((rval = MXS_MALLOC(sizeof(TABLE_CREATE))))
         {
             rval->version = 1;
             rval->was_used = false;
             rval->column_names = names;
             rval->columns = n_columns;
-            rval->database = strdup(db);
-            rval->table = strdup(table);
+            rval->database = MXS_STRDUP(db);
+            rval->table = MXS_STRDUP(table);
         }
 
         if (rval == NULL || rval->database == NULL || rval->table == NULL)
         {
             if (rval)
             {
-                free(rval->database);
-                free(rval->table);
-                free(rval);
+                MXS_FREE(rval->database);
+                MXS_FREE(rval->table);
+                MXS_FREE(rval);
             }
 
             for (int i = 0; i < n_columns; i++)
             {
-                free(names[i]);
+                MXS_FREE(names[i]);
             }
 
-            free(names);
-            MXS_ERROR("Memory allocation failed when processing a CREATE TABLE statement.");
+            MXS_FREE(names);
             rval = NULL;
         }
     }
@@ -661,20 +664,19 @@ TABLE_CREATE* table_create_alloc(const char* sql, const char* event_db)
  * Free a TABLE_CREATE structure
  * @param value Value to free
  */
-void* table_create_free(TABLE_CREATE* value)
+void table_create_free(TABLE_CREATE* value)
 {
     if (value)
     {
         for (uint64_t i = 0; i < value->columns; i++)
         {
-            free(value->column_names[i]);
+            MXS_FREE(value->column_names[i]);
         }
-        free(value->column_names);
-        free(value->table);
-        free(value->database);
-        free(value);
+        MXS_FREE(value->column_names);
+        MXS_FREE(value->table);
+        MXS_FREE(value->database);
+        MXS_FREE(value);
     }
-    return NULL;
 }
 
 static const char* get_next_def(const char* sql, const char* end)
@@ -817,7 +819,7 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 {
                     tok = get_tok(tok + len, &len, end);
 
-                    char ** tmp = realloc(create->column_names, sizeof(char*) * create->columns + 1);
+                    char ** tmp = MXS_REALLOC(create->column_names, sizeof(char*) * create->columns + 1);
                     ss_dassert(tmp);
 
                     if (tmp == NULL)
@@ -828,7 +830,7 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                     create->column_names = tmp;
                     char avro_token[len + 1];
                     make_avro_token(avro_token, tok, len);
-                    create->column_names[create->columns] = strdup(avro_token);
+                    create->column_names[create->columns] = MXS_STRDUP_A(avro_token);
                     create->columns++;
                     updates++;
                     tok = get_next_def(tok, end);
@@ -838,8 +840,8 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 {
                     tok = get_tok(tok + len, &len, end);
 
-                    free(create->column_names[create->columns - 1]);
-                    char ** tmp = realloc(create->column_names, sizeof(char*) * create->columns - 1);
+                    MXS_FREE(create->column_names[create->columns - 1]);
+                    char ** tmp = MXS_REALLOC(create->column_names, sizeof(char*) * create->columns - 1);
                     ss_dassert(tmp);
 
                     if (tmp == NULL)
@@ -856,7 +858,7 @@ bool table_create_alter(TABLE_CREATE *create, const char *sql, const char *end)
                 else if (tok_eq(ptok, "change", plen) && tok_eq(tok, "column", len))
                 {
                     tok = get_tok(tok + len, &len, end);
-                    free(create->column_names[create->columns - 1]);
+                    MXS_FREE(create->column_names[create->columns - 1]);
                     create->column_names[create->columns - 1] = strndup(tok, len);
                     updates++;
                     tok = get_next_def(tok, end);
@@ -962,7 +964,7 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
     uint8_t* metadata = (uint8_t*)lestr_consume(&ptr, &metadata_size);
     uint8_t *nullmap = ptr;
     size_t nullmap_size = (column_count + 7) / 8;
-    TABLE_MAP *map = malloc(sizeof(TABLE_MAP));
+    TABLE_MAP *map = MXS_MALLOC(sizeof(TABLE_MAP));
 
     if (map)
     {
@@ -971,13 +973,13 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
         map->flags = flags;
         ss_dassert(column_count == create->columns);
         map->columns = column_count;
-        map->column_types = malloc(column_count);
+        map->column_types = MXS_MALLOC(column_count);
         /** Allocate at least one byte for the metadata */
-        map->column_metadata = calloc(1, metadata_size + 1);
+        map->column_metadata = MXS_CALLOC(1, metadata_size + 1);
         map->column_metadata_size = metadata_size;
-        map->null_bitmap = malloc(nullmap_size);
-        map->database = strdup(schema_name);
-        map->table = strdup(table_name);
+        map->null_bitmap = MXS_MALLOC(nullmap_size);
+        map->database = MXS_STRDUP(schema_name);
+        map->table = MXS_STRDUP(table_name);
         map->table_create = create;
         if (map->column_types && map->database && map->table &&
             map->column_metadata && map->null_bitmap)
@@ -988,19 +990,14 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
         }
         else
         {
-            free(map->null_bitmap);
-            free(map->column_metadata);
-            free(map->column_types);
-            free(map->database);
-            free(map->table);
-            free(map);
+            MXS_FREE(map->null_bitmap);
+            MXS_FREE(map->column_metadata);
+            MXS_FREE(map->column_types);
+            MXS_FREE(map->database);
+            MXS_FREE(map->table);
+            MXS_FREE(map);
             map = NULL;
         }
-    }
-    else
-    {
-        free(map);
-        map = NULL;
     }
 
     return map;
@@ -1010,16 +1007,15 @@ TABLE_MAP *table_map_alloc(uint8_t *ptr, uint8_t hdr_len, TABLE_CREATE* create)
  * @brief Free a table map
  * @param map Table map to free
  */
-void* table_map_free(TABLE_MAP *map)
+void table_map_free(TABLE_MAP *map)
 {
     if (map)
     {
-        free(map->column_types);
-        free(map->database);
-        free(map->table);
-        free(map);
+        MXS_FREE(map->column_types);
+        MXS_FREE(map->database);
+        MXS_FREE(map->table);
+        MXS_FREE(map);
     }
-    return NULL;
 }
 
 /**

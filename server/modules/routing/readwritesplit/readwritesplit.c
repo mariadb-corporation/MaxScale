@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -30,6 +30,7 @@
 #include <modutil.h>
 #include <mysql_client_server_protocol.h>
 #include <mysqld_error.h>
+#include <maxscale/alloc.h>
 
 MODULE_INFO info =
 {
@@ -242,13 +243,13 @@ static bool have_enough_servers(ROUTER_CLIENT_SES **rses, const int nsrv,
 static SPINLOCK instlock;
 static ROUTER_INSTANCE *instances;
 
-static int hashkeyfun(void *key);
-static int hashcmpfun(void *, void *);
+static int hashkeyfun(const void *key);
+static int hashcmpfun(const void *, const void *);
 static bool check_for_multi_stmt(ROUTER_CLIENT_SES *rses, GWBUF *buf,
                                  mysql_server_cmd_t packet_type);
 static bool send_readonly_error(DCB *dcb);
 
-static int hashkeyfun(void *key)
+static int hashkeyfun(const void *key)
 {
     if (key == NULL)
     {
@@ -256,7 +257,7 @@ static int hashkeyfun(void *key)
     }
 
     unsigned int hash = 0, c = 0;
-    char *ptr = (char *)key;
+    const char *ptr = (const char *)key;
 
     while ((c = *ptr++))
     {
@@ -265,24 +266,23 @@ static int hashkeyfun(void *key)
     return hash;
 }
 
-static int hashcmpfun(void *v1, void *v2)
+static int hashcmpfun(const void *v1, const void *v2)
 {
-    char *i1 = (char *)v1;
-    char *i2 = (char *)v2;
+    const char *i1 = (const char *)v1;
+    const char *i2 = (const char *)v2;
 
     return strcmp(i1, i2);
 }
 
-static void *hstrdup(void *fval)
+static void *hstrdup(const void *fval)
 {
     char *str = (char *)fval;
-    return strdup(str);
+    return MXS_STRDUP(str);
 }
 
-static void *hfree(void *fval)
+static void hfree(void *fval)
 {
-    free(fval);
-    return NULL;
+    MXS_FREE(fval);
 }
 
 /**
@@ -469,11 +469,11 @@ static inline void free_rwsplit_instance(ROUTER_INSTANCE *router)
         {
             for (int i = 0; router->servers[i]; i++)
             {
-                free(router->servers[i]);
+                MXS_FREE(router->servers[i]);
             }
         }
-        free(router->servers);
-        free(router);
+        MXS_FREE(router->servers);
+        MXS_FREE(router);
     }
 }
 
@@ -494,7 +494,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
     CONFIG_PARAMETER *param;
     char *weightby;
 
-    if ((router = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if ((router = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
         return NULL;
     }
@@ -510,7 +510,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
         nservers++;
         sref = sref->next;
     }
-    router->servers = (BACKEND **)calloc(nservers + 1, sizeof(BACKEND *));
+    router->servers = (BACKEND **)MXS_CALLOC(nservers + 1, sizeof(BACKEND *));
 
     if (router->servers == NULL)
     {
@@ -528,7 +528,7 @@ static ROUTER *createInstance(SERVICE *service, char **options)
 
     while (sref != NULL)
     {
-        if ((router->servers[nservers] = malloc(sizeof(BACKEND))) == NULL)
+        if ((router->servers[nservers] = MXS_MALLOC(sizeof(BACKEND))) == NULL)
         {
             free_rwsplit_instance(router);
             return NULL;
@@ -725,7 +725,7 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     int i;
     const int min_nservers = 1; /*< hard-coded for now */
 
-    client_rses = (ROUTER_CLIENT_SES *)calloc(1, sizeof(ROUTER_CLIENT_SES));
+    client_rses = (ROUTER_CLIENT_SES *)MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
 
     if (client_rses == NULL)
     {
@@ -775,13 +775,13 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
     /**
      * Create backend reference objects for this session.
      */
-    backend_ref = (backend_ref_t *)calloc(1, router_nservers * sizeof(backend_ref_t));
+    backend_ref = (backend_ref_t *)MXS_CALLOC(1, router_nservers * sizeof(backend_ref_t));
 
     if (backend_ref == NULL)
     {
         /** log this */
-        free(client_rses);
-        free(backend_ref);
+        MXS_FREE(client_rses);
+        MXS_FREE(backend_ref);
         client_rses = NULL;
         goto return_rses;
     }
@@ -821,8 +821,8 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
 
     if (!succp)
     {
-        free(client_rses->rses_backend_ref);
-        free(client_rses);
+        MXS_FREE(client_rses->rses_backend_ref);
+        MXS_FREE(client_rses);
         client_rses = NULL;
         goto return_rses;
     }
@@ -840,8 +840,8 @@ static void *newSession(ROUTER *router_inst, SESSION *session)
      */
     if (!succp)
     {
-        free(client_rses->rses_backend_ref);
-        free(client_rses);
+        MXS_FREE(client_rses->rses_backend_ref);
+        MXS_FREE(client_rses);
         client_rses = NULL;
         goto return_rses;
     }
@@ -1021,8 +1021,8 @@ static void freeSession(ROUTER *router_instance, void *router_client_session)
      * all the memory and other resources associated
      * to the client session.
      */
-    free(router_cli_ses->rses_backend_ref);
-    free(router_cli_ses);
+    MXS_FREE(router_cli_ses->rses_backend_ref);
+    MXS_FREE(router_cli_ses);
     return;
 }
 
@@ -1375,59 +1375,7 @@ static route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
         {
             target = TARGET_MASTER;
         }
-        /** process routing hints */
-        while (hint != NULL)
-        {
-            if (hint->type == HINT_ROUTE_TO_MASTER)
-            {
-                target = TARGET_MASTER; /*< override */
-                MXS_DEBUG("%lu [get_route_target] Hint: route to master.",
-                          pthread_self());
-                break;
-            }
-            else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
-            {
-                /**
-                 * Searching for a named server. If it can't be
-                 * found, the oroginal target is chosen.
-                 */
-                target |= TARGET_NAMED_SERVER;
-                MXS_DEBUG("%lu [get_route_target] Hint: route to "
-                          "named server : ",
-                          pthread_self());
-            }
-            else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
-            {
-                /** not implemented */
-            }
-            else if (hint->type == HINT_ROUTE_TO_ALL)
-            {
-                /** not implemented */
-            }
-            else if (hint->type == HINT_PARAMETER)
-            {
-                if (strncasecmp((char *)hint->data, "max_slave_replication_lag",
-                                strlen("max_slave_replication_lag")) == 0)
-                {
-                    target |= TARGET_RLAG_MAX;
-                }
-                else
-                {
-                    MXS_ERROR("Unknown hint parameter "
-                              "'%s' when 'max_slave_replication_lag' "
-                              "was expected.",
-                              (char *)hint->data);
-                }
-            }
-            else if (hint->type == HINT_ROUTE_TO_SLAVE)
-            {
-                target = TARGET_SLAVE;
-                MXS_DEBUG("%lu [get_route_target] Hint: route to "
-                          "slave.",
-                          pthread_self());
-            }
-            hint = hint->next;
-        } /*< while (hint != NULL) */
+
         /** If nothing matches then choose the master */
         if ((target & (TARGET_ALL | TARGET_SLAVE | TARGET_MASTER)) == 0)
         {
@@ -1460,6 +1408,61 @@ static route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
                     QUERY_IS_TYPE(qtype, QUERY_TYPE_UNKNOWN)));
         target = TARGET_MASTER;
     }
+
+    /** process routing hints */
+    while (hint != NULL)
+    {
+        if (hint->type == HINT_ROUTE_TO_MASTER)
+        {
+            target = TARGET_MASTER; /*< override */
+            MXS_DEBUG("%lu [get_route_target] Hint: route to master.",
+                      pthread_self());
+            break;
+        }
+        else if (hint->type == HINT_ROUTE_TO_NAMED_SERVER)
+        {
+            /**
+             * Searching for a named server. If it can't be
+             * found, the oroginal target is chosen.
+             */
+            target |= TARGET_NAMED_SERVER;
+            MXS_DEBUG("%lu [get_route_target] Hint: route to "
+                      "named server : ",
+                      pthread_self());
+        }
+        else if (hint->type == HINT_ROUTE_TO_UPTODATE_SERVER)
+        {
+            /** not implemented */
+        }
+        else if (hint->type == HINT_ROUTE_TO_ALL)
+        {
+            /** not implemented */
+        }
+        else if (hint->type == HINT_PARAMETER)
+        {
+            if (strncasecmp((char *)hint->data, "max_slave_replication_lag",
+                            strlen("max_slave_replication_lag")) == 0)
+            {
+                target |= TARGET_RLAG_MAX;
+            }
+            else
+            {
+                MXS_ERROR("Unknown hint parameter "
+                          "'%s' when 'max_slave_replication_lag' "
+                          "was expected.",
+                          (char *)hint->data);
+            }
+        }
+        else if (hint->type == HINT_ROUTE_TO_SLAVE)
+        {
+            target = TARGET_SLAVE;
+            MXS_DEBUG("%lu [get_route_target] Hint: route to "
+                      "slave.",
+                      pthread_self());
+        }
+        hint = hint->next;
+    } /*< while (hint != NULL) */
+
 #if defined(SS_EXTRA_DEBUG)
     MXS_INFO("Selected target \"%s\"", STRTARGET(target));
 #endif
@@ -1516,7 +1519,8 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
             for (i = 0; i < tsize; i++)
             {
                 klen = strlen(dbname) + strlen(tbl[i]) + 2;
-                hkey = calloc(klen, sizeof(char));
+                hkey = MXS_CALLOC(klen, sizeof(char));
+                MXS_ABORT_IF_NULL(hkey);
                 strcpy(hkey, dbname);
                 strcat(hkey, ".");
                 strcat(hkey, tbl[i]);
@@ -1529,11 +1533,11 @@ void check_drop_tmp_table(ROUTER_CLIENT_SES *router_cli_ses, GWBUF *querybuf,
                         MXS_INFO("Temporary table dropped: %s", hkey);
                     }
                 }
-                free(tbl[i]);
-                free(hkey);
+                MXS_FREE(tbl[i]);
+                MXS_FREE(hkey);
             }
 
-            free(tbl);
+            MXS_FREE(tbl);
         }
     }
 }
@@ -1615,9 +1619,9 @@ static qc_query_type_t is_read_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
     {
         for (i = 0; i < tsize; i++)
         {
-            free(tbl[i]);
+            MXS_FREE(tbl[i]);
         }
-        free(tbl);
+        MXS_FREE(tbl);
     }
 
     return qtype;
@@ -1680,7 +1684,8 @@ static void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
     if (tblname && strlen(tblname) > 0)
     {
         klen = strlen(dbname) + strlen(tblname) + 2;
-        hkey = calloc(klen, sizeof(char));
+        hkey = MXS_CALLOC(klen, sizeof(char));
+        MXS_ABORT_IF_NULL(hkey);
         strcpy(hkey, dbname);
         strcat(hkey, ".");
         strcat(hkey, tblname);
@@ -1692,7 +1697,7 @@ static void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
 
     if (rses_prop_tmp == NULL)
     {
-        if ((rses_prop_tmp = (rses_property_t *)calloc(1, sizeof(rses_property_t))))
+        if ((rses_prop_tmp = (rses_property_t *)MXS_CALLOC(1, sizeof(rses_property_t))))
         {
 #if defined(SS_DEBUG)
             rses_prop_tmp->rses_prop_chk_top = CHK_NUM_ROUTER_PROPERTY;
@@ -1703,10 +1708,6 @@ static void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
             rses_prop_tmp->rses_prop_next = NULL;
             rses_prop_tmp->rses_prop_type = RSES_PROP_TYPE_TMPTABLES;
             router_cli_ses->rses_properties[RSES_PROP_TYPE_TMPTABLES] = rses_prop_tmp;
-        }
-        else
-        {
-            MXS_ERROR("Call to malloc() failed.");
         }
     }
     if (rses_prop_tmp)
@@ -1742,8 +1743,8 @@ static void check_create_tmp_table(ROUTER_CLIENT_SES *router_cli_ses,
 #endif
     }
 
-    free(hkey);
-    free(tblname);
+    MXS_FREE(hkey);
+    MXS_FREE(tblname);
 }
 
 /**
@@ -1801,7 +1802,7 @@ static int routeQuery(ROUTER *instance, void *router_session, GWBUF *querybuf)
             char *query_str = modutil_get_query(querybuf);
             MXS_ERROR("Can't route %s:\"%s\" to backend server. Router is closed.",
                       STRPACKETTYPE(data[4]), query_str ? query_str : "(empty)");
-            free(query_str);
+            MXS_FREE(query_str);
         }
     }
     else
@@ -2033,8 +2034,8 @@ static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                          STRPACKETTYPE(ptype), (qtypestr == NULL ? "N/A" : qtypestr),
                          contentstr, (querybuf->hint == NULL ? "" : ", Hint:"),
                          (querybuf->hint == NULL ? "" : STRHINTTYPE(querybuf->hint->type)));
-                free(contentstr);
-                free(qtypestr);
+                MXS_FREE(contentstr);
+                MXS_FREE(qtypestr);
             }
             else
             {
@@ -2088,9 +2089,9 @@ static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                 {
                     /** Create and add MySQL error to eventqueue */
                     modutil_reply_parse_error(bref->bref_dcb,
-                                              strdup("Routing query to backend failed. "
-                                                     "See the error log for further "
-                                                     "details."), 0);
+                                              MXS_STRDUP_A("Routing query to backend failed. "
+                                                           "See the error log for further "
+                                                           "details."), 0);
                     succp = true;
                 }
                 else
@@ -2107,11 +2108,11 @@ static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                 }
                 if (query_str)
                 {
-                    free(query_str);
+                    MXS_FREE(query_str);
                 }
                 if (qtype_str)
                 {
-                    free(qtype_str);
+                    MXS_FREE(qtype_str);
                 }
                 goto retblock;
             }
@@ -2141,7 +2142,7 @@ static bool route_single_stmt(ROUTER_INSTANCE *inst, ROUTER_CLIENT_SES *rses,
                       "backend server. Router is closed.",
                       STRPACKETTYPE(packet_type), STRQTYPE(qtype),
                       (query_str == NULL ? "(empty)" : query_str));
-            free(query_str);
+            MXS_FREE(query_str);
         }
         succp = false;
         goto retblock;
@@ -2354,7 +2355,7 @@ retblock :
         if (canonical_query_str != NULL)
         {
             MXS_INFO("Canonical version: %s", canonical_query_str);
-            free(canonical_query_str);
+            MXS_FREE(canonical_query_str);
         }
     }
 #endif
@@ -2584,8 +2585,8 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
             MXS_ERROR("Failed to execute session command in %s:%d. Error was: %s %s",
                       bref->bref_backend->backend_server->name,
                       bref->bref_backend->backend_server->port, err, replystr);
-            free(err);
-            free(replystr);
+            MXS_FREE(err);
+            MXS_FREE(replystr);
         }
 
         if (GWBUF_IS_TYPE_SESCMD_RESPONSE(writebuf))
@@ -2686,7 +2687,7 @@ static void clientReply(ROUTER *instance, void *router_session, GWBUF *writebuf,
             if (sql)
             {
                 MXS_ERROR("Routing query \"%s\" failed.", sql);
-                free(sql);
+                MXS_FREE(sql);
             }
             else
             {
@@ -3149,10 +3150,9 @@ static rses_property_t *rses_property_init(rses_property_type_t prop_type)
 {
     rses_property_t *prop;
 
-    prop = (rses_property_t *)calloc(1, sizeof(rses_property_t));
+    prop = (rses_property_t *)MXS_CALLOC(1, sizeof(rses_property_t));
     if (prop == NULL)
     {
-        MXS_ERROR("Error: Malloc returned NULL. (%s:%d)", __FILE__, __LINE__);
         return NULL;
     }
     prop->rses_prop_type = prop_type;
@@ -3194,7 +3194,7 @@ static void rses_property_done(rses_property_t *prop)
             ss_dassert(false);
             break;
     }
-    free(prop);
+    MXS_FREE(prop);
 }
 
 /**
@@ -3664,12 +3664,21 @@ static bool execute_sescmd_in_backend(backend_ref_t *backend_ref)
             unsigned int qlen;
 
             data = dcb->session->client_dcb->data;
+            *data->db = 0;
             tmpbuf = scur->scmd_cur_cmd->my_sescmd_buf;
-            qlen = MYSQL_GET_PACKET_LEN((unsigned char *)tmpbuf->start);
-            memset(data->db, 0, MYSQL_DATABASE_MAXLEN + 1);
-            if (qlen > 0 && qlen < MYSQL_DATABASE_MAXLEN + 1)
+            qlen = MYSQL_GET_PACKET_LEN((unsigned char *) GWBUF_DATA(tmpbuf));
+            if (qlen)
             {
-                strncpy(data->db, tmpbuf->start + 5, qlen - 1);
+                --qlen; // The COM_INIT_DB byte
+                if (qlen > MYSQL_DATABASE_MAXLEN)
+                {
+                    MXS_ERROR("Too long a database name received in COM_INIT_DB, "
+                              "trailing data will be cut.");
+                    qlen = MYSQL_DATABASE_MAXLEN;
+                }
+
+                memcpy(data->db, (char*)GWBUF_DATA(tmpbuf) + 5, qlen);
+                data->db[qlen] = 0;
             }
         }
         /** Fallthrough */
@@ -3806,26 +3815,28 @@ static void tracelog_routed_query(ROUTER_CLIENT_SES *rses, char *funcname,
 
         if (packet_type == '\x03')
         {
-            querystr = (char *)malloc(len);
+            querystr = (char *)MXS_MALLOC(len);
+            MXS_ABORT_IF_NULL(querystr);
             memcpy(querystr, startpos, len - 1);
             querystr[len - 1] = '\0';
             MXS_DEBUG("%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                       pthread_self(), funcname, (int)buflen, querystr,
                       b->backend_server->name, b->backend_server->port,
                       STRBETYPE(be_type), dcb);
-            free(querystr);
+            MXS_FREE(querystr);
         }
         else if (packet_type == '\x22' || packet_type == 0x22 ||
                  packet_type == '\x26' || packet_type == 0x26 || true)
         {
-            querystr = (char *)malloc(len);
+            querystr = (char *)MXS_MALLOC(len);
+            MXS_ABORT_IF_NULL(querystr);
             memcpy(querystr, startpos, len - 1);
             querystr[len - 1] = '\0';
             MXS_DEBUG("%lu [%s] %d bytes long buf, \"%s\" -> %s:%d %s dcb %p",
                       pthread_self(), funcname, (int)buflen, querystr,
                       b->backend_server->name, b->backend_server->port,
                       STRBETYPE(be_type), dcb);
-            free(querystr);
+            MXS_FREE(querystr);
         }
     }
     gwbuf_free(buf);
@@ -4527,7 +4538,7 @@ static void print_error_packet(ROUTER_CLIENT_SES *rses, GWBUF *buf, DCB *dcb)
                 MXS_ERROR("Backend server %s:%d responded with "
                           "error : %s",
                           srv->name, srv->port, bufstr);
-                free(bufstr);
+                MXS_FREE(bufstr);
             }
             buf = gwbuf_consume(buf, len + 4);
         }
@@ -4594,7 +4605,7 @@ static bool have_enough_servers(ROUTER_CLIENT_SES **p_rses, const int min_nsrv,
                           (*p_rses)->rses_config.rw_max_slave_conn_percent, dbgpct);
             }
         }
-        free(*p_rses);
+        MXS_FREE(*p_rses);
         *p_rses = NULL;
         succp = false;
     }
@@ -4755,7 +4766,7 @@ static prep_stmt_t *prep_stmt_init(prep_stmt_type_t type, void *id)
 {
     prep_stmt_t *pstmt;
 
-    pstmt = (prep_stmt_t *)calloc(1, sizeof(prep_stmt_t));
+    pstmt = (prep_stmt_t *)MXS_CALLOC(1, sizeof(prep_stmt_t));
 
     if (pstmt != NULL)
     {
@@ -4785,9 +4796,9 @@ static void prep_stmt_done(prep_stmt_t *pstmt)
 
     if (pstmt->pstmt_type == PREP_STMT_NAME)
     {
-        free(pstmt->pstmt_id.name);
+        MXS_FREE(pstmt->pstmt_id.name);
     }
-    free(pstmt);
+    MXS_FREE(pstmt);
 }
 
 static bool prep_stmt_drop(prep_stmt_t *pstmt)

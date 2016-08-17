@@ -1,3 +1,0 @@
-select * from mysql.wrong;
-select wrong from test.table;
-select * from test.table where name='wrong';

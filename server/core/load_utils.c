@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -45,6 +45,7 @@
 #include <openssl/sha.h>
 #include <gw.h>
 #include <gwdirs.h>
+#include <maxscale/alloc.h>
 
 static MODULES *registered = NULL;
 
@@ -81,14 +82,14 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
     size_t realsize = size * nmemb;
     struct MemoryStruct *mem = (struct MemoryStruct *)userp;
 
-    mem->data = realloc(mem->data, mem->size + realsize + 1);
-    if (mem->data == NULL)
+    void *data = MXS_REALLOC(mem->data, mem->size + realsize + 1);
+
+    if (data == NULL)
     {
-        /* out of memory! */
-        MXS_ERROR("Error in module_feedback_send(), not enough memory for realloc");
         return 0;
     }
 
+    mem->data = data;
     memcpy(&(mem->data[mem->size]), contents, realsize);
     mem->size += realsize;
     mem->data[mem->size] = 0;
@@ -325,16 +326,25 @@ register_module(const char *module,
                 void *modobj,
                 MODULE_INFO *mod_info)
 {
-    MODULES *mod;
+    module = MXS_STRDUP(module);
+    type = MXS_STRDUP(type);
+    version = MXS_STRDUP(version);
 
-    if ((mod = malloc(sizeof(MODULES))) == NULL)
+    MODULES *mod = (MODULES *)MXS_MALLOC(sizeof(MODULES));
+
+    if (!module || !type || !version || !mod)
     {
+        MXS_FREE((void*)module);
+        MXS_FREE((void*)type);
+        MXS_FREE(version);
+        MXS_FREE(mod);
         return;
     }
-    mod->module = strdup(module);
-    mod->type = strdup(type);
+
+    mod->module = (char*)module;
+    mod->type = (char*)type;
     mod->handle = dlhandle;
-    mod->version = strdup(version);
+    mod->version = version;
     mod->modobj = modobj;
     mod->next = registered;
     mod->info = mod_info;
@@ -382,10 +392,10 @@ unregister_module(const char *module)
      * memory related to it can be freed
      */
     dlclose(mod->handle);
-    free(mod->module);
-    free(mod->type);
-    free(mod->version);
-    free(mod);
+    MXS_FREE(mod->module);
+    MXS_FREE(mod->type);
+    MXS_FREE(mod->version);
+    MXS_FREE(mod);
 }
 
 /**
@@ -506,7 +516,7 @@ moduleRowCallback(RESULTSET *set, void *data)
     }
     if (ptr == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     (*rowno)++;
@@ -543,14 +553,14 @@ moduleGetList()
     RESULTSET       *set;
     int             *data;
 
-    if ((data = (int *)malloc(sizeof(int))) == NULL)
+    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
     {
         return NULL;
     }
     *data = 0;
     if ((set = resultset_create(moduleRowCallback, data)) == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     resultset_add_column(set, "Module Name", 18, COL_TYPE_VARCHAR);
@@ -807,7 +817,8 @@ do_http_post(GWBUF *buffer, void *cfg)
     FEEDBACK_CONF *feedback_config = (FEEDBACK_CONF *) cfg;
 
     /* allocate first memory chunck for httpd servr reply */
-    chunk.data = malloc(1);  /* will be grown as needed by the realloc above */
+    chunk.data = MXS_MALLOC(1);  /* will be grown as needed by the realloc above */
+    MXS_ABORT_IF_NULL(chunk.data);
     chunk.size = 0;    /* no data at this point */
 
     /* Initializing curl library for data send via HTTP */
@@ -901,7 +912,7 @@ cleanup:
 
     if (chunk.data)
     {
-        free(chunk.data);
+        MXS_FREE(chunk.data);
     }
 
     if (curl)

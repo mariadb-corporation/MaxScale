@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -27,6 +27,7 @@
 
 #include <mmmon.h>
 #include <dcb.h>
+#include <maxscale/alloc.h>
 
 static void monitorMain(void *);
 
@@ -121,7 +122,7 @@ startMonitor(void *arg, void* opt)
     }
     else
     {
-        if ((handle = (MM_MONITOR *) malloc(sizeof(MM_MONITOR))) == NULL)
+        if ((handle = (MM_MONITOR *) MXS_MALLOC(sizeof(MM_MONITOR))) == NULL)
         {
             return NULL;
         }
@@ -144,8 +145,8 @@ startMonitor(void *arg, void* opt)
         {
             if (externcmd_can_execute(params->value))
             {
-                free(handle->script);
-                handle->script = strdup(params->value);
+                MXS_FREE(handle->script);
+                handle->script = MXS_STRDUP_A(params->value);
             }
             else
             {
@@ -170,8 +171,8 @@ startMonitor(void *arg, void* opt)
     if (!check_monitor_permissions(mon, "SHOW SLAVE STATUS"))
     {
         MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        free(handle->script);
-        free(handle);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
         return NULL;
     }
 
@@ -179,7 +180,7 @@ startMonitor(void *arg, void* opt)
     {
         MXS_ERROR("Errors were found in the script configuration parameters "
                   "for the monitor '%s'. The script will not be used.", mon->name);
-        free(handle->script);
+        MXS_FREE(handle->script);
         handle->script = NULL;
     }
     /** If no specific events are given, enable them all */

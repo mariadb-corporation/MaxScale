@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -298,8 +298,18 @@ bool compare_parse(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_parse                 : ";
 
+    struct timespec start;
+    struct timespec finish;
+
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     qc_parse_result_t rv1 = pClassifier1->qc_parse(pCopy1);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
+    update_time(&global.time1, start, finish);
+
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     qc_parse_result_t rv2 = pClassifier2->qc_parse(pCopy2);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
+    update_time(&global.time2, start, finish);
 
     stringstream ss;
     ss << HEADING;
@@ -335,20 +345,8 @@ bool compare_get_type(QUERY_CLASSIFIER* pClassifier1, GWBUF* pCopy1,
     bool success = false;
     const char HEADING[] = "qc_get_type              : ";
 
-    struct timespec start;
-    struct timespec finish;
-
-    // As long as we cannot explicitly parse a query, we rely upon the
-    // knowledge that it will be parsed the first time a qc-function is called.
-    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     uint32_t rv1 = pClassifier1->qc_get_type(pCopy1);
-    clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
-    update_time(&global.time1, start, finish);
-
-    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     uint32_t rv2 = pClassifier2->qc_get_type(pCopy2);
-    clock_gettime(CLOCK_MONOTONIC_RAW, &finish);
-    update_time(&global.time2, start, finish);
 
     stringstream ss;
     ss << HEADING;

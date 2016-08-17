@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -21,6 +21,7 @@
 #include <string.h>
 #include <pcre2.h>
 #include <atomic.h>
+#include <maxscale/alloc.h>
 #include "maxconfig.h"
 
 /**
@@ -159,11 +160,11 @@ void free_instance(REGEX_INSTANCE *instance)
             pcre2_match_data_free(instance->match_data);
         }
 
-        free(instance->match);
-        free(instance->replace);
-        free(instance->source);
-        free(instance->user);
-        free(instance);
+        MXS_FREE(instance->match);
+        MXS_FREE(instance->replace);
+        MXS_FREE(instance->source);
+        MXS_FREE(instance->user);
+        MXS_FREE(instance);
     }
 }
 
@@ -185,7 +186,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
     char *logfile = NULL;
     const char *errmsg;
 
-    if ((my_instance = calloc(1, sizeof(REGEX_INSTANCE))) != NULL)
+    if ((my_instance = MXS_CALLOC(1, sizeof(REGEX_INSTANCE))) != NULL)
     {
         my_instance->match = NULL;
         my_instance->replace = NULL;
@@ -194,19 +195,19 @@ createInstance(char **options, FILTER_PARAMETER **params)
         {
             if (!strcmp(params[i]->name, "match"))
             {
-                my_instance->match = strdup(params[i]->value);
+                my_instance->match = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "replace"))
             {
-                my_instance->replace = strdup(params[i]->value);
+                my_instance->replace = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "source"))
             {
-                my_instance->source = strdup(params[i]->value);
+                my_instance->source = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "user"))
             {
-                my_instance->user = strdup(params[i]->value);
+                my_instance->user = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "log_trace"))
             {
@@ -216,9 +217,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
             {
                 if (logfile)
                 {
-                    free(logfile);
+                    MXS_FREE(logfile);
                 }
-                logfile = strdup(params[i]->value);
+                logfile = MXS_STRDUP_A(params[i]->value);
             }
             else if (!filter_standard_parameter(params[i]->name))
             {
@@ -253,14 +254,14 @@ createInstance(char **options, FILTER_PARAMETER **params)
             {
                 MXS_ERROR("regexfilter: Failed to open file '%s'.", logfile);
                 free_instance(my_instance);
-                free(logfile);
+                MXS_FREE(logfile);
                 return NULL;
             }
 
             fprintf(my_instance->logfile, "\nOpened regex filter log\n");
             fflush(my_instance->logfile);
         }
-        free(logfile);
+        MXS_FREE(logfile);
 
         if (my_instance->match == NULL || my_instance->replace == NULL)
         {
@@ -309,7 +310,7 @@ newSession(FILTER *instance, SESSION *session)
     REGEX_SESSION *my_session;
     char *remote, *user;
 
-    if ((my_session = calloc(1, sizeof(REGEX_SESSION))) != NULL)
+    if ((my_session = MXS_CALLOC(1, sizeof(REGEX_SESSION))) != NULL)
     {
         my_session->no_change = 0;
         my_session->replacements = 0;
@@ -354,7 +355,7 @@ closeSession(FILTER *instance, void *session)
 static void
 freeSession(FILTER *instance, void *session)
 {
-    free(session);
+    MXS_FREE(session);
     return;
 }
 
@@ -408,7 +409,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 spinlock_acquire(&my_session->lock);
                 log_match(my_instance, my_instance->match, sql, newsql);
                 spinlock_release(&my_session->lock);
-                free(newsql);
+                MXS_FREE(newsql);
                 my_session->replacements++;
             }
             else
@@ -418,7 +419,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 spinlock_release(&my_session->lock);
                 my_session->no_change++;
             }
-            free(sql);
+            MXS_FREE(sql);
         }
 
     }
@@ -485,7 +486,7 @@ regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, con
     if (pcre2_match(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0, 0, match_data, NULL))
     {
         result_size = strlen(sql) + strlen(replace);
-        result = malloc(result_size);
+        result = MXS_MALLOC(result_size);
 
         while (result &&
                pcre2_substitute(re, (PCRE2_SPTR) sql, PCRE2_ZERO_TERMINATED, 0,
@@ -494,9 +495,9 @@ regex_replace(const char *sql, pcre2_code *re, pcre2_match_data *match_data, con
                                 (PCRE2_UCHAR*) result, (PCRE2_SIZE*) & result_size) == PCRE2_ERROR_NOMEMORY)
         {
             char *tmp;
-            if ((tmp = realloc(result, (result_size *= 1.5))) == NULL)
+            if ((tmp = MXS_REALLOC(result, (result_size *= 1.5))) == NULL)
             {
-                free(result);
+                MXS_FREE(result);
                 result = NULL;
             }
             result = tmp;

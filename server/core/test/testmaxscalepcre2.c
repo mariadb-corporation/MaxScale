@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <maxscale/alloc.h>
 #include <maxscale_pcre2.h>
 #include <skygw_debug.h>
 
@@ -81,7 +82,8 @@ static int test2()
     pcre2_code *re2 = pcre2_compile((PCRE2_SPTR) pattern2, PCRE2_ZERO_TERMINATED,
                                     0, &err, &erroff, NULL);
     size_t size = 1000;
-    char* dest = malloc(size);
+    char* dest = MXS_MALLOC(size);
+    MXS_ABORT_IF_NULL(dest);
     mxs_pcre2_result_t result = mxs_pcre2_substitute(re, subject, good_replace, &dest, &size);
 
     test_assert(result == MXS_PCRE2_MATCH, "Substitution should substitute");

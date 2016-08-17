@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -25,6 +25,7 @@
 
 #include <string.h>
 #include <ctype.h>
+#include <maxscale/alloc.h>
 #include <resultset.h>
 #include <buffer.h>
 #include <dcb.h>
@@ -46,9 +47,9 @@ static int mysql_send_row(DCB *, RESULT_ROW *, int);
 RESULTSET *
 resultset_create(RESULT_ROW_CB func, void *data)
 {
-    RESULTSET *rval;
+    RESULTSET *rval = (RESULTSET *)MXS_MALLOC(sizeof(RESULTSET));
 
-    if ((rval = (RESULTSET *)malloc(sizeof(RESULTSET))) != NULL)
+    if (rval)
     {
         rval->n_cols = 0;
         rval->column = NULL;
@@ -79,7 +80,7 @@ resultset_free(RESULTSET *resultset)
             resultset_column_free(col);
             col = next;
         }
-        free(resultset);
+        MXS_FREE(resultset);
     }
 }
 
@@ -96,17 +97,17 @@ resultset_free(RESULTSET *resultset)
 int
 resultset_add_column(RESULTSET *set, char *name, int len, RESULT_COL_TYPE type)
 {
-    RESULT_COLUMN *newcol, *ptr;
+    name = MXS_STRDUP(name);
+    RESULT_COLUMN *newcol = (RESULT_COLUMN *)MXS_MALLOC(sizeof(RESULT_COLUMN));
 
-    if ((newcol = (RESULT_COLUMN *)malloc(sizeof(RESULT_COLUMN))) == NULL)
+    if (!name || !newcol)
     {
+        MXS_FREE(name);
+        MXS_FREE(newcol);
         return 0;
     }
-    if ((newcol->name = strdup(name)) == NULL)
-    {
-        free(newcol);
-        return 0;
-    }
+
+    newcol->name = name;
     newcol->type = type;
     newcol->len = len;
     newcol->next = NULL;
@@ -117,7 +118,7 @@ resultset_add_column(RESULTSET *set, char *name, int len, RESULT_COL_TYPE type)
     }
     else
     {
-        ptr = set->column;
+        RESULT_COLUMN *ptr = set->column;
         while (ptr->next)
         {
             ptr = ptr->next;
@@ -136,8 +137,8 @@ resultset_add_column(RESULTSET *set, char *name, int len, RESULT_COL_TYPE type)
 void
 resultset_column_free(RESULT_COLUMN *col)
 {
-    free(col->name);
-    free(col);
+    MXS_FREE(col->name);
+    MXS_FREE(col);
 }
 
 /**
@@ -153,14 +154,14 @@ resultset_make_row(RESULTSET *set)
     RESULT_ROW *row;
     int i;
 
-    if ((row = (RESULT_ROW *)malloc(sizeof(RESULT_ROW))) == NULL)
+    if ((row = (RESULT_ROW *)MXS_MALLOC(sizeof(RESULT_ROW))) == NULL)
     {
         return NULL;
     }
     row->n_cols = set->n_cols;
-    if ((row->cols = (char **)malloc(row->n_cols * sizeof(char *))) == NULL)
+    if ((row->cols = (char **)MXS_MALLOC(row->n_cols * sizeof(char *))) == NULL)
     {
-        free(row);
+        MXS_FREE(row);
         return NULL;
     }
 
@@ -188,11 +189,11 @@ resultset_free_row(RESULT_ROW *row)
     {
         if (row->cols[i])
         {
-            free(row->cols[i]);
+            MXS_FREE(row->cols[i]);
         }
     }
-    free(row->cols);
-    free(row);
+    MXS_FREE(row->cols);
+    MXS_FREE(row);
 }
 
 /**
@@ -214,7 +215,7 @@ resultset_row_set(RESULT_ROW *row, int col, char *value)
     }
     if (value)
     {
-        if ((row->cols[col] = strdup(value)) == NULL)
+        if ((row->cols[col] = MXS_STRDUP(value)) == NULL)
         {
             return 0;
         }
@@ -222,7 +223,7 @@ resultset_row_set(RESULT_ROW *row, int col, char *value)
     }
     else if (row->cols[col])
     {
-        free(row->cols[col]);
+        MXS_FREE(row->cols[col]);
     }
     row->cols[col] = NULL;
     return 1;
@@ -423,7 +424,7 @@ mysql_send_row(DCB *dcb, RESULT_ROW *row, int seqno)
         {
             len = strlen(row->cols[i]);
             *ptr++ = len;
-            strncpy((char *)ptr, row->cols[i], len);
+            memcpy(ptr, row->cols[i], len);
             ptr += len;
         }
         else

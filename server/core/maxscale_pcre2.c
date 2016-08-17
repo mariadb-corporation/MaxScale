@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -25,6 +25,7 @@
  */
 
 #include <maxscale_pcre2.h>
+#include <maxscale/alloc.h>
 
 /**
  * Utility wrapper for PCRE2 library function call pcre2_substitute.
@@ -56,7 +57,7 @@ mxs_pcre2_result_t mxs_pcre2_substitute(pcre2_code *re, const char *subject, con
                                       (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
                                       (PCRE2_UCHAR*) *dest, size)) == PCRE2_ERROR_NOMEMORY)
         {
-            char *tmp = realloc(*dest, *size * 2);
+            char *tmp = MXS_REALLOC(*dest, *size * 2);
             if (tmp == NULL)
             {
                 break;

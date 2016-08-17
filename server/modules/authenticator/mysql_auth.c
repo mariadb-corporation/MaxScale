@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -28,6 +28,7 @@
 #include <mysql_auth.h>
 #include <mysql_client_server_protocol.h>
 #include <gw_authenticator.h>
+#include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
@@ -181,7 +182,7 @@ mysql_auth_authenticate(DCB *dcb)
         /* on successful authentication, set user into dcb field */
         if (MYSQL_AUTH_SUCCEEDED == auth_ret)
         {
-            dcb->user = strdup(client_data->user);
+            dcb->user = MXS_STRDUP_A(client_data->user);
         }
         else if (dcb->service->log_auth_warnings)
         {
@@ -200,7 +201,7 @@ mysql_auth_authenticate(DCB *dcb)
         /* let's free the auth_token now */
         if (client_data->auth_token)
         {
-            free(client_data->auth_token);
+            MXS_FREE(client_data->auth_token);
             client_data->auth_token = NULL;
         }
     }
@@ -236,7 +237,7 @@ mysql_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     CHK_PROTOCOL(protocol);
     if (dcb->data == NULL)
     {
-        if (NULL == (client_data = (MYSQL_session *)calloc(1, sizeof(MYSQL_session))))
+        if (NULL == (client_data = (MYSQL_session *)MXS_CALLOC(1, sizeof(MYSQL_session))))
         {
             return MYSQL_FAILED_AUTH;
         }
@@ -345,7 +346,7 @@ mysql_auth_set_client_data(
                 (packet_length_used + client_data->auth_token_len))
             {
                 /* Packet is large enough for authentication token */
-                if (NULL != (client_data->auth_token = (uint8_t *)malloc(client_data->auth_token_len)))
+                if (NULL != (client_data->auth_token = (uint8_t *)MXS_MALLOC(client_data->auth_token_len)))
                 {
                     /* The extra 1 is for the token length byte, just extracted*/
                     memcpy(client_data->auth_token,
@@ -414,7 +415,7 @@ mysql_auth_is_client_ssl_capable(DCB *dcb)
  * gw_find_mysql_user_password_sha1
  *
  * The routine fetches an user from the MaxScale users' table
- * The users' table is dcb->service->users or a different one specified with void *repository
+ * The users' table is dcb->listener->users or a different one specified with void *repository
  * The user lookup uses username,host and db name (if passed in connection or change user)
  *
  * If found the HEX password, representing sha1(sha1(password)), is converted in binary data and
@@ -428,20 +429,17 @@ mysql_auth_is_client_ssl_capable(DCB *dcb)
  */
 int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, DCB *dcb)
 {
-    SERVICE *service = NULL;
-    struct sockaddr_in *client;
-    char *user_password = NULL;
-    MYSQL_USER_HOST key;
-    MYSQL_session *client_data = NULL;
+    MYSQL_session *client_data = (MYSQL_session *) dcb->data;
+    SERVICE *service = (SERVICE *) dcb->service;
+    SERV_LISTENER *listener = dcb->listener;
+    struct sockaddr_in *client = (struct sockaddr_in *) &dcb->ipv4;
 
-    client_data = (MYSQL_session *) dcb->data;
-    service = (SERVICE *) dcb->service;
-    client = (struct sockaddr_in *) &dcb->ipv4;
-
+    MYSQL_USER_HOST key = {};
     key.user = username;
     memcpy(&key.ipv4, client, sizeof(struct sockaddr_in));
     key.netmask = 32;
     key.resource = client_data->db;
+
     if (strlen(dcb->remote) < MYSQL_HOST_MAXLEN)
     {
         strcpy(key.hostname, dcb->remote);
@@ -455,7 +453,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
               key.resource != NULL ? key.resource : "");
 
     /* look for user@current_ipv4 now */
-    user_password = mysql_users_fetch(service->users, &key);
+    char *user_password = mysql_users_fetch(listener->users, &key);
 
     if (!user_password)
     {
@@ -482,7 +480,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
             key.ipv4.sin_addr.s_addr &= 0x00FFFFFF;
             key.netmask -= 8;
 
-            user_password = mysql_users_fetch(service->users, &key);
+            user_password = mysql_users_fetch(listener->users, &key);
 
             if (user_password)
             {
@@ -493,7 +491,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
             key.ipv4.sin_addr.s_addr &= 0x0000FFFF;
             key.netmask -= 8;
 
-            user_password = mysql_users_fetch(service->users, &key);
+            user_password = mysql_users_fetch(listener->users, &key);
 
             if (user_password)
             {
@@ -504,7 +502,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
             key.ipv4.sin_addr.s_addr &= 0x000000FF;
             key.netmask -= 8;
 
-            user_password = mysql_users_fetch(service->users, &key);
+            user_password = mysql_users_fetch(listener->users, &key);
 
             if (user_password)
             {
@@ -524,7 +522,7 @@ int gw_find_mysql_user_password_sha1(char *username, uint8_t *gateway_password, 
                       key.user,
                       dcb->remote);
 
-            user_password = mysql_users_fetch(service->users, &key);
+            user_password = mysql_users_fetch(listener->users, &key);
 
             if (user_password)
             {
@@ -723,9 +721,9 @@ check_db_name_after_auth(DCB *dcb, char *database, int auth_ret)
     if (database && strlen(database))
     {
         /* if database names are loaded we can check if db name exists */
-        if (dcb->service->resources != NULL)
+        if (dcb->listener->resources != NULL)
         {
-            if (hashtable_fetch(dcb->service->resources, database))
+            if (hashtable_fetch(dcb->listener->resources, database))
             {
                 db_exists = 1;
             }
@@ -811,5 +809,5 @@ static int combined_auth_check(
 static void
 mysql_auth_free_client_data(DCB *dcb)
 {
-    free(dcb->data);
+    MXS_FREE(dcb->data);
 }

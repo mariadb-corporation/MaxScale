@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -30,6 +30,7 @@
 #include <modutil.h>
 #include <users.h>
 #include <sys/stat.h>
+#include <maxscale/alloc.h>
 
 /* Allowed time interval (in seconds) after last update*/
 #define CDC_USERS_REFRESH_TIME 30
@@ -53,11 +54,11 @@ static bool cdc_auth_is_client_ssl_capable(DCB *dcb);
 static int  cdc_auth_authenticate(DCB *dcb);
 static void cdc_auth_free_client_data(DCB *dcb);
 
-static int cdc_set_service_user(SERVICE *service);
+static int cdc_set_service_user(SERV_LISTENER *listener);
 static int cdc_read_users(USERS *users, char *usersfile);
-static int cdc_load_users(SERVICE *service);
-static int cdc_refresh_users(SERVICE *service);
-static int cdc_replace_users(SERVICE *service);
+static int cdc_load_users(SERV_LISTENER *listener);
+static int cdc_refresh_users(SERV_LISTENER *listener);
+static int cdc_replace_users(SERV_LISTENER *listener);
 
 extern char  *gw_bin2hex(char *out, const uint8_t *in, unsigned int len);
 extern void gw_sha1_str(const uint8_t *in, int in_len, uint8_t *out);
@@ -140,15 +141,15 @@ static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username, uint
     if (!cdc_load_users_init)
     {
         /* Load db users or set service user */
-        if (cdc_load_users(dcb->service) < 1)
+        if (cdc_load_users(dcb->listener) < 1)
         {
-            cdc_set_service_user(dcb->service);
+            cdc_set_service_user(dcb->listener);
         }
 
         cdc_load_users_init = 1;
     }
 
-    user_password = users_fetch(dcb->service->users, username);
+    user_password = users_fetch(dcb->listener->users, username);
 
     if (!user_password)
     {
@@ -200,7 +201,7 @@ cdc_auth_authenticate(DCB *dcb)
         auth_ret = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
 
         /* On failed authentication try to reload user table */
-        if (CDC_STATE_AUTH_OK != auth_ret && 0 == cdc_refresh_users(dcb->service))
+        if (CDC_STATE_AUTH_OK != auth_ret && 0 == cdc_refresh_users(dcb->listener))
         {
             /* Call protocol authentication */
             auth_ret = cdc_auth_check(dcb, protocol, client_data->user, client_data->auth_data, client_data->flags);
@@ -209,7 +210,7 @@ cdc_auth_authenticate(DCB *dcb)
         /* on successful authentication, set user into dcb field */
         if (CDC_STATE_AUTH_OK == auth_ret)
         {
-            dcb->user = strdup(client_data->user);
+            dcb->user = MXS_STRDUP_A(client_data->user);
         }
         else if (dcb->service->log_auth_warnings)
         {
@@ -248,7 +249,7 @@ cdc_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
     CHK_PROTOCOL(protocol);
     if (dcb->data == NULL)
     {
-        if (NULL == (client_data = (CDC_session *)calloc(1, sizeof(CDC_session))))
+        if (NULL == (client_data = (CDC_session *)MXS_CALLOC(1, sizeof(CDC_session))))
         {
             return CDC_STATE_AUTH_ERR;
         }
@@ -356,7 +357,7 @@ cdc_auth_is_client_ssl_capable(DCB *dcb)
 static void
 cdc_auth_free_client_data(DCB *dcb)
 {
-    free(dcb->data);
+    MXS_FREE(dcb->data);
 }
 
 /*
@@ -367,8 +368,9 @@ cdc_auth_free_client_data(DCB *dcb)
  * @return      0 on success, 1 on failure
  */
 static int
-cdc_set_service_user(SERVICE *service)
+cdc_set_service_user(SERV_LISTENER *listener)
 {
+    SERVICE *service = listener->service;
     char *dpwd = NULL;
     char *newpasswd = NULL;
     char *service_user = NULL;
@@ -400,15 +402,15 @@ cdc_set_service_user(SERVICE *service)
         MXS_ERROR("create hex_sha1_sha1_password failed for service user %s",
                   service_user);
 
-        free(dpwd);
+        MXS_FREE(dpwd);
         return 1;
     }
 
     /* add service user */
-    (void)users_add(service->users, service->credentials.name, newpasswd);
+    (void)users_add(listener->users, service->credentials.name, newpasswd);
 
-    free(newpasswd);
-    free(dpwd);
+    MXS_FREE(newpasswd);
+    MXS_FREE(dpwd);
 
     return 0;
 }
@@ -420,8 +422,9 @@ cdc_set_service_user(SERVICE *service)
  * @return          -1 on failure, 0 for no users found, > 0 for found users
  */
 static int
-cdc_load_users(SERVICE *service)
+cdc_load_users(SERV_LISTENER *listener)
 {
+    SERVICE *service = listener->service;
     int loaded = -1;
     char path[PATH_MAX + 1] = "";
 
@@ -429,13 +432,13 @@ cdc_load_users(SERVICE *service)
     snprintf(path, PATH_MAX, "%s/%s/cdcusers", get_datadir(), service->name);
 
     /* Allocate users table */
-    if (service->users == NULL)
+    if (listener->users == NULL)
     {
-        service->users = users_alloc();
+        listener->users = users_alloc();
     }
 
     /* Try loading authentication data from file cache */
-    loaded = cdc_read_users(service->users, path);
+    loaded = cdc_read_users(listener->users, path);
 
     if (loaded == -1)
     {
@@ -491,11 +494,8 @@ cdc_read_users(USERS *users, char *usersfile)
         filelen = statb.st_size;
     }
 
-    if ((all_users_data = malloc(filelen + 1)) == NULL)
+    if ((all_users_data = MXS_MALLOC(filelen + 1)) == NULL)
     {
-        MXS_ERROR("failed to allocate %i for service user data load %s",
-                  filelen + 1,
-                  usersfile);
         return -1;
     }
 
@@ -532,7 +532,7 @@ cdc_read_users(USERS *users, char *usersfile)
 
     memcpy(users->cksum, hash, SHA_DIGEST_LENGTH);
 
-    free(all_users_data);
+    MXS_FREE(all_users_data);
 
     fclose(fp);
 
@@ -549,9 +549,11 @@ cdc_read_users(USERS *users, char *usersfile)
  *       * @return 0 on success and 1 on error
  *        */
 static int
-cdc_refresh_users(SERVICE *service)
+cdc_refresh_users(SERV_LISTENER *listener)
 {
     int ret = 1;
+    SERVICE *service = listener->service;
+
     /* check for another running getUsers request */
     if (!spinlock_acquire_nowait(&service->users_table_spin))
     {
@@ -582,7 +584,7 @@ cdc_refresh_users(SERVICE *service)
         service->rate_limit.last = time(NULL);
     }
 
-    ret = cdc_replace_users(service);
+    ret = cdc_replace_users(listener);
 
     /* remove lock */
     spinlock_release(&service->users_table_spin);
@@ -604,11 +606,11 @@ cdc_refresh_users(SERVICE *service)
  * @return      -1 on any error or the number of users inserted (0 means no users at all)
  *      */
 static int
-cdc_replace_users(SERVICE *service)
+cdc_replace_users(SERV_LISTENER *listener)
 {
+    SERVICE *service = listener->service;
     int i;
     USERS *newusers, *oldusers;
-    HASHTABLE *oldresources;
     char path[PATH_MAX + 1] = "";
 
     /* File path for router cached authentication data */
@@ -629,8 +631,8 @@ cdc_replace_users(SERVICE *service)
         return i;
     }
 
-    spinlock_acquire(&service->spin);
-    oldusers = service->users;
+    spinlock_acquire(&listener->lock);
+    oldusers = listener->users;
 
     /* digest compare */
     if (oldusers != NULL && memcmp(oldusers->cksum, newusers->cksum,
@@ -649,10 +651,10 @@ cdc_replace_users(SERVICE *service)
         /* replace the service with effective new data */
         MXS_DEBUG("%lu [cdc_replace_users] users' tables replaced, checksum differs",
                   pthread_self());
-        service->users = newusers;
+        listener->users = newusers;
     }
 
-    spinlock_release(&service->spin);
+    spinlock_release(&listener->lock);
 
     if (i && oldusers)
     {

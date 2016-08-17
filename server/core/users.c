@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <users.h>
+#include <maxscale/alloc.h>
 #include <atomic.h>
 #include <log_manager.h>
 
@@ -42,24 +43,22 @@ users_alloc()
 {
     USERS *rval;
 
-    if ((rval = calloc(1, sizeof(USERS))) == NULL)
+    if ((rval = MXS_CALLOC(1, sizeof(USERS))) == NULL)
     {
-        MXS_ERROR("[%s:%d]: Memory allocation failed.", __FUNCTION__, __LINE__);
         return NULL;
     }
 
-    if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE, simple_str_hash, strcmp)) == NULL)
+    if ((rval->data = hashtable_alloc(USERS_HASHTABLE_DEFAULT_SIZE,
+                                      hashtable_item_strhash, hashtable_item_strcmp)) == NULL)
     {
         MXS_ERROR("[%s:%d]: Memory allocation failed.", __FUNCTION__, __LINE__);
-        free(rval);
+        MXS_FREE(rval);
         return NULL;
     }
 
     hashtable_memory_fns(rval->data,
-                         (HASHMEMORYFN)strdup,
-                         (HASHMEMORYFN)strdup,
-                         (HASHMEMORYFN)free,
-                         (HASHMEMORYFN)free);
+                         hashtable_item_strdup, hashtable_item_strdup,
+                         hashtable_item_free, hashtable_item_free);
 
     return rval;
 }
@@ -82,7 +81,7 @@ users_free(USERS *users)
     {
         hashtable_free(users->data);
     }
-    free(users);
+    MXS_FREE(users);
 }
 
 /**
@@ -199,7 +198,7 @@ dcb_usersPrint(DCB *dcb, USERS *users)
                     if (custom_user)
                     {
                         dcb_printf(dcb, "%s%s", sep, custom_user);
-                        free(custom_user);
+                        MXS_FREE(custom_user);
                         sep = ", ";
                     }
                 }

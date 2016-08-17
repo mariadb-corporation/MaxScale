@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -61,6 +61,7 @@
 #include <maxscale/poll.h>
 #include <housekeeper.h>
 #include <service.h>
+#include <thread.h>
 #include <memlog.h>
 
 #include <stdlib.h>
@@ -84,6 +85,7 @@
 #include <sys/prctl.h>
 #include <sys/file.h>
 #include <statistics.h>
+#include <maxscale/alloc.h>
 
 #define STRING_BUFFER_SIZE 1024
 #define PIDFD_CLOSED -1
@@ -124,23 +126,24 @@ const char *progname = NULL;
 static struct option long_options[] =
 {
     {"config-check",     no_argument,       0, 'c'},
-    {"config",           required_argument, 0, 'f'},
     {"nodaemon",         no_argument,       0, 'd'},
+    {"config",           required_argument, 0, 'f'},
     {"log",              required_argument, 0, 'l'},
     {"logdir",           required_argument, 0, 'L'},
-    {"datadir",          required_argument, 0, 'D'},
-    {"configdir",        required_argument, 0, 'C'},
-    {"piddir",           required_argument, 0, 'P'},
-    {"libdir",           required_argument, 0, 'B'},
     {"cachedir",         required_argument, 0, 'A'},
+    {"libdir",           required_argument, 0, 'B'},
+    {"configdir",        required_argument, 0, 'C'},
+    {"datadir",          required_argument, 0, 'D'},
+    {"execdir",          required_argument, 0, 'E'},
     {"language",         required_argument, 0, 'N'},
-    {"syslog",           required_argument, 0, 's'},
-    {"maxlog",          required_argument, 0, 'S'},
+    {"piddir",           required_argument, 0, 'P'},
     {"user",             required_argument, 0, 'U'},
-    {"version",          no_argument,       0, 'v'},
-    {"help",             no_argument,       0, '?'},
-    {"version-full",     no_argument,       0, 'V'},
+    {"syslog",           required_argument, 0, 's'},
+    {"maxlog",           required_argument, 0, 'S'},
     {"log_augmentation", required_argument, 0, 'G'},
+    {"version",          no_argument,       0, 'v'},
+    {"version-full",     no_argument,       0, 'V'},
+    {"help",             no_argument,       0, '?'},
     {0, 0, 0, 0}
 };
 static bool syslog_configured = false;
@@ -219,7 +222,7 @@ struct CRYPTO_dynlock_value
  */
 static struct CRYPTO_dynlock_value *ssl_create_dynlock(const char* file, int line)
 {
-    struct CRYPTO_dynlock_value* lock = malloc(sizeof(struct CRYPTO_dynlock_value));
+    struct CRYPTO_dynlock_value* lock = MXS_MALLOC(sizeof(struct CRYPTO_dynlock_value));
     if (lock)
     {
         spinlock_init(&lock->lock);
@@ -254,7 +257,7 @@ static void ssl_lock_dynlock(int mode, struct CRYPTO_dynlock_value * n, const ch
  */
 static void ssl_free_dynlock(struct CRYPTO_dynlock_value * n, const char* file, int line)
 {
-    free(n);
+    MXS_FREE(n);
 }
 
 #ifdef OPENSSL_1_0
@@ -378,7 +381,7 @@ sigfatal_handler(int i)
             {
                 MXS_ERROR("  %s\n", symbols[n]);
             }
-            free(symbols);
+            MXS_FREE(symbols);
         }
         else
         {
@@ -605,14 +608,15 @@ static bool resolve_maxscale_conf_fname(char** cnf_full_path,
 {
     if (cnf_file_arg)
     {
-        *cnf_full_path = (char *)malloc(PATH_MAX + 1);
+        *cnf_full_path = (char *)MXS_MALLOC(PATH_MAX + 1);
+        MXS_ABORT_IF_NULL(*cnf_full_path);
 
         if (!realpath(cnf_file_arg, *cnf_full_path))
         {
             const char* logstr = "Failed to open read access to configuration file.";
             int eno = errno;
             print_log_n_stderr(true, true, logstr, logstr, eno);
-            free(*cnf_full_path);
+            MXS_FREE(*cnf_full_path);
             *cnf_full_path = NULL;
         }
     }
@@ -638,7 +642,7 @@ static char* check_dir_access(char* dirname, bool rd, bool wr)
 
     if (dirname == NULL)
     {
-        errstr = strdup("Directory argument is NULL");
+        errstr = MXS_STRDUP_A("Directory argument is NULL");
         goto retblock;
     }
 
@@ -646,7 +650,7 @@ static char* check_dir_access(char* dirname, bool rd, bool wr)
     {
         snprintf(errbuf, PATH_MAX * 2 - 1, "Can't access '%s'.", dirname);
         errbuf[PATH_MAX * 2 - 1] = '\0';
-        errstr = strdup(errbuf);
+        errstr = MXS_STRDUP_A(errbuf);
         goto retblock;
     }
 
@@ -655,7 +659,7 @@ static char* check_dir_access(char* dirname, bool rd, bool wr)
         snprintf(errbuf, PATH_MAX * 2 - 1, "MaxScale doesn't have read permission "
                  "to '%s'.", dirname);
         errbuf[PATH_MAX * 2 - 1] = '\0';
-        errstr = strdup(errbuf);
+        errstr = MXS_STRDUP_A(errbuf);
         goto retblock;
     }
 
@@ -664,7 +668,7 @@ static char* check_dir_access(char* dirname, bool rd, bool wr)
         snprintf(errbuf, PATH_MAX * 2 - 1, "MaxScale doesn't have write permission "
                  "to '%s'.", dirname);
         errbuf[PATH_MAX * 2 - 1] = '\0';
-        errstr = strdup(errbuf);
+        errstr = MXS_STRDUP_A(errbuf);
         goto retblock;
     }
 
@@ -793,7 +797,16 @@ static char* get_expanded_pathname(char** output_path,
         goto return_cnf_file_buf;
     }
 
-    expanded_path = (char*)malloc(PATH_MAX);
+    expanded_path = (char*)MXS_MALLOC(PATH_MAX);
+
+    if (!expanded_path)
+    {
+        if (output_path)
+        {
+            *output_path = NULL;
+        }
+        goto return_cnf_file_buf;
+    }
 
     /*<
      * Expand possible relative pathname to absolute path
@@ -807,8 +820,11 @@ static char* get_expanded_pathname(char** output_path,
         snprintf(buff, sizeof(buff), "Failed to read the directory '%s'.",  relative_path);
         print_log_n_stderr(true, true, buff, buff, eno);
 
-        free(expanded_path);
-        *output_path = NULL;
+        MXS_FREE(expanded_path);
+        if (output_path)
+        {
+            *output_path = NULL;
+        }
         goto return_cnf_file_buf;
     }
 
@@ -820,17 +836,11 @@ static char* get_expanded_pathname(char** output_path,
          */
         size_t pathlen = strnlen(expanded_path, PATH_MAX) +
                          1 + strnlen(fname, PATH_MAX) + 1;
-        cnf_file_buf = (char*)malloc(pathlen);
+        cnf_file_buf = (char*)MXS_MALLOC(pathlen);
 
         if (cnf_file_buf == NULL)
         {
-            ss_dassert(cnf_file_buf != NULL);
-            char errbuf[STRERROR_BUFLEN];
-
-            MXS_ERROR("Memory allocation failed due to %s.",
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
-
-            free(expanded_path);
+            MXS_FREE(expanded_path);
             expanded_path = NULL;
             goto return_cnf_file_buf;
         }
@@ -838,8 +848,8 @@ static char* get_expanded_pathname(char** output_path,
 
         if (!file_is_readable(cnf_file_buf))
         {
-            free(expanded_path);
-            free(cnf_file_buf);
+            MXS_FREE(expanded_path);
+            MXS_FREE(cnf_file_buf);
             expanded_path = NULL;
             cnf_file_buf = NULL;
             goto return_cnf_file_buf;
@@ -853,7 +863,7 @@ static char* get_expanded_pathname(char** output_path,
          */
         if (!file_is_readable(expanded_path))
         {
-            free(expanded_path);
+            MXS_FREE(expanded_path);
             expanded_path = NULL;
             goto return_cnf_file_buf;
         }
@@ -861,7 +871,7 @@ static char* get_expanded_pathname(char** output_path,
 
     if (output_path == NULL)
     {
-        free(expanded_path);
+        MXS_FREE(expanded_path);
     }
     else
     {
@@ -877,31 +887,31 @@ static void usage(void)
 {
     fprintf(stderr,
             "\nUsage : %s [OPTION]...\n\n"
-            "  -c, --config-check         Validate configuration file and exit\n"
-            "  -d, --nodaemon             enable running in terminal process (default:disabled)\n"
-            "  -f, --config=FILE          relative or absolute pathname of MaxScale configuration file\n"
-            "                             (default:/etc/maxscale.cnf)\n"
+            "  -c, --config-check          Validate configuration file and exit\n"
+            "  -d, --nodaemon              enable running in terminal process (default:disabled)\n"
+            "  -f, --config=FILE           relative or absolute pathname of MaxScale configuration file\n"
+            "                              (default:/etc/maxscale.cnf)\n"
             "  -l, --log=[file|shm|stdout] log to file, shared memory or stdout (default: file)\n"
-            "  -L, --logdir=PATH          path to log file directory (default: /var/log/maxscale)\n"
-            "  -A, --cachedir=PATH        path to cache directory (default: /var/cache/maxscale)\n"
-            "  -B, --libdir=PATH          path to module directory (default: /usr/lib64/maxscale)\n"
-            "  -C, --configdir=PATH       path to configuration file directory (default: /etc/)\n"
-            "  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
-            "                             (default: /var/cache/maxscale)\n"
-            "  -E, --execdir=PATH         path to the maxscale and other executable files\n"
-            "                             (default: /usr/bin)\n"
-            "  -N, --language=PATH         path to errmsg.sys file (default: /var/lib/maxscale)\n"
-            "  -P, --piddir=PATH          path to PID file directory (default: /var/run/maxscale)\n"
-            "  -U, --user=USER            run MaxScale as another user.\n"
-            "                             The user ID and group ID of this user are used to run MaxScale.\n"
-            "  -s, --syslog=[yes|no]      log messages to syslog (default:yes)\n"
-            "  -S, --maxlog=[yes|no]      log messages to MaxScale log (default: yes)\n"
-            "  -G, --log_augmentation=0|1 augment messages with the name of the function where\n"
-            "                             the message was logged (default: 0). Primarily for \n"
-            "                             development purposes.\n"
-            "  -v, --version              print version info and exit\n"
-            "  -V, --version-full         print full version info and exit\n"
-            "  -?, --help                 show this help\n"
+            "  -L, --logdir=PATH           path to log file directory (default: /var/log/maxscale)\n"
+            "  -A, --cachedir=PATH         path to cache directory (default: /var/cache/maxscale)\n"
+            "  -B, --libdir=PATH           path to module directory (default: /usr/lib64/maxscale)\n"
+            "  -C, --configdir=PATH        path to configuration file directory (default: /etc/)\n"
+            "  -D, --datadir=PATH          path to data directory, stored embedded mysql tables\n"
+            "                              (default: /var/cache/maxscale)\n"
+            "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
+            "                              (default: /usr/bin)\n"
+            "  -N, --language=PATH          path to errmsg.sys file (default: /var/lib/maxscale)\n"
+            "  -P, --piddir=PATH           path to PID file directory (default: /var/run/maxscale)\n"
+            "  -U, --user=USER             run MaxScale as another user.\n"
+            "                              The user ID and group ID of this user are used to run MaxScale.\n"
+            "  -s, --syslog=[yes|no]       log messages to syslog (default:yes)\n"
+            "  -S, --maxlog=[yes|no]       log messages to MaxScale log (default: yes)\n"
+            "  -G, --log_augmentation=0|1  augment messages with the name of the function where\n"
+            "                              the message was logged (default: 0). Primarily for \n"
+            "                              development purposes.\n"
+            "  -v, --version               print version info and exit\n"
+            "  -V, --version-full          print full version info and exit\n"
+            "  -?, --help                  show this help\n"
             , progname);
 }
 
@@ -1327,7 +1337,7 @@ int main(int argc, char **argv)
             case 'D':
                 snprintf(datadir, PATH_MAX, "%s", optarg);
                 datadir[PATH_MAX] = '\0';
-                set_datadir(strdup(optarg));
+                set_datadir(MXS_STRDUP_A(optarg));
                 datadir_defined = true;
                 break;
             case 'C':
@@ -1552,10 +1562,8 @@ int main(int argc, char **argv)
     OPENSSL_add_all_algorithms_noconf();
 
     int numlocks = CRYPTO_num_locks();
-    if ((ssl_locks = malloc(sizeof(SPINLOCK) * (numlocks + 1))) == NULL)
+    if ((ssl_locks = MXS_MALLOC(sizeof(SPINLOCK) * (numlocks + 1))) == NULL)
     {
-        char* logerr = "Memory allocation failed";
-        print_log_n_stderr(true, true, logerr, logerr, eno);
         rc = MAXSCALE_INTERNALERROR;
         goto return_main;
     }
@@ -1877,7 +1885,7 @@ int main(int argc, char **argv)
      * configured as the main thread will also poll.
      */
     n_threads = config_threadcount();
-    threads = calloc(n_threads, sizeof(THREAD));
+    threads = (THREAD*)MXS_CALLOC(n_threads, sizeof(THREAD));
     /*<
      * Start server threads.
      */
@@ -1951,11 +1959,11 @@ return_main:
 
     if (threads)
     {
-        free(threads);
+        MXS_FREE(threads);
     }
     if (cnf_file_path)
     {
-        free(cnf_file_path);
+        MXS_FREE(cnf_file_path);
     }
 
     return rc;
@@ -2269,13 +2277,13 @@ bool handle_path_arg(char** dest, char* path, char* arg, bool rd, bool wr)
 
         if ((errstr = check_dir_access(pathbuffer, rd, wr)) == NULL)
         {
-            *dest = strdup(pathbuffer);
+            *dest = MXS_STRDUP_A(pathbuffer);
             rval = true;
         }
         else
         {
             print_log_n_stderr(true, true, errstr, errstr, 0);
-            free(errstr);
+            MXS_FREE(errstr);
             errstr = NULL;
         }
     }

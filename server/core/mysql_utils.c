@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -23,8 +23,10 @@
 #include <mysql_utils.h>
 #include <string.h>
 #include <stdbool.h>
+#include <maxscale/alloc.h>
 #include <log_manager.h>
 #include <skygw_debug.h>
+#include <maxconfig.h>
 
 /**
  * @brief Calculate the length of a length-encoded integer in bytes
@@ -115,7 +117,7 @@ uint64_t leint_consume(uint8_t ** c)
 char* lestr_consume_dup(uint8_t** c)
 {
     uint64_t slen = leint_consume(c);
-    char *str = malloc((slen + 1) * sizeof(char));
+    char *str = MXS_MALLOC((slen + 1) * sizeof(char));
 
     if (str)
     {
@@ -161,15 +163,9 @@ MYSQL *mxs_mysql_real_connect(MYSQL *con, SERVER *server, const char *user, cons
 
     if (listener)
     {
-#ifdef CONNECTOR_C_SSL_AND_OPENSSL_INTERFERENCE_SORTED_OUT
-        // TODO: No conclusive evidence yet, but tentatively it seems that when OpenSSL is
-        // TODO: used explicitly (backend SSL) and in conjunction with Connector-C, the
-        // TODO: latter SSL becomes unstable. So for the time being the monitors and
-        // TODO: services (fetch users) do not use SSL when connecting to the backend.
-
+        GATEWAY_CONF* config = config_get_global_options();
         // mysql_ssl_set always returns true.
         mysql_ssl_set(con, listener->ssl_key, listener->ssl_cert, listener->ssl_ca_cert, NULL, NULL);
-#endif
     }
 
     return mysql_real_connect(con, server->name, user, passwd, NULL, server->port, NULL, 0);

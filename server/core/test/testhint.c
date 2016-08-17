@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -34,6 +34,7 @@
 #include <string.h>
 
 #include <hint.h>
+#include <maxscale/alloc.h>
 
 /**
  * test1    Allocate table of users and mess around with it
@@ -48,9 +49,9 @@ test1()
     /* Hint tests */
     ss_dfprintf(stderr,
                 "testhint : Add a parameter hint to a null list");
-    char* name = strdup("name");
+    char* name = MXS_STRDUP_A("name");
     hint = hint_create_parameter(NULL, name, "value");
-    free(name);
+    MXS_FREE(name);
     mxs_log_flush_sync();
     ss_info_dassert(NULL != hint, "New hint list should not be null");
     ss_info_dassert(0 == strcmp("value", hint->value), "Hint value should be correct");

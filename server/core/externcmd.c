@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -12,6 +12,7 @@
  */
 
 #include <externcmd.h>
+#include <maxscale/alloc.h>
 
 /**
  * Tokenize a string into arguments suitable for a execvp call.
@@ -48,7 +49,7 @@ int tokenize_arguments(char* argstr, char** argv)
             else if (quoted && !escaped && *ptr == qc) /** End of quoted string */
             {
                 *ptr = '\0';
-                argv[i++] = strdup(start);
+                argv[i++] = MXS_STRDUP_A(start);
                 read = false;
                 quoted = false;
             }
@@ -59,7 +60,7 @@ int tokenize_arguments(char* argstr, char** argv)
                     *ptr = '\0';
                     if (read) /** New token */
                     {
-                        argv[i++] = strdup(start);
+                        argv[i++] = MXS_STRDUP_A(start);
                         read = false;
                     }
                 }
@@ -81,7 +82,7 @@ int tokenize_arguments(char* argstr, char** argv)
     }
     if (read)
     {
-        argv[i++] = strdup(start);
+        argv[i++] = MXS_STRDUP_A(start);
     }
 
     argv[i] = NULL;
@@ -98,8 +99,8 @@ int tokenize_arguments(char* argstr, char** argv)
  */
 EXTERNCMD* externcmd_allocate(char* argstr)
 {
-    EXTERNCMD* cmd = (EXTERNCMD*) malloc(sizeof(EXTERNCMD));
-    char** argv = (char**) malloc(sizeof(char*) * MAXSCALE_EXTCMD_ARG_MAX);
+    EXTERNCMD* cmd = (EXTERNCMD*) MXS_MALLOC(sizeof(EXTERNCMD));
+    char** argv = (char**) MXS_MALLOC(sizeof(char*) * MAXSCALE_EXTCMD_ARG_MAX);
 
     if (argstr && cmd && argv)
     {
@@ -131,10 +132,8 @@ EXTERNCMD* externcmd_allocate(char* argstr)
     }
     else
     {
-        MXS_ERROR("Memory allocation for external command parameters failed when "
-                  "processing '%s'.", argstr);
-        free(cmd);
-        free(argv);
+        MXS_FREE(cmd);
+        MXS_FREE(argv);
         cmd = NULL;
     }
     return cmd;
@@ -150,10 +149,10 @@ void externcmd_free(EXTERNCMD* cmd)
     {
         for (int i = 0; cmd->argv[i]; i++)
         {
-            free(cmd->argv[i]);
+            MXS_FREE(cmd->argv[i]);
         }
-        free(cmd->argv);
-        free(cmd);
+        MXS_FREE(cmd->argv);
+        MXS_FREE(cmd);
     }
 }
 
@@ -210,22 +209,22 @@ bool externcmd_substitute_arg(EXTERNCMD* cmd, const char* match, const char* rep
         for (int i = 0; cmd->argv[i] && rval; i++)
         {
             size_t size = strlen(cmd->argv[i]);
-            char* dest = malloc(size);
+            char* dest = MXS_MALLOC(size);
             if (dest)
             {
                 mxs_pcre2_result_t rc = mxs_pcre2_substitute(re, cmd->argv[i], replace, &dest, &size);
                 switch (rc)
                 {
                     case MXS_PCRE2_ERROR:
-                        free(dest);
+                        MXS_FREE(dest);
                         rval = false;
                         break;
                     case MXS_PCRE2_MATCH:
-                        free(cmd->argv[i]);
+                        MXS_FREE(cmd->argv[i]);
                         cmd->argv[i] = dest;
                         break;
                     case MXS_PCRE2_NOMATCH:
-                        free(dest);
+                        MXS_FREE(dest);
                         break;
                 }
             }
@@ -264,10 +263,15 @@ char* get_command(const char* str)
 
     size_t len = end - start;
 
-    if (len > 0 && (rval = malloc(len + 1)))
+    if (len > 0)
     {
-        memcpy(rval, start, len);
-        rval[len] = '\0';
+        rval = MXS_MALLOC(len + 1);
+
+        if (rval)
+        {
+            memcpy(rval, start, len);
+            rval[len] = '\0';
+        }
     }
 
     return rval;
@@ -300,7 +304,7 @@ bool externcmd_can_execute(const char* argstr)
         {
             MXS_ERROR("The executable cannot be found: %s", command);
         }
-        free(command);
+        MXS_FREE(command);
     }
     return rval;
 }

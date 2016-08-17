@@ -55,8 +55,8 @@
 #include <strfunc.h>
 #include <item_func.h>
 
-#include "../utils/skygw_types.h"
-#include "../utils/skygw_debug.h"
+#include <skygw_types.h>
+#include <skygw_debug.h>
 #include <log_manager.h>
 #include <query_classifier.h>
 #include <mysql_client_server_protocol.h>

@@ -6,7 +6,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -82,4 +82,5 @@ int setipaddress(struct in_addr *, char *);
 char* get_libdir();
 long get_processor_count();
 void clean_up_pathname(char *path);
+bool mxs_mkdir_all(const char *path, int mask);
 #endif

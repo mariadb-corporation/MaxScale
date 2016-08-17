@@ -12,20 +12,6 @@ limitations to the components which illustrate them.
 This section describes the limitations that are common to all
 configuration of plugins with MariaDB MaxScale.
 
-### Crash if one of several listeners for a Service fails as startup
-
-If a service has multiple listeners and one of those listeners fails
-at startup, MariaDB MaxScale will crash.
-
-A typical reason for a listener to fail is that it has been configured
-with a non-existing socket path or a port that MariaDB MaxScale is not allowed
-to use.
-
-Workaround: Ensure that socket paths and ports are valid.
-
-Issues [MXS-710](https://jira.mariadb.org/browse/MXS-710) and
-[MXS-711](https://jira.mariadb.org/browse/MXS-711) relate to this.
-
 ## Limitations with MySQL Protocol support
 
 Compression is not included in MySQL server handshake

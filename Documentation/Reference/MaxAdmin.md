@@ -807,7 +807,14 @@ MariaDB MaxScale can log messages to syslog, to a log file or to both. The appro
 
 ## Rotating the log file
 
-MariaDB MaxScale logs messages to a log file in the log directory of MariaDB MaxScale. As the log file grows continuously, it is recommended to periodically rotate it. When rotated, the current log file will be closed and a new one with a new name opened. The log file name contain a sequence number, which is incremented each time the log is rotated.
+MariaDB MaxScale logs messages to a log file in the log directory of MariaDB MaxScale. As the log file grows continuously, it is recommended to periodically rotate it. When rotated, the current log file will be closed and a new one with the *same* name opened.
+
+To retain the ealier log entries, you need to first rename the log file and then instruct MaxScale to rotate it.
+
+    $ mv maxscale.log maxscale1.log
+    $ # MaxScale continues to write to maxscale1.log
+    $ kill -SIGUSR1 <maxscale-pid>
+    $ # MaxScale closes the file (i.e. maxscale1.log) and reopens maxscale.log
 
 There are two ways for rotating the log - *flush log maxscale* and *flush logs* - and the result is identical. The two alternatives are due to historical reasons; earlier MariaDB MaxScale had several different log files.
 
@@ -826,6 +833,23 @@ From version 1.3 onwards, MariaDB MaxScale has a single log file where messages 
     MaxScale>
 
 Please note that changes made via this interface will not persist across restarts of MariaDB MaxScale. To make a permanent change edit the maxscale.cnf file.
+
+## Adjusting the Log Throttling
+
+From 2.0 onwards, MariaDB MaxScale will throttle messages that are logged too frequently, which typically is a sign that MaxScale encounters some error that just keeps on repeating. The aim is to prevent the log from flooding. The configuration specifies how many times a particular error may be logged during a period of a specified length, before it is suppressed for a period of a specified other length.
+
+The current log throttling configuration can be queried with
+
+    MaxScale> show log_throttling
+    10 1000 100000
+
+where the numbers are the count, the length (in milliseconds) of the period during which the counting is made, and the length (in milliseconds) of the period the message is subsequently suppressed.
+
+The configuration can be set with
+
+    MaxScale> set log_throttling 10 1000 10000
+
+where numbers are specified in the same order as in the *show* case. Setting any of the values to 0, disables the throttling.
 
 ## Reloading The Configuration
 

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -12,6 +12,7 @@
  */
 
 #include <slist.h>
+#include <maxscale/alloc.h>
 #include <atomic.h>
 
 static slist_cursor_t* slist_cursor_init(slist_t* list);
@@ -31,7 +32,8 @@ static slist_t* slist_init_ex(bool create_cursors)
 {
     slist_t* list;
 
-    list = (slist_t*) calloc(1, sizeof (slist_t));
+    list = (slist_t*) MXS_CALLOC(1, sizeof (slist_t));
+    MXS_ABORT_IF_NULL(list);
     list->slist_chk_top = CHK_NUM_SLIST;
     list->slist_chk_tail = CHK_NUM_SLIST;
 
@@ -47,7 +49,8 @@ static slist_node_t* slist_node_init(void* data, slist_cursor_t* cursor)
 {
     slist_node_t* node;
 
-    node = (slist_node_t*) calloc(1, sizeof (slist_node_t));
+    node = (slist_node_t*) MXS_CALLOC(1, sizeof (slist_node_t));
+    MXS_ABORT_IF_NULL(node);
     node->slnode_chk_top = CHK_NUM_SLIST_NODE;
     node->slnode_chk_tail = CHK_NUM_SLIST_NODE;
     node->slnode_data = data;
@@ -128,7 +131,8 @@ static slist_cursor_t* slist_cursor_init(slist_t* list)
     CHK_SLIST(list);
     slist_cursor_t* c;
 
-    c = (slist_cursor_t *) calloc(1, sizeof (slist_cursor_t));
+    c = (slist_cursor_t *) MXS_CALLOC(1, sizeof (slist_cursor_t));
+    MXS_ABORT_IF_NULL(c);
     c->slcursor_chk_top = CHK_NUM_SLIST_CURSOR;
     c->slcursor_chk_tail = CHK_NUM_SLIST_CURSOR;
     c->slcursor_list = list;
@@ -306,7 +310,7 @@ void slcursor_remove_data(slist_cursor_t* c)
         atomic_add((int*) &node->slnode_cursor_refcount, -1);
         if (node->slnode_cursor_refcount == 0)
         {
-            free(node);
+            MXS_FREE(node);
         }
         return;
     }
@@ -320,7 +324,7 @@ void slcursor_remove_data(slist_cursor_t* c)
             atomic_add((int*) &node->slnode_cursor_refcount, -1);
             if (node->slnode_cursor_refcount == 0)
             {
-                free(node);
+                MXS_FREE(node);
             }
             return;
         }
@@ -348,11 +352,11 @@ void slist_done(slist_cursor_t* c)
     while (succp)
     {
         data = slcursor_get_data(c);
-        free(data);
+        MXS_FREE(data);
         succp = slcursor_step_ahead(c);
     }
-    free(c->slcursor_list);
-    free(c);
+    MXS_FREE(c->slcursor_list);
+    MXS_FREE(c);
 }
 
 

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -73,6 +73,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <maxscale/alloc.h>
 #include <service.h>
 #include <server.h>
 #include <router.h>
@@ -183,11 +184,11 @@ static inline void free_readconn_instance(ROUTER_INSTANCE *router)
         {
             for (int i = 0; router->servers[i]; i++)
             {
-                free(router->servers[i]);
+                MXS_FREE(router->servers[i]);
             }
         }
-        free(router->servers);
-        free(router);
+        MXS_FREE(router->servers);
+        MXS_FREE(router);
     }
 }
 
@@ -210,7 +211,7 @@ createInstance(SERVICE *service, char **options)
     BACKEND *backend;
     char *weightby;
 
-    if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL)
+    if ((inst = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL)
     {
         return NULL;
     }
@@ -228,7 +229,7 @@ createInstance(SERVICE *service, char **options)
         n++;
     }
 
-    inst->servers = (BACKEND **) calloc(n + 1, sizeof(BACKEND *));
+    inst->servers = (BACKEND **) MXS_CALLOC(n + 1, sizeof(BACKEND *));
     if (!inst->servers)
     {
         free_readconn_instance(inst);
@@ -237,7 +238,7 @@ createInstance(SERVICE *service, char **options)
 
     for (sref = service->dbref, n = 0; sref; sref = sref->next)
     {
-        if ((inst->servers[n] = malloc(sizeof(BACKEND))) == NULL)
+        if ((inst->servers[n] = MXS_MALLOC(sizeof(BACKEND))) == NULL)
         {
             free_readconn_instance(inst);
             return NULL;
@@ -410,7 +411,7 @@ newSession(ROUTER *instance, SESSION *session)
               inst);
 
 
-    client_rses = (ROUTER_CLIENT_SES *) calloc(1, sizeof(ROUTER_CLIENT_SES));
+    client_rses = (ROUTER_CLIENT_SES *) MXS_CALLOC(1, sizeof(ROUTER_CLIENT_SES));
 
     if (client_rses == NULL)
     {
@@ -557,7 +558,7 @@ newSession(ROUTER *instance, SESSION *session)
             MXS_ERROR("Failed to create new routing session. "
                       "Couldn't find eligible candidate server. Freeing "
                       "allocated resources.");
-            free(client_rses);
+            MXS_FREE(client_rses);
             return NULL;
         }
     }
@@ -586,7 +587,7 @@ newSession(ROUTER *instance, SESSION *session)
     if (client_rses->backend_dcb == NULL)
     {
         atomic_add(&candidate->current_connection_count, -1);
-        free(client_rses);
+        MXS_FREE(client_rses);
         return NULL;
     }
     dcb_add_callback(
@@ -671,7 +672,7 @@ static void freeSession(ROUTER* router_instance, void* router_client_ses)
               router_cli_ses->backend->server->port,
               prev_val - 1);
 
-    free(router_cli_ses);
+    MXS_FREE(router_cli_ses);
 }
 
 /**
@@ -793,7 +794,7 @@ routeQuery(ROUTER *instance, void *router_session, GWBUF *queue)
              backend_dcb->server->unique_name,
              trc ? ": " : ".",
              trc ? trc : "");
-    free(trc);
+    MXS_FREE(trc);
 
 return_rc:
 

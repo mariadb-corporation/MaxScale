@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -12,6 +12,7 @@
  */
 #include <stdio.h>
 #include <filter.h>
+#include <maxscale/alloc.h>
 #include <modinfo.h>
 #include <modutil.h>
 #include <atomic.h>
@@ -128,7 +129,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 {
     TEST_INSTANCE   *my_instance;
 
-    if ((my_instance = calloc(1, sizeof(TEST_INSTANCE))) != NULL)
+    if ((my_instance = MXS_CALLOC(1, sizeof(TEST_INSTANCE))) != NULL)
     {
         my_instance->sessions = 0;
     }
@@ -148,7 +149,7 @@ newSession(FILTER *instance, SESSION *session)
     TEST_INSTANCE   *my_instance = (TEST_INSTANCE *)instance;
     TEST_SESSION    *my_session;
 
-    if ((my_session = calloc(1, sizeof(TEST_SESSION))) != NULL)
+    if ((my_session = MXS_CALLOC(1, sizeof(TEST_SESSION))) != NULL)
     {
         atomic_add(&my_instance->sessions, 1);
         my_session->count = 0;
@@ -178,7 +179,7 @@ closeSession(FILTER *instance, void *session)
 static void
 freeSession(FILTER *instance, void *session)
 {
-    free(session);
+    MXS_FREE(session);
     return;
 }
 

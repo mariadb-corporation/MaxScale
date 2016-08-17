@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -12,6 +12,7 @@
  */
 #include <stdlib.h>
 #include <string.h>
+#include <maxscale/alloc.h>
 #include <housekeeper.h>
 #include <thread.h>
 #include <spinlock.h>
@@ -88,13 +89,13 @@ hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
 {
     HKTASK *task, *ptr;
 
-    if ((task = (HKTASK *)malloc(sizeof(HKTASK))) == NULL)
+    if ((task = (HKTASK *)MXS_MALLOC(sizeof(HKTASK))) == NULL)
     {
         return 0;
     }
-    if ((task->name = strdup(name)) == NULL)
+    if ((task->name = MXS_STRDUP(name)) == NULL)
     {
-        free(task);
+        MXS_FREE(task);
         return 0;
     }
     task->task = taskfn;
@@ -110,8 +111,8 @@ hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
         if (strcmp(ptr->name, name) == 0)
         {
             spinlock_release(&tasklock);
-            free(task->name);
-            free(task);
+            MXS_FREE(task->name);
+            MXS_FREE(task);
             return 0;
         }
         ptr = ptr->next;
@@ -121,8 +122,8 @@ hktask_add(const char *name, void (*taskfn)(void *), void *data, int frequency)
         if (strcmp(ptr->name, name) == 0)
         {
             spinlock_release(&tasklock);
-            free(task->name);
-            free(task);
+            MXS_FREE(task->name);
+            MXS_FREE(task);
             return 0;
         }
         ptr->next = task;
@@ -154,13 +155,13 @@ hktask_oneshot(const char *name, void (*taskfn)(void *), void *data, int when)
 {
     HKTASK *task, *ptr;
 
-    if ((task = (HKTASK *)malloc(sizeof(HKTASK))) == NULL)
+    if ((task = (HKTASK *)MXS_MALLOC(sizeof(HKTASK))) == NULL)
     {
         return 0;
     }
-    if ((task->name = strdup(name)) == NULL)
+    if ((task->name = MXS_STRDUP(name)) == NULL)
     {
-        free(task);
+        MXS_FREE(task);
         return 0;
     }
     task->task = taskfn;
@@ -219,8 +220,8 @@ hktask_remove(const char *name)
 
     if (ptr)
     {
-        free(ptr->name);
-        free(ptr);
+        MXS_FREE(ptr->name);
+        MXS_FREE(ptr);
         return 1;
     }
     else

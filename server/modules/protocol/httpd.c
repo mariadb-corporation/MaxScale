@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,6 +33,7 @@
  */
 
 #include <httpd.h>
+#include <maxscale/alloc.h>
 #include <gw_protocol.h>
 #include <gw.h>
 #include <modinfo.h>
@@ -54,7 +55,7 @@ MODULE_INFO info =
 
 #define ISspace(x) isspace((int)(x))
 #define HTTP_SERVER_STRING "MaxScale(c) v.1.0.0"
-static char *version_str = "V1.1.1";
+static char *version_str = "V1.2.0";
 
 static int httpd_read_event(DCB* dcb);
 static int httpd_write_event(DCB *dcb);
@@ -65,7 +66,7 @@ static int httpd_accept(DCB *dcb);
 static int httpd_close(DCB *dcb);
 static int httpd_listen(DCB *dcb, char *config);
 static int httpd_get_line(int sock, char *buf, int size);
-static void httpd_send_headers(DCB *dcb, int final);
+static void httpd_send_headers(DCB *dcb, int final, bool auth_ok);
 static char *httpd_default_auth();
 
 /**
@@ -124,6 +125,8 @@ GWPROTOCOL* GetModuleObject()
 }
 /*lint +e14 */
 
+static const char* default_auth = "NullAuthAllow";
+
 /**
  * The default authenticator name for this protocol
  *
@@ -131,7 +134,7 @@ GWPROTOCOL* GetModuleObject()
  */
 static char *httpd_default_auth()
 {
-    return "NullAuth";
+    return (char*)default_auth;
 }
 
 /**
@@ -212,6 +215,10 @@ static int httpd_read_event(DCB* dcb)
         }
     }
 
+    /** If listener->authenticator is NULL, it means we're using the default
+     * authenticator and we don't need to check the user credentials. */
+    bool auth_ok = dcb->listener->authenticator == 0;
+
     /**
      * Get the request headers
      */
@@ -236,6 +243,21 @@ static int httpd_read_event(DCB* dcb)
             {
                 strcpy(client_data->useragent, value);
             }
+
+            if (strcmp(buf, "Authorization") == 0)
+            {
+                GWBUF *auth_data = gwbuf_alloc_and_load(strlen(value), value);
+                MXS_OOM_IFNULL(auth_data);
+
+                if (auth_data)
+                {
+                    /** The freeing entry point is called automatically when
+                     * the client DCB is closed */
+                    dcb->authfunc.extract(dcb, auth_data);
+                    auth_ok = dcb->authfunc.authenticate(dcb) == 0;
+                    gwbuf_free(auth_data);
+                }
+            }
         }
     }
 
@@ -250,7 +272,7 @@ static int httpd_read_event(DCB* dcb)
      */
 
     /* send all the basic headers and close with \r\n */
-    httpd_send_headers(dcb, 1);
+    httpd_send_headers(dcb, 1, auth_ok);
 
 #if 0
     /**
@@ -281,7 +303,7 @@ static int httpd_read_event(DCB* dcb)
         }
     }
 #endif
-    if ((uri = gwbuf_alloc(strlen(url) + 1)) != NULL)
+    if (auth_ok && (uri = gwbuf_alloc(strlen(url) + 1)) != NULL)
     {
         strcpy((char *)GWBUF_DATA(uri), url);
         gwbuf_set_type(uri, GWBUF_TYPE_HTTP);
@@ -359,7 +381,7 @@ static int httpd_accept(DCB *listener)
         HTTPD_session *client_data = NULL;
 
         /* create the session data for HTTPD */
-        if ((client_data = (HTTPD_session *)calloc(1, sizeof(HTTPD_session))) == NULL)
+        if ((client_data = (HTTPD_session *)MXS_CALLOC(1, sizeof(HTTPD_session))) == NULL)
         {
             dcb_close(client_dcb);
             continue;
@@ -449,7 +471,7 @@ static int httpd_get_line(int sock, char *buf, int size)
 /**
  * HTTPD send basic headers with 200 OK
  */
-static void httpd_send_headers(DCB *dcb, int final)
+static void httpd_send_headers(DCB *dcb, int final, bool auth_ok)
 {
     char date[64] = "";
     const char *fmt = "%a, %d %b %Y %H:%M:%S GMT";
@@ -458,11 +480,15 @@ static void httpd_send_headers(DCB *dcb, int final)
     struct tm tm;
     localtime_r(&httpd_current_time, &tm);
     strftime(date, sizeof(date), fmt, &tm);
-
+    const char *response = auth_ok ? "200 OK" : "401 Unauthorized";
     dcb_printf(dcb,
-               "HTTP/1.1 200 OK\r\nDate: %s\r\nServer: %s\r\nConnection: "
-               "close\r\nContent-Type: application/json\r\n",
-               date, HTTP_SERVER_STRING);
+               "HTTP/1.1 %s\r\n"
+               "Date: %s\r\n"
+               "Server: %s\r\n"
+               "Connection: close\r\n"
+               "WWW-Authenticate: Basic realm=\"MaxInfo\"\r\n"
+               "Content-Type: application/json\r\n",
+               response, date, HTTP_SERVER_STRING);
 
     /* close the headers */
     if (final)

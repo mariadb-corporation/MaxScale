@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <maxscale/alloc.h>
 #include <modutil.h>
 #include <buffer.h>
 
@@ -90,7 +91,7 @@ test2()
     char* result = modutil_get_SQL(buffer);
     ss_dassert(strcmp(result, query) == 0);
     gwbuf_free(buffer);
-    free(result);
+    MXS_FREE(result);
     ss_dfprintf(stderr, "\t..done\n");
     return 0;
 

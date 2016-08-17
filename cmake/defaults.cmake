@@ -53,3 +53,12 @@ set(WITH_TCMALLOC FALSE CACHE BOOL "Use tcmalloc as the memory allocator")
 
 # Use jemalloc as the memory allocator
 set(WITH_JEMALLOC FALSE CACHE BOOL "Use jemalloc as the memory allocator")
+
+# Install experimental modules
+set(INSTALL_EXPERIMENTAL TRUE CACHE BOOL "Install experimental modules")
+
+# Default package name
+set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
+
+# Which component to build (core, experimental, devel)
+set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, devel)")

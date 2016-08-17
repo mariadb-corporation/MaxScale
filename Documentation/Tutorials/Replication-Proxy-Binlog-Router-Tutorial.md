@@ -1,5 +1,5 @@
 # MariaDB MaxScale as a Binlog Server
-MariaDB MaxScale is a database proxy that sits between a database layer and the clients of that database, the binlog router described here is somewhat different to that original concept, moving MariaDB MaxScale down to play a role within the database layer itself.
+MariaDB MaxScale is a dynamic data routing platform that sits between a database layer and the clients of that database, the binlog router described here is somewhat different to that original concept, moving MariaDB MaxScale down to play a role within the database layer itself.
 
 In a traditional MySQL replication setup a single master server is created and a set of slaves MySQL instances are configured to pull the binlog files from that master to the slaves. There are some problems, however, in this setup; when the number of slaves grows an increasing load is placed on the master, to serve the binlogs to each slave. When the master server fails, some action must be performed on every slave server before a new server can become the master server.
 
@@ -127,6 +127,25 @@ When MariaDB MaxScale starts an error message may appear if current binlog file 
 During normal operations binlog events are not distributed to the slaves until a *COMMIT* is seen.
 The default value is off, set *transaction_safety=on* to enable the incomplete transactions detection.
 
+### semisync
+
+This parameter controls whether binlog server could ask Master server to start the Semi-Synchronous replication.
+In order to get semi-sync working the Master server must have the *rpl_semi_sync_master* plugin installed.
+The available plugin and the value of GLOBAL VARIABLE *rpl_semi_sync_master_enabled* are checked in the Master registration phase: if plugin is installed in the Master database the binlog server then requests the semi-sync option.
+Note:
+ - the network replication stream from Master has two additional bytes before each binlog event.
+ - the Semi-Sync protocol requires an acknoledge packet to be sent back to Master only when requested: the semi-sync flag will have value of 1.
+   This flag is set only if *rpl_semi_sync_master_enabled=1* in the Master, otherwise it will always have value of 0 and no ack packet is sent back.
+
+Please note that semi-sync replication is only related to binlog server to Master communication.
+
+
+### ssl_cert_verification_depth
+
+This parameter sets the maximum length of the certificate authority chain that will be accepted. Legal values are positive integers.
+This applies to SSL connection to master server that could be acivated either by writing options in master.ini or later via CHANGE MASTER TO.
+This parameter cannot be modified at runtime, default is 9.
+
 A complete example of a service entry for a binlog router service would be as follows.
 
 ```
@@ -137,7 +156,7 @@ A complete example of a service entry for a binlog router service would be as fo
     version_string=5.6.17-log
     user=maxscale
     passwd=Mhu87p2D
-    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1
+    router_options=uuid=f12fcb7f-b97b-11e3-bc5e-0401152c4c22,server-id=3,user=repl,password=slavepass,master-id=1,heartbeat=30,binlogdir=/var/binlogs,transaction_safety=1,master_version=5.6.19-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-common,master-id=999,mariadb10-compatibility=1,ssl_cert_verification_depth=9,semisync=1
 ```
 
 The minimum set of router options that must be given in the configuration are are *server-id* and *master-id*, default values may be used for all other options.
@@ -153,6 +172,21 @@ As per any service in MariaDB MaxScale a listener section is required to define 
     port=5308
 
 The protocol used by slaves for connection to MariaDB MaxScale is the same *MySQLClient* protocol that is  used for client applications to connect to databases, therefore the same MariaDB MaxScale protocol module can be used.
+
+It's also possible to enable SSL from clients (MySQL clients or Slave servers) by adding SSL options in the listener, or in a new one:
+```
+   [Replication Listener_SSL]
+   type=listener
+   service=Replication
+   protocol=MySQLClient
+   port=5309
+   ssl=required
+   ssl_key=/path_to/key.pem
+   ssl_cert=/path_to/cert.pem
+   ssl_ca_cert=/path_to/ca-cert.pem
+   #ssl_version=TLSv10
+```
+Check the [Configuration-Guide](../Getting-Started/Configuration-Guide.md) for SSL options details.
 
 #  MariaDB MaxScale replication diagnostics
 
@@ -232,7 +266,67 @@ The binlog router module of MariaDB MaxScale produces diagnostic output that can
     	Users data:        				0x156c030
     	Total connections:				2
     	Currently connected:			2
--bash-4.1$
+```
+If a slave is connected to MaxScale with SSL, an entry will be present in the Slave report:
+```
+	Slaves:
+		Server-id:                               106
+		Hostname:                                SBslave6
+		Slave UUID:                              00019686-7777-7777-7777-777777777777
+		Slave_host_port:                         188.165.213.5:40365
+		Username:                                massi
+		Slave DCB:                               0x7fc01be3ba88
+		Slave connected with SSL:                Established
+
+```
+
+Another Binlog Server diagnostic output comes from SHOW SLAVE STATUS MySQL command
+
+```
+MySQL [(none)]> show slave status\G
+*************************** 1. row ***************************
+               Slave_IO_State: Binlog Dump
+                  Master_Host: 88.26.197.94
+                  Master_User: repl
+                  Master_Port: 3306
+                Connect_Retry: 60
+              Master_Log_File: mysql-bin.003140
+          Read_Master_Log_Pos: 16682679
+               Relay_Log_File: mysql-bin.003140
+                Relay_Log_Pos: 16682679
+        Relay_Master_Log_File: mysql-bin.003140
+             Slave_IO_Running: Yes
+            Slave_SQL_Running: Yes
+              Replicate_Do_DB:
+          Replicate_Ignore_DB:
+           Replicate_Do_Table:
+       Replicate_Ignore_Table:
+      Replicate_Wild_Do_Table:
+  Replicate_Wild_Ignore_Table:
+                   Last_Errno: 0
+                   Last_Error:
+                 Skip_Counter: 0
+          Exec_Master_Log_Pos: 16682679
+              Relay_Log_Space: 16682679
+              Until_Condition: None
+               Until_Log_File:
+                Until_Log_Pos: 0
+           Master_SSL_Allowed: Yes
+           Master_SSL_CA_File: /home/maxscale/packages/certificates/client/ca.pem
+           Master_SSL_CA_Path:
+              Master_SSL_Cert: /home/maxscale/packages/certificates/client/client-cert.pem
+            Master_SSL_Cipher:
+               Master_SSL_Key: /home/maxscale/packages/certificates/client/client-key.pem
+        Seconds_Behind_Master: 0
+Master_SSL_Verify_Server_Cert: No
+                Last_IO_Errno: 0
+                Last_IO_Error:
+               Last_SQL_Errno: 0
+               Last_SQL_Error:
+  Replicate_Ignore_Server_Ids:
+             Master_Server_Id: 1111
+                  Master_UUID: 6aae714e-b975-11e3-bc33-0401152c3d01
+             Master_Info_File: /home/maxscale/binlog/first/binlogs/master.ini
 ```
 
 # Binlog router compatibility
@@ -261,6 +355,12 @@ Please note that is such condition the only user for MySQL protocol connection t
 	master_user=repl
 	master_password=somepass
 	filestem=repl-bin
+	# Master SSL communication options
+	master_ssl=0
+	master_ssl_key=/home/mpinto/packages/certificates/client/client-key.pem
+	master_ssl_cert=/home/mpinto/packages/certificates/client/client-cert.pem
+	master_ssl_ca=/home/mpinto/packages/certificates/client/ca.pem
+	#master_tls_version=TLSv12
 
 Enabling replication from a master server requires:
 
@@ -306,6 +406,15 @@ The supported options are:
 	MASTER_LOG_FILE
 	MASTER_LOG_POS
 
+	and SSL options as well:
+	MASTER_SSL (0|1)
+	MASTER_SSL_CERT (path to certificate file)
+	MASTER_SSL_KEY (path to key file)
+	MASTER_SSL_CA (path to CA cerificate file)
+	MASTER_TLS_VERSION (allowed level of encryption used)
+
+Further details about level of encryption or certificates could be found here [Configuration Guuide](../Getting-Started/Configuration-Guide.md)
+
 There are some constraints related to *MASTER_LOG_FILE* and *MASTER_LOG_POS*:
 
 *MASTER_LOG_FILE* could be changed to next binlog in sequence with *MASTER_LOG_POS=4* or to current one at current position.
@@ -347,6 +456,53 @@ In order to resolve any mistake done with *CHANGE MASTER TO MASTER_LOG_FILE / MA
 This command removes *master.ini* file, blanks all master configuration in memory and sets binlog router in unconfigured state: a *CHANGE MASTER TO* command should be issued for the new configuration.
 
 Note: existing binlog files are not touched by this command.
+
+Examples with SSL options:
+
+	MySQL [(none)]> CHANGE MASTER TO MASTER_SSL = 1, MASTER_SSL_CERT='/home/maxscale/packages/certificates/client/client-cert.pem', MASTER_SSL_CA='/home/maxscale/packages/certificates/client/ca.pem', MASTER_SSL_KEY='/home/maxscale/packages/certificates/client/client-key.pem', MASTER_TLS_VERSION='TLSv12';
+
+	MySQL [(none)]> CHANGE MASTER TO MASTER_TLS_VERSION='TLSv12';
+
+	MySQL [(none)]> CHANGE MASTER TO MASTER_SSL = 0;
+
+
+#### Some constraints:
+  - In order to enable/re-enable Master SSL comunication the MASTER_SSL=1 option is required and all certificate options must be explicitey set in the same CHANGE MASTER TO command.
+  - New certificate options changes take effect after maxScale restart or after MASTER_SSL=1 with the new options.
+
+Note:
+ - SHOW SLAVE STATUS displays all the options but MASTER_TLS_VERSION value.
+ - Maxadmin, 'show services' or 'show service $binlog_service' displays all the options when SSL is on.
+ - STOP SLAVE is required for CHANGE MASTER TO command (any option)
+ - START SLAVE will use new SSL options for Master SSL communication setup.
+
+Examples:
+  mysql client
+
+	MySQL> SHOW SLAVE STATUS\G
+
+           Master_SSL_Allowed: Yes
+           Master_SSL_CA_File: /home/mpinto/packages/certificates/client/ca.pem
+           Master_SSL_CA_Path:
+              Master_SSL_Cert: /home/mpinto/packages/certificates/client/client-cert.pem
+            Master_SSL_Cipher:
+               Master_SSL_Key: /home/mpinto/packages/certificates/client/client-key.pem
+
+  maxadmin client
+
+	MaxScale>'show service BinlogServer'
+
+	Service:                             BinlogServer
+	Router:                              binlogrouter (0x7fd8c3002b40)
+	State:                               Started
+	Master connection DCB:               0x7fd8c8fce228
+	Master SSL is ON:
+		Master SSL CA cert: /home/mpinto/packages/certificates/client/ca.pem
+		Master SSL Cert:    /home/mpinto/packages/certificates/client/client-cert.pem
+		Master SSL Key:     /home/mpinto/packages/certificates/client/client-key.pem
+		Master SSL tls_ver: TLSv12
+
+
 
 ### Slave servers setup
 

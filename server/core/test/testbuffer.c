@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <maxscale/alloc.h>
 #include <buffer.h>
 #include <hint.h>
 
@@ -44,7 +45,8 @@
  */
 uint8_t* generate_data(size_t count)
 {
-    uint8_t* data = malloc(count);
+    uint8_t* data = MXS_MALLOC(count);
+    MXS_ABORT_IF_NULL(data);
 
     srand(0);
 

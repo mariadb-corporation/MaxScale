@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -23,6 +23,7 @@
  * 29/05/14     Mark Riddoch            Addition of filter mechanism
  * 23/08/15     Martin Brampton         Tidying; slight improvement in safety
  * 17/09/15     Martin Brampton         Keep failed session in existence - leave DCBs to close
+ * 27/06/16     Martin Brampton         Amend to utilise list manager
  *
  * @endverbatim
  */
@@ -31,7 +32,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
+#include <maxscale/alloc.h>
 #include <session.h>
+#include <listmanager.h>
 #include <service.h>
 #include <router.h>
 #include <dcb.h>
@@ -41,14 +44,15 @@
 #include <log_manager.h>
 #include <housekeeper.h>
 
-/** Global session id; updated safely by holding session_spin */
-static size_t session_id;
+/* This list of all sessions */
+LIST_CONFIG SESSIONlist =
+{LIST_TYPE_RECYCLABLE, sizeof(SESSION), SPINLOCK_INIT};
 
-static SPINLOCK session_spin = SPINLOCK_INIT;
-static SESSION *allSessions = NULL;
-static SESSION *lastSession = NULL;
-static SESSION *wasfreeSession = NULL;
-static int freeSessionCount = 0;
+/* A session with null values, used for initialization */
+static SESSION session_initialized = SESSION_INIT;
+
+/** Global session id; updated safely by use of atomic_add */
+static int session_id;
 
 static struct session session_dummy_struct;
 
@@ -60,11 +64,43 @@ long next_timeout_check = 0;
 
 static SPINLOCK timeout_lock = SPINLOCK_INIT;
 
+static void session_initialize(void *session);
 static int session_setup_filters(SESSION *session);
 static void session_simple_free(SESSION *session, DCB *dcb);
 static void session_add_to_all_list(SESSION *session);
 static SESSION *session_find_free();
 static void session_final_free(SESSION *session);
+static list_entry_t *skip_maybe_to_next_non_listener(list_entry_t *current, SESSIONLISTFILTER filter);
+
+/**
+ * @brief Initialize a session
+ *
+ * This routine puts initial values into the fields of the session pointed to
+ * by the parameter. The parameter has to be passed as void * because the
+ * function can be called by the generic list manager, which does not know
+ * the actual type of the list entries it handles.
+ *
+ * All fields can be initialized by the assignment of the static
+ * initialized session.
+ *
+ * @param *session    Pointer to the session to be initialized
+ */
+static void
+session_initialize(void *session)
+{
+    *(SESSION *)session = session_initialized;
+}
+
+/*
+ * @brief Pre-allocate memory for a number of sessions
+ *
+ * @param   The number of sessions to be pre-allocated
+ */
+bool
+session_pre_alloc(int number)
+{
+    return list_pre_alloc(&SESSIONlist, number, session_initialize);
+}
 
 /**
  * Allocate a new session for a new client of the specified service.
@@ -82,32 +118,17 @@ session_alloc(SERVICE *service, DCB *client_dcb)
 {
     SESSION *session;
 
-    spinlock_acquire(&session_spin);
-    session = session_find_free();
-    spinlock_release(&session_spin);
+    session = (SESSION *)list_find_free(&SESSIONlist, session_initialize);
     ss_info_dassert(session != NULL, "Allocating memory for session failed.");
-
-    if (session == NULL)
+    if (NULL == session)
     {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Failed to allocate memory for "
-                  "session object due error %d, %s.",
-                  errno,
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+        MXS_OOM();
         return NULL;
     }
-#if defined(SS_DEBUG)
-    session->ses_chk_top = CHK_NUM_SESSION;
-    session->ses_chk_tail = CHK_NUM_SESSION;
-#endif
     session->ses_is_child = (bool) DCB_IS_CLONE(client_dcb);
-    spinlock_init(&session->ses_lock);
     session->service = service;
     session->client_dcb = client_dcb;
-    session->n_filters = 0;
-    memset(&session->stats, 0, sizeof(SESSION_STATS));
     session->stats.connect = time(0);
-    session->state = SESSION_STATE_ALLOC;
     /*<
      * Associate the session to the client DCB and set the reference count on
      * the session to indicate that there is a single reference to the
@@ -199,104 +220,15 @@ session_alloc(SERVICE *service, DCB *client_dcb)
                  session->client_dcb->user,
                  session->client_dcb->remote);
     }
-    spinlock_acquire(&session_spin);
     /** Assign a session id and increase, insert session into list */
-    session->ses_id = ++session_id;
-    spinlock_release(&session_spin);
+    session->ses_id = (size_t)atomic_add(&session_id, 1) + 1;
     atomic_add(&service->stats.n_sessions, 1);
     atomic_add(&service->stats.n_current, 1);
     CHK_SESSION(session);
 
     client_dcb->session = session;
+    session->entry_is_ready = true;
     return SESSION_STATE_TO_BE_FREED == session->state ? NULL : session;
-}
-
-/**
- * Add a new session to the list of all sessions.
- *
- * Must be called with the general session lock held.
- *
- * A pointer, lastSession, is held to find the end of the list, and the new session
- * is linked to the end of the list.  The pointer, wasfreeSession, that is used to
- * search for a free session is initialised if not already set. There cannot be
- * any free sessions (or any at all) until this routine has been called at least
- * once. Hence it will not be referred to until after it is initialised.
- *
- * @param session       The session to be added to the list
- */
-static void
-session_add_to_all_list(SESSION *session)
-{
-    if (allSessions == NULL)
-    {
-        allSessions = session;
-    }
-    else
-    {
-        lastSession->next = session;
-    }
-    lastSession = session;
-    if (NULL == wasfreeSession)
-    {
-        wasfreeSession = session;
-    }
-}
-
-/**
- * Find a free session or allocate memory for a new one.
- *
- * This routine looks to see whether there are free session memory areas.
- * If not, new memory is allocated, if possible, and the new session is added to
- * the list of all sessions.
- *
- * Must be called with the general session lock held.
- *
- * @return An available session or NULL if none could be allocated.
- */
-static SESSION *
-session_find_free()
-{
-    SESSION *nextsession;
-
-    if (freeSessionCount <= 0)
-    {
-        SESSION *newsession;
-        if ((newsession = calloc(1, sizeof(SESSION))) == NULL)
-        {
-            return NULL;
-        }
-        newsession->next = NULL;
-        session_add_to_all_list(newsession);
-        newsession->ses_is_in_use = true;
-        return newsession;
-    }
-    /* Starting at the last place a free session was found, loop through the */
-    /* list of sessions searching for one that is not in use. */
-    while (wasfreeSession->ses_is_in_use)
-    {
-        int loopcount = 0;
-        wasfreeSession = wasfreeSession->next;
-        if (NULL == wasfreeSession)
-        {
-            loopcount++;
-            if (loopcount > 1)
-            {
-                /* Shouldn't need to loop round more than once */
-                MXS_ERROR("Find free session failed to find a session even"
-                          " though free count was positive");
-                return NULL;
-            }
-            wasfreeSession = allSessions;
-        }
-    }
-    /* Dropping out of the loop means we have found a session that is not in use */
-    freeSessionCount--;
-    /* Clear the old data, then reset the list forward link */
-    nextsession = wasfreeSession->next;
-    memset(wasfreeSession, 0, sizeof(SESSION));
-    wasfreeSession->next = nextsession;
-    wasfreeSession->ses_is_in_use = true;
-    return wasfreeSession;
 }
 
 /**
@@ -313,10 +245,10 @@ session_set_dummy(DCB *client_dcb)
     SESSION *session;
 
     session = &session_dummy_struct;
-#if defined(SS_DEBUG)
+    session->list_entry_chk_top = CHK_NUM_MANAGED_LIST;
+    session->list_entry_chk_tail = CHK_NUM_MANAGED_LIST;
     session->ses_chk_top = CHK_NUM_SESSION;
     session->ses_chk_tail = CHK_NUM_SESSION;
-#endif
     session->ses_is_child = false;
     spinlock_init(&session->ses_lock);
     session->service = NULL;
@@ -405,7 +337,7 @@ session_simple_free(SESSION *session, DCB *dcb)
     {
         void * clientdata = dcb->data;
         dcb->data = NULL;
-        free(clientdata);
+        MXS_FREE(clientdata);
     }
     if (session)
     {
@@ -487,7 +419,7 @@ session_free(SESSION *session)
                                                              session->filters[i].session);
             }
         }
-        free(session->filters);
+        MXS_FREE(session->filters);
     }
 
     MXS_INFO("Stopped %s client session [%lu]",
@@ -510,10 +442,7 @@ static void
 session_final_free(SESSION *session)
 {
     /* We never free the actual session, it is available for reuse*/
-    spinlock_acquire(&session_spin);
-    session->ses_is_in_use = false;
-    freeSessionCount++;
-    spinlock_release(&session_spin);
+    list_free_entry(&SESSIONlist, (list_entry_t *)session);
 }
 
 /**
@@ -525,21 +454,18 @@ session_final_free(SESSION *session)
 int
 session_isvalid(SESSION *session)
 {
-    SESSION *list_session;
     int rval = 0;
-
-    spinlock_acquire(&session_spin);
-    list_session = allSessions;
-    while (list_session)
+    list_entry_t *current = list_start_iteration(&SESSIONlist);
+    while (current)
     {
-        if (list_session->ses_is_in_use && list_session == session)
+        if ((SESSION *)current == session)
         {
             rval = 1;
+            list_terminate_iteration_early(&SESSIONlist, current);
             break;
         }
-        list_session = list_session->next;
+        current = list_iterate(&SESSIONlist, current);
     }
-    spinlock_release(&session_spin);
 
     return rval;
 }
@@ -572,19 +498,12 @@ printSession(SESSION *session)
 void
 printAllSessions()
 {
-    SESSION *list_session;
-
-    spinlock_acquire(&session_spin);
-    list_session = allSessions;
-    while (list_session)
+    list_entry_t *current = list_start_iteration(&SESSIONlist);
+    while (current)
     {
-        if (list_session->ses_is_in_use)
-        {
-            printSession(list_session);
-        }
-        list_session = list_session->next;
+        printSession((SESSION *)current);
+        current = list_iterate(&SESSIONlist, current);
     }
-    spinlock_release(&session_spin);
 }
 
 
@@ -597,19 +516,14 @@ printAllSessions()
 void
 CheckSessions()
 {
-    SESSION *list_session;
+    list_entry_t *current;
     int noclients = 0;
     int norouter = 0;
 
-    spinlock_acquire(&session_spin);
-    list_session = allSessions;
-    while (list_session)
+    current = list_start_iteration(&SESSIONlist);
+    while (current)
     {
-        if (false == list_session->ses_is_in_use)
-        {
-            list_session = list_session->next;
-            continue;
-        }
+        SESSION *list_session = (SESSION *)current;
         if (list_session->state != SESSION_STATE_LISTENER ||
             list_session->state != SESSION_STATE_LISTENER_STOPPED)
         {
@@ -624,22 +538,16 @@ CheckSessions()
                 noclients++;
             }
         }
-        list_session = list_session->next;
+        current = list_iterate(&SESSIONlist, current);
     }
-    spinlock_release(&session_spin);
     if (noclients)
     {
         printf("%d Sessions have no clients\n", noclients);
     }
-    spinlock_acquire(&session_spin);
-    list_session = allSessions;
-    while (list_session)
+    current = list_start_iteration(&SESSIONlist);
+    while (current)
     {
-        if (false == list_session->ses_is_in_use)
-        {
-            list_session = list_session->next;
-            continue;
-        }
+        SESSION *list_session = (SESSION *)current;
         if (list_session->state != SESSION_STATE_LISTENER ||
             list_session->state != SESSION_STATE_LISTENER_STOPPED)
         {
@@ -654,13 +562,23 @@ CheckSessions()
                 norouter++;
             }
         }
-        list_session = list_session->next;
+        current = list_iterate(&SESSIONlist, current);
     }
-    spinlock_release(&session_spin);
     if (norouter)
     {
         printf("%d Sessions have no router session\n", norouter);
     }
+}
+
+/*
+ * @brief Print session list statistics
+ *
+ * @param       pdcb    DCB to print results to
+ */
+void
+dprintSessionList(DCB *pdcb)
+{
+    dprintListStats(pdcb, &SESSIONlist, "All Sessions");
 }
 
 /**
@@ -674,24 +592,14 @@ CheckSessions()
 void
 dprintAllSessions(DCB *dcb)
 {
-    SESSION *list_session;
 
-    spinlock_acquire(&session_spin);
-    list_session = allSessions;
-    while (list_session)
+    list_entry_t *current = list_start_iteration(&SESSIONlist);
+    while (current)
     {
-        if (false == list_session->ses_is_in_use)
-        {
-            list_session = list_session->next;
-            continue;
-        }
-
-        dprintSession(dcb, list_session);
-
-        list_session = list_session->next;
+        dprintSession(dcb, (SESSION *)current);
+        current = list_iterate(&SESSIONlist, current);
     }
-    spinlock_release(&session_spin);
-}
+ }
 
 /**
  * Print a particular session to a DCB
@@ -705,6 +613,10 @@ dprintAllSessions(DCB *dcb)
 void
 dprintSession(DCB *dcb, SESSION *print_session)
 {
+    struct tm result;
+    char buf[30];
+    int i;
+
     dcb_printf(dcb, "Session %lu (%p)\n", print_session->ses_id, print_session);
     dcb_printf(dcb, "\tState:               %s\n", session_state(print_session->state));
     dcb_printf(dcb, "\tService:             %s (%p)\n", print_session->service->name, print_session->service);
@@ -712,28 +624,24 @@ dprintSession(DCB *dcb, SESSION *print_session)
 
     if (print_session->client_dcb && print_session->client_dcb->remote)
     {
-        dcb_printf(dcb, "\tClient Address:      %s%s%s\n",
-                   print_session->client_dcb->user ? print_session->client_dcb->user : "",
-                   print_session->client_dcb->user ? "@" : "",
-                   print_session->client_dcb->remote);
-    }
-
-    struct tm result;
-    char buf[30];
-
-    dcb_printf(dcb, "\tConnected:           %s", // asctime inserts newline.
-               asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
-
-    if (print_session->client_dcb && print_session->client_dcb->state == DCB_STATE_POLLING)
-    {
         double idle = (hkheartbeat - print_session->client_dcb->last_read);
-        idle = idle > 0 ? idle / 10.f : 0;
-        dcb_printf(dcb, "\tIdle:                %.0f seconds\n", idle);
+        idle = idle > 0 ? idle/10.f : 0;
+        dcb_printf(dcb, "\tClient Address:          %s%s%s\n",
+                   print_session->client_dcb->user?print_session->client_dcb->user:"",
+                   print_session->client_dcb->user?"@":"",
+                   print_session->client_dcb->remote);
+        dcb_printf(dcb, "\tConnected:               %s\n",
+                   asctime_r(localtime_r(&print_session->stats.connect, &result), buf));
+        if (print_session->client_dcb->state == DCB_STATE_POLLING)
+        {
+            dcb_printf(dcb, "\tIdle:                %.0f seconds\n",idle);
+        }
+
     }
 
     if (print_session->n_filters)
     {
-        for (int i = 0; i < print_session->n_filters; i++)
+        for (i = 0; i < print_session->n_filters; i++)
         {
             dcb_printf(dcb, "\tFilter: %s\n",
                        print_session->filters[i].filter->name);
@@ -755,36 +663,32 @@ dprintSession(DCB *dcb, SESSION *print_session)
 void
 dListSessions(DCB *dcb)
 {
-    SESSION *list_session;
-
-    spinlock_acquire(&session_spin);
-    list_session = allSessions;
-    if (list_session)
+    bool written_heading = false;
+    list_entry_t *current = list_start_iteration(&SESSIONlist);
+    if (current)
     {
         dcb_printf(dcb, "Sessions.\n");
         dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
         dcb_printf(dcb, "Session          | Client          | Service        | State\n");
         dcb_printf(dcb, "-----------------+-----------------+----------------+--------------------------\n");
+        written_heading = true;
     }
-    while (list_session)
+    while (current)
     {
-        if (list_session->ses_is_in_use)
-        {
-            dcb_printf(dcb, "%-16p | %-15s | %-14s | %s\n", list_session,
-                       ((list_session->client_dcb && list_session->client_dcb->remote)
-                        ? list_session->client_dcb->remote : ""),
-                       (list_session->service && list_session->service->name ? list_session->service->name
-                        : ""),
-                       session_state(list_session->state));
-        }
-        list_session = list_session->next;
+        SESSION *list_session = (SESSION *)current;
+        dcb_printf(dcb, "%-16p | %-15s | %-14s | %s\n", list_session,
+                ((list_session->client_dcb && list_session->client_dcb->remote)
+                ? list_session->client_dcb->remote : ""),
+                (list_session->service && list_session->service->name ? list_session->service->name
+                : ""),
+                session_state(list_session->state));
+        current = list_iterate(&SESSIONlist, current);
     }
-    if (allSessions)
+    if (written_heading)
     {
         dcb_printf(dcb,
                    "-----------------+-----------------+----------------+--------------------------\n\n");
     }
-    spinlock_release(&session_spin);
 }
 
 /**
@@ -821,20 +725,25 @@ session_state(session_state_t state)
     }
 }
 
+/*
+ * @brief Find the session that relates to a given router session
+ *
+ * @param rses      A router session
+ * @return      The related session, or NULL if none
+ */
 SESSION* get_session_by_router_ses(void* rses)
 {
-    SESSION* ses = allSessions;
-
-    while (((ses->ses_is_in_use == false) || (ses->router_session != rses)) && ses->next != NULL)
+    list_entry_t *current = list_start_iteration(&SESSIONlist);
+    while (current)
     {
-        ses = ses->next;
+        if (((SESSION *)current)->router_session == rses)
+        {
+            list_terminate_iteration_early(&SESSIONlist, current);
+            return (SESSION *)current;
+        }
+        current = list_iterate(&SESSIONlist, current);
     }
-
-    if (ses->ses_is_in_use == false || ses->router_session != rses)
-    {
-        ses = NULL;
-    }
-    return ses;
+    return NULL;
 }
 
 
@@ -858,11 +767,9 @@ session_setup_filters(SESSION *session)
     UPSTREAM *tail;
     int i;
 
-    if ((session->filters = calloc(service->n_filters,
-                                   sizeof(SESSION_FILTER))) == NULL)
+    if ((session->filters = MXS_CALLOC(service->n_filters,
+                                       sizeof(SESSION_FILTER))) == NULL)
     {
-        MXS_ERROR("Insufficient memory to allocate session filter "
-                  "tracking.\n");
         return 0;
     }
     session->n_filters = service->n_filters;
@@ -886,7 +793,7 @@ session_setup_filters(SESSION *session)
         session->filters[i].session = head->session;
         session->filters[i].instance = head->instance;
         session->head = *head;
-        free(head);
+        MXS_FREE(head);
     }
 
     for (i = 0; i < service->n_filters; i++)
@@ -909,7 +816,7 @@ session_setup_filters(SESSION *session)
         if (tail != &session->tail)
         {
             session->tail = *tail;
-            free(tail);
+            MXS_FREE(tail);
         }
     }
 
@@ -984,14 +891,6 @@ session_getUser(SESSION *session)
 {
     return (session && session->client_dcb) ? session->client_dcb->user : NULL;
 }
-/**
- * Return the pointer to the list of all sessions.
- * @return Pointer to the list of all sessions.
- */
-SESSION *get_all_sessions()
-{
-    return allSessions;
-}
 
 /**
  * Enable the timing out of idle connections.
@@ -1016,24 +915,22 @@ void process_idle_sessions()
     {
         if (hkheartbeat >= next_timeout_check)
         {
+            list_entry_t *current = list_start_iteration(&SESSIONlist);
             /** Because the resolution of the timeout is one second, we only need to
              * check for it once per second. One heartbeat is 100 milliseconds. */
             next_timeout_check = hkheartbeat + 10;
-            spinlock_acquire(&session_spin);
-            SESSION *all_session = allSessions;
-
-            while (all_session)
+            while (current)
             {
-                if (all_session->ses_is_in_use &&
-                    all_session->service && all_session->client_dcb && all_session->client_dcb->state == DCB_STATE_POLLING &&
+                SESSION *all_session = (SESSION *)current;
+
+                if (all_session->service && all_session->client_dcb && all_session->client_dcb->state == DCB_STATE_POLLING &&
                     hkheartbeat - all_session->client_dcb->last_read > all_session->service->conn_idle_timeout * 10)
                 {
                     dcb_close(all_session->client_dcb);
                 }
 
-                all_session = all_session->next;
+                current = list_iterate(&SESSIONlist, current);
             }
-            spinlock_release(&session_spin);
         }
         spinlock_release(&timeout_lock);
     }
@@ -1060,60 +957,72 @@ sessionRowCallback(RESULTSET *set, void *data)
 {
     SESSIONFILTER *cbdata = (SESSIONFILTER *)data;
     int i = 0;
-    char buf[20];
-    RESULT_ROW *row;
-    SESSION *list_session;
+    list_entry_t *current = list_start_iteration(&SESSIONlist);
 
-    spinlock_acquire(&session_spin);
-    list_session = allSessions;
     /* Skip to the first non-listener if not showing listeners */
-    while (false == list_session->ses_is_in_use ||
-           (list_session && cbdata->filter == SESSION_LIST_CONNECTION &&
-            list_session->state == SESSION_STATE_LISTENER))
+    current = skip_maybe_to_next_non_listener(current, cbdata->filter);
+
+    while (i < cbdata->index && current)
     {
-        list_session = list_session->next;
-    }
-    while (i < cbdata->index && list_session)
-    {
-        if (list_session->ses_is_in_use)
+        if (cbdata->filter == SESSION_LIST_ALL ||
+            (cbdata->filter == SESSION_LIST_CONNECTION &&
+            ((SESSION *)current)->state !=  SESSION_STATE_LISTENER))
         {
-            if (cbdata->filter == SESSION_LIST_CONNECTION &&
-                list_session->state !=  SESSION_STATE_LISTENER)
-            {
-                i++;
-            }
-            else if (cbdata->filter == SESSION_LIST_ALL)
-            {
-                i++;
-            }
+            i++;
         }
-        list_session = list_session->next;
+        current = list_iterate(&SESSIONlist, current);
     }
+
     /* Skip to the next non-listener if not showing listeners */
-    while (list_session && (false == list_session->ses_is_in_use ||
-                            (cbdata->filter == SESSION_LIST_CONNECTION &&
-                             list_session->state == SESSION_STATE_LISTENER)))
+    current = skip_maybe_to_next_non_listener(current, cbdata->filter);
+
+    if (NULL == current)
     {
-        list_session = list_session->next;
-    }
-    if (list_session == NULL)
-    {
-        spinlock_release(&session_spin);
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
-    cbdata->index++;
-    row = resultset_make_row(set);
-    snprintf(buf,19, "%p", list_session);
-    buf[19] = '\0';
-    resultset_row_set(row, 0, buf);
-    resultset_row_set(row, 1, ((list_session->client_dcb && list_session->client_dcb->remote)
+    else
+    {
+        char buf[20];
+        RESULT_ROW *row;
+        SESSION *list_session = (SESSION *)current;
+
+        cbdata->index++;
+        row = resultset_make_row(set);
+        snprintf(buf,19, "%p", list_session);
+        buf[19] = '\0';
+        resultset_row_set(row, 0, buf);
+        resultset_row_set(row, 1, ((list_session->client_dcb && list_session->client_dcb->remote)
                                ? list_session->client_dcb->remote : ""));
-    resultset_row_set(row, 2, (list_session->service && list_session->service->name
+        resultset_row_set(row, 2, (list_session->service && list_session->service->name
                                ? list_session->service->name : ""));
-    resultset_row_set(row, 3, session_state(list_session->state));
-    spinlock_release(&session_spin);
-    return row;
+        resultset_row_set(row, 3, session_state(list_session->state));
+        list_terminate_iteration_early(&SESSIONlist, current);
+        return row;
+    }
+}
+
+/*
+ * @brief   Skip to the next non-listener session, if not showing listeners
+ *
+ * Based on a test of the filter that is the second parameter, along with the
+ * state of the sessions.
+ *
+ * @param       current The session to start the possible skipping
+ * @param       filter  The filter the defines the operation
+ *
+ * @result      The first session beyond those skipped, or the starting session;
+ *              NULL if the list of sessions is exhausted.
+ */
+static list_entry_t *skip_maybe_to_next_non_listener(list_entry_t *current, SESSIONLISTFILTER filter)
+{
+    /* Skip to the first non-listener if not showing listeners */
+    while (current && filter == SESSION_LIST_CONNECTION &&
+        ((SESSION *)current)->state == SESSION_STATE_LISTENER)
+    {
+        current = list_iterate(&SESSIONlist, current);
+    }
+    return current;
 }
 
 /**
@@ -1133,7 +1042,7 @@ sessionGetList(SESSIONLISTFILTER filter)
     RESULTSET *set;
     SESSIONFILTER *data;
 
-    if ((data = (SESSIONFILTER *)malloc(sizeof(SESSIONFILTER))) == NULL)
+    if ((data = (SESSIONFILTER *)MXS_MALLOC(sizeof(SESSIONFILTER))) == NULL)
     {
         return NULL;
     }
@@ -1141,7 +1050,7 @@ sessionGetList(SESSIONLISTFILTER filter)
     data->filter = filter;
     if ((set = resultset_create(sessionRowCallback, data)) == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     resultset_add_column(set, "Session", 16, COL_TYPE_VARCHAR);

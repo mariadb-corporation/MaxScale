@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -19,6 +19,7 @@
 #include <mysql_client_server_protocol.h>
 #include <gwdirs.h>
 #include <random_jkiss.h>
+#include <maxscale/alloc.h>
 
 #include "gw.h"
 
@@ -53,30 +54,53 @@ secrets_random_str(unsigned char *output, int len)
 static MAXKEYS *
 secrets_readKeys(const char* path)
 {
-    char secret_file[PATH_MAX + 1];
-    char *home;
+    static const char NAME[] = ".secrets";
+    char secret_file[PATH_MAX + 1 + sizeof(NAME)]; // Worst case: maximum path + "/" + name.
     MAXKEYS *keys;
     struct stat secret_stats;
-    int fd;
-    int len;
     static int reported = 0;
 
     if (path != NULL)
     {
-        snprintf(secret_file, PATH_MAX, "%s", path);
-
-        char *file;
-        if ((file = strrchr(secret_file, '.')) == NULL || strcmp(file, ".secrets") != 0)
+        size_t len = strlen(path);
+        if (len > PATH_MAX)
         {
-            /** This is a possible path to a directory */
-            strncat(secret_file, "/.secrets", PATH_MAX);
+            MXS_ERROR("Too long (%lu > %d) path provided.", len, PATH_MAX);
+            return NULL;
+        }
+
+        if (stat(path, &secret_stats) == 0)
+        {
+            if (S_ISDIR(secret_stats.st_mode))
+            {
+                sprintf(secret_file, "%s/%s", path, NAME);
+            }
+            else
+            {
+                // If the provided path does not refer to a directory, then the
+                // file name *must* be ".secrets".
+                char *file;
+                if ((file = strrchr(secret_file, '.')) == NULL || strcmp(file, NAME) != 0)
+                {
+                    MXS_ERROR("The name of the secrets file must be \"%s\".", NAME);
+                    return NULL;
+                }
+            }
+        }
+        else
+        {
+            char errbuf[STRERROR_BUFLEN];
+            MXS_ERROR("The provided path \"%s\" does not exist or cannot be accessed. "
+                      "Error: %d, %s.", path, errno, strerror_r(errno, errbuf, sizeof(errbuf)));
+            return NULL;
         }
 
         clean_up_pathname(secret_file);
     }
     else
     {
-        snprintf(secret_file, PATH_MAX, "%s/.secrets", get_datadir());
+        // We assume that get_datadir() returns a path shorter than PATH_MAX.
+        sprintf(secret_file, "%s/%s", get_datadir(), NAME);
     }
     /* Try to access secrets file */
     if (access(secret_file, R_OK) == -1)
@@ -108,7 +132,8 @@ secrets_readKeys(const char* path)
     }
 
     /* open secret file */
-    if ((fd = open(secret_file, O_RDONLY)) < 0)
+    int fd = open(secret_file, O_RDONLY);
+    if (fd < 0)
     {
         int eno = errno;
         errno = 0;
@@ -159,10 +184,9 @@ secrets_readKeys(const char* path)
         return NULL;
     }
 
-    if ((keys = (MAXKEYS *) malloc(sizeof(MAXKEYS))) == NULL)
+    if ((keys = (MAXKEYS *) MXS_MALLOC(sizeof(MAXKEYS))) == NULL)
     {
         close(fd);
-        MXS_ERROR("Memory allocation failed for key structure.");
         return NULL;
     }
 
@@ -170,17 +194,17 @@ secrets_readKeys(const char* path)
      * Read all data from file.
      * MAXKEYS (secrets.h) is struct for key, _not_ length-related macro.
      */
-    len = read(fd, keys, sizeof(MAXKEYS));
+    ssize_t len = read(fd, keys, sizeof(MAXKEYS));
 
     if (len != sizeof(MAXKEYS))
     {
         int eno = errno;
         errno = 0;
         close(fd);
-        free(keys);
+        MXS_FREE(keys);
         char errbuf[STRERROR_BUFLEN];
         MXS_ERROR("Read from secrets file "
-                  "%s failed. Read %d, expected %d bytes. Error %d, %s.",
+                  "%s failed. Read %ld, expected %d bytes. Error %d, %s.",
                   secret_file,
                   len,
                   (int)sizeof(MAXKEYS),
@@ -194,7 +218,7 @@ secrets_readKeys(const char* path)
     {
         int eno = errno;
         errno = 0;
-        free(keys);
+        MXS_FREE(keys);
         char errbuf[STRERROR_BUFLEN];
         MXS_ERROR("Failed closing the "
                   "secrets file %s. Error %d, %s.",
@@ -221,23 +245,23 @@ secrets_readKeys(const char* path)
  * This routine writes into a binary file the AES encryption key
  * and the AES Init Vector
  *
- * @param secret_file   The file with secret keys
+ * @param dir The directory where the ".secrets" file should be created.
  * @return 0 on success and 1 on failure
  */
-int secrets_writeKeys(const char *path)
+int secrets_writeKeys(const char *dir)
 {
     int fd, randfd;
     unsigned int randval;
     MAXKEYS key;
     char secret_file[PATH_MAX + 10];
 
-    if (strlen(path) > PATH_MAX)
+    if (strlen(dir) > PATH_MAX)
     {
         MXS_ERROR("Pathname too long.");
         return 1;
     }
 
-    snprintf(secret_file, PATH_MAX + 9, "%s/.secrets", path);
+    snprintf(secret_file, PATH_MAX + 9, "%s/.secrets", dir);
     clean_up_pathname(secret_file);
 
     /* Open for writing | Create | Truncate the file for writing */
@@ -321,7 +345,7 @@ int secrets_writeKeys(const char *path)
  * Note the return is always a malloc'd string that the caller must free
  *
  * @param crypt The encrypted password
- * @return  The decrypted password
+ * @return  The decrypted password or NULL if allocation failure.
  */
 char *
 decryptPassword(const char *crypt)
@@ -336,7 +360,7 @@ decryptPassword(const char *crypt)
     keys = secrets_readKeys(NULL);
     if (!keys)
     {
-        return strdup(crypt);
+        return MXS_STRDUP(crypt);
     }
     /*
     ** If the input is not a HEX string return the input
@@ -346,24 +370,24 @@ decryptPassword(const char *crypt)
     {
         if (!isxdigit(*ptr))
         {
-            free(keys);
-            return strdup(crypt);
+            MXS_FREE(keys);
+            return MXS_STRDUP(crypt);
         }
     }
 
     enlen = strlen(crypt) / 2;
     gw_hex2bin(encrypted, crypt, strlen(crypt));
 
-    if ((plain = (unsigned char *) malloc(80)) == NULL)
+    if ((plain = (unsigned char *) MXS_MALLOC(80)) == NULL)
     {
-        free(keys);
+        MXS_FREE(keys);
         return NULL;
     }
 
     AES_set_decrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
     AES_cbc_encrypt(encrypted, plain, enlen, &aeskey, keys->initvector, AES_DECRYPT);
-    free(keys);
+    MXS_FREE(keys);
 
     return (char *) plain;
 }
@@ -383,24 +407,27 @@ encryptPassword(const char* path, const char *password)
     AES_KEY aeskey;
     int padded_len;
     char *hex_output;
-    unsigned char padded_passwd[80];
-    unsigned char encrypted[80];
+    unsigned char padded_passwd[MXS_PASSWORD_MAXLEN + 1];
+    unsigned char encrypted[MXS_PASSWORD_MAXLEN + 1];
 
     if ((keys = secrets_readKeys(path)) == NULL)
     {
         return NULL;
     }
 
-    memset(padded_passwd, 0, 80);
-    strncpy((char *) padded_passwd, password, 79);
-    padded_len = ((strlen(password) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
+    memset(padded_passwd, 0, MXS_PASSWORD_MAXLEN + 1);
+    strncpy((char *) padded_passwd, password, MXS_PASSWORD_MAXLEN);
+    padded_len = ((strlen((char*)padded_passwd) / AES_BLOCK_SIZE) + 1) * AES_BLOCK_SIZE;
 
     AES_set_encrypt_key(keys->enckey, 8 * MAXSCALE_KEYLEN, &aeskey);
 
     AES_cbc_encrypt(padded_passwd, encrypted, padded_len, &aeskey, keys->initvector, AES_ENCRYPT);
-    hex_output = (char *) malloc(padded_len * 2);
-    gw_bin2hex(hex_output, encrypted, padded_len);
-    free(keys);
+    hex_output = (char *) MXS_MALLOC(padded_len * 2);
+    if (hex_output)
+    {
+        gw_bin2hex(hex_output, encrypted, padded_len);
+    }
+    MXS_FREE(keys);
 
     return hex_output;
 }

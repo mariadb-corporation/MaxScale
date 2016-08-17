@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -47,6 +47,7 @@
  */
 #include <gw_protocol.h>
 #include <skygw_utils.h>
+#include <maxscale/alloc.h>
 #include <log_manager.h>
 #include <mysql_client_server_protocol.h>
 #include <mysql_auth.h>
@@ -94,6 +95,7 @@ static int gw_read_normal_data(DCB *dcb, GWBUF *read_buffer, int nbytes_read);
 static int gw_read_finish_processing(DCB *dcb, GWBUF *read_buffer, uint8_t capabilities);
 extern char* create_auth_fail_str(char *username, char *hostaddr, char *sha1, char *db,int);
 static bool ensure_complete_packet(DCB *dcb, GWBUF **read_buffer, int nbytes_read);
+static void gw_process_one_new_client(DCB *client_dcb);
 
 /*
  * The "module object" for the mysqld client protocol module.
@@ -990,7 +992,8 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val)
         /** Send error 1049 to client */
         message_len = 25 + MYSQL_DATABASE_MAXLEN;
 
-        fail_str = calloc(1, message_len+1);
+        fail_str = MXS_CALLOC(1, message_len+1);
+        MXS_ABORT_IF_NULL(fail_str);
         snprintf(fail_str, message_len, "Unknown database '%s'",
         (char*)((MYSQL_session *)dcb->data)->db);
 
@@ -1046,7 +1049,7 @@ mysql_client_auth_error_handling(DCB *dcb, int auth_val)
             (char*)((MYSQL_session *)dcb->data)->db, auth_val);
         modutil_send_mysql_err_packet(dcb, packet_number, 0, 1045, "28000", fail_str);
     }
-    free(fail_str);
+    MXS_FREE(fail_str);
 }
 
 static int
@@ -1151,66 +1154,88 @@ int gw_MySQLAccept(DCB *listener)
 
     CHK_DCB(listener);
 
-    while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
+    if (DCB_STATE_WAITING == listener->state)
     {
-        CHK_DCB(client_dcb);
-        protocol = mysql_protocol_init(client_dcb, client_dcb->fd);
-
-        if (protocol == NULL)
+        gw_process_one_new_client(listener);
+    }
+    else
+    {
+        while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
         {
-            /** delete client_dcb */
-            dcb_close(client_dcb);
-            MXS_ERROR("%lu [gw_MySQLAccept] Failed to create "
-                      "protocol object for client connection.",
-                      pthread_self());
-            continue;
-        }
-        CHK_PROTOCOL(protocol);
-        client_dcb->protocol = protocol;
-        atomic_add(&client_dcb->service->client_count, 1);
-        //send handshake to the client_dcb
-        MySQLSendHandshake(client_dcb);
-
-        // client protocol state change
-        protocol->protocol_auth_state = MYSQL_AUTH_SENT;
-
-        /**
-         * Set new descriptor to event set. At the same time,
-         * change state to DCB_STATE_POLLING so that
-         * thread which wakes up sees correct state.
-         */
-        if (poll_add_dcb(client_dcb) == -1)
-        {
-            /* Send a custom error as MySQL command reply */
-            mysql_send_custom_error(client_dcb,
-                                    1,
-                                    0,
-                                    "MaxScale encountered system limit while "
-                                    "attempting to register on an epoll instance.");
-
-            /** close client_dcb */
-            dcb_close(client_dcb);
-
-            /** Previous state is recovered in poll_add_dcb. */
-            MXS_ERROR("%lu [gw_MySQLAccept] Failed to add dcb %p for "
-                      "fd %d to epoll set.",
-                      pthread_self(),
-                      client_dcb,
-                      client_dcb->fd);
-            continue;
-        }
-        else
-        {
-            MXS_DEBUG("%lu [gw_MySQLAccept] Added dcb %p for fd "
-                      "%d to epoll set.",
-                      pthread_self(),
-                      client_dcb,
-                      client_dcb->fd);
-        }
-    } /**< while client_dcb != NULL */
+            gw_process_one_new_client(client_dcb);
+        } /**< while client_dcb != NULL */
+    }
 
     /* Must have broken out of while loop or received NULL client_dcb */
     return 1;
+}
+
+static void gw_process_one_new_client(DCB *client_dcb)
+{
+    MySQLProtocol *protocol;
+
+    CHK_DCB(client_dcb);
+    protocol = mysql_protocol_init(client_dcb, client_dcb->fd);
+
+    if (protocol == NULL)
+    {
+        /** delete client_dcb */
+        dcb_close(client_dcb);
+        MXS_ERROR("%lu [gw_MySQLAccept] Failed to create "
+              "protocol object for client connection.",
+              pthread_self());
+        return;
+    }
+    CHK_PROTOCOL(protocol);
+    client_dcb->protocol = protocol;
+    if (DCB_STATE_WAITING == client_dcb->state)
+    {
+        client_dcb->state = DCB_STATE_ALLOC;
+    }
+    else
+    {
+        atomic_add(&client_dcb->service->client_count, 1);
+    }
+    //send handshake to the client_dcb
+    MySQLSendHandshake(client_dcb);
+
+    // client protocol state change
+    protocol->protocol_auth_state = MYSQL_AUTH_SENT;
+
+    /**
+     * Set new descriptor to event set. At the same time,
+     * change state to DCB_STATE_POLLING so that
+     * thread which wakes up sees correct state.
+     */
+    if (poll_add_dcb(client_dcb) == -1)
+    {
+        /* Send a custom error as MySQL command reply */
+        mysql_send_custom_error(client_dcb,
+                    1,
+                    0,
+                    "MaxScale encountered system limit while "
+                    "attempting to register on an epoll instance.");
+
+        /** close client_dcb */
+        dcb_close(client_dcb);
+
+        /** Previous state is recovered in poll_add_dcb. */
+        MXS_ERROR("%lu [gw_MySQLAccept] Failed to add dcb %p for "
+              "fd %d to epoll set.",
+              pthread_self(),
+              client_dcb,
+              client_dcb->fd);
+        return;
+    }
+    else
+    {
+        MXS_DEBUG("%lu [gw_MySQLAccept] Added dcb %p for fd "
+              "%d to epoll set.",
+              pthread_self(),
+              client_dcb,
+              client_dcb->fd);
+    }
+    return;
 }
 
 static int gw_error_client_event(DCB* dcb)

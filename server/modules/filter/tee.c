@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -58,6 +58,8 @@
 #include <maxscale/poll.h>
 #include <mysql_client_server_protocol.h>
 #include <housekeeper.h>
+#include <maxscale/alloc.h>
+#include <listmanager.h>
 
 #define MYSQL_COM_QUIT                  0x01
 #define MYSQL_COM_INITDB                0x02
@@ -209,6 +211,8 @@ int route_single_query(TEE_INSTANCE* my_instance,
 int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer);
 void create_orphan(SESSION* ses);
 
+extern LIST_CONFIG SESSIONlist;
+
 static void
 orphan_free(void* data)
 {
@@ -293,8 +297,8 @@ orphan_free(void* data)
             tmp->session->router_session);
 
         tmp->session->state = SESSION_STATE_FREE;
-        free(tmp->session);
-        free(tmp);
+        list_free_entry(&SESSIONlist, (list_entry_t*)tmp->session);
+        MXS_FREE(tmp);
     }
 
 #ifdef SS_DEBUG
@@ -358,7 +362,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
     TEE_INSTANCE *my_instance;
     int i;
 
-    if ((my_instance = calloc(1, sizeof(TEE_INSTANCE))) != NULL)
+    if ((my_instance = MXS_CALLOC(1, sizeof(TEE_INSTANCE))) != NULL)
     {
         if (options)
         {
@@ -384,19 +388,19 @@ createInstance(char **options, FILTER_PARAMETER **params)
                 }
                 else if (!strcmp(params[i]->name, "match"))
                 {
-                    my_instance->match = strdup(params[i]->value);
+                    my_instance->match = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!strcmp(params[i]->name, "exclude"))
                 {
-                    my_instance->nomatch = strdup(params[i]->value);
+                    my_instance->nomatch = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!strcmp(params[i]->name, "source"))
                 {
-                    my_instance->source = strdup(params[i]->value);
+                    my_instance->source = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!strcmp(params[i]->name, "user"))
                 {
-                    my_instance->userName = strdup(params[i]->value);
+                    my_instance->userName = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!filter_standard_parameter(params[i]->name))
                 {
@@ -434,9 +438,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         if (my_instance->service == NULL)
         {
-            free(my_instance->match);
-            free(my_instance->source);
-            free(my_instance);
+            MXS_FREE(my_instance->match);
+            MXS_FREE(my_instance->source);
+            MXS_FREE(my_instance);
             return NULL;
         }
 
@@ -446,10 +450,10 @@ createInstance(char **options, FILTER_PARAMETER **params)
             MXS_ERROR("tee: Invalid regular expression '%s'"
                       " for the match parameter.",
                       my_instance->match);
-            free(my_instance->match);
-            free(my_instance->nomatch);
-            free(my_instance->source);
-            free(my_instance);
+            MXS_FREE(my_instance->match);
+            MXS_FREE(my_instance->nomatch);
+            MXS_FREE(my_instance->source);
+            MXS_FREE(my_instance);
             return NULL;
         }
         if (my_instance->nomatch &&
@@ -461,11 +465,11 @@ createInstance(char **options, FILTER_PARAMETER **params)
             if (my_instance->match)
             {
                 regfree(&my_instance->re);
-                free(my_instance->match);
+                MXS_FREE(my_instance->match);
             }
-            free(my_instance->nomatch);
-            free(my_instance->source);
-            free(my_instance);
+            MXS_FREE(my_instance->nomatch);
+            MXS_FREE(my_instance->source);
+            MXS_FREE(my_instance);
             return NULL;
         }
     }
@@ -496,7 +500,7 @@ newSession(FILTER *instance, SESSION *session)
         goto retblock;
     }
 
-    HASHTABLE* ht = hashtable_alloc(100, simple_str_hash, strcmp);
+    HASHTABLE* ht = hashtable_alloc(100, hashtable_item_strhash, hashtable_item_strcmp);
     bool is_loop = detect_loops(my_instance, ht, session->service);
     hashtable_free(ht);
 
@@ -508,7 +512,7 @@ newSession(FILTER *instance, SESSION *session)
         goto retblock;
     }
 
-    if ((my_session = calloc(1, sizeof(TEE_SESSION))) != NULL)
+    if ((my_session = MXS_CALLOC(1, sizeof(TEE_SESSION))) != NULL)
     {
         my_session->active = 1;
         my_session->residual = 0;
@@ -597,7 +601,7 @@ newSession(FILTER *instance, SESSION *session)
                 filter_free(dummy);
                 closeSession(instance, (void*) my_session);
                 dcb_close(dcb);
-                free(my_session);
+                MXS_FREE(my_session);
                 MXS_ERROR("tee: Allocating memory for"
                           "dummy upstream failed."
                           " Terminating session.");
@@ -608,7 +612,7 @@ newSession(FILTER *instance, SESSION *session)
             ses->tail = *dummy_upstream;
             MySQLProtocol* protocol = (MySQLProtocol*) session->client_dcb->protocol;
             my_session->use_ok = protocol->client_capabilities & (1 << 6);
-            free(dummy_upstream);
+            MXS_FREE(dummy_upstream);
         }
     }
 retblock:
@@ -707,7 +711,7 @@ freeSession(FILTER *instance, void *session)
                 ses->router_session);
             /** Free memory of branch client session */
             ses->state = SESSION_STATE_FREE;
-            free(ses);
+            MXS_FREE(ses);
             /** This indicates that branch session is not available anymore */
             my_session->branch_session = NULL;
         }
@@ -724,7 +728,7 @@ freeSession(FILTER *instance, void *session)
     {
         gwbuf_free(my_session->tee_replybuf);
     }
-    free(session);
+    MXS_FREE(session);
 
     orphan_free(NULL);
 
@@ -1248,7 +1252,7 @@ GWBUF* clone_query(TEE_INSTANCE* my_instance, TEE_SESSION* my_session, GWBUF* bu
                 clone = gwbuf_clone_all(buffer);
                 my_session->residual = residual;
             }
-            free(ptr);
+            MXS_FREE(ptr);
         }
         else if (packet_is_required(buffer))
         {
@@ -1357,14 +1361,8 @@ int reset_session_state(TEE_SESSION* my_session, GWBUF* buffer)
 
 void create_orphan(SESSION* ses)
 {
-    orphan_session_t* orphan;
-    if ((orphan = malloc(sizeof(orphan_session_t))) == NULL)
-    {
-        MXS_ERROR("Failed to "
-                  "allocate memory for orphan session struct, "
-                  "child session might leak memory.");
-    }
-    else
+    orphan_session_t* orphan = MXS_MALLOC(sizeof(orphan_session_t));
+    if (orphan)
     {
         orphan->session = ses;
         spinlock_acquire(&orphanLock);

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <sys/epoll.h>
 #include <errno.h>
+#include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <dcb.h>
 #include <atomic.h>
@@ -69,6 +70,7 @@ int max_poll_sleep;
  * 07/07/15     Martin Brampton Simplified add and remove DCB, improve error handling.
  * 23/08/15     Martin Brampton Added test so only DCB with a session link can be added to the poll list
  * 07/02/16     Martin Brampton Added a small piece of SSL logic to EPOLLIN
+ * 15/06/16     Martin Brampton Changed ts_stats_add to inline ts_stats_increment
  *
  * @endverbatim
  */
@@ -213,14 +215,16 @@ poll_init()
     }
     if ((epoll_fd = epoll_create(MAX_EVENTS)) == -1)
     {
-        perror("epoll_create");
+        char errbuf[STRERROR_BUFLEN];
+        MXS_ERROR("FATAL: Could not create epoll instance: %s", strerror_r(errno, errbuf, sizeof(errbuf)));
         exit(-1);
     }
     memset(&pollStats, 0, sizeof(pollStats));
     memset(&queueStats, 0, sizeof(queueStats));
     bitmask_init(&poll_mask);
     n_threads = config_threadcount();
-    if ((thread_data = (THREAD_DATA *)malloc(n_threads * sizeof(THREAD_DATA))) != NULL)
+    thread_data = (THREAD_DATA *)MXS_MALLOC(n_threads * sizeof(THREAD_DATA));
+    if (thread_data);
     {
         for (i = 0; i < n_threads; i++)
         {
@@ -239,7 +243,7 @@ poll_init()
         (pollStats.n_nothreads = ts_stats_alloc()) == NULL ||
         (pollStats.blockingpolls = ts_stats_alloc()) == NULL)
     {
-        perror("Fatal error: Memory allocation failed.");
+        MXS_OOM_MESSAGE("FATAL: Could not allocate statistics data.");
         exit(-1);
     }
 
@@ -249,12 +253,14 @@ poll_init()
 
     hktask_add("Load Average", poll_loadav, NULL, POLL_LOAD_FREQ);
     n_avg_samples = 15 * 60 / POLL_LOAD_FREQ;
-    avg_samples = (double *)malloc(sizeof(double) * n_avg_samples);
+    avg_samples = (double *)MXS_MALLOC(sizeof(double) * n_avg_samples);
+    MXS_ABORT_IF_NULL(avg_samples);
     for (i = 0; i < n_avg_samples; i++)
     {
         avg_samples[i] = 0.0;
     }
-    evqp_samples = (int *)malloc(sizeof(int) * n_avg_samples);
+    evqp_samples = (int *)MXS_MALLOC(sizeof(int) * n_avg_samples);
+    MXS_ABORT_IF_NULL(evqp_samples);
     for (i = 0; i < n_avg_samples; i++)
     {
         evqp_samples[i] = 0.0;
@@ -556,8 +562,6 @@ poll_waitevents(void *arg)
     intptr_t thread_id = (intptr_t)arg;
     int poll_spins = 0;
 
-    ts_stats_set_thread_id(thread_id);
-
     /** Add this thread to the bitmask of running polling threads */
     bitmask_set(&poll_mask, thread_id);
     if (thread_data)
@@ -585,7 +589,7 @@ poll_waitevents(void *arg)
             thread_data[thread_id].state = THREAD_POLLING;
         }
 
-        ts_stats_add(pollStats.n_polls, 1);
+        ts_stats_increment(pollStats.n_polls, thread_id);
         if ((nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, 0)) == -1)
         {
             atomic_add(&n_waiting, -1);
@@ -608,7 +612,7 @@ poll_waitevents(void *arg)
          */
         else if (nfds == 0 && pollStats.evq_pending == 0 && poll_spins++ > number_poll_spins)
         {
-            ts_stats_add(pollStats.blockingpolls, 1);
+            ts_stats_increment(pollStats.blockingpolls, thread_id);
             nfds = epoll_wait(epoll_fd,
                               events,
                               MAX_EVENTS,
@@ -626,7 +630,7 @@ poll_waitevents(void *arg)
 
         if (n_waiting == 0)
         {
-            ts_stats_add(pollStats.n_nothreads, 1);
+            ts_stats_increment(pollStats.n_nothreads, thread_id);
         }
 #if MUTEX_EPOLL
         simple_mutex_unlock(&epoll_wait_mutex);
@@ -637,13 +641,13 @@ poll_waitevents(void *arg)
             timeout_bias = 1;
             if (poll_spins <= number_poll_spins + 1)
             {
-                ts_stats_add(pollStats.n_nbpollev, 1);
+                ts_stats_increment(pollStats.n_nbpollev, thread_id);
             }
             poll_spins = 0;
             MXS_DEBUG("%lu [poll_waitevents] epoll_wait found %d fds",
                       pthread_self(),
                       nfds);
-            ts_stats_add(pollStats.n_pollev, 1);
+            ts_stats_increment(pollStats.n_pollev, thread_id);
             if (thread_data)
             {
                 thread_data[thread_id].n_fds = nfds;
@@ -928,7 +932,7 @@ process_pollq(int thread_id)
 
         if (eno == 0)
         {
-            ts_stats_add(pollStats.n_write, 1);
+            ts_stats_increment(pollStats.n_write, thread_id);
             /** Read session id to thread's local storage */
             dcb_get_ses_log_info(dcb,
                                  &mxs_log_tls.li_sesid,
@@ -954,13 +958,13 @@ process_pollq(int thread_id)
     }
     if (ev & EPOLLIN)
     {
-        if (dcb->state == DCB_STATE_LISTENING)
+        if (dcb->state == DCB_STATE_LISTENING || dcb->state == DCB_STATE_WAITING)
         {
             MXS_DEBUG("%lu [poll_waitevents] "
                       "Accept in fd %d",
                       pthread_self(),
                       dcb->fd);
-            ts_stats_add(pollStats.n_accept, 1);
+            ts_stats_increment(pollStats.n_accept, thread_id);
             dcb_get_ses_log_info(dcb,
                                  &mxs_log_tls.li_sesid,
                                  &mxs_log_tls.li_enabled_priorities);
@@ -977,7 +981,7 @@ process_pollq(int thread_id)
                       pthread_self(),
                       dcb,
                       dcb->fd);
-            ts_stats_add(pollStats.n_read, 1);
+            ts_stats_increment(pollStats.n_read, thread_id);
             /** Read session id to thread's local storage */
             dcb_get_ses_log_info(dcb,
                                  &mxs_log_tls.li_sesid,
@@ -1027,7 +1031,7 @@ process_pollq(int thread_id)
                       eno,
                       strerror_r(eno, errbuf, sizeof(errbuf)));
         }
-        ts_stats_add(pollStats.n_error, 1);
+        ts_stats_increment(pollStats.n_error, thread_id);
         /** Read session id to thread's local storage */
         dcb_get_ses_log_info(dcb,
                              &mxs_log_tls.li_sesid,
@@ -1052,7 +1056,7 @@ process_pollq(int thread_id)
                   dcb->fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
-        ts_stats_add(pollStats.n_hup, 1);
+        ts_stats_increment(pollStats.n_hup, thread_id);
         spinlock_acquire(&dcb->dcb_initlock);
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
@@ -1088,7 +1092,7 @@ process_pollq(int thread_id)
                   dcb->fd,
                   eno,
                   strerror_r(eno, errbuf, sizeof(errbuf)));
-        ts_stats_add(pollStats.n_hup, 1);
+        ts_stats_increment(pollStats.n_hup, thread_id);
         spinlock_acquire(&dcb->dcb_initlock);
         if ((dcb->flags & DCBF_HUNG) == 0)
         {
@@ -1309,7 +1313,7 @@ event_to_string(uint32_t event)
 {
     char *str;
 
-    str = malloc(22);       // 22 is max returned string length
+    str = MXS_MALLOC(22);       // 22 is max returned string length
     if (str == NULL)
     {
         return NULL;
@@ -1479,7 +1483,7 @@ dShowThreads(DCB *dcb)
 
             if (from_heap)
             {
-                free(event_string);
+                MXS_FREE(event_string);
             }
         }
     }
@@ -1780,8 +1784,8 @@ dShowEventQ(DCB *pdcb)
                    dcb->evq.processing ? "Processing" : "Pending",
                    (tmp1 = event_to_string(dcb->evq.processing_events)),
                    (tmp2 = event_to_string(dcb->evq.pending_events)));
-        free(tmp1);
-        free(tmp2);
+        MXS_FREE(tmp1);
+        MXS_FREE(tmp2);
         dcb = dcb->evq.next;
     }
     while (dcb != eventq);
@@ -1870,7 +1874,7 @@ eventTimesRowCallback(RESULTSET *set, void *data)
 
     if (*rowno >= N_QUEUE_TIMES)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     row = resultset_make_row(set);
@@ -1911,14 +1915,14 @@ eventTimesGetList()
     RESULTSET *set;
     int *data;
 
-    if ((data = (int *)malloc(sizeof(int))) == NULL)
+    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
     {
         return NULL;
     }
     *data = 0;
     if ((set = resultset_create(eventTimesRowCallback, data)) == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     resultset_add_column(set, "Duration", 20, COL_TYPE_VARCHAR);

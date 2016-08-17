@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <maxscale/alloc.h>
+#include <log_manager.h>
 
 static MEMLOG *memlogs = NULL;
 static SPINLOCK memlock = SPINLOCK_INIT;
@@ -43,14 +45,18 @@ static SPINLOCK memlock = SPINLOCK_INIT;
 MEMLOG *
 memlog_create(char *name, MEMLOGTYPE type, int size)
 {
-    MEMLOG *log;
+    name = MXS_STRDUP(name);
 
-    if ((log = (MEMLOG *)malloc(sizeof(MEMLOG))) == NULL)
+    MEMLOG *log = (MEMLOG *)MXS_MALLOC(sizeof(MEMLOG));
+
+    if (!name || !log)
     {
+        MXS_FREE(name);
+        MXS_FREE(log);
         return NULL;
     }
 
-    log->name = strdup(name);
+    log->name = name;
     spinlock_init(&log->lock);
     log->type = type;
     log->offset = 0;
@@ -59,21 +65,22 @@ memlog_create(char *name, MEMLOGTYPE type, int size)
     switch (type)
     {
     case ML_INT:
-        log->values = malloc(sizeof(int) * size);
+        log->values = MXS_MALLOC(sizeof(int) * size);
         break;
     case ML_LONG:
-        log->values = malloc(sizeof(long) * size);
+        log->values = MXS_MALLOC(sizeof(long) * size);
         break;
     case ML_LONGLONG:
-        log->values = malloc(sizeof(long long) * size);
+        log->values = MXS_MALLOC(sizeof(long long) * size);
         break;
     case ML_STRING:
-        log->values = malloc(sizeof(char *) * size);
+        log->values = MXS_MALLOC(sizeof(char *) * size);
         break;
     }
     if (log->values == NULL)
     {
-        free(log);
+        MXS_FREE(name);
+        MXS_FREE(log);
         return NULL;
     }
     spinlock_acquire(&memlock);
@@ -98,7 +105,7 @@ memlog_destroy(MEMLOG *log)
     {
         memlog_flush(log);
     }
-    free(log->values);
+    MXS_FREE(log->values);
 
     spinlock_acquire(&memlock);
     if (memlogs == log)
@@ -118,8 +125,8 @@ memlog_destroy(MEMLOG *log)
         }
     }
     spinlock_release(&memlock);
-    free(log->name);
-    free(log);
+    MXS_FREE(log->name);
+    MXS_FREE(log);
 }
 
 /**

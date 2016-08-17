@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -21,6 +21,7 @@
 #include <platform.h>
 #include <query_classifier.h>
 #include <skygw_utils.h>
+#include <maxscale/alloc.h>
 #include "builtin_functions.h"
 
 //#define QC_TRACE_ENABLED
@@ -105,65 +106,6 @@ static thread_local struct
     sqlite3* db;      // Thread specific database handle.
     QC_SQLITE_INFO* info;
 } this_thread;
-
-
-/**
- * MaxScale allocation functions.
- *
- * In the environments where MaxScale runs, malloc and friends will not fail, but
- * in low-memory situations some process will be killed. These functions now
- * never return NULL, but abort the process should the allocation failed for some
- * unknown reason.
- */
-static void* mxs_malloc(size_t size)
-{
-    void* p = malloc(size);
-    if (!p)
-    {
-        raise(SIGABRT);
-    }
-
-    return p;
-}
-
-static void mxs_free(void* p)
-{
-    free(p);
-}
-
-static void* mxs_realloc(void* p, size_t size)
-{
-    p = realloc(p, size);
-    if (!p)
-    {
-        raise(SIGABRT);
-    }
-
-    return p;
-}
-
-static void* mxs_calloc(size_t n, size_t size)
-{
-    void* p = calloc(n, size);
-    if (!p)
-    {
-        raise(SIGABRT);
-    }
-
-    return p;
-}
-
-static char* mxs_strdup(const char* s1)
-{
-    char* s2 = strdup(s1);
-    if (!s2)
-    {
-        raise(SIGABRT);
-    }
-
-    return s2;
-}
-
 
 /**
  * HELPERS
@@ -262,13 +204,15 @@ static char** copy_string_array(char** strings, int* pn)
         ++(*pn);
     }
 
-    ss = (char**) mxs_malloc((*pn + 1) * sizeof(char*));
+    ss = (char**) MXS_MALLOC((*pn + 1) * sizeof(char*));
+    MXS_ABORT_IF_NULL(ss);
 
     ss[*pn] = 0;
 
     for (int i = 0; i < *pn; ++i)
     {
-        ss[i] = mxs_strdup(strings[i]);
+        ss[i] = MXS_STRDUP(strings[i]);
+        MXS_ABORT_IF_NULL(ss[i]);
     }
 
     return ss;
@@ -280,7 +224,8 @@ static void enlarge_string_array(size_t n, size_t len, char*** ppzStrings, size_
     {
         int capacity = *pCapacity ? *pCapacity * 2 : 4;
 
-        *ppzStrings = (char**) mxs_realloc(*ppzStrings, capacity * sizeof(char**));
+        *ppzStrings = (char**) MXS_REALLOC(*ppzStrings, capacity * sizeof(char**));
+        MXS_ABORT_IF_NULL(*ppzStrings);
         *pCapacity = capacity;
     }
 }
@@ -328,7 +273,8 @@ static QC_SQLITE_INFO* get_query_info(GWBUF* query)
 
 static QC_SQLITE_INFO* info_alloc(void)
 {
-    QC_SQLITE_INFO* info = mxs_malloc(sizeof(*info));
+    QC_SQLITE_INFO* info = MXS_MALLOC(sizeof(*info));
+    MXS_ABORT_IF_NULL(info);
 
     info_init(info);
 
@@ -618,7 +564,8 @@ static void append_affected_field(QC_SQLITE_INFO* info, const char* s)
             info->affected_fields_capacity *= 2;
         }
 
-        info->affected_fields = mxs_realloc(info->affected_fields, info->affected_fields_capacity);
+        info->affected_fields = MXS_REALLOC(info->affected_fields, info->affected_fields_capacity);
+        MXS_ABORT_IF_NULL(info->affected_fields);
     }
 
     if (info->affected_fields_len != 0)
@@ -878,7 +825,8 @@ static void update_affected_fields_from_select(QC_SQLITE_INFO* info,
 
 static void update_database_names(QC_SQLITE_INFO* info, const char* zDatabase)
 {
-    char* zCopy = mxs_strdup(zDatabase);
+    char* zCopy = MXS_STRDUP(zDatabase);
+    MXS_ABORT_IF_NULL(zCopy);
     exposed_sqlite3Dequote(zCopy);
 
     enlarge_string_array(1, info->database_names_len,
@@ -889,7 +837,8 @@ static void update_database_names(QC_SQLITE_INFO* info, const char* zDatabase)
 
 static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char* zTable)
 {
-    char* zCopy = mxs_strdup(zTable);
+    char* zCopy = MXS_STRDUP(zTable);
+    MXS_ABORT_IF_NULL(zCopy);
     exposed_sqlite3Dequote(zCopy);
 
     enlarge_string_array(1, info->table_names_len, &info->table_names, &info->table_names_capacity);
@@ -898,7 +847,8 @@ static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char
 
     if (zDatabase)
     {
-        zCopy = mxs_malloc(strlen(zDatabase) + 1 + strlen(zTable) + 1);
+        zCopy = MXS_MALLOC(strlen(zDatabase) + 1 + strlen(zTable) + 1);
+        MXS_ABORT_IF_NULL(zCopy);
 
         strcpy(zCopy, zDatabase);
         strcat(zCopy, ".");
@@ -909,7 +859,8 @@ static void update_names(QC_SQLITE_INFO* info, const char* zDatabase, const char
     }
     else
     {
-        zCopy = mxs_strdup(zCopy);
+        zCopy = MXS_STRDUP(zCopy);
+        MXS_ABORT_IF_NULL(zCopy);
     }
 
     enlarge_string_array(1, info->table_fullnames_len,
@@ -1399,7 +1350,8 @@ void mxs_sqlite3StartTable(Parse *pParse,   /* Parser context */
             update_names(info, NULL, name);
         }
 
-        info->created_table_name = mxs_strdup(info->table_names[0]);
+        info->created_table_name = MXS_STRDUP(info->table_names[0]);
+        MXS_ABORT_IF_NULL(info->created_table_name);
     }
     else
     {
@@ -2607,7 +2559,8 @@ static char* qc_sqlite_get_created_table_name(GWBUF* query)
         {
             if (info->created_table_name)
             {
-                created_table_name = mxs_strdup(info->created_table_name);
+                created_table_name = MXS_STRDUP(info->created_table_name);
+                MXS_ABORT_IF_NULL(created_table_name);
             }
         }
         else
@@ -2792,7 +2745,10 @@ static char* qc_sqlite_get_affected_fields(GWBUF* query)
         affected_fields = "";
     }
 
-    return mxs_strdup(affected_fields);
+    affected_fields = MXS_STRDUP(affected_fields);
+    MXS_ABORT_IF_NULL(affected_fields);
+
+    return affected_fields;
 }
 
 static char** qc_sqlite_get_database_names(GWBUF* query, int* sizep)

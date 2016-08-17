@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <maxscale/alloc.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
 
@@ -59,7 +60,7 @@ int main(int argc, char** argv)
     }
 
     if (getcwd(cwd, sizeof(cwd)) == NULL ||
-        (message = (char*)malloc(sizeof(char) * block_size)) == NULL)
+        (message = (char*)MXS_MALLOC(sizeof(char) * block_size)) == NULL)
     {
         fprintf(stderr, "Fatal Error, exiting...");
         return 1;
@@ -114,6 +115,6 @@ int main(int argc, char** argv)
 
     mxs_log_flush();
     mxs_log_finish();
-    free(message);
+    MXS_FREE(message);
     return 0;
 }

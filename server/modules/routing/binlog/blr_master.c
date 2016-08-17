@@ -7,7 +7,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -47,6 +47,7 @@
  * 25/09/2015   Massimiliano Pinto  Addition of lastEventReceived for slaves
  * 23/10/2015   Markus Makela       Added current_safe_event
  * 26/04/2016   Massimiliano Pinto  Added MariaDB 10.0 and 10.1 GTID event flags detection
+ * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
  *
  * @endverbatim
  */
@@ -76,6 +77,8 @@
 
 /* Temporary requirement for auth data */
 #include <mysql_client_server_protocol.h>
+#include <maxscale/alloc.h>
+
 
 
 static GWBUF *blr_make_query(char *statement);
@@ -99,12 +102,39 @@ extern int blr_check_heartbeat(ROUTER_INSTANCE *router);
 static void blr_log_identity(ROUTER_INSTANCE *router);
 static void blr_distribute_error_message(ROUTER_INSTANCE *router, char *message, char *state,
                                          unsigned int err_code);
+static void blr_extract_header_semisync(uint8_t *pkt, REP_HEADER *hdr);
+static int blr_send_semisync_ack (ROUTER_INSTANCE *router, uint64_t pos);
+static int blr_get_master_semisync(GWBUF *buf);
 
 int blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *buf);
 void extract_checksum(ROUTER_INSTANCE* router, uint8_t *cksumptr, uint8_t len);
 static void blr_terminate_master_replication(ROUTER_INSTANCE *router, uint8_t* ptr, int len);
 
 static int keepalive = 1;
+
+/** Transactio-Safety feature */
+typedef enum
+{
+    BLRM_NO_TRANSACTION, /*< No transaction */
+    BLRM_TRANSACTION_START, /*< A transaction is open*/
+    BLRM_COMMIT_SEEN, /*< Received COMMIT event in the current transaction */
+    BLRM_XID_EVENT_SEEN /*< Received XID event of current transaction */
+} master_transaction_t;
+
+/** Master Semi-Sync capability */
+typedef enum
+{
+    MASTER_SEMISYNC_NOT_AVAILABLE, /*< Semi-Sync replication not available */
+    MASTER_SEMISYNC_DISABLED, /*< Semi-Sync is disabled */
+    MASTER_SEMISYNC_ENABLED /*< Semi-Sync is enabled */
+} master_semisync_capability_t;
+
+#define MASTER_BYTES_BEFORE_EVENT 5
+#define MASTER_BYTES_BEFORE_EVENT_SEMI_SYNC MASTER_BYTES_BEFORE_EVENT + 2
+/* Semi-Sync indicator in network packet (byte 6) */
+#define BLR_MASTER_SEMI_SYNC_INDICATOR  0xef
+/* Semi-Sync flag ACK_REQ in network packet (byte 7) */
+#define BLR_MASTER_SEMI_SYNC_ACK_REQ    0x01
 
 /**
  * blr_start_master - controls the connection of the binlog router to the
@@ -162,13 +192,14 @@ blr_start_master(void* data)
     client->session = router->session;
     if ((router->master = dcb_connect(router->service->dbref->server, router->session, BLR_PROTOCOL)) == NULL)
     {
-        char *name;
-        if ((name = malloc(strlen(router->service->name) + strlen(" Master") + 1)) != NULL)
+        char *name = MXS_MALLOC(strlen(router->service->name) + strlen(" Master") + 1);
+
+        if (name)
         {
             sprintf(name, "%s Master", router->service->name);
             hktask_oneshot(name, blr_start_master, router,
                            BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
-            free(name);
+            MXS_FREE(name);
         }
         if (router->retry_backoff > BLR_MAX_BACKOFF)
         {
@@ -178,7 +209,7 @@ blr_start_master(void* data)
                   router->service->dbref->server->unique_name);
         return;
     }
-    router->master->remote = strdup(router->service->dbref->server->name);
+    router->master->remote = MXS_STRDUP_A(router->service->dbref->server->name);
 
     MXS_NOTICE("%s: attempting to connect to master server %s:%d, binlog %s, pos %lu",
                router->service->name, router->service->dbref->server->name,
@@ -225,16 +256,16 @@ blr_restart_master(ROUTER_INSTANCE *router)
     spinlock_release(&router->lock);
     if (router->master_state < BLRM_BINLOGDUMP)
     {
-        char *name;
-
         router->master_state = BLRM_UNCONNECTED;
 
-        if ((name = malloc(strlen(router->service->name)  + strlen(" Master") + 1)) != NULL)
+        char *name = (char*)MXS_MALLOC(strlen(router->service->name)  + strlen(" Master") + 1);
+
+        if (name)
         {
             sprintf(name, "%s Master", router->service->name);
             hktask_oneshot(name, blr_start_master, router,
                            BLR_MASTER_BACKOFF_TIME * router->retry_backoff++);
-            free(name);
+            MXS_FREE(name);
         }
         if (router->retry_backoff > BLR_MAX_BACKOFF)
         {
@@ -315,13 +346,13 @@ blr_master_close(ROUTER_INSTANCE *router)
 void
 blr_master_delayed_connect(ROUTER_INSTANCE *router)
 {
-    char *name;
+    char *name = (char*)MXS_MALLOC(strlen(router->service->name) + strlen(" Master Recovery") + 1);
 
-    if ((name = malloc(strlen(router->service->name) + strlen(" Master Recovery") + 1)) != NULL)
+    if (name)
     {
         sprintf(name, "%s Master Recovery", router->service->name);
         hktask_oneshot(name, blr_start_master, router, 60);
-        free(name);
+        MXS_FREE(name);
     }
 }
 
@@ -349,7 +380,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
     {
         MXS_ERROR("Invalid master state machine state (%d) for binlog router.",
                   router->master_state);
-        gwbuf_consume(buf, gwbuf_length(buf));
+        gwbuf_free(buf);
 
         spinlock_acquire(&router->lock);
         if (router->reconnect_pending)
@@ -388,12 +419,12 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         unsigned long mysql_errno = extract_field(MYSQL_ERROR_CODE(buf), 16);
 
         msg_len = len - 7 - 6; // +7 is where msg starts, 6 is skipped the status message (#42000)
-        msg_err = (char *)malloc(msg_len + 1);
+        msg_err = (char *)MXS_MALLOC(msg_len + 1);
 
         if (msg_err)
         {
             // skip status message only as MYSQL_RESPONSE_ERR(buf) points to GWBUF_DATA(buf) +7
-            strncpy(msg_err, (char *)(MYSQL_ERROR_MSG(buf) + 6), msg_len);
+            memcpy(msg_err, (char *)(MYSQL_ERROR_MSG(buf) + 6), msg_len);
 
             /* NULL terminated error string */
             *(msg_err + msg_len) = '\0';
@@ -405,7 +436,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
                   mysql_errno,
                   msg_err ? msg_err : "(memory failure)",
                   blrm_states[router->master_state]);
-        gwbuf_consume(buf, gwbuf_length(buf));
+        gwbuf_free(buf);
 
         spinlock_acquire(&router->lock);
 
@@ -415,7 +446,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         /* set mysql error message */
         if (router->m_errmsg)
         {
-            free(router->m_errmsg);
+            MXS_FREE(router->m_errmsg);
         }
         router->m_errmsg = msg_err ? msg_err : "(memory failure)";
 
@@ -435,7 +466,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
     {
     case BLRM_TIMESTAMP:
         // Response to a timestamp message, no need to save this.
-        gwbuf_consume(buf, GWBUF_LENGTH(buf));
+        gwbuf_free(buf);
         buf = blr_make_query("SHOW VARIABLES LIKE 'SERVER_ID'");
         router->master_state = BLRM_SERVERID;
         router->master->func.write(router->master, buf);
@@ -466,7 +497,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
             }
             router->master_state = BLRM_HBPERIOD;
             router->master->func.write(router->master, buf);
-            free(val);
+            MXS_FREE(val);
             break;
         }
     case BLRM_HBPERIOD:
@@ -503,7 +534,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
             }
             if (val)
             {
-                free(val);
+                MXS_FREE(val);
             }
             // Response to the master_binlog_checksum, should be stored
             if (router->saved_master.chksum2)
@@ -562,13 +593,13 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
             }
             if (key)
             {
-                free(key);
+                MXS_FREE(key);
             }
 
             /* set the master_uuid from master if not set by the option */
             if (router->set_master_uuid == NULL)
             {
-                free(router->master_uuid);
+                MXS_FREE(router->master_uuid);
                 router->master_uuid = val;
             }
             else
@@ -686,9 +717,107 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         router->master->func.write(router->master, buf);
         break;
     case BLRM_REGISTER:
-        // Request a dump of the binlog file
+        /* discard master reply to COM_REGISTER_SLAVE */
+        gwbuf_free(buf);
+
+        /* if semisync option is set, check for master semi-sync availability */
+        if (router->request_semi_sync)
+        {
+            MXS_NOTICE("%s: checking Semi-Sync replication capability for master server %s:%d",
+                       router->service->name,
+                       router->service->dbref->server->name,
+                       router->service->dbref->server->port);
+
+            buf = blr_make_query("SHOW VARIABLES LIKE 'rpl_semi_sync_master_enabled'");
+            router->master_state = BLRM_CHECK_SEMISYNC;
+            router->master->func.write(router->master, buf);
+
+            break;
+        }
+        else
+        {
+            /* Continue */
+            router->master_state = BLRM_REQUEST_BINLOGDUMP;
+        }
+    case BLRM_CHECK_SEMISYNC:
+    {
+        /**
+         * This branch could be reached as fallthrough from BLRM_REGISTER
+         * if request_semi_sync option is false
+         */
+         if (router->master_state == BLRM_CHECK_SEMISYNC)
+         {
+             /* Get master semi-sync installed, enabled, disabled */
+             router->master_semi_sync = blr_get_master_semisync(buf);
+
+             /* Discard buffer */
+             gwbuf_free(buf);
+
+             if (router->master_semi_sync == MASTER_SEMISYNC_NOT_AVAILABLE)
+             {
+                 /* not installed */
+                 MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync capability",
+                            router->service->name,
+                            router->service->dbref->server->name,
+                            router->service->dbref->server->port);
+
+                 /* Continue */
+                 router->master_state = BLRM_REQUEST_BINLOGDUMP;
+
+             }
+             else
+             {
+                 if (router->master_semi_sync == MASTER_SEMISYNC_DISABLED)
+                 {
+                     /* Installed but not enabled,  right now */
+                     MXS_NOTICE("%s: master server %s:%d doesn't have semi_sync enabled right now, "
+                                "Requesting Semi-Sync Replication",
+                                router->service->name,
+                                router->service->dbref->server->name,
+                                router->service->dbref->server->port);
+                 }
+                 else
+                 {
+                     /* Installed and enabled */
+                     MXS_NOTICE("%s: master server %s:%d has semi_sync enabled, Requesting Semi-Sync Replication",
+                                router->service->name,
+                                router->service->dbref->server->name,
+                                router->service->dbref->server->port);
+                 }
+
+                 buf = blr_make_query("SET @rpl_semi_sync_slave = 1");
+                 router->master_state = BLRM_REQUEST_SEMISYNC;
+                 router->master->func.write(router->master, buf);
+
+                 break;
+            }
+        }
+    }
+    case BLRM_REQUEST_SEMISYNC:
+        /**
+         * This branch could be reached as fallthrough from BLRM_REGISTER or BLRM_CHECK_SEMISYNC
+         * if request_semi_sync option is false or master doesn't support semisync or it's not enabled
+         */
+         if (router->master_state == BLRM_REQUEST_SEMISYNC)
+         {
+             /* discard master reply */
+             gwbuf_free(buf);
+
+             /* Continue */
+             router->master_state = BLRM_REQUEST_BINLOGDUMP;
+         }
+
+    case BLRM_REQUEST_BINLOGDUMP:
+        /**
+         * This branch is reached after semi-sync check/request or
+         * just after sending COM_REGISTER_SLAVE if request_semi_sync option is false
+         */
+
+        /* Request now a dump of the binlog file */
         buf = blr_make_binlog_dump(router);
+
         router->master_state = BLRM_BINLOGDUMP;
+
         router->master->func.write(router->master, buf);
         MXS_NOTICE("%s: Request binlog records from %s at "
                    "position %lu from master server %s:%d",
@@ -701,6 +830,7 @@ blr_master_response(ROUTER_INSTANCE *router, GWBUF *buf)
         blr_log_identity(router);
 
         break;
+
     case BLRM_BINLOGDUMP:
         /**
          * Main body, we have received a binlog record from the master
@@ -864,6 +994,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
     int preslen = -1;
     int prev_length = -1;
     int n_bufs = -1, pn_bufs = -1;
+    int check_packet_len;
+    int semisync_bytes;
+    int semi_sync_send_ack = 0;
 
     /*
      * Prepend any residual buffer to the buffer chain we have
@@ -924,12 +1057,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
             int msg_remainder = len;
             GWBUF *p = pkt;
 
-            if ((msg = malloc(len)) == NULL)
+            if ((msg = MXS_MALLOC(len)) == NULL)
             {
-                MXS_ERROR("Insufficient memory to buffer event "
-                          "of %d bytes. Binlog %s @ %lu.",
-                          len, router->binlog_name,
-                          router->current_pos);
                 break;
             }
 
@@ -955,7 +1084,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                           "message as expected. %s @ %lu",
                           router->binlog_name,
                           router->current_pos);
-                free(msg);
+                MXS_FREE(msg);
                 /* msg = NULL; Not needed unless msg will be referred to again */
                 break;
             }
@@ -984,6 +1113,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
             ptr = pdata;
             n_bufs = 1;
         }
+
+        semisync_bytes = 0;
 
         /*
          * ptr now points at the current message in a contiguous buffer,
@@ -1015,12 +1146,38 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 router->stats.n_binlogs_ses++;
                 spinlock_release(&router->lock);
 
-                blr_extract_header(ptr, &hdr);
+                /* Check for semi-sync in event with OK byte[4]:
+                 * move pointer 2 bytes ahead and set check_packet_len accordingly
+                 */
+                if (ptr[4] == 0 && router->master_semi_sync != MASTER_SEMISYNC_NOT_AVAILABLE &&
+                    ptr[5] == BLR_MASTER_SEMI_SYNC_INDICATOR)
+                {
+
+                    check_packet_len = MASTER_BYTES_BEFORE_EVENT_SEMI_SYNC;
+                    semi_sync_send_ack = ptr[6];
+
+                    /* Extract header from the semi-sync event */
+                    blr_extract_header_semisync(ptr, &hdr);
+
+                    /** Remove the semi-sync bytes */
+                    memmove(ptr, ptr + 2, 5);
+                    ptr += 2;
+                    semisync_bytes = 2;
+                }
+                else
+                {
+                    semi_sync_send_ack = 0;
+                    check_packet_len = MASTER_BYTES_BEFORE_EVENT;
+
+                    /* Extract header from thr event */
+                    blr_extract_header(ptr, &hdr);
+                }
 
                 /* Sanity check */
                 if (hdr.ok == 0)
                 {
-                    if (hdr.event_size != len - 5 && (hdr.event_size + 1) < MYSQL_PACKET_LENGTH_MAX)
+                    if (hdr.event_size != len - check_packet_len &&
+                        (hdr.event_size + (check_packet_len - MYSQL_HEADER_LEN)) < MYSQL_PACKET_LENGTH_MAX)
                     {
                         MXS_ERROR("Packet length is %d, but event size is %d, "
                                   "binlog file %s position %lu "
@@ -1042,13 +1199,13 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         if (msg)
                         {
-                            free(msg);
+                            MXS_FREE(msg);
                             /* msg = NULL; Not needed unless msg will be referred to again */
                         }
 
                         break;
                     }
-                    else if ((hdr.event_size + 1) >= MYSQL_PACKET_LENGTH_MAX)
+                    else if (hdr.event_size + (check_packet_len - MYSQL_HEADER_LEN) >= MYSQL_PACKET_LENGTH_MAX)
                     {
                         router->master_event_state = BLR_EVENT_STARTED;
 
@@ -1076,7 +1233,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     /* Remove error message */
                     if (router->m_errmsg)
                     {
-                        free(router->m_errmsg);
+                        MXS_FREE(router->m_errmsg);
                     }
                     router->m_errmsg = NULL;
 
@@ -1118,22 +1275,28 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         extra_bytes = MYSQL_HEADER_LEN + 1;
                     }
 
+                    ss_dassert(len - extra_bytes - semisync_bytes > 0);
+                    uint32_t bytes_available = len - extra_bytes - semisync_bytes;
+
                     if (router->master_chksum)
                     {
-                        uint32_t size = (len - extra_bytes) < router->checksum_size ?
-                            len - extra_bytes : router->checksum_size;
+                        uint32_t size = MIN(len - extra_bytes - semisync_bytes,
+                                            router->checksum_size);
+
                         router->stored_checksum = crc32(router->stored_checksum,
                                                         ptr + offset,
                                                         size);
                         router->checksum_size -= size;
 
-                        if (router->checksum_size == 0 && size < len - offset)
+                        if (router->checksum_size == 0 && size < bytes_available)
                         {
-                            extract_checksum(router, ptr + offset + size, len - offset - size);
+                            extract_checksum(router, ptr + offset + size,
+                                             bytes_available - size);
                         }
                     }
 
-                    if (blr_write_data_into_binlog(router, len - offset, ptr + offset) == 0)
+                    if (blr_write_data_into_binlog(router, bytes_available,
+                                                   ptr + offset) == 0)
                     {
                         /** Failed to write to the binlog file, destroy the buffer
                          * chain and close the connection with the master */
@@ -1157,7 +1320,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
              */
             if (router->master_chksum)
             {
-                uint32_t pktsum, offset = MYSQL_HEADER_LEN;
+                uint32_t offset = MYSQL_HEADER_LEN;
                 uint32_t size = len - MYSQL_HEADER_LEN - MYSQL_CHECKSUM_LEN;
 
                 if (router->master_event_state == BLR_EVENT_DONE)
@@ -1165,7 +1328,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                     /** Set the pointer offset to the first byte after
                      * the header and OK byte */
                     offset = MYSQL_HEADER_LEN + 1;
-                    size = len - MYSQL_HEADER_LEN - MYSQL_CHECKSUM_LEN - 1;
+                    size = len - (check_packet_len + MYSQL_CHECKSUM_LEN);
                 }
 
                 size = MIN(size, router->checksum_size);
@@ -1173,23 +1336,23 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                 if (router->checksum_size > 0)
                 {
                     router->stored_checksum = crc32(router->stored_checksum,
-                                                    ptr + offset,
-                                                    size);
+                                                    ptr + offset, size);
                     router->checksum_size -= size;
                 }
 
-                if (router->checksum_size == 0 && size < len - offset)
+                if(router->checksum_size == 0 && size < (len - offset - semisync_bytes))
                 {
-                    extract_checksum(router, ptr + offset + size, len - offset - size);
+                    extract_checksum(router, ptr + offset + size,
+                                     len - offset - size - semisync_bytes);
                 }
 
                 if (router->partial_checksum_bytes == MYSQL_CHECKSUM_LEN)
                 {
-                    pktsum = EXTRACT32(router->partial_checksum);
+                    uint32_t pktsum = EXTRACT32(router->partial_checksum);
                     if (pktsum != router->stored_checksum)
                     {
                         router->stats.n_badcrc++;
-                        free(msg);
+                        MXS_FREE(msg);
                         /* msg = NULL; Not needed unless msg will be referred to again */
                         MXS_ERROR("%s: Checksum error in event from master, "
                                   "binlog %s @ %lu. Closing master connection.",
@@ -1222,7 +1385,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                  */
 
                 spinlock_acquire(&router->binlog_lock);
-                if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0))
+                if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == BLRM_NO_TRANSACTION))
                 {
                     /* no pending transaction: set current_pos to binlog_position */
                     router->binlog_position = router->current_pos;
@@ -1271,7 +1434,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                     // An action should be taken here
                                 }
 
-                                router->pending_transaction = 1;
+                                router->pending_transaction = BLRM_TRANSACTION_START;
 
                                 spinlock_release(&router->binlog_lock);
                             }
@@ -1289,18 +1452,19 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                         db_name_len = ptr[4 + 20 + 4 + 4];
                         var_block_len = ptr[4 + 20 + 4 + 4 + 1 + 2];
 
-                        statement_len = len - (4 + 20 + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len);
-                        statement_sql = calloc(1, statement_len + 1);
-                        strncpy(statement_sql,
-                                (char *)ptr + 4 + 20 + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len,
-                                statement_len);
+                        statement_len = len - (4 + 20 + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len) - semisync_bytes;
+                        statement_sql = MXS_CALLOC(1, statement_len + 1);
+                        MXS_ABORT_IF_NULL(statement_sql);
+                        memcpy(statement_sql,
+                               (char *)ptr + 4 + 20 + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len,
+                               statement_len);
 
                         spinlock_acquire(&router->binlog_lock);
 
                         /* Check for BEGIN (it comes for START TRANSACTION too) */
                         if (strncmp(statement_sql, "BEGIN", 5) == 0)
                         {
-                            if (router->pending_transaction > 0)
+                            if (router->pending_transaction > BLRM_NO_TRANSACTION)
                             {
                                 MXS_ERROR("A transaction is already open "
                                           "@ %lu and a new one starts @ %lu",
@@ -1310,18 +1474,18 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                 // An action should be taken here
                             }
 
-                            router->pending_transaction = 1;
+                            router->pending_transaction = BLRM_TRANSACTION_START;
                         }
 
                         /* Check for COMMIT in non transactional store engines */
                         if (strncmp(statement_sql, "COMMIT", 6) == 0)
                         {
-                            router->pending_transaction = 2;
+                            router->pending_transaction = BLRM_COMMIT_SEEN;
                         }
 
                         spinlock_release(&router->binlog_lock);
 
-                        free(statement_sql);
+                        MXS_FREE(statement_sql);
                     }
 
                     /* Check for COMMIT in Transactional engines, i.e InnoDB */
@@ -1331,7 +1495,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         if (router->pending_transaction)
                         {
-                            router->pending_transaction = 3;
+                            router->pending_transaction = BLRM_XID_EVENT_SEEN;
                         }
                         spinlock_release(&router->binlog_lock);
                     }
@@ -1364,26 +1528,17 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                          * slaves that attach later.
                          */
                         new_fde_len = hdr.event_size;
-                        new_fde = malloc(hdr.event_size);
+                        new_fde = MXS_MALLOC(hdr.event_size);
+
                         if (new_fde)
                         {
                             memcpy(new_fde, ptr + 5, hdr.event_size);
                             if (router->saved_master.fde_event)
                             {
-                                free(router->saved_master.fde_event);
+                                MXS_FREE(router->saved_master.fde_event);
                             }
                             router->saved_master.fde_event = new_fde;
                             router->saved_master.fde_len = new_fde_len;
-                        }
-                        else
-                        {
-                            MXS_ERROR("%s: Received a format description "
-                                      "event that MaxScale was unable to "
-                                      "record. Event length is %d.",
-                                      router->service->name,
-                                      hdr.event_size);
-                            blr_log_packet(LOG_ERR,
-                                           "Format Description Event:", ptr, len);
                         }
                     }
                 }
@@ -1429,9 +1584,8 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                          * It is possible for an empty packet to be sent if an
                          * event is exactly 2^24 bytes long. In this case the
                          * empty packet should be discarded. */
-
                         if (len > MYSQL_HEADER_LEN &&
-                            blr_write_binlog_record(router, &hdr, len - offset, ptr) == 0)
+                            blr_write_binlog_record(router, &hdr, len - offset - semisync_bytes, ptr) == 0)
                         {
                             /*
                              * Failed to write to the
@@ -1469,6 +1623,28 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                             }
                         }
 
+                        /* Handle semi-sync request fom master */
+                        if (router->master_semi_sync != MASTER_SEMISYNC_NOT_AVAILABLE &&
+                            semi_sync_send_ack == BLR_MASTER_SEMI_SYNC_ACK_REQ &&
+                            (router->master_event_state == BLR_EVENT_COMPLETE ||
+                            router->master_event_state == BLR_EVENT_DONE))
+                        {
+
+                            MXS_DEBUG("%s: binlog record in file %s, pos %lu has "
+                                      "SEMI_SYNC_ACK_REQ and needs a Semi-Sync ACK packet to "
+                                      "be sent to the master server %s:%d",
+                                      router->service->name, router->binlog_name,
+                                      router->current_pos,
+                                      router->service->dbref->server->name,
+                                      router->service->dbref->server->port);
+
+                            /* Send Semi-Sync ACK packet to master server */
+                            blr_send_semisync_ack(router, hdr.next_pos);
+
+                            /* Reset ACK sending */
+                            semi_sync_send_ack = 0;
+                        }
+
                         /**
                          * Distributing binlog events to slaves
                          * may depend on pending transaction
@@ -1476,7 +1652,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
                         spinlock_acquire(&router->binlog_lock);
 
-                        if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == 0))
+                        if (router->trx_safe == 0 || (router->trx_safe && router->pending_transaction == BLRM_NO_TRANSACTION))
                         {
                             router->binlog_position = router->current_pos;
                             router->current_safe_event = router->last_event_pos;
@@ -1525,7 +1701,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                              *
                              */
 
-                            if (router->pending_transaction > 1)
+                            if (router->pending_transaction > BLRM_TRANSACTION_START)
                             {
                                 unsigned long long pos;
                                 unsigned long long end_pos;
@@ -1592,8 +1768,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                                   router->binlog_position,
                                                   router->current_pos);
 
-                                        strncpy(err_message,
-                                                "No transaction events sent", BINLOG_ERROR_MSG_LEN);
+                                        static const char MESSAGE[] = "No transaction events sent";
+                                        ss_dassert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
+                                        strcpy(err_message, MESSAGE);
                                     }
                                     else
                                     {
@@ -1606,8 +1783,9 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                                   pos,
                                                   router->current_pos);
 
-                                        strncpy(err_message,
-                                                "Incomplete transaction events sent", BINLOG_ERROR_MSG_LEN);
+                                        static const char MESSAGE[] = "Incomplete transaction events sent";
+                                        ss_dassert(sizeof(MESSAGE) <= BINLOG_ERROR_MSG_LEN);
+                                        strcpy(err_message, MESSAGE);
                                     }
 
                                     /* distribute error message to registered slaves */
@@ -1618,7 +1796,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
                                 spinlock_acquire(&router->binlog_lock);
 
                                 router->binlog_position = router->current_pos;
-                                router->pending_transaction = 0;
+                                router->pending_transaction = BLRM_NO_TRANSACTION;
 
                                 spinlock_release(&router->binlog_lock);
                             }
@@ -1679,7 +1857,7 @@ blr_handle_binlog_record(ROUTER_INSTANCE *router, GWBUF *pkt)
 
         if (msg)
         {
-            free(msg);
+            MXS_FREE(msg);
             msg = NULL;
         }
         prev_length = len;
@@ -1805,16 +1983,31 @@ CreateMySQLAuthData(char *username, char *password, char *database)
 
     if (username == NULL || password == NULL)
     {
-        MXS_ERROR("You must specify both username and password for the binlog router.\n");
+        MXS_ERROR("You must specify both username and password for the binlog router.");
         return NULL;
     }
 
-    if ((auth_info = calloc(1, sizeof(MYSQL_session))) == NULL)
+    if (strlen(username) > MYSQL_USER_MAXLEN)
+    {
+        MXS_ERROR("Provided user name %s is longer than maximum length %d.",
+                  username, MYSQL_USER_MAXLEN);
+        return NULL;
+    }
+
+    if (strlen(database) > MYSQL_DATABASE_MAXLEN)
+    {
+        MXS_ERROR("Provided database %s is longer than maximum length %d.",
+                  database, MYSQL_DATABASE_MAXLEN);
+        return NULL;
+    }
+
+    if ((auth_info = MXS_CALLOC(1, sizeof(MYSQL_session))) == NULL)
     {
         return NULL;
     }
-    strncpy(auth_info->user, username, MYSQL_USER_MAXLEN);
-    strncpy(auth_info->db, database, MYSQL_DATABASE_MAXLEN);
+
+    strcpy(auth_info->user, username);
+    strcpy(auth_info->db, database);
     gw_sha1_str((const uint8_t *)password, strlen(password), auth_info->client_sha1);
 
     return auth_info;
@@ -2191,7 +2384,7 @@ blr_extract_column(GWBUF *buf, int col)
         ptr += collen;
     }
     collen = *ptr++;
-    if ((rval = malloc(collen + 1)) == NULL)
+    if ((rval = MXS_MALLOC(collen + 1)) == NULL)
     {
         return NULL;
     }
@@ -2370,7 +2563,7 @@ blr_stop_start_master(ROUTER_INSTANCE *router)
 
     if (strcmp(router->binlog_name, router->prevbinlog) != 0)
     {
-        strncpy(router->prevbinlog, router->binlog_name, BINLOG_FNAMELEN);
+        strcpy(router->prevbinlog, router->binlog_name); // Same size
     }
 
     if (router->client)
@@ -2584,6 +2777,16 @@ blr_distribute_error_message(ROUTER_INSTANCE *router, char *message, char *state
     spinlock_release(&router->lock);
 }
 
+/**
+ * @brief Write data into binlogs (incomplete event)
+ *
+ * Writes @c data_len bytes of data from @c buf into the current binlog being processed.
+ *
+ * @param router Router instance
+ * @param data_len Number of bytes to write
+ * @param buf Pointer where the data is read
+ * @return Number of bytes written or 0 on error
+ */
 int
 blr_write_data_into_binlog(ROUTER_INSTANCE *router, uint32_t data_len, uint8_t *buf)
 {
@@ -2773,7 +2976,7 @@ bool blr_send_event(blr_thread_role_t role,
 void extract_checksum(ROUTER_INSTANCE* router, uint8_t *cksumptr, uint8_t len)
 {
     uint8_t *ptr = cksumptr;
-    while (ptr - cksumptr < len)
+    while (ptr - cksumptr < len && router->partial_checksum_bytes < MYSQL_CHECKSUM_LEN)
     {
         router->partial_checksum[router->partial_checksum_bytes] = *ptr;
         ptr++;
@@ -2792,9 +2995,10 @@ static void blr_terminate_master_replication(ROUTER_INSTANCE* router, uint8_t* p
 {
     unsigned long mysql_errno = extract_field(ptr + 5, 16);
     int msg_len = len - 7 - 6; // msg len is decreased by 7 and 6
-    char *msg_err = (char *)malloc(msg_len + 1);
+    char *msg_err = (char *)MXS_MALLOC(msg_len + 1);
+    MXS_ABORT_IF_NULL(msg_err);
 
-    strncpy(msg_err, (char *)ptr + 7 + 6, msg_len);
+    memcpy(msg_err, (char *)ptr + 7 + 6, msg_len);
     *(msg_err + msg_len) = '\0';
 
     spinlock_acquire(&router->lock);
@@ -2807,8 +3011,110 @@ static void blr_terminate_master_replication(ROUTER_INSTANCE* router, uint8_t* p
 
     spinlock_release(&router->lock);
 
-    free(old_errmsg);
+    MXS_FREE(old_errmsg);
     MXS_ERROR("Error packet in binlog stream.%s @ %lu.",
               router->binlog_name, router->current_pos);
 
+}
+
+/**
+ * Populate a header structure for a replication message from a GWBUF structure with semi-sync enabled.
+ *
+ * @param pkt   The incoming packet in a GWBUF chain
+ * @param hdr   The packet header to populate
+ */
+static void
+blr_extract_header_semisync(register uint8_t *ptr, register REP_HEADER *hdr)
+{
+
+    hdr->payload_len = EXTRACT24(ptr);
+    hdr->seqno = ptr[3];
+    hdr->ok = ptr[4];
+    /* Data available after 2 bytes (the 2 semisync bytes) */
+    hdr->timestamp = EXTRACT32(&ptr[5 + 2]);
+    hdr->event_type = ptr[9 + 2];
+    hdr->serverid = EXTRACT32(&ptr[10 + 2]);
+    hdr->event_size = EXTRACT32(&ptr[14 + 2]);
+    hdr->next_pos = EXTRACT32(&ptr[18 + 2]);
+    hdr->flags = EXTRACT16(&ptr[22 + 2]);
+}
+
+/**
+ * Send a MySQL Replication Semi-Sync ACK to the master server.
+ *
+ * @param router The router instance.
+ * @param pos The binlog position for the ACK reply.
+ * @return 1 if the packect is sent, 0 on errors
+ */
+
+static int
+blr_send_semisync_ack(ROUTER_INSTANCE *router, uint64_t pos)
+{
+    int seqno = 0;
+    int semi_sync_flag = BLR_MASTER_SEMI_SYNC_INDICATOR;
+    GWBUF   *buf;
+    int     len;
+    uint8_t *data;
+    int     binlog_file_len = strlen(router->binlog_name);
+
+    /* payload is: 1 byte semi-sync indicator + 8 bytes position + binlog name len */
+    len = 1 + 8 + binlog_file_len;
+
+    /* add network header to size */
+    if ((buf = gwbuf_alloc(len + 4)) == NULL)
+    {
+        return 0;
+    }
+
+    data = GWBUF_DATA(buf);
+
+    encode_value(&data[0], len, 24);  // Payload length
+    data[3] = 0;                      // Sequence ID
+    data[4] = semi_sync_flag;         // Semi-sync indicator
+
+    /**
+     * Next Bytes are: 8 bytes log position + len bin_log filename
+     */
+
+    /* Position */
+    encode_value(&data[5], pos, 64);
+
+    /* Binlog filename */
+    memcpy((char *)&data[13], router->binlog_name, binlog_file_len);
+
+    router->master->func.write(router->master, buf);
+
+    return 1;
+}
+
+/**
+ * Check the master semisync capability.
+ *
+ * @param buf The GWBUF data with master reply.
+ * @return Semisync value: non available, enabled, disabled
+ */
+static int
+blr_get_master_semisync(GWBUF *buf)
+{
+    char *key;
+    char *val = NULL;
+    int  master_semisync = MASTER_SEMISYNC_NOT_AVAILABLE;
+
+    key = blr_extract_column(buf, 1);
+
+    if (key && strlen(key))
+    {
+        val = blr_extract_column(buf, 2);
+    }
+    free(key);
+
+    if (val) {
+        if (strncasecmp(val, "ON", 4) == 0)
+            master_semisync = MASTER_SEMISYNC_ENABLED;
+        else
+            master_semisync = MASTER_SEMISYNC_DISABLED;
+    }
+    free(val);
+
+    return master_semisync;
 }

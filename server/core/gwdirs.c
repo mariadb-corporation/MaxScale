@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -12,6 +12,7 @@
  */
 
 #include <gwdirs.h>
+#include <maxscale/alloc.h>
 #include <gw.h>
 
 /**
@@ -20,7 +21,7 @@
  */
 void set_configdir(char* str)
 {
-    free(configdir);
+    MXS_FREE(configdir);
     clean_up_pathname(str);
     configdir = str;
 }
@@ -31,7 +32,7 @@ void set_configdir(char* str)
  */
 void set_logdir(char* str)
 {
-    free(logdir);
+    MXS_FREE(logdir);
     clean_up_pathname(str);
     logdir = str;
 }
@@ -42,7 +43,7 @@ void set_logdir(char* str)
  */
 void set_langdir(char* str)
 {
-    free(langdir);
+    MXS_FREE(langdir);
     clean_up_pathname(str);
     langdir = str;
 }
@@ -53,7 +54,7 @@ void set_langdir(char* str)
  */
 void set_piddir(char* str)
 {
-    free(piddir);
+    MXS_FREE(piddir);
     clean_up_pathname(str);
     piddir = str;
 }
@@ -64,7 +65,7 @@ void set_piddir(char* str)
  */
 void set_cachedir(char* param)
 {
-    free(cachedir);
+    MXS_FREE(cachedir);
     clean_up_pathname(param);
     cachedir = param;
 }
@@ -75,7 +76,7 @@ void set_cachedir(char* param)
  */
 void set_datadir(char* param)
 {
-    free(maxscaledatadir);
+    MXS_FREE(maxscaledatadir);
     clean_up_pathname(param);
     maxscaledatadir = param;
 }
@@ -86,7 +87,7 @@ void set_datadir(char* param)
  */
 void set_process_datadir(char* param)
 {
-    free(processdatadir);
+    MXS_FREE(processdatadir);
     clean_up_pathname(param);
     processdatadir = param;
 }
@@ -97,7 +98,7 @@ void set_process_datadir(char* param)
  */
 void set_libdir(char* param)
 {
-    free(libdir);
+    MXS_FREE(libdir);
     clean_up_pathname(param);
     libdir = param;
 }
@@ -109,7 +110,7 @@ void set_libdir(char* param)
  */
 void set_execdir(char* param)
 {
-    free(execdir);
+    MXS_FREE(execdir);
     clean_up_pathname(param);
     execdir = param;
 }

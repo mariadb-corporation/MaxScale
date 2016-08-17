@@ -84,6 +84,7 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Database Firewall Filter](Filters/Database-Firewall-Filter.md)
  - [RabbitMQ Filter](Filters/RabbitMQ-Filter.md)
  - [Named Server Filter](Filters/Named-Server-Filter.md)
+ - [Gatekeeper - Adaptive Firewall](Filters/Gatekeeper.md)
 
 ## Monitors
 

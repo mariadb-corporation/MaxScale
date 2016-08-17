@@ -6,7 +6,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -47,7 +47,12 @@ typedef struct maxkeys
     unsigned char initvector[MAXSCALE_IV_LEN];
 } MAXKEYS;
 
-extern int  secrets_writeKeys(const char *filename);
+enum
+{
+    MXS_PASSWORD_MAXLEN = 79
+};
+
+extern int  secrets_writeKeys(const char *directory);
 extern char *decryptPassword(const char *);
 extern char *encryptPassword(const char*, const char *);
 

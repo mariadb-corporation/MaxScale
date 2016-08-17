@@ -1,4 +1,4 @@
-add_library(maxscale-common SHARED adminusers.c atomic.c buffer.c config.c dbusers.c dcb.c filter.c externcmd.c gwbitmask.c gwdirs.c gw_utils.c hashtable.c hint.c housekeeper.c load_utils.c log_manager.cc maxscale_pcre2.c memlog.c misc.c mlist.c modutil.c monitor.c queuemanager.c query_classifier.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c slist.c spinlock.c thread.c users.c utils.c ${CMAKE_SOURCE_DIR}/utils/skygw_utils.cc statistics.c listener.c gw_ssl.c mysql_utils.c mysql_binlog.c)
+add_library(maxscale-common SHARED adminusers.c alloc.c atomic.c buffer.c config.c dbusers.c dcb.c filter.c externcmd.c gwbitmask.c gwdirs.c gw_utils.c hashtable.c hint.c housekeeper.c listmanager.c load_utils.c log_manager.cc maxscale_pcre2.c memlog.c misc.c mlist.c modutil.c monitor.c queuemanager.c query_classifier.c poll.c random_jkiss.c resultset.c secrets.c server.c service.c session.c slist.c spinlock.c thread.c users.c utils.c skygw_utils.cc statistics.c listener.c gw_ssl.c mysql_utils.c mysql_binlog.c)
 
 target_link_libraries(maxscale-common ${MARIADB_CONNECTOR_LIBRARIES} ${LZMA_LINK_FLAGS} ${PCRE2_LIBRARIES} ${CURL_LIBRARIES} ssl aio pthread crypt dl crypto inih z rt m stdc++)
 
@@ -9,8 +9,8 @@ elseif(WITH_TCMALLOC)
 endif()
 
 add_dependencies(maxscale-common pcre2 connector-c)
-install(TARGETS maxscale-common DESTINATION ${MAXSCALE_LIBDIR})
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
+install_module(maxscale-common core)
 
 add_executable(maxscale gateway.c)
 add_dependencies(maxscale pcre2)
@@ -22,15 +22,15 @@ elseif(WITH_TCMALLOC)
 endif()
 
 target_link_libraries(maxscale maxscale-common)
-install(TARGETS maxscale DESTINATION ${MAXSCALE_BINDIR})
+install_executable(maxscale core)
 
 add_executable(maxkeys maxkeys.c)
 target_link_libraries(maxkeys maxscale-common)
-install(TARGETS maxkeys DESTINATION ${MAXSCALE_BINDIR})
+install_executable(maxkeys core)
 
 add_executable(maxpasswd maxpasswd.c)
 target_link_libraries(maxpasswd maxscale-common)
-install(TARGETS maxpasswd DESTINATION ${MAXSCALE_BINDIR})
+install_executable(maxpasswd core)
 
 if(BUILD_TESTS)
   add_subdirectory(test)

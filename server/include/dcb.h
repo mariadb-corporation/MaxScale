@@ -6,7 +6,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -14,6 +14,7 @@
  */
 #include <spinlock.h>
 #include <buffer.h>
+#include <listmanager.h>
 #include <gw_protocol.h>
 #include <gw_authenticator.h>
 #include <gw_ssl.h>
@@ -57,6 +58,7 @@ struct servlistener;
  * 19/06/2015   Martin Brampton         Provision of persistent connections
  * 20/01/2016   Martin Brampton         Moved GWPROTOCOL to gw_protocol.h
  * 01/02/2016   Martin Brampton         Added fields for SSL and authentication
+ * 27/06/2016   Martin Brampton         Changed DCB to conform to list manager
  *
  * @endverbatim
  */
@@ -88,6 +90,8 @@ typedef struct
     unsigned long   started;
 } DCBEVENTQ;
 
+#define DCBEVENTQ_INIT {NULL, NULL, 0, 0, 0, SPINLOCK_INIT, 0, 0}
+
 #define DCBFD_CLOSED -1
 
 /**
@@ -102,6 +106,8 @@ typedef struct dcbstats
     int     n_high_water;   /*< Number of crosses of high water mark */
     int     n_low_water;    /*< Number of crosses of low water mark */
 } DCBSTATS;
+
+#define DCBSTATS_INIT {0}
 
 /**
  * The data structure that is embedded witin a DCB and manages the complex memory
@@ -127,12 +133,15 @@ typedef struct
     struct dcb      *next;          /*< Next pointer for the zombie list */
 } DCBMM;
 
+#define DCBMM_INIT {GWBITMASK_INIT}
+
 /* DCB states */
 typedef enum
 {
     DCB_STATE_UNDEFINED,    /*< State variable with no state */
     DCB_STATE_ALLOC,        /*< Memory allocated but not populated */
     DCB_STATE_POLLING,      /*< Waiting in the poll loop */
+    DCB_STATE_WAITING,      /*< Client wanting a connection */
     DCB_STATE_LISTENING,    /*< The DCB is for a listening socket */
     DCB_STATE_DISCONNECTED, /*< The socket is now closed */
     DCB_STATE_NOPOLLING,    /*< Removed from poll mask */
@@ -189,16 +198,19 @@ typedef enum
  *
  * A wrapper for a network descriptor within the gateway, it contains all the
  * state information necessary to allow for the implementation of the asynchronous
- * operation of the potocol and gateway functions. It also provides links to the service
+ * operation of the protocol and gateway functions. It also provides links to the service
  * and session data that is required to route the information within the gateway.
  *
  * It is important to hold the state information here such that any thread within the
  * gateway may be selected to execute the required actions when a network event occurs.
+ *
+ * Note that the first few fields (up to and including "entry_is_ready") must
+ * precisely match the LIST_ENTRY structure defined in the list manager.
  */
 typedef struct dcb
 {
+    LIST_ENTRY_FIELDS
     skygw_chk_t     dcb_chk_top;
-    bool            dcb_is_in_use;  /**< Whether DCB is in use or for later reuse */
     bool            dcb_errhandle_called; /*< this can be called only once */
     bool            dcb_is_zombie;  /**< Whether the DCB is in the zombie list */
     bool            draining_flag;  /**< Set while write queue is drained */
@@ -232,7 +244,6 @@ typedef struct dcb
 
     DCBSTATS        stats;          /**< DCB related statistics */
     unsigned int    dcb_server_status; /*< the server role indicator from SERVER */
-    struct dcb      *next;          /**< Next DCB in the chain of allocated DCB's */
     struct dcb      *nextpersistent;   /**< Next DCB in the persistent pool for SERVER */
     time_t          persistentstart;   /**< Time when DCB placed in persistent pool */
     struct service  *service;       /**< The related service */
@@ -259,6 +270,14 @@ typedef struct dcb
     int             dcb_port;       /**< port of target server */
     skygw_chk_t     dcb_chk_tail;
 } DCB;
+
+#define DCB_INIT {.dcb_chk_top = CHK_NUM_DCB, .dcb_initlock = SPINLOCK_INIT, \
+    .evq = DCBEVENTQ_INIT, .ipv4 = {0}, .func = {0}, .authfunc = {0}, \
+    .writeqlock = SPINLOCK_INIT, .delayqlock = SPINLOCK_INIT, \
+    .authlock = SPINLOCK_INIT, .stats = {0}, .memdata = DCBMM_INIT, \
+    .cb_lock = SPINLOCK_INIT, .pollinlock = SPINLOCK_INIT, \
+    .fd = DCBFD_CLOSED, .stats = DCBSTATS_INIT, .ssl_state = SSL_HANDSHAKE_UNKNOWN, \
+    .state = DCB_STATE_ALLOC, .polloutlock = SPINLOCK_INIT, .dcb_chk_tail = CHK_NUM_DCB}
 
 /**
  * The DCB usage filer used for returning DCB's in use for a certain reason
@@ -297,6 +316,7 @@ int           fail_accept_errno;
 DCB *dcb_get_zombies(void);
 int dcb_write(DCB *, GWBUF *);
 DCB *dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs);
+bool dcb_pre_alloc(int number);
 DCB *dcb_alloc(dcb_role_t, struct servlistener *);
 void dcb_free(DCB *);
 void dcb_free_all_memory(DCB *dcb);
@@ -308,6 +328,7 @@ void dcb_close(DCB *);
 DCB *dcb_process_zombies(int);              /* Process Zombies except the one behind the pointer */
 void printAllDCBs();                         /* Debug to print all DCB in the system */
 void printDCB(DCB *);                        /* Debug print routine */
+void dprintDCBList(DCB *);                 /* Debug print DCB list statistics */
 void dprintAllDCBs(DCB *);                   /* Debug to print all DCB in the system */
 void dprintOneDCB(DCB *, DCB *);             /* Debug to print one DCB */
 void dprintDCB(DCB *, DCB *);                /* Debug to print a DCB in the system */

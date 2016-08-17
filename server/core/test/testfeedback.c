@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -39,6 +39,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdlib.h>
+#include <maxscale/alloc.h>
 #include <housekeeper.h>
 #include <buffer.h>
 #include <regex.h>
@@ -84,7 +85,8 @@ int main(int argc, char** argv)
 
     hkinit();
 
-    cnf = malloc(sizeof(char) * (strlen(TEST_DIR) + strlen("/maxscale.cnf") + 1));
+    cnf = MXS_MALLOC(sizeof(char) * (strlen(TEST_DIR) + strlen("/maxscale.cnf") + 1));
+    MXS_ABORT_IF_NULL(cnf);
     sprintf(cnf, "%s/maxscale.cnf", TEST_DIR);
 
     printf("Config: %s\n", cnf);

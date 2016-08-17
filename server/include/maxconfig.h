@@ -6,13 +6,14 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
 #include <skygw_utils.h>
+#include <sys/utsname.h>
 #include <stdint.h>
 #include <openssl/sha.h>
 #include <spinlock.h>
@@ -34,7 +35,6 @@
 
 #define DEFAULT_NBPOLLS         3       /**< Default number of non block polls before we block */
 #define DEFAULT_POLLSLEEP       1000    /**< Default poll wait time (milliseconds) */
-#define _SYSNAME_STR_LENGTH     256     /**< sysname len */
 #define _RELEASE_STR_LENGTH     256     /**< release len */
 #define DEFAULT_NTHREADS        1 /**< Default number of polling threads */
 /**
@@ -109,8 +109,8 @@ typedef struct
 {
     int           n_threads;                           /**< Number of polling threads */
     char          *version_string;                     /**< The version string of embedded db library */
-    char          release_string[_SYSNAME_STR_LENGTH]; /**< The release name string of the system */
-    char          sysname[_SYSNAME_STR_LENGTH];        /**< The release name string of the system */
+    char          release_string[_RELEASE_STR_LENGTH]; /**< The release name string of the system */
+    char          sysname[_UTSNAME_SYSNAME_LENGTH];    /**< The OS name of the system */
     uint8_t       mac_sha1[SHA_DIGEST_LENGTH];         /**< The SHA1 digest of an interface MAC address */
     unsigned long id;                                  /**< MaxScale ID */
     unsigned int  n_nbpoll;                            /**< Tune number of non-blocking polls */

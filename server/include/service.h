@@ -6,7 +6,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -134,10 +134,8 @@ typedef struct service
     SERVICE_USER credentials;          /**< The cedentials of the service user */
     SPINLOCK spin;                     /**< The service spinlock */
     SERVICE_STATS stats;               /**< The service statistics */
-    struct users *users;               /**< The user data for this service */
     int enable_root;                   /**< Allow root user  access */
     int localhost_match_wildcard_host; /**< Match localhost against wildcard */
-    HASHTABLE *resources;              /**< hastable for service resources, i.e. database names */
     CONFIG_PARAMETER* svc_config_param;/*<  list of config params and values */
     int svc_config_version;            /*<  Version number of configuration */
     bool svc_do_shutdown;              /*< tells the service to exit loops etc. */
@@ -173,7 +171,9 @@ extern SERVICE *service_alloc(const char *, const char *);
 extern int service_free(SERVICE *);
 extern SERVICE *service_find(char *);
 extern int service_isvalid(SERVICE *);
-extern int serviceAddProtocol(SERVICE *, char *, char *, unsigned short, char *, SSL_LISTENER *);
+extern int serviceAddProtocol(SERVICE *service, char *name, char *protocol,
+                              char *address, unsigned short port,
+                              char *authenticator, SSL_LISTENER *ssl);
 extern int serviceHasProtocol(SERVICE *service, const char *protocol,
                               const char* address, unsigned short port);
 extern void serviceAddBackend(SERVICE *, SERVER *);

@@ -141,14 +141,13 @@ which allows us to build packages. The `-DCMAKE_INSTALL_PREFIX` was removed sinc
 we aren't installing MariaDB MaxScale, only packaging it.
 
 ```
-cmake ../MaxScale -DPACKAGE=Y -DBUILD_TESTS=Y
+cmake ../MaxScale -DPACKAGE=Y
 ```
 
-Next step is to test and build the package.
+Next step is to build the package.
 
 ```
 make
-make test
 make package
 ```
 
@@ -162,4 +161,36 @@ the LD_LIBRARY_PATH environment variable.
 ```
 make
 LD_LIBRARY_PATH=$PWD/server/core/ make package
+```
+
+## Installing and packaging optional components
+
+MaxScale is split into multiple components. The main component is the core MaxScale
+package which contains MaxScale and all the modules. This is the default component
+that is build, installed and packaged. There exist two other components, the _experimental_
+and the _devel_ components. The former contains all experimental modules which are
+not considered as part of the core MaxScale package and they can be alpha or beta
+quality modules. The latter of the optional components, _devel_, contains the
+development files required for MaxScale module development.
+
+The component which is build is controlled by the TARGET_COMPONENT CMake variable.
+The default value for this is _core_ which build the core MaxScale package.
+
+To build the experimental modules, you will need to set value of the TARGET_COMPONENT
+CMake variable to the component name you wish to install or package.
+
+For example, to package the experimental module component, invoke CMake with
+_-DTARGET_COMPONENT=experimental_:
+
+```
+cmake ../MaxScale -DPACKAGE=Y DTARGET_COMPONENT=experimental
+make package
+```
+
+If you wish to create a monolithic package with all the components, set the value to an
+empty string and build the package:
+
+```
+cmake ../MaxScale -DPACKAGE=Y DTARGET_COMPONENT=""
+make package
 ```

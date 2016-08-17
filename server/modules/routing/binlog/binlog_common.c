@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -80,7 +80,7 @@ bool binlog_next_file_exists(const char* binlogdir, const char* binlog)
             char filename[PATH_MAX + 1];
             char next_file[BLRM_BINLOG_NAME_STR_LEN + 1];
             int offset = sptr - binlog;
-            strncpy(buf, binlog, offset);
+            memcpy(buf, binlog, offset);
             buf[offset] = '\0';
             sprintf(next_file, BINLOG_NAMEFMT, buf, filenum);
             snprintf(filename, PATH_MAX, "%s/%s", binlogdir, next_file);

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -56,7 +56,7 @@ static int test_close(DCB *dcb){ return 1;}
 static int test_listen(DCB *dcb, char *config){ return 1;}
 static int test_auth(DCB* dcb, struct server *srv, struct session *ses, GWBUF *buf){ return 1;}
 static int test_session(DCB *dcb, void* data){ return 1;}
-static char *test_default_auth(){return "NullAuth";}
+static char *test_default_auth(){return "NullAuthAllow";}
 static int test_connection_limit(DCB *dcb, int limit){return 0;}
 /**
  * The "module object" for the httpd protocol module.

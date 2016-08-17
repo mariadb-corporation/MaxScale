@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -66,6 +66,9 @@ test1()
     bitmask_clear(&bitmask, 17);
     ss_info_dassert(0 == bitmask_isset(&bitmask, 17), "Test bit should be clear");
     ss_info_dassert(0 != bitmask_isallclear(&bitmask), "Should be all clear");
+    // Testing the allocation mechanism, for use with valgrind.
+    bitmask_set(&bitmask, BIT_LENGTH_INC + 1);
+    bitmask_set(&bitmask, 2 * BIT_LENGTH_INC + 1);
     ss_dfprintf(stderr, "\t..done\nFree the bitmask.");
     bitmask_free(&bitmask);
     ss_info_dassert(0 == bitmask.length, "Length should be zero after bit mask freed.");

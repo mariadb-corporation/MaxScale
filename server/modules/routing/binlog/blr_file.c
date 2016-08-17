@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -32,8 +32,9 @@
  *                                  This is the current supported condition for detecting
  *                                  MariaDB 10 transaction start point.
  *                                  It's no longer using QUERY_EVENT with BEGIN
- * 23/10/2015     Markus Makela       Added current_safe_event
+ * 23/10/2015   Markus Makela       Added current_safe_event
  * 26/04/2016   Massimiliano Pinto  Added MariaDB 10.0 and 10.1 GTID event flags detection
+ * 11/07/2016   Massimiliano Pinto  Added SSL backend support
  *
  * @endverbatim
  */
@@ -58,6 +59,7 @@
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
+#include <maxscale/alloc.h>
 
 static int  blr_file_create(ROUTER_INSTANCE *router, char *file);
 static void blr_log_header(int priority, char *msg, uint8_t *ptr);
@@ -100,22 +102,35 @@ blr_file_init(ROUTER_INSTANCE *router)
 
     if (router->binlogdir == NULL)
     {
-        strncpy(path, get_datadir(), PATH_MAX);
-        strncat(path, "/", PATH_MAX - strlen(path));
-        strncat(path, router->service->name, PATH_MAX - strlen(path));
+        const char* datadir = get_datadir();
+        size_t len = strlen(datadir) + sizeof('/') + strlen(router->service->name);
+
+        if (len > PATH_MAX)
+        {
+            MXS_ERROR("The length of %s/%s is more than the maximum length %d.",
+                      datadir, router->service->name, PATH_MAX);
+            return 0;
+        }
+
+        strcpy(path, datadir);
+        strcat(path, "/");
+        strcat(path, router->service->name);
 
         if (access(path, R_OK) == -1)
         {
+            // TODO: Check what kind of error, ENOENT or something else.
             mkdir(path, 0700);
+            // TODO: Check the result of mkdir.
         }
 
-        router->binlogdir = strdup(path);
+        router->binlogdir = MXS_STRDUP_A(path);
     }
     else
     {
-        strncpy(path, router->binlogdir, PATH_MAX);
+        strcpy(path, router->binlogdir);
     }
-    if (access(router->binlogdir, R_OK) == -1)
+
+    if (access(path, R_OK) == -1)
     {
         MXS_ERROR("%s: Unable to read the binlog directory %s.",
                   router->service->name, router->binlogdir);
@@ -222,6 +237,13 @@ blr_file_add_magic(int fd)
 static int
 blr_file_create(ROUTER_INSTANCE *router, char *file)
 {
+    if (strlen(file) > BINLOG_FNAMELEN)
+    {
+        MXS_ERROR("The binlog filename %s is longer than the maximum allowed length %d.",
+                  file, BINLOG_FNAMELEN);
+        return 0;
+    }
+
     int created = 0;
     char err_msg[STRERROR_BUFLEN];
 
@@ -239,7 +261,7 @@ blr_file_create(ROUTER_INSTANCE *router, char *file)
         {
             close(router->binlog_fd);
             spinlock_acquire(&router->binlog_lock);
-            strncpy(router->binlog_name, file, BINLOG_FNAMELEN);
+            strcpy(router->binlog_name, file);
             router->binlog_fd = fd;
             router->current_pos = BINLOG_MAGIC_SIZE;     /* Initial position after the magic number */
             router->binlog_position = BINLOG_MAGIC_SIZE;
@@ -390,6 +412,22 @@ blr_file_flush(ROUTER_INSTANCE *router)
 BLFILE *
 blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
 {
+    size_t len = strlen(binlog);
+    if (len > BINLOG_FNAMELEN)
+    {
+        MXS_ERROR("The binlog filename %s is longer than the maximum allowed length %d.",
+                  binlog, BINLOG_FNAMELEN);
+        return NULL;
+    }
+
+    len += (strlen(router->binlogdir) + 1); // +1 for the /.
+    if (len > PATH_MAX)
+    {
+        MXS_ERROR("The length of %s/%s is longer than the maximum allowed length %d.",
+                  router->binlogdir, binlog, PATH_MAX);
+        return NULL;
+    }
+
     char path[PATH_MAX + 1] = "";
     BLFILE *file;
 
@@ -407,24 +445,24 @@ blr_open_binlog(ROUTER_INSTANCE *router, char *binlog)
         return file;
     }
 
-    if ((file = (BLFILE *)calloc(1, sizeof(BLFILE))) == NULL)
+    if ((file = (BLFILE *)MXS_CALLOC(1, sizeof(BLFILE))) == NULL)
     {
         spinlock_release(&router->fileslock);
         return NULL;
     }
-    strncpy(file->binlogname, binlog, BINLOG_FNAMELEN);
+    strcpy(file->binlogname, binlog);
     file->refcnt = 1;
     file->cache = 0;
     spinlock_init(&file->lock);
 
-    strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/", PATH_MAX - strlen(path));
-    strncat(path, binlog, PATH_MAX - strlen(path));
+    strcpy(path, router->binlogdir);
+    strcat(path, "/");
+    strcat(path, binlog);
 
     if ((file->fd = open(path, O_RDONLY, 0666)) == -1)
     {
         MXS_ERROR("Failed to open binlog file %s", path);
-        free(file);
+        MXS_FREE(file);
         spinlock_release(&router->fileslock);
         return NULL;
     }
@@ -778,7 +816,7 @@ blr_close_binlog(ROUTER_INSTANCE *router, BLFILE *file)
     {
         close(file->fd);
         file->fd = -1;
-        free(file);
+        MXS_FREE(file);
     }
 }
 
@@ -836,25 +874,37 @@ blr_file_size(BLFILE *file)
 void
 blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 {
+    static const char CACHE[] = "/cache";
+    size_t len = strlen(router->binlogdir) + (sizeof(CACHE) - 1) + sizeof('/') + strlen(response);
+    if (len > PATH_MAX)
+    {
+        MXS_ERROR("The cache path %s%s/%s is longer than the maximum allowed length %d.",
+                  router->binlogdir, CACHE, response, PATH_MAX);
+        return;
+    }
+
     char path[PATH_MAX + 1] = "";
     int fd;
 
-    strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX - strlen(path));
+    strcpy(path, router->binlogdir);
+    strcat(path, CACHE);
 
     if (access(path, R_OK) == -1)
     {
+        // TODO: Check error, ENOENT or something else.
         mkdir(path, 0700);
+        // TODO: Check return value.
     }
 
-    strncat(path, "/", PATH_MAX - strlen(path));
-    strncat(path, response, PATH_MAX - strlen(path));
+    strcat(path, "/");
+    strcat(path, response);
 
     if ((fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666)) == -1)
     {
         return;
     }
     write(fd, GWBUF_DATA(buf), GWBUF_LENGTH(buf));
+    // TODO: Check result.
 
     close(fd);
 }
@@ -873,15 +923,24 @@ blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf)
 GWBUF *
 blr_cache_read_response(ROUTER_INSTANCE *router, char *response)
 {
+    static const char CACHE[] = "/cache";
+    size_t len = strlen(router->binlogdir) + (sizeof(CACHE) - 1) + sizeof('/') + strlen(response);
+    if (len > PATH_MAX)
+    {
+        MXS_ERROR("The cache path %s%s/%s is longer than the maximum allowed length %d.",
+                  router->binlogdir, CACHE, response, PATH_MAX);
+        return NULL;
+    }
+
     struct stat statb;
     char path[PATH_MAX + 1] = "";
     int fd;
     GWBUF *buf;
 
-    strncpy(path, router->binlogdir, PATH_MAX);
-    strncat(path, "/cache", PATH_MAX - strlen(path));
-    strncat(path, "/", PATH_MAX - strlen(path));
-    strncat(path, response, PATH_MAX - strlen(path));
+    strcpy(path, router->binlogdir);
+    strcat(path, CACHE);
+    strcat(path, "/");
+    strcat(path, response);
 
     if ((fd = open(path, O_RDONLY)) == -1)
     {
@@ -1521,12 +1580,12 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                 BINLOG_EVENT_HDR_LEN -
                 (4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len);
 
-            statement_sql = calloc(1, statement_len + 1);
+            statement_sql = MXS_CALLOC(1, statement_len + 1);
             if (statement_sql)
             {
-                strncpy(statement_sql,
-                    (char *)ptr + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len,
-                    statement_len);
+                memcpy(statement_sql,
+                       (char *)ptr + 4 + 4 + 1 + 2 + 2 + var_block_len + 1 + db_name_len,
+                       statement_len);
 
                 /* A transaction starts with this event */
                 if (strncmp(statement_sql, "BEGIN", 5) == 0)
@@ -1534,10 +1593,10 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                     if (pending_transaction > 0)
                     {
                         MXS_ERROR("Transaction cannot be @ pos %llu: "
-                              "Another transaction was opened at %llu",
-                              pos, last_known_commit);
+                                  "Another transaction was opened at %llu",
+                                  pos, last_known_commit);
 
-                        free(statement_sql);
+                        MXS_FREE(statement_sql);
                         gwbuf_free(result);
 
                         break;
@@ -1551,7 +1610,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
 
                         if (debug)
                         {
-                        MXS_DEBUG("> Transaction starts @ pos %llu", pos);
+                            MXS_DEBUG("> Transaction starts @ pos %llu", pos);
                         }
                     }
                 }
@@ -1570,7 +1629,7 @@ blr_read_events_all_events(ROUTER_INSTANCE *router, int fix, int debug)
                         }
                     }
                 }
-                free(statement_sql);
+                MXS_FREE(statement_sql);
             }
             else
             {
@@ -1842,18 +1901,20 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     char *section = "binlog_configuration";
     FILE *config_file;
     int rc;
-    char path[(PATH_MAX - 15) + 1] = "";
-    char filename[(PATH_MAX - 4) + 1] = "";
-    char tmp_file[PATH_MAX + 1] = "";
+    static const char MASTER_INI[] = "master.ini";
+    static const char TMP[] = "tmp";
+    size_t len = strlen(router->binlogdir);
+
+    char filename[len + sizeof('/') + sizeof(MASTER_INI)]; // sizeof includes NULL
+    char tmp_file[len + sizeof('/') + sizeof(MASTER_INI) + sizeof('.') + sizeof(TMP)];
     char err_msg[STRERROR_BUFLEN];
+    char *ssl_ca;
+    char *ssl_cert;
+    char *ssl_key;
+    char *ssl_version;
 
-    strncpy(path, router->binlogdir, (PATH_MAX - 15));
-
-    snprintf(filename, (PATH_MAX - 4), "%s/master.ini", path);
-
-    snprintf(tmp_file, (PATH_MAX - 4), "%s", filename);
-
-    strcat(tmp_file, ".tmp");
+    sprintf(filename, "%s/%s", router->binlogdir, MASTER_INI);
+    sprintf(tmp_file, "%s/%s.%s", router->binlogdir, MASTER_INI, TMP);
 
     /* open file for writing */
     config_file = fopen(tmp_file, "wb");
@@ -1880,6 +1941,34 @@ blr_file_write_master_config(ROUTER_INSTANCE *router, char *error)
     fprintf(config_file, "master_user=%s\n", router->user);
     fprintf(config_file, "master_password=%s\n", router->password);
     fprintf(config_file, "filestem=%s\n", router->fileroot);
+
+    /* Add SSL options */
+    if (router->ssl_enabled)
+    {
+        /* Use current settings */
+        ssl_ca = router->service->dbref->server->server_ssl->ssl_ca_cert;
+        ssl_cert = router->service->dbref->server->server_ssl->ssl_cert;
+        ssl_key = router->service->dbref->server->server_ssl->ssl_key;
+    }
+    else
+    {
+        /* Try using previous configuration settings */
+        ssl_ca = router->ssl_ca;
+        ssl_cert = router->ssl_cert;
+        ssl_key = router->ssl_key;
+    }
+
+    ssl_version = router->ssl_version;
+
+    if (ssl_key && ssl_cert && ssl_ca)
+    {
+        fprintf(config_file, "master_ssl=%d\n", router->ssl_enabled);
+        fprintf(config_file, "master_ssl_key=%s\n", ssl_key);
+        fprintf(config_file, "master_ssl_cert=%s\n",ssl_cert);
+        fprintf(config_file, "master_ssl_ca=%s\n", ssl_ca);
+    }
+    if (ssl_version && strlen(ssl_version))
+        fprintf(config_file, "master_tls_version=%s\n", ssl_version);
 
     fclose(config_file);
 

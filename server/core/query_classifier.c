@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -15,6 +15,7 @@
 #include <log_manager.h>
 #include <modules.h>
 #include <modutil.h>
+#include <maxscale/alloc.h>
 
 //#define QC_TRACE_ENABLED
 #undef QC_TRACE_ENABLED
@@ -229,13 +230,14 @@ char* qc_get_qtype_str(qc_query_type_t qtype)
 
             if (qtype_str == NULL)
             {
-                qtype_str = strdup(STRQTYPE(t));
+                qtype_str = MXS_STRDUP_A(STRQTYPE(t));
             }
             else
             {
                 size_t len = strlen(STRQTYPE(t));
                 /** reallocate space for delimiter, new string and termination */
-                qtype_str = (char *) realloc(qtype_str, strlen(qtype_str) + 1 + len + 1);
+                qtype_str = (char *) MXS_REALLOC(qtype_str, strlen(qtype_str) + 1 + len + 1);
+                MXS_ABORT_IF_NULL(qtype_str);
                 snprintf(qtype_str + strlen(qtype_str), 1 + len + 1, "|%s", STRQTYPE(t));
             }
 
@@ -603,7 +605,7 @@ char* qc_types_to_string(uint32_t types)
     ++len;
 
     // Then make one allocation and build the string.
-    char* s = (char*) malloc(len);
+    char* s = (char*) MXS_MALLOC(len);
 
     if (s)
     {

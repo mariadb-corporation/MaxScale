@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -43,6 +43,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <gw_ssl.h>
+#include <maxscale/alloc.h>
 
 static SPINLOCK server_spin = SPINLOCK_INIT;
 static SERVER *allServers = NULL;
@@ -63,18 +64,25 @@ static void server_parameter_free(SERVER_PARAM *tofree);
 SERVER *
 server_alloc(char *servname, char *protocol, unsigned short port)
 {
-    SERVER *server;
+    servname = MXS_STRNDUP(servname, MAX_SERVER_NAME_LEN);
+    protocol = MXS_STRDUP(protocol);
 
-    if ((server = (SERVER *)calloc(1, sizeof(SERVER))) == NULL)
+    SERVER *server = (SERVER *)MXS_CALLOC(1, sizeof(SERVER));
+
+    if (!servname || !protocol || !server)
     {
+        MXS_FREE(servname);
+        MXS_FREE(protocol);
+        MXS_FREE(server);
         return NULL;
     }
+
 #if defined(SS_DEBUG)
     server->server_chk_top = CHK_NUM_SERVER;
     server->server_chk_tail = CHK_NUM_SERVER;
 #endif
-    server->name = strndup(servname, MAX_SERVER_NAME_LEN);
-    server->protocol = strdup(protocol);
+    server->name = servname;
+    server->protocol = protocol;
     server->port = port;
     server->status = SERVER_RUNNING;
     server->node_id = -1;
@@ -132,18 +140,18 @@ server_free(SERVER *tofreeserver)
     spinlock_release(&server_spin);
 
     /* Clean up session and free the memory */
-    free(tofreeserver->name);
-    free(tofreeserver->protocol);
-    free(tofreeserver->unique_name);
-    free(tofreeserver->server_string);
-    free(tofreeserver->slaves);
+    MXS_FREE(tofreeserver->name);
+    MXS_FREE(tofreeserver->protocol);
+    MXS_FREE(tofreeserver->unique_name);
+    MXS_FREE(tofreeserver->server_string);
+    MXS_FREE(tofreeserver->slaves);
     server_parameter_free(tofreeserver->parameters);
 
     if (tofreeserver->persistent)
     {
         dcb_persistent_clean_count(tofreeserver->persistent, true);
     }
-    free(tofreeserver);
+    MXS_FREE(tofreeserver);
     return 1;
 }
 
@@ -183,7 +191,7 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
                 {
                     previous->nextpersistent = dcb->nextpersistent;
                 }
-                free(dcb->user);
+                MXS_FREE(dcb->user);
                 dcb->user = NULL;
                 spinlock_release(&server->persistlock);
                 atomic_add(&server->stats.n_persistent, -1);
@@ -221,7 +229,7 @@ server_get_persistent(SERVER *server, char *user, const char *protocol)
 void
 server_set_unique_name(SERVER *server, char *name)
 {
-    server->unique_name = strdup(name);
+    server->unique_name = MXS_STRDUP_A(name);
 }
 
 /**
@@ -367,7 +375,7 @@ dprintAllServersJson(DCB *dcb)
         stat = server_status(server);
         dcb_printf(dcb, "    \"status\": \"%s\",\n",
                    stat);
-        free(stat);
+        MXS_FREE(stat);
         dcb_printf(dcb, "    \"protocol\": \"%s\",\n",
                    server->protocol);
         dcb_printf(dcb, "    \"port\": \"%d\",\n",
@@ -446,7 +454,7 @@ dprintServer(DCB *dcb, SERVER *server)
     dcb_printf(dcb, "\tServer:                              %s\n", server->name);
     char* stat = server_status(server);
     dcb_printf(dcb, "\tStatus:                              %s\n", stat);
-    free(stat);
+    MXS_FREE(stat);
     dcb_printf(dcb, "\tProtocol:                            %s\n", server->protocol);
     dcb_printf(dcb, "\tPort:                                %d\n", server->port);
     if (server->server_string)
@@ -591,7 +599,7 @@ dListServers(DCB *dcb)
                    server->unique_name, server->name,
                    server->port,
                    server->stats.n_current, stat);
-        free(stat);
+        MXS_FREE(stat);
         server = server->next;
     }
     if (allServers)
@@ -613,7 +621,7 @@ server_status(SERVER *server)
 {
     char    *status = NULL;
 
-    if (NULL == server || (status = (char *)malloc(256)) == NULL)
+    if (NULL == server || (status = (char *)MXS_MALLOC(256)) == NULL)
     {
         return NULL;
     }
@@ -740,8 +748,8 @@ server_transfer_status(SERVER *dest_server, SERVER *source_server)
 void
 serverAddMonUser(SERVER *server, char *user, char *passwd)
 {
-    server->monuser = strdup(user);
-    server->monpw = strdup(passwd);
+    server->monuser = MXS_STRDUP_A(user);
+    server->monpw = MXS_STRDUP_A(passwd);
 }
 
 /**
@@ -765,8 +773,8 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
         MXS_NOTICE("Update server protocol for server %s to protocol %s.",
                    server->name,
                    protocol);
-        free(server->protocol);
-        server->protocol = strdup(protocol);
+        MXS_FREE(server->protocol);
+        server->protocol = MXS_STRDUP_A(protocol);
     }
 
     if (user != NULL && passwd != NULL)
@@ -776,8 +784,8 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
         {
             MXS_NOTICE("Update server monitor credentials for server %s",
                        server->name);
-            free(server->monuser);
-            free(server->monpw);
+            MXS_FREE(server->monuser);
+            MXS_FREE(server->monpw);
             serverAddMonUser(server, user, passwd);
         }
     }
@@ -797,24 +805,21 @@ server_update(SERVER *server, char *protocol, char *user, char *passwd)
 void
 serverAddParameter(SERVER *server, char *name, char *value)
 {
-    SERVER_PARAM    *param;
+    name = MXS_STRDUP(name);
+    value = MXS_STRDUP(value);
 
-    if ((param = (SERVER_PARAM *)malloc(sizeof(SERVER_PARAM))) == NULL)
+    SERVER_PARAM *param = (SERVER_PARAM *)MXS_MALLOC(sizeof(SERVER_PARAM));
+
+    if (!name || !value || !param)
     {
-        return;
-    }
-    if ((param->name = strdup(name)) == NULL)
-    {
-        free(param);
-        return;
-    }
-    if ((param->value = strdup(value)) == NULL)
-    {
-        free(param->value);
-        free(param);
+        MXS_FREE(name);
+        MXS_FREE(value);
+        MXS_FREE(param);
         return;
     }
 
+    param->name = name;
+    param->value = value;
     param->next = server->parameters;
     server->parameters = param;
 }
@@ -831,9 +836,9 @@ static void server_parameter_free(SERVER_PARAM *tofree)
     {
         param = tofree;
         tofree = tofree->next;
-        free(param->name);
-        free(param->value);
-        free(param);
+        MXS_FREE(param->name);
+        MXS_FREE(param->value);
+        MXS_FREE(param);
     }
 }
 
@@ -886,7 +891,7 @@ serverRowCallback(RESULTSET *set, void *data)
     if (server == NULL)
     {
         spinlock_release(&server_spin);
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     (*rowno)++;
@@ -899,7 +904,7 @@ serverRowCallback(RESULTSET *set, void *data)
     resultset_row_set(row, 3, buf);
     stat = server_status(server);
     resultset_row_set(row, 4, stat);
-    free(stat);
+    MXS_FREE(stat);
     spinlock_release(&server_spin);
     return row;
 }
@@ -915,14 +920,14 @@ serverGetList()
     RESULTSET *set;
     int *data;
 
-    if ((data = (int *)malloc(sizeof(int))) == NULL)
+    if ((data = (int *)MXS_MALLOC(sizeof(int))) == NULL)
     {
         return NULL;
     }
     *data = 0;
     if ((set = resultset_create(serverRowCallback, data)) == NULL)
     {
-        free(data);
+        MXS_FREE(data);
         return NULL;
     }
     resultset_add_column(set, "Server", 20, COL_TYPE_VARCHAR);
@@ -949,9 +954,9 @@ server_update_address(SERVER *server, char *address)
     {
         if (server->name)
         {
-            free(server->name);
+            MXS_FREE(server->name);
         }
-        server->name = strdup(address);
+        server->name = MXS_STRDUP_A(address);
     }
     spinlock_release(&server_spin);
 }
@@ -1021,13 +1026,20 @@ server_map_status(char *str)
 bool server_set_version_string(SERVER* server, const char* string)
 {
     bool rval = true;
-    spinlock_acquire(&server->lock);
-    free(server->server_string);
-    if ((server->server_string = strdup(string)) == NULL)
+    string = MXS_STRDUP(string);
+
+    if (string)
     {
-        MXS_ERROR("Memory allocation failed.");
+        spinlock_acquire(&server->lock);
+        char* old = server->server_string;
+        server->server_string = (char*)string;
+        spinlock_release(&server->lock);
+        MXS_FREE(old);
+    }
+    else
+    {
         rval = false;
     }
-    spinlock_release(&server->lock);
+
     return rval;
 }

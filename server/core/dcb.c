@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -59,6 +59,7 @@
  * 07/02/2016   Martin Brampton         Make dcb_read_SSL & dcb_create_SSL internal,
  *                                      further small SSL logic changes
  * 31/05/2016   Martin Brampton         Implement connection throttling
+ * 27/06/2016   Martin Brampton         Implement list manager to manage DCB memory
  *
  * @endverbatim
  */
@@ -69,6 +70,7 @@
 #include <time.h>
 #include <signal.h>
 #include <dcb.h>
+#include <listmanager.h>
 #include <spinlock.h>
 #include <server.h>
 #include <session.h>
@@ -88,24 +90,25 @@
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <maxscale/alloc.h>
 
-static  DCB             *allDCBs = NULL;        /* Diagnostics need a list of DCBs */
-static  DCB             *lastDCB = NULL;
-static  DCB             *wasfreeDCB = NULL;
-static  int             freeDCBcount = 0;
-static  int             nDCBs = 0;
-static  int             maxDCBs = 0;
+/* The list of all DCBs */
+static LIST_CONFIG DCBlist =
+{LIST_TYPE_RECYCLABLE, sizeof(DCB), SPINLOCK_INIT};
+
+/* A DCB with null values, used for initialization */
+static DCB dcb_initialized = DCB_INIT;
+
 static  DCB             *zombies = NULL;
 static  int             nzombies = 0;
 static  int             maxzombies = 0;
-static  SPINLOCK        dcbspin = SPINLOCK_INIT;
 static  SPINLOCK        zombiespin = SPINLOCK_INIT;
 
+static void dcb_initialize(void *dcb);
 static void dcb_final_free(DCB *dcb);
 static void dcb_call_callback(DCB *dcb, DCB_REASON reason);
 static int  dcb_null_write(DCB *dcb, GWBUF *buf);
 static int  dcb_null_auth(DCB *dcb, SERVER *server, SESSION *session, GWBUF *buf);
-static inline int  dcb_isvalid_nolock(DCB *dcb);
 static inline DCB * dcb_find_in_list(DCB *dcb);
 static inline void dcb_process_victim_queue(DCB *listofdcb);
 static void dcb_stop_polling_and_shutdown (DCB *dcb);
@@ -176,11 +179,48 @@ dcb_get_zombies(void)
     return zombies;
 }
 
+/*
+ * @brief Pre-allocate memory for a number of DCBs
+ *
+ * @param   The number of DCBs to be pre-allocated
+ */
+bool
+dcb_pre_alloc(int number)
+{
+    return list_pre_alloc(&DCBlist, number, dcb_initialize);
+}
+
 /**
- * Allocate or recycle a new DCB.
+ * @brief Initialize a DCB
+ *
+ * This routine puts initial values into the fields of the DCB pointed to
+ * by the parameter. The parameter has to be passed as void * because the
+ * function can be called by the generic list manager, which does not know
+ * the actual type of the list entries it handles.
+ *
+ * Most fields can be initialized by the assignment of the static
+ * initialized DCB. The exception is the bitmask.
+ *
+ * @param *dcb    Pointer to the DCB to be initialized
+ */
+static void
+dcb_initialize(void *dcb)
+{
+    *(DCB *)dcb = dcb_initialized;
+    bitmask_init(&((DCB *)dcb)->memdata.bitmask);
+}
+
+/**
+ * @brief Allocate or recycle a new DCB.
  *
  * This routine performs the generic initialisation on the DCB before returning
  * the newly allocated or recycled DCB.
+ *
+ * Most fields will be already initialized by the list manager, through the
+ * call to list_find_free, passing the DCB initialization function.
+ *
+ * Remaining fields are set from the given parameters, and then the DCB is
+ * flagged as ready for use.
  *
  * @param dcb_role_t    The role for the new DCB
  * @return An available DCB or NULL if none could be allocated.
@@ -190,155 +230,17 @@ dcb_alloc(dcb_role_t role, SERV_LISTENER *listener)
 {
     DCB *newdcb;
 
-    spinlock_acquire(&dcbspin);
-    if ((newdcb = dcb_find_free()) == NULL)
+    if ((newdcb = (DCB *)list_find_free(&DCBlist, dcb_initialize)) == NULL)
     {
-        spinlock_release(&dcbspin);
         return NULL;
     }
-    nDCBs++;
-    if (nDCBs > maxDCBs)
-    {
-        maxDCBs = nDCBs;
-    }
-    spinlock_release(&dcbspin);
 
-    newdcb->dcb_chk_top = CHK_NUM_DCB;
-    newdcb->dcb_chk_tail = CHK_NUM_DCB;
-
-    newdcb->dcb_errhandle_called = false;
     newdcb->dcb_role = role;
-    spinlock_init(&newdcb->dcb_initlock);
-    spinlock_init(&newdcb->writeqlock);
-    spinlock_init(&newdcb->delayqlock);
-    spinlock_init(&newdcb->authlock);
-    spinlock_init(&newdcb->cb_lock);
-    spinlock_init(&newdcb->pollinlock);
-    spinlock_init(&newdcb->polloutlock);
-    newdcb->pollinbusy = 0;
-    newdcb->readcheck = 0;
-    newdcb->polloutbusy = 0;
-    newdcb->writecheck = 0;
-    newdcb->fd = DCBFD_CLOSED;
-
-    newdcb->evq.next = NULL;
-    newdcb->evq.prev = NULL;
-    newdcb->evq.pending_events = 0;
-    newdcb->evq.processing = 0;
-    spinlock_init(&newdcb->evq.eventqlock);
-
-    memset(&newdcb->stats, 0, sizeof(DCBSTATS));        // Zero the statistics
-    newdcb->state = DCB_STATE_ALLOC;
-    bitmask_init(&newdcb->memdata.bitmask);
-    newdcb->writeqlen = 0;
-    newdcb->high_water = 0;
-    newdcb->low_water = 0;
-    newdcb->session = NULL;
-    newdcb->server = NULL;
-    newdcb->service = NULL;
-    newdcb->nextpersistent = NULL;
-    newdcb->persistentstart = 0;
-    newdcb->callbacks = NULL;
-    newdcb->data = NULL;
-
     newdcb->listener = listener;
-    newdcb->ssl_state = SSL_HANDSHAKE_UNKNOWN;
+    newdcb->entry_is_ready = true;
 
-    newdcb->remote = NULL;
-    newdcb->user = NULL;
-    newdcb->flags = 0;
     return newdcb;
 }
-
-/**
- * Add a new DCB to the list of all DCBs.
- *
- * Must be called with the general DCB lock held.
- *
- * A pointer, lastDCB, is held to find the end of the list, and the new DCB
- * is linked to the end of the list.  The pointer, wasfreeDCB, that is used to
- * search for a free DCB is initialised if not already set. There cannot be
- * any free DCBs until this routine has been called at least once, so
- * wasfreeDCB will not be referred to before it is initialised.
- *
- * @param dcb    The DCB to be added to the list
- */
-static void
-dcb_add_to_all_list(DCB *dcb)
-{
-    if (allDCBs == NULL)
-    {
-        allDCBs = dcb;
-    }
-    else
-    {
-        lastDCB->next = dcb;
-    }
-    lastDCB = dcb;
-    if (NULL == wasfreeDCB)
-    {
-        wasfreeDCB = dcb;
-    }
-}
-
-/**
- * Find a free DCB or allocate memory for a new one.
- *
- * This routine looks to see whether there are free DCB memory areas.
- * If not, new memory is allocated, if possible, and the new DCB is added to
- * the list of all DCBs.
- *
- * Must be called with the general DCB lock held.
- *
- * @return An available DCB or NULL if none could be allocated.
- */
-static DCB *
-dcb_find_free()
-{
-    DCB *nextdcb;
-    int loopcount = 0;
-
-    if (freeDCBcount <= 0)
-    {
-        DCB *newdcb;
-        if ((newdcb = calloc(1, sizeof(DCB))) == NULL)
-        {
-            return NULL;
-        }
-        newdcb->next = NULL;
-        dcb_add_to_all_list(newdcb);
-        newdcb->dcb_is_in_use = true;
-        return newdcb;
-    }
-    /* Starting at the last place a free DCB was found, loop through the */
-    /* list of DCBs searching for one that is not in use. */
-    while (wasfreeDCB->dcb_is_in_use)
-    {
-        wasfreeDCB = wasfreeDCB->next;
-        if (NULL == wasfreeDCB)
-        {
-            loopcount++;
-            if (loopcount > 1)
-            {
-                /* Shouldn't need to loop round more than once */
-                MXS_ERROR("Find free DCB failed to find a free DCB even"
-                          " though the free count was positive");
-                return NULL;
-            }
-            wasfreeDCB = allDCBs;
-        }
-    }
-    /* Dropping out of the loop means we have found a DCB that is not in use */
-    freeDCBcount--;
-    ss_dassert(freeDCBcount >= 0);
-    /* Clear the old data, then reset the list forward link */
-    nextdcb = wasfreeDCB->next;
-    memset(wasfreeDCB, 0, sizeof(DCB));
-    wasfreeDCB->next = nextdcb;
-    wasfreeDCB->dcb_is_in_use = true;
-    return wasfreeDCB;
-}
-
 
 /**
  * Provided only for consistency, simply calls dcb_close to guarantee
@@ -362,23 +264,39 @@ dcb_free(DCB *dcb)
 DCB *
 dcb_clone(DCB *orig)
 {
-    DCB *clonedcb;
+    char *remote = orig->remote;
 
-    if ((clonedcb = dcb_alloc(orig->dcb_role, orig->listener)))
+    if (remote)
+    {
+        remote = MXS_STRDUP(remote);
+        if (!remote)
+        {
+            return NULL;
+        }
+    }
+
+    char *user = orig->user;
+    if (user)
+    {
+        user = MXS_STRDUP(user);
+        if (!user)
+        {
+            MXS_FREE(remote);
+            return NULL;
+        }
+    }
+
+    DCB *clonedcb = dcb_alloc(orig->dcb_role, orig->listener);
+
+    if (clonedcb)
     {
         clonedcb->fd = DCBFD_CLOSED;
         clonedcb->flags |= DCBF_CLONE;
         clonedcb->state = orig->state;
         clonedcb->data = orig->data;
         clonedcb->ssl_state = orig->ssl_state;
-        if (orig->remote)
-        {
-            clonedcb->remote = strdup(orig->remote);
-        }
-        if (orig->user)
-        {
-            clonedcb->user = strdup(orig->user);
-        }
+        clonedcb->remote = remote;
+        clonedcb->user = user;
         clonedcb->protocol = orig->protocol;
 
         clonedcb->func.write = dcb_null_write;
@@ -388,6 +306,12 @@ dcb_clone(DCB *orig)
         clonedcb->func.close = orig->func.close;
         clonedcb->func.auth = dcb_null_auth;
     }
+    else
+    {
+        MXS_FREE(remote);
+        MXS_FREE(user);
+    }
+
     return clonedcb;
 }
 
@@ -453,11 +377,11 @@ void
 dcb_free_all_memory(DCB *dcb)
 {
     DCB_CALLBACK *cb_dcb;
-    ss_dassert(dcb->dcb_is_in_use);
+    ss_dassert(dcb->entry_is_in_use);
 
     if (dcb->protocol && (!DCB_IS_CLONE(dcb)))
     {
-        free(dcb->protocol);
+        MXS_FREE(dcb->protocol);
     }
     if (dcb->data && dcb->authfunc.free && !DCB_IS_CLONE(dcb))
     {
@@ -466,15 +390,15 @@ dcb_free_all_memory(DCB *dcb)
     }
     if (dcb->protoname)
     {
-        free(dcb->protoname);
+        MXS_FREE(dcb->protoname);
     }
     if (dcb->remote)
     {
-        free(dcb->remote);
+        MXS_FREE(dcb->remote);
     }
     if (dcb->user)
     {
-        free(dcb->user);
+        MXS_FREE(dcb->user);
     }
 
     /* Clear write and read buffers */
@@ -498,7 +422,7 @@ dcb_free_all_memory(DCB *dcb)
     while ((cb_dcb = dcb->callbacks) != NULL)
     {
         dcb->callbacks = cb_dcb->next;
-        free(cb_dcb);
+        MXS_FREE(cb_dcb);
     }
     spinlock_release(&dcb->cb_lock);
     if (dcb->ssl)
@@ -508,11 +432,7 @@ dcb_free_all_memory(DCB *dcb)
     bitmask_free(&dcb->memdata.bitmask);
 
     /* We never free the actual DCB, it is available for reuse*/
-    spinlock_acquire(&dcbspin);
-    dcb->dcb_is_in_use = false;
-    freeDCBcount++;
-    nDCBs--;
-    spinlock_release(&dcbspin);
+    list_free_entry(&DCBlist, (list_entry_t *)dcb);
 
 }
 
@@ -706,7 +626,17 @@ dcb_process_victim_queue(DCB *listofdcb)
             {
                 if (dcb->protocol)
                 {
-                    atomic_add(&dcb->service->client_count, -1);
+                    QUEUE_ENTRY conn_waiting;
+                    if (mxs_dequeue(dcb->service->queued_connections, &conn_waiting))
+                    {
+                        DCB *waiting_dcb = (DCB *)conn_waiting.queued_object;
+                        waiting_dcb->state = DCB_STATE_WAITING;
+                        poll_fake_read_event(waiting_dcb);
+                    }
+                    else
+                    {
+                        atomic_add(&dcb->service->client_count, -1);
+                    }
                 }
             }
             else
@@ -852,7 +782,7 @@ dcb_connect(SERVER *server, SESSION *session, const char *protocol)
         return NULL;
     }
     memcpy(&(dcb->func), funcs, sizeof(GWPROTOCOL));
-    dcb->protoname = strdup(protocol);
+    dcb->protoname = MXS_STRDUP_A(protocol);
 
     /**
      * Link dcb to session. Unlink is called in dcb_final_free
@@ -1804,7 +1734,7 @@ dcb_close(DCB *dcb)
             user = session_getUser(dcb->session);
             if (user && strlen(user) && !dcb->user)
             {
-                dcb->user = strdup(user);
+                dcb->user = MXS_STRDUP_A(user);
             }
         }
         /*<
@@ -1872,7 +1802,7 @@ dcb_maybe_add_persistent(DCB *dcb)
         while ((loopcallback = dcb->callbacks) != NULL)
         {
             dcb->callbacks = loopcallback->next;
-            free(loopcallback);
+            MXS_FREE(loopcallback);
         }
         spinlock_release(&dcb->cb_lock);
         spinlock_acquire(&dcb->server->persistlock);
@@ -1909,10 +1839,6 @@ dcb_maybe_add_persistent(DCB *dcb)
 void
 printDCB(DCB *dcb)
 {
-    if (false == dcb->dcb_is_in_use)
-    {
-        return;
-    }
     printf("DCB: %p\n", (void *)dcb);
     printf("\tDCB state:            %s\n", gw_dcb_state2string(dcb->state));
     if (dcb->remote)
@@ -1935,13 +1861,13 @@ printDCB(DCB *dcb)
     if (statusname)
     {
         printf("\tServer status:            %s\n", statusname);
-        free(statusname);
+        MXS_FREE(statusname);
     }
     char *rolename = dcb_role_name(dcb);
     if (rolename)
     {
         printf("\tRole:                     %s\n", rolename);
-        free(rolename);
+        MXS_FREE(rolename);
     }
     printf("\tStatistics:\n");
     printf("\t\tNo. of Reads:                       %d\n",
@@ -1977,16 +1903,15 @@ spin_reporter(void *dcb, char *desc, int value)
  */
 void printAllDCBs()
 {
-    DCB *dcb;
+    list_entry_t *current;
 
-    spinlock_acquire(&dcbspin);
-    dcb = allDCBs;
-    while (dcb)
+    current = list_start_iteration(&DCBlist);
+
+    while (current)
     {
-        printDCB(dcb);
-        dcb = dcb->next;
+        printDCB((DCB *)current);
+        current = list_iterate(&DCBlist, current);
     }
-    spinlock_release(&dcbspin);
 }
 
 /**
@@ -1998,7 +1923,7 @@ void printAllDCBs()
 void
 dprintOneDCB(DCB *pdcb, DCB *dcb)
 {
-    if (false == dcb->dcb_is_in_use)
+    if (false == dcb->entry_is_in_use)
     {
         return;
     }
@@ -2047,13 +1972,13 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
     if (statusname)
     {
         dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
-        free(statusname);
+        MXS_FREE(statusname);
     }
     char *rolename = dcb_role_name(dcb);
     if (rolename)
     {
         dcb_printf(pdcb, "\tRole:                     %s\n", rolename);
-        free(rolename);
+        MXS_FREE(rolename);
     }
     if (!bitmask_isallclear(&dcb->memdata.bitmask))
     {
@@ -2061,7 +1986,7 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
         if (bitmasktext)
         {
             dcb_printf(pdcb, "\tBitMask:                %s\n", bitmasktext);
-            free(bitmasktext);
+            MXS_FREE(bitmasktext);
         }
     }
     dcb_printf(pdcb, "\tStatistics:\n");
@@ -2084,6 +2009,18 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
         dcb_printf(pdcb, "\t\tAdded to persistent pool:       %s\n", buff);
     }
 }
+
+/*
+ * @brief Print DCB list statistics
+ *
+ * @param       pdcb    DCB to print results to
+ */
+void
+dprintDCBList(DCB *pdcb)
+{
+    dprintListStats(pdcb, &DCBlist, "All DCBs");
+}
+
 /**
  * Diagnostic to print all DCB allocated in the system
  *
@@ -2092,22 +2029,20 @@ dprintOneDCB(DCB *pdcb, DCB *dcb)
 void
 dprintAllDCBs(DCB *pdcb)
 {
-    DCB *dcb;
+    list_entry_t *current;
 
-    spinlock_acquire(&dcbspin);
+    current = list_start_iteration(&DCBlist);
 #if SPINLOCK_PROFILE
     dcb_printf(pdcb, "DCB List Spinlock Statistics:\n");
-    spinlock_stats(&dcbspin, spin_reporter, pdcb);
+    spinlock_stats(&DCBlist->list_lock, spin_reporter, pdcb);
     dcb_printf(pdcb, "Zombie Queue Lock Statistics:\n");
     spinlock_stats(&zombiespin, spin_reporter, pdcb);
 #endif
-    dcb = allDCBs;
-    while (dcb)
+    while (current)
     {
-        dprintOneDCB(pdcb, dcb);
-        dcb = dcb->next;
+        dprintOneDCB(pdcb, (DCB *)current);
+        current = list_iterate(&DCBlist, current);
     }
-    spinlock_release(&dcbspin);
 }
 
 /**
@@ -2119,27 +2054,24 @@ void
 dListDCBs(DCB *pdcb)
 {
     DCB *dcb;
+    list_entry_t *current;
 
-    spinlock_acquire(&dcbspin);
-    dcb = allDCBs;
+    current = list_start_iteration(&DCBlist);
     dcb_printf(pdcb, "Descriptor Control Blocks\n");
     dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
     dcb_printf(pdcb, " %-16s | %-26s | %-18s | %s\n",
                "DCB", "State", "Service", "Remote");
     dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n");
-    while (dcb)
+    while (current)
     {
-        if (dcb->dcb_is_in_use)
-        {
-            dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
-                       dcb, gw_dcb_state2string(dcb->state),
-                       ((dcb->session && dcb->session->service) ? dcb->session->service->name : ""),
-                       (dcb->remote ? dcb->remote : ""));
-        }
-        dcb = dcb->next;
+        dcb = (DCB *)current;
+        dcb_printf(pdcb, " %-16p | %-26s | %-18s | %s\n",
+            dcb, gw_dcb_state2string(dcb->state),
+            ((dcb->session && dcb->session->service) ? dcb->session->service->name : ""),
+            (dcb->remote ? dcb->remote : ""));
+        current = list_iterate(&DCBlist, current);
     }
     dcb_printf(pdcb, "------------------+----------------------------+--------------------+----------\n\n");
-    spinlock_release(&dcbspin);
 }
 
 /**
@@ -2151,17 +2083,19 @@ void
 dListClients(DCB *pdcb)
 {
     DCB *dcb;
+    list_entry_t *current;
 
-    spinlock_acquire(&dcbspin);
-    dcb = allDCBs;
+    current = list_start_iteration(&DCBlist);
+
     dcb_printf(pdcb, "Client Connections\n");
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
     dcb_printf(pdcb, " %-15s | %-16s | %-20s | %s\n",
                "Client", "DCB", "Service", "Session");
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n");
-    while (dcb)
+    while (current)
     {
-        if (dcb->dcb_is_in_use && dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
+        dcb = (DCB *)current;
+        if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER)
         {
             dcb_printf(pdcb, " %-15s | %16p | %-20s | %10p\n",
                        (dcb->remote ? dcb->remote : ""),
@@ -2169,10 +2103,9 @@ dListClients(DCB *pdcb)
                              dcb->session->service->name : ""),
                        dcb->session);
         }
-        dcb = dcb->next;
+        current = list_iterate(&DCBlist, current);
     }
     dcb_printf(pdcb, "-----------------+------------------+----------------------+------------\n\n");
-    spinlock_release(&dcbspin);
 }
 
 
@@ -2185,10 +2118,6 @@ dListClients(DCB *pdcb)
 void
 dprintDCB(DCB *pdcb, DCB *dcb)
 {
-    if (false == dcb->dcb_is_in_use)
-    {
-        return;
-    }
     dcb_printf(pdcb, "DCB: %p\n", (void *)dcb);
     dcb_printf(pdcb, "\tDCB state:          %s\n", gw_dcb_state2string(dcb->state));
     if (dcb->session && dcb->session->service)
@@ -2223,13 +2152,13 @@ dprintDCB(DCB *pdcb, DCB *dcb)
     if (statusname)
     {
         dcb_printf(pdcb, "\tServer status:            %s\n", statusname);
-        free(statusname);
+        MXS_FREE(statusname);
     }
     char *rolename = dcb_role_name(dcb);
     if (rolename)
     {
         dcb_printf(pdcb, "\tRole:                     %s\n", rolename);
-        free(rolename);
+        MXS_FREE(rolename);
     }
     dcb_printf(pdcb, "\tStatistics:\n");
     dcb_printf(pdcb, "\t\tNo. of Reads:                     %d\n",
@@ -2498,7 +2427,8 @@ gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing)
 
             if (strncmp(str, "set autocommit", 14) == 0 && nbytes > 17)
             {
-                char* s = (char *)calloc(1, nbytes + 1);
+                char* s = (char *)MXS_CALLOC(1, nbytes + 1);
+                MXS_ABORT_IF_NULL(s);
 
                 if (nbytes - 5 > len)
                 {
@@ -2517,7 +2447,7 @@ gw_write(DCB *dcb, GWBUF *writeq, bool *stop_writing)
                          pthread_self(),
                          w,
                          s);
-                free(s);
+                MXS_FREE(s);
             }
         }
     }
@@ -2578,7 +2508,7 @@ dcb_add_callback(DCB *dcb,
 {
     DCB_CALLBACK *cb, *ptr, *lastcb = NULL;
 
-    if ((ptr = (DCB_CALLBACK *)malloc(sizeof(DCB_CALLBACK))) == NULL)
+    if ((ptr = (DCB_CALLBACK *)MXS_MALLOC(sizeof(DCB_CALLBACK))) == NULL)
     {
         return 0;
     }
@@ -2594,7 +2524,7 @@ dcb_add_callback(DCB *dcb,
             cb->userdata == userdata)
         {
             /* Callback is a duplicate, abandon it */
-            free(ptr);
+            MXS_FREE(ptr);
             spinlock_release(&dcb->cb_lock);
             return 0;
         }
@@ -2657,7 +2587,7 @@ dcb_remove_callback(DCB *dcb,
                     dcb->callbacks = cb->next;
                 }
                 spinlock_release(&dcb->cb_lock);
-                free(cb);
+                MXS_FREE(cb);
                 rval = 1;
                 break;
             }
@@ -2709,7 +2639,7 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
 }
 
 /**
- * Check the passed DCB to ensure it is in the list of allDCBS
+ * Check the passed DCB to ensure it is in the list of all DCBS
  *
  * @param       dcb     The DCB to check
  * @return      1 if the DCB is in the list, otherwise 0
@@ -2717,50 +2647,7 @@ dcb_call_callback(DCB *dcb, DCB_REASON reason)
 int
 dcb_isvalid(DCB *dcb)
 {
-    int rval = 0;
-
-    if (dcb)
-    {
-        spinlock_acquire(&dcbspin);
-        rval = dcb_isvalid_nolock(dcb);
-        spinlock_release(&dcbspin);
-    }
-
-    return rval;
-}
-
-/**
- * Find a DCB in the list of all DCB's
- *
- * @param dcb       The DCB to find
- * @return          A pointer to the DCB or NULL if not in the list
- */
-static inline DCB *
-dcb_find_in_list (DCB *dcb)
-{
-    DCB *ptr = NULL;
-    if (dcb)
-    {
-        ptr = allDCBs;
-        while (ptr && (false == ptr->dcb_is_in_use || ptr != dcb))
-        {
-            ptr = ptr->next;
-        }
-    }
-    return ptr;
-}
-
-/**
- * Check the passed DCB to ensure it is in the list of allDCBS.
- * Requires that the DCB list is already locked before call.
- *
- * @param       dcb     The DCB to check
- * @return      1 if the DCB is in the list, otherwise 0
- */
-static inline int
-dcb_isvalid_nolock(DCB *dcb)
-{
-    return (dcb == dcb_find_in_list(dcb));
+    return (int)list_is_entry_in_use(&DCBlist, (list_entry_t *)dcb);
 }
 
 /**
@@ -2782,16 +2669,13 @@ dcb_call_foreach(struct server* server, DCB_REASON reason)
     case DCB_REASON_NOT_RESPONDING:
     {
         DCB *dcb;
-        spinlock_acquire(&dcbspin);
-        dcb = allDCBs;
+        list_entry_t *current;
 
-        while (dcb != NULL)
+        current = list_start_iteration(&DCBlist);
+
+        while (current)
         {
-            if (false == dcb->dcb_is_in_use)
-            {
-                dcb = dcb->next;
-                continue;
-            }
+            dcb = (DCB *)current;
             spinlock_acquire(&dcb->dcb_initlock);
             if (dcb->state == DCB_STATE_POLLING && dcb->server &&
                 strcmp(dcb->server->unique_name,server->unique_name) == 0)
@@ -2799,9 +2683,8 @@ dcb_call_foreach(struct server* server, DCB_REASON reason)
                 dcb_call_callback(dcb, DCB_REASON_NOT_RESPONDING);
             }
             spinlock_release(&dcb->dcb_initlock);
-            dcb = dcb->next;
+            current = list_iterate(&DCBlist, current);
         }
-        spinlock_release(&dcbspin);
         break;
     }
 
@@ -2819,29 +2702,23 @@ dcb_call_foreach(struct server* server, DCB_REASON reason)
 void
 dcb_hangup_foreach(struct server* server)
 {
-    MXS_DEBUG("%lu [dcb_hangup_foreach]", pthread_self());
-
     DCB *dcb;
-    spinlock_acquire(&dcbspin);
-    dcb = allDCBs;
+    list_entry_t *current;
 
-    while (dcb != NULL)
+    current = list_start_iteration(&DCBlist);
+
+    while (current)
     {
-        if (false == dcb->dcb_is_in_use)
-        {
-            dcb = dcb->next;
-            continue;
-        }
+        dcb = (DCB *)current;
         spinlock_acquire(&dcb->dcb_initlock);
         if (dcb->state == DCB_STATE_POLLING && dcb->server &&
-            strcmp(dcb->server->unique_name, server->unique_name) == 0)
+            dcb->server == server)
         {
             poll_fake_hangup_event(dcb);
         }
         spinlock_release(&dcb->dcb_initlock);
-        dcb = dcb->next;
+        current = list_iterate(&DCBlist, current);
     }
-    spinlock_release(&dcbspin);
 }
 
 
@@ -2963,13 +2840,13 @@ dcb_count_by_usage(DCB_USAGE usage)
 {
     int rval = 0;
     DCB *dcb;
+    list_entry_t *current;
 
-    spinlock_acquire(&dcbspin);
-    dcb = allDCBs;
-    while (dcb)
+    current = list_start_iteration(&DCBlist);
+
+    while (current)
     {
-        if (dcb->dcb_is_in_use)
-        {
+        dcb = (DCB *)current;
         switch (usage)
         {
         case DCB_USAGE_CLIENT:
@@ -3007,10 +2884,8 @@ dcb_count_by_usage(DCB_USAGE usage)
             rval++;
             break;
         }
-        dcb = dcb->next;
+        current = list_iterate(&DCBlist, current);
     }
-    }
-    spinlock_release(&dcbspin);
     return rval;
 }
 
@@ -3272,7 +3147,7 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
             if (((struct sockaddr *)&client_conn)->sa_family == AF_UNIX)
             {
                 // client address
-                client_dcb->remote = strdup("localhost_from_socket");
+                client_dcb->remote = MXS_STRDUP_A("localhost_from_socket");
                 // set localhost IP for user authentication
                 (client_dcb->ipv4).sin_addr.s_addr = 0x0100007F;
             }
@@ -3283,7 +3158,7 @@ dcb_accept(DCB *listener, GWPROTOCOL *protocol_funcs)
                        (struct sockaddr_in *)&client_conn,
                        sizeof(struct sockaddr_in));
                 /* client IPv4 in string representation */
-                client_dcb->remote = (char *)calloc(INET_ADDRSTRLEN + 1, sizeof(char));
+                client_dcb->remote = (char *)MXS_CALLOC(INET_ADDRSTRLEN + 1, sizeof(char));
 
                 if (client_dcb->remote != NULL)
                 {
@@ -3582,6 +3457,13 @@ dcb_listen_create_socket_unix(const char *config_bind)
         *tmp = '\0';
     }
 
+    if (strlen(config_bind) > sizeof(local_addr.sun_path) - 1)
+    {
+        MXS_ERROR("The path %s specified for the UNIX domain socket is too long. "
+                  "The maximum length is %lu.", config_bind, sizeof(local_addr.sun_path) - 1);
+        return -1;
+    }
+
     // UNIX socket create
     if ((listener_socket = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
     {
@@ -3608,7 +3490,7 @@ dcb_listen_create_socket_unix(const char *config_bind)
 
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sun_family = AF_UNIX;
-    strncpy(local_addr.sun_path, config_bind, sizeof(local_addr.sun_path) - 1);
+    strcpy(local_addr.sun_path, config_bind);
 
     if ((-1 == unlink(config_bind)) && (errno != ENOENT))
     {
@@ -3678,9 +3560,9 @@ dcb_set_socket_option(int sockfd, int level, int optname, void *optval, socklen_
 char *
 dcb_role_name(DCB *dcb)
 {
-    char *name = NULL;
+    char *name = (char *)MXS_MALLOC(64);
 
-    if (NULL != (name = (char *)malloc(64)))
+    if (name)
     {
         name[0] = 0;
         if (DCB_ROLE_SERVICE_LISTENER == dcb->dcb_role)

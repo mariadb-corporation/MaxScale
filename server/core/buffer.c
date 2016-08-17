@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -37,15 +37,16 @@
  *
  * @endverbatim
  */
-#include <stdlib.h>
 #include <buffer.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <maxscale/alloc.h>
 #include <atomic.h>
 #include <skygw_debug.h>
 #include <skygw_utils.h>
 #include <spinlock.h>
 #include <hint.h>
 #include <log_manager.h>
-#include <errno.h>
 
 #if defined(BUFFER_TRACE)
 #include <hashtable.h>
@@ -83,25 +84,24 @@ gwbuf_alloc(unsigned int size)
     SHARED_BUF *sbuf;
 
     /* Allocate the buffer header */
-    if ((rval = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
+    if ((rval = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
     {
         goto retblock;
     }
 
     /* Allocate the shared data buffer */
-    if ((sbuf = (SHARED_BUF *)malloc(sizeof(SHARED_BUF))) == NULL)
+    if ((sbuf = (SHARED_BUF *)MXS_MALLOC(sizeof(SHARED_BUF))) == NULL)
     {
-        free(rval);
+        MXS_FREE(rval);
         rval = NULL;
         goto retblock;
     }
 
     /* Allocate the space for the actual data */
-    if ((sbuf->data = (unsigned char *)malloc(size)) == NULL)
+    if ((sbuf->data = (unsigned char *)MXS_MALLOC(size)) == NULL)
     {
-        ss_dassert(sbuf->data != NULL);
-        free(rval);
-        free(sbuf);
+        MXS_FREE(rval);
+        MXS_FREE(sbuf);
         rval = NULL;
         goto retblock;
     }
@@ -174,7 +174,7 @@ gwbuf_add_to_hashtable(GWBUF *buf)
     {
         total += strlen(strings[i]);
     }
-    tracetext = (char *)malloc(total);
+    tracetext = (char *)MXS_MALLOC(total);
     if (tracetext)
     {
         char *ptr = tracetext;
@@ -188,7 +188,7 @@ gwbuf_add_to_hashtable(GWBUF *buf)
         if (NULL == buffer_hashtable)
         {
             buffer_hashtable = hashtable_alloc(10000, bhashfn, bcmpfn);
-            hashtable_memory_fns(buffer_hashtable, NULL, NULL, NULL, (HASHMEMORYFN)free);
+            hashtable_memory_fns(buffer_hashtable, NULL, NULL, NULL, hashtable_item_free);
         }
         hashtable_add(buffer_hashtable, buf, (void *)tracetext);
     }
@@ -283,8 +283,8 @@ gwbuf_free_one(GWBUF *buf)
 
     if (atomic_add(&buf->sbuf->refcount, -1) == 1)
     {
-        free(buf->sbuf->data);
-        free(buf->sbuf);
+        MXS_FREE(buf->sbuf->data);
+        MXS_FREE(buf->sbuf);
         bo = buf->gwbuf_bufobj;
 
         while (bo != NULL)
@@ -297,9 +297,9 @@ gwbuf_free_one(GWBUF *buf)
     {
         prop = buf->properties;
         buf->properties = prop->next;
-        free(prop->name);
-        free(prop->value);
-        free(prop);
+        MXS_FREE(prop->name);
+        MXS_FREE(prop->value);
+        MXS_FREE(prop);
     }
     /** Release the hint */
     while (buf->hint)
@@ -311,7 +311,7 @@ gwbuf_free_one(GWBUF *buf)
 #if defined(BUFFER_TRACE)
     gwbuf_remove_from_hashtable(buf);
 #endif
-    free(buf);
+    MXS_FREE(buf);
 }
 
 /**
@@ -329,12 +329,8 @@ gwbuf_clone(GWBUF *buf)
 {
     GWBUF *rval;
 
-    if ((rval = (GWBUF *)calloc(1, sizeof(GWBUF))) == NULL)
+    if ((rval = (GWBUF *)MXS_CALLOC(1, sizeof(GWBUF))) == NULL)
     {
-        ss_dassert(rval != NULL);
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
         return NULL;
     }
 
@@ -393,12 +389,8 @@ GWBUF *gwbuf_clone_portion(GWBUF *buf,
     CHK_GWBUF(buf);
     ss_dassert(start_offset + length <= GWBUF_LENGTH(buf));
 
-    if ((clonebuf = (GWBUF *)malloc(sizeof(GWBUF))) == NULL)
+    if ((clonebuf = (GWBUF *)MXS_MALLOC(sizeof(GWBUF))) == NULL)
     {
-        ss_dassert(clonebuf != NULL);
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
         return NULL;
     }
     atomic_add(&buf->sbuf->refcount, 1);
@@ -729,16 +721,9 @@ void gwbuf_add_buffer_object(GWBUF* buf,
     buffer_object_t*  newb;
 
     CHK_GWBUF(buf);
-    newb = (buffer_object_t *)malloc(sizeof(buffer_object_t));
-    ss_dassert(newb != NULL);
+    newb = (buffer_object_t *)MXS_MALLOC(sizeof(buffer_object_t));
+    MXS_ABORT_IF_NULL(newb);
 
-    if (newb == NULL)
-    {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
-        return;
-    }
     newb->bo_id = id;
     newb->bo_data = data;
     newb->bo_donefun_fp = donefun_fp;
@@ -798,7 +783,7 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* 
     next = bufobj->bo_next;
     /** Call corresponding clean-up function to clean buffer object's data */
     bufobj->bo_donefun_fp(bufobj->bo_data);
-    free(bufobj);
+    MXS_FREE(bufobj);
     return next;
 }
 
@@ -813,18 +798,21 @@ static buffer_object_t* gwbuf_remove_buffer_object(GWBUF* buf, buffer_object_t* 
 int
 gwbuf_add_property(GWBUF *buf, char *name, char *value)
 {
-    BUF_PROPERTY *prop;
+    name = MXS_STRDUP(name);
+    value = MXS_STRDUP(value);
 
-    if ((prop = malloc(sizeof(BUF_PROPERTY))) == NULL)
+    BUF_PROPERTY *prop = (BUF_PROPERTY *)MXS_MALLOC(sizeof(BUF_PROPERTY));
+
+    if (!name || !value || !prop)
     {
-        ss_dassert(prop != NULL);
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
+        MXS_FREE(name);
+        MXS_FREE(value);
+        MXS_FREE(prop);
         return 0;
     }
-    prop->name = strdup(name);
-    prop->value = strdup(value);
+
+    prop->name = name;
+    prop->value = value;
     spinlock_acquire(&buf->gwbuf_lock);
     prop->next = buf->properties;
     buf->properties = prop;

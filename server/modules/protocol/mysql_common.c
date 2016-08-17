@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -44,7 +44,8 @@
 
 #include <gw.h>
 #include <utils.h>
-#include "mysql_client_server_protocol.h"
+#include <mysql_client_server_protocol.h>
+#include <maxscale/alloc.h>
 #include <skygw_types.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -69,19 +70,11 @@ MySQLProtocol* mysql_protocol_init(DCB* dcb, int fd)
 {
     MySQLProtocol* p;
 
-    p = (MySQLProtocol *) calloc(1, sizeof(MySQLProtocol));
+    p = (MySQLProtocol *) MXS_CALLOC(1, sizeof(MySQLProtocol));
     ss_dassert(p != NULL);
 
     if (p == NULL)
     {
-        int eno = errno;
-        errno = 0;
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("%lu [mysql_init_protocol] MySQL protocol init failed : "
-                  "memory allocation due error  %d, %s.",
-                  pthread_self(),
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
         goto return_p;
     }
     p->protocol_state = MYSQL_PROTOCOL_ALLOC;
@@ -130,7 +123,7 @@ void mysql_protocol_done(DCB* dcb)
     while (scmd != NULL)
     {
         scmd2 = scmd->scom_next;
-        free(scmd);
+        MXS_FREE(scmd);
         scmd = scmd2;
     }
     p->protocol_state = MYSQL_PROTOCOL_DONE;
@@ -423,7 +416,6 @@ int mysql_send_custom_error(DCB       *dcb,
 }
 
 /**
->>>>>>> origin/develop
  * mysql_send_auth_error
  *
  * Send a MySQL protocol ERR message, for gateway authentication error to the dcb
@@ -619,7 +611,7 @@ static server_command_t* server_command_init(server_command_t* srvcmd,
     }
     else
     {
-        c = (server_command_t *)malloc(sizeof(server_command_t));
+        c = (server_command_t *)MXS_MALLOC(sizeof(server_command_t));
     }
     if (c != NULL)
     {
@@ -634,12 +626,8 @@ static server_command_t* server_command_init(server_command_t* srvcmd,
 
 static server_command_t* server_command_copy(server_command_t* srvcmd)
 {
-    server_command_t* c = (server_command_t *)malloc(sizeof(server_command_t));
-    if (NULL == c)
-    {
-        MXS_ERROR("Memory failure while attempting server_command_copy");
-    }
-    else
+    server_command_t* c = (server_command_t *)MXS_MALLOC(sizeof(server_command_t));
+    if (c)
     {
         *c = *srvcmd;
     }
@@ -692,7 +680,7 @@ void protocol_archive_srv_command(MySQLProtocol* p)
     {
         server_command_t* c = p->protocol_cmd_history;
         p->protocol_cmd_history = p->protocol_cmd_history->scom_next;
-        free(c);
+        MXS_FREE(c);
     }
 
     /** Remove from command list */
@@ -703,7 +691,7 @@ void protocol_archive_srv_command(MySQLProtocol* p)
     else
     {
         p->protocol_command = *(s1->scom_next);
-        free(s1->scom_next);
+        MXS_FREE(s1->scom_next);
     }
 
 retblock:
@@ -783,7 +771,7 @@ void protocol_remove_srv_command(MySQLProtocol* p)
     else
     {
         p->protocol_command = *(s->scom_next);
-        free(s->scom_next);
+        MXS_FREE(s->scom_next);
     }
 
     spinlock_release(&p->protocol_lock);
@@ -928,7 +916,7 @@ char* create_auth_failed_msg(GWBUF*readbuf,
     const char* ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
 
     /** -4 comes from 2X'%s' minus terminating char */
-    errstr = (char *)malloc(strlen(uname) + strlen(ferrstr) + strlen(hostaddr) + strlen("YES") - 6 + 1);
+    errstr = (char *)MXS_MALLOC(strlen(uname) + strlen(ferrstr) + strlen(hostaddr) + strlen("YES") - 6 + 1);
 
     if (errstr != NULL)
     {
@@ -979,15 +967,12 @@ char *create_auth_fail_str(char *username,
     {
         ferrstr = "Access denied for user '%s'@'%s' (using password: %s)";
     }
-    errstr = (char *)malloc(strlen(username) + strlen(ferrstr) +
-                            strlen(hostaddr) + strlen("YES") - 6 +
-                            db_len + ((db_len > 0) ? (strlen(" to database ") +2) : 0) + 1);
+    errstr = (char *)MXS_MALLOC(strlen(username) + strlen(ferrstr) +
+                                strlen(hostaddr) + strlen("YES") - 6 +
+                                db_len + ((db_len > 0) ? (strlen(" to database ") + 2) : 0) + 1);
 
     if (errstr == NULL)
     {
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("Memory allocation failed due to %s.",
-                  strerror_r(errno, errbuf, sizeof(errbuf)));
         goto retblock;
     }
 

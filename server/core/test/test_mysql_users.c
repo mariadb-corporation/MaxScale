@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -39,6 +39,7 @@
 #include <mysql_auth.h>
 #include <listener.h>
 #include <arpa/inet.h>
+#include <maxscale/alloc.h>
 
 extern int setipaddress();
 
@@ -63,9 +64,8 @@ int set_and_get_single_mysql_users_ipv4(char *username, unsigned long ipv4, char
         fprintf(stderr, "dcb_alloc() failed\n");
         return 1;
     }
-    if ((service = (SERVICE *)calloc(1, sizeof(SERVICE))) == NULL)
+    if ((service = (SERVICE *)MXS_CALLOC(1, sizeof(SERVICE))) == NULL)
     {
-        fprintf(stderr, "service_alloc() failed\n");
         dcb_close(dcb);
         return 1;
     }
@@ -99,7 +99,7 @@ int set_and_get_single_mysql_users_ipv4(char *username, unsigned long ipv4, char
     {
         fprintf(stderr, "Failed adding %s@%s(%lu)\n", username, ret_ip, fix_ipv4);
         users_free(mysql_users);
-        free(service);
+        MXS_FREE(service);
         dcb_close(dcb);
         return 1;
     }
@@ -116,7 +116,7 @@ int set_and_get_single_mysql_users_ipv4(char *username, unsigned long ipv4, char
     fetch_data = mysql_users_fetch(mysql_users, &find_key);
 
     users_free(mysql_users);
-    free(service);
+    MXS_FREE(service);
     dcb_close(dcb);
 
     if (!fetch_data)
@@ -207,19 +207,19 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
     DCB *dcb;
     SERVICE *service;
     MYSQL_session *data;
-    SERV_LISTENER dummy;
 
-    dcb = dcb_alloc(DCB_ROLE_INTERNAL, &dummy);
+    if ((service = (SERVICE *)MXS_CALLOC(1, sizeof(SERVICE))) == NULL)
+    {
+        return ret;
+    }
+
+    SERV_LISTENER *port = listener_alloc(service, "testlistener", "MySQLClient", NULL, 4006, NULL, NULL);
+
+    dcb = dcb_alloc(DCB_ROLE_INTERNAL, port);
 
     if (dcb == NULL)
     {
         fprintf(stderr, "dcb_alloc() failed\n");
-        return ret;
-    }
-    if ((service = (SERVICE *)calloc(1, sizeof(SERVICE))) == NULL)
-    {
-        fprintf(stderr, "service_alloc() failed\n");
-        dcb_close(dcb);
         return ret;
     }
 
@@ -230,16 +230,15 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
         if (!setipaddress(&client_addr.sin_addr, from))
         {
             fprintf(stderr, "setipaddress failed for host [%s]\n", from);
-            free(service);
+            MXS_FREE(service);
             dcb_close(dcb);
             return ret;
         }
     }
 
-    if ((data = (MYSQL_session *) calloc(1, sizeof(MYSQL_session))) == NULL)
+    if ((data = (MYSQL_session *) MXS_CALLOC(1, sizeof(MYSQL_session))) == NULL)
     {
-        fprintf(stderr, "MYSQL_session alloc failed\n");
-        free(service);
+        MXS_FREE(service);
         dcb_close(dcb);
         return ret;
     }
@@ -252,15 +251,16 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
 
     mysql_users = mysql_users_alloc();
 
-    service->users = mysql_users;
+    service->ports = port;
+    service->ports->users = mysql_users;
 
     if (db_from != NULL)
     {
-        strncpy(data->db, db_from, MYSQL_DATABASE_MAXLEN);
+        strcpy(data->db, db_from);
     }
     else
     {
-        strncpy(data->db, "", MYSQL_DATABASE_MAXLEN);
+        data->db[0] = 0;
     }
 
     /* freed by dcb_close(dcb) */
@@ -295,14 +295,14 @@ int set_and_get_mysql_users_wildcards(char *username, char *hostname, char *pass
     {
         unsigned char db_passwd[100] = "";
 
-        dcb->remote = strdup(from);
+        dcb->remote = MXS_STRDUP_A(from);
 
         // returns 0 on success
         ret = gw_find_mysql_user_password_sha1(username, db_passwd, dcb);
     }
 
     users_free(mysql_users);
-    free(service);
+    MXS_FREE(service);
     dcb_close(dcb);
 
     return ret;

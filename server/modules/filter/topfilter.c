@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -44,6 +44,7 @@
 #include <sys/time.h>
 #include <regex.h>
 #include <atomic.h>
+#include <maxscale/alloc.h>
 
 MODULE_INFO info =
 {
@@ -186,10 +187,9 @@ GetModuleObject()
 static FILTER *
 createInstance(char **options, FILTER_PARAMETER **params)
 {
-    int i;
-    TOPN_INSTANCE *my_instance;
+    TOPN_INSTANCE *my_instance = (TOPN_INSTANCE*)MXS_MALLOC(sizeof(TOPN_INSTANCE));
 
-    if ((my_instance = malloc(sizeof(TOPN_INSTANCE))) != NULL)
+    if (my_instance)
     {
         my_instance->topN = 10;
         my_instance->match = NULL;
@@ -199,7 +199,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
         my_instance->filebase = NULL;
         bool error = false;
 
-        for (i = 0; params && params[i]; i++)
+        for (int i = 0; params && params[i]; i++)
         {
             if (!strcmp(params[i]->name, "count"))
             {
@@ -207,23 +207,23 @@ createInstance(char **options, FILTER_PARAMETER **params)
             }
             else if (!strcmp(params[i]->name, "filebase"))
             {
-                my_instance->filebase = strdup(params[i]->value);
+                my_instance->filebase = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "match"))
             {
-                my_instance->match = strdup(params[i]->value);
+                my_instance->match = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "exclude"))
             {
-                my_instance->exclude = strdup(params[i]->value);
+                my_instance->exclude = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "source"))
             {
-                my_instance->source = strdup(params[i]->value);
+                my_instance->source = MXS_STRDUP_A(params[i]->value);
             }
             else if (!strcmp(params[i]->name, "user"))
             {
-                my_instance->user = strdup(params[i]->value);
+                my_instance->user = MXS_STRDUP_A(params[i]->value);
             }
             else if (!filter_standard_parameter(params[i]->name))
             {
@@ -237,7 +237,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         if (options)
         {
-            for (i = 0; options[i]; i++)
+            for (int i = 0; options[i]; i++)
             {
                 if (!strcasecmp(options[i], "ignorecase"))
                 {
@@ -274,7 +274,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
                       " for the 'match' parameter.",
                       my_instance->match);
             regfree(&my_instance->re);
-            free(my_instance->match);
+            MXS_FREE(my_instance->match);
             my_instance->match = NULL;
             error = true;
         }
@@ -285,7 +285,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
                       " for the 'nomatch' parameter.\n",
                       my_instance->exclude);
             regfree(&my_instance->exre);
-            free(my_instance->exclude);
+            MXS_FREE(my_instance->exclude);
             my_instance->exclude = NULL;
             error = true;
         }
@@ -295,17 +295,17 @@ createInstance(char **options, FILTER_PARAMETER **params)
             if (my_instance->exclude)
             {
                 regfree(&my_instance->exre);
-                free(my_instance->exclude);
+                MXS_FREE(my_instance->exclude);
             }
             if (my_instance->match)
             {
                 regfree(&my_instance->re);
-                free(my_instance->match);
+                MXS_FREE(my_instance->match);
             }
-            free(my_instance->filebase);
-            free(my_instance->source);
-            free(my_instance->user);
-            free(my_instance);
+            MXS_FREE(my_instance->filebase);
+            MXS_FREE(my_instance->source);
+            MXS_FREE(my_instance->user);
+            MXS_FREE(my_instance);
             my_instance = NULL;
         }
     }
@@ -329,23 +329,24 @@ newSession(FILTER *instance, SESSION *session)
     int i;
     char *remote, *user;
 
-    if ((my_session = calloc(1, sizeof(TOPN_SESSION))) != NULL)
+    if ((my_session = MXS_CALLOC(1, sizeof(TOPN_SESSION))) != NULL)
     {
         if ((my_session->filename =
-                 (char *) malloc(strlen(my_instance->filebase) + 20))
+                 (char *) MXS_MALLOC(strlen(my_instance->filebase) + 20))
             == NULL)
         {
-            free(my_session);
+            MXS_FREE(my_session);
             return NULL;
         }
         sprintf(my_session->filename, "%s.%d", my_instance->filebase,
                 my_instance->sessions);
         atomic_add(&my_instance->sessions, 1);
-        my_session->top = (TOPNQ **) calloc(my_instance->topN + 1,
-                                            sizeof(TOPNQ *));
+        my_session->top = (TOPNQ **) MXS_CALLOC(my_instance->topN + 1, sizeof(TOPNQ *));
+        MXS_ABORT_IF_NULL(my_session->top);
         for (i = 0; i < my_instance->topN; i++)
         {
-            my_session->top[i] = (TOPNQ *) calloc(1, sizeof(TOPNQ));
+            my_session->top[i] = (TOPNQ *) MXS_CALLOC(1, sizeof(TOPNQ));
+            MXS_ABORT_IF_NULL(my_session->top[i]);
             my_session->top[i]->sql = NULL;
         }
         my_session->n_statements = 0;
@@ -354,7 +355,7 @@ newSession(FILTER *instance, SESSION *session)
         my_session->current = NULL;
         if ((remote = session_get_remote(session)) != NULL)
         {
-            my_session->clientHost = strdup(remote);
+            my_session->clientHost = MXS_STRDUP_A(remote);
         }
         else
         {
@@ -362,7 +363,7 @@ newSession(FILTER *instance, SESSION *session)
         }
         if ((user = session_getUser(session)) != NULL)
         {
-            my_session->userName = strdup(user);
+            my_session->userName = MXS_STRDUP_A(user);
         }
         else
         {
@@ -469,8 +470,8 @@ freeSession(FILTER *instance, void *session)
 {
     TOPN_SESSION *my_session = (TOPN_SESSION *) session;
 
-    free(my_session->filename);
-    free(session);
+    MXS_FREE(my_session->filename);
+    MXS_FREE(session);
     return;
 }
 
@@ -539,14 +540,14 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 my_session->n_statements++;
                 if (my_session->current)
                 {
-                    free(my_session->current);
+                    MXS_FREE(my_session->current);
                 }
                 gettimeofday(&my_session->start, NULL);
                 my_session->current = ptr;
             }
             else
             {
-                free(ptr);
+                MXS_FREE(ptr);
             }
         }
     }
@@ -599,7 +600,7 @@ clientReply(FILTER *instance, void *session, GWBUF *reply)
                               (diff.tv_sec == my_session->top[my_instance->topN - 1]->duration.tv_sec &&
                                diff.tv_usec > my_session->top[my_instance->topN - 1]->duration.tv_usec)))
         {
-            free(my_session->top[my_instance->topN - 1]->sql);
+            MXS_FREE(my_session->top[my_instance->topN - 1]->sql);
             my_session->top[my_instance->topN - 1]->sql = my_session->current;
             my_session->top[my_instance->topN - 1]->duration = diff;
             inserted = 1;
@@ -612,7 +613,7 @@ clientReply(FILTER *instance, void *session, GWBUF *reply)
         }
         else
         {
-            free(my_session->current);
+            MXS_FREE(my_session->current);
         }
         my_session->current = NULL;
     }

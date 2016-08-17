@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -40,6 +40,7 @@
 #include <skygw_utils.h>
 #include <log_manager.h>
 #include <gwdirs.h>
+#include <maxscale/alloc.h>
 
 #include <mysql_client_server_protocol.h>
 #include <ini.h>
@@ -78,7 +79,9 @@ int main(int argc, char **argv) {
 	char *roptions;
 	int tests = 1;
 
-	roptions = strdup("server-id=3,heartbeat=200,binlogdir=/not_exists/my_dir,transaction_safety=1,master_version=5.6.99-common,master_hostname=common_server,master_uuid=xxx-fff-cccc-fff,master-id=999");
+	roptions = MXS_STRDUP_A("server-id=3,heartbeat=200,binlogdir=/not_exists/my_dir,"
+                                "transaction_safety=1,master_version=5.6.99-common,"
+                                "master_hostname=common_server,master_uuid=xxx-fff-cccc-fff,master-id=999");
 
 	mxs_log_init(NULL, NULL, MXS_LOG_TARGET_DEFAULT);
 
@@ -87,10 +90,10 @@ int main(int argc, char **argv) {
 	mxs_log_set_priority_enabled(LOG_NOTICE, false);
 	mxs_log_set_priority_enabled(LOG_ERR, false);
 
-    set_libdir(strdup(".."));
+        set_libdir(MXS_STRDUP_A(".."));
 	service = service_alloc("test_service", "binlogrouter");
-	service->credentials.name = strdup("foo");
-	service->credentials.authdata = strdup("bar");
+	service->credentials.name = MXS_STRDUP_A("foo");
+	service->credentials.authdata = MXS_STRDUP_A("bar");
 
 	{
 		char *lasts;
@@ -104,10 +107,6 @@ int main(int argc, char **argv) {
 
 		server = server_alloc("_none_", "MySQLBackend", (int)3306);
 		if (server == NULL) {
-			if (service->users) {
-				users_free(service->users);
-			}
-
 			return 1;
 		}
 
@@ -115,9 +114,7 @@ int main(int argc, char **argv) {
 		serviceAddBackend(service, server);
 	}
 
-	if ((inst = calloc(1, sizeof(ROUTER_INSTANCE))) == NULL) {
-		MXS_ERROR("Memory allocation FAILED for ROUTER_INSTANCE");
-
+	if ((inst = MXS_CALLOC(1, sizeof(ROUTER_INSTANCE))) == NULL) {
 		mxs_log_flush_sync();
 		mxs_log_finish();
 
@@ -131,7 +128,7 @@ int main(int argc, char **argv) {
 	MXS_NOTICE("testbinlog v1.0");
 
 	if (inst->fileroot == NULL)
-		inst->fileroot = strdup(BINLOG_NAME_ROOT);
+		inst->fileroot = MXS_STRDUP_A(BINLOG_NAME_ROOT);
 	if (!inst->current_pos)
 		inst->current_pos = 4;
 
@@ -572,7 +569,7 @@ int main(int argc, char **argv) {
 	mxs_log_flush_sync();
 	mxs_log_finish();
 
-	free(inst);
+	MXS_FREE(inst);
 
 	return 0;
 }

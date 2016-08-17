@@ -30,4 +30,5 @@ set_target_properties(qc_sqlite PROPERTIES LINK_FLAGS -Wl,--version-script=${CMA
 #
 # target_link_libraries(qc_sqlite maxscale-common)
 # set_target_properties(qc_sqlite PROPERTIES LINK_FLAGS -Wl,-z,defs)
-install(TARGETS qc_sqlite COMPONENT lib DESTINATION ${MAXSCALE_LIBDIR})
+
+install_module(qc_sqlite core)

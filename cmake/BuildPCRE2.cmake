@@ -5,9 +5,6 @@
 # need to add a dependeny on the 'pcre2' target by adding add_dependencies(<target> pcre2)
 # to the CMakeLists.txt. You don't need to link against the pcre2 library
 # because the static symbols will be in MaxScale.
-
-include(ExternalProject)
-
 ExternalProject_Add(pcre2 SOURCE_DIR ${CMAKE_SOURCE_DIR}/pcre2/
   CMAKE_ARGS -DCMAKE_C_FLAGS=-fPIC -DBUILD_SHARED_LIBS=N -DPCRE2_BUILD_PCRE2GREP=N  -DPCRE2_BUILD_TESTS=N
   BINARY_DIR ${CMAKE_BINARY_DIR}/pcre2/

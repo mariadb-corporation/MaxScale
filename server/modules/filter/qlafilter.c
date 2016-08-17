@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -47,6 +47,7 @@
 #include <regex.h>
 #include <string.h>
 #include <atomic.h>
+#include <maxscale/alloc.h>
 
 MODULE_INFO info =
 {
@@ -173,10 +174,9 @@ GetModuleObject()
 static FILTER *
 createInstance(char **options, FILTER_PARAMETER **params)
 {
-    QLA_INSTANCE *my_instance;
-    int i;
+    QLA_INSTANCE *my_instance = (QLA_INSTANCE*) MXS_MALLOC(sizeof(QLA_INSTANCE));
 
-    if ((my_instance = malloc(sizeof(QLA_INSTANCE))) != NULL)
+    if (my_instance)
     {
         my_instance->source = NULL;
         my_instance->userName = NULL;
@@ -187,27 +187,27 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         if (params)
         {
-            for (i = 0; params[i]; i++)
+            for (int i = 0; params[i]; i++)
             {
                 if (!strcmp(params[i]->name, "match"))
                 {
-                    my_instance->match = strdup(params[i]->value);
+                    my_instance->match = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!strcmp(params[i]->name, "exclude"))
                 {
-                    my_instance->nomatch = strdup(params[i]->value);
+                    my_instance->nomatch = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!strcmp(params[i]->name, "source"))
                 {
-                    my_instance->source = strdup(params[i]->value);
+                    my_instance->source = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!strcmp(params[i]->name, "user"))
                 {
-                    my_instance->userName = strdup(params[i]->value);
+                    my_instance->userName = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!strcmp(params[i]->name, "filebase"))
                 {
-                    my_instance->filebase = strdup(params[i]->value);
+                    my_instance->filebase = MXS_STRDUP_A(params[i]->value);
                 }
                 else if (!filter_standard_parameter(params[i]->name))
                 {
@@ -222,7 +222,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
         if (options)
         {
-            for (i = 0; options[i]; i++)
+            for (int i = 0; options[i]; i++)
             {
                 if (!strcasecmp(options[i], "ignorecase"))
                 {
@@ -258,7 +258,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             MXS_ERROR("qlafilter: Invalid regular expression '%s'"
                       " for the 'match' parameter.\n",
                       my_instance->match);
-            free(my_instance->match);
+            MXS_FREE(my_instance->match);
             my_instance->match = NULL;
             error = true;
         }
@@ -268,7 +268,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
             MXS_ERROR("qlafilter: Invalid regular expression '%s'"
                       " for the 'nomatch' parameter.",
                       my_instance->nomatch);
-            free(my_instance->nomatch);
+            MXS_FREE(my_instance->nomatch);
             my_instance->nomatch = NULL;
             error = true;
         }
@@ -277,19 +277,19 @@ createInstance(char **options, FILTER_PARAMETER **params)
         {
             if (my_instance->match)
             {
-                free(my_instance->match);
+                MXS_FREE(my_instance->match);
                 regfree(&my_instance->re);
             }
 
             if (my_instance->nomatch)
             {
-                free(my_instance->nomatch);
+                MXS_FREE(my_instance->nomatch);
                 regfree(&my_instance->nore);
             }
-            free(my_instance->filebase);
-            free(my_instance->source);
-            free(my_instance->userName);
-            free(my_instance);
+            MXS_FREE(my_instance->filebase);
+            MXS_FREE(my_instance->source);
+            MXS_FREE(my_instance->userName);
+            MXS_FREE(my_instance);
             my_instance = NULL;
         }
     }
@@ -312,16 +312,11 @@ newSession(FILTER *instance, SESSION *session)
     QLA_SESSION *my_session;
     char *remote, *userName;
 
-    if ((my_session = calloc(1, sizeof(QLA_SESSION))) != NULL)
+    if ((my_session = MXS_CALLOC(1, sizeof(QLA_SESSION))) != NULL)
     {
-        if ((my_session->filename = (char *)malloc(strlen(my_instance->filebase) + 20)) == NULL)
+        if ((my_session->filename = (char *)MXS_MALLOC(strlen(my_instance->filebase) + 20)) == NULL)
         {
-            char errbuf[STRERROR_BUFLEN];
-            MXS_ERROR("Memory allocation for qla filter "
-                      "file name failed due to %d, %s.",
-                      errno,
-                      strerror_r(errno, errbuf, sizeof(errbuf)));
-            free(my_session);
+            MXS_FREE(my_session);
             return NULL;
         }
         my_session->active = 1;
@@ -359,8 +354,8 @@ newSession(FILTER *instance, SESSION *session)
                           "fileter failed due to %d, %s",
                           errno,
                           strerror_r(errno, errbuf, sizeof(errbuf)));
-                free(my_session->filename);
-                free(my_session);
+                MXS_FREE(my_session->filename);
+                MXS_FREE(my_session);
                 my_session = NULL;
             }
         }
@@ -406,8 +401,8 @@ freeSession(FILTER *instance, void *session)
 {
     QLA_SESSION *my_session = (QLA_SESSION *) session;
 
-    free(my_session->filename);
-    free(session);
+    MXS_FREE(my_session->filename);
+    MXS_FREE(session);
     return;
 }
 
@@ -467,7 +462,7 @@ routeQuery(FILTER *instance, void *session, GWBUF *queue)
                 fprintf(my_session->fp, "%s,%s@%s,%s\n", buffer, my_session->user,
                         my_session->remote, trim(squeeze_whitespace(ptr)));
             }
-            free(ptr);
+            MXS_FREE(ptr);
         }
     }
     /* Pass the query downstream */

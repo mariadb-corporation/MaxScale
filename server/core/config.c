@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -51,6 +51,8 @@
 #include <ctype.h>
 #include <ini.h>
 #include <maxconfig.h>
+#include <dcb.h>
+#include <session.h>
 #include <service.h>
 #include <server.h>
 #include <users.h>
@@ -72,6 +74,7 @@
 #include <sys/utsname.h>
 #include <dbusers.h>
 #include <gw.h>
+#include <maxscale/alloc.h>
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
@@ -91,7 +94,7 @@ static SSL_LISTENER *make_ssl_structure(CONFIG_CONTEXT *obj, bool require_cert, 
 
 int config_truth_value(char *str);
 int config_get_ifaddr(unsigned char *output);
-int config_get_release_string(char* release);
+static int config_get_release_string(char* release);
 FEEDBACK_CONF *config_get_feedback_data();
 void config_add_param(CONFIG_CONTEXT*, char*, char*);
 bool config_has_duplicate_sections(const char* config);
@@ -118,8 +121,8 @@ static char *service_params[] =
     "passwd",
     "enable_root_user",
     "max_connections",
-    /* "max_queued_connections", */
-    /* "queued_connection_timeout", */
+    "max_queued_connections",
+    "queued_connection_timeout",
     "connection_timeout",
     "auth_all_servers",
     "strip_db_esc",
@@ -206,9 +209,10 @@ static char *server_params[] =
  */
 char* config_clean_string_list(char* str)
 {
-    char *dest;
     size_t destsize = strlen(str) + 1;
-    if ((dest = malloc(destsize)) != NULL)
+    char *dest = MXS_MALLOC(destsize);
+
+    if (dest)
     {
         pcre2_code* re;
         pcre2_match_data* data;
@@ -224,7 +228,7 @@ char* config_clean_string_list(char* str)
             MXS_ERROR("[%s] Regular expression compilation failed at %d: %s",
                       __FUNCTION__, (int)err_offset, errbuf);
             pcre2_code_free(re);
-            free(dest);
+            MXS_FREE(dest);
             return NULL;
         }
 
@@ -235,10 +239,10 @@ char* config_clean_string_list(char* str)
                                         (PCRE2_SPTR) replace, PCRE2_ZERO_TERMINATED,
                                         (PCRE2_UCHAR*) dest, &destsize)) == PCRE2_ERROR_NOMEMORY)
         {
-            char* tmp = realloc(dest, destsize * 2);
+            char* tmp = MXS_REALLOC(dest, destsize * 2);
             if (tmp == NULL)
             {
-                free(dest);
+                MXS_FREE(dest);
                 dest = NULL;
                 break;
             }
@@ -254,10 +258,6 @@ char* config_clean_string_list(char* str)
 
         pcre2_code_free(re);
         pcre2_match_data_free(data);
-    }
-    else
-    {
-        MXS_ERROR("[%s] Memory allocation failed.", __FUNCTION__);
     }
 
     return dest;
@@ -305,12 +305,12 @@ handler(void *userdata, const char *section, const char *name, const char *value
 
     if (!ptr)
     {
-        if ((ptr = (CONFIG_CONTEXT *)malloc(sizeof(CONFIG_CONTEXT))) == NULL)
+        if ((ptr = (CONFIG_CONTEXT *)MXS_MALLOC(sizeof(CONFIG_CONTEXT))) == NULL)
         {
             return 0;
         }
 
-        ptr->object = strdup(section);
+        ptr->object = MXS_STRDUP_A(section);
         ptr->parameters = NULL;
         ptr->next = cntxt->next;
         ptr->element = NULL;
@@ -325,9 +325,8 @@ handler(void *userdata, const char *section, const char *name, const char *value
             char *tmp;
             int paramlen = strlen(p1->value) + strlen(value) + 2;
 
-            if ((tmp = realloc(p1->value, sizeof(char) * (paramlen))) == NULL)
+            if ((tmp = MXS_REALLOC(p1->value, sizeof(char) * (paramlen))) == NULL)
             {
-                MXS_ERROR("[%s] Memory allocation failed.", __FUNCTION__);
                 return 0;
             }
             strcat(tmp, ",");
@@ -338,19 +337,19 @@ handler(void *userdata, const char *section, const char *name, const char *value
                 MXS_ERROR("[%s] Cleaning configuration parameter failed.", __FUNCTION__);
                 return 0;
             }
-            free(tmp);
+            MXS_FREE(tmp);
             return 1;
         }
         p1 = p1->next;
     }
 
-    if ((param = (CONFIG_PARAMETER *)malloc(sizeof(CONFIG_PARAMETER))) == NULL)
+    if ((param = (CONFIG_PARAMETER *)MXS_MALLOC(sizeof(CONFIG_PARAMETER))) == NULL)
     {
         return 0;
     }
 
-    param->name = strdup(name);
-    param->value = strdup(value);
+    param->name = MXS_STRDUP_A(name);
+    param->value = MXS_STRDUP_A(value);
     param->next = ptr->parameters;
     param->qfd_param_type = UNDEFINED_TYPE;
     ptr->parameters = param;
@@ -378,6 +377,10 @@ config_load(char *file)
     {
         return false;
     }
+
+    /* Temporary - should use configuration values and test return value (bool) */
+    dcb_pre_alloc(1000);
+    session_pre_alloc(250);
 
     global_defaults();
     feedback_defaults();
@@ -440,7 +443,7 @@ config_reload()
 
     if (gateway.version_string)
     {
-        free(gateway.version_string);
+        MXS_FREE(gateway.version_string);
     }
 
     global_defaults();
@@ -472,13 +475,12 @@ process_config_context(CONFIG_CONTEXT *context)
     int             error_count = 0;
     HASHTABLE*      monitorhash;
 
-    if ((monitorhash = hashtable_alloc(5, simple_str_hash, strcmp)) == NULL)
+    if ((monitorhash = hashtable_alloc(5, hashtable_item_strhash, hashtable_item_strcmp)) == NULL)
     {
         MXS_ERROR("Failed to allocate, monitor configuration check hashtable.");
         return 0;
     }
-    hashtable_memory_fns(monitorhash, (HASHMEMORYFN) strdup, NULL,
-                         (HASHMEMORYFN) free, NULL);
+    hashtable_memory_fns(monitorhash, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
 
     /**
      * Process the data and create the services and servers defined
@@ -745,7 +747,7 @@ CONFIG_PARAMETER* config_clone_param(
 {
     CONFIG_PARAMETER* p2;
 
-    p2 = (CONFIG_PARAMETER*) malloc(sizeof(CONFIG_PARAMETER));
+    p2 = (CONFIG_PARAMETER*) MXS_MALLOC(sizeof(CONFIG_PARAMETER));
 
     if (p2 == NULL)
     {
@@ -772,10 +774,10 @@ void free_config_parameter(CONFIG_PARAMETER* p1)
 {
     while (p1)
     {
-        free(p1->name);
-        free(p1->value);
+        MXS_FREE(p1->name);
+        MXS_FREE(p1->value);
         CONFIG_PARAMETER* p2 = p1->next;
-        free(p1);
+        MXS_FREE(p1);
         p1 = p2;
     }
 }
@@ -793,10 +795,10 @@ free_config_context(CONFIG_CONTEXT *context)
 
     while (context)
     {
-        free(context->object);
+        MXS_FREE(context->object);
         free_config_parameter(context->parameters);
         obj = context->next;
-        free(context);
+        MXS_FREE(context);
         context = obj;
     }
 }
@@ -974,7 +976,73 @@ handle_global_item(const char *name, const char *value)
     }
     else if (strcmp(name, "query_classifier_args") == 0)
     {
-        gateway.qc_args = strdup(value);
+        gateway.qc_args = MXS_STRDUP_A(value);
+    }
+    else if (strcmp(name, "log_throttling") == 0)
+    {
+        if (*value == 0)
+        {
+            MXS_LOG_THROTTLING throttling = { 0, 0, 0 };
+
+            mxs_log_set_throttling(&throttling);
+        }
+        else
+        {
+            char *v = MXS_STRDUP_A(value);
+
+            char *count = v;
+            char *window_ms = NULL;
+            char *suppress_ms = NULL;
+
+            window_ms = strchr(count, ',');
+            if (window_ms)
+            {
+                *window_ms = 0;
+                ++window_ms;
+
+                suppress_ms = strchr(window_ms, ',');
+                if (suppress_ms)
+                {
+                    *suppress_ms = 0;
+                    ++suppress_ms;
+                }
+            }
+
+            if (!count || !window_ms || !suppress_ms)
+            {
+                MXS_ERROR("Invalid value for the `log_throttling` configuration entry: \"%s\". "
+                          "No throttling will now be performed.", value);
+                MXS_NOTICE("The format of the value for 'log_throttling' is \"X, Y, Z\", where "
+                           "X is the maximum number of times a particular error can be logged "
+                           "in the time window of Y milliseconds, before the logging is suppressed "
+                           "for Z milliseconds.");
+            }
+            else
+            {
+                int c = atoi(count);
+                int w = atoi(window_ms);
+                int s = atoi(suppress_ms);
+
+                if ((c >= 0) && (w >= 0) && (s >= 0))
+                {
+                    MXS_LOG_THROTTLING throttling;
+                    throttling.count = c;
+                    throttling.window_ms = w;
+                    throttling.suppress_ms = s;
+
+                    mxs_log_set_throttling(&throttling);
+                }
+                else
+                {
+                    MXS_ERROR("Invalid value for the `log_throttling` configuration entry: \"%s\". "
+                              "No throttling will now be performed.", value);
+                    MXS_NOTICE("The configuration entry 'log_throttling' requires as value three positive "
+                               "integers (or 0).");
+                }
+            }
+
+            MXS_FREE(v);
+        }
     }
     else
     {
@@ -1007,10 +1075,10 @@ free_ssl_structure(SSL_LISTENER *ssl)
     if (ssl)
     {
         SSL_CTX_free(ssl->ctx);
-        free(ssl->ssl_key);
-        free(ssl->ssl_cert);
-        free(ssl->ssl_ca_cert);
-        free(ssl);
+        MXS_FREE(ssl->ssl_key);
+        MXS_FREE(ssl->ssl_cert);
+        MXS_FREE(ssl->ssl_ca_cert);
+        MXS_FREE(ssl);
     }
 }
 
@@ -1035,7 +1103,7 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
     {
         if (!strcmp(ssl, "required"))
         {
-            if ((new_ssl = calloc(1, sizeof(SSL_LISTENER))) == NULL)
+            if ((new_ssl = MXS_CALLOC(1, sizeof(SSL_LISTENER))) == NULL)
             {
                 return NULL;
             }
@@ -1133,7 +1201,7 @@ make_ssl_structure (CONFIG_CONTEXT *obj, bool require_cert, int *error_count)
                 return new_ssl;
             }
             *error_count += local_errors;
-            free(new_ssl);
+            MXS_FREE(new_ssl);
         }
         else if (strcmp(ssl, "disabled") != 0)
         {
@@ -1160,11 +1228,11 @@ handle_feedback_item(const char *name, const char *value)
     }
     else if (strcmp(name, "feedback_user_info") == 0)
     {
-        feedback.feedback_user_info = strdup(value);
+        feedback.feedback_user_info = MXS_STRDUP_A(value);
     }
     else if (strcmp(name, "feedback_url") == 0)
     {
-        feedback.feedback_url = strdup(value);
+        feedback.feedback_url = MXS_STRDUP_A(value);
     }
     if (strcmp(name, "feedback_timeout") == 0)
     {
@@ -1197,7 +1265,7 @@ global_defaults()
     gateway.auth_write_timeout = DEFAULT_AUTH_WRITE_TIMEOUT;
     if (version_string != NULL)
     {
-        gateway.version_string = strdup(version_string);
+        gateway.version_string = MXS_STRDUP_A(version_string);
     }
     else
     {
@@ -1229,7 +1297,7 @@ global_defaults()
     }
     else
     {
-        strncpy(gateway.sysname, uname_data.sysname, _SYSNAME_STR_LENGTH);
+        strcpy(gateway.sysname, uname_data.sysname);
     }
 
     /* query_classifier */
@@ -1340,9 +1408,9 @@ process_config_update(CONFIG_CONTEXT *context)
                     {
                         if (service->version_string)
                         {
-                            free(service->version_string);
+                            MXS_FREE(service->version_string);
                         }
-                        service->version_string = strdup(version_string);
+                        service->version_string = MXS_STRDUP_A(version_string);
                     }
 
                     if (user && auth)
@@ -1762,12 +1830,12 @@ config_get_ifaddr(unsigned char *output)
 /**
  * Get the linux distribution info
  *
- * @param release       The allocated buffer where
- *                      the found distribution is copied into.
- * @return 1 on success, 0 on failure
+ * @param release The buffer where the found distribution is copied.
+ *                Assumed to be at least _RELEASE_STR_LENGTH bytes.
  *
+ * @return 1 on success, 0 on failure
  */
-int
+static int
 config_get_release_string(char* release)
 {
     const char *masks[] =
@@ -1779,8 +1847,6 @@ config_get_release_string(char* release)
     bool have_distribution;
     char distribution[_RELEASE_STR_LENGTH] = "";
     int fd;
-    int i;
-    char *to;
 
     have_distribution = false;
 
@@ -1805,7 +1871,7 @@ config_get_release_string(char* release)
                 {
                     end = distribution + len;
                 }
-                found += 20;
+                found += 20; // strlen("DISTRIB_DESCRIPTION=")
 
                 if (*found == '"' && end[-1] == '"')
                 {
@@ -1814,10 +1880,10 @@ config_get_release_string(char* release)
                 }
                 *end = 0;
 
-                to = strcpy(distribution, "lsb: ");
+                char *to = strcpy(distribution, "lsb: ");
                 memmove(to, found, end - found + 1 < INT_MAX ? end - found + 1 : INT_MAX);
 
-                strncpy(release, to, _RELEASE_STR_LENGTH);
+                strcpy(release, to);
 
                 return 1;
             }
@@ -1825,7 +1891,7 @@ config_get_release_string(char* release)
     }
 
     /* if not an LSB-compliant distribution */
-    for (i = 0; !have_distribution && i < 4; i++)
+    for (int i = 0; !have_distribution && i < 4; i++)
     {
         glob_t found;
         char *new_to;
@@ -1952,18 +2018,23 @@ unsigned long config_get_gateway_id()
 
 void config_add_param(CONFIG_CONTEXT* obj, char* key, char* value)
 {
-    CONFIG_PARAMETER* nptr = malloc(sizeof(CONFIG_PARAMETER));
+    key = MXS_STRDUP(key);
+    value = MXS_STRDUP(value);
 
-    if (nptr == NULL)
+    CONFIG_PARAMETER* param = (CONFIG_PARAMETER *)MXS_MALLOC(sizeof(CONFIG_PARAMETER));
+
+    if (!key || !value || !param)
     {
-        MXS_ERROR("Memory allocation failed when adding configuration parameters.");
+        MXS_FREE(key);
+        MXS_FREE(value);
+        MXS_FREE(param);
         return;
     }
 
-    nptr->name = strdup(key);
-    nptr->value = strdup(value);
-    nptr->next = obj->parameters;
-    obj->parameters = nptr;
+    param->name = key;
+    param->value = value;
+    param->next = obj->parameters;
+    obj->parameters = param;
 }
 /**
  * Return the pointer to the global options for MaxScale.
@@ -1986,17 +2057,16 @@ bool config_has_duplicate_sections(const char* config)
     const int table_size = 10;
     int errcode;
     PCRE2_SIZE erroffset;
-    HASHTABLE *hash = hashtable_alloc(table_size, simple_str_hash, strcmp);
+    HASHTABLE *hash = hashtable_alloc(table_size, hashtable_item_strhash, hashtable_item_strcmp);
     pcre2_code *re = pcre2_compile((PCRE2_SPTR) "^\\s*\\[(.+)\\]\\s*$", PCRE2_ZERO_TERMINATED,
                                    0, &errcode, &erroffset, NULL);
     pcre2_match_data *mdata = NULL;
     int size = 1024;
-    char *buffer = malloc(size * sizeof(char));
+    char *buffer = MXS_MALLOC(size * sizeof(char));
 
     if (buffer && hash && re && (mdata = pcre2_match_data_create_from_pattern(re, NULL)))
     {
-        hashtable_memory_fns(hash, (HASHMEMORYFN) strdup, NULL,
-                             (HASHMEMORYFN) free, NULL);
+        hashtable_memory_fns(hash, hashtable_item_strdup, NULL, hashtable_item_free, NULL);
         FILE* file = fopen(config, "r");
 
         if (file)
@@ -2036,15 +2106,15 @@ bool config_has_duplicate_sections(const char* config)
     }
     else
     {
-        MXS_ERROR("Failed to allocate enough memory when checking"
-                  " for duplicate sections in configuration file.");
+        MXS_OOM_MESSAGE("Failed to allocate enough memory when checking"
+                        " for duplicate sections in configuration file.");
         rval = true;
     }
 
     hashtable_free(hash);
     pcre2_code_free(re);
     pcre2_match_data_free(mdata);
-    free(buffer);
+    MXS_FREE(buffer);
     return rval;
 }
 
@@ -2078,7 +2148,7 @@ int maxscale_getline(char** dest, int* size, FILE* file)
     {
         if (*size <= offset)
         {
-            char* tmp = (char*) realloc(destptr, *size * 2);
+            char* tmp = (char*) MXS_REALLOC(destptr, *size * 2);
             if (tmp)
             {
                 destptr = tmp;
@@ -2086,9 +2156,6 @@ int maxscale_getline(char** dest, int* size, FILE* file)
             }
             else
             {
-                MXS_ERROR("Failed to reallocate memory from %d"
-                          " bytes to %d bytes when reading from file.",
-                          *size, *size * 2);
                 destptr[offset - 1] = '\0';
                 *dest = destptr;
                 return -1;
@@ -2301,23 +2368,24 @@ int create_new_service(CONFIG_CONTEXT *obj)
         /** Add the 5.5.5- string to the start of the version string if
          * the version string starts with "10.".
          * This mimics MariaDB 10.0 replication which adds 5.5.5- for backwards compatibility. */
-        if (strncmp(version_string, "10.", 3) == 0)
+        if (version_string[0] != '5')
         {
             size_t len = strlen(version_string) + strlen("5.5.5-") + 1;
-            service->version_string = malloc(len);
+            service->version_string = MXS_MALLOC(len);
+            MXS_ABORT_IF_NULL(service->version_string);
             strcpy(service->version_string, "5.5.5-");
             strcat(service->version_string, version_string);
         }
         else
         {
-            service->version_string = strdup(version_string);
+            service->version_string = MXS_STRDUP_A(version_string);
         }
     }
     else
     {
         if (gateway.version_string)
         {
-            service->version_string = strdup(gateway.version_string);
+            service->version_string = MXS_STRDUP_A(gateway.version_string);
         }
     }
 
@@ -2707,7 +2775,8 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
                 }
                 else
                 {
-                    serviceAddProtocol(service, protocol, socket, 0, authenticator, ssl_info);
+                    serviceAddProtocol(service, obj->object, protocol, socket, 0,
+                                       authenticator, ssl_info);
                     if (startnow)
                     {
                         serviceStartProtocol(service, protocol, 0);
@@ -2727,7 +2796,8 @@ int create_new_listener(CONFIG_CONTEXT *obj, bool startnow)
                 }
                 else
                 {
-                    serviceAddProtocol(service, protocol, address, atoi(port), authenticator, ssl_info);
+                    serviceAddProtocol(service, obj->object, protocol, address,
+                                       atoi(port), authenticator, ssl_info);
                     if (startnow)
                     {
                         serviceStartProtocol(service, protocol, atoi(port));

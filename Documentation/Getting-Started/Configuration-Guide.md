@@ -242,6 +242,41 @@ log_augmentation=1
 
 To disable the augmentation use the value 0 and to enable it use the value 1.
 
+#### `log_throttling`
+
+In some circumstances it is possible that a particular error (or warning) is logged
+over and over again, if the cause for the error persistently remains. To prevent the log
+from flooding, it is possible to specify how many times a particular error may be logged
+within a time period, before the logging of that error is suppressed for a while.
+
+```
+# A valid value looks like
+#       log_throttling = X, Y, Z
+#
+# where each value is a positive integer and X means the number of times a specific
+# error may be logged within a time period of Y milliseconds, before the logging of
+# that error is suppressed for Z milliseconds.
+log_throttling=8, 2000, 15000
+```
+
+In the example above, the logging of a particular error will be suppressed for 15 seconds
+if the error has been logged 8 times in 2 seconds.
+
+The default is `10, 1000, 10000`, which means that if the same error is logged 10
+times in one second, the logging of that error is suppressed for the following
+10 seconds.
+
+To disable log throttling, add an entry with an empty value
+```
+log_throttling=
+```
+or one where any of the integers is 0.
+```
+log_throttling=0, 0, 0
+```
+
+Note that *notice*, *info* and *debug* messages are never throttled.
+
 #### `logdir`
 
 Set the directory where the logfiles are stored. The folder needs to be both readable and writable by the user running MariaDB MaxScale.
@@ -475,7 +510,8 @@ This parameter enables matching of "127.0.0.1" (localhost) against "%" wildcard 
 
 #### `version_string`
 
-This parameter sets a custom version string that is sent in the MySQL Handshake from MariaDB MaxScale to clients.
+This parameter sets a custom version string that is sent in the MySQL Handshake
+from MariaDB MaxScale to clients.
 
 Example:
 
@@ -483,7 +519,11 @@ Example:
 version_string=5.5.37-MariaDB-RWsplit
 ```
 
-If not set, the default value is the server version of the embedded MySQL/MariaDB library. Example: 5.5.35-MariaDB
+If not set, the default value is `5.5.5-10.0.0 MaxScale <MaxScale version>`
+where `<MaxScale version>` is the version of MaxScale. If the provided string
+does not start with the number 5, a 5.5.5- prefix will be added to it. This
+means that a _version_string_ value of _MaxScale-Service_ would result in a
+_5.5.5-MaxScale-Service_ being sent to the client.
 
 #### `weightby`
 

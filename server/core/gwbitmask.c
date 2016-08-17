@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -14,6 +14,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <gwbitmask.h>
+#include <maxscale/alloc.h>
 
 /**
  * @file gwbitmask.c  Implementation of bitmask operations for the gateway
@@ -73,7 +74,7 @@ bitmask_init(GWBITMASK *bitmask)
 {
     bitmask->length = BIT_LENGTH_INITIAL;
     bitmask->size = bitmask->length / 8;
-    if ((bitmask->bits = calloc(bitmask->size, 1)) == NULL)
+    if ((bitmask->bits = MXS_CALLOC(bitmask->size, 1)) == NULL)
     {
         bitmask->length = bitmask->size = 0;
     }
@@ -90,7 +91,7 @@ bitmask_free(GWBITMASK *bitmask)
 {
     if (bitmask->length)
     {
-        free(bitmask->bits);
+        MXS_FREE(bitmask->bits);
         bitmask->length = bitmask->size = 0;
     }
 }
@@ -108,24 +109,30 @@ bitmask_free(GWBITMASK *bitmask)
 void
 bitmask_set(GWBITMASK *bitmask, int bit)
 {
-    unsigned char *ptr = bitmask->bits;
+    unsigned char *ptr;
 
     spinlock_acquire(&bitmask->lock);
     if (bit >= 8)
     {
         while (bit >= bitmask->length)
         {
-            bitmask->bits = realloc(bitmask->bits,
-                                    (bitmask->size + (BIT_LENGTH_INC / 8)));
+            bitmask->bits = MXS_REALLOC(bitmask->bits, (bitmask->size + (BIT_LENGTH_INC / 8)));
+            MXS_ABORT_IF_NULL(bitmask->bits);
             memset(bitmask->bits + (bitmask->size), 0,
                    BIT_LENGTH_INC / 8);
             bitmask->length += BIT_LENGTH_INC;
             bitmask->size += (BIT_LENGTH_INC / 8);
         }
 
+        ptr = bitmask->bits;
         ptr += (bit / 8);
         bit = bit % 8;
     }
+    else
+    {
+        ptr = bitmask->bits;
+    }
+
     *ptr |= bitmapset[bit];
     spinlock_release(&bitmask->lock);
 }
@@ -282,9 +289,9 @@ bitmask_copy(GWBITMASK *dest, GWBITMASK *src)
     spinlock_acquire(&dest->lock);
     if (dest->length)
     {
-        free(dest->bits);
+        MXS_FREE(dest->bits);
     }
-    if ((dest->bits = malloc(src->size)) == NULL)
+    if ((dest->bits = MXS_MALLOC(src->size)) == NULL)
     {
         dest->length = 0;
     }
@@ -320,7 +327,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
     spinlock_acquire(&bitmask->lock);
     if (999 < bitmask->length)
     {
-        result = malloc(sizeof(toobig));
+        result = MXS_MALLOC(sizeof(toobig));
         if (result)
         {
             strcpy(result, toobig);
@@ -331,7 +338,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
         count_set = bitmask_count_bits_set(bitmask);
         if (count_set)
         {
-            result = malloc(1 + (4 * count_set));
+            result = MXS_MALLOC(1 + (4 * count_set));
             if (result)
             {
                 result[0] = 0;
@@ -348,7 +355,7 @@ bitmask_render_readable(GWBITMASK *bitmask)
         }
         else
         {
-            result = malloc(sizeof(empty));
+            result = MXS_MALLOC(sizeof(empty));
             if (result)
             {
                 strcpy(result, empty);

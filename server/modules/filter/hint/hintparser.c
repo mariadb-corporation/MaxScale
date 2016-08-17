@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -19,6 +19,7 @@
 #include <modinfo.h>
 #include <modutil.h>
 #include <mysqlhint.h>
+#include <maxscale/alloc.h>
 
 /**
  * hintparser.c - Find any comment in the SQL packet and look for MAXSCALE
@@ -83,9 +84,9 @@ void token_free(HINT_TOKEN* token)
 {
     if (token->value != NULL)
     {
-        free(token->value);
+        MXS_FREE(token->value);
     }
-    free(token);
+    MXS_FREE(token);
 }
 
 static const char* token_get_keyword(
@@ -281,7 +282,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
                         break;
                     case TOK_STRING:
                         state = HS_NAME;
-                        lvalue = strdup(tok->value);
+                        lvalue = MXS_STRDUP_A(tok->value);
                         break;
                     case TOK_STOP:
                         /* Action: pop active hint */
@@ -452,7 +453,7 @@ hint_parser(HINT_SESSION *session, GWBUF *request)
                 /* We starting an already define set of named hints */
                 rval = lookup_named_hint(session, hintname);
                 hint_push(session, hint_dup(rval));
-                free(hintname);
+                MXS_FREE(hintname);
                 rval = NULL;
             }
             else if (hintname == NULL && rval == NULL)
@@ -518,7 +519,7 @@ hint_next_token(GWBUF **buf, char **ptr)
     int i, found;
     HINT_TOKEN *tok;
 
-    if ((tok = (HINT_TOKEN *)malloc(sizeof(HINT_TOKEN))) == NULL)
+    if ((tok = (HINT_TOKEN *)MXS_MALLOC(sizeof(HINT_TOKEN))) == NULL)
     {
         return NULL;
     }
@@ -603,7 +604,7 @@ hint_next_token(GWBUF **buf, char **ptr)
     if (found == 0)
     {
         tok->token = TOK_STRING;
-        tok->value = strdup(word);
+        tok->value = MXS_STRDUP_A(word);
     }
 
     return tok;
@@ -629,7 +630,7 @@ hint_pop(HINT_SESSION *session)
             ptr->hint = hint->next;
             hint_free(hint);
         }
-        free(ptr);
+        MXS_FREE(ptr);
     }
 }
 
@@ -645,7 +646,7 @@ hint_push(HINT_SESSION *session, HINT *hint)
 {
     HINTSTACK *item;
 
-    if ((item = (HINTSTACK *)malloc(sizeof(HINTSTACK))) == NULL)
+    if ((item = (HINTSTACK *)MXS_MALLOC(sizeof(HINTSTACK))) == NULL)
     {
         return;
     }
@@ -689,7 +690,7 @@ create_named_hint(HINT_SESSION *session, char *name, HINT *hint)
 {
     NAMEDHINTS *block;
 
-    if ((block = (NAMEDHINTS *)malloc(sizeof(NAMEDHINTS))) == NULL)
+    if ((block = (NAMEDHINTS *)MXS_MALLOC(sizeof(NAMEDHINTS))) == NULL)
     {
         return;
     }
@@ -724,8 +725,8 @@ NAMEDHINTS* free_named_hint(
             hint_free(named_hint->hints);
             named_hint->hints = hint;
         }
-        free(named_hint->name);
-        free(named_hint);
+        MXS_FREE(named_hint->name);
+        MXS_FREE(named_hint);
         return next;
     }
     else
@@ -758,7 +759,7 @@ HINTSTACK* free_hint_stack(
             hint_free(hint_stack->hint);
             hint_stack->hint = hint;
         }
-        free(hint_stack);
+        MXS_FREE(hint_stack);
         return next;
     }
     else

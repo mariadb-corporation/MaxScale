@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <maxscale/alloc.h>
 #include <dcb.h>
 #include <buffer.h>
 #include <service.h>
@@ -148,7 +149,7 @@ GWPROTOCOL* GetModuleObject()
  */
 static char *telnetd_default_auth()
 {
-    return "NullAuth";
+    return "NullAuthAllow";
 }
 
 /**
@@ -213,10 +214,10 @@ static int telnetd_read_event(DCB* dcb)
                         dcb_printf(dcb, "\n\rLogin incorrect\n\rLogin: ");
                         telnetd_echo(dcb, 1);
                         telnetd->state = TELNETD_STATE_LOGIN;
-                        free(telnetd->username);
+                        MXS_FREE(telnetd->username);
                     }
                     gwbuf_consume(head, GWBUF_LENGTH(head));
-                    free(password);
+                    MXS_FREE(password);
                     break;
                 case TELNETD_STATE_DATA:
                     SESSION_ROUTE_QUERY(session, head);
@@ -296,7 +297,7 @@ static int telnetd_accept(DCB *listener)
     {
         TELNETD* telnetd_protocol = NULL;
 
-        if ((telnetd_protocol = (TELNETD *)calloc(1, sizeof(TELNETD))) == NULL)
+        if ((telnetd_protocol = (TELNETD *)MXS_CALLOC(1, sizeof(TELNETD))) == NULL)
         {
             dcb_close(client_dcb);
             continue;
@@ -333,7 +334,7 @@ static int telnetd_close(DCB *dcb)
 
     if (telnetd && telnetd->username)
     {
-        free(telnetd->username);
+        MXS_FREE(telnetd->username);
     }
 
     return 0;

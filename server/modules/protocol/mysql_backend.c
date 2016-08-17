@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -51,6 +51,7 @@ uint8_t null_client_sha1[MYSQL_SCRAMBLE_LEN]="";
  * 23/05/2016   Martin Brampton         Provide for backend SSL
  *
  */
+#include <maxscale/alloc.h>
 #include <modinfo.h>
 #include <gw_protocol.h>
 #include <mysql_auth.h>
@@ -652,7 +653,7 @@ gw_read_backend_handshake(MySQLProtocol *conn)
                     server_set_status(dcb->server, SERVER_MAINT);
                 }
 
-                free(bufstr);
+                MXS_FREE(bufstr);
             }
             //get mysql packet size, 3 bytes
             packet_len = gw_mysql_get_byte3(payload);
@@ -1779,8 +1780,17 @@ static int gw_change_user(DCB *backend,
 
     /* now get the user, after 4 bytes header and 1 byte command */
     client_auth_packet += 5;
+    size_t len = strlen((char *)client_auth_packet);
+    if (len > MYSQL_USER_MAXLEN)
+    {
+        MXS_ERROR("Client sent user name \"%s\",which is %lu characters long, "
+                  "while a maximum length of %d is allowed. Cutting trailing "
+                  "characters.", (char*)client_auth_packet, len, MYSQL_USER_MAXLEN);
+    }
     strncpy(username, (char *)client_auth_packet, MYSQL_USER_MAXLEN);
-    client_auth_packet += strlen(username) + 1;
+    username[MYSQL_USER_MAXLEN] = 0;
+
+    client_auth_packet += (len + 1);
 
     /* get the auth token len */
     memcpy(&auth_token_len, client_auth_packet, 1);
@@ -1790,7 +1800,7 @@ static int gw_change_user(DCB *backend,
     /* allocate memory for token only if auth_token_len > 0 */
     if (auth_token_len > 0)
     {
-        auth_token = (uint8_t *)malloc(auth_token_len);
+        auth_token = (uint8_t *)MXS_MALLOC(auth_token_len);
         ss_dassert(auth_token != NULL);
 
         if (auth_token == NULL)
@@ -1802,19 +1812,19 @@ static int gw_change_user(DCB *backend,
     }
 
     /* get new database name */
+    len = strlen((char *)client_auth_packet);
+    if (len > MYSQL_DATABASE_MAXLEN)
+    {
+        MXS_ERROR("Client sent database name \"%s\", which is %lu characters long, "
+                  "while a maximum length of %d is allowed. Cutting trailing "
+                  "characters.", (char*)client_auth_packet, len, MYSQL_DATABASE_MAXLEN);
+    }
     strncpy(database, (char *)client_auth_packet, MYSQL_DATABASE_MAXLEN);
+    database[MYSQL_DATABASE_MAXLEN] = 0;
 
-    /* get character set */
-    if (strlen(database))
-    {
-        client_auth_packet += strlen(database) + 1;
-    }
-    else
-    {
-        client_auth_packet++;
-    }
+    client_auth_packet += (len + 1);
 
-    if (client_auth_packet && *client_auth_packet)
+    if (*client_auth_packet)
     {
         memcpy(&backend_protocol->charset, client_auth_packet, sizeof(int));
     }
@@ -1822,13 +1832,13 @@ static int gw_change_user(DCB *backend,
     spinlock_acquire(&in_session->ses_lock);
 
     /* save current_database name */
-    strncpy(current_database, current_session->db, MYSQL_DATABASE_MAXLEN);
+    strcpy(current_database, current_session->db);
 
     /*
      * Now clear database name in dcb as we don't do local authentication on db name for change user.
      * Local authentication only for user@host and if successful the database name change is sent to backend.
      */
-    strncpy(current_session->db, "", MYSQL_DATABASE_MAXLEN);
+    *current_session->db = 0;
 
     /*
      * Decode the token and check the password.
@@ -1839,7 +1849,7 @@ static int gw_change_user(DCB *backend,
                                             client_protocol->scramble,
                                             sizeof(client_protocol->scramble),
                                             username, client_sha1);
-    strncpy(current_session->db, current_database, MYSQL_DATABASE_MAXLEN);
+    strcpy(current_session->db, current_database);
     spinlock_release(&in_session->ses_lock);
 
     if (auth_ret != 0)
@@ -1849,14 +1859,14 @@ static int gw_change_user(DCB *backend,
             /* Try authentication again with new repository data */
             /* Note: if no auth client authentication will fail */
             spinlock_acquire(&in_session->ses_lock);
-            strncpy(current_session->db, "", MYSQL_DATABASE_MAXLEN);
+            *current_session->db = 0;
             auth_ret = gw_check_mysql_scramble_data(
                                                     backend->session->client_dcb,
                                                     auth_token, auth_token_len,
                                                     client_protocol->scramble,
                                                     sizeof(client_protocol->scramble),
                                                     username, client_sha1);
-            strncpy(current_session->db, current_database, MYSQL_DATABASE_MAXLEN);
+            strcpy(current_session->db, current_database);
             spinlock_release(&in_session->ses_lock);
         }
     }
@@ -1864,7 +1874,7 @@ static int gw_change_user(DCB *backend,
     /* let's free the auth_token now */
     if (auth_token)
     {
-        free(auth_token);
+        MXS_FREE(auth_token);
     }
 
     if (auth_ret != 0)
@@ -2279,8 +2289,8 @@ gw_receive_backend_auth(MySQLProtocol *protocol)
                       err,
                       bufstr);
 
-            free(bufstr);
-            free(err);
+            MXS_FREE(bufstr);
+            MXS_FREE(err);
             rc = -1;
         }
         else

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -52,8 +52,9 @@ spinlock_init(SPINLOCK *lock)
  * @param lock The spinlock to acquire
  */
 void
-spinlock_acquire(SPINLOCK *lock)
+spinlock_acquire(const SPINLOCK *const_lock)
 {
+    SPINLOCK *lock = (SPINLOCK*)const_lock;
 #if SPINLOCK_PROFILE
     int spins = 0;
 
@@ -96,8 +97,9 @@ spinlock_acquire(SPINLOCK *lock)
  * @return True if the spinlock was acquired, otherwise false
  */
 int
-spinlock_acquire_nowait(SPINLOCK *lock)
+spinlock_acquire_nowait(const SPINLOCK *const_lock)
 {
+    SPINLOCK *lock = (SPINLOCK*)const_lock;
 #ifdef __GNUC__
     if (__sync_lock_test_and_set(&(lock->lock), 1))
     {
@@ -123,8 +125,9 @@ spinlock_acquire_nowait(SPINLOCK *lock)
  * @param lock The spinlock to release
  */
 void
-spinlock_release(SPINLOCK *lock)
+spinlock_release(const SPINLOCK *const_lock)
 {
+    SPINLOCK *lock = (SPINLOCK*)const_lock;
     ss_dassert(lock->lock != 0);
 #if SPINLOCK_PROFILE
     if (lock->waiting > lock->max_waiting)
@@ -154,7 +157,7 @@ spinlock_release(SPINLOCK *lock)
  * @param hdl           A handle that is passed to the reporter function
  */
 void
-spinlock_stats(SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl)
+spinlock_stats(const SPINLOCK *lock, void (*reporter)(void *, char *, int), void *hdl)
 {
 #if SPINLOCK_PROFILE
     reporter(hdl, "Spinlock acquired", lock->acquired);

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -47,6 +47,7 @@
 #include "lua.h"
 #include "lualib.h"
 #include "lauxlib.h"
+#include <maxscale/alloc.h>
 
 MODULE_INFO info =
 {
@@ -173,7 +174,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
     LUA_INSTANCE *my_instance;
     bool error = false;
 
-    if ((my_instance = (LUA_INSTANCE*) calloc(1, sizeof(LUA_INSTANCE))) == NULL)
+    if ((my_instance = (LUA_INSTANCE*) MXS_CALLOC(1, sizeof(LUA_INSTANCE))) == NULL)
     {
         return NULL;
     }
@@ -184,11 +185,11 @@ createInstance(char **options, FILTER_PARAMETER **params)
     {
         if (strcmp(params[i]->name, "global_script") == 0)
         {
-            error = (my_instance->global_script = strdup(params[i]->value)) == NULL;
+            error = (my_instance->global_script = MXS_STRDUP(params[i]->value)) == NULL;
         }
         else if (strcmp(params[i]->name, "session_script") == 0)
         {
-            error = (my_instance->session_script = strdup(params[i]->value)) == NULL;
+            error = (my_instance->session_script = MXS_STRDUP(params[i]->value)) == NULL;
         }
         else if (!filter_standard_parameter(params[i]->name))
         {
@@ -199,9 +200,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
 
     if (error)
     {
-        free(my_instance->global_script);
-        free(my_instance->session_script);
-        free(my_instance);
+        MXS_FREE(my_instance->global_script);
+        MXS_FREE(my_instance->session_script);
+        MXS_FREE(my_instance);
         return NULL;
     }
 
@@ -215,9 +216,9 @@ createInstance(char **options, FILTER_PARAMETER **params)
             {
                 MXS_ERROR("luafilter: Failed to execute global script at '%s':%s.",
                           my_instance->global_script, lua_tostring(my_instance->global_lua_state, -1));
-                free(my_instance->global_script);
-                free(my_instance->session_script);
-                free(my_instance);
+                MXS_FREE(my_instance->global_script);
+                MXS_FREE(my_instance->session_script);
+                MXS_FREE(my_instance);
                 my_instance = NULL;
             }
             else if (my_instance->global_lua_state)
@@ -234,7 +235,7 @@ createInstance(char **options, FILTER_PARAMETER **params)
         else
         {
             MXS_ERROR("Unable to initialize new Lua state.");
-            free(my_instance);
+            MXS_FREE(my_instance);
             my_instance = NULL;
         }
     }
@@ -263,7 +264,7 @@ static void * newSession(FILTER *instance, SESSION *session)
     LUA_SESSION *my_session;
     LUA_INSTANCE *my_instance = (LUA_INSTANCE*) instance;
 
-    if ((my_session = (LUA_SESSION*) calloc(1, sizeof(LUA_SESSION))) == NULL)
+    if ((my_session = (LUA_SESSION*) MXS_CALLOC(1, sizeof(LUA_SESSION))) == NULL)
     {
         return NULL;
     }
@@ -282,7 +283,7 @@ static void * newSession(FILTER *instance, SESSION *session)
                       my_instance->session_script,
                       lua_tostring(my_session->lua_state, -1));
             lua_close(my_session->lua_state);
-            free(my_session);
+            MXS_FREE(my_session);
             my_session = NULL;
         }
         else
@@ -367,7 +368,7 @@ static void freeSession(FILTER *instance, void *session)
 {
     LUA_SESSION *my_session = (LUA_SESSION *) session;
     lua_close(my_session->lua_state);
-    free(my_session);
+    MXS_FREE(my_session);
 }
 
 /**
@@ -526,7 +527,7 @@ static int routeQuery(FILTER *instance, void *session, GWBUF *queue)
             spinlock_release(&my_instance->lock);
         }
 
-        free(fullquery);
+        MXS_FREE(fullquery);
     }
 
     if (!route)

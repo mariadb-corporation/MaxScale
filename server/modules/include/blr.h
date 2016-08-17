@@ -6,7 +6,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -31,6 +31,8 @@
  * 05/08/15     Massimiliano Pinto      Initial implementation of transaction safety
  * 23/10/15     Markus Makela           Added current_safe_event
  * 26/04/16     Massimiliano Pinto      Added MariaDB 10.0 and 10.1 GTID event flags detection
+ * 11/07/16     Massimiliano Pinto      Added SSL backend support
+ * 22/07/16     Massimiliano Pinto      Added Semi-Sync replication support
  *
  * @endverbatim
  */
@@ -39,6 +41,7 @@
 #include <pthread.h>
 #include <stdint.h>
 #include <memlog.h>
+#include <thread.h>
 #include <zlib.h>
 #include <mysql_client_server_protocol.h>
 
@@ -189,6 +192,10 @@
 #define MARIADB_FL_DDL                 32
 #define MARIADB_FL_STANDALONE           1
 
+/* Saved credential file name's tail */
+static const char BLR_DBUSERS_DIR[] = "cache/users";
+static const char BLR_DBUSERS_FILE[] = "dbusers";
+
 /**
  * Some useful macros for examining the MySQL Response packets
  */
@@ -221,6 +228,12 @@ typedef struct master_server_config
     char *user;
     char *password;
     char *filestem;
+    /* SSL options */
+    char *ssl_key;
+    char *ssl_cert;
+    char *ssl_ca;
+    int ssl_enabled;
+    char *ssl_version;
 } MASTER_SERVER_CFG;
 
 /* Config struct for CHANGE MASTER TO options */
@@ -232,6 +245,12 @@ typedef struct change_master_options
     char *binlog_pos;
     char *user;
     char *password;
+    /* SSL options */
+    char *ssl_key;
+    char *ssl_cert;
+    char *ssl_ca;
+    char *ssl_enabled;
+    char *ssl_version;
 } CHANGE_MASTER_OPTIONS;
 
 /**
@@ -499,6 +518,16 @@ typedef struct router_instance
     char              *set_master_uuid; /*< Send custom Master UUID to slaves */
     char              *set_master_server_id; /*< Send custom Master server_id to slaves */
     int               send_slave_heartbeat; /*< Enable sending heartbeat to slaves */
+    bool              ssl_enabled;          /*< Use SSL connection to master */
+    int               ssl_cert_verification_depth; /*< The maximum length of the certificate
+                                                    * authority chain that will be accepted.
+                                                    */
+    char              *ssl_key;             /*< config Certificate Key for Master SSL connection */
+    char              *ssl_ca;              /*< config CA Certificate for Master SSL connection */
+    char              *ssl_cert;            /*< config Certificate for Master SSL connection */
+    char              *ssl_version;         /*< config TLS Version for Master SSL connection */
+    bool              request_semi_sync;    /*< Request Semi-Sync replication to master */
+    int               master_semi_sync;     /*< Semi-Sync replication status of master server */
     struct router_instance  *next;
 } ROUTER_INSTANCE;
 
@@ -514,32 +543,35 @@ typedef struct router_instance
 #define BLRM_HBPERIOD           0x0006
 #define BLRM_CHKSUM1            0x0007
 #define BLRM_CHKSUM2            0x0008
-#define BLRM_GTIDMODE           0x0009
-#define BLRM_MUUID              0x000A
-#define BLRM_SUUID              0x000B
-#define BLRM_LATIN1             0x000C
-#define BLRM_UTF8               0x000D
-#define BLRM_SELECT1            0x000E
-#define BLRM_SELECTVER          0x000F
-#define BLRM_SELECTVERCOM       0x0010
-#define BLRM_SELECTHOSTNAME     0x0011
-#define BLRM_MAP                0x0012
-#define BLRM_REGISTER           0x0013
-#define BLRM_BINLOGDUMP         0x0014
-#define BLRM_SLAVE_STOPPED      0x0015
-#define BLRM_MARIADB10          0x0016
+#define BLRM_MARIADB10          0x0009
+#define BLRM_GTIDMODE           0x000A
+#define BLRM_MUUID              0x000B
+#define BLRM_SUUID              0x000C
+#define BLRM_LATIN1             0x000D
+#define BLRM_UTF8               0x000E
+#define BLRM_SELECT1            0x000F
+#define BLRM_SELECTVER          0x0010
+#define BLRM_SELECTVERCOM       0x0011
+#define BLRM_SELECTHOSTNAME     0x0012
+#define BLRM_MAP                0x0013
+#define BLRM_REGISTER           0x0014
+#define BLRM_CHECK_SEMISYNC     0x0015
+#define BLRM_REQUEST_SEMISYNC   0x0016
+#define BLRM_REQUEST_BINLOGDUMP 0x0017
+#define BLRM_BINLOGDUMP         0x0018
+#define BLRM_SLAVE_STOPPED      0x0019
 
-#define BLRM_MAXSTATE           0x0016
+#define BLRM_MAXSTATE           0x0019
 
 static char *blrm_states[] =
 {
     "Unconfigured", "Unconnected", "Connecting", "Authenticated", "Timestamp retrieval",
     "Server ID retrieval", "HeartBeat Period setup", "binlog checksum config",
-    "binlog checksum rerieval", "GTID Mode retrieval", "Master UUID retrieval",
-    "Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
+    "binlog checksum rerieval", "Set MariaDB slave capability", "GTID Mode retrieval",
+    "Master UUID retrieval", "Set Slave UUID", "Set Names latin1", "Set Names utf8", "select 1",
     "select version()", "select @@version_comment", "select @@hostname",
-    "select @@max_allowed_packet", "Register slave", "Binlog Dump", "Slave stopped",
-    "Set MariaDB slave capability"
+    "select @@max_allowed_packet", "Register slave", "Semi-Sync Support retrivial",
+    "Request Semi-Sync Replication", "Request Binlog Dump", "Binlog Dump", "Slave stopped"
 };
 
 #define BLRS_CREATED            0x0000
@@ -629,6 +661,7 @@ char    *blr_get_event_description(ROUTER_INSTANCE *router, uint8_t event);
 void blr_file_append(ROUTER_INSTANCE *router, char *file);
 void blr_cache_response(ROUTER_INSTANCE *router, char *response, GWBUF *buf);
 char * blr_last_event_description(ROUTER_INSTANCE *router);
+void blr_free_ssl_data(ROUTER_INSTANCE *inst);
 
 extern bool blr_send_event(blr_thread_role_t role,
                            const char* binlog_name,

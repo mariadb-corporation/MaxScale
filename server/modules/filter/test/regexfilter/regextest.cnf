@@ -1,5 +1,0 @@
-[Regex]
-type=filter
-module=regexfilter
-match=wrong
-replace=right

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -51,6 +51,7 @@
 #include <random_jkiss.h>
 #include <binlog_common.h>
 #include <avro/errors.h>
+#include <maxscale/alloc.h>
 
 #ifndef BINLOG_NAMEFMT
 #define BINLOG_NAMEFMT      "%s.%06d"
@@ -147,20 +148,6 @@ ROUTER_OBJECT *
 GetModuleObject()
 {
     return &MyObject;
-}
-
-/**
- * @brief Safe hashtable key freeing function
- *
- * This function conforms to the HASHMEMORYFN type by returning a NULL pointer
- *
- * @param data Data to free
- * @return Always NULL
- */
-void* safe_key_free(void *data)
-{
-    free(data);
-    return NULL;
 }
 
 /**
@@ -266,7 +253,7 @@ void read_source_service_options(AVRO_INSTANCE *inst, const char** options)
         for (int i = 0; options[i]; i++)
         {
             char option[strlen(options[i]) + 1];
-            strncpy(option, options[i], sizeof(option));
+            strcpy(option, options[i]);
 
             char *value = strchr(option, '=');
             if (value)
@@ -276,16 +263,43 @@ void read_source_service_options(AVRO_INSTANCE *inst, const char** options)
 
                 if (strcmp(option, "binlogdir") == 0)
                 {
-                    inst->binlogdir = strdup(value);
+                    inst->binlogdir = MXS_STRDUP_A(value);
                     MXS_INFO("Reading MySQL binlog files from %s", inst->binlogdir);
                 }
                 else if (strcmp(option, "filestem") == 0)
                 {
-                    inst->fileroot = strdup(value);
+                    inst->fileroot = MXS_STRDUP_A(value);
                 }
             }
         }
     }
+}
+
+/**
+ * TABLE_CREATE free function for use with hashtable.
+ * @param v Pointer to a TABLE_CREATE
+ */
+static void table_create_hfree(void* v)
+{
+    table_create_free((TABLE_CREATE*)v);
+}
+
+/**
+ * AVRO_TABLE free function for use with hashtable.
+ * @param v Pointer to a AVRO_TABLE
+ */
+static void avro_table_hfree(void* v)
+{
+    avro_table_free((AVRO_TABLE*)v);
+}
+
+/**
+ * TABLE_MAP free function for use with hashtable.
+ * @param v Pointer to a TABLE_MAP
+ */
+static void table_map_hfree(void* v)
+{
+    table_map_free((TABLE_MAP*)v);
 }
 
 /**
@@ -307,10 +321,8 @@ createInstance(SERVICE *service, char **options)
     AVRO_INSTANCE *inst;
     int i;
 
-    if ((inst = calloc(1, sizeof(AVRO_INSTANCE))) == NULL)
+    if ((inst = MXS_CALLOC(1, sizeof(AVRO_INSTANCE))) == NULL)
     {
-        MXS_ERROR("%s: Error: failed to allocate memory for router instance.",
-                  service->name);
         return NULL;
     }
 
@@ -376,19 +388,19 @@ createInstance(SERVICE *service, char **options)
 
                 if (strcmp(options[i], "binlogdir") == 0)
                 {
-                    free(inst->binlogdir);
-                    inst->binlogdir = strdup(value);
+                    MXS_FREE(inst->binlogdir);
+                    inst->binlogdir = MXS_STRDUP_A(value);
                     MXS_INFO("Reading MySQL binlog files from %s", inst->binlogdir);
                 }
                 else if (strcmp(options[i], "avrodir") == 0)
                 {
-                    inst->avrodir = strdup(value);
+                    inst->avrodir = MXS_STRDUP_A(value);
                     MXS_INFO("AVRO files stored in %s", inst->avrodir);
                 }
                 else if (strcmp(options[i], "filestem") == 0)
                 {
-                    free(inst->fileroot);
-                    inst->fileroot = strdup(value);
+                    MXS_FREE(inst->fileroot);
+                    inst->fileroot = MXS_STRDUP_A(value);
                 }
                 else if (strcmp(options[i], "group_rows") == 0)
                 {
@@ -432,13 +444,13 @@ createInstance(SERVICE *service, char **options)
         {
             MXS_NOTICE("[%s] No 'filestem' option specified, using default binlog name '%s'.",
                        service->name, BINLOG_NAME_ROOT);
-            inst->fileroot = strdup(BINLOG_NAME_ROOT);
+            inst->fileroot = MXS_STRDUP_A(BINLOG_NAME_ROOT);
         }
 
         /** Use the binlogdir as the default if no avrodir is specified. */
         if (inst->avrodir == NULL && inst->binlogdir)
         {
-            inst->avrodir = strdup(inst->binlogdir);
+            inst->avrodir = MXS_STRDUP_A(inst->binlogdir);
         }
 
         if (ensure_dir_ok(inst->avrodir, W_OK))
@@ -455,16 +467,16 @@ createInstance(SERVICE *service, char **options)
     snprintf(inst->binlog_name, sizeof(inst->binlog_name), BINLOG_NAMEFMT, inst->fileroot, first_file);
     inst->prevbinlog[0] = '\0';
 
-    if ((inst->table_maps = hashtable_alloc(1000, simple_str_hash, strcmp)) &&
-        (inst->open_tables = hashtable_alloc(1000, simple_str_hash, strcmp)) &&
-        (inst->created_tables = hashtable_alloc(1000, simple_str_hash, strcmp)))
+    if ((inst->table_maps = hashtable_alloc(1000, hashtable_item_strhash, hashtable_item_strcmp)) &&
+        (inst->open_tables = hashtable_alloc(1000, hashtable_item_strhash, hashtable_item_strcmp)) &&
+        (inst->created_tables = hashtable_alloc(1000, hashtable_item_strhash, hashtable_item_strcmp)))
     {
-        hashtable_memory_fns(inst->table_maps, (HASHMEMORYFN)strdup, NULL,
-                             safe_key_free, (HASHMEMORYFN)table_map_free);
-        hashtable_memory_fns(inst->open_tables, (HASHMEMORYFN)strdup, NULL,
-                             safe_key_free, (HASHMEMORYFN)avro_table_free);
-        hashtable_memory_fns(inst->created_tables, (HASHMEMORYFN)strdup, NULL,
-                             safe_key_free, (HASHMEMORYFN)table_create_free);
+        hashtable_memory_fns(inst->table_maps, hashtable_item_strdup, NULL,
+                             hashtable_item_free, table_map_hfree);
+        hashtable_memory_fns(inst->open_tables, hashtable_item_strdup, NULL,
+                             hashtable_item_free, avro_table_hfree);
+        hashtable_memory_fns(inst->created_tables, hashtable_item_strdup, NULL,
+                             hashtable_item_free, table_create_hfree);
     }
     else
     {
@@ -518,10 +530,10 @@ createInstance(SERVICE *service, char **options)
         hashtable_free(inst->table_maps);
         hashtable_free(inst->open_tables);
         hashtable_free(inst->created_tables);
-        free(inst->avrodir);
-        free(inst->binlogdir);
-        free(inst->fileroot);
-        free(inst);
+        MXS_FREE(inst->avrodir);
+        MXS_FREE(inst->binlogdir);
+        MXS_FREE(inst->fileroot);
+        MXS_FREE(inst);
         return NULL;
     }
     /**
@@ -575,9 +587,8 @@ newSession(ROUTER *instance, SESSION *session)
     MXS_DEBUG("avrorouter: %lu [newSession] new router session with "
               "session %p, and inst %p.", pthread_self(), session, inst);
 
-    if ((client = (AVRO_CLIENT *) calloc(1, sizeof(AVRO_CLIENT))) == NULL)
+    if ((client = (AVRO_CLIENT *) MXS_CALLOC(1, sizeof(AVRO_CLIENT))) == NULL)
     {
-        MXS_ERROR("Insufficient memory to create new client session for AVRO router");
         return NULL;
     }
 
@@ -679,7 +690,7 @@ static void freeSession(ROUTER* router_instance, void* router_client_ses)
     }
     spinlock_release(&router->lock);
 
-    free(client);
+    MXS_FREE(client);
 }
 
 /**
@@ -911,7 +922,7 @@ extract_message(GWBUF *errpkt)
     int len;
 
     len = EXTRACT24(errpkt->start);
-    if ((rval = (char *) malloc(len)) == NULL)
+    if ((rval = (char *) MXS_MALLOC(len)) == NULL)
     {
         return NULL;
     }

@@ -1,3 +1,0 @@
-select * from mysql.right;
-select right from test.table;
-select * from test.table where name='right';

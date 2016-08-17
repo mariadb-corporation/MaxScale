@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -33,6 +33,7 @@
 #include <dcb.h>
 #include <session.h>
 #include <openssl/sha.h>
+#include <maxscale/alloc.h>
 #include <maxscale/poll.h>
 #include <skygw_utils.h>
 #include <log_manager.h>
@@ -256,7 +257,7 @@ char *create_hex_sha1_sha1_passwd(char *passwd)
     uint8_t hash2[SHA_DIGEST_LENGTH] = "";
     char *hexpasswd = NULL;
 
-    if ((hexpasswd = (char *)calloc(SHA_DIGEST_LENGTH * 2 + 1, 1)) == NULL)
+    if ((hexpasswd = (char *)MXS_CALLOC(SHA_DIGEST_LENGTH * 2 + 1, 1)) == NULL)
     {
         return NULL;
     }
@@ -312,4 +313,78 @@ void clean_up_pathname(char *path)
             len--;
         }
     }
+}
+
+/**
+ * @brief Internal helper function for mkdir_all()
+ *
+ * @param path Path to create
+ * @param mask Bitmask to use
+ * @return True if directory exists or it was successfully created, false on error
+ */
+static bool mkdir_all_internal(char *path, mode_t mask)
+{
+    bool rval = false;
+
+    if (mkdir(path, mask) == -1 && errno != EEXIST)
+    {
+        if (errno == ENOENT)
+        {
+            /** Try to create the parent directory */
+            char *ndir = strrchr(path, '/');
+            if (ndir)
+            {
+                *ndir = '\0';
+                if (mkdir_all_internal(path, mask))
+                {
+                    /** Creation of the parent directory was successful, try to
+                     * create the directory again */
+                    *ndir = '/';
+                    if (mkdir(path, mask) == 0)
+                    {
+                        rval = true;
+                    }
+                    else
+                    {
+                        char err[STRERROR_BUFLEN];
+                        MXS_ERROR("Failed to create directory '%s': %d, %s",
+                                  path, errno, strerror_r(errno, err, sizeof(err)));
+                    }
+                }
+            }
+        }
+        else
+        {
+            char err[STRERROR_BUFLEN];
+            MXS_ERROR("Failed to create directory '%s': %d, %s",
+                      path, errno, strerror_r(errno, err, sizeof(err)));
+        }
+    }
+    else
+    {
+        rval = true;
+    }
+
+    return rval;
+}
+
+/**
+ * @brief Create a directory and any parent directories that do not exist
+ *
+ *
+ * @param path Path to create
+ * @param mask Bitmask to use
+ * @return True if directory exists or it was successfully created, false on error
+ */
+bool mxs_mkdir_all(const char *path, int mask)
+{
+    char local_path[strlen(path) + 1];
+    strcpy(local_path, path);
+
+    if (local_path[sizeof(local_path) - 2] == '/')
+    {
+        local_path[sizeof(local_path) - 2] = '\0';
+    }
+
+    return mkdir_all_internal(local_path, (mode_t)mask);
 }

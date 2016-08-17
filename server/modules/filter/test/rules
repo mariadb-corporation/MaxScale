@@ -1,4 +1,0 @@
-rule union_regex deny regex '.*union.*'
-rule dont_delete_everything deny no_where_clause on_queries delete|update
-rule no_wildcard deny wildcard
-users %@% match any rules union_regex dont_delete_everything no_wildcard

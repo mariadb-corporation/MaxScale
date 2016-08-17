@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -31,6 +31,7 @@
  */
 
 #include <cdc.h>
+#include <maxscale/alloc.h>
 #include <gw.h>
 #include <modinfo.h>
 #include <log_manager.h>
@@ -321,7 +322,7 @@ cdc_accept(DCB *listener)
 
         /* create the session data for CDC */
         /* this coud be done in anothe routine, let's keep it here for now */
-        client_data = (CDC_session *) calloc(1, sizeof(CDC_session));
+        client_data = (CDC_session *) MXS_CALLOC(1, sizeof(CDC_session));
         if (client_data == NULL)
         {
             dcb_close(client_dcb);
@@ -388,18 +389,10 @@ cdc_protocol_init(DCB* dcb)
 {
     CDC_protocol* p;
 
-    p = (CDC_protocol *) calloc(1, sizeof(CDC_protocol));
+    p = (CDC_protocol *) MXS_CALLOC(1, sizeof(CDC_protocol));
 
     if (p == NULL)
     {
-        int eno = errno;
-        errno = 0;
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("%lu [CDC_protocol_init] CDC protocol init failed : "
-                  "memory allocation due error  %d, %s.",
-                  pthread_self(),
-                  eno,
-                  strerror_r(eno, errbuf, sizeof(errbuf)));
         return NULL;
     }
 

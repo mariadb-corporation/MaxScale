@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -26,6 +26,32 @@ extern "C" {
  */
 #if !defined(STRERROR_BUFLEN)
 #define STRERROR_BUFLEN 512
+#endif
+
+/**
+ * If MXS_MODULE_NAME is defined before log_manager.h is included, then all
+ * logged messages will be prefixed with that string enclosed in square brackets.
+ * For instance, the following
+ *
+ *     #define MXS_MODULE_NAME "xyz"
+ *     #include <log_manager.h>
+ *
+ * will lead to every logged message looking like:
+ *
+ *     2016-08-12 13:49:11   error : [xyz] The gadget was not ready
+ *
+ * In general, the value of MXS_MODULE_NAME should be the name of the shared
+ * library to which the source file, where MXS_MODULE_NAME is defined, belongs.
+ *
+ * Note that a file that is compiled into multiple modules should
+ * have MXS_MODULE_NAME defined as something else than the name of a real
+ * module, or not at all.
+ *
+ * Any file that is compiled into maxscale-common should *not* have
+ * MXS_MODULE_NAME defined.
+ */
+#if !defined(MXS_MODULE_NAME)
+#define MXS_MODULE_NAME NULL
 #endif
 
 enum mxs_log_priorities
@@ -82,6 +108,13 @@ typedef enum
     MXS_LOG_AUGMENTATION_MASK     = (MXS_LOG_AUGMENT_WITH_FUNCTION)
 } mxs_log_augmentation_t;
 
+typedef struct mxs_log_throttling
+{
+    size_t count;       // Maximum number of a specific message...
+    size_t window_ms;   // ...during this many milliseconds.
+    size_t suppress_ms; // If exceeded, suppress such messages for this many ms.
+} MXS_LOG_THROTTLING;
+
 bool mxs_log_init(const char* ident, const char* logdir, mxs_log_target_t target);
 void mxs_log_finish(void);
 
@@ -94,10 +127,14 @@ void mxs_log_set_syslog_enabled(bool enabled);
 void mxs_log_set_maxlog_enabled(bool enabled);
 void mxs_log_set_highprecision_enabled(bool enabled);
 void mxs_log_set_augmentation(int bits);
+void mxs_log_set_throttling(const MXS_LOG_THROTTLING* throttling);
+
+void mxs_log_get_throttling(MXS_LOG_THROTTLING* throttling);
 
 int mxs_log_message(int priority,
+                    const char* modname,
                     const char* file, int line, const char* function,
-                    const char* format, ...) __attribute__((format(printf, 5, 6)));
+                    const char* format, ...) __attribute__((format(printf, 6, 7)));
 /**
  * Log an error, warning, notice, info, or debug  message.
  *
@@ -109,7 +146,7 @@ int mxs_log_message(int priority,
  *       MXS_ERROR, MXS_WARNING, etc. macros instead.
  */
 #define MXS_LOG_MESSAGE(priority, format, ...)\
-    mxs_log_message(priority, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
+    mxs_log_message(priority, MXS_MODULE_NAME, __FILE__, __LINE__, __func__, format, ##__VA_ARGS__)
 
 /**
  * Log an error, warning, notice, info, or debug  message.
@@ -122,6 +159,45 @@ int mxs_log_message(int priority,
 #define MXS_NOTICE(format, ...)  MXS_LOG_MESSAGE(LOG_NOTICE,  format, ##__VA_ARGS__)
 #define MXS_INFO(format, ...)    MXS_LOG_MESSAGE(LOG_INFO,    format, ##__VA_ARGS__)
 #define MXS_DEBUG(format, ...)   MXS_LOG_MESSAGE(LOG_DEBUG,   format, ##__VA_ARGS__)
+
+/**
+ * Log an out of memory error using custom message.
+ *
+ * @param message Text to be logged.
+ */
+// TODO: In an OOM situation, the default logging will (most likely) *not* work,
+// TODO: as memory is allocated as part of the process. A custom route, that does
+// TODO: not allocate memory, must be created for OOM messages.
+// TODO: So, currently these are primarily placeholders.
+#define MXS_OOM_MESSAGE(message) MXS_ERROR("OOM: %s", message);
+
+/**
+ * Log an out of memory error using custom message, if the
+ * provided pointer is NULL.
+ *
+ * @param p If NULL, an OOM message will be logged.
+ * @param message Text to be logged.
+ */
+#define MXS_OOM_MESSAGE_IFNULL(p, m) do { if (!p) { MXS_OOM_MESSAGE(m); } } while (false)
+
+/**
+ * Log an out of memory error using a default message.
+ */
+#define MXS_OOM() MXS_OOM_MESSAGE(__func__)
+
+/**
+ * Log an out of memory error using a default message, if the
+ * provided pointer is NULL.
+ *
+ * @param p If NULL, an OOM message will be logged.
+ */
+#define MXS_OOM_IFNULL(p) do { if (!p) { MXS_OOM(); } } while (false)
+
+enum
+{
+    MXS_OOM_MESSAGE_MAXLEN = 80 /** Maximum length of an OOM message, including the
+                                    trailing NULL. If longer, it will be cut. */
+};
 
 #if defined(__cplusplus)
 }

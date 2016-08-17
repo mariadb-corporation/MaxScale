@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl.
  *
- * Change Date: 2019-01-01
+ * Change Date: 2019-07-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -39,6 +39,7 @@
 #include <ini.h>
 #include <stdlib.h>
 #include <glob.h>
+#include <maxscale/alloc.h>
 
 static const char *statefile_section = "avro-conversion";
 static const char *ddl_list_name = "table-ddl.list";
@@ -102,14 +103,14 @@ void avro_close_binlog(int fd)
  */
 AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema)
 {
-    AVRO_TABLE *table = calloc(1, sizeof(AVRO_TABLE));
+    AVRO_TABLE *table = MXS_CALLOC(1, sizeof(AVRO_TABLE));
     if (table)
     {
         if (avro_schema_from_json_length(json_schema, strlen(json_schema),
                                          &table->avro_schema))
         {
             MXS_ERROR("Avro error: %s", avro_strerror());
-            free(table);
+            MXS_FREE(table);
             return NULL;
         }
 
@@ -128,7 +129,7 @@ AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema)
         {
             MXS_ERROR("Avro error: %s", avro_strerror());
             avro_schema_decref(table->avro_schema);
-            free(table);
+            MXS_FREE(table);
             return NULL;
         }
 
@@ -137,12 +138,12 @@ AVRO_TABLE* avro_table_alloc(const char* filepath, const char* json_schema)
             MXS_ERROR("Avro error: %s", avro_strerror());
             avro_schema_decref(table->avro_schema);
             avro_file_writer_close(table->avro_file);
-            free(table);
+            MXS_FREE(table);
             return NULL;
         }
 
-        table->json_schema = strdup(json_schema);
-        table->filename = strdup(filepath);
+        table->json_schema = MXS_STRDUP_A(json_schema);
+        table->filename = MXS_STRDUP_A(filepath);
     }
     return table;
 }
@@ -233,7 +234,16 @@ static int conv_state_handler(void* data, const char* section, const char* key, 
         }
         else if (strcmp(key, "file") == 0)
         {
-            strncpy(router->binlog_name, value, sizeof(router->binlog_name));
+            size_t len = strlen(value);
+
+            if (len > BINLOG_FNAMELEN)
+            {
+                MXS_ERROR("Provided value %s for key 'file' is too long. "
+                          "The maximum allowed length is %d.", value, BINLOG_FNAMELEN);
+                return 0;
+            }
+
+            strcpy(router->binlog_name, value);
         }
         else
         {
@@ -297,9 +307,8 @@ bool avro_load_conversion_state(AVRO_INSTANCE *router)
  * @brief Free an AVRO_TABLE
  *
  * @param table Table to free
- * @return Always NULL
  */
-void* avro_table_free(AVRO_TABLE *table)
+void avro_table_free(AVRO_TABLE *table)
 {
     if (table)
     {
@@ -307,10 +316,9 @@ void* avro_table_free(AVRO_TABLE *table)
         avro_file_writer_close(table->avro_file);
         avro_value_iface_decref(table->avro_writer_iface);
         avro_schema_decref(table->avro_schema);
-        free(table->json_schema);
-        free(table->filename);
+        MXS_FREE(table->json_schema);
+        MXS_FREE(table->filename);
     }
-    return NULL;
 }
 
 /**
@@ -329,27 +337,34 @@ static avro_binlog_end_t rotate_to_next_file_if_exists(AVRO_INSTANCE* router, ui
     if (binlog_next_file_exists(router->binlogdir, router->binlog_name))
     {
         char next_binlog[BINLOG_FNAMELEN + 1];
-        snprintf(next_binlog, sizeof(next_binlog),
-                 BINLOG_NAMEFMT, router->fileroot,
-                 blr_file_get_next_binlogname(router->binlog_name));
-
-        if (stop_seen)
+        if (snprintf(next_binlog, sizeof(next_binlog),
+                     BINLOG_NAMEFMT, router->fileroot,
+                     blr_file_get_next_binlogname(router->binlog_name)) >= sizeof(next_binlog))
         {
-            MXS_NOTICE("End of binlog file [%s] at %lu with a "
-                       "close event. Rotating to next binlog file [%s].",
-                       router->binlog_name, pos, next_binlog);
+            MXS_ERROR("Next binlog name did not fit into the allocated buffer "
+                      "but was truncated, aborting: %s", next_binlog);
+            rval = AVRO_BINLOG_ERROR;
         }
         else
         {
-            MXS_NOTICE("End of binlog file [%s] at %lu with no "
-                       "close or rotate event. Rotating to next binlog file [%s].",
-                       router->binlog_name, pos, next_binlog);
-        }
+            if (stop_seen)
+            {
+                MXS_NOTICE("End of binlog file [%s] at %lu with a "
+                           "close event. Rotating to next binlog file [%s].",
+                           router->binlog_name, pos, next_binlog);
+            }
+            else
+            {
+                MXS_NOTICE("End of binlog file [%s] at %lu with no "
+                           "close or rotate event. Rotating to next binlog file [%s].",
+                           router->binlog_name, pos, next_binlog);
+            }
 
-        rval = AVRO_OK;
-        strncpy(router->binlog_name, next_binlog, sizeof(router->binlog_name));
-        router->binlog_position = 4;
-        router->current_pos = 4;
+            rval = AVRO_OK;
+            strcpy(router->binlog_name, next_binlog);
+            router->binlog_position = 4;
+            router->current_pos = 4;
+        }
     }
     else if (stop_seen)
     {
@@ -375,7 +390,7 @@ static void rotate_to_file(AVRO_INSTANCE* router, uint64_t pos, const char *next
     /** Binlog file is processed, prepare for next one */
     MXS_NOTICE("End of binlog file [%s] at %lu. Rotating to file [%s].",
                router->binlog_name, pos, next_binlog);
-    strncpy(router->binlog_name, next_binlog, sizeof(router->binlog_name));
+    strcpy(router->binlog_name, next_binlog); // next_binlog is as big as router->binlog_name.
     router->binlog_position = 4;
     router->current_pos = 4;
 }
@@ -984,11 +999,13 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     int len = hdr->event_size - BINLOG_EVENT_HDR_LEN - (PHDR_OFF + vblklen + 1 + dblen) + 1;
     char *sql = (char *) ptr + PHDR_OFF + vblklen + 1 + dblen;
     char db[dblen + 1];
-    strncpy(db, (char*) ptr + PHDR_OFF + vblklen, sizeof(db));
+    memcpy(db, (char*) ptr + PHDR_OFF + vblklen, dblen);
+    db[dblen] = 0;
 
     unify_whitespace(sql, len);
     size_t sqlsz = len, tmpsz = len;
-    char *tmp = malloc(len);
+    char *tmp = MXS_MALLOC(len);
+    MXS_ABORT_IF_NULL(tmp);
     remove_mysql_comments((const char**)&sql, &sqlsz, &tmp, &tmpsz);
     sql = tmp;
     len = tmpsz;
@@ -1005,17 +1022,27 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
     else if (is_alter_table_statement(router, sql, len))
     {
         char ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
-        char full_ident[MYSQL_TABLE_MAXLEN + MYSQL_DATABASE_MAXLEN + 2];
         read_alter_identifier(sql, sql + len, ident, sizeof(ident));
 
-        if (strnlen(db, 1) && strchr(ident, '.') == NULL)
+        bool combine = (strnlen(db, 1) && strchr(ident, '.') == NULL);
+
+        size_t len = strlen(ident) + 1; // + 1 for the NULL
+
+        if (combine)
         {
-            snprintf(full_ident, sizeof(full_ident), "%s.%s", db, ident);
+            len += (strlen(db) + 1); // + 1 for the "."
         }
-        else
+
+        char full_ident[len];
+        full_ident[0] = 0; // Set full_ident to "".
+
+        if (combine)
         {
-            strncpy(full_ident, ident, sizeof(full_ident));
+            strcat(full_ident, db);
+            strcat(full_ident, ".");
         }
+
+        strcat(full_ident, ident);
 
         TABLE_CREATE *created = hashtable_fetch(router->created_tables, full_ident);
         ss_dassert(created);
@@ -1041,5 +1068,5 @@ void handle_query_event(AVRO_INSTANCE *router, REP_HEADER *hdr, int *pending_tra
         *pending_transaction = 0;
     }
 
-    free(tmp);
+    MXS_FREE(tmp);
 }
