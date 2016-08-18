@@ -1,4 +1,3 @@
-include_directories(monitor)
 add_subdirectory(routing)
 add_subdirectory(protocol)
 add_subdirectory(monitor)

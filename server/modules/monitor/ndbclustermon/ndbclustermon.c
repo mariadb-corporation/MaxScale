@@ -26,7 +26,7 @@
  */
 
 
-#include <mysqlmon.h>
+#include "../mysqlmon.h"
 #include <maxscale/alloc.h>
 
 static void monitorMain(void *);

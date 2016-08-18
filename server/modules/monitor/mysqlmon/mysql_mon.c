@@ -45,7 +45,7 @@
  * @endverbatim
  */
 
-#include <mysqlmon.h>
+#include "../mysqlmon.h"
 #include <dcb.h>
 #include <modutil.h>
 #include <maxscale/alloc.h>

@@ -25,7 +25,7 @@
  * @endverbatim
  */
 
-#include <mmmon.h>
+#include "mmmon.h"
 #include <dcb.h>
 #include <maxscale/alloc.h>
 

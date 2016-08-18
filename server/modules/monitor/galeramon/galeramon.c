@@ -34,7 +34,7 @@
  */
 
 
-#include <galeramon.h>
+#include "galeramon.h"
 #include <dcb.h>
 #include <maxscale/alloc.h>
 
