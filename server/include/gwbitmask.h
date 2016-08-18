@@ -12,7 +12,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
 #include <spinlock.h>
+#include <maxscale/limits.h>
 
 /**
  * @file gwbitmask.h An implementation of an arbitrarily long bitmask
@@ -28,7 +30,7 @@
  */
 
 /* This number MUST an be exact multiple of 8 */
-#define MXS_BITMASK_LENGTH      256      /**< Number of bits in the bitmask */
+#define MXS_BITMASK_LENGTH     (MXS_MAX_THREADS + 1)    /**< Number of bits in the bitmask */
 
 #define MXS_BITMASK_SIZE       (MXS_BITMASK_LENGTH / 8) /**< Number of bytes in the bitmask */
 

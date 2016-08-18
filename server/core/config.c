@@ -75,6 +75,7 @@
 #include <dbusers.h>
 #include <gw.h>
 #include <maxscale/alloc.h>
+#include <maxscale/limits.h>
 #define PCRE2_CODE_UNIT_WIDTH 8
 #include <pcre2.h>
 
@@ -895,8 +896,8 @@ handle_global_item(const char *name, const char *value)
                 int processor_count = get_processor_count();
                 if (thrcount > processor_count)
                 {
-                    MXS_WARNING("Number of threads set to %d which is greater than"
-                                " the number of processors available: %d",
+                    MXS_WARNING("Number of threads set to %d, which is greater than "
+                                "the number of processors available: %d",
                                 thrcount, processor_count);
                 }
             }
@@ -905,6 +906,14 @@ handle_global_item(const char *name, const char *value)
                 MXS_WARNING("Invalid value for 'threads': %s.", value);
                 return 0;
             }
+        }
+
+        if (gateway.n_threads > MXS_MAX_THREADS)
+        {
+            MXS_WARNING("Number of threads set to %d, which is greater than the "
+                        "hard maximum of %d. Number of threads adjusted down "
+                        "accordingly.", gateway.n_threads, MXS_MAX_THREADS);
+            gateway.n_threads = MXS_MAX_THREADS;
         }
     }
     else if (strcmp(name, "non_blocking_polls") == 0)
