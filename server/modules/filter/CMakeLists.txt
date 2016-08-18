@@ -1,3 +1,4 @@
+add_subdirectory(cache)
 add_subdirectory(ccrfilter)
 add_subdirectory(dbfwfilter)
 add_subdirectory(gatekeeper)
