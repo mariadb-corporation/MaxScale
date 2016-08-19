@@ -14,7 +14,7 @@ report at [Jira](https://jira.mariadb.org).
 
 Before version 2.1.0, MaxScale created in the log directory a log file
 maxscaleN.log, where N initially was 1 and then was increased every time
-MaxScale was instructued (by sending the signal SIGUSR1 or via maxadmin)
+MaxScale was instructed (by sending the signal SIGUSR1 or via maxadmin)
 to rotate the log file.
 
 That has now been changed so that the name of the log file is *always*
@@ -58,6 +58,13 @@ removed if they are no longer used by older versions of MaxScale.
 
 ## New Features
 
+### Amazon RDS Aurora monitor
+
+The new [Aurora Monitor](../Monitors/Aurora-Monitor.md) module allows monitoring
+of Aurora clusters. The monitor detects which of the nodes are read replicas and
+which of them is the real write node and assigns the appropriate status for each
+node. This module also supports launchable scripts on monitored events. Read the
+[Monitor Common Documentation](../Monitors/Monitor-Common.md) for more details.
 
 ## Bug fixes
 
