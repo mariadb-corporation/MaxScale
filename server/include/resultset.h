@@ -77,11 +77,11 @@ typedef struct resultset
 
 extern RESULTSET *resultset_create(RESULT_ROW_CB, void *);
 extern void resultset_free(RESULTSET *);
-extern int resultset_add_column(RESULTSET *, char *, int, RESULT_COL_TYPE);
+extern int resultset_add_column(RESULTSET *, const char *, int, RESULT_COL_TYPE);
 extern void resultset_column_free(RESULT_COLUMN *);
 extern RESULT_ROW *resultset_make_row(RESULTSET *);
 extern void resultset_free_row(RESULT_ROW *);
-extern int resultset_row_set(RESULT_ROW *, int, char *);
+extern int resultset_row_set(RESULT_ROW *, int, const char *);
 extern void resultset_stream_mysql(RESULTSET *, DCB *);
 extern void resultset_stream_json(RESULTSET *, DCB *);
 

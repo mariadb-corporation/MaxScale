@@ -32,7 +32,7 @@
 
 
 static int mysql_send_fieldcount(DCB *, int);
-static int mysql_send_columndef(DCB *, char *, int, int, uint8_t);
+static int mysql_send_columndef(DCB *, const char *, int, int, uint8_t);
 static int mysql_send_eof(DCB *, int);
 static int mysql_send_row(DCB *, RESULT_ROW *, int);
 
@@ -95,9 +95,9 @@ resultset_free(RESULTSET *resultset)
  * @return      The numebr of columns added to the result set
  */
 int
-resultset_add_column(RESULTSET *set, char *name, int len, RESULT_COL_TYPE type)
+resultset_add_column(RESULTSET *set, const char *cname, int len, RESULT_COL_TYPE type)
 {
-    name = MXS_STRDUP(name);
+    char *name = MXS_STRDUP(cname);
     RESULT_COLUMN *newcol = (RESULT_COLUMN *)MXS_MALLOC(sizeof(RESULT_COLUMN));
 
     if (!name || !newcol)
@@ -207,7 +207,7 @@ resultset_free_row(RESULT_ROW *row)
  * @return      The number of columns inserted
  */
 int
-resultset_row_set(RESULT_ROW *row, int col, char *value)
+resultset_row_set(RESULT_ROW *row, int col, const char *value)
 {
     if (col < 0 || col >= row->n_cols)
     {
@@ -299,7 +299,7 @@ mysql_send_fieldcount(DCB *dcb, int count)
  * @return              Non-zero on success
  */
 static int
-mysql_send_columndef(DCB *dcb, char *name, int type, int len, uint8_t seqno)
+mysql_send_columndef(DCB *dcb, const char *name, int type, int len, uint8_t seqno)
 {
     GWBUF *pkt;
     uint8_t *ptr;
@@ -443,7 +443,7 @@ mysql_send_row(DCB *dcb, RESULT_ROW *row, int seqno)
  * @return      Non-zero if the string is made of of numeric values
  */
 static int
-value_is_numeric(char *value)
+value_is_numeric(const char *value)
 {
     int rval = 0;
 
