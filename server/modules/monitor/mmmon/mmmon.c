@@ -46,9 +46,9 @@ MODULE_INFO info =
 };
 /*lint +e14 */
 
-static void *startMonitor(void *, void*);
-static void stopMonitor(void *);
-static void diagnostics(DCB *, void *);
+static void *startMonitor(MONITOR *, const CONFIG_PARAMETER *);
+static void stopMonitor(MONITOR *);
+static void diagnostics(DCB *, const MONITOR *);
 static void detectStaleMaster(void *, int);
 static MONITOR_SERVERS *get_current_master(MONITOR *);
 static bool isMySQLEvent(monitor_event_t event);
@@ -109,11 +109,9 @@ GetModuleObject()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(void *arg, void* opt)
+startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
 {
-    MONITOR* mon = (MONITOR*) arg;
     MM_MONITOR *handle = mon->handle;
-    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*) opt;
     bool have_events = false, script_error = false;
 
     if (handle)
@@ -203,9 +201,8 @@ startMonitor(void *arg, void* opt)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(void *arg)
+stopMonitor(MONITOR *mon)
 {
-    MONITOR* mon = arg;
     MM_MONITOR *handle = (MM_MONITOR *) mon->handle;
 
     handle->shutdown = 1;
@@ -218,10 +215,9 @@ stopMonitor(void *arg)
  * @param dcb   DCB to print diagnostics
  * @param arg   The monitor handle
  */
-static void diagnostics(DCB *dcb, void *arg)
+static void diagnostics(DCB *dcb, const MONITOR *mon)
 {
-    MONITOR* mon = (MONITOR*) arg;
-    MM_MONITOR *handle = (MM_MONITOR *) mon->handle;
+    const MM_MONITOR *handle = (const MM_MONITOR *) mon->handle;
     MONITOR_SERVERS *db;
     char *sep;
 

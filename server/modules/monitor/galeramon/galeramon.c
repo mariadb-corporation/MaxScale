@@ -58,9 +58,9 @@ MODULE_INFO info =
 };
 /*lint +e14 */
 
-static void *startMonitor(void *, void*);
-static void stopMonitor(void *);
-static void diagnostics(DCB *, void *);
+static void *startMonitor(MONITOR *, const CONFIG_PARAMETER *params);
+static void stopMonitor(MONITOR *);
+static void diagnostics(DCB *, const MONITOR *);
 static MONITOR_SERVERS *get_candidate_master(MONITOR*);
 static MONITOR_SERVERS *set_cluster_master(MONITOR_SERVERS *, MONITOR_SERVERS *, int);
 static void disableMasterFailback(void *, int);
@@ -124,11 +124,9 @@ GetModuleObject()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(void *arg, void* opt)
+startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
 {
-    MONITOR* mon = arg;
     GALERA_MONITOR *handle = mon->handle;
-    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*) opt;
     bool have_events = false, script_error = false;
     if (handle != NULL)
     {
@@ -234,9 +232,8 @@ startMonitor(void *arg, void* opt)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(void *arg)
+stopMonitor(MONITOR *mon)
 {
-    MONITOR* mon = (MONITOR*) arg;
     GALERA_MONITOR *handle = (GALERA_MONITOR *) mon->handle;
 
     handle->shutdown = 1;
@@ -250,10 +247,9 @@ stopMonitor(void *arg)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(DCB *dcb, void *arg)
+diagnostics(DCB *dcb, const MONITOR *mon)
 {
-    MONITOR* mon = (MONITOR*) arg;
-    GALERA_MONITOR *handle = (GALERA_MONITOR *) mon->handle;
+    const GALERA_MONITOR *handle = (const GALERA_MONITOR *) mon->handle;
     MONITOR_SERVERS *db;
     char *sep;
 

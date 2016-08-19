@@ -46,9 +46,9 @@ MODULE_INFO info =
 };
 /*lint +e14 */
 
-static void *startMonitor(void *, void*);
-static void stopMonitor(void *);
-static void diagnostics(DCB *, void *);
+static void *startMonitor(MONITOR *, const CONFIG_PARAMETER *params);
+static void stopMonitor(MONITOR *);
+static void diagnostics(DCB *, const MONITOR *);
 bool isNdbEvent(monitor_event_t event);
 
 static MONITOR_OBJECT MyObject =
@@ -106,11 +106,9 @@ GetModuleObject()
  * @return A handle to use when interacting with the monitor
  */
 static void *
-startMonitor(void *arg, void* opt)
+startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
 {
-    MONITOR* mon = (MONITOR*) arg;
     MYSQL_MONITOR *handle = mon->handle;
-    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*) opt;
     bool have_events = false, script_error = false;
 
     if (handle != NULL)
@@ -195,9 +193,8 @@ startMonitor(void *arg, void* opt)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(void *arg)
+stopMonitor(MONITOR *mon)
 {
-    MONITOR* mon = (MONITOR*) arg;
     MYSQL_MONITOR *handle = (MYSQL_MONITOR *) mon->handle;
 
     handle->shutdown = 1;
@@ -211,10 +208,9 @@ stopMonitor(void *arg)
  * @param arg   The monitor handle
  */
 static void
-diagnostics(DCB *dcb, void *arg)
+diagnostics(DCB *dcb, const MONITOR *mon)
 {
-    MONITOR* mon = arg;
-    MYSQL_MONITOR *handle = (MYSQL_MONITOR *) mon->handle;
+    const MYSQL_MONITOR *handle = (const MYSQL_MONITOR *) mon->handle;
     MONITOR_SERVERS *db;
     char *sep;
 

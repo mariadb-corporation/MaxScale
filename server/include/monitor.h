@@ -68,11 +68,15 @@
  * unregisterServer is called to remove a server from the set of servers that need to be
  * monitored.
  */
+
+struct monitor;
+typedef struct monitor MONITOR;
+
 typedef struct
 {
-    void *(*startMonitor)(void *, void*);
-    void (*stopMonitor)(void *);
-    void (*diagnostics)(DCB *, void *);
+    void *(*startMonitor)(MONITOR *monitor, const CONFIG_PARAMETER *params);
+    void (*stopMonitor)(MONITOR *monitor);
+    void (*diagnostics)(DCB *, const MONITOR *);
 } MONITOR_OBJECT;
 
 /**
