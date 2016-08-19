@@ -10,6 +10,12 @@ set(MAXSCALE_DOCDIR ${CMAKE_INSTALL_DOCDIR}/maxscale CACHE PATH "Documentation i
 set(MAXSCALE_VARDIR /var CACHE PATH "Data file path (usually /var/)")
 set(MAXSCALE_CONFDIR /etc CACHE PATH "Configuration file installation path (/etc/)")
 
+# Massage TARGET_COMPONENT into a list
+if (TARGET_COMPONENT)
+  string(REPLACE "," ";" TARGET_COMPONENT ${TARGET_COMPONENT})
+  list(FIND TARGET_COMPONENT "all" BUILD_ALL)
+endif()
+
 #
 # Installation functions for MaxScale
 #
@@ -25,9 +31,12 @@ set(MAXSCALE_CONFDIR /etc CACHE PATH "Configuration file installation path (/etc
 # @param Name of the CMake target
 # @param Component where this executable should be included
 function(install_executable target component)
-  if(NOT TARGET_COMPONENT OR "${component}" STREQUAL "${TARGET_COMPONENT}")
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
     install(TARGETS ${target} DESTINATION ${MAXSCALE_BINDIR} COMPONENT "${component}")
   endif()
+
 endfunction()
 
 # Installation function for modules
@@ -36,14 +45,17 @@ endfunction()
 # @param Component where this module should be included
 function(install_module target component)
   get_target_property(TGT_VERSION ${target} VERSION)
+
   if (${TGT_VERSION} MATCHES "NOTFOUND")
     message(AUTHOR_WARNING "Module '${target}' is missing the VERSION parameter!")
   endif()
 
-  # If TARGET_COMPONENT is defined, only parts of that component are installed
-  if(NOT TARGET_COMPONENT OR "${component}" STREQUAL "${TARGET_COMPONENT}")
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
     install(TARGETS ${target} DESTINATION ${MAXSCALE_LIBDIR} COMPONENT "${component}")
   endif()
+
 endfunction()
 
 # Installation functions for interpreted scripts.
@@ -52,10 +64,12 @@ endfunction()
 # @param Component where this script should be included
 function(install_script target component)
 
-  # If TARGET_COMPONENT is defined, only parts of that component are installed
-  if(NOT TARGET_COMPONENT OR "${component}" STREQUAL "${TARGET_COMPONENT}")
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
     install(PROGRAMS ${target} DESTINATION ${MAXSCALE_BINDIR} COMPONENT "${component}")
   endif()
+
 endfunction()
 
 # Installation functions for files and programs. These all go to the share directory
@@ -65,18 +79,20 @@ endfunction()
 # @param Component where this file should be included
 function(install_file file component)
 
-  # If TARGET_COMPONENT is defined, only parts of that component are installed
-  if(NOT TARGET_COMPONENT OR "${component}" STREQUAL "${TARGET_COMPONENT}")
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
     install(FILES ${file} DESTINATION ${MAXSCALE_SHAREDIR} COMPONENT "${component}")
   endif()
 endfunction()
 
 function(install_program file component)
 
-  # If TARGET_COMPONENT is defined, only parts of that component are installed
-  if(NOT TARGET_COMPONENT OR "${component}" STREQUAL "${TARGET_COMPONENT}")
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
     install(PROGRAMS ${file} DESTINATION ${MAXSCALE_SHAREDIR} COMPONENT "${component}")
   endif()
+
 endfunction()
 
 # Install man pages
@@ -86,10 +102,12 @@ endfunction()
 # @param Component where this manual should be included
 function(install_manual file page component)
 
-  # If TARGET_COMPONENT is defined, only parts of that component are installed
-  if(NOT TARGET_COMPONENT OR "${component}" STREQUAL "${TARGET_COMPONENT}")
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
     install(PROGRAMS ${file} DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man${page} COMPONENT "${component}")
   endif()
+
 endfunction()
 
 # Install headers
@@ -98,10 +116,12 @@ endfunction()
 # @param Component where this header should be included
 function(install_header header component)
 
-  # If TARGET_COMPONENT is defined, only parts of that component are installed
-  if(NOT TARGET_COMPONENT OR "${component}" STREQUAL "${TARGET_COMPONENT}")
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
     install(FILES ${header} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/maxscale COMPONENT "${component}")
   endif()
+
 endfunction()
 
 
@@ -112,8 +132,10 @@ endfunction()
 # @param Component where this file should be included
 function(install_custom_file file dest component)
 
-  # If TARGET_COMPONENT is defined, only parts of that component are installed
-  if(NOT TARGET_COMPONENT OR "${component}" STREQUAL "${TARGET_COMPONENT}")
+  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
+
+  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
     install(FILES ${file} DESTINATION ${dest} COMPONENT "${component}")
   endif()
+
 endfunction()

@@ -61,4 +61,4 @@ set(INSTALL_EXPERIMENTAL TRUE CACHE BOOL "Install experimental modules")
 set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
 
 # Which component to build (core, experimental, devel)
-set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, devel)")
+set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, devel, all)")

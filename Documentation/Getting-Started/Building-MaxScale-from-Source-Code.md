@@ -87,6 +87,7 @@ _NAME_=_VALUE_ format (e.g. `-DBUILD_TESTS=Y`).
 |BUILD_TESTS|Build tests|
 |WITH_SCRIPTS|Install systemd and init.d scripts|
 |PACKAGE|Enable building of packages|
+|TARGET_COMPONENT|Which component to install, default is the 'core' package. Other targets are 'experimental', which installs experimental packages, 'devel' which installs development headers and 'all' which installs all components.|
 
 **Note**: You can look into [defaults.cmake](../../cmake/defaults.cmake) for a
 list of the CMake variables.
@@ -163,7 +164,7 @@ make
 LD_LIBRARY_PATH=$PWD/server/core/ make package
 ```
 
-## Installing and packaging optional components
+## Installing optional components
 
 MaxScale is split into multiple components. The main component is the core MaxScale
 package which contains MaxScale and all the modules. This is the default component
@@ -174,23 +175,28 @@ quality modules. The latter of the optional components, _devel_, contains the
 development files required for MaxScale module development.
 
 The component which is build is controlled by the TARGET_COMPONENT CMake variable.
-The default value for this is _core_ which build the core MaxScale package.
+The default value for this is _core_ which builds the core MaxScale package.
 
-To build the experimental modules, you will need to set value of the TARGET_COMPONENT
+To build other components, you will need to set value of the TARGET_COMPONENT
 CMake variable to the component name you wish to install or package.
 
-For example, to package the experimental module component, invoke CMake with
+### Install experimental modules
+
+To install the experimental modules, invoke CMake with
 _-DTARGET_COMPONENT=experimental_:
 
 ```
-cmake ../MaxScale -DPACKAGE=Y DTARGET_COMPONENT=experimental
-make package
+cmake ../MaxScale -DTARGET_COMPONENT=experimental
+make
+make install
 ```
 
-If you wish to create a monolithic package with all the components, set the value to an
-empty string and build the package:
+### Creating a monolithic package
+
+To create a monolithic package with all the components, set the
+value of _TARGET_COMPONENT_ to 'all', _PACKAGE_ to Y and build the package:
 
 ```
-cmake ../MaxScale -DPACKAGE=Y DTARGET_COMPONENT=""
+cmake ../MaxScale -DPACKAGE=Y -DTARGET_COMPONENT=all
 make package
 ```
