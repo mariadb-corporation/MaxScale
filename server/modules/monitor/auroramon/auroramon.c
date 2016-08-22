@@ -255,10 +255,8 @@ static void auroramon_free(AURORA_MONITOR *handle)
  * @return Monitor handle
  */
 static void *
-startMonitor(void *arg, void* opt)
+startMonitor(MONITOR *mon, const CONFIG_PARAMETER *params)
 {
-    MONITOR* mon = (MONITOR*) arg;
-    CONFIG_PARAMETER* params = (CONFIG_PARAMETER*) opt;
     bool have_events = false, script_error = false;
     AURORA_MONITOR *handle = mon->handle;
 
@@ -344,9 +342,8 @@ startMonitor(void *arg, void* opt)
  * @param arg   Handle on thr running monior
  */
 static void
-stopMonitor(void *arg)
+stopMonitor(MONITOR *mon)
 {
-    MONITOR* mon = (MONITOR*) arg;
     AURORA_MONITOR *handle = (AURORA_MONITOR *) mon->handle;
 
     handle->shutdown = true;
@@ -357,10 +354,10 @@ stopMonitor(void *arg)
  * Diagnostic interface
  *
  * @param dcb   DCB to send output
- * @param arg   The monitor handle
+ * @param mon   The monitor
  */
 static void
-diagnostics(DCB *dcb, void *arg)
+diagnostics(DCB *dcb, const MONITOR *mon)
 {
 }
 
