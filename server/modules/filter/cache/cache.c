@@ -17,7 +17,7 @@
 
 static char VERSION_STRING[] = "V1.0.0";
 
-static FILTER *createInstance(char **options, FILTER_PARAMETER **);
+static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **);
 static void   *newSession(FILTER *instance, SESSION *session);
 static void    closeSession(FILTER *instance, void *sdata);
 static void    freeSession(FILTER *instance, void *sdata);
@@ -93,12 +93,13 @@ typedef struct cache_session_data
  * Create an instance of the cache filter for a particular service
  * within MaxScale.
  *
+ * @param name     The name of the instance (as defined in the config file).
  * @param options  The options for this filter
  * @param params   The array of name/value pair parameters for the filter
  *
  * @return The instance data for this new instance
  */
-static FILTER *createInstance(char **options, FILTER_PARAMETER **params)
+static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
     CACHE_INSTANCE *cinstance;
 

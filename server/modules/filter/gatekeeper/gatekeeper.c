@@ -82,7 +82,7 @@ static const char* datafile_name = "gatekeeper.data";
  * return a non-NULL value when a hash hit is made */
 static bool trueval = true;
 
-static FILTER *createInstance(char **options, FILTER_PARAMETER **params);
+static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -140,12 +140,13 @@ FILTER_OBJECT* GetModuleObject()
  * Create an instance of the filter for a particular service
  * within MaxScale.
  *
+ * @param name      The name of the instance (as defined in the config file).
  * @param options   The options for this filter
  * @param params    The array of name/value pair parameters for the filter
  *
  * @return The instance data for this new instance
  */
-static FILTER* createInstance(char **options, FILTER_PARAMETER **params)
+static FILTER* createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
     GK_INSTANCE *inst = MXS_CALLOC(1, sizeof(GK_INSTANCE));
 

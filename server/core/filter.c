@@ -405,7 +405,8 @@ bool filter_load(FILTER_DEF* filter)
             {
                 ss_dassert(!filter->filter);
 
-                if ((filter->filter = (filter->obj->createInstance)(filter->options,
+                if ((filter->filter = (filter->obj->createInstance)(filter->name,
+                                                                    filter->options,
                                                                     filter->parameters)))
                 {
                     rval = true;
