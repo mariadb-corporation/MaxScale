@@ -202,7 +202,7 @@ newSession(ROUTER *instance, SESSION *session)
     session->state = SESSION_STATE_READY;
     client->mode = inst->mode;
 
-    dcb_printf(session->client_dcb, "Welcome the MariaDB Corporation MaxScale Debug Interface (%s).\n",
+    dcb_printf(session->client_dcb, "Welcome to the MariaDB Corporation MaxScale Debug Interface (%s).\n",
                version_str);
     if (client->mode == CLIM_DEVELOPER)
     {
