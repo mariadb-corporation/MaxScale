@@ -21,6 +21,29 @@ When 2.0 has been installed, MaxAdmin can only be used by `root` and
 other users must be added anew. Please consult
 [MaxAdmin documentation](../Reference/MaxAdmin.md) for more details.
 
+This change requires the _maxscaled_ protocol listener entry in the
+MaxScale configuration file to be updated; address and port information
+must be replaced with socket information. For instance, an entry like
+```
+[MaxAdmin Listener]
+type=listener
+protocol=maxscaled
+address=localhost
+port=6603
+```
+should be updated to
+```
+[MaxAdmin Listener]
+type=listener
+protocol=maxscaled
+socket=default
+```
+where `default` corresponds to `/tmp/maxadmin.sock`.
+
+Note that if this update is *not* made, maxscaled will log a warning
+and use the default socket path. This behaviour may change in later
+releases of MaxScale.
+
 ## MySQL Monitor
 
 The MySQL Monitor now assigns the stale state to the master server by default.
