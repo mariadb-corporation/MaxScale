@@ -349,7 +349,7 @@ static int maxscaled_close(DCB *dcb)
  */
 static int maxscaled_listen(DCB *listener, char *config)
 {
-    char *socket_path;
+    char *socket_path = NULL;
 
     /* check for default UNIX socket */
     if (strncmp(config, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG, MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG_LEN) == 0)
@@ -358,19 +358,28 @@ static int maxscaled_listen(DCB *listener, char *config)
     }
     else
     {
-       socket_path = config;
+        const char* colon = strchr(config, ':');
+        ss_dassert(colon);
+        const char* port = colon + 1;
+
+        if (*port == '0')
+        {
+            // It seems "socket=socket-path" has been specified.
+
+            // The colon etc. will be stripped away in dcb_listen_create_socket_unix.
+            socket_path = config;
+        }
+        else
+        {
+            MXS_WARNING("The 'maxscaled' protocol can only be used with a domain socket, but "
+                        "it seems to have been configured with a socket and port: %s. "
+                        "Using the default socket path instead: %s. "
+                        "Remove all 'port' and 'address' entries from maxscaled protocol "
+                        "listeners and replace with 'socket=default' or 'socket=path-to-socket'.",
+                        config, MAXADMIN_DEFAULT_SOCKET);
+            socket_path = MAXADMIN_DEFAULT_SOCKET;
+        }
     }
 
-    /* check for UNIX socket path*/
-    if (strchr(socket_path,'/') == NULL)
-    {
-        MXS_ERROR("Failed to start listening on '%s' with 'MaxScale Admin' protocol,"
-                  " only UNIX domain sockets are supported. Remove all 'port' and 'address'"
-                  " parameters from this listener and add 'socket=default' to enable UNIX domain sockets.", socket_path);
-        return -1;
-    }
-    else
-    {
-        return (dcb_listen(listener, socket_path, "MaxScale Admin") < 0) ? 0 : 1;
-    }
+    return (dcb_listen(listener, socket_path, "MaxScale Admin") < 0) ? 0 : 1;
 }
