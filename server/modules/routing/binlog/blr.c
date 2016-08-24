@@ -50,6 +50,7 @@
  *                                  for connection error and authentication failure.
  * 11/07/2016   Massimiliano Pinto  Added SSL backend support
  * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
+ * 24/08/2016   Massimiliano Pinto  Added slave notification via CS_WAIT_DATA new state
  *
  * @endverbatim
  */
@@ -1531,21 +1532,19 @@ diagnostics(ROUTER *router, DCB *dcb)
             {
                 dcb_printf(dcb, "\t\tSlave_mode:                              connected\n");
             }
-            else if ((session->cstate & CS_UPTODATE) == 0)
-            {
-                dcb_printf(dcb, "\t\tSlave_mode:                              catchup. %s%s\n",
-                           ((session->cstate & CS_EXPECTCB) == 0 ? "" :
-                            "Waiting for DCB queue to drain."),
-                           ((session->cstate & CS_BUSY) == 0 ? "" :
-                            " Busy in slave catchup."));
-            }
             else
             {
-                dcb_printf(dcb, "\t\tSlave_mode:                              follow\n");
-                if (session->binlog_pos != router_inst->binlog_position)
+                if ((session->cstate & CS_WAIT_DATA) == CS_WAIT_DATA)
                 {
-                    dcb_printf(dcb, "\t\tSlave reports up to date however "
-                               "the slave binlog position does not match the master\n");
+                    dcb_printf(dcb, "\t\tSlave_mode:                              wait-for-data\n");
+                }
+                else
+                {
+                    dcb_printf(dcb, "\t\tSlave_mode:                              catchup. %s%s\n",
+                               ((session->cstate & CS_EXPECTCB) == 0 ? "" :
+                               "Waiting for DCB queue to drain."),
+                               ((session->cstate & CS_BUSY) == 0 ? "" :
+                               " Busy in slave catchup."));
                 }
             }
 #if SPINLOCK_PROFILE
