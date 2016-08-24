@@ -111,7 +111,7 @@ extern bool blr_notify_waiting_slave(ROUTER_SLAVE *slave);
 
 static int keepalive = 1;
 
-/** Transactio-Safety feature */
+/** Transaction-Safety feature */
 typedef enum
 {
     BLRM_NO_TRANSACTION, /*< No transaction */
@@ -2733,29 +2733,24 @@ void blr_notify_all_slaves(ROUTER_INSTANCE *router)
 {
     ROUTER_SLAVE *slave;
     int notified = 0;
- 
+
     spinlock_acquire(&router->lock);
     slave = router->slaves;
     while (slave)
     {
-        if (slave->state != BLRS_DUMPING)
-        {
-            slave = slave->next;
-            continue;
-        }
- 
         /* Notify a slave that has CS_WAIT_DATA bit set */
-        if (blr_notify_waiting_slave(slave))
+        if (slave->state == BLRS_DUMPING &&
+            blr_notify_waiting_slave(slave))
         {
             notified++;
         }
- 
+
         slave = slave->next;
     }
     spinlock_release(&router->lock);
- 
+
     if (notified > 0)
     {
-        MXS_BEBUG("Notified %d slaves about new data.", notified);
+        MXS_DEBUG("Notified %d slaves about new data.", notified);
     }
 }
