@@ -172,7 +172,7 @@ typedef struct monitor_servers
 /**
  * Representation of the running monitor.
  */
-typedef struct monitor
+struct monitor
 {
     char *name;                   /**< The name of the monitor module */
     char *user;                   /*< Monitor username */
@@ -194,7 +194,7 @@ typedef struct monitor
     void *handle;                 /**< Handle returned from startMonitor */
     size_t interval;              /**< The monitor interval */
     struct monitor *next;         /**< Next monitor in the linked list */
-} MONITOR;
+};
 
 extern MONITOR *monitor_alloc(char *, char *);
 extern void monitor_free(MONITOR *);
