@@ -131,8 +131,8 @@ static bool route_using_cache(CACHE_INSTANCE *instance,
  */
 static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
-    const char *storage_name = 0;
-    const char *storage_args = 0;
+    const char *storage_name = NULL;
+    const char *storage_args = NULL;
     uint32_t ttl = DEFAULT_TTL;
 
     bool error = false;
