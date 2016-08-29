@@ -385,26 +385,38 @@ bool filter_load(FILTER_DEF* filter)
     bool rval = false;
     if (filter)
     {
-        if (filter->obj == NULL)
+        if (filter->filter)
         {
-            /* Filter not yet loaded */
-            if ((filter->obj = load_module(filter->module, MODULE_FILTER)) == NULL)
-            {
-                MXS_ERROR("Failed to load filter module '%s'.", filter->module);
-                return false;
-            }
-        }
-
-        if ((filter->filter = (filter->obj->createInstance)(filter->options,
-                                                            filter->parameters)))
-        {
+            // Already loaded and created.
             rval = true;
         }
         else
         {
-            MXS_ERROR("Failed to create filter '%s' instance.", filter->name);
-        }
+            if (filter->obj == NULL)
+            {
+                /* Filter not yet loaded */
+                if ((filter->obj = load_module(filter->module, MODULE_FILTER)) == NULL)
+                {
+                    MXS_ERROR("Failed to load filter module '%s'.", filter->module);
+                }
+            }
 
+            if (filter->obj)
+            {
+                ss_dassert(!filter->filter);
+
+                if ((filter->filter = (filter->obj->createInstance)(filter->name,
+                                                                    filter->options,
+                                                                    filter->parameters)))
+                {
+                    rval = true;
+                }
+                else
+                {
+                    MXS_ERROR("Failed to create filter '%s' instance.", filter->name);
+                }
+            }
+        }
     }
     return rval;
 }

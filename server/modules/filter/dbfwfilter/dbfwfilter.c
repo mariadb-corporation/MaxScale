@@ -99,7 +99,7 @@ static char *version_str = "V1.2.0";
 /*
  * The filter entry points
  */
-static FILTER *createInstance(char **options, FILTER_PARAMETER **);
+static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -1357,12 +1357,14 @@ static bool process_rule_file(const char* filename, FW_INSTANCE* instance)
  * Create an instance of the filter for a particular service
  * within MaxScale.
  *
- * @param options   The options for this filter
+ * @param name     The name of the instance (as defined in the config file).
+ * @param options  The options for this filter
+ * @param params   The array of name/value pair parameters for the filter
  *
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
     FW_INSTANCE *my_instance;
     int i;

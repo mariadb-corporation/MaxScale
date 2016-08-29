@@ -51,7 +51,7 @@ MODULE_INFO info =
 
 static char *version_str = "V1.1.0";
 
-static FILTER *createInstance(char **options, FILTER_PARAMETER **params);
+static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -137,13 +137,14 @@ GetModuleObject()
  * Create an instance of the filter for a particular service
  * within MaxScale.
  *
+ * @param params    The array of name/value pair parameters for the filter
  * @param options   The options for this filter
  * @param params    The array of name/value pair parameters for the filter
  *
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
     REGEXHINT_INSTANCE *my_instance = (REGEXHINT_INSTANCE*)MXS_MALLOC(sizeof(REGEXHINT_INSTANCE));
 
