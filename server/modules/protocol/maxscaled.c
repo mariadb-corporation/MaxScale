@@ -371,10 +371,10 @@ static int maxscaled_listen(DCB *listener, char *config)
         }
         else
         {
-            MXS_WARNING("The 'maxscaled' protocol can only be used with a domain socket, but "
-                        "it seems to have been configured with a socket and port: %s. "
+            MXS_WARNING("The 'maxscaled' protocol can only be used with a Unix domain socket, but "
+                        "it seems to have been configured with an address and port: %s. "
                         "Using the default socket path instead: %s. "
-                        "Remove all 'port' and 'address' entries from maxscaled protocol "
+                        "Remove all 'address' and 'port' entries from maxscaled protocol "
                         "listeners and replace with 'socket=default' or 'socket=path-to-socket'.",
                         config, MAXADMIN_DEFAULT_SOCKET);
             socket_path = MAXADMIN_DEFAULT_SOCKET;
