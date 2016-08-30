@@ -26,24 +26,24 @@ Workaround: Ensure that socket paths and ports are valid.
 Issues [MXS-710](https://jira.mariadb.org/browse/MXS-710) and
 [MXS-711](https://jira.mariadb.org/browse/MXS-711) relate to this.
 
-## Limitations with MySQL Protocol support
+## Limitations with MySQL Protocol support (MySQLClient)
 
 Compression is not included in MySQL server handshake
 
-## Limitations with Galera Cluster Monitoring
+## Limitations with Galera Cluster Monitoring (galeramon)
 
 The default master selection is based only on MIN(wsrep_local_index). This
 can be influenced with the server priority mechanic described in the
 [Galera Monitor](../Monitors/Galera-Monitor.md) manual.
 
-## Limitations in the connection router
+## Limitations in the connection router (readconnroute)
 
 * If Master changes (ie. new Master promotion) during current connection
   the router cannot check the change.
 
 * Sending of binary data with LOAD DATA LOCAL INFILE is not supported
 
-## Limitations in the Read/Write Splitter
+## Limitations in the Read/Write Splitter (readwritesplit)
 
 Read queries are routed to the master server in the following situations:
 
@@ -55,6 +55,20 @@ Read queries are routed to the master server in the following situations:
 
 * if there are multiple statements inside one query e.g.
   `INSERT INTO ... ; SELECT LAST_INSERT_ID();`
+
+### Backend write timeout handling
+
+The backend connections opened by the readwritesplit will not be kept alive if
+they aren't used. To keep all of the connections alive, a session command must
+be periodically executed (for example `SET @a = 1;`).
+
+If the backend server is configured with a low
+[wait_timeout](https://mariadb.com/kb/en/mariadb/server-system-variables/#wait_timeout),
+it is possible that connections get closed during long sessions. It is
+recommended to set the wait_timeout to a high value and let MaxScale handle the
+client timeouts. This can be achieved by using the
+[_connection_timeout_](../Getting-Started/Configuration-Guide.md#connection_timeout)
+parameter for the service.
 
 ### Limitations in multi-statement handling
 
@@ -177,7 +191,7 @@ possible that a slave fails to execute something because of some
 non-fatal, temporary failure, while the execution of the same command
 succeeds in other backends.
 
-## Authentication Related Limitations
+## Authentication Related Limitations (MySQLAuth)
 
 * MariaDB MaxScale can not manage authentication that uses wildcard matching in hostnames
   in the mysql.user table of the backend database. The only wildcards that can be
@@ -191,7 +205,7 @@ succeeds in other backends.
   backend database. This results in failed connections and unusable usernames
   in MariaDB MaxScale.
 
-## Schemarouter limitations
+## Schemarouter limitations (schemarouter)
 
 The schemarouter router currently has some limitations due to the nature of
 the sharding implementation and the way the session variables are detected
@@ -220,12 +234,12 @@ and routed. Here is a list of the current limitations.
   the query will be routed to the first available server. This possibly
   returns an error about database rights instead of a missing database.
 
-## Dbfwfilter limitations
+## Database Firewall limitations (dbfwfilter)
 
 The Database Firewall filter does not support multi-statements. Using them
 will result in an error being sent to the client.
 
-## Avrorouter limitations
+## Avrorouter limitations (avrorouter)
 
 The avrorouter does not support the following data types and conversions.
 
