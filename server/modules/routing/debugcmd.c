@@ -1282,15 +1282,15 @@ reload_config(DCB *dcb)
 static void
 telnetdAddUser(DCB *dcb, char *user)
 {
-    char    *err;
+    const char *err;
 
-    if (admin_search_user(user))
+    if (admin_local_search_user(user))
     {
         dcb_printf(dcb, "User %s already exists.\n", user);
         return;
     }
 
-    if ((err = admin_add_user(user)) == NULL)
+    if ((err = admin_local_add_user(user)) == NULL)
     {
         dcb_printf(dcb, "User %s has been successfully added.\n", user);
     }
@@ -1311,15 +1311,15 @@ static void telnetdRemoveUser(
     DCB*  dcb,
     char* user)
 {
-    char* err;
+    const char* err;
 
-    if (!admin_search_user(user))
+    if (!admin_local_search_user(user))
     {
         dcb_printf(dcb, "User %s doesn't exist.\n", user);
         return;
     }
 
-    if ((err = admin_remove_user(user)) == NULL)
+    if ((err = admin_local_remove_user(user)) == NULL)
     {
         dcb_printf(dcb, "User %s has been successfully removed.\n", user);
     }

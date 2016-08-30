@@ -85,8 +85,8 @@ initialise()
  * @param password      Password to verify
  * @return Non-zero if the username/password combination is valid
  */
-int
-admin_verify(char *username, char *password)
+bool
+admin_remote_verify(const char *username, const char *password)
 {
     char *pw;
 
@@ -95,23 +95,23 @@ admin_verify(char *username, char *password)
     {
         if (strcmp(username, "admin") == 0 && strcmp(password, "mariadb") == 0)
         {
-            return 1;
+            return true;
         }
     }
     else
     {
-        if ((pw = users_fetch(users, username)) == NULL)
+        if ((pw = users_fetch(users, (char*)username)) == NULL) // TODO: Make users const-correct.
         {
-            return 0;
+            return false;
         }
         struct crypt_data cdata;
         cdata.initialized = 0;
         if (strcmp(pw, crypt_r(password, ADMIN_SALT, &cdata)) == 0)
         {
-            return 1;
+            return true;
         }
     }
-    return 0;
+    return false;
 }
 
 
@@ -184,11 +184,10 @@ loadUsers()
 /**
  * Add user
  *
- * @param uname         Name of the new user
- * @return      NULL on success or an error string on failure
+ * @param  uname Name of the new user
+ * @return       NULL on success or an error string on failure
  */
-char *
-admin_add_user(char *uname)
+const char *admin_local_add_user(const char *uname)
 {
     FILE *fp;
     char fname[PATH_MAX], *home;
@@ -219,11 +218,11 @@ admin_add_user(char *uname)
         }
         fclose(fp);
     }
-    if (users_fetch(users, uname) != NULL)
+    if (users_fetch(users, (char*)uname) != NULL) // TODO: Make users const correct.
     {
         return ADMIN_ERR_DUPLICATE;
     }
-    users_add(users, uname, "");
+    users_add(users, (char*)uname, ""); // TODO: Make users const correct.
     if ((fp = fopen(fname, "a")) == NULL)
     {
         MXS_ERROR("Unable to append to password file %s.", fname);
@@ -241,8 +240,7 @@ admin_add_user(char *uname)
  * @param uname         Name of the new user
  * @return      NULL on success or an error string on failure
  */
-char* admin_remove_user(
-    char* uname)
+const char* admin_local_remove_user(const char* uname)
 {
     FILE*  fp;
     FILE*  fp_tmp;
@@ -260,14 +258,14 @@ char* admin_remove_user(
         return ADMIN_ERR_DELROOT;
     }
 
-    if (!admin_search_user(uname))
+    if (!admin_local_search_user(uname))
     {
         MXS_ERROR("Couldn't find user %s. Removing user failed.", uname);
         return ADMIN_ERR_USERNOTFOUND;
     }
 
     /** Remove user from in-memory structure */
-    users_delete(users, uname);
+    users_delete(users, (char*)uname); // TODO: Make users const correct.
 
     /**
      * Open passwd file and remove user from the file.
@@ -393,10 +391,9 @@ char* admin_remove_user(
  * Check for existance of the user
  *
  * @param user  The user name to test
- * @return      Non-zero if the user exists
+ * @return      True if the user exists
  */
-int
-admin_search_user(char *user)
+bool admin_local_search_user(const char *user)
 {
     initialise();
 
@@ -404,11 +401,11 @@ admin_search_user(char *user)
 
     if (strcmp(user, DEFAULT_ADMIN_USER) == 0)
     {
-        rv = 1;
+        rv = true;
     }
     else if (users)
     {
-        rv = (users_fetch(users, user) != NULL);
+        rv = (users_fetch(users, (char*)user) != NULL); // TODO: Make users const correct.
     }
 
     return rv;
