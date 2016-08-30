@@ -133,24 +133,21 @@ GWAUTHENTICATOR* GetModuleObject()
 static int cdc_auth_check(DCB *dcb, CDC_protocol *protocol, char *username, uint8_t *auth_data,
                           unsigned int *flags)
 {
-    char *user_password = users_fetch(dcb->listener->users, username);
-
-    if (user_password)
+    if (dcb->listener->users)
     {
-        /* compute SHA1 of auth_data */
-        uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
-        char hex_step1[2 * SHA_DIGEST_LENGTH + 1] = "";
+        char *user_password = users_fetch(dcb->listener->users, username);
 
-        gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
-        gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
+        if (user_password)
+        {
+            /* compute SHA1 of auth_data */
+            uint8_t sha1_step1[SHA_DIGEST_LENGTH] = "";
+            char hex_step1[2 * SHA_DIGEST_LENGTH + 1] = "";
 
-        if (memcmp(user_password, hex_step1, SHA_DIGEST_LENGTH) == 0)
-        {
-            return CDC_STATE_AUTH_OK;
-        }
-        else
-        {
-            return CDC_STATE_AUTH_FAILED;
+            gw_sha1_str(auth_data, SHA_DIGEST_LENGTH, sha1_step1);
+            gw_bin2hex(hex_step1, sha1_step1, SHA_DIGEST_LENGTH);
+
+            return memcmp(user_password, hex_step1, SHA_DIGEST_LENGTH) == 0 ?
+                CDC_STATE_AUTH_OK : CDC_STATE_AUTH_FAILED;
         }
     }
 
@@ -485,7 +482,7 @@ cdc_read_users(USERS *users, char *usersfile)
  */
 int cdc_replace_users(SERV_LISTENER *listener)
 {
-    int rc = AUTH_LOADUSERS_OK;
+    int rc = AUTH_LOADUSERS_ERROR;
     USERS *newusers = users_alloc();
 
     if (newusers)
@@ -494,30 +491,35 @@ int cdc_replace_users(SERV_LISTENER *listener)
         snprintf(path, PATH_MAX, "%s/%s/cdcusers", get_datadir(), listener->service->name);
 
         int i = cdc_read_users(newusers, path);
+        USERS *oldusers = NULL;
 
-        if (i <= 0)
+        spinlock_acquire(&listener->lock);
+
+        if (i > 0)
         {
-            /** Failed to read users or no users loaded */
+            /** Successfully loaded at least one user */
+            oldusers = listener->users;
+            listener->users = newusers;
+            rc = AUTH_LOADUSERS_OK;
+        }
+        else if (listener->users)
+        {
+            /** Failed to load users, use the old users table */
             users_free(newusers);
-
-            if (i < 0)
-            {
-                rc = AUTH_LOADUSERS_ERROR;
-            }
         }
         else
         {
-            spinlock_acquire(&listener->lock);
-
-            USERS *oldusers = listener->users;
+            /** No existing users, use the new empty users table */
             listener->users = newusers;
+        }
 
-            spinlock_release(&listener->lock);
+        cdc_set_service_user(listener);
 
-            if (oldusers)
-            {
-                users_free(oldusers);
-            }
+        spinlock_release(&listener->lock);
+
+        if (oldusers)
+        {
+            users_free(oldusers);
         }
     }
     return rc;

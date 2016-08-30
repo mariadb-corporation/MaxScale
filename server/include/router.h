@@ -92,10 +92,12 @@ typedef struct router_object
  */
 typedef enum router_capability_t
 {
-    RCAP_TYPE_UNDEFINED    = 0x00,
-    RCAP_TYPE_STMT_INPUT   = 0x01,  /*< statement per buffer */
-    RCAP_TYPE_PACKET_INPUT = 0x02,  /*< data as it was read from DCB */
-    RCAP_TYPE_NO_RSESSION  = 0x04   /*< router does not use router sessions */
+    RCAP_TYPE_UNDEFINED     = 0x00,
+    RCAP_TYPE_STMT_INPUT    = 0x01, /**< Statement per buffer */
+    RCAP_TYPE_PACKET_INPUT  = 0x02, /**< Data as it was read from DCB */
+    RCAP_TYPE_NO_RSESSION   = 0x04, /**< Router does not use router sessions */
+    RCAP_TYPE_NO_USERS_INIT = 0x08  /**< Prevent the loading of authenticator
+                                       users when the service is started */
 } router_capability_t;
 
 

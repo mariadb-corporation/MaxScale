@@ -277,9 +277,18 @@ replace_mysql_users(SERV_LISTENER *listener)
 
     if (i <= 0)
     {
-        users_free(newusers);
-        /* Failed to load users, restore old users and resources */
-        listener->resources = oldresources;
+        /** Failed to load users */
+        if (listener->users)
+        {
+            /* Restore old users and resources */
+            users_free(newusers);
+            listener->resources = oldresources;
+        }
+        else
+        {
+            /* No users allocated, use the empty new one */
+            listener->users = newusers;
+        }
         spinlock_release(&listener->lock);
         return i;
     }

@@ -845,9 +845,7 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
 
         if ((loaded = dbusers_load(port->users, path)) == -1)
         {
-            MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);
-            users_free(port->users);
-            port->users = NULL;
+            MXS_ERROR("[%s] Failed to load cached users from '%s'.", service->name, path);;
             rc = AUTH_LOADUSERS_ERROR;
         }
         else
@@ -870,10 +868,13 @@ static int mysql_auth_load_users(SERV_LISTENER *port)
 
     if (loaded == 0)
     {
-        MXS_ERROR("[%s]: failed to load any user information. Authentication"
-                  " will probably fail as a result.", service->name);
+        MXS_WARNING("[%s]: failed to load any user information. Authentication"
+                    " will probably fail as a result.", service->name);
+    }
+    else if (loaded > 0)
+    {
+        MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name);
     }
 
-    MXS_NOTICE("[%s] Loaded %d MySQL users for listener %s.", service->name, loaded, port->name);
     return rc;
 }
