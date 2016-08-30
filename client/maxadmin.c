@@ -27,6 +27,7 @@
  * @endverbatim
  */
 
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <signal.h>
@@ -45,6 +46,7 @@
 #include <locale.h>
 #include <errno.h>
 #include <getopt.h>
+#include <stdbool.h>
 
 #include <version.h>
 
@@ -60,15 +62,21 @@
 #define STRERROR_BUFLEN 512
 #endif
 
-static int connectMaxScale(char *socket);
-static int setipaddress(struct in_addr *a, char *p);
-static int authMaxScale(int so);
+#define MAX_PASSWORD_LEN 80
+
+static int connectUsingUnixSocket(const char *socket);
+static int connectUsingInetSocket(const char *hostname, const char *port,
+                                  const char *user, const char* password);
+static int setipaddress(struct in_addr *a, const char *p);
+static bool authUnixSocket(int so);
+static bool authInetSocket(int so, const char *user, const char *password);
 static int sendCommand(int so, char *cmd);
 static void DoSource(int so, char *cmd);
 static void DoUsage(const char*);
 static int isquit(char *buf);
 static void PrintVersion(const char *progname);
 static void read_inifile(char **, int*);
+static bool getPassword(char *password, size_t length);
 
 #ifdef HISTORY
 
@@ -79,16 +87,25 @@ prompt(EditLine *el __attribute__((__unused__)))
 
     return prompt;
 }
+
 #endif
 
 static struct option long_options[] =
 {
+    {"host", required_argument, 0, 'h'},
+    {"user", required_argument, 0, 'u'},
+    {"password", required_argument, 0, 'p'},
+    {"port", required_argument, 0, 'P'},
     {"socket", required_argument, 0, 'S'},
     {"version", no_argument, 0, 'v'},
     {"help", no_argument, 0, '?'},
     {"emacs", no_argument, 0, 'e'},
     {0, 0, 0, 0}
 };
+
+#define MAXADMIN_DEFAULT_HOST "localhost"
+#define MAXADMIN_DEFAULT_PORT "6603"
+#define MAXADMIN_DEFAULT_USER "admin"
 
 /**
  * The main for the maxadmin client
@@ -112,7 +129,12 @@ main(int argc, char **argv)
 #else
     char buf[1024];
 #endif
-    char *conn_socket = MAXADMIN_DEFAULT_SOCKET;
+    char *hostname = NULL;
+    char *port = NULL;
+    char *user = NULL;
+    char *passwd = NULL;
+    char *conn_socket = NULL;
+    char *default_socket = MAXADMIN_DEFAULT_SOCKET;
     int use_emacs = 0;
     int so;
     int option_index = 0;
@@ -120,11 +142,28 @@ main(int argc, char **argv)
 
     read_inifile(&conn_socket, &use_emacs);
 
-    while ((c = getopt_long(argc, argv, "S:v?e",
+    while ((c = getopt_long(argc, argv, "h:p:P:u:S:v?e",
                             long_options, &option_index)) >= 0)
     {
         switch (c)
         {
+            case 'h':
+                hostname = strdup(optarg);
+                break;
+
+            case 'p':
+                passwd = strdup(optarg);
+                memset(optarg, '\0', strlen(optarg));
+                break;
+
+            case 'P':
+                port = strdup(optarg);
+                break;
+
+            case 'u':
+                user = strdup(optarg);
+                break;
+
             case 'S':
                 conn_socket = strdup(optarg);
                 break;
@@ -138,22 +177,72 @@ main(int argc, char **argv)
                 break;
 
             case '?':
-                DoUsage(*argv);
+                DoUsage(argv[0]);
                 exit(optopt ? EXIT_FAILURE : EXIT_SUCCESS);
         }
     }
 
-    /* Connet to MaxScale using UNIX domain socket */
-    if ((so = connectMaxScale(conn_socket)) == -1)
+    if ((hostname || port || user || passwd) && (conn_socket))
     {
-        exit(1);
+        // Either socket or any parameters related to hostname/port.
+        DoUsage(argv[0]);
+        exit(EXIT_FAILURE);
     }
 
-    /* Check for successful authentication */
-    if (!authMaxScale(so))
+    if (hostname || port || user || passwd)
     {
-        fprintf(stderr, "Failed to connect to MaxScale, incorrect username.\n");
-        exit(1);
+        assert(!conn_socket);
+
+        if (!hostname)
+        {
+            hostname = MAXADMIN_DEFAULT_HOST;
+        }
+
+        if (!port)
+        {
+            port = MAXADMIN_DEFAULT_PORT;
+        }
+
+        if (!user)
+        {
+            user = MAXADMIN_DEFAULT_USER;
+        }
+    }
+    else
+    {
+        if (!conn_socket)
+        {
+            conn_socket = MAXADMIN_DEFAULT_SOCKET;
+        }
+    }
+
+    assert(!((hostname || port) && conn_socket));
+
+    if (conn_socket)
+    {
+        if ((so = connectUsingUnixSocket(conn_socket)) == -1)
+        {
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+    {
+        char password[MAX_PASSWORD_LEN];
+
+        if (passwd == NULL)
+        {
+            if (!getPassword(password, MAX_PASSWORD_LEN))
+            {
+                exit(EXIT_FAILURE);
+            }
+
+            passwd = password;
+        }
+
+        if ((so = connectUsingInetSocket(hostname, port, user, passwd)) == -1)
+        {
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (optind < argc)
@@ -309,44 +398,114 @@ main(int argc, char **argv)
  * @return       The connected socket or -1 on error
  */
 static int
-connectMaxScale(char *conn_socket)
+connectUsingUnixSocket(const char *conn_socket)
 {
-    struct sockaddr_un local_addr;
-    int so;
-    int keepalive = 1;
-    int optval = 1;
+    int so = -1;
 
-    if ((so = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+    if ((so = socket(AF_UNIX, SOCK_STREAM, 0)) != -1)
+    {
+        struct sockaddr_un local_addr;
+
+        memset(&local_addr, 0, sizeof local_addr);
+        local_addr.sun_family = AF_UNIX;
+        strncpy(local_addr.sun_path, conn_socket, sizeof(local_addr.sun_path) - 1);
+
+        if (connect(so, (struct sockaddr *) &local_addr, sizeof(local_addr)) == 0)
+        {
+            int keepalive = 1;
+            if (setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)))
+            {
+                fprintf(stderr, "Warning: Could not set keepalive.\n");
+            }
+
+            /* Client is sending connection credentials (Pid, User, Group) */
+            int optval = 1;
+            if (setsockopt(so, SOL_SOCKET, SO_PASSCRED, &optval, sizeof(optval)) == 0)
+            {
+                if (!authUnixSocket(so))
+                {
+                    close(so);
+                    so = -1;
+                }
+            }
+            else
+            {
+                char errbuf[STRERROR_BUFLEN];
+                fprintf(stderr, "Could not set SO_PASSCRED: %s\n",
+                        strerror_r(errno, errbuf, sizeof(errbuf)));
+                close(so);
+                so = -1;
+            }
+        }
+        else
+        {
+            char errbuf[STRERROR_BUFLEN];
+            fprintf(stderr, "Unable to connect to MaxScale at %s: %s\n",
+                    conn_socket, strerror_r(errno, errbuf, sizeof(errbuf)));
+            close(so);
+            so = -1;
+        }
+    }
+    else
     {
         char errbuf[STRERROR_BUFLEN];
         fprintf(stderr, "Unable to create socket: %s\n",
                 strerror_r(errno, errbuf, sizeof(errbuf)));
-        return -1;
     }
 
-    memset(&local_addr, 0, sizeof local_addr);
-    local_addr.sun_family = AF_UNIX;
-    strncpy(local_addr.sun_path, conn_socket, sizeof(local_addr.sun_path)-1);
+    return so;
+}
 
-    if (connect(so, (struct sockaddr *) &local_addr, sizeof(local_addr)) < 0)
+/**
+ * Connect to the MaxScale server
+ *
+ * @param hostname  The hostname to connect to
+ * @param port      The port to use for the connection
+ * @return      The connected socket or -1 on error
+ */
+static int
+connectUsingInetSocket(const char *hostname, const char *port,
+                       const char *user, const char *passwd)
+{
+    int so;
+
+    if ((so = socket(AF_INET, SOCK_STREAM, 0)) != -1)
+    {
+        struct sockaddr_in addr;
+
+        memset(&addr, 0, sizeof addr);
+        addr.sin_family = AF_INET;
+        setipaddress(&addr.sin_addr, hostname);
+        addr.sin_port = htons(atoi(port));
+
+        if (connect(so, (struct sockaddr *) &addr, sizeof(addr)) == 0)
+        {
+            int keepalive = 1;
+            if (setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)))
+            {
+                fprintf(stderr, "Warning: Could not set keepalive.\n");
+            }
+
+            if (!authInetSocket(so, user, passwd))
+            {
+                close(so);
+                so = -1;
+            }
+        }
+        else
+        {
+            char errbuf[STRERROR_BUFLEN];
+            fprintf(stderr, "Unable to connect to MaxScale at %s, %s: %s\n",
+                    hostname, port, strerror_r(errno, errbuf, sizeof(errbuf)));
+            close(so);
+            so = -1;
+        }
+    }
+    else
     {
         char errbuf[STRERROR_BUFLEN];
-        fprintf(stderr, "Unable to connect to MaxScale at %s: %s\n",
-                conn_socket, strerror_r(errno, errbuf, sizeof(errbuf)));
-        close(so);
-        return -1;
-    }
-
-    if (setsockopt(so, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive)))
-    {
-        perror("setsockopt");
-    }
-
-    /* Client is sending connection credentials (Pid, User, Group) */
-    if (setsockopt(so, SOL_SOCKET, SO_PASSCRED, &optval, sizeof(optval)) != 0)
-    {
-        fprintf(stderr, "SO_PASSCRED failed\n");
-        return -1;
+        fprintf(stderr, "Unable to create socket: %s\n",
+                strerror_r(errno, errbuf, sizeof(errbuf)));
     }
 
     return so;
@@ -360,7 +519,7 @@ connectMaxScale(char *conn_socket)
  * @return  1 on success, 0 on failure
  */
 static int
-setipaddress(struct in_addr *a, char *p)
+setipaddress(struct in_addr *a, const char *p)
 {
 #ifdef __USE_POSIX
     struct addrinfo *ai = NULL, hint;
@@ -418,17 +577,84 @@ setipaddress(struct in_addr *a, char *p)
  * @param so    The socket connected to MaxScale
  * @return      Non-zero of succesful authentication
  */
-static int
-authMaxScale(int so)
+static bool
+authUnixSocket(int so)
 {
     char buf[MAXADMIN_AUTH_REPLY_LEN];
 
     if (read(so, buf, MAXADMIN_AUTH_REPLY_LEN) != MAXADMIN_AUTH_REPLY_LEN)
     {
+        fprintf(stderr, "Could not read authentication response from MaxScale.\n");
         return 0;
     }
 
-    return strncmp(buf, MAXADMIN_FAILED_AUTH_MESSAGE, MAXADMIN_AUTH_REPLY_LEN);
+    bool authenticated = (strncmp(buf, MAXADMIN_AUTH_SUCCESS_REPLY, MAXADMIN_AUTH_REPLY_LEN) == 0);
+
+    if (!authenticated)
+    {
+        fprintf(stderr, "Could connect to MaxScale, but was not authorized.\n");
+    }
+
+    return authenticated;
+}
+
+/**
+ * Perform authentication using the maxscaled protocol conventions
+ *
+ * @param so        The socket connected to MaxScale
+ * @param user      The username to authenticate
+ * @param password  The password to authenticate with
+ * @return          Non-zero of succesful authentication
+ */
+static bool
+authInetSocket(int so, const char *user, const char *password)
+{
+    char buf[20];
+    size_t len;
+
+    len = MAXADMIN_AUTH_USER_PROMPT_LEN;
+    if (read(so, buf, len) != len)
+    {
+        fprintf(stderr, "Could not read user prompt from MaxScale.\n");
+        return false;
+    }
+
+    len = strlen(user);
+    if (write(so, user, len) != len)
+    {
+        fprintf(stderr, "Could not write user to MaxScale.\n");
+        return false;
+    }
+
+    len = MAXADMIN_AUTH_PASSWORD_PROMPT_LEN;
+    if (read(so, buf, len) != len)
+    {
+        fprintf(stderr, "Could not read password prompt from MaxScale.\n");
+        return false;
+    }
+
+    len = strlen(password);
+    if (write(so, password, len) != len)
+    {
+        fprintf(stderr, "Could not write password to MaxScale.\n");
+        return false;
+    }
+
+    len = MAXADMIN_AUTH_REPLY_LEN;
+    if (read(so, buf, len) != len)
+    {
+        fprintf(stderr, "Could not read authentication response from MaxScale.\n");
+        return false;
+    }
+
+    bool authenticated = (strncmp(buf, MAXADMIN_AUTH_SUCCESS_REPLY, MAXADMIN_AUTH_REPLY_LEN) == 0);
+
+    if (!authenticated)
+    {
+        fprintf(stderr, "Could connect to MaxScale, but was not authorized.\n");
+    }
+
+    return authenticated;
 }
 
 /**
@@ -550,13 +776,27 @@ DoUsage(const char *progname)
 {
     PrintVersion(progname);
     printf("The MaxScale administrative and monitor client.\n\n");
-    printf("Usage: %s [-S socket] [<command file> | <command>]\n\n", progname);
-    printf("  -S|--socket=...        The UNIX socket to connect to, The default is\n");
-    printf("            /tmp/maxadmin.sock\n");
-    printf("  -v|--version          print version information and exit\n");
-    printf("  -?|--help     Print this help text.\n");
+    printf("Usage: %s [(-S socket)|([-u user] [-p password] [-h hostname] [-P port])]"
+           "[<command file> | <command>]\n\n", progname);
+    printf("  -S|--socket=...   The UNIX domain socket to connect to, The default is\n");
+    printf("                    %s\n", MAXADMIN_DEFAULT_SOCKET);
+    printf("  -u|--user=...     The user name to use for the connection, default\n");
+    printf("                    is %s.\n", MAXADMIN_DEFAULT_USER);
+    printf("  -p|--password=... The user password, if not given the password will\n");
+    printf("                    be prompted for interactively\n");
+    printf("  -h|--host=...     The maxscale host to connecto to. The default is\n");
+    printf("                    %s\n", MAXADMIN_DEFAULT_HOST);
+    printf("  -P|--port=...     The port to use for the connection, the default\n");
+    printf("                    port is %s.\n", MAXADMIN_DEFAULT_PORT);
+    printf("  -v|--version      Print version information and exit\n");
+    printf("  -?|--help         Print this help text.\n");
+    printf("\n");
     printf("Any remaining arguments are treated as MaxScale commands or a file\n");
     printf("containing commands to execute.\n");
+    printf("\n");
+    printf("Either a socket or a hostname/port combination should be provided.\n");
+    printf("If a port or hostname is provided, but not the other, then the default\n"
+           "value is used.\n");
 }
 
 /**
@@ -686,4 +926,56 @@ read_inifile(char **conn_socket, int* editor)
         }
     }
     fclose(fp);
+}
+
+/**
+ * Get password
+ *
+ * @param password Buffer for password.
+ * @param len The size of the buffer.
+ *
+ * @return Whether the password was obtained.
+ */
+bool getPassword(char *passwd, size_t len)
+{
+    bool gotten = false;
+
+    struct termios tty_attr;
+    tcflag_t c_lflag;
+
+    if (tcgetattr(STDIN_FILENO, &tty_attr) == 0)
+    {
+        c_lflag = tty_attr.c_lflag;
+        tty_attr.c_lflag &= ~ICANON;
+        tty_attr.c_lflag &= ~ECHO;
+
+        if (tcsetattr(STDIN_FILENO, 0, &tty_attr) == 0)
+        {
+            printf("Password: ");
+            fgets(passwd, len, stdin);
+
+            tty_attr.c_lflag = c_lflag;
+
+            if (tcsetattr(STDIN_FILENO, 0, &tty_attr) == 0)
+            {
+                int i = strlen(passwd);
+
+                if (i > 1)
+                {
+                    passwd[i - 1] = '\0';
+                }
+
+                printf("\n");
+
+                gotten = true;
+            }
+        }
+    }
+
+    if (!gotten)
+    {
+        fprintf(stderr, "Could not configure terminal.\n");
+    }
+
+    return gotten;
 }

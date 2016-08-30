@@ -65,6 +65,8 @@ MODULE_INFO info =
 
 static char *version_str = "V2.0.0";
 
+#define GETPWUID_BUF_LEN 255
+
 static int maxscaled_read_event(DCB* dcb);
 static int maxscaled_write_event(DCB *dcb);
 static int maxscaled_write(DCB *dcb, GWBUF *queue);
@@ -74,6 +76,98 @@ static int maxscaled_accept(DCB *dcb);
 static int maxscaled_close(DCB *dcb);
 static int maxscaled_listen(DCB *dcb, char *config);
 static char *mxsd_default_auth();
+
+static bool authenticate_unix_socket(MAXSCALED *protocol, DCB *dcb)
+{
+    bool authenticated = false;
+
+    struct ucred ucred;
+    socklen_t len = sizeof(struct ucred);
+
+    /* Get UNIX client credentials from socket*/
+    if (getsockopt(dcb->fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == 0)
+    {
+        struct passwd pw_entry;
+        struct passwd *pw_tmp;
+        char buf[GETPWUID_BUF_LEN];
+
+        /* Fetch username from UID */
+        if (getpwuid_r(ucred.uid, &pw_entry, buf, sizeof(buf), &pw_tmp) == 0)
+        {
+            GWBUF *username;
+
+            /* Set user in protocol */
+            protocol->username = strdup(pw_entry.pw_name);
+
+            username = gwbuf_alloc(strlen(protocol->username) + 1);
+
+            strcpy(GWBUF_DATA(username), protocol->username);
+
+            /* Authenticate the user */
+            if (dcb->authfunc.extract(dcb, username) == 0 &&
+                dcb->authfunc.authenticate(dcb) == 0)
+            {
+                dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
+                protocol->state = MAXSCALED_STATE_DATA;
+                dcb->user = strdup(protocol->username);
+            }
+            else
+            {
+                dcb_printf(dcb, MAXADMIN_AUTH_FAILED_REPLY);
+            }
+
+            authenticated = true;
+        }
+        else
+        {
+            MXS_ERROR("Failed to get UNIX user %ld details for 'MaxScale Admin'",
+                      (unsigned long)ucred.uid);
+        }
+    }
+    else
+    {
+        MXS_ERROR("Failed to get UNIX domain socket credentials for 'MaxScale Admin'.");
+    }
+
+    return authenticated;
+}
+
+
+static bool authenticate_inet_socket(MAXSCALED *protocol, DCB *dcb)
+{
+    dcb_printf(dcb, MAXADMIN_AUTH_USER_PROMPT);
+    return true;
+}
+
+static bool authenticate_socket(MAXSCALED *protocol, DCB *dcb)
+{
+    bool authenticated = false;
+
+    struct sockaddr address;
+    socklen_t address_len = sizeof(address);
+
+    if (getsockname(dcb->fd, &address, &address_len) == 0)
+    {
+        if (address.sa_family == AF_UNIX)
+        {
+            authenticated = authenticate_unix_socket(protocol, dcb);
+        }
+        else
+        {
+            authenticated = authenticate_inet_socket(protocol, dcb);
+        }
+    }
+    else
+    {
+        char errbuf[STRERROR_BUFLEN];
+
+        MXS_ERROR("Could not get socket family of client connection: %s",
+                  strerror_r(errno, errbuf, sizeof(errbuf)));
+    }
+
+    return authenticated;
+}
+
 
 /**
  * The "module object" for the maxscaled protocol module.
@@ -160,10 +254,41 @@ static int maxscaled_read_event(DCB* dcb)
         {
             if (GWBUF_LENGTH(head))
             {
-                if (maxscaled->state == MAXSCALED_STATE_DATA)
+                switch (maxscaled->state)
                 {
-                    SESSION_ROUTE_QUERY(dcb->session, head);
-                    dcb_printf(dcb, "OK");
+                case MAXSCALED_STATE_LOGIN:
+                    {
+                        maxscaled->username = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
+                        maxscaled->state = MAXSCALED_STATE_PASSWD;
+                        dcb_printf(dcb, MAXADMIN_AUTH_PASSWORD_PROMPT);
+                        gwbuf_free(head);
+                    }
+                    break;
+
+                case MAXSCALED_STATE_PASSWD:
+                    {
+                        char *password = strndup(GWBUF_DATA(head), GWBUF_LENGTH(head));
+                        if (admin_verify_inet_user(maxscaled->username, password))
+                        {
+                            dcb_printf(dcb, MAXADMIN_AUTH_SUCCESS_REPLY);
+                            maxscaled->state = MAXSCALED_STATE_DATA;
+                        }
+                        else
+                        {
+                            dcb_printf(dcb, MAXADMIN_AUTH_FAILED_REPLY);
+                            maxscaled->state = MAXSCALED_STATE_LOGIN;
+                        }
+                        gwbuf_free(head);
+                        free(password);
+                    }
+                    break;
+
+                case MAXSCALED_STATE_DATA:
+                    {
+                        SESSION_ROUTE_QUERY(dcb->session, head);
+                        dcb_printf(dcb, "OK");
+                    }
+                    break;
                 }
             }
             else
@@ -240,9 +365,9 @@ static int maxscaled_accept(DCB *listener)
 
     while ((client_dcb = dcb_accept(listener, &MyObject)) != NULL)
     {
-        MAXSCALED *maxscaled_protocol = NULL;
+        MAXSCALED *maxscaled_protocol = (MAXSCALED *)calloc(1, sizeof(MAXSCALED));
 
-        if ((maxscaled_protocol = (MAXSCALED *)calloc(1, sizeof(MAXSCALED))) == NULL)
+        if (!maxscaled_protocol)
         {
             dcb_close(client_dcb);
             continue;
@@ -251,51 +376,13 @@ static int maxscaled_accept(DCB *listener)
         maxscaled_protocol->username = NULL;
         maxscaled_protocol->state = MAXSCALED_STATE_LOGIN;
 
-        /* Get UNIX client credentials from socket*/
-        if (getsockopt(client_dcb->fd, SOL_SOCKET, SO_PEERCRED, &ucred, &len) == -1)
+        bool authenticated = false;
+
+        if (!authenticate_socket(maxscaled_protocol, client_dcb))
         {
-            MXS_ERROR("Failed to get UNIX socket credentials for 'MaxScale Admin'");
             dcb_close(client_dcb);
+            free(maxscaled_protocol);
             continue;
-        }
-        else
-        {
-             struct passwd pw_entry;
-             struct passwd *pw_tmp;
-             char buf[MAXADMIN_GETPWUID_BUF_LEN];
-
-             /* Fetch username from UID */
-             if (!getpwuid_r(ucred.uid, &pw_entry, buf, sizeof(buf), &pw_tmp))
-             {
-                  GWBUF *username;
-
-                  /* Set user in protocol */
-                  maxscaled_protocol->username = strdup(pw_entry.pw_name);
-
-                  username = gwbuf_alloc(strlen(maxscaled_protocol->username) + 1);
-
-                  strcpy(GWBUF_DATA(username), maxscaled_protocol->username);
-
-                  /* Authenticate the user */
-                  if (client_dcb->authfunc.extract(client_dcb, username) == 0 &&
-                      client_dcb->authfunc.authenticate(client_dcb) == 0)
-                  {
-                      dcb_printf(client_dcb, "OK----");
-                      maxscaled_protocol->state = MAXSCALED_STATE_DATA;
-                      client_dcb->user = strdup(maxscaled_protocol->username);
-                  }
-                  else
-                  {
-                      dcb_printf(client_dcb, "FAILED");
-                  }
-             }
-             else
-             {
-                  MXS_ERROR("Failed to get UNIX user %ld details for 'MaxScale Admin'",
-                            (unsigned long)ucred.uid);
-                  dcb_close(client_dcb);
-                  continue;
-             }
         }
 
         spinlock_init(&maxscaled_protocol->lock);
@@ -358,27 +445,7 @@ static int maxscaled_listen(DCB *listener, char *config)
     }
     else
     {
-        const char* colon = strchr(config, ':');
-        ss_dassert(colon);
-        const char* port = colon + 1;
-
-        if (*port == '0')
-        {
-            // It seems "socket=socket-path" has been specified.
-
-            // The colon etc. will be stripped away in dcb_listen_create_socket_unix.
-            socket_path = config;
-        }
-        else
-        {
-            MXS_WARNING("The 'maxscaled' protocol can only be used with a Unix domain socket, but "
-                        "it seems to have been configured with an address and port: %s. "
-                        "Using the default socket path instead: %s. "
-                        "Remove all 'address' and 'port' entries from maxscaled protocol "
-                        "listeners and replace with 'socket=default' or 'socket=path-to-socket'.",
-                        config, MAXADMIN_DEFAULT_SOCKET);
-            socket_path = MAXADMIN_DEFAULT_SOCKET;
-        }
+        socket_path = config;
     }
 
     return (dcb_listen(listener, socket_path, "MaxScale Admin") < 0) ? 0 : 1;

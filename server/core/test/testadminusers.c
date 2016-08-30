@@ -49,12 +49,12 @@
 static int
 test1()
 {
-    if (admin_remote_verify("admin", "mariadb") == 0)
+    if (admin_verify_inet_user("admin", "mariadb") == 0)
     {
         fprintf(stderr, "admin_verify: test 1.1 (default user) failed.\n");
         return 1;
     }
-    if (admin_remote_verify("bad", "user"))
+    if (admin_verify_inet_user("bad", "user"))
     {
         fprintf(stderr, "admin_verify: test 1.2 (wrong user) failed.\n");
         return 1;
@@ -75,13 +75,13 @@ test2()
 {
     const char *err;
 
-    if ((err = admin_local_add_user("user0")) != NULL)
+    if ((err = admin_enable_linux_account("user0")) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 2.1 (add user) failed, %s.\n", err);
 
         return 1;
     }
-    if (admin_local_add_user("user0") == NULL)
+    if (admin_enable_linux_account("user0") == NULL)
     {
         fprintf(stderr, "admin_add_user: test 2.2 (add user) failed, duplicate.\n");
 
@@ -89,7 +89,7 @@ test2()
     }
 
     /* Deleting the last user is not forbidden so we expect this to succeed */
-    if ((err = admin_local_remove_user("user0")) != NULL)
+    if ((err = admin_disable_linux_account("user0")) != NULL)
     {
         fprintf(stderr, "admin_remove_user: test 2.3 (add user) failed, %s.\n", err);
 
@@ -97,7 +97,7 @@ test2()
     }
 
     /* Add the user back, for test5. */
-    if ((err = admin_local_add_user("user0")) != NULL)
+    if ((err = admin_enable_linux_account("user0")) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 2.4 (add user) failed, %s.\n", err);
 
@@ -121,35 +121,35 @@ test3()
 {
     const char *err;
 
-    if ((err = admin_local_add_user("user1")) != NULL)
+    if ((err = admin_enable_linux_account("user1")) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 3.1 (add user) failed, %s.\n", err);
 
         return 1;
     }
 
-    if (admin_local_search_user("user1") == 0)
+    if (admin_linux_account_enabled("user1") == 0)
     {
         fprintf(stderr, "admin_search_user: test 3.2 (search user) failed.\n");
 
         return 1;
     }
 
-    if (admin_local_search_user("user2") != 0)
+    if (admin_linux_account_enabled("user2") != 0)
     {
         fprintf(stderr, "admin_search_user: test 3.3 (search user) failed, unexpeted user found.\n");
 
         return 1;
     }
 
-    if ((err = admin_local_remove_user("user1")) != NULL)
+    if ((err = admin_disable_linux_account("user1")) != NULL)
     {
         fprintf(stderr, "admin_remove_user: test 3.4 (add user) failed, %s.\n", err);
 
         return 1;
     }
 
-    if (admin_local_search_user("user1"))
+    if (admin_linux_account_enabled("user1"))
     {
         fprintf(stderr, "admin_search_user: test 3.5 (search user) failed - user was deleted.\n");
 
@@ -179,7 +179,7 @@ test4()
     for (i = 1; i < n_users; i++)
     {
         sprintf(user, "user%d", i);
-        if ((err = admin_local_add_user(user)) != NULL)
+        if ((err = admin_enable_linux_account(user)) != NULL)
         {
             fprintf(stderr, "admin_add_user: test 4.1 (add user) failed, %s.\n", err);
 
@@ -190,7 +190,7 @@ test4()
     for (i = 1; i < n_users; i++)
     {
         sprintf(user, "user%d", i);
-        if (admin_local_search_user(user) == 0)
+        if (admin_linux_account_enabled(user) == 0)
         {
             fprintf(stderr, "admin_search_user: test 4.2 (search user) failed.\n");
 
@@ -201,7 +201,7 @@ test4()
     for (i = 1; i < n_users; i++)
     {
         sprintf(user, "user%d", i);
-        if ((err = admin_local_remove_user(user)) != NULL)
+        if ((err = admin_disable_linux_account(user)) != NULL)
         {
             fprintf(stderr, "admin_remove_user: test 4.3 (add user) failed, %s.\n", err);
 
@@ -223,14 +223,14 @@ test5()
 {
     const char *err;
 
-    if ((err = admin_local_add_user("user")) != NULL)
+    if ((err = admin_enable_linux_account("user")) != NULL)
     {
         fprintf(stderr, "admin_add_user: test 5.1 (add user) failed, %s.\n", err);
 
         return 1;
     }
 
-    if ((err = admin_local_remove_user("user0")) != NULL)
+    if ((err = admin_disable_linux_account("user0")) != NULL)
     {
         fprintf(stderr, "admin_remove_user: test 5.2 (add user) failed, %s.\n", err);
 

@@ -208,7 +208,7 @@ router=cli
 type=listener
 service=MaxAdmin Service
 protocol=maxscaled
-port=6603
+socket=default
 ```
 
 Now we have created the MariaDB MaxScale configuration file and all we need to do is to save

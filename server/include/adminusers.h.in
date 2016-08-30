@@ -51,11 +51,15 @@ typedef struct admin_session
 #endif
 } ADMIN_session;
 
-extern const char *admin_local_add_user(const char *uname);
-extern const char *admin_local_remove_user(const char *uname);
-extern bool        admin_local_search_user(const char *uname);
+extern const char *admin_enable_linux_account(const char *uname);
+extern const char *admin_disable_linux_account(const char *uname);
+extern bool        admin_linux_account_enabled(const char *uname);
 
-extern bool        admin_remote_verify(const char *uname, const char *password);
+extern const char *admin_add_inet_user(const char *uname, const char *password);
+extern const char *admin_remove_inet_user(const char *uname, const char *password);
+extern bool        admin_inet_user_exists(const char *uname);
+
+extern bool        admin_verify_inet_user(const char *uname, const char *password);
 
 extern void        dcb_PrintAdminUsers(DCB *dcb);
 

@@ -3,6 +3,7 @@
 # The Maxscale Administrative & Monitoring Client Application
 
  - [Overview](#overview)
+ - [Configuring MariaDB MaxScale for MaxAdmin](#configuring)
  - [Running MaxAdmin](#running)
  - [Working With Administration Interface Users](#interface)
  - [Getting Help](#help)
@@ -14,7 +15,6 @@
  - [Working with Monitors](#monitors)
  - [MariaDB MaxScale Status Commands](#statuscommands)
  - [Administration Commands](#admincommands)
- - [Configuring MariaDB MaxScale to Accept MaxAdmin Connections](#connections)
  - [Tuning MariaDB MaxScale](#tuning)
 
 <a name="overview"></a>
@@ -30,53 +30,145 @@ MaxAdmin supports
 
 * Execution of command scripts
 
+<a name="configuring"></a>
+# Configuring MariaDB MaxScale for MaxAdmin
+
+In order to be able to use MaxAdmin, MariaDB MaxScale must be configured for it.
+
+There are two ways MaxAdmin can connect to to MaxScale.
+
+* Using a Unix domain socket.
+* Using a hostname and port.
+
+The first alternative is introduced in MaxScale 2.0 and is the secure and
+recommended way. The second alternative is available for backward compatibility,
+but is _insecure_ and **deprecated** and _will be removed in a future version of
+MaxScale_.
+
+An example configuration looks as follows:
+
+```
+[MaxAdmin]
+type=service
+router=cli
+
+[MaxAdmin Unix Listener]
+type=listener
+service=MaxAdmin
+protocol=maxscaled
+socket=default
+
+[MaxAdmin Inet Listener]
+type=listener
+service=MaxAdmin
+protocol=maxscaled
+address=localhost
+port=6603
+```
+
+In the configuration above, two listeners are created; one listening on the default
+Unix domain socket and one listening on the default port.
+
+Which approach is used has other implications than just how the communication between
+MaxAdmin and MariaDB MaxScale is handled. In the former case, the authorization is
+based upon the Linux identity and in the latter case on explicitly created user
+accounts that have **no** relationship to the Linux accounts.
+
+Note that if the socket path or port are changed, then MaxAdmin has to be invoked
+with `-S` or `-P` respectively.
+
 <a name="running"></a>
 # Running MaxAdmin
+
+Depending on whether MariaDB MaxScale has been configured to use Unix domain sockets
+or internet sockets, MaxAdmin needs to be invoked slightly differently.
+
+If Unix domain sockets are used, then MaxAdmin needs no additional arguments:
+
+    alice@host$ maxadmin
+    MaxAdmin>
+
+The above implies that the Linux user _alice_ has been enabled to use MaxAdmin.
+
+If internet sockets are used, then either the host, port, user or password has
+to be specified explicitly:
+
+    alice@host$ maxadmin -u maxscale-admin
+    Password:
+    MaxScale>
+
+If Unix domain sockets are used, then initially only `root` has access. MaxAdmin
+usage can subsequently be enabled for other Linux users.
 
 The MaxAdmin client application may be run in two different modes, either as an interactive command shell for executing commands against MariaDB MaxScale or by passing commands on the MaxAdmin command line itself.
 
 <a name="interface"></a>
 # Working With Administration Interface Users
 
-MaxScale communicates with MariaDB MaxScale using UNIX domain sockets, which means that it can only be used on the very host where MariaDB MaxScale is running. Initially MaxAdmin can connect only when run as `root`. Other Linux users can subsequently be allowed access.
-
-**NOTE**: Remote access with -h and -P options is no longer supported.
-
 ## What Users Have Been Defined?
 
-In order to see the current users (UNIX users) that have been defined for the administration interface use the command _show users_.
+In order to see the Linux users for whom MaxAdmin usage has been enabled and
+any explicitly created accounts, use the command _show users_.
 
     MaxScale> show users
-    Administration interface users:
-    User names: vilho, dba, massi, mark
+    Enabled Linux accounts (secure)    : alice, bob, cecil
+    Created network accounts (insecure): maxscale-admin
     MaxScale>
 
-Please note `root` will not be shown.
+Please note that `root` will not be shown.
 
-    MaxScale> show users
-    Administration interface users:
-    No administration users have been defined.
-    MaxScale>
+## Enabling a Linux account
+
+To enable MaxAdmin usage for a particular Linux account, use the command _enable account_.
+This command is passed a user name, which should be the same as that of an existing Linux user.
+
+    MaxScale> enable account bob
+
+Note that it is not checked that the provided name indeed corresponds to an existing
+Linux account, so it is possible to enable an account that does not exist yet.
+
+Note also that it is possible to enable a Linux account irrespective of how MaxAdmin
+has connected to MariaDB MaxScale. That is, the command is not restricted to MaxAdmin
+users connecting over a Unix domain socket.
+
+## Disabling a Linux account
+
+To disable MaxAdmin usage for a particular Linux account, use the command _disable account_.
+This command is passed a user name, which should be a Linux user for whom MaxAdmin usage
+earlier has been enabled.
+
+    MaxScale> disable account bob
+
+Note also that it is possible to disable a Linux account irrespective of how MaxAdmin
+has connected to MariaDB MaxScale. That is, the command is not restricted to MaxAdmin
+users connecting over a Unix domain socket.
+
+Note that it is possible to disable the current user, but that will only affect the
+next attempt to use MaxAdmin. `root` cannot be removed.
 
 ## Add A New User
 
-To add a new administrative user to the MariaDB MaxScale server use the command _add user_. This command is passed a user name, which should be the same as that of an existing Linux user.
+To add a new MaxAdmin user to be used when MaxAdmin connects over an internet socket,
+use the command _add user_. This command is passed a user name and a password.
 
-    MaxScale> add user maria
-    User maria has been successfully added.
+    MaxScale> add user maxscale-admin secretpwd
+    User maxscale-admin has been successfully added.
     MaxScale>
 
-Note that a user that is given the rights to use MaxAdmin, has the very same rights `root` has, including adding and removing users.
+Note that there is no difference in rights between an enabled Linux account and an
+explicitly created user.
 
 ## Delete A User
 
-To remove a user the command _remove user_ is used and it is simply invoked with the user to be removed.
+To remove a user the command _remove user_ is used and it is invoked with the
+username and password.
 
-    MaxScale> remove user maria
-    User maria has been successfully removed.
+    MaxScale> remove user maxscale-admin secretpwd
+    User maxscale-admin has been successfully removed.
     MaxScale>
 
-Note that it is possible to remove the current user, but that will only affect the next attempt to use MaxAdmin. `root` cannot be removed.
+Note that it is possible to remove the current user, but that will only affect the
+next attempt to use MaxAdmin.
 
 # Command Line Switches
 
@@ -92,6 +184,26 @@ The MaxAdmin command accepts a number of switches
     <td>-S socket path</td>
     <td>--socket=...</td>
     <td>The UNIX domain socket path that MaxAdmin will use to connect to the MariaDB MaxScale server. If no -S option is given then the default socket path /tmp/maxadmin.sock will be used.</td>
+  </tr>
+  <tr>
+    <td>-u user</td>
+    <td>--user=...</td>
+    <td>Sets the username that will be used for the MaxScale connection. If no -u option is passed on the MaxAdmin command line then the default username of ‘admin’ will be used.</td>
+  </tr>
+  <tr>
+    <td>-p password</td>
+    <td>--password=...</td>
+    <td>Sets the user password that will be used. If no -p option is passed on the command line then MaxAdmin will prompt for interactive entry of the password.</td>
+  </tr>
+  <tr>
+    <td>-h hostname</td>
+    <td>--hostname=...</td>
+    <td>The hostname of the MaxScale server to connect to. If no -h option is passed on the command line then MaxAdmin will attempt to connect to the host ‘localhost’.</td>
+  </tr>
+  <tr>
+    <td>-P port</td>
+    <td>--port=...</td>
+    <td>The port that MaxAdmin will use to connect to the MaxScale server. if no -P option is given then the default port of 6603 will be used.</td>
   </tr>
   <tr>
     <td>-?</td>
@@ -834,28 +946,6 @@ A command, _reload config_, is available that will cause MariaDB MaxScale to rel
 ## Shutting Down MariaDB MaxScale
 
 The MariaDB MaxScale server may be shutdown using the _shutdown maxscale_ command.
-
-<a name="connections"></a>
-# Configuring MariaDB MaxScale to Accept MaxAdmin Connections
-
-In order to enable the use of MaxAdmin, the service CLI with an accompanying listener must be added to the MariaDB MaxScale configuration file.
-
-The default entries required are shown below.
-
-    [CLI]
-    type=service
-    router=cli
-
-    [CLI Listener]
-    type=listener
-    service=CLI
-    protocol=maxscaled
-    socket=default
-    #socket=/somepath/maxadmin.socket
-
-**NOTE**: As the protocol maxscaled only supports UNIX domain sockets it is thus not possible to connect remotely to MariaDB MaxScale.
-
-In the example, the default socket path (/tmp/maxadmin.sock) is used. It can be changed to an specific path and in that case MaxAdmin must be invoked with the -S option.
 
 <a name="tuning"></a>
 # Tuning MariaDB MaxScale

@@ -205,8 +205,8 @@ struct subcommand showoptions[] = {
       "Show the status of the polling threads in MaxScale",
       {0, 0, 0} },
     { "users", 0, telnetdShowUsers,
-      "Show statistics and user names for the debug interface",
-      "Show statistics and user names for the debug interface",
+      "Show all maxadmin enabled Linux accounts and created maxadmin users",
+      "Show all maxadmin enabled Linux accounts and created maxadmin users",
       {0, 0, 0} },
     { NULL, 0, NULL, NULL, NULL,
       {0, 0, 0} }
@@ -427,6 +427,8 @@ static void enable_syslog();
 static void disable_syslog();
 static void enable_maxlog();
 static void disable_maxlog();
+static void enable_account(DCB *, char *user);
+static void disable_account(DCB *, char *user);
 
 /**
  *  * The subcommands of the enable command
@@ -513,6 +515,16 @@ struct subcommand enableoptions[] = {
         "Enable maxlog logging",
         "Enable maxlog logging",
         {0, 0, 0}
+    },
+    {
+        "account",
+        1,
+        enable_account,
+        "Enable maxadmin usage for Linux user. E.g.:\n"
+        "                 MaxScale> enable account alice",
+        "Enable maxadmin usage for Linux user. E.g.:\n"
+        "                 MaxScale> enable account alice",
+        {ARG_TYPE_STRING, 0, 0}
     },
     {
         NULL,
@@ -613,6 +625,16 @@ struct subcommand disableoptions[] = {
         {0, 0, 0}
     },
     {
+        "account",
+        1,
+        disable_account,
+        "Disable maxadmin usage for Linux user. E.g.:\n"
+        "                 MaxScale> disable account alice",
+        "Disable maxadmin usage for Linux user. E.g.:\n"
+        "                 MaxScale> disable account alice",
+        {ARG_TYPE_STRING, 0, 0}
+    },
+    {
         NULL,
         0,
         NULL,
@@ -666,32 +688,38 @@ struct subcommand failoptions[] = {
 };
 #endif /* FAKE_CODE */
 
-static void telnetdAddUser(DCB *, char *);
+static void telnetdAddUser(DCB *, char *user, char *password);
+
 /**
  * The subcommands of the add command
  */
 struct subcommand addoptions[] = {
-    { "user", 1, telnetdAddUser,
-      "Add a new user for the debug interface. E.g. add user john",
-      "Add a new user for the debug interface. E.g. add user john",
-      {ARG_TYPE_STRING, 0, 0} },
+    { "user", 2, telnetdAddUser,
+      "Add insecure account for using maxadmin over the network. E.g.:\n"
+      "                 MaxScale> add user bob somepass",
+      "Add insecure account for using maxadmin over the network. E.g.:\n"
+      "                 MaxScale> add user bob somepass",
+      {ARG_TYPE_STRING, ARG_TYPE_STRING, 0} },
     { NULL, 0, NULL, NULL, NULL,
       {0, 0, 0} }
 };
 
 
-static void telnetdRemoveUser(DCB *, char *);
+static void telnetdRemoveUser(DCB *, char *user, char *password);
+
 /**
  * The subcommands of the remove command
  */
 struct subcommand removeoptions[] = {
     {
         "user",
-        1,
+        2,
         telnetdRemoveUser,
-        "Remove existing maxscale user. Example : remove user john",
-        "Remove existing maxscale user. Example : remove user john",
-        {ARG_TYPE_STRING, 0, 0}
+        "Remove account for using maxadmin over the network. E.g.:\n"
+        "                 MaxAdmin> remove user bob somepass",
+        "Remove account for using maxadmin over the network. E.g.:\n"
+        "                 MaxAdmin> remove user bob somepass",
+        {ARG_TYPE_STRING, ARG_TYPE_STRING, 0}
     },
     {
         NULL, 0, NULL, NULL, NULL, {0, 0, 0}
@@ -1274,61 +1302,59 @@ reload_config(DCB *dcb)
 }
 
 /**
- * Add a new maxscale admin user
+ * Add a new remote (insecure, over the network) maxscale admin user
  *
- * @param dcb           The DCB for messages
- * @param user          The user name
+ * @param dcb  The DCB for messages
+ * @param user The user name
+ * @param user The user password
  */
 static void
-telnetdAddUser(DCB *dcb, char *user)
+telnetdAddUser(DCB *dcb, char *user, char *password)
 {
     const char *err;
 
-    if (admin_local_search_user(user))
+    if (admin_inet_user_exists(user))
     {
-        dcb_printf(dcb, "User %s already exists.\n", user);
+        dcb_printf(dcb, "Account %s for remote (network) usage already exists.\n", user);
         return;
     }
 
-    if ((err = admin_local_add_user(user)) == NULL)
+    if ((err = admin_add_inet_user(user, password)) == NULL)
     {
-        dcb_printf(dcb, "User %s has been successfully added.\n", user);
+        dcb_printf(dcb, "Account %s for remote (network) usage has been successfully added.\n", user);
     }
     else
     {
-        dcb_printf(dcb, "Failed to add new user. %s\n", err);
+        dcb_printf(dcb, "Failed to add new remote account %s: %s.\n", user, err);
     }
 }
 
-
 /**
- * Remove a maxscale admin user
+ * Remove a remote (insecure, over the network) maxscale admin user
  *
- * @param dcb           The DCB for messages
- * @param user          The user name
+ * @param dcb  The DCB for messages
+ * @param user The user name
+ * @param user The user password
  */
-static void telnetdRemoveUser(
-    DCB*  dcb,
-    char* user)
+static void telnetdRemoveUser(DCB *dcb, char *user, char *password)
 {
     const char* err;
 
-    if (!admin_local_search_user(user))
+    if (!admin_inet_user_exists(user))
     {
-        dcb_printf(dcb, "User %s doesn't exist.\n", user);
+        dcb_printf(dcb, "Account %s for remote (network) usage does not exist.\n", user);
         return;
     }
 
-    if ((err = admin_local_remove_user(user)) == NULL)
+    if ((err = admin_remove_inet_user(user, password)) == NULL)
     {
-        dcb_printf(dcb, "User %s has been successfully removed.\n", user);
+        dcb_printf(dcb, "Account %s for remote (network) usage has been successfully removed.\n", user);
     }
     else
     {
-        dcb_printf(dcb, "Failed to remove user %s. %s\n", user, err);
+        dcb_printf(dcb, "Failed to remove remote account %s: %s\n", user, err);
     }
 }
-
 
 
 /**
@@ -1339,7 +1365,6 @@ static void telnetdRemoveUser(
 static void
 telnetdShowUsers(DCB *dcb)
 {
-    dcb_printf(dcb, "Administration interface users:\n");
     dcb_PrintAdminUsers(dcb);
 }
 
@@ -1827,6 +1852,60 @@ static void
 disable_maxlog()
 {
     mxs_log_set_maxlog_enabled(false);
+}
+
+/**
+ * Enable a Linux account
+ *
+ * @param dcb  The DCB for messages
+ * @param user The Linux user name
+ */
+static void
+enable_account(DCB *dcb, char *user)
+{
+    const char *err;
+
+    if (admin_linux_account_enabled(user))
+    {
+        dcb_printf(dcb, "The Linux user %s has already been enabled.\n", user);
+        return;
+    }
+
+    if ((err = admin_enable_linux_account(user)) == NULL)
+    {
+        dcb_printf(dcb, "The Linux user %s has successfully been enabled.\n", user);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to enable the Linux user %s: %s\n", user, err);
+    }
+}
+
+/**
+ * Disable a Linux account
+ *
+ * @param dcb   The DCB for messages
+ * @param user  The Linux user name
+ */
+static void
+disable_account(DCB *dcb, char *user)
+{
+    const char* err;
+
+    if (!admin_linux_account_enabled(user))
+    {
+        dcb_printf(dcb, "The Linux user %s has not been enabled.\n", user);
+        return;
+    }
+
+    if ((err = admin_disable_linux_account(user)) == NULL)
+    {
+        dcb_printf(dcb, "The Linux user %s has successfully been disabled.\n", user);
+    }
+    else
+    {
+        dcb_printf(dcb, "Failed to disable the Linux user %s: %s\n", user, err);
+    }
 }
 
 #if defined(FAKE_CODE)

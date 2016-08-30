@@ -13,12 +13,19 @@
  * Public License.
  */
 
-#define MAXADMIN_DEFAULT_SOCKET "/tmp/maxadmin.sock"
+#define MAXADMIN_DEFAULT_SOCKET                "/tmp/maxadmin.sock"
 
 #define MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG_LEN 7
-#define MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG "default"
-#define MAXADMIN_GETPWUID_BUF_LEN 255
-#define MAXADMIN_AUTH_REPLY_LEN 6
-#define MAXADMIN_FAILED_AUTH_MESSAGE "FAILED"
+#define MAXADMIN_CONFIG_DEFAULT_SOCKET_TAG     "default"
+
+#define MAXADMIN_AUTH_REPLY_LEN                6
+#define MAXADMIN_AUTH_FAILED_REPLY             "FAILED"
+#define MAXADMIN_AUTH_SUCCESS_REPLY            "OK----"
+
+#define MAXADMIN_AUTH_USER_PROMPT              "USER"
+#define MAXADMIN_AUTH_USER_PROMPT_LEN          4
+
+#define MAXADMIN_AUTH_PASSWORD_PROMPT          "PASSWORD"
+#define MAXADMIN_AUTH_PASSWORD_PROMPT_LEN      8
 
 #endif

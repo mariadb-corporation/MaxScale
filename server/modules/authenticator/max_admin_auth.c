@@ -142,7 +142,7 @@ max_admin_auth_set_protocol_data(DCB *dcb, GWBUF *buf)
         dcb->data = (void *)session_data;
 
         /* Check for existance of the user */
-        if (admin_local_search_user(session_data->user))
+        if (admin_linux_account_enabled(session_data->user))
         {
             session_data->validated = true;
             return 0;
