@@ -1015,12 +1015,18 @@ static BACKEND *get_root_master(BACKEND **servers)
     {
         if (servers[i] && (servers[i]->server->status & (SERVER_MASTER | SERVER_MAINT)) == SERVER_MASTER)
         {
-            if (master_host && servers[i]->server->depth < master_host->server->depth)
+            if (master_host == NULL)
             {
                 master_host = servers[i];
             }
-            else if (master_host == NULL)
+            else if (servers[i]->server->depth < master_host->server->depth ||
+                    (servers[i]->server->depth == master_host->server->depth &&
+                     servers[i]->weight > master_host->weight))
             {
+                /**
+                 * This master has a lower depth than the candidate master or
+                 * the depths are equal but this master has a higher weight
+                 */
                 master_host = servers[i];
             }
         }
