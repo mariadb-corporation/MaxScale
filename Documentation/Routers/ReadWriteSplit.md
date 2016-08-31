@@ -150,7 +150,14 @@ reconnecting to MariaDB MaxScale once a new master is available.
 
 ## Routing hints
 
-The readwritesplit router supports routing hints. For a detailed guide on hint syntax and functionality, please read [this](../Reference/Hint-Syntax.md) document.
+The readwritesplit router supports routing hints. For a detailed guide on hint
+syntax and functionality, please read [this](../Reference/Hint-Syntax.md) document.
+
+**Note**: Routing hints will always have the highest priority when a routing
+decision is made. This means that it is possible to cause inconsistencies in
+the session state and the actual data in the database by adding routing hints
+to DDL/DML statements which are then directed to slave servers. Only use routing
+hints when you are sure that they can cause no harm.
 
 ## Limitations
 
