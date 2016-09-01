@@ -958,6 +958,7 @@ blr_make_binlog_dump(ROUTER_INSTANCE *router)
         encode_value(&data[9], BLR_REQUEST_ANNOTATE_ROWS_EVENT, 16);
     }
     else
+    {
         encode_value(&data[9], 0, 16);      // No flag set
     }
 
