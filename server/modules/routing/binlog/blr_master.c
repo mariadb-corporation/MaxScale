@@ -48,6 +48,7 @@
  * 23/10/2015   Markus Makela       Added current_safe_event
  * 26/04/2016   Massimiliano Pinto  Added MariaDB 10.0 and 10.1 GTID event flags detection
  * 22/07/2016   Massimiliano Pinto  Added semi_sync replication support
+ * 01/08/2016   Massimiliano Pinto  Added support for ANNOTATE_ROWS_EVENT in COM_BINLOG_DUMP
  *
  * @endverbatim
  */
@@ -949,7 +950,17 @@ blr_make_binlog_dump(ROUTER_INSTANCE *router)
     data[4] = COM_BINLOG_DUMP;             // Command
     encode_value(&data[5],
                  router->current_pos, 32); // binlog position
-    encode_value(&data[9], 0, 16);         // Flags
+
+    /* With mariadb10 always ask for annotate rows events */
+    if (router->mariadb10_compat)
+    {
+        // set flag for annotate rows event
+        encode_value(&data[9], BLR_REQUEST_ANNOTATE_ROWS_EVENT, 16);
+    }
+    else
+        encode_value(&data[9], 0, 16);      // No flag set
+    }
+
     encode_value(&data[11],
                  router->serverid, 32);    // Server-id of MaxScale
     memcpy((char *)&data[15], router->binlog_name,

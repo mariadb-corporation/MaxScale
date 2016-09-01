@@ -33,6 +33,7 @@
  * 26/04/16     Massimiliano Pinto      Added MariaDB 10.0 and 10.1 GTID event flags detection
  * 11/07/16     Massimiliano Pinto      Added SSL backend support
  * 22/07/16     Massimiliano Pinto      Added Semi-Sync replication support
+ * 01/08/2016   Massimiliano Pinto      Added support for ANNOTATE_ROWS_EVENT in COM_BINLOG_DUMP
  *
  * @endverbatim
  */
@@ -121,6 +122,11 @@
 #define LOG_EVENT_IGNORABLE_F                   0x0080
 #define LOG_EVENT_NO_FILTER_F                   0x0100
 #define LOG_EVENT_MTS_ISOLATE_F                 0x0200
+
+/**
+ * Binlog COM_BINLOG_DUMP flags
+ */
+#define BLR_REQUEST_ANNOTATE_ROWS_EVENT         2
 
 /**
  * How often to call the binlog status function (seconds)
