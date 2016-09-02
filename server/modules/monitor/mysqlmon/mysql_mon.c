@@ -50,6 +50,26 @@
 #include <modutil.h>
 #include <maxscale/alloc.h>
 
+/** Column positions for SHOW SLAVE STATUS */
+#define MYSQL55_STATUS_BINLOG_POS 5
+#define MYSQL55_STATUS_BINLOG_NAME 6
+#define MYSQL55_STATUS_IO_RUNNING 10
+#define MYSQL55_STATUS_SQL_RUNNING 11
+#define MYSQL55_STATUS_MASTER_ID 39
+
+/** Column positions for SHOW SLAVE STATUS */
+#define MARIA10_STATUS_BINLOG_NAME 7
+#define MARIA10_STATUS_BINLOG_POS 8
+#define MARIA10_STATUS_IO_RUNNING 12
+#define MARIA10_STATUS_SQL_RUNNING 13
+#define MARIA10_STATUS_MASTER_ID 41
+
+/** Column positions for SHOW SLAVE HOSTS */
+#define SLAVE_HOSTS_SERVER_ID 0
+#define SLAVE_HOSTS_HOSTNAME 1
+#define SLAVE_HOSTS_PORT 2
+
+
 extern char *strcasestr(const char *haystack, const char *needle);
 
 static void monitorMain(void *);
@@ -128,6 +148,87 @@ GetModuleObject()
 {
     return &MyObject;
 }
+
+/**
+ * Monitor specific information about a server
+ */
+typedef struct mysql_server_info
+{
+    int              server_id; /**< Value of @@server_id */
+    int              master_id; /**< Master server id from SHOW SLAVE STATUS*/
+    bool             read_only; /**< Value of @@read_only */
+    bool             slave_configured; /**< Whether SHOW SLAVE STATUS returned rows */
+    bool             slave_io;  /**< If Slave IO thread is running  */
+    bool             slave_sql; /**< If Slave SQL thread is running */
+    uint64_t         binlog_pos; /**< Binlog position from SHOW SLAVE STATUS */
+    char            *binlog_name; /**< Binlog name from SHOW SLAVE STATUS */
+} MYSQL_SERVER_INFO;
+
+/** Other values are implicitly zero initialized */
+#define MYSQL_SERVER_INFO_INIT {.binlog_name = ""}
+
+void* info_copy_func(const void *val)
+{
+    ss_dassert(val);
+    MYSQL_SERVER_INFO *old_val = (MYSQL_SERVER_INFO*)val;
+    MYSQL_SERVER_INFO *new_val = MXS_MALLOC(sizeof(MYSQL_SERVER_INFO));
+    char *binlog_name = MXS_STRDUP(old_val->binlog_name);
+
+    if (new_val && binlog_name)
+    {
+        *new_val = *old_val;
+        new_val->binlog_name = binlog_name;
+    }
+    else
+    {
+        MXS_FREE(new_val);
+        MXS_FREE(binlog_name);
+        new_val = NULL;
+    }
+
+    return new_val;
+}
+
+void info_free_func(void *val)
+{
+    if (val)
+    {
+        MYSQL_SERVER_INFO *old_val = (MYSQL_SERVER_INFO*)val;
+        MXS_FREE(old_val->binlog_name);
+        MXS_FREE(old_val);
+    }
+}
+
+/**
+ * @brief Helper function that initializes the server info hashtable
+ *
+ * @param handle MySQL monitor handle
+ * @param database List of monitored databases
+ * @return True on success, false if initialization failed. At the moment
+ *         initialization can only fail if memory allocation fails.
+ */
+bool init_server_info(MYSQL_MONITOR *handle, MONITOR_SERVERS *database)
+{
+    MYSQL_SERVER_INFO info = MYSQL_SERVER_INFO_INIT;
+    bool rval = true;
+
+    while (database)
+    {
+        /** Delete any existing structures and replace them with empty ones */
+        hashtable_delete(handle->server_info, database->server);
+
+        if (!hashtable_add(handle->server_info, database->server->unique_name, &info))
+        {
+            rval = false;
+            break;
+        }
+
+        database = database->next;
+    }
+
+    return rval;
+}
+
 /*lint +e14 */
 
 /**
@@ -143,7 +244,7 @@ static void *
 startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
 {
     MYSQL_MONITOR *handle = (MYSQL_MONITOR*) monitor->handle;
-    bool have_events = false, script_error = false;
+    bool have_events = false, script_error = false, error = false;
 
     if (handle)
     {
@@ -151,10 +252,19 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
     }
     else
     {
-        if ((handle = (MYSQL_MONITOR *) MXS_MALLOC(sizeof(MYSQL_MONITOR))) == NULL)
+        handle = (MYSQL_MONITOR *) MXS_MALLOC(sizeof(MYSQL_MONITOR));
+        HASHTABLE *server_info = hashtable_alloc(MAX_NUM_SLAVES, hashtable_item_strhash, hashtable_item_strcmp);
+
+        if (handle == NULL || server_info == NULL)
         {
+            MXS_FREE(handle);
+            hashtable_free(server_info);
             return NULL;
         }
+
+        hashtable_memory_fns(server_info, hashtable_item_strdup, info_copy_func,
+                             hashtable_item_free, info_free_func);
+        handle->server_info = server_info;
         handle->shutdown = 0;
         handle->id = config_get_gateway_id();
         handle->replicationHeartbeat = 0;
@@ -214,25 +324,32 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
     if (!check_monitor_permissions(monitor, "SHOW SLAVE STATUS"))
     {
         MXS_ERROR("Failed to start monitor. See earlier errors for more information.");
-        MXS_FREE(handle->script);
-        MXS_FREE(handle);
-        return NULL;
+        error = true;
     }
 
     if (script_error)
     {
-        MXS_ERROR("Errors were found in the script configuration parameters "
-                  "for the monitor '%s'. The script will not be used.", monitor->name);
-        MXS_FREE(handle->script);
-        handle->script = NULL;
+        MXS_ERROR("[%s] Errors were found in the script configuration parameters ", monitor->name);
+        error = true;
     }
-    /** If no specific events are given, enable them all */
-    if (!have_events)
+    else if (!have_events)
     {
+        /** If no specific events are given, enable them all */
         memset(handle->events, true, sizeof(handle->events));
     }
 
-    if (thread_start(&handle->thread, monitorMain, monitor) == NULL)
+    if (!init_server_info(handle, monitor->databases))
+    {
+        error = true;
+    }
+
+    if (error)
+    {
+        hashtable_free(handle->server_info);
+        MXS_FREE(handle->script);
+        MXS_FREE(handle);
+    }
+    else if (thread_start(&handle->thread, monitorMain, monitor) == NULL)
     {
         MXS_ERROR("Failed to start monitor thread for monitor '%s'.", monitor->name);
     }
@@ -286,20 +403,28 @@ static void diagnostics(DCB *dcb, const MONITOR *mon)
     dcb_printf(dcb, "\tConnect Timeout:\t%i seconds\n", mon->connect_timeout);
     dcb_printf(dcb, "\tRead Timeout:\t\t%i seconds\n", mon->read_timeout);
     dcb_printf(dcb, "\tWrite Timeout:\t\t%i seconds\n", mon->write_timeout);
-    dcb_printf(dcb, "\tMonitored servers:	");
+    dcb_printf(dcb, "\nMonitored servers\n\n");
 
     db = mon->databases;
-    sep = "";
+
     while (db)
     {
-        dcb_printf(dcb, "%s%s:%d", sep, db->server->name, db->server->port);
-        sep = ", ";
+        MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, db->server->unique_name);
+        dcb_printf(dcb, "Server: %s\n", db->server->unique_name);
+        dcb_printf(dcb, "Server ID: %d\n", serv_info->server_id);
+        dcb_printf(dcb, "Read only: %s\n", serv_info->read_only ? "ON" : "OFF");
+        dcb_printf(dcb, "Slave configured: %s\n", serv_info->slave_configured ? "YES" : "NO");
+        dcb_printf(dcb, "Slave IO running: %s\n", serv_info->slave_io ? "YES" : "NO");
+        dcb_printf(dcb, "Slave SQL running: %s\n", serv_info->slave_sql ? "YES" : "NO");
+        dcb_printf(dcb, "Master ID: %d\n", serv_info->master_id);
+        dcb_printf(dcb, "Master binlog file: %s\n", serv_info->binlog_name);
+        dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->binlog_pos);
+        dcb_printf(dcb, "\n");
         db = db->next;
     }
-    dcb_printf(dcb, "\n");
 }
 
-static inline void monitor_mysql100_db(MONITOR_SERVERS* database)
+static inline void monitor_mysql100_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info)
 {
     int isslave = 0;
     MYSQL_RES* result;
@@ -320,34 +445,69 @@ static inline void monitor_mysql100_db(MONITOR_SERVERS* database)
             return;
         }
 
-        while ((row = mysql_fetch_row(result)))
+        row = mysql_fetch_row(result);
+
+        if (row)
         {
-            /* get Slave_IO_Running and Slave_SQL_Running values*/
-            if (strncmp(row[12], "Yes", 3) == 0
-                && strncmp(row[13], "Yes", 3) == 0)
-            {
-                isslave += 1;
-            }
+            serv_info->slave_configured = true;
 
-            /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
-             * the replication tree, slaves ids will be added to master(s) and we will have at least the
-             * root master server.
-             * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
-             */
-            if (strncmp(row[12], "Yes", 3) == 0)
+            do
             {
-                /* get Master_Server_Id values */
-                master_id = atol(row[41]);
-                if (master_id == 0)
+                /* get Slave_IO_Running and Slave_SQL_Running values*/
+                serv_info->slave_io = strncmp(row[MARIA10_STATUS_IO_RUNNING], "Yes", 3) == 0;
+                serv_info->slave_sql = strncmp(row[MARIA10_STATUS_SQL_RUNNING], "Yes", 3) == 0;
+
+                if (serv_info->slave_io && serv_info->slave_sql)
                 {
-                    master_id = -1;
-                }
-            }
+                    if (isslave == 0)
+                    {
+                        /** Only check binlog name for the first slave */
+                        char *binlog_name = MXS_STRDUP(row[MARIA10_STATUS_BINLOG_NAME]);
 
-            i++;
+                        if (binlog_name)
+                        {
+                            MXS_FREE(serv_info->binlog_name);
+                            serv_info->binlog_name = binlog_name;
+                            serv_info->binlog_pos = atol(row[MARIA10_STATUS_BINLOG_POS]);
+                        }
+                    }
+
+                    isslave += 1;
+                }
+
+                /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
+                 * the replication tree, slaves ids will be added to master(s) and we will have at least the
+                 * root master server.
+                 * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
+                 */
+                if (serv_info->slave_io)
+                {
+                    /* get Master_Server_Id values */
+                    master_id = atol(row[MARIA10_STATUS_MASTER_ID]);
+                    if (master_id == 0)
+                    {
+                        master_id = -1;
+                    }
+                }
+
+                i++;
+                row = mysql_fetch_row(result);
+            }
+            while (row);
         }
+        else
+        {
+            /** SHOW ALL SLAVES STATUS returned no rows, replication not configured */
+            serv_info->slave_configured = false;
+            serv_info->slave_io = false;
+            serv_info->slave_sql = false;
+            serv_info->binlog_pos = 0;
+            serv_info->binlog_name[0] = '\0';
+        }
+
         /* store master_id of current node */
-        memcpy(&database->server->master_id, &master_id, sizeof(long));
+        database->server->master_id = master_id;
+        serv_info->master_id = master_id;
 
         mysql_free_result(result);
 
@@ -385,7 +545,7 @@ static inline void monitor_mysql100_db(MONITOR_SERVERS* database)
     }
 }
 
-static inline void monitor_mysql55_db(MONITOR_SERVERS* database)
+static inline void monitor_mysql55_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info)
 {
     bool isslave = false;
     MYSQL_RES* result;
@@ -404,32 +564,60 @@ static inline void monitor_mysql55_db(MONITOR_SERVERS* database)
             return;
         }
 
-        while ((row = mysql_fetch_row(result)))
-        {
-            /* get Slave_IO_Running and Slave_SQL_Running values*/
-            if (strncmp(row[10], "Yes", 3) == 0
-                && strncmp(row[11], "Yes", 3) == 0)
-            {
-                isslave = 1;
-            }
+        row = mysql_fetch_row(result);
 
-            /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
-             * the replication tree, slaves ids will be added to master(s) and we will have at least the
-             * root master server.
-             * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
-             */
-            if (strncmp(row[10], "Yes", 3) == 0)
+        if (row)
+        {
+            serv_info->slave_configured = true;
+
+            do
             {
-                /* get Master_Server_Id values */
-                master_id = atol(row[39]);
-                if (master_id == 0)
+                /* get Slave_IO_Running and Slave_SQL_Running values*/
+                serv_info->slave_io = strncmp(row[MYSQL55_STATUS_IO_RUNNING], "Yes", 3) == 0;
+                serv_info->slave_sql = strncmp(row[MYSQL55_STATUS_SQL_RUNNING], "Yes", 3) == 0;
+
+                if (serv_info->slave_io && serv_info->slave_sql)
                 {
-                    master_id = -1;
+                    isslave = 1;
+
+                    serv_info->binlog_pos = atol(row[MYSQL55_STATUS_BINLOG_POS]);
+                    char *binlog_name = MXS_STRDUP(row[MYSQL55_STATUS_BINLOG_NAME]);
+
+                    if (binlog_name)
+                    {
+                        MXS_FREE(serv_info->binlog_name);
+                        serv_info->binlog_name = binlog_name;
+                    }
                 }
+
+                /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
+                 * the replication tree, slaves ids will be added to master(s) and we will have at least the
+                 * root master server.
+                 * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
+                 */
+                if (serv_info->slave_io)
+                {
+                    /* get Master_Server_Id values */
+                    master_id = atol(row[MYSQL55_STATUS_MASTER_ID]);
+                    if (master_id == 0)
+                    {
+                        master_id = -1;
+                    }
+                }
+                row = mysql_fetch_row(result);
             }
+            while (row);
+        }
+        else
+        {
+            /** SHOW SLAVE STATUS returned no rows, slave is not configured. */
+            serv_info->slave_configured = false;
+            serv_info->binlog_pos = 0;
+            serv_info->binlog_name[0] = '\0';
         }
         /* store master_id of current node */
-        memcpy(&database->server->master_id, &master_id, sizeof(long));
+        database->server->master_id = master_id;
+        serv_info->master_id = master_id;
 
         mysql_free_result(result);
     }
@@ -457,7 +645,7 @@ static inline void monitor_mysql55_db(MONITOR_SERVERS* database)
     }
 }
 
-static inline void monitor_mysql51_db(MONITOR_SERVERS* database)
+static inline void monitor_mysql51_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info)
 {
     bool isslave = false;
     MYSQL_RES* result;
@@ -476,16 +664,46 @@ static inline void monitor_mysql51_db(MONITOR_SERVERS* database)
             return;
         }
 
-        while ((row = mysql_fetch_row(result)))
+        row = mysql_fetch_row(result);
+
+        if (row)
         {
-            /* get Slave_IO_Running and Slave_SQL_Running values*/
-            if (strncmp(row[10], "Yes", 3) == 0
-                && strncmp(row[11], "Yes", 3) == 0)
+            serv_info->slave_configured = true;
+
+            do
             {
-                isslave = 1;
+                /* get Slave_IO_Running and Slave_SQL_Running values*/
+                serv_info->slave_io = strncmp(row[MYSQL55_STATUS_IO_RUNNING], "Yes", 3) == 0;
+                serv_info->slave_sql = strncmp(row[MYSQL55_STATUS_SQL_RUNNING], "Yes", 3) == 0;
+
+                if (serv_info->slave_io && serv_info->slave_sql)
+                {
+                    isslave = 1;
+
+                    serv_info->binlog_pos = atol(row[MYSQL55_STATUS_BINLOG_POS]);
+                    char *binlog_name = MXS_STRDUP(row[MYSQL55_STATUS_BINLOG_NAME]);
+
+                    if (binlog_name)
+                    {
+                        MXS_FREE(serv_info->binlog_name);
+                        serv_info->binlog_name = binlog_name;
+                    }
+                }
+
+                row = mysql_fetch_row(result);
             }
+            while (row);
         }
+        else
+        {
+            /** SHOW SLAVE STATUS returned no rows, slave is not configured. */
+            serv_info->slave_configured = false;
+            serv_info->binlog_pos = 0;
+            serv_info->binlog_name[0] = '\0';
+        }
+
         mysql_free_result(result);
+        serv_info->master_id = -1;
     }
 
     /* Remove addition info */
@@ -550,9 +768,9 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
                     while (nslaves < MAX_NUM_SLAVES && (row = mysql_fetch_row(result)))
                     {
                         /* get Slave_IO_Running and Slave_SQL_Running values*/
-                        database->server->slaves[nslaves] = atol(row[0]);
+                        database->server->slaves[nslaves] = atol(row[SLAVE_HOSTS_SERVER_ID]);
                         nslaves++;
-                        MXS_DEBUG("Found slave at %s:%s", row[1], row[2]);
+                        MXS_DEBUG("Found slave at %s:%s", row[SLAVE_HOSTS_HOSTNAME], row[SLAVE_HOSTS_PORT]);
                     }
                     database->server->slaves[nslaves] = 0;
                 }
@@ -701,16 +919,19 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
         server_set_version_string(database->server, server_string);
     }
 
-    /* get server_id form current node */
-    if (mysql_query(database->con, "SELECT @@server_id") == 0
+    MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, database->server->unique_name);
+    ss_dassert(serv_info);
+
+    /* Get server_id and read_only from current node */
+    if (mysql_query(database->con, "SELECT @@server_id, @@read_only") == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
         long server_id = -1;
 
-        if (mysql_field_count(database->con) != 1)
+        if (mysql_field_count(database->con) != 2)
         {
             mysql_free_result(result);
-            MXS_ERROR("Unexpected result for 'SELECT @@server_id'. Expected 1 column."
+            MXS_ERROR("Unexpected result for 'SELECT @@server_id, @@read_only'. Expected 2 columns."
                       " MySQL Version: %s", version_str);
             return;
         }
@@ -723,7 +944,10 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             {
                 server_id = -1;
             }
+
             database->server->node_id = server_id;
+            serv_info->server_id = server_id;
+            serv_info->read_only = (row[1] && strcmp(row[1], "1") == 0);
         }
         mysql_free_result(result);
     }
@@ -731,17 +955,17 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     /* Check first for MariaDB 10.x.x and get status for multi-master replication */
     if (server_version >= 100000)
     {
-        monitor_mysql100_db(database);
+        monitor_mysql100_db(database, serv_info);
     }
     else if (server_version >= 5 * 10000 + 5 * 100)
     {
-        monitor_mysql55_db(database);
+        monitor_mysql55_db(database, serv_info);
     }
     else
     {
         if (handle->mysql51_replication)
         {
-            monitor_mysql51_db(database);
+            monitor_mysql51_db(database, serv_info);
         }
         else if (report_version_err)
         {

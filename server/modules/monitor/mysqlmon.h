@@ -28,6 +28,7 @@
 #include <modinfo.h>
 #include <maxconfig.h>
 #include <externcmd.h>
+#include <hashtable.h>
 
 /**
  * @file mysqlmon.h - The MySQL monitor
@@ -69,6 +70,7 @@ typedef struct
     MONITOR_SERVERS *master; /**< Master server for MySQL Master/Slave replication */
     char* script; /*< Script to call when state changes occur on servers */
     bool events[MAX_MONITOR_EVENT]; /*< enabled events */
+    HASHTABLE *server_info; /**< Contains server specific information */
 } MYSQL_MONITOR;
 
 #endif
