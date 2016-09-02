@@ -116,6 +116,8 @@ static bool authenticate_unix_socket(MAXSCALED *protocol, DCB *dcb)
                 dcb_printf(dcb, MAXADMIN_AUTH_FAILED_REPLY);
             }
 
+            gwbuf_free(username);
+
             authenticated = true;
         }
         else
