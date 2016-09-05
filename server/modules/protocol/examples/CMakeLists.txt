@@ -1,0 +1,5 @@
+install(PROGRAMS cdc.py DESTINATION ${MAXSCALE_BINDIR})
+install(PROGRAMS cdc_users.py DESTINATION ${MAXSCALE_BINDIR})
+install(PROGRAMS cdc_last_transaction.py DESTINATION ${MAXSCALE_BINDIR})
+install(PROGRAMS cdc_kafka_producer.py DESTINATION ${MAXSCALE_BINDIR})
+install(FILES cdc_schema.go DESTINATION ${MAXSCALE_SHAREDIR})

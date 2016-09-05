@@ -21,16 +21,15 @@ password=cdc_password
 ## Creating new CDC users
 
 ```
-bash$ cdc_users [-h] USER PASSWORD
+bash$ cdc_users.py [-h] USER PASSWORD
 ```
 
 The output of this command should be appended to the _cdcusers_ file at
 `/var/lib/maxscale/<service name>/`.
 
 ```
-bash$ cdc_users user1 pass1 >> /var/lib/maxscale/avro-service/cdcusers
+bash$ cdc_users.py user1 pass1 >> /var/lib/maxscale/avro-service/cdcusers
 ```
 
 Users can be deleted by removing the related rows in 'cdcusers' file. For
 more details on the format of the _cdcusers_ file, read the [CDC Protocol documentation](CDC.md).
-
