@@ -89,4 +89,4 @@ The source code of MaxScale is tagged at GitHub with a tag, which is identical
 with the version of MaxScale. For instance, the tag of version X.Y.Z of MaxScale
 is X.Y.Z. Further, *master* always refers to the latest released non-beta version.
 
-The source code is available [here](https://github.com/mariadb-corporation/maxscale-bsl).
+The source code is available [here](https://github.com/mariadb-corporation/MaxScale).
