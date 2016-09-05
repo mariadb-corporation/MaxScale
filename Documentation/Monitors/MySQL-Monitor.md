@@ -97,6 +97,32 @@ Enable support for MySQL 5.1 replication monitoring. This is needed if a MySQL s
 mysql51_replication=true
 ```
 
+### `multimaster`
+
+Detect multi-master replication topologies. This feature is disabled by default.
+
+When enabled, the multi-master detection looks for the root master servers in
+the replication clusters. These masters can be found by detecting cycles in the
+graph created by the servers. When a cycle is detected, it is assigned a master
+group ID. Every master in a master group will receive the Master status. The
+special group ID 0 is assigned to all servers which are not a part of a
+multi-master replication cycle.
+
+If one or more masters in a group has the `@@read_only` system variable set to
+`ON`, those servers will receive the Slave status even though they are in the
+multi-master group. Slave servers with `@@read_only` disabled will never receive
+the master status.
+
+By setting the servers into read-only mode, the user can control which
+server receive the master status. To do this:
+
+- Enable `@@read_only` on all servers (preferrably through the configuration file)
+- Manually disable `@@read_only` on the server which should be the master
+
+This functionality is similar to the [Multi-Master Monitor](MM-Monitor.md)
+functionality. The only difference is that the MySQL monitor will also detect
+traditional Master-Slave topologies.
+
 ## Example 1 - Monitor script
 
 Here is an example shell script which sends an email to an admin when a server goes down.

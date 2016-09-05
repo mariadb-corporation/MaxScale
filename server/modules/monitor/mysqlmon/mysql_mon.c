@@ -74,7 +74,7 @@ extern char *strcasestr(const char *haystack, const char *needle);
 
 static void monitorMain(void *);
 
-static char *version_str = "V1.4.0";
+static char *version_str = "V1.5.0";
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
@@ -156,6 +156,8 @@ typedef struct mysql_server_info
 {
     int              server_id; /**< Value of @@server_id */
     int              master_id; /**< Master server id from SHOW SLAVE STATUS*/
+    int              group;     /**< Multi-master group where this server
+                                   belongs, 0 for servers not in groups */
     bool             read_only; /**< Value of @@read_only */
     bool             slave_configured; /**< Whether SHOW SLAVE STATUS returned rows */
     bool             slave_io;  /**< If Slave IO thread is running  */
@@ -272,6 +274,7 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         handle->detectStaleSlave = true;
         handle->master = NULL;
         handle->script = NULL;
+        handle->multimaster = false;
         handle->mysql51_replication = false;
         memset(handle->events, false, sizeof(handle->events));
         spinlock_init(&handle->lock);
@@ -290,6 +293,10 @@ startMonitor(MONITOR *monitor, const CONFIG_PARAMETER* params)
         else if (!strcmp(params->name, "detect_replication_lag"))
         {
             handle->replicationHeartbeat = config_truth_value(params->value);
+        }
+        else if (!strcmp(params->name, "multimaster"))
+        {
+            handle->multimaster = config_truth_value(params->value);
         }
         else if (!strcmp(params->name, "script"))
         {
@@ -419,6 +426,12 @@ static void diagnostics(DCB *dcb, const MONITOR *mon)
         dcb_printf(dcb, "Master ID: %d\n", serv_info->master_id);
         dcb_printf(dcb, "Master binlog file: %s\n", serv_info->binlog_name);
         dcb_printf(dcb, "Master binlog position: %lu\n", serv_info->binlog_pos);
+
+        if (handle->multimaster)
+        {
+            dcb_printf(dcb, "Master group: %d\n", serv_info->group);
+        }
+
         dcb_printf(dcb, "\n");
         db = db->next;
     }
@@ -979,6 +992,212 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
 }
 
 /**
+ * @brief A node in a graph
+ */
+struct graph_node
+{
+    int index;
+    int lowest_index;
+    int cycle;
+    bool active;
+    struct graph_node *parent;
+    MYSQL_SERVER_INFO *info;
+    MONITOR_SERVERS *db;
+};
+
+/**
+ * @brief Visit a node in the graph
+ *
+ * This function is the main function used to determine whether the node is a
+ * part of a cycle. It is an implementation of the Tarjan's strongly connected
+ * component algorithm. All one node cycles are ignored since normal
+ * master-slave monitoring handles that.
+ *
+ * Tarjan's strongly connected component algorithm:
+ *
+ *     https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
+ */
+static void visit_node(struct graph_node *node, struct graph_node **stack,
+                         int *stacksize, int *index, int *cycle)
+{
+    /** Assign an index to this node */
+    node->lowest_index = node->index = *index;
+    node->active = true;
+    *index += 1;
+
+    stack[*stacksize] = node;
+    *stacksize += 1;
+
+    if (node->parent == NULL)
+    {
+        /** This node does not connect to another node, it can't be a part of a cycle */
+        node->lowest_index = -1;
+    }
+    else if (node->parent->index == 0)
+    {
+        /** Node has not been visited */
+        visit_node(node->parent, stack, stacksize, index, cycle);
+
+        if (node->parent->lowest_index < node->lowest_index)
+        {
+            /** The parent connects to a node with a lower index, this node
+                could be a part of a cycle. */
+            node->lowest_index = node->parent->lowest_index;
+        }
+    }
+    else if (node->parent->active)
+    {
+        /** This node could be a root node of the cycle */
+        if (node->parent->index < node->lowest_index)
+        {
+            /** Root node found */
+            node->lowest_index = node->parent->index;
+        }
+    }
+    else
+    {
+        /** Node connects to an already connected cycle, it can't be a part of it */
+        node->lowest_index = -1;
+    }
+
+    if (node->active && node->parent && node->lowest_index > 0)
+    {
+        if (node->lowest_index == node->index &&
+            node->lowest_index == node->parent->lowest_index)
+        {
+            /**
+             * Found a multi-node cycle from the graph. The cycle is formed from the
+             * nodes with a lowest_index value equal to the lowest_index value of the
+             * current node. Rest of the nodes on the stack are not part of a cycle
+             * and can be discarded.
+             */
+
+            *cycle += 1;
+
+            while (*stacksize > 0)
+            {
+                struct graph_node *top = stack[(*stacksize) - 1];
+                top->active = false;
+
+                if (top->lowest_index == node->lowest_index)
+                {
+                    top->cycle = *cycle;
+                }
+                *stacksize -= 1;
+            }
+        }
+    }
+    else
+    {
+        /** Pop invalid nodes off the stack */
+        node->active = false;
+        *stacksize -= 1;
+    }
+}
+
+/**
+ * @brief Find the strongly connected components in the replication tree graph
+ *
+ * Each replication cluster is a directed graph made out of replication
+ * trees. If this graph has strongly connected components (more generally
+ * cycles), it is considered a multi-master cluster due to the fact that there
+ * are multiple nodes where the data can originate.
+ *
+ * Detecting the cycles in the graph allows this monitor to better understand
+ * the relationships between the nodes. All nodes that are a part of a cycle can
+ * be labeled as master nodes. This information will later be used to choose the
+ * right master where the writes should go.
+ *
+ * This function also populates the MYSQL_SERVER_INFO structures group
+ * member. Nodes in a group get a positive group ID where the nodes not in a
+ * group get a group ID of 0.
+ */
+void find_graph_cycles(MYSQL_MONITOR *handle, MONITOR_SERVERS *database, int nservers)
+{
+    struct graph_node graph[nservers];
+    struct graph_node *stack[nservers];
+    int nodes = 0;
+
+    for (MONITOR_SERVERS *db = database; db; db = db->next)
+    {
+        graph[nodes].info = hashtable_fetch(handle->server_info, db->server->unique_name);
+        graph[nodes].db = db;
+        ss_dassert(graph[nodes].info);
+        graph[nodes].index = graph[nodes].lowest_index = 0;
+        graph[nodes].cycle = 0;
+        graph[nodes].active = false;
+        graph[nodes].parent = NULL;
+        nodes++;
+    }
+
+    /** Build the graph */
+    for (int i = 0; i < nservers; i++)
+    {
+        if (graph[i].info->master_id > 0)
+        {
+            /** Found a connected node */
+            for (int k = 0; k < nservers; k++)
+            {
+                if (graph[k].info->server_id == graph[i].info->master_id)
+                {
+                    graph[i].parent = &graph[k];
+                    break;
+                }
+            }
+        }
+    }
+
+    int index = 1;
+    int cycle = 0;
+    int stacksize = 0;
+
+    for (int i = 0; i < nservers; i++)
+    {
+        if (graph[i].index == 0)
+        {
+            /** Index is 0, this node has not yet been visited */
+            visit_node(&graph[i], stack, &stacksize, &index, &cycle);
+        }
+    }
+
+    for (int i = 0; i < nservers; i++)
+    {
+        graph[i].info->group = graph[i].cycle;
+
+        if (graph[i].cycle > 0)
+        {
+            /** We have at least one cycle in the graph */
+            if (graph[i].info->read_only)
+            {
+                monitor_set_pending_status(graph[i].db, SERVER_SLAVE);
+                monitor_clear_pending_status(graph[i].db, SERVER_MASTER);
+            }
+            else
+            {
+                monitor_set_pending_status(graph[i].db, SERVER_MASTER);
+                monitor_clear_pending_status(graph[i].db, SERVER_SLAVE);
+            }
+        }
+        else if (handle->detectStaleMaster && cycle == 0 && graph[i].cycle == 0 &&
+                 graph[i].db->server->status & SERVER_MASTER)
+        {
+            /**
+             * Stale master detection is handled here for multi-master mode.
+             *
+             * If we know that no cycles were found from the graph and that a
+             * server once had the master status, replication has broken
+             * down. These masters are assigned the stale master status allowing
+             * them to be used as masters even if they lose their slaves. A
+             * slave in this case can be either a normal slave or another
+             * master.
+             */
+            monitor_set_pending_status(graph[i].db, SERVER_MASTER | SERVER_STALE_STATUS);
+            monitor_clear_pending_status(graph[i].db, SERVER_SLAVE);
+        }
+    }
+}
+
+/**
  * The entry point for the monitoring module thread
  *
  * @param arg   The handle of the monitor
@@ -1151,6 +1370,14 @@ monitorMain(void *arg)
 
         }
 
+        if (handle->multimaster)
+        {
+            /** Find all the master server cycles in the cluster graph. If
+                multiple masters are found, the servers with the read_only
+                variable set to ON will be assigned the slave status. */
+            find_graph_cycles(handle, mon->databases, num_servers);
+        }
+
         /* Update server status from monitor pending status on that server*/
 
         ptr = mon->databases;
@@ -1158,8 +1385,11 @@ monitorMain(void *arg)
         {
             if (!SERVER_IN_MAINT(ptr->server))
             {
-                /* If "detect_stale_master" option is On, let's use the previous master */
-                if (detect_stale_master && root_master &&
+                /** If "detect_stale_master" option is On, let's use the previous master.
+                 *
+                 * Multi-master mode detects the stale masters in find_graph_cycles().
+                 */
+                if (detect_stale_master && root_master && !handle->multimaster &&
                     (strcmp(ptr->server->name, root_master->server->name) == 0 &&
                      ptr->server->port == root_master->server->port) &&
                     (ptr->server->status & SERVER_MASTER) &&
