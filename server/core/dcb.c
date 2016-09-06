@@ -2970,45 +2970,45 @@ dcb_count_by_usage(DCB_USAGE usage)
     {
         if (dcb->dcb_is_in_use)
         {
-        switch (usage)
-        {
-        case DCB_USAGE_CLIENT:
-            if (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
+            switch (usage)
             {
+            case DCB_USAGE_CLIENT:
+                if (DCB_ROLE_CLIENT_HANDLER == dcb->dcb_role)
+                {
+                    rval++;
+                }
+                break;
+            case DCB_USAGE_LISTENER:
+                if (dcb->state == DCB_STATE_LISTENING)
+                {
+                    rval++;
+                }
+                break;
+            case DCB_USAGE_BACKEND:
+                if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+                {
+                    rval++;
+                }
+                break;
+            case DCB_USAGE_INTERNAL:
+                if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
+                    dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
+                {
+                    rval++;
+                }
+                break;
+            case DCB_USAGE_ZOMBIE:
+                if (DCB_ISZOMBIE(dcb))
+                {
+                    rval++;
+                }
+                break;
+            case DCB_USAGE_ALL:
                 rval++;
+                break;
             }
-            break;
-        case DCB_USAGE_LISTENER:
-            if (dcb->state == DCB_STATE_LISTENING)
-            {
-                rval++;
-            }
-            break;
-        case DCB_USAGE_BACKEND:
-            if (dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
-            {
-                rval++;
-            }
-            break;
-        case DCB_USAGE_INTERNAL:
-            if (dcb->dcb_role == DCB_ROLE_CLIENT_HANDLER ||
-                dcb->dcb_role == DCB_ROLE_BACKEND_HANDLER)
-            {
-                rval++;
-            }
-            break;
-        case DCB_USAGE_ZOMBIE:
-            if (DCB_ISZOMBIE(dcb))
-            {
-                rval++;
-            }
-            break;
-        case DCB_USAGE_ALL:
-            rval++;
-            break;
         }
         dcb = dcb->next;
-    }
     }
     spinlock_release(&dcbspin);
     return rval;
