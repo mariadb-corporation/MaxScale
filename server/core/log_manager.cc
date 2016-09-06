@@ -443,7 +443,7 @@ return_succ:
     {
         /** This releases memory of all created objects */
         logmanager_done_nomutex();
-        fprintf(stderr, "*\n* Error : Initializing log manager failed.\n*\n");
+        fprintf(stderr, "* Error: Initializing the log manager failed.\n");
     }
     return succ;
 }
@@ -1566,7 +1566,7 @@ static bool logfile_open_file(filewriter_t* fw, logfile_t* lf)
 
     if (fw->fwr_file == NULL)
     {
-        fprintf(stderr, "Error : opening logfile %s failed.\n", lf->lf_full_file_name);
+        // Error logged by skygw_file_init to stderr.
         rv = false;
     }
 
@@ -2035,10 +2035,7 @@ static bool filewriter_init(logmanager_t* logmanager, filewriter_t* fw)
     }
     else
     {
-        fprintf(stderr,
-                "Error : opening log file %s failed. Exiting "
-                "MaxScale\n",
-                lf->lf_full_file_name);
+        // Error logged already to stderr.
         filewriter_done(fw);
     }
 

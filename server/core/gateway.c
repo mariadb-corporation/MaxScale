@@ -693,30 +693,27 @@ static void print_log_n_stderr(
     const char* fprstr,   /*< string to be printed to stderr */
     int         eno)      /*< errno, if it is set, zero, otherwise */
 {
-    char* log_err = "Error :";
-    char* fpr_err = "*\n* Error :";
-    char* fpr_end   = "\n*\n";
-
     if (do_log)
     {
-        mxs_log_init(NULL, get_logdir(), MXS_LOG_TARGET_FS);
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("%s %s %s %s",
-                  log_err,
-                  logstr,
-                  eno == 0 ? " " : "Error :",
-                  eno == 0 ? " " : strerror_r(eno, errbuf, sizeof(errbuf)));
+        if (mxs_log_init(NULL, get_logdir(), MXS_LOG_TARGET_FS))
+        {
+            char errbuf[STRERROR_BUFLEN];
+            MXS_ERROR("%s%s%s%s",
+                      logstr,
+                      eno == 0 ? "" : " (",
+                      eno == 0 ? "" : strerror_r(eno, errbuf, sizeof(errbuf)),
+                      eno == 0 ? "" : ")");
+        }
     }
     if (do_stderr)
     {
         char errbuf[STRERROR_BUFLEN];
         fprintf(stderr,
-                "%s %s %s %s %s",
-                fpr_err,
+                "* Error: %s%s%s%s\n",
                 fprstr,
-                eno == 0 ? " " : "Error :",
-                eno == 0 ? " " : strerror_r(eno, errbuf, sizeof(errbuf)),
-                fpr_end);
+                eno == 0 ? "" : " (",
+                eno == 0 ? "" : strerror_r(eno, errbuf, sizeof(errbuf)),
+                eno == 0 ? "" : ")");
     }
 }
 
