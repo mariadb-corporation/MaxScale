@@ -900,6 +900,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             server_clear_status(database->server, SERVER_MASTER);
             monitor_clear_pending_status(database, SERVER_SLAVE);
             monitor_clear_pending_status(database, SERVER_MASTER);
+            monitor_clear_pending_status(database, SERVER_RELAY_MASTER);
 
             /* Clean addition status too */
             server_clear_status(database->server, SERVER_SLAVE_OF_EXTERNAL_MASTER);
@@ -1376,6 +1377,23 @@ monitorMain(void *arg)
                 multiple masters are found, the servers with the read_only
                 variable set to ON will be assigned the slave status. */
             find_graph_cycles(handle, mon->databases, num_servers);
+        }
+
+        ptr = mon->databases;
+        while (ptr)
+        {
+            MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, ptr->server->unique_name);
+            ss_dassert(serv_info);
+
+            if (getSlaveOfNodeId(mon->databases, ptr->server->node_id) &&
+                getServerByNodeId(mon->databases, ptr->server->master_id) &&
+                (!handle->multimaster || serv_info->group == 0))
+            {
+                /** This server is both a slave and a master i.e. a relay master */
+                monitor_set_pending_status(ptr, SERVER_RELAY_MASTER);
+                monitor_clear_pending_status(ptr, SERVER_MASTER);
+            }
+            ptr = ptr->next;
         }
 
         /* Update server status from monitor pending status on that server*/
@@ -1899,6 +1917,14 @@ static MONITOR_SERVERS *get_replication_tree(MONITOR *mon, int num_servers)
                     add_slave_to_master(master->server->slaves, sizeof(master->server->slaves),
                                         current->node_id);
                     master->server->depth = current->depth - 1;
+
+                    if(handle->master && master->server->depth < handle->master->server->depth)
+                    {
+                        /** A master with a lower depth was found, remove
+                            the master status from the previous master. */
+                        monitor_clear_pending_status(handle->master, SERVER_MASTER);
+                    }
+
                     monitor_set_pending_status(master, SERVER_MASTER);
                     handle->master = master;
                 }
