@@ -135,6 +135,7 @@ static char *service_params[] =
     "ignore_databases_regex",
     "log_auth_warnings",
     "source", /**< Avrorouter only */
+    "retry_on_failure",
     NULL
 };
 

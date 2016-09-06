@@ -452,6 +452,9 @@ int serviceStartAllPorts(SERVICE* service)
                            (void*) service, retry_after);
             MXS_NOTICE("Failed to start service %s, retrying in %d seconds.",
                        service->name, retry_after);
+
+            /** This will prevent MaxScale from shutting down if service start is retried later */
+            listeners = 1;
         }
     }
     else
