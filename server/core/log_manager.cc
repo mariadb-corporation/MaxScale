@@ -2052,9 +2052,6 @@ static void filewriter_done(filewriter_t* fw)
     {
         case RUN:
             CHK_FILEWRITER(fw);
-        case INIT:
-            fw->fwr_logmes = NULL;
-            fw->fwr_clientmes = NULL;
             if (log_config.use_stdout)
             {
                 skygw_file_free(fw->fwr_file);
@@ -2063,7 +2060,11 @@ static void filewriter_done(filewriter_t* fw)
             {
                 skygw_file_close(fw->fwr_file, true);
             }
+        case INIT:
+            fw->fwr_logmes = NULL;
+            fw->fwr_clientmes = NULL;
             fw->fwr_state = DONE;
+            break;
         case DONE:
         case UNINIT:
         default:
