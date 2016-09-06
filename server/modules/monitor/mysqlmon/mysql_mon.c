@@ -1179,8 +1179,9 @@ void find_graph_cycles(MYSQL_MONITOR *handle, MONITOR_SERVERS *database, int nse
                 monitor_clear_pending_status(graph[i].db, SERVER_SLAVE);
             }
         }
-        else if (handle->detectStaleMaster && cycle == 0 && graph[i].cycle == 0 &&
-                 graph[i].db->server->status & SERVER_MASTER)
+        else if (handle->detectStaleMaster && cycle == 0 &&
+                 graph[i].db->server->status & SERVER_MASTER &&
+                 (graph[i].db->pending_status & SERVER_MASTER) == 0)
         {
             /**
              * Stale master detection is handled here for multi-master mode.
