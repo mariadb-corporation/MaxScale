@@ -15,16 +15,25 @@
 #include <openssl/sha.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <rocksdb/env.h>
 #include <gwdirs.h>
+#include "rocksdbinternals.h"
 
 using std::string;
 using std::unique_ptr;
 
+
 namespace
 {
 
-const size_t ROCKSDB_KEY_LENGTH = SHA512_DIGEST_LENGTH;
 string u_storageDirectory;
+
+const size_t ROCKSDB_KEY_LENGTH = SHA512_DIGEST_LENGTH;
+
+// See https://github.com/facebook/rocksdb/wiki/Basic-Operations#thread-pools
+// These figures should perhaps depend upon the number of cache instances.
+const size_t ROCKSDB_N_LOW_THREADS = 2;
+const size_t ROCKSDB_N_HIGH_THREADS = 1;
 
 }
 
@@ -65,6 +74,12 @@ bool RocksDBStorage::Initialize()
                   u_storageDirectory.c_str(),
                   strerror_r(errno, errbuf, sizeof(errbuf)));
     }
+    else
+    {
+        auto pEnv = rocksdb::Env::Default();
+        pEnv->SetBackgroundThreads(ROCKSDB_N_LOW_THREADS, rocksdb::Env::LOW);
+        pEnv->SetBackgroundThreads(ROCKSDB_N_HIGH_THREADS, rocksdb::Env::HIGH);
+    }
 
     return initialized;
 }
@@ -81,6 +96,9 @@ RocksDBStorage* RocksDBStorage::Create(const char* zName, uint32_t ttl, int argc
     path += zName;
 
     rocksdb::Options options;
+    options.env = rocksdb::Env::Default();
+    options.max_background_compactions = ROCKSDB_N_LOW_THREADS;
+    options.max_background_flushes = ROCKSDB_N_HIGH_THREADS;
     options.create_if_missing = true;
     rocksdb::DBWithTTL* pDb;
 
@@ -120,25 +138,42 @@ cache_result_t RocksDBStorage::getKey(const GWBUF* pQuery, char* pKey)
 
 cache_result_t RocksDBStorage::getValue(const char* pKey, GWBUF** ppResult)
 {
+    // Use the root DB so that we get the value *with* the timestamp at the end.
+    rocksdb::DB* pDb = m_sDb->GetRootDB();
     rocksdb::Slice key(pKey, ROCKSDB_KEY_LENGTH);
     string value;
 
-    rocksdb::Status status = m_sDb->Get(rocksdb::ReadOptions(), key, &value);
+    rocksdb::Status status = pDb->Get(rocksdb::ReadOptions(), key, &value);
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
     switch (status.code())
     {
     case rocksdb::Status::kOk:
+        if (value.length() >= RocksDBInternals::TS_LENGTH)
         {
-            *ppResult = gwbuf_alloc(value.length());
-
-            if (*ppResult)
+            if (!RocksDBInternals::IsStale(value, m_ttl, rocksdb::Env::Default()))
             {
-                memcpy(GWBUF_DATA(*ppResult), value.data(), value.length());
+                size_t length = value.length() - RocksDBInternals::TS_LENGTH;
 
-                result = CACHE_RESULT_OK;
+                *ppResult = gwbuf_alloc(length);
+
+                if (*ppResult)
+                {
+                    memcpy(GWBUF_DATA(*ppResult), value.data(), length);
+
+                    result = CACHE_RESULT_OK;
+                }
             }
+            else
+            {
+                MXS_NOTICE("Cache item is stale, not using.");
+            }
+        }
+        else
+        {
+            MXS_ERROR("RocksDB value too short. Database corrupted?");
+            result = CACHE_RESULT_ERROR;
         }
         break;
 

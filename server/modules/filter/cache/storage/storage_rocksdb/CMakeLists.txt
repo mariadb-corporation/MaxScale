@@ -12,6 +12,7 @@ if (ROCKSDB_BUILT)
   link_directories(${ROCKSDB_LIB_DIR})
 
   add_library(storage_rocksdb SHARED
+    rocksdbinternals.cc
     rocksdbstorage.cc
     storage_rocksdb.cc
     )
