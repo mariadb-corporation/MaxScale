@@ -107,18 +107,57 @@ static char ok[] =
  * CREATE OR REPLACE TABLE test.t1 (id int);
  * INSERT INTO test.t1 VALUES (3000);
  * SELECT * FROM test.t1; */
-static char resultset[] =
+static const char resultset[] =
 {
-    0x01, 0x00, 0x00, 0x01, 0x01, 0x22, 0x00, 0x00, 0x02, 0x03, 0x64, 0x65, 0x66, 0x04, 0x74, 0x65,
-    0x73, 0x74, 0x02, 0x74, 0x31, 0x02, 0x74, 0x31, 0x02, 0x69, 0x64, 0x02, 0x69, 0x64, 0x0c, 0x3f,
-    0x00, 0x0b, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x03, 0xfe,
-    0x00, 0x00, 0x22, 0x00, 0x05, 0x00, 0x00, 0x04, 0x04, 0x33, 0x30, 0x30, 0x30, 0x05, 0x00, 0x00,
-    0x05, 0xfe, 0x00, 0x00, 0x22, 0x00
+    /* Packet 1 */
+    0x01, 0x00, 0x00, 0x01, 0x01,
+    /* Packet 2 */
+    0x22, 0x00, 0x00, 0x02, 0x03, 0x64, 0x65, 0x66, 0x04, 0x74, 0x65, 0x73, 0x74, 0x02, 0x74, 0x31,
+    0x02, 0x74, 0x31, 0x02, 0x69, 0x64, 0x02, 0x69, 0x64, 0x0c, 0x3f,
+    0x00, 0x0b, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00,
+    /* Packet 3 */
+    0x05, 0x00, 0x00, 0x03, 0xfe, 0x00, 0x00, 0x22, 0x00,
+    /* Packet 4 */
+    0x05, 0x00, 0x00, 0x04, 0x04, 0x33, 0x30, 0x30, 0x30,
+    /* Packet 5 */
+    0x05, 0x00, 0x00, 0x05, 0xfe, 0x00, 0x00, 0x22, 0x00
 };
 
+#define PACKET_HDR_LEN 4
 
-void test_single_sql_packet()
+#define PACKET_1_IDX 0
+#define PACKET_1_LEN (PACKET_HDR_LEN + 0x01)       // resultset[PACKET_1_IDX])
+#define PACKET_2_IDX (PACKET_1_IDX + PACKET_1_LEN)
+#define PACKET_2_LEN (PACKET_HDR_LEN + 0x22)       // resultset[PACKET_2_IDX]);
+#define PACKET_3_IDX (PACKET_2_IDX + PACKET_2_LEN)
+#define PACKET_3_LEN (PACKET_HDR_LEN + 0x05)       // resultset[PACKET_3_IDX]);
+#define PACKET_4_IDX (PACKET_3_IDX + PACKET_3_LEN)
+#define PACKET_4_LEN (PACKET_HDR_LEN + 0x05)       // resultset[PACKET_4_IDX]);
+#define PACKET_5_IDX (PACKET_4_IDX + PACKET_4_LEN)
+#define PACKET_5_LEN (PACKET_HDR_LEN + 0x05)       // resultset[PACKET_5_IDX]);
+
+struct packet
 {
+    int index;
+    int length;
+} packets[] =
+{
+    { PACKET_1_IDX, PACKET_1_LEN },
+    { PACKET_2_IDX, PACKET_2_LEN },
+    { PACKET_3_IDX, PACKET_3_LEN },
+    { PACKET_4_IDX, PACKET_4_LEN },
+    { PACKET_5_IDX, PACKET_5_LEN },
+};
+
+#define N_PACKETS (sizeof(packets)/sizeof(packets[0]))
+
+
+//
+// modutil_get_complete_packets
+//
+void test_single_sql_packet1()
+{
+    printf("%s\n", __func__);
     /** Single packet */
     GWBUF* buffer = gwbuf_alloc_and_load(sizeof(ok), ok);
     GWBUF* complete = modutil_get_complete_packets(&buffer);
@@ -144,8 +183,9 @@ void test_single_sql_packet()
     ss_info_dassert(gwbuf_length(complete) == sizeof(ok), "Buffer should contain all data");
 }
 
-void test_multiple_sql_packets()
+void test_multiple_sql_packets1()
 {
+    printf("%s\n", __func__);
     /** All of the data */
     GWBUF* buffer = gwbuf_alloc_and_load(sizeof(resultset), resultset);
     GWBUF* complete = modutil_get_complete_packets(&buffer);
@@ -245,6 +285,160 @@ void test_multiple_sql_packets()
     ss_info_dassert(gwbuf_copy_data(complete, 0, completelen, databuf) == completelen,
                     "All data should be readable");
     ss_info_dassert(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+}
+
+//
+// modutil_get_next_MySQL_packet
+//
+void test_single_sql_packet2()
+{
+    printf("%s\n", __func__);
+    /** Single packet */
+    GWBUF* buffer;
+    GWBUF* next;
+
+    buffer = gwbuf_alloc_and_load(sizeof(ok), ok);
+    next = modutil_get_next_MySQL_packet(&buffer);
+    ss_info_dassert(buffer == NULL, "Old buffer should be NULL");
+    ss_info_dassert(next, "Next packet buffer should not be NULL");
+    ss_info_dassert(gwbuf_length(next) == sizeof(ok), "Next packet buffer should contain enough data");
+    ss_info_dassert(memcmp(GWBUF_DATA(next), ok, GWBUF_LENGTH(next)) == 0,
+                    "Next packet buffer's data should be equal to original data");
+    gwbuf_free(buffer);
+    gwbuf_free(next);
+
+    /** Partial single packet */
+    buffer = gwbuf_alloc_and_load(sizeof(ok) - 4, ok);
+    next = modutil_get_next_MySQL_packet(&buffer);
+    ss_info_dassert(buffer, "Old buffer should be not NULL");
+    ss_info_dassert(next == NULL, "Next packet buffer should be NULL");
+    ss_info_dassert(gwbuf_length(buffer) == sizeof(ok) - 4, "Old buffer should contain right amount of data");
+
+    /** Add the missing data */
+    buffer = gwbuf_append(buffer, gwbuf_alloc_and_load(4, ok + sizeof(ok) - 4));
+    next = modutil_get_next_MySQL_packet(&buffer);
+    ss_info_dassert(buffer == NULL, "Old buffer should be NULL");
+    ss_info_dassert(next, "Next packet buffer should not be NULL");
+    //To be put back when the current realloc behaviour is replaced with splitting behaviour.
+    //ss_info_dassert(next->next, "The next packet should be a chain of buffers");
+    ss_info_dassert(gwbuf_length(next) == sizeof(ok), "Buffer should contain all data");
+    gwbuf_free(next);
+}
+
+void test_multiple_sql_packets2()
+{
+    printf("%s\n", __func__);
+    /** All of the data */
+    GWBUF* buffer;
+    GWBUF* next;
+
+    buffer = gwbuf_alloc_and_load(sizeof(resultset), resultset);
+    // Empty buffer packet by packet.
+    for (int i = 0; i < N_PACKETS; i++)
+    {
+        GWBUF* next = modutil_get_next_MySQL_packet(&buffer);
+        ss_info_dassert(next, "Next packet buffer should not be NULL");
+        ss_info_dassert(gwbuf_length(next) == packets[i].length,
+                        "Next packet buffer should contain enough data");
+        ss_info_dassert(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], GWBUF_LENGTH(next)) == 0,
+                        "Next packet buffer's data should be equal to original data");
+        gwbuf_free(next);
+    }
+    ss_info_dassert(buffer == NULL, "Buffer should be NULL");
+
+    size_t len;
+    // Exactly one packet
+    len = PACKET_1_LEN;
+    buffer = gwbuf_alloc_and_load(len, resultset);
+    next = modutil_get_next_MySQL_packet(&buffer);
+    ss_info_dassert(buffer == NULL, "Old buffer should be NULL.");
+    ss_info_dassert(next, "Next should not be NULL.");
+    ss_info_dassert(GWBUF_LENGTH(next) == PACKET_1_LEN, "Length should match.");
+    gwbuf_free(next);
+
+    // Slightly less than one packet
+    len = PACKET_1_LEN - 1;
+    buffer = gwbuf_alloc_and_load(len, resultset);
+    next = modutil_get_next_MySQL_packet(&buffer);
+    ss_info_dassert(buffer, "Old buffer should not be NULL.");
+    ss_info_dassert(next == NULL, "Next should be NULL.");
+
+    GWBUF *tail = gwbuf_alloc_and_load(sizeof(resultset) - len, resultset + len);
+    buffer = gwbuf_append(buffer, tail);
+    next = modutil_get_next_MySQL_packet(&buffer);
+    ss_info_dassert(buffer, "Old buffer should not be NULL.");
+    ss_info_dassert(next, "Next should not be NULL.");
+    ss_info_dassert(gwbuf_length(next) == PACKET_1_LEN, "Length should match.");
+    gwbuf_free(buffer);
+    gwbuf_free(next);
+
+    // Slightly more than one packet
+    len = PACKET_1_LEN + 1;
+    buffer = gwbuf_alloc_and_load(len, resultset);
+    next = modutil_get_next_MySQL_packet(&buffer);
+    ss_info_dassert(buffer, "Old buffer should not be NULL.");
+    ss_info_dassert(next, "Next should not be NULL.");
+    ss_info_dassert(GWBUF_LENGTH(next) == PACKET_1_LEN, "Length should match.");
+    gwbuf_free(next);
+
+    next = modutil_get_next_MySQL_packet(&buffer);
+    ss_info_dassert(buffer, "Old buffer should not be NULL.");
+    ss_info_dassert(next == NULL, "Next should be NULL.");
+
+    tail = gwbuf_alloc_and_load(sizeof(resultset) - len, resultset + len);
+    buffer = gwbuf_append(buffer, tail);
+    next = modutil_get_next_MySQL_packet(&buffer);
+    ss_info_dassert(buffer, "Old buffer should not be NULL.");
+    ss_info_dassert(next, "Next should not be NULL.");
+    ss_info_dassert(gwbuf_length(next) == PACKET_2_LEN, "Length should match.");
+    ss_info_dassert(memcmp(GWBUF_DATA(next), &resultset[PACKET_2_IDX], GWBUF_LENGTH(next)) == 0,
+                    "Next packet buffer's data should be equal to original data");
+    gwbuf_free(buffer);
+    gwbuf_free(next);
+
+    GWBUF *head;
+    /** Sliding cutoff of the buffer boundary */
+    for (size_t i = 0; i < sizeof(resultset); i++)
+    {
+        head = gwbuf_alloc_and_load(i, resultset);
+        tail = gwbuf_alloc_and_load(sizeof(resultset) - i, resultset + i);
+        head = gwbuf_append(head, tail);
+        next = modutil_get_next_MySQL_packet(&head);
+        int headlen = gwbuf_length(head);
+        int nextlen = next ? gwbuf_length(next) : 0;
+        ss_info_dassert(headlen + nextlen == sizeof(resultset),
+                        "Both buffers should sum up to sizeof(resutlset) bytes");
+        uint8_t databuf[sizeof(resultset)];
+        gwbuf_copy_data(next, 0, nextlen, databuf);
+        gwbuf_copy_data(head, 0, headlen, databuf + nextlen);
+        ss_info_dassert(memcmp(databuf, resultset, sizeof(resultset)) == 0, "Data should be OK");
+    }
+
+    /** Fragmented buffer chain */
+    size_t chunk = 5;
+    size_t total = 0;
+    buffer = NULL;
+
+    do
+    {
+        chunk = chunk + 5 < sizeof(resultset) ? 5 : (chunk + 5) - sizeof(resultset);
+        buffer = gwbuf_append(buffer, gwbuf_alloc_and_load(chunk, resultset + total));
+        total += chunk;
+    }
+    while (total < sizeof(resultset));
+
+    for (int i = 0; i < N_PACKETS; i++)
+    {
+        GWBUF* next = modutil_get_next_MySQL_packet(&buffer);
+        ss_info_dassert(next, "Next packet buffer should not be NULL");
+        ss_info_dassert(gwbuf_length(next) == packets[i].length,
+                        "Next packet buffer should contain enough data");
+        next = gwbuf_make_contiguous(next);
+        ss_info_dassert(memcmp(GWBUF_DATA(next), &resultset[packets[i].index], GWBUF_LENGTH(next)) == 0,
+                        "Next packet buffer's data should be equal to original data");
+        gwbuf_free(next);
+    }
+    ss_info_dassert(buffer == NULL, "Buffer should be NULL");
 }
 
 void test_strnchr_esc_mysql()
@@ -390,8 +584,10 @@ int main(int argc, char **argv)
 
     result += test1();
     result += test2();
-    test_single_sql_packet();
-    test_multiple_sql_packets();
+    test_single_sql_packet1();
+    test_single_sql_packet2();
+    test_multiple_sql_packets1();
+    test_multiple_sql_packets2();
     test_strnchr_esc();
     test_strnchr_esc_mysql();
     test_large_packets();
