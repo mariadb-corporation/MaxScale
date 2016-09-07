@@ -13,6 +13,17 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Updated Features
 
+### Password parameter
+
+In the configuration entry for a _service_ or _monitor_, the value of
+the password to be used can now be specified using `password` in addition
+to `passwd`. The use of the latter will be deprecated and removed in later
+releases of MaxScale.
+
+    [SomeService]
+    ...
+    password=mypasswd
+
 ### Routing hint priority change
 
 Routing hints now have the highest priority when a routing decision is made. If

@@ -80,6 +80,7 @@ static bool process_config_context(CONFIG_CONTEXT   *);
 static int process_config_update(CONFIG_CONTEXT *);
 static void free_config_context(CONFIG_CONTEXT      *);
 static char *config_get_value(CONFIG_PARAMETER *, const char *);
+static char *config_get_password(CONFIG_PARAMETER *);
 static const char *config_get_value_string(CONFIG_PARAMETER *, const char *);
 static int handle_global_item(const char *, const char *);
 static int handle_feedback_item(const char *, const char *);
@@ -115,7 +116,8 @@ static char *service_params[] =
     "router_options",
     "servers",
     "user",
-    "passwd",
+    "passwd", // DEPRECATE: See config_get_password.
+    "password",
     "enable_root_user",
     "max_connections",
     /* "max_queued_connections", */
@@ -163,7 +165,8 @@ static char *monitor_params[] =
     "module",
     "servers",
     "user",
-    "passwd",
+    "passwd",   // DEPRECATE: See config_get_password.
+    "password",
     "script",
     "events",
     "mysql51_replication",
@@ -590,6 +593,30 @@ config_get_value(CONFIG_PARAMETER *params, const char *name)
         params = params->next;
     }
     return NULL;
+}
+
+// DEPRECATE: In 2.1 complain but accept if "passwd" is provided, in 2.2
+// DEPRECATE: drop support for "passwd".
+/**
+ * Get the value of the password parameter
+ *
+ * The words looked for are "password" and "passwd".
+ *
+ * @param params        The linked list of config parameters
+ * @return the parameter value or NULL if not found
+ */
+static char *
+config_get_password(CONFIG_PARAMETER *params)
+{
+    char *password = config_get_value(params, "password");
+    char *passwd = config_get_value(params, "passwd");
+
+    if (password && passwd)
+    {
+        MXS_WARNING("Both 'password' and 'passwd' specified. Using value of 'password'.");
+    }
+
+    return passwd ? passwd : password;
 }
 
 /**
@@ -1310,7 +1337,7 @@ process_config_update(CONFIG_CONTEXT *context)
                     max_queued_connections = config_get_value_string(obj->parameters, "max_queued_connections");
                     queued_connection_timeout = config_get_value_string(obj->parameters, "queued_connection_timeout");
                     user = config_get_value(obj->parameters, "user");
-                    auth = config_get_value(obj->parameters, "passwd");
+                    auth = config_get_password(obj->parameters);
 
                     auth_all_servers = config_get_value(obj->parameters, "auth_all_servers");
                     strip_db_esc = config_get_value(obj->parameters, "strip_db_esc");
@@ -2243,7 +2270,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
     }
 
     char *user = config_get_value(obj->parameters, "user");
-    char *auth = config_get_value(obj->parameters, "passwd");
+    char *auth = config_get_password(obj->parameters);
 
     if (user && auth)
     {
@@ -2256,7 +2283,7 @@ int create_new_service(CONFIG_CONTEXT *obj)
                   obj->object,
                   user ? "" : "the 'user' parameter",
                   !user && !auth ? " and " : "",
-                  auth ? "" : "the 'passwd' parameter");
+                  auth ? "" : "the 'password' or 'passwd' parameter");
     }
 
     char *subservices = config_get_value(obj->parameters, "subservices");
@@ -2660,7 +2687,7 @@ int create_new_monitor(CONFIG_CONTEXT *context, CONFIG_CONTEXT *obj, HASHTABLE* 
         }
 
         char *user = config_get_value(obj->parameters, "user");
-        char *passwd = config_get_value(obj->parameters, "passwd");
+        char *passwd = config_get_password(obj->parameters);
         if (user && passwd)
         {
             monitorAddUser(obj->element, user, passwd);
