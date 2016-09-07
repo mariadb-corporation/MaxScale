@@ -523,8 +523,24 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
         goto return_packetbuf;
     }
     totalbuflen = gwbuf_length(readbuf);
-    data        = (uint8_t *)GWBUF_DATA((readbuf));
-    packetlen   = MYSQL_GET_PACKET_LEN(data) + 4;
+    if (totalbuflen < MYSQL_HEADER_LEN)
+    {
+        packetbuf = NULL;
+        goto return_packetbuf;
+    }
+
+    if (GWBUF_LENGTH(readbuf) >= 3) // The length is in the 3 first bytes.
+    {
+        data = (uint8_t *)GWBUF_DATA((readbuf));
+        packetlen = MYSQL_GET_PACKET_LEN(data) + 4;
+    }
+    else
+    {
+        // The header is split between two GWBUFs.
+        uint8_t length[3];
+        gwbuf_copy_data(readbuf, 0, 3, length);
+        packetlen = MYSQL_GET_PACKET_LEN(length) + 4;
+    }
 
     /** packet is incomplete */
     if (packetlen > totalbuflen)
