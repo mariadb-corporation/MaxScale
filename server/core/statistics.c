@@ -58,7 +58,7 @@ void ts_stats_end()
 ts_stats_t ts_stats_alloc()
 {
     ss_dassert(stats_initialized);
-    return MXS_CALLOC(thread_count, sizeof(int));
+    return MXS_CALLOC(thread_count, sizeof(int64_t));
 }
 
 /**
@@ -80,13 +80,13 @@ void ts_stats_free(ts_stats_t stats)
  * @param stats Statistics to read
  * @return Value of statistics
  */
-int ts_stats_sum(ts_stats_t stats)
+int64_t ts_stats_sum(ts_stats_t stats)
 {
     ss_dassert(stats_initialized);
-    int sum = 0;
+    int64_t sum = 0;
     for (int i = 0; i < thread_count; i++)
     {
-        sum += ((int*)stats)[i];
+        sum += ((int64_t*)stats)[i];
     }
     return sum;
 }

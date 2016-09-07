@@ -25,6 +25,8 @@
  * @endverbatim
  */
 
+#include <stdint.h>
+
 typedef void* ts_stats_t;
 
 /** stats_init should be called only once */
@@ -35,7 +37,7 @@ void ts_stats_end();
 
 ts_stats_t ts_stats_alloc();
 void ts_stats_free(ts_stats_t stats);
-int ts_stats_sum(ts_stats_t stats);
+int64_t ts_stats_sum(ts_stats_t stats);
 
 /**
  * @brief Increment thread statistics by one
@@ -46,7 +48,7 @@ int ts_stats_sum(ts_stats_t stats);
 static void inline
 ts_stats_increment(ts_stats_t stats, int thread_id)
 {
-    ((int*)stats)[thread_id]++;
+    ((int64_t*)stats)[thread_id]++;
 }
 
 /**
@@ -63,7 +65,7 @@ ts_stats_increment(ts_stats_t stats, int thread_id)
 static void inline
 ts_stats_set(ts_stats_t stats, int value, int thread_id)
 {
-    ((int*)stats)[thread_id] = value;
+    ((int64_t*)stats)[thread_id] = value;
 }
 
 #endif
