@@ -69,9 +69,6 @@
 #define SLAVE_HOSTS_HOSTNAME 1
 #define SLAVE_HOSTS_PORT 2
 
-
-extern char *strcasestr(const char *haystack, const char *needle);
-
 static void monitorMain(void *);
 
 static char *version_str = "V1.5.0";
@@ -437,55 +434,88 @@ static void diagnostics(DCB *dcb, const MONITOR *mon)
     }
 }
 
-static inline void monitor_mysql100_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info)
+enum mysql_server_version
 {
-    int isslave = 0;
-    MYSQL_RES* result;
-    MYSQL_ROW row;
+    MYSQL_SERVER_VERSION_100,
+    MYSQL_SERVER_VERSION_55,
+    MYSQL_SERVER_VERSION_51
+};
 
-    if (mysql_query(database->con, "SHOW ALL SLAVES STATUS") == 0
+static inline void monitor_mysql_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info,
+                                    enum mysql_server_version server_version)
+{
+    int columns, i_io_thread, i_sql_thread, i_binlog_pos, i_master_id, i_binlog_name;
+    const char *query;
+
+    if (server_version == MYSQL_SERVER_VERSION_100)
+    {
+        columns = 42;
+        query = "SHOW ALL SLAVES STATUS";
+        i_io_thread = MARIA10_STATUS_IO_RUNNING;
+        i_sql_thread = MARIA10_STATUS_SQL_RUNNING;
+        i_binlog_name = MARIA10_STATUS_BINLOG_NAME;
+        i_binlog_pos = MARIA10_STATUS_BINLOG_POS;
+        i_master_id = MARIA10_STATUS_MASTER_ID;
+    }
+    else
+    {
+        columns = server_version == MYSQL_SERVER_VERSION_55 ? 40 : 38;
+        query = "SHOW SLAVE STATUS";
+        i_io_thread = MYSQL55_STATUS_IO_RUNNING;
+        i_sql_thread = MYSQL55_STATUS_SQL_RUNNING;
+        i_binlog_name = MYSQL55_STATUS_BINLOG_NAME;
+        i_binlog_pos = MYSQL55_STATUS_BINLOG_POS;
+        i_master_id = MYSQL55_STATUS_MASTER_ID;
+    }
+
+    /** Clear old states */
+    monitor_clear_pending_status(database, SERVER_SLAVE | SERVER_MASTER | SERVER_RELAY_MASTER |
+                                 SERVER_STALE_STATUS | SERVER_SLAVE_OF_EXTERNAL_MASTER);
+
+    MYSQL_RES* result;
+
+    if (mysql_query(database->con, query) == 0
         && (result = mysql_store_result(database->con)) != NULL)
     {
-        int i = 0;
-        long master_id = -1;
-
-        if (mysql_field_count(database->con) < 42)
+        if (mysql_field_count(database->con) < columns)
         {
             mysql_free_result(result);
-            MXS_ERROR("\"SHOW ALL SLAVES STATUS\" "
-                      "returned less than the expected amount of columns. Expected 42 columns."
-                      " MySQL Version: %s", version_str);
+            MXS_ERROR("\"%s\" returned less than the expected amount of columns. "
+                      "Expected %d columns. MySQL Version: %s", query, columns, version_str);
             return;
         }
 
-        row = mysql_fetch_row(result);
+        MYSQL_ROW row = mysql_fetch_row(result);
+        long master_id = -1;
 
         if (row)
         {
             serv_info->slave_configured = true;
+            int nconfigured = 0;
+            int nrunning = 0;
 
             do
             {
                 /* get Slave_IO_Running and Slave_SQL_Running values*/
-                serv_info->slave_io = strncmp(row[MARIA10_STATUS_IO_RUNNING], "Yes", 3) == 0;
-                serv_info->slave_sql = strncmp(row[MARIA10_STATUS_SQL_RUNNING], "Yes", 3) == 0;
+                serv_info->slave_io = strncmp(row[i_io_thread], "Yes", 3) == 0;
+                serv_info->slave_sql = strncmp(row[i_sql_thread], "Yes", 3) == 0;
 
                 if (serv_info->slave_io && serv_info->slave_sql)
                 {
-                    if (isslave == 0)
+                    if (nrunning == 0)
                     {
-                        /** Only check binlog name for the first slave */
-                        char *binlog_name = MXS_STRDUP(row[MARIA10_STATUS_BINLOG_NAME]);
+                        /** Only check binlog name for the first running slave */
+                        char *binlog_name = MXS_STRDUP(row[i_binlog_name]);
 
                         if (binlog_name)
                         {
                             MXS_FREE(serv_info->binlog_name);
                             serv_info->binlog_name = binlog_name;
-                            serv_info->binlog_pos = atol(row[MARIA10_STATUS_BINLOG_POS]);
+                            serv_info->binlog_pos = atol(row[i_binlog_pos]);
                         }
                     }
 
-                    isslave += 1;
+                    nrunning++;
                 }
 
                 /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
@@ -493,24 +523,31 @@ static inline void monitor_mysql100_db(MONITOR_SERVERS* database, MYSQL_SERVER_I
                  * root master server.
                  * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
                  */
-                if (serv_info->slave_io)
+                if (serv_info->slave_io && server_version != MYSQL_SERVER_VERSION_51)
                 {
-                    /* get Master_Server_Id values */
-                    master_id = atol(row[MARIA10_STATUS_MASTER_ID]);
+                    /* Get Master_Server_Id */
+                    master_id = atol(row[i_master_id]);
                     if (master_id == 0)
                     {
                         master_id = -1;
                     }
                 }
 
-                i++;
+                nconfigured++;
                 row = mysql_fetch_row(result);
             }
             while (row);
+
+
+            /* If all configured slaves are running set this node as slave */
+            if (nrunning > 0 && nrunning == nconfigured)
+            {
+                monitor_set_pending_status(database, SERVER_SLAVE);
+            }
         }
         else
         {
-            /** SHOW ALL SLAVES STATUS returned no rows, replication not configured */
+            /** Query returned no rows, replication is not configured */
             serv_info->slave_configured = false;
             serv_info->slave_io = false;
             serv_info->slave_sql = false;
@@ -518,227 +555,11 @@ static inline void monitor_mysql100_db(MONITOR_SERVERS* database, MYSQL_SERVER_I
             serv_info->binlog_name[0] = '\0';
         }
 
-        /* store master_id of current node */
+        /** Store master_id of current node. For MySQL 5.1 it will be set at a later point. */
         database->server->master_id = master_id;
         serv_info->master_id = master_id;
 
         mysql_free_result(result);
-
-        /* If all configured slaves are running set this node as slave */
-        if (isslave > 0 && isslave == i)
-        {
-            isslave = 1;
-        }
-        else
-        {
-            isslave = 0;
-        }
-    }
-
-    /* Remove addition info */
-    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-
-    /* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
-     * will be assigned in the monitorMain() via get_replication_tree() routine
-     */
-
-    /* Set the Slave Role */
-    if (isslave)
-    {
-        monitor_set_pending_status(database, SERVER_SLAVE);
-        /* Avoid any possible stale Master state */
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-    else
-    {
-        /* Avoid any possible Master/Slave stale state */
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-}
-
-static inline void monitor_mysql55_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info)
-{
-    bool isslave = false;
-    MYSQL_RES* result;
-    MYSQL_ROW row;
-
-    if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
-    {
-        long master_id = -1;
-        if (mysql_field_count(database->con) < 40)
-        {
-            mysql_free_result(result);
-            MXS_ERROR("\"SHOW SLAVE STATUS\" "
-                      "returned less than the expected amount of columns. Expected 40 columns."
-                      " MySQL Version: %s", version_str);
-            return;
-        }
-
-        row = mysql_fetch_row(result);
-
-        if (row)
-        {
-            serv_info->slave_configured = true;
-
-            do
-            {
-                /* get Slave_IO_Running and Slave_SQL_Running values*/
-                serv_info->slave_io = strncmp(row[MYSQL55_STATUS_IO_RUNNING], "Yes", 3) == 0;
-                serv_info->slave_sql = strncmp(row[MYSQL55_STATUS_SQL_RUNNING], "Yes", 3) == 0;
-
-                if (serv_info->slave_io && serv_info->slave_sql)
-                {
-                    isslave = 1;
-
-                    serv_info->binlog_pos = atol(row[MYSQL55_STATUS_BINLOG_POS]);
-                    char *binlog_name = MXS_STRDUP(row[MYSQL55_STATUS_BINLOG_NAME]);
-
-                    if (binlog_name)
-                    {
-                        MXS_FREE(serv_info->binlog_name);
-                        serv_info->binlog_name = binlog_name;
-                    }
-                }
-
-                /* If Slave_IO_Running = Yes, assign the master_id to current server: this allows building
-                 * the replication tree, slaves ids will be added to master(s) and we will have at least the
-                 * root master server.
-                 * Please note, there could be no slaves at all if Slave_SQL_Running == 'No'
-                 */
-                if (serv_info->slave_io)
-                {
-                    /* get Master_Server_Id values */
-                    master_id = atol(row[MYSQL55_STATUS_MASTER_ID]);
-                    if (master_id == 0)
-                    {
-                        master_id = -1;
-                    }
-                }
-                row = mysql_fetch_row(result);
-            }
-            while (row);
-        }
-        else
-        {
-            /** SHOW SLAVE STATUS returned no rows, slave is not configured. */
-            serv_info->slave_configured = false;
-            serv_info->binlog_pos = 0;
-            serv_info->binlog_name[0] = '\0';
-        }
-        /* store master_id of current node */
-        database->server->master_id = master_id;
-        serv_info->master_id = master_id;
-
-        mysql_free_result(result);
-    }
-
-    /* Remove addition info */
-    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-
-    /* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
-     * will be assigned in the monitorMain() via get_replication_tree() routine
-     */
-
-    /* Set the Slave Role */
-    if (isslave)
-    {
-        monitor_set_pending_status(database, SERVER_SLAVE);
-        /* Avoid any possible stale Master state */
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-    else
-    {
-        /* Avoid any possible Master/Slave stale state */
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-}
-
-static inline void monitor_mysql51_db(MONITOR_SERVERS* database, MYSQL_SERVER_INFO *serv_info)
-{
-    bool isslave = false;
-    MYSQL_RES* result;
-    MYSQL_ROW row;
-
-    if (mysql_query(database->con, "SHOW SLAVE STATUS") == 0
-        && (result = mysql_store_result(database->con)) != NULL)
-    {
-        if (mysql_field_count(database->con) < 38)
-        {
-            mysql_free_result(result);
-
-            MXS_ERROR("\"SHOW SLAVE STATUS\" "
-                      "returned less than the expected amount of columns. Expected 38 columns."
-                      " MySQL Version: %s", version_str);
-            return;
-        }
-
-        row = mysql_fetch_row(result);
-
-        if (row)
-        {
-            serv_info->slave_configured = true;
-
-            do
-            {
-                /* get Slave_IO_Running and Slave_SQL_Running values*/
-                serv_info->slave_io = strncmp(row[MYSQL55_STATUS_IO_RUNNING], "Yes", 3) == 0;
-                serv_info->slave_sql = strncmp(row[MYSQL55_STATUS_SQL_RUNNING], "Yes", 3) == 0;
-
-                if (serv_info->slave_io && serv_info->slave_sql)
-                {
-                    isslave = 1;
-
-                    serv_info->binlog_pos = atol(row[MYSQL55_STATUS_BINLOG_POS]);
-                    char *binlog_name = MXS_STRDUP(row[MYSQL55_STATUS_BINLOG_NAME]);
-
-                    if (binlog_name)
-                    {
-                        MXS_FREE(serv_info->binlog_name);
-                        serv_info->binlog_name = binlog_name;
-                    }
-                }
-
-                row = mysql_fetch_row(result);
-            }
-            while (row);
-        }
-        else
-        {
-            /** SHOW SLAVE STATUS returned no rows, slave is not configured. */
-            serv_info->slave_configured = false;
-            serv_info->binlog_pos = 0;
-            serv_info->binlog_name[0] = '\0';
-        }
-
-        mysql_free_result(result);
-        serv_info->master_id = -1;
-    }
-
-    /* Remove addition info */
-    monitor_clear_pending_status(database, SERVER_SLAVE_OF_EXTERNAL_MASTER);
-    monitor_clear_pending_status(database, SERVER_STALE_STATUS);
-
-    /* Please note, the MASTER status and SERVER_SLAVE_OF_EXTERNAL_MASTER
-     * will be assigned in the monitorMain() via get_replication_tree() routine
-     */
-
-    /* Set the Slave Role */
-    if (isslave)
-    {
-        monitor_set_pending_status(database, SERVER_SLAVE);
-        /* Avoid any possible stale Master state */
-        monitor_clear_pending_status(database, SERVER_MASTER);
-    }
-    else
-    {
-        /* Avoid any possible Master/Slave stale state */
-        monitor_clear_pending_status(database, SERVER_SLAVE);
-        monitor_clear_pending_status(database, SERVER_MASTER);
     }
 }
 
@@ -969,17 +790,17 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
     /* Check first for MariaDB 10.x.x and get status for multi-master replication */
     if (server_version >= 100000)
     {
-        monitor_mysql100_db(database, serv_info);
+        monitor_mysql_db(database, serv_info, MYSQL_SERVER_VERSION_100);
     }
     else if (server_version >= 5 * 10000 + 5 * 100)
     {
-        monitor_mysql55_db(database, serv_info);
+        monitor_mysql_db(database, serv_info, MYSQL_SERVER_VERSION_55);
     }
     else
     {
         if (handle->mysql51_replication)
         {
-            monitor_mysql51_db(database, serv_info);
+            monitor_mysql_db(database, serv_info, MYSQL_SERVER_VERSION_51);
         }
         else if (report_version_err)
         {
