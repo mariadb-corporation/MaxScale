@@ -491,65 +491,52 @@ int modutil_send_mysql_err_packet(DCB        *dcb,
 }
 
 /**
- * Buffer contains at least one of the following:
- * complete [complete] [partial] mysql packet
+ * Return the first packet from a buffer.
  *
- * return pointer to gwbuf containing a complete packet or
- *   NULL if no complete packet was found.
+ * @param p_readbuf Pointer to pointer to GWBUF. If the GWBUF contains a
+ *                  complete packet, after the call it will have been updated
+ *                  to begin at the byte following the packet.
+ *
+ * @return Pointer to GWBUF if the buffer contained at least one complete packet,
+ *         otherwise NULL.
+ *
+ * @attention The returned GWBUF is not necessarily contiguous.
  */
 GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
 {
-    GWBUF*   packetbuf;
-    GWBUF*   readbuf;
-    size_t   packetlen;
-    size_t   totalbuflen;
-    uint8_t* data;
+    GWBUF *packet = NULL;
+    GWBUF *readbuf = *p_readbuf;
 
-    readbuf = *p_readbuf;
+    if (readbuf)
+    {
+        CHK_GWBUF(readbuf);
 
-    if (readbuf == NULL)
-    {
-        packetbuf = NULL;
-        goto return_packetbuf;
-    }
-    CHK_GWBUF(readbuf);
+        size_t totalbuflen = gwbuf_length(readbuf);
+        if (totalbuflen >= MYSQL_HEADER_LEN)
+        {
+            size_t packetlen;
 
-    if (GWBUF_EMPTY(readbuf))
-    {
-        packetbuf = NULL;
-        goto return_packetbuf;
-    }
-    totalbuflen = gwbuf_length(readbuf);
-    if (totalbuflen < MYSQL_HEADER_LEN)
-    {
-        packetbuf = NULL;
-        goto return_packetbuf;
-    }
+            if (GWBUF_LENGTH(readbuf) >= 3) // The length is in the 3 first bytes.
+            {
+                uint8_t *data = (uint8_t *)GWBUF_DATA((readbuf));
+                packetlen = MYSQL_GET_PACKET_LEN(data) + 4;
+            }
+            else
+            {
+                // The header is split between two GWBUFs.
+                uint8_t data[3];
+                gwbuf_copy_data(readbuf, 0, 3, data);
+                packetlen = MYSQL_GET_PACKET_LEN(data) + 4;
+            }
 
-    if (GWBUF_LENGTH(readbuf) >= 3) // The length is in the 3 first bytes.
-    {
-        data = (uint8_t *)GWBUF_DATA((readbuf));
-        packetlen = MYSQL_GET_PACKET_LEN(data) + 4;
-    }
-    else
-    {
-        // The header is split between two GWBUFs.
-        uint8_t length[3];
-        gwbuf_copy_data(readbuf, 0, 3, length);
-        packetlen = MYSQL_GET_PACKET_LEN(length) + 4;
+            if (packetlen <= totalbuflen)
+            {
+                packet = gwbuf_split(p_readbuf, packetlen);
+            }
+        }
     }
 
-    /** packet is incomplete */
-    if (packetlen > totalbuflen)
-    {
-        packetbuf = NULL;
-        goto return_packetbuf;
-    }
-
-    packetbuf = gwbuf_split(p_readbuf, packetlen);
-
-return_packetbuf:
-    return packetbuf;
+    return packet;
 }
 
 /**
