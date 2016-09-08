@@ -501,12 +501,9 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
 {
     GWBUF*   packetbuf;
     GWBUF*   readbuf;
-    size_t   buflen;
     size_t   packetlen;
     size_t   totalbuflen;
     uint8_t* data;
-    size_t   nbytes_copied = 0;
-    uint8_t* target;
 
     readbuf = *p_readbuf;
 
@@ -549,27 +546,7 @@ GWBUF* modutil_get_next_MySQL_packet(GWBUF** p_readbuf)
         goto return_packetbuf;
     }
 
-    packetbuf = gwbuf_alloc(packetlen);
-    target    = GWBUF_DATA(packetbuf);
-    packetbuf->gwbuf_type = readbuf->gwbuf_type; /*< Copy the type too */
-    /**
-     * Copy first MySQL packet to packetbuf and leave posible other
-     * packets to read buffer.
-     */
-    while (nbytes_copied < packetlen && totalbuflen > 0)
-    {
-        uint8_t* src = GWBUF_DATA((*p_readbuf));
-        size_t   bytestocopy;
-
-        buflen = GWBUF_LENGTH((*p_readbuf));
-        bytestocopy = MIN(buflen, packetlen - nbytes_copied);
-
-        memcpy(target + nbytes_copied, src, bytestocopy);
-        *p_readbuf = gwbuf_consume((*p_readbuf), bytestocopy);
-        totalbuflen = gwbuf_length((*p_readbuf));
-        nbytes_copied += bytestocopy;
-    }
-    ss_dassert(buflen == 0 || nbytes_copied == packetlen);
+    packetbuf = gwbuf_split(p_readbuf, packetlen);
 
 return_packetbuf:
     return packetbuf;
