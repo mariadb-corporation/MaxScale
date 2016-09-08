@@ -12,7 +12,7 @@
  */
 
 /**
- * @file http_ba__auth.c
+ * @file http_ba_auth.c
  *
  * MaxScale HTTP Basic Access authentication for the HTTPD protocol module.
  *
@@ -32,6 +32,7 @@
 #include <openssl/bio.h>
 #include <service.h>
 #include <secrets.h>
+#include <users.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
@@ -46,7 +47,7 @@ MODULE_INFO info =
 };
 /*lint +e14 */
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.1.0";
 
 static int http_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool http_auth_is_client_ssl_capable(DCB *dcb);
@@ -62,6 +63,7 @@ static GWAUTHENTICATOR MyObject =
     http_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
     http_auth_authenticate,                /* Authenticate user credentials */
     http_auth_free_client_data,            /* Free the client data held in DCB */
+    users_default_loadusers
 };
 
 typedef struct http_auth

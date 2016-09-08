@@ -31,6 +31,7 @@
 #include <modinfo.h>
 #include <dcb.h>
 #include <buffer.h>
+#include <users.h>
 
 /* @see function load_module in load_utils.c for explanation of the following
  * lint directives.
@@ -45,7 +46,7 @@ MODULE_INFO info =
 };
 /*lint +e14 */
 
-static char *version_str = "V1.0.0";
+static char *version_str = "V1.1.0";
 
 static int null_auth_set_protocol_data(DCB *dcb, GWBUF *buf);
 static bool null_auth_is_client_ssl_capable(DCB *dcb);
@@ -61,6 +62,7 @@ static GWAUTHENTICATOR MyObject =
     null_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
     null_auth_authenticate,                /* Authenticate user credentials */
     null_auth_free_client_data,            /* Free the client data held in DCB */
+    users_default_loadusers
 };
 
 /**

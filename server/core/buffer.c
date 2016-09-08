@@ -143,7 +143,7 @@ retblock:
  *              be allocated.
  */
 GWBUF *
-gwbuf_alloc_and_load(unsigned int size, void *data)
+gwbuf_alloc_and_load(unsigned int size, const void *data)
 {
     GWBUF      *rval;
     if ((rval = gwbuf_alloc(size)) != NULL)

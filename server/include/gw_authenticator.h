@@ -36,6 +36,7 @@
 struct dcb;
 struct server;
 struct session;
+struct servlistener;
 
 /**
  * @verbatim
@@ -44,6 +45,8 @@ struct session;
  *      extract         Extract the data from a buffer and place in a structure
  *      connectssl      Determine whether the connection can support SSL
  *      authenticate    Carry out the authentication
+ *      free            Free extracted data
+ *      loadusers       Load or update authenticator user data
  * @endverbatim
  *
  * This forms the "module object" for authenticator modules within the gateway.
@@ -56,14 +59,19 @@ typedef struct gw_authenticator
     bool (*connectssl)(struct dcb *);
     int (*authenticate)(struct dcb *);
     void (*free)(struct dcb *);
+    int (*loadusers)(struct servlistener *);
 } GWAUTHENTICATOR;
+
+/** Return values for the loadusers entry point */
+#define AUTH_LOADUSERS_OK    0 /**< Users loaded successfully */
+#define AUTH_LOADUSERS_ERROR 1 /**< Failed to load users */
 
 /**
  * The GWAUTHENTICATOR version data. The following should be updated whenever
  * the GWAUTHENTICATOR structure is changed. See the rules defined in modinfo.h
  * that define how these numbers should change.
  */
-#define GWAUTHENTICATOR_VERSION      {1, 0, 0}
+#define GWAUTHENTICATOR_VERSION      {1, 1, 0}
 
 
 #endif /* GW_AUTHENTICATOR_H */

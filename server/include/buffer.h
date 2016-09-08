@@ -183,7 +183,7 @@ typedef struct gwbuf
  * Function prototypes for the API to maniplate the buffers
  */
 extern GWBUF            *gwbuf_alloc(unsigned int size);
-extern GWBUF            *gwbuf_alloc_and_load(unsigned int size, void *data);
+extern GWBUF            *gwbuf_alloc_and_load(unsigned int size, const void *data);
 extern void             gwbuf_free(GWBUF *buf);
 extern GWBUF            *gwbuf_clone(GWBUF *buf);
 extern GWBUF            *gwbuf_append(GWBUF *head, GWBUF *tail);
