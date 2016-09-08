@@ -152,7 +152,6 @@ A complete example of a service entry for a binlog router service would be as fo
     [Replication]
     type=service
     router=binlogrouter
-    servers=masterdb
     version_string=5.6.17-log
     user=maxscale
     passwd=Mhu87p2D
