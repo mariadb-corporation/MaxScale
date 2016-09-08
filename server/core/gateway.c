@@ -880,16 +880,14 @@ static void usage(void)
             "  -f, --config=FILE           relative or absolute pathname of MaxScale configuration file\n"
             "                              (default:/etc/maxscale.cnf)\n"
             "  -l, --log=[file|shm|stdout] log to file, shared memory or stdout (default: file)\n"
-            "  -L, --logdir=PATH           path to log file directory (default: /var/log/maxscale)\n"
-            "  -A, --cachedir=PATH         path to cache directory (default: /var/cache/maxscale)\n"
-            "  -B, --libdir=PATH           path to module directory (default: /usr/lib64/maxscale)\n"
-            "  -C, --configdir=PATH        path to configuration file directory (default: /etc/)\n"
+            "  -L, --logdir=PATH           path to log file directory\n"
+            "  -A, --cachedir=PATH         path to cache directory\n"
+            "  -B, --libdir=PATH           path to module directory\n"
+            "  -C, --configdir=PATH        path to configuration file directory\n"
             "  -D, --datadir=PATH          path to data directory, stored embedded mysql tables\n"
-            "                              (default: /var/cache/maxscale)\n"
             "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
-            "                              (default: /usr/bin)\n"
-            "  -N, --language=PATH          path to errmsg.sys file (default: /var/lib/maxscale)\n"
-            "  -P, --piddir=PATH           path to PID file directory (default: /var/run/maxscale)\n"
+            "  -N, --language=PATH         path to errmsg.sys file\n"
+            "  -P, --piddir=PATH           path to PID file directory\n"
             "  -U, --user=USER             run MaxScale as another user.\n"
             "                              The user ID and group ID of this user are used to run MaxScale.\n"
             "  -s, --syslog=[yes|no]       log messages to syslog (default:yes)\n"
@@ -900,7 +898,19 @@ static void usage(void)
             "  -v, --version               print version info and exit\n"
             "  -V, --version-full          print full version info and exit\n"
             "  -?, --help                  show this help\n"
-            , progname);
+            "\n"
+            "Defaults:\n"
+            "  logdir   : %s\n"
+            "  cachedir : %s\n"
+            "  libdir   : %s\n"
+            "  configdir: %s\n"
+            "  datadir  : %s\n"
+            "  execdir  : %s\n"
+            "  language : %s\n"
+            "  piddir   : %s\n"
+            , progname
+            , get_logdir(), get_cachedir(), get_libdir(), get_configdir()
+            , get_datadir(), get_execdir(), get_langdir(), get_piddir());
 }
 
 
