@@ -124,23 +124,24 @@ const char *progname = NULL;
 static struct option long_options[] =
 {
     {"config-check",     no_argument,       0, 'c'},
-    {"config",           required_argument, 0, 'f'},
     {"nodaemon",         no_argument,       0, 'd'},
+    {"config",           required_argument, 0, 'f'},
     {"log",              required_argument, 0, 'l'},
     {"logdir",           required_argument, 0, 'L'},
-    {"datadir",          required_argument, 0, 'D'},
-    {"configdir",        required_argument, 0, 'C'},
-    {"piddir",           required_argument, 0, 'P'},
-    {"libdir",           required_argument, 0, 'B'},
     {"cachedir",         required_argument, 0, 'A'},
+    {"libdir",           required_argument, 0, 'B'},
+    {"configdir",        required_argument, 0, 'C'},
+    {"datadir",          required_argument, 0, 'D'},
+    {"execdir",          required_argument, 0, 'E'},
     {"language",         required_argument, 0, 'N'},
-    {"syslog",           required_argument, 0, 's'},
-    {"maxlog",          required_argument, 0, 'S'},
+    {"piddir",           required_argument, 0, 'P'},
     {"user",             required_argument, 0, 'U'},
-    {"version",          no_argument,       0, 'v'},
-    {"help",             no_argument,       0, '?'},
-    {"version-full",     no_argument,       0, 'V'},
+    {"syslog",           required_argument, 0, 's'},
+    {"maxlog",           required_argument, 0, 'S'},
     {"log_augmentation", required_argument, 0, 'G'},
+    {"version",          no_argument,       0, 'v'},
+    {"version-full",     no_argument,       0, 'V'},
+    {"help",             no_argument,       0, '?'},
     {0, 0, 0, 0}
 };
 static bool syslog_configured = false;
@@ -874,31 +875,31 @@ static void usage(void)
 {
     fprintf(stderr,
             "\nUsage : %s [OPTION]...\n\n"
-            "  -c, --config-check         Validate configuration file and exit\n"
-            "  -d, --nodaemon             enable running in terminal process (default:disabled)\n"
-            "  -f, --config=FILE          relative or absolute pathname of MaxScale configuration file\n"
-            "                             (default:/etc/maxscale.cnf)\n"
+            "  -c, --config-check          Validate configuration file and exit\n"
+            "  -d, --nodaemon              enable running in terminal process (default:disabled)\n"
+            "  -f, --config=FILE           relative or absolute pathname of MaxScale configuration file\n"
+            "                              (default:/etc/maxscale.cnf)\n"
             "  -l, --log=[file|shm|stdout] log to file, shared memory or stdout (default: file)\n"
-            "  -L, --logdir=PATH          path to log file directory (default: /var/log/maxscale)\n"
-            "  -A, --cachedir=PATH        path to cache directory (default: /var/cache/maxscale)\n"
-            "  -B, --libdir=PATH          path to module directory (default: /usr/lib64/maxscale)\n"
-            "  -C, --configdir=PATH       path to configuration file directory (default: /etc/)\n"
-            "  -D, --datadir=PATH         path to data directory, stored embedded mysql tables\n"
-            "                             (default: /var/cache/maxscale)\n"
-            "  -E, --execdir=PATH         path to the maxscale and other executable files\n"
-            "                             (default: /usr/bin)\n"
-            "  -N, --language=PATH         path to errmsg.sys file (default: /var/lib/maxscale)\n"
-            "  -P, --piddir=PATH          path to PID file directory (default: /var/run/maxscale)\n"
-            "  -U, --user=USER            run MaxScale as another user.\n"
-            "                             The user ID and group ID of this user are used to run MaxScale.\n"
-            "  -s, --syslog=[yes|no]      log messages to syslog (default:yes)\n"
-            "  -S, --maxlog=[yes|no]      log messages to MaxScale log (default: yes)\n"
-            "  -G, --log_augmentation=0|1 augment messages with the name of the function where\n"
-            "                             the message was logged (default: 0). Primarily for \n"
-            "                             development purposes.\n"
-            "  -v, --version              print version info and exit\n"
-            "  -V, --version-full         print full version info and exit\n"
-            "  -?, --help                 show this help\n"
+            "  -L, --logdir=PATH           path to log file directory (default: /var/log/maxscale)\n"
+            "  -A, --cachedir=PATH         path to cache directory (default: /var/cache/maxscale)\n"
+            "  -B, --libdir=PATH           path to module directory (default: /usr/lib64/maxscale)\n"
+            "  -C, --configdir=PATH        path to configuration file directory (default: /etc/)\n"
+            "  -D, --datadir=PATH          path to data directory, stored embedded mysql tables\n"
+            "                              (default: /var/cache/maxscale)\n"
+            "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
+            "                              (default: /usr/bin)\n"
+            "  -N, --language=PATH          path to errmsg.sys file (default: /var/lib/maxscale)\n"
+            "  -P, --piddir=PATH           path to PID file directory (default: /var/run/maxscale)\n"
+            "  -U, --user=USER             run MaxScale as another user.\n"
+            "                              The user ID and group ID of this user are used to run MaxScale.\n"
+            "  -s, --syslog=[yes|no]       log messages to syslog (default:yes)\n"
+            "  -S, --maxlog=[yes|no]       log messages to MaxScale log (default: yes)\n"
+            "  -G, --log_augmentation=0|1  augment messages with the name of the function where\n"
+            "                              the message was logged (default: 0). Primarily for \n"
+            "                              development purposes.\n"
+            "  -v, --version               print version info and exit\n"
+            "  -V, --version-full          print full version info and exit\n"
+            "  -?, --help                  show this help\n"
             , progname);
 }
 
