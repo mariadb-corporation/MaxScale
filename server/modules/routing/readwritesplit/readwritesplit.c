@@ -942,7 +942,7 @@ static void closeSession(ROUTER *instance, void *router_session)
                 }
 #endif
                 /** Clean operation counter in bref and in SERVER */
-                while (BREF_IS_WAITING_RESULT(bref))
+                if (BREF_IS_WAITING_RESULT(bref))
                 {
                     bref_clear_state(bref, BREF_WAITING_RESULT);
                 }
@@ -954,6 +954,10 @@ static void closeSession(ROUTER *instance, void *router_session)
                 dcb_close(dcb);
                 /** decrease server current connection counters */
                 atomic_add(&bref->bref_backend->backend_conn_count, -1);
+            }
+            else
+            {
+                ss_dassert(!BREF_IS_WAITING_RESULT(bref));
             }
         }
         /** Unlock */
@@ -2796,11 +2800,8 @@ static void bref_clear_state(backend_ref_t *bref, bref_state_t state)
         MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
         return;
     }
-    if (state != BREF_WAITING_RESULT)
-    {
-        bref->bref_state &= ~state;
-    }
-    else
+
+    if ((state & BREF_WAITING_RESULT) && (bref->bref_state & BREF_WAITING_RESULT))
     {
         int prev1;
         int prev2;
@@ -2825,6 +2826,8 @@ static void bref_clear_state(backend_ref_t *bref, bref_state_t state)
             }
         }
     }
+
+    bref->bref_state &= ~state;
 }
 
 static void bref_set_state(backend_ref_t *bref, bref_state_t state)
@@ -2834,11 +2837,8 @@ static void bref_set_state(backend_ref_t *bref, bref_state_t state)
         MXS_ERROR("[%s] Error: NULL parameter.", __FUNCTION__);
         return;
     }
-    if (state != BREF_WAITING_RESULT)
-    {
-        bref->bref_state |= state;
-    }
-    else
+
+    if ((state & BREF_WAITING_RESULT) && (bref->bref_state & BREF_WAITING_RESULT) == 0)
     {
         int prev1;
         int prev2;
@@ -2864,6 +2864,8 @@ static void bref_set_state(backend_ref_t *bref, bref_state_t state)
                       bref->bref_backend->backend_server->port);
         }
     }
+
+    bref->bref_state |= state;
 }
 
 /**
