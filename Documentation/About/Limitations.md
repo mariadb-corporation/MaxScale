@@ -7,12 +7,12 @@ to specific plugins or to MariaDB MaxScale as a whole this document is divided
 into a number of sections, the purpose of which are to isolate the
 limitations to the components which illustrate them.
 
-## Limitations in the MariaDB MaxScale core
+# Limitations in the MariaDB MaxScale core
 
 This section describes the limitations that are common to all
 configuration of plugins with MariaDB MaxScale.
 
-### Crash if one of several listeners for a Service fails as startup
+## Crash if one of several listeners for a Service fails as startup
 
 If a service has multiple listeners and one of those listeners fails
 at startup, MariaDB MaxScale will crash.
@@ -26,15 +26,24 @@ Workaround: Ensure that socket paths and ports are valid.
 Issues [MXS-710](https://jira.mariadb.org/browse/MXS-710) and
 [MXS-711](https://jira.mariadb.org/browse/MXS-711) relate to this.
 
+# Protocol limitations
+
 ## Limitations with MySQL Protocol support (MySQLClient)
 
 Compression is not included in MySQL server handshake
+
+# Monitor limitations
+
+A server can only be monitored by one monitor. If multiple monitors monitor the
+same server, the state of the server is non-deterministic.
 
 ## Limitations with Galera Cluster Monitoring (galeramon)
 
 The default master selection is based only on MIN(wsrep_local_index). This
 can be influenced with the server priority mechanic described in the
 [Galera Monitor](../Monitors/Galera-Monitor.md) manual.
+
+# Router limitations
 
 ## Limitations in the connection router (readconnroute)
 
@@ -191,20 +200,6 @@ possible that a slave fails to execute something because of some
 non-fatal, temporary failure, while the execution of the same command
 succeeds in other backends.
 
-## Authentication Related Limitations (MySQLAuth)
-
-* MariaDB MaxScale can not manage authentication that uses wildcard matching in hostnames
-  in the mysql.user table of the backend database. The only wildcards that can be
-  used are in IP address entries.
-
-* MySQL old style passwords are not supported. MySQL versions 4.1 and newer use
-  a new authentication protocol which does not support pre-4.1 style passwords.
-
-* When users have different passwords based on the host from which they connect
-  MariaDB MaxScale is unable to determine which password it should use to connect to the
-  backend database. This results in failed connections and unusable usernames
-  in MariaDB MaxScale.
-
 ## Schemarouter limitations (schemarouter)
 
 The schemarouter router currently has some limitations due to the nature of
@@ -234,11 +229,6 @@ and routed. Here is a list of the current limitations.
   the query will be routed to the first available server. This possibly
   returns an error about database rights instead of a missing database.
 
-## Database Firewall limitations (dbfwfilter)
-
-The Database Firewall filter does not support multi-statements. Using them
-will result in an error being sent to the client.
-
 ## Avrorouter limitations (avrorouter)
 
 The avrorouter does not support the following data types and conversions.
@@ -249,3 +239,30 @@ The avrorouter does not support the following data types and conversions.
 
 The avrorouter does not do any crash recovery. This means that the avro files
 need to be truncated to valid block lengths before starting the avrorouter.
+
+# Authenticator limitations
+
+## MySQL Authentication Related Limitations (MySQLAuth)
+
+* MariaDB MaxScale can not manage authentication that uses wildcard matching in hostnames
+  in the mysql.user table of the backend database. The only wildcards that can be
+  used are in IP address entries.
+
+* MySQL old style passwords are not supported. MySQL versions 4.1 and newer use
+  a new authentication protocol which does not support pre-4.1 style passwords.
+
+* When users have different passwords based on the host from which they connect
+  MariaDB MaxScale is unable to determine which password it should use to connect to the
+  backend database. This results in failed connections and unusable usernames
+  in MariaDB MaxScale.
+
+# Filter limitations
+
+Filters are not guaranteed to receive complete MySQL packets if they are used
+with the readconnroute router. This can be fixed by using the readwritesplit
+router.
+
+## Database Firewall limitations (dbfwfilter)
+
+The Database Firewall filter does not support multi-statements. Using them
+will result in an error being sent to the client.
