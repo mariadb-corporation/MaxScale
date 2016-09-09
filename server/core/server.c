@@ -135,7 +135,6 @@ server_free(SERVER *tofreeserver)
     free(tofreeserver->protocol);
     free(tofreeserver->unique_name);
     free(tofreeserver->server_string);
-    free(tofreeserver->slaves);
     server_parameter_free(tofreeserver->parameters);
 
     if (tofreeserver->persistent)
