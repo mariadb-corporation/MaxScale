@@ -21,6 +21,8 @@
 
 EXTERN_C_BLOCK_BEGIN
 
+// NOTE: If you make changes here, ensure they are compatible with the
+//       situation in <root>/CMakeLists.txt, where directories are installed.
 #define MXS_DEFAULT_PID_SUBPATH    "run/maxscale"
 #define MXS_DEFAULT_LOG_SUBPATH    "log/maxscale"
 #define MXS_DEFAULT_DATA_SUBPATH   "lib/maxscale"
