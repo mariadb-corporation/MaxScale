@@ -306,4 +306,3 @@ if (NOT CMAKE_INSTALL_PREFIX EQUAL "/usr")
   install(DIRECTORY DESTINATION var/log/maxscale)
   install(DIRECTORY DESTINATION var/run/maxscale)
 endif()
-
