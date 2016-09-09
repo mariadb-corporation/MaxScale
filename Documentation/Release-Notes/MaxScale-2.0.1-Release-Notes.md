@@ -11,6 +11,18 @@ of [2.0.0](./MaxScale-2.0.0-Release-Notes.md).
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
+## Changed default values
+
+### `strip_db_esc`
+
+The service parameter [_strip_db_esc_](../Getting-Started/Configuration-Guide.md#strip_db_esc)
+now defaults to true.
+
+### `detect_stale_master`
+
+The [stale master detection](../Monitors/MySQL-Monitor.md#detect_stale_master)
+feature is now enabled by default.
+
 ## Updated Features
 
 ### Starting MariaDB MaxScale
