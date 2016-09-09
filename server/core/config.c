@@ -185,6 +185,8 @@ static char *monitor_params[] =
     "disable_master_role_setting",
     "use_priority",
     "multimaster",
+    "failover",
+    "failcount",
     NULL
 };
 
