@@ -13,6 +13,28 @@ report at [Jira](https://jira.mariadb.org).
 
 ## Updated Features
 
+### Starting MariaDB MaxScale
+
+There is now a new command line parameter `--basedir=PATH` that will
+cause all directory paths and the location of the configuration file
+to be defined relative to that path.
+
+For instance, invoking MariaDB MaxScale like
+
+    $ maxscale --basedir=/path/maxscale
+
+has the same effect as invoking MariaDB MaxScale like
+
+    $ maxscale --config=/path/maxscale/etc/maxscale.cnf
+               --configdir=/path/maxscale/etc
+               --logdir=/path/maxscale/var/log/maxscale
+               --cachhedir=/path/maxscale/var/cache/maxscale
+               --libdir=/path/maxscale/lib/maxscale
+               --datadir=/path/maxscale/var/lib/maxscale
+               --execdir=/path/maxscale/bin
+               --language=/path/maxscale/var/lib/maxscale
+               --piddir=/path/maxscale/var/run/maxscale
+
 ### Password parameter
 
 In the configuration entry for a _service_ or _monitor_, the value of
