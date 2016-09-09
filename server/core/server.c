@@ -89,7 +89,6 @@ server_alloc(char *servname, char *protocol, unsigned short port)
     server->rlag = -2;
     server->master_id = -1;
     server->depth = -1;
-    server->slaves = NULL;
     server->parameters = NULL;
     server->server_string = NULL;
     spinlock_init(&server->lock);

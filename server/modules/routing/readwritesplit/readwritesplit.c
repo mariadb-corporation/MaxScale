@@ -1384,7 +1384,6 @@ static route_target_t get_route_target(ROUTER_CLIENT_SES *rses,
     }
     else
     {
-        /** hints don't affect on routing */
         ss_dassert(trx_active ||
                    (QUERY_IS_TYPE(qtype, QUERY_TYPE_WRITE) ||
                     QUERY_IS_TYPE(qtype, QUERY_TYPE_MASTER_READ) ||

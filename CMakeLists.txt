@@ -293,3 +293,17 @@ add_custom_target(generate_html
   -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
   -P generate-html.cmake
   COMMENT "Generating HTML files" VERBATIM)
+
+if(PACKAGE)
+  message(STATUS "You can install startup scripts and system configuration files for MaxScale by running the 'postinst' shell script located at ${CMAKE_INSTALL_PREFIX}.")
+  message(STATUS "To remove these installed files, run the 'postrm' shell script located in the same folder.")
+endif()
+
+# NOTE: If you make changes here, ensure they are compatible with the
+#       situation in gwdirs.h.in.
+if (NOT CMAKE_INSTALL_PREFIX EQUAL "/usr")
+  install(DIRECTORY DESTINATION var/cache/maxscale)
+  install(DIRECTORY DESTINATION var/log/maxscale)
+  install(DIRECTORY DESTINATION var/run/maxscale)
+endif()
+

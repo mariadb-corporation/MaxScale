@@ -152,16 +152,16 @@ conversion process, delete these two files and restart MaxScale.
 
 # Example Client
 
-The avrorouter comes with an example client program, _cdc_, written in Python 3.
+The avrorouter comes with an example client program, _cdc.py_, written in Python 3.
 This client can connect to a MaxScale configured with the CDC protocol and the
 avrorouter.
 
 Before using this client, you will need to install the Python 3 interpreter and
-add users to the service with the _cdc_users_ script. Fore more details about
+add users to the service with the _cdc_users.py_ script. Fore more details about
 the user creation, please refer to the [CDC Protocol](../Protocols/CDC.md)
 and [CDC Users](../Protocols/CDC_users.md) documentation.
 
-Read the output of `cdc --help` for a full list of supported options
+Read the output of `cdc.py --help` for a full list of supported options
 and a short usage description of the client program.
 
 # Avro Schema Generator
@@ -206,27 +206,27 @@ protocol=CDC
 port=4001
 ```
 
-Here is an example how you can query for data in JSON format using the _cdc_ Python script.
+Here is an example how you can query for data in JSON format using the _cdc.py_ Python script.
 It queries the table _test.mytable_ for all change records.
 
 ```
-cdc --user=myuser --password=mypasswd --host=127.0.0.1 --port=4001 test.mytable
+cdc.py --user=myuser --password=mypasswd --host=127.0.0.1 --port=4001 test.mytable
 ```
 
-You can then combine it with the _cdc_kafka_producer_ to publish these change records to a Kafka broker.
+You can then combine it with the _cdc_kafka_producer.py_ to publish these change records to a Kafka broker.
 
 ```
-cdc --user=myuser --password=mypasswd --host=127.0.0.1 --port=4001 test.mytable | cdc_kafka_producer --kafka-broker 127.0.0.1:9092 --kafka-topic test.mytable
+cdc.py --user=myuser --password=mypasswd --host=127.0.0.1 --port=4001 test.mytable | cdc_kafka_producer.py --kafka-broker 127.0.0.1:9092 --kafka-topic test.mytable
 ```
 
-For more information on how to use these scripts, see the output of `cdc -h` and `cdc_kafka_producer -h`.
+For more information on how to use these scripts, see the output of `cdc.py -h` and `cdc_kafka_producer.py -h`.
 
 # Building Avrorouter
 
 To build the avrorouter from source, you will need the [Avro C](https://avro.apache.org/docs/current/api/c/)
-library, liblzma and sqlite3 development headers. When configuring MaxScale with
-CMake, you will need to add `-DBUILD_AVRO=Y -DBUILD_CDC=Y` to build the
-avrorouter and the CDC protocol module.
+library, liblzma, [the Jansson library](http://www.digip.org/jansson/) and sqlite3 development headers. When
+configuring MaxScale with CMake, you will need to add `-DBUILD_AVRO=Y
+-DBUILD_CDC=Y` to build the avrorouter and the CDC protocol module.
 
 For more details about building MaxScale from source, please refer to the
 [Building MaxScale from Source Code](../Getting-Started/Building-MaxScale-from-Source-Code.md) document.

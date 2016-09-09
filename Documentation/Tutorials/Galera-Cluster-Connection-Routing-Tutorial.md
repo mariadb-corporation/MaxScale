@@ -117,9 +117,6 @@ The final stage in the configuration is to add the option service which is used 
 	protocol=maxscaled
 	socket=default
 
-**Note**: maxscaled protocol supports only UNIX domain sockets and in the example default is set.
-Changing it requires maxadmin to use -S with the new path. Default /tmp/maxadmin.sock is for both maxadmin and maxscaled.
-
 ## Starting MariaDB MaxScale
 
 Upon completion of the configuration process MariaDB MaxScale is ready to be started for the first time. This may either be done manually by running the maxscale command or via the service interface.

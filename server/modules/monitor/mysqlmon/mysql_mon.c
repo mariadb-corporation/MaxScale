@@ -547,7 +547,7 @@ static MONITOR_SERVERS *build_mysql51_replication_tree(MONITOR *mon)
                 if (mysql_num_rows(result) > 0)
                 {
                     ismaster = true;
-                    while (nslaves < MONITOR_MAX_NUM_SLAVES && (row = mysql_fetch_row(result)))
+                    while (nslaves < MAX_NUM_SLAVES && (row = mysql_fetch_row(result)))
                     {
                         /* get Slave_IO_Running and Slave_SQL_Running values*/
                         database->server->slaves[nslaves] = atol(row[0]);
@@ -835,13 +835,7 @@ monitorMain(void *arg)
             monitorDatabase(mon, ptr);
 
             /* reset the slave list of current node */
-            if (ptr->server->slaves)
-            {
-                MXS_FREE(ptr->server->slaves);
-            }
-            /* create a new slave list */
-            ptr->server->slaves = (long *) MXS_CALLOC(MONITOR_MAX_NUM_SLAVES, sizeof(long));
-            MXS_ABORT_IF_NULL(ptr->server->slaves);
+            memset(&ptr->server->slaves, 0, sizeof(ptr->server->slaves));
 
             num_servers++;
 
@@ -1448,7 +1442,8 @@ static MONITOR_SERVERS *get_replication_tree(MONITOR *mon, int num_servers)
                 master = getServerByNodeId(mon->databases, current->master_id);
                 if (master && master->server && master->server->node_id > 0)
                 {
-                    add_slave_to_master(master->server->slaves, MONITOR_MAX_NUM_SLAVES, current->node_id);
+                    add_slave_to_master(master->server->slaves, sizeof(master->server->slaves),
+                                        current->node_id);
                     master->server->depth = current->depth - 1;
                     monitor_set_pending_status(master, SERVER_MASTER);
                     handle->master = master;
@@ -1509,7 +1504,7 @@ static int add_slave_to_master(long *slaves_list, int list_size, long node_id)
     {
         if (slaves_list[i] == 0)
         {
-            memcpy(&slaves_list[i], &node_id, sizeof(long));
+            slaves_list[i] = node_id;
             return 1;
         }
     }

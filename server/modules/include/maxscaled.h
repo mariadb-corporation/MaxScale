@@ -28,16 +28,17 @@
 #include <spinlock.h>
 #include <housekeeper.h>
 /**
- * The telnetd specific protocol structure to put in the DCB.
+ * The maxscaled specific protocol structure to put in the DCB.
  */
-typedef struct  maxscaled
+typedef struct maxscaled
 {
-    SPINLOCK    lock;       /**< Protocol structure lock */
-    int     state;      /**< The connection state */
-    char        *username;  /**< The login name of the user */
+    SPINLOCK lock;      /**< Protocol structure lock */
+    int      state;     /**< The connection state */
+    char    *username;  /**< The login name of the user */
 } MAXSCALED;
 
-#define MAXSCALED_STATE_LOGIN   1   /**< Waiting for credentials */
-#define MAXSCALED_STATE_DATA    2   /**< User logged in */
+#define MAXSCALED_STATE_LOGIN   1   /**< Waiting for user */
+#define MAXSCALED_STATE_PASSWD  2   /**< Waiting for password */
+#define MAXSCALED_STATE_DATA    3   /**< User logged in */
 
 #endif

@@ -30,6 +30,11 @@ running|A server that is up and running. All servers that MariaDB MaxScale can c
 
 If no `router_options` parameter is configured in the service definition, the router will use the default value of `running`. This means that it will load balance connections across all running servers defined in the `servers` parameter of the service.
 
+When a connection is being created and the candidate server is being chosen, the
+list of servers is processed in from first entry to last. This means that if two
+servers with equal weight and status are found, the one that's listed first in
+the _servers_ parameter for the service is chosen.
+
 ## Limitations
 
 For a list of readconnroute limitations, please read the [Limitations](../About/Limitations.md) document.

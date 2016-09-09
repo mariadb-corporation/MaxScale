@@ -137,6 +137,7 @@ static struct option long_options[] =
     {"execdir",          required_argument, 0, 'E'},
     {"language",         required_argument, 0, 'N'},
     {"piddir",           required_argument, 0, 'P'},
+    {"basedir",          required_argument, 0, 'R'},
     {"user",             required_argument, 0, 'U'},
     {"syslog",           required_argument, 0, 's'},
     {"maxlog",           required_argument, 0, 'S'},
@@ -164,7 +165,7 @@ static void write_footer(void);
 static int ntfw_cb(const char*, const struct stat*, int, struct FTW*);
 static bool file_is_readable(const char* absolute_pathname);
 static bool file_is_writable(const char* absolute_pathname);
-bool handle_path_arg(char** dest, char* path, char* arg, bool rd, bool wr);
+bool handle_path_arg(char** dest, const char* path, char* arg, bool rd, bool wr);
 static void set_log_augmentation(const char* value);
 static void usage(void);
 static char* get_expanded_pathname(
@@ -697,30 +698,27 @@ static void print_log_n_stderr(
     const char* fprstr,   /*< string to be printed to stderr */
     int         eno)      /*< errno, if it is set, zero, otherwise */
 {
-    char* log_err = "Error :";
-    char* fpr_err = "*\n* Error :";
-    char* fpr_end   = "\n*\n";
-
     if (do_log)
     {
-        mxs_log_init(NULL, get_logdir(), MXS_LOG_TARGET_FS);
-        char errbuf[STRERROR_BUFLEN];
-        MXS_ERROR("%s %s %s %s",
-                  log_err,
-                  logstr,
-                  eno == 0 ? " " : "Error :",
-                  eno == 0 ? " " : strerror_r(eno, errbuf, sizeof(errbuf)));
+        if (mxs_log_init(NULL, get_logdir(), MXS_LOG_TARGET_FS))
+        {
+            char errbuf[STRERROR_BUFLEN];
+            MXS_ERROR("%s%s%s%s",
+                      logstr,
+                      eno == 0 ? "" : " (",
+                      eno == 0 ? "" : strerror_r(eno, errbuf, sizeof(errbuf)),
+                      eno == 0 ? "" : ")");
+        }
     }
     if (do_stderr)
     {
         char errbuf[STRERROR_BUFLEN];
         fprintf(stderr,
-                "%s %s %s %s %s",
-                fpr_err,
+                "* Error: %s%s%s%s\n",
                 fprstr,
-                eno == 0 ? " " : "Error :",
-                eno == 0 ? " " : strerror_r(eno, errbuf, sizeof(errbuf)),
-                fpr_end);
+                eno == 0 ? "" : " (",
+                eno == 0 ? "" : strerror_r(eno, errbuf, sizeof(errbuf)),
+                eno == 0 ? "" : ")");
     }
 }
 
@@ -887,32 +885,52 @@ static void usage(void)
 {
     fprintf(stderr,
             "\nUsage : %s [OPTION]...\n\n"
-            "  -c, --config-check          Validate configuration file and exit\n"
-            "  -d, --nodaemon              enable running in terminal process (default:disabled)\n"
-            "  -f, --config=FILE           relative or absolute pathname of MaxScale configuration file\n"
-            "                              (default:/etc/maxscale.cnf)\n"
-            "  -l, --log=[file|shm|stdout] log to file, shared memory or stdout (default: file)\n"
-            "  -L, --logdir=PATH           path to log file directory (default: /var/log/maxscale)\n"
-            "  -A, --cachedir=PATH         path to cache directory (default: /var/cache/maxscale)\n"
-            "  -B, --libdir=PATH           path to module directory (default: /usr/lib64/maxscale)\n"
-            "  -C, --configdir=PATH        path to configuration file directory (default: /etc/)\n"
-            "  -D, --datadir=PATH          path to data directory, stored embedded mysql tables\n"
-            "                              (default: /var/cache/maxscale)\n"
+            "  -c, --config-check          validate configuration file and exit\n"
+            "  -d, --nodaemon              enable running in terminal process\n"
+            "  -f, --config=FILE           relative or absolute pathname of config file\n"
+            "  -l, --log=[file|shm|stdout] log to file, shared memory or stdout\n"
+            "                              (default: file)\n"
+            "  -L, --logdir=PATH           path to log file directory\n"
+            "  -A, --cachedir=PATH         path to cache directory\n"
+            "  -B, --libdir=PATH           path to module directory\n"
+            "  -C, --configdir=PATH        path to configuration file directory\n"
+            "  -D, --datadir=PATH          path to data directory,\n"
+            "                              stored embedded mysql tables\n"
             "  -E, --execdir=PATH          path to the maxscale and other executable files\n"
-            "                              (default: /usr/bin)\n"
-            "  -N, --language=PATH          path to errmsg.sys file (default: /var/lib/maxscale)\n"
-            "  -P, --piddir=PATH           path to PID file directory (default: /var/run/maxscale)\n"
-            "  -U, --user=USER             run MaxScale as another user.\n"
-            "                              The user ID and group ID of this user are used to run MaxScale.\n"
+            "  -N, --language=PATH         path to errmsg.sys file\n"
+            "  -P, --piddir=PATH           path to PID file directory\n"
+            "  -R, --basedir=PATH          base path for all other paths\n"
+            "  -U, --user=USER             user ID and group ID of specified user are used to\n"
+            "                              run MaxScale\n"
             "  -s, --syslog=[yes|no]       log messages to syslog (default:yes)\n"
             "  -S, --maxlog=[yes|no]       log messages to MaxScale log (default: yes)\n"
-            "  -G, --log_augmentation=0|1  augment messages with the name of the function where\n"
-            "                              the message was logged (default: 0). Primarily for \n"
-            "                              development purposes.\n"
+            "  -G, --log_augmentation=0|1  augment messages with the name of the function\n"
+            "                              where the message was logged (default: 0)\n"
             "  -v, --version               print version info and exit\n"
             "  -V, --version-full          print full version info and exit\n"
             "  -?, --help                  show this help\n"
-            , progname);
+            "\n"
+            "Defaults paths:\n"
+            "  config file: %s/%s\n"
+            "  configdir  : %s\n"
+            "  logdir     : %s\n"
+            "  cachedir   : %s\n"
+            "  libdir     : %s\n"
+            "  datadir    : %s\n"
+            "  execdir    : %s\n"
+            "  language   : %s\n"
+            "  piddir     : %s\n"
+            "\n"
+            "If '--basedir' is provided then all other paths, including the default\n"
+            "configuration file path, are defined relative to that. As an example,\n"
+            "if '--basedir /path/maxscale' is specified, then, for instance, the log\n"
+            "dir will be '/path/maxscale/var/log/maxscale', the config dir will be\n"
+            "'/path/maxscale/etc' and the default config file will be\n"
+            "'/path/maxscale/etc/maxscale.cnf'.\n",
+            progname,
+            get_configdir(), default_cnf_fname,
+            get_configdir(), get_logdir(), get_cachedir(), get_libdir(),
+            get_datadir(), get_execdir(), get_langdir(), get_piddir());
 }
 
 
@@ -1136,6 +1154,61 @@ bool configure_signals(void)
 }
 
 /**
+ * Set the directories of MaxScale relative to a basedir
+ *
+ * @param basedir The base directory relative to which the other are set.
+ *
+ * @return True if the directories could be set, false otherwise.
+ */
+bool set_dirs(const char *basedir)
+{
+    bool rv = true;
+    char *path;
+
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LOG_SUBPATH, true, false)))
+    {
+        set_logdir(path);
+    }
+
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_CACHE_SUBPATH, true, true)))
+    {
+        set_cachedir(path);
+    }
+
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_LIB_SUBPATH, true, false)))
+    {
+        set_libdir(path);
+    }
+
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_CONFIG_SUBPATH, true, false)))
+    {
+        set_configdir(path);
+    }
+
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_DATA_SUBPATH, true, false)))
+    {
+        set_datadir(path);
+    }
+
+    if (rv && (rv = handle_path_arg(&path, basedir, MXS_DEFAULT_EXEC_SUBPATH, true, false)))
+    {
+        set_execdir(path);
+    }
+
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_LANG_SUBPATH, true, false)))
+    {
+        set_langdir(path);
+    }
+
+    if (rv && (rv = handle_path_arg(&path, basedir, "var/" MXS_DEFAULT_PID_SUBPATH, true, true)))
+    {
+        set_piddir(path);
+    }
+
+    return rv;
+}
+
+/**
  * @mainpage
  * The main entry point into MaxScale
  *
@@ -1304,7 +1377,6 @@ int main(int argc, char **argv)
                 }
                 break;
             case 'L':
-
                 if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
                 {
                     set_logdir(tmp_path);
@@ -1375,6 +1447,17 @@ int main(int argc, char **argv)
                 if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
                 {
                     set_execdir(tmp_path);
+                }
+                else
+                {
+                    succp = false;
+                }
+                break;
+            case 'R':
+                if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+                {
+                    succp = set_dirs(tmp_path);
+                    free(tmp_path);
                 }
                 else
                 {
@@ -2252,7 +2335,7 @@ static int write_pid_file()
     return 0;
 }
 
-bool handle_path_arg(char** dest, char* path, char* arg, bool rd, bool wr)
+bool handle_path_arg(char** dest, const char* path, char* arg, bool rd, bool wr)
 {
     char pathbuffer[PATH_MAX + 2];
     char* errstr;

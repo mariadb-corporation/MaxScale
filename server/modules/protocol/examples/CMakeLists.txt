@@ -1,0 +1,5 @@
+install_script(cdc.py core)
+install_script(cdc_users.py core)
+install_script(cdc_last_transaction.py core)
+install_script(cdc_kafka_producer.py core)
+install_file(cdc_schema.go core)
