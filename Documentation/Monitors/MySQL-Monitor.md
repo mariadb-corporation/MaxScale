@@ -55,7 +55,8 @@ and the table if they do not exist.
 Allow previous master to be available even in case of stopped or misconfigured
 replication.
 
-This feature is enabled by default.
+Starting from MaxScale 2.0.0 this feature is enabled by default. It is disabled
+by default in MaxScale 1.4.3 and below.
 
 This allows services that depend on master and slave roles to continue
 functioning as long as the master server is available. This is a situation
