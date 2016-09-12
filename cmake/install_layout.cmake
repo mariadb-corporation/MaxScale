@@ -16,6 +16,9 @@ if (TARGET_COMPONENT)
   list(FIND TARGET_COMPONENT "all" BUILD_ALL)
 endif()
 
+# Name of the common core library
+set(MAXSCALE_CORE maxscale-common)
+
 #
 # Installation functions for MaxScale
 #
@@ -56,6 +59,8 @@ function(install_module target component)
     install(TARGETS ${target} DESTINATION ${MAXSCALE_LIBDIR} COMPONENT "${component}")
   endif()
 
+  # Make all modules dependent on the core
+  add_dependencies(${target} ${MAXSCALE_CORE})
 endfunction()
 
 # Installation functions for interpreted scripts.
