@@ -11,6 +11,18 @@ of [2.0.0](./MaxScale-2.0.0-Release-Notes.md).
 For any problems you encounter, please consider submitting a bug
 report at [Jira](https://jira.mariadb.org).
 
+## Changed default values
+
+### `strip_db_esc`
+
+The service parameter [_strip_db_esc_](../Getting-Started/Configuration-Guide.md#strip_db_esc)
+now defaults to true.
+
+### `detect_stale_master`
+
+The [stale master detection](../Monitors/MySQL-Monitor.md#detect_stale_master)
+feature is now enabled by default.
+
 ## Updated Features
 
 ### Starting MariaDB MaxScale
@@ -103,6 +115,7 @@ Please consult
 
 [Here is a list of bugs fixed since the release of MaxScale 2.0.1.](https://jira.mariadb.org/issues/?jql=project%20%3D%20MXS%20AND%20issuetype%20%3D%20Bug%20AND%20status%20%3D%20Closed%20AND%20fixVersion%20in%20(2.0.0%2C%202.0.1)%20AND%20resolved%20%3E%3D%20-21d%20ORDER%20BY%20priority%20DESC%2C%20updated%20DESC)
 
+* [MXS-812](https://jira.mariadb.org/browse/MXS-812): Number of conns not matching number of operations
 * [MXS-847](https://jira.mariadb.org/browse/MXS-847): server_down event is executed 8 times due to putting sever into maintenance mode
 * [MXS-845](https://jira.mariadb.org/browse/MXS-845): "Server down" event is re-triggered after maintenance mode is repeated
 * [MXS-842](https://jira.mariadb.org/browse/MXS-842): Unexpected / undocumented behaviour when multiple available masters from mmmon monitor

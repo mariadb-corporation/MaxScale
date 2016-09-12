@@ -143,7 +143,6 @@ server_free(SERVER *tofreeserver)
     MXS_FREE(tofreeserver->protocol);
     MXS_FREE(tofreeserver->unique_name);
     MXS_FREE(tofreeserver->server_string);
-    MXS_FREE(tofreeserver->slaves);
     server_parameter_free(tofreeserver->parameters);
 
     if (tofreeserver->persistent)
