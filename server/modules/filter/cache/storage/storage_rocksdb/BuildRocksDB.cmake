@@ -1,9 +1,6 @@
 # Build RocksDB
 
 if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") AND (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7)))
-  find_package(BZip2)
-  find_package(ZLIB)
-
   message(STATUS "GCC >= 4.7, RocksDB is built.")
 
   set(ROCKSDB_REPO "https://github.com/facebook/rocksdb.git"
@@ -30,12 +27,22 @@ if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") AND (NOT (CMAKE_CXX_COMPILER_VERSION 
   set(ROCKSDB_LIB_DIR ${ROCKSDB_ROOT})
   set(ROCKSDB_LIB librocksdb.a)
 
+  # RocksDB supports several compression libraries and automatically
+  # uses them if it finds the headers in the environment. Consequently,
+  # we must ensure that a user of RocksDB can link to the needed
+  # libraries.
+  #
+  # ROCKSDB_LINK_LIBS specifies that libraries a module using ROCKSDB_LIB
+  # must link with.
+
+  find_package(BZip2)
   if (BZIP2_FOUND)
-    set(ROCKSDB_LINK_LIBS ${ROCKSDB_LINK_LIB} ${BZIP2_LIBRARIES})
+    set(ROCKSDB_LINK_LIBS ${ROCKSDB_LINK_LIBS} ${BZIP2_LIBRARIES})
   endif()
 
+  find_package(ZLIB)
   if (ZLIB_FOUND)
-    set(ROCKSDB_LINK_LIBS ${ROCKSDB_LINK_LIB} ${ZLIB_LIBRARIES})
+    set(ROCKSDB_LINK_LIBS ${ROCKSDB_LINK_LIBS} ${ZLIB_LIBRARIES})
   endif()
 else()
   message(STATUS "RocksDB requires GCC >= 4.7, only ${CMAKE_CXX_COMPILER_VERSION} available.")
