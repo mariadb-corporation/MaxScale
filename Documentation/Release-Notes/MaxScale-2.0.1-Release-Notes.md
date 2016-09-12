@@ -120,6 +120,7 @@ Please consult
 * [MXS-845](https://jira.mariadb.org/browse/MXS-845): "Server down" event is re-triggered after maintenance mode is repeated
 * [MXS-842](https://jira.mariadb.org/browse/MXS-842): Unexpected / undocumented behaviour when multiple available masters from mmmon monitor
 * [MXS-846](https://jira.mariadb.org/browse/MXS-846): MMMon: Maintenance mode on slave logs error message every second
+* [MXS-860](https://jira.mariadb.org/browse/MXS-860): I want to access the web site if master server is down.
 
 ## Known Issues and Limitations
 

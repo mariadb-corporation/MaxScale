@@ -323,8 +323,11 @@ static inline void monitor_mysql100_db(MONITOR_SERVERS* database)
             return;
         }
 
+        database->server->slave_configured = false;
+
         while ((row = mysql_fetch_row(result)))
         {
+            database->server->slave_configured = true;
             /* get Slave_IO_Running and Slave_SQL_Running values*/
             if (strncmp(row[12], "Yes", 3) == 0
                 && strncmp(row[13], "Yes", 3) == 0)
@@ -407,8 +410,11 @@ static inline void monitor_mysql55_db(MONITOR_SERVERS* database)
             return;
         }
 
+        database->server->slave_configured = false;
+
         while ((row = mysql_fetch_row(result)))
         {
+            database->server->slave_configured = true;
             /* get Slave_IO_Running and Slave_SQL_Running values*/
             if (strncmp(row[10], "Yes", 3) == 0
                 && strncmp(row[11], "Yes", 3) == 0)
@@ -479,8 +485,11 @@ static inline void monitor_mysql51_db(MONITOR_SERVERS* database)
             return;
         }
 
+        database->server->slave_configured = false;
+
         while ((row = mysql_fetch_row(result)))
         {
+            database->server->slave_configured = true;
             /* get Slave_IO_Running and Slave_SQL_Running values*/
             if (strncmp(row[10], "Yes", 3) == 0
                 && strncmp(row[11], "Yes", 3) == 0)
@@ -992,6 +1001,11 @@ monitorMain(void *arg)
                               (SERVER_IS_MASTER(root_master->server) &&
                                (root_master->mon_prev_status & SERVER_MASTER) == 0)))
                     {
+                        ptr->pending_status |= SERVER_SLAVE;
+                    }
+                    else if (root_master == NULL && ptr->server->slave_configured)
+                    {
+                        /** TODO: Change this in 2.1 to use the server_info mechanism */
                         ptr->pending_status |= SERVER_SLAVE;
                     }
                 }

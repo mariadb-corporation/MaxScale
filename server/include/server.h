@@ -102,6 +102,8 @@ typedef struct server
     int            depth;          /**< Replication level in the tree */
     long           slaves[MAX_NUM_SLAVES]; /**< Slaves of this node */
     bool           master_err_is_logged; /*< If node failed, this indicates whether it is logged */
+    bool           slave_configured; /**< Server is configured as a replication slave
+                                      * TODO: Remove this for 2.1 */
     DCB            *persistent;    /**< List of unused persistent connections to the server */
     SPINLOCK       persistlock;    /**< Lock for adjusting the persistent connections list */
     long           persistpoolmax; /**< Maximum size of persistent connections pool */

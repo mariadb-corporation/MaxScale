@@ -78,10 +78,6 @@ With this parameter, slaves that have lost their master but have been slaves of
 a master server can retain their slave status even without a master. This means
 that when a slave loses its master, it can still be used for reads.
 
-If MaxScale loses the connection to the slave, the slave will lose the stale
-slave state because MaxScale doesn't know if the slave has had recent contact
-with the master server.
-
 If this feature is disabled, a server is considered a valid slave if and only if
 it has a running master server monitored by this monitor.
 
