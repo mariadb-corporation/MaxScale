@@ -3135,6 +3135,10 @@ static bool select_connect_backend_servers(backend_ref_t **p_master_ref,
                 ss_dassert(backend_ref[i].bref_backend->backend_conn_count > 0);
 
                 /** disconnect opened connections */
+                if (BREF_IS_WAITING_RESULT(&backend_ref[i]))
+                {
+                    bref_clear_state(&backend_ref[i], BREF_WAITING_RESULT);
+                }
                 bref_clear_state(&backend_ref[i], BREF_IN_USE);
                 /** Decrease backend's connection counter. */
                 atomic_add(&backend_ref[i].bref_backend->backend_conn_count, -1);
@@ -4299,6 +4303,10 @@ static void handleError(ROUTER *instance, void *router_session,
                         CHK_BACKEND_REF(bref);
                         bref_clear_state(bref, BREF_IN_USE);
                         bref_set_state(bref, BREF_CLOSED);
+                        if (BREF_IS_WAITING_RESULT(bref))
+                        {
+                            bref_clear_state(bref, BREF_WAITING_RESULT);
+                        }
                     }
                     else
                     {
