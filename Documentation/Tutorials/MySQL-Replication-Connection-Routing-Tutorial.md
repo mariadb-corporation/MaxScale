@@ -174,8 +174,6 @@ service=CLI
 protocol=maxscaled
 socket=default
 ```
-**Note**: maxscaled protocol supports only UNIX domain sockets and in the example default is set.
-Changing it requires maxadmin to use -S with the new path. Default /tmp/maxadmin.sock is for both maxadmin and maxscaled.
 
 # Starting MariaDB MaxScale
 

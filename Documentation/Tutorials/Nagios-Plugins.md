@@ -62,8 +62,7 @@ service=AdminInterface
 protocol=maxscaled
 socket=default
 ```
-**Note**: maxscaled protocol supports only UNIX domain sockets and in the example default is set.
-Changing it requires maxadmin to use -S with the new path. Default /tmp/maxadmin.sock is for both maxadmin and maxscaled.
+
 ## Prepare Nagios configuration files.
 
 Assuming Nagios installed on a separated server and the plugins are in /usr/lib64/nagios/plugins and configuration files are in /etc/nagios:

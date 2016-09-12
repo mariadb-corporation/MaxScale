@@ -12,7 +12,7 @@ The purpose of this document is to describe how to configure MariaDB MaxScale an
   * [Server](#server)
   * [Server and SSL](#server-and-ssl)
   * [Listener](#listener)
-  * [Listener and SSL](#listener-and-ssl) 
+  * [Listener and SSL](#listener-and-ssl)
 * [Router Modules](#routing-modules)
 * [Diagnostic Modules](#diagnostic-modules)
 * [Monitor Modules](#monitor-modules)
@@ -702,7 +702,7 @@ For more information about persistent connections, please read the [Administrati
 
 ### Server and SSL
 
-This section describes configuration parameters for servers that control the SSL/TLS encryption method and the various certificate files involved in it when applied to back end servers. To enable SSL between MaxScale and a back end server, you must configure the `ssl` parameter in the relevant server section to the value `required` and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`. After this, MaxScale connections to this server will be encrypted with SSL. Attempts to connect to the server without using SSL will cause failures. Hence, the database server in question must have been configured to be able to accept SSL connections. 
+This section describes configuration parameters for servers that control the SSL/TLS encryption method and the various certificate files involved in it when applied to back end servers. To enable SSL between MaxScale and a back end server, you must configure the `ssl` parameter in the relevant server section to the value `required` and provide the three files for `ssl_cert`, `ssl_key` and `ssl_ca_cert`. After this, MaxScale connections to this server will be encrypted with SSL. Attempts to connect to the server without using SSL will cause failures. Hence, the database server in question must have been configured to be able to accept SSL connections.
 
 #### `ssl`
 
@@ -726,7 +726,7 @@ This parameter controls the level of encryption used. Accepted values are:
  * TLSv10
  * TLSv11
  * TLSv12
- * MAX   
+ * MAX
 
 Not all backend servers will support TLSv11 or TLSv12. If available, TLSv12 should be used.
 
@@ -845,7 +845,7 @@ This parameter controls the level of encryption used. Accepted values are:
  * TLSv10
  * TLSv11
  * TLSv12
- * MAX   
+ * MAX
 
 If possible, use TLSv12 for best security. Recent Linux systems will include a version of OpenSSL that supports TLS version 1.2.  Only if you are using MaxScale on a system that does not have OpenSSL with support for this should earlier versions be used. It is unlikely that TLS 1.1 will be available unless TLS 1.2 is also available. MAX will use the best available version.
 

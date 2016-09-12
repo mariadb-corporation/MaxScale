@@ -826,7 +826,9 @@ mon_status_changed(MONITOR_SERVERS* mon_srv)
 {
     /* Previous status is -1 if not yet set */
     return (mon_srv->mon_prev_status != -1
-            && mon_srv->mon_prev_status != mon_srv->server->status);
+            && mon_srv->mon_prev_status != mon_srv->server->status
+            /** If the server is going into maintenance or coming out of it, don't trigger a state change */
+            && ((mon_srv->mon_prev_status | mon_srv->server->status) & SERVER_MAINT) == 0);
 }
 
 /**

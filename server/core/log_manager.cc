@@ -584,7 +584,7 @@ return_succ:
     {
         /** This releases memory of all created objects */
         logmanager_done_nomutex();
-        LOG_ERROR("MaxScale Log: Error, initialization failed.\n");
+        fprintf(stderr, "* Error: Initializing the log manager failed.\n");
     }
     return succ;
 }
@@ -1693,7 +1693,7 @@ static bool logfile_open_file(filewriter_t* fw,
 
     if (fw->fwr_file == NULL)
     {
-        LOG_ERROR("MaxScale Log: Error, opening log file %s failed.\n", lf->lf_full_file_name);
+        // Error logged by skygw_file_init to stderr.
         rv = false;
     }
 
@@ -2125,9 +2125,6 @@ static void filewriter_done(filewriter_t* fw, bool write_footer)
     {
         case RUN:
             CHK_FILEWRITER(fw);
-        case INIT:
-            fw->fwr_logmes = NULL;
-            fw->fwr_clientmes = NULL;
             if (log_config.use_stdout)
             {
                 skygw_file_free(fw->fwr_file);
@@ -2141,7 +2138,11 @@ static void filewriter_done(filewriter_t* fw, bool write_footer)
 
                 skygw_file_close(fw->fwr_file);
             }
+        case INIT:
+            fw->fwr_logmes = NULL;
+            fw->fwr_clientmes = NULL;
             fw->fwr_state = DONE;
+            break;
         case DONE:
         case UNINIT:
         default:

@@ -73,7 +73,7 @@ version()
 /*
  * The filter entry points
  */
-static FILTER *createInstance(char **options, FILTER_PARAMETER **);
+static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **);
 static void *newSession(FILTER *instance, SESSION *session);
 static void closeSession(FILTER *instance, void *session);
 static void freeSession(FILTER *instance, void *session);
@@ -169,7 +169,7 @@ ModuleInit()
  * @return The instance data for this new instance
  */
 static FILTER *
-createInstance(char **options, FILTER_PARAMETER **params)
+createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
     LUA_INSTANCE *my_instance;
     bool error = false;

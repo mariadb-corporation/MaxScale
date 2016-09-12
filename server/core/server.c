@@ -89,7 +89,6 @@ server_alloc(char *servname, char *protocol, unsigned short port)
     server->rlag = -2;
     server->master_id = -1;
     server->depth = -1;
-    server->slaves = NULL;
     server->parameters = NULL;
     server->server_string = NULL;
     spinlock_init(&server->lock);
@@ -144,7 +143,6 @@ server_free(SERVER *tofreeserver)
     MXS_FREE(tofreeserver->protocol);
     MXS_FREE(tofreeserver->unique_name);
     MXS_FREE(tofreeserver->server_string);
-    MXS_FREE(tofreeserver->slaves);
     server_parameter_free(tofreeserver->parameters);
 
     if (tofreeserver->persistent)

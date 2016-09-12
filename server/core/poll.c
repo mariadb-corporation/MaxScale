@@ -225,7 +225,7 @@ poll_init()
     bitmask_init(&poll_mask);
     n_threads = config_threadcount();
     thread_data = (THREAD_DATA *)MXS_MALLOC(n_threads * sizeof(THREAD_DATA));
-    if (thread_data);
+    if (thread_data)
     {
         for (i = 0; i < n_threads; i++)
         {

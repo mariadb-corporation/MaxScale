@@ -34,6 +34,10 @@ service maxscale start
 
 An example configuration file is installed into the `/etc/` folder. This file should be changed according to your needs.
 
+## Install MariaDB MaxScale Using a Tarball
+
+MaxScale can also be installed using a tarball. That may be required if you are using a Linux distribution for which there exist no installation package or if you want to install many different MaxScale versions side by side. For instructions on how to do that, please refer to [Install MariaDB MaxScale using a Tarball](Install-MariaDB-MaxScale-Using-a-Tarball.md).
+
 ## Building MariaDB MaxScale From Source Code
 
 Alternatively you may download the MariaDB MaxScale source and build your own binaries. To do this, refer to the separate document [Building MariaDB MaxScale from Source Code](Building-MaxScale-from-Source-Code.md)

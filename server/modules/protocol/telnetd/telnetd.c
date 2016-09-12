@@ -203,7 +203,7 @@ static int telnetd_read_event(DCB* dcb)
                     {
                         *t = 0;
                     }
-                    if (admin_verify(telnetd->username, password))
+                    if (admin_verify_inet_user(telnetd->username, password))
                     {
                         telnetd_echo(dcb, 1);
                         telnetd->state = TELNETD_STATE_DATA;

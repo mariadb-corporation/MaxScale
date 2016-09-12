@@ -12,14 +12,18 @@ configuration file.
 
 ## MaxAdmin
 
-The way a user of MaxAdmin is authenticated has been completely changed.
-In 2.0, MaxAdmin can only connect to MariaDB MaxScale using a domain socket, thus
-_only when run on the same host_, and authorization is based upon the UNIX
-identity. Remote access is no longer supported.
+The default way the communication between MaxAdmin and MariaDB MaxScale is
+handled has been changed from an internet socket to a Unix domain socket.
+The former alternative is still available but has been _deprecated_.
 
-When 2.0 has been installed, MaxAdmin can only be used by `root` and
-other users must be added anew. Please consult
-[MaxAdmin documentation](../Reference/MaxAdmin.md) for more details.
+If no arguments are given to MaxAdmin, it will attempt to connect to
+MariaDB MaxScale using a Unix domain socket. After the upgrade you will
+need to provide at least one internet socket related flag - `-h`, `-P`,
+`-u` or `-p` - to force MaxAdmin to use the internet socket approach.
+
+E.g.
+
+    user@host $ maxadmin -u admin
 
 ## MySQL Monitor
 

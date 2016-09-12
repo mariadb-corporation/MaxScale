@@ -21,19 +21,30 @@
 
 EXTERN_C_BLOCK_BEGIN
 
+// NOTE: If you make changes here, ensure they are compatible with the
+//       situation in <root>/CMakeLists.txt, where directories are installed.
+#define MXS_DEFAULT_PID_SUBPATH    "run/maxscale"
+#define MXS_DEFAULT_LOG_SUBPATH    "log/maxscale"
+#define MXS_DEFAULT_DATA_SUBPATH   "lib/maxscale"
+#define MXS_DEFAULT_LIB_SUBPATH    "@MAXSCALE_LIBDIR@"
+#define MXS_DEFAULT_CACHE_SUBPATH  "cache/maxscale"
+#define MXS_DEFAULT_LANG_SUBPATH   "lib/maxscale"
+#define MXS_DEFAULT_EXEC_SUBPATH   "@MAXSCALE_BINDIR@"
+#define MXS_DEFAULT_CONFIG_SUBPATH "etc"
+
 /** Default file locations, configured by CMake */
 static const char* default_cnf_fname = "maxscale.cnf";
-static const char* default_configdir = "/etc";
+static const char* default_configdir = "/" MXS_DEFAULT_CONFIG_SUBPATH;
 /*< This should be changed to just /run eventually,
  * the /var/run folder is an old standard and the newer FSH 3.0
  * uses /run for PID files.*/
-static const char* default_piddir = "@MAXSCALE_VARDIR@/run/maxscale";
-static const char* default_logdir = "@MAXSCALE_VARDIR@/log/maxscale";
-static const char* default_datadir = "@MAXSCALE_VARDIR@/lib/maxscale";
-static const char* default_libdir = "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@";
-static const char* default_cachedir = "@MAXSCALE_VARDIR@/cache/maxscale";
-static const char* default_langdir = "@MAXSCALE_VARDIR@/lib/maxscale";
-static const char* default_execdir = "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@";
+static const char* default_piddir   = "@MAXSCALE_VARDIR@/"      MXS_DEFAULT_PID_SUBPATH;
+static const char* default_logdir   = "@MAXSCALE_VARDIR@/"      MXS_DEFAULT_LOG_SUBPATH;
+static const char* default_datadir  = "@MAXSCALE_VARDIR@/"      MXS_DEFAULT_DATA_SUBPATH;
+static const char* default_libdir   = "@CMAKE_INSTALL_PREFIX@/" MXS_DEFAULT_LIB_SUBPATH;
+static const char* default_cachedir = "@MAXSCALE_VARDIR@/"      MXS_DEFAULT_CACHE_SUBPATH;
+static const char* default_langdir  = "@MAXSCALE_VARDIR@/"      MXS_DEFAULT_LANG_SUBPATH;
+static const char* default_execdir  = "@CMAKE_INSTALL_PREFIX@/" MXS_DEFAULT_EXEC_SUBPATH;
 
 static char* configdir = NULL;
 static char* logdir = NULL;

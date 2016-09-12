@@ -45,6 +45,7 @@
  */
 
 #define MAX_SERVER_NAME_LEN 1024
+#define MAX_NUM_SLAVES 128 /**< Maximum number of slaves under a single server*/
 
 /**
  * The server parameters used for weighting routing decissions
@@ -99,7 +100,7 @@ typedef struct server
     SERVER_PARAM   *parameters;    /**< Parameters of a server that may be used to weight routing decisions */
     long           master_id;      /**< Master server id of this node */
     int            depth;          /**< Replication level in the tree */
-    long           *slaves;        /**< Slaves of this node */
+    long           slaves[MAX_NUM_SLAVES]; /**< Slaves of this node */
     bool           master_err_is_logged; /*< If node failed, this indicates whether it is logged */
     DCB            *persistent;    /**< List of unused persistent connections to the server */
     SPINLOCK       persistlock;    /**< Lock for adjusting the persistent connections list */

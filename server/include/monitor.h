@@ -133,7 +133,6 @@ typedef enum
 
 #define MONITOR_INTERVAL 10000 // in milliseconds
 #define MONITOR_DEFAULT_ID 1UL // unsigned long value
-#define MONITOR_MAX_NUM_SLAVES 20 //number of MySQL slave servers associated to a MySQL master server
 
 /*
  * Create declarations of the enum for monitor events and also the array of
