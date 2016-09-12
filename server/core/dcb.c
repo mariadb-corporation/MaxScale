@@ -92,6 +92,15 @@
 #include <sys/un.h>
 #include <maxscale/alloc.h>
 
+#if defined(FAKE_CODE)
+unsigned char dcb_fake_write_errno[10240];
+__int32_t     dcb_fake_write_ev[10240];
+bool          fail_next_backend_fd;
+bool          fail_next_client_fd;
+int           fail_next_accept;
+int           fail_accept_errno;
+#endif /* FAKE_CODE */
+
 /* The list of all DCBs */
 static LIST_CONFIG DCBlist =
 {LIST_TYPE_RECYCLABLE, sizeof(DCB), SPINLOCK_INIT};
