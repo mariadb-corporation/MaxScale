@@ -15,9 +15,6 @@
 #include <rocksdb/env.h>
 #include <util/coding.h>
 
-namespace RocksDBInternals
-{
-
 /**
  * Check whether a value is stale or not.
  *
@@ -31,7 +28,7 @@ namespace RocksDBInternals
  * but note that the here we claim the data is stale if we fail to
  * get the time while the original code claims it is fresh.
  */
-bool IsStale(const rocksdb::Slice& value, int32_t ttl, rocksdb::Env* pEnv)
+bool RocksDBInternals::IsStale(const rocksdb::Slice& value, int32_t ttl, rocksdb::Env* pEnv)
 {
     if (ttl <= 0)
     {  // Data is fresh if TTL is non-positive
@@ -46,6 +43,4 @@ bool IsStale(const rocksdb::Slice& value, int32_t ttl, rocksdb::Env* pEnv)
 
     int32_t timestamp = rocksdb::DecodeFixed32(value.data() + value.size() - TS_LENGTH);
     return (timestamp + ttl) < curtime;
-}
-
 }
