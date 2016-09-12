@@ -1,6 +1,9 @@
 # Build RocksDB
 
 if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") AND (NOT (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.7)))
+  find_package(BZip2)
+  find_package(ZLIB)
+
   message(STATUS "GCC >= 4.7, RocksDB is built.")
 
   set(ROCKSDB_REPO "https://github.com/facebook/rocksdb.git"
@@ -26,6 +29,14 @@ if ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU") AND (NOT (CMAKE_CXX_COMPILER_VERSION 
   set(ROCKSDB_INCLUDE_DIRS ${ROCKSDB_ROOT}/include ${ROCKSDB_ROOT})
   set(ROCKSDB_LIB_DIR ${ROCKSDB_ROOT})
   set(ROCKSDB_LIB librocksdb.a)
+
+  if (BZIP2_FOUND)
+    set(ROCKSDB_LINK_LIBS ${ROCKSDB_LINK_LIB} ${BZIP2_LIBRARIES})
+  endif()
+
+  if (ZLIB_FOUND)
+    set(ROCKSDB_LINK_LIBS ${ROCKSDB_LINK_LIB} ${ZLIB_LIBRARIES})
+  endif()
 else()
   message(STATUS "RocksDB requires GCC >= 4.7, only ${CMAKE_CXX_COMPILER_VERSION} available.")
 endif()
