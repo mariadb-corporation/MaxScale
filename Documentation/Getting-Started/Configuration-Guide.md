@@ -95,13 +95,25 @@ It should be noted that additional threads will be created to execute other inte
 
 The connection timeout in seconds for the MySQL connections to the backend server when user authentication data is fetched. Increasing the value of this parameter will cause MariaDB MaxScale to wait longer for a response from the backend server before aborting the authentication process. The default is 3 seconds.
 
+```
+auth_connect_timeout=10
+```
+
 #### `auth_read_timeout`
 
 The read timeout in seconds for the MySQL connection to the backend database when user authentication data is fetched. Increasing the value of this parameter will cause MariaDB MaxScale to wait longer for a response from the backend server when user data is being actively fetched. If the authentication is failing and you either have a large number of database users and grants or the connection to the backend servers is slow, it is a good idea to increase this value. The default is 1 second.
 
+```
+auth_read_timeout=10
+```
+
 #### `auth_write_timeout`
 
 The write timeout in seconds for the MySQL connection to the backend database when user authentication data is fetched. Currently MariaDB MaxScale does not write or modify the data in the backend server. The default is 2 seconds.
+
+```
+auth_write_timeout=10
+```
 
 #### `ms_timestamp`
 
@@ -113,10 +125,28 @@ Enable or disable the high precision timestamps in logfiles. Enabling this adds 
 ms_timestamp=1
 ```
 
+#### `skip_permission_checks`
+
+Skip service and monitor user permission checks. This is useful when you know
+the permissions are OK and you want to speed up the startup process. This
+parameter takes a boolean value and is disabled by default.
+
+It is recommended to not disable the permission checks so that any missing
+privileges are detected when maxscale is starting up. If you are experiencing a
+slow startup of MaxScale due to large amounts of connection timeouts when
+permissions are checked, disabling the permission checks could speed up the
+startup process.
+
+```
+skip_permission_checks=true
+```
+
 #### `syslog`
+
 Enable or disable the logging of messages to *syslog*.
 
 By default logging to *syslog* is enabled.
+
 ```
 # Valid options are:
 #       syslog=<0|1>
@@ -127,9 +157,11 @@ To enable logging to syslog use the value 1 and to disable use
 the value 0.
 
 #### `maxlog`
+
 Enable to disable to logging of messages to MariaDB MaxScale's log file.
 
 By default logging to *maxlog* is enabled.
+
 ```
 # Valid options are:
 #       syslog=<0|1>
@@ -140,6 +172,7 @@ To enable logging to the MariaDB MaxScale log file use the value 1 and to
 disable use the value 0.
 
 #### `log_to_shm`
+
 Enable or disable the writing of the *maxscale.log* file to shared memory.
 If enabled, then the actual log file will be created under `/dev/shm` and
 a symbolic link to that file will be created in the *MaxScale* log directory.
@@ -169,6 +202,7 @@ To enable logging to shared memory use the value 1 and to disable use
 the value 0.
 
 #### `log_warning`
+
 Enable or disable the logging of messages whose syslog priority is *warning*.
 Messages of this priority are enabled by default.
 
@@ -181,6 +215,7 @@ log_warning=0
 To disable these messages use the value 0 and to enable them use the value 1.
 
 #### `log_notice`
+
 Enable or disable the logging of messages whose syslog priority is *notice*.
 Messages of this priority provide information about the functioning of
 MariaDB MaxScale and are enabled by default.
@@ -267,10 +302,12 @@ times in one second, the logging of that error is suppressed for the following
 10 seconds.
 
 To disable log throttling, add an entry with an empty value
+
 ```
 log_throttling=
 ```
 or one where any of the integers is 0.
+
 ```
 log_throttling=0, 0, 0
 ```
@@ -358,6 +395,7 @@ An integer argument taking the following values:
 query_classifier=qc_sqlite
 query_classifier_args=log_unrecognized_statements=1
 ```
+
 This will log all statements that cannot be parsed completely. This
 may be useful if you suspect that MariaDB MaxScale routes statements to the wrong
 server (e.g. to a slave instead of to a master).

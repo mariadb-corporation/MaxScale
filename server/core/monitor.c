@@ -543,6 +543,11 @@ bool check_monitor_permissions(MONITOR* monitor, const char* query)
         return false;
     }
 
+    if (config_get_global_options()->skip_permission_checks)
+    {
+        return true;
+    }
+
     char *user = monitor->user;
     char *dpasswd = decryptPassword(monitor->password);
     GATEWAY_CONF* cnf = config_get_global_options();
