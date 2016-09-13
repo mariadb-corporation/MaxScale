@@ -1443,17 +1443,16 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
     }
 
     /* check if the maxscale_schema database and replication_heartbeat table exist */
-    if (mysql_query(database->con,
-            "SELECT table_name FROM information_schema.tables "
-            "WHERE table_schema = 'maxscale_schema' AND table_name = 'replication_heartbeat'"))
+    if (mysql_query(database->con, "SELECT table_name FROM information_schema.tables "
+                    "WHERE table_schema = 'maxscale_schema' AND table_name = 'replication_heartbeat'"))
     {
         MXS_ERROR( "[mysql_mon]: Error checking for replication_heartbeat in Master server"
-                ": %s", mysql_error(database->con));
+                   ": %s", mysql_error(database->con));
         database->server->rlag = -1;
     }
-    
+
     result = mysql_store_result(database->con);
-    
+
     if (result == NULL)
     {
         returned_rows = 0;
@@ -1463,7 +1462,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
         returned_rows = mysql_num_rows(result);
         mysql_free_result(result);
     }
-    
+
     if (0 == returned_rows)
     {
         /* create repl_heartbeat table in maxscale_schema database */
@@ -1476,7 +1475,7 @@ static void set_master_heartbeat(MYSQL_MONITOR *handle, MONITOR_SERVERS *databas
                         "ENGINE=MYISAM DEFAULT CHARSET=latin1"))
         {
             MXS_ERROR("[mysql_mon]: Error creating maxscale_schema.replication_heartbeat "
-                    "table in Master server: %s", mysql_error(database->con));
+                      "table in Master server: %s", mysql_error(database->con));
 
             database->server->rlag = -1;
         }
