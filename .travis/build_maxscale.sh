@@ -8,16 +8,15 @@
 
 
 echo TRAVIS_BUILD_DIR: ${TRAVIS_BUILD_DIR}
-echo MARIADB_DIR: ${MARIADB_DIR}
 
 mkdir build
 cd build
 
-cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DMYSQL_EMBEDDED_INCLUDE_DIR=${TRAVIS_BUILD_DIR}/${MARIADB_DIR}/include/ -DMYSQL_EMBEDDED_LIBRARIES=${TRAVIS_BUILD_DIR}/${MARIADB_DIR}/lib/libmysqld.a -DERRMSG=${TRAVIS_BUILD_DIR}/${MARIADB_DIR}/share/english/errmsg.sys
+cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_TESTS=Y
 
 make VERBOSE=1
+make test
 sudo make install
-sudo make testcore
 
 sudo ./postinst
 maxscale --version
