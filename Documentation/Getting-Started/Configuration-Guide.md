@@ -113,6 +113,15 @@ Enable or disable the high precision timestamps in logfiles. Enabling this adds 
 ms_timestamp=1
 ```
 
+#### `skip_permission_checks`
+
+Skip service and monitor user permission checks. This is useful when
+you know the permissions are OK and you want to speed up the startup
+process.
+
+It is recommended to leave the permission checks on so that any
+missing privileges are detected when maxscale is starting up.
+
 #### `syslog`
 Enable or disable the logging of messages to *syslog*.
 
