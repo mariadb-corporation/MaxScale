@@ -30,7 +30,7 @@ typedef enum cache_references
 
 #define DEFAULT_ALLOWED_REFERENCES CACHE_REFERENCES_QUALIFIED
 // Bytes
-#define DEFAULT_MAX_RESULTSET_SIZE 64 * 1024 * 1024
+#define DEFAULT_MAX_RESULTSET_SIZE 64 * 1024
 // Seconds
 #define DEFAULT_TTL                10
 
