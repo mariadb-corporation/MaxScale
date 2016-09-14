@@ -22,7 +22,17 @@
 
 static char VERSION_STRING[] = "V1.0.0";
 
-static const int DEFAULT_TTL = 10;
+typedef enum cache_references
+{
+    CACHE_REFERENCES_ANY,
+    CACHE_REFERENCES_QUALIFIED
+} cache_references_t;
+
+#define DEFAULT_ALLOWED_REFERENCES CACHE_REFERENCES_QUALIFIED
+// Bytes
+#define DEFAULT_MAX_RESULTSET_SIZE 64 * 1024 * 1024
+// Seconds
+#define DEFAULT_TTL                10
 
 static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **);
 static void   *newSession(FILTER *instance, SESSION *session);
@@ -88,15 +98,31 @@ FILTER_OBJECT *GetModuleObject()
 // Implementation
 //
 
+typedef struct cache_config
+{
+    cache_references_t allowed_references;
+    uint32_t           max_resultset_size;
+    const char        *storage;
+    const char        *storage_args;
+    uint32_t           ttl;
+} CACHE_CONFIG;
+
 typedef struct cache_instance
 {
-    const char           *name;
-    const char           *storage_name;
-    const char           *storage_args;
-    uint32_t              ttl;             // Time to live in seconds.
-    CACHE_STORAGE_MODULE *module;
-    CACHE_STORAGE        *storage;
+    const char            *name;
+    CACHE_CONFIG           config;
+    CACHE_STORAGE_MODULE  *module;
+    CACHE_STORAGE         *storage;
 } CACHE_INSTANCE;
+
+static const CACHE_CONFIG DEFAULT_CONFIG =
+{
+    DEFAULT_ALLOWED_REFERENCES,
+    DEFAULT_MAX_RESULTSET_SIZE,
+    NULL,
+    NULL,
+    DEFAULT_TTL
+};
 
 typedef struct cache_session_data
 {
@@ -131,9 +157,7 @@ static bool route_using_cache(CACHE_INSTANCE *instance,
  */
 static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER **params)
 {
-    const char *storage_name = NULL;
-    const char *storage_args = NULL;
-    uint32_t ttl = DEFAULT_TTL;
+    CACHE_CONFIG config = DEFAULT_CONFIG;
 
     bool error = false;
 
@@ -141,13 +165,44 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
     {
         const FILTER_PARAMETER *param = params[i];
 
-        if (strcmp(param->name, "storage_name") == 0)
+        if (strcmp(param->name, "allowed_references") == 0)
         {
-            storage_name = param->value;
+            if (strcmp(param->value, "qualified") == 0)
+            {
+                config.allowed_references = CACHE_REFERENCES_QUALIFIED;
+            }
+            else if (strcmp(param->value, "any") == 0)
+            {
+                config.allowed_references = CACHE_REFERENCES_ANY;
+            }
+            else
+            {
+                MXS_ERROR("Unknown value '%s' for parameter '%s'.", param->value, param->name);
+                error = true;
+            }
+        }
+        else if (strcmp(param->name, "max_resultset_size") == 0)
+        {
+            int v = atoi(param->value);
+
+            if (v > 0)
+            {
+                config.max_resultset_size = v;
+            }
+            else
+            {
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than 0.", param->name);
+                error = true;
+            }
         }
         else if (strcmp(param->name, "storage_args") == 0)
         {
-            storage_args = param->value;
+            config.storage_args = param->value;
+        }
+        else if (strcmp(param->name, "storage") == 0)
+        {
+            config.storage = param->value;
         }
         else if (strcmp(param->name, "ttl") == 0)
         {
@@ -155,12 +210,12 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
 
             if (v > 0)
             {
-                ttl = v;
+                config.ttl = v;
             }
             else
             {
-                MXS_ERROR("The value of the configuration entry 'ttl' must "
-                          "be an integer larger than 0.");
+                MXS_ERROR("The value of the configuration entry '%s' must "
+                          "be an integer larger than 0.", param->name);
                 error = true;
             }
         }
@@ -177,22 +232,20 @@ static FILTER *createInstance(const char *name, char **options, FILTER_PARAMETER
     {
         if ((cinstance = MXS_CALLOC(1, sizeof(CACHE_INSTANCE))) != NULL)
         {
-            CACHE_STORAGE_MODULE *module = cache_storage_open(storage_name);
+            CACHE_STORAGE_MODULE *module = cache_storage_open(config.storage);
 
             if (module)
             {
-                CACHE_STORAGE *storage = module->api->createInstance(name, ttl, 0, NULL);
+                CACHE_STORAGE *storage = module->api->createInstance(name, config.ttl, 0, NULL);
 
                 if (storage)
                 {
                     cinstance->name = name;
-                    cinstance->storage_name = storage_name;
-                    cinstance->storage_args = storage_args;
-                    cinstance->ttl = ttl;
+                    cinstance->config = config;
                     cinstance->module = module;
                     cinstance->storage = storage;
 
-                    MXS_NOTICE("Cache storage %s opened and initialized.", storage_name);
+                    MXS_NOTICE("Cache storage %s opened and initialized.", config.storage);
                 }
                 else
                 {
