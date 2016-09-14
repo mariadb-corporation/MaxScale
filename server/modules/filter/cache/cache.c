@@ -364,84 +364,58 @@ static int routeQuery(FILTER *instance, void *sdata, GWBUF *packets)
 
     if (csdata->packets)
     {
-        C_DEBUG("Old packets exist.");
         gwbuf_append(csdata->packets, packets);
     }
     else
     {
-        C_DEBUG("NO old packets exist.");
         csdata->packets = packets;
     }
 
-    packets = modutil_get_complete_packets(&csdata->packets);
+    GWBUF *packet = modutil_get_next_MySQL_packet(&csdata->packets);
 
     int rv;
 
-    if (packets)
+    if (packet)
     {
-        C_DEBUG("At least one complete packet exist.");
-        GWBUF *packet;
+        bool use_default = true;
 
-        // TODO: Is it really possible to get more that one packet
-        // TODO: is this loop? If so, can those packets be sent
-        // TODO: after one and other, or do we need to wait for
-        // TODO: a replies? If there are more complete packets
-        // TODO: than one, then either CACHE_SESSION_DATA::key
-        // TODO: needs to be a queue
-
-        // TODO: modutil_get_next_MySQL_packet *copies* the data.
-        while ((packet = modutil_get_next_MySQL_packet(&packets)))
+        // TODO: This returns the wrong result if GWBUF_LENGTH(packet) is < 5.
+        if (modutil_is_SQL(packet))
         {
-            C_DEBUG("Processing packet.");
-            bool use_default = true;
+            packet = gwbuf_make_contiguous(packet);
 
-            if (modutil_is_SQL(packet))
+            // We do not care whether the query was fully parsed or not.
+            // If a query cannot be fully parsed, the worst thing that can
+            // happen is that caching is not used, even though it would be
+            // possible.
+
+            if (qc_get_operation(packet) == QUERY_OP_SELECT)
             {
-                C_DEBUG("Is SQL.");
-                // We do not care whether the query was fully parsed or not.
-                // If a query cannot be fully parsed, the worst thing that can
-                // happen is that caching is not used, even though it would be
-                // possible.
+                GWBUF *result;
+                use_default = !route_using_cache(cinstance, csdata, packet, &result);
 
-                if (qc_get_operation(packet) == QUERY_OP_SELECT)
+                if (!use_default)
                 {
-                    C_DEBUG("Is a SELECT");
+                    C_DEBUG("Using data from cache.");
+                    gwbuf_free(packet);
+                    DCB *dcb = csdata->session->client_dcb;
 
-                    GWBUF *result;
-                    use_default = !route_using_cache(cinstance, csdata, packet, &result);
-
-                    if (!use_default)
-                    {
-                        C_DEBUG("Using data from cache.");
-                        gwbuf_free(packet);
-                        DCB *dcb = csdata->session->client_dcb;
-
-                        // TODO: This is not ok. Any filters before this filter, will not
-                        // TODO: see this data.
-                        rv = dcb->func.write(dcb, result);
-                    }
-                }
-                else
-                {
-                    C_DEBUG("Is NOT a SELECT");
+                    // TODO: This is not ok. Any filters before this filter, will not
+                    // TODO: see this data.
+                    rv = dcb->func.write(dcb, result);
                 }
             }
-            else
-            {
-                C_DEBUG("Is NOT SQL.");
-            }
+        }
 
-            if (use_default)
-            {
-                C_DEBUG("Using default processing.");
-                rv = csdata->down.routeQuery(csdata->down.instance, csdata->down.session, packet);
-            }
+        if (use_default)
+        {
+            C_DEBUG("Using default processing.");
+            rv = csdata->down.routeQuery(csdata->down.instance, csdata->down.session, packet);
         }
     }
     else
     {
-        C_DEBUG("Not even one complete packet exist; more data needed.");
-        // Ok, we need more data before we can do something.
+        // We need more data before we can do something.
         rv = 1;
     }
 
