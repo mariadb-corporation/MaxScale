@@ -205,6 +205,8 @@ install_file(${CMAKE_BINARY_DIR}/ReleaseNotes.txt core)
 install_file(${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt core)
 install_file(server/maxscale.cnf.template core)
 install_file(server/maxscale_binlogserver_template.cnf core)
+install_program(script/create_grants core)
+install_file(script/create_roles.sql core)
 
 # Install the template into /etc
 if(WITH_MAXSCALE_CNF AND (NOT TARGET_COMPONENT OR "core" STREQUAL "${TARGET_COMPONENT}"))
