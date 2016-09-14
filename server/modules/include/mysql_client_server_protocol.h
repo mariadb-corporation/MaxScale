@@ -79,6 +79,8 @@
 #define GW_MYSQL_SCRAMBLE_SIZE 20
 #define GW_SCRAMBLE_LENGTH_323 8
 
+#define DEFAULT_AUTH_PLUGIN_NAME "mysql_native_password"
+
 /** Maximum length of a MySQL packet */
 #define MYSQL_PACKET_LENGTH_MAX 0x00ffffff
 

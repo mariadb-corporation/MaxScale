@@ -311,11 +311,15 @@ int MySQLSendHandshake(DCB* dcb)
 
     memcpy(mysql_plugin_data, server_scramble + 8, 12);
 
+    const char* plugin_name = dcb->authfunc.plugin_name ?
+        dcb->authfunc.plugin_name : DEFAULT_AUTH_PLUGIN_NAME;
+    int plugin_name_len = strlen(plugin_name);
+
     mysql_payload_size =
         sizeof(mysql_protocol_version) + (len_version_string + 1) + sizeof(mysql_thread_id_num) + 8 +
         sizeof(/* mysql_filler */ uint8_t) + sizeof(mysql_server_capabilities_one) + sizeof(mysql_server_language) +
         sizeof(mysql_server_status) + sizeof(mysql_server_capabilities_two) + sizeof(mysql_scramble_len) +
-        sizeof(mysql_filler_ten) + 12 + sizeof(/* mysql_last_byte */ uint8_t) + strlen("mysql_native_password") +
+        sizeof(mysql_filler_ten) + 12 + sizeof(/* mysql_last_byte */ uint8_t) + plugin_name_len +
         sizeof(/* mysql_last_byte */ uint8_t);
 
     // allocate memory for packet header + payload
@@ -407,8 +411,8 @@ int MySQLSendHandshake(DCB* dcb)
     mysql_handshake_payload++;
 
     // to be understanded ????
-    memcpy(mysql_handshake_payload, "mysql_native_password", strlen("mysql_native_password"));
-    mysql_handshake_payload = mysql_handshake_payload + strlen("mysql_native_password");
+    memcpy(mysql_handshake_payload, plugin_name, plugin_name_len);
+    mysql_handshake_payload = mysql_handshake_payload + plugin_name_len;
 
     //write last byte, 0
     *mysql_handshake_payload = 0x00;

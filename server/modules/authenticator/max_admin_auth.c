@@ -63,7 +63,8 @@ static GWAUTHENTICATOR MyObject =
     max_admin_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
     max_admin_auth_authenticate,                /* Authenticate user credentials */
     max_admin_auth_free_client_data,            /* Free the client data held in DCB */
-    users_default_loadusers
+    users_default_loadusers,
+    NULL
 };
 
 /**

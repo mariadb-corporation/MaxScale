@@ -66,7 +66,8 @@ static GWAUTHENTICATOR MyObject =
     mysql_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
     mysql_auth_authenticate,                /* Authenticate user credentials */
     mysql_auth_free_client_data,            /* Free the client data held in DCB */
-    mysql_auth_load_users                   /* Load users from backend databases */
+    mysql_auth_load_users,                  /* Load users from backend databases */
+    "mysql_native_password"
 };
 
 static int combined_auth_check(

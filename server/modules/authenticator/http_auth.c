@@ -63,7 +63,8 @@ static GWAUTHENTICATOR MyObject =
     http_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
     http_auth_authenticate,                /* Authenticate user credentials */
     http_auth_free_client_data,            /* Free the client data held in DCB */
-    users_default_loadusers
+    users_default_loadusers,
+    NULL
 };
 
 typedef struct http_auth

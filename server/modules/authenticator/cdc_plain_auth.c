@@ -71,7 +71,8 @@ static GWAUTHENTICATOR MyObject =
     cdc_auth_is_client_ssl_capable,       /* Check if client supports SSL  */
     cdc_auth_authenticate,                /* Authenticate user credentials */
     cdc_auth_free_client_data,            /* Free the client data held in DCB */
-    cdc_replace_users
+    cdc_replace_users,
+    NULL
 };
 
 static int cdc_auth_check(
