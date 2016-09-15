@@ -62,9 +62,9 @@ storage_args=path=/usr/maxscale/cache/rocksdb
 Specifies whether any or only fully qualified references are allowed in
 queries stored to the cache.
 ```
-allowed_references=[fully-qualified|any]
+allowed_references=[qualified|any]
 ```
-The default is `fully-qualified`, which means that only queries where
+The default is `qualified`, which means that only queries where
 the database name is included in the table name are subject to caching.
 ```
 select col from db.tbl;
@@ -87,13 +87,13 @@ The setting can be changed to `any`, provided fully qualified names
 are always used or if the names of tables in different databases are
 different.
 
-#### `maximum_resultset_size`
+#### `max_resultset_size`
 
 Specifies the maximum size a resultset can have, measured in kibibytes,
 in order to be stored in the cache. A resultset larger than this, will
 not be stored.
 ```
-maximum_resultset_size=64
+max_resultset_size=64
 ```
 The default value is TBD.
 

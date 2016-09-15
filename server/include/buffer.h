@@ -161,6 +161,9 @@ typedef struct gwbuf
 /*< Check that the data in a buffer has the SQL marker*/
 #define GWBUF_IS_SQL(b)         (0x03 == GWBUF_DATA_CHAR(b,4))
 
+/*< Check whether the buffer is contiguous*/
+#define GWBUF_IS_CONTIGUOUS(b) (((b) == NULL) || ((b)->next == NULL))
+
 /*< True if all bytes in the buffer have been consumed */
 #define GWBUF_EMPTY(b)          ((char *)(b)->start >= (char *)(b)->end)
 

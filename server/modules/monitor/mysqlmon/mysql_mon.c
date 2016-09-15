@@ -719,6 +719,7 @@ monitorDatabase(MONITOR *mon, MONITOR_SERVERS *database)
             /* Also clear M/S state in both server and monitor server pending struct */
             server_clear_status(database->server, SERVER_SLAVE);
             server_clear_status(database->server, SERVER_MASTER);
+            server_clear_status(database->server, SERVER_RELAY_MASTER);
             monitor_clear_pending_status(database, SERVER_SLAVE);
             monitor_clear_pending_status(database, SERVER_MASTER);
             monitor_clear_pending_status(database, SERVER_RELAY_MASTER);
@@ -1207,7 +1208,8 @@ monitorMain(void *arg)
             MYSQL_SERVER_INFO *serv_info = hashtable_fetch(handle->server_info, ptr->server->unique_name);
             ss_dassert(serv_info);
 
-            if (getSlaveOfNodeId(mon->databases, ptr->server->node_id) &&
+            if (ptr->server->node_id > 0 && ptr->server->master_id > 0 &&
+                getSlaveOfNodeId(mon->databases, ptr->server->node_id) &&
                 getServerByNodeId(mon->databases, ptr->server->master_id) &&
                 (!handle->multimaster || serv_info->group == 0))
             {

@@ -25,6 +25,10 @@
 // To ensure that ss_info_assert asserts also when builing in non-debug mode.
 #if !defined(SS_DEBUG)
 #define SS_DEBUG
+int debug_check_fail = 1;
+#else
+// This is defined in the queuemanager code but only in debug builds
+extern int debug_check_fail;
 #endif
 #if defined(NDEBUG)
 #undef NDEBUG
@@ -43,8 +47,6 @@
  * test1    Allocate a queue and do lots of other things
  *
  */
-
-extern int debug_check_fail;
 
 #define TEST_QUEUE_SIZE 5
 #define HEARTBEATS_TO_EXPIRE 3
