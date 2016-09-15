@@ -6,21 +6,33 @@ In this introduction to MariaDB MaxScale the aim is to take the reader from the 
 
 ## Installation
 
-The simplest way to install MariaDB MaxScale is to use one of the binary packages that are available for download from the MariaDB website.
+MariaDB MaxScale can be installed either using the MariaDB Enterprise Repository or directly from a downloaded package.
 
-* Simply go to [http://www.mariadb.com/my_portal/download](http://www.mariadb.com/my_portal/download)
+### Using the MariaDB Enterprise Repository
 
-* Sign in to MariaDB.com
+* Go to [https://mariadb.com/my_portal/download](https://mariadb.com/my_portal/download).
 
-* Follow the instructions at the top of the page. 
+* Sign in or create an account for you.
 
-![image alt text](images/getting_started.png)
+* Select your operating system and follow the instructions.
 
-If you want to install only MariaDB MaxScale, further down you will find the product specific download pages. Click on the MariaDB MaxScale link and follow the distribution specific instructions.
+### From a Downloaded Package
 
-![image alt text](images/getting_started2.png)
+The MaxScale package can be downloaded from the following locations:
 
-After you have installed MariaDB MaxScale, you can start it.
+* [https://mariadb.com/my_portal/download/maxscale](https://mariadb.com/my_portal/download/maxscale)
+
+* [https://mariadb.com/downloads/maxscale](https://mariadb.com/downloads/maxscale)
+
+Select your operating system and download the package.
+
+Once you have downloaded the package, install it using the package tool relevant for your operating system.
+
+### Starting MariaDB MaxScale
+
+Before starting MariaDB MaxScale, you need to create a configuration file for it; please see further [down](#configuring-mariadb-maxscale).
+
+Once a configuration file has been created you can start MariaDB MaxScale:
 
 ```
 systemctl start maxscale.service
