@@ -1184,48 +1184,38 @@ static int gw_write_backend_event(DCB *dcb)
      */
     if (dcb->state != DCB_STATE_POLLING)
     {
-        uint8_t* data;
+        uint8_t* data = NULL;
+        bool com_quit = false;
 
-        if (dcb->writeq != NULL)
+        spinlock_acquire(&dcb->writeqlock);
+        if (dcb->writeq)
         {
             data = (uint8_t *) GWBUF_DATA(dcb->writeq);
+            com_quit = MYSQL_IS_COM_QUIT(data);
+            rc = 0;
+        }
+        spinlock_release(&dcb->writeqlock);
 
-            if (dcb->session->client_dcb == NULL)
-            {
-                rc = 0;
-            }
-            else if (!(MYSQL_IS_COM_QUIT(data)))
-            {
-                /*< vraa : errorHandle */
-                mysql_send_custom_error(dcb->session->client_dcb,
-                                        1,
-                                        0,
-                                        "Writing to backend failed due invalid Maxscale "
-                                        "state.");
-                MXS_DEBUG("%lu [gw_write_backend_event] Write to backend "
-                          "dcb %p fd %d "
-                          "failed due invalid state %s.",
-                          pthread_self(),
-                          dcb,
-                          dcb->fd,
-                          STRDCBSTATE(dcb->state));
 
-                MXS_ERROR("Attempt to write buffered data to backend "
-                          "failed "
-                          "due internal inconsistent state.");
+        if (data && !com_quit)
+        {
+            mysql_send_custom_error(dcb->session->client_dcb, 1, 0,
+                                    "Writing to backend failed due invalid Maxscale state.");
+            MXS_DEBUG("%lu [gw_write_backend_event] Write to backend "
+                      "dcb %p fd %d failed due invalid state %s.",
+                      pthread_self(), dcb, dcb->fd, STRDCBSTATE(dcb->state));
 
-                rc = 0;
-            }
+            MXS_ERROR("Attempt to write buffered data to backend "
+                      "failed due internal inconsistent state.");
         }
         else
         {
             MXS_DEBUG("%lu [gw_write_backend_event] Dcb %p in state %s "
-                "but there's nothing to write either.",
-                pthread_self(),
-                dcb,
-                STRDCBSTATE(dcb->state));
+                      "but there's nothing to write either.",
+                      pthread_self(), dcb, STRDCBSTATE(dcb->state));
             rc = 1;
         }
+
         goto return_rc;
     }
 
